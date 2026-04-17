@@ -78,6 +78,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMcpAutomationMessageReceived,
 class FMcpBridgeWebSocket;
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpAutomationBridgeSubsystem, Log, All);
 
+enum class ERequestOrigin : uint8
+{
+	WebSocket,
+	NativeHTTP
+};
+
 UCLASS()
 class MCPAUTOMATIONBRIDGE_API UMcpAutomationBridgeSubsystem
     : public UEditorSubsystem {
@@ -108,10 +114,11 @@ public:
                               const FString &RequestId, bool bSuccess,
                               const FString &Message,
                               const TSharedPtr<FJsonObject> &Result = nullptr,
-                              const FString &ErrorCode = FString());
+                              const FString &ErrorCode = FString(),
+                              ERequestOrigin Origin = ERequestOrigin::WebSocket);
   void SendAutomationError(TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
-                           const FString &RequestId, const FString &Message,
-                           const FString &ErrorCode);
+                            const FString &RequestId, const FString &Message,
+                            const FString &ErrorCode);
 
   /**
    * Send a progress update message during long-running operations.
@@ -123,7 +130,8 @@ public:
    * @param bStillWorking True if operation is still in progress (prevents stale detection)
    */
   void SendProgressUpdate(const FString &RequestId, float Percent = -1.0f, 
-                          const FString &Message = TEXT(""), bool bStillWorking = true);
+                          const FString &Message = TEXT(""), bool bStillWorking = true,
+                          ERequestOrigin Origin = ERequestOrigin::WebSocket);
 
   bool ExecuteEditorCommands(const TArray<FString> &Commands,
                              FString &OutErrorMessage);
@@ -1299,7 +1307,8 @@ private:
   void
   ProcessAutomationRequest(const FString &RequestId, const FString &Action,
                            const TSharedPtr<FJsonObject> &Payload,
-                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+                           ERequestOrigin Origin = ERequestOrigin::WebSocket);
 
   friend class FMcpNativeTransport;
 };

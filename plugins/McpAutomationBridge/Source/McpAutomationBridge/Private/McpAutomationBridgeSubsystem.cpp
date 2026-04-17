@@ -68,7 +68,7 @@ private:
 #include "Dom/JsonObject.h"
 #include "Async/TaskGraphInterfaces.h"
 #include "Async/Async.h"
-#include "HAL/PlatformFilemanager.h"
+#include "HAL/PlatformFileManager.h"
 #include "HAL/PlatformTime.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeSettings.h"
@@ -408,11 +408,9 @@ bool UMcpAutomationBridgeSubsystem::Tick(float DeltaTime) {
 void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString &RequestId,
     const bool bSuccess, const FString &Message,
-    const TSharedPtr<FJsonObject> &Result, const FString &ErrorCode) {
-  // Native MCP HTTP path: TargetSocket==nullptr means this originated from HTTP.
-  // If NativeTransport exists, route exclusively to it — never fall through to
-  // WebSocket, which would broadcast to all WS clients.
-  if (!TargetSocket.IsValid() && NativeTransport)
+    const TSharedPtr<FJsonObject> &Result, const FString &ErrorCode,
+    ERequestOrigin Origin) {
+  if (Origin == ERequestOrigin::NativeHTTP && NativeTransport)
   {
     if (!NativeTransport->CompletePendingRequest(RequestId, bSuccess, Message, Result, ErrorCode))
     {
@@ -422,7 +420,6 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     }
     return;
   }
-  // WebSocket path (TargetSocket is valid, or no NativeTransport configured)
   if (ConnectionManager.IsValid()) {
     ConnectionManager->SendAutomationResponse(TargetSocket, RequestId, bSuccess,
                                               Message, Result, ErrorCode);
@@ -452,7 +449,7 @@ void UMcpAutomationBridgeSubsystem::SendAutomationError(
          TEXT("Automation request failed (%s): %s"), *ResolvedError,
          *SanitizeForLog(Message));
   SendAutomationResponse(TargetSocket, RequestId, false, Message, nullptr,
-                         ResolvedError);
+                         ResolvedError, ERequestOrigin::WebSocket);
 }
 
 /**
@@ -468,14 +465,13 @@ void UMcpAutomationBridgeSubsystem::SendAutomationError(
  * @param bStillWorking True if operation is still in progress
  */
 void UMcpAutomationBridgeSubsystem::SendProgressUpdate(
-    const FString &RequestId, float Percent, const FString &Message, bool bStillWorking) {
-  // Native MCP HTTP path: stream progress via SSE
-  if (NativeTransport && NativeTransport->HasPendingRequest(RequestId))
+    const FString &RequestId, float Percent, const FString &Message, bool bStillWorking,
+    ERequestOrigin Origin) {
+  if (Origin == ERequestOrigin::NativeHTTP && NativeTransport)
   {
     NativeTransport->SendSSEProgressUpdate(RequestId, Percent, Message);
     return;
   }
-  // Existing WebSocket path
   if (ConnectionManager.IsValid()) {
     ConnectionManager->SendProgressUpdate(RequestId, Percent, Message, bStillWorking);
   }
