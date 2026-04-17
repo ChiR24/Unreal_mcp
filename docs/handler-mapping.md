@@ -198,6 +198,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `start_session` | `McpAutomationBridge_InsightsHandlers.cpp` | `HandleInsightsAction` | |
 | `lumen_update_scene` | `McpAutomationBridge_RenderHandlers.cpp` | `HandleRenderAction` | |
 | `set_project_setting` | `McpAutomationBridge_EnvironmentHandlers.cpp` | `HandleSystemControlAction` | |
+| `execute_python` | `McpAutomationBridge_SystemControlHandlers.cpp` | `HandleSystemControlAction` | Requires Python Editor Script Plugin. Max 1 MB code. Async timeout warning at 60s. |
 | `create_hud` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
 | `set_widget_text` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
 | `set_widget_image` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |

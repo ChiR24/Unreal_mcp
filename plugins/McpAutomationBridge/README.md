@@ -21,7 +21,7 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 | **Sequencer** | Cinematics, timeline control, camera animations |
 | **Graph Editing** | Blueprint, Niagara, Material, Behavior Tree graphs |
 | **Audio** | Sound cues, audio components, MetaSounds |
-| **System** | Console commands, UBT, tests, logs, project settings |
+| **System** | Console commands, UBT, tests, logs, project settings, Python execution |
 
 **200+ automation actions** across 36 MCP tools.
 
@@ -31,7 +31,7 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 
 - **Unreal Engine**: 5.0 - 5.7
 - **Platforms**: Win64, Mac, Linux
-- **Node.js**: 18+ (for MCP server)
+- **Node.js**: 18+ (only for TypeScript bridge transport — not needed for Native MCP)
 
 ---
 
@@ -99,6 +99,34 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 
 ## Quick Start
 
+### Option A: Native MCP Transport (no Node.js needed)
+
+The plugin includes a built-in MCP Streamable HTTP server. AI clients connect directly — no TypeScript bridge required.
+
+1. Enable in **Edit → Project Settings → Plugins → MCP Automation Bridge**:
+   - Check **Enable Native MCP**
+   - Set port (default: `3000`)
+2. Restart the editor
+3. Configure your AI client for Streamable HTTP at `http://localhost:3000/mcp`
+
+**Claude Code:**
+```bash
+claude mcp add unreal-engine --transport http http://localhost:3000/mcp
+```
+
+**Cursor** (`.cursor/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "unreal-engine": {
+      "url": "http://localhost:3000/mcp"
+    }
+  }
+}
+```
+
+### Option B: TypeScript Bridge (classic setup)
+
 ### Step 1: Install MCP Server
 
 ```bash
@@ -159,16 +187,25 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 - **Listen Ports**: WebSocket ports (default: 8090, 8091)
 - **Enable TLS**: Enable secure WebSocket connections
 - **Allow Non-Loopback**: Enable LAN access (security consideration)
+- **Enable Native MCP**: Enable built-in HTTP/SSE MCP server (default: off)
+- **Native MCP Port**: HTTP port for native MCP transport (default: 3000)
+- **Listen Host**: Bind address (default: 127.0.0.1)
+- **Load All Tools on Start**: Load all 36 tools at startup (default: off — only 8 core tools)
+- **Native MCP Instructions**: Custom instructions for AI clients
+- **Require Capability Token**: Enforce token authentication on WS and HTTP transports
 
 ---
 
 ## Security
 
 - **Loopback-only binding** by default (127.0.0.1)
+- **Capability token authentication** — enforce token on both WebSocket and Native MCP transports (enable in Project Settings)
 - **TLS/SSL support** for secure connections
 - **Rate limiting** support (disabled by default; configurable via Project Settings)
 - **Handshake required** before automation requests
 - **Command validation** blocks dangerous console commands
+- **Path sanitization** — blocks directory traversal in file operations
+- **Python execution security** — 1 MB code limit, symlink resolution, temp file scope guard cleanup
 
 ---
 

@@ -6,6 +6,8 @@
 #endif
 
 #include "McpAutomationBridgeSubsystem.h"
+#include "MCP/McpNativeTransport.h"
+#include "Interfaces/IPluginManager.h"
 
 // =============================================================================
 // FMcpRequestErrorDevice - Custom log device for per-request error capture
@@ -170,6 +172,31 @@ void UMcpAutomationBridgeSubsystem::Initialize(
   // Start the connection manager
   ConnectionManager->Start();
 
+  // Native MCP Streamable HTTP transport (opt-in)
+  {
+    const auto* Settings = GetDefault<UMcpAutomationBridgeSettings>();
+    if (Settings && Settings->bEnableNativeMCP)
+    {
+      // Find plugin directory for loading tool schemas
+      FString PluginDir;
+      TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("McpAutomationBridge"));
+      if (Plugin.IsValid())
+      {
+        PluginDir = Plugin->GetBaseDir();
+      }
+
+      NativeTransport = MakeShared<FMcpNativeTransport>(this);
+      if (!NativeTransport->Start(Settings->NativeMCPPort, PluginDir, Settings->bLoadAllToolsOnStart,
+                                  Settings->NativeMCPInstructions,
+                                  Settings->ListenHost, Settings->bAllowNonLoopback))
+      {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
+               TEXT("Failed to start Native MCP server on port %d"), Settings->NativeMCPPort);
+        NativeTransport.Reset();
+      }
+    }
+  }
+
   // Register Ticker
   TickHandle = FTSTicker::GetCoreTicker().AddTicker(
       FTickerDelegate::CreateUObject(this,
@@ -205,6 +232,12 @@ void UMcpAutomationBridgeSubsystem::Deinitialize() {
   if (!IsRunningCommandlet()) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("McpAutomationBridgeSubsystem deinitializing."));
+  }
+
+  if (NativeTransport)
+  {
+    NativeTransport->Shutdown();
+    NativeTransport.Reset();
   }
 
   if (ConnectionManager.IsValid()) {
@@ -345,6 +378,11 @@ bool UMcpAutomationBridgeSubsystem::Tick(float DeltaTime) {
       !IsGarbageCollecting() && !IsAsyncLoading()) {
     ProcessPendingAutomationRequests();
   }
+  // Cleanup stale HTTP pending requests (5 minute timeout)
+  if (NativeTransport)
+  {
+    NativeTransport->CleanupStaleRequests();
+  }
   return true;
 }
 
@@ -370,7 +408,22 @@ bool UMcpAutomationBridgeSubsystem::Tick(float DeltaTime) {
 void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString &RequestId,
     const bool bSuccess, const FString &Message,
-    const TSharedPtr<FJsonObject> &Result, const FString &ErrorCode) {
+    const TSharedPtr<FJsonObject> &Result, const FString &ErrorCode,
+    ERequestOrigin Origin) {
+  // When handlers omit Origin (default WebSocket), use the stored
+  // CurrentRequestOrigin from the active ProcessAutomationRequest call.
+  ERequestOrigin EffectiveOrigin = (Origin == ERequestOrigin::WebSocket)
+      ? CurrentRequestOrigin : Origin;
+  if (EffectiveOrigin == ERequestOrigin::NativeHTTP && NativeTransport)
+  {
+    if (!NativeTransport->CompletePendingRequest(RequestId, bSuccess, Message, Result, ErrorCode))
+    {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+        TEXT("Native HTTP response for %s dropped — request already expired or unknown"),
+        *RequestId);
+    }
+    return;
+  }
   if (ConnectionManager.IsValid()) {
     ConnectionManager->SendAutomationResponse(TargetSocket, RequestId, bSuccess,
                                               Message, Result, ErrorCode);
@@ -416,7 +469,13 @@ void UMcpAutomationBridgeSubsystem::SendAutomationError(
  * @param bStillWorking True if operation is still in progress
  */
 void UMcpAutomationBridgeSubsystem::SendProgressUpdate(
-    const FString &RequestId, float Percent, const FString &Message, bool bStillWorking) {
+    const FString &RequestId, float Percent, const FString &Message, bool bStillWorking,
+    ERequestOrigin Origin) {
+  if (Origin == ERequestOrigin::NativeHTTP && NativeTransport)
+  {
+    NativeTransport->SendSSEProgressUpdate(RequestId, Percent, Message);
+    return;
+  }
   if (ConnectionManager.IsValid()) {
     ConnectionManager->SendProgressUpdate(RequestId, Percent, Message, bStillWorking);
   }
@@ -1316,7 +1375,7 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests() {
 
   for (const FPendingAutomationRequest &Req : LocalQueue) {
     ProcessAutomationRequest(Req.RequestId, Req.Action, Req.Payload,
-                             Req.RequestingSocket);
+                             Req.RequestingSocket, Req.Origin);
   }
 }
 

@@ -4,6 +4,69 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ---
 
+## [0.6.0] - 2026-04-05
+
+### Security
+- **Capability token enforcement** on native MCP transport — validates `X-MCP-Capability-Token` header when `bRequireCapabilityToken` is enabled (mirrors WebSocket bridge logic)
+- **Symlink escape prevention** in `execute_python` file path validation — resolves symlinks and re-validates against project directory
+- **Code size limit** in `execute_python` — enforces 1 MB maximum for inline code payloads
+- **Explicit request origin tracking** (`ERequestOrigin`) — routes HTTP vs WebSocket responses by explicit origin instead of inferring from `TargetSocket==nullptr`
+- **Tool registry thread safety** — `Register()` now holds `CacheMutex` for entire body, `GetAllTools()` returns copy to prevent external mutation
+- **Dynamic tool manager protection** — `EnableCategory("all")` now respects protected categories and initial state instead of blindly enabling everything
+
+### Added — Native MCP Streamable HTTP Transport
+- **Native MCP endpoint** (`POST /mcp`) directly inside the C++ plugin — AI clients connect without the TypeScript bridge
+- **SSE streaming** for `tools/call` — progress notifications arrive in real-time, followed by final JSON-RPC result
+- **Raw socket HTTP server** (`FRunnable` + `FSocket`) replacing `FHttpServerModule` — no external dependencies
+- **JSON-RPC 2.0** protocol (MCP 2025-03-26) with `initialize`, `tools/list`, `tools/call` methods
+- **Multiple concurrent sessions** — Cursor, Claude Code, and other clients can connect simultaneously
+- **Session management** with `Mcp-Session-Id` header, 1-hour inactivity timeout, `DELETE /mcp` termination
+- **Dynamic tool manager** — enable/disable tools and categories at runtime via `manage_tools`
+- **36 tool schemas** generated from self-describing C++ tool classes with full `inputSchema` and categories (core, world, authoring, gameplay, utility)
+- **`listChanged` notifications** — broadcast `notifications/tools/list_changed` to all active SSE connections when tool state changes
+- **Load All Tools on Start** project setting — toggle between core-only (8 tools) and all tools (36) at startup
+- **Status bar indicator** — `● MCP :3000 (2)` in UE editor status bar, click to open settings
+- **Server identity config** — `server-info.json` for name/version/instructions, plus `NativeMCPInstructions` project setting for custom instructions
+- **Client info logging** — log connecting client name and version from `initialize` request
+- **`execute_python` action** in `system_control` — execute Python code with stdout/stderr capture, supports inline `code` and `file` path, execution time tracking
+- **Shared `ListenHost` setting** — native MCP respects `AllowNonLoopback` for network access control
+- **Plugin-packaging scripts** for Win/Mac/Linux — build and package the plugin via RunUAT BuildPlugin, with smart arg parsing
+
+### Changed
+- `manage_blueprint` schema: `location`, `rotation`, `scale` changed from flat number arrays to structured objects with named sub-fields (`x`/`y`/`z` or `pitch`/`yaw`/`roll`) — matches TypeScript schema
+- `system_control` schema: removed `export_asset` action (not in TypeScript schema) and `additionalArgs` parameter (C++-only, never used by TS clients)
+- `control_editor` schema: added `set_editor_mode` action (was missing from C++, present in TS)
+- Screenshot handler: now returns `async: true` with `expectedDelay` field and timing guidance for polling
+- `ScanPathsSynchronous` removed from asset query/workflow handlers to prevent GameThread blocking — documented limitation: newly-added assets may not appear until editor rescan
+- Temp file cleanup in `execute_python` uses RAII scope guard for guaranteed cleanup on all exit paths
+
+### Fixed
+- `reset` action now restores initial state from `Initialize()` instead of enabling all tools unconditionally
+- UE 5.6 compatibility: `TSharedPtr` for incomplete types, `Headers.Add` instead of `SetHeader`, `TryGetField` return value
+- Package script arg parsing — flags no longer eaten as output directory, extra args correctly forwarded to RunUAT
+
+### Technical Details
+- Response routing via explicit `ERequestOrigin` enum (`NativeHTTP` vs `WebSocket`) — no more `TargetSocket==nullptr` inference
+- Thread-safe SSE writes: per-connection `WriteMutex`, snapshot pattern for broadcast
+- Thread-safe tool registry: `CacheMutex` protects `Tools`, `ToolsByName`, `CachedToolSchemas`, `bCacheValid`
+- Opt-in via `bEnableNativeMCP` project setting (default: off)
+- Capability token validation mirrors WebSocket bridge (`McpConnectionManager.cpp`)
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `Private/MCP/McpNativeTransport.h/cpp` | Raw-socket HTTP+SSE server, session management, JSON-RPC dispatch |
+| `Private/MCP/McpJsonRpc.h/cpp` | JSON-RPC 2.0 helpers (parse, response, error, notification, progress) |
+| `Private/MCP/McpToolRegistry.h/cpp` | Singleton registry for self-describing C++ tool definitions |
+| `Private/MCP/McpSchemaBuilder.h/cpp` | Fluent builder for MCP tool inputSchema JSON |
+| `Private/MCP/McpDynamicToolManager.h/cpp` | Runtime tool enable/disable, protected tools, initial state reset |
+| `Private/MCP/Tools/McpTool_*.cpp` | 36 self-describing tool definition classes with schema + dispatch |
+| `Private/UI/SMcpStatusBarWidget.h/cpp` | Editor status bar MCP indicator |
+| `Resources/MCP/server-info.json` | Server name, version, default instructions |
+
+---
+
 ## [0.1.4] - 2026-04-03
 
 ### Security
