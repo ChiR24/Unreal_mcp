@@ -2881,7 +2881,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
 
   if (LowerSub == TEXT("play"))
     return HandleControlEditorPlay(RequestId, Payload, RequestingSocket);
-  if (LowerSub == TEXT("stop"))
+  if (LowerSub == TEXT("stop") || LowerSub == TEXT("stop_pie"))
     return HandleControlEditorStop(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("eject"))
     return HandleControlEditorEject(RequestId, Payload, RequestingSocket);

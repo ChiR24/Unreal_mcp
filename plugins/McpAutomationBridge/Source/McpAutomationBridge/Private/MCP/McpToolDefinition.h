@@ -1,4 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
 // McpToolDefinition.h — Base class for self-describing MCP tool definitions
 
 #pragma once

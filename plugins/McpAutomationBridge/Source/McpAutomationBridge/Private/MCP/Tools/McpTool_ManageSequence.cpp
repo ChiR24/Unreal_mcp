@@ -1,4 +1,4 @@
-// McpTool_ManageSequence.cpp — manage_sequence tool definition (31 actions)
+// McpTool_ManageSequence.cpp — manage_sequence tool definition
 
 #include "McpVersionCompatibility.h"
 #include "MCP/McpToolDefinition.h"

@@ -1,4 +1,4 @@
-// McpTool_ManageAudio.cpp — manage_audio tool definition (49 actions)
+// McpTool_ManageAudio.cpp — manage_audio tool definition
 
 #include "McpVersionCompatibility.h"
 #include "MCP/McpToolDefinition.h"

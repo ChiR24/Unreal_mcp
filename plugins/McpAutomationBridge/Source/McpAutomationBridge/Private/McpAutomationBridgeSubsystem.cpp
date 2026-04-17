@@ -410,7 +410,11 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     const bool bSuccess, const FString &Message,
     const TSharedPtr<FJsonObject> &Result, const FString &ErrorCode,
     ERequestOrigin Origin) {
-  if (Origin == ERequestOrigin::NativeHTTP && NativeTransport)
+  // When handlers omit Origin (default WebSocket), use the stored
+  // CurrentRequestOrigin from the active ProcessAutomationRequest call.
+  ERequestOrigin EffectiveOrigin = (Origin == ERequestOrigin::WebSocket)
+      ? CurrentRequestOrigin : Origin;
+  if (EffectiveOrigin == ERequestOrigin::NativeHTTP && NativeTransport)
   {
     if (!NativeTransport->CompletePendingRequest(RequestId, bSuccess, Message, Result, ErrorCode))
     {
@@ -449,7 +453,7 @@ void UMcpAutomationBridgeSubsystem::SendAutomationError(
          TEXT("Automation request failed (%s): %s"), *ResolvedError,
          *SanitizeForLog(Message));
   SendAutomationResponse(TargetSocket, RequestId, false, Message, nullptr,
-                         ResolvedError, ERequestOrigin::WebSocket);
+                         ResolvedError);
 }
 
 /**
@@ -1371,7 +1375,7 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests() {
 
   for (const FPendingAutomationRequest &Req : LocalQueue) {
     ProcessAutomationRequest(Req.RequestId, Req.Action, Req.Payload,
-                             Req.RequestingSocket);
+                             Req.RequestingSocket, Req.Origin);
   }
 }
 

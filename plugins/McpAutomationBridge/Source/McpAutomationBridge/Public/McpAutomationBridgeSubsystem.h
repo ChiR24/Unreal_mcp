@@ -111,8 +111,8 @@ public:
   // blueprint helper routines). They were previously declared private which
   // prevented those helpers from invoking them via a 'Self' pointer.
   void SendAutomationResponse(TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
-                              const FString &RequestId, bool bSuccess,
-                              const FString &Message,
+                              const FString &RequestId,
+                              bool bSuccess, const FString &Message,
                               const TSharedPtr<FJsonObject> &Result = nullptr,
                               const FString &ErrorCode = FString(),
                               ERequestOrigin Origin = ERequestOrigin::WebSocket);
@@ -235,11 +235,17 @@ public:
     FString Action;
     TSharedPtr<FJsonObject> Payload;
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket;
+    ERequestOrigin Origin = ERequestOrigin::WebSocket;
   };
   TArray<FPendingAutomationRequest> PendingAutomationRequests;
   FCriticalSection PendingAutomationRequestsMutex;
   bool bPendingRequestsScheduled = false;
   void ProcessPendingAutomationRequests();
+
+  // Origin of the currently-processing request — used by SendAutomationResponse
+  // and SendAutomationError as fallback when handlers don't pass Origin explicitly.
+  // Set at the start of ProcessAutomationRequest, cleared on exit.
+  ERequestOrigin CurrentRequestOrigin = ERequestOrigin::WebSocket;
 
   void RecordAutomationTelemetry(const FString &RequestId, bool bSuccess,
                                  const FString &Message,

@@ -988,7 +988,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
         AssetPaths.Add(AssetPath);
       }
       
-      if (AssetDataList.Num() == 0) {
+      if (AssetPaths.Num() == 0) {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("success"), true);
         Result->SetNumberField(TEXT("deleted"), 0);

@@ -151,16 +151,16 @@ public:
 			.String(TEXT("velocityMode"), TEXT(""))
 			.Number(TEXT("speedMin"), TEXT(""))
 			.Number(TEXT("speedMax"), TEXT(""))
-			.Object(TEXT("acceleration"), TEXT("3D location (x, y, z)."),
+			.Object(TEXT("acceleration"), TEXT("3D acceleration vector (x, y, z)."),
 				[](FMcpSchemaBuilder& S) {
 				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
 			})
 			.String(TEXT("sizeMode"), TEXT(""))
-			.Object(TEXT("sizeMin"), TEXT("3D location (x, y, z)."),
+			.Object(TEXT("sizeMin"), TEXT("Minimum particle size (x, y, z)."),
 				[](FMcpSchemaBuilder& S) {
 				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
 			})
-			.Object(TEXT("sizeMax"), TEXT("3D location (x, y, z)."),
+			.Object(TEXT("sizeMax"), TEXT("Maximum particle size (x, y, z)."),
 				[](FMcpSchemaBuilder& S) {
 				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
 			})

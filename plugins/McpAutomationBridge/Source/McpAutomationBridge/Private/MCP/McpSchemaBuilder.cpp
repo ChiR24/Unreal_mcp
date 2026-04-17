@@ -1,4 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
 // McpSchemaBuilder.cpp — Fluent builder for MCP tool inputSchema JSON
 
 #include "McpVersionCompatibility.h"

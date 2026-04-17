@@ -724,6 +724,7 @@ bool FMcpNativeTransport::ReadHttpRequest(FSocket* Socket, FParsedHttpRequest& O
 		TArray<uint8> BodyBuf;
 		BodyBuf.SetNumUninitialized(OutRequest.ContentLength);
 		int32 TotalRead = 0;
+		uint32 PendingData = 0;
 
 		while (TotalRead < OutRequest.ContentLength)
 		{
@@ -740,6 +741,11 @@ bool FMcpNativeTransport::ReadHttpRequest(FSocket* Socket, FParsedHttpRequest& O
 				if (BytesRead > 0)
 				{
 					TotalRead += BytesRead;
+				}
+				else if (!Socket->HasPendingData(PendingData))
+				{
+					UE_LOG(LogMcpNativeTransport, Warning, TEXT("HTTP body read: peer closed connection (read %d/%d)"), TotalRead, OutRequest.ContentLength);
+					return false;
 				}
 				else
 				{
@@ -773,6 +779,7 @@ bool FMcpNativeTransport::SendHttpResponse(FSocket* Socket, int32 StatusCode,
 	case 400: StatusText = TEXT("Bad Request"); break;
 	case 404: StatusText = TEXT("Not Found"); break;
 	case 405: StatusText = TEXT("Method Not Allowed"); break;
+	case 401: StatusText = TEXT("Unauthorized"); break;
 	case 406: StatusText = TEXT("Not Acceptable"); break;
 	case 429: StatusText = TEXT("Too Many Requests"); break;
 	case 500: StatusText = TEXT("Internal Server Error"); break;
@@ -1046,7 +1053,7 @@ void FMcpNativeTransport::HandleToolsCall(
 	{
 		FString ErrorBody = FMcpJsonRpc::BuildError(
 			Id, FMcpJsonRpc::ErrorInvalidParams, TEXT("Missing params"));
-		SendHttpResponse(ClientSocket, 400, TEXT("application/json"), ErrorBody);
+		SendHttpResponse(ClientSocket, 200, TEXT("application/json"), ErrorBody);
 		ClientSocket->Close();
 		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
 		return;
@@ -1057,7 +1064,7 @@ void FMcpNativeTransport::HandleToolsCall(
 	{
 		FString ErrorBody = FMcpJsonRpc::BuildError(
 			Id, FMcpJsonRpc::ErrorInvalidParams, TEXT("Missing tool name"));
-		SendHttpResponse(ClientSocket, 400, TEXT("application/json"), ErrorBody);
+		SendHttpResponse(ClientSocket, 200, TEXT("application/json"), ErrorBody);
 		ClientSocket->Close();
 		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
 		return;
@@ -1092,7 +1099,8 @@ void FMcpNativeTransport::HandleToolsCall(
 		FString Action;
 		Arguments->TryGetStringField(TEXT("action"), Action);
 		TSharedPtr<FJsonObject> Result = ToolManager.HandleAction(Action, Arguments);
-		bool bActionSuccess = Result.IsValid() && Result->GetBoolField(TEXT("success"));
+		bool bActionSuccess = false;
+		if (Result.IsValid()) { Result->TryGetBoolField(TEXT("success"), bActionSuccess); }
 		FString ActionMessage = TEXT("OK");
 		if (!bActionSuccess && Result.IsValid())
 		{

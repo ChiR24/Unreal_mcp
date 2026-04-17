@@ -1,4 +1,4 @@
-// McpTool_ManageGeometry.cpp — manage_geometry tool definition (68 actions)
+// McpTool_ManageGeometry.cpp — manage_geometry tool definition
 
 #include "McpVersionCompatibility.h"
 #include "MCP/McpToolDefinition.h"

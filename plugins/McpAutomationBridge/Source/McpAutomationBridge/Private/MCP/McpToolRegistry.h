@@ -1,4 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
 // McpToolRegistry.h — Singleton registry for self-describing MCP tool definitions
 
 #pragma once

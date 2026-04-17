@@ -1,4 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
 // McpSchemaBuilder.h — Fluent builder for MCP tool inputSchema JSON
 
 #pragma once
