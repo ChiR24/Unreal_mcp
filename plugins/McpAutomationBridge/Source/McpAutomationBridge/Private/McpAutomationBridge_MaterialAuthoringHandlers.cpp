@@ -1504,11 +1504,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
   }
 
   // --------------------------------------------------------------------------
-  // add_custom_input_pin — adds a named FCustomInput to an existing
-  // UMaterialExpressionCustom node. Complements the optional `inputs[]` array
-  // on add_custom_expression: use this when you want to attach a pin to a
-  // Custom node that already exists. Uses standard schema params: assetPath,
-  // nodeId, inputName. Idempotent (silently skips if the pin already exists).
+  // LOCAL PATCH: add_custom_input_pin — adds an FCustomInput to an existing
+  // UMaterialExpressionCustom node. Needed because the "inputs" array param on
+  // add_custom_expression isn't in the server schema until the upstream tool
+  // definitions are regenerated, so clients can't populate it in one shot.
+  // Uses only standard schema params: assetPath, nodeId, inputName.
   // --------------------------------------------------------------------------
   if (SubAction == TEXT("add_custom_input_pin")) {
     LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
@@ -1669,10 +1669,10 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
       return true;
     }
 
-    // Custom nodes store inputs in an FCustomInput array, not as individual
-    // UProperties. FindPropertyByName can't locate them, so we look up the
-    // named entry inside Inputs[] and wire the source expression into its
-    // embedded FExpressionInput.
+    // LOCAL PATCH: Custom nodes store inputs in an FCustomInput array, not as
+    // individual UProperties. FindPropertyByName can't locate them, so we look
+    // up the named entry inside Inputs[] and wire the source expression into
+    // its embedded FExpressionInput.
     if (UMaterialExpressionCustom *CustomExpr =
             Cast<UMaterialExpressionCustom>(TargetExpr)) {
       const FName SearchName(*InputName);
@@ -1691,6 +1691,32 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
       SendAutomationError(
           Socket, RequestId,
           FString::Printf(TEXT("Custom node input '%s' not found in Inputs[]."),
+                          *InputName),
+          TEXT("PIN_NOT_FOUND"));
+      return true;
+    }
+
+    // LOCAL PATCH: MaterialFunctionCall nodes store their inputs in a
+    // FunctionInputs[] array of FFunctionExpressionInput (each carries an
+    // ExpressionInput ptr to the source function's FunctionInput node and a
+    // per-call FExpressionInput pin). Match by the referenced FunctionInput's
+    // InputName and wire the source into that pin.
+    if (UMaterialExpressionMaterialFunctionCall *CallExpr =
+            Cast<UMaterialExpressionMaterialFunctionCall>(TargetExpr)) {
+      const FName SearchName(*InputName);
+      for (int32 Idx = 0; Idx < CallExpr->FunctionInputs.Num(); ++Idx) {
+        FFunctionExpressionInput& Entry = CallExpr->FunctionInputs[Idx];
+        if (Entry.ExpressionInput && Entry.ExpressionInput->InputName == SearchName) {
+          Entry.Input.Expression = SourceExpr;
+          NotifyMatOrFuncDirty(Material, MaterialFunction);
+          SendAutomationResponse(Socket, RequestId, true,
+                                 TEXT("Nodes connected (function-call input)."));
+          return true;
+        }
+      }
+      SendAutomationError(
+          Socket, RequestId,
+          FString::Printf(TEXT("Function-call input '%s' not found."),
                           *InputName),
           TEXT("PIN_NOT_FOUND"));
       return true;
