@@ -43,7 +43,7 @@
 // -----------------------------------------------------------------------------
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
-#include "HAL/PlatformFilemanager.h"
+#include "HAL/PlatformFileManager.h"
 #include "Misc/Paths.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
@@ -787,6 +787,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
       Filter.PackagePaths.Add(FName(*NormalizedPath));
       Filter.bRecursivePaths = true;
       
+      // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+      // Asset listing uses cached AssetRegistry data exclusively.
+      // LIMITATION: Assets not yet indexed by the editor's background scanner
+      // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
       TArray<FAssetData> AssetDataList;
       AssetRegistry.GetAssets(Filter, AssetDataList);
       
@@ -965,6 +969,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
       Filter.PackagePaths.Add(FName(*NormalizedPath));
       Filter.bRecursivePaths = true;
       
+      // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+      // Asset listing uses cached AssetRegistry data exclusively.
+      // LIMITATION: Assets not yet indexed by the editor's background scanner
+      // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
       TArray<FAssetData> AssetDataList;
       AssetRegistry.GetAssets(Filter, AssetDataList);
       
@@ -980,7 +988,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
         AssetPaths.Add(AssetPath);
       }
       
-      if (AssetPaths.Num() == 0) {
+      if (AssetDataList.Num() == 0) {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("success"), true);
         Result->SetNumberField(TEXT("deleted"), 0);
@@ -1604,6 +1612,10 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
     Filter.PackagePaths.Add(FName(*SourcePath));
     Filter.bRecursivePaths = true;
 
+    // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+    // Asset listing uses cached AssetRegistry data exclusively.
+    // LIMITATION: Assets not yet indexed by the editor's background scanner
+    // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
     TArray<FAssetData> Assets;
     AssetRegistryModule.Get().GetAssets(Filter, Assets);
 
@@ -2347,6 +2359,8 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
 
   // Use cached AssetRegistry data — ScanPathsSynchronous() removed to prevent
   // blocking the GameThread (causes SSE/HTTP transport timeouts).
+  // LIMITATION: Assets not yet indexed by the editor's background scanner
+  // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
 
   if (!ClassFilter.IsEmpty()) {
     // Support both short class names and full paths (best effort)
@@ -2367,6 +2381,10 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
   // key or value. Implementing a generic "HasTag" is ambiguous. We'll assume
   // TagFilter refers to a metadata key presence.
 
+  // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+  // Asset listing uses cached AssetRegistry data exclusively.
+  // LIMITATION: Assets not yet indexed by the editor's background scanner
+  // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
   TArray<FAssetData> AssetList;
   AssetRegistry.GetAssets(Filter, AssetList);
 
@@ -2640,6 +2658,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
       Filter.PackagePaths.Add(FName(*Directory));
     }
 
+    // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+    // Asset listing uses cached AssetRegistry data exclusively.
+    // LIMITATION: Assets not yet indexed by the editor's background scanner
+    // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
     TArray<FAssetData> AssetList;
     AssetRegistryModule.Get().GetAssets(Filter, AssetList);
 
@@ -3066,6 +3088,10 @@ bool UMcpAutomationBridgeSubsystem::HandleListMaterialInstances(
 #endif
   Filter.bRecursiveClasses = true;
 
+  // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+  // Asset listing uses cached AssetRegistry data exclusively.
+  // LIMITATION: Assets not yet indexed by the editor's background scanner
+  // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
   TArray<FAssetData> AssetList;
   AssetRegistry.GetAssets(Filter, AssetList);
 

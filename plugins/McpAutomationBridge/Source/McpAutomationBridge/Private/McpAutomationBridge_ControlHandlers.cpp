@@ -3075,8 +3075,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   Resp->SetStringField(TEXT("path"), FullPath);
   Resp->SetBoolField(TEXT("async"), true);
   Resp->SetStringField(TEXT("message"),
-      TEXT("Screenshot queued. File will be written on the next rendered frame. "
+      TEXT("Screenshot queued. File will be written on the next rendered frame "
+           "(typically within 100-200ms). Poll the file path to confirm availability. "
            "The editor window must be visible for capture to complete."));
+  Resp->SetStringField(TEXT("expectedDelay"), TEXT("200ms"));
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Screenshot queued"), Resp, FString());
