@@ -754,8 +754,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         key: commonSchemas.stringProp,
         value: commonSchemas.stringProp,
         configName: commonSchemas.stringProp,
-        code: { type: 'string', description: 'Python code to execute inline' },
-        file: { type: 'string', description: 'Path to .py file to execute' }
+        code: { type: 'string', description: 'Python code to execute inline', maxLength: 1048576 }, // 1MB max — prevents resource exhaustion via oversized payloads
+        file: { type: 'string', description: 'Path to .py file to execute', maxLength: 4096 } // Max path length on most OS
       },
       required: ['action']
     },
