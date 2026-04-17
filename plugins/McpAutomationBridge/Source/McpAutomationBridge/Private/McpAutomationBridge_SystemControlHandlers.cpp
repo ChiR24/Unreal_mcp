@@ -527,7 +527,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       return true;
     }
 
-    // Temp paths — RequestId in filenames for concurrency safety
+    // Enforce maximum code size (1 MB)
+    static const int32 MaxCodeSize = 1048576;
+    if (Code.Len() > MaxCodeSize) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Python code exceeds maximum size (%d bytes)"), MaxCodeSize),
+                          TEXT("CODE_TOO_LARGE"));
+      return true;
+    }
+
+    // Temp paths — GUID in filenames for concurrency safety
     FString TempDir = FPaths::ProjectSavedDir() / TEXT("Temp/MCP_Python");
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
     if (!PlatformFile.DirectoryExists(*TempDir)) {
@@ -541,9 +550,25 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     FString StatusPath = TempDir / FString::Printf(TEXT("status_%s.txt"), *SafeId);
     FString CodePath   = TempDir / FString::Printf(TEXT("code_%s.py"), *SafeId);
 
-    // Normalize paths for Python (forward slashes, escape single quotes for r'...' literals)
+    // RAII-style scope guard for temp file cleanup
+    struct FTempFileCleanup {
+      TArray<FString> Paths;
+      ~FTempFileCleanup() {
+        IPlatformFile& PF = FPlatformFileManager::Get().GetPlatformFile();
+        for (const FString& P : Paths) {
+          PF.DeleteFile(*P);
+        }
+      }
+    } Cleanup;
+    Cleanup.Paths.Add(ScriptPath);
+    Cleanup.Paths.Add(OutputPath);
+    Cleanup.Paths.Add(ErrorPath);
+    Cleanup.Paths.Add(StatusPath);
+    Cleanup.Paths.Add(CodePath);
+
+    // Normalize paths for Python (forward slashes)
     auto NormalizePyPath = [](const FString& Path) -> FString {
-      return Path.Replace(TEXT("\\"), TEXT("/")).Replace(TEXT("'"), TEXT("\\'"));
+      return Path.Replace(TEXT("\\"), TEXT("/"));
     };
     FString PyOutputPath = NormalizePyPath(OutputPath);
     FString PyErrorPath  = NormalizePyPath(ErrorPath);
@@ -560,8 +585,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     Wrapper += TEXT("try:\n");
 
     if (bHasCode) {
-      // Write user code to a separate temp file to avoid backslash/quote escaping
-      // issues in triple-quoted strings — then read it back in the wrapper.
       if (!FFileHelper::SaveStringToFile(Code, *CodePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM)) {
         SendAutomationError(RequestingSocket, RequestId,
                             FString::Printf(TEXT("Failed to write temp code file: %s"), *CodePath),
@@ -599,6 +622,21 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
         return true;
       }
 
+      // Resolve symlinks and re-validate (prevents symlink escape attacks)
+      FString ResolvedPath = FPlatformFileManager::Get().GetPlatformFile().ConvertToAbsolutePathForExternalAppForRead(*AbsoluteFilePath);
+      if (!ResolvedPath.IsEmpty())
+      {
+        FPaths::NormalizeFilename(ResolvedPath);
+        if (!ResolvedPath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase))
+        {
+          SendAutomationError(RequestingSocket, RequestId,
+                              TEXT("Resolved file path escapes project directory (symlink detected)"),
+                              TEXT("SECURITY_VIOLATION"));
+          return true;
+        }
+        AbsoluteFilePath = ResolvedPath;
+      }
+
       // Use absolute path in Python wrapper (forward slashes)
       FString PyFilePath = NormalizePyPath(AbsoluteFilePath);
       Wrapper += FString::Printf(TEXT("    with open(r'%s', 'r', encoding='utf-8') as _f:\n"), *PyFilePath);
@@ -633,11 +671,20 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       World = GEngine->GetWorldContexts()[0].World();
     }
 
-    // Execute via py console command
+    // Execute via py console command with execution time tracking
+    static constexpr double MaxPythonExecutionSeconds = 60.0;
     FString PyCommand = FString::Printf(TEXT("py \"%s\""), *ScriptPath);
     bool bExecHandled = false;
+    double ExecStartTime = FPlatformTime::Seconds();
     if (GEngine) {
       bExecHandled = GEngine->Exec(World, *PyCommand);
+    }
+    double ExecElapsed = FPlatformTime::Seconds() - ExecStartTime;
+    if (ExecElapsed > MaxPythonExecutionSeconds) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+             TEXT("Python execution took %.1fs (exceeds %.1fs threshold). "
+                  "Consider running long scripts via 'file' parameter in a separate process."),
+             ExecElapsed, MaxPythonExecutionSeconds);
     }
 
     // Read results
@@ -646,12 +693,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     FFileHelper::LoadFileToString(Error, *ErrorPath);
     FFileHelper::LoadFileToString(Status, *StatusPath);
 
-    // Cleanup temp files
-    PlatformFile.DeleteFile(*ScriptPath);
-    PlatformFile.DeleteFile(*OutputPath);
-    PlatformFile.DeleteFile(*ErrorPath);
-    PlatformFile.DeleteFile(*StatusPath);
-    PlatformFile.DeleteFile(*CodePath);
+    // Cleanup happens automatically via FTempFileCleanup destructor
 
     // Check if Python is available
     if (!bExecHandled && Status.IsEmpty()) {
