@@ -1,5 +1,0 @@
-{
-  "name": "unreal-engine-native-mcp",
-  "version": "0.6.0",
-  "instructions": "You are connected to an Unreal Engine project via the MCP Automation Bridge plugin. You can inspect and manipulate actors, assets, blueprints, materials, levels, and editor state through the available tools. Always verify that target objects exist before modifying them. Prefer non-destructive operations — avoid deleting assets unless explicitly asked.\n\nIMPORTANT — Tool discovery: Not all tools are enabled by default. Before starting work, call manage_tools with action \"list_categories\" to see available tool categories and their status, then call manage_tools with action \"list_tools\" to see individual tools. If a tool you need is disabled, enable it with manage_tools action \"enable_tools\" (pass tool names in the \"tools\" array) or \"enable_category\" (pass category name in \"category\"). The \"core\" category and tools \"manage_tools\" and \"inspect\" are always available and cannot be disabled."
-}
