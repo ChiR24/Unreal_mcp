@@ -131,6 +131,35 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Debug", meta = (ClampMin = "0.0"))
     float TickerIntervalSeconds;
 
+    // ── Native MCP Streamable HTTP ──────────────────────────────────────
+
+    /** Enable native MCP Streamable HTTP endpoint (POST /mcp).
+     * AI clients (Claude Code, Cursor, etc.) connect directly without the TypeScript bridge.
+     * Requires editor restart after changing. */
+    UPROPERTY(config, EditAnywhere, Category = "Native MCP",
+        meta = (DisplayName = "Enable Native MCP Server"))
+    bool bEnableNativeMCP = false;
+
+    /** Port for the native MCP HTTP server. Must differ from WebSocket ports. */
+    UPROPERTY(config, EditAnywhere, Category = "Native MCP",
+        meta = (DisplayName = "Native MCP Port", EditCondition = "bEnableNativeMCP",
+                ClampMin = "1024", ClampMax = "65535"))
+    int32 NativeMCPPort = 3000;
+
+    /** Load all tools on startup. When disabled, only core tools are loaded initially.
+     * Use manage_tools to enable additional categories at runtime. */
+    UPROPERTY(config, EditAnywhere, Category = "Native MCP",
+        meta = (DisplayName = "Load All Tools on Start", EditCondition = "bEnableNativeMCP"))
+    bool bLoadAllToolsOnStart = false;
+
+    /** Additional instructions sent to AI clients in the MCP initialize response.
+     * Use this to describe your project, conventions, or constraints.
+     * Appended after the default server instructions from server-info.json. */
+    UPROPERTY(config, EditAnywhere, Category = "Native MCP",
+        meta = (DisplayName = "Server Instructions", EditCondition = "bEnableNativeMCP",
+                MultiLine = "true"))
+    FString NativeMCPInstructions;
+
     virtual FName GetCategoryName() const override { return FName(TEXT("Plugins")); }
     virtual FText GetSectionText() const override;
 

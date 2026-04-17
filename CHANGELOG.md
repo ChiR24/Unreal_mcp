@@ -11,6 +11,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Native MCP Streamable HTTP Transport** — built-in HTTP/SSE MCP server directly in the C++ plugin, no TypeScript bridge or Node.js required. AI clients connect via `http://localhost:3000/mcp`. Supports SSE streaming, multiple concurrent sessions, dynamic tool management. Opt-in via `bEnableNativeMCP` project setting.
+- **`execute_python` action** in `system_control` — execute Python code inline or from `.py` files with stdout/stderr capture, execution time tracking, and RAII temp file cleanup. Max code size: 1 MB.
+- **Capability token authentication** for native MCP transport — validates `X-MCP-Capability-Token` header when `bRequireCapabilityToken` is enabled.
+- **36 self-describing C++ tool definitions** with `FMcpSchemaBuilder` fluent API — replaces JSON schema loader.
+- **Dynamic tool manager** — enable/disable tools and categories at runtime via `manage_tools`, with protected tools/categories.
+- **Editor status bar indicator** — shows MCP port and active session count.
+
+### Security
+
+- **Symlink escape prevention** in `execute_python` file path validation — resolves symlinks and re-validates against project directory.
+- **Code size limit** — `execute_python` enforces 1 MB maximum for inline code payloads.
+- **Explicit request origin tracking** (`ERequestOrigin`) — routes HTTP vs WebSocket responses by explicit origin instead of inferring from `TargetSocket==nullptr`.
+- **Tool registry thread safety** — `Register()` holds `CacheMutex` for entire body; `GetAllTools()` returns copy.
+- **Dynamic tool manager protection** — `EnableCategory("all")` respects protected categories and initial state.
+
+### Changed
+
+- `manage_blueprint` schema: `location`, `rotation`, `scale` changed from flat number arrays to structured objects with named sub-fields — matches TypeScript schema.
+- `system_control` schema: removed `export_asset` action (not in TS) and `additionalArgs` parameter.
+- `control_editor` schema: added `set_editor_mode` action.
+- `ScanPathsSynchronous` removed from asset query/workflow handlers to prevent GameThread blocking. Documented limitation: newly-added assets may not appear until editor rescan.
+- Screenshot handler now returns `async: true` with `expectedDelay` field and timing guidance.
+
 - **`inspect_cdo` sub-action** for the `inspect` tool – inspect any Blueprint's Class Default Object without spawning an actor. Reads CDO property values via reflection. For Actor BPs, enumerates all components: native CDO components with effective override values, plus Blueprint SCS components from node templates (full parent chain). Includes parent attachment info for SCS components. Source classified as Native, SCS, or SCS_Inherited. Key fields (mesh, animClass, transform) included in summary; full property export via detailed or propertyNames filter.
 
 ---

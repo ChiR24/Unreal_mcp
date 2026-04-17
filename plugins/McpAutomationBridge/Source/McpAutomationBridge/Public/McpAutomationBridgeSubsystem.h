@@ -7,6 +7,8 @@
 #include "HAL/CriticalSection.h"
 #include "Templates/SharedPointer.h"
 #include "Engine/DataAsset.h"
+class FMcpNativeTransport;
+
 #include "McpAutomationBridgeSubsystem.generated.h"
 
 // Define MCP_HAS_CONTROLRIG_FACTORY based on UE version
@@ -76,6 +78,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMcpAutomationMessageReceived,
 class FMcpBridgeWebSocket;
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpAutomationBridgeSubsystem, Log, All);
 
+enum class ERequestOrigin : uint8
+{
+	WebSocket,
+	NativeHTTP
+};
+
 UCLASS()
 class MCPAUTOMATIONBRIDGE_API UMcpAutomationBridgeSubsystem
     : public UEditorSubsystem {
@@ -103,13 +111,14 @@ public:
   // blueprint helper routines). They were previously declared private which
   // prevented those helpers from invoking them via a 'Self' pointer.
   void SendAutomationResponse(TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
-                              const FString &RequestId, bool bSuccess,
-                              const FString &Message,
+                              const FString &RequestId,
+                              bool bSuccess, const FString &Message,
                               const TSharedPtr<FJsonObject> &Result = nullptr,
-                              const FString &ErrorCode = FString());
+                              const FString &ErrorCode = FString(),
+                              ERequestOrigin Origin = ERequestOrigin::WebSocket);
   void SendAutomationError(TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
-                           const FString &RequestId, const FString &Message,
-                           const FString &ErrorCode);
+                            const FString &RequestId, const FString &Message,
+                            const FString &ErrorCode);
 
   /**
    * Send a progress update message during long-running operations.
@@ -121,7 +130,8 @@ public:
    * @param bStillWorking True if operation is still in progress (prevents stale detection)
    */
   void SendProgressUpdate(const FString &RequestId, float Percent = -1.0f, 
-                          const FString &Message = TEXT(""), bool bStillWorking = true);
+                          const FString &Message = TEXT(""), bool bStillWorking = true,
+                          ERequestOrigin Origin = ERequestOrigin::WebSocket);
 
   bool ExecuteEditorCommands(const TArray<FString> &Commands,
                              FString &OutErrorMessage);
@@ -206,6 +216,9 @@ public:
   // Connection Manager
   TSharedPtr<class FMcpConnectionManager> ConnectionManager;
 
+  /** Native MCP Streamable HTTP transport (opt-in via bEnableNativeMCP setting) */
+  TSharedPtr<FMcpNativeTransport> NativeTransport;
+
   // Track a blueprint currently being modified by this subsystem request
   // so scope-exit handlers can reliably clear busy state without
   // attempting to capture local variables inside macros.
@@ -222,11 +235,17 @@ public:
     FString Action;
     TSharedPtr<FJsonObject> Payload;
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket;
+    ERequestOrigin Origin = ERequestOrigin::WebSocket;
   };
   TArray<FPendingAutomationRequest> PendingAutomationRequests;
   FCriticalSection PendingAutomationRequestsMutex;
   bool bPendingRequestsScheduled = false;
   void ProcessPendingAutomationRequests();
+
+  // Origin of the currently-processing request — used by SendAutomationResponse
+  // and SendAutomationError as fallback when handlers don't pass Origin explicitly.
+  // Set at the start of ProcessAutomationRequest, cleared on exit.
+  ERequestOrigin CurrentRequestOrigin = ERequestOrigin::WebSocket;
 
   void RecordAutomationTelemetry(const FString &RequestId, bool bSuccess,
                                  const FString &Message,
@@ -1294,5 +1313,8 @@ private:
   void
   ProcessAutomationRequest(const FString &RequestId, const FString &Action,
                            const TSharedPtr<FJsonObject> &Payload,
-                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+                           ERequestOrigin Origin = ERequestOrigin::WebSocket);
+
+  friend class FMcpNativeTransport;
 };

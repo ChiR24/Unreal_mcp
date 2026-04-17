@@ -45,10 +45,12 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 ### Architecture
 
 - **Native C++ Automation** — All operations route through the MCP Automation Bridge plugin
+- **Dual Transport** — Native HTTP/SSE (no bridge needed) or WebSocket via TypeScript bridge
 - **Dynamic Type Discovery** — Runtime introspection for lights, debug shapes, and sequencer tracks
 - **Graceful Degradation** — Server starts even without an active Unreal connection
 - **On-Demand Connection** — Retries automation handshakes with exponential backoff
 - **Command Safety** — Blocks dangerous console commands with pattern-based validation
+- **Capability Token Auth** — Optional token-based authentication for both WS and HTTP transports
 - **Asset Caching** — 10-second TTL for improved performance
 - **Metrics Rate Limiting** — Per-IP rate limiting (60 req/min) on Prometheus endpoint
 - **Centralized Configuration** — Unified class aliases and type definitions
@@ -59,17 +61,22 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 ### Prerequisites
 
-- **Node.js** 18+
 - **Unreal Engine** 5.0–5.7
 
-### Step 1: Install MCP Server
+Choose your transport:
+- **Option A: Native MCP** (recommended) — no additional dependencies
+- **Option B: TypeScript Bridge** — requires **Node.js** 18+
 
-**Option A: NPX (Recommended)**
+### Step 1: Install MCP Server (Option B only — skip for Native MCP)
+
+> Skip this step if using **Option A: Native MCP Transport** ([Step 4A](#option-a-native-mcp-transport-direct-http--no-bridge-needed) below).
+
+**NPX (Recommended):**
 ```bash
 npx unreal-engine-mcp-server
 ```
 
-**Option B: Clone & Build**
+**Clone & Build:**
 ```bash
 git clone https://github.com/ChiR24/Unreal_mcp.git
 cd Unreal_mcp
@@ -82,23 +89,51 @@ node dist/cli.js
 
 The MCP Automation Bridge plugin is included at `Unreal_mcp/plugins/McpAutomationBridge`.
 
+#### From source (requires a project with code target)
+
+Your project must have a code target (`.sln` or `.xcworkspace`).
+Blueprint-only projects cannot compile native plugins — to convert, add any class via **Tools > New C++ Class** in the editor.
+
 **Method 1: Copy Folder**
-```
+```text
 Copy:  Unreal_mcp/plugins/McpAutomationBridge/
 To:    YourUnrealProject/Plugins/McpAutomationBridge/
 ```
-Regenerate project files after copying.
 
-**Method 2: Add in Editor**
+**Method 2: External Plugin Directory (no copy needed)**
 1. Open Unreal Editor → **Edit → Plugins**
-2. Click **"Add"** → Browse to `Unreal_mcp/plugins/`
-3. Select the `McpAutomationBridge` folder
+2. Click **Plugin Directories** (bottom-left)
+3. In **Additional Plugin Directories**, add the path to `Unreal_mcp/plugins/`
+4. Restart the editor — the plugin will be picked up from the external location
+
+This saves the path in your `.uproject` file so the plugin stays linked without copying.
+
+The plugin compiles automatically when you open the project — UE detects the `.uplugin` + `Source/` and runs UnrealBuildTool.
 
 **Video Guide:**
 
 https://github.com/user-attachments/assets/d8b86ebc-4364-48c9-9781-de854bf3ef7d
 
-> ⚠️ **First-Time Project Open:** When opening the project directly (double-click `.uproject`) for the first time, UE will prompt *"Would you like to rebuild them now?"* for missing modules. Click **Yes** to rebuild. After the rebuild completes, you may still see: *"Plugin 'McpAutomationBridge' failed to load because module could not be loaded."* This is expected — UE rebuilds successfully but doesn't reload the plugin in the same session. **Simply close and reopen the project** and the plugin will load correctly. Alternatively, build via Visual Studio first to avoid this.
+> ⚠️ **First-Time Project Open:** UE may prompt *"Would you like to rebuild them now?"* — click **Yes**. If instead you see *"Missing Modules — McpAutomationBridge. Engine modules cannot be compiled at runtime. Please build through your IDE."* — open your project in **Visual Studio** (Win) or **Xcode** (Mac) and build from there. After that, the editor will open normally with the plugin loaded.
+
+#### Pre-built (works with any project, including Blueprint-only)
+
+Build the plugin once, then distribute the compiled binaries — no IDE or compilation needed on the target machine.
+
+**1. Build:**
+```bash
+# macOS / Linux
+./scripts/package-plugin.sh /path/to/UE_5.6
+
+# Windows
+scripts\package-plugin.bat C:\Path\To\UE_5.6
+```
+
+This produces a zip like `McpAutomationBridge-v0.6.0-UE5.6-Mac.zip`.
+
+**2. Install:** unzip into `YourProject/Plugins/` and open the project. That's it — no compilation step.
+
+> Note: pre-built binaries are tied to a specific UE version. A build for 5.6 won't work with 5.5 or 5.7.
 
 ### Step 3: Enable Required Plugins
 
@@ -143,6 +178,69 @@ Enable via **Edit → Plugins**, then restart the editor.
 > 💡 Optional plugins are auto-enabled by the MCP Automation Bridge plugin when needed.
 
 ### Step 4: Configure MCP Client
+
+#### Option A: Native MCP Transport (Direct HTTP — no bridge needed)
+
+The plugin includes a built-in MCP Streamable HTTP server. AI clients connect directly to the plugin over HTTP — no TypeScript bridge, no Node.js, no npm.
+
+**Enable in Unreal:**
+1. **Edit > Project Settings > Plugins > MCP Automation Bridge**
+2. Check **Enable Native MCP**
+3. Set port (default: `3000`)
+4. Optionally set **Native MCP Instructions** for project-specific guidance
+5. Restart the editor
+
+**Configure your MCP client** to use Streamable HTTP transport at:
+```
+http://localhost:3000/mcp
+```
+
+**Claude Code:**
+```bash
+claude mcp add unreal-engine --transport http http://localhost:3000/mcp
+```
+
+Or manually in `~/.claude/settings.json` or project `.mcp.json`:
+```json
+{
+  "mcpServers": {
+    "unreal-engine": {
+      "type": "url",
+      "url": "http://localhost:3000/mcp"
+    }
+  }
+}
+```
+
+**Cursor** (`.cursor/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "unreal-engine": {
+      "url": "http://localhost:3000/mcp"
+    }
+  }
+}
+```
+
+**Verify it works:**
+- **Status bar** — look for `● MCP :3000 (2)` in the bottom-right of the editor. Green dot = server running, number in parens = active sessions. Click it to open settings.
+- **Output Log** — filter by `LogMcpNativeTransport` to see connections, tool calls, and session activity:
+  ```
+  LogMcpNativeTransport: Native MCP server started on http://localhost:3000/mcp
+  LogMcpNativeTransport: MCP session initialized: ... (client: claude-code 2.1.92, active sessions: 1)
+  LogMcpNativeTransport: tools/call: inspect (RequestId=...)
+  LogMcpNativeTransport: tools/call completed: ... (tool=inspect, success=true)
+  ```
+
+Features:
+- SSE streaming for real-time progress during long operations
+- Multiple concurrent sessions (Cursor + Claude Code + others simultaneously)
+- Dynamic tool management — only core tools (8) loaded by default, enable more via `manage_tools`
+- Python execution via `execute_python` action (inline code or .py files)
+- Capability token authentication — enable in project settings for network security
+
+#### Option B: TypeScript Bridge (stdio — classic setup)
 
 Add to your Claude Desktop / Cursor config file:
 
@@ -224,7 +322,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 3. Under **Connection**, set **"Listen Host"** to `0.0.0.0`
 4. Restart the editor
 
-⚠️ **Security Warning:** Enabling LAN access exposes the automation bridge to your local network. Only use on trusted networks with appropriate firewall rules.
+⚠️ **Security Warning:** Enabling LAN access exposes the automation bridge to your local network. Only use on trusted networks with appropriate firewall rules. **Enable capability token authentication** (`Require Capability Token` in project settings) to prevent unauthorized access when using LAN mode.
 
 ---
 
@@ -241,7 +339,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 | `control_actor` | Spawn, delete, transform, physics, tags |
 | `control_editor` | PIE, Camera, viewport, screenshots |
 | `manage_level` | Load/Save, World Partition, streaming |
-| `system_control` | UBT, Tests, Logs, Project Settings, CVars |
+| `system_control` | UBT, Tests, Logs, Project Settings, CVars, Python Execution |
 | `inspect` | Object Introspection |
 | `manage_pipeline` | Build automation, UBT compilation, status checks |
 | `manage_tools` | Dynamic tool management (enable/disable at runtime) |

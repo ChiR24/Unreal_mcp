@@ -39,7 +39,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       !Lower.StartsWith(TEXT("run_tests")) &&
       !Lower.StartsWith(TEXT("test_progress")) &&
       !Lower.StartsWith(TEXT("test_stale")) &&
-      Lower != TEXT("export_asset")) {
+      Lower != TEXT("export_asset") &&
+      Lower != TEXT("execute_python")) {
     return false; // Not handled by this function
   }
 
@@ -502,6 +503,214 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                              FString::Printf(TEXT("Export failed: %s"), *ExportError),
                              Result, TEXT("EXPORT_FAILED"));
     }
+    return true;
+  } else if (Lower == TEXT("execute_python")) {
+    // Execute Python code with stdout/stderr capture via temp file wrapper
+    FString Code;
+    Payload->TryGetStringField(TEXT("code"), Code);
+    FString File;
+    Payload->TryGetStringField(TEXT("file"), File);
+
+    const bool bHasCode = !Code.TrimStartAndEnd().IsEmpty();
+    const bool bHasFile = !File.TrimStartAndEnd().IsEmpty();
+
+    if (!bHasCode && !bHasFile) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("'code' or 'file' parameter is required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (bHasCode && bHasFile) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Provide either 'code' or 'file', not both"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Enforce maximum code size (1 MB)
+    static const int32 MaxCodeSize = 1048576;
+    if (Code.Len() > MaxCodeSize) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Python code exceeds maximum size (%d bytes)"), MaxCodeSize),
+                          TEXT("CODE_TOO_LARGE"));
+      return true;
+    }
+
+    // Temp paths — GUID in filenames for concurrency safety
+    FString TempDir = FPaths::ProjectSavedDir() / TEXT("Temp/MCP_Python");
+    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+    if (!PlatformFile.DirectoryExists(*TempDir)) {
+      PlatformFile.CreateDirectoryTree(*TempDir);
+    }
+
+    FString SafeId = FGuid::NewGuid().ToString(EGuidFormats::Digits);
+    FString ScriptPath = TempDir / FString::Printf(TEXT("mcp_exec_%s.py"), *SafeId);
+    FString OutputPath = TempDir / FString::Printf(TEXT("output_%s.txt"), *SafeId);
+    FString ErrorPath  = TempDir / FString::Printf(TEXT("error_%s.txt"), *SafeId);
+    FString StatusPath = TempDir / FString::Printf(TEXT("status_%s.txt"), *SafeId);
+    FString CodePath   = TempDir / FString::Printf(TEXT("code_%s.py"), *SafeId);
+
+    // RAII-style scope guard for temp file cleanup
+    struct FTempFileCleanup {
+      TArray<FString> Paths;
+      ~FTempFileCleanup() {
+        IPlatformFile& PF = FPlatformFileManager::Get().GetPlatformFile();
+        for (const FString& P : Paths) {
+          PF.DeleteFile(*P);
+        }
+      }
+    } Cleanup;
+    Cleanup.Paths.Add(ScriptPath);
+    Cleanup.Paths.Add(OutputPath);
+    Cleanup.Paths.Add(ErrorPath);
+    Cleanup.Paths.Add(StatusPath);
+    Cleanup.Paths.Add(CodePath);
+
+    // Normalize paths for Python (forward slashes)
+    auto NormalizePyPath = [](const FString& Path) -> FString {
+      return Path.Replace(TEXT("\\"), TEXT("/"));
+    };
+    FString PyOutputPath = NormalizePyPath(OutputPath);
+    FString PyErrorPath  = NormalizePyPath(ErrorPath);
+    FString PyStatusPath = NormalizePyPath(StatusPath);
+
+    // Build Python wrapper
+    FString Wrapper;
+    Wrapper += TEXT("import sys\nimport traceback\n\n");
+    Wrapper += FString::Printf(TEXT("_out = open(r'%s', 'w', encoding='utf-8')\n"), *PyOutputPath);
+    Wrapper += FString::Printf(TEXT("_err = open(r'%s', 'w', encoding='utf-8')\n"), *PyErrorPath);
+    Wrapper += TEXT("_old_out, _old_err = sys.stdout, sys.stderr\n");
+    Wrapper += TEXT("sys.stdout, sys.stderr = _out, _err\n\n");
+    Wrapper += TEXT("_success = True\n");
+    Wrapper += TEXT("try:\n");
+
+    if (bHasCode) {
+      if (!FFileHelper::SaveStringToFile(Code, *CodePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM)) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Failed to write temp code file: %s"), *CodePath),
+                            TEXT("FILE_WRITE_FAILED"));
+        return true;
+      }
+      FString PyCodePath = NormalizePyPath(CodePath);
+      Wrapper += FString::Printf(TEXT("    with open(r'%s', 'r', encoding='utf-8') as _f:\n"), *PyCodePath);
+      Wrapper += TEXT("        _user_code = _f.read()\n");
+      Wrapper += FString::Printf(TEXT("    exec(compile(_user_code, r'%s', 'exec'))\n"), *PyCodePath);
+    } else {
+      // SECURITY: Sanitize file path to prevent directory traversal
+      FString SafeFilePath = SanitizeProjectFilePath(File);
+      if (SafeFilePath.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Invalid or unsafe file path: %s"), *File),
+                            TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+
+      // Resolve absolute path and verify it stays within project directory
+      FString AbsoluteFilePath = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir() / SafeFilePath);
+      FPaths::NormalizeFilename(AbsoluteFilePath);
+
+      FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+      FPaths::NormalizeDirectoryName(NormalizedProjectDir);
+      if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
+        NormalizedProjectDir += TEXT("/");
+      }
+
+      if (!AbsoluteFilePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("File path escapes project directory: %s"), *File),
+                            TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+
+      // Resolve symlinks and re-validate (prevents symlink escape attacks)
+      FString ResolvedPath = FPlatformFileManager::Get().GetPlatformFile().ConvertToAbsolutePathForExternalAppForRead(*AbsoluteFilePath);
+      if (!ResolvedPath.IsEmpty())
+      {
+        FPaths::NormalizeFilename(ResolvedPath);
+        if (!ResolvedPath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase))
+        {
+          SendAutomationError(RequestingSocket, RequestId,
+                              TEXT("Resolved file path escapes project directory (symlink detected)"),
+                              TEXT("SECURITY_VIOLATION"));
+          return true;
+        }
+        AbsoluteFilePath = ResolvedPath;
+      }
+
+      // Use absolute path in Python wrapper (forward slashes)
+      FString PyFilePath = NormalizePyPath(AbsoluteFilePath);
+      Wrapper += FString::Printf(TEXT("    with open(r'%s', 'r', encoding='utf-8') as _f:\n"), *PyFilePath);
+      Wrapper += TEXT("        _user_code = _f.read()\n");
+      Wrapper += FString::Printf(TEXT("    exec(compile(_user_code, r'%s', 'exec'))\n"), *PyFilePath);
+    }
+
+    Wrapper += TEXT("except:\n");
+    Wrapper += TEXT("    traceback.print_exc()\n");
+    Wrapper += TEXT("    _success = False\n");
+    Wrapper += TEXT("finally:\n");
+    Wrapper += TEXT("    sys.stdout, sys.stderr = _old_out, _old_err\n");
+    Wrapper += TEXT("    _out.close()\n");
+    Wrapper += TEXT("    _err.close()\n");
+    Wrapper += FString::Printf(TEXT("    with open(r'%s', 'w') as _sf:\n"), *PyStatusPath);
+    Wrapper += TEXT("        _sf.write('1' if _success else '0')\n");
+
+    // Write wrapper to disk
+    if (!FFileHelper::SaveStringToFile(Wrapper, *ScriptPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM)) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Failed to write temp script: %s"), *ScriptPath),
+                          TEXT("FILE_WRITE_FAILED"));
+      return true;
+    }
+
+    // Get world context (same pattern as console_command handler)
+    UWorld* World = nullptr;
+    if (GEditor) {
+      World = GEditor->GetEditorWorldContext().World();
+    }
+    if (!World && GEngine && GEngine->GetWorldContexts().Num() > 0) {
+      World = GEngine->GetWorldContexts()[0].World();
+    }
+
+    // Execute via py console command with execution time tracking
+    static constexpr double MaxPythonExecutionSeconds = 60.0;
+    FString PyCommand = FString::Printf(TEXT("py \"%s\""), *ScriptPath);
+    bool bExecHandled = false;
+    double ExecStartTime = FPlatformTime::Seconds();
+    if (GEngine) {
+      bExecHandled = GEngine->Exec(World, *PyCommand);
+    }
+    double ExecElapsed = FPlatformTime::Seconds() - ExecStartTime;
+    if (ExecElapsed > MaxPythonExecutionSeconds) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+             TEXT("Python execution took %.1fs (exceeds %.1fs threshold). "
+                  "Consider running long scripts via 'file' parameter in a separate process."),
+             ExecElapsed, MaxPythonExecutionSeconds);
+    }
+
+    // Read results
+    FString Output, Error, Status;
+    FFileHelper::LoadFileToString(Output, *OutputPath);
+    FFileHelper::LoadFileToString(Error, *ErrorPath);
+    FFileHelper::LoadFileToString(Status, *StatusPath);
+
+    // Cleanup happens automatically via FTempFileCleanup destructor
+
+    // Check if Python is available
+    if (!bExecHandled && Status.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Python command not recognized. Is the Python Editor Script Plugin enabled?"),
+                          TEXT("PYTHON_NOT_AVAILABLE"));
+      return true;
+    }
+
+    bool bSuccess = Status.TrimStartAndEnd().Equals(TEXT("1"));
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("output"), Output.TrimEnd());
+    Result->SetStringField(TEXT("error"), Error.TrimEnd());
+
+    SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
+                           bSuccess ? TEXT("Python executed successfully") : TEXT("Python execution failed"),
+                           Result, bSuccess ? FString() : TEXT("PYTHON_ERROR"));
     return true;
   }
 
