@@ -18,6 +18,7 @@ void FMcpToolRegistry::Register(FMcpToolDefinition* Tool)
 		return;
 	}
 
+	FScopeLock Lock(&CacheMutex);
 	const FString Name = Tool->GetName();
 	if (ToolsByName.Contains(Name))
 	{
@@ -26,7 +27,7 @@ void FMcpToolRegistry::Register(FMcpToolDefinition* Tool)
 
 	Tools.Add(Tool);
 	ToolsByName.Add(Name, Tool);
-	InvalidateCache();
+	bCacheValid = false;
 }
 
 FMcpToolDefinition* FMcpToolRegistry::FindTool(const FString& Name) const
@@ -106,7 +107,6 @@ void FMcpToolRegistry::InvalidateCache()
 	FScopeLock Lock(&CacheMutex);
 	bCacheValid = false;
 }
-
 TSharedPtr<FJsonObject> FMcpToolRegistry::GetFilteredToolsResponse(
 	const TSet<FString>& EnabledTools)
 {

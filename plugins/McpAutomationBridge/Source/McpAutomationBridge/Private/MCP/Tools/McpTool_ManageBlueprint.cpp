@@ -83,9 +83,27 @@ public:
 			.String(TEXT("memberName"), TEXT(""))
 			.Number(TEXT("x"), TEXT(""))
 			.Number(TEXT("y"), TEXT(""))
-			.Array(TEXT("location"), TEXT(""), TEXT("number"))
-			.Array(TEXT("rotation"), TEXT(""), TEXT("number"))
-			.Array(TEXT("scale"), TEXT(""), TEXT("number"))
+			.Object(TEXT("location"), TEXT("3D location (x, y, z)."),
+				[](FMcpSchemaBuilder& S) {
+				S.Number(TEXT("x"), TEXT("X coordinate."))
+				 .Number(TEXT("y"), TEXT("Y coordinate."))
+				 .Number(TEXT("z"), TEXT("Z coordinate."))
+				 .Required({TEXT("x"), TEXT("y"), TEXT("z")});
+			})
+			.Object(TEXT("rotation"), TEXT("3D rotation (pitch, yaw, roll)."),
+				[](FMcpSchemaBuilder& S) {
+				S.Number(TEXT("pitch"), TEXT("Pitch."))
+				 .Number(TEXT("yaw"), TEXT("Yaw."))
+				 .Number(TEXT("roll"), TEXT("Roll."))
+				 .Required({TEXT("pitch"), TEXT("yaw"), TEXT("roll")});
+			})
+			.Object(TEXT("scale"), TEXT("3D scale (x, y, z)."),
+				[](FMcpSchemaBuilder& S) {
+				S.Number(TEXT("x"), TEXT("X scale."))
+				 .Number(TEXT("y"), TEXT("Y scale."))
+				 .Number(TEXT("z"), TEXT("Z scale."))
+				 .Required({TEXT("x"), TEXT("y"), TEXT("z")});
+			})
 			.ArrayOfObjects(TEXT("operations"), TEXT(""))
 			.Bool(TEXT("compile"), TEXT("Compile the blueprint(s) after the operation."))
 			.Bool(TEXT("save"), TEXT("Save the asset(s) after the operation."))

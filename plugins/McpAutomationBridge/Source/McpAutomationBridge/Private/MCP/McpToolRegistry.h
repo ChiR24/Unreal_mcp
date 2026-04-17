@@ -14,8 +14,8 @@ class FMcpToolDefinition;
  * Tool .cpp files register via FMcpToolAutoRegistrar at static init time.
  * The transport queries this at runtime for tools/list and dispatch metadata.
  *
- * Thread safety: registration happens at static init (single-threaded).
- * All runtime access is read-only.
+ * Thread safety: CacheMutex protects Tools, ToolsByName, CachedToolSchemas,
+ * and bCacheValid. Register() and all read operations acquire CacheMutex.
  */
 class FMcpToolRegistry
 {
@@ -29,8 +29,8 @@ public:
 	/** Find a tool by name. Returns nullptr if not found. */
 	FMcpToolDefinition* FindTool(const FString& Name) const;
 
-	/** Get all registered tool definitions. */
-	const TArray<FMcpToolDefinition*>& GetAllTools() const { return Tools; }
+	/** Get all registered tool definitions (copy to prevent external mutation). */
+	TArray<FMcpToolDefinition*> GetAllTools() const { return Tools; }
 
 	/** Get all tool names. */
 	TSet<FString> GetToolNames() const;

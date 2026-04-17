@@ -346,16 +346,49 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::EnableCategory(const FString& Ca
 	{
 		for (auto& Pair : CategoryStates)
 		{
-			if (!Pair.Value.bEnabled) bAnyCategoryToggled = true;
-			Pair.Value.bEnabled = true;
-			Pair.Value.EnabledCount = Pair.Value.ToolCount;
+			if (IsProtectedCategory(Pair.Key))
+			{
+				const bool* Initial = InitialCategoryEnabled.Find(Pair.Key);
+				bool bTarget = Initial ? *Initial : true;
+				if (!Pair.Value.bEnabled && bTarget) bAnyCategoryToggled = true;
+				Pair.Value.bEnabled = bTarget;
+			}
+			else
+			{
+				if (!Pair.Value.bEnabled) bAnyCategoryToggled = true;
+				Pair.Value.bEnabled = true;
+			}
 		}
 		for (auto& Pair : ToolStates)
 		{
-			if (!Pair.Value.bEnabled)
+			FCategoryState* CS = CategoryStates.Find(Pair.Value.Category);
+			bool bCategoryEnabled = CS ? CS->bEnabled : true;
+
+			if (IsProtectedTool(Pair.Key))
+			{
+				const bool* InitialTool = InitialToolEnabled.Find(Pair.Key);
+				bool bToolTarget = (InitialTool ? *InitialTool : true) && bCategoryEnabled;
+				if (!Pair.Value.bEnabled && bToolTarget)
+				{
+					Pair.Value.bEnabled = true;
+					Enabled.Add(MakeShared<FJsonValueString>(Pair.Key));
+				}
+			}
+			else if (bCategoryEnabled && !Pair.Value.bEnabled)
 			{
 				Pair.Value.bEnabled = true;
 				Enabled.Add(MakeShared<FJsonValueString>(Pair.Key));
+			}
+		}
+		for (auto& CatPair : CategoryStates)
+		{
+			CatPair.Value.EnabledCount = 0;
+			for (const auto& ToolPair : ToolStates)
+			{
+				if (ToolPair.Value.Category == CatPair.Key && ToolPair.Value.bEnabled)
+				{
+					CatPair.Value.EnabledCount++;
+				}
 			}
 		}
 	}
