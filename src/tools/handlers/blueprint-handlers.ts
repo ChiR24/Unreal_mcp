@@ -486,6 +486,50 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs, 'Automation bridge not available for blueprint graph operations');
       return cleanObject(res) as Record<string, unknown>;
     }
+    case 'list_interfaces': {
+      const blueprintPath = argsTyped.blueprintPath || (argsRecord.path as string | undefined);
+      if (!blueprintPath || typeof blueprintPath !== 'string') {
+        throw new Error('Missing required parameter: blueprintPath');
+      }
+      const res = await executeAutomationRequest(tools, 'blueprint_list_interfaces', { blueprintPath });
+      return cleanObject(res as Record<string, unknown>) as Record<string, unknown>;
+    }
+    case 'add_interface': {
+      const blueprintPath = argsTyped.blueprintPath || (argsRecord.path as string | undefined);
+      const interfacePath = argsRecord.interfacePath as string | undefined;
+      if (!blueprintPath || typeof blueprintPath !== 'string') {
+        throw new Error('Missing required parameter: blueprintPath');
+      }
+      if (!interfacePath || typeof interfacePath !== 'string') {
+        throw new Error('Missing required parameter: interfacePath');
+      }
+      const res = await executeAutomationRequest(tools, 'blueprint_add_interface', { blueprintPath, interfacePath });
+      return cleanObject(res as Record<string, unknown>) as Record<string, unknown>;
+    }
+    case 'remove_interface': {
+      const blueprintPath = argsTyped.blueprintPath || (argsRecord.path as string | undefined);
+      const interfacePath = argsRecord.interfacePath as string | undefined;
+      if (!blueprintPath || typeof blueprintPath !== 'string') {
+        throw new Error('Missing required parameter: blueprintPath');
+      }
+      if (!interfacePath || typeof interfacePath !== 'string') {
+        throw new Error('Missing required parameter: interfacePath');
+      }
+      const res = await executeAutomationRequest(tools, 'blueprint_remove_interface', { blueprintPath, interfacePath });
+      return cleanObject(res as Record<string, unknown>) as Record<string, unknown>;
+    }
+    case 'set_parent_class': {
+      const blueprintPath = argsTyped.blueprintPath || (argsRecord.path as string | undefined);
+      const parentClass = argsRecord.parentClass as string | undefined;
+      if (!blueprintPath || typeof blueprintPath !== 'string') {
+        throw new Error('Missing required parameter: blueprintPath');
+      }
+      if (!parentClass || typeof parentClass !== 'string') {
+        throw new Error('Missing required parameter: parentClass');
+      }
+      const res = await executeAutomationRequest(tools, 'blueprint_set_parent_class', { blueprintPath, parentClass });
+      return cleanObject(res as Record<string, unknown>) as Record<string, unknown>;
+    }
     case 'create_enum':
     case 'create_struct':
     case 'modify_enum':

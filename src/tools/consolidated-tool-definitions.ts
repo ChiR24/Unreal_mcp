@@ -192,7 +192,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'ensure_exists', 'probe_handle', 'add_variable', 'remove_variable', 'rename_variable', 'add_function', 'add_event', 'remove_event', 'add_construction_script', 'set_variable_metadata', 'set_metadata',
             'create_node', 'list_graph_nodes', 'add_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
             'list_node_types', 'set_pin_default_value',
-            'create_enum', 'create_struct', 'modify_enum', 'modify_struct', 'inspect_enum', 'inspect_struct'
+            'create_enum', 'create_struct', 'modify_enum', 'modify_struct', 'inspect_enum', 'inspect_struct',
+            'set_parent_class', 'add_interface', 'remove_interface', 'list_interfaces'
           ],
           description: 'Blueprint action'
         },
@@ -269,6 +270,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         waitForCompletionTimeoutMs: commonSchemas.numberProp,
         // Parent class for blueprint creation
         parentClass: commonSchemas.parentClass,
+        // Interface management (add_interface / remove_interface)
+        interfacePath: { type: 'string', description: 'Interface blueprint or native interface class path (e.g. "/Game/IF_Test.IF_Test_C" or "/Script/Engine.Interface_AssetUserData").' },
         // Graph pin connections
         fromNodeId: commonSchemas.sourceNodeId,
         fromPin: commonSchemas.sourcePin,
@@ -292,7 +295,13 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         blueprintPath: commonSchemas.blueprintPath,
         blueprint: { oneOf: [{ type: 'object' }, { type: 'string' }], description: 'Blueprint data object or path string.' },
         nodes: commonSchemas.arrayOfObjects,
-        nodeCount: commonSchemas.numberProp
+        nodeCount: commonSchemas.numberProp,
+        // Interface management
+        interfaces: { type: 'array', items: { type: 'string' }, description: 'Implemented interface class paths (list_interfaces).' },
+        currentInterfaces: { type: 'array', items: { type: 'string' }, description: 'Implemented interface class paths after add/remove.' },
+        // Reparent
+        oldParent: { type: 'string', description: 'Previous parent class path (set_parent_class).' },
+        newParent: { type: 'string', description: 'New parent class path (set_parent_class).' }
       }
     }
   },

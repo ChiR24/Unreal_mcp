@@ -5360,6 +5360,331 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 #endif
   }
 
+  // blueprint_list_interfaces: enumerate implemented interface class paths
+  if (ActionMatchesPattern(TEXT("blueprint_list_interfaces")) ||
+      ActionMatchesPattern(TEXT("list_interfaces")) ||
+      AlphaNumLower.Contains(TEXT("blueprintlistinterfaces")) ||
+      AlphaNumLower.Contains(TEXT("listinterfaces"))) {
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_list_interfaces requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+#if WITH_EDITOR
+    FString Normalized;
+    FString LoadErr;
+    UBlueprint *BP = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    if (!BP) {
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
+      Err->SetStringField(TEXT("error"), LoadErr);
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to load blueprint"), Err,
+                             TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+    TArray<TSharedPtr<FJsonValue>> InterfacePaths;
+    for (const FBPInterfaceDescription &Iface : BP->ImplementedInterfaces) {
+      if (Iface.Interface) {
+        InterfacePaths.Add(
+            MakeShared<FJsonValueString>(Iface.Interface->GetPathName()));
+      }
+    }
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("blueprintPath"),
+                         Normalized.IsEmpty() ? Path : Normalized);
+    Resp->SetArrayField(TEXT("interfaces"), InterfacePaths);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Interfaces listed"), Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_list_interfaces requires editor build"), nullptr,
+        TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  // blueprint_add_interface: add an interface to a blueprint
+  if (ActionMatchesPattern(TEXT("blueprint_add_interface")) ||
+      ActionMatchesPattern(TEXT("add_interface")) ||
+      AlphaNumLower.Contains(TEXT("blueprintaddinterface")) ||
+      AlphaNumLower.Contains(TEXT("addinterface"))) {
+    FString Path = ResolveBlueprintRequestedPath();
+    FString InterfacePath;
+    LocalPayload->TryGetStringField(TEXT("interfacePath"), InterfacePath);
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_add_interface requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+    if (InterfacePath.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_add_interface requires an interfacePath."), nullptr,
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+#if WITH_EDITOR
+    FString Normalized;
+    FString LoadErr;
+    UBlueprint *BP = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    if (!BP) {
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
+      Err->SetStringField(TEXT("error"), LoadErr);
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to load blueprint"), Err,
+                             TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    // Normalize interface path: bare "/Game/IF_Foo" -> "/Game/IF_Foo.IF_Foo_C"
+    FString NormalizedInterface = InterfacePath;
+    if (!NormalizedInterface.Contains(TEXT("."))) {
+      int32 SlashIdx = INDEX_NONE;
+      if (NormalizedInterface.FindLastChar(TEXT('/'), SlashIdx)) {
+        NormalizedInterface =
+            NormalizedInterface + TEXT(".") +
+            NormalizedInterface.Mid(SlashIdx + 1) + TEXT("_C");
+      }
+    }
+
+    UClass *InterfaceClass = LoadObject<UClass>(nullptr, *NormalizedInterface);
+    if (!InterfaceClass ||
+        !InterfaceClass->HasAnyClassFlags(CLASS_Interface)) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Not an interface class: %s"),
+                          *NormalizedInterface),
+          nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    const bool bAlreadyImplemented =
+        BP->ImplementedInterfaces.ContainsByPredicate(
+            [InterfaceClass](const FBPInterfaceDescription &D) {
+              return D.Interface == InterfaceClass;
+            });
+    bool bAdded = bAlreadyImplemented;
+    if (!bAlreadyImplemented) {
+      bAdded = FBlueprintEditorUtils::ImplementNewInterface(
+          BP, InterfaceClass->GetClassPathName());
+      if (bAdded) {
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+        McpSafeCompileBlueprint(BP);
+      }
+    }
+
+    const bool bSaved = bAdded ? SaveLoadedAssetThrottled(BP) : false;
+
+    TArray<TSharedPtr<FJsonValue>> CurrentIfaces;
+    for (const FBPInterfaceDescription &D : BP->ImplementedInterfaces) {
+      if (D.Interface) {
+        CurrentIfaces.Add(
+            MakeShared<FJsonValueString>(D.Interface->GetPathName()));
+      }
+    }
+
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), bAdded);
+    Resp->SetStringField(TEXT("blueprintPath"),
+                         Normalized.IsEmpty() ? Path : Normalized);
+    Resp->SetArrayField(TEXT("currentInterfaces"), CurrentIfaces);
+    Resp->SetBoolField(TEXT("saved"), bSaved);
+    Resp->SetBoolField(TEXT("alreadyImplemented"), bAlreadyImplemented);
+    SendAutomationResponse(RequestingSocket, RequestId, bAdded,
+                           bAdded ? TEXT("Interface added")
+                                  : TEXT("Failed to add interface"),
+                           Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_add_interface requires editor build"), nullptr,
+        TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  // blueprint_remove_interface: remove an interface from a blueprint
+  if (ActionMatchesPattern(TEXT("blueprint_remove_interface")) ||
+      ActionMatchesPattern(TEXT("remove_interface")) ||
+      AlphaNumLower.Contains(TEXT("blueprintremoveinterface")) ||
+      AlphaNumLower.Contains(TEXT("removeinterface"))) {
+    FString Path = ResolveBlueprintRequestedPath();
+    FString InterfacePath;
+    LocalPayload->TryGetStringField(TEXT("interfacePath"), InterfacePath);
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_remove_interface requires a blueprint path."),
+          nullptr, TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+    if (InterfacePath.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_remove_interface requires an interfacePath."),
+          nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+#if WITH_EDITOR
+    FString Normalized;
+    FString LoadErr;
+    UBlueprint *BP = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    if (!BP) {
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
+      Err->SetStringField(TEXT("error"), LoadErr);
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to load blueprint"), Err,
+                             TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    FString NormalizedInterface = InterfacePath;
+    if (!NormalizedInterface.Contains(TEXT("."))) {
+      int32 SlashIdx = INDEX_NONE;
+      if (NormalizedInterface.FindLastChar(TEXT('/'), SlashIdx)) {
+        NormalizedInterface =
+            NormalizedInterface + TEXT(".") +
+            NormalizedInterface.Mid(SlashIdx + 1) + TEXT("_C");
+      }
+    }
+    UClass *InterfaceClass = LoadObject<UClass>(nullptr, *NormalizedInterface);
+    if (!InterfaceClass) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Interface class not found: %s"),
+                          *NormalizedInterface),
+          nullptr, TEXT("NOT_FOUND"));
+      return true;
+    }
+
+    FBlueprintEditorUtils::RemoveInterface(BP,
+                                           InterfaceClass->GetClassPathName(),
+                                           /*bPreserveFunctions=*/false);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    McpSafeCompileBlueprint(BP);
+    const bool bSaved = SaveLoadedAssetThrottled(BP);
+
+    TArray<TSharedPtr<FJsonValue>> CurrentIfaces;
+    for (const FBPInterfaceDescription &D : BP->ImplementedInterfaces) {
+      if (D.Interface) {
+        CurrentIfaces.Add(
+            MakeShared<FJsonValueString>(D.Interface->GetPathName()));
+      }
+    }
+
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("blueprintPath"),
+                         Normalized.IsEmpty() ? Path : Normalized);
+    Resp->SetArrayField(TEXT("currentInterfaces"), CurrentIfaces);
+    Resp->SetBoolField(TEXT("saved"), bSaved);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Interface removed"), Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_remove_interface requires editor build"), nullptr,
+        TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  // blueprint_set_parent_class: reparent a blueprint
+  if (ActionMatchesPattern(TEXT("blueprint_set_parent_class")) ||
+      ActionMatchesPattern(TEXT("set_parent_class")) ||
+      AlphaNumLower.Contains(TEXT("blueprintsetparentclass")) ||
+      AlphaNumLower.Contains(TEXT("setparentclass"))) {
+    FString Path = ResolveBlueprintRequestedPath();
+    FString ParentClassPath;
+    LocalPayload->TryGetStringField(TEXT("parentClass"), ParentClassPath);
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_set_parent_class requires a blueprint path."),
+          nullptr, TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+    if (ParentClassPath.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_set_parent_class requires a parentClass."), nullptr,
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+#if WITH_EDITOR
+    FString Normalized;
+    FString LoadErr;
+    UBlueprint *BP = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    if (!BP) {
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
+      Err->SetStringField(TEXT("error"), LoadErr);
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to load blueprint"), Err,
+                             TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    UClass *NewParent = LoadObject<UClass>(nullptr, *ParentClassPath);
+    if (!NewParent) {
+      FString NormalizedParent = ParentClassPath;
+      if (!NormalizedParent.Contains(TEXT("."))) {
+        int32 SlashIdx = INDEX_NONE;
+        if (NormalizedParent.FindLastChar(TEXT('/'), SlashIdx)) {
+          NormalizedParent =
+              NormalizedParent + TEXT(".") +
+              NormalizedParent.Mid(SlashIdx + 1) + TEXT("_C");
+        }
+      }
+      NewParent = LoadObject<UClass>(nullptr, *NormalizedParent);
+    }
+    if (!NewParent) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Parent class not found: %s"),
+                          *ParentClassPath),
+          nullptr, TEXT("NOT_FOUND"));
+      return true;
+    }
+
+    const FString OldParentPath =
+        BP->ParentClass ? BP->ParentClass->GetPathName() : FString(TEXT("None"));
+
+    BP->Modify();
+    BP->ParentClass = NewParent;
+    FBlueprintEditorUtils::RefreshAllNodes(BP);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    McpSafeCompileBlueprint(BP);
+    const bool bSaved = SaveLoadedAssetThrottled(BP);
+
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("blueprintPath"),
+                         Normalized.IsEmpty() ? Path : Normalized);
+    Resp->SetStringField(TEXT("oldParent"), OldParentPath);
+    Resp->SetStringField(TEXT("newParent"), NewParent->GetPathName());
+    Resp->SetBoolField(TEXT("saved"), bSaved);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Parent class updated"), Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_set_parent_class requires editor build"), nullptr,
+        TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
   // Handle SCS (Simple Construction Script) operations - must be called before
   // the final fallback
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
