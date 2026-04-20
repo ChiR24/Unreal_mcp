@@ -191,23 +191,43 @@ namespace
 			return true;
 		}
 
-		// Add enumerators. UE 5.7's UUserDefinedEnum exposes only DisplayName for editing
-		// (the internal short name is auto-generated). We treat spec's `name` as the
-		// default DisplayName, and `displayName` overrides it when present.
-		int32 Count = 0;
-		for (const TSharedPtr<FJsonValue>& V : *Enumerators)
+		// Add enumerators via UEnum::SetEnums so the FName == user's `name`. Puerts'
+		// DeclarationGenerator uses GetAuthoredNameStringByIndex which falls back to
+		// the FName (via DisplayNameMap default-keyed by FName). EnsureAllDisplayNamesExist
+		// seeds DisplayNameMap[ShortName] = ShortName, so the Editor enum dropdown also
+		// shows the ASCII short name. Optional `displayName` becomes per-entry Tooltip
+		// metadata (visible on hover in the Editor; ignored by code generators).
+		TArray<TPair<FName, int64>> EnumNames;
+		TArray<FString> Tooltips;
+		EnumNames.Reserve(Enumerators->Num());
+		Tooltips.Reserve(Enumerators->Num());
+		for (int32 i = 0; i < Enumerators->Num(); ++i)
 		{
-			TSharedPtr<FJsonObject> Obj = V->AsObject();
-			const FString Name = Obj->GetStringField(TEXT("name"));
-			FString DisplayName;
-			Obj->TryGetStringField(TEXT("displayName"), DisplayName);
-			const FString EffectiveDisplay = DisplayName.IsEmpty() ? Name : DisplayName;
+			const TSharedPtr<FJsonObject> EObj = (*Enumerators)[i]->AsObject();
+			const FString ShortName = EObj->GetStringField(TEXT("name"));
+			const FString FullName = NewEnum->GenerateFullEnumName(*ShortName);
+			EnumNames.Emplace(FName(*FullName), (int64)i);
 
-			FEnumEditorUtils::AddNewEnumeratorForUserDefinedEnum(NewEnum);
-			const int32 NewIndex = NewEnum->NumEnums() - 2; // -1 是 _MAX
-			FEnumEditorUtils::SetEnumeratorDisplayName(NewEnum, NewIndex, FText::FromString(EffectiveDisplay));
-			++Count;
+			FString DN;
+			EObj->TryGetStringField(TEXT("displayName"), DN);
+			Tooltips.Add(DN);
 		}
+		if (!NewEnum->SetEnums(EnumNames, UEnum::ECppForm::Namespaced, EEnumFlags::None, /*bAddMaxKeyIfMissing*/ true))
+		{
+			SendError(Self, Socket, RequestId, TEXT("OPERATION_FAILED"),
+				FString::Printf(TEXT("UEnum::SetEnums failed for '%s'"), *AssetPath));
+			return true;
+		}
+		FEnumEditorUtils::EnsureAllDisplayNamesExist(NewEnum);
+		for (int32 i = 0; i < Tooltips.Num(); ++i)
+		{
+			if (!Tooltips[i].IsEmpty())
+			{
+				NewEnum->SetMetaData(TEXT("Tooltip"), *Tooltips[i], i);
+			}
+		}
+		NewEnum->MarkPackageDirty();
+		const int32 Count = Enumerators->Num();
 
 		if (!UEditorAssetLibrary::SaveLoadedAsset(NewEnum))
 		{
@@ -480,10 +500,23 @@ namespace
 				}
 				FString DN;
 				Op->TryGetStringField(TEXT("displayName"), DN);
-				const FString EffectiveDisplay = DN.IsEmpty() ? Name : DN;
-				FEnumEditorUtils::AddNewEnumeratorForUserDefinedEnum(UDE);
-				const int32 NewIdx = UDE->NumEnums() - 2;
-				FEnumEditorUtils::SetEnumeratorDisplayName(UDE, NewIdx, FText::FromString(EffectiveDisplay));
+
+				// Append via SetEnums so the FName is the user's short name (not "NewEnumeratorN").
+				TArray<TPair<FName, int64>> EnumNames;
+				EnumNames.Reserve(N + 1);
+				for (int32 i = 0; i < N; ++i) EnumNames.Emplace(UDE->GetNameByIndex(i), (int64)i);
+				EnumNames.Emplace(FName(*UDE->GenerateFullEnumName(*Name)), (int64)N);
+				if (!UDE->SetEnums(EnumNames, UEnum::ECppForm::Namespaced, EEnumFlags::None, true))
+				{
+					SendPartial(OpIdx, Op, TEXT("OPERATION_FAILED"), TEXT("SetEnums failed"));
+					return true;
+				}
+				FEnumEditorUtils::EnsureAllDisplayNamesExist(UDE);
+				if (!DN.IsEmpty())
+				{
+					UDE->SetMetaData(TEXT("Tooltip"), *DN, N);
+				}
+				UDE->MarkPackageDirty();
 			}
 			else if (OpName == TEXT("remove"))
 			{
@@ -511,8 +544,25 @@ namespace
 					SendPartial(OpIdx, Op, TEXT("INVALID_NAME"), TEXT("Invalid 'newName'"));
 					return true;
 				}
-				// UE 5.7 has no SetEnumeratorName; rename = update DisplayName.
-				FEnumEditorUtils::SetEnumeratorDisplayName(UDE, Idx, FText::FromString(NewName));
+				// Rename the underlying FName via SetEnums so Puerts + code generators
+				// see the updated short name. EnsureAllDisplayNamesExist refreshes the
+				// DisplayNameMap (drops old key, seeds new key with default DisplayName=ShortName).
+				TArray<TPair<FName, int64>> EnumNames;
+				EnumNames.Reserve(N);
+				for (int32 i = 0; i < N; ++i)
+				{
+					const FName N0 = (i == Idx)
+						? FName(*UDE->GenerateFullEnumName(*NewName))
+						: UDE->GetNameByIndex(i);
+					EnumNames.Emplace(N0, (int64)i);
+				}
+				if (!UDE->SetEnums(EnumNames, UEnum::ECppForm::Namespaced, EEnumFlags::None, true))
+				{
+					SendPartial(OpIdx, Op, TEXT("OPERATION_FAILED"), TEXT("SetEnums failed"));
+					return true;
+				}
+				FEnumEditorUtils::EnsureAllDisplayNamesExist(UDE);
+				UDE->MarkPackageDirty();
 			}
 			else if (OpName == TEXT("set_display_name"))
 			{
@@ -529,7 +579,12 @@ namespace
 					SendPartial(OpIdx, Op, TEXT("INVALID_PARAMS"), TEXT("Missing 'newDisplayName'"));
 					return true;
 				}
-				FEnumEditorUtils::SetEnumeratorDisplayName(UDE, Idx, FText::FromString(NewDN));
+				// Sets the per-entry Tooltip metadata (visible on hover in the Editor).
+				// We do NOT touch the actual UEnum DisplayName because Puerts + other
+				// code generators read it as the TS identifier — keeping it == ShortName
+				// preserves the ASCII identifier guarantee.
+				UDE->SetMetaData(TEXT("Tooltip"), *NewDN, Idx);
+				UDE->MarkPackageDirty();
 			}
 			else
 			{
@@ -822,8 +877,13 @@ namespace
 		for (int32 i = 0; i < N; ++i)
 		{
 			TSharedPtr<FJsonObject> E = MakeShared<FJsonObject>();
-			E->SetStringField(TEXT("name"), UDE->GetNameStringByIndex(i));
-			E->SetStringField(TEXT("displayName"), UDE->GetDisplayNameTextByIndex(i).ToString());
+			// `name` is the FName short form (ASCII identifier; what Puerts emits).
+			// `displayName` reads the Tooltip metadata first (set via spec's `displayName`
+			// field on create / modify); falls back to `name` so callers always get a string.
+			const FString ShortName = UDE->GetNameStringByIndex(i);
+			const FString Tooltip = UDE->GetMetaData(TEXT("Tooltip"), i);
+			E->SetStringField(TEXT("name"), ShortName);
+			E->SetStringField(TEXT("displayName"), Tooltip.IsEmpty() ? ShortName : Tooltip);
 			E->SetNumberField(TEXT("index"), i);
 			Arr.Add(MakeShared<FJsonValueObject>(E));
 		}
