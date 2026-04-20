@@ -880,7 +880,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'inspect',
     category: 'core',
-    description: 'Inspect any UObject: read/write properties, list components, export snapshots, and query class info. Actions: inspect_cdo (Blueprint CDO properties + all components without spawning an actor; use blueprintPath, optional detailed/componentName/propertyNames), inspect_class (class metadata), inspect_object (world actor), get_property/set_property, get_components, list_objects, find_by_class, find_by_tag. When detailed=true, inspect_class returns functions/properties/interfaces arrays (filter via functionFilter/functionFlagFilter/propertyFilter, includeInherited=true expands super chain).',
+    description: 'Inspect any UObject: read/write properties, list components, export snapshots, and query class info. Actions: inspect_cdo (Blueprint CDO properties + all components without spawning an actor; use blueprintPath, optional detailed/componentName/propertyNames), inspect_class (class metadata), inspect_object (world actor), get_property/set_property, get_components, list_objects, find_by_class, find_by_tag. When detailed=true, inspect_class returns functions/properties/interfaces arrays (filter via functionFilter/functionFlagFilter/propertyFilter, includeInherited=true expands super chain). inspect_function returns a single UFunction by className+functionName (default includeInherited=true) with definedIn/flagNames/parameters/returnType/scriptBytecodeSize.',
     inputSchema: {
       type: 'object',
       properties: {
