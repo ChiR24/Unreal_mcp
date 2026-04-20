@@ -56,6 +56,74 @@ bool FMcpPinTypeParser::Parse(const FString& TypeString, FEdGraphPinType& OutPin
 	OutPinType = FEdGraphPinType();
 	OutPinType.ContainerType = EPinContainerType::None;
 
+	// 0. Containers: Array<T>, Set<T>, Map<K,V> — recurse into inner
+	if (T.StartsWith(TEXT("Array<")) && T.EndsWith(TEXT(">")))
+	{
+		const FString Inner = T.Mid(6, T.Len() - 7).TrimStartAndEnd();
+		FEdGraphPinType InnerType;
+		if (!Parse(Inner, InnerType, OutError)) return false;
+		if (InnerType.ContainerType != EPinContainerType::None)
+		{
+			OutError = TEXT("Nested containers not supported by FEdGraphPinType");
+			return false;
+		}
+		OutPinType = InnerType;
+		OutPinType.ContainerType = EPinContainerType::Array;
+		return true;
+	}
+
+	if (T.StartsWith(TEXT("Set<")) && T.EndsWith(TEXT(">")))
+	{
+		const FString Inner = T.Mid(4, T.Len() - 5).TrimStartAndEnd();
+		FEdGraphPinType InnerType;
+		if (!Parse(Inner, InnerType, OutError)) return false;
+		if (InnerType.ContainerType != EPinContainerType::None)
+		{
+			OutError = TEXT("Nested containers not supported by FEdGraphPinType");
+			return false;
+		}
+		OutPinType = InnerType;
+		OutPinType.ContainerType = EPinContainerType::Set;
+		return true;
+	}
+
+	if (T.StartsWith(TEXT("Map<")) && T.EndsWith(TEXT(">")))
+	{
+		// Split inner on top-level comma (no nested generics expected since we forbid above).
+		const FString Inner = T.Mid(4, T.Len() - 5).TrimStartAndEnd();
+		int32 CommaIdx = INDEX_NONE;
+		int32 Depth = 0;
+		for (int32 i = 0; i < Inner.Len(); ++i)
+		{
+			const TCHAR C = Inner[i];
+			if (C == '<') ++Depth;
+			else if (C == '>') --Depth;
+			else if (C == ',' && Depth == 0) { CommaIdx = i; break; }
+		}
+		if (CommaIdx == INDEX_NONE)
+		{
+			OutError = FString::Printf(TEXT("Map<K,V> requires comma-separated K and V: '%s'"), *T);
+			return false;
+		}
+		const FString KStr = Inner.Left(CommaIdx).TrimStartAndEnd();
+		const FString VStr = Inner.Mid(CommaIdx + 1).TrimStartAndEnd();
+		FEdGraphPinType KeyType, ValType;
+		if (!Parse(KStr, KeyType, OutError)) return false;
+		if (!Parse(VStr, ValType, OutError)) return false;
+		if (KeyType.ContainerType != EPinContainerType::None ||
+		    ValType.ContainerType != EPinContainerType::None)
+		{
+			OutError = TEXT("Map K/V cannot themselves be containers");
+			return false;
+		}
+		OutPinType = KeyType;
+		OutPinType.ContainerType = EPinContainerType::Map;
+		OutPinType.PinValueType.TerminalCategory = ValType.PinCategory;
+		OutPinType.PinValueType.TerminalSubCategory = ValType.PinSubCategory;
+		OutPinType.PinValueType.TerminalSubCategoryObject = ValType.PinSubCategoryObject;
+		return true;
+	}
+
 	// 1. Keyword scalar
 	if (T == TEXT("Bool"))   { OutPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean; return true; }
 	if (T == TEXT("Byte"))   { OutPinType.PinCategory = UEdGraphSchema_K2::PC_Byte;    return true; }
