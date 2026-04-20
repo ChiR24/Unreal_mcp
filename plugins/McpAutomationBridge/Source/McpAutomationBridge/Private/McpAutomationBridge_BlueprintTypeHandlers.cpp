@@ -611,12 +611,80 @@ namespace
 		return true;
 	}
 #endif
+#if WITH_EDITOR
+	FEdGraphPinType BuildPinTypeFromDesc(const FStructVariableDescription& D)
+	{
+		FEdGraphPinType T;
+		T.PinCategory = D.Category;
+		T.PinSubCategory = D.SubCategory;
+		T.PinSubCategoryObject = D.SubCategoryObject.Get();
+		T.ContainerType = D.ContainerType;
+		T.PinValueType = D.PinValueType;
+		return T;
+	}
+
 	bool HandleInspectStruct(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 	                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 	{
-		SendError(Self, Socket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("inspect_struct stub"));
+		FString AssetPath, Err;
+		if (!McpHandlerUtils::TryGetRequiredString(Payload, TEXT("assetPath"), AssetPath, Err))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"), Err);
+			return true;
+		}
+		const bool bIncludeGuids = Payload->HasTypedField<EJson::Boolean>(TEXT("includeGuids")) &&
+		                           Payload->GetBoolField(TEXT("includeGuids"));
+
+		if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
+		{
+			SendError(Self, Socket, RequestId, TEXT("ASSET_NOT_FOUND"),
+				FString::Printf(TEXT("Asset not found: '%s'"), *AssetPath));
+			return true;
+		}
+		UUserDefinedStruct* UDS = Cast<UUserDefinedStruct>(UEditorAssetLibrary::LoadAsset(AssetPath));
+		if (!UDS)
+		{
+			SendError(Self, Socket, RequestId, TEXT("ASSET_WRONG_TYPE"),
+				FString::Printf(TEXT("Asset at '%s' is not a UUserDefinedStruct"), *AssetPath));
+			return true;
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("name"), UDS->GetName());
+		Data->SetStringField(TEXT("assetPath"), AssetPath);
+
+		TArray<TSharedPtr<FJsonValue>> Arr;
+		const auto& Descs = FStructureEditorUtils::GetVarDesc(UDS);
+		for (int32 i = 0; i < Descs.Num(); ++i)
+		{
+			const FStructVariableDescription& D = Descs[i];
+			TSharedPtr<FJsonObject> M = MakeShared<FJsonObject>();
+			M->SetStringField(TEXT("name"), D.VarName.ToString());
+			FString SerWarn;
+			M->SetStringField(TEXT("type"), FMcpPinTypeParser::Serialize(BuildPinTypeFromDesc(D), SerWarn));
+			M->SetNumberField(TEXT("index"), i);
+			if (bIncludeGuids)
+			{
+				M->SetStringField(TEXT("guid"), D.VarGuid.ToString());
+			}
+			Arr.Add(MakeShared<FJsonValueObject>(M));
+		}
+		Data->SetArrayField(TEXT("members"), Arr);
+
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Inspected struct '%s' (%d members)"), *UDS->GetName(), Descs.Num()),
+			Data);
 		return true;
 	}
+#else
+	bool HandleInspectStruct(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+	                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		SendError(Self, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+			TEXT("inspect_struct requires editor build"));
+		return true;
+	}
+#endif
 }
 
 bool HandleAction(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
