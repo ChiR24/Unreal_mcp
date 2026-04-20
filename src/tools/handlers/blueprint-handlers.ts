@@ -475,6 +475,18 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs, 'Automation bridge not available for blueprint graph operations');
       return cleanObject(res) as Record<string, unknown>;
     }
+    case 'create_enum':
+    case 'create_struct':
+    case 'modify_enum':
+    case 'modify_struct':
+    case 'inspect_enum':
+    case 'inspect_struct': {
+      // Enum/Struct authoring — pure pass-through; C++ HandleBlueprintAction
+      // extracts the nested action and dispatches to BlueprintTypeHandlers.
+      const res = await executeAutomationRequest(tools, 'manage_blueprint', args,
+        'Automation bridge not available for enum/struct authoring');
+      return cleanObject(res) as Record<string, unknown>;
+    }
     default: {
       // Translate applyAndSave to compile/save flags for modify_scs action
       const processedArgs = { ...args } as Record<string, unknown>;

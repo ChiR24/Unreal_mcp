@@ -191,7 +191,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'add_component', 'set_default', 'modify_scs', 'get_scs', 'add_scs_component', 'remove_scs_component', 'reparent_scs_component', 'set_scs_transform', 'set_scs_property',
             'ensure_exists', 'probe_handle', 'add_variable', 'remove_variable', 'rename_variable', 'add_function', 'add_event', 'remove_event', 'add_construction_script', 'set_variable_metadata', 'set_metadata',
             'create_node', 'add_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
-            'list_node_types', 'set_pin_default_value'
+            'list_node_types', 'set_pin_default_value',
+            'create_enum', 'create_struct', 'modify_enum', 'modify_struct', 'inspect_enum', 'inspect_struct'
           ],
           description: 'Blueprint action'
         },
@@ -272,7 +273,13 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         fromPinName: commonSchemas.sourcePin,
         toNodeId: commonSchemas.targetNodeId,
         toPin: commonSchemas.targetPin,
-        toPinName: commonSchemas.targetPin
+        toPinName: commonSchemas.targetPin,
+        // Enum/Struct authoring (create_enum, create_struct, modify_enum, modify_struct, inspect_enum, inspect_struct)
+        assetPath: commonSchemas.assetPath,
+        enumerators: commonSchemas.arrayOfObjects,
+        members: commonSchemas.arrayOfObjects,
+        overwrite: commonSchemas.booleanProp,
+        includeGuids: commonSchemas.booleanProp
       },
       required: ['action']
     },
