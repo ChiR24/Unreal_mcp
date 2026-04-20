@@ -95,6 +95,7 @@
 #include "McpAutomationBridge_BlueprintCreationHandlers.h"
 #include "McpAutomationBridge_BlueprintTypeHandlers.h"
 #include "McpAutomationBridge_SCSHandlers.h"
+#include "MCP/McpPinTypeParser.h"
 #include "McpConnectionManager.h"
 #include "Misc/DateTime.h"
 #include "Misc/ScopeExit.h"
@@ -2726,50 +2727,63 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                              : false;
 
     // Validate variableType BEFORE checking existence to ensure parameter
-    // validation occurs even if variable already exists
+    // validation occurs even if variable already exists.
+    //
+    // Type resolution flows through FMcpPinTypeParser so the same DSL the
+    // create_struct/modify_struct actions use is honored here:
+    //   Array<T>, Set<T>, Map<K,V>, E_*, S_*, BP_*/WBP_*/ABP_*, ClassName*,
+    //   TSubclassOf<X>, plus all builtin scalars and structs.
+    //
+    // Legacy aliases (Boolean/Integer/Object/Class with case-insensitive
+    // matching) are normalized to the parser's canonical keywords first so
+    // pre-existing callers keep working.
     FEdGraphPinType PinType;
-    const FString LowerType = VarType.ToLower();
-    if (LowerType == TEXT("float") || LowerType == TEXT("double")) {
-      PinType.PinCategory = MCP_PC_Float;
-    } else if (LowerType == TEXT("int") || LowerType == TEXT("integer")) {
-      PinType.PinCategory = MCP_PC_Int;
-    } else if (LowerType == TEXT("bool") || LowerType == TEXT("boolean")) {
-      PinType.PinCategory = MCP_PC_Boolean;
-    } else if (LowerType == TEXT("string")) {
-      PinType.PinCategory = MCP_PC_String;
-    } else if (LowerType == TEXT("name")) {
-      PinType.PinCategory = MCP_PC_Name;
-    } else if (LowerType == TEXT("text")) {
-      PinType.PinCategory = MCP_PC_Text;
-    } else if (LowerType == TEXT("vector")) {
-      PinType.PinCategory = MCP_PC_Struct;
-      PinType.PinSubCategoryObject = TBaseStructure<FVector>::Get();
-    } else if (LowerType == TEXT("rotator")) {
-      PinType.PinCategory = MCP_PC_Struct;
-      PinType.PinSubCategoryObject = TBaseStructure<FRotator>::Get();
-    } else if (LowerType == TEXT("transform")) {
-      PinType.PinCategory = MCP_PC_Struct;
-      PinType.PinSubCategoryObject = TBaseStructure<FTransform>::Get();
-    } else if (LowerType == TEXT("object")) {
-      PinType.PinCategory = MCP_PC_Object;
-      PinType.PinSubCategoryObject = UObject::StaticClass();
-    } else if (LowerType == TEXT("class")) {
-      PinType.PinCategory = MCP_PC_Class;
-      PinType.PinSubCategoryObject = UObject::StaticClass();
-    } else if (!VarType.TrimStartAndEnd().IsEmpty()) {
-      PinType.PinCategory = MCP_PC_Object;
-      UClass *FoundClass = ResolveUClass(VarType);
-      if (FoundClass) {
-        PinType.PinSubCategoryObject = FoundClass;
-      } else {
-        SendAutomationError(
-            RequestingSocket, RequestId,
-            FString::Printf(TEXT("Could not resolve class '%s'"), *VarType),
-            TEXT("CLASS_NOT_FOUND"));
-        return true;
+    {
+      FString TypeForParse = VarType.TrimStartAndEnd();
+      const FString LowerType = TypeForParse.ToLower();
+      static const TMap<FString, FString> LegacyAliases = {
+          {TEXT("boolean"),     TEXT("Bool")},
+          {TEXT("bool"),        TEXT("Bool")},
+          {TEXT("integer"),     TEXT("Int")},
+          {TEXT("int"),         TEXT("Int")},
+          {TEXT("int64"),       TEXT("Int64")},
+          {TEXT("float"),       TEXT("Float")},
+          {TEXT("double"),      TEXT("Double")},
+          {TEXT("string"),      TEXT("String")},
+          {TEXT("name"),        TEXT("Name")},
+          {TEXT("text"),        TEXT("Text")},
+          {TEXT("byte"),        TEXT("Byte")},
+          {TEXT("vector"),      TEXT("Vector")},
+          {TEXT("vector2d"),    TEXT("Vector2D")},
+          {TEXT("rotator"),     TEXT("Rotator")},
+          {TEXT("transform"),   TEXT("Transform")},
+          {TEXT("color"),       TEXT("Color")},
+          {TEXT("linearcolor"), TEXT("LinearColor")},
+      };
+      if (const FString* Mapped = LegacyAliases.Find(LowerType)) {
+        TypeForParse = *Mapped;
       }
-    } else {
-      PinType.PinCategory = MCP_PC_Wildcard;
+
+      if (TypeForParse.IsEmpty()) {
+        PinType.PinCategory = MCP_PC_Wildcard;
+      } else if (LowerType == TEXT("object")) {
+        PinType.PinCategory = MCP_PC_Object;
+        PinType.PinSubCategoryObject = UObject::StaticClass();
+      } else if (LowerType == TEXT("class")) {
+        PinType.PinCategory = MCP_PC_Class;
+        PinType.PinSubCategoryObject = UObject::StaticClass();
+      } else {
+        FString ParseErr;
+        if (!FMcpPinTypeParser::Parse(TypeForParse, PinType, ParseErr)) {
+          SendAutomationError(
+              RequestingSocket, RequestId,
+              FString::Printf(
+                  TEXT("Cannot resolve variableType '%s': %s"),
+                  *VarType, *ParseErr),
+              TEXT("INVALID_TYPE_STRING"));
+          return true;
+        }
+      }
     }
 
     const FString RequestedPath = Path;

@@ -14,6 +14,7 @@
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
+#include "Engine/Blueprint.h"
 #include "Engine/UserDefinedEnum.h"
 #include "StructUtils/UserDefinedStruct.h"
 #include "UObject/Class.h"
@@ -36,12 +37,25 @@ namespace
 		IAssetRegistry& AR = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
 			TEXT("AssetRegistry")).Get();
 		TArray<FAssetData> Assets;
-		AR.GetAssetsByClass(ExpectedClass->GetClassPathName(), Assets);
+		// bSearchSubClasses=true so e.g. WidgetBlueprint matches when ExpectedClass=UBlueprint.
+		AR.GetAssetsByClass(ExpectedClass->GetClassPathName(), Assets, /*bSearchSubClasses*/ true);
 		for (const FAssetData& A : Assets)
 		{
 			if (A.AssetName.ToString() == Name)
 			{
 				return A.GetAsset();
+			}
+		}
+		return nullptr;
+	}
+
+	UClass* FindBlueprintGeneratedClass(const FString& BlueprintAssetName)
+	{
+		if (UObject* Obj = FindUserDefinedAssetByName(BlueprintAssetName, UBlueprint::StaticClass()))
+		{
+			if (UBlueprint* BP = Cast<UBlueprint>(Obj))
+			{
+				return BP->GeneratedClass;
 			}
 		}
 		return nullptr;
@@ -205,6 +219,21 @@ bool FMcpPinTypeParser::Parse(const FString& TypeString, FEdGraphPinType& OutPin
 		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
 		OutPinType.PinSubCategoryObject = Obj;
 		return true;
+	}
+
+	// 6.5. Blueprint asset reference: BP_X / WBP_X / ABP_X (UE naming convention)
+	// Resolves to the Blueprint's generated UClass so callers can write
+	//   "Array<BP_HexTile>" instead of "Array<BP_HexTile_C*>".
+	if (T.StartsWith(TEXT("BP_")) || T.StartsWith(TEXT("WBP_")) || T.StartsWith(TEXT("ABP_")))
+	{
+		if (UClass* GeneratedClass = FindBlueprintGeneratedClass(T))
+		{
+			OutPinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+			OutPinType.PinSubCategoryObject = GeneratedClass;
+			return true;
+		}
+		// Fall through to lenient fallback if no Blueprint asset matches —
+		// avoids hard-failing if the user picks an unconventional prefix.
 	}
 
 	// 7. Lenient fallback: bare class name treated as object reference (e.g. "Texture2D" == "Texture2D*")
