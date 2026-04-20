@@ -351,6 +351,21 @@ namespace
 			return true;
 		}
 
+		// CreateUserDefinedStruct seeds a default placeholder member (Bool MemberVar_0)
+		// to keep the struct non-empty during creation. Strip those before adding the
+		// user-supplied members so the result matches spec exactly.
+		{
+			TArray<FGuid> InitialGuids;
+			for (const FStructVariableDescription& D : FStructureEditorUtils::GetVarDesc(NewStruct))
+			{
+				InitialGuids.Add(D.VarGuid);
+			}
+			for (const FGuid& G : InitialGuids)
+			{
+				FStructureEditorUtils::RemoveVariable(NewStruct, G);
+			}
+		}
+
 		// Add members
 		for (const TPair<FString, FEdGraphPinType>& M : ParsedMembers)
 		{
@@ -863,7 +878,11 @@ namespace
 		{
 			const FStructVariableDescription& D = Descs[i];
 			TSharedPtr<FJsonObject> M = MakeShared<FJsonObject>();
-			M->SetStringField(TEXT("name"), D.VarName.ToString());
+			// FriendlyName is the user-facing identifier set via RenameVariable;
+			// VarName is the internal storage name with GUID suffix
+			// (e.g. "Strategy_2_6F1027..."), which is not what callers want.
+			const FString DisplayName = D.FriendlyName.IsEmpty() ? D.VarName.ToString() : D.FriendlyName;
+			M->SetStringField(TEXT("name"), DisplayName);
 			FString SerWarn;
 			M->SetStringField(TEXT("type"), FMcpPinTypeParser::Serialize(D.ToPinType(), SerWarn));
 			M->SetNumberField(TEXT("index"), i);
