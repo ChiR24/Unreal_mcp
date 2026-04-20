@@ -5,7 +5,7 @@
 //
 // Implements node creation, connection, and graph inspection for Blueprint graphs.
 //
-// HANDLERS IMPLEMENTED (13 subActions):
+// HANDLERS IMPLEMENTED (14 subActions):
 // ================================
 //
 // NODE OPERATIONS:
@@ -20,6 +20,7 @@
 //
 // INSPECTION:
 //   - get_nodes          : List all nodes in a graph
+//   - list_nodes         : Enumerate graph nodes with nodeId/class/title/position + K2Node_CallFunction/K2Node_Event specialization, supports nameFilter/classFilter
 //   - get_node_details   : Get detailed info about a specific node
 //   - get_graph_details  : Get graph metadata (name, node count, etc.)
 //   - get_pin_details    : Get pin information (type, connections, value)
@@ -1291,10 +1292,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       const FString NodeName = Node->GetName();
       const FString NodeClass = Node->GetClass()->GetName();
       const FString NodeTitle = Node->GetNodeTitle(ENodeTitleType::ListView).ToString();
-      if (!NameFilter.IsEmpty() && !NodeName.Contains(NameFilter) && !NodeTitle.Contains(NameFilter)) {
+      if (!NameFilter.IsEmpty()
+          && !NodeName.Contains(NameFilter, ESearchCase::IgnoreCase)
+          && !NodeTitle.Contains(NameFilter, ESearchCase::IgnoreCase)) {
         continue;
       }
-      if (!ClassFilter.IsEmpty() && !NodeClass.Contains(ClassFilter)) {
+      if (!ClassFilter.IsEmpty() && !NodeClass.Contains(ClassFilter, ESearchCase::IgnoreCase)) {
         continue;
       }
 
