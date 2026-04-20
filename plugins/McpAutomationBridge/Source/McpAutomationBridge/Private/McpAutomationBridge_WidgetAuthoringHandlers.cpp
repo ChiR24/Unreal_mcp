@@ -79,6 +79,8 @@
 #include "UObject/UObjectIterator.h"
 
 // UMG Layout Panels
+#include "Components/PanelWidget.h"
+#include "Components/NamedSlot.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/HorizontalBox.h"
@@ -1782,33 +1784,72 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         TSharedPtr<FJsonObject> WidgetInfo = McpHandlerUtils::CreateResultObject();
-
-        // Basic info
         WidgetInfo->SetStringField(TEXT("widgetClass"), WidgetBP->GetName());
         if (WidgetBP->ParentClass)
         {
             WidgetInfo->SetStringField(TEXT("parentClass"), WidgetBP->ParentClass->GetName());
         }
 
-        // Collect widgets/slots
         TArray<TSharedPtr<FJsonValue>> SlotsArray;
         if (WidgetBP->WidgetTree)
         {
             WidgetBP->WidgetTree->ForEachWidget([&](UWidget* Widget) {
-                TSharedPtr<FJsonValue> SlotValue = MakeShared<FJsonValueString>(Widget->GetName());
-                SlotsArray.Add(SlotValue);
+                SlotsArray.Add(MakeShared<FJsonValueString>(Widget->GetName()));
             });
         }
         WidgetInfo->SetArrayField(TEXT("slots"), SlotsArray);
 
-        // Collect animations
+        // Recursive tree builder
+        TFunction<TSharedPtr<FJsonObject>(UWidget*)> BuildNode;
+        BuildNode = [&BuildNode](UWidget* W) -> TSharedPtr<FJsonObject>
+        {
+            TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+            if (!W) { return Obj; }
+            Obj->SetStringField(TEXT("name"), W->GetName());
+            Obj->SetStringField(TEXT("class"), W->GetClass()->GetName());
+            if (W->Slot)
+            {
+                Obj->SetStringField(TEXT("slotClass"), W->Slot->GetClass()->GetName());
+            }
+
+            TArray<TSharedPtr<FJsonValue>> Children;
+            if (UPanelWidget* Panel = Cast<UPanelWidget>(W))
+            {
+                const int32 N = Panel->GetChildrenCount();
+                for (int32 i = 0; i < N; ++i)
+                {
+                    if (UWidget* Child = Panel->GetChildAt(i))
+                    {
+                        Children.Add(MakeShared<FJsonValueObject>(BuildNode(Child)));
+                    }
+                }
+            }
+            else if (UNamedSlot* NamedSlot = Cast<UNamedSlot>(W))
+            {
+                if (UWidget* Content = NamedSlot->GetContent())
+                {
+                    Children.Add(MakeShared<FJsonValueObject>(BuildNode(Content)));
+                }
+            }
+            Obj->SetArrayField(TEXT("children"), Children);
+            return Obj;
+        };
+
+        if (WidgetBP->WidgetTree && WidgetBP->WidgetTree->RootWidget)
+        {
+            WidgetInfo->SetObjectField(TEXT("tree"), BuildNode(WidgetBP->WidgetTree->RootWidget));
+        }
+        else
+        {
+            WidgetInfo->SetObjectField(TEXT("tree"), MakeShared<FJsonObject>());
+        }
+
         TArray<TSharedPtr<FJsonValue>> AnimsArray;
         for (UWidgetAnimation* Anim : WidgetBP->Animations)
         {
             if (Anim)
             {
-                TSharedPtr<FJsonValue> AnimValue = MakeShared<FJsonValueString>(Anim->GetName());
-                AnimsArray.Add(AnimValue);
+                AnimsArray.Add(MakeShared<FJsonValueString>(Anim->GetName()));
             }
         }
         WidgetInfo->SetArrayField(TEXT("animations"), AnimsArray);
