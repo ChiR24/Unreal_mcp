@@ -221,8 +221,93 @@ bool FMcpPinTypeParser::Parse(const FString& TypeString, FEdGraphPinType& OutPin
 
 FString FMcpPinTypeParser::Serialize(const FEdGraphPinType& PinType, FString& OutWarning)
 {
-	OutWarning = TEXT("Not yet implemented");
-	return TEXT("");
+	auto SerializeInner = [&OutWarning](const FName& Cat, const FName& SubCat, UObject* SubObj) -> FString
+	{
+		if (Cat == UEdGraphSchema_K2::PC_Boolean) return TEXT("Bool");
+		if (Cat == UEdGraphSchema_K2::PC_Byte)
+		{
+			if (UUserDefinedEnum* UDE = Cast<UUserDefinedEnum>(SubObj))
+			{
+				return UDE->GetName();
+			}
+			return TEXT("Byte");
+		}
+		if (Cat == UEdGraphSchema_K2::PC_Int)    return TEXT("Int");
+		if (Cat == UEdGraphSchema_K2::PC_Int64)  return TEXT("Int64");
+		if (Cat == UEdGraphSchema_K2::PC_Real)
+		{
+			return SubCat == UEdGraphSchema_K2::PC_Double ? TEXT("Double") : TEXT("Float");
+		}
+		if (Cat == UEdGraphSchema_K2::PC_String) return TEXT("String");
+		if (Cat == UEdGraphSchema_K2::PC_Name)   return TEXT("Name");
+		if (Cat == UEdGraphSchema_K2::PC_Text)   return TEXT("Text");
+
+		if (Cat == UEdGraphSchema_K2::PC_Struct)
+		{
+			if (UUserDefinedStruct* UDS = Cast<UUserDefinedStruct>(SubObj))
+			{
+				return UDS->GetName();
+			}
+			if (UScriptStruct* SS = Cast<UScriptStruct>(SubObj))
+			{
+				static const TMap<FString, FString> BuiltinStructName = {
+					{TEXT("Vector"),      TEXT("Vector")},
+					{TEXT("Vector2D"),    TEXT("Vector2D")},
+					{TEXT("Rotator"),     TEXT("Rotator")},
+					{TEXT("Transform"),   TEXT("Transform")},
+					{TEXT("Color"),       TEXT("Color")},
+					{TEXT("LinearColor"), TEXT("LinearColor")},
+				};
+				const FString N = SS->GetName();
+				if (const FString* Mapped = BuiltinStructName.Find(N)) return *Mapped;
+				return N;
+			}
+			OutWarning = TEXT("Unknown struct subobject");
+			return TEXT("Struct?");
+		}
+
+		if (Cat == UEdGraphSchema_K2::PC_Object)
+		{
+			if (UClass* Cls = Cast<UClass>(SubObj))
+			{
+				return Cls->GetName() + TEXT("*");
+			}
+			OutWarning = TEXT("Object pin without UClass subobject");
+			return TEXT("Object*?");
+		}
+
+		if (Cat == UEdGraphSchema_K2::PC_Class)
+		{
+			if (UClass* Cls = Cast<UClass>(SubObj))
+			{
+				return FString::Printf(TEXT("TSubclassOf<%s>"), *Cls->GetName());
+			}
+			OutWarning = TEXT("Class pin without UClass subobject");
+			return TEXT("TSubclassOf<?>");
+		}
+
+		OutWarning = FString::Printf(TEXT("Unknown PinCategory: %s"), *Cat.ToString());
+		return FString::Printf(TEXT("Unknown<%s>"), *Cat.ToString());
+	};
+
+	const FString Inner = SerializeInner(
+		PinType.PinCategory, PinType.PinSubCategory, PinType.PinSubCategoryObject.Get());
+
+	switch (PinType.ContainerType)
+	{
+		case EPinContainerType::Array: return FString::Printf(TEXT("Array<%s>"), *Inner);
+		case EPinContainerType::Set:   return FString::Printf(TEXT("Set<%s>"),   *Inner);
+		case EPinContainerType::Map:
+		{
+			const FString ValStr = SerializeInner(
+				PinType.PinValueType.TerminalCategory,
+				PinType.PinValueType.TerminalSubCategory,
+				PinType.PinValueType.TerminalSubCategoryObject.Get());
+			return FString::Printf(TEXT("Map<%s,%s>"), *Inner, *ValStr);
+		}
+		case EPinContainerType::None:
+		default:                       return Inner;
+	}
 }
 
 #endif // WITH_EDITOR
