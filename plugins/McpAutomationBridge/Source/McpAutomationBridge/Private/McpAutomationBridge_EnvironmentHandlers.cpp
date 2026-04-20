@@ -149,38 +149,57 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpEnvironmentHandlers, Log, All);
 // =============================================================================
 namespace McpInspectReflection
 {
+    struct FFlagNameEntry
+    {
+        EFunctionFlags Flag;
+        const TCHAR* Name;
+    };
+
+    static const TArray<FFlagNameEntry>& GetFunctionFlagTable()
+    {
+        static const TArray<FFlagNameEntry> Table = {
+            { FUNC_Final,              TEXT("FUNC_Final") },
+            { FUNC_BlueprintCallable,  TEXT("FUNC_BlueprintCallable") },
+            { FUNC_BlueprintEvent,     TEXT("FUNC_BlueprintEvent") },
+            { FUNC_BlueprintPure,      TEXT("FUNC_BlueprintPure") },
+            { FUNC_Event,              TEXT("FUNC_Event") },
+            { FUNC_Native,             TEXT("FUNC_Native") },
+            { FUNC_Net,                TEXT("FUNC_Net") },
+            { FUNC_NetServer,          TEXT("FUNC_NetServer") },
+            { FUNC_NetClient,          TEXT("FUNC_NetClient") },
+            { FUNC_NetMulticast,       TEXT("FUNC_NetMulticast") },
+            { FUNC_Static,             TEXT("FUNC_Static") },
+            { FUNC_Exec,               TEXT("FUNC_Exec") },
+            { FUNC_Public,             TEXT("FUNC_Public") },
+            { FUNC_Protected,          TEXT("FUNC_Protected") },
+            { FUNC_Private,            TEXT("FUNC_Private") },
+        };
+        return Table;
+    }
+
     static TArray<FString> DescribeFunctionFlags(EFunctionFlags Flags)
     {
         TArray<FString> Out;
-        if (Flags & FUNC_Final)             Out.Add(TEXT("FUNC_Final"));
-        if (Flags & FUNC_BlueprintCallable) Out.Add(TEXT("FUNC_BlueprintCallable"));
-        if (Flags & FUNC_BlueprintEvent)    Out.Add(TEXT("FUNC_BlueprintEvent"));
-        if (Flags & FUNC_BlueprintPure)     Out.Add(TEXT("FUNC_BlueprintPure"));
-        if (Flags & FUNC_Event)             Out.Add(TEXT("FUNC_Event"));
-        if (Flags & FUNC_Native)            Out.Add(TEXT("FUNC_Native"));
-        if (Flags & FUNC_Net)               Out.Add(TEXT("FUNC_Net"));
-        if (Flags & FUNC_NetServer)         Out.Add(TEXT("FUNC_NetServer"));
-        if (Flags & FUNC_NetClient)         Out.Add(TEXT("FUNC_NetClient"));
-        if (Flags & FUNC_NetMulticast)      Out.Add(TEXT("FUNC_NetMulticast"));
-        if (Flags & FUNC_Static)            Out.Add(TEXT("FUNC_Static"));
-        if (Flags & FUNC_Exec)              Out.Add(TEXT("FUNC_Exec"));
-        if (Flags & FUNC_Public)            Out.Add(TEXT("FUNC_Public"));
-        if (Flags & FUNC_Protected)         Out.Add(TEXT("FUNC_Protected"));
-        if (Flags & FUNC_Private)           Out.Add(TEXT("FUNC_Private"));
+        for (const FFlagNameEntry& E : GetFunctionFlagTable())
+        {
+            if (Flags & E.Flag) Out.Add(E.Name);
+        }
         return Out;
     }
 
+    // Unknown flag names are treated as strict non-match (returns false) so a typo
+    // surfaces as an empty result instead of silently permissive behavior.
     static bool MatchesFlagFilter(EFunctionFlags Flags, const TArray<FString>& Required)
     {
+        const TArray<FFlagNameEntry>& Table = GetFunctionFlagTable();
         for (const FString& Name : Required)
         {
-            if (Name.Equals(TEXT("FUNC_BlueprintCallable"), ESearchCase::IgnoreCase) && !(Flags & FUNC_BlueprintCallable)) return false;
-            if (Name.Equals(TEXT("FUNC_BlueprintEvent"),    ESearchCase::IgnoreCase) && !(Flags & FUNC_BlueprintEvent))    return false;
-            if (Name.Equals(TEXT("FUNC_BlueprintPure"),     ESearchCase::IgnoreCase) && !(Flags & FUNC_BlueprintPure))     return false;
-            if (Name.Equals(TEXT("FUNC_Event"),             ESearchCase::IgnoreCase) && !(Flags & FUNC_Event))             return false;
-            if (Name.Equals(TEXT("FUNC_Native"),            ESearchCase::IgnoreCase) && !(Flags & FUNC_Native))            return false;
-            if (Name.Equals(TEXT("FUNC_Net"),               ESearchCase::IgnoreCase) && !(Flags & FUNC_Net))               return false;
-            if (Name.Equals(TEXT("FUNC_Static"),            ESearchCase::IgnoreCase) && !(Flags & FUNC_Static))            return false;
+            const FFlagNameEntry* Found = Table.FindByPredicate(
+                [&Name](const FFlagNameEntry& E) {
+                    return Name.Equals(E.Name, ESearchCase::IgnoreCase);
+                });
+            if (!Found) return false;
+            if (!(Flags & Found->Flag)) return false;
         }
         return true;
     }

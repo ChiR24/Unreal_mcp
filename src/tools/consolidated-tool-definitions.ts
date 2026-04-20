@@ -933,6 +933,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         className: commonSchemas.stringProp,
         classPath: commonSchemas.stringProp,
         parentClass: commonSchemas.stringProp,
+        parentClassPath: commonSchemas.parentClassPath,
         cdoProperties: commonSchemas.objectProp,
         components: commonSchemas.arrayOfObjects,
         componentCount: commonSchemas.numberProp,
