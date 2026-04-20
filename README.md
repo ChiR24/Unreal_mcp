@@ -379,7 +379,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 | `manage_effect` | Niagara, Particles, Debug Shapes, GPU simulations |
 | `manage_material_authoring` | Material creation, expressions, landscape layers |
 | `manage_texture` | Texture creation, modification, compression settings |
-| `manage_blueprint` | Create, SCS, Graph Editing, Node manipulation |
+| `manage_blueprint` | Create, SCS, Graph Editing, Node manipulation, Enum/Struct authoring |
 | `manage_sequence` | Sequencer / Cinematics, list_track_types |
 | `manage_performance` | Profiling, optimization, scalability |
 
