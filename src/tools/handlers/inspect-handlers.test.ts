@@ -56,7 +56,8 @@ describe('inspect_class detailed reflection', () => {
       { action: 'inspect_class', className: 'Actor' },
       {} as never
     );
-    const call = executeAutomationRequestMock.mock.calls[0][2] as Record<string, unknown>;
+    const mockCalls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const call = mockCalls[0][2] as Record<string, unknown>;
     expect(call.detailed).toBeUndefined();
     expect(call.includeInherited).toBeUndefined();
     expect(call.functionFilter).toBeUndefined();
