@@ -63,3 +63,40 @@ describe('inspect_class detailed reflection', () => {
     expect(call.functionFilter).toBeUndefined();
   });
 });
+
+describe('inspect_function routing', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockClear();
+    executeAutomationRequestMock.mockResolvedValue({
+      success: true,
+      function: { name: 'OnPaint', definedIn: 'PaperBackground_C' }
+    });
+  });
+
+  it('forwards className + functionName to bridge', async () => {
+    await handleInspectTools(
+      'inspect_function',
+      { action: 'inspect_function', className: 'PaperBackground_C', functionName: 'OnPaint' },
+      {} as never
+    );
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      'inspect',
+      expect.objectContaining({
+        action: 'inspect_function',
+        className: 'PaperBackground_C',
+        functionName: 'OnPaint'
+      })
+    );
+  });
+
+  it('throws when functionName missing', async () => {
+    await expect(
+      handleInspectTools(
+        'inspect_function',
+        { action: 'inspect_function', className: 'Foo' },
+        {} as never
+      )
+    ).rejects.toThrow(/functionName/);
+  });
+});

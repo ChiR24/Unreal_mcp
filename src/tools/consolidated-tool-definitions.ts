@@ -891,7 +891,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'get_texture_details', 'get_material_details', 'get_level_details', 'get_component_details',
             'set_property', 'get_property',
             'get_components', 'get_component_property', 'set_component_property',
-            'inspect_class', 'inspect_cdo', 'list_objects',
+            'inspect_class', 'inspect_function', 'inspect_cdo', 'list_objects',
             'get_metadata', 'add_tag', 'find_by_tag',
             'create_snapshot', 'restore_snapshot', 'export', 'delete_object', 'find_by_class', 'get_bounding_box',
             'get_project_settings', 'get_world_settings', 'get_viewport_info', 'get_selected_actors',
@@ -920,7 +920,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         includeInherited: commonSchemas.booleanProp,
         functionFilter: commonSchemas.stringProp,
         functionFlagFilter: commonSchemas.arrayOfStrings,
-        propertyFilter: commonSchemas.stringProp
+        propertyFilter: commonSchemas.stringProp,
+        functionName: commonSchemas.stringProp,
       },
       required: ['action']
     },
@@ -942,7 +943,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         componentClass: commonSchemas.stringProp,
         properties: commonSchemas.objectProp,
         functions: commonSchemas.arrayOfObjects,
-        interfaces: commonSchemas.arrayOfStrings
+        interfaces: commonSchemas.arrayOfStrings,
+        function: commonSchemas.objectProp,
       }
     }
   },

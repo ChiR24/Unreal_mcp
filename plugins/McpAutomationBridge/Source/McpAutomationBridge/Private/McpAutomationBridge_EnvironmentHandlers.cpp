@@ -1570,6 +1570,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         LowerSubAction.Equals(TEXT("find_by_class")) ||
         LowerSubAction.Equals(TEXT("find_by_tag")) ||
         LowerSubAction.Equals(TEXT("inspect_class")) ||
+        LowerSubAction.Equals(TEXT("inspect_function")) ||
         LowerSubAction.Equals(TEXT("inspect_cdo"));
 
     // Actor actions (delegated to HandleControlActorAction)
@@ -1939,6 +1940,68 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
             Resp->SetBoolField(TEXT("success"), true);
             SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Class inspected"), Resp, FString());
+            return true;
+        }
+        // ---------------------------------------------------------------------
+        // inspect_function - single UFunction introspection
+        // ---------------------------------------------------------------------
+        else if (LowerSubAction.Equals(TEXT("inspect_function")))
+        {
+            FString ClassName, FuncName;
+            Payload->TryGetStringField(TEXT("className"), ClassName);
+            Payload->TryGetStringField(TEXT("functionName"), FuncName);
+            if (ClassName.IsEmpty() || FuncName.IsEmpty())
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                                    TEXT("className and functionName are required for inspect_function"),
+                                    TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+
+            UClass* TargetClass = FindObject<UClass>(nullptr, *ClassName);
+            if (!TargetClass && !ClassName.Contains(TEXT(".")))
+            {
+                TargetClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), *ClassName));
+            }
+            if (!TargetClass)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                                    FString::Printf(TEXT("Class not found: %s"), *ClassName),
+                                    TEXT("CLASS_NOT_FOUND"));
+                return true;
+            }
+
+            bool bIncludeInherited = true;
+            Payload->TryGetBoolField(TEXT("includeInherited"), bIncludeInherited);
+
+            UFunction* Found = nullptr;
+            const EFieldIteratorFlags::SuperClassFlags SuperFlag = bIncludeInherited
+                ? EFieldIteratorFlags::IncludeSuper
+                : EFieldIteratorFlags::ExcludeSuper;
+            for (TFieldIterator<UFunction> It(TargetClass, SuperFlag); It; ++It)
+            {
+                if (It->GetName().Equals(FuncName, ESearchCase::IgnoreCase))
+                {
+                    Found = *It;
+                    break;
+                }
+            }
+            if (!Found)
+            {
+                Resp->SetBoolField(TEXT("success"), false);
+                Resp->SetStringField(TEXT("error"), TEXT("FUNCTION_NOT_FOUND"));
+                Resp->SetStringField(TEXT("message"),
+                    FString::Printf(TEXT("Function '%s' not found on class '%s' (includeInherited=%s)"),
+                                    *FuncName, *ClassName, bIncludeInherited ? TEXT("true") : TEXT("false")));
+                SendAutomationResponse(RequestingSocket, RequestId, false,
+                                       TEXT("Function lookup failed"), Resp, TEXT("FUNCTION_NOT_FOUND"));
+                return true;
+            }
+
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetObjectField(TEXT("function"), McpInspectReflection::DescribeFunction(Found, TargetClass));
+            SendAutomationResponse(RequestingSocket, RequestId, true,
+                                   TEXT("Function inspected"), Resp, FString());
             return true;
         }
         // ---------------------------------------------------------------------

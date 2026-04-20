@@ -702,6 +702,23 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
       });
       return cleanObject(res) as Record<string, unknown>;
     }
+    case 'inspect_function': {
+      const params = normalizeArgs(args, [
+        { key: 'className', aliases: ['classPath'], required: true },
+        { key: 'functionName', aliases: ['memberName'], required: true }
+      ]);
+      const className = extractString(params, 'className');
+      const functionName = extractString(params, 'functionName');
+
+      const argsRecord = args as Record<string, unknown>;
+      const res = await executeAutomationRequest(tools, 'inspect', {
+        action: 'inspect_function',
+        className,
+        functionName,
+        includeInherited: argsRecord.includeInherited as boolean | undefined
+      }) as InspectResponse;
+      return cleanObject(res);
+    }
     // Global actions that don't require objectPath
     case 'get_project_settings': {
       const res = await executeAutomationRequest(tools, 'inspect', {

@@ -42,6 +42,7 @@ public:
 				TEXT("get_component_property"),
 				TEXT("set_component_property"),
 				TEXT("inspect_class"),
+				TEXT("inspect_function"),
 				TEXT("inspect_cdo"),
 				TEXT("list_objects"),
 				TEXT("get_metadata"),
@@ -84,6 +85,7 @@ public:
 			.String(TEXT("functionFilter"), TEXT("inspect_class: case-insensitive substring filter on function name."))
 			.Array(TEXT("functionFlagFilter"), TEXT("inspect_class: AND-match flag names (e.g. FUNC_BlueprintEvent)."))
 			.String(TEXT("propertyFilter"), TEXT("inspect_class: case-insensitive substring filter on property name."))
+			.String(TEXT("functionName"), TEXT("inspect_function: UFunction name to introspect."))
 			.Required({TEXT("action")})
 			.Build();
 	}
