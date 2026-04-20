@@ -2,7 +2,7 @@
 #include "McpStructReflection.h"
 #include "UObject/UnrealType.h"
 #include "UObject/PropertyPortFlags.h"
-#include "Engine/UserDefinedStruct.h"
+#include "StructUtils/UserDefinedStruct.h"
 #include "JsonObjectConverter.h"
 
 namespace McpStructReflection
@@ -11,7 +11,10 @@ namespace McpStructReflection
     {
         if (!Struct) return NAME_None;
 
-        // UUserDefinedStruct stores field names as "LogicalName_IDX_GUID"
+        // UUserDefinedStruct stores field names as "<Logical>_<Index>_<Hex32>"
+        // where <Hex32> is a 32-char GUID. Logical names can themselves contain
+        // underscores, so we must strip the suffix from the RIGHT (not split on
+        // the first underscore).
         const UUserDefinedStruct* UDS = Cast<UUserDefinedStruct>(Struct);
         if (UDS)
         {
@@ -19,18 +22,35 @@ namespace McpStructReflection
             {
                 const FProperty* Prop = *It;
                 const FString PropName = Prop->GetName();
-                // Match by prefix up to the "_N_" pattern
-                int32 UnderscoreIdx = INDEX_NONE;
-                if (PropName.FindChar(TEXT('_'), UnderscoreIdx))
+
+                int32 LastUnderscore = INDEX_NONE;
+                if (!PropName.FindLastChar(TEXT('_'), LastUnderscore))
                 {
-                    const FString Logical = PropName.Left(UnderscoreIdx);
-                    if (Logical.Equals(LogicalName, ESearchCase::IgnoreCase))
+                    // No suffix; fall back to exact match.
+                    if (PropName.Equals(LogicalName, ESearchCase::IgnoreCase))
                     {
                         return Prop->GetFName();
                     }
+                    continue;
                 }
-                // Fallback: exact match (for non-UDS or early-mangled)
-                if (PropName.Equals(LogicalName, ESearchCase::IgnoreCase))
+                const FString AfterLastUnderscore = PropName.Mid(LastUnderscore + 1);
+                // Expect 32 hex chars for the GUID; if not, treat as exact-match attempt.
+                if (AfterLastUnderscore.Len() != 32)
+                {
+                    if (PropName.Equals(LogicalName, ESearchCase::IgnoreCase))
+                    {
+                        return Prop->GetFName();
+                    }
+                    continue;
+                }
+                const FString TrimOnce = PropName.Left(LastUnderscore);
+                int32 SecondLast = INDEX_NONE;
+                if (!TrimOnce.FindLastChar(TEXT('_'), SecondLast))
+                {
+                    continue;
+                }
+                const FString LogicalCandidate = TrimOnce.Left(SecondLast);
+                if (LogicalCandidate.Equals(LogicalName, ESearchCase::IgnoreCase))
                 {
                     return Prop->GetFName();
                 }
@@ -95,16 +115,30 @@ namespace McpStructReflection
         if (!Struct || !StructInstance) return Out;
         for (TFieldIterator<FProperty> It(Struct); It; ++It)
         {
-            const FProperty* Prop = *It;
+            FProperty* Prop = *It;
             const void* ValuePtr = Prop->ContainerPtrToValuePtr<void>(StructInstance);
             TSharedPtr<FJsonValue> JsonVal = FJsonObjectConverter::UPropertyToJsonValue(Prop, ValuePtr, 0, CPF_Transient);
 
-            // Strip UUserDefinedStruct GUID suffix for logical names
+            // Strip UUserDefinedStruct GUID suffix for logical names.
+            // Form is "<Logical>_<Index>_<Hex32>"; logical may contain underscores,
+            // so strip from the RIGHT using the 32-char GUID as an anchor.
             FString Key = Prop->GetName();
-            int32 UnderscoreIdx = INDEX_NONE;
-            if (Struct->IsA<UUserDefinedStruct>() && Key.FindChar(TEXT('_'), UnderscoreIdx))
+            if (Cast<UUserDefinedStruct>(Struct) != nullptr)
             {
-                Key = Key.Left(UnderscoreIdx);
+                int32 LastUnderscore = INDEX_NONE;
+                if (Key.FindLastChar(TEXT('_'), LastUnderscore))
+                {
+                    const FString AfterLast = Key.Mid(LastUnderscore + 1);
+                    if (AfterLast.Len() == 32)
+                    {
+                        const FString TrimOnce = Key.Left(LastUnderscore);
+                        int32 SecondLast = INDEX_NONE;
+                        if (TrimOnce.FindLastChar(TEXT('_'), SecondLast))
+                        {
+                            Key = TrimOnce.Left(SecondLast);
+                        }
+                    }
+                }
             }
             Out->SetField(Key, JsonVal);
         }

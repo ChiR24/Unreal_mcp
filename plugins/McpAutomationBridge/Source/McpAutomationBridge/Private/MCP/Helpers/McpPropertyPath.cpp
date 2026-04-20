@@ -38,14 +38,23 @@ namespace McpPropertyPath
         return true;
     }
 
-    static bool WalkToContainer(
+    // Walks the segment list and returns a direct pointer to the final property's value.
+    // IMPORTANT: OutValuePtr is already offset-applied; callers MUST NOT call
+    // ContainerPtrToValuePtr() on it again.
+    static bool WalkToValue(
         UObject* Root,
         const TArray<FSegment>& Segments,
         FProperty*& OutFinalProp,
-        void*& OutFinalContainer,
+        void*& OutValuePtr,
         FString& OutError)
     {
         if (!Root) { OutError = TEXT("Null root"); return false; }
+        if (Segments.Num() == 0) { OutError = TEXT("Empty path"); return false; }
+
+        // CurrentContainer = pointer to a struct/object instance whose fields can be looked up
+        //                    via CurrentStruct->FindPropertyByName(...).
+        // CurrentProp      = the property that "produced" CurrentContainer when its target is a
+        //                    container (array/map/set) waiting for an index segment; otherwise nullptr.
         void* CurrentContainer = Root;
         UStruct* CurrentStruct = Root->GetClass();
         FProperty* CurrentProp = nullptr;
@@ -57,49 +66,74 @@ namespace McpPropertyPath
 
             if (Seg.ArrayIndex >= 0)
             {
-                // Previous prop must be FArrayProperty
+                // Previous prop must be FArrayProperty with CurrentContainer pointing at the
+                // FScriptArray storage (i.e. the array property's value ptr).
                 FArrayProperty* ArrayProp = CastField<FArrayProperty>(CurrentProp);
                 if (!ArrayProp) { OutError = TEXT("Indexed segment on non-array"); return false; }
                 FScriptArrayHelper Helper(ArrayProp, CurrentContainer);
                 if (!Helper.IsValidIndex(Seg.ArrayIndex)) { OutError = FString::Printf(TEXT("Array index OOB: %d"), Seg.ArrayIndex); return false; }
-                CurrentContainer = Helper.GetRawPtr(Seg.ArrayIndex);
-                CurrentProp = ArrayProp->Inner;
-                if (FStructProperty* InnerStruct = CastField<FStructProperty>(CurrentProp))
-                {
-                    CurrentStruct = InnerStruct->Struct;
-                }
+                void* ElementPtr = Helper.GetRawPtr(Seg.ArrayIndex);
+
                 if (bIsLast)
                 {
-                    OutFinalProp = CurrentProp;
-                    OutFinalContainer = CurrentContainer;
+                    OutFinalProp = ArrayProp->Inner;
+                    OutValuePtr = ElementPtr;
                     return true;
+                }
+
+                // Descend into element for subsequent segments.
+                if (FStructProperty* InnerStruct = CastField<FStructProperty>(ArrayProp->Inner))
+                {
+                    CurrentContainer = ElementPtr;
+                    CurrentStruct = InnerStruct->Struct;
+                    CurrentProp = nullptr;
+                }
+                else if (FArrayProperty* InnerArray = CastField<FArrayProperty>(ArrayProp->Inner))
+                {
+                    // Nested array: element IS the FScriptArray storage; wait for next [N].
+                    CurrentContainer = ElementPtr;
+                    CurrentStruct = nullptr;
+                    CurrentProp = InnerArray;
+                }
+                else
+                {
+                    OutError = FString::Printf(TEXT("Cannot descend into array element of type %s"), *ArrayProp->Inner->GetClass()->GetName());
+                    return false;
                 }
                 continue;
             }
 
-            // Name segment
+            // Name segment: look up on CurrentStruct.
+            if (!CurrentStruct)
+            {
+                OutError = FString::Printf(TEXT("Cannot resolve field '%s' without a struct context"), *Seg.Name);
+                return false;
+            }
             FProperty* Prop = CurrentStruct->FindPropertyByName(FName(*Seg.Name));
             if (!Prop) { OutError = FString::Printf(TEXT("Field not found: %s"), *Seg.Name); return false; }
+
+            void* FieldValuePtr = Prop->ContainerPtrToValuePtr<void>(CurrentContainer);
 
             if (bIsLast)
             {
                 OutFinalProp = Prop;
-                OutFinalContainer = CurrentContainer;
+                OutValuePtr = FieldValuePtr;
                 return true;
             }
 
-            // Descend
+            // Descend for the next segment.
             if (FStructProperty* SP = CastField<FStructProperty>(Prop))
             {
-                CurrentContainer = SP->ContainerPtrToValuePtr<void>(CurrentContainer);
+                CurrentContainer = FieldValuePtr;
                 CurrentStruct = SP->Struct;
-                CurrentProp = Prop;
+                CurrentProp = nullptr;
             }
             else if (FArrayProperty* AP = CastField<FArrayProperty>(Prop))
             {
-                // Next segment must be [N]
-                CurrentContainer = AP->ContainerPtrToValuePtr<void>(CurrentContainer);
-                CurrentProp = Prop;
+                // Next segment must be [N]; leave CurrentContainer at array storage.
+                CurrentContainer = FieldValuePtr;
+                CurrentStruct = nullptr;
+                CurrentProp = AP;
             }
             else
             {
@@ -107,7 +141,7 @@ namespace McpPropertyPath
                 return false;
             }
         }
-        OutError = TEXT("Empty path");
+        OutError = TEXT("Walk terminated without producing a value");
         return false;
     }
 
@@ -116,11 +150,8 @@ namespace McpPropertyPath
         TArray<FSegment> Segments;
         if (!ParsePath(Path, Segments, OutError)) return false;
         FProperty* FinalProp = nullptr;
-        void* FinalContainer = nullptr;
-        if (!WalkToContainer(Root, Segments, FinalProp, FinalContainer, OutError)) return false;
-        void* ValuePtr = FinalProp->ContainerPtrToValuePtr<void>(FinalContainer);
-        // For array element write, FinalContainer IS the raw element ptr (see WalkToContainer); skip Container offset
-        if (Segments.Last().ArrayIndex >= 0) ValuePtr = FinalContainer;
+        void* ValuePtr = nullptr;
+        if (!WalkToValue(Root, Segments, FinalProp, ValuePtr, OutError)) return false;
 
         if (!FJsonObjectConverter::JsonValueToUProperty(Value, FinalProp, ValuePtr, 0, CPF_Transient))
         {
@@ -136,10 +167,8 @@ namespace McpPropertyPath
         TArray<FSegment> Segments;
         if (!ParsePath(Path, Segments, OutError)) return nullptr;
         FProperty* FinalProp = nullptr;
-        void* FinalContainer = nullptr;
-        if (!WalkToContainer(Root, Segments, FinalProp, FinalContainer, OutError)) return nullptr;
-        void* ValuePtr = FinalProp->ContainerPtrToValuePtr<void>(FinalContainer);
-        if (Segments.Last().ArrayIndex >= 0) ValuePtr = FinalContainer;
+        void* ValuePtr = nullptr;
+        if (!WalkToValue(Root, Segments, FinalProp, ValuePtr, OutError)) return nullptr;
         return FJsonObjectConverter::UPropertyToJsonValue(FinalProp, ValuePtr, 0, CPF_Transient);
     }
 }

@@ -17,7 +17,14 @@ namespace McpStructReflection
         const TSharedPtr<FJsonValue>& Value,
         FString& OutError);
 
-    /** Write all fields from a JSON object into a struct instance. Returns false + OutError on first failure. */
+    /**
+     * Write all fields from a JSON object into a struct instance.
+     * Returns false + OutError on first failure.
+     *
+     * NOTE: Aborts on first field failure, leaving any previously-written fields
+     * in place (partial-write). Caller is responsible for snapshotting the struct
+     * before this call if rollback-on-failure semantics are required.
+     */
     bool SetStructFieldsFromJsonObject(
         const UStruct* Struct,
         void* StructInstance,

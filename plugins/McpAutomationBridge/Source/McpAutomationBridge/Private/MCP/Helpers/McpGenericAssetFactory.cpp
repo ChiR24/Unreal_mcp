@@ -14,9 +14,11 @@ namespace McpGenericAssetFactory
         const FString& PackagePath,
         const FString& AssetName,
         TFunction<void(UObject*)> Configurator,
-        FString& OutError)
+        FString& OutError,
+        bool& bOutSaved)
     {
         check(IsInGameThread());
+        bOutSaved = false;
         if (!AssetClass) { OutError = TEXT("Null AssetClass"); return nullptr; }
         if (AssetName.IsEmpty()) { OutError = TEXT("Empty AssetName"); return nullptr; }
         if (PackagePath.IsEmpty()) { OutError = TEXT("Empty PackagePath"); return nullptr; }
@@ -35,10 +37,15 @@ namespace McpGenericAssetFactory
         }
 
         NewAsset->MarkPackageDirty();
-        if (!McpSafeAssetSave(NewAsset))
+        if (McpSafeAssetSave(NewAsset))
+        {
+            bOutSaved = true;
+        }
+        else
         {
             OutError = FString::Printf(TEXT("McpSafeAssetSave failed for %s/%s"), *PackagePath, *AssetName);
-            // Do not delete; asset is valid in memory even if save fails
+            // Do not delete; asset is valid in memory even if save fails.
+            // bOutSaved stays false so callers can distinguish this from full success.
         }
         return NewAsset;
     }
