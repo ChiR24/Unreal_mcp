@@ -93,6 +93,7 @@
 #include "McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridge_BlueprintCreationHandlers.h"
+#include "McpAutomationBridge_BlueprintTypeHandlers.h"
 #include "McpAutomationBridge_SCSHandlers.h"
 #include "McpConnectionManager.h"
 #include "Misc/DateTime.h"
@@ -1404,6 +1405,15 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                 "returning false (CleanAction='%s')"),
            *CleanAction);
     return false;
+  }
+
+  // ===== Early dispatch: enum/struct authoring (Task 9 wire) =====
+  if (Lower == TEXT("create_enum") || Lower == TEXT("create_struct") ||
+      Lower == TEXT("modify_enum") || Lower == TEXT("modify_struct") ||
+      Lower == TEXT("inspect_enum") || Lower == TEXT("inspect_struct"))
+  {
+    return McpBlueprintTypeHandlers::HandleAction(
+        this, RequestId, Lower, LocalPayload, RequestingSocket);
   }
 
   // Temporaries used by blueprint_create handler — declared here so
