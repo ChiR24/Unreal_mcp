@@ -657,18 +657,25 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
         }
       }
 
-      const res = await executeAutomationRequest(tools, 'inspect', {
+      const argsRecord = args as Record<string, unknown>;
+      const payload: Record<string, unknown> = {
         action: 'inspect_class',
-        className
-      }) as InspectResponse;
+        className,
+        detailed: argsRecord.detailed as boolean | undefined,
+        includeInherited: argsRecord.includeInherited as boolean | undefined,
+        functionFilter: argsRecord.functionFilter as string | undefined,
+        functionFlagFilter: argsRecord.functionFlagFilter as string[] | undefined,
+        propertyFilter: argsRecord.propertyFilter as string | undefined
+      };
+
+      const res = await executeAutomationRequest(tools, 'inspect', payload) as InspectResponse;
       if (!res || res.success === false) {
         // If first try failed and it looked like a short name, maybe try standard engine path?
         const originalClassName = typeof argsTyped.className === 'string' ? argsTyped.className : '';
         if (originalClassName && !originalClassName.includes('/') && !className.startsWith('/Script/')) {
           const retryName = `/Script/Engine.${originalClassName}`;
           const resRetry = await executeAutomationRequest(tools, 'inspect', {
-            action: 'inspect_class',
-            className: retryName
+            ...payload, className: retryName
           }) as InspectResponse;
           if (resRetry && resRetry.success) {
             return cleanObject(resRetry);

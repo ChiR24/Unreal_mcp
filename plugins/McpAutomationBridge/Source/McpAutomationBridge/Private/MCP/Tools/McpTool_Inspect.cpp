@@ -80,6 +80,10 @@ public:
 			.String(TEXT("blueprintPath"), TEXT("Blueprint asset path."))
 			.Bool(TEXT("detailed"), TEXT(""))
 			.Array(TEXT("propertyNames"), TEXT(""))
+			.Bool(TEXT("includeInherited"), TEXT("inspect_class: include super-class members (default false)."))
+			.String(TEXT("functionFilter"), TEXT("inspect_class: case-insensitive substring filter on function name."))
+			.Array(TEXT("functionFlagFilter"), TEXT("inspect_class: AND-match flag names (e.g. FUNC_BlueprintEvent)."))
+			.String(TEXT("propertyFilter"), TEXT("inspect_class: case-insensitive substring filter on property name."))
 			.Required({TEXT("action")})
 			.Build();
 	}

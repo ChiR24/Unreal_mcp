@@ -1,0 +1,64 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { executeAutomationRequestMock } = vi.hoisted(() => ({
+  executeAutomationRequestMock: vi.fn(async () => ({ success: true, functions: [], properties: [] }))
+}));
+
+vi.mock('./common-handlers.js', () => ({
+  executeAutomationRequest: executeAutomationRequestMock,
+  requireNonEmptyString: (value: unknown, fieldName: string) => {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new Error(`Missing required parameter: ${fieldName}`);
+    }
+  }
+}));
+
+import { handleInspectTools } from './inspect-handlers.js';
+
+describe('inspect_class detailed reflection', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockClear();
+  });
+
+  it('forwards detailed/includeInherited/functionFilter to bridge', async () => {
+    await handleInspectTools(
+      'inspect_class',
+      {
+        action: 'inspect_class',
+        className: '/Game/Blueprints/Foo.Foo_C',
+        detailed: true,
+        includeInherited: true,
+        functionFilter: 'OnPaint',
+        functionFlagFilter: ['FUNC_BlueprintEvent'],
+        propertyFilter: 'bIs'
+      },
+      {} as never
+    );
+
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      'inspect',
+      expect.objectContaining({
+        action: 'inspect_class',
+        className: '/Game/Blueprints/Foo.Foo_C',
+        detailed: true,
+        includeInherited: true,
+        functionFilter: 'OnPaint',
+        functionFlagFilter: ['FUNC_BlueprintEvent'],
+        propertyFilter: 'bIs'
+      })
+    );
+  });
+
+  it('defaults detailed/includeInherited to undefined when not provided', async () => {
+    await handleInspectTools(
+      'inspect_class',
+      { action: 'inspect_class', className: 'Actor' },
+      {} as never
+    );
+    const call = executeAutomationRequestMock.mock.calls[0][2] as Record<string, unknown>;
+    expect(call.detailed).toBeUndefined();
+    expect(call.includeInherited).toBeUndefined();
+    expect(call.functionFilter).toBeUndefined();
+  });
+});

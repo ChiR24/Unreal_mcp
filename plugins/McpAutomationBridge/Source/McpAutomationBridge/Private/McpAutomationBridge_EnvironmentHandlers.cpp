@@ -67,6 +67,9 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/ConfigCacheIni.h"
+#include "UObject/UnrealType.h"
+#include "UObject/Class.h"
+#include "UObject/Interface.h"
 
 // =============================================================================
 // Editor-Only Includes
@@ -137,6 +140,117 @@
 // Logging Category
 // =============================================================================
 DEFINE_LOG_CATEGORY_STATIC(LogMcpEnvironmentHandlers, Log, All);
+
+// =============================================================================
+// McpInspectReflection - Helper namespace for inspect_class detailed mode.
+// Walks UFunction/FProperty via TFieldIterator and serializes flag masks +
+// readable flag name arrays. Enables read-after-write reflection diagnosis
+// (e.g. Puerts AutoMode BIE override registration).
+// =============================================================================
+namespace McpInspectReflection
+{
+    static TArray<FString> DescribeFunctionFlags(EFunctionFlags Flags)
+    {
+        TArray<FString> Out;
+        if (Flags & FUNC_Final)             Out.Add(TEXT("FUNC_Final"));
+        if (Flags & FUNC_BlueprintCallable) Out.Add(TEXT("FUNC_BlueprintCallable"));
+        if (Flags & FUNC_BlueprintEvent)    Out.Add(TEXT("FUNC_BlueprintEvent"));
+        if (Flags & FUNC_BlueprintPure)     Out.Add(TEXT("FUNC_BlueprintPure"));
+        if (Flags & FUNC_Event)             Out.Add(TEXT("FUNC_Event"));
+        if (Flags & FUNC_Native)            Out.Add(TEXT("FUNC_Native"));
+        if (Flags & FUNC_Net)               Out.Add(TEXT("FUNC_Net"));
+        if (Flags & FUNC_NetServer)         Out.Add(TEXT("FUNC_NetServer"));
+        if (Flags & FUNC_NetClient)         Out.Add(TEXT("FUNC_NetClient"));
+        if (Flags & FUNC_NetMulticast)      Out.Add(TEXT("FUNC_NetMulticast"));
+        if (Flags & FUNC_Static)            Out.Add(TEXT("FUNC_Static"));
+        if (Flags & FUNC_Exec)              Out.Add(TEXT("FUNC_Exec"));
+        if (Flags & FUNC_Public)            Out.Add(TEXT("FUNC_Public"));
+        if (Flags & FUNC_Protected)         Out.Add(TEXT("FUNC_Protected"));
+        if (Flags & FUNC_Private)           Out.Add(TEXT("FUNC_Private"));
+        return Out;
+    }
+
+    static bool MatchesFlagFilter(EFunctionFlags Flags, const TArray<FString>& Required)
+    {
+        for (const FString& Name : Required)
+        {
+            if (Name.Equals(TEXT("FUNC_BlueprintCallable"), ESearchCase::IgnoreCase) && !(Flags & FUNC_BlueprintCallable)) return false;
+            if (Name.Equals(TEXT("FUNC_BlueprintEvent"),    ESearchCase::IgnoreCase) && !(Flags & FUNC_BlueprintEvent))    return false;
+            if (Name.Equals(TEXT("FUNC_BlueprintPure"),     ESearchCase::IgnoreCase) && !(Flags & FUNC_BlueprintPure))     return false;
+            if (Name.Equals(TEXT("FUNC_Event"),             ESearchCase::IgnoreCase) && !(Flags & FUNC_Event))             return false;
+            if (Name.Equals(TEXT("FUNC_Native"),            ESearchCase::IgnoreCase) && !(Flags & FUNC_Native))            return false;
+            if (Name.Equals(TEXT("FUNC_Net"),               ESearchCase::IgnoreCase) && !(Flags & FUNC_Net))               return false;
+            if (Name.Equals(TEXT("FUNC_Static"),            ESearchCase::IgnoreCase) && !(Flags & FUNC_Static))            return false;
+        }
+        return true;
+    }
+
+    static TSharedPtr<FJsonObject> DescribeFunction(UFunction* Func, UClass* TargetClass)
+    {
+        TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+        Obj->SetStringField(TEXT("name"), Func->GetName());
+        UClass* Owner = Func->GetOwnerClass();
+        Obj->SetStringField(TEXT("definedIn"), Owner ? Owner->GetName() : TEXT("<none>"));
+        Obj->SetStringField(TEXT("definedInPath"), Owner ? Owner->GetPathName() : TEXT(""));
+        Obj->SetBoolField(TEXT("isInherited"), Owner != TargetClass);
+
+        Obj->SetNumberField(TEXT("flagsMask"), static_cast<double>(Func->FunctionFlags));
+        TArray<TSharedPtr<FJsonValue>> FlagNames;
+        for (const FString& F : DescribeFunctionFlags(Func->FunctionFlags))
+        {
+            FlagNames.Add(MakeShared<FJsonValueString>(F));
+        }
+        Obj->SetArrayField(TEXT("flagNames"), FlagNames);
+
+        TArray<TSharedPtr<FJsonValue>> Params;
+        FString ReturnTypeStr = TEXT("void");
+        for (TFieldIterator<FProperty> PIt(Func); PIt; ++PIt)
+        {
+            FProperty* P = *PIt;
+            const bool bReturn = P->HasAnyPropertyFlags(CPF_ReturnParm);
+            const bool bOut    = P->HasAnyPropertyFlags(CPF_OutParm) && !bReturn;
+            const bool bRef    = P->HasAnyPropertyFlags(CPF_ReferenceParm);
+            FString TypeCpp = P->GetCPPType();
+            if (bReturn)
+            {
+                ReturnTypeStr = TypeCpp;
+                continue;
+            }
+            TSharedPtr<FJsonObject> ParamObj = MakeShared<FJsonObject>();
+            ParamObj->SetStringField(TEXT("name"), P->GetName());
+            ParamObj->SetStringField(TEXT("type"), TypeCpp);
+            ParamObj->SetBoolField(TEXT("isOut"), bOut);
+            ParamObj->SetBoolField(TEXT("isRef"), bRef);
+            Params.Add(MakeShared<FJsonValueObject>(ParamObj));
+        }
+        Obj->SetArrayField(TEXT("parameters"), Params);
+        Obj->SetStringField(TEXT("returnType"), ReturnTypeStr);
+
+        Obj->SetBoolField(TEXT("hasScript"), Func->Script.Num() > 0);
+        Obj->SetNumberField(TEXT("scriptBytecodeSize"), static_cast<double>(Func->Script.Num()));
+
+        return Obj;
+    }
+
+    static TSharedPtr<FJsonObject> DescribeProperty(FProperty* Prop, UClass* TargetClass)
+    {
+        TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+        Obj->SetStringField(TEXT("name"), Prop->GetName());
+        Obj->SetStringField(TEXT("type"), Prop->GetCPPType());
+        UClass* Owner = Prop->GetOwnerClass();
+        Obj->SetStringField(TEXT("definedIn"), Owner ? Owner->GetName() : TEXT("<none>"));
+        Obj->SetBoolField(TEXT("isInherited"), Owner != TargetClass);
+        Obj->SetNumberField(TEXT("flagsMask"), static_cast<double>(static_cast<uint64>(Prop->PropertyFlags)));
+        TArray<TSharedPtr<FJsonValue>> FlagNames;
+        if (Prop->PropertyFlags & CPF_Edit)              FlagNames.Add(MakeShared<FJsonValueString>(TEXT("CPF_Edit")));
+        if (Prop->PropertyFlags & CPF_BlueprintVisible)  FlagNames.Add(MakeShared<FJsonValueString>(TEXT("CPF_BlueprintVisible")));
+        if (Prop->PropertyFlags & CPF_BlueprintReadOnly) FlagNames.Add(MakeShared<FJsonValueString>(TEXT("CPF_BlueprintReadOnly")));
+        if (Prop->PropertyFlags & CPF_Net)               FlagNames.Add(MakeShared<FJsonValueString>(TEXT("CPF_Net")));
+        if (Prop->PropertyFlags & CPF_Transient)         FlagNames.Add(MakeShared<FJsonValueString>(TEXT("CPF_Transient")));
+        Obj->SetArrayField(TEXT("flagNames"), FlagNames);
+        return Obj;
+    }
+}
 
 // =============================================================================
 // Section 1: Build Environment Actions
@@ -1722,37 +1836,90 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         {
             FString ClassName;
             Payload->TryGetStringField(TEXT("className"), ClassName);
-            if (!ClassName.IsEmpty())
-            {
-                // Try to find the class
-                UClass* TargetClass = FindObject<UClass>(nullptr, *ClassName);
-                if (!TargetClass && !ClassName.Contains(TEXT(".")))
-                {
-                    // Try with /Script/Engine prefix for common classes
-                    TargetClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), *ClassName));
-                }
-                if (TargetClass)
-                {
-                    Resp->SetStringField(TEXT("className"), TargetClass->GetName());
-                    Resp->SetStringField(TEXT("classPath"), TargetClass->GetPathName());
-                    Resp->SetStringField(TEXT("parentClass"), TargetClass->GetSuperClass() ? TargetClass->GetSuperClass()->GetName() : TEXT("None"));
-                    Resp->SetBoolField(TEXT("success"), true);
-                    SendAutomationResponse(RequestingSocket, RequestId, true,
-                                           TEXT("Class inspected"), Resp, FString());
-                }
-                else
-                {
-                    SendAutomationError(RequestingSocket, RequestId,
-                                        FString::Printf(TEXT("Class not found: %s"), *ClassName),
-                                        TEXT("CLASS_NOT_FOUND"));
-                }
-            }
-            else
+            if (ClassName.IsEmpty())
             {
                 SendAutomationError(RequestingSocket, RequestId,
                                     TEXT("className is required for inspect_class"),
                                     TEXT("INVALID_ARGUMENT"));
+                return true;
             }
+
+            UClass* TargetClass = FindObject<UClass>(nullptr, *ClassName);
+            if (!TargetClass && !ClassName.Contains(TEXT(".")))
+            {
+                TargetClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), *ClassName));
+            }
+            if (!TargetClass)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                                    FString::Printf(TEXT("Class not found: %s"), *ClassName),
+                                    TEXT("CLASS_NOT_FOUND"));
+                return true;
+            }
+
+            Resp->SetStringField(TEXT("className"), TargetClass->GetName());
+            Resp->SetStringField(TEXT("classPath"), TargetClass->GetPathName());
+            Resp->SetStringField(TEXT("parentClass"), TargetClass->GetSuperClass() ? TargetClass->GetSuperClass()->GetName() : TEXT("None"));
+            Resp->SetStringField(TEXT("parentClassPath"), TargetClass->GetSuperClass() ? TargetClass->GetSuperClass()->GetPathName() : TEXT(""));
+
+            bool bDetailed = false;
+            Payload->TryGetBoolField(TEXT("detailed"), bDetailed);
+            if (bDetailed)
+            {
+                bool bIncludeInherited = false;
+                Payload->TryGetBoolField(TEXT("includeInherited"), bIncludeInherited);
+                const EFieldIteratorFlags::SuperClassFlags SuperFlag = bIncludeInherited
+                    ? EFieldIteratorFlags::IncludeSuper
+                    : EFieldIteratorFlags::ExcludeSuper;
+
+                FString FuncFilter;
+                Payload->TryGetStringField(TEXT("functionFilter"), FuncFilter);
+                FString PropFilter;
+                Payload->TryGetStringField(TEXT("propertyFilter"), PropFilter);
+
+                TArray<FString> FlagFilter;
+                const TArray<TSharedPtr<FJsonValue>>* FlagFilterJson = nullptr;
+                if (Payload->TryGetArrayField(TEXT("functionFlagFilter"), FlagFilterJson) && FlagFilterJson)
+                {
+                    for (const TSharedPtr<FJsonValue>& V : *FlagFilterJson)
+                    {
+                        if (V.IsValid()) FlagFilter.Add(V->AsString());
+                    }
+                }
+
+                TArray<TSharedPtr<FJsonValue>> FunctionsArr;
+                for (TFieldIterator<UFunction> It(TargetClass, SuperFlag); It; ++It)
+                {
+                    UFunction* Func = *It;
+                    if (!FuncFilter.IsEmpty() && !Func->GetName().Contains(FuncFilter)) continue;
+                    if (FlagFilter.Num() > 0 && !McpInspectReflection::MatchesFlagFilter(Func->FunctionFlags, FlagFilter)) continue;
+                    FunctionsArr.Add(MakeShared<FJsonValueObject>(McpInspectReflection::DescribeFunction(Func, TargetClass)));
+                }
+                Resp->SetArrayField(TEXT("functions"), FunctionsArr);
+
+                TArray<TSharedPtr<FJsonValue>> PropsArr;
+                for (TFieldIterator<FProperty> It(TargetClass, SuperFlag); It; ++It)
+                {
+                    FProperty* Prop = *It;
+                    if (!PropFilter.IsEmpty() && !Prop->GetName().Contains(PropFilter)) continue;
+                    PropsArr.Add(MakeShared<FJsonValueObject>(McpInspectReflection::DescribeProperty(Prop, TargetClass)));
+                }
+                Resp->SetArrayField(TEXT("properties"), PropsArr);
+
+                TArray<TSharedPtr<FJsonValue>> InterfacesArr;
+                for (const FImplementedInterface& Impl : TargetClass->Interfaces)
+                {
+                    if (Impl.Class)
+                    {
+                        InterfacesArr.Add(MakeShared<FJsonValueString>(Impl.Class->GetName()));
+                    }
+                }
+                Resp->SetArrayField(TEXT("interfaces"), InterfacesArr);
+            }
+
+            Resp->SetBoolField(TEXT("success"), true);
+            SendAutomationResponse(RequestingSocket, RequestId, true,
+                                   TEXT("Class inspected"), Resp, FString());
             return true;
         }
         // ---------------------------------------------------------------------
