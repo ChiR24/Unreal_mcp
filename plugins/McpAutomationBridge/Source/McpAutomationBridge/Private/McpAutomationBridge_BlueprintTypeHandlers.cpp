@@ -237,12 +237,161 @@ namespace
 		return true;
 	}
 #endif
+#if WITH_EDITOR
 	bool HandleCreateStruct(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 	                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 	{
-		SendError(Self, Socket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("create_struct stub"));
+		FString AssetPath, Err;
+		if (!McpHandlerUtils::TryGetRequiredString(Payload, TEXT("assetPath"), AssetPath, Err))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"), Err);
+			return true;
+		}
+		const TArray<TSharedPtr<FJsonValue>>* Members = nullptr;
+		if (!Payload->TryGetArrayField(TEXT("members"), Members) || Members->Num() == 0)
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing or empty 'members' array"));
+			return true;
+		}
+		const bool bOverwrite = Payload->HasTypedField<EJson::Boolean>(TEXT("overwrite")) &&
+		                        Payload->GetBoolField(TEXT("overwrite"));
+
+		FString PackagePath, AssetName;
+		if (!SplitAssetPath(AssetPath, PackagePath, AssetName, Err))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"), Err);
+			return true;
+		}
+
+		TArray<FString> Warnings;
+		if (UEditorAssetLibrary::DoesAssetExist(AssetPath))
+		{
+			if (!bOverwrite)
+			{
+				SendError(Self, Socket, RequestId, TEXT("ASSET_ALREADY_EXISTS"),
+					FString::Printf(TEXT("Asset already exists at '%s'; pass overwrite=true to replace."), *AssetPath));
+				return true;
+			}
+			const int32 Refs = CountReferencers(AssetPath);
+			if (Refs > 0)
+			{
+				Warnings.Add(FString::Printf(
+					TEXT("Replaced asset had %d referencer(s); pin types in dependent assets may now be unresolved."),
+					Refs));
+			}
+			UObject* Existing = UEditorAssetLibrary::LoadAsset(AssetPath);
+			if (!Existing || !UEditorAssetLibrary::DeleteLoadedAsset(Existing))
+			{
+				SendError(Self, Socket, RequestId, TEXT("OPERATION_FAILED"),
+					FString::Printf(TEXT("Failed to delete existing asset at '%s'"), *AssetPath));
+				return true;
+			}
+		}
+
+		// Validate member names + parse all types up-front (fail-fast before any creation)
+		TSet<FString> SeenNames;
+		TArray<TPair<FString, FEdGraphPinType>> ParsedMembers;
+		for (const TSharedPtr<FJsonValue>& V : *Members)
+		{
+			TSharedPtr<FJsonObject> Obj = V->AsObject();
+			if (!Obj.IsValid())
+			{
+				SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+					TEXT("Each member entry must be an object"));
+				return true;
+			}
+			FString Name, TypeStr;
+			if (!Obj->TryGetStringField(TEXT("name"), Name) || !IsValidIdentifier(Name))
+			{
+				SendError(Self, Socket, RequestId, TEXT("INVALID_NAME"),
+					FString::Printf(TEXT("Invalid member name: '%s'"), *Name));
+				return true;
+			}
+			if (SeenNames.Contains(Name))
+			{
+				SendError(Self, Socket, RequestId, TEXT("DUPLICATE_NAME"),
+					FString::Printf(TEXT("Duplicate member name: '%s'"), *Name));
+				return true;
+			}
+			SeenNames.Add(Name);
+			if (!Obj->TryGetStringField(TEXT("type"), TypeStr))
+			{
+				SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+					FString::Printf(TEXT("Member '%s' missing 'type'"), *Name));
+				return true;
+			}
+			FEdGraphPinType PinType;
+			FString TypeErr;
+			if (!FMcpPinTypeParser::Parse(TypeStr, PinType, TypeErr))
+			{
+				SendError(Self, Socket, RequestId, TEXT("INVALID_TYPE_STRING"),
+					FString::Printf(TEXT("Member '%s' type '%s': %s"), *Name, *TypeStr, *TypeErr));
+				return true;
+			}
+			ParsedMembers.Emplace(Name, PinType);
+		}
+
+		// Create package + struct
+		const FString FullObjectPath = FString::Printf(TEXT("%s/%s"), *PackagePath, *AssetName);
+		UPackage* Pkg = CreatePackage(*FullObjectPath);
+		if (!Pkg)
+		{
+			SendError(Self, Socket, RequestId, TEXT("OPERATION_FAILED"),
+				FString::Printf(TEXT("CreatePackage failed for '%s'"), *AssetPath));
+			return true;
+		}
+
+		UUserDefinedStruct* NewStruct = FStructureEditorUtils::CreateUserDefinedStruct(
+			Pkg, FName(*AssetName), RF_Public | RF_Standalone);
+		if (!NewStruct)
+		{
+			SendError(Self, Socket, RequestId, TEXT("OPERATION_FAILED"),
+				FString::Printf(TEXT("CreateUserDefinedStruct returned null for '%s'"), *AssetPath));
+			return true;
+		}
+
+		// Add members
+		for (const TPair<FString, FEdGraphPinType>& M : ParsedMembers)
+		{
+			FStructureEditorUtils::AddVariable(NewStruct, M.Value);
+			const auto& Descs = FStructureEditorUtils::GetVarDesc(NewStruct);
+			if (Descs.Num() == 0)
+			{
+				SendError(Self, Socket, RequestId, TEXT("OPERATION_FAILED"),
+					FString::Printf(TEXT("AddVariable did not append a desc for '%s'"), *M.Key));
+				return true;
+			}
+			FStructureEditorUtils::RenameVariable(NewStruct, Descs.Last().VarGuid, M.Key);
+		}
+
+		if (!UEditorAssetLibrary::SaveLoadedAsset(NewStruct))
+		{
+			SendError(Self, Socket, RequestId, TEXT("SAVE_FAILED"),
+				FString::Printf(TEXT("Failed to save struct at '%s'"), *AssetPath));
+			return true;
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("assetPath"), AssetPath);
+		Data->SetNumberField(TEXT("memberCount"), ParsedMembers.Num());
+		TArray<TSharedPtr<FJsonValue>> WarningsArr;
+		for (const FString& W : Warnings) WarningsArr.Add(MakeShared<FJsonValueString>(W));
+		Data->SetArrayField(TEXT("warnings"), WarningsArr);
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Created struct '%s' with %d member(s)"), *AssetName, ParsedMembers.Num()),
+			Data);
 		return true;
 	}
+#else
+	bool HandleCreateStruct(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+	                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		SendError(Self, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+			TEXT("create_struct requires editor build"));
+		return true;
+	}
+#endif
 #if WITH_EDITOR
 	bool HandleModifyEnum(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 	                      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
