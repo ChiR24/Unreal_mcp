@@ -549,12 +549,228 @@ namespace
 		return true;
 	}
 #endif
+#if WITH_EDITOR
+	bool ResolveMemberSelector(UUserDefinedStruct* UDS, const TSharedPtr<FJsonObject>& Op,
+	                           FGuid& OutGuid, FString& OutError)
+	{
+		const bool bHasIndex = Op->HasTypedField<EJson::Number>(TEXT("index"));
+		const bool bHasName  = Op->HasTypedField<EJson::String>(TEXT("name"));
+		const bool bHasGuid  = Op->HasTypedField<EJson::String>(TEXT("guid"));
+		const int32 SelectorCount = (bHasIndex ? 1 : 0) + (bHasName ? 1 : 0) + (bHasGuid ? 1 : 0);
+		if (SelectorCount == 0)
+		{
+			OutError = TEXT("Operation requires one of: index, name, guid");
+			return false;
+		}
+		if (SelectorCount > 1)
+		{
+			OutError = TEXT("Operation must provide exactly one of index/name/guid (mutually exclusive)");
+			return false;
+		}
+		const auto& Descs = FStructureEditorUtils::GetVarDesc(UDS);
+
+		if (bHasGuid)
+		{
+			FGuid G;
+			if (!FGuid::Parse(Op->GetStringField(TEXT("guid")), G))
+			{
+				OutError = TEXT("Invalid GUID format");
+				return false;
+			}
+			for (const auto& D : Descs)
+			{
+				if (D.VarGuid == G) { OutGuid = G; return true; }
+			}
+			OutError = TEXT("GUID not found in struct");
+			return false;
+		}
+		if (bHasName)
+		{
+			const FString N = Op->GetStringField(TEXT("name"));
+			for (const auto& D : Descs)
+			{
+				if (D.VarName.ToString() == N) { OutGuid = D.VarGuid; return true; }
+			}
+			OutError = FString::Printf(TEXT("Member name '%s' not found"), *N);
+			return false;
+		}
+		// index
+		const int32 Idx = (int32)Op->GetNumberField(TEXT("index"));
+		if (Idx < 0 || Idx >= Descs.Num())
+		{
+			OutError = FString::Printf(TEXT("Index %d out of range [0,%d)"), Idx, Descs.Num());
+			return false;
+		}
+		OutGuid = Descs[Idx].VarGuid;
+		return true;
+	}
+
 	bool HandleModifyStruct(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 	                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 	{
-		SendError(Self, Socket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("modify_struct stub"));
+		FString AssetPath, Err;
+		if (!McpHandlerUtils::TryGetRequiredString(Payload, TEXT("assetPath"), AssetPath, Err))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"), Err);
+			return true;
+		}
+		const TArray<TSharedPtr<FJsonValue>>* Operations = nullptr;
+		if (!Payload->TryGetArrayField(TEXT("operations"), Operations) || Operations->Num() == 0)
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing or empty 'operations' array"));
+			return true;
+		}
+		if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
+		{
+			SendError(Self, Socket, RequestId, TEXT("ASSET_NOT_FOUND"),
+				FString::Printf(TEXT("Asset not found: '%s'"), *AssetPath));
+			return true;
+		}
+		UUserDefinedStruct* UDS = Cast<UUserDefinedStruct>(UEditorAssetLibrary::LoadAsset(AssetPath));
+		if (!UDS)
+		{
+			SendError(Self, Socket, RequestId, TEXT("ASSET_WRONG_TYPE"),
+				FString::Printf(TEXT("Asset at '%s' is not a UUserDefinedStruct"), *AssetPath));
+			return true;
+		}
+
+		auto SendPartial = [&](int32 OpIdx, const TSharedPtr<FJsonObject>& OpJson,
+		                       const FString& Code, const FString& Message)
+		{
+			TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+			Data->SetStringField(TEXT("status"), TEXT("partial_failure"));
+			Data->SetNumberField(TEXT("completedOps"), OpIdx);
+			Data->SetNumberField(TEXT("failedOpIndex"), OpIdx);
+			Data->SetObjectField(TEXT("failedOp"), OpJson);
+			Data->SetStringField(TEXT("errorCode"), Code);
+			Self->SendAutomationResponse(Socket, RequestId, false, Message, Data, Code);
+		};
+
+		int32 OpIdx = 0;
+		for (const TSharedPtr<FJsonValue>& V : *Operations)
+		{
+			TSharedPtr<FJsonObject> Op = V->AsObject();
+			if (!Op.IsValid())
+			{
+				SendPartial(OpIdx, MakeShared<FJsonObject>(),
+					TEXT("INVALID_PARAMS"), TEXT("Operation must be an object"));
+				return true;
+			}
+			FString OpName;
+			if (!Op->TryGetStringField(TEXT("op"), OpName))
+			{
+				SendPartial(OpIdx, Op, TEXT("INVALID_PARAMS"), TEXT("Operation missing 'op'"));
+				return true;
+			}
+
+			if (OpName == TEXT("add_member"))
+			{
+				FString Name, TypeStr;
+				if (!Op->TryGetStringField(TEXT("name"), Name) || !IsValidIdentifier(Name))
+				{
+					SendPartial(OpIdx, Op, TEXT("INVALID_NAME"), TEXT("Invalid 'name'"));
+					return true;
+				}
+				if (!Op->TryGetStringField(TEXT("type"), TypeStr))
+				{
+					SendPartial(OpIdx, Op, TEXT("INVALID_PARAMS"), TEXT("Missing 'type'"));
+					return true;
+				}
+				FEdGraphPinType PinType;
+				FString TErr;
+				if (!FMcpPinTypeParser::Parse(TypeStr, PinType, TErr))
+				{
+					SendPartial(OpIdx, Op, TEXT("INVALID_TYPE_STRING"), TErr);
+					return true;
+				}
+				FStructureEditorUtils::AddVariable(UDS, PinType);
+				const auto& Descs = FStructureEditorUtils::GetVarDesc(UDS);
+				FStructureEditorUtils::RenameVariable(UDS, Descs.Last().VarGuid, Name);
+			}
+			else if (OpName == TEXT("remove_member"))
+			{
+				FGuid G; FString E2;
+				if (!ResolveMemberSelector(UDS, Op, G, E2))
+				{
+					SendPartial(OpIdx, Op, TEXT("INVALID_PARAMS"), E2);
+					return true;
+				}
+				FStructureEditorUtils::RemoveVariable(UDS, G);
+			}
+			else if (OpName == TEXT("rename_member"))
+			{
+				FGuid G; FString E2;
+				if (!ResolveMemberSelector(UDS, Op, G, E2))
+				{
+					SendPartial(OpIdx, Op, TEXT("INVALID_PARAMS"), E2);
+					return true;
+				}
+				FString NewName;
+				if (!Op->TryGetStringField(TEXT("newName"), NewName) || !IsValidIdentifier(NewName))
+				{
+					SendPartial(OpIdx, Op, TEXT("INVALID_NAME"), TEXT("Invalid 'newName'"));
+					return true;
+				}
+				FStructureEditorUtils::RenameVariable(UDS, G, NewName);
+			}
+			else if (OpName == TEXT("set_member_type"))
+			{
+				FGuid G; FString E2;
+				if (!ResolveMemberSelector(UDS, Op, G, E2))
+				{
+					SendPartial(OpIdx, Op, TEXT("INVALID_PARAMS"), E2);
+					return true;
+				}
+				FString NewType;
+				if (!Op->TryGetStringField(TEXT("newType"), NewType))
+				{
+					SendPartial(OpIdx, Op, TEXT("INVALID_PARAMS"), TEXT("Missing 'newType'"));
+					return true;
+				}
+				FEdGraphPinType PinType;
+				FString TErr;
+				if (!FMcpPinTypeParser::Parse(NewType, PinType, TErr))
+				{
+					SendPartial(OpIdx, Op, TEXT("INVALID_TYPE_STRING"), TErr);
+					return true;
+				}
+				FStructureEditorUtils::ChangeVariableType(UDS, G, PinType);
+			}
+			else
+			{
+				SendPartial(OpIdx, Op, TEXT("INVALID_PARAMS"),
+					FString::Printf(TEXT("Unknown op: '%s'"), *OpName));
+				return true;
+			}
+			++OpIdx;
+		}
+
+		if (!UEditorAssetLibrary::SaveLoadedAsset(UDS))
+		{
+			SendError(Self, Socket, RequestId, TEXT("SAVE_FAILED"),
+				FString::Printf(TEXT("Failed to save struct at '%s'"), *AssetPath));
+			return true;
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("status"), TEXT("success"));
+		Data->SetStringField(TEXT("assetPath"), AssetPath);
+		Data->SetNumberField(TEXT("completedOps"), OpIdx);
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Modified struct '%s' (%d ops)"), *UDS->GetName(), OpIdx),
+			Data);
 		return true;
 	}
+#else
+	bool HandleModifyStruct(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+	                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		SendError(Self, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+			TEXT("modify_struct requires editor build"));
+		return true;
+	}
+#endif
 #if WITH_EDITOR
 	bool HandleInspectEnum(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 	                       const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
