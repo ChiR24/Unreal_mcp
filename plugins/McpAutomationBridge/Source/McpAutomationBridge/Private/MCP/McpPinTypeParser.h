@@ -1,5 +1,14 @@
 // McpPinTypeParser.h — Bidirectional conversion between type DSL strings and FEdGraphPinType.
-// Type DSL spec: docs/superpowers/specs/2026-04-20-bp-author-enum-struct-design.md §5
+//
+// Supported DSL:
+//   Scalars : Bool Byte Int Int64 Float Double String Name Text
+//   Structs : Vector Vector2D Rotator Transform Color LinearColor
+//   Objects : <ClassName>*  (e.g. Texture2D*, StaticMesh*)
+//   Classes : TSubclassOf<X>
+//   Enums   : E_<Name>      (UUserDefinedEnum via AssetRegistry)
+//   Structs : S_<Name>      (UUserDefinedStruct via AssetRegistry)
+//   BP refs : BP_<Name> / WBP_<Name> / ABP_<Name>  (GeneratedClass of the Blueprint)
+//   Arrays  : Array<T> Set<T> Map<K,V>  (no nested containers)
 
 #pragma once
 

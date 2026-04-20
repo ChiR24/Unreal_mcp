@@ -63,7 +63,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `modify_enum` | `McpAutomationBridge_BlueprintTypeHandlers.cpp` | `BlueprintTypeHandlers::HandleAction` | Batch ops: add/remove/rename/set_display_name |
 | `modify_struct` | `McpAutomationBridge_BlueprintTypeHandlers.cpp` | `BlueprintTypeHandlers::HandleAction` | Batch ops: add_member/remove_member/rename_member/set_member_type |
 | `inspect_enum` | `McpAutomationBridge_BlueprintTypeHandlers.cpp` | `BlueprintTypeHandlers::HandleAction` | Returns enumerators[] |
-| `inspect_struct` | `McpAutomationBridge_BlueprintTypeHandlers.cpp` | `BlueprintTypeHandlers::HandleAction` | Returns members[] with type DSL strings; type spec in docs/superpowers/specs/2026-04-20-bp-author-enum-struct-design.md §5 |
+| `inspect_struct` | `McpAutomationBridge_BlueprintTypeHandlers.cpp` | `BlueprintTypeHandlers::HandleAction` | Returns members[] with type DSL strings (round-trips `Array<T>` / `E_*` / `S_*` / `BP_*`); see `McpPinTypeParser.h` for the full DSL |
 
 ## 17. Input Manager (`manage_input`)
 
