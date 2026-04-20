@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { executeAutomationRequestMock } = vi.hoisted(() => ({
-  executeAutomationRequestMock: vi.fn(async () => ({ success: true, functions: [], properties: [] }))
+  executeAutomationRequestMock: vi.fn(async (): Promise<Record<string, unknown>> => ({ success: true, functions: [], properties: [] }))
 }));
 
 vi.mock('./common-handlers.js', () => ({
