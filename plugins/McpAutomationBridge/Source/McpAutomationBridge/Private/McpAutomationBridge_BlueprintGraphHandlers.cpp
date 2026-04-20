@@ -1273,6 +1273,62 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Nodes retrieved."), Result);
     return true;
+  } else if (SubAction.Equals(TEXT("list_nodes"), ESearchCase::IgnoreCase)) {
+    FString NameFilter;
+    Payload->TryGetStringField(TEXT("nameFilter"), NameFilter);
+    FString ClassFilter;
+    Payload->TryGetStringField(TEXT("classFilter"), ClassFilter);
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
+    Result->SetStringField(TEXT("graphName"), TargetGraph->GetName());
+
+    TArray<TSharedPtr<FJsonValue>> NodesArr;
+    for (UEdGraphNode *Node : TargetGraph->Nodes) {
+      if (!Node) {
+        continue;
+      }
+      const FString NodeName = Node->GetName();
+      const FString NodeClass = Node->GetClass()->GetName();
+      const FString NodeTitle = Node->GetNodeTitle(ENodeTitleType::ListView).ToString();
+      if (!NameFilter.IsEmpty() && !NodeName.Contains(NameFilter) && !NodeTitle.Contains(NameFilter)) {
+        continue;
+      }
+      if (!ClassFilter.IsEmpty() && !NodeClass.Contains(ClassFilter)) {
+        continue;
+      }
+
+      TSharedPtr<FJsonObject> NodeObj = MakeShared<FJsonObject>();
+      NodeObj->SetStringField(TEXT("nodeId"), Node->NodeGuid.ToString());
+      NodeObj->SetStringField(TEXT("nodeClass"), NodeClass);
+      NodeObj->SetStringField(TEXT("nodeName"), NodeName);
+      NodeObj->SetStringField(TEXT("title"), NodeTitle);
+      NodeObj->SetNumberField(TEXT("posX"), Node->NodePosX);
+      NodeObj->SetNumberField(TEXT("posY"), Node->NodePosY);
+
+      if (UK2Node_CallFunction *CallFn = Cast<UK2Node_CallFunction>(Node)) {
+        NodeObj->SetStringField(TEXT("functionName"),
+                                CallFn->FunctionReference.GetMemberName().ToString());
+        if (UClass *MemberParent = CallFn->FunctionReference.GetMemberParentClass()) {
+          NodeObj->SetStringField(TEXT("functionParent"), MemberParent->GetName());
+        }
+      } else if (UK2Node_Event *EventNode = Cast<UK2Node_Event>(Node)) {
+        NodeObj->SetStringField(TEXT("eventName"),
+                                EventNode->EventReference.GetMemberName().ToString());
+        if (UClass *MemberParent = EventNode->EventReference.GetMemberParentClass()) {
+          NodeObj->SetStringField(TEXT("eventParent"), MemberParent->GetName());
+        }
+        NodeObj->SetBoolField(TEXT("bOverrideFunction"), EventNode->bOverrideFunction);
+      }
+
+      NodesArr.Add(MakeShared<FJsonValueObject>(NodeObj));
+    }
+    Result->SetArrayField(TEXT("nodes"), NodesArr);
+    Result->SetNumberField(TEXT("nodeCount"), NodesArr.Num());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Graph nodes listed."), Result);
+    return true;
   } else if (SubAction == TEXT("break_pin_links")) {
     const FScopedTransaction Transaction(
         FText::FromString(TEXT("Break Blueprint Pin Links")));

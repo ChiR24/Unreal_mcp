@@ -292,6 +292,17 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       }) as Record<string, unknown>;
       return cleanObject(res);
     }
+    case 'list_graph_nodes': {
+      const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', {
+        subAction: 'list_nodes',
+        assetPath: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
+        graphName: argsTyped.graphName,
+        nameFilter: argsRecord.nameFilter as string | undefined,
+        classFilter: argsRecord.classFilter as string | undefined,
+        timeoutMs: argsRecord.timeoutMs as number | undefined
+      }) as Record<string, unknown>;
+      return cleanObject(res) as Record<string, unknown>;
+    }
     case 'add_node': {
       if ((argsTyped.nodeType === 'CallFunction' || argsTyped.nodeType === 'K2Node_CallFunction') && !(argsRecord.functionName as string | undefined) && !argsTyped.memberName) {
         throw new Error('CallFunction node requires functionName parameter');

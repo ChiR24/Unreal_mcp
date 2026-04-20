@@ -47,6 +47,7 @@ public:
 				TEXT("set_variable_metadata"),
 				TEXT("set_metadata"),
 				TEXT("create_node"),
+				TEXT("list_graph_nodes"),
 				TEXT("add_node"),
 				TEXT("delete_node"),
 				TEXT("connect_pins"),

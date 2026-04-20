@@ -190,7 +190,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create', 'get_blueprint', 'get', 'compile',
             'add_component', 'set_default', 'modify_scs', 'get_scs', 'add_scs_component', 'remove_scs_component', 'reparent_scs_component', 'set_scs_transform', 'set_scs_property',
             'ensure_exists', 'probe_handle', 'add_variable', 'remove_variable', 'rename_variable', 'add_function', 'add_event', 'remove_event', 'add_construction_script', 'set_variable_metadata', 'set_metadata',
-            'create_node', 'add_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
+            'create_node', 'list_graph_nodes', 'add_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
             'list_node_types', 'set_pin_default_value',
             'create_enum', 'create_struct', 'modify_enum', 'modify_struct', 'inspect_enum', 'inspect_struct'
           ],
@@ -213,6 +213,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         metadata: commonSchemas.objectProp,
         properties: commonSchemas.objectProp,
         graphName: commonSchemas.graphName,
+        nameFilter: commonSchemas.stringProp,
+        classFilter: commonSchemas.stringProp,
         nodeType: commonSchemas.stringProp,
         nodeId: commonSchemas.nodeId,
         pinName: commonSchemas.pinName,
@@ -288,7 +290,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       properties: {
         ...commonSchemas.outputBase,
         blueprintPath: commonSchemas.blueprintPath,
-        blueprint: { oneOf: [{ type: 'object' }, { type: 'string' }], description: 'Blueprint data object or path string.' }
+        blueprint: { oneOf: [{ type: 'object' }, { type: 'string' }], description: 'Blueprint data object or path string.' },
+        nodes: commonSchemas.arrayOfObjects
       }
     }
   },
