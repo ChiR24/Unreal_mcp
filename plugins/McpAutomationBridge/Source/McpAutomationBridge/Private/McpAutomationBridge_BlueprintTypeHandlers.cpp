@@ -255,12 +255,62 @@ namespace
 		SendError(Self, Socket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("modify_struct stub"));
 		return true;
 	}
+#if WITH_EDITOR
 	bool HandleInspectEnum(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 	                       const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 	{
-		SendError(Self, Socket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("inspect_enum stub"));
+		FString AssetPath, Err;
+		if (!McpHandlerUtils::TryGetRequiredString(Payload, TEXT("assetPath"), AssetPath, Err))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"), Err);
+			return true;
+		}
+		if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
+		{
+			SendError(Self, Socket, RequestId, TEXT("ASSET_NOT_FOUND"),
+				FString::Printf(TEXT("Asset not found: '%s'"), *AssetPath));
+			return true;
+		}
+		UObject* Obj = UEditorAssetLibrary::LoadAsset(AssetPath);
+		UUserDefinedEnum* UDE = Cast<UUserDefinedEnum>(Obj);
+		if (!UDE)
+		{
+			SendError(Self, Socket, RequestId, TEXT("ASSET_WRONG_TYPE"),
+				FString::Printf(TEXT("Asset at '%s' is not a UUserDefinedEnum"), *AssetPath));
+			return true;
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("name"), UDE->GetName());
+		Data->SetStringField(TEXT("assetPath"), AssetPath);
+
+		TArray<TSharedPtr<FJsonValue>> Arr;
+		// NumEnums() includes _MAX; iterate up to NumEnums() - 1.
+		const int32 N = UDE->NumEnums() - 1;
+		for (int32 i = 0; i < N; ++i)
+		{
+			TSharedPtr<FJsonObject> E = MakeShared<FJsonObject>();
+			E->SetStringField(TEXT("name"), UDE->GetNameStringByIndex(i));
+			E->SetStringField(TEXT("displayName"), UDE->GetDisplayNameTextByIndex(i).ToString());
+			E->SetNumberField(TEXT("index"), i);
+			Arr.Add(MakeShared<FJsonValueObject>(E));
+		}
+		Data->SetArrayField(TEXT("enumerators"), Arr);
+
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Inspected enum '%s' (%d enumerators)"), *UDE->GetName(), N),
+			Data);
 		return true;
 	}
+#else
+	bool HandleInspectEnum(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+	                       const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		SendError(Self, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+			TEXT("inspect_enum requires editor build"));
+		return true;
+	}
+#endif
 	bool HandleInspectStruct(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 	                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 	{
