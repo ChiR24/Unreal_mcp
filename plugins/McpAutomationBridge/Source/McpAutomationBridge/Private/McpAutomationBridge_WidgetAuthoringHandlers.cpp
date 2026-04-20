@@ -1790,6 +1790,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             WidgetInfo->SetStringField(TEXT("parentClass"), WidgetBP->ParentClass->GetName());
         }
 
+        // `slots` kept for backward compat; `tree` below supersedes it for structural queries.
         TArray<TSharedPtr<FJsonValue>> SlotsArray;
         if (WidgetBP->WidgetTree)
         {

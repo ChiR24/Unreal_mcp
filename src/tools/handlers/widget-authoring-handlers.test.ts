@@ -28,6 +28,10 @@ describe('widget_authoring get_widget_info tree response', () => {
       {} as never
     ) as { widgetInfo?: { tree?: unknown } };
 
-    expect(result.widgetInfo?.tree).toBeDefined();
+    expect(result.widgetInfo?.tree).toMatchObject({
+      name: expect.any(String),
+      class: expect.any(String),
+      children: expect.any(Array)
+    });
   });
 });

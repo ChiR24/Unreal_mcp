@@ -3542,7 +3542,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             slots: commonSchemas.arrayOfStrings,
             tree: {
               type: 'object',
-              description: 'Hierarchical widget tree: {name, class, slotClass?, children: [...]}. children recurses for UPanelWidget (GetChildAt) and UNamedSlot (GetContent). Empty object when RootWidget is null.'
+              description: 'Hierarchical widget tree: {name, class, slotClass?, children: [...]}. children recurses for UPanelWidget (GetChildAt) and UNamedSlot (GetContent). Embedded UUserWidget instances appear as leaves; their internal trees require a separate get_widget_info call. Empty object when RootWidget is null.'
             },
             animations: commonSchemas.arrayOfStrings,
             variables: commonSchemas.arrayOfStrings,
