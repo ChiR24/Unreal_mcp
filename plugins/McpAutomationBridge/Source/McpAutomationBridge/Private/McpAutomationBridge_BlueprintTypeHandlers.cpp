@@ -15,7 +15,8 @@
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/UserDefinedEnum.h"
-#include "Engine/UserDefinedStruct.h"
+#include "StructUtils/UserDefinedStruct.h"
+#include "UserDefinedStructure/UserDefinedStructEditorData.h"
 #include "Factories/EnumFactory.h"
 #include "Kismet2/EnumEditorUtils.h"
 #include "Kismet2/StructureEditorUtils.h"
@@ -190,7 +191,9 @@ namespace
 			return true;
 		}
 
-		// Add enumerators
+		// Add enumerators. UE 5.7's UUserDefinedEnum exposes only DisplayName for editing
+		// (the internal short name is auto-generated). We treat spec's `name` as the
+		// default DisplayName, and `displayName` overrides it when present.
 		int32 Count = 0;
 		for (const TSharedPtr<FJsonValue>& V : *Enumerators)
 		{
@@ -198,14 +201,11 @@ namespace
 			const FString Name = Obj->GetStringField(TEXT("name"));
 			FString DisplayName;
 			Obj->TryGetStringField(TEXT("displayName"), DisplayName);
+			const FString EffectiveDisplay = DisplayName.IsEmpty() ? Name : DisplayName;
 
 			FEnumEditorUtils::AddNewEnumeratorForUserDefinedEnum(NewEnum);
 			const int32 NewIndex = NewEnum->NumEnums() - 2; // -1 是 _MAX
-			FEnumEditorUtils::SetEnumeratorName(NewEnum, NewIndex, FName(*Name));
-			if (!DisplayName.IsEmpty())
-			{
-				FEnumEditorUtils::SetEnumeratorDisplayName(NewEnum, NewIndex, FText::FromString(DisplayName));
-			}
+			FEnumEditorUtils::SetEnumeratorDisplayName(NewEnum, NewIndex, FText::FromString(EffectiveDisplay));
 			++Count;
 		}
 
@@ -461,14 +461,12 @@ namespace
 					SendPartial(OpIdx, Op, TEXT("INVALID_NAME"), TEXT("Invalid 'name'"));
 					return true;
 				}
+				FString DN;
+				Op->TryGetStringField(TEXT("displayName"), DN);
+				const FString EffectiveDisplay = DN.IsEmpty() ? Name : DN;
 				FEnumEditorUtils::AddNewEnumeratorForUserDefinedEnum(UDE);
 				const int32 NewIdx = UDE->NumEnums() - 2;
-				FEnumEditorUtils::SetEnumeratorName(UDE, NewIdx, FName(*Name));
-				FString DN;
-				if (Op->TryGetStringField(TEXT("displayName"), DN) && !DN.IsEmpty())
-				{
-					FEnumEditorUtils::SetEnumeratorDisplayName(UDE, NewIdx, FText::FromString(DN));
-				}
+				FEnumEditorUtils::SetEnumeratorDisplayName(UDE, NewIdx, FText::FromString(EffectiveDisplay));
 			}
 			else if (OpName == TEXT("remove"))
 			{
@@ -496,7 +494,8 @@ namespace
 					SendPartial(OpIdx, Op, TEXT("INVALID_NAME"), TEXT("Invalid 'newName'"));
 					return true;
 				}
-				FEnumEditorUtils::SetEnumeratorName(UDE, Idx, FName(*NewName));
+				// UE 5.7 has no SetEnumeratorName; rename = update DisplayName.
+				FEnumEditorUtils::SetEnumeratorDisplayName(UDE, Idx, FText::FromString(NewName));
 			}
 			else if (OpName == TEXT("set_display_name"))
 			{
@@ -828,17 +827,6 @@ namespace
 	}
 #endif
 #if WITH_EDITOR
-	FEdGraphPinType BuildPinTypeFromDesc(const FStructVariableDescription& D)
-	{
-		FEdGraphPinType T;
-		T.PinCategory = D.Category;
-		T.PinSubCategory = D.SubCategory;
-		T.PinSubCategoryObject = D.SubCategoryObject.Get();
-		T.ContainerType = D.ContainerType;
-		T.PinValueType = D.PinValueType;
-		return T;
-	}
-
 	bool HandleInspectStruct(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 	                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 	{
@@ -877,7 +865,7 @@ namespace
 			TSharedPtr<FJsonObject> M = MakeShared<FJsonObject>();
 			M->SetStringField(TEXT("name"), D.VarName.ToString());
 			FString SerWarn;
-			M->SetStringField(TEXT("type"), FMcpPinTypeParser::Serialize(BuildPinTypeFromDesc(D), SerWarn));
+			M->SetStringField(TEXT("type"), FMcpPinTypeParser::Serialize(D.ToPinType(), SerWarn));
 			M->SetNumberField(TEXT("index"), i);
 			if (bIncludeGuids)
 			{
