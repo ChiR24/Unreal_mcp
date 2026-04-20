@@ -290,6 +290,7 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleDataCreateTable(con
     }
 
     FString OutError;
+    bool bSaved = false;
     UObject* NewTable = McpGenericAssetFactory::CreateAssetOfClass(
         UDataTable::StaticClass(),
         PathStr,
@@ -300,7 +301,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleDataCreateTable(con
                 DT->RowStruct = RowStruct;
             }
         },
-        OutError);
+        OutError,
+        bSaved);
 
     if (!NewTable)
     {

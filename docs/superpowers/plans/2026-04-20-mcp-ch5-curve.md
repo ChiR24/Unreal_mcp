@@ -199,8 +199,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleCurveCreateFloat(co
     }
 
     FString OutError;
+    bool bSaved = false;
     UObject* NewCurve = McpGenericAssetFactory::CreateAssetOfClass(
-        UCurveFloat::StaticClass(), PathStr, NameStr, nullptr, OutError);
+        UCurveFloat::StaticClass(), PathStr, NameStr, nullptr, OutError, bSaved);
     if (!NewCurve)
     {
         Response->SetBoolField(TEXT("success"), false);
@@ -210,6 +211,7 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleCurveCreateFloat(co
     }
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("assetPath"), NewCurve->GetPathName());
+    if (!bSaved) Response->SetStringField(TEXT("warning"), TEXT("Asset created but save failed"));
     return Response;
 }
 ```

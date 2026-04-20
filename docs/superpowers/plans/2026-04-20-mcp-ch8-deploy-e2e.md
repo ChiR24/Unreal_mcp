@@ -9,97 +9,53 @@
 
 ---
 
-## Task 1: Create `deploy-to-war.sh` deployment script
+## Task 1: Verify existing `sync-mcp-plugin.js` deployment workflow
+
+**NOTE (post-Task 0 correction):** This repo already has `scripts/sync-mcp-plugin.js` which is the canonical deployment mechanism. War project uses a **directory copy** (NOT a symlink/junction) — this matches existing team workflow and keeps War's `.uproject` / `Plugins/` structure portable. Do NOT replace the copy with a junction.
 
 **Files:**
-- Create: `scripts/deploy-to-war.sh`
+- Read-only: `scripts/sync-mcp-plugin.js` (existing)
+- Potentially modify: nothing (unless the existing script is broken)
 
-- [ ] **Step 1: Write deployment script**
-
-```bash
-#!/usr/bin/env bash
-# scripts/deploy-to-war.sh
-# One-shot junction-link McpAutomationBridge plugin into /d/Unreal/Project/War/Plugins
-# Safe to re-run: verifies existing link, backs up real dirs, skips if already correct.
-
-set -euo pipefail
-
-REPO_PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/plugins/McpAutomationBridge"
-WAR_PLUGINS_DIR="/d/Unreal/Project/War/Plugins"
-WAR_LINK="${WAR_PLUGINS_DIR}/McpAutomationBridge"
-WAR_LINK_WIN='D:\Unreal\Project\War\Plugins\McpAutomationBridge'
-REPO_PLUGIN_WIN='C:\Code\Unreal_mcp\plugins\McpAutomationBridge'
-
-if [ ! -d "$REPO_PLUGIN_DIR" ]; then
-    echo "ERROR: repo plugin dir not found: $REPO_PLUGIN_DIR"
-    exit 1
-fi
-if [ ! -d "$WAR_PLUGINS_DIR" ]; then
-    echo "ERROR: War Plugins dir not found: $WAR_PLUGINS_DIR"
-    exit 1
-fi
-
-# If already a junction pointing to repo, do nothing
-if [ -L "$WAR_LINK" ]; then
-    TARGET=$(readlink "$WAR_LINK")
-    if [ "$TARGET" = "$REPO_PLUGIN_DIR" ]; then
-        echo "OK: junction already exists pointing to repo."
-        exit 0
-    fi
-    echo "INFO: junction exists but points elsewhere ($TARGET) — removing."
-    rm "$WAR_LINK"
-fi
-
-# If it's a real directory, back it up
-if [ -d "$WAR_LINK" ]; then
-    BACKUP="${WAR_LINK}.bak-$(date +%Y%m%d-%H%M%S)"
-    echo "INFO: backing up existing directory to $BACKUP"
-    mv "$WAR_LINK" "$BACKUP"
-fi
-
-# Create junction (requires Windows cmd.exe mklink)
-echo "Creating junction: $WAR_LINK_WIN -> $REPO_PLUGIN_WIN"
-cmd //c "mklink /J \"$WAR_LINK_WIN\" \"$REPO_PLUGIN_WIN\"" || {
-    echo "ERROR: mklink failed. Run this script from an elevated shell."
-    exit 1
-}
-
-echo "Deployed. Restart UE Editor to reload plugin."
-```
-
-- [ ] **Step 2: Make executable**
+- [ ] **Step 1: Verify sync script usage**
 
 ```bash
-chmod +x scripts/deploy-to-war.sh
+node scripts/sync-mcp-plugin.js --help
 ```
 
-- [ ] **Step 3: Test run (will create junction if absent)**
+Expected usage:
+```
+Usage: node sync-mcp-plugin.js [--engine <engine_plugins_dir>] [--project <project_plugins_dir>] [--dry-run] [--clean-engine] [--clean-project]
+```
+
+- [ ] **Step 2: Dry-run sync to War**
 
 ```bash
-./scripts/deploy-to-war.sh
+node scripts/sync-mcp-plugin.js --project D:/Unreal/Project/War/Plugins --dry-run
 ```
 
-Expected output:
-```
-Creating junction: D:\Unreal\Project\War\Plugins\McpAutomationBridge -> C:\Code\Unreal_mcp\plugins\McpAutomationBridge
-Deployed. Restart UE Editor to reload plugin.
-```
+Expected: logs file operations without modifying filesystem. Should reference paths under `D:/Unreal/Project/War/Plugins/McpAutomationBridge/`.
 
-(Or "OK: junction already exists" on repeat.)
+- [ ] **Step 3: Real sync**
 
-Verify:
 ```bash
-ls -la /d/Unreal/Project/War/Plugins/McpAutomationBridge
-# Expect: lrwxrwxrwx ... McpAutomationBridge -> C:/Code/Unreal_mcp/plugins/McpAutomationBridge
+node scripts/sync-mcp-plugin.js --project D:/Unreal/Project/War/Plugins
 ```
 
-- [ ] **Step 4: Commit**
-```bash
-git add scripts/deploy-to-war.sh
-git commit -m "chore(ch8): add deploy-to-war.sh junction setup script
+Expected: copies plugin files. `D:/Unreal/Project/War/Plugins/McpAutomationBridge/Binaries/Win64/UnrealEditor-McpAutomationBridge.dll` timestamp should update to match the latest repo build.
 
-Idempotent one-shot deployment for dev iteration against /d/Unreal/Project/War.
-Backs up pre-existing real directories, verifies existing junctions."
+- [ ] **Step 4: Document the workflow (no code changes)**
+
+If a README or deploy doc exists under `docs/` or at repo root, add a short section: "For War project iteration, run `node scripts/sync-mcp-plugin.js --project D:/Unreal/Project/War/Plugins` after every plugin compile. Do NOT use symlinks/junctions — breaks War's SCM tracking."
+
+If no such doc exists, skip (do NOT create a new doc for this).
+
+- [ ] **Step 5: No commit required** (unless doc added in Step 4)
+
+If you added a doc line, commit it:
+```bash
+git add <doc-file>
+git commit -m "docs(deploy): note sync-mcp-plugin.js as canonical War deploy"
 ```
 
 ---

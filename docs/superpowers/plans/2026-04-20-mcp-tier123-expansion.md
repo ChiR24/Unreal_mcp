@@ -602,6 +602,38 @@ Each chapter file is self-contained; a subagent can be dispatched one chapter at
 - **Path normalization** — use `normalizeBlueprintPath` / `/Game/` prefix enforcement from `src/utils/normalize.ts`
 - **Integration test registration** — add scenarios to `tests/integration.mjs` (NOT a new subdir; existing flat layout preferred)
 
+### Workflow corrections (post-Task 0 lessons)
+
+- **UE Engine path is `D:\Unreal\UE_5.7`** (NOT `X:\Unreal_Engine\UE_5.7` — CLAUDE.md line was wrong). UBT batch file: `D:\Unreal\UE_5.7\Engine\Build\BatchFiles\Build.bat`.
+- **Compile command** (use this, not anything referencing `McpAutomationBridgeEditor` target):
+  ```
+  "D:\Unreal\UE_5.7\Engine\Build\BatchFiles\Build.bat" UnrealEditor Win64 Development -Project="D:\Unreal\Project\War\War.uproject"
+  ```
+- **Kill UE Editor before every UBT compile** — otherwise plugin DLL is locked and UBT silently reuses the stale DLL (gives false "Succeeded"). Process name: `UnrealEditor-Win64-DebugGame.exe` or `UnrealEditor.exe`.
+- **War project plugin is a COPY, not a symlink** — after each successful compile, sync via:
+  ```
+  node scripts/sync-mcp-plugin.js --project D:/Unreal/Project/War/Plugins
+  ```
+
+### UE 5.5+ API migrations (discovered during Task 0)
+
+- `#include "Engine/UserDefinedStruct.h"` is a deprecated shim → use `#include "StructUtils/UserDefinedStruct.h"`
+- `UStruct::IsA<T>()` template doesn't resolve → use `Cast<T>(Struct) != nullptr`
+
+### `McpGenericAssetFactory::CreateAssetOfClass` signature (Task 0 final)
+
+```cpp
+UObject* CreateAssetOfClass(
+    UClass* AssetClass,
+    const FString& PackagePath,
+    const FString& AssetName,
+    TFunction<void(UObject*)> Configurator,
+    FString& OutError,
+    bool& bOutSaved);         // NEW: distinguishes create-success from save-success
+```
+
+Call sites pass `bool bSaved = false;` as the last argument and optionally report a warning when `bSaved == false`.
+
 ---
 
 ## Execution Handoff

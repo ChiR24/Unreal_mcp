@@ -94,8 +94,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleDataCreateAsset(con
     }
 
     FString OutError;
+    bool bSaved = false;
     UObject* NewAsset = McpGenericAssetFactory::CreateAssetOfClass(
-        AssetClass, PathStr, NameStr, nullptr, OutError);
+        AssetClass, PathStr, NameStr, nullptr, OutError, bSaved);
     if (!NewAsset)
     {
         Response->SetBoolField(TEXT("success"), false);
@@ -106,6 +107,7 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleDataCreateAsset(con
 
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+    if (!bSaved) Response->SetStringField(TEXT("warning"), TEXT("Asset created but save failed; retry save manually or re-run"));
     return Response;
 }
 ```
