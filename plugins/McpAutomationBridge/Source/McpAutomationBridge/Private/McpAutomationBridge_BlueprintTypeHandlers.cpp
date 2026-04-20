@@ -243,12 +243,163 @@ namespace
 		SendError(Self, Socket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("create_struct stub"));
 		return true;
 	}
+#if WITH_EDITOR
 	bool HandleModifyEnum(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 	                      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 	{
-		SendError(Self, Socket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("modify_enum stub"));
+		FString AssetPath, Err;
+		if (!McpHandlerUtils::TryGetRequiredString(Payload, TEXT("assetPath"), AssetPath, Err))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"), Err);
+			return true;
+		}
+		const TArray<TSharedPtr<FJsonValue>>* Operations = nullptr;
+		if (!Payload->TryGetArrayField(TEXT("operations"), Operations) || Operations->Num() == 0)
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing or empty 'operations' array"));
+			return true;
+		}
+		if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
+		{
+			SendError(Self, Socket, RequestId, TEXT("ASSET_NOT_FOUND"),
+				FString::Printf(TEXT("Asset not found: '%s'"), *AssetPath));
+			return true;
+		}
+		UUserDefinedEnum* UDE = Cast<UUserDefinedEnum>(UEditorAssetLibrary::LoadAsset(AssetPath));
+		if (!UDE)
+		{
+			SendError(Self, Socket, RequestId, TEXT("ASSET_WRONG_TYPE"),
+				FString::Printf(TEXT("Asset at '%s' is not a UUserDefinedEnum"), *AssetPath));
+			return true;
+		}
+
+		auto SendPartial = [&](int32 OpIdx, const TSharedPtr<FJsonObject>& OpJson,
+		                       const FString& Code, const FString& Message)
+		{
+			TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+			Data->SetStringField(TEXT("status"), TEXT("partial_failure"));
+			Data->SetNumberField(TEXT("completedOps"), OpIdx);
+			Data->SetNumberField(TEXT("failedOpIndex"), OpIdx);
+			Data->SetObjectField(TEXT("failedOp"), OpJson);
+			Data->SetStringField(TEXT("errorCode"), Code);
+			Self->SendAutomationResponse(Socket, RequestId, false, Message, Data, Code);
+		};
+
+		int32 OpIdx = 0;
+		for (const TSharedPtr<FJsonValue>& V : *Operations)
+		{
+			TSharedPtr<FJsonObject> Op = V->AsObject();
+			if (!Op.IsValid())
+			{
+				SendPartial(OpIdx, MakeShared<FJsonObject>(),
+					TEXT("INVALID_PARAMS"), TEXT("Operation must be an object"));
+				return true;
+			}
+			FString OpName;
+			if (!Op->TryGetStringField(TEXT("op"), OpName))
+			{
+				SendPartial(OpIdx, Op, TEXT("INVALID_PARAMS"), TEXT("Operation missing 'op'"));
+				return true;
+			}
+			const int32 N = UDE->NumEnums() - 1; // exclude _MAX
+
+			if (OpName == TEXT("add"))
+			{
+				FString Name;
+				if (!Op->TryGetStringField(TEXT("name"), Name) || !IsValidIdentifier(Name))
+				{
+					SendPartial(OpIdx, Op, TEXT("INVALID_NAME"), TEXT("Invalid 'name'"));
+					return true;
+				}
+				FEnumEditorUtils::AddNewEnumeratorForUserDefinedEnum(UDE);
+				const int32 NewIdx = UDE->NumEnums() - 2;
+				FEnumEditorUtils::SetEnumeratorName(UDE, NewIdx, FName(*Name));
+				FString DN;
+				if (Op->TryGetStringField(TEXT("displayName"), DN) && !DN.IsEmpty())
+				{
+					FEnumEditorUtils::SetEnumeratorDisplayName(UDE, NewIdx, FText::FromString(DN));
+				}
+			}
+			else if (OpName == TEXT("remove"))
+			{
+				int32 Idx;
+				if (!Op->TryGetNumberField(TEXT("index"), Idx) || Idx < 0 || Idx >= N)
+				{
+					SendPartial(OpIdx, Op, TEXT("INDEX_OUT_OF_RANGE"),
+						FString::Printf(TEXT("Index out of range [0,%d)"), N));
+					return true;
+				}
+				FEnumEditorUtils::RemoveEnumeratorFromUserDefinedEnum(UDE, Idx);
+			}
+			else if (OpName == TEXT("rename"))
+			{
+				int32 Idx;
+				FString NewName;
+				if (!Op->TryGetNumberField(TEXT("index"), Idx) || Idx < 0 || Idx >= N)
+				{
+					SendPartial(OpIdx, Op, TEXT("INDEX_OUT_OF_RANGE"),
+						FString::Printf(TEXT("Index out of range [0,%d)"), N));
+					return true;
+				}
+				if (!Op->TryGetStringField(TEXT("newName"), NewName) || !IsValidIdentifier(NewName))
+				{
+					SendPartial(OpIdx, Op, TEXT("INVALID_NAME"), TEXT("Invalid 'newName'"));
+					return true;
+				}
+				FEnumEditorUtils::SetEnumeratorName(UDE, Idx, FName(*NewName));
+			}
+			else if (OpName == TEXT("set_display_name"))
+			{
+				int32 Idx;
+				FString NewDN;
+				if (!Op->TryGetNumberField(TEXT("index"), Idx) || Idx < 0 || Idx >= N)
+				{
+					SendPartial(OpIdx, Op, TEXT("INDEX_OUT_OF_RANGE"),
+						FString::Printf(TEXT("Index out of range [0,%d)"), N));
+					return true;
+				}
+				if (!Op->TryGetStringField(TEXT("newDisplayName"), NewDN))
+				{
+					SendPartial(OpIdx, Op, TEXT("INVALID_PARAMS"), TEXT("Missing 'newDisplayName'"));
+					return true;
+				}
+				FEnumEditorUtils::SetEnumeratorDisplayName(UDE, Idx, FText::FromString(NewDN));
+			}
+			else
+			{
+				SendPartial(OpIdx, Op, TEXT("INVALID_PARAMS"),
+					FString::Printf(TEXT("Unknown op: '%s'"), *OpName));
+				return true;
+			}
+			++OpIdx;
+		}
+
+		if (!UEditorAssetLibrary::SaveLoadedAsset(UDE))
+		{
+			SendError(Self, Socket, RequestId, TEXT("SAVE_FAILED"),
+				FString::Printf(TEXT("Failed to save enum at '%s'"), *AssetPath));
+			return true;
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("status"), TEXT("success"));
+		Data->SetStringField(TEXT("assetPath"), AssetPath);
+		Data->SetNumberField(TEXT("completedOps"), OpIdx);
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Modified enum '%s' (%d ops)"), *UDE->GetName(), OpIdx),
+			Data);
 		return true;
 	}
+#else
+	bool HandleModifyEnum(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+	                      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		SendError(Self, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+			TEXT("modify_enum requires editor build"));
+		return true;
+	}
+#endif
 	bool HandleModifyStruct(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 	                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 	{
