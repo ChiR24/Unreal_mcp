@@ -5685,6 +5685,183 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 #endif
   }
 
+  // blueprint_add_event_dispatcher: create a multicast inline delegate
+  // variable on the blueprint (i.e. an event dispatcher). Mirrors the
+  // FBlueprintEditor::OnAddNewDelegate canonical path.
+  if (ActionMatchesPattern(TEXT("blueprint_add_event_dispatcher")) ||
+      ActionMatchesPattern(TEXT("add_event_dispatcher")) ||
+      AlphaNumLower.Contains(TEXT("blueprintaddeventdispatcher")) ||
+      AlphaNumLower.Contains(TEXT("addeventdispatcher"))) {
+    FString Path = ResolveBlueprintRequestedPath();
+    FString DispatcherName;
+    LocalPayload->TryGetStringField(TEXT("dispatcherName"), DispatcherName);
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_add_event_dispatcher requires a blueprint path."),
+          nullptr, TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+    if (DispatcherName.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_add_event_dispatcher requires dispatcherName."),
+          nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+#if WITH_EDITOR && MCP_HAS_EDGRAPH_SCHEMA_K2
+    FString Normalized;
+    FString LoadErr;
+    UBlueprint *BP = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    if (!BP) {
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
+      Err->SetStringField(TEXT("error"), LoadErr);
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to load blueprint"), Err,
+                             TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    const FName DispName(*DispatcherName);
+
+    // Idempotent: if already present as a multicast delegate var, return ok.
+    const bool bAlreadyExists =
+        BP->NewVariables.ContainsByPredicate(
+            [DispName](const FBPVariableDescription &Desc) {
+              return Desc.VarName == DispName &&
+                     Desc.VarType.PinCategory ==
+                         UEdGraphSchema_K2::PC_MCDelegate;
+            });
+
+    bool bAdded = bAlreadyExists;
+    UEdGraph *SignatureGraph = nullptr;
+
+    if (!bAlreadyExists) {
+      BP->Modify();
+
+      FEdGraphPinType DelegateType;
+      DelegateType.PinCategory = UEdGraphSchema_K2::PC_MCDelegate;
+      bAdded = FBlueprintEditorUtils::AddMemberVariable(BP, DispName,
+                                                        DelegateType);
+      if (!bAdded) {
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            TEXT("AddMemberVariable failed for event dispatcher"), nullptr,
+            TEXT("ENGINE_API_ERROR"));
+        return true;
+      }
+
+      SignatureGraph = FBlueprintEditorUtils::CreateNewGraph(
+          BP, DispName, UEdGraph::StaticClass(),
+          UEdGraphSchema_K2::StaticClass());
+      if (!SignatureGraph) {
+        FBlueprintEditorUtils::RemoveMemberVariable(BP, DispName);
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            TEXT("CreateNewGraph failed for event dispatcher signature"),
+            nullptr, TEXT("ENGINE_API_ERROR"));
+        return true;
+      }
+      SignatureGraph->bEditable = false;
+
+      const UEdGraphSchema_K2 *K2Schema =
+          GetDefault<UEdGraphSchema_K2>();
+      K2Schema->CreateDefaultNodesForGraph(*SignatureGraph);
+      K2Schema->CreateFunctionGraphTerminators(*SignatureGraph,
+                                               (UClass *)nullptr);
+      K2Schema->AddExtraFunctionFlags(
+          SignatureGraph,
+          (FUNC_BlueprintCallable | FUNC_BlueprintEvent | FUNC_Public));
+      K2Schema->MarkFunctionEntryAsEditable(SignatureGraph, true);
+
+      BP->DelegateSignatureGraphs.Add(SignatureGraph);
+    } else {
+      // Find the existing signature graph for signature wiring.
+      for (UEdGraph *G : BP->DelegateSignatureGraphs) {
+        if (G && G->GetFName() == DispName) {
+          SignatureGraph = G;
+          break;
+        }
+      }
+    }
+
+    // Apply delegateSignature inputs (optional). Each entry: { name, type }.
+    const TArray<TSharedPtr<FJsonValue>> *SigField = nullptr;
+    TArray<TSharedPtr<FJsonValue>> AppliedSignature;
+    if (LocalPayload->TryGetArrayField(TEXT("delegateSignature"), SigField) &&
+        SigField && SignatureGraph) {
+      // Find the K2Node_FunctionEntry in the signature graph to add pins on.
+      UK2Node_FunctionEntry *EntryNode = nullptr;
+      for (UEdGraphNode *Node : SignatureGraph->Nodes) {
+        if (UK2Node_FunctionEntry *Entry =
+                Cast<UK2Node_FunctionEntry>(Node)) {
+          EntryNode = Entry;
+          break;
+        }
+      }
+      if (EntryNode) {
+        EntryNode->Modify();
+        for (const TSharedPtr<FJsonValue> &SigVal : *SigField) {
+          if (!SigVal.IsValid() || SigVal->Type != EJson::Object)
+            continue;
+          const TSharedPtr<FJsonObject> SigObj = SigVal->AsObject();
+          if (!SigObj.IsValid())
+            continue;
+          FString ParamName;
+          SigObj->TryGetStringField(TEXT("name"), ParamName);
+          FString ParamType;
+          SigObj->TryGetStringField(TEXT("type"), ParamType);
+          if (ParamName.IsEmpty() || ParamType.IsEmpty())
+            continue;
+
+          FEdGraphPinType PinType;
+          FString ParseErr;
+          if (!FMcpPinTypeParser::Parse(ParamType, PinType, ParseErr)) {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                   TEXT("add_event_dispatcher: failed to parse pin type '%s' "
+                        "for param '%s': %s"),
+                   *ParamType, *ParamName, *ParseErr);
+            continue;
+          }
+          EntryNode->CreateUserDefinedPin(FName(*ParamName), PinType,
+                                          EGPD_Output);
+          TSharedPtr<FJsonObject> Rec = MakeShared<FJsonObject>();
+          Rec->SetStringField(TEXT("name"), ParamName);
+          Rec->SetStringField(TEXT("type"), ParamType);
+          AppliedSignature.Add(MakeShared<FJsonValueObject>(Rec));
+        }
+        EntryNode->ReconstructNode();
+      }
+    }
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+    McpSafeCompileBlueprint(BP);
+    const bool bSaved = SaveLoadedAssetThrottled(BP);
+
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), bAdded);
+    Resp->SetStringField(TEXT("blueprintPath"),
+                         Normalized.IsEmpty() ? Path : Normalized);
+    Resp->SetStringField(TEXT("dispatcherName"), DispatcherName);
+    Resp->SetBoolField(TEXT("alreadyExists"), bAlreadyExists);
+    Resp->SetBoolField(TEXT("saved"), bSaved);
+    if (AppliedSignature.Num() > 0) {
+      Resp->SetArrayField(TEXT("appliedSignature"), AppliedSignature);
+    }
+    SendAutomationResponse(RequestingSocket, RequestId, bAdded,
+                           bAdded ? TEXT("Event dispatcher added")
+                                  : TEXT("Failed to add event dispatcher"),
+                           Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_add_event_dispatcher requires editor build"), nullptr,
+        TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
   // Handle SCS (Simple Construction Script) operations - must be called before
   // the final fallback
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,

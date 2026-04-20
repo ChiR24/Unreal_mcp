@@ -530,6 +530,23 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       const res = await executeAutomationRequest(tools, 'blueprint_set_parent_class', { blueprintPath, parentClass });
       return cleanObject(res as Record<string, unknown>) as Record<string, unknown>;
     }
+    case 'add_event_dispatcher': {
+      const blueprintPath = argsTyped.blueprintPath || (argsRecord.path as string | undefined);
+      const dispatcherName = argsRecord.dispatcherName as string | undefined;
+      const delegateSignature = argsRecord.delegateSignature as unknown[] | undefined;
+      if (!blueprintPath || typeof blueprintPath !== 'string') {
+        throw new Error('Missing required parameter: blueprintPath');
+      }
+      if (!dispatcherName || typeof dispatcherName !== 'string') {
+        throw new Error('Missing required parameter: dispatcherName');
+      }
+      const res = await executeAutomationRequest(tools, 'blueprint_add_event_dispatcher', {
+        blueprintPath,
+        dispatcherName,
+        delegateSignature: delegateSignature ?? []
+      });
+      return cleanObject(res as Record<string, unknown>) as Record<string, unknown>;
+    }
     case 'create_enum':
     case 'create_struct':
     case 'modify_enum':

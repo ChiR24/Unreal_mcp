@@ -209,3 +209,55 @@ describe('manage_blueprint set_parent_class', () => {
     )).rejects.toThrow(/parentClass/);
   });
 });
+
+describe('manage_blueprint add_event_dispatcher', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({ success: true, nodes: [] });
+  });
+
+  it('forwards add_event_dispatcher with signature', async () => {
+    executeAutomationRequestMock.mockResolvedValueOnce({
+      success: true,
+      dispatcherName: 'OnTestFired'
+    });
+    const res = await handleBlueprintTools(
+      'add_event_dispatcher',
+      {
+        action: 'add_event_dispatcher',
+        blueprintPath: '/Game/BP_T',
+        dispatcherName: 'OnTestFired',
+        delegateSignature: [{ name: 'Payload', type: 'int' }]
+      },
+      {} as never
+    );
+    expect(res.success).toBe(true);
+    expect(res.dispatcherName).toBe('OnTestFired');
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      'blueprint_add_event_dispatcher',
+      expect.objectContaining({
+        blueprintPath: '/Game/BP_T',
+        dispatcherName: 'OnTestFired',
+        delegateSignature: [{ name: 'Payload', type: 'int' }]
+      })
+    );
+  });
+
+  it('defaults delegateSignature to [] when omitted', async () => {
+    executeAutomationRequestMock.mockResolvedValueOnce({
+      success: true,
+      dispatcherName: 'OnTestFired'
+    });
+    await handleBlueprintTools(
+      'add_event_dispatcher',
+      { action: 'add_event_dispatcher', blueprintPath: '/Game/BP_T', dispatcherName: 'OnTestFired' },
+      {} as never
+    );
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      'blueprint_add_event_dispatcher',
+      expect.objectContaining({ delegateSignature: [] })
+    );
+  });
+});

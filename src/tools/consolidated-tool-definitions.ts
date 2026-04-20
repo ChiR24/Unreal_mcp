@@ -189,7 +189,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           enum: [
             'create', 'get_blueprint', 'get', 'compile',
             'add_component', 'set_default', 'modify_scs', 'get_scs', 'add_scs_component', 'remove_scs_component', 'reparent_scs_component', 'set_scs_transform', 'set_scs_property',
-            'ensure_exists', 'probe_handle', 'add_variable', 'remove_variable', 'rename_variable', 'add_function', 'add_event', 'remove_event', 'add_construction_script', 'set_variable_metadata', 'set_metadata',
+            'ensure_exists', 'probe_handle', 'add_variable', 'remove_variable', 'rename_variable', 'add_function', 'add_event', 'add_event_dispatcher', 'remove_event', 'add_construction_script', 'set_variable_metadata', 'set_metadata',
             'create_node', 'list_graph_nodes', 'add_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
             'list_node_types', 'set_pin_default_value',
             'create_enum', 'create_struct', 'modify_enum', 'modify_struct', 'inspect_enum', 'inspect_struct',
@@ -272,6 +272,20 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         parentClass: commonSchemas.parentClass,
         // Interface management (add_interface / remove_interface)
         interfacePath: { type: 'string', description: 'Interface blueprint or native interface class path (e.g. "/Game/IF_Test.IF_Test_C" or "/Script/Engine.Interface_AssetUserData").' },
+        // Event dispatcher (add_event_dispatcher)
+        dispatcherName: { type: 'string', description: 'Name for the event dispatcher (multicast inline delegate variable).' },
+        delegateSignature: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              type: { type: 'string', description: 'Pin type tag (e.g. "bool", "int", "float", "string", "object /Script/Engine.Actor").' }
+            },
+            required: ['name', 'type']
+          },
+          description: 'Input parameters for the dispatcher delegate signature.'
+        },
         // Graph pin connections
         fromNodeId: commonSchemas.sourceNodeId,
         fromPin: commonSchemas.sourcePin,
@@ -301,7 +315,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         currentInterfaces: { type: 'array', items: { type: 'string' }, description: 'Implemented interface class paths after add/remove.' },
         // Reparent
         oldParent: { type: 'string', description: 'Previous parent class path (set_parent_class).' },
-        newParent: { type: 'string', description: 'New parent class path (set_parent_class).' }
+        newParent: { type: 'string', description: 'New parent class path (set_parent_class).' },
+        // Event dispatcher
+        dispatcherName: { type: 'string', description: 'Name of the event dispatcher variable (add_event_dispatcher).' }
       }
     }
   },
