@@ -12,6 +12,42 @@
 #include "Math/Transform.h"
 #include "Math/Color.h"
 
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetRegistry/IAssetRegistry.h"
+#include "Engine/UserDefinedEnum.h"
+#include "Engine/UserDefinedStruct.h"
+#include "UObject/Class.h"
+
+namespace
+{
+	UClass* FindClassBySimpleName(const FString& SimpleName)
+	{
+		// UE 5.1+ exposes UClass::TryFindTypeSlow.
+		if (UClass* Cls = UClass::TryFindTypeSlow<UClass>(SimpleName))
+		{
+			return Cls;
+		}
+		// Engine-prefixed fallback for common engine classes (Texture2D, StaticMesh, etc.)
+		return UClass::TryFindTypeSlow<UClass>(FString(TEXT("/Script/Engine.")) + SimpleName);
+	}
+
+	UObject* FindUserDefinedAssetByName(const FString& Name, UClass* ExpectedClass)
+	{
+		IAssetRegistry& AR = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
+			TEXT("AssetRegistry")).Get();
+		TArray<FAssetData> Assets;
+		AR.GetAssetsByClass(ExpectedClass->GetClassPathName(), Assets);
+		for (const FAssetData& A : Assets)
+		{
+			if (A.AssetName.ToString() == Name)
+			{
+				return A.GetAsset();
+			}
+		}
+		return nullptr;
+	}
+}
+
 bool FMcpPinTypeParser::Parse(const FString& TypeString, FEdGraphPinType& OutPinType, FString& OutError)
 {
 	const FString T = TypeString.TrimStartAndEnd();
@@ -45,7 +81,73 @@ bool FMcpPinTypeParser::Parse(const FString& TypeString, FEdGraphPinType& OutPin
 	if (T == TEXT("Color"))       { MakeStruct(TBaseStructure<FColor>::Get());       return true; }
 	if (T == TEXT("LinearColor")) { MakeStruct(TBaseStructure<FLinearColor>::Get()); return true; }
 
-	OutError = FString::Printf(TEXT("Unknown type keyword: '%s' (object/container/userdef parsing not yet implemented)"), *T);
+	// 3. Object reference: ClassName*
+	if (T.EndsWith(TEXT("*")))
+	{
+		const FString ClassName = T.LeftChop(1).TrimStartAndEnd();
+		UClass* Cls = FindClassBySimpleName(ClassName);
+		if (!Cls)
+		{
+			OutError = FString::Printf(TEXT("Unknown class for object reference: '%s'"), *ClassName);
+			return false;
+		}
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+		OutPinType.PinSubCategoryObject = Cls;
+		return true;
+	}
+
+	// 4. Class reference: TSubclassOf<X>
+	if (T.StartsWith(TEXT("TSubclassOf<")) && T.EndsWith(TEXT(">")))
+	{
+		const FString Inner = T.Mid(12, T.Len() - 13).TrimStartAndEnd();
+		UClass* Cls = FindClassBySimpleName(Inner);
+		if (!Cls)
+		{
+			OutError = FString::Printf(TEXT("Unknown class for TSubclassOf<%s>"), *Inner);
+			return false;
+		}
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Class;
+		OutPinType.PinSubCategoryObject = Cls;
+		return true;
+	}
+
+	// 5. User-defined enum: E_X
+	if (T.StartsWith(TEXT("E_")))
+	{
+		UObject* Obj = FindUserDefinedAssetByName(T, UUserDefinedEnum::StaticClass());
+		if (!Obj)
+		{
+			OutError = FString::Printf(TEXT("User-defined enum not found: '%s'"), *T);
+			return false;
+		}
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Byte;
+		OutPinType.PinSubCategoryObject = Obj;
+		return true;
+	}
+
+	// 6. User-defined struct: S_X
+	if (T.StartsWith(TEXT("S_")))
+	{
+		UObject* Obj = FindUserDefinedAssetByName(T, UUserDefinedStruct::StaticClass());
+		if (!Obj)
+		{
+			OutError = FString::Printf(TEXT("User-defined struct not found: '%s'"), *T);
+			return false;
+		}
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+		OutPinType.PinSubCategoryObject = Obj;
+		return true;
+	}
+
+	// 7. Lenient fallback: bare class name treated as object reference (e.g. "Texture2D" == "Texture2D*")
+	if (UClass* Cls = FindClassBySimpleName(T))
+	{
+		OutPinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+		OutPinType.PinSubCategoryObject = Cls;
+		return true;
+	}
+
+	OutError = FString::Printf(TEXT("Cannot parse type: '%s' (not a keyword, builtin struct, class reference, or known user-defined asset)"), *T);
 	return false;
 }
 
