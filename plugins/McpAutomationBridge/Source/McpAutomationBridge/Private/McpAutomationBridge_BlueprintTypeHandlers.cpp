@@ -351,19 +351,15 @@ namespace
 			return true;
 		}
 
-		// CreateUserDefinedStruct seeds a default placeholder member (Bool MemberVar_0)
-		// to keep the struct non-empty during creation. Strip those before adding the
-		// user-supplied members so the result matches spec exactly.
+		// CreateUserDefinedStruct seeds a default placeholder member ("MemberVar_0", Bool)
+		// to keep the struct non-empty during creation. UE 5.7's RemoveVariable refuses
+		// to leave the struct empty (bAllowToMakeEmpty=false), so we must capture seed
+		// GUIDs first, ADD the user-supplied members, THEN remove the seeds — by which
+		// point count > 1 and removal is allowed.
+		TArray<FGuid> SeedGuids;
+		for (const FStructVariableDescription& D : FStructureEditorUtils::GetVarDesc(NewStruct))
 		{
-			TArray<FGuid> InitialGuids;
-			for (const FStructVariableDescription& D : FStructureEditorUtils::GetVarDesc(NewStruct))
-			{
-				InitialGuids.Add(D.VarGuid);
-			}
-			for (const FGuid& G : InitialGuids)
-			{
-				FStructureEditorUtils::RemoveVariable(NewStruct, G);
-			}
+			SeedGuids.Add(D.VarGuid);
 		}
 
 		// Add members
@@ -378,6 +374,12 @@ namespace
 				return true;
 			}
 			FStructureEditorUtils::RenameVariable(NewStruct, Descs.Last().VarGuid, M.Key);
+		}
+
+		// Now remove the seed members (struct has user members, removal is allowed).
+		for (const FGuid& G : SeedGuids)
+		{
+			FStructureEditorUtils::RemoveVariable(NewStruct, G);
 		}
 
 		if (!UEditorAssetLibrary::SaveLoadedAsset(NewStruct))
