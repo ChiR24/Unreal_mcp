@@ -177,6 +177,27 @@ namespace McpInspectReflection
         return Table;
     }
 
+    // Resolve UClass from className. Accepts:
+    //   - full package path  "/Script/UMG.UserWidget"
+    //   - short engine name  "Actor" (retries with /Script/Engine.)
+    //   - /Game/ blueprint   "/Game/Blueprints/TypeScript/SmokeTest.SmokeTest_C"
+    // Falls back to LoadObject when FindObject misses (BP classes are not preloaded).
+    static UClass* ResolveClass(const FString& ClassName)
+    {
+        UClass* Found = FindObject<UClass>(nullptr, *ClassName);
+        if (Found) return Found;
+        Found = LoadObject<UClass>(nullptr, *ClassName);
+        if (Found) return Found;
+        if (!ClassName.Contains(TEXT(".")))
+        {
+            const FString Engineified = FString::Printf(TEXT("/Script/Engine.%s"), *ClassName);
+            Found = FindObject<UClass>(nullptr, *Engineified);
+            if (Found) return Found;
+            Found = LoadObject<UClass>(nullptr, *Engineified);
+        }
+        return Found;
+    }
+
     static TArray<FString> DescribeFunctionFlags(EFunctionFlags Flags)
     {
         TArray<FString> Out;
@@ -1864,11 +1885,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
                 return true;
             }
 
-            UClass* TargetClass = FindObject<UClass>(nullptr, *ClassName);
-            if (!TargetClass && !ClassName.Contains(TEXT(".")))
-            {
-                TargetClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), *ClassName));
-            }
+            UClass* TargetClass = McpInspectReflection::ResolveClass(ClassName);
             if (!TargetClass)
             {
                 SendAutomationError(RequestingSocket, RequestId,
@@ -1958,11 +1975,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
                 return true;
             }
 
-            UClass* TargetClass = FindObject<UClass>(nullptr, *ClassName);
-            if (!TargetClass && !ClassName.Contains(TEXT(".")))
-            {
-                TargetClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), *ClassName));
-            }
+            UClass* TargetClass = McpInspectReflection::ResolveClass(ClassName);
             if (!TargetClass)
             {
                 SendAutomationError(RequestingSocket, RequestId,
