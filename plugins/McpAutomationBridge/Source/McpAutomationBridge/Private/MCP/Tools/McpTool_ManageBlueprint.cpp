@@ -57,7 +57,13 @@ public:
 				TEXT("get_graph_details"),
 				TEXT("get_pin_details"),
 				TEXT("list_node_types"),
-				TEXT("set_pin_default_value")
+				TEXT("set_pin_default_value"),
+				TEXT("create_enum"),
+				TEXT("create_struct"),
+				TEXT("modify_enum"),
+				TEXT("modify_struct"),
+				TEXT("inspect_enum"),
+				TEXT("inspect_struct")
 			}, TEXT("Blueprint action"))
 			.String(TEXT("name"), TEXT("Name identifier."))
 			.String(TEXT("blueprintPath"), TEXT("Blueprint asset path."))
@@ -145,6 +151,16 @@ public:
 			.String(TEXT("toNodeId"), TEXT("ID of the target node."))
 			.String(TEXT("toPin"), TEXT("Name of the target pin."))
 			.String(TEXT("toPinName"), TEXT("Name of the target pin."))
+			.String(TEXT("assetPath"),
+				TEXT("Asset path under /Game/... for create/modify/inspect _enum/_struct."))
+			.ArrayOfObjects(TEXT("enumerators"),
+				TEXT("Enumerator definitions for create_enum: [{name, displayName?}]"))
+			.ArrayOfObjects(TEXT("members"),
+				TEXT("Member definitions for create_struct: [{name, type, defaultValue?}]"))
+			.Bool(TEXT("overwrite"),
+				TEXT("If true, delete existing asset before recreating (create_enum/create_struct)."))
+			.Bool(TEXT("includeGuids"),
+				TEXT("If true, inspect_struct returns each member's GUID."))
 			.Required({TEXT("action")})
 			.Build();
 	}
