@@ -7,6 +7,7 @@
 #include "McpHandlerUtils.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpSafeOperations.h"
+#include "MCP/McpPinTypeParser.h"
 #include "EngineUtils.h"
 
 // Define log category declared in McpSafeOperations.h
@@ -675,125 +676,77 @@ UEdGraphPin* FindPreferredEventExec(UEdGraph* Graph)
 
 FEdGraphPinType MakePinType(const FString& InType)
 {
-    FEdGraphPinType PinType;
-    const FString Lower = InType.ToLower();
-    const FString CleanType = InType.TrimStartAndEnd();
+    // Centralized pin-type resolver. Delegates to FMcpPinTypeParser so the same
+    // DSL accepted by manage_blueprint(create_struct/add_variable/...) works for
+    // all blueprint authoring entry points (add_function inputs/outputs,
+    // add_event parameters, etc.). Legacy aliases (Boolean/Integer/...) are
+    // normalized first; "object"/"class" still hardcode UObject for backward
+    // compat (parser would resolve "Object"/"Class" only via lenient class-name
+    // fallback which can be flaky for ambiguous engine names).
+    //
+    // On parse failure we fall back to PC_Wildcard to preserve the legacy
+    // MakePinType contract — callers that want strict validation use
+    // FMcpPinTypeParser::Parse directly and inspect OutError themselves.
 
-    if (Lower == TEXT("float") || Lower == TEXT("double"))
+    FEdGraphPinType PinType;
+    const FString CleanType = InType.TrimStartAndEnd();
+    if (CleanType.IsEmpty())
     {
-        PinType.PinCategory = UEdGraphSchema_K2::PC_Float;
+        PinType.PinCategory = UEdGraphSchema_K2::PC_Wildcard;
+        return PinType;
     }
-    else if (Lower == TEXT("int") || Lower == TEXT("integer"))
-    {
-        PinType.PinCategory = UEdGraphSchema_K2::PC_Int;
-    }
-    else if (Lower == TEXT("int64"))
-    {
-        PinType.PinCategory = UEdGraphSchema_K2::PC_Int64;
-    }
-    else if (Lower == TEXT("bool") || Lower == TEXT("boolean"))
-    {
-        PinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-    }
-    else if (Lower == TEXT("string"))
-    {
-        PinType.PinCategory = UEdGraphSchema_K2::PC_String;
-    }
-    else if (Lower == TEXT("name"))
-    {
-        PinType.PinCategory = UEdGraphSchema_K2::PC_Name;
-    }
-    else if (Lower == TEXT("text"))
-    {
-        PinType.PinCategory = UEdGraphSchema_K2::PC_Text;
-    }
-    else if (Lower == TEXT("byte"))
-    {
-        PinType.PinCategory = UEdGraphSchema_K2::PC_Byte;
-    }
-    else if (Lower == TEXT("vector"))
-    {
-        PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-        PinType.PinSubCategoryObject = TBaseStructure<FVector>::Get();
-    }
-    else if (Lower == TEXT("rotator"))
-    {
-        PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-        PinType.PinSubCategoryObject = TBaseStructure<FRotator>::Get();
-    }
-    else if (Lower == TEXT("transform"))
-    {
-        PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-        PinType.PinSubCategoryObject = TBaseStructure<FTransform>::Get();
-    }
-    else if (Lower == TEXT("object"))
+
+    const FString Lower = CleanType.ToLower();
+    static const TMap<FString, FString> LegacyAliases = {
+        {TEXT("boolean"),     TEXT("Bool")},
+        {TEXT("bool"),        TEXT("Bool")},
+        {TEXT("integer"),     TEXT("Int")},
+        {TEXT("int"),         TEXT("Int")},
+        {TEXT("int64"),       TEXT("Int64")},
+        {TEXT("float"),       TEXT("Float")},
+        {TEXT("double"),      TEXT("Double")},
+        {TEXT("string"),      TEXT("String")},
+        {TEXT("name"),        TEXT("Name")},
+        {TEXT("text"),        TEXT("Text")},
+        {TEXT("byte"),        TEXT("Byte")},
+        {TEXT("vector"),      TEXT("Vector")},
+        {TEXT("vector2d"),    TEXT("Vector2D")},
+        {TEXT("rotator"),     TEXT("Rotator")},
+        {TEXT("transform"),   TEXT("Transform")},
+        {TEXT("color"),       TEXT("Color")},
+        {TEXT("linearcolor"), TEXT("LinearColor")},
+    };
+
+    if (Lower == TEXT("object"))
     {
         PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
         PinType.PinSubCategoryObject = UObject::StaticClass();
+        return PinType;
     }
-    else if (Lower == TEXT("class"))
+    if (Lower == TEXT("class"))
     {
         PinType.PinCategory = UEdGraphSchema_K2::PC_Class;
         PinType.PinSubCategoryObject = UObject::StaticClass();
+        return PinType;
     }
-    else
-    {
-        // Fallback: try to resolve as specific type
-        if (UClass* ClassResolve = ResolveClassByName(CleanType))
-        {
-            PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
-            PinType.PinSubCategoryObject = ClassResolve;
-        }
-        else if (UScriptStruct* StructResolve = FindObject<UScriptStruct>(nullptr, *CleanType))
-        {
-            PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-            PinType.PinSubCategoryObject = StructResolve;
-        }
-        else if (UScriptStruct* LoadedStruct = LoadObject<UScriptStruct>(nullptr, *CleanType))
-        {
-            PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-            PinType.PinSubCategoryObject = LoadedStruct;
-        }
-        else
-        {
-            // Try short name loop for structs
-            bool bFoundStruct = false;
-            if (!CleanType.Contains(TEXT("/")) && !CleanType.Contains(TEXT(".")))
-            {
-                for (TObjectIterator<UScriptStruct> It; It; ++It)
-                {
-                    if (It->GetName().Equals(CleanType, ESearchCase::IgnoreCase))
-                    {
-                        PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-                        PinType.PinSubCategoryObject = *It;
-                        bFoundStruct = true;
-                        break;
-                    }
-                }
-            }
 
-            if (!bFoundStruct)
-            {
-                // Try Enum
-                if (UEnum* EnumResolve = FindObject<UEnum>(nullptr, *CleanType))
-                {
-                    PinType.PinCategory = UEdGraphSchema_K2::PC_Byte;
-                    PinType.PinSubCategoryObject = EnumResolve;
-                }
-                else if (UEnum* LoadedEnum = LoadObject<UEnum>(nullptr, *CleanType))
-                {
-                    PinType.PinCategory = UEdGraphSchema_K2::PC_Byte;
-                    PinType.PinSubCategoryObject = LoadedEnum;
-                }
-                else
-                {
-                    // Default to wildcard
-                    PinType.PinCategory = UEdGraphSchema_K2::PC_Wildcard;
-                }
-            }
-        }
+    FString TypeForParse = CleanType;
+    if (const FString* Mapped = LegacyAliases.Find(Lower))
+    {
+        TypeForParse = *Mapped;
     }
-    
+
+    FString ParseErr;
+    if (FMcpPinTypeParser::Parse(TypeForParse, PinType, ParseErr))
+    {
+        return PinType;
+    }
+
+    // Parser failed — preserve legacy fallback to wildcard so add_function /
+    // add_event don't hard-error on unknown types (they used to silently
+    // produce a wildcard pin in this case).
+    PinType = FEdGraphPinType();
+    PinType.PinCategory = UEdGraphSchema_K2::PC_Wildcard;
     return PinType;
 }
 
