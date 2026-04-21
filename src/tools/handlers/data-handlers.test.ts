@@ -396,6 +396,49 @@ describe('manage_data get_data_asset_property', () => {
   });
 });
 
+describe('manage_data list_data_assets_of_class', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({
+      success: true,
+      assets: ['/Game/DA_A', '/Game/DA_B'],
+    });
+  });
+
+  it('forwards classPath and returns assets', async () => {
+    const res = await handleDataTools(
+      'list_data_assets_of_class',
+      { classPath: '/Game/BP_ItemData.BP_ItemData_C' } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    expect(res.assets).toEqual(['/Game/DA_A', '/Game/DA_B']);
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('list_data_assets_of_class');
+    expect(payload.classPath).toBe('/Game/BP_ItemData.BP_ItemData_C');
+  });
+
+  it('forwards searchPaths when provided', async () => {
+    await handleDataTools(
+      'list_data_assets_of_class',
+      {
+        classPath: '/Game/BP_ItemData.BP_ItemData_C',
+        searchPaths: ['/Game/DataTest'],
+      } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.searchPaths).toEqual(['/Game/DataTest']);
+  });
+
+  it('throws on missing classPath', async () => {
+    await expect(
+      handleDataTools('list_data_assets_of_class', {} as never, {} as never)
+    ).rejects.toThrow(/classPath/);
+  });
+});
+
 describe('manage_data set_data_table_row_struct', () => {
   beforeEach(() => {
     executeAutomationRequestMock.mockReset();

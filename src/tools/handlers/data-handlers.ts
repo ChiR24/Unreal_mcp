@@ -144,6 +144,16 @@ export async function handleDataTools(
       return sendDataRequest(tools, 'get_data_asset_property', { path, propertyPath });
     }
 
+    case 'list_data_assets_of_class': {
+      const classPath = requireStringArg(argsRecord, 'classPath');
+      const rawSearchPaths = argsRecord.searchPaths;
+      const payload: Record<string, unknown> = { classPath };
+      if (Array.isArray(rawSearchPaths)) {
+        payload.searchPaths = rawSearchPaths.filter((v): v is string => typeof v === 'string');
+      }
+      return sendDataRequest(tools, 'list_data_assets_of_class', payload);
+    }
+
     default: {
       void requireObjectArg;
       throw new Error(`Unsupported manage_data action: ${action}`);

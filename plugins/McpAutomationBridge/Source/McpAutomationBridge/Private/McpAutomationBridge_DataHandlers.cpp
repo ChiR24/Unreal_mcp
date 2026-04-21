@@ -876,6 +876,87 @@ namespace McpDataHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// list_data_assets_of_class — AssetRegistry query for instances of a class.
+	//
+	// classPath accepts Blueprint generated class paths ("/Game/.../BP.BP_C")
+	// and native UDataAsset subclasses ("/Script/MyGame.MyData"). Recursive
+	// class matching is enabled so subclasses are included. Optional
+	// searchPaths scopes the query to /Game/ subtrees (recursive).
+	// -----------------------------------------------------------------------
+	static bool HandleListDataAssetsOfClass(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString ClassPath;
+		if (!Payload->TryGetStringField(TEXT("classPath"), ClassPath))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field: classPath"));
+			return true;
+		}
+
+		UClass* Target = LoadObject<UClass>(nullptr, *ClassPath);
+		if (!Target)
+		{
+			// Accept the same BP shorthand as create_data_asset.
+			FString Normalized = ClassPath;
+			if (!Normalized.Contains(TEXT(".")))
+			{
+				int32 SlashIdx = INDEX_NONE;
+				if (Normalized.FindLastChar(TEXT('/'), SlashIdx))
+				{
+					Normalized = Normalized + TEXT(".") + Normalized.Mid(SlashIdx + 1) + TEXT("_C");
+				}
+			}
+			Target = LoadObject<UClass>(nullptr, *Normalized);
+		}
+		if (!Target)
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("Class not found: %s"), *ClassPath));
+			return true;
+		}
+
+		FAssetRegistryModule& ARM = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+
+		FARFilter Filter;
+		Filter.bRecursiveClasses = true;
+		Filter.ClassPaths.Add(Target->GetClassPathName());
+
+		const TArray<TSharedPtr<FJsonValue>>* PathsArr = nullptr;
+		if (Payload->TryGetArrayField(TEXT("searchPaths"), PathsArr) && PathsArr)
+		{
+			for (const auto& V : *PathsArr)
+			{
+				if (V.IsValid() && V->Type == EJson::String)
+				{
+					Filter.PackagePaths.Add(FName(*V->AsString()));
+				}
+			}
+			Filter.bRecursivePaths = true;
+		}
+
+		TArray<FAssetData> Results;
+		ARM.Get().GetAssets(Filter, Results);
+
+		TArray<TSharedPtr<FJsonValue>> Paths;
+		Paths.Reserve(Results.Num());
+		for (const FAssetData& AD : Results)
+		{
+			Paths.Add(MakeShared<FJsonValueString>(AD.GetObjectPathString()));
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("classPath"), Target->GetPathName());
+		Data->SetArrayField(TEXT("assets"), Paths);
+		Data->SetNumberField(TEXT("count"), Paths.Num());
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Found %d asset(s) of class '%s'"), Paths.Num(), *Target->GetName()),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpDataHandlers
@@ -951,6 +1032,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
 	if (SubAction == TEXT("get_data_asset_property"))
 	{
 		return McpDataHandlers::HandleGetDataAssetProperty(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("list_data_assets_of_class"))
+	{
+		return McpDataHandlers::HandleListDataAssetsOfClass(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,
