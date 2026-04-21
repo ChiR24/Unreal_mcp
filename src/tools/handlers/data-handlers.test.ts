@@ -247,3 +247,28 @@ describe('manage_data get_data_table_rows', () => {
     expect(payload.rowNames).toEqual(['Row1', 'Row2']);
   });
 });
+
+describe('manage_data list_data_table_rows', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({ success: true, rowNames: ['A', 'B'] });
+  });
+
+  it('returns the row name array', async () => {
+    const res = await handleDataTools(
+      'list_data_table_rows',
+      { path: '/Game/DT' } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    expect(res.rowNames).toEqual(['A', 'B']);
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('list_data_table_rows');
+  });
+
+  it('throws on missing path', async () => {
+    await expect(
+      handleDataTools('list_data_table_rows', {} as never, {} as never)
+    ).rejects.toThrow(/path/);
+  });
+});

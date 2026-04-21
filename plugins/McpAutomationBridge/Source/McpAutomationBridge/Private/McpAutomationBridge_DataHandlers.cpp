@@ -492,6 +492,46 @@ namespace McpDataHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// list_data_table_rows — row name array only (no field deserialization).
+	// -----------------------------------------------------------------------
+	static bool HandleListDataTableRows(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field: path"));
+			return true;
+		}
+
+		UDataTable* DT = LoadObject<UDataTable>(nullptr, *PathStr);
+		if (!DT)
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("DataTable not found: %s"), *PathStr));
+			return true;
+		}
+
+		TArray<TSharedPtr<FJsonValue>> Names;
+		for (const auto& Pair : DT->GetRowMap())
+		{
+			Names.Add(MakeShared<FJsonValueString>(Pair.Key.ToString()));
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("assetPath"), DT->GetPathName());
+		Data->SetArrayField(TEXT("rowNames"), Names);
+		Data->SetNumberField(TEXT("rowCount"), Names.Num());
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Listed %d row name(s) for DataTable '%s'"),
+				Names.Num(), *DT->GetName()),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpDataHandlers
@@ -547,6 +587,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
 	if (SubAction == TEXT("get_data_table_rows"))
 	{
 		return McpDataHandlers::HandleGetDataTableRows(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("list_data_table_rows"))
+	{
+		return McpDataHandlers::HandleListDataTableRows(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,

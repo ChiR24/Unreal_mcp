@@ -109,6 +109,11 @@ export async function handleDataTools(
       return sendDataRequest(tools, 'get_data_table_rows', payload);
     }
 
+    case 'list_data_table_rows': {
+      const path = requireStringArg(argsRecord, 'path');
+      return sendDataRequest(tools, 'list_data_table_rows', { path });
+    }
+
     default: {
       void requireObjectArg;
       throw new Error(`Unsupported manage_data action: ${action}`);
