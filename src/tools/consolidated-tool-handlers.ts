@@ -43,6 +43,7 @@ import { handleVolumeTools } from './handlers/volume-handlers.js';
 import { handleNavigationTools } from './handlers/navigation-handlers.js';
 import { handleSplineTools } from './handlers/spline-handlers.js';
 import { handleManageToolsTools } from './handlers/manage-tools-handlers.js';
+import { handleDataTools } from './handlers/data-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -463,6 +464,9 @@ function registerDefaultHandlers() {
 
   // 40. SPLINE SYSTEM (Phase 26)
   toolRegistry.register('manage_splines', async (args, tools) => await handleSplineTools(getAction(args), args, tools));
+
+  // 41. DATA SYSTEM (Ch2/Ch3 — manage_data: DataTable + DataAsset CRUD)
+  toolRegistry.register('manage_data', async (args, tools) => await handleDataTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

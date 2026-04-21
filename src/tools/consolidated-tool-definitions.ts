@@ -4768,5 +4768,55 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         error: commonSchemas.stringProp
       }
     }
+  },
+  {
+    name: 'manage_data',
+    category: 'authoring',
+    description: 'Create and modify UDataTable / UDataAsset instances (row-level CRUD, property paths, schema migration).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'create_data_table', 'add_data_table_row', 'set_data_table_row',
+            'update_data_table_row', 'remove_data_table_row', 'get_data_table_rows',
+            'list_data_table_rows', 'set_data_table_row_struct',
+            'create_data_asset', 'set_data_asset_property', 'get_data_asset_property',
+            'list_data_assets_of_class'
+          ],
+          description: 'Data-layer action to perform.'
+        },
+        path: { type: 'string', description: 'Package path (/Game/...) for the target asset.' },
+        name: { type: 'string', description: 'Asset name (for create actions).' },
+        rowStructPath: { type: 'string', description: 'Path to UScriptStruct / UUserDefinedStruct used as DataTable row type.' },
+        newRowStructPath: { type: 'string', description: 'Target row struct path for set_data_table_row_struct migration.' },
+        rowName: { type: 'string', description: 'DataTable row name.' },
+        rowNames: { type: 'array', items: { type: 'string' }, description: 'Optional row filter for get_data_table_rows.' },
+        fields: { type: 'object', additionalProperties: true, description: 'Field values (row or DataAsset).' },
+        dataAssetClassPath: { type: 'string', description: 'UDataAsset BP or native class path for create_data_asset.' },
+        propertyPath: { type: 'string', description: 'Dotted/indexed property path, e.g. "Stats.Health" or "Effects.[0].Value".' },
+        value: { description: 'JSON value to set (any type; resolved via reflection).' },
+        classPath: { type: 'string', description: 'Class to filter by for list_data_assets_of_class.' },
+        searchPaths: { type: 'array', items: { type: 'string' }, description: 'Optional /Game/ subpath roots for scoped search.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        error: { type: 'string' },
+        errorCategory: { type: 'string' },
+        assetPath: { type: 'string' },
+        rowName: { type: 'string' },
+        rowNames: { type: 'array', items: { type: 'string' } },
+        rows: { type: 'object', additionalProperties: true },
+        updatedFields: { type: 'array', items: { type: 'string' } },
+        rowsMigrated: { type: 'number' },
+        value: {},
+        assets: { type: 'array', items: { type: 'string' } }
+      }
+    }
   }
 ];

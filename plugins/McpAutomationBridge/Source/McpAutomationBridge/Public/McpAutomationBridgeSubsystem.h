@@ -902,6 +902,11 @@ private:
       const FString &RequestId, const FString &Action,
       const TSharedPtr<FJsonObject> &Payload,
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Ch2/Ch3: manage_data — DataTable + DataAsset CRUD
+  bool HandleManageDataAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Phase 27: Misc handlers (camera, viewport, bookmarks, etc.)
   bool HandleMiscAction(
       const FString &RequestId, const FString &Action,

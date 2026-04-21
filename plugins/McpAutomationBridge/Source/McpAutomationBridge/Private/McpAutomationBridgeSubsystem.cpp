@@ -1141,6 +1141,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleManageSplinesAction(R, A, P, S);
                   });
 
+  // Ch2/Ch3: manage_data — DataTable + DataAsset CRUD
+  RegisterHandler(TEXT("manage_data"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageDataAction(R, A, P, S);
+                  });
+
   RegisterHandler(TEXT("manage_pipeline"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
