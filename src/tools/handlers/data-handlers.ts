@@ -99,6 +99,16 @@ export async function handleDataTools(
       return sendDataRequest(tools, 'remove_data_table_row', { path, rowName });
     }
 
+    case 'get_data_table_rows': {
+      const path = requireStringArg(argsRecord, 'path');
+      const rawRowNames = argsRecord.rowNames;
+      const payload: Record<string, unknown> = { path };
+      if (Array.isArray(rawRowNames)) {
+        payload.rowNames = rawRowNames.filter((v): v is string => typeof v === 'string');
+      }
+      return sendDataRequest(tools, 'get_data_table_rows', payload);
+    }
+
     default: {
       void requireObjectArg;
       throw new Error(`Unsupported manage_data action: ${action}`);

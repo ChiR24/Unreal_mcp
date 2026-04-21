@@ -213,3 +213,37 @@ describe('manage_data remove_data_table_row', () => {
     ).rejects.toThrow(/rowName/);
   });
 });
+
+describe('manage_data get_data_table_rows', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({
+      success: true,
+      rows: { Row1: { DisplayName: 'A', Value: 1 } },
+    });
+  });
+
+  it('returns rows object when no filter is provided', async () => {
+    const res = await handleDataTools(
+      'get_data_table_rows',
+      { path: '/Game/DT' } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    expect(res.rows).toEqual({ Row1: { DisplayName: 'A', Value: 1 } });
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('get_data_table_rows');
+    expect(payload.rowNames).toBeUndefined();
+  });
+
+  it('forwards rowNames filter when provided', async () => {
+    await handleDataTools(
+      'get_data_table_rows',
+      { path: '/Game/DT', rowNames: ['Row1', 'Row2'] } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.rowNames).toEqual(['Row1', 'Row2']);
+  });
+});

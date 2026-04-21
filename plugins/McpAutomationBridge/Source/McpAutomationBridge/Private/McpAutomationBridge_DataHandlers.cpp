@@ -438,6 +438,60 @@ namespace McpDataHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// get_data_table_rows
+	// -----------------------------------------------------------------------
+	static bool HandleGetDataTableRows(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field: path"));
+			return true;
+		}
+
+		UDataTable* DT = LoadDataTableOrError(Self, Socket, RequestId, PathStr);
+		if (!DT) { return true; }
+
+		TSet<FString> Filter;
+		const TArray<TSharedPtr<FJsonValue>>* NamesArr = nullptr;
+		if (Payload->TryGetArrayField(TEXT("rowNames"), NamesArr) && NamesArr)
+		{
+			for (const auto& V : *NamesArr)
+			{
+				if (V.IsValid() && V->Type == EJson::String)
+				{
+					Filter.Add(V->AsString());
+				}
+			}
+		}
+
+		TSharedPtr<FJsonObject> RowsObj = MakeShared<FJsonObject>();
+		int32 RowCount = 0;
+		for (const auto& Pair : DT->GetRowMap())
+		{
+			const FString RowName = Pair.Key.ToString();
+			if (Filter.Num() > 0 && !Filter.Contains(RowName)) { continue; }
+			TSharedPtr<FJsonObject> RowJson = McpStructReflection::StructInstanceToJson(
+				DT->RowStruct, Pair.Value);
+			RowsObj->SetObjectField(RowName, RowJson);
+			++RowCount;
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("assetPath"), DT->GetPathName());
+		Data->SetObjectField(TEXT("rows"), RowsObj);
+		Data->SetNumberField(TEXT("rowCount"), RowCount);
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Fetched %d row(s) from DataTable '%s'"),
+				RowCount, *DT->GetName()),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpDataHandlers
@@ -489,6 +543,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
 	if (SubAction == TEXT("remove_data_table_row"))
 	{
 		return McpDataHandlers::HandleRemoveDataTableRow(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("get_data_table_rows"))
+	{
+		return McpDataHandlers::HandleGetDataTableRows(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,
