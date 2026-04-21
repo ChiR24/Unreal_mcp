@@ -80,6 +80,21 @@ const testCases = [
   { scenario: 'Splines: Get specific spline info', toolName: 'manage_splines', arguments: { action: 'get_splines_info', actorName: 'IT_SplineActor' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete spline actors', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_SplineActor' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete road spline', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_RoadSpline' }, expected: 'success|not found' },
+  // Ch2: manage_data — DataTable CRUD
+  { scenario: 'Data prep: create Ch2 test folder', toolName: 'manage_asset',
+    arguments: { action: 'create_folder', path: '/Game/DataTest' },
+    expected: 'success|already exists' },
+  { scenario: 'Data prep: create row struct ST_Ch2Row', toolName: 'manage_blueprint',
+    arguments: { action: 'create_struct', assetPath: '/Game/DataTest/ST_Ch2Row',
+      members: [
+        { name: 'DisplayName', type: 'name' },
+        { name: 'Value', type: 'double' }
+      ] },
+    expected: 'success|already exists' },
+  { scenario: 'Data: create DataTable DT_Ch2', toolName: 'manage_data',
+    arguments: { action: 'create_data_table', path: '/Game/DataTest', name: 'DT_Ch2',
+      rowStructPath: '/Game/DataTest/ST_Ch2Row.ST_Ch2Row' },
+    expected: 'success|already exists' },
   // search_assets: searchText filtering (fix for Issue #233)
   { scenario: 'Asset: search by text (exact name)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'BP_IntegrationTest' }, expected: 'success' },
   { scenario: 'Asset: search by text (partial, case-insensitive)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'integrationtest' }, expected: 'success' },

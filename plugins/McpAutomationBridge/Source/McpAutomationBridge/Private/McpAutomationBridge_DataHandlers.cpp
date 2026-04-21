@@ -65,16 +65,87 @@ namespace McpDataHandlers
 		return Cast<UScriptStruct>(Obj);
 	}
 
-	static TSharedPtr<FJsonObject> MakeErrorJson(const FString& Message, const FString& Category)
+	static void SendSuccess(UMcpAutomationBridgeSubsystem* Self,
+		TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId,
+		const FString& Message, const TSharedPtr<FJsonObject>& Data)
 	{
-		TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
-		Obj->SetBoolField(TEXT("success"), false);
-		Obj->SetStringField(TEXT("error"), Message);
-		if (!Category.IsEmpty())
+		Self->SendAutomationResponse(Socket, RequestId, true, Message, Data);
+	}
+
+	static void SendError(UMcpAutomationBridgeSubsystem* Self,
+		TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId,
+		const FString& Category, const FString& Message)
+	{
+		Self->SendAutomationError(Socket, RequestId, Message, Category);
+	}
+
+	// -----------------------------------------------------------------------
+	// create_data_table
+	// -----------------------------------------------------------------------
+	static bool HandleCreateDataTable(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr, NameStr, RowStructPath;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr) ||
+			!Payload->TryGetStringField(TEXT("name"), NameStr) ||
+			!Payload->TryGetStringField(TEXT("rowStructPath"), RowStructPath))
 		{
-			Obj->SetStringField(TEXT("errorCategory"), Category);
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field(s): path, name, rowStructPath"));
+			return true;
 		}
-		return Obj;
+
+		UScriptStruct* RowStruct = LoadRowStruct(RowStructPath);
+		if (!RowStruct)
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("Row struct not found: %s"), *RowStructPath));
+			return true;
+		}
+
+		const FString FullPath = PathStr / NameStr;
+		if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+		{
+			TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+			Data->SetStringField(TEXT("assetPath"), FullPath);
+			Data->SetBoolField(TEXT("alreadyExists"), true);
+			SendSuccess(Self, Socket, RequestId,
+				FString::Printf(TEXT("DataTable already exists at '%s'"), *FullPath), Data);
+			return true;
+		}
+
+		FString OutError;
+		bool bSaved = false;
+		UObject* NewTable = McpGenericAssetFactory::CreateAssetOfClass(
+			UDataTable::StaticClass(), PathStr, NameStr,
+			[RowStruct](UObject* Asset)
+			{
+				if (UDataTable* DT = Cast<UDataTable>(Asset))
+				{
+					DT->RowStruct = RowStruct;
+				}
+			},
+			OutError, bSaved);
+
+		if (!NewTable)
+		{
+			SendError(Self, Socket, RequestId, TEXT("ENGINE_API_ERROR"),
+				OutError.IsEmpty() ? TEXT("CreateAsset returned nullptr") : OutError);
+			return true;
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("assetPath"), NewTable->GetPathName());
+		Data->SetBoolField(TEXT("saved"), bSaved);
+		if (!bSaved && !OutError.IsEmpty())
+		{
+			Data->SetStringField(TEXT("saveWarning"), OutError);
+		}
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Created DataTable at '%s'"), *NewTable->GetPathName()),
+			Data);
+		return true;
 	}
 
 #endif // WITH_EDITOR
@@ -109,8 +180,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
 		TEXT("NOT_IMPLEMENTED"));
 	return true;
 #else
-	// Per-action handlers are wired in follow-on Ch2/Ch3 tasks. For now every
-	// sub-action resolves to NOT_IMPLEMENTED with a stable error shape.
+	if (SubAction == TEXT("create_data_table"))
+	{
+		return McpDataHandlers::HandleCreateDataTable(this, RequestId, Payload, RequestingSocket);
+	}
+
 	SendAutomationError(RequestingSocket, RequestId,
 		FString::Printf(TEXT("manage_data sub-action not yet implemented: %s"), *SubAction),
 		TEXT("NOT_IMPLEMENTED"));

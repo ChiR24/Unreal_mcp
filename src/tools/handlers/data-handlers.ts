@@ -61,17 +61,16 @@ export async function handleDataTools(
 ): Promise<Record<string, unknown>> {
   const argsRecord = args as Record<string, unknown>;
 
-  // Tasks 2-9 (and Ch3) will add cases above this default. For now the skeleton
-  // only exposes the action list via the TS schema; runtime calls with any
-  // action throw "Unsupported". `tools` / helpers are referenced via the
-  // default branch argument list below to keep the unused-lint clean.
   switch (action) {
+    case 'create_data_table': {
+      const path = requireStringArg(argsRecord, 'path');
+      const name = requireStringArg(argsRecord, 'name');
+      const rowStructPath = requireStringArg(argsRecord, 'rowStructPath');
+      return sendDataRequest(tools, 'create_data_table', { path, name, rowStructPath });
+    }
+
     default: {
-      // Ensure the helpers are referenced statically so tree-shakers and the
-      // TypeScript noUnusedLocals checker don't drop them before Task 2 wires
-      // them. They are invoked only via per-action cases in subsequent tasks.
-      void tools; void argsRecord; void sendDataRequest;
-      void requireStringArg; void requireObjectArg;
+      void requireObjectArg;
       throw new Error(`Unsupported manage_data action: ${action}`);
     }
   }
