@@ -251,11 +251,17 @@ namespace McpDataHandlers
 		DT->AddRow(RowName, Buf.Data, DT->RowStruct);
 
 		DT->MarkPackageDirty();
-		McpSafeAssetSave(DT);
+		const bool bSaved = McpSafeAssetSave(DT);
 
 		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
 		Data->SetStringField(TEXT("rowName"), RowNameStr);
 		Data->SetStringField(TEXT("assetPath"), DT->GetPathName());
+		Data->SetBoolField(TEXT("saved"), bSaved);
+		if (!bSaved)
+		{
+			Data->SetStringField(TEXT("saveWarning"),
+				TEXT("Asset changes in memory but save failed"));
+		}
 		SendSuccess(Self, Socket, RequestId,
 			FString::Printf(TEXT("Added row '%s' to DataTable '%s'"), *RowNameStr, *DT->GetName()),
 			Data);
@@ -297,25 +303,40 @@ namespace McpDataHandlers
 			return true;
 		}
 
-		// Reset row to struct defaults then apply fields.
-		DT->RowStruct->DestroyStruct(ExistingRow);
-		DT->RowStruct->InitializeStruct(ExistingRow);
+		// Stage fields into a temp buffer; commit into ExistingRow only on success
+		// so a failed SetStructFieldsFromJsonObject leaves the existing row intact.
+		FScopedRowBuffer Temp(DT->RowStruct);
+		if (!Temp.Data)
+		{
+			SendError(Self, Socket, RequestId, TEXT("ENGINE_API_ERROR"),
+				TEXT("Failed to allocate row buffer"));
+			return true;
+		}
 
 		FString StructError;
 		if (!McpStructReflection::SetStructFieldsFromJsonObject(
-			DT->RowStruct, ExistingRow, *FieldsObj, StructError))
+			DT->RowStruct, Temp.Data, *FieldsObj, StructError))
 		{
 			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"), StructError);
 			return true;
 		}
 
+		// Commit: overwrite ExistingRow with validated temp contents.
+		DT->RowStruct->CopyScriptStruct(ExistingRow, Temp.Data);
+
 		DT->HandleDataTableChanged(RowName);
 		DT->MarkPackageDirty();
-		McpSafeAssetSave(DT);
+		const bool bSaved = McpSafeAssetSave(DT);
 
 		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
 		Data->SetStringField(TEXT("rowName"), RowNameStr);
 		Data->SetStringField(TEXT("assetPath"), DT->GetPathName());
+		Data->SetBoolField(TEXT("saved"), bSaved);
+		if (!bSaved)
+		{
+			Data->SetStringField(TEXT("saveWarning"),
+				TEXT("Asset changes in memory but save failed"));
+		}
 		SendSuccess(Self, Socket, RequestId,
 			FString::Printf(TEXT("Overwrote row '%s' in DataTable '%s'"), *RowNameStr, *DT->GetName()),
 			Data);
@@ -357,6 +378,18 @@ namespace McpDataHandlers
 			return true;
 		}
 
+		// Snapshot existing row into a temp buffer, apply patches to the temp
+		// only, and copy back on full success — a mid-iteration failure leaves
+		// the existing row untouched.
+		FScopedRowBuffer Temp(DT->RowStruct);
+		if (!Temp.Data)
+		{
+			SendError(Self, Socket, RequestId, TEXT("ENGINE_API_ERROR"),
+				TEXT("Failed to allocate row buffer"));
+			return true;
+		}
+		DT->RowStruct->CopyScriptStruct(Temp.Data, ExistingRow);
+
 		TArray<TSharedPtr<FJsonValue>> UpdatedFieldNames;
 		for (const auto& Pair : (*FieldsObj)->Values)
 		{
@@ -369,7 +402,7 @@ namespace McpDataHandlers
 			}
 			FString SetError;
 			if (!McpStructReflection::SetStructFieldFromJson(
-				DT->RowStruct, ExistingRow, ResolvedName, Pair.Value, SetError))
+				DT->RowStruct, Temp.Data, ResolvedName, Pair.Value, SetError))
 			{
 				SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"), SetError);
 				return true;
@@ -377,14 +410,23 @@ namespace McpDataHandlers
 			UpdatedFieldNames.Add(MakeShared<FJsonValueString>(Pair.Key));
 		}
 
+		// Commit: all patches applied cleanly — overwrite ExistingRow.
+		DT->RowStruct->CopyScriptStruct(ExistingRow, Temp.Data);
+
 		DT->HandleDataTableChanged(RowName);
 		DT->MarkPackageDirty();
-		McpSafeAssetSave(DT);
+		const bool bSaved = McpSafeAssetSave(DT);
 
 		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
 		Data->SetStringField(TEXT("rowName"), RowNameStr);
 		Data->SetStringField(TEXT("assetPath"), DT->GetPathName());
 		Data->SetArrayField(TEXT("updatedFields"), UpdatedFieldNames);
+		Data->SetBoolField(TEXT("saved"), bSaved);
+		if (!bSaved)
+		{
+			Data->SetStringField(TEXT("saveWarning"),
+				TEXT("Asset changes in memory but save failed"));
+		}
 		SendSuccess(Self, Socket, RequestId,
 			FString::Printf(TEXT("Updated %d field(s) in row '%s'"),
 				UpdatedFieldNames.Num(), *RowNameStr),
@@ -426,11 +468,17 @@ namespace McpDataHandlers
 
 		DT->RemoveRow(RowName);
 		DT->MarkPackageDirty();
-		McpSafeAssetSave(DT);
+		const bool bSaved = McpSafeAssetSave(DT);
 
 		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
 		Data->SetStringField(TEXT("rowName"), RowNameStr);
 		Data->SetStringField(TEXT("assetPath"), DT->GetPathName());
+		Data->SetBoolField(TEXT("saved"), bSaved);
+		if (!bSaved)
+		{
+			Data->SetStringField(TEXT("saveWarning"),
+				TEXT("Asset changes in memory but save failed"));
+		}
 		SendSuccess(Self, Socket, RequestId,
 			FString::Printf(TEXT("Removed row '%s' from DataTable '%s'"),
 				*RowNameStr, *DT->GetName()),
@@ -570,6 +618,39 @@ namespace McpDataHandlers
 
 		const int32 RowCount = DT->GetRowMap().Num();
 
+		// Compute field-name deltas between the old and new row structs so the
+		// response can tell callers exactly which columns survived, which were
+		// dropped, and which are newly available. Names are raw FProperty names
+		// (for UDS these include the internal GUID suffix — acceptable for
+		// display; callers cross-reference with get_data_table_rows field keys).
+		TSet<FString> OldFields;
+		if (const UScriptStruct* OldRowStruct = DT->RowStruct)
+		{
+			for (TFieldIterator<FProperty> It(OldRowStruct); It; ++It)
+			{
+				OldFields.Add(It->GetName());
+			}
+		}
+		TSet<FString> NewFields;
+		for (TFieldIterator<FProperty> It(NewStruct); It; ++It)
+		{
+			NewFields.Add(It->GetName());
+		}
+		const TSet<FString> Preserved = OldFields.Intersect(NewFields);
+		const TSet<FString> Dropped = OldFields.Difference(NewFields);
+		const TSet<FString> Added = NewFields.Difference(OldFields);
+
+		auto SetToJsonArray = [](const TSet<FString>& Src) -> TArray<TSharedPtr<FJsonValue>>
+		{
+			TArray<TSharedPtr<FJsonValue>> Out;
+			Out.Reserve(Src.Num());
+			for (const FString& Name : Src)
+			{
+				Out.Add(MakeShared<FJsonValueString>(Name));
+			}
+			return Out;
+		};
+
 		// UE 5.7 editor path: CleanBeforeStructChange() frees the existing row
 		// allocations so we can assign a new RowStruct without corrupting the
 		// map; RestoreAfterStructChange() re-allocates rows using the new
@@ -580,18 +661,30 @@ namespace McpDataHandlers
 		DT->HandleDataTableChanged();
 
 		DT->MarkPackageDirty();
-		McpSafeAssetSave(DT);
+		const bool bSaved = McpSafeAssetSave(DT);
 
 		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
 		Data->SetStringField(TEXT("assetPath"), DT->GetPathName());
 		Data->SetStringField(TEXT("rowStructPath"), NewStruct->GetPathName());
-		Data->SetNumberField(TEXT("rowsMigrated"), RowCount);
+		// Renamed from misleading "rowsMigrated": UE's RestoreAfterStructChange
+		// reinitializes each row in the new struct's shape, preserving only
+		// compatible same-named fields. It is not a lossless migration.
+		Data->SetNumberField(TEXT("rowsReinitialized"), RowCount);
+		Data->SetArrayField(TEXT("fieldsPreserved"), SetToJsonArray(Preserved));
+		Data->SetArrayField(TEXT("fieldsDropped"), SetToJsonArray(Dropped));
+		Data->SetArrayField(TEXT("fieldsAdded"), SetToJsonArray(Added));
+		Data->SetBoolField(TEXT("saved"), bSaved);
+		if (!bSaved)
+		{
+			Data->SetStringField(TEXT("saveWarning"),
+				TEXT("Asset changes in memory but save failed"));
+		}
 		Data->SetStringField(TEXT("warning"),
 			TEXT("Field values in removed columns were destroyed; callers "
 				"must snapshot rows via get_data_table_rows before migration "
 				"if preservation is required."));
 		SendSuccess(Self, Socket, RequestId,
-			FString::Printf(TEXT("Migrated DataTable '%s' to RowStruct '%s' (%d row(s))"),
+			FString::Printf(TEXT("Reinitialized DataTable '%s' under RowStruct '%s' (%d row(s))"),
 				*DT->GetName(), *NewStruct->GetName(), RowCount),
 			Data);
 		return true;

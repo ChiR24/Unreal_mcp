@@ -276,16 +276,16 @@ describe('manage_data list_data_table_rows', () => {
 describe('manage_data set_data_table_row_struct', () => {
   beforeEach(() => {
     executeAutomationRequestMock.mockReset();
-    executeAutomationRequestMock.mockResolvedValue({ success: true, rowsMigrated: 3 });
+    executeAutomationRequestMock.mockResolvedValue({ success: true, rowsReinitialized: 3 });
   });
 
-  it('forwards path + newRowStructPath and returns rowsMigrated', async () => {
+  it('forwards path + newRowStructPath and returns rowsReinitialized', async () => {
     const res = await handleDataTools(
       'set_data_table_row_struct',
       { path: '/Game/DT', newRowStructPath: '/Game/ST_New.ST_New' } as unknown as Record<string, unknown>,
       {} as never
     );
-    expect(res.rowsMigrated).toBe(3);
+    expect(res.rowsReinitialized).toBe(3);
     const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
     const payload = calls[0][2] as Record<string, unknown>;
     expect(payload.subAction).toBe('set_data_table_row_struct');

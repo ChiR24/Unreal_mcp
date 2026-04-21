@@ -4813,7 +4813,12 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         rowNames: { type: 'array', items: { type: 'string' } },
         rows: { type: 'object', additionalProperties: true },
         updatedFields: { type: 'array', items: { type: 'string' } },
-        rowsMigrated: { type: 'number' },
+        rowsReinitialized: { type: 'number' },
+        fieldsPreserved: { type: 'array', items: { type: 'string' } },
+        fieldsDropped: { type: 'array', items: { type: 'string' } },
+        fieldsAdded: { type: 'array', items: { type: 'string' } },
+        saved: { type: 'boolean' },
+        saveWarning: { type: 'string' },
         value: {},
         assets: { type: 'array', items: { type: 'string' } }
       }
