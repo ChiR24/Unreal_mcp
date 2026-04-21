@@ -120,6 +120,13 @@ export async function handleDataTools(
       return sendDataRequest(tools, 'set_data_table_row_struct', { path, newRowStructPath });
     }
 
+    case 'create_data_asset': {
+      const path = requireStringArg(argsRecord, 'path');
+      const name = requireStringArg(argsRecord, 'name');
+      const dataAssetClassPath = requireStringArg(argsRecord, 'dataAssetClassPath');
+      return sendDataRequest(tools, 'create_data_asset', { path, name, dataAssetClassPath });
+    }
+
     default: {
       void requireObjectArg;
       throw new Error(`Unsupported manage_data action: ${action}`);

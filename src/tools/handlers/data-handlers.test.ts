@@ -273,6 +273,46 @@ describe('manage_data list_data_table_rows', () => {
   });
 });
 
+describe('manage_data create_data_asset', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({
+      success: true,
+      assetPath: '/Game/DA/DA_Item',
+    });
+  });
+
+  it('forwards path + name + dataAssetClassPath', async () => {
+    const res = await handleDataTools(
+      'create_data_asset',
+      {
+        path: '/Game/DA',
+        name: 'DA_Item',
+        dataAssetClassPath: '/Game/BP_ItemData.BP_ItemData_C',
+      } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    expect(res.success).toBe(true);
+    expect(res.assetPath).toBe('/Game/DA/DA_Item');
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('create_data_asset');
+    expect(payload.path).toBe('/Game/DA');
+    expect(payload.name).toBe('DA_Item');
+    expect(payload.dataAssetClassPath).toBe('/Game/BP_ItemData.BP_ItemData_C');
+  });
+
+  it('throws on missing dataAssetClassPath', async () => {
+    await expect(
+      handleDataTools(
+        'create_data_asset',
+        { path: '/Game/DA', name: 'DA_Item' } as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/dataAssetClassPath/);
+  });
+});
+
 describe('manage_data set_data_table_row_struct', () => {
   beforeEach(() => {
     executeAutomationRequestMock.mockReset();

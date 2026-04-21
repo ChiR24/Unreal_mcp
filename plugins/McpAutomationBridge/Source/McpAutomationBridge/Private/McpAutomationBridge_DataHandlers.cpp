@@ -690,6 +690,86 @@ namespace McpDataHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// create_data_asset — instantiate a UDataAsset subclass at path/name.
+	//
+	// dataAssetClassPath accepts either a fully qualified generated-class path
+	// ("/Game/DataTest/BP_Ch3ItemData.BP_ItemData_C") or a shorthand package
+	// path ("/Game/DataTest/BP_Ch3ItemData"), which is normalized to the
+	// generated class form on lookup miss.
+	// -----------------------------------------------------------------------
+	static bool HandleCreateDataAsset(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr, NameStr, ClassPathStr;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr) ||
+			!Payload->TryGetStringField(TEXT("name"), NameStr) ||
+			!Payload->TryGetStringField(TEXT("dataAssetClassPath"), ClassPathStr))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field(s): path, name, dataAssetClassPath"));
+			return true;
+		}
+
+		UClass* AssetClass = LoadObject<UClass>(nullptr, *ClassPathStr);
+		if (!AssetClass)
+		{
+			// Normalize "/Game/Foo/Bar" → "/Game/Foo/Bar.Bar_C" for Blueprint
+			// generated classes (common MCP caller shortcut).
+			FString Normalized = ClassPathStr;
+			if (!Normalized.Contains(TEXT(".")))
+			{
+				int32 SlashIdx = INDEX_NONE;
+				if (Normalized.FindLastChar(TEXT('/'), SlashIdx))
+				{
+					Normalized = Normalized + TEXT(".") + Normalized.Mid(SlashIdx + 1) + TEXT("_C");
+				}
+			}
+			AssetClass = LoadObject<UClass>(nullptr, *Normalized);
+		}
+		if (!AssetClass || !AssetClass->IsChildOf(UDataAsset::StaticClass()))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				FString::Printf(TEXT("Not a UDataAsset subclass: %s"), *ClassPathStr));
+			return true;
+		}
+
+		const FString FullPath = PathStr / NameStr;
+		if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+		{
+			TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+			Data->SetStringField(TEXT("assetPath"), FullPath);
+			Data->SetBoolField(TEXT("alreadyExists"), true);
+			SendSuccess(Self, Socket, RequestId,
+				FString::Printf(TEXT("DataAsset already exists at '%s'"), *FullPath), Data);
+			return true;
+		}
+
+		FString OutError;
+		bool bSaved = false;
+		UObject* NewAsset = McpGenericAssetFactory::CreateAssetOfClass(
+			AssetClass, PathStr, NameStr, nullptr, OutError, bSaved);
+		if (!NewAsset)
+		{
+			SendError(Self, Socket, RequestId, TEXT("ENGINE_API_ERROR"),
+				OutError.IsEmpty() ? TEXT("CreateAsset returned nullptr") : OutError);
+			return true;
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+		Data->SetBoolField(TEXT("saved"), bSaved);
+		if (!bSaved && !OutError.IsEmpty())
+		{
+			Data->SetStringField(TEXT("saveWarning"), OutError);
+		}
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Created DataAsset at '%s'"), *NewAsset->GetPathName()),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpDataHandlers
@@ -753,6 +833,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
 	if (SubAction == TEXT("set_data_table_row_struct"))
 	{
 		return McpDataHandlers::HandleSetDataTableRowStruct(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("create_data_asset"))
+	{
+		return McpDataHandlers::HandleCreateDataAsset(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,
