@@ -262,6 +262,66 @@ namespace McpDataHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// set_data_table_row — full overwrite (missing fields → struct defaults).
+	// -----------------------------------------------------------------------
+	static bool HandleSetDataTableRow(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr, RowNameStr;
+		const TSharedPtr<FJsonObject>* FieldsObj = nullptr;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr) ||
+			!Payload->TryGetStringField(TEXT("rowName"), RowNameStr) ||
+			!Payload->TryGetObjectField(TEXT("fields"), FieldsObj) ||
+			!FieldsObj || !(*FieldsObj).IsValid())
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field(s): path, rowName, fields"));
+			return true;
+		}
+
+		UDataTable* DT = LoadDataTableOrError(Self, Socket, RequestId, PathStr);
+		if (!DT) { return true; }
+
+		const FName RowName(*RowNameStr);
+		uint8* ExistingRow = nullptr;
+		if (uint8* const* Found = DT->GetRowMap().Find(RowName))
+		{
+			ExistingRow = *Found;
+		}
+		if (!ExistingRow)
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("Row not found: %s"), *RowNameStr));
+			return true;
+		}
+
+		// Reset row to struct defaults then apply fields.
+		DT->RowStruct->DestroyStruct(ExistingRow);
+		DT->RowStruct->InitializeStruct(ExistingRow);
+
+		FString StructError;
+		if (!McpStructReflection::SetStructFieldsFromJsonObject(
+			DT->RowStruct, ExistingRow, *FieldsObj, StructError))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"), StructError);
+			return true;
+		}
+
+		DT->HandleDataTableChanged(RowName);
+		DT->MarkPackageDirty();
+		McpSafeAssetSave(DT);
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("rowName"), RowNameStr);
+		Data->SetStringField(TEXT("assetPath"), DT->GetPathName());
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Overwrote row '%s' in DataTable '%s'"), *RowNameStr, *DT->GetName()),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpDataHandlers
@@ -301,6 +361,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
 	if (SubAction == TEXT("add_data_table_row"))
 	{
 		return McpDataHandlers::HandleAddDataTableRow(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("set_data_table_row"))
+	{
+		return McpDataHandlers::HandleSetDataTableRow(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,

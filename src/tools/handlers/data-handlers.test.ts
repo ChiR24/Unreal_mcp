@@ -124,3 +124,33 @@ describe('manage_data add_data_table_row', () => {
     ).rejects.toThrow(/rowName/);
   });
 });
+
+describe('manage_data set_data_table_row', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({ success: true });
+  });
+
+  it('forwards fields overwriting full row', async () => {
+    await handleDataTools(
+      'set_data_table_row',
+      { path: '/Game/DT', rowName: 'R1', fields: { DisplayName: 'B', Value: 9 } } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('set_data_table_row');
+    expect(payload.rowName).toBe('R1');
+    expect(payload.fields).toEqual({ DisplayName: 'B', Value: 9 });
+  });
+
+  it('throws on missing fields', async () => {
+    await expect(
+      handleDataTools(
+        'set_data_table_row',
+        { path: '/Game/DT', rowName: 'R1' } as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/fields/);
+  });
+});
