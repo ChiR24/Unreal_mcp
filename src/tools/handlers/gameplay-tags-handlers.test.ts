@@ -143,3 +143,35 @@ describe('manage_gameplay_tags remove_gameplay_tag', () => {
     ).rejects.toThrow(/tag/);
   });
 });
+
+describe('manage_gameplay_tags add_gameplay_tag_source', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({
+      success: true,
+      sourceIni: 'Tags/CombatTags.ini',
+    });
+  });
+
+  it('forwards iniRelativePath to the automation bridge', async () => {
+    await handleGameplayTagsTools(
+      'add_gameplay_tag_source',
+      { iniRelativePath: 'Tags/CombatTags.ini' } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('add_gameplay_tag_source');
+    expect(payload.iniRelativePath).toBe('Tags/CombatTags.ini');
+  });
+
+  it('throws on missing iniRelativePath', async () => {
+    await expect(
+      handleGameplayTagsTools(
+        'add_gameplay_tag_source',
+        {} as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/iniRelativePath/);
+  });
+});

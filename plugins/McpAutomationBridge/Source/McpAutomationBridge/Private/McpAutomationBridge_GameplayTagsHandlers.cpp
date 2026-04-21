@@ -205,6 +205,62 @@ namespace McpGameplayTagsHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// add_gameplay_tag_source
+	// -----------------------------------------------------------------------
+	static bool HandleAddGameplayTagSource(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString RelPath;
+		if (!Payload->TryGetStringField(TEXT("iniRelativePath"), RelPath) || RelPath.IsEmpty())
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field: iniRelativePath"));
+			return true;
+		}
+
+		if (!IGameplayTagsEditorModule::IsAvailable())
+		{
+			SendError(Self, Socket, RequestId, TEXT("ENGINE_API_ERROR"),
+				TEXT("GameplayTagsEditor module is not available"));
+			return true;
+		}
+
+		// Ensure the on-disk file exists first. AddNewGameplayTagSource is tolerant
+		// of missing files (it creates the source record), but pre-creating the ini
+		// with a minimal header guarantees that subsequent AddNewGameplayTagToINI
+		// calls with sourceIni=<RelPath> have a valid file to write into.
+		const FString FullPath = FPaths::ProjectConfigDir() / RelPath;
+		if (!FPaths::FileExists(FullPath))
+		{
+			const FString Header = TEXT("[/Script/GameplayTags.GameplayTagsList]\r\n");
+			if (!FFileHelper::SaveStringToFile(Header, *FullPath))
+			{
+				SendError(Self, Socket, RequestId, TEXT("IO_ERROR"),
+					FString::Printf(TEXT("Failed to create ini file: %s"), *FullPath));
+				return true;
+			}
+		}
+
+		IGameplayTagsEditorModule& EditorModule = IGameplayTagsEditorModule::Get();
+		const bool bAdded = EditorModule.AddNewGameplayTagSource(RelPath, FString());
+		if (!bAdded)
+		{
+			SendError(Self, Socket, RequestId, TEXT("ENGINE_API_ERROR"),
+				FString::Printf(TEXT("AddNewGameplayTagSource failed for '%s'"), *RelPath));
+			return true;
+		}
+
+		UGameplayTagsManager::Get().EditorRefreshGameplayTagTree();
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("sourceIni"), RelPath);
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Added gameplay tag source '%s'"), *RelPath), Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpGameplayTagsHandlers
@@ -248,6 +304,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplayTagsAction(
 	if (SubAction == TEXT("remove_gameplay_tag"))
 	{
 		return McpGameplayTagsHandlers::HandleRemoveGameplayTag(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("add_gameplay_tag_source"))
+	{
+		return McpGameplayTagsHandlers::HandleAddGameplayTagSource(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,

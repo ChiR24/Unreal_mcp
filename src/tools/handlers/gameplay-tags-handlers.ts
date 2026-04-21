@@ -79,6 +79,11 @@ export async function handleGameplayTagsTools(
       return sendTagsRequest(tools, 'remove_gameplay_tag', { tag });
     }
 
+    case 'add_gameplay_tag_source': {
+      const iniRelativePath = requireStringArg(argsRecord, 'iniRelativePath');
+      return sendTagsRequest(tools, 'add_gameplay_tag_source', { iniRelativePath });
+    }
+
     default:
       throw new Error(`Unsupported manage_gameplay_tags action: ${action}`);
   }
