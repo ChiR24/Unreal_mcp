@@ -178,6 +178,12 @@ const testCases = [
   { scenario: 'GT: list with prefix Modifier.Weather', toolName: 'manage_gameplay_tags',
     arguments: { action: 'list_gameplay_tags', prefix: 'Modifier.Weather' },
     expected: 'success' },
+  { scenario: 'GT: remove Modifier.Weather.Rain', toolName: 'manage_gameplay_tags',
+    arguments: { action: 'remove_gameplay_tag', tag: 'Modifier.Weather.Rain' },
+    expected: 'success|already removed|not found' },
+  { scenario: 'GT: list after remove (should be empty)', toolName: 'manage_gameplay_tags',
+    arguments: { action: 'list_gameplay_tags', prefix: 'Modifier.Weather.Rain' },
+    expected: 'success' },
   // search_assets: searchText filtering (fix for Issue #233)
   { scenario: 'Asset: search by text (exact name)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'BP_IntegrationTest' }, expected: 'success' },
   { scenario: 'Asset: search by text (partial, case-insensitive)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'integrationtest' }, expected: 'success' },

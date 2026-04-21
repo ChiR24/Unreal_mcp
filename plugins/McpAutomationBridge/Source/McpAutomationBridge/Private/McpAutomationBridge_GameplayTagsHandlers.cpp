@@ -149,6 +149,62 @@ namespace McpGameplayTagsHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// remove_gameplay_tag
+	// -----------------------------------------------------------------------
+	static bool HandleRemoveGameplayTag(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString TagStr;
+		if (!Payload->TryGetStringField(TEXT("tag"), TagStr) || TagStr.IsEmpty())
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field: tag"));
+			return true;
+		}
+
+		if (!IGameplayTagsEditorModule::IsAvailable())
+		{
+			SendError(Self, Socket, RequestId, TEXT("ENGINE_API_ERROR"),
+				TEXT("GameplayTagsEditor module is not available"));
+			return true;
+		}
+
+		UGameplayTagsManager& Manager = UGameplayTagsManager::Get();
+		TSharedPtr<FGameplayTagNode> Node = Manager.FindTagNode(FName(*TagStr));
+		if (!Node.IsValid())
+		{
+			TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+			Data->SetStringField(TEXT("tag"), TagStr);
+			Data->SetBoolField(TEXT("alreadyRemoved"), true);
+			SendSuccess(Self, Socket, RequestId,
+				FString::Printf(TEXT("Gameplay tag '%s' not found (already removed)"), *TagStr),
+				Data);
+			return true;
+		}
+
+		IGameplayTagsEditorModule& EditorModule = IGameplayTagsEditorModule::Get();
+		const bool bDeleted = EditorModule.DeleteTagFromINI(Node);
+		if (!bDeleted)
+		{
+			SendError(Self, Socket, RequestId, TEXT("ENGINE_API_ERROR"),
+				FString::Printf(TEXT("DeleteTagFromINI failed for tag '%s' "
+					"(tag may be native, referenced by content, or restricted)"), *TagStr));
+			return true;
+		}
+
+		// DeleteTagFromINI triggers EditorRefreshGameplayTagTree internally on 5.7,
+		// but call it defensively in case the implementation changes.
+		Manager.EditorRefreshGameplayTagTree();
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("tag"), TagStr);
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Removed gameplay tag '%s'"), *TagStr), Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpGameplayTagsHandlers
@@ -188,6 +244,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplayTagsAction(
 	if (SubAction == TEXT("list_gameplay_tags"))
 	{
 		return McpGameplayTagsHandlers::HandleListGameplayTags(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("remove_gameplay_tag"))
+	{
+		return McpGameplayTagsHandlers::HandleRemoveGameplayTag(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,

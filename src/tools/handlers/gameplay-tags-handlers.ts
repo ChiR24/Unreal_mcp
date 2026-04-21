@@ -74,6 +74,11 @@ export async function handleGameplayTagsTools(
       return sendTagsRequest(tools, 'list_gameplay_tags', payload);
     }
 
+    case 'remove_gameplay_tag': {
+      const tag = requireStringArg(argsRecord, 'tag');
+      return sendTagsRequest(tools, 'remove_gameplay_tag', { tag });
+    }
+
     default:
       throw new Error(`Unsupported manage_gameplay_tags action: ${action}`);
   }

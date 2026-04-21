@@ -114,3 +114,32 @@ describe('manage_gameplay_tags list_gameplay_tags', () => {
     expect(payload.prefix).toBe('Modifier.Weather');
   });
 });
+
+describe('manage_gameplay_tags remove_gameplay_tag', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({ success: true });
+  });
+
+  it('forwards tag to the automation bridge', async () => {
+    await handleGameplayTagsTools(
+      'remove_gameplay_tag',
+      { tag: 'Modifier.Weather.Rain' } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('remove_gameplay_tag');
+    expect(payload.tag).toBe('Modifier.Weather.Rain');
+  });
+
+  it('throws on missing tag', async () => {
+    await expect(
+      handleGameplayTagsTools(
+        'remove_gameplay_tag',
+        {} as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/tag/);
+  });
+});
