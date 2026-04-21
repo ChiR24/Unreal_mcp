@@ -49,6 +49,16 @@
 #include "GameFramework/Pawn.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
+// UBlueprintEditorLibrary::ReparentBlueprint (scripting-friendly reparent path)
+// Present in UE 5.0+. Fall back to manual reparent if the module header
+// is not visible for any reason.
+#if __has_include("BlueprintEditorLibrary.h")
+#include "BlueprintEditorLibrary.h"
+#define MCP_HAS_BLUEPRINT_EDITOR_LIBRARY 1
+#else
+#define MCP_HAS_BLUEPRINT_EDITOR_LIBRARY 0
+#endif
+
 // EdGraphSchema_K2 for ConvertPropertyToPinType
 #if __has_include("EdGraphSchema_K2.h")
 #include "EdGraphSchema_K2.h"
@@ -5498,10 +5508,17 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     Resp->SetArrayField(TEXT("currentInterfaces"), CurrentIfaces);
     Resp->SetBoolField(TEXT("saved"), bSaved);
     Resp->SetBoolField(TEXT("alreadyImplemented"), bAlreadyImplemented);
-    SendAutomationResponse(RequestingSocket, RequestId, bAdded,
-                           bAdded ? TEXT("Interface added")
-                                  : TEXT("Failed to add interface"),
-                           Resp, FString());
+    // I3: categorize ImplementNewInterface failures so callers can branch
+    // deterministically rather than parsing a free-form message.
+    if (!bAdded) {
+      Resp->SetStringField(TEXT("error"),
+                           TEXT("Failed to add interface"));
+      Resp->SetStringField(TEXT("errorCategory"), TEXT("EngineAPIError"));
+    }
+    SendAutomationResponse(
+        RequestingSocket, RequestId, bAdded,
+        bAdded ? TEXT("Interface added") : TEXT("Failed to add interface"),
+        Resp, bAdded ? FString() : TEXT("ENGINE_API_ERROR"));
     return true;
 #else
     SendAutomationResponse(
@@ -5566,12 +5583,25 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       return true;
     }
 
-    FBlueprintEditorUtils::RemoveInterface(BP,
-                                           InterfaceClass->GetClassPathName(),
-                                           /*bPreserveFunctions=*/false);
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
-    McpSafeCompileBlueprint(BP);
-    const bool bSaved = SaveLoadedAssetThrottled(BP);
+    // I4: detect no-op — if the interface was never implemented on this BP,
+    // skip RemoveInterface (which would otherwise log / touch compile state
+    // for no reason) and report via `alreadyRemoved` — mirroring the
+    // add_interface idempotent `alreadyImplemented` pattern.
+    const bool bWasPresent =
+        BP->ImplementedInterfaces.ContainsByPredicate(
+            [InterfaceClass](const FBPInterfaceDescription &D) {
+              return D.Interface == InterfaceClass;
+            });
+
+    bool bSaved = false;
+    if (bWasPresent) {
+      FBlueprintEditorUtils::RemoveInterface(BP,
+                                             InterfaceClass->GetClassPathName(),
+                                             /*bPreserveFunctions=*/false);
+      FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+      McpSafeCompileBlueprint(BP);
+      bSaved = SaveLoadedAssetThrottled(BP);
+    }
 
     TArray<TSharedPtr<FJsonValue>> CurrentIfaces;
     for (const FBPInterfaceDescription &D : BP->ImplementedInterfaces) {
@@ -5587,8 +5617,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                          Normalized.IsEmpty() ? Path : Normalized);
     Resp->SetArrayField(TEXT("currentInterfaces"), CurrentIfaces);
     Resp->SetBoolField(TEXT("saved"), bSaved);
+    Resp->SetBoolField(TEXT("alreadyRemoved"), !bWasPresent);
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Interface removed"), Resp, FString());
+                           bWasPresent
+                               ? TEXT("Interface removed")
+                               : TEXT("Interface was not implemented"),
+                           Resp, FString());
     return true;
 #else
     SendAutomationResponse(
@@ -5659,11 +5693,76 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     const FString OldParentPath =
         BP->ParentClass ? BP->ParentClass->GetPathName() : FString(TEXT("None"));
 
+    // Cycle guard: disallow parenting to self or any descendant of this BP's
+    // generated class. Assigning such a parent would produce a corrupt
+    // inheritance graph (BP -> BP) that BPGC / CDO creation cannot resolve.
+    if (BP->GeneratedClass != nullptr &&
+        (NewParent == BP->GeneratedClass ||
+         NewParent->IsChildOf(BP->GeneratedClass))) {
+      TSharedPtr<FJsonObject> Cycle = McpHandlerUtils::CreateResultObject();
+      Cycle->SetBoolField(TEXT("success"), false);
+      Cycle->SetStringField(
+          TEXT("error"),
+          TEXT("Cannot reparent: new parent would create inheritance cycle"));
+      Cycle->SetStringField(TEXT("errorCategory"), TEXT("InvalidParams"));
+      Cycle->SetStringField(TEXT("blueprintPath"),
+                            Normalized.IsEmpty() ? Path : Normalized);
+      Cycle->SetStringField(TEXT("oldParent"), OldParentPath);
+      Cycle->SetStringField(TEXT("newParent"), NewParent->GetPathName());
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("Reparent rejected: inheritance cycle"), Cycle,
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Canonical reparent path. UBlueprintEditorLibrary::ReparentBlueprint
+    // performs SCS->ValidateSceneRootNodes, RefreshAllNodes,
+    // MarkBlueprintAsModified, and CompileBlueprint with the correct options
+    // (SkipSave | UseDeltaSerialization | SkipNewVariableDefaultsDetection)
+    // — i.e. the same flow used by the editor UI's reparent affordance.
+#if MCP_HAS_BLUEPRINT_EDITOR_LIBRARY
+    UBlueprintEditorLibrary::ReparentBlueprint(BP, NewParent);
+#else
+    // Fallback for environments where BlueprintEditorLibrary is unavailable.
     BP->Modify();
     BP->ParentClass = NewParent;
+    if (BP->SimpleConstructionScript != nullptr) {
+      BP->SimpleConstructionScript->ValidateSceneRootNodes();
+    }
     FBlueprintEditorUtils::RefreshAllNodes(BP);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     McpSafeCompileBlueprint(BP);
+#endif
+
+    // Detect compile failure via Blueprint->Status. McpSafeCompileBlueprint
+    // returns bool, but UBlueprintEditorLibrary::ReparentBlueprint returns
+    // void — so we probe Status directly for uniformity. BS_UpToDate and
+    // BS_UpToDateWithWarnings are the only successful states.
+    const bool bCompiled =
+        (BP->Status == EBlueprintStatus::BS_UpToDate) ||
+        (BP->Status == EBlueprintStatus::BS_UpToDateWithWarnings);
+
+    if (!bCompiled) {
+      TSharedPtr<FJsonObject> Fail = McpHandlerUtils::CreateResultObject();
+      Fail->SetBoolField(TEXT("success"), false);
+      Fail->SetStringField(
+          TEXT("error"),
+          TEXT("Blueprint failed to compile after reparent"));
+      Fail->SetStringField(TEXT("errorCategory"), TEXT("EngineAPIError"));
+      Fail->SetStringField(TEXT("blueprintPath"),
+                           Normalized.IsEmpty() ? Path : Normalized);
+      Fail->SetStringField(TEXT("oldParent"), OldParentPath);
+      Fail->SetStringField(TEXT("newParent"), NewParent->GetPathName());
+      Fail->SetNumberField(TEXT("blueprintStatus"),
+                           static_cast<double>(BP->Status));
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("Parent class updated but compile failed"), Fail,
+          TEXT("ENGINE_API_ERROR"));
+      return true;
+    }
+
     const bool bSaved = SaveLoadedAssetThrottled(BP);
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -5733,6 +5832,65 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                          UEdGraphSchema_K2::PC_MCDelegate;
             });
 
+    // Name-collision check across ALL blueprint members (I1).
+    // Only enforced when we'd actually create a new dispatcher — if an existing
+    // multicast delegate with the same name exists, fall through to the
+    // idempotent path below.
+    if (!bAlreadyExists) {
+      // Non-delegate variable with the same name.
+      const FBPVariableDescription *ExistingVar =
+          BP->NewVariables.FindByPredicate(
+              [DispName](const FBPVariableDescription &Desc) {
+                return Desc.VarName == DispName;
+              });
+      if (ExistingVar != nullptr) {
+        TSharedPtr<FJsonObject> Conflict =
+            McpHandlerUtils::CreateResultObject();
+        Conflict->SetBoolField(TEXT("success"), false);
+        Conflict->SetStringField(
+            TEXT("error"),
+            FString::Printf(
+                TEXT("Name already used by variable: %s"), *DispatcherName));
+        Conflict->SetStringField(TEXT("errorCategory"),
+                                 TEXT("ConflictState"));
+        Conflict->SetStringField(TEXT("blueprintPath"),
+                                 Normalized.IsEmpty() ? Path : Normalized);
+        Conflict->SetStringField(TEXT("dispatcherName"), DispatcherName);
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            TEXT("Name collision with existing variable"), Conflict,
+            TEXT("CONFLICT_STATE"));
+        return true;
+      }
+
+      // Function / macro graph with the same name.
+      auto GraphNameMatches = [DispName](const UEdGraph *G) {
+        return G != nullptr && G->GetFName() == DispName;
+      };
+      const bool bFuncCollision =
+          BP->FunctionGraphs.ContainsByPredicate(GraphNameMatches) ||
+          BP->MacroGraphs.ContainsByPredicate(GraphNameMatches);
+      if (bFuncCollision) {
+        TSharedPtr<FJsonObject> Conflict =
+            McpHandlerUtils::CreateResultObject();
+        Conflict->SetBoolField(TEXT("success"), false);
+        Conflict->SetStringField(
+            TEXT("error"),
+            FString::Printf(
+                TEXT("Name already used by function: %s"), *DispatcherName));
+        Conflict->SetStringField(TEXT("errorCategory"),
+                                 TEXT("ConflictState"));
+        Conflict->SetStringField(TEXT("blueprintPath"),
+                                 Normalized.IsEmpty() ? Path : Normalized);
+        Conflict->SetStringField(TEXT("dispatcherName"), DispatcherName);
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            TEXT("Name collision with existing function"), Conflict,
+            TEXT("CONFLICT_STATE"));
+        return true;
+      }
+    }
+
     bool bAdded = bAlreadyExists;
     UEdGraph *SignatureGraph = nullptr;
 
@@ -5788,6 +5946,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     // Apply delegateSignature inputs (optional). Each entry: { name, type }.
     const TArray<TSharedPtr<FJsonValue>> *SigField = nullptr;
     TArray<TSharedPtr<FJsonValue>> AppliedSignature;
+    TArray<TSharedPtr<FJsonValue>> SkippedSignature;
     if (LocalPayload->TryGetArrayField(TEXT("delegateSignature"), SigField) &&
         SigField && SignatureGraph) {
       // Find the K2Node_FunctionEntry in the signature graph to add pins on.
@@ -5802,17 +5961,35 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       if (EntryNode) {
         EntryNode->Modify();
         for (const TSharedPtr<FJsonValue> &SigVal : *SigField) {
-          if (!SigVal.IsValid() || SigVal->Type != EJson::Object)
+          auto RecordSkipped =
+              [&SkippedSignature](const FString &Name, const FString &Type,
+                                  const FString &Reason) {
+                TSharedPtr<FJsonObject> S = MakeShared<FJsonObject>();
+                S->SetStringField(TEXT("name"), Name);
+                S->SetStringField(TEXT("type"), Type);
+                S->SetStringField(TEXT("reason"), Reason);
+                SkippedSignature.Add(MakeShared<FJsonValueObject>(S));
+              };
+          if (!SigVal.IsValid() || SigVal->Type != EJson::Object) {
+            RecordSkipped(FString(), FString(),
+                          TEXT("entry is not a JSON object"));
             continue;
+          }
           const TSharedPtr<FJsonObject> SigObj = SigVal->AsObject();
-          if (!SigObj.IsValid())
+          if (!SigObj.IsValid()) {
+            RecordSkipped(FString(), FString(),
+                          TEXT("entry object is invalid"));
             continue;
+          }
           FString ParamName;
           SigObj->TryGetStringField(TEXT("name"), ParamName);
           FString ParamType;
           SigObj->TryGetStringField(TEXT("type"), ParamType);
-          if (ParamName.IsEmpty() || ParamType.IsEmpty())
+          if (ParamName.IsEmpty() || ParamType.IsEmpty()) {
+            RecordSkipped(ParamName, ParamType,
+                          TEXT("missing name or type"));
             continue;
+          }
 
           FEdGraphPinType PinType;
           FString ParseErr;
@@ -5821,6 +5998,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                    TEXT("add_event_dispatcher: failed to parse pin type '%s' "
                         "for param '%s': %s"),
                    *ParamType, *ParamName, *ParseErr);
+            RecordSkipped(ParamName, ParamType,
+                          FString::Printf(TEXT("parse error: %s"), *ParseErr));
             continue;
           }
           EntryNode->CreateUserDefinedPin(FName(*ParamName), PinType,
@@ -5847,6 +6026,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     Resp->SetBoolField(TEXT("saved"), bSaved);
     if (AppliedSignature.Num() > 0) {
       Resp->SetArrayField(TEXT("appliedSignature"), AppliedSignature);
+    }
+    // I2: surface skipped signature entries (partial-success disclosure).
+    // We intentionally keep success=true here to avoid overly-strict
+    // behavior — callers inspect skippedSignature to detect partial failures.
+    if (SkippedSignature.Num() > 0) {
+      Resp->SetArrayField(TEXT("skippedSignature"), SkippedSignature);
     }
     SendAutomationResponse(RequestingSocket, RequestId, bAdded,
                            bAdded ? TEXT("Event dispatcher added")

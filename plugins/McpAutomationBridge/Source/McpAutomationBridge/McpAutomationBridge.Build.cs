@@ -144,7 +144,7 @@ PublicDependencyModuleNames.AddRange(new string[]
             PrivateDependencyModuleNames.AddRange(new string[]
             {
                 "ApplicationCore","Slate","SlateCore","Projects","InputCore","DeveloperSettings","Settings","EngineSettings",
-                "Sockets","Networking","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph","SSL",
+                "Sockets","Networking","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph","BlueprintEditorLibrary","SSL",
                 "Kismet","KismetCompiler","AssetRegistry","AssetTools","SourceControl",
                 "AudioEditor", "AudioMixer",
                 // Native MCP uses raw sockets (Sockets/Networking already listed above)

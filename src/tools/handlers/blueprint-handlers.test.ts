@@ -169,6 +169,26 @@ describe('manage_blueprint remove_interface', () => {
       })
     );
   });
+
+  // Documents I4: when the C++ bridge detects the interface was never
+  // implemented on the BP, it short-circuits RemoveInterface and sets
+  // alreadyRemoved: true in the response. The TS handler must pass that
+  // field through verbatim (via cleanObject) to the caller.
+  it('passes through alreadyRemoved: true for no-op removal', async () => {
+    executeAutomationRequestMock.mockResolvedValueOnce({
+      success: true,
+      currentInterfaces: [],
+      alreadyRemoved: true
+    });
+    const res = await handleBlueprintTools(
+      'remove_interface',
+      { action: 'remove_interface', blueprintPath: '/Game/BP_T', interfacePath: '/Game/IF_NotApplied.IF_NotApplied_C' },
+      {} as never
+    );
+    expect(res.success).toBe(true);
+    expect(res.alreadyRemoved).toBe(true);
+    expect(res.currentInterfaces).toEqual([]);
+  });
 });
 
 describe('manage_blueprint set_parent_class', () => {
