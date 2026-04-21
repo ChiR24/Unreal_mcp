@@ -60,7 +60,7 @@ export async function handleWidgetAuthoringTools(
   tools: ITools
 ): Promise<Record<string, unknown>> {
   // Normalize path fields before processing
-  const argsRecord = normalizePathFields(args as Record<string, unknown>, ['widgetPath', 'folder', 'widgetBlueprintPath']);
+  const argsRecord = normalizePathFields(args as Record<string, unknown>, ['widgetPath', 'folder', 'path', 'widgetBlueprintPath']);
   const timeoutMs = getTimeoutMs();
 
   // All actions are dispatched to C++ via automation bridge

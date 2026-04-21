@@ -3282,6 +3282,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         },
         name: commonSchemas.name,
         folder: commonSchemas.directoryPath,
+        path: { type: 'string', description: 'Alias of folder: destination /Game/... package path for create_widget_blueprint. Takes precedence over folder when both are provided.' },
         widgetPath: commonSchemas.widgetPath,
         slotName: commonSchemas.slotName,
         parentSlot: { type: 'string', description: 'Parent slot to add widget to.' },

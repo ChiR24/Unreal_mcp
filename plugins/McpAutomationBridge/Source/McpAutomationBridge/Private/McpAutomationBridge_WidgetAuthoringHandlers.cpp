@@ -890,19 +890,24 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
-        
+        // Live-test hotfix: honor 'path' param (preferred) or legacy 'folder'; fall back to /Game/UI.
+        FString Folder = GetJsonStringField(Payload, TEXT("path"));
+        if (Folder.IsEmpty())
+        {
+            Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
+        }
+
         // SECURITY: Validate folder path for traversal attacks
         FString SanitizedFolder = SanitizeProjectRelativePath(Folder);
         if (SanitizedFolder.IsEmpty() && !Folder.IsEmpty())
         {
-            SendAutomationError(RequestingSocket, RequestId, 
-                TEXT("Invalid folder path: path traversal or invalid characters detected"), 
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Invalid folder path: path traversal or invalid characters detected"),
                 TEXT("SECURITY_VIOLATION"));
             return true;
         }
         Folder = SanitizedFolder;
-        
+
         FString ParentClass = GetJsonStringField(Payload, TEXT("parentClass"), TEXT("UserWidget"));
 
         // Build full path
@@ -1146,7 +1151,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("CanvasPanel"));
+        // Live-test hotfix: honor 'widgetName' as the slot FName override; fall back to legacy 'slotName', then class default.
+        FString SlotName = GetJsonStringField(Payload, TEXT("widgetName"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("CanvasPanel"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -5906,42 +5916,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     // =========================================================================
     // 19.11 Widget Manipulation Actions
     // =========================================================================
-
-    if (SubAction.Equals(TEXT("remove_widget"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"));
-
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP || !WidgetBP->WidgetTree)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* TargetWidget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
-        if (!TargetWidget)
-        {
-            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        WidgetBP->WidgetTree->RemoveWidget(TargetWidget);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
-        ResultJson->SetStringField(TEXT("removedWidget"), SlotName);
-
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Removed widget"), ResultJson);
-        return true;
-    }
+    // NOTE: remove_widget is handled by the Ch6 generic branch below
+    // (widgetBlueprintPath + widgetName convention, matching add_widget).
+    // The legacy widgetPath+slotName variant was removed so it no longer
+    // intercepts the newer signature.
 
     if (SubAction.Equals(TEXT("rename_widget"), ESearchCase::IgnoreCase))
     {
