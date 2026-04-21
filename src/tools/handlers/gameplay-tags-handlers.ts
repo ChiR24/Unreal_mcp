@@ -57,13 +57,15 @@ export async function handleGameplayTagsTools(
 ): Promise<Record<string, unknown>> {
   const argsRecord = args as Record<string, unknown>;
 
-  // Silence "unused" warnings for the helpers that future tasks will consume.
-  // These references are compiled out with no runtime effect.
-  void argsRecord;
-  void sendTagsRequest;
-  void requireStringArg;
-  void optionalStringArg;
-  void tools;
+  switch (action) {
+    case 'add_gameplay_tag': {
+      const tag = requireStringArg(argsRecord, 'tag');
+      const comment = optionalStringArg(argsRecord, 'comment') ?? '';
+      const sourceIni = optionalStringArg(argsRecord, 'sourceIni') ?? 'DefaultGameplayTags.ini';
+      return sendTagsRequest(tools, 'add_gameplay_tag', { tag, comment, sourceIni });
+    }
 
-  throw new Error(`Unsupported manage_gameplay_tags action: ${action}`);
+    default:
+      throw new Error(`Unsupported manage_gameplay_tags action: ${action}`);
+  }
 }

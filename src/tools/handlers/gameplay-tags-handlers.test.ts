@@ -29,3 +29,54 @@ describe('manage_gameplay_tags skeleton', () => {
     ).rejects.toThrow(/Unsupported manage_gameplay_tags action/);
   });
 });
+
+describe('manage_gameplay_tags add_gameplay_tag', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({
+      success: true,
+      tag: 'Modifier.Weather.Rain',
+      sourceIni: 'DefaultGameplayTags.ini',
+    });
+  });
+
+  it('forwards tag + comment + default sourceIni to the automation bridge', async () => {
+    const res = await handleGameplayTagsTools(
+      'add_gameplay_tag',
+      { tag: 'Modifier.Weather.Rain', comment: 'Rain modifier' } as unknown as Record<string, unknown>,
+      {} as never
+    );
+
+    expect(res.success).toBe(true);
+    expect(res.tag).toBe('Modifier.Weather.Rain');
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    expect(calls[0][1]).toBe('manage_gameplay_tags');
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('add_gameplay_tag');
+    expect(payload.tag).toBe('Modifier.Weather.Rain');
+    expect(payload.comment).toBe('Rain modifier');
+    expect(payload.sourceIni).toBe('DefaultGameplayTags.ini');
+  });
+
+  it('forwards explicit sourceIni when provided', async () => {
+    await handleGameplayTagsTools(
+      'add_gameplay_tag',
+      { tag: 'Combat.Ability.Slash', sourceIni: 'CombatTags.ini' } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.sourceIni).toBe('CombatTags.ini');
+    expect(payload.comment).toBe('');
+  });
+
+  it('throws on missing tag', async () => {
+    await expect(
+      handleGameplayTagsTools(
+        'add_gameplay_tag',
+        {} as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/tag/);
+  });
+});

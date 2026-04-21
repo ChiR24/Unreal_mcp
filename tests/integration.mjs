@@ -171,6 +171,10 @@ const testCases = [
   { scenario: 'Curve: create float curve (C_Ch5Test)', toolName: 'manage_curve',
     arguments: { action: 'create_curve_float', path: '/Game/DataTest', name: 'C_Ch5Test' },
     expected: 'success|already exists' },
+  // Ch4: manage_gameplay_tags — GameplayTag ini CRUD
+  { scenario: 'GT: add Modifier.Weather.Rain', toolName: 'manage_gameplay_tags',
+    arguments: { action: 'add_gameplay_tag', tag: 'Modifier.Weather.Rain', comment: 'Rain modifier' },
+    expected: 'success|already exists' },
   // search_assets: searchText filtering (fix for Issue #233)
   { scenario: 'Asset: search by text (exact name)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'BP_IntegrationTest' }, expected: 'success' },
   { scenario: 'Asset: search by text (partial, case-insensitive)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'integrationtest' }, expected: 'success' },

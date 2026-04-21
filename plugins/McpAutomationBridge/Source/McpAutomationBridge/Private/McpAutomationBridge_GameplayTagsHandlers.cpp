@@ -57,11 +57,61 @@ namespace McpGameplayTagsHandlers
 		Self->SendAutomationError(Socket, RequestId, Message, Category);
 	}
 
-	// Avoid unused warning during skeleton compile — real uses appear in Task 2-5.
-	static void SilenceUnusedHelpers()
+	// -----------------------------------------------------------------------
+	// add_gameplay_tag
+	// -----------------------------------------------------------------------
+	static bool HandleAddGameplayTag(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
 	{
-		(void)&SendSuccess;
-		(void)&SendError;
+		FString TagStr;
+		if (!Payload->TryGetStringField(TEXT("tag"), TagStr) || TagStr.IsEmpty())
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field: tag"));
+			return true;
+		}
+
+		FString Comment;
+		Payload->TryGetStringField(TEXT("comment"), Comment);
+
+		FString SourceIni;
+		Payload->TryGetStringField(TEXT("sourceIni"), SourceIni);
+		// When caller passes empty sourceIni, interpret as NAME_None which writes to
+		// the project's default tag source (DefaultGameplayTags.ini).
+		const FName TagSourceName = SourceIni.IsEmpty() ? FName(NAME_None) : FName(*SourceIni);
+
+		if (!IGameplayTagsEditorModule::IsAvailable())
+		{
+			SendError(Self, Socket, RequestId, TEXT("ENGINE_API_ERROR"),
+				TEXT("GameplayTagsEditor module is not available"));
+			return true;
+		}
+
+		IGameplayTagsEditorModule& EditorModule = IGameplayTagsEditorModule::Get();
+		const bool bAdded = EditorModule.AddNewGameplayTagToINI(
+			TagStr, Comment, TagSourceName, /*bIsRestrictedTag=*/false,
+			/*bAllowNonRestrictedChildren=*/true);
+
+		if (!bAdded)
+		{
+			SendError(Self, Socket, RequestId, TEXT("ENGINE_API_ERROR"),
+				FString::Printf(TEXT("AddNewGameplayTagToINI failed for tag '%s' (source='%s'). "
+					"Tag may already exist, be malformed, or the source ini is invalid."),
+					*TagStr, *SourceIni));
+			return true;
+		}
+
+		// Refresh editor tag tree so UI / dropdowns update immediately.
+		UGameplayTagsManager::Get().EditorRefreshGameplayTagTree();
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("tag"), TagStr);
+		Data->SetStringField(TEXT("sourceIni"),
+			SourceIni.IsEmpty() ? TEXT("DefaultGameplayTags.ini") : SourceIni);
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Added gameplay tag '%s'"), *TagStr), Data);
+		return true;
 	}
 
 #endif // WITH_EDITOR
@@ -96,9 +146,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplayTagsAction(
 		TEXT("NOT_IMPLEMENTED"));
 	return true;
 #else
-	// Ensure static helpers are referenced so unused-function warnings stay silent
-	// in the skeleton commit; real dispatches appear in Tasks 2-5.
-	McpGameplayTagsHandlers::SilenceUnusedHelpers();
+	if (SubAction == TEXT("add_gameplay_tag"))
+	{
+		return McpGameplayTagsHandlers::HandleAddGameplayTag(this, RequestId, Payload, RequestingSocket);
+	}
 
 	SendAutomationError(RequestingSocket, RequestId,
 		FString::Printf(TEXT("Sub-action not implemented: %s"), *SubAction),
