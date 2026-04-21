@@ -292,6 +292,16 @@ const testCases = [
     arguments: { action: 'add_state_tree_state', stateTreePath: '/Game/DataTest/ST_Ch7Test',
       stateName: 'Patrol', stateType: 'State', parentState: 'Root' },
     expected: 'success|already exists' },
+  // H7.8: re-adding the same child should report alreadyExists (no error).
+  { scenario: 'Ch7 StateTree: add Patrol twice (idempotent / alreadyExists)', toolName: 'manage_ai',
+    arguments: { action: 'add_state_tree_state', stateTreePath: '/Game/DataTest/ST_Ch7Test',
+      stateName: 'Patrol', stateType: 'State', parentState: 'Root' },
+    expected: 'success' },
+  // H7.1: bogus contextClass should now reject with INVALID_PARAMS (not silently create a schema-less tree).
+  { scenario: 'Ch7 StateTree: create with non-Schema contextClass -> INVALID_PARAMS', toolName: 'manage_ai',
+    arguments: { action: 'create_state_tree', name: 'ST_Ch7BadSchema', path: '/Game/DataTest',
+      contextClass: '/Script/CoreUObject.Object' },
+    expected: 'error|INVALID_PARAMS|not a UStateTreeSchema' },
   { scenario: 'Ch7 StateTree: add transition Patrol -> Combat (OnEvent)', toolName: 'manage_ai',
     arguments: { action: 'add_state_tree_transition', stateTreePath: '/Game/DataTest/ST_Ch7Test',
       fromState: 'Patrol', toState: 'Combat', triggerType: 'OnEvent' },

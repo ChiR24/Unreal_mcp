@@ -1691,8 +1691,52 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             SchemaClass = LoadObject<UClass>(nullptr, *ContextClassPath);
             if (!SchemaClass)
             {
-                UE_LOG(LogMcpAIHandlers, Warning, TEXT("contextClass '%s' not found; StateTree will be created without a schema."), *ContextClassPath);
+                // Clean up: destroy StateTree + EditorData, mark package garbage.
+                EditorData->ConditionalBeginDestroy();
+                StateTree->ConditionalBeginDestroy();
+                Package->MarkAsGarbage();
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("contextClass not found: %s"), *ContextClassPath),
+                    TEXT("NOT_FOUND"));
+                return true;
             }
+            // H7.1: validate the class is a UStateTreeSchema subclass before using it.
+#if __has_include("StateTreeSchema.h")
+            if (!SchemaClass->IsChildOf(UStateTreeSchema::StaticClass()))
+            {
+                EditorData->ConditionalBeginDestroy();
+                StateTree->ConditionalBeginDestroy();
+                Package->MarkAsGarbage();
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("contextClass %s is not a UStateTreeSchema subclass"), *ContextClassPath),
+                    TEXT("INVALID_PARAMS"));
+                return true;
+            }
+#else
+            // Fallback: walk SuperClass chain looking for a class named "StateTreeSchema".
+            // This avoids hard-depending on the header in unusual build configurations.
+            {
+                bool bIsSchema = false;
+                for (UClass* Cur = SchemaClass; Cur; Cur = Cur->GetSuperClass())
+                {
+                    if (Cur->GetName() == TEXT("StateTreeSchema"))
+                    {
+                        bIsSchema = true;
+                        break;
+                    }
+                }
+                if (!bIsSchema)
+                {
+                    EditorData->ConditionalBeginDestroy();
+                    StateTree->ConditionalBeginDestroy();
+                    Package->MarkAsGarbage();
+                    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("contextClass %s is not a UStateTreeSchema subclass"), *ContextClassPath),
+                        TEXT("INVALID_PARAMS"));
+                    return true;
+                }
+            }
+#endif
         }
         else
         {
@@ -1711,17 +1755,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             EditorData->Schema = NewObject<UStateTreeSchema>(EditorData, SchemaClass);
             Result->SetStringField(TEXT("schemaClass"), SchemaClass->GetPathName());
         }
-        
+
         // Add a default root state
         UStateTreeState& RootState = EditorData->AddRootState();
         RootState.Name = FName(TEXT("Root"));
-        
-        // Save the asset
-        McpSafeAssetSave(StateTree);
-        
+
+        // Save the asset (H7.7 — report saved / saveWarning)
+        const bool bSaved = McpSafeAssetSave(StateTree);
+
         Result->SetStringField(TEXT("stateTreePath"), FullPath);
         Result->SetStringField(TEXT("rootStateName"), TEXT("Root"));
         Result->SetStringField(TEXT("message"), TEXT("State Tree created with root state"));
+        Result->SetBoolField(TEXT("saved"), bSaved);
+        if (!bSaved)
+        {
+            Result->SetStringField(TEXT("saveWarning"), TEXT("Asset changes in memory but save failed"));
+        }
         McpHandlerUtils::AddVerification(Result, StateTree);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State Tree created"), Result);
 #elif MCP_HAS_STATE_TREE
@@ -1802,13 +1851,37 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         // Ch7 Task 3: if stateType=Subtree AND no parent specified, add as top-level subtree
         if (Type == EStateTreeStateType::Subtree && ParentStateName.IsEmpty())
         {
+            // H7.8: idempotency — if a top-level subtree with the same name already exists, return it.
+            for (UStateTreeState* Existing : EditorData->SubTrees)
+            {
+                if (Existing && Existing->Name.ToString().Equals(StateName, ESearchCase::IgnoreCase))
+                {
+                    Result->SetStringField(TEXT("stateName"), StateName);
+                    Result->SetStringField(TEXT("parentState"), TEXT(""));
+                    Result->SetStringField(TEXT("stateType"), TEXT("Subtree"));
+                    Result->SetBoolField(TEXT("alreadyExists"), true);
+                    Result->SetStringField(TEXT("stateId"), Existing->ID.ToString());
+                    Result->SetStringField(TEXT("message"), TEXT("Top-level Subtree already exists"));
+                    McpHandlerUtils::AddVerification(Result, StateTree);
+                    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Subtree already exists"), Result);
+                    return true;
+                }
+            }
+
+            EditorData->Modify();  // H7.5: support undo/redo
             UStateTreeState& NewSubTree = EditorData->AddSubTree(FName(*StateName));
             NewSubTree.Type = EStateTreeStateType::Subtree;
-            McpSafeAssetSave(StateTree);
+            const bool bSaved = McpSafeAssetSave(StateTree);
 
             Result->SetStringField(TEXT("stateName"), StateName);
             Result->SetStringField(TEXT("parentState"), TEXT(""));
             Result->SetStringField(TEXT("stateType"), TEXT("Subtree"));
+            Result->SetStringField(TEXT("stateId"), NewSubTree.ID.ToString());
+            Result->SetBoolField(TEXT("saved"), bSaved);
+            if (!bSaved)
+            {
+                Result->SetStringField(TEXT("saveWarning"), TEXT("Asset changes in memory but save failed"));
+            }
             Result->SetStringField(TEXT("message"), TEXT("Top-level Subtree added"));
             McpHandlerUtils::AddVerification(Result, StateTree);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Subtree added"), Result);
@@ -1854,14 +1927,37 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
 
-        UStateTreeState& NewState = ParentState->AddChildState(FName(*StateName), Type);
-        (void)NewState;
+        // H7.8: idempotency — if a child with the same name already exists, return it.
+        for (UStateTreeState* Existing : ParentState->Children)
+        {
+            if (Existing && Existing->Name.ToString().Equals(StateName, ESearchCase::IgnoreCase))
+            {
+                Result->SetStringField(TEXT("stateName"), StateName);
+                Result->SetStringField(TEXT("parentState"), ParentStateName);
+                Result->SetStringField(TEXT("stateType"), StateType);
+                Result->SetBoolField(TEXT("alreadyExists"), true);
+                Result->SetStringField(TEXT("stateId"), Existing->ID.ToString());
+                Result->SetStringField(TEXT("message"), TEXT("Child state already exists"));
+                McpHandlerUtils::AddVerification(Result, StateTree);
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State already exists"), Result);
+                return true;
+            }
+        }
 
-        McpSafeAssetSave(StateTree);
+        ParentState->Modify();  // H7.5: support undo/redo
+        UStateTreeState& NewState = ParentState->AddChildState(FName(*StateName), Type);
+
+        const bool bSaved = McpSafeAssetSave(StateTree);
 
         Result->SetStringField(TEXT("stateName"), StateName);
         Result->SetStringField(TEXT("parentState"), ParentStateName);
         Result->SetStringField(TEXT("stateType"), StateType);
+        Result->SetStringField(TEXT("stateId"), NewState.ID.ToString());
+        Result->SetBoolField(TEXT("saved"), bSaved);
+        if (!bSaved)
+        {
+            Result->SetStringField(TEXT("saveWarning"), TEXT("Asset changes in memory but save failed"));
+        }
         Result->SetStringField(TEXT("message"), TEXT("State added to StateTree"));
         McpHandlerUtils::AddVerification(Result, StateTree);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State added"), Result);
@@ -1969,15 +2065,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         }
         
         // Add transition
+        SourceState->Modify();  // H7.5: support undo/redo on Transitions array mutation.
         FStateTreeTransition& Transition = SourceState->AddTransition(Trigger, EStateTreeTransitionType::GotoState, TargetState);
-        
-        // Save
-        McpSafeAssetSave(StateTree);
-        
+
+        // Save (H7.7)
+        const bool bSaved = McpSafeAssetSave(StateTree);
+
         Result->SetStringField(TEXT("fromState"), FromState);
         Result->SetStringField(TEXT("toState"), ToState);
         Result->SetStringField(TEXT("triggerType"), TriggerType);
         Result->SetStringField(TEXT("transitionId"), Transition.ID.ToString());
+        Result->SetBoolField(TEXT("saved"), bSaved);
+        if (!bSaved)
+        {
+            Result->SetStringField(TEXT("saveWarning"), TEXT("Asset changes in memory but save failed"));
+        }
         Result->SetStringField(TEXT("message"), TEXT("Transition added"));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Transition added"), Result);
 #elif MCP_HAS_STATE_TREE
@@ -2058,49 +2160,64 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
         
-        // Ch7 Task 5: Re-enable selectionBehavior on 5.7+ (the enum still exists in 5.7).
+        // H7.3: atomic configure_state_tree_task — stage BOTH selectionBehavior and
+        // taskProps into working buffers; commit only after reflection succeeds.
+        // Original behavior wrote SelectionBehavior first, so a subsequent taskProps
+        // reflection failure left the state in a partial-apply state.
+
+        // Stage 1: parse selectionBehavior into a pending value (no mutation yet).
+        bool bHasSelectionBehavior = false;
+        EStateTreeStateSelectionBehavior PendingSelection = FoundState->SelectionBehavior;
         if (Payload->HasField(TEXT("selectionBehavior")))
         {
             FString Behavior = GetStringFieldAI(Payload, TEXT("selectionBehavior"));
+            bHasSelectionBehavior = true;
             if (Behavior.Equals(TEXT("None"), ESearchCase::IgnoreCase))
             {
-                FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::None;
+                PendingSelection = EStateTreeStateSelectionBehavior::None;
             }
             else if (Behavior.Equals(TEXT("TryEnterState"), ESearchCase::IgnoreCase))
             {
-                FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TryEnterState;
+                PendingSelection = EStateTreeStateSelectionBehavior::TryEnterState;
             }
             else if (Behavior.Equals(TEXT("TrySelectChildrenInOrder"), ESearchCase::IgnoreCase))
             {
-                FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TrySelectChildrenInOrder;
+                PendingSelection = EStateTreeStateSelectionBehavior::TrySelectChildrenInOrder;
             }
             else if (Behavior.Equals(TEXT("TrySelectChildrenAtRandom"), ESearchCase::IgnoreCase))
             {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
-                FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TrySelectChildrenAtRandom;
+                PendingSelection = EStateTreeStateSelectionBehavior::TrySelectChildrenAtRandom;
 #else
                 UE_LOG(LogMcpAIHandlers, Warning, TEXT("TrySelectChildrenAtRandom requires UE 5.5+. Using TrySelectChildrenInOrder instead."));
-                FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TrySelectChildrenInOrder;
+                PendingSelection = EStateTreeStateSelectionBehavior::TrySelectChildrenInOrder;
 #endif
             }
             else if (Behavior.Equals(TEXT("TrySelectChildrenWithHighestUtility"), ESearchCase::IgnoreCase))
             {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
-                FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TrySelectChildrenWithHighestUtility;
+                PendingSelection = EStateTreeStateSelectionBehavior::TrySelectChildrenWithHighestUtility;
 #else
                 UE_LOG(LogMcpAIHandlers, Warning, TEXT("TrySelectChildrenWithHighestUtility requires UE 5.5+. Using TryEnterState instead."));
-                FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TryEnterState;
+                PendingSelection = EStateTreeStateSelectionBehavior::TryEnterState;
 #endif
             }
             else
             {
                 UE_LOG(LogMcpAIHandlers, Warning, TEXT("Unknown selection behavior: %s"), *Behavior);
+                bHasSelectionBehavior = false;  // Don't commit an unknown value.
             }
         }
 
-        // Ch7 Task 5: taskProps reflection write into Tasks[taskIndex].Instance
+        // Stage 2: parse + validate taskProps into a working FInstancedStruct clone.
+        // If reflection fails, we return an error without touching the asset.
+        int32 PendingTaskIndex = -1;
+        bool bUseNodeSlot = false;  // true = write to Node, false = write to Instance.
+        FInstancedStruct WorkInstance;
         const TSharedPtr<FJsonObject>* TaskPropsObj = nullptr;
-        if (Payload->TryGetObjectField(TEXT("taskProps"), TaskPropsObj) && TaskPropsObj && TaskPropsObj->IsValid())
+        const bool bHasTaskProps = Payload->TryGetObjectField(TEXT("taskProps"), TaskPropsObj)
+                                    && TaskPropsObj && TaskPropsObj->IsValid();
+        if (bHasTaskProps)
         {
             int32 TaskIndex = 0;
             if (Payload->HasField(TEXT("taskIndex")))
@@ -2118,17 +2235,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             FStateTreeEditorNode& EditorNode = FoundState->Tasks[TaskIndex];
 
             // Prefer Instance (typed instance data) when available; fall back to Node itself.
-            FInstancedStruct* Target = nullptr;
+            const FInstancedStruct* SourceSlot = nullptr;
             if (EditorNode.Instance.IsValid())
             {
-                Target = &EditorNode.Instance;
+                SourceSlot = &EditorNode.Instance;
+                bUseNodeSlot = false;
             }
             else if (EditorNode.Node.IsValid())
             {
-                Target = &EditorNode.Node;
+                SourceSlot = &EditorNode.Node;
+                bUseNodeSlot = true;
             }
 
-            if (!Target || !Target->IsValid())
+            if (!SourceSlot || !SourceSlot->IsValid())
             {
                 SendAutomationError(RequestingSocket, RequestId,
                     TEXT("Task at index has no writable instance struct"),
@@ -2137,20 +2256,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             }
 
 #if MCP_HAS_STRUCT_REFLECTION
-            const UScriptStruct* TargetStruct = Target->GetScriptStruct();
-            uint8* TargetMemory = Target->GetMutableMemory();
+            // Copy the source struct into our working buffer, apply the JSON there.
+            WorkInstance = *SourceSlot;
+            const UScriptStruct* TargetStruct = WorkInstance.GetScriptStruct();
+            uint8* TargetMemory = WorkInstance.GetMutableMemory();
             FString StructError;
             if (!McpStructReflection::SetStructFieldsFromJsonObject(
                     TargetStruct, TargetMemory, *TaskPropsObj, StructError))
             {
+                // Nothing committed yet — asset is untouched.
                 SendAutomationError(RequestingSocket, RequestId,
                     FString::Printf(TEXT("taskProps reflection failed: %s"), *StructError),
                     TEXT("INVALID_PARAMS"));
                 return true;
             }
-            Result->SetNumberField(TEXT("taskIndex"), TaskIndex);
+            PendingTaskIndex = TaskIndex;
 #else
-            (void)Target;
             SendAutomationError(RequestingSocket, RequestId,
                 TEXT("McpStructReflection helper not available"),
                 TEXT("UNSUPPORTED"));
@@ -2158,10 +2279,38 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 #endif
         }
 
-        McpSafeAssetSave(StateTree);
+        // Stage 3: commit. All validations have passed — apply atomically.
+        if (bHasSelectionBehavior || bHasTaskProps)
+        {
+            FoundState->Modify();  // H7.5: single Modify for both mutations.
+        }
+        if (bHasTaskProps && PendingTaskIndex >= 0)
+        {
+            FStateTreeEditorNode& EditorNode = FoundState->Tasks[PendingTaskIndex];
+            if (bUseNodeSlot)
+            {
+                EditorNode.Node = MoveTemp(WorkInstance);
+            }
+            else
+            {
+                EditorNode.Instance = MoveTemp(WorkInstance);
+            }
+            Result->SetNumberField(TEXT("taskIndex"), PendingTaskIndex);
+        }
+        if (bHasSelectionBehavior)
+        {
+            FoundState->SelectionBehavior = PendingSelection;
+        }
+
+        const bool bSaved = McpSafeAssetSave(StateTree);
 
         Result->SetStringField(TEXT("stateName"), StateName);
         Result->SetNumberField(TEXT("taskCount"), FoundState->Tasks.Num());
+        Result->SetBoolField(TEXT("saved"), bSaved);
+        if (!bSaved)
+        {
+            Result->SetStringField(TEXT("saveWarning"), TEXT("Asset changes in memory but save failed"));
+        }
         Result->SetStringField(TEXT("message"), TEXT("State task configuration updated"));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Task configured"), Result);
 #elif MCP_HAS_STATE_TREE
@@ -2244,6 +2393,28 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
 
+        // H7.4: if the caller supplied a UClass path (Blueprint task), validate the
+        // class descends from UStateTreeTaskBlueprintBase before we mutate anything.
+        // If the base class can't be loaded (module not loaded), skip the check.
+        if (TaskClass)
+        {
+            UClass* BPTaskBase = LoadObject<UClass>(nullptr, TEXT("/Script/StateTreeModule.StateTreeTaskBlueprintBase"));
+            if (BPTaskBase && !TaskClass->IsChildOf(BPTaskBase))
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("taskClass %s is not a UStateTreeTaskBlueprintBase subclass"), *TaskClassPath),
+                    TEXT("INVALID_PARAMS"));
+                return true;
+            }
+            // If !BPTaskBase: base class not yet loaded; skip check but warn.
+            if (!BPTaskBase)
+            {
+                UE_LOG(LogMcpAIHandlers, Warning,
+                    TEXT("Could not load UStateTreeTaskBlueprintBase base class; skipping BP task class validation."));
+            }
+        }
+
+        FoundState->Modify();  // H7.5: record Tasks array mutation for undo/redo.
         FStateTreeEditorNode& EditorNode = FoundState->Tasks.AddDefaulted_GetRef();
         EditorNode.ID = FGuid::NewGuid();
 
@@ -2256,20 +2427,27 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             EditorNode.InstanceObject = NewObject<UObject>(FoundState, TaskClass);
         }
 
-        McpSafeAssetSave(StateTree);
+        const bool bSaved = McpSafeAssetSave(StateTree);
 
         const int32 NewIndex = FoundState->Tasks.Num() - 1;
         Result->SetStringField(TEXT("stateName"), StateName);
         Result->SetStringField(TEXT("stateTaskClass"), TaskClassPath);
         Result->SetNumberField(TEXT("taskIndex"), NewIndex);
         Result->SetStringField(TEXT("taskId"), EditorNode.ID.ToString());
+        Result->SetBoolField(TEXT("saved"), bSaved);
+        if (!bSaved)
+        {
+            Result->SetStringField(TEXT("saveWarning"), TEXT("Asset changes in memory but save failed"));
+        }
         Result->SetStringField(TEXT("message"), TEXT("Task appended to state"));
         McpHandlerUtils::AddVerification(Result, StateTree);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Task added"), Result);
 #elif MCP_HAS_STATE_TREE
-        Result->SetStringField(TEXT("message"), TEXT("Task add registered (headers unavailable)"));
-        Result->SetBoolField(TEXT("headersUnavailable"), true);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Task registered"), Result);
+        // H7.9: headersUnavailable is a real failure, not a success. The caller
+        // must know the task was NOT appended so they can enable the plugin.
+        SendAutomationError(RequestingSocket, RequestId,
+            TEXT("StateTree reflection headers unavailable in this build configuration"),
+            TEXT("UNSUPPORTED"));
 #else
         SendAutomationError(RequestingSocket, RequestId,
             TEXT("State Trees require UE 5.3+"), TEXT("UNSUPPORTED_VERSION"));
@@ -2384,6 +2562,59 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
 
+        // First, locate the target state so we can capture its ID before removal.
+        // Needed for H7.6 orphaned-transition counting.
+        FGuid RemovedStateId;
+        bool bFoundTarget = false;
+
+        for (UStateTreeState* Root : EditorData->SubTrees)
+        {
+            if (Root && Root->Name.ToString().Equals(StateName, ESearchCase::IgnoreCase))
+            {
+                RemovedStateId = Root->ID;
+                bFoundTarget = true;
+                break;
+            }
+        }
+        if (!bFoundTarget)
+        {
+            TFunction<bool(UStateTreeState*)> FindRec;
+            FindRec = [&FindRec, &RemovedStateId, &StateName](UStateTreeState* S) -> bool
+            {
+                if (!S) return false;
+                for (UStateTreeState* C : S->Children)
+                {
+                    if (C && C->Name.ToString().Equals(StateName, ESearchCase::IgnoreCase))
+                    {
+                        RemovedStateId = C->ID;
+                        return true;
+                    }
+                }
+                for (UStateTreeState* C : S->Children)
+                {
+                    if (FindRec(C)) return true;
+                }
+                return false;
+            };
+            for (UStateTreeState* Root : EditorData->SubTrees)
+            {
+                if (FindRec(Root))
+                {
+                    bFoundTarget = true;
+                    break;
+                }
+            }
+        }
+
+        if (!bFoundTarget)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("State not found: %s"), *StateName), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        EditorData->Modify();  // H7.5: record mutation for undo/redo.
+
         bool bRemoved = false;
 
         // First: top-level SubTree match
@@ -2410,6 +2641,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                     UStateTreeState* Child = Parent->Children[i];
                     if (Child && Child->Name.ToString().Equals(StateName, ESearchCase::IgnoreCase))
                     {
+                        Parent->Modify();  // H7.5: parent owns the Children mutation.
                         Parent->Children.RemoveAt(i);
                         return true;
                     }
@@ -2433,14 +2665,42 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         if (!bRemoved)
         {
+            // Shouldn't happen — we found it above. Defensive.
             SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("State not found: %s"), *StateName), TEXT("NOT_FOUND"));
             return true;
         }
 
-        McpSafeAssetSave(StateTree);
+        // H7.6: after removal, count transitions across remaining states whose
+        // FStateTreeStateLink target ID still references the removed state.
+        // FStateTreeTransition::State is FStateTreeStateLink with ID (editor-only).
+        int32 OrphanedTransitions = 0;
+#if WITH_EDITORONLY_DATA
+        TFunction<void(UStateTreeState*)> ScanOrphans;
+        ScanOrphans = [&ScanOrphans, &OrphanedTransitions, &RemovedStateId](UStateTreeState* S)
+        {
+            if (!S) return;
+            for (const FStateTreeTransition& T : S->Transitions)
+            {
+                if (T.State.ID == RemovedStateId)
+                {
+                    ++OrphanedTransitions;
+                }
+            }
+            for (UStateTreeState* C : S->Children) ScanOrphans(C);
+        };
+        for (UStateTreeState* Root : EditorData->SubTrees) ScanOrphans(Root);
+#endif
+
+        const bool bSaved = McpSafeAssetSave(StateTree);
 
         Result->SetStringField(TEXT("stateName"), StateName);
+        Result->SetNumberField(TEXT("transitionsOrphaned"), OrphanedTransitions);
+        Result->SetBoolField(TEXT("saved"), bSaved);
+        if (!bSaved)
+        {
+            Result->SetStringField(TEXT("saveWarning"), TEXT("Asset changes in memory but save failed"));
+        }
         Result->SetStringField(TEXT("message"), TEXT("State removed"));
         McpHandlerUtils::AddVerification(Result, StateTree);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State removed"), Result);

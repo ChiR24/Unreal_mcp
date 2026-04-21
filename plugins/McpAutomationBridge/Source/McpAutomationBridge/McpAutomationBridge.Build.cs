@@ -189,6 +189,10 @@ PublicDependencyModuleNames.AddRange(new string[]
             // Phase 16: AI Systems - StateTree, SmartObjects, MassAI (optional plugins)
             AddOptionalDynamicModule(Target, EngineDir, "StateTreeModule", "StateTreeModule");
             AddOptionalDynamicModule(Target, EngineDir, "StateTreeEditorModule", "StateTreeEditorModule");
+            // Ch7 H7.2: UE 5.7 moved UStateTreeComponentSchema to GameplayStateTreeModule.
+            // Required so the default schema "/Script/GameplayStateTreeModule.StateTreeComponentSchema"
+            // resolves at runtime and IsChildOf(UStateTreeSchema) works against that class.
+            AddOptionalDynamicModule(Target, EngineDir, "GameplayStateTreeModule", "GameplayStateTreeModule");
             AddOptionalDynamicModule(Target, EngineDir, "SmartObjectsModule", "SmartObjectsModule");
             AddOptionalDynamicModule(Target, EngineDir, "SmartObjectsEditorModule", "SmartObjectsEditorModule");
             AddOptionalDynamicModule(Target, EngineDir, "MassEntity", "MassEntity");

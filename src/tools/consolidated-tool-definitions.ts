@@ -2717,6 +2717,15 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           additionalProperties: true,
           description: 'Nested StateTree hierarchy { <name>: { type, id, children: {...} } } returned by list_state_tree_states.'
         },
+        // Ch7 fix fields (H7.7/H7.6/H7.8):
+        saved: { type: 'boolean', description: 'Whether the StateTree asset save succeeded (manage_ai StateTree actions).' },
+        saveWarning: { type: 'string', description: 'Warning text if the StateTree asset save failed after a successful in-memory mutation.' },
+        alreadyExists: { type: 'boolean', description: 'True when add_state_tree_state is idempotent and a state with the requested name already existed.' },
+        stateId: { type: 'string', description: 'FGuid of the created or already-existing StateTree state.' },
+        transitionId: { type: 'string', description: 'FGuid of the appended StateTree transition.' },
+        transitionsOrphaned: { type: 'number', description: 'remove_state_tree_state: count of transitions in remaining states that now reference a removed state.' },
+        schemaClass: { type: 'string', description: 'Resolved UStateTreeSchema subclass path used for the new StateTree asset.' },
+        rootStateName: { type: 'string', description: 'Name of the default root state added during create_state_tree.' },
         aiInfo: {
           type: 'object',
           properties: {
