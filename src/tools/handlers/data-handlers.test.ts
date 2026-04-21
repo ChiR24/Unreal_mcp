@@ -154,3 +154,33 @@ describe('manage_data set_data_table_row', () => {
     ).rejects.toThrow(/fields/);
   });
 });
+
+describe('manage_data update_data_table_row', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({ success: true, updatedFields: ['Value'] });
+  });
+
+  it('forwards partial fields and returns updatedFields array', async () => {
+    const res = await handleDataTools(
+      'update_data_table_row',
+      { path: '/Game/DT', rowName: 'R1', fields: { Value: 99 } } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    expect(res.updatedFields).toEqual(['Value']);
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('update_data_table_row');
+    expect(payload.fields).toEqual({ Value: 99 });
+  });
+
+  it('throws on missing fields', async () => {
+    await expect(
+      handleDataTools(
+        'update_data_table_row',
+        { path: '/Game/DT', rowName: 'R1' } as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/fields/);
+  });
+});

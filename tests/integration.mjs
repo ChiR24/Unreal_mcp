@@ -103,6 +103,10 @@ const testCases = [
     arguments: { action: 'set_data_table_row', path: '/Game/DataTest/DT_Ch2',
       rowName: 'Row1', fields: { DisplayName: 'Beta', Value: 42 } },
     expected: 'success' },
+  { scenario: 'Data: update DataTable row (partial Row1)', toolName: 'manage_data',
+    arguments: { action: 'update_data_table_row', path: '/Game/DataTest/DT_Ch2',
+      rowName: 'Row1', fields: { Value: 100 } },
+    expected: 'success' },
   // search_assets: searchText filtering (fix for Issue #233)
   { scenario: 'Asset: search by text (exact name)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'BP_IntegrationTest' }, expected: 'success' },
   { scenario: 'Asset: search by text (partial, case-insensitive)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'integrationtest' }, expected: 'success' },
