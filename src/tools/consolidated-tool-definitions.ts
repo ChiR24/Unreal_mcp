@@ -3596,7 +3596,19 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         skippedSlotProps: {
           type: 'array',
           items: commonSchemas.stringProp,
-          description: 'Slot property keys that were silently skipped because they are not valid for the target UPanelSlot subclass.'
+          description: 'Slot property keys that were silently skipped because they are not valid for the target UPanelSlot subclass (unknown-field names).'
+        },
+        slotPropErrors: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              key: commonSchemas.stringProp,
+              reason: commonSchemas.stringProp
+            },
+            description: 'Slot property keys that resolved to a real field but failed to set (e.g. type-mismatch); reason comes from the reflection setter.'
+          },
+          description: 'Slot property set errors for keys that resolved to a real field but failed to apply via reflection.'
         },
         widgetInfo: {
           type: 'object',

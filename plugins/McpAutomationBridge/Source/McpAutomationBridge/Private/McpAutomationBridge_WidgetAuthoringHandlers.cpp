@@ -7123,10 +7123,44 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ChildClass = ResolveClassByName(WidgetClassPath);
 #endif
 
+        // H6.3: Short-name lookup with U-prefix tolerance. UE registers native class
+        // names WITHOUT the "U" prefix, but our schema doc examples use "UTextBlock".
+        // Try as-is first, then strip a leading "U" if missing.
+        if (!ChildClass
+            && !WidgetClassPath.Contains(TEXT("/"))
+            && !WidgetClassPath.Contains(TEXT(".")))
+        {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+            if (WidgetClassPath.StartsWith(TEXT("U")) && WidgetClassPath.Len() > 1)
+            {
+                const FString Stripped = WidgetClassPath.Mid(1);
+                ChildClass = FindFirstObject<UClass>(*Stripped, EFindFirstObjectOptions::NativeFirst);
+            }
+#else
+            if (WidgetClassPath.StartsWith(TEXT("U")) && WidgetClassPath.Len() > 1)
+            {
+                ChildClass = ResolveClassByName(WidgetClassPath.Mid(1));
+            }
+#endif
+        }
+
         // Blueprint generated-class lookup.
         if (!ChildClass)
         {
             ChildClass = LoadObject<UClass>(nullptr, *WidgetClassPath);
+        }
+
+        // H6.3: /Script/Module.UName -> /Script/Module.Name fallback (strip U after dot).
+        if (!ChildClass && WidgetClassPath.StartsWith(TEXT("/Script/")))
+        {
+            int32 DotIdx = INDEX_NONE;
+            if (WidgetClassPath.FindLastChar(TEXT('.'), DotIdx)
+                && DotIdx + 1 < WidgetClassPath.Len()
+                && WidgetClassPath[DotIdx + 1] == TEXT('U'))
+            {
+                FString Stripped = WidgetClassPath.Left(DotIdx + 1) + WidgetClassPath.Mid(DotIdx + 2);
+                ChildClass = LoadObject<UClass>(nullptr, *Stripped);
+            }
         }
 
         // Bare "/Game/Foo" -> "/Game/Foo.Foo_C" normalization.
@@ -7204,8 +7238,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        // Apply slotProps via reflection; collect unknown-field keys for the caller.
+        // Apply slotProps via reflection; distinguish unknown-key (skippedSlotProps)
+        // from type-mismatch / set-error (slotPropErrors with {key, reason}).
         TArray<TSharedPtr<FJsonValue>> SkippedKeys;
+        TArray<TSharedPtr<FJsonValue>> SlotPropErrors;
         const TSharedPtr<FJsonObject>* SlotPropsObj = nullptr;
         if (Payload->TryGetObjectField(TEXT("slotProps"), SlotPropsObj)
             && SlotPropsObj && (*SlotPropsObj).IsValid())
@@ -7222,7 +7258,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 if (!McpStructReflection::SetStructFieldFromJson(
                         NewSlot->GetClass(), NewSlot, FieldName, Pair.Value, SetError))
                 {
-                    SkippedKeys.Add(MakeShared<FJsonValueString>(Pair.Key));
+                    TSharedPtr<FJsonObject> ErrObj = MakeShared<FJsonObject>();
+                    ErrObj->SetStringField(TEXT("key"), Pair.Key);
+                    ErrObj->SetStringField(TEXT("reason"), SetError);
+                    SlotPropErrors.Add(MakeShared<FJsonValueObject>(ErrObj));
                 }
             }
         }
@@ -7240,6 +7279,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("slotClass"), NewSlot->GetClass()->GetName());
         ResultJson->SetBoolField(TEXT("saved"), bSaved);
         ResultJson->SetArrayField(TEXT("skippedSlotProps"), SkippedKeys);
+        ResultJson->SetArrayField(TEXT("slotPropErrors"), SlotPropErrors);
 
         SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Added widget '%s'"), *NewName), ResultJson);
@@ -7285,10 +7325,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        // Clean up GUID map entries (for the target and any panel children it owns)
-        // before tearing down the widget itself.
-        WidgetAuthoringHelpers::UnregisterWidgetAndChildren(WidgetBP, Target);
-
+        // H6.2: Remove widget FIRST; unregister GUIDs only on success. If the
+        // WidgetTree->RemoveWidget call returns false the widget still exists,
+        // so we must leave the GUID map entries alone to avoid a half-state.
         const bool bRemoved = WidgetBP->WidgetTree->RemoveWidget(Target);
         if (!bRemoved)
         {
@@ -7297,6 +7336,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 TEXT("ENGINE_API_ERROR"));
             return true;
         }
+
+        // Clean up GUID map entries (for the target and any panel children it owns)
+        // now that the widget is actually gone.
+        WidgetAuthoringHelpers::UnregisterWidgetAndChildren(WidgetBP, Target);
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
         McpSafeCompileBlueprint(WidgetBP);
