@@ -604,6 +604,13 @@ export async function handleWidgetAuthoringTools(
       return sendRequest('add_widget');
     }
 
+    case 'remove_widget': {
+      requireNonEmptyString(argsRecord.widgetBlueprintPath, 'widgetBlueprintPath', 'Missing required parameter: widgetBlueprintPath');
+      requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
+      // Removes a widget instance from a widget blueprint by name.
+      return sendRequest('remove_widget');
+    }
+
     // =========================================================================
     // Default / Unknown Action
     // =========================================================================

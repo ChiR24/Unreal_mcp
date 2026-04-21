@@ -3266,7 +3266,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_radial_menu',
             'get_widget_info',
             'preview_widget',
-            'add_widget'
+            'add_widget',
+            'remove_widget'
           ],
           description: 'The widget authoring action to perform.'
         },

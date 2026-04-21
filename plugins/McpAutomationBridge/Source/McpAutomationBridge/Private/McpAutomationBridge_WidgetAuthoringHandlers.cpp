@@ -7246,6 +7246,74 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         return true;
     }
 
+    if (SubAction.Equals(TEXT("remove_widget"), ESearchCase::IgnoreCase))
+    {
+        const FString WBPPath = GetJsonStringField(Payload, TEXT("widgetBlueprintPath"));
+        const FString TargetName = GetJsonStringField(Payload, TEXT("widgetName"));
+
+        if (WBPPath.IsEmpty() || TargetName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Missing required parameter: widgetBlueprintPath, widgetName"),
+                TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = WidgetAuthoringHelpers::LoadWidgetBlueprint(WBPPath);
+        if (!WidgetBP || !WidgetBP->WidgetTree)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Widget blueprint not found: %s"), *WBPPath),
+                TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UWidget* Target = nullptr;
+        WidgetBP->WidgetTree->ForEachWidget([&Target, &TargetName](UWidget* W)
+        {
+            if (W && !Target && W->GetName() == TargetName)
+            {
+                Target = W;
+            }
+        });
+
+        if (!Target)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Widget not found: %s"), *TargetName),
+                TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Clean up GUID map entries (for the target and any panel children it owns)
+        // before tearing down the widget itself.
+        WidgetAuthoringHelpers::UnregisterWidgetAndChildren(WidgetBP, Target);
+
+        const bool bRemoved = WidgetBP->WidgetTree->RemoveWidget(Target);
+        if (!bRemoved)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("RemoveWidget failed for %s"), *TargetName),
+                TEXT("ENGINE_API_ERROR"));
+            return true;
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        McpSafeCompileBlueprint(WidgetBP);
+        const bool bSaved = McpSafeAssetSave(WidgetBP);
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("message"),
+            FString::Printf(TEXT("Removed widget '%s'"), *TargetName));
+        ResultJson->SetStringField(TEXT("widgetName"), TargetName);
+        ResultJson->SetStringField(TEXT("widgetBlueprintPath"), WidgetBP->GetPathName());
+        ResultJson->SetBoolField(TEXT("saved"), bSaved);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+            FString::Printf(TEXT("Removed widget '%s'"), *TargetName), ResultJson);
+        return true;
+    }
+
     // Action not recognized
     return false;
 }

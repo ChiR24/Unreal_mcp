@@ -74,3 +74,31 @@ describe('widget-authoring: add_widget', () => {
   });
 });
 
+describe('widget-authoring: remove_widget', () => {
+  beforeEach(() => executeAutomationRequestMock.mockClear());
+
+  it('forwards path + widgetName to the bridge', async () => {
+    executeAutomationRequestMock.mockResolvedValueOnce({ success: true });
+    const res = await handleWidgetAuthoringTools(
+      'remove_widget',
+      { widgetBlueprintPath: '/Game/UI/WBP_Parent', widgetName: 'ChildInstance' },
+      {} as never
+    ) as Record<string, unknown>;
+
+    expect(res.success).toBe(true);
+    const callArgs = executeAutomationRequestMock.mock.calls[0] as unknown[];
+    const payload = callArgs[2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('remove_widget');
+    expect(payload.widgetBlueprintPath).toBe('/Game/UI/WBP_Parent');
+    expect(payload.widgetName).toBe('ChildInstance');
+  });
+
+  it('throws when widgetName is missing', async () => {
+    await expect(handleWidgetAuthoringTools(
+      'remove_widget',
+      { widgetBlueprintPath: '/Game/UI/WBP_Parent' },
+      {} as never
+    )).rejects.toThrow(/widgetName/);
+  });
+});
+
