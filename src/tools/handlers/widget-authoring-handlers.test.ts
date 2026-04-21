@@ -35,3 +35,42 @@ describe('widget_authoring get_widget_info tree response', () => {
     });
   });
 });
+
+describe('widget-authoring: add_widget', () => {
+  beforeEach(() => executeAutomationRequestMock.mockClear());
+
+  it('forwards blueprint + parent + class + name + slotProps to the bridge', async () => {
+    executeAutomationRequestMock.mockResolvedValueOnce({ success: true, widgetName: 'ChildInstance' });
+    const res = await handleWidgetAuthoringTools(
+      'add_widget',
+      {
+        widgetBlueprintPath: '/Game/UI/WBP_Parent',
+        parentWidgetName: 'RootCanvas',
+        widgetClass: '/Game/UI/WBP_HealthBar.WBP_HealthBar_C',
+        widgetName: 'ChildInstance',
+        slotProps: { Anchors: { Minimum: [0, 0] } }
+      },
+      {} as never
+    ) as Record<string, unknown>;
+
+    expect(res.success).toBe(true);
+    expect(res.widgetName).toBe('ChildInstance');
+    const callArgs = executeAutomationRequestMock.mock.calls[0] as unknown[];
+    const payload = callArgs[2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('add_widget');
+    expect(payload.widgetBlueprintPath).toBe('/Game/UI/WBP_Parent');
+    expect(payload.parentWidgetName).toBe('RootCanvas');
+    expect(payload.widgetClass).toBe('/Game/UI/WBP_HealthBar.WBP_HealthBar_C');
+    expect(payload.widgetName).toBe('ChildInstance');
+    expect(payload.slotProps).toEqual({ Anchors: { Minimum: [0, 0] } });
+  });
+
+  it('throws when required fields are missing', async () => {
+    await expect(handleWidgetAuthoringTools(
+      'add_widget',
+      { widgetBlueprintPath: '/Game/UI/WBP_Parent' },
+      {} as never
+    )).rejects.toThrow(/parentWidgetName/);
+  });
+});
+

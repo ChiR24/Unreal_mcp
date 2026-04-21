@@ -60,7 +60,7 @@ export async function handleWidgetAuthoringTools(
   tools: ITools
 ): Promise<Record<string, unknown>> {
   // Normalize path fields before processing
-  const argsRecord = normalizePathFields(args as Record<string, unknown>, ['widgetPath', 'folder']);
+  const argsRecord = normalizePathFields(args as Record<string, unknown>, ['widgetPath', 'folder', 'widgetBlueprintPath']);
   const timeoutMs = getTimeoutMs();
 
   // All actions are dispatched to C++ via automation bridge
@@ -588,6 +588,20 @@ export async function handleWidgetAuthoringTools(
       // Opens widget in preview/designer mode
       // Optional: previewSize (1080p, 720p, mobile, custom), customWidth, customHeight
       return sendRequest('preview_widget');
+    }
+
+    // =========================================================================
+    // Generic add/remove of widget instances (Ch6)
+    // =========================================================================
+
+    case 'add_widget': {
+      requireNonEmptyString(argsRecord.widgetBlueprintPath, 'widgetBlueprintPath', 'Missing required parameter: widgetBlueprintPath');
+      requireNonEmptyString(argsRecord.parentWidgetName, 'parentWidgetName', 'Missing required parameter: parentWidgetName');
+      requireNonEmptyString(argsRecord.widgetClass, 'widgetClass', 'Missing required parameter: widgetClass');
+      requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
+      // Adds a child widget (native or BP class) to a panel in a widget blueprint.
+      // Optional: slotProps (object) — UPanelSlot field overrides applied via reflection.
+      return sendRequest('add_widget');
     }
 
     // =========================================================================

@@ -61,6 +61,7 @@
 #include "McpBridgeWebSocket.h"
 #include "McpHandlerUtils.h"
 #include "McpAutomationBridgeHelpers.h"
+#include "MCP/Helpers/McpStructReflection.h"
 
 // JSON & Serialization
 #include "Dom/JsonObject.h"
@@ -7081,6 +7082,167 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added quest tracker"), ResultJson);
+        return true;
+    }
+
+    // =========================================================================
+    // Ch6: Generic add_widget / remove_widget (UUserWidget escape hatch)
+    // =========================================================================
+
+    if (SubAction.Equals(TEXT("add_widget"), ESearchCase::IgnoreCase))
+    {
+        const FString WBPPath = GetJsonStringField(Payload, TEXT("widgetBlueprintPath"));
+        const FString ParentName = GetJsonStringField(Payload, TEXT("parentWidgetName"));
+        const FString WidgetClassPath = GetJsonStringField(Payload, TEXT("widgetClass"));
+        const FString NewName = GetJsonStringField(Payload, TEXT("widgetName"));
+
+        if (WBPPath.IsEmpty() || ParentName.IsEmpty() || WidgetClassPath.IsEmpty() || NewName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Missing required parameter: widgetBlueprintPath, parentWidgetName, widgetClass, widgetName"),
+                TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = WidgetAuthoringHelpers::LoadWidgetBlueprint(WBPPath);
+        if (!WidgetBP || !WidgetBP->WidgetTree)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Widget blueprint not found: %s"), *WBPPath),
+                TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Resolve widget class: try native path first, then BP _C normalization.
+        UClass* ChildClass = nullptr;
+
+        // Native class lookup (e.g., "UTextBlock", "/Script/UMG.TextBlock").
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        ChildClass = FindFirstObject<UClass>(*WidgetClassPath, EFindFirstObjectOptions::None);
+#else
+        ChildClass = ResolveClassByName(WidgetClassPath);
+#endif
+
+        // Blueprint generated-class lookup.
+        if (!ChildClass)
+        {
+            ChildClass = LoadObject<UClass>(nullptr, *WidgetClassPath);
+        }
+
+        // Bare "/Game/Foo" -> "/Game/Foo.Foo_C" normalization.
+        if (!ChildClass)
+        {
+            FString Normalized = WidgetClassPath;
+            if (!Normalized.Contains(TEXT(".")))
+            {
+                int32 SlashIdx = INDEX_NONE;
+                if (Normalized.FindLastChar(TEXT('/'), SlashIdx))
+                {
+                    Normalized = Normalized + TEXT(".") + Normalized.Mid(SlashIdx + 1) + TEXT("_C");
+                }
+            }
+            ChildClass = LoadObject<UClass>(nullptr, *Normalized);
+        }
+
+        if (!ChildClass || !ChildClass->IsChildOf(UWidget::StaticClass()))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Not a UWidget subclass: %s"), *WidgetClassPath),
+                TEXT("INVALID_CLASS"));
+            return true;
+        }
+
+        // Find parent panel by name in the widget tree.
+        UPanelWidget* ParentPanel = nullptr;
+        WidgetBP->WidgetTree->ForEachWidget([&ParentPanel, &ParentName](UWidget* W)
+        {
+            if (W && !ParentPanel && W->GetName() == ParentName)
+            {
+                ParentPanel = Cast<UPanelWidget>(W);
+            }
+        });
+
+        if (!ParentPanel)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Parent panel widget not found: %s"), *ParentName),
+                TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Reject duplicate names to avoid shadow lookup failures later.
+        if (WidgetBP->WidgetTree->FindWidget(FName(*NewName)) != nullptr)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Widget already exists: %s"), *NewName),
+                TEXT("ALREADY_EXISTS"));
+            return true;
+        }
+
+        // Construct the widget via the template. We use UWidget as the template arg
+        // since ChildClass is only known at runtime; ConstructWidget's non-UUserWidget
+        // branch calls NewObject which accepts arbitrary UClass*.
+        UWidget* NewWidget = WidgetBP->WidgetTree->ConstructWidget<UWidget>(ChildClass, FName(*NewName));
+        if (!NewWidget)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("ConstructWidget failed"),
+                TEXT("CREATION_ERROR"));
+            return true;
+        }
+
+        WidgetAuthoringHelpers::RegisterWidgetGuid(WidgetBP, NewWidget);
+
+        UPanelSlot* NewSlot = ParentPanel->AddChild(NewWidget);
+        if (!NewSlot)
+        {
+            WidgetAuthoringHelpers::UnregisterWidgetGuid(WidgetBP, NewWidget);
+            WidgetBP->WidgetTree->RemoveWidget(NewWidget);
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("AddChild failed on parent %s"), *ParentName),
+                TEXT("ENGINE_API_ERROR"));
+            return true;
+        }
+
+        // Apply slotProps via reflection; collect unknown-field keys for the caller.
+        TArray<TSharedPtr<FJsonValue>> SkippedKeys;
+        const TSharedPtr<FJsonObject>* SlotPropsObj = nullptr;
+        if (Payload->TryGetObjectField(TEXT("slotProps"), SlotPropsObj)
+            && SlotPropsObj && (*SlotPropsObj).IsValid())
+        {
+            for (const auto& Pair : (*SlotPropsObj)->Values)
+            {
+                const FName FieldName = McpStructReflection::ResolveFieldName(NewSlot->GetClass(), Pair.Key);
+                if (FieldName == NAME_None)
+                {
+                    SkippedKeys.Add(MakeShared<FJsonValueString>(Pair.Key));
+                    continue;
+                }
+                FString SetError;
+                if (!McpStructReflection::SetStructFieldFromJson(
+                        NewSlot->GetClass(), NewSlot, FieldName, Pair.Value, SetError))
+                {
+                    SkippedKeys.Add(MakeShared<FJsonValueString>(Pair.Key));
+                }
+            }
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        McpSafeCompileBlueprint(WidgetBP);
+        const bool bSaved = McpSafeAssetSave(WidgetBP);
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("message"),
+            FString::Printf(TEXT("Added widget '%s' as child of '%s'"), *NewName, *ParentName));
+        ResultJson->SetStringField(TEXT("widgetName"), NewName);
+        ResultJson->SetStringField(TEXT("widgetBlueprintPath"), WidgetBP->GetPathName());
+        ResultJson->SetStringField(TEXT("parentWidgetName"), ParentName);
+        ResultJson->SetStringField(TEXT("slotClass"), NewSlot->GetClass()->GetName());
+        ResultJson->SetBoolField(TEXT("saved"), bSaved);
+        ResultJson->SetArrayField(TEXT("skippedSlotProps"), SkippedKeys);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+            FString::Printf(TEXT("Added widget '%s'"), *NewName), ResultJson);
         return true;
     }
 

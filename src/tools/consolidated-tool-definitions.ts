@@ -2465,6 +2465,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_eqs_query', 'add_eqs_generator', 'add_eqs_context', 'add_eqs_test', 'configure_test_scoring',
             'add_ai_perception_component', 'configure_sight_config', 'configure_hearing_config', 'configure_damage_sense_config', 'set_perception_team',
             'create_state_tree', 'add_state_tree_state', 'add_state_tree_transition', 'configure_state_tree_task',
+            'add_state_tree_task', 'list_state_tree_states', 'remove_state_tree_state',
             'create_smart_object_definition', 'add_smart_object_slot', 'configure_slot_behavior', 'add_smart_object_component',
             'create_mass_entity_config', 'configure_mass_entity', 'add_mass_spawner',
             'get_ai_info',
@@ -2625,8 +2626,27 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         fromState: commonSchemas.fromState,
         toState: commonSchemas.toState,
         transitionCondition: { type: 'string', description: 'Condition expression for transition.' },
-        stateTaskClass: { type: 'string', description: 'Task class for state.' },
+        stateTaskClass: { type: 'string', description: 'Task class for state (UScriptStruct path for C++ tasks, UClass path for Blueprint tasks).' },
         stateEvaluatorClass: { type: 'string', description: 'Evaluator class for state.' },
+        contextClass: { type: 'string', description: 'StateTree schema/context class path (e.g. /Script/GameplayStateTreeModule.StateTreeComponentSchema). Defaults to StateTreeComponentSchema when available.' },
+        stateType: {
+          type: 'string',
+          enum: ['State', 'Group', 'Linked', 'LinkedAsset', 'Subtree'],
+          description: 'StateTree state type. Subtree creates a top-level subtree when parentState is empty or omitted.'
+        },
+        parentState: { type: 'string', description: 'Parent state name for add_state_tree_state (defaults to Root). Alias for legacy parentStateName.' },
+        parentStateName: { type: 'string', description: 'Legacy alias for parentState.' },
+        taskProps: {
+          type: 'object',
+          additionalProperties: true,
+          description: 'Property values for the task instance data struct (written via reflection). Used by configure_state_tree_task.'
+        },
+        taskIndex: { type: 'number', description: 'Zero-based index of the task within state.Tasks to configure (defaults to 0).' },
+        selectionBehavior: {
+          type: 'string',
+          enum: ['None', 'TryEnterState', 'TrySelectChildrenInOrder', 'TrySelectChildrenAtRandom', 'TrySelectChildrenWithHighestUtility'],
+          description: 'State selection behavior (configure_state_tree_task).'
+        },
         definitionPath: commonSchemas.definitionPath,
         slotIndex: { type: 'number', description: 'Index of slot to configure.' },
         slotOffset: {
@@ -2691,6 +2711,12 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         keyIndex: commonSchemas.integerProp,
         testIndex: commonSchemas.integerProp,
         slotIndex: commonSchemas.integerProp,
+        taskIndex: commonSchemas.integerProp,
+        stateTreeTree: {
+          type: 'object',
+          additionalProperties: true,
+          description: 'Nested StateTree hierarchy { <name>: { type, id, children: {...} } } returned by list_state_tree_states.'
+        },
         aiInfo: {
           type: 'object',
           properties: {
@@ -3239,7 +3265,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_dialog_widget',
             'create_radial_menu',
             'get_widget_info',
-            'preview_widget'
+            'preview_widget',
+            'add_widget'
           ],
           description: 'The widget authoring action to perform.'
         },
@@ -3544,7 +3571,12 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           description: 'Preview resolution preset.'
         },
         customWidth: { type: 'number', description: 'Custom preview width.' },
-        customHeight: { type: 'number', description: 'Custom preview height.' }
+        customHeight: { type: 'number', description: 'Custom preview height.' },
+        widgetBlueprintPath: { type: 'string', description: 'Widget blueprint containing the parent widget (used by add_widget/remove_widget).' },
+        parentWidgetName: { type: 'string', description: 'Name of the parent panel widget in the WBP (used by add_widget).' },
+        widgetClass: { type: 'string', description: 'Class path for child widget: native like "UUserWidget"/"UTextBlock" or BP path like "/Game/UI/WBP_Foo.WBP_Foo_C" (used by add_widget).' },
+        widgetName: { type: 'string', description: 'Name for the new child widget instance (used by add_widget/remove_widget).' },
+        slotProps: { type: 'object', additionalProperties: true, description: 'Optional UPanelSlot property overrides applied via reflection (used by add_widget).' }
       },
       required: ['action']
     },
@@ -3559,6 +3591,12 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         trackIndex: { type: 'number', description: 'Index of created track.' },
         keyframeIndex: { type: 'number', description: 'Index of created keyframe.' },
         bindingCreated: { type: 'boolean', description: 'Whether binding was created.' },
+        widgetName: commonSchemas.stringProp,
+        skippedSlotProps: {
+          type: 'array',
+          items: commonSchemas.stringProp,
+          description: 'Slot property keys that were silently skipped because they are not valid for the target UPanelSlot subclass.'
+        },
         widgetInfo: {
           type: 'object',
           properties: {
