@@ -366,6 +366,36 @@ describe('manage_data set_data_asset_property', () => {
   });
 });
 
+describe('manage_data get_data_asset_property', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({ success: true, value: 42.5 });
+  });
+
+  it('returns value for propertyPath', async () => {
+    const res = await handleDataTools(
+      'get_data_asset_property',
+      { path: '/Game/DA_T', propertyPath: 'Value' } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    expect(res.value).toBe(42.5);
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('get_data_asset_property');
+    expect(payload.propertyPath).toBe('Value');
+  });
+
+  it('throws on missing propertyPath', async () => {
+    await expect(
+      handleDataTools(
+        'get_data_asset_property',
+        { path: '/Game/DA' } as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/propertyPath/);
+  });
+});
+
 describe('manage_data set_data_table_row_struct', () => {
   beforeEach(() => {
     executeAutomationRequestMock.mockReset();

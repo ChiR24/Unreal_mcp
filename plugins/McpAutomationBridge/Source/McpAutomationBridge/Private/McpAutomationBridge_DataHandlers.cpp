@@ -833,6 +833,49 @@ namespace McpDataHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// get_data_asset_property — read a JSON value at a dotted/indexed path.
+	// -----------------------------------------------------------------------
+	static bool HandleGetDataAssetProperty(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr, PropPath;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr) ||
+			!Payload->TryGetStringField(TEXT("propertyPath"), PropPath))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field(s): path, propertyPath"));
+			return true;
+		}
+
+		UObject* Asset = LoadObject<UObject>(nullptr, *PathStr);
+		if (!Asset)
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("Asset not found: %s"), *PathStr));
+			return true;
+		}
+
+		FString WalkError;
+		TSharedPtr<FJsonValue> Val = McpPropertyPath::GetValueAtPath(Asset, PropPath, WalkError);
+		if (!Val.IsValid())
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				WalkError.IsEmpty() ? TEXT("Property not found") : WalkError);
+			return true;
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("assetPath"), Asset->GetPathName());
+		Data->SetStringField(TEXT("propertyPath"), PropPath);
+		Data->SetField(TEXT("value"), Val);
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Read '%s' from asset '%s'"), *PropPath, *Asset->GetName()),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpDataHandlers
@@ -904,6 +947,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
 	if (SubAction == TEXT("set_data_asset_property"))
 	{
 		return McpDataHandlers::HandleSetDataAssetProperty(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("get_data_asset_property"))
+	{
+		return McpDataHandlers::HandleGetDataAssetProperty(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,

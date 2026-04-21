@@ -138,6 +138,12 @@ export async function handleDataTools(
       });
     }
 
+    case 'get_data_asset_property': {
+      const path = requireStringArg(argsRecord, 'path');
+      const propertyPath = requireStringArg(argsRecord, 'propertyPath');
+      return sendDataRequest(tools, 'get_data_asset_property', { path, propertyPath });
+    }
+
     default: {
       void requireObjectArg;
       throw new Error(`Unsupported manage_data action: ${action}`);
