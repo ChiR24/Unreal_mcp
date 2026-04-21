@@ -171,6 +171,14 @@ const testCases = [
   { scenario: 'Curve: create float curve (C_Ch5Test)', toolName: 'manage_curve',
     arguments: { action: 'create_curve_float', path: '/Game/DataTest', name: 'C_Ch5Test' },
     expected: 'success|already exists' },
+  { scenario: 'Curve: set keys on C_Ch5Test (3 keys, mixed interp)', toolName: 'manage_curve',
+    arguments: { action: 'set_curve_keys', path: '/Game/DataTest/C_Ch5Test',
+      keys: [
+        { time: 0, value: 0, interpMode: 'Linear' },
+        { time: 1, value: 1, interpMode: 'Auto' },
+        { time: 2, value: 0, interpMode: 'Constant' }
+      ] },
+    expected: 'success' },
   // Ch4: manage_gameplay_tags — GameplayTag ini CRUD
   { scenario: 'GT: add Modifier.Weather.Rain', toolName: 'manage_gameplay_tags',
     arguments: { action: 'add_gameplay_tag', tag: 'Modifier.Weather.Rain', comment: 'Rain modifier' },
@@ -184,6 +192,9 @@ const testCases = [
   { scenario: 'GT: list after remove (should be empty)', toolName: 'manage_gameplay_tags',
     arguments: { action: 'list_gameplay_tags', prefix: 'Modifier.Weather.Rain' },
     expected: 'success' },
+  { scenario: 'GT: add tag source ini (Tags/CombatTags.ini)', toolName: 'manage_gameplay_tags',
+    arguments: { action: 'add_gameplay_tag_source', iniRelativePath: 'Tags/CombatTags.ini' },
+    expected: 'success|already exists' },
   // search_assets: searchText filtering (fix for Issue #233)
   { scenario: 'Asset: search by text (exact name)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'BP_IntegrationTest' }, expected: 'success' },
   { scenario: 'Asset: search by text (partial, case-insensitive)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'integrationtest' }, expected: 'success' },

@@ -103,6 +103,100 @@ namespace McpCurveHandlers
 		return true;
 	}
 
+	// Parse the caller-facing interpMode string into the engine's separate
+	// interp + tangent-mode enums. Default (unknown/unset) is (Cubic, Auto).
+	static ERichCurveInterpMode ParseInterpMode(const FString& S, ERichCurveTangentMode& OutTangent)
+	{
+		OutTangent = RCTM_Auto;
+		if (S.Equals(TEXT("Linear"), ESearchCase::IgnoreCase)) { return RCIM_Linear; }
+		if (S.Equals(TEXT("Constant"), ESearchCase::IgnoreCase)) { return RCIM_Constant; }
+		if (S.Equals(TEXT("CubicBreak"), ESearchCase::IgnoreCase))
+		{
+			OutTangent = RCTM_Break;
+			return RCIM_Cubic;
+		}
+		// Default "Auto" (or empty): Cubic + Auto tangents.
+		OutTangent = RCTM_Auto;
+		return RCIM_Cubic;
+	}
+
+	// -----------------------------------------------------------------------
+	// set_curve_keys — replace all keys on the target UCurveFloat.
+	// -----------------------------------------------------------------------
+	static bool HandleSetCurveKeys(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr;
+		const TArray<TSharedPtr<FJsonValue>>* KeysArr = nullptr;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr) ||
+			!Payload->TryGetArrayField(TEXT("keys"), KeysArr))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field(s): path, keys"));
+			return true;
+		}
+
+		UCurveFloat* Curve = LoadObject<UCurveFloat>(nullptr, *PathStr);
+		if (!Curve)
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("Curve not found: %s"), *PathStr));
+			return true;
+		}
+
+		Curve->FloatCurve.Reset();
+		for (const TSharedPtr<FJsonValue>& V : *KeysArr)
+		{
+			if (!V.IsValid() || V->Type != EJson::Object) { continue; }
+			const TSharedPtr<FJsonObject>& Obj = V->AsObject();
+			if (!Obj.IsValid()) { continue; }
+
+			double TimeVal = 0.0;
+			double ValueVal = 0.0;
+			if (!Obj->TryGetNumberField(TEXT("time"), TimeVal) ||
+				!Obj->TryGetNumberField(TEXT("value"), ValueVal))
+			{
+				SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+					TEXT("Each key must have numeric 'time' and 'value'"));
+				return true;
+			}
+
+			FString InterpStr;
+			Obj->TryGetStringField(TEXT("interpMode"), InterpStr);
+			ERichCurveTangentMode TangentMode;
+			const ERichCurveInterpMode InterpMode = ParseInterpMode(InterpStr, TangentMode);
+
+			// FRichCurve::AddKey signature in UE 5.7:
+			//   virtual FKeyHandle AddKey(float InTime, float InValue,
+			//       const bool bUnwindRotation = false,
+			//       FKeyHandle KeyHandle = FKeyHandle()) final override;
+			// Third param defaults to false which is what we want.
+			const FKeyHandle Handle = Curve->FloatCurve.AddKey(
+				static_cast<float>(TimeVal), static_cast<float>(ValueVal));
+			Curve->FloatCurve.SetKeyInterpMode(Handle, InterpMode);
+			Curve->FloatCurve.SetKeyTangentMode(Handle, TangentMode);
+		}
+
+		Curve->MarkPackageDirty();
+		const bool bSaved = McpSafeAssetSave(Curve);
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("assetPath"), Curve->GetPathName());
+		Data->SetNumberField(TEXT("keyCount"), Curve->FloatCurve.GetNumKeys());
+		Data->SetBoolField(TEXT("saved"), bSaved);
+		if (!bSaved)
+		{
+			Data->SetStringField(TEXT("saveWarning"),
+				TEXT("Asset changes in memory but save failed"));
+		}
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Set %d key(s) on curve '%s'"),
+				Curve->FloatCurve.GetNumKeys(), *Curve->GetName()),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpCurveHandlers
@@ -138,6 +232,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCurveAction(
 	if (SubAction == TEXT("create_curve_float"))
 	{
 		return McpCurveHandlers::HandleCreateCurveFloat(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("set_curve_keys"))
+	{
+		return McpCurveHandlers::HandleSetCurveKeys(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,

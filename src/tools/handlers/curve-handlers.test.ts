@@ -72,3 +72,42 @@ describe('manage_curve create_curve_float', () => {
     ).rejects.toThrow(/name/);
   });
 });
+
+describe('manage_curve set_curve_keys', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({ success: true, keyCount: 3 });
+  });
+
+  it('forwards path + keys array with subAction=set_curve_keys', async () => {
+    const keys = [
+      { time: 0, value: 0, interpMode: 'Linear' },
+      { time: 1, value: 1, interpMode: 'Auto' },
+      { time: 2, value: 0, interpMode: 'Constant' },
+    ];
+    const res = await handleCurveTools(
+      'set_curve_keys',
+      { path: '/Game/DataTest/C_Ch5Test', keys } as unknown as Record<string, unknown>,
+      {} as never
+    );
+
+    expect(res.success).toBe(true);
+    expect(res.keyCount).toBe(3);
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('set_curve_keys');
+    expect(payload.path).toBe('/Game/DataTest/C_Ch5Test');
+    expect(Array.isArray(payload.keys)).toBe(true);
+    expect((payload.keys as unknown[]).length).toBe(3);
+  });
+
+  it('throws on missing keys array', async () => {
+    await expect(
+      handleCurveTools(
+        'set_curve_keys',
+        { path: '/Game/X' } as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/keys/);
+  });
+});

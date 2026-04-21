@@ -66,8 +66,13 @@ export async function handleCurveTools(
       return sendCurveRequest(tools, 'create_curve_float', { path, name });
     }
 
+    case 'set_curve_keys': {
+      const path = requireStringArg(argsRecord, 'path');
+      const keys = requireArrayArg(argsRecord, 'keys');
+      return sendCurveRequest(tools, 'set_curve_keys', { path, keys });
+    }
+
     default: {
-      void requireArrayArg;
       throw new Error(`Unsupported manage_curve action: ${action}`);
     }
   }
