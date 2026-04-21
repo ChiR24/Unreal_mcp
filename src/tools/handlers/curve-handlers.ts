@@ -77,6 +77,11 @@ export async function handleCurveTools(
       return sendCurveRequest(tools, 'get_curve_keys', { path });
     }
 
+    case 'inspect_curve': {
+      const path = requireStringArg(argsRecord, 'path');
+      return sendCurveRequest(tools, 'inspect_curve', { path });
+    }
+
     default: {
       throw new Error(`Unsupported manage_curve action: ${action}`);
     }

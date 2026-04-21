@@ -146,3 +146,39 @@ describe('manage_curve get_curve_keys', () => {
     ).rejects.toThrow(/path/);
   });
 });
+
+describe('manage_curve inspect_curve', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({
+      success: true, keyCount: 3, minTime: 0, maxTime: 2,
+    });
+  });
+
+  it('forwards path with subAction=inspect_curve and returns summary', async () => {
+    const res = await handleCurveTools(
+      'inspect_curve',
+      { path: '/Game/DataTest/C_Ch5Test' } as unknown as Record<string, unknown>,
+      {} as never
+    );
+
+    expect(res.success).toBe(true);
+    expect(res.keyCount).toBe(3);
+    expect(res.minTime).toBe(0);
+    expect(res.maxTime).toBe(2);
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('inspect_curve');
+    expect(payload.path).toBe('/Game/DataTest/C_Ch5Test');
+  });
+
+  it('throws on missing path', async () => {
+    await expect(
+      handleCurveTools(
+        'inspect_curve',
+        {} as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/path/);
+  });
+});

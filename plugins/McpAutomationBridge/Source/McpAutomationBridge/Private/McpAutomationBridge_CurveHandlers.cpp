@@ -259,6 +259,47 @@ namespace McpCurveHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// inspect_curve — summary: key count + time range.
+	// -----------------------------------------------------------------------
+	static bool HandleInspectCurve(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field: path"));
+			return true;
+		}
+
+		UCurveFloat* Curve = LoadObject<UCurveFloat>(nullptr, *PathStr);
+		if (!Curve)
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("Curve not found: %s"), *PathStr));
+			return true;
+		}
+
+		const int32 Count = Curve->FloatCurve.GetNumKeys();
+		float MinTime = 0.f;
+		float MaxTime = 0.f;
+		// GetTimeRange(float&, float&) in UE 5.7 writes 0,0 when the curve is empty.
+		Curve->FloatCurve.GetTimeRange(MinTime, MaxTime);
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("assetPath"), Curve->GetPathName());
+		Data->SetNumberField(TEXT("keyCount"), Count);
+		Data->SetNumberField(TEXT("minTime"), MinTime);
+		Data->SetNumberField(TEXT("maxTime"), MaxTime);
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Curve '%s': %d keys, time [%f, %f]"),
+				*Curve->GetName(), Count, MinTime, MaxTime),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpCurveHandlers
@@ -302,6 +343,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCurveAction(
 	if (SubAction == TEXT("get_curve_keys"))
 	{
 		return McpCurveHandlers::HandleGetCurveKeys(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("inspect_curve"))
+	{
+		return McpCurveHandlers::HandleInspectCurve(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,
