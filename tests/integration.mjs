@@ -150,6 +150,10 @@ const testCases = [
     arguments: { action: 'create_data_asset', path: '/Game/DataTest', name: 'DA_Ch3Sword',
       dataAssetClassPath: '/Game/DataTest/BP_Ch3ItemData.BP_Ch3ItemData_C' },
     expected: 'success|already exists' },
+  { scenario: 'DA: set Value property on DA_Ch3Sword', toolName: 'manage_data',
+    arguments: { action: 'set_data_asset_property', path: '/Game/DataTest/DA_Ch3Sword',
+      propertyPath: 'Value', value: 42.5 },
+    expected: 'success' },
   // search_assets: searchText filtering (fix for Issue #233)
   { scenario: 'Asset: search by text (exact name)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'BP_IntegrationTest' }, expected: 'success' },
   { scenario: 'Asset: search by text (partial, case-insensitive)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'integrationtest' }, expected: 'success' },

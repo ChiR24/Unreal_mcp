@@ -770,6 +770,69 @@ namespace McpDataHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// set_data_asset_property — write a JSON value at a dotted/indexed path.
+	//
+	// NOTE: McpPropertyPath::SetValueAtPath writes directly to the UObject via
+	// FJsonObjectConverter::JsonValueToUProperty. For a single scalar write
+	// this is atomic. For nested struct writes, partial failure can leave the
+	// target mutated; callers that need transactional semantics should read
+	// back via get_data_asset_property and compare.
+	// -----------------------------------------------------------------------
+	static bool HandleSetDataAssetProperty(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr, PropPath;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr) ||
+			!Payload->TryGetStringField(TEXT("propertyPath"), PropPath))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field(s): path, propertyPath"));
+			return true;
+		}
+		const TSharedPtr<FJsonValue> Value = Payload->TryGetField(TEXT("value"));
+		if (!Value.IsValid())
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field: value"));
+			return true;
+		}
+
+		UObject* Asset = LoadObject<UObject>(nullptr, *PathStr);
+		if (!Asset)
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("Asset not found: %s"), *PathStr));
+			return true;
+		}
+
+		FString WalkError;
+		if (!McpPropertyPath::SetValueAtPath(Asset, PropPath, Value, WalkError))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				WalkError.IsEmpty() ? TEXT("SetValueAtPath failed") : WalkError);
+			return true;
+		}
+
+		Asset->MarkPackageDirty();
+		const bool bSaved = McpSafeAssetSave(Asset);
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("assetPath"), Asset->GetPathName());
+		Data->SetStringField(TEXT("propertyPath"), PropPath);
+		Data->SetBoolField(TEXT("saved"), bSaved);
+		if (!bSaved)
+		{
+			Data->SetStringField(TEXT("saveWarning"),
+				TEXT("Asset changes in memory but save failed"));
+		}
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Set '%s' on asset '%s'"), *PropPath, *Asset->GetName()),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpDataHandlers
@@ -837,6 +900,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
 	if (SubAction == TEXT("create_data_asset"))
 	{
 		return McpDataHandlers::HandleCreateDataAsset(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("set_data_asset_property"))
+	{
+		return McpDataHandlers::HandleSetDataAssetProperty(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,

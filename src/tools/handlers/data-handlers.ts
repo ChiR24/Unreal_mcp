@@ -127,6 +127,17 @@ export async function handleDataTools(
       return sendDataRequest(tools, 'create_data_asset', { path, name, dataAssetClassPath });
     }
 
+    case 'set_data_asset_property': {
+      const path = requireStringArg(argsRecord, 'path');
+      const propertyPath = requireStringArg(argsRecord, 'propertyPath');
+      if (argsRecord.value === undefined) {
+        throw new Error('Missing required parameter: value');
+      }
+      return sendDataRequest(tools, 'set_data_asset_property', {
+        path, propertyPath, value: argsRecord.value,
+      });
+    }
+
     default: {
       void requireObjectArg;
       throw new Error(`Unsupported manage_data action: ${action}`);

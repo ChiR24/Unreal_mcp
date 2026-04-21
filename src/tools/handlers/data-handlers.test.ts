@@ -313,6 +313,59 @@ describe('manage_data create_data_asset', () => {
   });
 });
 
+describe('manage_data set_data_asset_property', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({ success: true });
+  });
+
+  it('forwards path + propertyPath + value', async () => {
+    await handleDataTools(
+      'set_data_asset_property',
+      { path: '/Game/DA_T', propertyPath: 'Stats.Health', value: 100 } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('set_data_asset_property');
+    expect(payload.path).toBe('/Game/DA_T');
+    expect(payload.propertyPath).toBe('Stats.Health');
+    expect(payload.value).toBe(100);
+  });
+
+  it('accepts nested array path + numeric value', async () => {
+    await handleDataTools(
+      'set_data_asset_property',
+      { path: '/Game/DA_T', propertyPath: 'Effects.[0].Value', value: 3.14 } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.propertyPath).toBe('Effects.[0].Value');
+    expect(payload.value).toBe(3.14);
+  });
+
+  it('throws on missing propertyPath', async () => {
+    await expect(
+      handleDataTools(
+        'set_data_asset_property',
+        { path: '/Game/DA', value: 1 } as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/propertyPath/);
+  });
+
+  it('throws on missing value', async () => {
+    await expect(
+      handleDataTools(
+        'set_data_asset_property',
+        { path: '/Game/DA', propertyPath: 'X' } as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/value/);
+  });
+});
+
 describe('manage_data set_data_table_row_struct', () => {
   beforeEach(() => {
     executeAutomationRequestMock.mockReset();
