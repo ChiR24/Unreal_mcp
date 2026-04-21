@@ -272,3 +272,33 @@ describe('manage_data list_data_table_rows', () => {
     ).rejects.toThrow(/path/);
   });
 });
+
+describe('manage_data set_data_table_row_struct', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({ success: true, rowsMigrated: 3 });
+  });
+
+  it('forwards path + newRowStructPath and returns rowsMigrated', async () => {
+    const res = await handleDataTools(
+      'set_data_table_row_struct',
+      { path: '/Game/DT', newRowStructPath: '/Game/ST_New.ST_New' } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    expect(res.rowsMigrated).toBe(3);
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('set_data_table_row_struct');
+    expect(payload.newRowStructPath).toBe('/Game/ST_New.ST_New');
+  });
+
+  it('throws on missing newRowStructPath', async () => {
+    await expect(
+      handleDataTools(
+        'set_data_table_row_struct',
+        { path: '/Game/DT' } as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/newRowStructPath/);
+  });
+});

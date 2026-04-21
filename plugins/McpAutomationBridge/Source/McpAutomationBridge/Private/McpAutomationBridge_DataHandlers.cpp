@@ -532,6 +532,71 @@ namespace McpDataHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// set_data_table_row_struct — swap RowStruct (schema migration).
+	//
+	// WARNING: Field values in columns that do not exist on the new struct are
+	// destroyed. Callers that need to preserve per-column data must first
+	// snapshot via get_data_table_rows, then re-set via set_data_table_row.
+	// -----------------------------------------------------------------------
+	static bool HandleSetDataTableRowStruct(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr, NewStructPath;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr) ||
+			!Payload->TryGetStringField(TEXT("newRowStructPath"), NewStructPath))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field(s): path, newRowStructPath"));
+			return true;
+		}
+
+		UDataTable* DT = LoadObject<UDataTable>(nullptr, *PathStr);
+		if (!DT)
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("DataTable not found: %s"), *PathStr));
+			return true;
+		}
+
+		UScriptStruct* NewStruct = LoadRowStruct(NewStructPath);
+		if (!NewStruct)
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("New row struct not found: %s"), *NewStructPath));
+			return true;
+		}
+
+		const int32 RowCount = DT->GetRowMap().Num();
+
+		// UE 5.7 editor path: CleanBeforeStructChange() frees the existing row
+		// allocations so we can assign a new RowStruct without corrupting the
+		// map; RestoreAfterStructChange() re-allocates rows using the new
+		// struct's size. HandleDataTableChanged broadcasts to open editors.
+		DT->CleanBeforeStructChange();
+		DT->RowStruct = NewStruct;
+		DT->RestoreAfterStructChange();
+		DT->HandleDataTableChanged();
+
+		DT->MarkPackageDirty();
+		McpSafeAssetSave(DT);
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("assetPath"), DT->GetPathName());
+		Data->SetStringField(TEXT("rowStructPath"), NewStruct->GetPathName());
+		Data->SetNumberField(TEXT("rowsMigrated"), RowCount);
+		Data->SetStringField(TEXT("warning"),
+			TEXT("Field values in removed columns were destroyed; callers "
+				"must snapshot rows via get_data_table_rows before migration "
+				"if preservation is required."));
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Migrated DataTable '%s' to RowStruct '%s' (%d row(s))"),
+				*DT->GetName(), *NewStruct->GetName(), RowCount),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpDataHandlers
@@ -591,6 +656,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
 	if (SubAction == TEXT("list_data_table_rows"))
 	{
 		return McpDataHandlers::HandleListDataTableRows(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("set_data_table_row_struct"))
+	{
+		return McpDataHandlers::HandleSetDataTableRowStruct(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,
