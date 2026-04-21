@@ -4823,5 +4823,92 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         assets: { type: 'array', items: { type: 'string' } }
       }
     }
+  },
+  {
+    name: 'manage_curve',
+    category: 'authoring',
+    description: 'Create and edit UCurveFloat assets (keyframe editing with interp/tangent modes).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['create_curve_float', 'set_curve_keys', 'get_curve_keys', 'inspect_curve'],
+          description: 'Curve action to perform.'
+        },
+        path: { type: 'string', description: 'Package path (/Game/...). For create_curve_float, the destination folder; for other actions, the curve asset path.' },
+        name: { type: 'string', description: 'Asset name (create_curve_float only).' },
+        keys: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              time: { type: 'number' },
+              value: { type: 'number' },
+              interpMode: {
+                type: 'string',
+                enum: ['Auto', 'Linear', 'Constant', 'CubicBreak'],
+                description: 'Auto=Cubic/Auto tangents, Linear, Constant, CubicBreak=Cubic/Break.'
+              }
+            },
+            required: ['time', 'value']
+          },
+          description: 'Keyframes for set_curve_keys.'
+        }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        error: { type: 'string' },
+        errorCategory: { type: 'string' },
+        assetPath: { type: 'string' },
+        keyCount: { type: 'number' },
+        minTime: { type: 'number' },
+        maxTime: { type: 'number' },
+        keys: {
+          type: 'array',
+          items: { type: 'object', additionalProperties: true }
+        },
+        saved: { type: 'boolean' },
+        saveWarning: { type: 'string' },
+        alreadyExists: { type: 'boolean' }
+      }
+    }
+  },
+  {
+    name: 'manage_gameplay_tags',
+    category: 'gameplay',
+    description: 'Manage GameplayTag registrations in project config (ini-based tags). Add/remove/list tags and register additional tag source ini files.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['add_gameplay_tag', 'remove_gameplay_tag', 'list_gameplay_tags', 'add_gameplay_tag_source'],
+          description: 'GameplayTag action to perform.'
+        },
+        tag: { type: 'string', description: 'Tag name, e.g. "Modifier.Weather.Rain".' },
+        comment: { type: 'string', description: 'Developer comment for the tag (add_gameplay_tag).' },
+        sourceIni: { type: 'string', description: 'Ini file name for the tag source (e.g. "DefaultGameplayTags.ini"). Optional; defaults to DefaultGameplayTags.ini.' },
+        prefix: { type: 'string', description: 'Optional prefix filter for list_gameplay_tags.' },
+        iniRelativePath: { type: 'string', description: 'Path for add_gameplay_tag_source, relative to Config/ (e.g. "Tags/CombatTags.ini").' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        error: { type: 'string' },
+        errorCategory: { type: 'string' },
+        tag: { type: 'string' },
+        sourceIni: { type: 'string' },
+        tags: { type: 'array', items: { type: 'string' } },
+        warning: { type: 'string' }
+      }
+    }
   }
 ];

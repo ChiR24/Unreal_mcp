@@ -907,6 +907,16 @@ private:
       const FString &RequestId, const FString &Action,
       const TSharedPtr<FJsonObject> &Payload,
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Ch5: manage_curve — UCurveFloat authoring
+  bool HandleManageCurveAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Ch4: manage_gameplay_tags — GameplayTag ini CRUD
+  bool HandleManageGameplayTagsAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Phase 27: Misc handlers (camera, viewport, bookmarks, etc.)
   bool HandleMiscAction(
       const FString &RequestId, const FString &Action,

@@ -44,6 +44,8 @@ import { handleNavigationTools } from './handlers/navigation-handlers.js';
 import { handleSplineTools } from './handlers/spline-handlers.js';
 import { handleManageToolsTools } from './handlers/manage-tools-handlers.js';
 import { handleDataTools } from './handlers/data-handlers.js';
+import { handleCurveTools } from './handlers/curve-handlers.js';
+import { handleGameplayTagsTools } from './handlers/gameplay-tags-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -467,6 +469,12 @@ function registerDefaultHandlers() {
 
   // 41. DATA SYSTEM (Ch2/Ch3 — manage_data: DataTable + DataAsset CRUD)
   toolRegistry.register('manage_data', async (args, tools) => await handleDataTools(getAction(args), args, tools));
+
+  // 42. CURVE SYSTEM (Ch5 — manage_curve: UCurveFloat authoring)
+  toolRegistry.register('manage_curve', async (args, tools) => await handleCurveTools(getAction(args), args, tools));
+
+  // 43. GAMEPLAY TAGS SYSTEM (Ch4 — manage_gameplay_tags: ini CRUD)
+  toolRegistry.register('manage_gameplay_tags', async (args, tools) => await handleGameplayTagsTools(getAction(args), args, tools));
 }
 
 // Initialize default handlers immediately

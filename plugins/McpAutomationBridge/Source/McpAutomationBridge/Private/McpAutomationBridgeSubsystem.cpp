@@ -1149,6 +1149,22 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleManageDataAction(R, A, P, S);
                   });
 
+  // Ch5: manage_curve — UCurveFloat authoring
+  RegisterHandler(TEXT("manage_curve"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageCurveAction(R, A, P, S);
+                  });
+
+  // Ch4: manage_gameplay_tags — GameplayTag ini CRUD
+  RegisterHandler(TEXT("manage_gameplay_tags"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageGameplayTagsAction(R, A, P, S);
+                  });
+
   RegisterHandler(TEXT("manage_pipeline"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
