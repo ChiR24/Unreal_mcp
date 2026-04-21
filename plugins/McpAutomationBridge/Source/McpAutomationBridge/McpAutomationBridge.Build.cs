@@ -162,7 +162,8 @@ PublicDependencyModuleNames.AddRange(new string[]
                 "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIGraph",
                 "MeshUtilities", "MaterialUtilities", "PhysicsCore", "ClothingSystemRuntimeCommon",
                 "GeometryCore", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription",
-                "NavigationSystem"
+                "NavigationSystem",
+                "GameplayTagsEditor"  // Ch4: manage_gameplay_tags — IGameplayTagsEditorModule for INI CRUD
                 // Optional plugins are handled by AddOptionalDynamicModule() below with delay-load
             });
 
