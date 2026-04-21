@@ -69,6 +69,16 @@ export async function handleDataTools(
       return sendDataRequest(tools, 'create_data_table', { path, name, rowStructPath });
     }
 
+    case 'add_data_table_row': {
+      const path = requireStringArg(argsRecord, 'path');
+      const rowName = requireStringArg(argsRecord, 'rowName');
+      const rawFields = argsRecord.fields;
+      const fields = (rawFields && typeof rawFields === 'object' && !Array.isArray(rawFields))
+        ? rawFields as Record<string, unknown>
+        : {};
+      return sendDataRequest(tools, 'add_data_table_row', { path, rowName, fields });
+    }
+
     default: {
       void requireObjectArg;
       throw new Error(`Unsupported manage_data action: ${action}`);

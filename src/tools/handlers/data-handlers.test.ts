@@ -81,3 +81,46 @@ describe('manage_data create_data_table', () => {
     ).rejects.toThrow(/name/);
   });
 });
+
+describe('manage_data add_data_table_row', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({ success: true, rowName: 'R1' });
+  });
+
+  it('forwards path, rowName, fields', async () => {
+    const res = await handleDataTools(
+      'add_data_table_row',
+      { path: '/Game/DT', rowName: 'R1', fields: { DisplayName: 'A', Value: 1.5 } } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    expect(res.success).toBe(true);
+    expect(res.rowName).toBe('R1');
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('add_data_table_row');
+    expect(payload.rowName).toBe('R1');
+    expect(payload.fields).toEqual({ DisplayName: 'A', Value: 1.5 });
+  });
+
+  it('defaults fields to empty object when omitted', async () => {
+    await handleDataTools(
+      'add_data_table_row',
+      { path: '/Game/DT', rowName: 'R1' } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.fields).toEqual({});
+  });
+
+  it('throws on missing rowName', async () => {
+    await expect(
+      handleDataTools(
+        'add_data_table_row',
+        { path: '/Game/DT', fields: {} } as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/rowName/);
+  });
+});

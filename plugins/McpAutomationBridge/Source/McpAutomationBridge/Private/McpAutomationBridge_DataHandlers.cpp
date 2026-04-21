@@ -148,6 +148,120 @@ namespace McpDataHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// Row buffer RAII helper: allocates + InitializeStruct, frees on scope exit.
+	// -----------------------------------------------------------------------
+	struct FScopedRowBuffer
+	{
+		const UScriptStruct* Struct = nullptr;
+		uint8* Data = nullptr;
+
+		explicit FScopedRowBuffer(const UScriptStruct* InStruct)
+			: Struct(InStruct)
+		{
+			if (Struct)
+			{
+				Data = static_cast<uint8*>(FMemory::Malloc(Struct->GetStructureSize()));
+				Struct->InitializeStruct(Data);
+			}
+		}
+		FScopedRowBuffer(const FScopedRowBuffer&) = delete;
+		FScopedRowBuffer& operator=(const FScopedRowBuffer&) = delete;
+		~FScopedRowBuffer()
+		{
+			if (Struct && Data)
+			{
+				Struct->DestroyStruct(Data);
+				FMemory::Free(Data);
+			}
+		}
+	};
+
+	// Load a UDataTable at PackagePath. Sends an error + returns nullptr on miss.
+	static UDataTable* LoadDataTableOrError(UMcpAutomationBridgeSubsystem* Self,
+		TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId,
+		const FString& PathStr)
+	{
+		UDataTable* DT = LoadObject<UDataTable>(nullptr, *PathStr);
+		if (!DT)
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("DataTable not found: %s"), *PathStr));
+			return nullptr;
+		}
+		if (!DT->RowStruct)
+		{
+			SendError(Self, Socket, RequestId, TEXT("CONFLICT_STATE"),
+				FString::Printf(TEXT("DataTable '%s' has no RowStruct"), *PathStr));
+			return nullptr;
+		}
+		return DT;
+	}
+
+	// -----------------------------------------------------------------------
+	// add_data_table_row
+	// -----------------------------------------------------------------------
+	static bool HandleAddDataTableRow(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr, RowNameStr;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr) ||
+			!Payload->TryGetStringField(TEXT("rowName"), RowNameStr))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field(s): path, rowName"));
+			return true;
+		}
+
+		UDataTable* DT = LoadDataTableOrError(Self, Socket, RequestId, PathStr);
+		if (!DT) { return true; }
+
+		const FName RowName(*RowNameStr);
+		if (DT->GetRowMap().Contains(RowName))
+		{
+			SendError(Self, Socket, RequestId, TEXT("CONFLICT_STATE"),
+				FString::Printf(TEXT("Row already exists: %s"), *RowNameStr));
+			return true;
+		}
+
+		FScopedRowBuffer Buf(DT->RowStruct);
+		if (!Buf.Data)
+		{
+			SendError(Self, Socket, RequestId, TEXT("ENGINE_API_ERROR"),
+				TEXT("Failed to allocate row buffer"));
+			return true;
+		}
+
+		const TSharedPtr<FJsonObject>* FieldsObj = nullptr;
+		if (Payload->TryGetObjectField(TEXT("fields"), FieldsObj) &&
+			FieldsObj && (*FieldsObj).IsValid() && (*FieldsObj)->Values.Num() > 0)
+		{
+			FString StructError;
+			if (!McpStructReflection::SetStructFieldsFromJsonObject(
+				DT->RowStruct, Buf.Data, *FieldsObj, StructError))
+			{
+				SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"), StructError);
+				return true;
+			}
+		}
+
+		// Use the (FName, const uint8*, const UScriptStruct*) overload to avoid
+		// unsafe reinterpret_cast to FTableRowBase* (UDS rows aren't FTableRowBase).
+		DT->AddRow(RowName, Buf.Data, DT->RowStruct);
+
+		DT->MarkPackageDirty();
+		McpSafeAssetSave(DT);
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("rowName"), RowNameStr);
+		Data->SetStringField(TEXT("assetPath"), DT->GetPathName());
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Added row '%s' to DataTable '%s'"), *RowNameStr, *DT->GetName()),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpDataHandlers
@@ -183,6 +297,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
 	if (SubAction == TEXT("create_data_table"))
 	{
 		return McpDataHandlers::HandleCreateDataTable(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("add_data_table_row"))
+	{
+		return McpDataHandlers::HandleAddDataTableRow(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,

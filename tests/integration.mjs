@@ -95,6 +95,10 @@ const testCases = [
     arguments: { action: 'create_data_table', path: '/Game/DataTest', name: 'DT_Ch2',
       rowStructPath: '/Game/DataTest/ST_Ch2Row.ST_Ch2Row' },
     expected: 'success|already exists' },
+  { scenario: 'Data: add DataTable row (Row1)', toolName: 'manage_data',
+    arguments: { action: 'add_data_table_row', path: '/Game/DataTest/DT_Ch2',
+      rowName: 'Row1', fields: { DisplayName: 'Alpha', Value: 1.5 } },
+    expected: 'success|already exists' },
   // search_assets: searchText filtering (fix for Issue #233)
   { scenario: 'Asset: search by text (exact name)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'BP_IntegrationTest' }, expected: 'success' },
   { scenario: 'Asset: search by text (partial, case-insensitive)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'integrationtest' }, expected: 'success' },
