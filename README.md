@@ -328,7 +328,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 ## Available Tools
 
-**36 MCP tools** with action-based dispatch for comprehensive Unreal Engine automation.
+**39 MCP tools** with action-based dispatch for comprehensive Unreal Engine automation.
 
 <details>
 <summary><b>Core Tools</b></summary>
@@ -379,7 +379,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 | `manage_effect` | Niagara, Particles, Debug Shapes, GPU simulations |
 | `manage_material_authoring` | Material creation, expressions, landscape layers |
 | `manage_texture` | Texture creation, modification, compression settings |
-| `manage_blueprint` | Create, SCS, Graph Editing, Node manipulation, Enum/Struct authoring |
+| `manage_blueprint` | Create, SCS, Graph Editing, Node manipulation, Enum/Struct authoring, Reparent & Interfaces |
 | `manage_sequence` | Sequencer / Cinematics, list_track_types |
 | `manage_performance` | Profiling, optimization, scalability |
 
@@ -408,6 +408,17 @@ MCP_AUTOMATION_HOST=0.0.0.0
 | `manage_inventory` | Items, equipment, loot tables, crafting |
 | `manage_interaction` | Interactables, destructibles, triggers |
 | `manage_widget_authoring` | UMG widget creation, layout, styling, animations |
+
+</details>
+
+<details>
+<summary><b>Data Authoring</b></summary>
+
+| Tool | Description |
+|------|-------------|
+| `manage_data` | UDataTable + UDataAsset CRUD, row editing, property paths, schema migration |
+| `manage_curve` | UCurveFloat authoring: keys, interp modes (Auto/Linear/Constant/CubicBreak) |
+| `manage_gameplay_tags` | GameplayTag ini registration (add/remove/list/add source) |
 
 </details>
 

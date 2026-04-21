@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] - 2026-04-21
+
+### Added
+
+- **`manage_data` tool** (12 actions): UDataTable + UDataAsset authoring — `create_data_table`, `add_data_table_row`, `set_data_table_row`, `update_data_table_row`, `remove_data_table_row`, `get_data_table_rows`, `list_data_table_rows`, `set_data_table_row_struct` (schema migration), `create_data_asset`, `set_data_asset_property`, `get_data_asset_property`, `list_data_assets_of_class`. DataAsset props use `McpPropertyPath` dotted/indexed writes (e.g. `Stats.Health`, `Effects.[0].Value`).
+- **`manage_curve` tool** (4 actions): UCurveFloat authoring — `create_curve_float`, `set_curve_keys`, `get_curve_keys`, `inspect_curve`. Interp modes: Auto, Linear, Constant, CubicBreak.
+- **`manage_gameplay_tags` tool** (4 actions): GameplayTag ini registration — `add_gameplay_tag`, `remove_gameplay_tag`, `list_gameplay_tags` (optional `prefix` filter), `add_gameplay_tag_source` (register additional Config/ ini files).
+- **`manage_blueprint`**: `set_parent_class`, `add_interface`, `remove_interface`, `list_interfaces` actions for reparenting BPs and managing `ImplementedInterfaces`.
+- **`manage_widget_authoring`**: generic `add_widget` / `remove_widget` actions (composable over the legacy per-widget variants).
+- **`manage_ai`**: StateTree schema completion — `contextClass`, `stateType`, `taskProps`, plus `add_task`, `list_states`, `remove_state` actions and `add_state_tree_transition`.
+- **Shared C++ helpers**: `McpStructReflection` (struct-aware JSON <-> UScriptStruct marshalling), `McpGenericAssetFactory` (uniform create/save helper), `McpPropertyPath` (dotted/indexed property path evaluator).
+- **Ch8 E2E scenario**: `tests/scenarios/war-e2e.mjs` — 22-step end-to-end test exercising all Ch1-7 additions against the War project (`/Game/War/Data/ModifierKeys`).
+
+### Changed
+
+- **Tool count**: 36 -> 39 consolidated tools.
+- **README**: added Data Authoring category; `manage_blueprint` description notes Reparent & Interfaces.
+- **docs/handler-mapping.md**: added sections 37/38/39 for the new tools and Blueprint interface action rows.
+
+### Compatibility
+
+- Target UE 5.7. Earlier versions (5.0-5.6) are expected to work for all actions except StateTree (5.2+ only); not systematically tested.
+
+---
+
 ## [Unreleased]
 
 ### Added

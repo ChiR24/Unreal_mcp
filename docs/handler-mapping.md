@@ -64,6 +64,10 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `modify_struct` | `McpAutomationBridge_BlueprintTypeHandlers.cpp` | `BlueprintTypeHandlers::HandleAction` | Batch ops: add_member/remove_member/rename_member/set_member_type |
 | `inspect_enum` | `McpAutomationBridge_BlueprintTypeHandlers.cpp` | `BlueprintTypeHandlers::HandleAction` | Returns enumerators[] |
 | `inspect_struct` | `McpAutomationBridge_BlueprintTypeHandlers.cpp` | `BlueprintTypeHandlers::HandleAction` | Returns members[] with type DSL strings (round-trips `Array<T>` / `E_*` / `S_*` / `BP_*`); see `McpPinTypeParser.h` for the full DSL |
+| `set_parent_class` | `McpAutomationBridge_BlueprintHandlers.cpp` | `HandleBlueprintAction` | Reparents a Blueprint; recompiles & saves |
+| `add_interface` | `McpAutomationBridge_BlueprintHandlers.cpp` | `HandleBlueprintAction` | Adds a UInterface to the BP's ImplementedInterfaces |
+| `remove_interface` | `McpAutomationBridge_BlueprintHandlers.cpp` | `HandleBlueprintAction` | Removes a UInterface (by class path) |
+| `list_interfaces` | `McpAutomationBridge_BlueprintHandlers.cpp` | `HandleBlueprintAction` | Returns `interfaces[]` of implemented class paths |
 
 ## 17. Input Manager (`manage_input`)
 
@@ -1112,3 +1116,44 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `create_pipe_spline` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Creates pipe with radius and segments |
 | **Utility** | | | |
 | `get_splines_info` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Returns spline info (points, length, closed) |
+
+## 37. Data Manager (`manage_data`)
+
+UDataTable + UDataAsset authoring (row CRUD, property paths, schema migration).
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| `create_data_table` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Create UDataTable with RowStruct |
+| `add_data_table_row` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Append row; reflection-populated |
+| `set_data_table_row` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Overwrite entire row |
+| `update_data_table_row` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Patch subset of row fields |
+| `remove_data_table_row` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Delete by row name |
+| `get_data_table_rows` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Fetch (optionally filter via `rowNames`) |
+| `list_data_table_rows` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Row-name enumeration only |
+| `set_data_table_row_struct` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Migrate RowStruct; preserves matching field names |
+| `create_data_asset` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Instantiate UDataAsset subclass (native or BP) |
+| `set_data_asset_property` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Uses `McpPropertyPath` dotted/indexed writes |
+| `get_data_asset_property` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | Reflection-driven property read |
+| `list_data_assets_of_class` | `McpAutomationBridge_DataHandlers.cpp` | `HandleManageDataAction` | AssetRegistry filter by class; supports `searchPaths` |
+
+## 38. Curve Manager (`manage_curve`)
+
+UCurveFloat authoring.
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| `create_curve_float` | `McpAutomationBridge_CurveHandlers.cpp` | `HandleManageCurveAction` | Create empty UCurveFloat asset |
+| `set_curve_keys` | `McpAutomationBridge_CurveHandlers.cpp` | `HandleManageCurveAction` | Replace keys; interpMode: Auto/Linear/Constant/CubicBreak |
+| `get_curve_keys` | `McpAutomationBridge_CurveHandlers.cpp` | `HandleManageCurveAction` | Returns `keys[]` |
+| `inspect_curve` | `McpAutomationBridge_CurveHandlers.cpp` | `HandleManageCurveAction` | Returns keyCount/minTime/maxTime + keys |
+
+## 39. Gameplay Tags (`manage_gameplay_tags`)
+
+GameplayTag ini registration (project config), not in-memory runtime tag usage.
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| `add_gameplay_tag` | `McpAutomationBridge_GameplayTagsHandlers.cpp` | `HandleManageGameplayTagsAction` | Registers tag in `DefaultGameplayTags.ini` (or custom `sourceIni`) |
+| `remove_gameplay_tag` | `McpAutomationBridge_GameplayTagsHandlers.cpp` | `HandleManageGameplayTagsAction` | Removes tag from registry ini |
+| `list_gameplay_tags` | `McpAutomationBridge_GameplayTagsHandlers.cpp` | `HandleManageGameplayTagsAction` | Enumerate tags; optional `prefix` filter |
+| `add_gameplay_tag_source` | `McpAutomationBridge_GameplayTagsHandlers.cpp` | `HandleManageGameplayTagsAction` | Register additional tag source ini under `Config/` |
