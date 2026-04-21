@@ -114,6 +114,41 @@ namespace McpGameplayTagsHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// list_gameplay_tags
+	// -----------------------------------------------------------------------
+	static bool HandleListGameplayTags(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString Prefix;
+		Payload->TryGetStringField(TEXT("prefix"), Prefix);
+
+		FGameplayTagContainer All;
+		UGameplayTagsManager::Get().RequestAllGameplayTags(All, /*OnlyIncludeDictionaryTags=*/false);
+
+		TArray<TSharedPtr<FJsonValue>> Tags;
+		Tags.Reserve(All.Num());
+		for (const FGameplayTag& Tag : All)
+		{
+			const FString S = Tag.ToString();
+			if (Prefix.IsEmpty() || S.StartsWith(Prefix))
+			{
+				Tags.Add(MakeShared<FJsonValueString>(S));
+			}
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetArrayField(TEXT("tags"), Tags);
+		if (!Prefix.IsEmpty())
+		{
+			Data->SetStringField(TEXT("prefix"), Prefix);
+		}
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Listed %d gameplay tag(s)"), Tags.Num()), Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpGameplayTagsHandlers
@@ -149,6 +184,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplayTagsAction(
 	if (SubAction == TEXT("add_gameplay_tag"))
 	{
 		return McpGameplayTagsHandlers::HandleAddGameplayTag(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("list_gameplay_tags"))
+	{
+		return McpGameplayTagsHandlers::HandleListGameplayTags(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,

@@ -65,6 +65,15 @@ export async function handleGameplayTagsTools(
       return sendTagsRequest(tools, 'add_gameplay_tag', { tag, comment, sourceIni });
     }
 
+    case 'list_gameplay_tags': {
+      const prefix = optionalStringArg(argsRecord, 'prefix');
+      const payload: Record<string, unknown> = {};
+      if (prefix !== undefined) {
+        payload.prefix = prefix;
+      }
+      return sendTagsRequest(tools, 'list_gameplay_tags', payload);
+    }
+
     default:
       throw new Error(`Unsupported manage_gameplay_tags action: ${action}`);
   }

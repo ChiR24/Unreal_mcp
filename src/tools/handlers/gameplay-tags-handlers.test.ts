@@ -80,3 +80,37 @@ describe('manage_gameplay_tags add_gameplay_tag', () => {
     ).rejects.toThrow(/tag/);
   });
 });
+
+describe('manage_gameplay_tags list_gameplay_tags', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({
+      success: true,
+      tags: ['Modifier.Weather.Rain', 'Modifier.Weather.Snow'],
+    });
+  });
+
+  it('forwards empty payload when no prefix supplied', async () => {
+    const res = await handleGameplayTagsTools(
+      'list_gameplay_tags',
+      {} as unknown as Record<string, unknown>,
+      {} as never
+    );
+    expect(res.success).toBe(true);
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('list_gameplay_tags');
+    expect(payload.prefix).toBeUndefined();
+  });
+
+  it('forwards prefix filter to the automation bridge', async () => {
+    await handleGameplayTagsTools(
+      'list_gameplay_tags',
+      { prefix: 'Modifier.Weather' } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.prefix).toBe('Modifier.Weather');
+  });
+});

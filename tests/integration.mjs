@@ -175,6 +175,9 @@ const testCases = [
   { scenario: 'GT: add Modifier.Weather.Rain', toolName: 'manage_gameplay_tags',
     arguments: { action: 'add_gameplay_tag', tag: 'Modifier.Weather.Rain', comment: 'Rain modifier' },
     expected: 'success|already exists' },
+  { scenario: 'GT: list with prefix Modifier.Weather', toolName: 'manage_gameplay_tags',
+    arguments: { action: 'list_gameplay_tags', prefix: 'Modifier.Weather' },
+    expected: 'success' },
   // search_assets: searchText filtering (fix for Issue #233)
   { scenario: 'Asset: search by text (exact name)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'BP_IntegrationTest' }, expected: 'success' },
   { scenario: 'Asset: search by text (partial, case-insensitive)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'integrationtest' }, expected: 'success' },

@@ -60,12 +60,14 @@ export async function handleCurveTools(
   const argsRecord = args as Record<string, unknown>;
 
   switch (action) {
+    case 'create_curve_float': {
+      const path = requireStringArg(argsRecord, 'path');
+      const name = requireStringArg(argsRecord, 'name');
+      return sendCurveRequest(tools, 'create_curve_float', { path, name });
+    }
+
     default: {
-      void requireStringArg;
       void requireArrayArg;
-      void sendCurveRequest;
-      void argsRecord;
-      void tools;
       throw new Error(`Unsupported manage_curve action: ${action}`);
     }
   }

@@ -52,6 +52,57 @@ namespace McpCurveHandlers
 		Self->SendAutomationError(Socket, RequestId, Message, Category);
 	}
 
+	// -----------------------------------------------------------------------
+	// create_curve_float — instantiate a UCurveFloat at path/name.
+	// -----------------------------------------------------------------------
+	static bool HandleCreateCurveFloat(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr, NameStr;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr) ||
+			!Payload->TryGetStringField(TEXT("name"), NameStr))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field(s): path, name"));
+			return true;
+		}
+
+		const FString FullPath = PathStr / NameStr;
+		if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+		{
+			TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+			Data->SetStringField(TEXT("assetPath"), FullPath);
+			Data->SetBoolField(TEXT("alreadyExists"), true);
+			SendSuccess(Self, Socket, RequestId,
+				FString::Printf(TEXT("Curve already exists at '%s'"), *FullPath), Data);
+			return true;
+		}
+
+		FString OutError;
+		bool bSaved = false;
+		UObject* NewCurve = McpGenericAssetFactory::CreateAssetOfClass(
+			UCurveFloat::StaticClass(), PathStr, NameStr, nullptr, OutError, bSaved);
+		if (!NewCurve)
+		{
+			SendError(Self, Socket, RequestId, TEXT("ENGINE_API_ERROR"),
+				OutError.IsEmpty() ? TEXT("CreateAsset returned nullptr") : OutError);
+			return true;
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("assetPath"), NewCurve->GetPathName());
+		Data->SetBoolField(TEXT("saved"), bSaved);
+		if (!bSaved && !OutError.IsEmpty())
+		{
+			Data->SetStringField(TEXT("saveWarning"), OutError);
+		}
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Created UCurveFloat at '%s'"), *NewCurve->GetPathName()),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpCurveHandlers
@@ -84,7 +135,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCurveAction(
 		TEXT("NOT_IMPLEMENTED"));
 	return true;
 #else
-	// Per-action dispatch added in Tasks 2-5.
+	if (SubAction == TEXT("create_curve_float"))
+	{
+		return McpCurveHandlers::HandleCreateCurveFloat(this, RequestId, Payload, RequestingSocket);
+	}
+
 	SendAutomationError(RequestingSocket, RequestId,
 		FString::Printf(TEXT("manage_curve sub-action not yet implemented: %s"), *SubAction),
 		TEXT("NOT_IMPLEMENTED"));
