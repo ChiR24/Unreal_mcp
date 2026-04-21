@@ -171,12 +171,13 @@ const testCases = [
   { scenario: 'Curve: create float curve (C_Ch5Test)', toolName: 'manage_curve',
     arguments: { action: 'create_curve_float', path: '/Game/DataTest', name: 'C_Ch5Test' },
     expected: 'success|already exists' },
-  { scenario: 'Curve: set keys on C_Ch5Test (3 keys, mixed interp)', toolName: 'manage_curve',
+  { scenario: 'Curve: set keys on C_Ch5Test (4 keys, all interpModes incl CubicBreak)', toolName: 'manage_curve',
     arguments: { action: 'set_curve_keys', path: '/Game/DataTest/C_Ch5Test',
       keys: [
-        { time: 0, value: 0, interpMode: 'Linear' },
-        { time: 1, value: 1, interpMode: 'Auto' },
-        { time: 2, value: 0, interpMode: 'Constant' }
+        { time: 0, value: 0, interpMode: 'Auto' },
+        { time: 1, value: 1, interpMode: 'Linear' },
+        { time: 2, value: 0, interpMode: 'Constant' },
+        { time: 3, value: 2, interpMode: 'CubicBreak' }
       ] },
     expected: 'success' },
   { scenario: 'Curve: get keys on C_Ch5Test', toolName: 'manage_curve',
@@ -184,6 +185,18 @@ const testCases = [
     expected: 'success' },
   { scenario: 'Curve: inspect C_Ch5Test summary', toolName: 'manage_curve',
     arguments: { action: 'inspect_curve', path: '/Game/DataTest/C_Ch5Test' },
+    expected: 'success' },
+  { scenario: 'Curve: round-trip interpModes (set distinct per key)', toolName: 'manage_curve',
+    arguments: { action: 'set_curve_keys', path: '/Game/DataTest/C_Ch5Test',
+      keys: [
+        { time: 0.0, value: 0.0, interpMode: 'Auto' },
+        { time: 0.5, value: 0.5, interpMode: 'Linear' },
+        { time: 1.0, value: 1.0, interpMode: 'Constant' },
+        { time: 1.5, value: 0.5, interpMode: 'CubicBreak' }
+      ] },
+    expected: 'success' },
+  { scenario: 'Curve: get keys after round-trip', toolName: 'manage_curve',
+    arguments: { action: 'get_curve_keys', path: '/Game/DataTest/C_Ch5Test' },
     expected: 'success' },
   // Ch4: manage_gameplay_tags — GameplayTag ini CRUD
   { scenario: 'GT: add Modifier.Weather.Rain', toolName: 'manage_gameplay_tags',
@@ -201,6 +214,12 @@ const testCases = [
   { scenario: 'GT: add tag source ini (Tags/CombatTags.ini)', toolName: 'manage_gameplay_tags',
     arguments: { action: 'add_gameplay_tag_source', iniRelativePath: 'Tags/CombatTags.ini' },
     expected: 'success|already exists' },
+  { scenario: 'GT: add tag to new source', toolName: 'manage_gameplay_tags',
+    arguments: { action: 'add_gameplay_tag', tag: 'Combat.Test.FromNewSource', comment: 'test', sourceIni: 'Tags/CombatTags.ini' },
+    expected: 'success|already exists' },
+  { scenario: 'GT: list tags including new source', toolName: 'manage_gameplay_tags',
+    arguments: { action: 'list_gameplay_tags', prefix: 'Combat.Test' },
+    expected: 'success' },
   // search_assets: searchText filtering (fix for Issue #233)
   { scenario: 'Asset: search by text (exact name)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'BP_IntegrationTest' }, expected: 'success' },
   { scenario: 'Asset: search by text (partial, case-insensitive)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'integrationtest' }, expected: 'success' },

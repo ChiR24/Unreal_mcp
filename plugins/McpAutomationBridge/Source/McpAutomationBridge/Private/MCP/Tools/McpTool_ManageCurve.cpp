@@ -38,10 +38,9 @@ public:
 					 .Number(TEXT("value"), TEXT("Key value."))
 					 .StringEnum(TEXT("interpMode"),
 						{TEXT("Auto"), TEXT("Linear"), TEXT("Constant"), TEXT("CubicBreak")},
-						TEXT("Interpolation mode. Auto=Cubic/Auto tangents. Default: Auto."));
+						TEXT("Interpolation mode. Auto=Cubic/Auto tangents. Default: Auto."))
+					 .Required({TEXT("time"), TEXT("value")});
 				})
-			.String(TEXT("subAction"),
-				TEXT("Internal routing hint populated by TS handler."))
 			.Required({TEXT("action")})
 			.Build();
 	}

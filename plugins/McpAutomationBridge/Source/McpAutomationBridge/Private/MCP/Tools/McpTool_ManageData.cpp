@@ -56,8 +56,6 @@ public:
 				TEXT("Class to filter by for list_data_assets_of_class."))
 			.Array(TEXT("searchPaths"),
 				TEXT("Optional /Game/ subpath roots for scoped search."), TEXT("string"))
-			.String(TEXT("subAction"),
-				TEXT("Internal routing hint populated by TS handler."))
 			.Required({TEXT("action")})
 			.Build();
 	}

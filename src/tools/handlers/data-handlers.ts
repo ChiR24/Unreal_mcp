@@ -148,8 +148,16 @@ export async function handleDataTools(
       const classPath = requireStringArg(argsRecord, 'classPath');
       const rawSearchPaths = argsRecord.searchPaths;
       const payload: Record<string, unknown> = { classPath };
-      if (Array.isArray(rawSearchPaths)) {
-        payload.searchPaths = rawSearchPaths.filter((v): v is string => typeof v === 'string');
+      if (rawSearchPaths !== undefined) {
+        if (!Array.isArray(rawSearchPaths)) {
+          throw new Error('searchPaths must be an array of strings');
+        }
+        for (const p of rawSearchPaths) {
+          if (typeof p !== 'string') {
+            throw new Error('searchPaths must be an array of strings');
+          }
+        }
+        payload.searchPaths = rawSearchPaths;
       }
       return sendDataRequest(tools, 'list_data_assets_of_class', payload);
     }

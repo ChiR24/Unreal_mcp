@@ -220,6 +220,22 @@ namespace McpGameplayTagsHandlers
 			return true;
 		}
 
+		// Trust boundary: iniRelativePath is caller-controlled and joins with
+		// ProjectConfigDir. Reject traversal attempts and absolute paths so the
+		// write stays scoped under Config/.
+		{
+			const FString Normalized = RelPath.Replace(TEXT("\\"), TEXT("/"));
+			if (FPaths::IsRelative(Normalized) == false ||
+				Normalized.Contains(TEXT("../")) ||
+				Normalized.StartsWith(TEXT("../")) ||
+				Normalized.StartsWith(TEXT("/")))
+			{
+				SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+					TEXT("iniRelativePath must be a relative path without '..' segments"));
+				return true;
+			}
+		}
+
 		if (!IGameplayTagsEditorModule::IsAvailable())
 		{
 			SendError(Self, Socket, RequestId, TEXT("ENGINE_API_ERROR"),
@@ -231,11 +247,15 @@ namespace McpGameplayTagsHandlers
 		// of missing files (it creates the source record), but pre-creating the ini
 		// with a minimal header guarantees that subsequent AddNewGameplayTagToINI
 		// calls with sourceIni=<RelPath> have a valid file to write into.
+		//
+		// Match UE's own config writer: UTF-8 without BOM. Default SaveStringToFile
+		// emits UTF-16 with BOM, which breaks downstream ini parsers.
 		const FString FullPath = FPaths::ProjectConfigDir() / RelPath;
 		if (!FPaths::FileExists(FullPath))
 		{
 			const FString Header = TEXT("[/Script/GameplayTags.GameplayTagsList]\r\n");
-			if (!FFileHelper::SaveStringToFile(Header, *FullPath))
+			if (!FFileHelper::SaveStringToFile(Header, *FullPath,
+				FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
 			{
 				SendError(Self, Socket, RequestId, TEXT("IO_ERROR"),
 					FString::Printf(TEXT("Failed to create ini file: %s"), *FullPath));

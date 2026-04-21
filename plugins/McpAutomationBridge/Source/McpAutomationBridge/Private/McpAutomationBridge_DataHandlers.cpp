@@ -815,7 +815,8 @@ namespace McpDataHandlers
 			return true;
 		}
 
-		Asset->MarkPackageDirty();
+		// NOTE: McpPropertyPath::SetValueAtPath internally calls MarkPackageDirty
+		// on the root object on success; we only need to save here.
 		const bool bSaved = McpSafeAssetSave(Asset);
 
 		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
@@ -861,7 +862,11 @@ namespace McpDataHandlers
 		TSharedPtr<FJsonValue> Val = McpPropertyPath::GetValueAtPath(Asset, PropPath, WalkError);
 		if (!Val.IsValid())
 		{
-			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+			// Walk errors (bad propertyPath, non-struct descent, etc.) surface as
+			// INVALID_PARAMS so callers can distinguish them from asset-not-found
+			// NOT_FOUND above.
+			SendError(Self, Socket, RequestId,
+				WalkError.IsEmpty() ? TEXT("NOT_FOUND") : TEXT("INVALID_PARAMS"),
 				WalkError.IsEmpty() ? TEXT("Property not found") : WalkError);
 			return true;
 		}
@@ -919,6 +924,7 @@ namespace McpDataHandlers
 		}
 
 		FAssetRegistryModule& ARM = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+		IAssetRegistry& Registry = ARM.Get();
 
 		FARFilter Filter;
 		Filter.bRecursiveClasses = true;
@@ -937,8 +943,17 @@ namespace McpDataHandlers
 			Filter.bRecursivePaths = true;
 		}
 
+		// Fresh editor boots may not have scanned /Game yet — without an
+		// explicit searchPaths scope the filter can return empty. Force a
+		// synchronous scan of /Game so the query is correct regardless of
+		// editor startup state. Scan is idempotent; no force-rescan.
+		if (Filter.PackagePaths.Num() == 0)
+		{
+			Registry.ScanPathsSynchronous({TEXT("/Game")}, /*bForceRescan=*/false);
+		}
+
 		TArray<FAssetData> Results;
-		ARM.Get().GetAssets(Filter, Results);
+		Registry.GetAssets(Filter, Results);
 
 		TArray<TSharedPtr<FJsonValue>> Paths;
 		Paths.Reserve(Results.Num());

@@ -36,8 +36,6 @@ public:
 			.String(TEXT("prefix"), TEXT("Optional prefix filter for list_gameplay_tags."))
 			.String(TEXT("iniRelativePath"),
 				TEXT("Path for add_gameplay_tag_source, relative to Config/."))
-			.String(TEXT("subAction"),
-				TEXT("Internal routing hint populated by TS handler."))
 			.Required({TEXT("action")})
 			.Build();
 	}
