@@ -392,6 +392,52 @@ namespace McpDataHandlers
 		return true;
 	}
 
+	// -----------------------------------------------------------------------
+	// remove_data_table_row
+	// -----------------------------------------------------------------------
+	static bool HandleRemoveDataTableRow(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr, RowNameStr;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr) ||
+			!Payload->TryGetStringField(TEXT("rowName"), RowNameStr))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field(s): path, rowName"));
+			return true;
+		}
+
+		UDataTable* DT = LoadObject<UDataTable>(nullptr, *PathStr);
+		if (!DT)
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("DataTable not found: %s"), *PathStr));
+			return true;
+		}
+
+		const FName RowName(*RowNameStr);
+		if (!DT->GetRowMap().Contains(RowName))
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("Row not found: %s"), *RowNameStr));
+			return true;
+		}
+
+		DT->RemoveRow(RowName);
+		DT->MarkPackageDirty();
+		McpSafeAssetSave(DT);
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("rowName"), RowNameStr);
+		Data->SetStringField(TEXT("assetPath"), DT->GetPathName());
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Removed row '%s' from DataTable '%s'"),
+				*RowNameStr, *DT->GetName()),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpDataHandlers
@@ -439,6 +485,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
 	if (SubAction == TEXT("update_data_table_row"))
 	{
 		return McpDataHandlers::HandleUpdateDataTableRow(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("remove_data_table_row"))
+	{
+		return McpDataHandlers::HandleRemoveDataTableRow(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,

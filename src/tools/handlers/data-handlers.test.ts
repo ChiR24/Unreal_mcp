@@ -184,3 +184,32 @@ describe('manage_data update_data_table_row', () => {
     ).rejects.toThrow(/fields/);
   });
 });
+
+describe('manage_data remove_data_table_row', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockReset();
+    executeAutomationRequestMock.mockResolvedValue({ success: true });
+  });
+
+  it('forwards path + rowName', async () => {
+    await handleDataTools(
+      'remove_data_table_row',
+      { path: '/Game/DT', rowName: 'R1' } as unknown as Record<string, unknown>,
+      {} as never
+    );
+    const calls = executeAutomationRequestMock.mock.calls as unknown as Array<unknown[]>;
+    const payload = calls[0][2] as Record<string, unknown>;
+    expect(payload.subAction).toBe('remove_data_table_row');
+    expect(payload.rowName).toBe('R1');
+  });
+
+  it('throws on missing rowName', async () => {
+    await expect(
+      handleDataTools(
+        'remove_data_table_row',
+        { path: '/Game/DT' } as unknown as Record<string, unknown>,
+        {} as never
+      )
+    ).rejects.toThrow(/rowName/);
+  });
+});
