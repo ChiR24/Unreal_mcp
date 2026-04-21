@@ -179,6 +179,9 @@ const testCases = [
         { time: 2, value: 0, interpMode: 'Constant' }
       ] },
     expected: 'success' },
+  { scenario: 'Curve: get keys on C_Ch5Test', toolName: 'manage_curve',
+    arguments: { action: 'get_curve_keys', path: '/Game/DataTest/C_Ch5Test' },
+    expected: 'success' },
   // Ch4: manage_gameplay_tags — GameplayTag ini CRUD
   { scenario: 'GT: add Modifier.Weather.Rain', toolName: 'manage_gameplay_tags',
     arguments: { action: 'add_gameplay_tag', tag: 'Modifier.Weather.Rain', comment: 'Rain modifier' },

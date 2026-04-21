@@ -197,6 +197,68 @@ namespace McpCurveHandlers
 		return true;
 	}
 
+	// Inverse mapping of ParseInterpMode: (interp, tangent) -> caller-facing string.
+	static FString InterpModeToString(ERichCurveInterpMode M, ERichCurveTangentMode T)
+	{
+		if (M == RCIM_Linear) { return TEXT("Linear"); }
+		if (M == RCIM_Constant) { return TEXT("Constant"); }
+		if (M == RCIM_Cubic && T == RCTM_Break) { return TEXT("CubicBreak"); }
+		// RCIM_Cubic + (Auto/User/SmartAuto/None) collapses to "Auto" in the
+		// caller-facing enum — finer tangent control is a follow-up.
+		return TEXT("Auto");
+	}
+
+	// -----------------------------------------------------------------------
+	// get_curve_keys — emit every key as {time, value, interpMode}.
+	// -----------------------------------------------------------------------
+	static bool HandleGetCurveKeys(UMcpAutomationBridgeSubsystem* Self,
+		const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+		TSharedPtr<FMcpBridgeWebSocket> Socket)
+	{
+		FString PathStr;
+		if (!Payload->TryGetStringField(TEXT("path"), PathStr))
+		{
+			SendError(Self, Socket, RequestId, TEXT("INVALID_PARAMS"),
+				TEXT("Missing required field: path"));
+			return true;
+		}
+
+		UCurveFloat* Curve = LoadObject<UCurveFloat>(nullptr, *PathStr);
+		if (!Curve)
+		{
+			SendError(Self, Socket, RequestId, TEXT("NOT_FOUND"),
+				FString::Printf(TEXT("Curve not found: %s"), *PathStr));
+			return true;
+		}
+
+		TArray<TSharedPtr<FJsonValue>> Keys;
+		// GetKeyHandleIterator returns TArray<FKeyHandle>::TConstIterator in UE 5.7.
+		for (auto It = Curve->FloatCurve.GetKeyHandleIterator(); It; ++It)
+		{
+			const FKeyHandle Handle = *It;
+			// GetKey(FKeyHandle) has mutable + const overloads in UE 5.7;
+			// the mutable overload returns FRichCurveKey&.
+			const FRichCurveKey& K = Curve->FloatCurve.GetKey(Handle);
+
+			TSharedPtr<FJsonObject> KObj = MakeShared<FJsonObject>();
+			KObj->SetNumberField(TEXT("time"), K.Time);
+			KObj->SetNumberField(TEXT("value"), K.Value);
+			KObj->SetStringField(TEXT("interpMode"),
+				InterpModeToString(K.InterpMode.GetValue(), K.TangentMode.GetValue()));
+			Keys.Add(MakeShared<FJsonValueObject>(KObj));
+		}
+
+		TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+		Data->SetStringField(TEXT("assetPath"), Curve->GetPathName());
+		Data->SetArrayField(TEXT("keys"), Keys);
+		Data->SetNumberField(TEXT("keyCount"), Keys.Num());
+		SendSuccess(Self, Socket, RequestId,
+			FString::Printf(TEXT("Fetched %d key(s) from curve '%s'"),
+				Keys.Num(), *Curve->GetName()),
+			Data);
+		return true;
+	}
+
 #endif // WITH_EDITOR
 
 } // namespace McpCurveHandlers
@@ -236,6 +298,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCurveAction(
 	if (SubAction == TEXT("set_curve_keys"))
 	{
 		return McpCurveHandlers::HandleSetCurveKeys(this, RequestId, Payload, RequestingSocket);
+	}
+	if (SubAction == TEXT("get_curve_keys"))
+	{
+		return McpCurveHandlers::HandleGetCurveKeys(this, RequestId, Payload, RequestingSocket);
 	}
 
 	SendAutomationError(RequestingSocket, RequestId,
