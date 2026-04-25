@@ -240,6 +240,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
       ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
   FRotator Rotation =
       ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+  const bool bHasScale = Payload->HasField(TEXT("scale"));
+  const FVector Scale =
+      ExtractVectorField(Payload, TEXT("scale"), FVector::OneVector);
 
   UClass *ResolvedClass = nullptr;
   FString MeshPath;
@@ -407,6 +410,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
                               TEXT("Failed to spawn actor"));
 
     return true;
+  }
+
+  if (bHasScale) {
+    Spawned->SetActorScale3D(Scale);
   }
 
   if (!ActorName.IsEmpty()) {
