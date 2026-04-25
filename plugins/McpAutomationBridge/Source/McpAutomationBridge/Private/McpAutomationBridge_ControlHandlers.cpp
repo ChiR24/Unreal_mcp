@@ -228,6 +228,13 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bo
   return nullptr;
 }
 
+/**
+ * Spawn a native actor from a class or mesh path and apply the requested transform.
+ *
+ * The handler accepts optional `location`, `rotation`, and `scale` payload fields,
+ * applies scale only when explicitly provided, and returns the actual actor scale
+ * so callers can verify the resulting transform without an additional query.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -484,6 +491,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
 #endif
 }
 
+/**
+ * Spawn an actor from a Blueprint class and apply the requested transform fields.
+ *
+ * Blueprint spawning mirrors the regular actor spawn path by accepting optional
+ * `location`, `rotation`, and `scale`, then returning the applied scale in the
+ * response payload for client-side verification.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
