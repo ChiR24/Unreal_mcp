@@ -98,8 +98,13 @@
 // =============================================================================
 // Engine Component Includes
 // =============================================================================
+#include "Camera/CameraComponent.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
+#include "Camera/PlayerCameraManager.h"
+#include "GameFramework/SpringArmComponent.h"
 
 // =============================================================================
 // Editor & Asset Includes
@@ -137,6 +142,205 @@
 // Logging Category
 // =============================================================================
 DEFINE_LOG_CATEGORY_STATIC(LogMcpEnvironmentHandlers, Log, All);
+
+#if WITH_EDITOR
+static TSharedPtr<FJsonObject> McpMakeVectorObject(const FVector &Vector)
+{
+    TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
+    Obj->SetNumberField(TEXT("x"), Vector.X);
+    Obj->SetNumberField(TEXT("y"), Vector.Y);
+    Obj->SetNumberField(TEXT("z"), Vector.Z);
+    return Obj;
+}
+
+static TSharedPtr<FJsonObject> McpMakeRotatorObject(const FRotator &Rotator)
+{
+    TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
+    Obj->SetNumberField(TEXT("pitch"), Rotator.Pitch);
+    Obj->SetNumberField(TEXT("yaw"), Rotator.Yaw);
+    Obj->SetNumberField(TEXT("roll"), Rotator.Roll);
+    return Obj;
+}
+
+static TSharedPtr<FJsonObject> McpMakeTransformObject(const FTransform &Transform)
+{
+    TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
+    Obj->SetObjectField(TEXT("location"), McpMakeVectorObject(Transform.GetLocation()));
+    Obj->SetObjectField(TEXT("rotation"), McpMakeRotatorObject(Transform.GetRotation().Rotator()));
+    Obj->SetObjectField(TEXT("scale"), McpMakeVectorObject(Transform.GetScale3D()));
+    return Obj;
+}
+
+static UWorld *McpGetRuntimeInspectionWorld()
+{
+    if (!GEditor)
+    {
+        return nullptr;
+    }
+
+    if (GEditor->PlayWorld)
+    {
+        return GEditor->PlayWorld.Get();
+    }
+
+    if (GEngine)
+    {
+        for (const FWorldContext &Context : GEngine->GetWorldContexts())
+        {
+            if (Context.WorldType == EWorldType::PIE || Context.WorldType == EWorldType::Game)
+            {
+                if (UWorld *World = Context.World())
+                {
+                    return World;
+                }
+            }
+        }
+    }
+
+    return GEditor->GetEditorWorldContext().World();
+}
+
+static FString McpGetWorldTypeName(UWorld *World)
+{
+    if (!World)
+    {
+        return TEXT("None");
+    }
+
+    switch (World->WorldType)
+    {
+    case EWorldType::PIE:
+        return TEXT("PIE");
+    case EWorldType::Game:
+        return TEXT("Game");
+    case EWorldType::Editor:
+        return TEXT("Editor");
+    case EWorldType::EditorPreview:
+        return TEXT("EditorPreview");
+    case EWorldType::GamePreview:
+        return TEXT("GamePreview");
+    case EWorldType::GameRPC:
+        return TEXT("GameRPC");
+    case EWorldType::Inactive:
+        return TEXT("Inactive");
+    default:
+        return TEXT("Unknown");
+    }
+}
+
+static void McpAddActorTags(TSharedPtr<FJsonObject> Obj, const AActor *Actor)
+{
+    TArray<TSharedPtr<FJsonValue>> TagsArray;
+    if (Actor)
+    {
+        for (const FName &Tag : Actor->Tags)
+        {
+            TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
+        }
+    }
+    Obj->SetArrayField(TEXT("tags"), TagsArray);
+}
+
+static TSharedPtr<FJsonObject> McpDescribeRuntimeComponent(UActorComponent *Component, const TArray<FString> &PropertyNames)
+{
+    TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
+    if (!Component)
+    {
+        return Obj;
+    }
+
+    Obj->SetStringField(TEXT("name"), Component->GetName());
+    Obj->SetStringField(TEXT("path"), Component->GetPathName());
+    Obj->SetStringField(TEXT("class"), Component->GetClass() ? Component->GetClass()->GetName() : TEXT(""));
+    Obj->SetStringField(TEXT("classPath"), Component->GetClass() ? Component->GetClass()->GetPathName() : TEXT(""));
+    Obj->SetBoolField(TEXT("isActive"), Component->IsActive());
+
+    if (USceneComponent *SceneComp = Cast<USceneComponent>(Component))
+    {
+        Obj->SetBoolField(TEXT("isSceneComponent"), true);
+        Obj->SetBoolField(TEXT("isVisible"), SceneComp->IsVisible());
+        Obj->SetObjectField(TEXT("transform"), McpMakeTransformObject(SceneComp->GetComponentTransform()));
+        Obj->SetStringField(TEXT("attachParent"), SceneComp->GetAttachParent() ? SceneComp->GetAttachParent()->GetName() : TEXT(""));
+    }
+
+    if (UCameraComponent *CameraComp = Cast<UCameraComponent>(Component))
+    {
+        Obj->SetBoolField(TEXT("isCamera"), true);
+        Obj->SetNumberField(TEXT("fieldOfView"), CameraComp->FieldOfView);
+        Obj->SetBoolField(TEXT("isActive"), CameraComp->IsActive());
+    }
+
+    if (USpringArmComponent *SpringArm = Cast<USpringArmComponent>(Component))
+    {
+        Obj->SetBoolField(TEXT("isSpringArm"), true);
+        Obj->SetNumberField(TEXT("targetArmLength"), SpringArm->TargetArmLength);
+        Obj->SetBoolField(TEXT("usePawnControlRotation"), SpringArm->bUsePawnControlRotation);
+    }
+
+    if (PropertyNames.Num() > 0)
+    {
+        TSharedPtr<FJsonObject> PropertiesObj = McpHandlerUtils::CreateResultObject();
+        for (const FString &PropertyName : PropertyNames)
+        {
+            if (PropertyName.IsEmpty())
+            {
+                continue;
+            }
+            McpHandlerUtils::FPropertyResolveResult PropResult = McpHandlerUtils::ResolveProperty(Component, PropertyName);
+            if (PropResult.IsValid())
+            {
+                if (TSharedPtr<FJsonValue> Value = ExportPropertyToJsonValue(PropResult.Container, PropResult.Property))
+                {
+                    PropertiesObj->SetField(PropertyName, Value);
+                }
+            }
+        }
+        Obj->SetObjectField(TEXT("properties"), PropertiesObj);
+    }
+
+    return Obj;
+}
+
+static TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FString> &ComponentNames, const TArray<FString> &PropertyNames)
+{
+    TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
+    if (!Actor)
+    {
+        return Obj;
+    }
+
+    Obj->SetStringField(TEXT("name"), Actor->GetName());
+    Obj->SetStringField(TEXT("label"), Actor->GetActorLabel());
+    Obj->SetStringField(TEXT("path"), Actor->GetPathName());
+    Obj->SetStringField(TEXT("class"), Actor->GetClass() ? Actor->GetClass()->GetName() : TEXT(""));
+    Obj->SetStringField(TEXT("classPath"), Actor->GetClass() ? Actor->GetClass()->GetPathName() : TEXT(""));
+    Obj->SetObjectField(TEXT("transform"), McpMakeTransformObject(Actor->GetActorTransform()));
+    McpAddActorTags(Obj, Actor);
+
+    TArray<TSharedPtr<FJsonValue>> ComponentsArray;
+    TInlineComponentArray<UActorComponent *> Components;
+    Actor->GetComponents(Components);
+    for (UActorComponent *Component : Components)
+    {
+        if (!Component)
+        {
+            continue;
+        }
+
+        const bool bRequestedByName = ComponentNames.Num() == 0 || ComponentNames.ContainsByPredicate([Component](const FString &RequestedName) {
+            return Component->GetName().Equals(RequestedName, ESearchCase::IgnoreCase);
+        });
+        const bool bAlwaysReportCameraState = Component->IsA<UCameraComponent>() || Component->IsA<USpringArmComponent>();
+        if (bRequestedByName || bAlwaysReportCameraState)
+        {
+            ComponentsArray.Add(MakeShared<FJsonValueObject>(McpDescribeRuntimeComponent(Component, PropertyNames)));
+        }
+    }
+    Obj->SetArrayField(TEXT("components"), ComponentsArray);
+    Obj->SetNumberField(TEXT("componentCount"), ComponentsArray.Num());
+    return Obj;
+}
+#endif
 
 // =============================================================================
 // Section 1: Build Environment Actions
@@ -1437,7 +1641,9 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         LowerSubAction.Equals(TEXT("find_by_class")) ||
         LowerSubAction.Equals(TEXT("find_by_tag")) ||
         LowerSubAction.Equals(TEXT("inspect_class")) ||
-        LowerSubAction.Equals(TEXT("inspect_cdo"));
+        LowerSubAction.Equals(TEXT("inspect_cdo")) ||
+        LowerSubAction.Equals(TEXT("runtime_report")) ||
+        LowerSubAction.Equals(TEXT("pie_report"));
 
     // Actor actions (delegated to HandleControlActorAction)
     const bool bIsActorAction =
@@ -1622,6 +1828,132 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
             Resp->SetStringField(TEXT("message"), TEXT("Memory stats placeholder - implement with actual metrics"));
             SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Memory stats retrieved"), Resp, FString());
+            return true;
+        }
+        // ---------------------------------------------------------------------
+        // runtime_report / pie_report
+        // ---------------------------------------------------------------------
+        else if (LowerSubAction.Equals(TEXT("runtime_report")) || LowerSubAction.Equals(TEXT("pie_report")))
+        {
+            UWorld *World = McpGetRuntimeInspectionWorld();
+            if (!World)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                                    TEXT("No editor, PIE, or game world available for runtime inspection"),
+                                    TEXT("WORLD_NOT_FOUND"));
+                return true;
+            }
+
+            FString Filter;
+            Payload->TryGetStringField(TEXT("filter"), Filter);
+            FString ActorName;
+            Payload->TryGetStringField(TEXT("actorName"), ActorName);
+            if (ActorName.IsEmpty())
+            {
+                Payload->TryGetStringField(TEXT("name"), ActorName);
+            }
+
+            TArray<FString> ComponentNames;
+            FString ComponentName;
+            if (Payload->TryGetStringField(TEXT("componentName"), ComponentName) && !ComponentName.IsEmpty())
+            {
+                ComponentNames.Add(ComponentName);
+            }
+            const TArray<TSharedPtr<FJsonValue>> *ComponentNamesArray = nullptr;
+            if (Payload->TryGetArrayField(TEXT("componentNames"), ComponentNamesArray) && ComponentNamesArray)
+            {
+                for (const TSharedPtr<FJsonValue> &Value : *ComponentNamesArray)
+                {
+                    if (Value.IsValid() && Value->Type == EJson::String)
+                    {
+                        ComponentNames.Add(Value->AsString());
+                    }
+                }
+            }
+
+            TArray<FString> PropertyNames;
+            FString PropertyName;
+            if (Payload->TryGetStringField(TEXT("propertyName"), PropertyName) && !PropertyName.IsEmpty())
+            {
+                PropertyNames.Add(PropertyName);
+            }
+            const TArray<TSharedPtr<FJsonValue>> *PropertyNamesArray = nullptr;
+            if (Payload->TryGetArrayField(TEXT("propertyNames"), PropertyNamesArray) && PropertyNamesArray)
+            {
+                for (const TSharedPtr<FJsonValue> &Value : *PropertyNamesArray)
+                {
+                    if (Value.IsValid() && Value->Type == EJson::String)
+                    {
+                        PropertyNames.Add(Value->AsString());
+                    }
+                }
+            }
+
+            TSharedPtr<FJsonObject> Report = McpHandlerUtils::CreateResultObject();
+            Report->SetBoolField(TEXT("success"), true);
+            Report->SetStringField(TEXT("worldName"), World->GetName());
+            Report->SetStringField(TEXT("worldType"), McpGetWorldTypeName(World));
+            Report->SetStringField(TEXT("worldPath"), World->GetPathName());
+            Report->SetBoolField(TEXT("isPIE"), World->WorldType == EWorldType::PIE);
+
+            TArray<TSharedPtr<FJsonValue>> ActorsArray;
+            int32 TotalActorCount = 0;
+            for (TActorIterator<AActor> It(World); It; ++It)
+            {
+                AActor *Actor = *It;
+                if (!Actor)
+                {
+                    continue;
+                }
+                ++TotalActorCount;
+
+                const FString Label = Actor->GetActorLabel();
+                const FString Name = Actor->GetName();
+                const bool bMatchesActor = ActorName.IsEmpty() ||
+                    Label.Equals(ActorName, ESearchCase::IgnoreCase) ||
+                    Name.Equals(ActorName, ESearchCase::IgnoreCase) ||
+                    Actor->GetPathName().Equals(ActorName, ESearchCase::IgnoreCase);
+                const bool bMatchesFilter = Filter.IsEmpty() ||
+                    Label.Contains(Filter) ||
+                    Name.Contains(Filter) ||
+                    Actor->GetClass()->GetName().Contains(Filter) ||
+                    Actor->GetPathName().Contains(Filter);
+                if (bMatchesActor && bMatchesFilter)
+                {
+                    ActorsArray.Add(MakeShared<FJsonValueObject>(McpDescribeRuntimeActor(Actor, ComponentNames, PropertyNames)));
+                }
+            }
+            Report->SetArrayField(TEXT("actors"), ActorsArray);
+            Report->SetNumberField(TEXT("count"), ActorsArray.Num());
+            Report->SetNumberField(TEXT("totalActorCount"), TotalActorCount);
+
+            APlayerController *PlayerController = World->GetFirstPlayerController();
+            if (PlayerController)
+            {
+                TSharedPtr<FJsonObject> ControllerObj = McpDescribeRuntimeActor(PlayerController, ComponentNames, PropertyNames);
+                Report->SetObjectField(TEXT("playerController"), ControllerObj);
+
+                if (APawn *Pawn = PlayerController->GetPawn())
+                {
+                    Report->SetObjectField(TEXT("pawn"), McpDescribeRuntimeActor(Pawn, ComponentNames, PropertyNames));
+                }
+
+                if (AActor *ViewTarget = PlayerController->GetViewTarget())
+                {
+                    Report->SetObjectField(TEXT("viewTarget"), McpDescribeRuntimeActor(ViewTarget, ComponentNames, PropertyNames));
+                }
+
+                if (APlayerCameraManager *CameraManager = PlayerController->PlayerCameraManager)
+                {
+                    TSharedPtr<FJsonObject> CameraManagerObj = McpDescribeRuntimeActor(CameraManager, ComponentNames, PropertyNames);
+                    CameraManagerObj->SetObjectField(TEXT("cameraLocation"), McpMakeVectorObject(CameraManager->GetCameraLocation()));
+                    CameraManagerObj->SetObjectField(TEXT("cameraRotation"), McpMakeRotatorObject(CameraManager->GetCameraRotation()));
+                    Report->SetObjectField(TEXT("playerCameraManager"), CameraManagerObj);
+                }
+            }
+
+            SendAutomationResponse(RequestingSocket, RequestId, true,
+                                   TEXT("Runtime inspection report generated"), Report, FString());
             return true;
         }
         // ---------------------------------------------------------------------

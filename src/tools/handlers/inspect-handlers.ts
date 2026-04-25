@@ -34,6 +34,7 @@ const INSPECT_ACTION_ALIASES: Record<string, string> = {
   'get_scene_stats': 'get_scene_stats',
   'get_viewport_info': 'get_viewport_info',
   'get_selected_actors': 'get_selected_actors',
+  'pie_report': 'runtime_report',
 };
 
 /**
@@ -588,6 +589,18 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
         }
         throw err;
       }
+    }
+    case 'runtime_report': {
+      const inspectArgs = args as InspectArgs;
+      return cleanObject(await executeAutomationRequest(tools, 'inspect', {
+        action: 'runtime_report',
+        filter: inspectArgs.filter,
+        actorName: inspectArgs.actorName || inspectArgs.name,
+        componentName: inspectArgs.componentName,
+        componentNames: inspectArgs.componentNames,
+        propertyName: inspectArgs.propertyName || inspectArgs.propertyPath,
+        propertyNames: inspectArgs.propertyNames
+      }) as Record<string, unknown>);
     }
     case 'list_objects':
       return cleanObject(await executeAutomationRequest(tools, 'control_actor', {

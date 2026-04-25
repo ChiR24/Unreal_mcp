@@ -558,6 +558,7 @@ export interface InspectArgs extends HandlerArgs {
     blueprintPath?: string;
     detailed?: boolean;
     propertyNames?: string[];
+    componentNames?: string[];
 }
 
 // ============================================================================
