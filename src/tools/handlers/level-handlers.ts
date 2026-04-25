@@ -226,7 +226,8 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
           classPath,
           actorName: argsTyped.name,
           location: argsTyped.location,
-          rotation: argsTyped.rotation
+          rotation: argsTyped.rotation,
+          scale: argsTyped.scale
         }) as Record<string, unknown>;
         return { ...cleanObject(res), action: 'spawn_light' };
       } catch (_e) {

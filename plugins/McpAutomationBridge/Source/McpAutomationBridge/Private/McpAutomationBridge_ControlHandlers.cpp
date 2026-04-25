@@ -460,6 +460,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     Data->SetStringField(TEXT("meshPath"), ResolvedStaticMesh->GetPathName());
   else if (ResolvedSkeletalMesh)
     Data->SetStringField(TEXT("meshPath"), ResolvedSkeletalMesh->GetPathName());
+
+  auto MakeVectorArray = [](const FVector &Vec) -> TArray<TSharedPtr<FJsonValue>> {
+    TArray<TSharedPtr<FJsonValue>> Values;
+    Values.Add(MakeShared<FJsonValueNumber>(Vec.X));
+    Values.Add(MakeShared<FJsonValueNumber>(Vec.Y));
+    Values.Add(MakeShared<FJsonValueNumber>(Vec.Z));
+    return Values;
+  };
+  Data->SetArrayField(TEXT("scale"), MakeVectorArray(Spawned->GetActorScale3D()));
   
   // Add verification data
   McpHandlerUtils::AddVerification(Data, Spawned);
@@ -493,6 +502,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
       ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
   FRotator Rotation =
       ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+  const bool bHasScale = Payload->HasField(TEXT("scale"));
+  const FVector Scale =
+      ExtractVectorField(Payload, TEXT("scale"), FVector::OneVector);
 
   UClass *ResolvedClass = nullptr;
 
@@ -563,6 +575,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
     return true;
   }
 
+  if (bHasScale) {
+    Spawned->SetActorScale3D(Scale);
+  }
+
   if (!ActorName.IsEmpty())
     Spawned->SetActorLabel(ActorName);
 
@@ -580,6 +596,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   // actorPath for convenience
   Resp->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
   Resp->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
+  auto MakeVectorArray = [](const FVector &Vec) -> TArray<TSharedPtr<FJsonValue>> {
+    TArray<TSharedPtr<FJsonValue>> Values;
+    Values.Add(MakeShared<FJsonValueNumber>(Vec.X));
+    Values.Add(MakeShared<FJsonValueNumber>(Vec.Y));
+    Values.Add(MakeShared<FJsonValueNumber>(Vec.Z));
+    return Values;
+  };
+  Resp->SetArrayField(TEXT("scale"), MakeVectorArray(Spawned->GetActorScale3D()));
   
   // Add verification data
   McpHandlerUtils::AddVerification(Resp, Spawned);

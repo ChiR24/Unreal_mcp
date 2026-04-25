@@ -91,6 +91,7 @@ const handlers: Record<string, ActorActionHandler> = {
             actorName,
             location: args.location,
             rotation: args.rotation,
+            scale: args.scale,
             meshPath: typeof args.meshPath === 'string' ? args.meshPath : undefined
         };
         if (componentToAdd) {
