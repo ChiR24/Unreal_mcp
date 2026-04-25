@@ -73,7 +73,7 @@ FKey McpInputKeyFromName(const FString& KeyName)
 /** Adds verified mapping readback for an action after key-specific edits. */
 void AddInputMappingSummary(
     TSharedPtr<FJsonObject> Result,
-    UInputMappingContext* Context,
+    const UInputMappingContext* Context,
     const UInputAction* InAction)
 {
     TArray<TSharedPtr<FJsonValue>> Mappings;
@@ -91,7 +91,7 @@ void AddInputMappingSummary(
         Mappings.Add(MakeShared<FJsonValueObject>(MappingObject));
     }
 
-    Result->SetNumberField(TEXT("remainingMappingCount"), Mappings.Num());
+    Result->SetNumberField(TEXT("mappingCount"), Mappings.Num());
     Result->SetArrayField(TEXT("mappings"), Mappings);
 }
 
@@ -124,10 +124,10 @@ UInputModifier* CreateInputModifierForType(const FString& ModifierType, UObject*
     }
     if (ModifierType == TEXT("ScaleByDeltaTime") || ModifierType == TEXT("InputModifierScaleByDeltaTime"))
     {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5
         return NewObject<UInputModifierScaleByDeltaTime>(Outer);
 #else
-        return NewObject<UInputModifierScalar>(Outer);
+        return nullptr;
 #endif
     }
     if (ModifierType == TEXT("ToWorldSpace") || ModifierType == TEXT("InputModifierToWorldSpace"))
@@ -495,8 +495,10 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
         AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
         AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
 
-        SendAutomationResponse(RequestingSocket, RequestId, true,
-            TEXT("Mappings removed for action."), Result);
+        const FString SuccessMessage = bHasSpecificKey
+            ? FString::Printf(TEXT("Mapping removed for action key: %s"), *KeyName)
+            : TEXT("Mappings removed for action.");
+        SendAutomationResponse(RequestingSocket, RequestId, true, SuccessMessage, Result);
         return true;
     }
 
@@ -679,7 +681,8 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
                 return true;
             }
 
-            for (int32 MappingIndex = 0; MappingIndex < Context->GetMappings().Num(); ++MappingIndex)
+            const int32 MappingCount = Context->GetMappings().Num();
+            for (int32 MappingIndex = 0; MappingIndex < MappingCount; ++MappingIndex)
             {
                 FEnhancedActionKeyMapping& Mapping = Context->GetMapping(MappingIndex);
                 if (Mapping.Action == InAction && Mapping.Key == RequestedKey)
