@@ -82,6 +82,14 @@
 // Handler Implementation
 // =============================================================================
 
+/**
+ * Dispatch and execute native lighting actions for the automation bridge.
+ *
+ * `manage_lighting` requests are routed through their payload `action` field so
+ * consolidated-tool calls reach the same sub-action handlers as direct bridge
+ * calls. Light spawning keeps the UE 5.7 safe deferred-spawn path and returns a
+ * response only after the actor is created and verified.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
