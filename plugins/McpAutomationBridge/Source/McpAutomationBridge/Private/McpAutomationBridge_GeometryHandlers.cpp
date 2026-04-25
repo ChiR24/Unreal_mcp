@@ -685,10 +685,13 @@ static bool HandleCreatePlane(UMcpAutomationBridgeSubsystem* Self, const FString
     if (Name.IsEmpty()) Name = TEXT("GeneratedPlane");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double Width = GetNumberFieldGeom(Payload, TEXT("width"), 100.0);
-    double Depth = GetNumberFieldGeom(Payload, TEXT("depth"), 100.0);
-    int32 WidthSubdivisions = GetIntFieldGeom(Payload, TEXT("widthSubdivisions"), 1);
-    int32 DepthSubdivisions = GetIntFieldGeom(Payload, TEXT("depthSubdivisions"), 1);
+    double Width = ClampDimension(GetNumberFieldGeom(Payload, TEXT("width"), 100.0));
+    double Height = ClampDimension(GetNumberFieldGeom(
+        Payload, TEXT("height"), GetNumberFieldGeom(Payload, TEXT("depth"), 100.0)));
+    int32 WidthSubdivisions = ClampSegments(GetIntFieldGeom(
+        Payload, TEXT("widthSegments"), GetIntFieldGeom(Payload, TEXT("widthSubdivisions"), 1)));
+    int32 HeightSubdivisions = ClampSegments(GetIntFieldGeom(
+        Payload, TEXT("heightSegments"), GetIntFieldGeom(Payload, TEXT("depthSubdivisions"), 1)));
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -697,8 +700,8 @@ double Width = GetNumberFieldGeom(Payload, TEXT("width"), 100.0);
         DynMesh,
         Options,
         Transform,
-        Width, Depth,
-        WidthSubdivisions, DepthSubdivisions,
+        Width, Height,
+        WidthSubdivisions, HeightSubdivisions,
         nullptr
     );
 
@@ -728,6 +731,10 @@ double Width = GetNumberFieldGeom(Payload, TEXT("width"), 100.0);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
+    Result->SetNumberField(TEXT("width"), Width);
+    Result->SetNumberField(TEXT("height"), Height);
+    Result->SetNumberField(TEXT("widthSegments"), WidthSubdivisions);
+    Result->SetNumberField(TEXT("heightSegments"), HeightSubdivisions);
 
     // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
