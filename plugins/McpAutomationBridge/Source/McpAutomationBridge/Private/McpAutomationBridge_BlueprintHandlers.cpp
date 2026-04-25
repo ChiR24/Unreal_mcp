@@ -2318,17 +2318,35 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       AlphaNumLower.Contains(TEXT("addscscomponent"))) {
     FString BPPath;
     Payload->TryGetStringField(TEXT("blueprint_path"), BPPath);
+    if (BPPath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("blueprintPath"), BPPath);
+    }
     FString CompClass;
     Payload->TryGetStringField(TEXT("component_class"), CompClass);
+    if (CompClass.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("componentClass"), CompClass);
+    }
     FString CompName;
     Payload->TryGetStringField(TEXT("component_name"), CompName);
+    if (CompName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("componentName"), CompName);
+    }
     FString ParentName;
     Payload->TryGetStringField(TEXT("parent_component"), ParentName);
+    if (ParentName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("parentComponent"), ParentName);
+    }
     // Feature #1, #2: Extract mesh and material paths for assignment
     FString MeshPath;
     Payload->TryGetStringField(TEXT("mesh_path"), MeshPath);
+    if (MeshPath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("meshPath"), MeshPath);
+    }
     FString MaterialPath;
     Payload->TryGetStringField(TEXT("material_path"), MaterialPath);
+    if (MaterialPath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("materialPath"), MaterialPath);
+    }
     TSharedPtr<FJsonObject> Result = FSCSHandlers::AddSCSComponent(
         BPPath, CompClass, CompName, ParentName, MeshPath, MaterialPath);
     SendAutomationResponse(RequestingSocket, RequestId,
@@ -2343,8 +2361,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       AlphaNumLower.Contains(TEXT("removescscomponent"))) {
     FString BPPath;
     Payload->TryGetStringField(TEXT("blueprint_path"), BPPath);
+    if (BPPath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("blueprintPath"), BPPath);
+    }
     FString CompName;
     Payload->TryGetStringField(TEXT("component_name"), CompName);
+    if (CompName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("componentName"), CompName);
+    }
     TSharedPtr<FJsonObject> Result =
         FSCSHandlers::RemoveSCSComponent(BPPath, CompName);
     SendAutomationResponse(RequestingSocket, RequestId,
@@ -2359,10 +2383,19 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       AlphaNumLower.Contains(TEXT("reparentscscomponent"))) {
     FString BPPath;
     Payload->TryGetStringField(TEXT("blueprint_path"), BPPath);
+    if (BPPath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("blueprintPath"), BPPath);
+    }
     FString CompName;
     Payload->TryGetStringField(TEXT("component_name"), CompName);
+    if (CompName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("componentName"), CompName);
+    }
     FString NewParent;
     Payload->TryGetStringField(TEXT("new_parent"), NewParent);
+    if (NewParent.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("newParent"), NewParent);
+    }
     TSharedPtr<FJsonObject> Result =
         FSCSHandlers::ReparentSCSComponent(BPPath, CompName, NewParent);
     SendAutomationResponse(RequestingSocket, RequestId,
@@ -2374,11 +2407,19 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 
   // set_scs_component_transform: set component transform in SCS
   if (ActionMatchesPattern(TEXT("set_scs_component_transform")) ||
-      AlphaNumLower.Contains(TEXT("setscscomponenttransform"))) {
+      ActionMatchesPattern(TEXT("set_scs_transform")) ||
+      AlphaNumLower.Contains(TEXT("setscscomponenttransform")) ||
+      AlphaNumLower.Contains(TEXT("setscstransform"))) {
     FString BPPath;
     Payload->TryGetStringField(TEXT("blueprint_path"), BPPath);
+    if (BPPath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("blueprintPath"), BPPath);
+    }
     FString CompName;
     Payload->TryGetStringField(TEXT("component_name"), CompName);
+    if (CompName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("componentName"), CompName);
+    }
     TSharedPtr<FJsonObject> Result =
         FSCSHandlers::SetSCSComponentTransform(BPPath, CompName, Payload);
     SendAutomationResponse(RequestingSocket, RequestId,
@@ -2390,17 +2431,30 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 
   // set_scs_component_property: set component property in SCS
   if (ActionMatchesPattern(TEXT("set_scs_component_property")) ||
-      AlphaNumLower.Contains(TEXT("setscscomponentproperty"))) {
+      ActionMatchesPattern(TEXT("set_scs_property")) ||
+      AlphaNumLower.Contains(TEXT("setscscomponentproperty")) ||
+      AlphaNumLower.Contains(TEXT("setscsproperty"))) {
     FString BPPath;
     Payload->TryGetStringField(TEXT("blueprint_path"), BPPath);
+    if (BPPath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("blueprintPath"), BPPath);
+    }
     FString CompName;
     Payload->TryGetStringField(TEXT("component_name"), CompName);
+    if (CompName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("componentName"), CompName);
+    }
     FString PropName;
     Payload->TryGetStringField(TEXT("property_name"), PropName);
+    if (PropName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("propertyName"), PropName);
+    }
     const TSharedPtr<FJsonValue> PropVal =
         Payload->TryGetField(TEXT("property_value"));
+    const TSharedPtr<FJsonValue> ResolvedPropVal =
+        PropVal.IsValid() ? PropVal : Payload->TryGetField(TEXT("value"));
     TSharedPtr<FJsonObject> Result = FSCSHandlers::SetSCSComponentProperty(
-        BPPath, CompName, PropName, PropVal);
+        BPPath, CompName, PropName, ResolvedPropVal);
     SendAutomationResponse(RequestingSocket, RequestId,
                            GetJsonBoolField(Result, TEXT("success")),
                            SafeGetStr(Result, TEXT("message")), Result,
