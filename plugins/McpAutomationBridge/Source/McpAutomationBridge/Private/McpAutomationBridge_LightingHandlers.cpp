@@ -108,24 +108,36 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
         }
     }
     const FString Lower = EffectiveAction.ToLower();
-    if (!Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase) &&
-        !Lower.StartsWith(TEXT("spawn_light")) &&
-        !Lower.StartsWith(TEXT("spawn_sky_light")) &&
-        !Lower.StartsWith(TEXT("create_sky_light")) &&
-        !Lower.StartsWith(TEXT("create_light")) &&
-        !Lower.StartsWith(TEXT("build_lighting")) &&
-        !Lower.StartsWith(TEXT("bake_lightmap")) &&
-        !Lower.StartsWith(TEXT("ensure_single_sky_light")) &&
-        !Lower.StartsWith(TEXT("create_lighting_enabled_level")) &&
-        !Lower.StartsWith(TEXT("create_lightmass_volume")) &&
-        !Lower.StartsWith(TEXT("create_dynamic_light")) &&
-        !Lower.StartsWith(TEXT("setup_volumetric_fog")) &&
-        !Lower.StartsWith(TEXT("setup_global_illumination")) &&
-        !Lower.StartsWith(TEXT("configure_shadows")) &&
-        !Lower.StartsWith(TEXT("set_exposure")) &&
-        !Lower.StartsWith(TEXT("list_light_types")) &&
-        !Lower.StartsWith(TEXT("set_ambient_occlusion")))
+    const bool bKnownLightingAction =
+        Lower.StartsWith(TEXT("spawn_light")) ||
+        Lower.StartsWith(TEXT("spawn_sky_light")) ||
+        Lower.StartsWith(TEXT("create_sky_light")) ||
+        Lower.StartsWith(TEXT("create_light")) ||
+        Lower.StartsWith(TEXT("build_lighting")) ||
+        Lower.StartsWith(TEXT("bake_lightmap")) ||
+        Lower.StartsWith(TEXT("ensure_single_sky_light")) ||
+        Lower.StartsWith(TEXT("create_lighting_enabled_level")) ||
+        Lower.StartsWith(TEXT("create_lightmass_volume")) ||
+        Lower.StartsWith(TEXT("create_dynamic_light")) ||
+        Lower.StartsWith(TEXT("setup_volumetric_fog")) ||
+        Lower.StartsWith(TEXT("setup_global_illumination")) ||
+        Lower.StartsWith(TEXT("configure_shadows")) ||
+        Lower.StartsWith(TEXT("set_exposure")) ||
+        Lower.StartsWith(TEXT("list_light_types")) ||
+        Lower.StartsWith(TEXT("set_ambient_occlusion"));
+    if (!bKnownLightingAction)
     {
+        if (Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase))
+        {
+            const bool bMissingSubAction = EffectiveAction.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase);
+            SendAutomationError(RequestingSocket, RequestId,
+                bMissingSubAction
+                    ? TEXT("manage_lighting requires a non-empty 'action' field in payload")
+                    : FString::Printf(TEXT("Unknown manage_lighting action: %s"), *EffectiveAction),
+                bMissingSubAction ? TEXT("INVALID_ARGUMENT") : TEXT("UNKNOWN_ACTION"));
+            return true;
+        }
+
         return false;
     }
 
@@ -370,13 +382,8 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
             ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
         // CRITICAL: Validate world before spawning to prevent crashes
-        // Use the active editor world instead of EditorActorSubsystem->GetWorld(),
-        // which can be null for editor utility subsystems.
-        UWorld* World = nullptr;
-        if (GEditor)
-        {
-            World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
-        }
+        // Use the editor world for persistent authoring instead of transient PIE worlds.
+        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
         if (!World || !World->IsValidLowLevel())
         {
             SendAutomationError(RequestingSocket, RequestId,
