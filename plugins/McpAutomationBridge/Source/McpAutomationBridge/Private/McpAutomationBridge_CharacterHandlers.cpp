@@ -157,7 +157,10 @@
 //   Payload:  { "blueprintPath": string }
 //   Response: { "blueprintPath": string, "assetName": string, "capsuleRadius": number,
 //               "capsuleHalfHeight": number, "walkSpeed": number, "jumpZVelocity": number,
-//               "hasSpringArm": bool, "hasCamera": bool, "movementVariables"?: string[] }
+//               "hasSpringArm": bool, "hasCamera": bool,
+//               "springArmTemplates": object[], "cameraTemplates": object[],
+//               "bFindCameraComponentWhenViewTarget"?: bool, "playerViewState": object,
+//               "movementVariables"?: string[] }
 //
 // VERSION COMPATIBILITY:
 // ----------------------
@@ -349,32 +352,6 @@ static TSharedPtr<FJsonObject> CreateSpringArmComponentReportChar(const USpringA
     Report->SetObjectField(TEXT("worldLocation"), VectorToJsonChar(SpringArm->GetComponentLocation()));
     Report->SetObjectField(TEXT("worldRotation"), RotatorToJsonChar(SpringArm->GetComponentRotation()));
     return Report;
-}
-
-static void AddCharacterCameraReportsChar(AActor* Actor, TSharedPtr<FJsonObject> Result)
-{
-    if (!Actor || !Result.IsValid())
-    {
-        return;
-    }
-
-    TArray<UCameraComponent*> Cameras;
-    Actor->GetComponents<UCameraComponent>(Cameras);
-    TArray<TSharedPtr<FJsonValue>> CameraReports;
-    for (const UCameraComponent* Camera : Cameras)
-    {
-        CameraReports.Add(MakeShared<FJsonValueObject>(CreateCameraComponentReportChar(Camera)));
-    }
-    Result->SetArrayField(TEXT("cameraComponents"), CameraReports);
-
-    TArray<USpringArmComponent*> SpringArms;
-    Actor->GetComponents<USpringArmComponent>(SpringArms);
-    TArray<TSharedPtr<FJsonValue>> SpringArmReports;
-    for (const USpringArmComponent* SpringArm : SpringArms)
-    {
-        SpringArmReports.Add(MakeShared<FJsonValueObject>(CreateSpringArmComponentReportChar(SpringArm)));
-    }
-    Result->SetArrayField(TEXT("springArmComponents"), SpringArmReports);
 }
 
 static void AddPlayerViewStateReportChar(UWorld* World, TSharedPtr<FJsonObject> Result)
@@ -1842,7 +1819,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // get_character_info
     // -------------------------------------------------------------------------
     // Retrieves comprehensive info about a Character Blueprint including:
-    // capsule dimensions, movement speeds, jump settings, camera setup,
+    // capsule dimensions, movement speeds, jump settings, Blueprint camera
+    // templates, active camera discovery flags, PIE player view state,
     // and all movement-related Blueprint variables.
     //
     // Payload:  { "blueprintPath": string }
@@ -1850,6 +1828,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     //             "capsuleRadius": number, "capsuleHalfHeight": number,
     //             "walkSpeed": number, "jumpZVelocity": number, "airControl": number,
     //             "hasSpringArm": bool, "hasCamera": bool,
+    //             "springArmTemplates": object[], "cameraTemplates": object[],
+    //             "bFindCameraComponentWhenViewTarget"?: bool, "playerViewState": object,
     //             "movementVariables"?: string[] }
     // -------------------------------------------------------------------------
     if (SubAction == TEXT("get_character_info"))
@@ -1913,7 +1893,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
                     bHasSpringArm = true;
                     SpringArmTemplates.Add(MakeShared<FJsonValueObject>(CreateSpringArmComponentReportChar(SpringArm)));
                 }
-                if (UCameraComponent* Camera = Cast<UCameraComponent>(Node->ComponentTemplate))
+                else if (UCameraComponent* Camera = Cast<UCameraComponent>(Node->ComponentTemplate))
                 {
                     bHasCamera = true;
                     CameraTemplates.Add(MakeShared<FJsonValueObject>(CreateCameraComponentReportChar(Camera)));
@@ -1928,7 +1908,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         if (CharCDO)
         {
             Result->SetBoolField(TEXT("bFindCameraComponentWhenViewTarget"), CharCDO->bFindCameraComponentWhenViewTarget);
-            AddCharacterCameraReportsChar(CharCDO, Result);
         }
 
         UWorld* PIEWorld = (GEditor && GEditor->PlayWorld) ? GEditor->PlayWorld.Get() : nullptr;

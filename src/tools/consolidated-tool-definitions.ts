@@ -2218,6 +2218,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             orientToMovement: commonSchemas.booleanProp,
             hasSpringArm: commonSchemas.booleanProp,
             hasCamera: commonSchemas.booleanProp,
+            springArmTemplates: { ...commonSchemas.arrayOfObjects, description: 'Spring arm component templates on the Character Blueprint.' },
+            cameraTemplates: { ...commonSchemas.arrayOfObjects, description: 'Camera component templates on the Character Blueprint.' },
+            bFindCameraComponentWhenViewTarget: commonSchemas.booleanProp,
+            playerViewState: { ...commonSchemas.objectProp, description: 'Active PIE player controller, pawn, view target, and PlayerCameraManager state.' },
+            movementVariables: commonSchemas.arrayOfStrings,
             customMovementModes: commonSchemas.arrayOfStrings
           }
         },
