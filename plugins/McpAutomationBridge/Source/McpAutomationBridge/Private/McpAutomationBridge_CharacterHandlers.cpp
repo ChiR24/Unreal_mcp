@@ -220,6 +220,9 @@
 // Camera Includes
 // =============================================================================
 #include "Camera/CameraComponent.h"
+#include "Camera/PlayerCameraManager.h"
+#include "EngineUtils.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 
 // =============================================================================
@@ -270,6 +273,164 @@ static bool SavePackageHelperChar(UPackage* Package, UObject* Asset)
     McpSafeAssetSave(Asset);
     return true;
 }
+
+#if WITH_EDITOR
+
+static TSharedPtr<FJsonObject> VectorToJsonChar(const FVector& Vector)
+{
+    TSharedPtr<FJsonObject> Json = MakeShared<FJsonObject>();
+    Json->SetNumberField(TEXT("x"), Vector.X);
+    Json->SetNumberField(TEXT("y"), Vector.Y);
+    Json->SetNumberField(TEXT("z"), Vector.Z);
+    return Json;
+}
+
+static TSharedPtr<FJsonObject> RotatorToJsonChar(const FRotator& Rotator)
+{
+    TSharedPtr<FJsonObject> Json = MakeShared<FJsonObject>();
+    Json->SetNumberField(TEXT("pitch"), Rotator.Pitch);
+    Json->SetNumberField(TEXT("yaw"), Rotator.Yaw);
+    Json->SetNumberField(TEXT("roll"), Rotator.Roll);
+    return Json;
+}
+
+static FString GetSceneComponentParentNameChar(const USceneComponent* Component)
+{
+    if (!Component)
+    {
+        return TEXT("");
+    }
+
+    const USceneComponent* Parent = Component->GetAttachParent();
+    return Parent ? Parent->GetName() : TEXT("");
+}
+
+static TSharedPtr<FJsonObject> CreateCameraComponentReportChar(const UCameraComponent* Camera)
+{
+    TSharedPtr<FJsonObject> Report = MakeShared<FJsonObject>();
+    if (!Camera)
+    {
+        return Report;
+    }
+
+    Report->SetStringField(TEXT("name"), Camera->GetName());
+    Report->SetStringField(TEXT("class"), Camera->GetClass()->GetName());
+    Report->SetStringField(TEXT("attachParent"), GetSceneComponentParentNameChar(Camera));
+    Report->SetBoolField(TEXT("active"), Camera->IsActive());
+    Report->SetBoolField(TEXT("visible"), Camera->IsVisible());
+    Report->SetBoolField(TEXT("usePawnControlRotation"), Camera->bUsePawnControlRotation);
+    Report->SetNumberField(TEXT("fieldOfView"), Camera->FieldOfView);
+    Report->SetObjectField(TEXT("relativeLocation"), VectorToJsonChar(Camera->GetRelativeLocation()));
+    Report->SetObjectField(TEXT("relativeRotation"), RotatorToJsonChar(Camera->GetRelativeRotation()));
+    Report->SetObjectField(TEXT("worldLocation"), VectorToJsonChar(Camera->GetComponentLocation()));
+    Report->SetObjectField(TEXT("worldRotation"), RotatorToJsonChar(Camera->GetComponentRotation()));
+    return Report;
+}
+
+static TSharedPtr<FJsonObject> CreateSpringArmComponentReportChar(const USpringArmComponent* SpringArm)
+{
+    TSharedPtr<FJsonObject> Report = MakeShared<FJsonObject>();
+    if (!SpringArm)
+    {
+        return Report;
+    }
+
+    Report->SetStringField(TEXT("name"), SpringArm->GetName());
+    Report->SetStringField(TEXT("class"), SpringArm->GetClass()->GetName());
+    Report->SetStringField(TEXT("attachParent"), GetSceneComponentParentNameChar(SpringArm));
+    Report->SetBoolField(TEXT("active"), SpringArm->IsActive());
+    Report->SetBoolField(TEXT("visible"), SpringArm->IsVisible());
+    Report->SetNumberField(TEXT("targetArmLength"), SpringArm->TargetArmLength);
+    Report->SetBoolField(TEXT("usePawnControlRotation"), SpringArm->bUsePawnControlRotation);
+    Report->SetBoolField(TEXT("enableCameraLag"), SpringArm->bEnableCameraLag);
+    Report->SetNumberField(TEXT("cameraLagSpeed"), SpringArm->CameraLagSpeed);
+    Report->SetObjectField(TEXT("relativeLocation"), VectorToJsonChar(SpringArm->GetRelativeLocation()));
+    Report->SetObjectField(TEXT("relativeRotation"), RotatorToJsonChar(SpringArm->GetRelativeRotation()));
+    Report->SetObjectField(TEXT("worldLocation"), VectorToJsonChar(SpringArm->GetComponentLocation()));
+    Report->SetObjectField(TEXT("worldRotation"), RotatorToJsonChar(SpringArm->GetComponentRotation()));
+    return Report;
+}
+
+static void AddCharacterCameraReportsChar(AActor* Actor, TSharedPtr<FJsonObject> Result)
+{
+    if (!Actor || !Result.IsValid())
+    {
+        return;
+    }
+
+    TArray<UCameraComponent*> Cameras;
+    Actor->GetComponents<UCameraComponent>(Cameras);
+    TArray<TSharedPtr<FJsonValue>> CameraReports;
+    for (const UCameraComponent* Camera : Cameras)
+    {
+        CameraReports.Add(MakeShared<FJsonValueObject>(CreateCameraComponentReportChar(Camera)));
+    }
+    Result->SetArrayField(TEXT("cameraComponents"), CameraReports);
+
+    TArray<USpringArmComponent*> SpringArms;
+    Actor->GetComponents<USpringArmComponent>(SpringArms);
+    TArray<TSharedPtr<FJsonValue>> SpringArmReports;
+    for (const USpringArmComponent* SpringArm : SpringArms)
+    {
+        SpringArmReports.Add(MakeShared<FJsonValueObject>(CreateSpringArmComponentReportChar(SpringArm)));
+    }
+    Result->SetArrayField(TEXT("springArmComponents"), SpringArmReports);
+}
+
+static void AddPlayerViewStateReportChar(UWorld* World, TSharedPtr<FJsonObject> Result)
+{
+    TSharedPtr<FJsonObject> ViewState = MakeShared<FJsonObject>();
+    ViewState->SetBoolField(TEXT("isPIE"), World && World->WorldType == EWorldType::PIE);
+
+    if (!World)
+    {
+        ViewState->SetStringField(TEXT("status"), TEXT("No active PIE world"));
+        Result->SetObjectField(TEXT("playerViewState"), ViewState);
+        return;
+    }
+
+    APlayerController* PlayerController = World->GetFirstPlayerController();
+    if (!PlayerController)
+    {
+        ViewState->SetStringField(TEXT("status"), TEXT("No player controller"));
+        Result->SetObjectField(TEXT("playerViewState"), ViewState);
+        return;
+    }
+
+    ViewState->SetStringField(TEXT("playerController"), PlayerController->GetName());
+    ViewState->SetStringField(TEXT("playerControllerClass"), PlayerController->GetClass()->GetName());
+
+    APawn* Pawn = PlayerController->GetPawn();
+    if (Pawn)
+    {
+        ViewState->SetStringField(TEXT("pawn"), Pawn->GetName());
+        ViewState->SetStringField(TEXT("pawnClass"), Pawn->GetClass()->GetName());
+        ViewState->SetBoolField(TEXT("bFindCameraComponentWhenViewTarget"), Pawn->bFindCameraComponentWhenViewTarget);
+    }
+
+    AActor* ViewTarget = PlayerController->GetViewTarget();
+    if (ViewTarget)
+    {
+        ViewState->SetStringField(TEXT("viewTarget"), ViewTarget->GetName());
+        ViewState->SetStringField(TEXT("viewTargetClass"), ViewTarget->GetClass()->GetName());
+        ViewState->SetBoolField(TEXT("viewTargetFindsCameraComponent"), ViewTarget->bFindCameraComponentWhenViewTarget);
+    }
+
+    APlayerCameraManager* CameraManager = PlayerController->PlayerCameraManager;
+    if (CameraManager)
+    {
+        TSharedPtr<FJsonObject> CameraManagerJson = MakeShared<FJsonObject>();
+        CameraManagerJson->SetStringField(TEXT("name"), CameraManager->GetName());
+        CameraManagerJson->SetObjectField(TEXT("location"), VectorToJsonChar(CameraManager->GetCameraLocation()));
+        CameraManagerJson->SetObjectField(TEXT("rotation"), RotatorToJsonChar(CameraManager->GetCameraRotation()));
+        CameraManagerJson->SetNumberField(TEXT("fov"), CameraManager->GetFOVAngle());
+        ViewState->SetObjectField(TEXT("playerCameraManager"), CameraManagerJson);
+    }
+
+    Result->SetObjectField(TEXT("playerViewState"), ViewState);
+}
+
+#endif // WITH_EDITOR
 
 /**
  * SetBPVarDefaultValue - Set blueprint variable default value (multi-version compatible)
@@ -1738,19 +1899,40 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
             Result->SetBoolField(TEXT("useControllerRotationYaw"), CharCDO->bUseControllerRotationYaw);
         }
 
-        // Check for spring arm and camera
+        // Check for spring arm and camera templates on the Blueprint asset.
         bool bHasSpringArm = false;
         bool bHasCamera = false;
+        TArray<TSharedPtr<FJsonValue>> SpringArmTemplates;
+        TArray<TSharedPtr<FJsonValue>> CameraTemplates;
         for (USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
         {
             if (Node && Node->ComponentTemplate)
             {
-                if (Node->ComponentTemplate->IsA<USpringArmComponent>()) bHasSpringArm = true;
-                if (Node->ComponentTemplate->IsA<UCameraComponent>()) bHasCamera = true;
+                if (USpringArmComponent* SpringArm = Cast<USpringArmComponent>(Node->ComponentTemplate))
+                {
+                    bHasSpringArm = true;
+                    SpringArmTemplates.Add(MakeShared<FJsonValueObject>(CreateSpringArmComponentReportChar(SpringArm)));
+                }
+                if (UCameraComponent* Camera = Cast<UCameraComponent>(Node->ComponentTemplate))
+                {
+                    bHasCamera = true;
+                    CameraTemplates.Add(MakeShared<FJsonValueObject>(CreateCameraComponentReportChar(Camera)));
+                }
             }
         }
         Result->SetBoolField(TEXT("hasSpringArm"), bHasSpringArm);
         Result->SetBoolField(TEXT("hasCamera"), bHasCamera);
+        Result->SetArrayField(TEXT("springArmTemplates"), SpringArmTemplates);
+        Result->SetArrayField(TEXT("cameraTemplates"), CameraTemplates);
+
+        if (CharCDO)
+        {
+            Result->SetBoolField(TEXT("bFindCameraComponentWhenViewTarget"), CharCDO->bFindCameraComponentWhenViewTarget);
+            AddCharacterCameraReportsChar(CharCDO, Result);
+        }
+
+        UWorld* PIEWorld = (GEditor && GEditor->PlayWorld) ? GEditor->PlayWorld.Get() : nullptr;
+        AddPlayerViewStateReportChar(PIEWorld, Result);
 
         // List blueprint variables related to movement states
         TArray<TSharedPtr<FJsonValue>> MovementVars;
