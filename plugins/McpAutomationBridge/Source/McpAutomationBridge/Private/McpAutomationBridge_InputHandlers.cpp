@@ -648,6 +648,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
 
         UObject* ModifierOuter = InAction;
         UInputMappingContext* Context = nullptr;
+        FString SanitizedContextPath;
         FEnhancedActionKeyMapping* TargetMapping = nullptr;
         FKey RequestedKey = McpInputKeyFromName(KeyName);
 
@@ -660,7 +661,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
                 return true;
             }
 
-            FString SanitizedContextPath = SanitizeProjectRelativePath(ContextPath);
+            SanitizedContextPath = SanitizeProjectRelativePath(ContextPath);
             if (SanitizedContextPath.IsEmpty())
             {
                 SendAutomationError(RequestingSocket, RequestId,
@@ -711,11 +712,13 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
 
         if (TargetMapping)
         {
+            Context->Modify();
             TargetMapping->Modifiers.Add(NewModifier);
             SaveLoadedAssetThrottled(Context, -1.0, true);
         }
         else
         {
+            InAction->Modify();
             InAction->Modifiers.Add(NewModifier);
             SaveLoadedAssetThrottled(InAction, -1.0, true);
         }
@@ -727,7 +730,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
         Result->SetStringField(TEXT("target"), TargetMapping ? TEXT("mapping") : TEXT("action"));
         if (TargetMapping)
         {
-            Result->SetStringField(TEXT("contextPath"), SanitizeProjectRelativePath(ContextPath));
+            Result->SetStringField(TEXT("contextPath"), SanitizedContextPath);
             Result->SetStringField(TEXT("key"), KeyName);
             Result->SetNumberField(TEXT("mappingModifierCount"), TargetMapping->Modifiers.Num());
             AddInputMappingSummary(Result, Context, InAction);

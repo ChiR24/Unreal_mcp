@@ -858,7 +858,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         triggerType: commonSchemas.stringProp,
         modifierType: commonSchemas.stringProp,
         assetPath: commonSchemas.assetPath,
-        priority: { type: 'number', description: 'Priority for input mapping context (default: 0).' }
+        priority: { type: 'number', description: 'Priority for input mapping context (default: 0).' },
+        timeoutMs: commonSchemas.numberProp
       },
       required: ['action']
     },
