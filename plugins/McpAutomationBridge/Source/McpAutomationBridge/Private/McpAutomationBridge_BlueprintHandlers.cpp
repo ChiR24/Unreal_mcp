@@ -1465,8 +1465,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       if (FChar::IsAlnum(C))
         PatternAlpha.AppendChar(C);
     }
-    const bool bExactOrContains =
-        (Lower.Equals(PatternStr) || Lower.Contains(PatternStr));
+    const bool bExactOrContains = Lower.Equals(PatternStr);
     const bool bAlphaMatch =
         (!AlphaNumLower.IsEmpty() && !PatternAlpha.IsEmpty() &&
          AlphaNumLower.Contains(PatternAlpha));
