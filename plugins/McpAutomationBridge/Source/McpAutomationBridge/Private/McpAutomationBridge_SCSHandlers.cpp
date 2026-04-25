@@ -790,7 +790,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
       const TArray<USCS_Node *> &Roots = SCS->GetRootNodes();
       // Prefer an explicit DefaultSceneRoot if present
       for (USCS_Node *R : Roots) {
-        if (R && R->GetVariableName().IsValid() &&
+        if (R && R != ComponentNode && R->GetVariableName().IsValid() &&
             R->GetVariableName().ToString().Equals(TEXT("DefaultSceneRoot"),
                                                    ESearchCase::IgnoreCase)) {
           NewParentNode = R;
@@ -832,6 +832,16 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
       AddSCSNodeVerification(Result, SCS, ComponentNode);
       return Result;
     }
+  }
+
+  if (NewParentNode == ComponentNode) {
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(
+        TEXT("message"),
+        TEXT("Component already under requested parent; no changes made"));
+    AddSCSNodeVerification(Result, SCS, ComponentNode);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
+    return Result;
   }
 
   const FString ExpectedParentName =
@@ -890,7 +900,8 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   }
 
   // Prevent cycles: new parent cannot be a descendant of the component
-  if (NewParentNode && IsDescendantOf(ComponentNode, NewParentNode)) {
+  if (NewParentNode && (NewParentNode == ComponentNode ||
+                        IsDescendantOf(ComponentNode, NewParentNode))) {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),
