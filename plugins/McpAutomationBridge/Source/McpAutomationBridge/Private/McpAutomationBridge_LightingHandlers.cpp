@@ -1352,6 +1352,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
         return true;
     }
 
+    if (Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase))
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Unknown manage_lighting action: %s"), *EffectiveAction),
+            TEXT("UNKNOWN_ACTION"));
+        return true;
+    }
+
     return false;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false,
