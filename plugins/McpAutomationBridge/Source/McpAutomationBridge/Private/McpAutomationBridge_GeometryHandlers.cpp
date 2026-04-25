@@ -678,6 +678,14 @@ double MajorRadius = GetNumberFieldGeom(Payload, TEXT("majorRadius"), 50.0);
     return true;
 }
 
+/**
+ * Create a DynamicMesh plane from the current schema fields and legacy aliases.
+ *
+ * Reads `width`, `height`, `widthSegments`, and `heightSegments` from the payload,
+ * while preserving `depth`, `widthSubdivisions`, and `depthSubdivisions` as
+ * compatibility fallbacks. Returns the effective dimensions and segment counts
+ * so clients can verify which values were applied.
+ */
 static bool HandleCreatePlane(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
