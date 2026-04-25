@@ -835,12 +835,12 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   }
 
   if (NewParentNode == ComponentNode) {
-    Result->SetBoolField(TEXT("success"), true);
+    Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
-        TEXT("message"),
-        TEXT("Component already under requested parent; no changes made"));
+        TEXT("error"),
+        TEXT("Cannot reparent a component to itself"));
+    Result->SetStringField(TEXT("errorCode"), TEXT("SCS_SELF_REPARENT"));
     AddSCSNodeVerification(Result, SCS, ComponentNode);
-    McpHandlerUtils::AddVerification(Result, Blueprint);
     return Result;
   }
 
@@ -900,8 +900,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   }
 
   // Prevent cycles: new parent cannot be a descendant of the component
-  if (NewParentNode && (NewParentNode == ComponentNode ||
-                        IsDescendantOf(ComponentNode, NewParentNode))) {
+  if (NewParentNode && IsDescendantOf(ComponentNode, NewParentNode)) {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),
