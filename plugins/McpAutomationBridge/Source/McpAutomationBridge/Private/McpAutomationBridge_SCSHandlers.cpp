@@ -271,7 +271,7 @@ static bool SCSParentMatches(USimpleConstructionScript *SCS, USCS_Node *Node,
   }
   USCS_Node *ActualParent = FindSCSParentNode(SCS, Node);
   if (ExpectedParentName.IsEmpty()) {
-    return ActualParent == nullptr && IsSCSRootNode(SCS, Node);
+    return ActualParent == nullptr || IsSCSRootNode(SCS, Node);
   }
   return ActualParent &&
          GetSCSNodeName(ActualParent).Equals(ExpectedParentName,
@@ -821,6 +821,11 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
     }
   }
 
+  const FString ExpectedParentName =
+      NewParentNode ? GetSCSNodeName(NewParentNode) : FString();
+  const FString ParentDisplayName =
+      ExpectedParentName.IsEmpty() ? FString(TEXT("(root)")) : ExpectedParentName;
+
   // Helper: check if B is a descendant of A (prevent cycles)
   auto IsDescendantOf = [](USCS_Node *A, USCS_Node *B) -> bool {
     if (!A || !B)
@@ -906,14 +911,12 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
 
   USCS_Node *VerifiedNode = FindSCSNodeByVariableName(SCS, ComponentName);
-  if (!VerifiedNode || !SCSParentMatches(SCS, VerifiedNode, NewParentName)) {
+  if (!VerifiedNode || !SCSParentMatches(SCS, VerifiedNode, ExpectedParentName)) {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),
         FString::Printf(TEXT("Verification failed: Component '%s' was not reparented to '%s'"),
-                        *ComponentName,
-                        NewParentName.IsEmpty() ? TEXT("(root)")
-                                                : *NewParentName));
+                        *ComponentName, *ParentDisplayName));
     Result->SetStringField(TEXT("errorCode"), TEXT("SCS_REPARENT_VERIFICATION_FAILED"));
     if (VerifiedNode) {
       AddSCSNodeVerification(Result, SCS, VerifiedNode);
@@ -927,8 +930,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   Result->SetStringField(
       TEXT("message"),
       FString::Printf(TEXT("Component '%s' reparented to '%s'"), *ComponentName,
-                      NewParentName.IsEmpty() ? TEXT("(root)")
-                                              : *NewParentName));
+                      *ParentDisplayName));
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
   AddSCSNodeVerification(Result, SCS, VerifiedNode);
