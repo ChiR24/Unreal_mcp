@@ -158,7 +158,9 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     actorName: args.actor_name ?? args.actorName ?? args.name,
     objectPath: args.object_path ?? args.objectPath ?? args.path,
     componentName: args.component_name ?? args.componentName,
+    componentNames: args.component_names ?? args.componentNames,
     propertyName: args.property_name ?? args.propertyName,
+    propertyNames: args.property_names ?? args.propertyNames,
   };
   
   switch (normalizedAction) {
@@ -591,7 +593,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
       }
     }
     case 'runtime_report': {
-      const inspectArgs = args as InspectArgs;
+      const inspectArgs = normalizedArgs as InspectArgs;
       return cleanObject(await executeAutomationRequest(tools, 'inspect', {
         action: 'runtime_report',
         filter: inspectArgs.filter,
