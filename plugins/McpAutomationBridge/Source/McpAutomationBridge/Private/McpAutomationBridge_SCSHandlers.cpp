@@ -264,6 +264,14 @@ static void AddSCSNodeVerification(TSharedPtr<FJsonObject> Result,
   Result->SetObjectField(TEXT("scsVerification"), Verification);
 }
 
+/**
+ * Verify that an SCS node is attached to the expected parent.
+ *
+ * An empty expected parent means the node should be root-like; nodes with no
+ * discoverable parent are accepted even if root registration has not refreshed
+ * yet. Non-empty parent names are compared against the resolved parent node name
+ * so callers can pass canonical names after resolving root aliases.
+ */
 static bool SCSParentMatches(USimpleConstructionScript *SCS, USCS_Node *Node,
                              const FString &ExpectedParentName) {
   if (!SCS || !Node) {
@@ -705,7 +713,12 @@ FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
 }
 
 /**
- * @brief Reparent component within SCS.
+ * @brief Reparent component within SCS and verify the resolved parent.
+ *
+ * Root aliases such as `Root`, `RootComponent`, and `DefaultSceneRoot` are
+ * resolved before mutation. Verification uses the resolved parent node name so
+ * successful reparent operations are not rejected because the caller used an
+ * alias instead of the concrete SCS variable name.
  *
  * @param BlueprintPath Path to the Blueprint asset.
  * @param ComponentName Variable name of component to reparent.
