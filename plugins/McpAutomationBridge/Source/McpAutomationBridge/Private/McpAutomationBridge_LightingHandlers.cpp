@@ -90,8 +90,18 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     // -------------------------------------------------------------------------
     // Action Routing
     // -------------------------------------------------------------------------
-    const FString Lower = Action.ToLower();
-    if (!Lower.StartsWith(TEXT("spawn_light")) &&
+    FString EffectiveAction = Action;
+    if (Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase) && Payload.IsValid())
+    {
+        FString PayloadAction;
+        if (Payload->TryGetStringField(TEXT("action"), PayloadAction) && !PayloadAction.IsEmpty())
+        {
+            EffectiveAction = PayloadAction;
+        }
+    }
+    const FString Lower = EffectiveAction.ToLower();
+    if (!Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase) &&
+        !Lower.StartsWith(TEXT("spawn_light")) &&
         !Lower.StartsWith(TEXT("spawn_sky_light")) &&
         !Lower.StartsWith(TEXT("create_sky_light")) &&
         !Lower.StartsWith(TEXT("create_light")) &&
@@ -352,7 +362,13 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
             ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
         // CRITICAL: Validate world before spawning to prevent crashes
-        UWorld* World = ActorSS->GetWorld();
+        // Use the active editor world instead of EditorActorSubsystem->GetWorld(),
+        // which can be null for editor utility subsystems.
+        UWorld* World = nullptr;
+        if (GEditor)
+        {
+            World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
+        }
         if (!World || !World->IsValidLowLevel())
         {
             SendAutomationError(RequestingSocket, RequestId,
