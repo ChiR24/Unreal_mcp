@@ -124,10 +124,10 @@ UInputModifier* CreateInputModifierForType(const FString& ModifierType, UObject*
     }
     if (ModifierType == TEXT("ScaleByDeltaTime") || ModifierType == TEXT("InputModifierScaleByDeltaTime"))
     {
-#if ENGINE_MAJOR_VERSION == 5
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         return NewObject<UInputModifierScaleByDeltaTime>(Outer);
 #else
-        return nullptr;
+        return NewObject<UInputModifierScalar>(Outer);
 #endif
     }
     if (ModifierType == TEXT("ToWorldSpace") || ModifierType == TEXT("InputModifierToWorldSpace"))
