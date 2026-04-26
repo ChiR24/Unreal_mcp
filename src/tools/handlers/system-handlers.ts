@@ -2,6 +2,7 @@ import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, SystemArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest, validateArgsSecurity } from './common-handlers.js';
+import { sanitizeCommandArgument } from '../../utils/validation.js';
 
 /** Response from various operations */
 interface OperationResponse {
@@ -302,13 +303,25 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       const value = (argsTyped.value !== undefined && argsTyped.value !== null)
         ? argsTyped.value
         : (tokens.length > 1 ? tokens.slice(1).join(' ') : '');
-      await executeAutomationRequest(tools, 'console_command', { command: `${rawName} ${value}` });
+
+      const safeName = sanitizeCommandArgument(rawName);
+      const safeValue = sanitizeCommandArgument(String(value));
+
+      if (!safeName) {
+        return {
+          success: false,
+          error: 'Name is required after sanitization',
+          action: 'set_cvar'
+        };
+      }
+
+      await executeAutomationRequest(tools, 'console_command', { command: `${safeName} ${safeValue}` });
       return {
         success: true,
-        message: `CVar ${rawName} set to ${value}`,
+        message: `CVar ${safeName} set to ${safeValue}`,
         action: 'set_cvar',
-        cvar: rawName,
-        value
+        cvar: safeName,
+        value: safeValue
       };
     }
     case 'get_project_settings': {
