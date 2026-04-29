@@ -133,6 +133,7 @@ private:
     bool bServerMode;
     bool bServerAcceptedConnection;
     FSocket* ListenSocket;
+    FCriticalSection ListenSocketMutex;
     FRunnableThread* Thread;
     FEvent* StopEvent;
     FCriticalSection ClientSocketsMutex;

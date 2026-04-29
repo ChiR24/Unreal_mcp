@@ -682,8 +682,11 @@ void FMcpBridgeWebSocket::Close(int32 StatusCode, const FString &Reason) {
   // will destroy it after its loop exits. This avoids a TOCTOU race where we
   // destroy the socket while RunServer() is between checking ListenSocket and
   // calling Accept().
-  if (ListenSocket) {
-    ListenSocket->Close();
+  {
+    FScopeLock Lock(&ListenSocketMutex);
+    if (ListenSocket) {
+      ListenSocket->Close();
+    }
   }
 
   // Close any client sockets that were accepted by this server
@@ -818,11 +821,32 @@ uint32 FMcpBridgeWebSocket::RunServer() {
          TEXT("FMcpBridgeWebSocket::RunServer begin (host=%s, port=%d, IPv6=%s)"),
          *ListenHost, Port, bIsIpv6Host ? TEXT("true") : TEXT("false"));
   
+  struct FListenSocketCleanup {
+    FMcpBridgeWebSocket* Owner;
+    ISocketSubsystem* Subsystem;
+    ~FListenSocketCleanup() {
+      FSocket* SocketToDestroy = nullptr;
+      {
+        FScopeLock Lock(&Owner->ListenSocketMutex);
+        SocketToDestroy = Owner->ListenSocket;
+        Owner->ListenSocket = nullptr;
+      }
+      if (SocketToDestroy) {
+        SocketToDestroy->Close();
+        Subsystem->DestroySocket(SocketToDestroy);
+      }
+    }
+  } CleanupGuard{this, SocketSubsystem};
+  
   // Create socket with proper protocol family for IPv6 support
   // Use FName-based protocol specification (non-deprecated API)
   const FName ProtocolName = bIsIpv6Host ? FName(TEXT("IPv6")) : FName();
-  ListenSocket = SocketSubsystem->CreateSocket(
+  FSocket* NewListenSocket = SocketSubsystem->CreateSocket(
       NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), ProtocolName);
+  {
+    FScopeLock Lock(&ListenSocketMutex);
+    ListenSocket = NewListenSocket;
+  }
   if (!ListenSocket) {
     const FString ErrorMessage = DescribeSocketError(
         SocketSubsystem, TEXT("Failed to create listen socket"));
@@ -869,9 +893,15 @@ uint32 FMcpBridgeWebSocket::RunServer() {
              TEXT("IPv6 loopback '::1' not supported on this system. Falling back to 127.0.0.1."));
       
       // Re-create socket as IPv4 since we're falling back to IPv4 address
-      SocketSubsystem->DestroySocket(ListenSocket);
-      ListenSocket = SocketSubsystem->CreateSocket(
+      FSocket* FallbackListenSocket = SocketSubsystem->CreateSocket(
           NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), FName());
+      {
+        FScopeLock Lock(&ListenSocketMutex);
+        if (ListenSocket) {
+          SocketSubsystem->DestroySocket(ListenSocket);
+        }
+        ListenSocket = FallbackListenSocket;
+      }
       if (!ListenSocket) {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Failed to re-create IPv4 socket for fallback."));
         return 0;
@@ -926,10 +956,16 @@ uint32 FMcpBridgeWebSocket::RunServer() {
                  bResolvedIsIpv6 ? TEXT("IPv6") : TEXT("IPv4"),
                  bIsIpv6Host ? TEXT("IPv6") : TEXT("IPv4"));
           
-          SocketSubsystem->DestroySocket(ListenSocket);
           const FName NewProtocolName = bResolvedIsIpv6 ? FName(TEXT("IPv6")) : FName();
-          ListenSocket = SocketSubsystem->CreateSocket(
+          FSocket* ResolvedListenSocket = SocketSubsystem->CreateSocket(
               NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), NewProtocolName);
+          {
+            FScopeLock Lock(&ListenSocketMutex);
+            if (ListenSocket) {
+              SocketSubsystem->DestroySocket(ListenSocket);
+            }
+            ListenSocket = ResolvedListenSocket;
+          }
           if (!ListenSocket) {
             UE_LOG(LogMcpAutomationBridgeSubsystem, Error, 
                    TEXT("Failed to re-create socket for resolved address family."));
@@ -956,9 +992,15 @@ uint32 FMcpBridgeWebSocket::RunServer() {
 
     // If socket was created as IPv6 but we're falling back to IPv4, recreate it
     if (bIsIpv6Host) {
-      SocketSubsystem->DestroySocket(ListenSocket);
-      ListenSocket = SocketSubsystem->CreateSocket(
+      FSocket* LoopbackListenSocket = SocketSubsystem->CreateSocket(
           NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), FName());
+      {
+        FScopeLock Lock(&ListenSocketMutex);
+        if (ListenSocket) {
+          SocketSubsystem->DestroySocket(ListenSocket);
+        }
+        ListenSocket = LoopbackListenSocket;
+      }
       if (!ListenSocket) {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Failed to re-create IPv4 socket for fallback."));
         return 0;
@@ -1099,11 +1141,7 @@ uint32 FMcpBridgeWebSocket::RunServer() {
     }
   }
 
-  if (ListenSocket) {
-    ListenSocket->Close();
-    SocketSubsystem->DestroySocket(ListenSocket);
-    ListenSocket = nullptr;
-  }
+  // Cleanup is handled by FListenSocketCleanup guard
 
   return 0;
 }

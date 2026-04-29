@@ -319,6 +319,32 @@ namespace WidgetAuthoringHelpers
         }
         return ESlateVisibility::Visible;
     }
+
+    // Ensure all widgets in the tree are registered as variables with GUIDs to prevent compiler crashes
+    void SyncWidgetVariables(UWidgetBlueprint* WidgetBP)
+    {
+        if (!WidgetBP || !WidgetBP->WidgetTree) return;
+
+        WidgetBP->WidgetTree->ForEachWidget([&](UWidget* Widget) {
+            if (Widget)
+            {
+                // Ensure widget has a valid GUID if it's supposed to be a variable
+                // Most automation-added widgets should be variables by default for logic accessibility
+                if (!WidgetBP->WidgetVariableNameToGuidMap.Contains(Widget->GetFName()))
+                {
+                    WidgetBP->WidgetVariableNameToGuidMap.Add(Widget->GetFName(), FGuid::NewGuid());
+                }
+            }
+        });
+    }
+
+    // Consolidate synchronization and modification notification
+    void NotifyWidgetBlueprintChanged(UWidgetBlueprint* WidgetBP)
+    {
+        if (!WidgetBP) return;
+        SyncWidgetVariables(WidgetBP);
+        FBlueprintEditorUtils::MarkBlueprintAsModified(WidgetBP);
+    }
 }
 
 using namespace WidgetAuthoringHelpers;
@@ -394,6 +420,27 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        // CRASH PREVENTION: Check if ANY object already exists in this package with this name.
+        // FKismetEditorUtilities::CreateBlueprint asserts (Kismet2.cpp:435) if an object
+        // with the same name already exists in the Outer package, even if it's not a Blueprint.
+        if (StaticFindObject(UObject::StaticClass(), Package, *Name) != nullptr)
+        {
+            // Object already exists — return its path rather than crashing
+            UWidgetBlueprint* Existing = Cast<UWidgetBlueprint>(UEditorAssetLibrary::LoadAsset(FullPath));
+            FString ExistingPath = Existing ? Existing->GetPathName() : FullPath;
+            ResultJson->SetBoolField(TEXT("success"), true);
+            ResultJson->SetBoolField(TEXT("alreadyExisted"), true);
+            ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Widget blueprint (or conflicting object) already exists: %s"), *Name));
+            ResultJson->SetStringField(TEXT("widgetPath"), ExistingPath);
+            if (Existing)
+            {
+                McpHandlerUtils::AddVerification(ResultJson, Existing);
+            }
+            SendAutomationResponse(RequestingSocket, RequestId, true,
+                FString::Printf(TEXT("Widget blueprint already exists: %s"), *Name), ResultJson);
+            return true;
+        }
+
         // Find parent class
         UClass* ParentUClass = UUserWidget::StaticClass();
         if (!ParentClass.Equals(TEXT("UserWidget"), ESearchCase::IgnoreCase))
@@ -431,7 +478,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Mark package dirty and notify asset registry
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(WidgetBlueprint);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBlueprint);
+        // Use MarkBlueprintAsModified (not Structural) to avoid triggering UMG recompile
+        // on a freshly created, potentially empty widget tree
+        NotifyWidgetBlueprintChanged(WidgetBlueprint);
 
         // Return the full object path (Package.ObjectName format) for proper loading
         FString ObjectPath = WidgetBlueprint->GetPathName();
@@ -445,6 +494,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             FString::Printf(TEXT("Created widget blueprint: %s"), *Name), ResultJson);
         return true;
     }
+
 
     if (SubAction.Equals(TEXT("set_widget_parent_class"), ESearchCase::IgnoreCase))
     {
@@ -497,7 +547,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         // Set parent class
         WidgetBP->ParentClass = NewParentClass;
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Set parent class to: %s"), *ParentClass));
@@ -577,7 +627,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(CanvasPanel);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added canvas panel"));
@@ -653,7 +703,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(HBox);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added horizontal box"));
@@ -745,7 +795,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(VBox);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added vertical box"));
@@ -822,7 +872,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(OverlayWidget);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added overlay"));
@@ -926,7 +976,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(TextBlock);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added text block"));
@@ -1016,7 +1066,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(ImageWidget);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added image"));
@@ -1101,7 +1151,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(ButtonWidget);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added button"));
@@ -1192,7 +1242,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(ProgressBarWidget);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added progress bar"));
@@ -1285,7 +1335,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(SliderWidget);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added slider"));
@@ -1429,7 +1479,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(GridPanel);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added grid panel"));
@@ -1531,7 +1581,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(UniformGrid);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added uniform grid panel"));
@@ -1629,7 +1679,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(WrapBox);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added wrap box"));
@@ -1740,7 +1790,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(ScrollBox);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added scroll box"));
@@ -1842,7 +1892,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(SizeBox);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added size box"));
@@ -1974,7 +2024,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(ScaleBox);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added scale box"));
@@ -2078,7 +2128,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(BorderWidget);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added border"));
@@ -2154,7 +2204,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(RichTextBlock);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added rich text block"));
@@ -2226,7 +2276,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(CheckBox);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added check box"));
@@ -2324,7 +2374,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(TextInput);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added text input"));
@@ -2410,7 +2460,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(ComboBox);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added combo box"));
@@ -2499,7 +2549,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(SpinBox);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added spin box"));
@@ -2568,7 +2618,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(ListView);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added list view"));
@@ -2637,7 +2687,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ParentPanel->AddChild(TreeView);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added tree view"));
@@ -2762,7 +2812,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             CanvasSlot->SetAnchors(Anchors);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Anchor set"));
@@ -2808,7 +2858,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Alignment set"));
@@ -2854,7 +2904,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Position set"));
@@ -2900,7 +2950,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Size set"));
@@ -2974,7 +3024,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Padding set"));
@@ -3015,7 +3065,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             CanvasSlot->SetZOrder(ZOrder);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Z-order set to %d"), ZOrder));
@@ -3079,7 +3129,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         Widget->SetRenderTransform(RenderTransform);
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Render transform set"));
@@ -3117,7 +3167,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ESlateVisibility Visibility = GetVisibility(VisibilityStr);
         Widget->SetVisibility(Visibility);
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Visibility set to %s"), *VisibilityStr));
@@ -3175,7 +3225,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             Widget->SetClipping(Clipping);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("%s applied"), *SubAction));
@@ -3230,7 +3280,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("bindingType"), TEXT("Text"));
         ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create a function named '%s' returning FText in the Widget Blueprint to complete the binding."), *BindingFunction));
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Text binding configured"), ResultJson);
         return true;
@@ -3275,7 +3325,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("bindingType"), TEXT("Visibility"));
         ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create a function named '%s' returning ESlateVisibility in the Widget Blueprint."), *BindingFunction));
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Visibility binding configured"), ResultJson);
         return true;
@@ -3320,7 +3370,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("bindingType"), TEXT("Color"));
         ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create a function named '%s' returning FSlateColor or FLinearColor."), *BindingFunction));
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Color binding configured"), ResultJson);
         return true;
@@ -3365,7 +3415,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("bindingType"), TEXT("Enabled"));
         ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create a function named '%s' returning bool."), *BindingFunction));
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Enabled binding configured"), ResultJson);
         return true;
@@ -3412,7 +3462,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("functionName"), FunctionName);
         ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create an event handler function named '%s' and bind it to %s's OnClicked event in the Designer."), *FunctionName, *WidgetName));
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("OnClicked binding info provided"), ResultJson);
         return true;
@@ -3457,7 +3507,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("functionName"), FunctionName);
         ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Bind '%s' to %s's OnHovered event."), *FunctionName, *WidgetName));
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("OnHovered binding info provided"), ResultJson);
         return true;
@@ -3512,7 +3562,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("functionName"), FunctionName);
         ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Bind '%s' to %s's %s event."), *FunctionName, *WidgetName, *EventName));
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("OnValueChanged binding info provided"), ResultJson);
         return true;
@@ -3568,7 +3618,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("functionName"), FunctionName);
         ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create function '%s' returning %s and use Property Binding dropdown on %s.%s."), *FunctionName, *PropertyType, *WidgetName, *PropertyName));
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Property binding configured"), ResultJson);
         return true;
@@ -3618,7 +3668,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Add to widget blueprint's animations array
         WidgetBP->Animations.Add(NewAnim);
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         McpSafeAssetSave(WidgetBP);
         
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -3699,7 +3749,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             ResultJson->SetStringField(TEXT("propertyName"), PropertyName);
             ResultJson->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
             
-            FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+            NotifyWidgetBlueprintChanged(WidgetBP);
         }
         else
         {
@@ -3756,7 +3806,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetNumberField(TEXT("value"), Value);
         ResultJson->SetStringField(TEXT("note"), TEXT("Keyframe timing set. Use Widget Blueprint Editor Animation tab for precise keyframe editing."));
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Animation keyframe info set"), ResultJson);
         return true;
@@ -3807,7 +3857,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetNumberField(TEXT("loopCount"), LoopCount);
         ResultJson->SetStringField(TEXT("note"), TEXT("Loop settings configured. Apply via PlayAnimation() with NumLoopsToPlay parameter at runtime."));
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Animation loop settings configured"), ResultJson);
         return true;
@@ -3876,7 +3926,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         QuitButton->AddChild(QuitText);
         MenuBox->AddChild(QuitButton);
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         McpSafeAssetSave(WidgetBP);
         
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -3943,7 +3993,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         MainMenuButton->AddChild(MainMenuText);
         MenuBox->AddChild(MainMenuButton);
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         McpSafeAssetSave(WidgetBP);
         
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -3974,7 +4024,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         UCanvasPanel* RootCanvas = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("HUDCanvas"));
         WidgetBP->WidgetTree->RootWidget = RootCanvas;
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         McpSafeAssetSave(WidgetBP);
         
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -4050,7 +4100,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         McpSafeAssetSave(WidgetBP);
         
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -4120,7 +4170,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         McpSafeAssetSave(WidgetBP);
         
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -4190,7 +4240,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
         
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         McpSafeAssetSave(WidgetBP);
         
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -4228,7 +4278,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         // Widget preview is typically done by opening in editor or compiling
         // We can trigger a compile which updates the preview
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Widget blueprint marked for recompilation. Open in Widget Blueprint Editor to see preview."));
@@ -4458,7 +4508,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         McpSafeAssetSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -4566,7 +4616,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Note: Actually creating the binding requires modifying the widget graph
         // This is a complex operation - for now we document what binding to create
         
-        FBlueprintEditorUtils::MarkBlueprintAsModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         McpSafeAssetSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -4733,7 +4783,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             CreatedVariables.Add(MarginVarName);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
         McpSafeAssetSave(WidgetBP);
 
         TArray<TSharedPtr<FJsonValue>> VariablesArray;
@@ -4831,7 +4881,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(WidgetBP);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
@@ -4905,7 +4955,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(WidgetBP);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
@@ -4967,7 +5017,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -5024,7 +5074,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -5081,7 +5131,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -5147,7 +5197,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -5210,7 +5260,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -5289,7 +5339,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(WidgetBP);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
@@ -5377,7 +5427,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(WidgetBP);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
@@ -5471,7 +5521,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(WidgetBP);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
@@ -5511,7 +5561,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         WidgetBP->WidgetTree->RemoveWidget(TargetWidget);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -5549,7 +5599,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         // Rename requires FBlueprintEditorUtils for proper undo/redo support
         TargetWidget->Rename(*NewName);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -5600,7 +5650,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
         NewParentWidget->AddChild(TargetWidget);
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -5722,7 +5772,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             Parent->AddChild(SafeZone);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -5775,7 +5825,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             Parent->AddChild(Spacer);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -5829,7 +5879,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             Parent->AddChild(Switcher);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -5905,7 +5955,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             bFontApplied = true; // Acknowledge but note limitation
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), bFontApplied);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -5975,7 +6025,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             bMarginApplied = true;
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), bMarginApplied);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -6025,7 +6075,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("styleFound"), StyleProp != nullptr);
         ResultJson->SetStringField(TEXT("note"), TEXT("Style binding created. Actual style application requires runtime binding setup."));
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Applied style to widget"), ResultJson);
         return true;
@@ -6076,7 +6126,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         TRange<FFrameNumber> PlaybackRange = TargetAnim->MovieScene->GetPlaybackRange();
         TargetAnim->MovieScene->SetPlaybackRange(PlaybackRange);
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -6233,7 +6283,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         WidgetBP->Animations.RemoveAt(FoundIndex);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -6284,7 +6334,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             bApplied = true;
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), bApplied);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -6335,7 +6385,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), bBound);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -6426,7 +6476,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(WidgetBP);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
@@ -6545,7 +6595,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(WidgetBP);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
@@ -6633,7 +6683,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        NotifyWidgetBlueprintChanged(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);

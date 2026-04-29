@@ -145,6 +145,11 @@
 #include "EdGraph/EdGraphPin.h"
 #include "Blueprint/BlueprintSupport.h"
 
+// -----------------------------------------------------------------------------
+// Editor-only Includes (Widget Blueprint - needed for safe Widget BP deletion)
+// -----------------------------------------------------------------------------
+#include "WidgetBlueprint.h"
+
 #endif // WITH_EDITOR
 
 // =============================================================================
@@ -1846,8 +1851,35 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
         FailedToDeletePaths.Add(Path);
       }
     } else if (UEditorAssetLibrary::DoesAssetExist(Path)) {
-      // Asset exists - attempt to delete it
-      if (UEditorAssetLibrary::DeleteAsset(Path)) {
+      // Asset exists - attempt to delete it.
+      // WIDGET BLUEPRINT SAFETY: UEditorAssetLibrary::DeleteAsset on a WidgetBlueprint
+      // can trigger a UMG recompile which asserts in WidgetBlueprintCompiler if the
+      // WidgetVariableNameToGuidMap is inconsistent (e.g. after programmatic widget edits).
+      // To avoid this crash, we load the asset and check its class before deleting.
+      bool bDeleted = false;
+      UObject* AssetObj = UEditorAssetLibrary::LoadAsset(Path);
+      if (AssetObj && AssetObj->IsA(UWidgetBlueprint::StaticClass()))
+      {
+        // For Widget Blueprints: unload cleanly without triggering the UMG compiler.
+        // Mark the package for garbage collection and force a purge instead of
+        // going through the full destructive delete path.
+        UPackage* Pkg = AssetObj->GetOutermost();
+        if (Pkg)
+        {
+          // Reset the object flags so it can be GC'd, then delete on disk
+          AssetObj->ClearFlags(RF_Standalone);
+          AssetObj->MarkAsGarbage();
+          // Use EditorAssetLibrary delete - the asset is now flagged safe to GC
+          // so the compiler won't try to re-link it
+          bDeleted = UEditorAssetLibrary::DeleteAsset(Path);
+        }
+      }
+      else
+      {
+        bDeleted = UEditorAssetLibrary::DeleteAsset(Path);
+      }
+
+      if (bDeleted) {
         // CRITICAL FIX: Verify the asset was actually deleted
         // DeleteAsset may return true even if deletion failed
         if (!UEditorAssetLibrary::DoesAssetExist(Path)) {
@@ -1864,6 +1896,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
       NotFoundPaths.Add(Path);
     }
   }
+
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   
