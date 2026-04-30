@@ -8,6 +8,7 @@ import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
 import type { AutomationResponse } from '../../types/automation-responses.js';
 import { executeAutomationRequest } from './common-handlers.js';
+import { sanitizePath } from '../../utils/path-security.js';
 import {
   normalizeArgs,
   extractString,
@@ -31,7 +32,7 @@ import { ResponseFactory } from '../../utils/response-factory.js';
 import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 import { MATERIAL_AUTHORING_ACTIONS } from '../consolidated-tool-definitions.js';
 
-/** Normalize asset path: backslash→slash, /Content/→/Game/, bare names→/Game/ prefix */
+/** Normalize asset path: format conversion + security validation */
 function normalizeAssetPath(p: string): string {
   let normalized = p.replace(/\\/g, '/');
   // /Content/Foo → /Game/Foo
@@ -50,7 +51,8 @@ function normalizeAssetPath(p: string): string {
   if (!normalized.startsWith('/') && normalized.length > 0) {
     normalized = normalized.includes('/') ? '/' + normalized : '/Game/' + normalized;
   }
-  return normalized;
+  // Validate with shared security utility (blocks traversal, illegal chars, ensures valid root)
+  return sanitizePath(normalized);
 }
 
 /**
@@ -523,9 +525,9 @@ export async function handleMaterialAuthoringTools(
         if (inputs != null) {
           payload.inputs = inputs;
         }
-        if (additionalOutputs != null) {
-          payload.additionalOutputs = additionalOutputs;
-        }
+if (additionalOutputs != null) {
+  payload.outputs = additionalOutputs;
+}
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, payload)) as AutomationResponse;
 
@@ -1181,8 +1183,8 @@ export async function handleMaterialAuthoringTools(
         const hasCode = code !== undefined && code !== null;
         const hasDescription = description !== undefined && description !== null;
         const hasOutputType = outputType !== undefined && outputType !== null;
-        const hasInputs = inputs != null;
-        const hasAdditionalOutputs = additionalOutputs != null;
+  const hasInputs = inputs !== undefined && inputs !== null;
+  const hasAdditionalOutputs = additionalOutputs !== undefined && additionalOutputs !== null;
         if (!hasCode && !hasDescription && !hasOutputType && !hasInputs && !hasAdditionalOutputs) {
           return ResponseFactory.error(
             'manage_material_authoring.update_custom_expression: provide at least one field to update',
@@ -1193,7 +1195,7 @@ export async function handleMaterialAuthoringTools(
         if (hasDescription) payload.description = description;
         if (hasOutputType) payload.outputType = outputType;
         if (hasInputs) payload.inputs = inputs;
-        if (hasAdditionalOutputs) payload.additionalOutputs = additionalOutputs;
+        if (hasAdditionalOutputs) payload.outputs = additionalOutputs;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, payload)) as AutomationResponse;
 
