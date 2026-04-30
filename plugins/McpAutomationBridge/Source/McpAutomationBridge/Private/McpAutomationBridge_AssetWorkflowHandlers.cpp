@@ -4077,7 +4077,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
   Resp->SetStringField(TEXT("nodeType"), NodeType);
   Resp->SetNumberField(TEXT("expressionIndex"), ExpressionIndex);
   Resp->SetStringField(TEXT("expressionName"), NewExpression->GetName());
-  Resp->SetStringField(TEXT("nodeId"), NewExpression->GetName());
+  Resp->SetStringField(TEXT("nodeId"), NewExpression->MaterialExpressionGuid.ToString());
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Material node added successfully"), Resp, FString());
@@ -4595,7 +4595,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Resp, Material);
   else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
-  Resp->SetStringField(TEXT("nodeId"), TargetExpression->GetName());
+  Resp->SetStringField(TEXT("nodeId"), TargetExpression->MaterialExpressionGuid.ToString());
   Resp->SetNumberField(TEXT("brokenConnections"), BrokenConnections);
   if (bSpecificInput) Resp->SetStringField(TEXT("inputName"), InputName);
 
@@ -4679,7 +4679,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
       if (!Expr) continue;
       
       TSharedPtr<FJsonObject> NodeInfo = McpHandlerUtils::CreateResultObject();
-      NodeInfo->SetStringField(TEXT("nodeId"), Expr->GetName());
+      NodeInfo->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
       NodeInfo->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
       NodeInfo->SetNumberField(TEXT("index"), i);
       NodeInfo->SetNumberField(TEXT("editorX"), Expr->MaterialExpressionEditorX);
@@ -4723,7 +4723,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Resp, Material);
   else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
-  Resp->SetStringField(TEXT("nodeId"), Expression->GetName());
+  Resp->SetStringField(TEXT("nodeId"), Expression->MaterialExpressionGuid.ToString());
   Resp->SetStringField(TEXT("name"), Expression->GetName());
   Resp->SetStringField(TEXT("class"), Expression->GetClass()->GetName());
   Resp->SetStringField(TEXT("classPath"), Expression->GetClass()->GetPathName());

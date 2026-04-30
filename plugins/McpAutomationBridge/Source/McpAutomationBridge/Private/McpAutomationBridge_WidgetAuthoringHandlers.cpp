@@ -3404,9 +3404,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             {
                 Clipping = EWidgetClipping::OnDemand;
             }
-            Widget->SetClipping(Clipping);
-            WidgetBP->MarkPackageDirty();
-            FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+	Widget->SetClipping(Clipping);
+	if (!McpSafeAssetSave(WidgetBP)) {
+		SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save widget blueprint after clipping change"), TEXT("SAVE_FAILED"));
+		return true;
+	}
         }
         else if (SubAction.Equals(TEXT("set_style"), ESearchCase::IgnoreCase))
         {

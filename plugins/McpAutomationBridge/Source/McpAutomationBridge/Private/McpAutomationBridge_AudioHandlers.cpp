@@ -1731,9 +1731,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                TEXT("Doppler configured for SoundCue '%s': intensity=%.2f, velocityScale=%.2f"),
                *SoundPath, DopplerIntensity, VelocityScale);
 
-        if (bSave) {
-          SoundCue->MarkPackageDirty();
-        }
+	if (bSave) {
+		if (!McpSafeAssetSave(SoundCue)) {
+			SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save sound cue"), TEXT("SAVE_FAILED"));
+			return true;
+		}
+	}
 
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), true);
@@ -1842,9 +1845,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       AttenuationSettings->Attenuation.OcclusionLowPassFilterFrequency = (float)(20000.0 * OcclusionFilterScale);
       AttenuationSettings->Attenuation.OcclusionInterpolationTime = (float)OcclusionInterpolationTime;
 
-      if (bSave && !SoundPath.IsEmpty()) {
-        AttenuationSettings->MarkPackageDirty();
-      }
+	if (bSave && !SoundPath.IsEmpty()) {
+		if (!McpSafeAssetSave(AttenuationSettings)) {
+			SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save attenuation settings"), TEXT("SAVE_FAILED"));
+			return true;
+		}
+	}
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), true);
