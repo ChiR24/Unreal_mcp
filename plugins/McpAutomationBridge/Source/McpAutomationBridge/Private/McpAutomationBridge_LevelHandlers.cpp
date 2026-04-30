@@ -18,7 +18,7 @@
 //   - unload_streaming_level       : Unload streaming level
 //
 // Section 3: Level Operations
-//   - get_current_level_name       : Get current level path
+//   - get_current_level            : Get current level path and editor world identity
 //   - get_all_levels               : List all levels in world
 //   - set_current_level            : Set active editing level
 //
@@ -364,6 +364,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
        Lower == TEXT("spawn_light") || Lower == TEXT("build_lighting") ||
        Lower == TEXT("spawn_light") || Lower == TEXT("build_lighting") ||
        Lower == TEXT("bake_lightmap") || Lower == TEXT("list_levels") ||
+       Lower == TEXT("get_current_level") ||
        Lower == TEXT("export_level") || Lower == TEXT("import_level") ||
        Lower == TEXT("add_sublevel"));
   if (!bIsLevelAction)
@@ -547,6 +548,10 @@ TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       EffectiveAction = TEXT("spawn_light");
     } else if (LowerSub == TEXT("list") || LowerSub == TEXT("list_levels")) {
       EffectiveAction = TEXT("list_levels");
+    } else if (LowerSub == TEXT("get_current_level")) {
+      // Keep the documented manage_level action on the native route instead of
+      // falling through to UNKNOWN_ACTION or relying on a TS-side list fallback.
+      EffectiveAction = TEXT("get_current_level");
     } else if (LowerSub == TEXT("export_level")) {
       EffectiveAction = TEXT("export_level");
     } else if (LowerSub == TEXT("import_level")) {
@@ -622,6 +627,64 @@ TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     
     return Levels;
   };
+
+  if (EffectiveAction == TEXT("get_current_level")) {
+    UWorld* EditorWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!EditorWorld) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+
+    ULevel* CurrentLevel = EditorWorld->GetCurrentLevel();
+    if (!CurrentLevel) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No current level available"), nullptr, TEXT("NO_LEVEL"));
+      return true;
+    }
+
+    UPackage* WorldPackage = EditorWorld->GetOutermost();
+    UPackage* LevelPackage = CurrentLevel->GetOutermost();
+
+    auto WorldTypeToString = [](EWorldType::Type WorldType) -> FString {
+      switch (WorldType) {
+      case EWorldType::Game:
+        return TEXT("Game");
+      case EWorldType::Editor:
+        return TEXT("Editor");
+      case EWorldType::PIE:
+        return TEXT("PIE");
+      case EWorldType::EditorPreview:
+        return TEXT("EditorPreview");
+      case EWorldType::GamePreview:
+        return TEXT("GamePreview");
+      case EWorldType::GameRPC:
+        return TEXT("GameRPC");
+      case EWorldType::Inactive:
+        return TEXT("Inactive");
+      case EWorldType::None:
+      default:
+        return TEXT("None");
+      }
+    };
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("mapName"), EditorWorld->GetMapName());
+    Result->SetStringField(TEXT("mapPath"), WorldPackage ? WorldPackage->GetName() : TEXT(""));
+    Result->SetStringField(TEXT("levelName"), CurrentLevel->GetName());
+    Result->SetStringField(TEXT("levelPath"), LevelPackage ? LevelPackage->GetName() : TEXT(""));
+    // Include editor-world identity separately from the map package so agents
+    // can distinguish persistent map state from transient PIE/editor worlds.
+    Result->SetStringField(TEXT("editorWorldName"), EditorWorld->GetName());
+    Result->SetStringField(TEXT("editorWorldPath"), WorldPackage ? WorldPackage->GetPathName() : TEXT(""));
+    Result->SetStringField(TEXT("worldType"), WorldTypeToString(EditorWorld->WorldType));
+    Result->SetNumberField(TEXT("actorCount"), CurrentLevel->Actors.Num());
+    Result->SetBoolField(TEXT("isPersistentLevel"), CurrentLevel == EditorWorld->PersistentLevel);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Current level retrieved"), Result);
+    return true;
+  }
 
   if (EffectiveAction == TEXT("save_current_level")) {
     if (!GEditor) {

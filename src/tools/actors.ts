@@ -24,7 +24,8 @@ export class ActorTools extends BaseTool implements IActorTools {
     super(bridge);
   }
 
-  async spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; actorName?: string; meshPath?: string; timeoutMs?: number }) {
+  /** Spawn an actor through the automation bridge, forwarding transform fields including scale. */
+  async spawn(params: { classPath: string; location?: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; scale?: { x: number; y: number; z: number }; actorName?: string; meshPath?: string; timeoutMs?: number }) {
     if (!params.classPath || typeof params.classPath !== 'string' || params.classPath.trim().length === 0) {
       throw new Error(`Invalid classPath: ${params.classPath}`);
     }
@@ -67,6 +68,7 @@ export class ActorTools extends BaseTool implements IActorTools {
           classPath: mappedClassPath,
           location: { x: locX, y: locY, z: locZ },
           rotation: { pitch: rotPitch, yaw: rotYaw, roll: rotRoll },
+          scale: params.scale,
           actorName: sanitizedActorName,
           meshPath: params.meshPath
         },

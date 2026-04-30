@@ -228,6 +228,13 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bo
   return nullptr;
 }
 
+/**
+ * Spawn a native actor from a class or mesh path and apply the requested transform.
+ *
+ * The handler accepts optional `location`, `rotation`, and `scale` payload fields,
+ * applies scale only when explicitly provided, and returns the actual actor scale
+ * so callers can verify the resulting transform without an additional query.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -240,6 +247,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
       ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
   FRotator Rotation =
       ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+  const bool bHasScale = Payload->HasField(TEXT("scale"));
+  const FVector Scale =
+      ExtractVectorField(Payload, TEXT("scale"), FVector::OneVector);
 
   UClass *ResolvedClass = nullptr;
   FString MeshPath;
@@ -409,6 +419,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     return true;
   }
 
+  if (bHasScale) {
+    Spawned->SetActorScale3D(Scale);
+  }
+
   if (!ActorName.IsEmpty()) {
     Spawned->SetActorLabel(ActorName);
   } else {
@@ -453,6 +467,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     Data->SetStringField(TEXT("meshPath"), ResolvedStaticMesh->GetPathName());
   else if (ResolvedSkeletalMesh)
     Data->SetStringField(TEXT("meshPath"), ResolvedSkeletalMesh->GetPathName());
+
+  auto MakeVectorArray = [](const FVector &Vec) -> TArray<TSharedPtr<FJsonValue>> {
+    TArray<TSharedPtr<FJsonValue>> Values;
+    Values.Add(MakeShared<FJsonValueNumber>(Vec.X));
+    Values.Add(MakeShared<FJsonValueNumber>(Vec.Y));
+    Values.Add(MakeShared<FJsonValueNumber>(Vec.Z));
+    return Values;
+  };
+  Data->SetArrayField(TEXT("scale"), MakeVectorArray(Spawned->GetActorScale3D()));
   
   // Add verification data
   McpHandlerUtils::AddVerification(Data, Spawned);
@@ -468,6 +491,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
 #endif
 }
 
+/**
+ * Spawn an actor from a Blueprint class and apply the requested transform fields.
+ *
+ * Blueprint spawning mirrors the regular actor spawn path by accepting optional
+ * `location`, `rotation`, and `scale`, then returning the applied scale in the
+ * response payload for client-side verification.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -486,6 +516,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
       ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
   FRotator Rotation =
       ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+  const bool bHasScale = Payload->HasField(TEXT("scale"));
+  const FVector Scale =
+      ExtractVectorField(Payload, TEXT("scale"), FVector::OneVector);
 
   UClass *ResolvedClass = nullptr;
 
@@ -556,6 +589,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
     return true;
   }
 
+  if (bHasScale) {
+    Spawned->SetActorScale3D(Scale);
+  }
+
   if (!ActorName.IsEmpty())
     Spawned->SetActorLabel(ActorName);
 
@@ -573,6 +610,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   // actorPath for convenience
   Resp->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
   Resp->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
+  auto MakeVectorArray = [](const FVector &Vec) -> TArray<TSharedPtr<FJsonValue>> {
+    TArray<TSharedPtr<FJsonValue>> Values;
+    Values.Add(MakeShared<FJsonValueNumber>(Vec.X));
+    Values.Add(MakeShared<FJsonValueNumber>(Vec.Y));
+    Values.Add(MakeShared<FJsonValueNumber>(Vec.Z));
+    return Values;
+  };
+  Resp->SetArrayField(TEXT("scale"), MakeVectorArray(Spawned->GetActorScale3D()));
   
   // Add verification data
   McpHandlerUtils::AddVerification(Resp, Spawned);

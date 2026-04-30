@@ -348,6 +348,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         blueprint_path: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
         component_class: (argsRecord.componentClass as string | undefined) || argsTyped.componentType || 'SceneComponent',
         component_name: argsTyped.componentName ?? '',
+        parent_component: argsTyped.parentComponent ?? (argsRecord.attachTo as string | undefined) ?? '',
         mesh_path: argsRecord.meshPath as string | undefined,
         material_path: argsRecord.materialPath as string | undefined,
         timeoutMs: argsRecord.timeoutMs as number | undefined
@@ -364,11 +365,12 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       return cleanObject(res);
     }
     case 'set_scs_property': {
+      const resolvedValue = argsTyped.value !== undefined ? argsTyped.value : argsRecord.propertyValue;
       const res = await executeAutomationRequest(tools, 'set_scs_component_property', {
         blueprint_path: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
         component_name: argsTyped.componentName ?? '',
         property_name: argsTyped.propertyName ?? '',
-        property_value: JSON.stringify({ value: argsRecord.propertyValue }),
+        property_value: resolvedValue,
         timeoutMs: argsRecord.timeoutMs as number | undefined
       }) as Record<string, unknown>;
       return cleanObject(res);

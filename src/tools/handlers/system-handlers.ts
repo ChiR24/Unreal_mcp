@@ -253,7 +253,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       }
 
       try {
-        const res = await executeAutomationRequest(tools, 'manage_widget_authoring', {
+        const res = await executeAutomationRequest(tools, 'system_control', {
           action: 'add_widget_child',
           widgetPath,
           childClass: childClass,

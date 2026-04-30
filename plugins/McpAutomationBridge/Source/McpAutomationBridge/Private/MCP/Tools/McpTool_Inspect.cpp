@@ -16,7 +16,7 @@ public:
 			"and query class info. Actions: inspect_cdo (Blueprint CDO properties + all components "
 			"without spawning an actor; use blueprintPath, optional detailed/componentName/propertyNames), "
 			"inspect_class (class metadata), inspect_object (world actor), get_property/set_property, "
-			"get_components, list_objects, find_by_class, find_by_tag.");
+			"get_components, list_objects, find_by_class, find_by_tag, runtime_report.");
 	}
 
 	FString GetCategory() const override { return TEXT("core"); }
@@ -43,6 +43,8 @@ public:
 				TEXT("set_component_property"),
 				TEXT("inspect_class"),
 				TEXT("inspect_cdo"),
+				TEXT("runtime_report"),
+				TEXT("pie_report"),
 				TEXT("list_objects"),
 				TEXT("get_metadata"),
 				TEXT("add_tag"),
@@ -80,6 +82,7 @@ public:
 			.String(TEXT("blueprintPath"), TEXT("Blueprint asset path."))
 			.Bool(TEXT("detailed"), TEXT(""))
 			.Array(TEXT("propertyNames"), TEXT(""))
+			.Array(TEXT("componentNames"), TEXT("Component names to include detailed property readback for."))
 			.Required({TEXT("action")})
 			.Build();
 	}

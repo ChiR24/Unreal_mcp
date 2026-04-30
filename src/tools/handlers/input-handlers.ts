@@ -15,10 +15,10 @@ const VALID_PARAMS_BY_ACTION: Record<string, Set<string>> = {
     create_input_action: new Set(['action', 'name', 'path', 'timeoutMs']),
     create_input_mapping_context: new Set(['action', 'name', 'path', 'timeoutMs']),
     add_mapping: new Set(['action', 'contextPath', 'actionPath', 'key', 'timeoutMs']),
-    remove_mapping: new Set(['action', 'contextPath', 'actionPath', 'timeoutMs']),
+    remove_mapping: new Set(['action', 'contextPath', 'actionPath', 'key', 'timeoutMs']),
     map_input_action: new Set(['action', 'contextPath', 'actionPath', 'key', 'timeoutMs']),
     set_input_trigger: new Set(['action', 'actionPath', 'triggerType', 'timeoutMs']),
-    set_input_modifier: new Set(['action', 'actionPath', 'modifierType', 'timeoutMs']),
+    set_input_modifier: new Set(['action', 'contextPath', 'actionPath', 'key', 'modifierType', 'timeoutMs']),
     enable_input_mapping: new Set(['action', 'contextPath', 'priority', 'timeoutMs']),
     disable_input_action: new Set(['action', 'actionPath', 'timeoutMs']),
     get_input_info: new Set(['action', 'assetPath', 'timeoutMs']),
@@ -126,9 +126,11 @@ export async function handleInputTools(
           }
       }
       
-      // Also check for optional path params (path, assetPath for non-required)
+      // Also check for optional path params (path, assetPath, contextPath, actionPath for non-required)
       if (argsRecord.path !== undefined) pathParams.path = argsRecord.path;
       if (argsRecord.assetPath !== undefined) pathParams.assetPath = argsRecord.assetPath;
+      if (argsRecord.contextPath !== undefined) pathParams.contextPath = argsRecord.contextPath;
+      if (argsRecord.actionPath !== undefined) pathParams.actionPath = argsRecord.actionPath;
       
       const pathValidation = validateAndSanitizePaths(pathParams, requiredPaths);
       if (!pathValidation.valid) {
@@ -215,7 +217,8 @@ export async function handleInputTools(
             const result = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_INPUT, {
                 action: 'remove_mapping',
                 contextPath: sanitizedContextPath,
-                actionPath: sanitizedActionPath
+                actionPath: sanitizedActionPath,
+                key: argsTyped.key ?? ''
             }, undefined, { timeoutMs });
             return cleanObject(result) as Record<string, unknown>;
         }
