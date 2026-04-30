@@ -295,51 +295,48 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
         enableFootPlacement: mutableArgs.enableFootPlacement
       })) as Record<string, unknown>;
     }
-    case 'create_procedural_anim': {
-      const params = normalizeArgs(args, [
-        { key: 'name', required: true },
-        { key: 'path', aliases: ['directory'], default: '/Game/Animations' },
-        { key: 'skeletonPath', required: true },
-        { key: 'boneTracks', required: true },
-        { key: 'numFrames', default: 30 },
-        { key: 'frameRate', default: 30 },
-        { key: 'save', default: true }
-      ]);
+  case 'create_procedural_anim': {
+    const params = normalizeArgs(args, [
+      { key: 'name', required: true },
+      { key: 'path', aliases: ['directory'], default: '/Game/Animations' },
+      { key: 'skeletonPath', required: false },
+      { key: 'boneTracks', required: false },
+      { key: 'numFrames', default: 30 },
+      { key: 'frameRate', default: 30 },
+      { key: 'save', default: true }
+    ]);
 
-      let savePath: string;
-      let skeletonPath: string;
-      try {
-        savePath = sanitizePath(String(params.path || '/Game/Animations'));
+    let savePath: string;
+    let skeletonPath: string | undefined;
+    try {
+      savePath = sanitizePath(String(params.path || '/Game/Animations'));
+      if (params.skeletonPath && typeof params.skeletonPath === 'string') {
         skeletonPath = sanitizePath(String(params.skeletonPath));
-      } catch (e) {
-        return cleanObject({
-          success: false,
-          error: 'SECURITY_VIOLATION',
-          message: e instanceof Error ? e.message : 'Invalid path: path traversal or illegal characters detected'
-        });
       }
-
-      if (!Array.isArray(params.boneTracks)) {
-        return cleanObject({
-          success: false,
-          error: 'INVALID_ARGUMENT',
-          message: 'boneTracks must be an array of bone track definitions'
-        });
-      }
-
-      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
-        action: 'create_procedural_anim',
-        subAction: 'create_procedural_anim',
-        name: params.name,
-        path: savePath,
-        savePath,
-        skeletonPath,
-        boneTracks: params.boneTracks,
-        numFrames: params.numFrames,
-        frameRate: params.frameRate,
-        save: params.save
-      })) as Record<string, unknown>;
+    } catch (e) {
+      return cleanObject({
+        success: false,
+        error: 'SECURITY_VIOLATION',
+        message: e instanceof Error ? e.message : 'Invalid path: path traversal or illegal characters detected'
+      });
     }
+
+    // boneTracks is optional - C++ handler will validate if required
+    const boneTracks = Array.isArray(params.boneTracks) ? params.boneTracks : undefined;
+
+    return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+      action: 'create_procedural_anim',
+      subAction: 'create_procedural_anim',
+      name: params.name,
+      path: savePath,
+      savePath,
+      skeletonPath,
+      boneTracks,
+      numFrames: params.numFrames,
+      frameRate: params.frameRate,
+      save: params.save
+    })) as Record<string, unknown>;
+  }
     case 'create_blend_tree': {
       // Validate blueprint path
       let blueprintPath: string | undefined;
@@ -451,13 +448,14 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
         time: mutableArgs.time ?? mutableArgs.startTime
       })) as Record<string, unknown>;
     }
-    case 'configure_vehicle': {
+case 'configure_vehicle': {
       const params = normalizeArgs(args, [
-        { key: 'actorName', required: true },
-        { key: 'vehicleType', default: 'WheeledVehicle4W' }, // WheeledVehicle4W, WheeledVehicle, Tank
-        { key: 'wheels' }, // Array of {boneName, offset, radius, width, friction}
-        { key: 'engine' }, // {maxRPM, maxTorque, gears}
-        { key: 'transmission' }, // {gearRatios, finalDrive}
+        { key: 'actorName', required: false },
+        { key: 'vehicleName', required: false },
+        { key: 'vehicleType', default: 'WheeledVehicle4W' },
+        { key: 'wheels' },
+        { key: 'engine' },
+        { key: 'transmission' },
         { key: 'mass', default: 1500 },
         { key: 'dragCoefficient', default: 0.3 }
       ]);
@@ -466,6 +464,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
         action: 'configure_vehicle',
         subAction: 'configure_vehicle',
         actorName: params.actorName,
+        vehicleName: params.vehicleName,
         vehicleType: params.vehicleType,
         wheels: params.wheels,
         engine: params.engine,
