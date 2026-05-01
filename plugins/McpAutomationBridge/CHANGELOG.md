@@ -4,6 +4,15 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- `inspect:inspect_class` now resolves Blueprint generated classes — previously returned `CLASS_NOT_FOUND` for `BP_*` short names because the lookup only used `FindObject<UClass>` against the as-given name. The handler now delegates to the central `ResolveClassByName` helper.
+- `ResolveClassByName` and `ResolveUClass` helpers gained a Blueprint resolution chain: try the input as-is, retry with a `_C` generated-class suffix, strip a trailing `_C` and `LoadAsset` the underlying `UBlueprint` (returning `GeneratedClass`), and fall back to an Asset Registry lookup of `UBlueprint` assets by short `AssetName`. The `TObjectIterator` fallback also now matches `BP_Foo` against an in-memory `BP_Foo_C` class.
+- `blueprint_create` parent-class resolution now falls back to `ResolveClassByName`, so callers can specify a Blueprint parent by short name (e.g. `BP_BaseCharacter`) or full asset path (`/Game/.../BP_Foo.BP_Foo_C`).
+
+---
+
 ## [0.6.0] - 2026-04-05
 
 ### Security

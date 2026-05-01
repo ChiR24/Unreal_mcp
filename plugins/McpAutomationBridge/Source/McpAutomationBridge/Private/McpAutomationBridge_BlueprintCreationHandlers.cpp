@@ -575,6 +575,13 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
           }
         }
       }
+      // Final fallback: delegate to the centralized helper, which handles
+      // Blueprint generated classes (auto-appends "_C") and looks up
+      // UBlueprint by short name via the Asset Registry. Lets users specify
+      // a BP parent like "BP_BaseCharacter" or "/Game/BP_Foo.BP_Foo_C".
+      if (!ResolvedParent) {
+        ResolvedParent = ResolveClassByName(ParentClassSpec);
+      }
     }
   }
   if (!ResolvedParent && bRequestedFunctionLibraryByParentSpec) {

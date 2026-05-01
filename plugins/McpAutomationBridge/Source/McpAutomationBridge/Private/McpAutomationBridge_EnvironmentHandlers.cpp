@@ -2056,11 +2056,17 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
             Payload->TryGetStringField(TEXT("className"), ClassName);
             if (!ClassName.IsEmpty())
             {
-                // Try to find the class
-                UClass* TargetClass = FindObject<UClass>(nullptr, *ClassName);
+                // Resolve via the centralized helper, which handles:
+                //   - native classes by short name or /Script/...
+                //   - Blueprint generated classes (auto-appends "_C")
+                //   - UBlueprint asset paths -> GeneratedClass
+                //   - Asset Registry lookup for BP short names like "BP_Foo"
+                // (Game-thread safe: invoked through the subsystem dispatcher.)
+                UClass* TargetClass = ResolveClassByName(ClassName);
                 if (!TargetClass && !ClassName.Contains(TEXT(".")))
                 {
-                    // Try with /Script/Engine prefix for common classes
+                    // Final fallback: try with /Script/Engine prefix for
+                    // unloaded native classes (covers an existing edge case).
                     TargetClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), *ClassName));
                 }
                 if (TargetClass)

@@ -1465,20 +1465,30 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
 // to load an asset by path (UBlueprint or UClass), then fall back to scanning
 // loaded classes by name or path suffix. This replaces previous usages of
 // FindObject<...>(ANY_PACKAGE, ...) which is deprecated.
+//
+// Blueprint resolution: Unreal Blueprint generated classes live at
+// "/Game/Path/BP_Foo.BP_Foo_C". Callers frequently pass either the asset short
+// name ("BP_Foo"), the asset path without the generated-class suffix
+// ("/Game/Path/BP_Foo.BP_Foo"), or the full generated-class path. This helper
+// handles all three by trying the input as-is, retrying with a "_C" suffix,
+// and falling back to UBlueprint::GeneratedClass via the Asset Registry.
 static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
   if (ClassNameOrPath.IsEmpty())
     return nullptr;
 
-  // 1) If it's an asset path, prefer loading the asset and deriving the class
-  // Skip /Script/ paths as they are native classes, not assets
+  // 1) If it's an asset path, prefer loading the asset and deriving the class.
+  //    Skip /Script/ paths as they are native classes, not assets.
   if ((ClassNameOrPath.StartsWith(TEXT("/")) ||
        ClassNameOrPath.Contains(TEXT("/"))) &&
       !ClassNameOrPath.StartsWith(TEXT("/Script/"))) {
-    UObject *Loaded = nullptr;
-// Prefer EditorAssetLibrary when available
-#if WITH_EDITOR
-    Loaded = UEditorAssetLibrary::LoadAsset(ClassNameOrPath);
-#endif
+    // For paths that include the generated-class "_C" suffix
+    // (e.g. /Game/Foo.Foo_C), strip it before LoadAsset since
+    // EditorAssetLibrary loads UObject assets, not UClass directly.
+    FString AssetLoadPath = ClassNameOrPath;
+    if (AssetLoadPath.EndsWith(TEXT("_C"))) {
+      AssetLoadPath.LeftChopInline(2);
+    }
+    UObject *Loaded = UEditorAssetLibrary::LoadAsset(AssetLoadPath);
     if (Loaded) {
       if (UBlueprint *BP = Cast<UBlueprint>(Loaded))
         return BP->GeneratedClass;
@@ -1490,6 +1500,21 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
   // 2) Try a direct FindObject using nullptr/explicit outer (expects full path)
   if (UClass *Direct = FindObject<UClass>(nullptr, *ClassNameOrPath))
     return Direct;
+
+  // 2.1) Blueprint generated-class fallback: append _C and retry FindObject.
+  //      Covers callers that passed "/Game/Foo.Foo" (UBlueprint object path)
+  //      or a bare short name "BP_Foo" for an already-loaded Blueprint.
+  if (!ClassNameOrPath.EndsWith(TEXT("_C"))) {
+    const FString WithCSuffix = ClassNameOrPath + TEXT("_C");
+    if (UClass *BPClass = FindObject<UClass>(nullptr, *WithCSuffix))
+      return BPClass;
+    // For full asset paths, try loading the generated class explicitly.
+    if (ClassNameOrPath.StartsWith(TEXT("/")) &&
+        !ClassNameOrPath.StartsWith(TEXT("/Script/"))) {
+      if (UClass *BPClassLoaded = LoadObject<UClass>(nullptr, *WithCSuffix))
+        return BPClassLoaded;
+    }
+  }
 
   // 2.5) Try guessing generic engine locations for common components (e.g.
   // StaticMeshComponent -> /Script/Engine.StaticMeshComponent) This helps when
@@ -1520,8 +1545,46 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
     }
   }
 
+  // 2.7) Asset Registry lookup for Blueprint short names (e.g. "BP_Foo").
+  //      Resolves a Blueprint asset by name and returns its GeneratedClass,
+  //      so callers don't have to know the /Game/... path.
+  if (!ClassNameOrPath.Contains(TEXT("/")) &&
+      !ClassNameOrPath.Contains(TEXT("."))) {
+    // Strip a trailing "_C" so we look up the UBlueprint asset by base name.
+    FString BPShortName = ClassNameOrPath;
+    if (BPShortName.EndsWith(TEXT("_C"))) {
+      BPShortName.LeftChopInline(2);
+    }
+    if (FModuleManager::Get().IsModuleLoaded(TEXT("AssetRegistry"))) {
+      FAssetRegistryModule &ARM =
+          FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
+              TEXT("AssetRegistry"));
+      TArray<FAssetData> BPAssets;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+      ARM.Get().GetAssetsByClass(UBlueprint::StaticClass()->GetClassPathName(),
+                                 BPAssets);
+#else
+      // UE 5.0: legacy FName overload
+      ARM.Get().GetAssetsByClass(FName(TEXT("Blueprint")), BPAssets);
+#endif
+      for (const FAssetData &AD : BPAssets) {
+        if (AD.AssetName.ToString().Equals(BPShortName,
+                                           ESearchCase::IgnoreCase)) {
+          if (UBlueprint *BP = Cast<UBlueprint>(AD.GetAsset())) {
+            if (BP->GeneratedClass)
+              return BP->GeneratedClass;
+          }
+        }
+      }
+    }
+  }
+
   // 3) Fallback: iterate loaded classes and match by short name or path suffix
   UClass *BestMatch = nullptr;
+  // For "BP_Foo" requests, the in-memory generated class is named "BP_Foo_C".
+  const FString BPSuffixedName = ClassNameOrPath.EndsWith(TEXT("_C"))
+                                     ? FString()
+                                     : ClassNameOrPath + TEXT("_C");
   for (TObjectIterator<UClass> It; It; ++It) {
     UClass *C = *It;
     if (!C)
@@ -1532,6 +1595,12 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
       // Prefer /Script/ (native) classes over others if multiple match
       if (C->GetPathName().StartsWith(TEXT("/Script/")))
         return C;
+      if (!BestMatch)
+        BestMatch = C;
+    }
+    // Generated-class match: input "BP_Foo" matches loaded class "BP_Foo_C".
+    else if (!BPSuffixedName.IsEmpty() &&
+             C->GetName().Equals(BPSuffixedName, ESearchCase::IgnoreCase)) {
       if (!BestMatch)
         BestMatch = C;
     }
@@ -3050,8 +3119,16 @@ static inline bool FindBlueprintNormalizedPath(const FString &Req,
  * Resolve a UClass from a string that may be a full path, a blueprint class
  * path, or a short class name.
  *
- * @param Input The input string representing the class (examples:
- * "/Script/Engine.Actor", "/Game/MyBP.MyBP_C", or "Actor").
+ * Blueprint generated classes live at "/Game/Path/MyBP.MyBP_C". Callers may
+ * pass any of the following forms; this helper tries them all:
+ *   - "/Script/Engine.Actor"     (native class)
+ *   - "/Game/MyBP.MyBP_C"        (full BP generated-class path)
+ *   - "/Game/MyBP.MyBP"          (BP object path; we retry with _C)
+ *   - "/Game/MyBP"               (asset path; we load + use GeneratedClass)
+ *   - "MyBP" / "BP_Foo"          (short name; we delegate to ResolveClassByName
+ *                                 which also probes the Asset Registry)
+ *
+ * @param Input The input string representing the class.
  * @returns A pointer to the resolved UClass if found, `nullptr` otherwise.
  */
 static inline UClass *ResolveUClass(const FString &Input) {
@@ -3068,14 +3145,39 @@ static inline UClass *ResolveUClass(const FString &Input) {
   if (Found)
     return Found;
 
-  // 3. Handle Blueprint Generated Classes explicitly
-  // parsing "MyBP" -> "/Game/MyBP.MyBP_C" logic is hard without path,
-  // but if input ends in _C, treat as class path.
-  if (Input.EndsWith(TEXT("_C"))) {
-    // Already tried loading, maybe it needs a package path fix?
-    // Assuming the user provided a full path if they included _C.
-    return nullptr;
+  // 3. Blueprint generated-class fallback: append _C and retry.
+  //    Handles "/Game/MyBP.MyBP" -> "/Game/MyBP.MyBP_C" and short BP names
+  //    where the in-memory class is "BP_Foo_C".
+  if (!Input.EndsWith(TEXT("_C"))) {
+    const FString WithCSuffix = Input + TEXT("_C");
+    Found = FindObject<UClass>(nullptr, *WithCSuffix);
+    if (Found)
+      return Found;
+    if (Input.StartsWith(TEXT("/")) && !Input.StartsWith(TEXT("/Script/"))) {
+      Found = LoadObject<UClass>(nullptr, *WithCSuffix);
+      if (Found)
+        return Found;
+    }
   }
+
+  // 3a. If we have an asset path for a UBlueprint, load it and return its
+  //     GeneratedClass. Skip /Script/ paths (not assets). Editor-only.
+#if WITH_EDITOR
+  if (Input.StartsWith(TEXT("/")) && !Input.StartsWith(TEXT("/Script/"))) {
+    FString AssetLoadPath = Input;
+    if (AssetLoadPath.EndsWith(TEXT("_C"))) {
+      AssetLoadPath.LeftChopInline(2);
+    }
+    if (UObject *Loaded = UEditorAssetLibrary::LoadAsset(AssetLoadPath)) {
+      if (UBlueprint *BP = Cast<UBlueprint>(Loaded)) {
+        if (BP->GeneratedClass)
+          return BP->GeneratedClass;
+      }
+      if (UClass *AsClass = Cast<UClass>(Loaded))
+        return AsClass;
+    }
+  }
+#endif
 
   // 4. Short name resolution
   // Check common script packages
@@ -3098,12 +3200,30 @@ static inline UClass *ResolveUClass(const FString &Input) {
 
   // 5. Native class search by iteration (slow fallback, but useful for obscure
   // plugins)
-  // Only doing this for exact short name matches to avoid false positives
+  // Only doing this for exact short name matches to avoid false positives.
+  // Also accepts the "_C" suffixed form for Blueprint-generated classes.
+  const FString InputWithC = Input.EndsWith(TEXT("_C"))
+                                 ? FString()
+                                 : Input + TEXT("_C");
   for (TObjectIterator<UClass> It; It; ++It) {
-    if (It->GetName() == Input) {
+    const FString IterName = It->GetName();
+    if (IterName == Input) {
+      return *It;
+    }
+    if (!InputWithC.IsEmpty() && IterName == InputWithC) {
       return *It;
     }
   }
+
+  // 6. Asset Registry fallback for Blueprint short names (delegated to
+  //    ResolveClassByName, which knows how to look up UBlueprint by AssetName
+  //    and return its GeneratedClass). Editor-only.
+#if WITH_EDITOR
+  if (!Input.Contains(TEXT("/")) && !Input.Contains(TEXT("."))) {
+    if (UClass *FromRegistry = ResolveClassByName(Input))
+      return FromRegistry;
+  }
+#endif
 
   return nullptr;
 }
