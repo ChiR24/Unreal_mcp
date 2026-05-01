@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Game Feature Plugin path validation** – `SanitizeProjectRelativePath` now uses `FPackageName::IsValidLongPackageName` instead of a manual `/Content/` heuristic, correctly recognizing all registered engine mount points (game feature plugins like `/MyGameFeature/`, `/ShooterCore/`, `/ALS/`, etc.).
+- **`manage_navigation: rebuild_navigation` returned before tiles finished generating** – the handler called `UNavigationSystemV1::Build()` and immediately reported `success: true`, so a follow-up `find_path` would fail with `NO_PATH` because the navmesh wasn't actually built yet. The handler now polls `UNavigationSystemV1::IsNavigationBuildInProgress()` until tile generation completes (default 30 s timeout, configurable via the new `timeout_seconds` payload field) and returns `success: false` with `error_code: "BUILD_TIMEOUT"` if the deadline elapses. Response gains `awaited`, `waitedSeconds`, `timeoutSeconds`, and `timedOut` fields.
 
 ---
 

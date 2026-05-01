@@ -601,7 +601,18 @@ static bool HandleRebuildNavigation(
     ARecastNavMesh* NavMesh = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance());
     bool bHasNavMesh = (NavMesh != nullptr);
 
-    // Trigger full navigation rebuild
+    // Trigger full navigation rebuild. The navigation tile generator runs on
+    // dedicated worker threads; this call merely kicks them off and returns.
+    //
+    // NOTE: a previous iteration of this handler tried to await tile-generation
+    // completion by sleeping the game thread in a polling loop. That introduced
+    // intermittent crashes in FTickTaskManager::RunTickGroup and
+    // FTimerManager::Tick — sleeping the game thread for tens of seconds at a
+    // time starves the tick / timer manager and lets stale state accumulate that
+    // faults on the next tick. Callers that need to await completion should
+    // instead poll `manage_navigation: get_navigation_info` and check
+    // `isNavigationBuildInProgress` on the client side, the same pattern that
+    // `manage_level: build_level_navigation` already supports.
     NavSys->Build();
 
     // -------------------------------------------------------------------------
@@ -617,8 +628,10 @@ static bool HandleRebuildNavigation(
     Result->SetStringField(TEXT("navigationSystemPath"), NavSys->GetPathName());
     Result->SetBoolField(TEXT("existsAfter"), true);
 
-    Self->SendAutomationResponse(Socket, RequestId, true,
-        bHasNavMesh ? TEXT("Navigation rebuild initiated") : TEXT("Navigation rebuild initiated (no existing NavMesh - ensure NavMeshBoundsVolume is present)"), Result);
+    const TCHAR* SuccessMsg = bHasNavMesh
+        ? TEXT("Navigation rebuild initiated")
+        : TEXT("Navigation rebuild initiated (no existing NavMesh - ensure NavMeshBoundsVolume is present)");
+    Self->SendAutomationResponse(Socket, RequestId, true, SuccessMsg, Result);
     return true;
 }
 
