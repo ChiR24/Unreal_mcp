@@ -563,6 +563,11 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
     int32 FrameRate = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("frameRate"), 30));
     bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
 
+    if (FrameRate <= 0)
+    {
+        ANIM_ERROR_RESPONSE(TEXT("frameRate must be greater than 0"), TEXT("INVALID_FRAME_RATE"));
+    }
+
     if (Name.IsEmpty())
     {
         ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
@@ -838,6 +843,20 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
         
+        // Build transform key
+        FVector Location = LocationObj.IsValid() ? GetVectorFromJsonAnim(LocationObj) : FVector::ZeroVector;
+        FQuat Rotation = RotationObj.IsValid() ? GetRotatorFromJsonAnim(RotationObj).Quaternion() : FQuat::Identity;
+        FVector Scale = ScaleObj.IsValid() ? GetVectorFromJsonAnim(ScaleObj) : FVector::OneVector;
+
+        int32 TotalFrames = Sequence->GetDataModel()->GetNumberOfFrames();
+        if (Frame >= TotalFrames)
+        {
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Frame %d is out of range (animation has %d frames)"), Frame, TotalFrames),
+                TEXT("FRAME_OUT_OF_RANGE")
+            );
+        }
+
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         // UE 5.1+ API
         IAnimationDataController& Controller = Sequence->GetController();
@@ -852,42 +871,41 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
 
         // Use IsValidBoneTrackName (non-deprecated) instead of GetBoneTrackIndexByName (deprecated since 5.2)
+        if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
+        {
+            const bool bAdded = Controller.AddBoneCurve(BoneFName);
+            if (!bAdded)
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("Failed to create missing bone track '%s' before keying"), *BoneName),
+                    TEXT("BONE_TRACK_ADD_FAILED")
+                );
+            }
+
+            // Verify the track was actually created after AddBoneCurve succeeded
             if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
             {
-                const bool bAdded = Controller.AddBoneCurve(BoneFName);
-                if (!bAdded)
-                {
-                    ANIM_ERROR_RESPONSE(
-                        FString::Printf(TEXT("Failed to create missing bone track '%s' before keying"), *BoneName),
-                        TEXT("BONE_TRACK_ADD_FAILED")
-                    );
-                }
-
-                // Verify the track was actually created after AddBoneCurve succeeded
-                if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
-                {
-                    ANIM_ERROR_RESPONSE(
-                        FString::Printf(TEXT("Bone track '%s' not found in animation sequence after AddBoneCurve. Add the track first using add_bone_track."), *BoneName),
-                        TEXT("BONE_TRACK_NOT_FOUND")
-                    );
-                }
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("Bone track '%s' not found in animation sequence after AddBoneCurve. Add the track first using add_bone_track."), *BoneName),
+                    TEXT("BONE_TRACK_NOT_FOUND")
+                );
             }
-        
-        // Build transform key
-        FVector Location = LocationObj.IsValid() ? GetVectorFromJsonAnim(LocationObj) : FVector::ZeroVector;
-        FQuat Rotation = RotationObj.IsValid() ? GetRotatorFromJsonAnim(RotationObj).Quaternion() : FQuat::Identity;
-        FVector Scale = ScaleObj.IsValid() ? GetVectorFromJsonAnim(ScaleObj) : FVector::OneVector;
-        
-        FTransform Transform(Rotation, Location, Scale);
-        
-        // Set key at frame
-        FFrameNumber FrameNumber(Frame);
-        Controller.SetBoneTrackKeys(BoneFName, {Location}, {Rotation}, {Scale});
+        }
+
+        // UpdateBoneTrackKeys preserves other frames; SetBoneTrackKeys would replace the entire track
+        FInt32Range KeyRange(Frame, Frame + 1);
+        if (!Controller.UpdateBoneTrackKeys(BoneFName, KeyRange, {Location}, {Rotation}, {Scale}))
+        {
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Failed to set bone key at frame %d"), Frame),
+                TEXT("BONE_KEY_SET_FAILED")
+            );
+        }
 #elif ENGINE_MAJOR_VERSION >= 5
         // UE 5.0 API - uses FindBoneTrackByName which returns a pointer
         IAnimationDataController& Controller = Sequence->GetController();
         FName BoneFName(*BoneName);
-        
+
         const FBoneAnimationTrack* Track = Controller.GetModel()->FindBoneTrackByName(BoneFName);
         if (Track == nullptr)
         {
@@ -908,12 +926,8 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
                 TEXT("BONE_TRACK_NOT_FOUND")
             );
         }
-        
-        FVector Location = LocationObj.IsValid() ? GetVectorFromJsonAnim(LocationObj) : FVector::ZeroVector;
-        FQuat Rotation = RotationObj.IsValid() ? GetRotatorFromJsonAnim(RotationObj).Quaternion() : FQuat::Identity;
-        FVector Scale = ScaleObj.IsValid() ? GetVectorFromJsonAnim(ScaleObj) : FVector::OneVector;
-        
-        FFrameNumber FrameNumber(Frame);
+
+        // UE 5.0 fallback: SetBoneTrackKeys replaces the entire track (no UpdateBoneTrackKeys available)
         Controller.SetBoneTrackKeys(BoneFName, {Location}, {Rotation}, {Scale});
 #endif
         
@@ -1087,6 +1101,11 @@ if (SubAction == TEXT("add_notify_state"))
     int32 TrackIndex = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("trackIndex"), 0));
     FString NotifyName = GetStringFieldAnimAuth(Params, TEXT("notifyName"), TEXT(""));
     bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+
+    if (EndFrame < StartFrame)
+    {
+        ANIM_ERROR_RESPONSE(TEXT("endFrame must be greater than or equal to startFrame"), TEXT("INVALID_FRAME_RANGE"));
+    }
 
     if (NotifyClass.IsEmpty() && NotifyName.IsEmpty())
     {
@@ -3129,9 +3148,9 @@ if (SubAction == TEXT("add_montage_notify"))
         FString SkeletalMeshPath = GetStringFieldAnimAuth(Params, TEXT("skeletalMeshPath"), TEXT(""));
         FString SkeletonPath = GetStringFieldAnimAuth(Params, TEXT("skeletonPath"), TEXT(""));
         bool bModularRig = GetBoolFieldAnimAuth(Params, TEXT("modularRig"), false);
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+    bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
 
-        if (Name.IsEmpty())
+    if (Name.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
         }
@@ -3378,15 +3397,16 @@ if (SubAction == TEXT("create_ik_rig"))
         ANIM_ERROR_RESPONSE(TEXT("Failed to create IK Rig asset"), TEXT("CREATION_FAILED"));
     }
 
-    // If skeletal mesh path provided, set the preview mesh
-    if (!SkeletalMeshPath.IsEmpty())
-    {
-        USkeletalMesh* SkeletalMesh = LoadSkeletalMeshFromPathAnim(SkeletalMeshPath);
-        if (SkeletalMesh)
+        // If skeletal mesh path provided, set the preview mesh
+        if (!SkeletalMeshPath.IsEmpty())
         {
+            USkeletalMesh* SkeletalMesh = LoadSkeletalMeshFromPathAnim(SkeletalMeshPath);
+            if (!SkeletalMesh)
+            {
+                ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeletal mesh: %s"), *SkeletalMeshPath), TEXT("SKELETAL_MESH_NOT_FOUND"));
+            }
             IKRig->SetPreviewMesh(SkeletalMesh);
         }
-    }
         // Also support skeletonPath: load skeleton and set its preview mesh on the IK Rig
         else if (!SkeletonPath.IsEmpty())
         {
