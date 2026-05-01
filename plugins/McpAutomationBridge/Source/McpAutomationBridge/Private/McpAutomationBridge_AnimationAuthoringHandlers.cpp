@@ -849,7 +849,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         FVector Scale = ScaleObj.IsValid() ? GetVectorFromJsonAnim(ScaleObj) : FVector::OneVector;
 
         int32 TotalFrames = Sequence->GetDataModel()->GetNumberOfFrames();
-        if (Frame >= TotalFrames)
+        if (Frame < 0 || Frame >= TotalFrames)
         {
             ANIM_ERROR_RESPONSE(
                 FString::Printf(TEXT("Frame %d is out of range (animation has %d frames)"), Frame, TotalFrames),
@@ -1015,14 +1015,14 @@ if (SubAction == TEXT("add_notify"))
         }
 
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-        ResolvedNotifyClass = FindFirstObject<UClass>(*FullClassName, EFindFirstObjectOptions::ExactClass);
+        ResolvedNotifyClass = FindFirstObject<UClass>(*FullClassName, EFindFirstObjectOptions::None);
 #else
         ResolvedNotifyClass = ResolveClassByName(FullClassName);
 #endif
         if (!ResolvedNotifyClass)
         {
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-            ResolvedNotifyClass = FindFirstObject<UClass>(*NotifyClass, EFindFirstObjectOptions::ExactClass);
+            ResolvedNotifyClass = FindFirstObject<UClass>(*NotifyClass, EFindFirstObjectOptions::None);
 #else
             ResolvedNotifyClass = ResolveClassByName(NotifyClass);
 #endif
@@ -1123,14 +1123,14 @@ if (SubAction == TEXT("add_notify_state"))
         }
 
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-        ResolvedNotifyStateClass = FindFirstObject<UClass>(*FullClassName, EFindFirstObjectOptions::ExactClass);
+        ResolvedNotifyStateClass = FindFirstObject<UClass>(*FullClassName, EFindFirstObjectOptions::None);
 #else
         ResolvedNotifyStateClass = ResolveClassByName(FullClassName);
 #endif
         if (!ResolvedNotifyStateClass)
         {
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-            ResolvedNotifyStateClass = FindFirstObject<UClass>(*NotifyClass, EFindFirstObjectOptions::ExactClass);
+            ResolvedNotifyStateClass = FindFirstObject<UClass>(*NotifyClass, EFindFirstObjectOptions::None);
 #else
             ResolvedNotifyStateClass = ResolveClassByName(NotifyClass);
 #endif
@@ -1551,14 +1551,14 @@ if (SubAction == TEXT("add_montage_notify"))
         }
 
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-        ResolvedNotifyClass = FindFirstObject<UClass>(*FullClassName, EFindFirstObjectOptions::ExactClass);
+        ResolvedNotifyClass = FindFirstObject<UClass>(*FullClassName, EFindFirstObjectOptions::None);
 #else
         ResolvedNotifyClass = ResolveClassByName(FullClassName);
 #endif
         if (!ResolvedNotifyClass)
         {
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-            ResolvedNotifyClass = FindFirstObject<UClass>(*NotifyClass, EFindFirstObjectOptions::ExactClass);
+            ResolvedNotifyClass = FindFirstObject<UClass>(*NotifyClass, EFindFirstObjectOptions::None);
 #else
             ResolvedNotifyClass = ResolveClassByName(NotifyClass);
 #endif
@@ -3250,7 +3250,11 @@ if (SubAction == TEXT("add_montage_notify"))
         if (!SkeletalMeshPath.IsEmpty())
         {
             USkeletalMesh* SkeletalMesh = LoadSkeletalMeshFromPathAnim(SkeletalMeshPath);
-            if (SkeletalMesh && SkeletalMesh->GetSkeleton())
+            if (!SkeletalMesh)
+            {
+                ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeletal mesh: %s"), *SkeletalMeshPath), TEXT("SKELETAL_MESH_NOT_FOUND"));
+            }
+            if (SkeletalMesh->GetSkeleton())
             {
                 USkeletalMesh* PreviewMesh = SkeletalMesh->GetSkeleton()->GetPreviewMesh();
                 if (PreviewMesh)
