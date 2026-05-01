@@ -55,6 +55,7 @@
 #include "RenderingThread.h"
 #include "GameFramework/WorldSettings.h"
 #include "Engine/LevelBounds.h"
+#include "Engine/LevelScriptActor.h"
 #include "LevelUtils.h"
 #include "EditorBuildUtils.h"
 #include "EditorAssetLibrary.h"
@@ -2347,16 +2348,30 @@ TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       return true;
     }
     
+    // Compute bounds by iterating actors of the target level itself. Relying on
+    // ALevelBoundsActor or UWorld::GetWorldBounds() returns zero unless the
+    // bounds actor was authored OR streaming sublevels are visible/loaded —
+    // which is not the case after a plain manage_level: load. Iterating the
+    // level's own AActors (game-thread safe) gives correct, streaming-
+    // independent bounds for the persistent level the caller asked about.
     FBox LevelBounds(ForceInit);
-    if (TargetLevel->LevelBoundsActor.IsValid()) {
-      LevelBounds = TargetLevel->LevelBoundsActor->GetComponentsBoundingBox();
+    for (AActor* Actor : TargetLevel->Actors) {
+      if (!Actor || Actor->IsA(ALevelScriptActor::StaticClass())) {
+        continue;
+      }
+      // bNonColliding=true so visual-only actors (lights, decals, meshes
+      // without collision) still contribute to the bounds.
+      const FBox ActorBounds = Actor->GetComponentsBoundingBox(true);
+      if (ActorBounds.IsValid) {
+        LevelBounds += ActorBounds;
+      }
     }
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("levelPath"), TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT(""));
     Result->SetStringField(TEXT("min"), FString::Printf(TEXT("X=%f Y=%f Z=%f"), LevelBounds.Min.X, LevelBounds.Min.Y, LevelBounds.Min.Z));
     Result->SetStringField(TEXT("max"), FString::Printf(TEXT("X=%f Y=%f Z=%f"), LevelBounds.Max.X, LevelBounds.Max.Y, LevelBounds.Max.Z));
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level bounds retrieved"), Result);
     return true;
   }

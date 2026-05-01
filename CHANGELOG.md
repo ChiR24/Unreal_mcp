@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`manage_level: get_level_bounds` returning zero bounds** – Previous implementation only read `ULevel::LevelBoundsActor`, which is unset on most levels and otherwise relies on `UWorld::GetWorldBounds()`-style aggregation that requires streaming sublevels to be visible/loaded. After a plain `manage_level: load`, the persistent level is loaded but the bounds actor is rarely authored, so callers received `min=(0,0,0) max=(0,0,0)`. Bounds are now computed on the game thread by unioning each persistent-level actor's `GetComponentsBoundingBox(true)` (skipping `ALevelScriptActor`), which is independent of streaming state and includes non-colliding visual actors. JSON shape unchanged.
 - **Game Feature Plugin path validation** – `SanitizeProjectRelativePath` now uses `FPackageName::IsValidLongPackageName` instead of a manual `/Content/` heuristic, correctly recognizing all registered engine mount points (game feature plugins like `/MyGameFeature/`, `/ShooterCore/`, `/ALS/`, etc.).
 
 ---
