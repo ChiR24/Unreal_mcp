@@ -354,7 +354,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 | `manage_lighting` | Spawn lights, GI, shadows, build lighting, list_light_types |
 | `manage_level_structure` | Level creation, sublevels, World Partition, data layers, HLOD |
 | `manage_volumes` | Trigger volumes, blocking, physics, audio, navigation volumes |
-| `manage_navigation` | NavMesh settings, nav modifiers, nav links, smart links, pathfinding |
+| `manage_navigation` | NavMesh settings, nav modifiers, nav links, smart links, `find_path` pathfinding queries |
 | `build_environment` | Landscape, Foliage, Procedural |
 | `manage_splines` | Spline creation, spline mesh deformation |
 

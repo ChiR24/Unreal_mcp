@@ -1066,6 +1066,9 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `create_smart_link`
 - [x] `configure_smart_link_behavior`
 
+### 25.4 Pathfinding Queries
+- [x] `find_path` (start, end, optional `agent_class`; returns waypoints, total length, partial flag, owning nav data)
+
 ---
 
 ## Phase 26: Spline System (Complete)

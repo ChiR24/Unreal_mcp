@@ -1074,6 +1074,8 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `configure_smart_link_behavior` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Configures UNavLinkCustomComponent settings |
 | **Utility** | | | |
 | `get_navigation_info` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Returns NavMesh stats, agent properties, link counts |
+| **Pathfinding Queries** | | | |
+| `find_path` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Runs `UNavigationSystemV1::FindPathToLocationSynchronously`; returns waypoints, total length, partial flag, owning nav data |
 
 ## 38. Splines Manager (`manage_splines`) - Phase 26
 

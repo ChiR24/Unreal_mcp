@@ -384,6 +384,8 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 | `configure_smart_link_behavior` | ✅ Done | Configures UNavLinkCustomComponent (area classes, broadcast, obstacles) |
 | **Utility** | | |
 | `get_navigation_info` | ✅ Done | Returns NavMesh stats, agent properties, link/volume counts |
+| **Pathfinding Queries** | | |
+| `find_path` | ✅ Done | Synchronous `FindPathToLocationSynchronously` query; returns waypoints, total length, partial flag, and owning nav data class |
 
 ### Phase 26: Spline System (`manage_splines`)
 

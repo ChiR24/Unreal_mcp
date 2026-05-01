@@ -24,6 +24,7 @@
 //
 // Section 4: Utility Handlers
 //   - HandleGetNavigationInfo           : Get navigation system status and settings
+//   - HandleFindPath                    : Synchronous navmesh pathfinding query
 //   - HandleManageNavigationAction      : Main dispatcher for navigation actions
 //
 // PAYLOAD/RESPONSE FORMATS:
@@ -89,6 +90,8 @@
 // Navigation System Includes
 // =============================================================================
 #include "NavigationSystem.h"
+#include "NavigationPath.h"
+#include "NavigationData.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "NavMesh/NavMeshBoundsVolume.h"
 #include "NavModifierComponent.h"
@@ -1624,6 +1627,180 @@ static bool HandleGetNavigationInfo(
     return true;
 }
 
+/**
+ * HandleFindPath
+ * --------------
+ * Synchronous navmesh pathfinding query between two world-space points.
+ *
+ * Payload:
+ *   start:       { x, y, z }   (required)
+ *   end:         { x, y, z }   (required)
+ *   agent_class: string        (optional — class path of an AActor/APawn whose
+ *                               default nav agent properties select the nav data;
+ *                               defaults to NavSys default nav agent)
+ *
+ * Response (success):
+ *   success:        bool       (path was found and is at least partial)
+ *   path_length:    number     (sum of segment lengths between consecutive PathPoints)
+ *   waypoints:      array      ([{x,y,z}, ...] — first entry is start, last is end/closest reachable)
+ *   partial:        bool       (true if the goal was unreachable but a partial path was returned)
+ *   nav_data_used:  string     (class name of owning nav data, e.g. "RecastNavMesh")
+ *
+ * Response (failure):
+ *   success: false  + error message + errorCode (NO_WORLD, NO_NAV_SYSTEM,
+ *           AGENT_NOT_REGISTERED, NOT_FOUND, NO_PATH).
+ */
+static bool HandleFindPath(
+    UMcpAutomationBridgeSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    if (!Payload.IsValid())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Missing payload for find_path"), nullptr, TEXT("INVALID_PAYLOAD"));
+        return true;
+    }
+
+    // Required: start, end (must be present as objects, not just defaulted to ZeroVector)
+    const TSharedPtr<FJsonObject>* StartObj = nullptr;
+    const TSharedPtr<FJsonObject>* EndObj = nullptr;
+    if (!Payload->TryGetObjectField(TEXT("start"), StartObj) || !StartObj->IsValid() ||
+        !Payload->TryGetObjectField(TEXT("end"),   EndObj)   || !EndObj->IsValid())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("find_path requires 'start' and 'end' objects with x/y/z fields"),
+            nullptr, TEXT("INVALID_PAYLOAD"));
+        return true;
+    }
+
+    const FVector StartLoc = GetJsonVectorFieldNav(Payload, TEXT("start"));
+    const FVector EndLoc   = GetJsonVectorFieldNav(Payload, TEXT("end"));
+
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+        return true;
+    }
+
+    UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
+    if (!NavSys)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Navigation system not available in current world"),
+            nullptr, TEXT("NO_NAV_SYSTEM"));
+        return true;
+    }
+
+    // Optional agent class — used as PathfindingContext so the nav data picked
+    // matches that actor's nav agent properties.
+    AActor* PathfindingContext = nullptr;
+    FString AgentClassPath = GetJsonStringFieldNav(Payload, TEXT("agent_class"));
+    if (!AgentClassPath.IsEmpty())
+    {
+        if (!IsValidNavigationPath(AgentClassPath))
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("Invalid agent_class: must not contain path traversal (..) or invalid format"),
+                nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        UClass* AgentClass = LoadObject<UClass>(nullptr, *AgentClassPath);
+        if (!AgentClass)
+        {
+            // Allow short class names too (e.g., "Character") via StaticLoadClass-like fallback
+            AgentClass = FindObject<UClass>(nullptr, *AgentClassPath);
+        }
+        if (!AgentClass || !AgentClass->IsChildOf(AActor::StaticClass()))
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("agent_class not found or not an AActor subclass: %s"),
+                    *AgentClassPath),
+                nullptr, TEXT("AGENT_NOT_REGISTERED"));
+            return true;
+        }
+        PathfindingContext = AgentClass->GetDefaultObject<AActor>();
+    }
+
+    UNavigationPath* NavPath = NavSys->FindPathToLocationSynchronously(
+        World, StartLoc, EndLoc, PathfindingContext, /*FilterClass=*/nullptr);
+
+    if (!NavPath)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Pathfinding query returned no result (no nav data, or query rejected)"),
+            nullptr, TEXT("NO_PATH"));
+        return true;
+    }
+
+    // GC-safety: FindPathToLocationSynchronously returns a UNavigationPath that is NOT
+    // referenced from any GC root by default. Subsequent JSON allocations in this
+    // handler can trigger garbage collection, which would invalidate NavPath mid-read
+    // and corrupt the engine's nav-tick state on later frames. Pin it to the root set
+    // for the duration of the read, then release. Copy out all needed fields BEFORE
+    // any UObject allocation so we never re-deref NavPath after JSON work begins.
+    NavPath->AddToRoot();
+
+    const bool bIsValid   = NavPath->IsValid();
+    const bool bIsPartial = NavPath->IsPartial();
+    const TArray<FVector> Points = NavPath->PathPoints;  // copy by value
+
+    FString NavDataUsed;
+    if (FNavPathSharedPtr SharedPath = NavPath->GetPath())
+    {
+        if (const ANavigationData* OwningData = SharedPath->GetNavigationDataUsed())
+        {
+            NavDataUsed = OwningData->GetClass()->GetName();
+        }
+    }
+
+    NavPath->RemoveFromRoot();
+    NavPath = nullptr;  // do not use past this point
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+
+    // Compute total length and emit waypoints from the local copy
+    TArray<TSharedPtr<FJsonValue>> Waypoints;
+    double PathLength = 0.0;
+    for (int32 i = 0; i < Points.Num(); ++i)
+    {
+        TSharedPtr<FJsonObject> Pt = MakeShared<FJsonObject>();
+        Pt->SetNumberField(TEXT("x"), Points[i].X);
+        Pt->SetNumberField(TEXT("y"), Points[i].Y);
+        Pt->SetNumberField(TEXT("z"), Points[i].Z);
+        Waypoints.Add(MakeShared<FJsonValueObject>(Pt));
+
+        if (i > 0)
+        {
+            PathLength += FVector::Dist(Points[i - 1], Points[i]);
+        }
+    }
+
+    Result->SetBoolField(TEXT("success"), bIsValid);
+    Result->SetNumberField(TEXT("path_length"), PathLength);
+    Result->SetArrayField(TEXT("waypoints"), Waypoints);
+    Result->SetBoolField(TEXT("partial"), bIsPartial);
+    Result->SetStringField(TEXT("nav_data_used"), NavDataUsed);
+
+    if (!bIsValid)
+    {
+        // Path object exists but no valid path could be built (e.g., points outside navmesh).
+        Result->SetStringField(TEXT("error"),
+            TEXT("No valid path between the requested points (outside navmesh or unreachable)"));
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Pathfinding returned no valid path"), Result, TEXT("NO_PATH"));
+        return true;
+    }
+
+    Self->SendAutomationResponse(Socket, RequestId, true,
+        bIsPartial ? TEXT("Partial path found") : TEXT("Path found"),
+        Result);
+    return true;
+}
+
 #endif // WITH_EDITOR
 
 // =============================================================================
@@ -1650,6 +1827,7 @@ static bool HandleGetNavigationInfo(
  *   - create_smart_link
  *   - configure_smart_link_behavior
  *   - get_navigation_info
+ *   - find_path
  */
 bool UMcpAutomationBridgeSubsystem::HandleManageNavigationAction(
     const FString& RequestId,
@@ -1701,6 +1879,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNavigationAction(
     // =========================================================================
     if (SubAction == TEXT("get_navigation_info"))
         return HandleGetNavigationInfo(this, RequestId, Payload, Socket);
+
+    // =========================================================================
+    // Pathfinding Queries
+    // =========================================================================
+    if (SubAction == TEXT("find_path"))
+        return HandleFindPath(this, RequestId, Payload, Socket);
 
     // Unknown action
     SendAutomationResponse(Socket, RequestId, false,

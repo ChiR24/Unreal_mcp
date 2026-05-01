@@ -1,4 +1,4 @@
-// McpTool_ManageNavigation.cpp — manage_navigation tool definition (12 actions)
+// McpTool_ManageNavigation.cpp — manage_navigation tool definition (13 actions)
 
 #include "McpVersionCompatibility.h"
 #include "MCP/McpToolDefinition.h"
@@ -13,7 +13,8 @@ public:
 	FString GetDescription() const override
 	{
 		return TEXT("Configure NavMesh settings, add nav modifiers, "
-			"create nav links and smart links for pathfinding.");
+			"create nav links and smart links for pathfinding, "
+			"and run synchronous navmesh path queries (find_path).");
 	}
 
 	FString GetCategory() const override { return TEXT("gameplay"); }
@@ -33,7 +34,8 @@ public:
 				TEXT("set_nav_link_type"),
 				TEXT("create_smart_link"),
 				TEXT("configure_smart_link_behavior"),
-				TEXT("get_navigation_info")
+				TEXT("get_navigation_info"),
+				TEXT("find_path")
 			}, TEXT("Navigation action to perform"))
 			.String(TEXT("navMeshPath"), TEXT("Path to NavMesh data asset."))
 			.String(TEXT("actorName"), TEXT("Name of the actor."))
@@ -104,6 +106,15 @@ public:
 			})
 			.String(TEXT("filter"), TEXT("General search filter."))
 			.Bool(TEXT("save"), TEXT("Save the asset(s) after the operation."))
+			.Object(TEXT("start"), TEXT("World-space start point for find_path query."),
+				[](FMcpSchemaBuilder& S) {
+				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
+			})
+			.Object(TEXT("end"), TEXT("World-space end point for find_path query."),
+				[](FMcpSchemaBuilder& S) {
+				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
+			})
+			.String(TEXT("agent_class"), TEXT("Optional AActor/APawn class path; its default nav agent properties select the nav data used for find_path."))
 			.Required({TEXT("action")})
 			.Build();
 	}

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`find_path` sub-action for `manage_navigation`** — synchronous navmesh pathfinding query via `UNavigationSystemV1::FindPathToLocationSynchronously`. Payload accepts `start`/`end` world-space points and an optional `agent_class` (AActor/APawn class path used as the pathfinding context). Response includes `success`, `path_length`, ordered `waypoints[]`, `partial`, and `nav_data_used` (e.g. `"RecastNavMesh"`). Enables automated reachability/connectivity checks against a built navmesh — previously the handler exposed link/modifier setup but no actual path query.
 - **Native MCP Streamable HTTP Transport** — built-in HTTP/SSE MCP server directly in the C++ plugin, no TypeScript bridge or Node.js required. AI clients connect via `http://localhost:3000/mcp`. Supports SSE streaming, multiple concurrent sessions, dynamic tool management. Opt-in via `bEnableNativeMCP` project setting.
 - **`execute_python` action** in `system_control` — execute Python code inline or from `.py` files with stdout/stderr capture, execution time tracking, and RAII temp file cleanup. Max code size: 1 MB.
 - **Capability token authentication** for native MCP transport — validates `X-MCP-Capability-Token` header when `bRequireCapabilityToken` is enabled.
