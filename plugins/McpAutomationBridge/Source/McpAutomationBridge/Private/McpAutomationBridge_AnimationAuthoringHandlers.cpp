@@ -738,39 +738,39 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
         
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-	// UE 5.1+ uses IAnimationDataController with IsValidBoneTrackName and AddBoneCurve
-	IAnimationDataController& Controller = Sequence->GetController();
+        // UE 5.1+ uses IAnimationDataController with IsValidBoneTrackName and AddBoneCurve
+        IAnimationDataController& Controller = Sequence->GetController();
 
-	// Validate the controller model is available
-	if (!Controller.GetModel())
-	{
-		ANIM_ERROR_RESPONSE(
-			TEXT("Animation data model is not available - cannot add bone track"),
-			TEXT("MODEL_NOT_AVAILABLE")
-		);
-	}
+        // Validate the controller model is available
+        if (!Controller.GetModel())
+        {
+            ANIM_ERROR_RESPONSE(
+                TEXT("Animation data model is not available - cannot add bone track"),
+                TEXT("MODEL_NOT_AVAILABLE")
+            );
+        }
 
-	// Use IsValidBoneTrackName (non-deprecated) instead of GetBoneTrackIndexByName (deprecated since 5.2)
-	if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
-	{
-		// AddBoneCurve returns bool - check the result
-		const bool bAdded = Controller.AddBoneCurve(BoneFName);
-		if (!bAdded)
-		{
-			ANIM_ERROR_RESPONSE(
-				FString::Printf(TEXT("AddBoneCurve failed for bone '%s' - the bone may not be valid for this animation"), *BoneName),
-				TEXT("BONE_TRACK_ADD_FAILED")
-			);
-		}
+        // Use IsValidBoneTrackName (non-deprecated) instead of GetBoneTrackIndexByName (deprecated since 5.2)
+        if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
+        {
+            // AddBoneCurve returns bool - check the result
+            const bool bAdded = Controller.AddBoneCurve(BoneFName);
+            if (!bAdded)
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("AddBoneCurve failed for bone '%s' - the bone may not be valid for this animation"), *BoneName),
+                    TEXT("BONE_TRACK_ADD_FAILED")
+                );
+            }
 
-		if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
-		{
-			ANIM_ERROR_RESPONSE(
-				FString::Printf(TEXT("Bone track '%s' was not found after AddBoneCurve succeeded - internal inconsistency"), *BoneName),
-				TEXT("BONE_TRACK_ADD_FAILED")
-			);
-		}
-	}
+            if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("Bone track '%s' was not found after AddBoneCurve succeeded - internal inconsistency"), *BoneName),
+                    TEXT("BONE_TRACK_ADD_FAILED")
+                );
+            }
+        }
 #elif ENGINE_MAJOR_VERSION >= 5
         // UE 5.0 approach - uses FindBoneTrackByName which returns a pointer
         IAnimationDataController& Controller = Sequence->GetController();
@@ -840,18 +840,18 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         // UE 5.1+ API
-	IAnimationDataController& Controller = Sequence->GetController();
-	FName BoneFName(*BoneName);
+        IAnimationDataController& Controller = Sequence->GetController();
+        FName BoneFName(*BoneName);
 
-	if (!Controller.GetModel())
-	{
-		ANIM_ERROR_RESPONSE(
-			TEXT("Animation data model is not available - cannot set bone key"),
-			TEXT("MODEL_NOT_AVAILABLE")
-		);
-	}
+        if (!Controller.GetModel())
+        {
+            ANIM_ERROR_RESPONSE(
+                TEXT("Animation data model is not available - cannot set bone key"),
+                TEXT("MODEL_NOT_AVAILABLE")
+            );
+        }
 
-	// Use IsValidBoneTrackName (non-deprecated) instead of GetBoneTrackIndexByName (deprecated since 5.2)
+        // Use IsValidBoneTrackName (non-deprecated) instead of GetBoneTrackIndexByName (deprecated since 5.2)
             if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
             {
                 const bool bAdded = Controller.AddBoneCurve(BoneFName);
@@ -978,7 +978,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
 
 if (SubAction == TEXT("add_notify"))
 {
-	FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
+        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
     FString NotifyClass = GetStringFieldAnimAuth(Params, TEXT("notifyClass"), TEXT(""));
     int32 Frame = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("frame"), 0));
     int32 TrackIndex = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("trackIndex"), 0));
@@ -1048,7 +1048,7 @@ if (SubAction == TEXT("add_notify"))
     float TriggerTime = static_cast<float>(Frame) / FrameRate;
 
     FAnimNotifyEvent& NotifyEvent = AnimAsset->Notifies.AddDefaulted_GetRef();
-    NotifyEvent.TriggerTimeOffset = TriggerTime;
+    NotifyEvent.SetTime(TriggerTime);
     NotifyEvent.TrackIndex = TrackIndex;
 
     if (!NotifyName.IsEmpty())
@@ -1070,17 +1070,17 @@ if (SubAction == TEXT("add_notify"))
         NotifyEvent.Notify = NewNotify;
     }
 
-	AnimAsset->RefreshCacheData();
-	SaveAnimAsset(AnimAsset, bSave);
+        AnimAsset->RefreshCacheData();
+        SaveAnimAsset(AnimAsset, bSave);
 
-	ANIM_SUCCESS_RESPONSE(TEXT("Notify added"));
-	McpHandlerUtils::AddVerification(Response, AnimAsset);
-	return Response;
+        ANIM_SUCCESS_RESPONSE(TEXT("Notify added"));
+        McpHandlerUtils::AddVerification(Response, AnimAsset);
+        return Response;
 }
 
 if (SubAction == TEXT("add_notify_state"))
 {
-	FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
+        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
     FString NotifyClass = GetStringFieldAnimAuth(Params, TEXT("notifyClass"), TEXT(""));
     int32 StartFrame = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("startFrame"), 0));
     int32 EndFrame = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("endFrame"), 10));
@@ -1152,7 +1152,7 @@ if (SubAction == TEXT("add_notify_state"))
     float Duration = EndTime - StartTime;
 
     FAnimNotifyEvent& NotifyEvent = AnimAsset->Notifies.AddDefaulted_GetRef();
-    NotifyEvent.TriggerTimeOffset = StartTime;
+    NotifyEvent.SetTime(StartTime);
     NotifyEvent.SetDuration(Duration);
     NotifyEvent.TrackIndex = TrackIndex;
 
@@ -1175,7 +1175,7 @@ if (SubAction == TEXT("add_notify_state"))
         NotifyEvent.NotifyStateClass = NewNotifyState;
     }
 
-	AnimAsset->RefreshCacheData();
+        AnimAsset->RefreshCacheData();
         
         SaveAnimAsset(AnimAsset, bSave);
 
@@ -1509,7 +1509,7 @@ if (SubAction == TEXT("add_notify_state"))
 
 if (SubAction == TEXT("add_montage_notify"))
 {
-	FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
+        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
     FString NotifyClass = GetStringFieldAnimAuth(Params, TEXT("notifyClass"), TEXT(""));
     float Time = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("time"), 0.0));
     int32 TrackIndex = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("trackIndex"), 0));
@@ -1581,7 +1581,7 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
 
     FAnimNotifyEvent& NotifyEvent = Montage->Notifies.AddDefaulted_GetRef();
-    NotifyEvent.TriggerTimeOffset = Time;
+    NotifyEvent.SetTime(Time);
     NotifyEvent.TrackIndex = TrackIndex;
 
     if (!NotifyName.IsEmpty())
@@ -1603,12 +1603,12 @@ if (SubAction == TEXT("add_montage_notify"))
         NotifyEvent.Notify = NewNotify;
     }
 
-	Montage->RefreshCacheData();
-	SaveAnimAsset(Montage, bSave);
+        Montage->RefreshCacheData();
+        SaveAnimAsset(Montage, bSave);
 
-	ANIM_SUCCESS_RESPONSE(TEXT("Montage notify added"));
-	McpHandlerUtils::AddVerification(Response, Montage);
-	return Response;
+        ANIM_SUCCESS_RESPONSE(TEXT("Montage notify added"));
+        McpHandlerUtils::AddVerification(Response, Montage);
+        return Response;
 }
 
     if (SubAction == TEXT("set_blend_in"))
@@ -3124,47 +3124,47 @@ if (SubAction == TEXT("add_montage_notify"))
 // ControlRig factory static methods (CreateNewControlRigAsset, CreateControlRigFromSkeletalMeshOrSkeleton)
 // are only available in UE 5.5+ where ControlRigBlueprintFactory.h is in Public folder
 #if MCP_HAS_CONTROLRIG_FACTORY && MCP_HAS_CONTROLRIG_BLUEPRINT && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
-	FString Name = GetStringFieldAnimAuth(Params, TEXT("name"), TEXT(""));
-	FString Path = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("path"), TEXT("/Game/ControlRigs")));
-	FString SkeletalMeshPath = GetStringFieldAnimAuth(Params, TEXT("skeletalMeshPath"), TEXT(""));
-	FString SkeletonPath = GetStringFieldAnimAuth(Params, TEXT("skeletonPath"), TEXT(""));
-	bool bModularRig = GetBoolFieldAnimAuth(Params, TEXT("modularRig"), false);
-	bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString Name = GetStringFieldAnimAuth(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("path"), TEXT("/Game/ControlRigs")));
+        FString SkeletalMeshPath = GetStringFieldAnimAuth(Params, TEXT("skeletalMeshPath"), TEXT(""));
+        FString SkeletonPath = GetStringFieldAnimAuth(Params, TEXT("skeletonPath"), TEXT(""));
+        bool bModularRig = GetBoolFieldAnimAuth(Params, TEXT("modularRig"), false);
+        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
 
-	if (Name.IsEmpty())
-	{
-		ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
-	}
+        if (Name.IsEmpty())
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
+        }
 
-	UControlRigBlueprint* ControlRigBP = nullptr;
-	FString FullPath = Path / Name;
+        UControlRigBlueprint* ControlRigBP = nullptr;
+        FString FullPath = Path / Name;
 
-	UObject* SelectedObject = nullptr;
-	if (!SkeletalMeshPath.IsEmpty())
-	{
-		SelectedObject = LoadSkeletalMeshFromPathAnim(SkeletalMeshPath);
-		if (!SelectedObject)
-		{
-			ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeletal mesh: %s"), *SkeletalMeshPath), TEXT("SKELETAL_MESH_NOT_FOUND"));
-		}
-	}
-	else if (!SkeletonPath.IsEmpty())
-	{
-		SelectedObject = LoadObject<USkeleton>(nullptr, *SkeletonPath);
-		if (!SelectedObject)
-		{
-			ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
-		}
-	}
+        UObject* SelectedObject = nullptr;
+        if (!SkeletalMeshPath.IsEmpty())
+        {
+            SelectedObject = LoadSkeletalMeshFromPathAnim(SkeletalMeshPath);
+            if (!SelectedObject)
+            {
+                ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeletal mesh: %s"), *SkeletalMeshPath), TEXT("SKELETAL_MESH_NOT_FOUND"));
+            }
+        }
+        else if (!SkeletonPath.IsEmpty())
+        {
+            SelectedObject = LoadSkeletonFromPathAnim(SkeletonPath);
+            if (!SelectedObject)
+            {
+                ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
+            }
+        }
 
-	if (SelectedObject)
-	{
-		ControlRigBP = UControlRigBlueprintFactory::CreateControlRigFromSkeletalMeshOrSkeleton(SelectedObject, bModularRig);
-	}
-	else
-	{
-		ControlRigBP = UControlRigBlueprintFactory::CreateNewControlRigAsset(FullPath, bModularRig);
-	}
+        if (SelectedObject)
+        {
+            ControlRigBP = UControlRigBlueprintFactory::CreateControlRigFromSkeletalMeshOrSkeleton(SelectedObject, bModularRig);
+        }
+        else
+        {
+            ControlRigBP = UControlRigBlueprintFactory::CreateNewControlRigAsset(FullPath, bModularRig);
+        }
         
         if (!ControlRigBP)
         {
@@ -3242,14 +3242,15 @@ if (SubAction == TEXT("add_montage_notify"))
         }
         else if (!SkeletonPath.IsEmpty())
         {
-            USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
-            if (Skeleton)
+            USkeleton* Skeleton = LoadSkeletonFromPathAnim(SkeletonPath);
+            if (!Skeleton)
             {
-                USkeletalMesh* PreviewMesh = Skeleton->GetPreviewMesh();
-                if (PreviewMesh)
-                {
-                    ControlRigBP->SetPreviewMesh(PreviewMesh);
-                }
+                ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
+            }
+            USkeletalMesh* PreviewMesh = Skeleton->GetPreviewMesh();
+            if (PreviewMesh)
+            {
+                ControlRigBP->SetPreviewMesh(PreviewMesh);
             }
         }
         
@@ -3386,12 +3387,14 @@ if (SubAction == TEXT("create_ik_rig"))
             IKRig->SetPreviewMesh(SkeletalMesh);
         }
     }
-    // Also support skeletonPath: load skeleton and set its preview mesh on the IK Rig
-    else if (!SkeletonPath.IsEmpty())
-    {
-        USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
-        if (Skeleton)
+        // Also support skeletonPath: load skeleton and set its preview mesh on the IK Rig
+        else if (!SkeletonPath.IsEmpty())
         {
+            USkeleton* Skeleton = LoadSkeletonFromPathAnim(SkeletonPath);
+            if (!Skeleton)
+            {
+                ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
+            }
             USkeletalMesh* PreviewMesh = Skeleton->GetPreviewMesh();
             if (PreviewMesh)
             {
@@ -3399,7 +3402,6 @@ if (SubAction == TEXT("create_ik_rig"))
             }
             Response->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
         }
-    }
 
     if (!SaveAnimAsset(IKRig, bSave))
     {

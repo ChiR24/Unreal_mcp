@@ -106,24 +106,25 @@ export async function handleAnimationAuthoringTools(
 
   case 'set_sequence_length': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'numFrames', required: true },
       { key: 'frameRate' },
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
-        const numFrames = extractOptionalNumber(params, 'numFrames') ?? 30;
-        const frameRate = extractOptionalNumber(params, 'frameRate');
-        const save = extractOptionalBoolean(params, 'save') ?? true;
+    const assetPath = assetPathValidation.sanitized;
+    const numFrames = extractOptionalNumber(params, 'numFrames') ?? 30;
+    const frameRate = extractOptionalNumber(params, 'frameRate');
+    const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'set_sequence_length',
-      assetPath: assetPath?.sanitized,
+      assetPath,
       numFrames,
           frameRate,
           save,
@@ -137,22 +138,23 @@ export async function handleAnimationAuthoringTools(
 
   case 'add_bone_track': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'boneName', required: true },
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const boneName = extractString(params, 'boneName');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'add_bone_track',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           boneName,
           save,
         })) as AutomationResponse;
@@ -165,7 +167,7 @@ export async function handleAnimationAuthoringTools(
 
   case 'set_bone_key': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'boneName', required: true },
       { key: 'frame', required: true },
       { key: 'location' }, // {x, y, z}
@@ -174,11 +176,12 @@ export async function handleAnimationAuthoringTools(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const boneName = extractString(params, 'boneName');
     const frame = extractOptionalNumber(params, 'frame') ?? 0;
     const location = extractOptionalObject(params, 'location');
@@ -188,7 +191,7 @@ export async function handleAnimationAuthoringTools(
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'set_bone_key',
-      assetPath: assetPath?.sanitized,
+      assetPath,
       boneName,
       frame,
       location,
@@ -205,7 +208,7 @@ export async function handleAnimationAuthoringTools(
 
   case 'set_curve_key': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'curveName', required: true },
       { key: 'frame', required: true },
       { key: 'value', required: true },
@@ -213,11 +216,12 @@ export async function handleAnimationAuthoringTools(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const curveName = extractString(params, 'curveName');
     const frame = extractOptionalNumber(params, 'frame') ?? 0;
     const value = extractOptionalNumber(params, 'value') ?? 0;
@@ -226,7 +230,7 @@ export async function handleAnimationAuthoringTools(
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'set_curve_key',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           curveName,
           frame,
           value,
@@ -242,7 +246,7 @@ export async function handleAnimationAuthoringTools(
 
   case 'add_notify': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'notifyClass', required: false },
       { key: 'frame', required: true },
       { key: 'trackIndex', default: 0 },
@@ -250,11 +254,12 @@ export async function handleAnimationAuthoringTools(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const notifyClass = extractOptionalString(params, 'notifyClass');
     const frame = extractOptionalNumber(params, 'frame') ?? 0;
     const trackIndex = extractOptionalNumber(params, 'trackIndex') ?? 0;
@@ -263,7 +268,7 @@ export async function handleAnimationAuthoringTools(
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'add_notify',
-      assetPath: assetPath?.sanitized,
+      assetPath,
       notifyClass,
       frame,
           trackIndex,
@@ -279,7 +284,7 @@ export async function handleAnimationAuthoringTools(
 
   case 'add_notify_state': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'notifyClass', required: false },
       { key: 'startFrame', required: true },
       { key: 'endFrame', required: true },
@@ -288,11 +293,12 @@ export async function handleAnimationAuthoringTools(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const notifyClass = extractOptionalString(params, 'notifyClass');
     const startFrame = extractOptionalNumber(params, 'startFrame') ?? 0;
     const endFrame = extractOptionalNumber(params, 'endFrame') ?? 10;
@@ -302,7 +308,7 @@ export async function handleAnimationAuthoringTools(
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'add_notify_state',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           notifyClass,
           startFrame,
           endFrame,
@@ -319,24 +325,25 @@ export async function handleAnimationAuthoringTools(
 
   case 'add_sync_marker': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'markerName', required: true },
       { key: 'frame', required: true },
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const markerName = extractString(params, 'markerName');
     const frame = extractOptionalNumber(params, 'frame') ?? 0;
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'add_sync_marker',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           markerName,
           frame,
           save,
@@ -350,18 +357,19 @@ export async function handleAnimationAuthoringTools(
 
   case 'set_root_motion_settings': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'enableRootMotion', default: true },
       { key: 'rootMotionRootLock', default: 'RefPose' },
       { key: 'forceRootLock', default: false },
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const enableRootMotion = extractOptionalBoolean(params, 'enableRootMotion') ?? true;
     const rootMotionRootLock = extractOptionalString(params, 'rootMotionRootLock') ?? 'RefPose';
     const forceRootLock = extractOptionalBoolean(params, 'forceRootLock') ?? false;
@@ -369,7 +377,7 @@ export async function handleAnimationAuthoringTools(
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'set_root_motion_settings',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           enableRootMotion,
           rootMotionRootLock,
           forceRootLock,
@@ -384,7 +392,7 @@ export async function handleAnimationAuthoringTools(
 
   case 'set_additive_settings': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'additiveAnimType', default: 'NoAdditive' }, // NoAdditive, LocalSpaceAdditive, MeshSpaceAdditive
       { key: 'basePoseType', default: 'RefPose' }, // RefPose, AnimationFrame, AnimationScaled
       { key: 'basePoseAnimation' },
@@ -392,11 +400,12 @@ export async function handleAnimationAuthoringTools(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const additiveAnimType = extractOptionalString(params, 'additiveAnimType') ?? 'NoAdditive';
     const basePoseType = extractOptionalString(params, 'basePoseType') ?? 'RefPose';
     const basePoseAnimation = extractOptionalString(params, 'basePoseAnimation');
@@ -405,7 +414,7 @@ export async function handleAnimationAuthoringTools(
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'set_additive_settings',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           additiveAnimType,
           basePoseType,
           basePoseAnimation,
@@ -452,24 +461,25 @@ export async function handleAnimationAuthoringTools(
 
   case 'add_montage_section': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'sectionName', required: true },
       { key: 'startTime', required: true },
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const sectionName = extractString(params, 'sectionName');
     const startTime = extractOptionalNumber(params, 'startTime') ?? 0;
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'add_montage_section',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           sectionName,
           startTime,
           save,
@@ -483,31 +493,33 @@ export async function handleAnimationAuthoringTools(
 
   case 'add_montage_slot': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
-      { key: 'animationPath', required: false },
+      { key: 'assetPath', required: true },
+      { key: 'animationPath', required: true },
       { key: 'slotName', default: 'DefaultSlot' },
       { key: 'startTime', default: 0 },
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
-    const rawAnimationPath = extractOptionalString(params, 'animationPath');
-    const animationPath = rawAnimationPath ? validatePath(rawAnimationPath, 'animationPath') : undefined;
-    if (animationPath && !animationPath.valid) {
-      return animationPath.error;
+    const assetPath = assetPathValidation.sanitized;
+    const rawAnimationPath = extractString(params, 'animationPath');
+    const animationPathValidation = validatePath(rawAnimationPath, 'animationPath');
+    if (!animationPathValidation.valid) {
+      return animationPathValidation.error;
     }
+    const animationPath = animationPathValidation.sanitized;
     const slotName = extractOptionalString(params, 'slotName') ?? 'DefaultSlot';
     const startTime = extractOptionalNumber(params, 'startTime') ?? 0;
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'add_montage_slot',
-      assetPath: assetPath?.sanitized,
-      animationPath: animationPath?.sanitized,
+      assetPath,
+      animationPath,
           slotName,
           startTime,
           save,
@@ -521,18 +533,19 @@ export async function handleAnimationAuthoringTools(
 
   case 'set_section_timing': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'sectionName', required: true },
       { key: 'startTime' },
       { key: 'length' },
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const sectionName = extractString(params, 'sectionName');
     const startTime = extractOptionalNumber(params, 'startTime');
     const length = extractOptionalNumber(params, 'length');
@@ -540,7 +553,7 @@ export async function handleAnimationAuthoringTools(
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'set_section_timing',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           sectionName,
           startTime,
           length,
@@ -555,7 +568,7 @@ export async function handleAnimationAuthoringTools(
 
   case 'add_montage_notify': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'notifyClass', required: false },
       { key: 'time', required: true },
       { key: 'trackIndex', default: 0 },
@@ -563,11 +576,12 @@ export async function handleAnimationAuthoringTools(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const notifyClass = extractOptionalString(params, 'notifyClass');
     const time = extractOptionalNumber(params, 'time') ?? 0;
     const trackIndex = extractOptionalNumber(params, 'trackIndex') ?? 0;
@@ -576,7 +590,7 @@ export async function handleAnimationAuthoringTools(
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'add_montage_notify',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           notifyClass,
           time,
           trackIndex,
@@ -592,24 +606,25 @@ export async function handleAnimationAuthoringTools(
 
   case 'set_blend_in': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'blendTime', default: 0.25 },
       { key: 'blendOption', default: 'Linear' },
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const blendTime = extractOptionalNumber(params, 'blendTime') ?? 0.25;
     const blendOption = extractOptionalString(params, 'blendOption') ?? 'Linear';
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'set_blend_in',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           blendTime,
           blendOption,
           save,
@@ -623,24 +638,25 @@ export async function handleAnimationAuthoringTools(
 
   case 'set_blend_out': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'blendTime', default: 0.25 },
       { key: 'blendOption', default: 'Linear' },
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const blendTime = extractOptionalNumber(params, 'blendTime') ?? 0.25;
     const blendOption = extractOptionalString(params, 'blendOption') ?? 'Linear';
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'set_blend_out',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           blendTime,
           blendOption,
           save,
@@ -654,24 +670,25 @@ export async function handleAnimationAuthoringTools(
 
   case 'link_sections': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'fromSection', required: true },
       { key: 'toSection', required: true },
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const fromSection = extractString(params, 'fromSection');
     const toSection = extractString(params, 'toSection');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'link_sections',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           fromSection,
           toSection,
           save,
@@ -767,29 +784,31 @@ export async function handleAnimationAuthoringTools(
 
   case 'add_blend_sample': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
-      { key: 'animationPath', required: false },
+      { key: 'assetPath', required: true },
+      { key: 'animationPath', required: true },
       { key: 'sampleValue', required: true }, // For 1D: number, for 2D: {x, y}
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
-    const rawAnimationPath = extractOptionalString(params, 'animationPath');
-    const animationPath = rawAnimationPath ? validatePath(rawAnimationPath, 'animationPath') : undefined;
-    if (animationPath && !animationPath.valid) {
-      return animationPath.error;
+    const assetPath = assetPathValidation.sanitized;
+    const rawAnimationPath = extractString(params, 'animationPath');
+    const animationPathValidation = validatePath(rawAnimationPath, 'animationPath');
+    if (!animationPathValidation.valid) {
+      return animationPathValidation.error;
     }
+    const animationPath = animationPathValidation.sanitized;
     const sampleValue = params['sampleValue'];
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'add_blend_sample',
-      assetPath: assetPath?.sanitized,
-      animationPath: animationPath?.sanitized,
+      assetPath,
+      animationPath,
           sampleValue,
           save,
         })) as AutomationResponse;
@@ -802,7 +821,7 @@ export async function handleAnimationAuthoringTools(
 
   case 'set_axis_settings': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'axis', required: true }, // 'Horizontal', 'Vertical', or 'X' for 1D
       { key: 'axisName' },
       { key: 'minValue' },
@@ -811,11 +830,12 @@ export async function handleAnimationAuthoringTools(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const axis = extractString(params, 'axis');
     const axisName = extractOptionalString(params, 'axisName');
     const minValue = extractOptionalNumber(params, 'minValue');
@@ -825,7 +845,7 @@ export async function handleAnimationAuthoringTools(
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'set_axis_settings',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           axis,
           axisName,
           minValue,
@@ -842,24 +862,25 @@ export async function handleAnimationAuthoringTools(
 
   case 'set_interpolation_settings': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
+      { key: 'assetPath', required: true },
       { key: 'interpolationType', default: 'Lerp' }, // Lerp, Cubic
       { key: 'targetWeightInterpolationSpeed', default: 5.0 },
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
+    const assetPath = assetPathValidation.sanitized;
     const interpolationType = extractOptionalString(params, 'interpolationType') ?? 'Lerp';
     const targetWeightInterpolationSpeed = extractOptionalNumber(params, 'targetWeightInterpolationSpeed') ?? 5.0;
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'set_interpolation_settings',
-      assetPath: assetPath?.sanitized,
+      assetPath,
           interpolationType,
           targetWeightInterpolationSpeed,
           save,
@@ -900,31 +921,33 @@ export async function handleAnimationAuthoringTools(
 
   case 'add_aim_offset_sample': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: false },
-      { key: 'animationPath', required: false },
+      { key: 'assetPath', required: true },
+      { key: 'animationPath', required: true },
       { key: 'yaw', required: true },
       { key: 'pitch', required: true },
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractOptionalString(params, 'assetPath');
-    const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-    if (assetPath && !assetPath.valid) {
-      return assetPath.error;
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
     }
-    const rawAnimationPath = extractOptionalString(params, 'animationPath');
-    const animationPath = rawAnimationPath ? validatePath(rawAnimationPath, 'animationPath') : undefined;
-    if (animationPath && !animationPath.valid) {
-      return animationPath.error;
+    const assetPath = assetPathValidation.sanitized;
+    const rawAnimationPath = extractString(params, 'animationPath');
+    const animationPathValidation = validatePath(rawAnimationPath, 'animationPath');
+    if (!animationPathValidation.valid) {
+      return animationPathValidation.error;
     }
+    const animationPath = animationPathValidation.sanitized;
     const yaw = extractOptionalNumber(params, 'yaw') ?? 0;
     const pitch = extractOptionalNumber(params, 'pitch') ?? 0;
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'add_aim_offset_sample',
-      assetPath: assetPath?.sanitized,
-      animationPath: animationPath?.sanitized,
+      assetPath,
+      animationPath,
           yaw,
           pitch,
           save,
@@ -971,22 +994,23 @@ export async function handleAnimationAuthoringTools(
 
   case 'add_state_machine': {
     const params = normalizeArgs(args, [
-      { key: 'blueprintPath', required: false },
+      { key: 'blueprintPath', required: true },
       { key: 'stateMachineName', required: true },
       { key: 'save', default: true },
     ]);
 
-    const rawBlueprintPath = extractOptionalString(params, 'blueprintPath');
-    const blueprintPath = rawBlueprintPath ? validatePath(rawBlueprintPath, 'blueprintPath') : undefined;
-    if (blueprintPath && !blueprintPath.valid) {
-      return blueprintPath.error;
+    const rawBlueprintPath = extractString(params, 'blueprintPath');
+    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    if (!blueprintPathValidation.valid) {
+      return blueprintPathValidation.error;
     }
+    const blueprintPath = blueprintPathValidation.sanitized;
     const stateMachineName = extractString(params, 'stateMachineName');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'add_state_machine',
-      blueprintPath: blueprintPath?.sanitized,
+      blueprintPath,
           stateMachineName,
           save,
         })) as AutomationResponse;
@@ -997,34 +1021,35 @@ export async function handleAnimationAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `State machine '${stateMachineName}' added`);
       }
 
-      case 'add_state': {
-        const params = normalizeArgs(args, [
-          { key: 'blueprintPath', required: false },
-          { key: 'stateMachineName', required: true },
-          { key: 'stateName', required: true },
-          { key: 'animationPath' },
-          { key: 'isEntryState', default: false },
-          { key: 'save', default: true },
-        ]);
+  case 'add_state': {
+    const params = normalizeArgs(args, [
+      { key: 'blueprintPath', required: true },
+      { key: 'stateMachineName', required: true },
+      { key: 'stateName', required: true },
+      { key: 'animationPath' },
+      { key: 'isEntryState', default: false },
+      { key: 'save', default: true },
+    ]);
 
-      const rawBlueprintPath = extractOptionalString(params, 'blueprintPath');
-      const blueprintPath = rawBlueprintPath ? validatePath(rawBlueprintPath, 'blueprintPath') : undefined;
-      if (blueprintPath && !blueprintPath.valid) {
-        return blueprintPath.error;
-      }
-      const stateMachineName = extractString(params, 'stateMachineName');
-      const stateName = extractString(params, 'stateName');
-      const rawAnimationPath = extractOptionalString(params, 'animationPath');
-      const animationPath = rawAnimationPath ? validatePath(rawAnimationPath, 'animationPath') : undefined;
-      if (animationPath && !animationPath.valid) {
-        return animationPath.error;
-      }
-      const isEntryState = extractOptionalBoolean(params, 'isEntryState') ?? false;
-      const save = extractOptionalBoolean(params, 'save') ?? true;
+    const rawBlueprintPath = extractString(params, 'blueprintPath');
+    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    if (!blueprintPathValidation.valid) {
+      return blueprintPathValidation.error;
+    }
+    const blueprintPath = blueprintPathValidation.sanitized;
+    const stateMachineName = extractString(params, 'stateMachineName');
+    const stateName = extractString(params, 'stateName');
+    const rawAnimationPath = extractOptionalString(params, 'animationPath');
+    const animationPath = rawAnimationPath ? validatePath(rawAnimationPath, 'animationPath') : undefined;
+    if (animationPath && !animationPath.valid) {
+      return animationPath.error;
+    }
+    const isEntryState = extractOptionalBoolean(params, 'isEntryState') ?? false;
+    const save = extractOptionalBoolean(params, 'save') ?? true;
 
-      const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
-        subAction: 'add_state',
-        blueprintPath: blueprintPath?.sanitized,
+    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+      subAction: 'add_state',
+      blueprintPath,
           stateMachineName,
           stateName,
           animationPath: animationPath?.sanitized,
@@ -1038,28 +1063,29 @@ export async function handleAnimationAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `State '${stateName}' added`);
       }
 
-      case 'add_transition': {
-        const params = normalizeArgs(args, [
-          { key: 'blueprintPath', required: false },
-          { key: 'stateMachineName', required: true },
-          { key: 'fromState', required: true },
-          { key: 'toState', required: true },
-          { key: 'save', default: true },
-        ]);
+  case 'add_transition': {
+    const params = normalizeArgs(args, [
+      { key: 'blueprintPath', required: true },
+      { key: 'stateMachineName', required: true },
+      { key: 'fromState', required: true },
+      { key: 'toState', required: true },
+      { key: 'save', default: true },
+    ]);
 
-      const rawBlueprintPath = extractOptionalString(params, 'blueprintPath');
-      const blueprintPath = rawBlueprintPath ? validatePath(rawBlueprintPath, 'blueprintPath') : undefined;
-      if (blueprintPath && !blueprintPath.valid) {
-        return blueprintPath.error;
-      }
-      const stateMachineName = extractString(params, 'stateMachineName');
-      const fromState = extractString(params, 'fromState');
-      const toState = extractString(params, 'toState');
-      const save = extractOptionalBoolean(params, 'save') ?? true;
+    const rawBlueprintPath = extractString(params, 'blueprintPath');
+    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    if (!blueprintPathValidation.valid) {
+      return blueprintPathValidation.error;
+    }
+    const blueprintPath = blueprintPathValidation.sanitized;
+    const stateMachineName = extractString(params, 'stateMachineName');
+    const fromState = extractString(params, 'fromState');
+    const toState = extractString(params, 'toState');
+    const save = extractOptionalBoolean(params, 'save') ?? true;
 
-      const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
-        subAction: 'add_transition',
-        blueprintPath: blueprintPath?.sanitized,
+    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+      subAction: 'add_transition',
+      blueprintPath,
           stateMachineName,
           fromState,
           toState,
@@ -1072,36 +1098,37 @@ export async function handleAnimationAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Transition from '${fromState}' to '${toState}' added`);
       }
 
-      case 'set_transition_rules': {
-        const params = normalizeArgs(args, [
-          { key: 'blueprintPath', required: false },
-          { key: 'stateMachineName', required: true },
-          { key: 'fromState', required: true },
-          { key: 'toState', required: true },
-          { key: 'blendTime', default: 0.2 },
-          { key: 'blendLogicType', default: 'StandardBlend' },
-          { key: 'automaticTriggerRule' }, // e.g., 'TimeRemaining'
-          { key: 'automaticTriggerTime' },
-          { key: 'save', default: true },
-        ]);
+  case 'set_transition_rules': {
+    const params = normalizeArgs(args, [
+      { key: 'blueprintPath', required: true },
+      { key: 'stateMachineName', required: true },
+      { key: 'fromState', required: true },
+      { key: 'toState', required: true },
+      { key: 'blendTime', default: 0.2 },
+      { key: 'blendLogicType', default: 'StandardBlend' },
+      { key: 'automaticTriggerRule' }, // e.g., 'TimeRemaining'
+      { key: 'automaticTriggerTime' },
+      { key: 'save', default: true },
+    ]);
 
-  const rawBlueprintPath = extractOptionalString(params, 'blueprintPath');
-  const blueprintPath = rawBlueprintPath ? validatePath(rawBlueprintPath, 'blueprintPath') : undefined;
-  if (blueprintPath && !blueprintPath.valid) {
-    return blueprintPath.error;
-  }
-  const stateMachineName = extractString(params, 'stateMachineName');
-  const fromState = extractString(params, 'fromState');
-  const toState = extractString(params, 'toState');
-  const blendTime = extractOptionalNumber(params, 'blendTime') ?? 0.2;
-  const blendLogicType = extractOptionalString(params, 'blendLogicType') ?? 'StandardBlend';
-  const automaticTriggerRule = extractOptionalString(params, 'automaticTriggerRule');
-  const automaticTriggerTime = extractOptionalNumber(params, 'automaticTriggerTime');
-  const save = extractOptionalBoolean(params, 'save') ?? true;
+    const rawBlueprintPath = extractString(params, 'blueprintPath');
+    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    if (!blueprintPathValidation.valid) {
+      return blueprintPathValidation.error;
+    }
+    const blueprintPath = blueprintPathValidation.sanitized;
+    const stateMachineName = extractString(params, 'stateMachineName');
+    const fromState = extractString(params, 'fromState');
+    const toState = extractString(params, 'toState');
+    const blendTime = extractOptionalNumber(params, 'blendTime') ?? 0.2;
+    const blendLogicType = extractOptionalString(params, 'blendLogicType') ?? 'StandardBlend';
+    const automaticTriggerRule = extractOptionalString(params, 'automaticTriggerRule');
+    const automaticTriggerTime = extractOptionalNumber(params, 'automaticTriggerTime');
+    const save = extractOptionalBoolean(params, 'save') ?? true;
 
-  const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
-    subAction: 'set_transition_rules',
-    blueprintPath: blueprintPath?.sanitized,
+    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+      subAction: 'set_transition_rules',
+      blueprintPath,
           stateMachineName,
           fromState,
           toState,
@@ -1118,30 +1145,31 @@ export async function handleAnimationAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Transition rules updated');
       }
 
-      case 'add_blend_node': {
-        const params = normalizeArgs(args, [
-          { key: 'blueprintPath', required: false },
-          { key: 'blendType', required: true }, // TwoWayBlend, BlendByBool, BlendPosesByBool, etc.
-          { key: 'nodeName' },
-          { key: 'x', default: 0 },
-          { key: 'y', default: 0 },
-          { key: 'save', default: true },
-        ]);
+  case 'add_blend_node': {
+    const params = normalizeArgs(args, [
+      { key: 'blueprintPath', required: true },
+      { key: 'blendType', required: true }, // TwoWayBlend, BlendByBool, BlendPosesByBool, etc.
+      { key: 'nodeName' },
+      { key: 'x', default: 0 },
+      { key: 'y', default: 0 },
+      { key: 'save', default: true },
+    ]);
 
-  const rawBlueprintPath = extractOptionalString(params, 'blueprintPath');
-  const blueprintPath = rawBlueprintPath ? validatePath(rawBlueprintPath, 'blueprintPath') : undefined;
-  if (blueprintPath && !blueprintPath.valid) {
-    return blueprintPath.error;
-  }
-  const blendType = extractString(params, 'blendType');
-  const nodeName = extractOptionalString(params, 'nodeName');
-  const x = extractOptionalNumber(params, 'x') ?? 0;
-  const y = extractOptionalNumber(params, 'y') ?? 0;
-  const save = extractOptionalBoolean(params, 'save') ?? true;
+    const rawBlueprintPath = extractString(params, 'blueprintPath');
+    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    if (!blueprintPathValidation.valid) {
+      return blueprintPathValidation.error;
+    }
+    const blueprintPath = blueprintPathValidation.sanitized;
+    const blendType = extractString(params, 'blendType');
+    const nodeName = extractOptionalString(params, 'nodeName');
+    const x = extractOptionalNumber(params, 'x') ?? 0;
+    const y = extractOptionalNumber(params, 'y') ?? 0;
+    const save = extractOptionalBoolean(params, 'save') ?? true;
 
-  const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
-    subAction: 'add_blend_node',
-    blueprintPath: blueprintPath?.sanitized,
+    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+      subAction: 'add_blend_node',
+      blueprintPath,
           blendType,
           nodeName,
           x,
@@ -1155,24 +1183,25 @@ export async function handleAnimationAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Blend node added');
       }
 
-      case 'add_cached_pose': {
-        const params = normalizeArgs(args, [
-          { key: 'blueprintPath', required: false },
-          { key: 'cacheName', required: true },
-          { key: 'save', default: true },
-        ]);
+  case 'add_cached_pose': {
+    const params = normalizeArgs(args, [
+      { key: 'blueprintPath', required: true },
+      { key: 'cacheName', required: true },
+      { key: 'save', default: true },
+    ]);
 
-  const rawBlueprintPath = extractOptionalString(params, 'blueprintPath');
-  const blueprintPath = rawBlueprintPath ? validatePath(rawBlueprintPath, 'blueprintPath') : undefined;
-  if (blueprintPath && !blueprintPath.valid) {
-    return blueprintPath.error;
-  }
-  const cacheName = extractString(params, 'cacheName');
-  const save = extractOptionalBoolean(params, 'save') ?? true;
+    const rawBlueprintPath = extractString(params, 'blueprintPath');
+    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    if (!blueprintPathValidation.valid) {
+      return blueprintPathValidation.error;
+    }
+    const blueprintPath = blueprintPathValidation.sanitized;
+    const cacheName = extractString(params, 'cacheName');
+    const save = extractOptionalBoolean(params, 'save') ?? true;
 
-  const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
-    subAction: 'add_cached_pose',
-    blueprintPath: blueprintPath?.sanitized,
+    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+      subAction: 'add_cached_pose',
+      blueprintPath,
     cacheName,
     save,
   })) as AutomationResponse;
@@ -1183,24 +1212,25 @@ export async function handleAnimationAuthoringTools(
   return ResponseFactory.success(res, res.message ?? `Cached pose '${cacheName}' added`);
       }
 
-      case 'add_slot_node': {
-        const params = normalizeArgs(args, [
-          { key: 'blueprintPath', required: false },
-          { key: 'slotName', required: true },
-          { key: 'save', default: true },
-        ]);
+  case 'add_slot_node': {
+    const params = normalizeArgs(args, [
+      { key: 'blueprintPath', required: true },
+      { key: 'slotName', required: true },
+      { key: 'save', default: true },
+    ]);
 
-  const rawBlueprintPath = extractOptionalString(params, 'blueprintPath');
-  const blueprintPath = rawBlueprintPath ? validatePath(rawBlueprintPath, 'blueprintPath') : undefined;
-  if (blueprintPath && !blueprintPath.valid) {
-    return blueprintPath.error;
-  }
-  const slotName = extractString(params, 'slotName');
-  const save = extractOptionalBoolean(params, 'save') ?? true;
+    const rawBlueprintPath = extractString(params, 'blueprintPath');
+    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    if (!blueprintPathValidation.valid) {
+      return blueprintPathValidation.error;
+    }
+    const blueprintPath = blueprintPathValidation.sanitized;
+    const slotName = extractString(params, 'slotName');
+    const save = extractOptionalBoolean(params, 'save') ?? true;
 
-  const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
-    subAction: 'add_slot_node',
-    blueprintPath: blueprintPath?.sanitized,
+    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+      subAction: 'add_slot_node',
+      blueprintPath,
           slotName,
           save,
         })) as AutomationResponse;
@@ -1211,24 +1241,25 @@ export async function handleAnimationAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Slot node '${slotName}' added`);
       }
 
-      case 'add_layered_blend_per_bone': {
-        const params = normalizeArgs(args, [
-          { key: 'blueprintPath', required: false },
-          { key: 'layerSetup' }, // Array of {branchFilters: [{boneName, blendDepth}]}
-          { key: 'save', default: true },
-        ]);
+  case 'add_layered_blend_per_bone': {
+    const params = normalizeArgs(args, [
+      { key: 'blueprintPath', required: true },
+      { key: 'layerSetup' }, // Array of {branchFilters: [{boneName, blendDepth}]}
+      { key: 'save', default: true },
+    ]);
 
-  const rawBlueprintPath = extractOptionalString(params, 'blueprintPath');
-  const blueprintPath = rawBlueprintPath ? validatePath(rawBlueprintPath, 'blueprintPath') : undefined;
-  if (blueprintPath && !blueprintPath.valid) {
-    return blueprintPath.error;
-  }
-  const layerSetup = extractOptionalArray(params, 'layerSetup');
-  const save = extractOptionalBoolean(params, 'save') ?? true;
+    const rawBlueprintPath = extractString(params, 'blueprintPath');
+    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    if (!blueprintPathValidation.valid) {
+      return blueprintPathValidation.error;
+    }
+    const blueprintPath = blueprintPathValidation.sanitized;
+    const layerSetup = extractOptionalArray(params, 'layerSetup');
+    const save = extractOptionalBoolean(params, 'save') ?? true;
 
-  const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
-    subAction: 'add_layered_blend_per_bone',
-    blueprintPath: blueprintPath?.sanitized,
+    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+      subAction: 'add_layered_blend_per_bone',
+      blueprintPath,
           layerSetup,
           save,
         })) as AutomationResponse;
@@ -1239,28 +1270,29 @@ export async function handleAnimationAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Layered blend per bone added');
       }
 
-      case 'set_anim_graph_node_value': {
-        const params = normalizeArgs(args, [
-          { key: 'blueprintPath', required: false },
-          { key: 'nodeName', required: true },
-          { key: 'propertyName', required: true },
-          { key: 'value', required: true },
-          { key: 'save', default: true },
-        ]);
+  case 'set_anim_graph_node_value': {
+    const params = normalizeArgs(args, [
+      { key: 'blueprintPath', required: true },
+      { key: 'nodeName', required: true },
+      { key: 'propertyName', required: true },
+      { key: 'value', required: true },
+      { key: 'save', default: true },
+    ]);
 
-  const rawBlueprintPath = extractOptionalString(params, 'blueprintPath');
-  const blueprintPath = rawBlueprintPath ? validatePath(rawBlueprintPath, 'blueprintPath') : undefined;
-  if (blueprintPath && !blueprintPath.valid) {
-    return blueprintPath.error;
-  }
-  const nodeName = extractString(params, 'nodeName');
-  const propertyName = extractString(params, 'propertyName');
-  const value = params['value'];
-  const save = extractOptionalBoolean(params, 'save') ?? true;
+    const rawBlueprintPath = extractString(params, 'blueprintPath');
+    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    if (!blueprintPathValidation.valid) {
+      return blueprintPathValidation.error;
+    }
+    const blueprintPath = blueprintPathValidation.sanitized;
+    const nodeName = extractString(params, 'nodeName');
+    const propertyName = extractString(params, 'propertyName');
+    const value = params['value'];
+    const save = extractOptionalBoolean(params, 'save') ?? true;
 
-  const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
-    subAction: 'set_anim_graph_node_value',
-    blueprintPath: blueprintPath?.sanitized,
+    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+      subAction: 'set_anim_graph_node_value',
+      blueprintPath,
           nodeName,
           propertyName,
           value,
@@ -1412,24 +1444,29 @@ export async function handleAnimationAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Rig elements connected');
       }
 
-      case 'create_pose_library': {
-        const params = normalizeArgs(args, [
-          { key: 'name', required: true },
-          { key: 'path', aliases: ['directory'], default: '/Game/Animations' },
-          { key: 'skeletonPath', required: false },
-          { key: 'save', default: true },
-        ]);
+  case 'create_pose_library': {
+    const params = normalizeArgs(args, [
+      { key: 'name', required: true },
+      { key: 'path', aliases: ['directory'], default: '/Game/Animations' },
+      { key: 'skeletonPath', required: true },
+      { key: 'save', default: true },
+    ]);
 
-        const name = extractString(params, 'name');
-        const path = extractOptionalString(params, 'path') ?? '/Game/Animations';
-        const skeletonPath = extractOptionalString(params, 'skeletonPath');
-        const save = extractOptionalBoolean(params, 'save') ?? true;
+    const name = extractString(params, 'name');
+    const path = extractOptionalString(params, 'path') ?? '/Game/Animations';
+    const rawSkeletonPath = extractString(params, 'skeletonPath');
+    const skeletonPathValidation = validatePath(rawSkeletonPath, 'skeletonPath');
+    if (!skeletonPathValidation.valid) {
+      return skeletonPathValidation.error;
+    }
+    const skeletonPath = skeletonPathValidation.sanitized;
+    const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
-          subAction: 'create_pose_library',
-          name,
-          path,
-          skeletonPath,
+    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+      subAction: 'create_pose_library',
+      name,
+      path,
+      skeletonPath,
           save,
         })) as AutomationResponse;
 
@@ -1568,21 +1605,22 @@ export async function handleAnimationAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Chain mapping '${sourceChain}' -> '${targetChain}' set`);
       }
 
-      // ===== Utility =====
-      case 'get_animation_info': {
-        const params = normalizeArgs(args, [
-          { key: 'assetPath', required: false },
-        ]);
+  // ===== Utility =====
+  case 'get_animation_info': {
+    const params = normalizeArgs(args, [
+      { key: 'assetPath', required: true },
+    ]);
 
-  const rawAssetPath = extractOptionalString(params, 'assetPath');
-  const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
-  if (assetPath && !assetPath.valid) {
-    return assetPath.error;
-  }
+    const rawAssetPath = extractString(params, 'assetPath');
+    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    if (!assetPathValidation.valid) {
+      return assetPathValidation.error;
+    }
+    const assetPath = assetPathValidation.sanitized;
 
-  const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
-    subAction: 'get_animation_info',
-    assetPath: assetPath?.sanitized,
+    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+      subAction: 'get_animation_info',
+      assetPath,
         })) as AutomationResponse;
 
         if (res.success === false) {

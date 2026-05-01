@@ -299,20 +299,18 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     const params = normalizeArgs(args, [
       { key: 'name', required: true },
       { key: 'path', aliases: ['directory'], default: '/Game/Animations' },
-      { key: 'skeletonPath', required: false },
-      { key: 'boneTracks', required: false },
+      { key: 'skeletonPath', required: true },
+      { key: 'boneTracks', required: true },
       { key: 'numFrames', default: 30 },
       { key: 'frameRate', default: 30 },
       { key: 'save', default: true }
     ]);
 
     let savePath: string;
-    let skeletonPath: string | undefined;
+    let skeletonPath: string;
     try {
       savePath = sanitizePath(String(params.path || '/Game/Animations'));
-      if (params.skeletonPath && typeof params.skeletonPath === 'string') {
-        skeletonPath = sanitizePath(String(params.skeletonPath));
-      }
+      skeletonPath = sanitizePath(String(params.skeletonPath));
     } catch (e) {
       return cleanObject({
         success: false,
@@ -321,8 +319,14 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
       });
     }
 
-    // boneTracks is optional - C++ handler will validate if required
-    const boneTracks = Array.isArray(params.boneTracks) ? params.boneTracks : undefined;
+    if (!Array.isArray(params.boneTracks)) {
+      return cleanObject({
+        success: false,
+        error: 'MISSING_REQUIRED_PARAM',
+        message: 'boneTracks is required and must be an array for create_procedural_anim'
+      });
+    }
+    const boneTracks = params.boneTracks;
 
     return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
       action: 'create_procedural_anim',
@@ -448,31 +452,39 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
         time: mutableArgs.time ?? mutableArgs.startTime
       })) as Record<string, unknown>;
     }
-case 'configure_vehicle': {
-      const params = normalizeArgs(args, [
-        { key: 'actorName', required: false },
-        { key: 'vehicleName', required: false },
-        { key: 'vehicleType', default: 'WheeledVehicle4W' },
-        { key: 'wheels' },
-        { key: 'engine' },
-        { key: 'transmission' },
-        { key: 'mass', default: 1500 },
-        { key: 'dragCoefficient', default: 0.3 }
-      ]);
+ case 'configure_vehicle': {
+    const params = normalizeArgs(args, [
+      { key: 'actorName', required: false },
+      { key: 'vehicleName', required: false },
+      { key: 'vehicleType', default: 'WheeledVehicle4W' },
+      { key: 'wheels' },
+      { key: 'engine' },
+      { key: 'transmission' },
+      { key: 'mass', default: 1500 },
+      { key: 'dragCoefficient', default: 0.3 }
+    ]);
 
-      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
-        action: 'configure_vehicle',
-        subAction: 'configure_vehicle',
-        actorName: params.actorName,
-        vehicleName: params.vehicleName,
-        vehicleType: params.vehicleType,
-        wheels: params.wheels,
-        engine: params.engine,
-        transmission: params.transmission,
-        mass: params.mass,
-        dragCoefficient: params.dragCoefficient
-      })) as Record<string, unknown>;
+    if (!params.actorName && !params.vehicleName) {
+      return cleanObject({
+        success: false,
+        error: 'MISSING_REQUIRED_PARAM',
+        message: 'At least one of actorName or vehicleName is required for configure_vehicle'
+      });
     }
+
+    return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+      action: 'configure_vehicle',
+      subAction: 'configure_vehicle',
+      actorName: params.actorName,
+      vehicleName: params.vehicleName,
+      vehicleType: params.vehicleType,
+      wheels: params.wheels,
+      engine: params.engine,
+      transmission: params.transmission,
+      mass: params.mass,
+      dragCoefficient: params.dragCoefficient
+    })) as Record<string, unknown>;
+  }
     case 'setup_physics_simulation': {
       // Validate and sanitize paths
       let savePath: string | undefined;
