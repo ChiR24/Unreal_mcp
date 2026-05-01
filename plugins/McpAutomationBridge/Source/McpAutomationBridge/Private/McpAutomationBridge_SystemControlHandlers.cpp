@@ -33,14 +33,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
   }
   
   const FString Lower = SubAction.ToLower();
-  
+
   // Check if this handler should process this sub-action
   if (!Lower.StartsWith(TEXT("run_ubt")) &&
       !Lower.StartsWith(TEXT("run_tests")) &&
       !Lower.StartsWith(TEXT("test_progress")) &&
       !Lower.StartsWith(TEXT("test_stale")) &&
       Lower != TEXT("export_asset") &&
-      Lower != TEXT("execute_python")) {
+      Lower != TEXT("execute_python") &&
+      Lower != TEXT("start_pie") &&
+      Lower != TEXT("stop_pie")) {
     return false; // Not handled by this function
   }
 
@@ -50,6 +52,27 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                         TEXT("System control payload missing"),
                         TEXT("INVALID_PAYLOAD"));
     return true;
+  }
+
+  // -------------------------------------------------------------------------
+  // PIE (Play-In-Editor) session control
+  //
+  // start_pie / stop_pie delegate to the editor-control implementations
+  // (HandleControlEditorPlay / HandleControlEditorStop), which use the
+  // FRequestPlaySessionParams API directly. Handlers run on the game thread
+  // (dispatched by the subsystem), satisfying the GEditor->RequestPlaySession
+  // game-thread requirement.
+  //
+  // Optional payload fields (forwarded to HandleControlEditorPlay):
+  //   - mode: "viewport" (default) | "new_window" | "simulate"
+  //   - start_location: { x, y, z }
+  //   - spawn_at_player_start: bool, default true
+  // -------------------------------------------------------------------------
+  if (Lower == TEXT("start_pie")) {
+    return HandleControlEditorPlay(RequestId, Payload, RequestingSocket);
+  }
+  if (Lower == TEXT("stop_pie")) {
+    return HandleControlEditorStop(RequestId, Payload, RequestingSocket);
   }
 
   if (Lower == TEXT("run_ubt")) {

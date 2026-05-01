@@ -13,7 +13,8 @@ public:
 	FString GetDescription() const override
 	{
 		return TEXT("Run profiling, set quality/CVars, execute console commands, "
-			"execute Python scripts, run UBT, and manage widgets.");
+			"execute Python scripts, run UBT, manage widgets, and start/stop "
+			"Play-In-Editor (PIE) sessions.");
 	}
 
 	FString GetCategory() const override { return TEXT("core"); }
@@ -45,7 +46,9 @@ public:
 				TEXT("get_project_settings"),
 				TEXT("validate_assets"),
 				TEXT("set_project_setting"),
-				TEXT("execute_python")
+				TEXT("execute_python"),
+				TEXT("start_pie"),
+				TEXT("stop_pie")
 			}, TEXT("Action"))
 			.String(TEXT("profileType"), TEXT(""))
 			.String(TEXT("category"), TEXT(""))
@@ -68,6 +71,17 @@ public:
 			.String(TEXT("configName"), TEXT(""))
 			.String(TEXT("code"), TEXT("Python code to execute inline"))
 			.String(TEXT("file"), TEXT("Path to .py file to execute"))
+			.String(TEXT("mode"),
+				TEXT("PIE play mode (start_pie): viewport (default), new_window, or simulate."))
+			.Object(TEXT("start_location"),
+				TEXT("PIE spawn location (start_pie). Overrides Player Start."),
+				[](FMcpSchemaBuilder& S) {
+					S.Number(TEXT("x"))
+					 .Number(TEXT("y"))
+					 .Number(TEXT("z"));
+				})
+			.Bool(TEXT("spawn_at_player_start"),
+				TEXT("If true (default), PIE spawns at the Player Start actor (start_pie)."))
 			.Required({TEXT("action")})
 			.Build();
 	}

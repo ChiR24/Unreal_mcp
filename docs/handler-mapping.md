@@ -199,6 +199,8 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `lumen_update_scene` | `McpAutomationBridge_RenderHandlers.cpp` | `HandleRenderAction` | |
 | `set_project_setting` | `McpAutomationBridge_EnvironmentHandlers.cpp` | `HandleSystemControlAction` | |
 | `execute_python` | `McpAutomationBridge_SystemControlHandlers.cpp` | `HandleSystemControlAction` | Requires Python Editor Script Plugin. Max 1 MB code. Async timeout warning at 60s. |
+| `start_pie` | `McpAutomationBridge_SystemControlHandlers.cpp` → `McpAutomationBridge_ControlHandlers.cpp` | `HandleSystemControlAction` → `HandleControlEditorPlay` | Calls `GEditor->RequestPlaySession(FRequestPlaySessionParams)` on the game thread. Optional: `mode` (`viewport`/`new_window`/`simulate`), `start_location`, `spawn_at_player_start` (default `true`). |
+| `stop_pie` | `McpAutomationBridge_SystemControlHandlers.cpp` → `McpAutomationBridge_ControlHandlers.cpp` | `HandleSystemControlAction` → `HandleControlEditorStop` | Calls `GEditor->RequestEndPlayMap()`. |
 | `create_hud` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
 | `set_widget_text` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
 | `set_widget_image` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |

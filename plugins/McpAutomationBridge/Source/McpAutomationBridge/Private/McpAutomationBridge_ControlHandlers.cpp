@@ -2625,6 +2625,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
+  if (!GEditor) {
+    SendStandardErrorResponse(this, Socket, RequestId,
+                              TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("GEditor is null; cannot start PIE"),
+                              nullptr);
+    return true;
+  }
+
   if (GEditor->PlayWorld) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
@@ -2635,27 +2643,83 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
     return true;
   }
 
+  // -------------------------------------------------------------------------
+  // Optional payload fields:
+  //   mode: "viewport" (default) | "new_window" | "simulate"
+  //   start_location: { x, y, z } — explicit world-space spawn location
+  //   spawn_at_player_start: bool (default true) — use Player Start actor;
+  //                          ignored when start_location is provided
+  // -------------------------------------------------------------------------
+  FString ModeString;
+  if (Payload.IsValid()) {
+    Payload->TryGetStringField(TEXT("mode"), ModeString);
+  }
+  const FString LowerMode = ModeString.ToLower();
+
   FRequestPlaySessionParams PlayParams;
-  PlayParams.WorldType = EPlaySessionWorldType::PlayInEditor;
+  if (LowerMode == TEXT("simulate")) {
+    PlayParams.WorldType = EPlaySessionWorldType::SimulateInEditor;
+  } else {
+    // Both "viewport" (default) and "new_window" use PlayInEditor; the
+    // distinction is made via DestinationSlateViewport below.
+    PlayParams.WorldType = EPlaySessionWorldType::PlayInEditor;
+  }
+
 #if MCP_HAS_LEVEL_EDITOR_PLAY_SETTINGS
   PlayParams.EditorPlaySettings = GetMutableDefault<ULevelEditorPlaySettings>();
 #endif
+
+  // Honor explicit start location, otherwise let UE pick (Player Start).
+  bool bUsedExplicitStart = false;
+  if (Payload.IsValid() && Payload->HasField(TEXT("start_location"))) {
+    const FVector StartLocation =
+        ExtractVectorField(Payload, TEXT("start_location"), FVector::ZeroVector);
+    PlayParams.StartLocation = StartLocation;
+    PlayParams.StartRotation = FRotator::ZeroRotator;
+    bUsedExplicitStart = true;
+  } else {
+    bool bSpawnAtPlayerStart = true;
+    if (Payload.IsValid()) {
+      Payload->TryGetBoolField(TEXT("spawn_at_player_start"),
+                               bSpawnAtPlayerStart);
+    }
+    if (!bSpawnAtPlayerStart) {
+      // Spawn at world origin if caller explicitly opts out of Player Start.
+      PlayParams.StartLocation = FVector::ZeroVector;
+      PlayParams.StartRotation = FRotator::ZeroRotator;
+    }
+    // Otherwise leave StartLocation unset so UE uses the Player Start actor.
+  }
+
+  // Wire the destination viewport unless caller asked for a new window.
 #if MCP_HAS_LEVEL_EDITOR_MODULE
-  if (FLevelEditorModule *LevelEditorModule =
-          FModuleManager::GetModulePtr<FLevelEditorModule>(
-              TEXT("LevelEditor"))) {
-    TSharedPtr<IAssetViewport> DestinationViewport =
-        LevelEditorModule->GetFirstActiveViewport();
-    if (DestinationViewport.IsValid())
-      PlayParams.DestinationSlateViewport = DestinationViewport;
+  const bool bUseNewWindow = (LowerMode == TEXT("new_window"));
+  if (!bUseNewWindow) {
+    if (FLevelEditorModule *LevelEditorModule =
+            FModuleManager::GetModulePtr<FLevelEditorModule>(
+                TEXT("LevelEditor"))) {
+      TSharedPtr<IAssetViewport> DestinationViewport =
+          LevelEditorModule->GetFirstActiveViewport();
+      if (DestinationViewport.IsValid())
+        PlayParams.DestinationSlateViewport = DestinationViewport;
+    }
   }
 #endif
 
   GEditor->RequestPlaySession(PlayParams);
+
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("mode"),
+                       LowerMode.IsEmpty() ? TEXT("viewport") : LowerMode);
+  Resp->SetBoolField(TEXT("explicitStartLocation"), bUsedExplicitStart);
+  // PIE world is created asynchronously after RequestPlaySession; the world
+  // pointer becomes available once the session actually starts (next tick).
+  Resp->SetStringField(TEXT("status"), TEXT("requested"));
+
   SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Play in Editor started"), Resp, FString());
+                         TEXT("Play in Editor session requested"), Resp,
+                         FString());
   return true;
 #else
   return false;
@@ -2666,6 +2730,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStop(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
+  if (!GEditor) {
+    SendStandardErrorResponse(this, Socket, RequestId,
+                              TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("GEditor is null; cannot stop PIE"),
+                              nullptr);
+    return true;
+  }
+
   if (!GEditor->PlayWorld) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);

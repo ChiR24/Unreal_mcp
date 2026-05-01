@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Native MCP Streamable HTTP Transport** — built-in HTTP/SSE MCP server directly in the C++ plugin, no TypeScript bridge or Node.js required. AI clients connect via `http://localhost:3000/mcp`. Supports SSE streaming, multiple concurrent sessions, dynamic tool management. Opt-in via `bEnableNativeMCP` project setting.
+- **`start_pie` / `stop_pie` actions** in `system_control` — start/stop a Play-In-Editor session via `GEditor->RequestPlaySession(FRequestPlaySessionParams)` / `GEditor->RequestEndPlayMap()`. Optional fields on `start_pie`: `mode` (`viewport` / `new_window` / `simulate`), `start_location` (`{x,y,z}`), `spawn_at_player_start` (default `true`). Fixes "System control action 'start_pie' not implemented" error.
 - **`execute_python` action** in `system_control` — execute Python code inline or from `.py` files with stdout/stderr capture, execution time tracking, and RAII temp file cleanup. Max code size: 1 MB.
 - **Capability token authentication** for native MCP transport — validates `X-MCP-Capability-Token` header when `bRequireCapabilityToken` is enabled.
 - **36 self-describing C++ tool definitions** with `FMcpSchemaBuilder` fluent API — replaces JSON schema loader.

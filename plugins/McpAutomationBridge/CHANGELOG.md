@@ -4,6 +4,20 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ---
 
+## [Unreleased]
+
+### Added
+- **`start_pie` / `stop_pie` actions** in `system_control` — start/stop a Play-In-Editor session via `GEditor->RequestPlaySession(FRequestPlaySessionParams)` and `GEditor->RequestEndPlayMap()`. Routed through `HandleControlEditorPlay` / `HandleControlEditorStop`, which now also accept optional payload fields on `start_pie`:
+  - `mode`: `"viewport"` (default), `"new_window"`, or `"simulate"`
+  - `start_location`: `{x, y, z}` — explicit world-space spawn (overrides Player Start)
+  - `spawn_at_player_start`: `bool`, default `true`
+  Fixes "System control action 'start_pie' not implemented" error.
+
+### Changed
+- `HandleControlEditorPlay` and `HandleControlEditorStop` now null-check `GEditor` before dereferencing and emit `EDITOR_NOT_AVAILABLE` instead of crashing.
+
+---
+
 ## [0.6.0] - 2026-04-05
 
 ### Security
