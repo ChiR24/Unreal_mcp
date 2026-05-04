@@ -10,6 +10,13 @@ REM   scripts\package-plugin.bat C:\UE\UE_5.6 C:\output
 REM   scripts\package-plugin.bat C:\UE\UE_5.6 C:\output -NoDefaultPlugins
 REM
 
+REM ─── Resolve script/repo paths BEFORE any shift (shift mutates %0) ─────────
+
+set "SCRIPT_DIR=%~dp0"
+pushd "%SCRIPT_DIR%.." >nul
+set "REPO_ROOT=%CD%"
+popd >nul
+
 REM ─── Arguments ─────────────────────────────────────────────────────────────
 
 set "ENGINE_DIR=%~1"
@@ -35,10 +42,8 @@ shift
 goto parse_args
 :done_args
 
-if "!OUTPUT_DIR!"=="" set "OUTPUT_DIR=%cd%\build"
-
-set "SCRIPT_DIR=%~dp0"
-set "REPO_ROOT=%SCRIPT_DIR%.."
+if "!OUTPUT_DIR!"=="" set "OUTPUT_DIR=%REPO_ROOT%\build"
+for %%I in ("!OUTPUT_DIR!") do set "OUTPUT_DIR=%%~fI"
 set "PLUGIN_FILE=%REPO_ROOT%\plugins\McpAutomationBridge\McpAutomationBridge.uplugin"
 
 if not exist "%PLUGIN_FILE%" (
@@ -58,7 +63,7 @@ REM ─── Extract version info ───────────────
 set "UE_VER=unknown"
 set "UE_VERSION_FILE=%ENGINE_DIR%\Engine\Build\Build.version"
 if exist "%UE_VERSION_FILE%" (
-    for /f "delims=" %%V in ('powershell -NoProfile -Command "$v = Get-Content '%UE_VERSION_FILE%' | ConvertFrom-Json; Write-Output \"$($v.MajorVersion).$($v.MinorVersion)\""') do set "UE_VER=%%V"
+    for /f "delims=" %%V in ('powershell -NoProfile -Command "$v = Get-Content '%UE_VERSION_FILE%' | ConvertFrom-Json; $maj=$v.MajorVersion; $min=$v.MinorVersion; Write-Output \"$maj.$min\""') do set "UE_VER=%%V"
 )
 
 set "PLUGIN_VER=0.0.0"

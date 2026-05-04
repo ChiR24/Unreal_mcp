@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`scripts/package-plugin.bat` path resolution** — `shift` mutates `%0`, so `%~dp0` was returning the wrong directory when the script was called from the repo root. Fixed by capturing `SCRIPT_DIR`/`REPO_ROOT` via `pushd`/`popd` before any `shift`. Also normalizes the second argument (output dir) to an absolute path so relative paths like `.\output` work correctly, and fixes the UE version extraction PowerShell command which had a `$(...)` escaping issue with cmd.exe.
 - **Game Feature Plugin path validation** – `SanitizeProjectRelativePath` now uses `FPackageName::IsValidLongPackageName` instead of a manual `/Content/` heuristic, correctly recognizing all registered engine mount points (game feature plugins like `/MyGameFeature/`, `/ShooterCore/`, `/ALS/`, etc.).
 - **`manage_level: get_level_info` no longer requires the level to be loaded** – previously returned `LEVEL_NOT_FOUND` for any map asset path that hadn't already been `load_level`'d. Now falls back to `IAssetRegistry::GetAssetByObjectPath` and returns `objectPath`, `assetName`, `packageName`, `assetClass`, and the asset's `tagsAndValues` map alongside `loaded: false`. The loaded case is unchanged but now also includes `loaded: true`. Does not auto-load the level.
 
