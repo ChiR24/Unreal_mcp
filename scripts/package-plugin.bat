@@ -63,11 +63,11 @@ REM ─── Extract version info ───────────────
 set "UE_VER=unknown"
 set "UE_VERSION_FILE=%ENGINE_DIR%\Engine\Build\Build.version"
 if exist "%UE_VERSION_FILE%" (
-    for /f "delims=" %%V in ('powershell -NoProfile -Command "$v = Get-Content '%UE_VERSION_FILE%' | ConvertFrom-Json; $maj=$v.MajorVersion; $min=$v.MinorVersion; Write-Output \"$maj.$min\""') do set "UE_VER=%%V"
+    for /f "delims=" %%V in ('powershell -NoProfile -Command "$v = Get-Content -LiteralPath $env:UE_VERSION_FILE | ConvertFrom-Json; $maj=$v.MajorVersion; $min=$v.MinorVersion; Write-Output \"$maj.$min\""') do set "UE_VER=%%V"
 )
 
 set "PLUGIN_VER=0.0.0"
-for /f "delims=" %%V in ('powershell -NoProfile -Command "$d = Get-Content '%PLUGIN_FILE%' | ConvertFrom-Json; Write-Output $d.VersionName"') do set "PLUGIN_VER=%%V"
+for /f "delims=" %%V in ('powershell -NoProfile -Command "$d = Get-Content -LiteralPath $env:PLUGIN_FILE | ConvertFrom-Json; Write-Output $d.VersionName"') do set "PLUGIN_VER=%%V"
 
 set "PACKAGE_DIR=%OUTPUT_DIR%\McpAutomationBridge"
 set "ZIP_NAME=McpAutomationBridge-v%PLUGIN_VER%-UE%UE_VER%-Win64.zip"
@@ -100,7 +100,7 @@ REM ─── Post-process: set Installed=true ───────────
 set "OUTPUT_UPLUGIN=%PACKAGE_DIR%\McpAutomationBridge.uplugin"
 if exist "%OUTPUT_UPLUGIN%" (
     echo Setting Installed=true in output .uplugin...
-    powershell -NoProfile -Command "try { $ErrorActionPreference='Stop'; $f='%OUTPUT_UPLUGIN%'; $d=Get-Content $f | ConvertFrom-Json; $d | Add-Member -Force -NotePropertyName Installed -NotePropertyValue $true; $d | ConvertTo-Json -Depth 10 | Set-Content $f } catch { Write-Error $_; exit 1 }"
+    powershell -NoProfile -Command "try { $ErrorActionPreference='Stop'; $f=$env:OUTPUT_UPLUGIN; $d=Get-Content -LiteralPath $f | ConvertFrom-Json; $d | Add-Member -Force -NotePropertyName Installed -NotePropertyValue $true; $d | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $f } catch { Write-Error $_; exit 1 }"
     if errorlevel 1 (
         echo ERROR: Failed to set Installed=true in .uplugin
         exit /b 1
@@ -112,7 +112,7 @@ REM ─── Zip ────────────────────�
 echo Creating archive: %ZIP_NAME%
 cd /d "%OUTPUT_DIR%"
 if exist "%ZIP_NAME%" del "%ZIP_NAME%"
-powershell -NoProfile -Command "try { $ErrorActionPreference='Stop'; Get-ChildItem -Path 'McpAutomationBridge' -Recurse | Where-Object { $_.Extension -ne '.pdb' -and $_.FullName -notmatch '\\Intermediate\\' } | Compress-Archive -DestinationPath '%ZIP_NAME%' -Force } catch { Write-Error $_; exit 1 }"
+powershell -NoProfile -Command "try { $ErrorActionPreference='Stop'; Get-ChildItem -LiteralPath 'McpAutomationBridge' -Recurse | Where-Object { $_.Extension -ne '.pdb' -and $_.FullName -notmatch '\\Intermediate\\' } | Compress-Archive -DestinationPath $env:ZIP_NAME -Force } catch { Write-Error $_; exit 1 }"
 if errorlevel 1 (
     echo ERROR: Failed to create zip archive.
     exit /b 1
