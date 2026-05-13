@@ -112,6 +112,7 @@
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "McpLandscapeMetadataTags.h"
 #include "ScopedTransaction.h"
 
 // =============================================================================
@@ -421,9 +422,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
     Landscape->NumSubsections = CaptSectionsPerComponent;
     // Keep authoring metadata on the actor so generic actor bounds can still
     // report a useful footprint when UE has not generated landscape components.
-    Landscape->Tags.AddUnique(FName(*FString::Printf(TEXT("MCP_LandscapeComponentsX=%d"), CaptComponentsX)));
-    Landscape->Tags.AddUnique(FName(*FString::Printf(TEXT("MCP_LandscapeComponentsY=%d"), CaptComponentsY)));
-    Landscape->Tags.AddUnique(FName(*FString::Printf(TEXT("MCP_LandscapeQuadsPerComponent=%d"), CaptQuadsPerComponent)));
+    McpLandscapeMetadataTags::EncodeLandscapeMetadata(
+        Landscape, CaptComponentsX, CaptComponentsY, CaptQuadsPerComponent);
 
     if (!CaptMaterialPath.IsEmpty()) {
       UMaterialInterface *Mat =
