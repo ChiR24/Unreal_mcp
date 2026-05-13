@@ -2109,7 +2109,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetBoundingBox(
         const double MaxYFromMetadata = Metadata.ComponentsY * Metadata.QuadsPerComponent;
         const FBox LandscapeBox = BuildLandscapeBox(
             Landscape->GetTransform(), 0.0, 0.0, MaxXFromMetadata,
-            MaxYFromMetadata, 0.0, 512.0);
+            MaxYFromMetadata, -256.0, 256.0);
         Origin = LandscapeBox.GetCenter();
         BoxExtent = LandscapeBox.GetExtent();
       }
