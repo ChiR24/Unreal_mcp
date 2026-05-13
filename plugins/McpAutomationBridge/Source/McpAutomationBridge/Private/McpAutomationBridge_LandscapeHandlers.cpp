@@ -419,6 +419,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
     Landscape->SubsectionSizeQuads =
         CaptQuadsPerComponent / CaptSectionsPerComponent;
     Landscape->NumSubsections = CaptSectionsPerComponent;
+    // Keep authoring metadata on the actor so generic actor bounds can still
+    // report a useful footprint when UE has not generated landscape components.
+    Landscape->Tags.AddUnique(FName(*FString::Printf(TEXT("MCP_LandscapeComponentsX=%d"), CaptComponentsX)));
+    Landscape->Tags.AddUnique(FName(*FString::Printf(TEXT("MCP_LandscapeComponentsY=%d"), CaptComponentsY)));
+    Landscape->Tags.AddUnique(FName(*FString::Printf(TEXT("MCP_LandscapeQuadsPerComponent=%d"), CaptQuadsPerComponent)));
 
     if (!CaptMaterialPath.IsEmpty()) {
       UMaterialInterface *Mat =
@@ -585,9 +590,12 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPackage()->GetPathName());
     Resp->SetStringField(TEXT("actorLabel"), Landscape->GetActorLabel());
+    Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());
     Resp->SetNumberField(TEXT("componentsX"), CaptComponentsX);
     Resp->SetNumberField(TEXT("componentsY"), CaptComponentsY);
     Resp->SetNumberField(TEXT("quadsPerComponent"), CaptQuadsPerComponent);
+    Resp->SetNumberField(TEXT("extentX"), CaptComponentsX * CaptQuadsPerComponent * Landscape->GetActorScale3D().X * 0.5);
+    Resp->SetNumberField(TEXT("extentY"), CaptComponentsY * CaptQuadsPerComponent * Landscape->GetActorScale3D().Y * 0.5);
 
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
                                       TEXT("Landscape created successfully"),

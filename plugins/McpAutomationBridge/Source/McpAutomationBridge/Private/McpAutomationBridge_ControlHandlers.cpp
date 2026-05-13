@@ -69,6 +69,8 @@
 // -----------------------------------------------------------------------------
 #include "EditorAssetLibrary.h"
 #include "EngineUtils.h"
+#include "Landscape.h"
+#include "LandscapeInfo.h"
 
 // -----------------------------------------------------------------------------
 // Editor-only Includes: Editor Subsystems (paths vary by UE version)
@@ -2063,6 +2065,57 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetBoundingBox(
 
   FVector Origin, BoxExtent;
   Found->GetActorBounds(false, Origin, BoxExtent);
+
+  if (ALandscape* Landscape = Cast<ALandscape>(Found)) {
+    ULandscapeInfo* LandscapeInfo = Landscape->GetLandscapeInfo();
+    int32 MinX = 0, MinY = 0, MaxX = 0, MaxY = 0;
+    if (LandscapeInfo && LandscapeInfo->GetLandscapeExtent(MinX, MinY, MaxX, MaxY)) {
+      const FVector MinWorld = Landscape->GetTransform().TransformPosition(
+          FVector(static_cast<double>(MinX), static_cast<double>(MinY), -256.0));
+      const FVector MaxWorld = Landscape->GetTransform().TransformPosition(
+          FVector(static_cast<double>(MaxX), static_cast<double>(MaxY), 256.0));
+      const FBox LandscapeBox(MinWorld.ComponentMin(MaxWorld),
+                              MinWorld.ComponentMax(MaxWorld));
+      Origin = LandscapeBox.GetCenter();
+      BoxExtent = LandscapeBox.GetExtent();
+    } else {
+      const FBox ProxyBounds = Landscape->GetProxyBounds();
+      if (ProxyBounds.IsValid) {
+        Origin = ProxyBounds.GetCenter();
+        BoxExtent = ProxyBounds.GetExtent();
+      }
+    }
+
+    if (BoxExtent.IsNearlyZero()) {
+      int32 ComponentsX = 0;
+      int32 ComponentsY = 0;
+      int32 QuadsPerComponent = Landscape->ComponentSizeQuads;
+      for (const FName& TagName : Landscape->Tags) {
+        const FString Tag = TagName.ToString();
+        FString Value;
+        if (Tag.Split(TEXT("="), nullptr, &Value)) {
+          if (Tag.StartsWith(TEXT("MCP_LandscapeComponentsX="))) {
+            ComponentsX = FCString::Atoi(*Value);
+          } else if (Tag.StartsWith(TEXT("MCP_LandscapeComponentsY="))) {
+            ComponentsY = FCString::Atoi(*Value);
+          } else if (Tag.StartsWith(TEXT("MCP_LandscapeQuadsPerComponent="))) {
+            QuadsPerComponent = FCString::Atoi(*Value);
+          }
+        }
+      }
+      if (ComponentsX > 0 && ComponentsY > 0 && QuadsPerComponent > 0) {
+        const FVector LocalMax(ComponentsX * QuadsPerComponent,
+                               ComponentsY * QuadsPerComponent,
+                               512.0);
+        const FVector MinWorld = Landscape->GetTransform().TransformPosition(FVector::ZeroVector);
+        const FVector MaxWorld = Landscape->GetTransform().TransformPosition(LocalMax);
+        const FBox LandscapeBox(MinWorld.ComponentMin(MaxWorld),
+                                MinWorld.ComponentMax(MaxWorld));
+        Origin = LandscapeBox.GetCenter();
+        BoxExtent = LandscapeBox.GetExtent();
+      }
+    }
+  }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
 

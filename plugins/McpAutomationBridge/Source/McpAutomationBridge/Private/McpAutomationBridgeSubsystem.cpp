@@ -711,6 +711,14 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
   // CurrentRequestOrigin from the active ProcessAutomationRequest call.
   ERequestOrigin EffectiveOrigin = (Origin == ERequestOrigin::WebSocket)
       ? CurrentRequestOrigin : Origin;
+  // Some handlers complete later via AsyncTask(GameThread) after the request
+  // scope has already reset CurrentRequestOrigin. A live native pending request
+  // is authoritative in that case and must receive the response over SSE.
+  if (Origin == ERequestOrigin::WebSocket && NativeTransport &&
+      NativeTransport->HasPendingRequest(RequestId))
+  {
+    EffectiveOrigin = ERequestOrigin::NativeHTTP;
+  }
   if (EffectiveOrigin == ERequestOrigin::NativeHTTP && NativeTransport)
   {
     if (!NativeTransport->CompletePendingRequest(RequestId, bEffectiveSuccess, EffectiveMessage, EffectiveResult, EffectiveErrorCode))

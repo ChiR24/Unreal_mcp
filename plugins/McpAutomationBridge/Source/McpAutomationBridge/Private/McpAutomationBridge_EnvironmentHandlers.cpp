@@ -414,11 +414,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     // =========================================================================
     if (LowerSub == TEXT("add_foliage_instances"))
     {
-        // Transform from build_environment schema to foliage handler schema
         FString FoliageTypePath;
-        Payload->TryGetStringField(TEXT("foliageType"), FoliageTypePath);
-        const TArray<TSharedPtr<FJsonValue>> *Transforms = nullptr;
-        Payload->TryGetArrayField(TEXT("transforms"), Transforms);
+        if (!Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath) ||
+            FoliageTypePath.IsEmpty())
+        {
+            Payload->TryGetStringField(TEXT("foliageType"), FoliageTypePath);
+        }
 
         TSharedPtr<FJsonObject> FoliagePayload = McpHandlerUtils::CreateResultObject();
         if (!FoliageTypePath.IsEmpty())
@@ -426,42 +427,22 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
             FoliagePayload->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
         }
 
-        // Extract locations from transforms
-        TArray<TSharedPtr<FJsonValue>> Locations;
+        // Preserve full transform data so callers can specify rotation and scale.
+        const TArray<TSharedPtr<FJsonValue>> *Transforms = nullptr;
+        Payload->TryGetArrayField(TEXT("transforms"), Transforms);
         if (Transforms)
         {
-            for (const TSharedPtr<FJsonValue> &V : *Transforms)
-            {
-                if (!V.IsValid() || V->Type != EJson::Object)
-                {
-                    continue;
-                }
-                const TSharedPtr<FJsonObject> *TObj = nullptr;
-                if (!V->TryGetObject(TObj) || !TObj)
-                {
-                    continue;
-                }
-                const TSharedPtr<FJsonObject> *LocObj = nullptr;
-                if (!(*TObj)->TryGetObjectField(TEXT("location"), LocObj) || !LocObj)
-                {
-                    continue;
-                }
-                
-                double X = 0, Y = 0, Z = 0;
-                (*LocObj)->TryGetNumberField(TEXT("x"), X);
-                (*LocObj)->TryGetNumberField(TEXT("y"), Y);
-                (*LocObj)->TryGetNumberField(TEXT("z"), Z);
-
-                TSharedPtr<FJsonObject> L = McpHandlerUtils::CreateResultObject();
-                L->SetNumberField(TEXT("x"), X);
-                L->SetNumberField(TEXT("y"), Y);
-                L->SetNumberField(TEXT("z"), Z);
-                Locations.Add(MakeShared<FJsonValueObject>(L));
-            }
+            FoliagePayload->SetArrayField(TEXT("transforms"), *Transforms);
         }
-        FoliagePayload->SetArrayField(TEXT("locations"), Locations);
-        return HandlePaintFoliage(RequestId, TEXT("paint_foliage"), FoliagePayload,
-                                  RequestingSocket);
+
+        const TArray<TSharedPtr<FJsonValue>> *Locations = nullptr;
+        if (Payload->TryGetArrayField(TEXT("locations"), Locations) && Locations)
+        {
+            FoliagePayload->SetArrayField(TEXT("locations"), *Locations);
+        }
+
+        return HandleAddFoliageInstances(RequestId, TEXT("add_foliage_instances"),
+                                         FoliagePayload, RequestingSocket);
     }
     else if (LowerSub == TEXT("get_foliage_instances"))
     {
