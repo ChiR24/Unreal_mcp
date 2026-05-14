@@ -1005,6 +1005,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
     }
   }
 
+  if (ParsedTransforms.Num() == 0) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("transforms or locations must contain at least one valid location"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
   if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
