@@ -1149,7 +1149,13 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         assetPath: commonSchemas.assetPath,
         animPath: commonSchemas.assetPath,
         montagePath: commonSchemas.assetPath,
-        blendSpacePath: commonSchemas.assetPath
+        blendSpacePath: commonSchemas.assetPath,
+        // force_rebuild_blend_space response fields:
+        rebuiltBlendParameters: { ...commonSchemas.booleanProp, description: 'force_rebuild_blend_space: echoes whether BlendParameters PostEditChangeProperty was also triggered.' },
+        referencersCompiled: { ...commonSchemas.numberProp, description: 'force_rebuild_blend_space (compileReferencers=true): count of referencing AnimBlueprints that compiled successfully after the BS rebuild.' },
+        compiledAnimBlueprints: { ...commonSchemas.arrayOfStrings, description: 'force_rebuild_blend_space (compileReferencers=true): asset paths of AnimBlueprints whose compile succeeded.' },
+        referencersFailed: { ...commonSchemas.numberProp, description: 'force_rebuild_blend_space (compileReferencers=true): count of referencing AnimBlueprints that failed to compile (or to load).' },
+        failedAnimBlueprints: { ...commonSchemas.arrayOfStrings, description: 'force_rebuild_blend_space (compileReferencers=true): asset paths of AnimBlueprints that failed to compile or load.' }
       }
     }
   },
