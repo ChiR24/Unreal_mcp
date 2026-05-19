@@ -1451,12 +1451,45 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       }
 
       if (bHandled) {
+        // Wave 7+ #6: refresh title cache for K2Node types whose displayed
+        // title is computed from a property we just wrote (otherwise editor
+        // still shows stale "EnhancedInputAction None" until the user clicks
+        // the node manually). WHITELIST ONLY — calling ReconstructNode on
+        // arbitrary K2Nodes risks breaking already-connected pins.
+        // Match by class name string to avoid pulling in InputBlueprintNodes
+        // module as a hard plugin dependency (it's optional).
+        //
+        // FNodeTextCache (EdGraphNodeUtils.h) treats CachedText as valid as
+        // long as the schema's visualization cache ID matches; ReconstructNode
+        // alone doesn't bump that ID, so we call ForceVisualizationCacheClear
+        // on the schema to actually invalidate every K2Node's title cache on
+        // this graph. Cost is just re-running GetNodeTitle next access — cheap.
+        //
+        // Order: refresh BEFORE NotifyGraphChanged / MarkBlueprintAsModified /
+        // SaveLoadedAssetThrottled so the reconstructed pin layout is what
+        // gets notified + dirtied + persisted (standalone set_node_property
+        // call semantics, not relying on a subsequent compile to mop up).
+        static const TSet<FString> RefreshableTitleNodeClassNames = {
+            TEXT("K2Node_EnhancedInputAction"),
+            // Future additions: any K2Node whose GetNodeTitle reads a property
+            // we expose via set_node_property and that doesn't auto-invalidate.
+        };
+        const FString TargetClassName = TargetNode->GetClass()->GetName();
+        if (RefreshableTitleNodeClassNames.Contains(TargetClassName)) {
+          if (UK2Node *K2Node = Cast<UK2Node>(TargetNode)) {
+            K2Node->ReconstructNode();
+          }
+          if (const UEdGraphSchema *Schema = TargetGraph->GetSchema()) {
+            Schema->ForceVisualizationCacheClear();
+          }
+        }
+
         TargetGraph->NotifyGraphChanged();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        
+
         // CRITICAL: Save the blueprint to persist changes.
         SaveLoadedAssetThrottled(Blueprint);
-        
+
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("nodeId"), TargetNode->NodeGuid.ToString());
         Result->SetStringField(TEXT("nodeName"), TargetNode->GetName());
