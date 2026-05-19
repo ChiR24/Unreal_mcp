@@ -610,62 +610,108 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
     // Special nodes requiring extra parameters
     if (NodeType == TEXT("VariableGet") ||
-        NodeType == TEXT("K2Node_VariableGet")) {
-      FString VarName;
-      Payload->TryGetStringField(TEXT("variableName"), VarName);
-      FName VarFName(*VarName);
-      bool bFound = false;
-      for (const FBPVariableDescription &VarDesc : Blueprint->NewVariables) {
-        if (VarDesc.VarName == VarFName) {
-          bFound = true;
-          break;
-        }
-      }
-      if (!bFound && Blueprint->GeneratedClass &&
-          Blueprint->GeneratedClass->FindPropertyByName(VarFName)) {
-        bFound = true;
-      }
-      if (!bFound) {
-        SendAutomationError(
-            RequestingSocket, RequestId,
-            FString::Printf(TEXT("Variable '%s' not found"), *VarName),
-            TEXT("VARIABLE_NOT_FOUND"));
-        return true;
-      }
-      FGraphNodeCreator<UK2Node_VariableGet> NodeCreator(*TargetGraph);
-      UK2Node_VariableGet *VarGet = NodeCreator.CreateNode(false);
-      VarGet->VariableReference.SetSelfMember(VarFName);
-      FinalizeAndReport(NodeCreator, VarGet);
-      return true;
-    }
-
-    if (NodeType == TEXT("VariableSet") ||
+        NodeType == TEXT("K2Node_VariableGet") ||
+        NodeType == TEXT("VariableSet") ||
         NodeType == TEXT("K2Node_VariableSet")) {
+      const bool bIsSet = (NodeType == TEXT("VariableSet") ||
+                           NodeType == TEXT("K2Node_VariableSet"));
       FString VarName;
       Payload->TryGetStringField(TEXT("variableName"), VarName);
       FName VarFName(*VarName);
-      bool bFound = false;
-      for (const FBPVariableDescription &VarDesc : Blueprint->NewVariables) {
-        if (VarDesc.VarName == VarFName) {
-          bFound = true;
-          break;
+
+      // Support inherited UPROPERTY on parent / SCS component class
+      // (e.g. UCharacterMovementComponent::MaxWalkSpeed). When memberClass is
+      // provided, look the property up *only* there; otherwise check the
+      // Blueprint's own NewVariables (BP-declared but possibly uncompiled
+      // member vars) and then walk its GeneratedClass parent chain.
+      FString MemberClassStr;
+      Payload->TryGetStringField(TEXT("memberClass"), MemberClassStr);
+
+      FProperty *FoundProp = nullptr;
+      UClass *ResolvedOwnerClass = nullptr;
+      bool bFoundAsBPDeclaredVar = false;
+
+      if (!MemberClassStr.IsEmpty()) {
+        // Explicit memberClass — restrict lookup to that class's parent chain.
+        // Do NOT fall back to Blueprint->NewVariables / GeneratedClass: if the
+        // caller asserted "this variable lives on UCharacterMovementComponent"
+        // and it doesn't, fail with VARIABLE_NOT_FOUND rather than silently
+        // matching a same-name property on this BP's own class chain (which
+        // would generate a wrong-target self-context node).
+        if (UClass *OwnerClass = ResolveUClass(MemberClassStr)) {
+          FoundProp = McpFindPropertyRecursive(OwnerClass, VarFName);
+          if (FoundProp) {
+            ResolvedOwnerClass = OwnerClass;
+          }
+        }
+      } else {
+        // No explicit memberClass — preserve the original lookup order:
+        //   1. Blueprint->NewVariables (BP-declared vars that may be present
+        //      here but not yet on GeneratedClass if the BP hasn't been
+        //      recompiled since add_variable).
+        //   2. Blueprint->GeneratedClass parent chain (compiled BP-declared
+        //      vars and inherited UPROPERTY on parent BP/native classes).
+        for (const FBPVariableDescription &VarDesc : Blueprint->NewVariables) {
+          if (VarDesc.VarName == VarFName) {
+            bFoundAsBPDeclaredVar = true;
+            ResolvedOwnerClass = Blueprint->GeneratedClass;
+            break;
+          }
+        }
+        if (!bFoundAsBPDeclaredVar && Blueprint->GeneratedClass) {
+          FoundProp =
+              McpFindPropertyRecursive(Blueprint->GeneratedClass, VarFName);
+          if (FoundProp) {
+            ResolvedOwnerClass = FoundProp->GetOwnerClass();
+          }
         }
       }
-      if (!bFound && Blueprint->GeneratedClass &&
-          Blueprint->GeneratedClass->FindPropertyByName(VarFName)) {
-        bFound = true;
-      }
-      if (!bFound) {
+
+      if (!FoundProp && !bFoundAsBPDeclaredVar) {
         SendAutomationError(
             RequestingSocket, RequestId,
-            FString::Printf(TEXT("Variable '%s' not found"), *VarName),
+            FString::Printf(
+                TEXT("Variable '%s' not found in Blueprint or any parent class "
+                     "(memberClass='%s')"),
+                *VarName, *MemberClassStr),
             TEXT("VARIABLE_NOT_FOUND"));
         return true;
       }
-      FGraphNodeCreator<UK2Node_VariableSet> NodeCreator(*TargetGraph);
-      UK2Node_VariableSet *VarSet = NodeCreator.CreateNode(false);
-      VarSet->VariableReference.SetSelfMember(VarFName);
-      FinalizeAndReport(NodeCreator, VarSet);
+
+      // Treat the variable as "self context" when the Blueprint's class IS-A
+      // owner class — i.e. the property lives on this BP or any of its
+      // ancestors (BP-declared vars, parent BP/native ACharacter components,
+      // etc.). For UPROPERTY on an unrelated class (e.g. accessing
+      // UCharacterMovementComponent::MaxWalkSpeed through an external Target
+      // component) we want external-member semantics so the K2Node exposes
+      // a Target pin that the caller must wire to a component reference.
+      // NewVariables hits are always self-context by construction.
+      const bool bIsSelfContext =
+          bFoundAsBPDeclaredVar ||
+          (Blueprint->GeneratedClass &&
+           Blueprint->GeneratedClass->IsChildOf(ResolvedOwnerClass));
+
+      if (bIsSet) {
+        FGraphNodeCreator<UK2Node_VariableSet> NodeCreator(*TargetGraph);
+        UK2Node_VariableSet *VarSet = NodeCreator.CreateNode(false);
+        if (bIsSelfContext) {
+          VarSet->VariableReference.SetSelfMember(VarFName);
+        } else {
+          VarSet->VariableReference.SetFromField<FProperty>(
+              FoundProp, /*bIsConsideredSelfContext=*/false, ResolvedOwnerClass);
+        }
+        FinalizeAndReport(NodeCreator, VarSet);
+      } else {
+        FGraphNodeCreator<UK2Node_VariableGet> NodeCreator(*TargetGraph);
+        UK2Node_VariableGet *VarGet = NodeCreator.CreateNode(false);
+        if (bIsSelfContext) {
+          VarGet->VariableReference.SetSelfMember(VarFName);
+        } else {
+          VarGet->VariableReference.SetFromField<FProperty>(
+              FoundProp, /*bIsConsideredSelfContext=*/false, ResolvedOwnerClass);
+        }
+        FinalizeAndReport(NodeCreator, VarGet);
+      }
       return true;
     }
 
