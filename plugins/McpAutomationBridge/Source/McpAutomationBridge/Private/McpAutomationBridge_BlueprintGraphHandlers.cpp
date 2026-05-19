@@ -619,35 +619,55 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       Payload->TryGetStringField(TEXT("variableName"), VarName);
       FName VarFName(*VarName);
 
-      // Wave 7+ — support inherited UPROPERTY on parent / SCS component class
+      // Support inherited UPROPERTY on parent / SCS component class
       // (e.g. UCharacterMovementComponent::MaxWalkSpeed). When memberClass is
-      // provided, look the property up there; otherwise walk the Blueprint's
-      // own generated class parent chain.
+      // provided, look the property up *only* there; otherwise check the
+      // Blueprint's own NewVariables (BP-declared but possibly uncompiled
+      // member vars) and then walk its GeneratedClass parent chain.
       FString MemberClassStr;
       Payload->TryGetStringField(TEXT("memberClass"), MemberClassStr);
 
       FProperty *FoundProp = nullptr;
       UClass *ResolvedOwnerClass = nullptr;
+      bool bFoundAsBPDeclaredVar = false;
 
       if (!MemberClassStr.IsEmpty()) {
+        // Explicit memberClass — restrict lookup to that class's parent chain.
+        // Do NOT fall back to Blueprint->NewVariables / GeneratedClass: if the
+        // caller asserted "this variable lives on UCharacterMovementComponent"
+        // and it doesn't, fail with VARIABLE_NOT_FOUND rather than silently
+        // matching a same-name property on this BP's own class chain (which
+        // would generate a wrong-target self-context node).
         if (UClass *OwnerClass = ResolveUClass(MemberClassStr)) {
           FoundProp = McpFindPropertyRecursive(OwnerClass, VarFName);
           if (FoundProp) {
             ResolvedOwnerClass = OwnerClass;
           }
         }
-      }
-
-      // Fall back to Blueprint's own class hierarchy (handles BP-declared vars
-      // and pure inherited BP parent class properties without explicit memberClass).
-      if (!FoundProp && Blueprint->GeneratedClass) {
-        FoundProp = McpFindPropertyRecursive(Blueprint->GeneratedClass, VarFName);
-        if (FoundProp) {
-          ResolvedOwnerClass = FoundProp->GetOwnerClass();
+      } else {
+        // No explicit memberClass — preserve the original lookup order:
+        //   1. Blueprint->NewVariables (BP-declared vars that may be present
+        //      here but not yet on GeneratedClass if the BP hasn't been
+        //      recompiled since add_variable).
+        //   2. Blueprint->GeneratedClass parent chain (compiled BP-declared
+        //      vars and inherited UPROPERTY on parent BP/native classes).
+        for (const FBPVariableDescription &VarDesc : Blueprint->NewVariables) {
+          if (VarDesc.VarName == VarFName) {
+            bFoundAsBPDeclaredVar = true;
+            ResolvedOwnerClass = Blueprint->GeneratedClass;
+            break;
+          }
+        }
+        if (!bFoundAsBPDeclaredVar && Blueprint->GeneratedClass) {
+          FoundProp =
+              McpFindPropertyRecursive(Blueprint->GeneratedClass, VarFName);
+          if (FoundProp) {
+            ResolvedOwnerClass = FoundProp->GetOwnerClass();
+          }
         }
       }
 
-      if (!FoundProp) {
+      if (!FoundProp && !bFoundAsBPDeclaredVar) {
         SendAutomationError(
             RequestingSocket, RequestId,
             FString::Printf(
@@ -665,9 +685,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       // UCharacterMovementComponent::MaxWalkSpeed through an external Target
       // component) we want external-member semantics so the K2Node exposes
       // a Target pin that the caller must wire to a component reference.
+      // NewVariables hits are always self-context by construction.
       const bool bIsSelfContext =
-          Blueprint->GeneratedClass &&
-          Blueprint->GeneratedClass->IsChildOf(ResolvedOwnerClass);
+          bFoundAsBPDeclaredVar ||
+          (Blueprint->GeneratedClass &&
+           Blueprint->GeneratedClass->IsChildOf(ResolvedOwnerClass));
 
       if (bIsSet) {
         FGraphNodeCreator<UK2Node_VariableSet> NodeCreator(*TargetGraph);
