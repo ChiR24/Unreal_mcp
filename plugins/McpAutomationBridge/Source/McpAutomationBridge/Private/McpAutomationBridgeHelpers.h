@@ -2565,6 +2565,32 @@ static inline UClass *ResolveUClass(const FString &Input) {
   return nullptr;
 }
 
+/**
+ * Walks the UClass parent chain looking for a UPROPERTY by name.
+ *
+ * Used by K2Node_VariableSet/Get handlers to resolve inherited UPROPERTY on
+ * parent or SCS component classes (e.g. UCharacterMovementComponent::MaxWalkSpeed).
+ * Vanilla UClass::FindPropertyByName already walks SuperClass internally, but
+ * exposing an explicit recursive helper makes the lookup intent obvious at the
+ * call site and gives a single insertion point if we ever need to also search
+ * SCS-attached component classes.
+ *
+ * @param StartClass The class to begin lookup from (typically the resolved
+ *                   owner class such as UCharacterMovementComponent::StaticClass(),
+ *                   or Blueprint->GeneratedClass when memberClass is unspecified).
+ * @param PropName   The property FName to search for.
+ * @returns FProperty pointer if found anywhere in the parent chain, nullptr otherwise.
+ */
+static inline FProperty *McpFindPropertyRecursive(UClass *StartClass,
+                                                  FName PropName) {
+  for (UClass *C = StartClass; C != nullptr; C = C->GetSuperClass()) {
+    if (FProperty *Prop = C->FindPropertyByName(PropName)) {
+      return Prop;
+    }
+  }
+  return nullptr;
+}
+
 // Standardized Response Helpers
 // See: https://google.github.io/styleguide/jsoncstyleguide.xml
 
