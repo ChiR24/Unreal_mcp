@@ -819,6 +819,44 @@ export async function handleAnimationAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Blend sample added');
       }
 
+      case 'force_rebuild_blend_space': {
+        // Wave 7+ #12: Python set_editor_property / raw sample writes don't
+        // trigger PostEditChangeProperty, so the BlendSpace's cached grid
+        // becomes stale (referencing ABP compiles report "sample out of bounds").
+        // This action forces ValidateSampleData + PostEditChangeProperty on the
+        // BS, and optionally cascade-compiles every AnimBlueprint that references
+        // it (so user doesn't have to find/compile each ABP manually).
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['blendSpacePath'], required: true },
+          { key: 'rebuildBlendParameters', default: false },
+          { key: 'compileReferencers', default: true },
+          { key: 'save', default: true },
+        ]);
+
+        const rawAssetPath = extractString(params, 'assetPath');
+        const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+        if (!assetPathValidation.valid) {
+          return assetPathValidation.error;
+        }
+        const assetPath = assetPathValidation.sanitized;
+        const rebuildBlendParameters = extractOptionalBoolean(params, 'rebuildBlendParameters') ?? false;
+        const compileReferencers = extractOptionalBoolean(params, 'compileReferencers') ?? true;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+          subAction: 'force_rebuild_blend_space',
+          assetPath,
+          rebuildBlendParameters,
+          compileReferencers,
+          save,
+        })) as AutomationResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to rebuild blend space', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Blend space rebuilt');
+      }
+
   case 'set_axis_settings': {
     const params = normalizeArgs(args, [
       { key: 'assetPath', required: true },

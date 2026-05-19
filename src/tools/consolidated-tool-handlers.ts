@@ -181,7 +181,7 @@ function registerDefaultHandlers() {
     'add_notify_state', 'add_sync_marker', 'set_root_motion_settings', 'set_additive_settings',
     'create_montage', 'add_montage_section', 'add_montage_slot', 'set_section_timing',
     'add_montage_notify', 'set_blend_in', 'set_blend_out', 'link_sections',
-    'create_blend_space_1d', 'create_blend_space_2d', 'add_blend_sample', 'set_axis_settings', 'set_interpolation_settings',
+    'create_blend_space_1d', 'create_blend_space_2d', 'add_blend_sample', 'force_rebuild_blend_space', 'set_axis_settings', 'set_interpolation_settings',
     'create_aim_offset', 'add_aim_offset_sample',
     'create_anim_blueprint', 'create_animation_bp', 'create_animation_blueprint', 'add_state_machine', 'add_state', 'add_transition', 'set_transition_rules',
     'add_blend_node', 'add_cached_pose', 'add_slot_node', 'add_layered_blend_per_bone', 'set_anim_graph_node_value',
