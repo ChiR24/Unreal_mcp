@@ -1375,7 +1375,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                         TEXT("set_node_property"), TEXT("create_reroute_node"),
                         TEXT("get_node_details"),  TEXT("get_graph_details"),
                         TEXT("get_pin_details"),   TEXT("list_node_types"),
-                        TEXT("set_pin_default_value")};
+                        TEXT("set_pin_default_value"),
+                        // Wave 6B Path-a AnimBP graph discovery actions —
+                        // implemented in HandleBlueprintGraphAction (early
+                        // dispatch L691/831) but were missing from this routing
+                        // set, so manage_blueprint requests fell through to
+                        // HandleBlueprintAction and returned UNKNOWN_ACTION.
+                        TEXT("list_animbp_graphs"),
+                        TEXT("get_transition_rule_graph")};
                     if (GraphSubActions.Contains(SubAction)) {
                       return HandleBlueprintGraphAction(R, A, P, S);
                     }
