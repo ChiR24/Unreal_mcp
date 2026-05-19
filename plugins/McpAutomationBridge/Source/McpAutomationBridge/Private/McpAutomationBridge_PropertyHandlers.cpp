@@ -81,6 +81,9 @@
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Engine/SkeletalMesh.h"
+#include "EdGraph/EdGraph.h"
+#include "EdGraph/EdGraphSchema.h"
+#include "K2Node.h"
 #endif
 
 // =============================================================================
@@ -377,6 +380,42 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
 
 #if WITH_EDITOR
   RootObject->PostEditChange();
+
+  // Refresh stale node title cache for K2Node types whose displayed title is
+  // computed from a UPROPERTY we just wrote — otherwise the editor keeps
+  // rendering the cached title (e.g. "EnhancedInputAction None") until the
+  // user manually clicks the node, which reads as "the property write didn't
+  // take" even though it did.
+  //
+  // FNodeTextCache (EdGraphNodeUtils.h) treats CachedText as valid as long as
+  // the schema's visualization cache ID matches; PostEditChange does not bump
+  // that ID. ForceVisualizationCacheClear on the schema is what makes
+  // FNodeTextCache::IsOutOfDate return true on the next access so GetNodeTitle
+  // is re-computed.
+  //
+  // NARROW WHITELIST ONLY — calling ReconstructNode on arbitrary K2Nodes
+  // would risk breaking already-connected pins on nodes whose authors did not
+  // design for ReconstructNode after a single property write. Match by class
+  // name string so this code path stays independent of the optional
+  // InputBlueprintNodes plugin module (referencing
+  // UK2Node_EnhancedInputAction::StaticClass() directly would add a hard
+  // module dependency just for the type check).
+  if (UK2Node *K2Node = Cast<UK2Node>(RootObject)) {
+      static const TSet<FString> RefreshableTitleNodeClassNames = {
+          TEXT("K2Node_EnhancedInputAction"),
+          // Future additions: any K2Node whose GetNodeTitle reads a UPROPERTY
+          // we expose via set_object_property and that doesn't auto-invalidate.
+      };
+      if (RefreshableTitleNodeClassNames.Contains(K2Node->GetClass()->GetName())) {
+          K2Node->ReconstructNode();
+          if (UEdGraph *Graph = K2Node->GetGraph()) {
+              if (const UEdGraphSchema *Schema = Graph->GetSchema()) {
+                  Schema->ForceVisualizationCacheClear();
+              }
+              Graph->NotifyGraphChanged();
+          }
+      }
+  }
 #endif
 
   // --- Build Response ---
