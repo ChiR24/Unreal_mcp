@@ -1,4 +1,4 @@
-// McpTool_ManageBehaviorTree.cpp — manage_behavior_tree tool definition (6 actions)
+// McpTool_ManageBehaviorTree.cpp — manage_behavior_tree tool definition (7 actions)
 
 #include "McpVersionCompatibility.h"
 #include "MCP/McpToolDefinition.h"
@@ -27,15 +27,18 @@ public:
 				TEXT("connect_nodes"),
 				TEXT("remove_node"),
 				TEXT("break_connections"),
-				TEXT("set_node_properties")
+				TEXT("set_node_properties"),
+				TEXT("add_subnode")
 			}, TEXT("Action"))
 			.String(TEXT("name"), TEXT("Name identifier."))
 			.String(TEXT("savePath"), TEXT("Path to save the asset."))
 			.String(TEXT("assetPath"), TEXT("Asset path (e.g., /Game/Path/Asset)."))
 			.String(TEXT("nodeType"), TEXT(""))
 			.String(TEXT("nodeId"), TEXT("ID of the node."))
-			.String(TEXT("parentNodeId"), TEXT("ID of the node."))
+			.String(TEXT("parentNodeId"), TEXT("ID of the parent node, or 'root' to attach as a root subnode."))
 			.String(TEXT("childNodeId"), TEXT("ID of the node."))
+			.String(TEXT("subnodeType"), TEXT("'Decorator' or 'Service' (used by add_subnode)."))
+			.String(TEXT("nodeClass"), TEXT("Fully qualified subnode UClass name, e.g. 'BTDecorator_Cooldown' or 'BTService_DefaultFocus'. The TypeScript wrapper (graph-handlers.ts) expands short aliases like 'Cooldown' -> 'BTDecorator_Cooldown' via BT_NODE_ALIASES before forwarding; direct callers of the native MCP transport must supply the expanded name."))
 			.Number(TEXT("x"), TEXT(""))
 			.Number(TEXT("y"), TEXT(""))
 			.String(TEXT("comment"), TEXT(""))
