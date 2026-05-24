@@ -248,7 +248,13 @@ async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools
             processedArgs.nodeCategory = alias.type;
         }
     }
-    
+
+    // For add_subnode, alias nodeClass through the same map (callers pass short names like "Cooldown")
+    if (action === 'add_subnode' && typeof processedArgs.nodeClass === 'string' && BT_NODE_ALIASES[processedArgs.nodeClass]) {
+        const alias = BT_NODE_ALIASES[processedArgs.nodeClass];
+        processedArgs.nodeClass = alias.class;
+    }
+
     const res = await executeAutomationRequest(tools, 'manage_behavior_tree', processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
     return cleanObject(promoteScalarResultFields(res)) as Record<string, unknown>;
 }
