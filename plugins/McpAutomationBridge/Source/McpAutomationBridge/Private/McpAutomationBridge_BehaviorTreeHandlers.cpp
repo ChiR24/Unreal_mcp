@@ -66,12 +66,15 @@
 #include "BehaviorTree/Tasks/BTTask_RotateToFaceBBEntry.h"
 #include "BehaviorTree/Tasks/BTTask_RunBehavior.h"
 #include "BehaviorTree/Tasks/BTTask_Wait.h"
+#include "BehaviorTree/BlackboardData.h"
+#include "BehaviorTree/BehaviorTreeTypes.h"   // FBlackboardKeySelector
 
 // Behavior Tree Graph (UE 5.3+)
 // BehaviorTreeGraph classes are only exported (BEHAVIORTREEEDITOR_API) starting from UE 5.3
 // UE 5.0-5.2: Class is not exported, cannot use NewObject<UBehaviorTreeGraph>() from outside module
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 #include "AIGraphTypes.h"
+#include "AIGraphNode.h"                  // UAIGraphNode (provides SubNodes array)
 #include "BehaviorTreeGraph.h"
 #include "BehaviorTreeGraphNode.h"
 #include "BehaviorTreeGraphNode_Composite.h"
@@ -312,26 +315,27 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     }
     const FString Needle = IdOrName.TrimStartAndEnd();
 
-    // Iterate nodes
-    for (UEdGraphNode *Node : BTGraph->Nodes) {
-      if (!Node)
-        continue;
-
-      // Check exact GUID match first
-      if (Node->NodeGuid.ToString() == Needle)
-        return Node;
-
-      // Check parsed GUID match (handles format differences)
+    // Inner matcher — recurses into UAIGraphNode::SubNodes for decorator/service
+    // lookup. Captured by reference so the lambda can refer to itself.
+    TFunction<UEdGraphNode*(UEdGraphNode*)> Match;
+    Match = [&](UEdGraphNode* Node) -> UEdGraphNode* {
+      if (!Node) return nullptr;
+      if (Node->NodeGuid.ToString() == Needle) return Node;
       FGuid SearchGuid;
-      if (FGuid::Parse(Needle, SearchGuid) && Node->NodeGuid == SearchGuid) {
-        return Node;
+      if (FGuid::Parse(Needle, SearchGuid) && Node->NodeGuid == SearchGuid) return Node;
+      if (Node->GetName().Equals(Needle, ESearchCase::IgnoreCase)) return Node;
+      if (Node->GetPathName().Equals(Needle, ESearchCase::IgnoreCase)) return Node;
+      // Recurse into subnodes (decorators/services attached to graph nodes).
+      if (UAIGraphNode* AINode = Cast<UAIGraphNode>(Node)) {
+        for (UAIGraphNode* SubNode : AINode->SubNodes) {
+          if (UEdGraphNode* Found = Match(SubNode)) return Found;
+        }
       }
+      return nullptr;
+    };
 
-      // Check Name and PathName
-      if (Node->GetName().Equals(Needle, ESearchCase::IgnoreCase))
-        return Node;
-      if (Node->GetPathName().Equals(Needle, ESearchCase::IgnoreCase))
-        return Node;
+    for (UEdGraphNode *Node : BTGraph->Nodes) {
+      if (UEdGraphNode* Found = Match(Node)) return Found;
     }
     return nullptr;
   };
@@ -723,6 +727,44 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
                 NameProp->SetPropertyValue_InContainer(
                     BTNode->NodeInstance, FName(*Pair.Value->AsString()));
                 bModified = true;
+              }
+            } else if (FStructProperty *StructProp =
+                           CastField<FStructProperty>(Prop)) {
+              if (StructProp->Struct == FBlackboardKeySelector::StaticStruct() &&
+                  Pair.Value->Type == EJson::String) {
+                void* StructPtr = StructProp->ContainerPtrToValuePtr<void>(BTNode->NodeInstance);
+                FBlackboardKeySelector* Selector = static_cast<FBlackboardKeySelector*>(StructPtr);
+                Selector->SelectedKeyName = FName(*Pair.Value->AsString());
+
+                // Resolve against BT's blackboard. BB may be null when
+                // assign_blackboard was not called yet — log a warning and
+                // continue without crashing (PR0a-confirmed: BT->BlackboardAsset
+                // is null in that case).
+                if (UBlackboardData* BB = BT->BlackboardAsset) {
+                  Selector->ResolveSelectedKey(*BB);
+                  // ResolveSelectedKey does NOT signal failure — on a typo'd key
+                  // name it leaves SelectedKeyID == FBlackboard::InvalidKey while
+                  // returning normally. Without this check a caller can write a
+                  // wrong key name, see success: true, and have a silently broken
+                  // decorator at PIE time.
+                  if (!Selector->IsSet()) {
+                    SendAutomationError(RequestingSocket, RequestId,
+                      FString::Printf(TEXT("BlackboardKey '%s' not found in BT's assigned BB '%s' (typo or missing add_blackboard_key call?)"),
+                        *Pair.Value->AsString(), *BB->GetPathName()),
+                      TEXT("BB_KEY_NOT_FOUND"));
+                    return true;
+                  }
+                } else {
+                  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                    TEXT("set_node_properties: BT '%s' has no BlackboardAsset assigned; "
+                         "BlackboardKey selector name set but not resolved."),
+                    *BT->GetPathName());
+                }
+                bModified = true;
+              } else {
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+                  TEXT("set_node_properties: unsupported struct property '%s' on node (only FBlackboardKeySelector supported)"),
+                  *Pair.Key);
               }
             }
           }
