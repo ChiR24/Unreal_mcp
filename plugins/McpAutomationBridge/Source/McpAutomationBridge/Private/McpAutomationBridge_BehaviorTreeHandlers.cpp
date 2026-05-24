@@ -789,6 +789,141 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     return true;
 #endif
   }
+  // ===========================================================================
+  // SubAction: add_subnode — Add decorator/service as a subnode attached to a
+  // parent graph node (uses "root" sentinel for root-level decorators).
+  // ===========================================================================
+  else if (SubAction == TEXT("add_subnode")) {
+#if !MCP_HAS_BEHAVIOR_TREE_GRAPH
+    SendAutomationError(RequestingSocket, RequestId,
+      TEXT("add_subnode requires UE 5.3+ Behavior Tree graph editing support."),
+      TEXT("NOT_SUPPORTED"));
+    return true;
+#else
+    FString ParentNodeIdStr, SubnodeType, NodeClass;
+    if (!Payload->TryGetStringField(TEXT("parentNodeId"), ParentNodeIdStr) ||
+        !Payload->TryGetStringField(TEXT("subnodeType"), SubnodeType) ||
+        !Payload->TryGetStringField(TEXT("nodeClass"), NodeClass)) {
+      SendAutomationError(RequestingSocket, RequestId,
+        TEXT("add_subnode requires assetPath, parentNodeId, subnodeType, nodeClass"),
+        TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Resolve parent node. "root" sentinel is a contract, not workaround.
+    // Branch order: literal BEFORE GUID parse — real GUIDs always contain
+    // hyphens so the literal cannot collide (per spec R8).
+    UBehaviorTreeGraphNode* ParentNode = nullptr;
+    if (ParentNodeIdStr.Equals(TEXT("root"), ESearchCase::IgnoreCase)) {
+      for (UEdGraphNode* GraphNode : BTGraph->Nodes) {
+        if (UBehaviorTreeGraphNode_Root* RootNode = Cast<UBehaviorTreeGraphNode_Root>(GraphNode)) {
+          ParentNode = RootNode;
+          break;
+        }
+      }
+    } else {
+      FGuid ParentGuid;
+      if (!FGuid::Parse(ParentNodeIdStr, ParentGuid)) {
+        SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("Invalid parentNodeId: %s (must be 'root' or a GUID)"), *ParentNodeIdStr),
+          TEXT("INVALID_PARENT"));
+        return true;
+      }
+      for (UEdGraphNode* GraphNode : BTGraph->Nodes) {
+        if (GraphNode->NodeGuid == ParentGuid) {
+          ParentNode = Cast<UBehaviorTreeGraphNode>(GraphNode);
+          break;
+        }
+      }
+    }
+    if (!ParentNode) {
+      SendAutomationError(RequestingSocket, RequestId,
+        FString::Printf(TEXT("Parent node not found: %s"), *ParentNodeIdStr),
+        TEXT("INVALID_PARENT"));
+      return true;
+    }
+
+    // Resolve subnode UClass. TS wrapper expands aliases like "Cooldown" →
+    // "BTDecorator_Cooldown"; ANY_PACKAGE was deprecated in UE 5.1+ so we use
+    // TryFindTypeSlow. LoadObject is the cross-asset (BP-class) fallback.
+    UClass* NodeInstanceClass = UClass::TryFindTypeSlow<UClass>(NodeClass);
+    if (!NodeInstanceClass) {
+      NodeInstanceClass = LoadObject<UClass>(nullptr, *NodeClass);
+    }
+    if (!NodeInstanceClass) {
+      SendAutomationError(RequestingSocket, RequestId,
+        FString::Printf(TEXT("Subnode class not found: %s"), *NodeClass),
+        TEXT("INVALID_CLASS"));
+      return true;
+    }
+
+    // Validate Decorator vs Service against class hierarchy.
+    UClass* SubnodeGraphClass = nullptr;
+    if (SubnodeType.Equals(TEXT("Decorator"), ESearchCase::IgnoreCase)) {
+      if (!NodeInstanceClass->IsChildOf(UBTDecorator::StaticClass())) {
+        SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("Class %s is not a UBTDecorator subclass"), *NodeClass),
+          TEXT("INVALID_CLASS"));
+        return true;
+      }
+      SubnodeGraphClass = UBehaviorTreeGraphNode_Decorator::StaticClass();
+    } else if (SubnodeType.Equals(TEXT("Service"), ESearchCase::IgnoreCase)) {
+      if (!NodeInstanceClass->IsChildOf(UBTService::StaticClass())) {
+        SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("Class %s is not a UBTService subclass"), *NodeClass),
+          TEXT("INVALID_CLASS"));
+        return true;
+      }
+      // Parent acceptance: services cannot attach to BT root graph node
+      // (UE editor convention — root only accepts decorators). Fail before
+      // constructing rather than producing a graph the editor rejects.
+      if (Cast<UBehaviorTreeGraphNode_Root>(ParentNode)) {
+        SendAutomationError(RequestingSocket, RequestId,
+          TEXT("Service subnode cannot be attached to the root graph node — use Decorator, or attach the Service to a composite/task child."),
+          TEXT("INVALID_PARENT_FOR_SUBNODE"));
+        return true;
+      }
+      SubnodeGraphClass = UBehaviorTreeGraphNode_Service::StaticClass();
+    } else {
+      SendAutomationError(RequestingSocket, RequestId,
+        FString::Printf(TEXT("subnodeType must be 'Decorator' or 'Service' (got: %s)"), *SubnodeType),
+        TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Create graph subnode + UBTNode instance. Mirror add_node init triplet
+    // (AddNode + PostPlacedNewNode + AllocateDefaultPins). AllocateDefaultPins
+    // is a no-op for subnodes (no pins) but kept for consistency.
+    UBehaviorTreeGraphNode* NewSubnode = NewObject<UBehaviorTreeGraphNode>(BTGraph, SubnodeGraphClass);
+    NewSubnode->ClassData = FGraphNodeClassData(NodeInstanceClass, FString());
+    // NodeInstance is declared as UObject* on UAIGraphNode (shared with
+    // StateTree). For BT subnodes the runtime type is always UBTNode — using
+    // UBTNode tightens static intent and surfaces accidental mismatches.
+    NewSubnode->NodeInstance = NewObject<UBTNode>(NewSubnode, NodeInstanceClass);
+    NewSubnode->CreateNewGuid();
+    NewSubnode->PostPlacedNewNode();
+    NewSubnode->AllocateDefaultPins();
+
+    ParentNode->AddSubNode(NewSubnode, BTGraph);
+
+    BTGraph->NotifyGraphChanged();
+    BT->MarkPackageDirty();
+    // NotifyGraphChanged + MarkPackageDirty mirror the add_node post-modify
+    // pattern. The editor's BT graph compile path propagates subnodes into
+    // FBTCompositeChild::Decorators / Services / UBehaviorTree::RootDecorators
+    // on next save or PIE start. Do NOT call FBlueprintEditorUtils::
+    // ConditionallyCompileBlueprint — UBehaviorTree is not a UBlueprint.
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("nodeId"), NewSubnode->NodeGuid.ToString(EGuidFormats::DigitsWithHyphens));
+    Result->SetStringField(TEXT("nodeClass"), NodeInstanceClass->GetName());
+    Result->SetStringField(TEXT("parentNodeId"), ParentNodeIdStr);
+    Result->SetStringField(TEXT("subnodeType"), SubnodeType);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Subnode added."), Result);
+    return true;
+#endif  // MCP_HAS_BEHAVIOR_TREE_GRAPH
+  }
 
   // Unknown subAction
   SendAutomationError(
