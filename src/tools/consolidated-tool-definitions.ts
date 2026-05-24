@@ -77,7 +77,8 @@ export const PERFORMANCE_ACTIONS = [
 ] as const;
 
 export const BEHAVIOR_TREE_ACTIONS = [
-  'create', 'add_node', 'connect_nodes', 'remove_node', 'break_connections', 'set_node_properties'
+  'create', 'add_node', 'connect_nodes', 'remove_node', 'break_connections',
+  'set_node_properties', 'add_subnode'
 ] as const;
 
 export const NAVIGATION_ACTIONS = [
