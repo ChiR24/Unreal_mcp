@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`manage_behavior_tree.add_subnode` action** — authors decorators and services as subnodes attached to root/composite/task graph nodes (rather than as standalone graph nodes). Supports `parentNodeId="root"` sentinel for top-level decorators that populate `UBehaviorTree::RootDecorators` after editor compile. Validates subnode UClass against `UBTDecorator` / `UBTService` and rejects Services on the root graph node (`INVALID_PARENT_FOR_SUBNODE`).
+- **`manage_behavior_tree.set_node_properties` now handles `FBlackboardKeySelector` struct properties** — pass `properties: { BlackboardKey: "<key name>" }` and the handler calls `ResolveSelectedKey` against the BT's assigned blackboard. Returns `BB_KEY_NOT_FOUND` when the resolved selector ID is invalid (silent-failure guard).
+- **`FindGraphNodeByIdOrName` now walks `UAIGraphNode::SubNodes`** — all four BT SubActions (`connect_nodes`, `remove_node`, `break_connections`, `set_node_properties`) gain subnode-aware lookup as a side effect, enabling `set_node_properties` on a decorator/service via its `nodeId`.
 - **Native MCP Streamable HTTP Transport** — built-in HTTP/SSE MCP server directly in the C++ plugin, no TypeScript bridge or Node.js required. AI clients connect via `http://localhost:3000/mcp`. Supports SSE streaming, multiple concurrent sessions, dynamic tool management. Opt-in via `bEnableNativeMCP` project setting.
 - **`execute_python` action** in `system_control` — execute Python code inline or from `.py` files with stdout/stderr capture, execution time tracking, and RAII temp file cleanup. Max code size: 1 MB.
 - **Capability token authentication** for native MCP transport — validates `X-MCP-Capability-Token` header when `bRequireCapabilityToken` is enabled.

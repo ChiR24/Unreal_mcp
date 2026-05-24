@@ -260,7 +260,8 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `connect_nodes` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
 | `remove_node` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
 | `break_connections` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
-| `set_node_properties` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
+| `set_node_properties` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | Handles `FBlackboardKeySelector` struct properties via `SelectedKeyName` + `ResolveSelectedKey` |
+| `add_subnode` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | Add decorator/service as subnode attached to a parent graph node (`"root"` sentinel for root-level decorators) |
 
 ## Blueprint Graph Actions (`manage_blueprint`)
 
