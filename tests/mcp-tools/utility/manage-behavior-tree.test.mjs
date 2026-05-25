@@ -174,6 +174,18 @@ const testCases = [
                  subnodeType: 'Decorator', nodeClass: 'Cooldown' },
     expected: 'INVALID_PARENT|not found' },
 
+  // Symmetry with the other 4 BT SubActions: add_subnode also walks
+  // UAIGraphNode::SubNodes via FindGraphNodeByIdOrName, so passing a subnode's
+  // own GUID as parentNodeId now lands on the parent-class validation path and
+  // rejects with INVALID_PARENT_FOR_SUBNODE instead of a misleading "not found"
+  // (caught in cross-model review, F1).
+  { scenario: 'Negative: subnode GUID as parentNodeId rejects with INVALID_PARENT_FOR_SUBNODE',
+    toolName: 'manage_ai',
+    arguments: { action: 'add_subnode', assetPath: '${captured:btPath}',
+                 parentNodeId: '${captured:bbDecId}',
+                 subnodeType: 'Decorator', nodeClass: 'Cooldown' },
+    expected: 'INVALID_PARENT_FOR_SUBNODE|cannot host' },
+
   // === Cleanup (two-step: assets first, then folder — UE 5.7 folder-delete
   // modal workaround per reference_mcp_integration_test_patterns memory) ===
   { scenario: 'Cleanup: delete BT', toolName: 'manage_asset',

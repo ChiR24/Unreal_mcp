@@ -829,11 +829,20 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
           TEXT("INVALID_PARENT"));
         return true;
       }
-      for (UEdGraphNode* GraphNode : BTGraph->Nodes) {
-        if (GraphNode->NodeGuid == ParentGuid) {
-          ParentNode = Cast<UBehaviorTreeGraphNode>(GraphNode);
-          break;
+      // Use the subnode-aware helper so a caller passing a subnode's GUID gets
+      // a clear "parent cannot host subnodes" rejection instead of a misleading
+      // "not found". This restores symmetry with the other 4 BT SubActions that
+      // already walk UAIGraphNode::SubNodes via FindGraphNodeByIdOrName.
+      if (UEdGraphNode* Found = FindGraphNodeByIdOrName(ParentNodeIdStr)) {
+        if (Cast<UBehaviorTreeGraphNode_Decorator>(Found) ||
+            Cast<UBehaviorTreeGraphNode_Service>(Found)) {
+          SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Parent node %s is a Decorator/Service subnode and cannot host other subnodes"),
+              *ParentNodeIdStr),
+            TEXT("INVALID_PARENT_FOR_SUBNODE"));
+          return true;
         }
+        ParentNode = Cast<UBehaviorTreeGraphNode>(Found);
       }
     }
     if (!ParentNode) {
