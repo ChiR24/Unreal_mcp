@@ -70,7 +70,15 @@ export async function handleAITools(
     }
 
     case 'assign_blackboard': {
-      requireNonEmptyString(argsRecord.controllerPath, 'controllerPath', 'Missing required parameter: controllerPath');
+      const hasControllerPath = typeof argsRecord.controllerPath === 'string' && argsRecord.controllerPath.trim().length > 0;
+      const hasBehaviorTreePath = typeof argsRecord.behaviorTreePath === 'string' && argsRecord.behaviorTreePath.trim().length > 0;
+      if (!hasControllerPath && !hasBehaviorTreePath) {
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Missing required parameter: controllerPath or behaviorTreePath'
+        };
+      }
       requireNonEmptyString(argsRecord.blackboardPath, 'blackboardPath', 'Missing required parameter: blackboardPath');
       return sendRequest('assign_blackboard');
     }

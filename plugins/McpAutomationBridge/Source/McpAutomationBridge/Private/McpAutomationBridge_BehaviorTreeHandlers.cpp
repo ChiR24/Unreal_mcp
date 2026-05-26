@@ -814,12 +814,36 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     // Branch order: literal BEFORE GUID parse — real GUIDs always contain
     // hyphens so the literal cannot collide (per spec R8).
     UBehaviorTreeGraphNode* ParentNode = nullptr;
+    bool bRootSentinelParent = false;
     if (ParentNodeIdStr.Equals(TEXT("root"), ESearchCase::IgnoreCase)) {
+      bRootSentinelParent = true;
+      UBehaviorTreeGraphNode_Root* RootNode = nullptr;
       for (UEdGraphNode* GraphNode : BTGraph->Nodes) {
-        if (UBehaviorTreeGraphNode_Root* RootNode = Cast<UBehaviorTreeGraphNode_Root>(GraphNode)) {
-          ParentNode = RootNode;
+        if (UBehaviorTreeGraphNode_Root* CandidateRoot = Cast<UBehaviorTreeGraphNode_Root>(GraphNode)) {
+          RootNode = CandidateRoot;
           break;
         }
+      }
+      if (!RootNode) {
+        SendAutomationError(RequestingSocket, RequestId,
+          TEXT("Root graph node not found for root sentinel parentNodeId"),
+          TEXT("INVALID_PARENT"));
+        return true;
+      }
+      UEdGraphPin::ResolveAllPinReferences();
+      if (RootNode->Pins.Num() == 0 || !RootNode->Pins[0] || RootNode->Pins[0]->LinkedTo.Num() == 0) {
+        SendAutomationError(RequestingSocket, RequestId,
+          TEXT("Root graph node has no linked child; connect the root to a Behavior Tree node before adding a root subnode"),
+          TEXT("INVALID_PARENT"));
+        return true;
+      }
+      UEdGraphPin* LinkedPin = RootNode->Pins[0]->LinkedTo[0];
+      ParentNode = LinkedPin ? Cast<UBehaviorTreeGraphNode>(LinkedPin->GetOwningNode()) : nullptr;
+      if (!ParentNode) {
+        SendAutomationError(RequestingSocket, RequestId,
+          TEXT("Root graph node's linked child is not a Behavior Tree graph node"),
+          TEXT("INVALID_PARENT"));
+        return true;
       }
     } else {
       FGuid ParentGuid;
@@ -886,7 +910,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
       // Parent acceptance: services cannot attach to BT root graph node
       // (UE editor convention — root only accepts decorators). Fail before
       // constructing rather than producing a graph the editor rejects.
-      if (Cast<UBehaviorTreeGraphNode_Root>(ParentNode)) {
+      if (bRootSentinelParent || Cast<UBehaviorTreeGraphNode_Root>(ParentNode)) {
         SendAutomationError(RequestingSocket, RequestId,
           TEXT("Service subnode cannot be attached to the root graph node — use Decorator, or attach the Service to a composite/task child."),
           TEXT("INVALID_PARENT_FOR_SUBNODE"));
@@ -914,14 +938,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     NewSubnode->AllocateDefaultPins();
 
     ParentNode->AddSubNode(NewSubnode, BTGraph);
-
-    BTGraph->NotifyGraphChanged();
-    BT->MarkPackageDirty();
-    // NotifyGraphChanged + MarkPackageDirty mirror the add_node post-modify
-    // pattern. The editor's BT graph compile path propagates subnodes into
-    // FBTCompositeChild::Decorators / Services / UBehaviorTree::RootDecorators
-    // on next save or PIE start. Do NOT call FBlueprintEditorUtils::
-    // ConditionallyCompileBlueprint — UBehaviorTree is not a UBlueprint.
+    UpdateBehaviorTreeAsset();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"), NewSubnode->NodeGuid.ToString(EGuidFormats::DigitsWithHyphens));

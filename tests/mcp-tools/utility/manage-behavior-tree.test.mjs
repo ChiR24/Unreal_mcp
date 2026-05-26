@@ -10,7 +10,7 @@
  *
  * Spec: docs/superpowers/specs/2026-05-03-pr0b-bt-authoring-subnode-design.md
  *
- * Current-dev API limitations observed during plan execution (PR review notes):
+ * Test notes:
  *
  *   1. BT must be created via manage_ai action='create' (which routes through
  *      behaviorTreeActionSet to the BT.create SubAction), NOT
@@ -18,32 +18,20 @@
  *      uses Asset Tools without initializing BTGraph; downstream BT SubActions
  *      then fail with GRAPH_NOT_FOUND.
  *
- *   2. BT-BB linkage is environment-dependent. assign_blackboard requires
- *      controllerPath (AI Controller blueprint), not behaviorTreePath, so
- *      there is no MCP-side action that links a BT to a specific BB
- *      directly. However, UE may auto-assign a default BlackboardAsset to
- *      newly created BTs via CDO defaults / editor session state — in this
- *      project we observed BTs picking up a Turret-AI BB automatically.
- *      When the auto-assigned BB lacks the test's intended keys, our new
- *      set_node_properties + FBlackboardKeySelector path returns the
- *      silent-failure guard BB_KEY_NOT_FOUND. The BlackboardKey set scenarios
- *      below accept either outcome (`success` if the auto-assigned BB
- *      happens to have the key, `BB_KEY_NOT_FOUND` otherwise); both prove
- *      the FStructProperty case in set_node_properties reached and executed
- *      ResolveSelectedKey against a real UBlackboardData.
+ *   2. The fixture binds the newly created BT to the newly created BB before
+ *      setting BlackboardKey properties, so FBlackboardKeySelector resolution
+ *      runs against known keys.
  *
- *   4. runToolTests matcher quirk: lowerReason for primary error-type match
+ *   3. runToolTests matcher quirk: lowerReason for primary error-type match
  *      uses the response *message* (not error code) when message is non-empty.
  *      The INVALID_PARENT negative test accepts either the error code or
  *      the substring `not found` (which is in the engine's reply message)
  *      so the matcher path resolves cleanly regardless of which side carries
  *      the discriminating word.
  *
- *   3. btNodeCount assertion was dropped during plan execution: runtime tree
- *      population (BT->RootNode) requires BT compile (editor save or PIE),
- *      which the add_node + connect_nodes pipeline does not trigger. Other
- *      signals (success: true, captured nodeId/echoed nodeClass, INVALID_PARENT
- *      negative path) cover the new authoring SubAction's contract.
+ *   4. btNodeCount is intentionally not asserted here. The diagnostics below
+ *      focus on the BB binding, FBlackboardKeySelector resolution, and root
+ *      decorator propagation contracts covered by this fixture.
  */
 
 import { runToolTests } from '../../test-runner.mjs';
@@ -62,7 +50,7 @@ const testCases = [
   { scenario: 'Setup: BB asset', toolName: 'manage_ai',
     arguments: { action: 'create_blackboard_asset', name: bbName, path: TEST_FOLDER },
     expected: 'success',
-    captureResult: { key: 'bbPath', fromField: 'result.assetPath' } },
+    captureResult: { key: 'bbPath', fromField: 'result.blackboardPath' } },
 
   { scenario: 'Setup: BB key Spotted (Bool)', toolName: 'manage_ai',
     arguments: { action: 'add_blackboard_key', blackboardPath: '${captured:bbPath}',
@@ -82,13 +70,26 @@ const testCases = [
     expected: 'success',
     captureResult: { key: 'btPath', fromField: 'result.assetPath' } },
 
-  // BB-BT linkage skipped — see header note 2.
+  { scenario: 'Setup: bind BT to BB', toolName: 'manage_ai',
+    arguments: { action: 'assign_blackboard', behaviorTreePath: '${captured:btPath}',
+                 blackboardPath: '${captured:bbPath}' },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.saved', equals: true,
+        label: 'BT blackboard binding saved' }
+    ] },
 
   // === Build BT structure: Selector -> Sequence -> Wait ===
   { scenario: 'Build: add Selector', toolName: 'manage_ai',
     arguments: { action: 'add_node', assetPath: '${captured:btPath}', nodeType: 'Selector' },
     expected: 'success',
     captureResult: { key: 'rootSelectorId', fromField: 'result.nodeId' } },
+
+  { scenario: 'Build: connect Root->Selector', toolName: 'manage_ai',
+    arguments: { action: 'connect_nodes', assetPath: '${captured:btPath}',
+                 parentNodeId: 'BehaviorTreeGraphNode_Root_0',
+                 childNodeId: '${captured:rootSelectorId}' },
+    expected: 'success' },
 
   { scenario: 'Build: add Sequence', toolName: 'manage_ai',
     arguments: { action: 'add_node', assetPath: '${captured:btPath}', nodeType: 'Sequence' },
@@ -130,7 +131,7 @@ const testCases = [
     arguments: { action: 'set_node_properties', assetPath: '${captured:btPath}',
                  nodeId: '${captured:serviceId}',
                  properties: { BlackboardKey: 'TargetActor' } },
-    expected: 'success|BB_KEY_NOT_FOUND' },
+    expected: 'success' },
 
   // === Scenario B: stacked decorators on non-root edge ===
   { scenario: 'B: add_subnode Decorator Blackboard on Sequence',
@@ -146,7 +147,7 @@ const testCases = [
     arguments: { action: 'set_node_properties', assetPath: '${captured:btPath}',
                  nodeId: '${captured:bbDecId}',
                  properties: { BlackboardKey: 'Spotted' } },
-    expected: 'success|BB_KEY_NOT_FOUND' },
+    expected: 'success' },
 
   { scenario: 'B: add_subnode Decorator Cooldown on Sequence (stacking proof)',
     toolName: 'manage_ai',
@@ -162,6 +163,27 @@ const testCases = [
                  parentNodeId: 'root',
                  subnodeType: 'Decorator', nodeClass: 'Cooldown' },
     expected: 'success' },
+
+  { scenario: 'C: verify runtime BT diagnostics after root sentinel subnode',
+    toolName: 'manage_ai',
+    arguments: { action: 'get_ai_info', behaviorTreePath: '${captured:btPath}' },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.aiInfo.assignedBlackboard', equals: bbName,
+        label: 'BT reports the bound BlackboardAsset' },
+      { path: 'structuredContent.result.aiInfo.rootGraphBlackboard', equals: bbName,
+        label: 'BT root graph node reports the bound BlackboardAsset' },
+      { path: 'structuredContent.result.aiInfo.rootGraphBlackboardMatchesAssigned', equals: true,
+        label: 'BT root graph BlackboardAsset matches runtime BT BlackboardAsset' },
+      { path: 'structuredContent.result.aiInfo.rootDecoratorCount', equals: 1,
+        label: 'root decorator count propagated to runtime BT' },
+      { path: 'structuredContent.result.aiInfo.rootDecorators', includesObject: { className: 'BTDecorator_Cooldown' },
+        label: 'runtime root decorators include Cooldown' },
+      { path: 'structuredContent.result.aiInfo.services', includesObject: { className: 'BTService_DefaultFocus', selectedBlackboardKey: 'TargetActor' },
+        label: 'runtime service resolved TargetActor key' },
+      { path: 'structuredContent.result.aiInfo.childDecorators', includesObject: { className: 'BTDecorator_Blackboard', selectedBlackboardKey: 'Spotted' },
+        label: 'runtime child decorator resolved Spotted key' }
+    ] },
 
   // === Negative: nonexistent GUID -> INVALID_PARENT ===
   // The error code is INVALID_PARENT; the engine's message reads "Parent node not

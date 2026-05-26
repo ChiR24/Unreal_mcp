@@ -83,6 +83,7 @@
 
 // Behavior Tree
 #include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BehaviorTreeTypes.h"
 #include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Bool.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Int.h"
@@ -106,6 +107,14 @@
 #include "BehaviorTree/Decorators/BTDecorator_Blackboard.h"
 #include "BehaviorTree/Decorators/BTDecorator_Cooldown.h"
 #include "BehaviorTree/Decorators/BTDecorator_Loop.h"
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#include "BehaviorTreeGraph.h"
+#include "BehaviorTreeGraphNode_Root.h"
+#define MCP_AI_HAS_BEHAVIOR_TREE_GRAPH 1
+#else
+#define MCP_AI_HAS_BEHAVIOR_TREE_GRAPH 0
+#endif
 
 // Environment Query
 #include "EnvironmentQuery/EnvQuery.h"
@@ -750,7 +759,58 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
     if (SubAction == TEXT("assign_blackboard"))
     {
         FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
+        FString BehaviorTreePath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
         FString BlackboardPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
+
+        if (ControllerPath.IsEmpty() && !BehaviorTreePath.IsEmpty())
+        {
+            UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BehaviorTreePath);
+            if (!BT)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Behavior tree not found: %s"), *BehaviorTreePath), TEXT("NOT_FOUND"));
+                return true;
+            }
+
+            UBlackboardData* BB = LoadObject<UBlackboardData>(nullptr, *BlackboardPath);
+            if (!BB)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Blackboard not found: %s"), *BlackboardPath), TEXT("NOT_FOUND"));
+                return true;
+            }
+
+            BT->Modify();
+            BT->BlackboardAsset = BB;
+
+#if MCP_AI_HAS_BEHAVIOR_TREE_GRAPH
+            if (UBehaviorTreeGraph* BTGraph = Cast<UBehaviorTreeGraph>(BT->BTGraph))
+            {
+                BTGraph->Modify();
+                for (UEdGraphNode* GraphNode : BTGraph->Nodes)
+                {
+                    if (UBehaviorTreeGraphNode_Root* RootNode = Cast<UBehaviorTreeGraphNode_Root>(GraphNode))
+                    {
+                        RootNode->Modify();
+                        RootNode->BlackboardAsset = BB;
+                        BTGraph->UpdateBlackboardChange();
+                        break;
+                    }
+                }
+            }
+#endif
+
+            BT->MarkPackageDirty();
+            bool bSaved = McpSafeAssetSave(BT);
+
+            Result->SetStringField(TEXT("behaviorTreePath"), BehaviorTreePath);
+            Result->SetStringField(TEXT("blackboardPath"), BlackboardPath);
+            Result->SetBoolField(TEXT("saved"), bSaved);
+            Result->SetStringField(TEXT("message"), TEXT("Blackboard assigned to Behavior Tree"));
+            McpHandlerUtils::AddVerification(Result, BT);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard assigned to Behavior Tree"), Result);
+            return true;
+        }
 
         // CRITICAL: Remove DoesAssetExist pre-check - newly created assets may not yet be
         // indexed in the asset registry. Rely on LoadObject null-check instead.
@@ -3265,8 +3325,54 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
             if (BT)
             {
+                auto CreateBTNodeRuntimeInfo = [](UBTNode* Node) -> TSharedPtr<FJsonObject>
+                {
+                    TSharedPtr<FJsonObject> NodeInfo = McpHandlerUtils::CreateResultObject();
+                    if (!Node)
+                    {
+                        return NodeInfo;
+                    }
+
+                    NodeInfo->SetStringField(TEXT("className"), Node->GetClass() ? Node->GetClass()->GetName() : TEXT("Unknown"));
+                    NodeInfo->SetStringField(TEXT("nodeName"), Node->GetNodeName());
+
+                    FString SelectedBlackboardKey;
+                    for (TFieldIterator<FProperty> PropIt(Node->GetClass()); PropIt; ++PropIt)
+                    {
+                        if (FStructProperty* StructProp = CastField<FStructProperty>(*PropIt))
+                        {
+                            if (StructProp->Struct == FBlackboardKeySelector::StaticStruct())
+                            {
+                                FBlackboardKeySelector* Selector = StructProp->ContainerPtrToValuePtr<FBlackboardKeySelector>(Node);
+                                if (Selector && !Selector->SelectedKeyName.IsNone())
+                                {
+                                    SelectedBlackboardKey = Selector->SelectedKeyName.ToString();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    NodeInfo->SetStringField(TEXT("selectedBlackboardKey"), SelectedBlackboardKey);
+                    return NodeInfo;
+                };
+
                 AIInfo->SetStringField(TEXT("assignedBehaviorTree"), BT->GetName());
                 AIInfo->SetBoolField(TEXT("hasRootNode"), BT->RootNode != nullptr);
+
+                TArray<TSharedPtr<FJsonValue>> RootDecoratorClasses;
+                TArray<TSharedPtr<FJsonValue>> RootDecorators;
+                for (UBTDecorator* RootDecorator : BT->RootDecorators)
+                {
+                    if (!RootDecorator)
+                    {
+                        continue;
+                    }
+                    RootDecoratorClasses.Add(MakeShared<FJsonValueString>(RootDecorator->GetClass()->GetName()));
+                    RootDecorators.Add(MakeShared<FJsonValueObject>(CreateBTNodeRuntimeInfo(RootDecorator)));
+                }
+                AIInfo->SetNumberField(TEXT("rootDecoratorCount"), BT->RootDecorators.Num());
+                AIInfo->SetArrayField(TEXT("rootDecoratorClasses"), RootDecoratorClasses);
+                AIInfo->SetArrayField(TEXT("rootDecorators"), RootDecorators);
 
                 // Report associated blackboard from BT asset (only if
                 // blackboardPath was not explicitly provided, to avoid
@@ -3278,10 +3384,27 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                         BT->BlackboardAsset->GetName());
                 }
 
+#if MCP_AI_HAS_BEHAVIOR_TREE_GRAPH
+                if (UBehaviorTreeGraph* BTGraph = Cast<UBehaviorTreeGraph>(BT->BTGraph))
+                {
+                    for (UEdGraphNode* GraphNode : BTGraph->Nodes)
+                    {
+                        if (UBehaviorTreeGraphNode_Root* RootNode = Cast<UBehaviorTreeGraphNode_Root>(GraphNode))
+                        {
+                            AIInfo->SetStringField(TEXT("rootGraphBlackboard"), GetNameSafe(RootNode->BlackboardAsset));
+                            AIInfo->SetBoolField(TEXT("rootGraphBlackboardMatchesAssigned"), RootNode->BlackboardAsset == BT->BlackboardAsset);
+                            break;
+                        }
+                    }
+                }
+#endif
+
                 // Count BT nodes (composites + tasks + decorators + services)
                 if (BT->RootNode)
                 {
                     int32 NodeCount = 0;
+                    TArray<TSharedPtr<FJsonValue>> ChildDecorators;
+                    TArray<TSharedPtr<FJsonValue>> Services;
                     TArray<UBTCompositeNode*> Stack;
                     Stack.Add(BT->RootNode);
                     while (Stack.Num() > 0)
@@ -3289,9 +3412,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                         UBTCompositeNode* Current = Stack.Pop();
                         NodeCount++;
                         NodeCount += Current->Services.Num();
+                        for (UBTService* Service : Current->Services)
+                        {
+                            if (Service)
+                            {
+                                Services.Add(MakeShared<FJsonValueObject>(CreateBTNodeRuntimeInfo(Service)));
+                            }
+                        }
                         for (const FBTCompositeChild& Child : Current->Children)
                         {
                             NodeCount += Child.Decorators.Num();
+                            for (UBTDecorator* Decorator : Child.Decorators)
+                            {
+                                if (Decorator)
+                                {
+                                    ChildDecorators.Add(MakeShared<FJsonValueObject>(CreateBTNodeRuntimeInfo(Decorator)));
+                                }
+                            }
                             if (Child.ChildComposite)
                             {
                                 Stack.Add(Child.ChildComposite);
@@ -3300,10 +3437,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                             {
                                 NodeCount++;
                                 NodeCount += Child.ChildTask->Services.Num();
+                                for (UBTService* Service : Child.ChildTask->Services)
+                                {
+                                    if (Service)
+                                    {
+                                        Services.Add(MakeShared<FJsonValueObject>(CreateBTNodeRuntimeInfo(Service)));
+                                    }
+                                }
                             }
                         }
                     }
                     AIInfo->SetNumberField(TEXT("btNodeCount"), NodeCount);
+                    AIInfo->SetArrayField(TEXT("childDecorators"), ChildDecorators);
+                    AIInfo->SetArrayField(TEXT("services"), Services);
                 }
             }
         }
