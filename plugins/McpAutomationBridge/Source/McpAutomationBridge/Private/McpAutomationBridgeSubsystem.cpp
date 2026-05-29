@@ -1525,8 +1525,10 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
                     if (McpConsolidatedActions::IsAudioAuthoringAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
                       return HandleManageAudioAuthoringAction(
-                          R, TEXT("manage_audio_authoring"), P, S);
+                          R, TEXT("manage_audio_authoring"), RoutedPayload, S);
                     }
                     return HandleAudioAction(R, A, P, S);
                   });
@@ -1560,8 +1562,10 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
                     if (McpConsolidatedActions::IsAnimationAuthoringAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
                       return HandleManageAnimationAuthoringAction(
-                          R, TEXT("manage_animation_authoring"), P, S);
+                          R, TEXT("manage_animation_authoring"), RoutedPayload, S);
                     }
                     if (McpConsolidatedActions::IsSkeletonAction(SubAction)) {
                       return HandleManageSkeleton(R, TEXT("manage_skeleton"), P, S);

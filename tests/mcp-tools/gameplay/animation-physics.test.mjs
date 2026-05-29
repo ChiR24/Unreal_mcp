@@ -11,6 +11,8 @@ const ts = Date.now();
 
 // The skeleton created in setup - used by all CREATE actions that need a skeleton
 const TEST_SKELETON_PATH = `${TEST_FOLDER}/SK_AnimPhys_${ts}`;
+const TEST_IK_RIG_PATH = `${TEST_FOLDER}/Testik_rig`;
+const TEST_IK_RETARGETER_PATH = `${TEST_FOLDER}/Testik_retargeter`;
 
 const testCases = [
 // === SETUP ===
@@ -70,10 +72,10 @@ const testCases = [
 // === CREATE (Control Rig - needs skeletonPath) ===
 { scenario: 'CREATE: create_control_rig', toolName: 'animation_physics', arguments: {"action": "create_control_rig", "name": "Testcontrol_rig", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|already exists|NOT_AVAILABLE' },
 
-// === CREATE (IK Rig - needs skeletonPath) ===
-{ scenario: 'CREATE: create_ik_rig', toolName: 'animation_physics', arguments: {"action": "create_ik_rig", "name": "Testik_rig", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'error|IKRIG_FACTORY_UNAVAILABLE|NOT_SUPPORTED' },
-{ scenario: 'CREATE: create_ik_retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_retargeter", "name": "Testik_retargeter", "path": TEST_FOLDER, "sourceIKRigPath": `${TEST_FOLDER}/Testik_rig`, "targetIKRigPath": `${TEST_FOLDER}/Testik_rig`, "save": true}, expected: 'error|IKRETARGET_FACTORY_UNAVAILABLE|NOT_SUPPORTED|success|already exists' },
-{ scenario: 'CONFIG: set_retarget_chain_mapping', toolName: 'animation_physics', arguments: {"action": "set_retarget_chain_mapping", "assetPath": `${TEST_FOLDER}/Testik_retargeter`, "sourceChain": "Root", "targetChain": "Root"}, expected: 'error|NOT_SUPPORTED|success' },
+// === CREATE (IK Rig - explicit retargeter dependency; unavailable on some engine builds) ===
+{ scenario: 'SETUP: create IK Rig for retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_rig", "name": "Testik_rig", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'error|IKRIG_FACTORY_UNAVAILABLE|NOT_SUPPORTED|success|already exists' },
+{ scenario: 'CREATE: create_ik_retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_retargeter", "name": "Testik_retargeter", "path": TEST_FOLDER, "sourceIKRigPath": TEST_IK_RIG_PATH, "targetIKRigPath": TEST_IK_RIG_PATH, "save": true}, expected: 'error|IKRETARGET_FACTORY_UNAVAILABLE|NOT_SUPPORTED|success|already exists' },
+{ scenario: 'CONFIG: set_retarget_chain_mapping', toolName: 'animation_physics', arguments: {"action": "set_retarget_chain_mapping", "assetPath": TEST_IK_RETARGETER_PATH, "sourceChain": "Root", "targetChain": "Root"}, expected: 'error|NOT_SUPPORTED|success' },
 
 // === ACTION (Setup IK - needs name and skeletonPath) ===
 { scenario: 'ACTION: setup_ik', toolName: 'animation_physics', arguments: {"action": "setup_ik", "name": "TestIK", "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|already exists' },
@@ -176,8 +178,8 @@ const testCases = [
   `${TEST_FOLDER}/Testprocedural_anim`,
   `${TEST_FOLDER}/Testaim_offset`,
   `${TEST_FOLDER}/Testcontrol_rig`,
-  `${TEST_FOLDER}/Testik_rig`,
-  `${TEST_FOLDER}/Testik_retargeter`,
+  TEST_IK_RIG_PATH,
+  TEST_IK_RETARGETER_PATH,
   `${TEST_FOLDER}/Testpose_library`,
   `${TEST_FOLDER}/Testanimation_asset`,
   `${TEST_FOLDER}/Testanimation_sequence`,

@@ -43,7 +43,11 @@ function extractTypeScriptTools() {
   for (let index = 0; index < toolStarts.length; index += 1) {
     const match = toolStarts[index];
     const next = toolStarts[index + 1];
-    const block = source.slice(match.index, next?.index ?? source.indexOf('\n] satisfies ToolDefinition[]', match.index));
+    const blockEnd = next?.index ?? source.indexOf('\n];', match.index);
+    if (blockEnd < 0) {
+      throw new Error('Could not locate the end of consolidatedToolDefinitions');
+    }
+    const block = source.slice(match.index, blockEnd);
     const actionEnum = block.match(/action:\s*\{[\s\S]*?enum:\s*\[([\s\S]*?)\]\s*,\s*description:/);
     tools.push({
       name: match[1],

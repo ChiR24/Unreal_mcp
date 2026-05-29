@@ -26,6 +26,25 @@ inline FString GetPayloadSubAction(const TSharedPtr<FJsonObject>& Payload)
 	return SubAction;
 }
 
+inline TSharedPtr<FJsonObject> WithPayloadSubAction(const TSharedPtr<FJsonObject>& Payload, const FString& SubAction)
+{
+	if (!Payload.IsValid() || SubAction.IsEmpty())
+	{
+		return Payload;
+	}
+
+	FString ExistingSubAction;
+	if (Payload->TryGetStringField(TEXT("subAction"), ExistingSubAction) && !ExistingSubAction.IsEmpty())
+	{
+		return Payload;
+	}
+
+	TSharedPtr<FJsonObject> RoutedPayload = MakeShared<FJsonObject>();
+	RoutedPayload->Values = Payload->Values;
+	RoutedPayload->SetStringField(TEXT("subAction"), SubAction);
+	return RoutedPayload;
+}
+
 inline bool ContainsAction(const TArray<FString>& Actions, const FString& Action)
 {
 	return Actions.Contains(Action);
