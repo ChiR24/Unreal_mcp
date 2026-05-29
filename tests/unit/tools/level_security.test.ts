@@ -44,4 +44,12 @@ describe('LevelTools Injection Security', () => {
 
         expect(command).not.toContain(';Quit');
     });
+
+    it('should NOT allow command injection in streaming load fallback', async () => {
+        await levelTools.loadLevel({ levelPath: '/Game/Maps/MyLevel;Quit', streaming: true });
+
+        const executeCommandMock = vi.mocked(bridge.executeConsoleCommand);
+        const command = executeCommandMock.mock.calls[0][0];
+        expect(command).toBe('StreamLevel MyLevel_Quit Load Show');
+    });
 });

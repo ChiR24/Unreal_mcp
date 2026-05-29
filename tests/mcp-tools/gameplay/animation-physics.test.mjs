@@ -163,6 +163,7 @@ const testCases = [
 
 // === CONFIG (Interpolation Settings - needs assetPath) ===
 { scenario: 'CONFIG: set_interpolation_settings', toolName: 'animation_physics', arguments: {"action": "set_interpolation_settings", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "interpolationType": "Lerp"}, expected: 'success' },
+{ scenario: 'ACTION: force_rebuild_blend_space', toolName: 'animation_physics', arguments: {"action": "force_rebuild_blend_space", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "rebuildBlendParameters": true, "compileReferencers": false, "save": true}, expected: 'success|ASSET_NOT_FOUND|not found' },
 
 // === ACTION (Retargeting - needs sourceSkeleton and targetSkeleton) ===
 { scenario: 'ACTION: setup_retargeting', toolName: 'animation_physics', arguments: {"action": "setup_retargeting", "sourceSkeleton": TEST_SKELETON_PATH, "targetSkeleton": TEST_SKELETON_PATH, "assets": [`${TEST_FOLDER}/Testanimation_sequence`], "savePath": TEST_FOLDER, "suffix": "_Retargeted", "overwrite": true}, expected: 'success' },

@@ -16,6 +16,7 @@ const BP_PATH = `${TEST_FOLDER}/${BP_NAME}`;
 const TEST_MESH = '/Game/MCPTest/TestMesh';
 const TEST_MATERIAL = '/Game/MCPTest/TestMat';
 const TEST_LEVEL = '/Game/MCPTest/MainLevel';
+const ENGINE_DEFAULT_TEXTURE = '/Engine/EngineResources/DefaultTexture.DefaultTexture';
 
 const inspectActor = (action, extra = {}) => ({ action, actorName: ACTOR, ...extra });
 
@@ -33,7 +34,7 @@ const testCases = [
   { scenario: 'INFO: get_bounding_box falls back from empty actorName to name', toolName: 'inspect', arguments: { action: 'get_bounding_box', actorName: '', name: ACTOR }, expected: 'success' },
   { scenario: 'INFO: get_blueprint_details', toolName: 'inspect', arguments: { action: 'get_blueprint_details', objectPath: BP_PATH, blueprintPath: BP_PATH }, expected: 'success' },
   { scenario: 'INFO: get_mesh_details', toolName: 'inspect', arguments: { action: 'get_mesh_details', objectPath: TEST_MESH }, expected: 'success' },
-  { scenario: 'INFO: get_texture_details', toolName: 'inspect', arguments: { action: 'get_texture_details', objectPath: '/Game/Foliage/Grass' }, expected: 'success|not found|LOAD_FAILED' },
+  { scenario: 'INFO: get_texture_details', toolName: 'inspect', arguments: { action: 'get_texture_details', objectPath: ENGINE_DEFAULT_TEXTURE }, expected: 'success' },
   { scenario: 'INFO: get_material_details', toolName: 'inspect', arguments: { action: 'get_material_details', objectPath: TEST_MATERIAL }, expected: 'success' },
   { scenario: 'INFO: get_level_details', toolName: 'inspect', arguments: { action: 'get_level_details', objectPath: TEST_LEVEL }, expected: 'success' },
   { scenario: 'INFO: get_component_details', toolName: 'inspect', arguments: { action: 'get_component_details', actorName: ACTOR, componentName: COMPONENT }, expected: 'success' },

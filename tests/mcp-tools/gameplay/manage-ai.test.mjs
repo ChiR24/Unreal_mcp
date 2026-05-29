@@ -252,19 +252,20 @@ const testCases = [
    * Covers all 12 actions with proper setup/teardown sequencing.
    */
 
-  const TEST_FOLDER = '/Game/MCPTest/WorldAssets';
   const ts = Date.now();
-  const TEST_BLUEPRINT = '/Game/MCPTest/BP_Test';
-  const NAV_ACTOR = 'NavTestActor';
-  const NAV_LINK = 'TestNavLinkProxy';
-  const SMART_LINK = 'TestSmartLink';
+  const TEST_FOLDER = `/Game/MCPTest/WorldAssets_${ts}`;
+  const NAV_BLUEPRINT = `BP_NavTest_${ts}`;
+  const NAV_ACTOR = `NavTestActor_${ts}`;
+  const NAV_LINK = `TestNavLinkProxy_${ts}`;
+  const SMART_LINK = `TestSmartLink_${ts}`;
   const NAV_MODIFIER = `NavModifier_${ts}`;
   const OBSTACLE_AREA = '/Script/NavigationSystem.NavArea_Obstacle';
 
   testCases.push(
     // === SETUP ===
     { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
-    { scenario: 'Setup: spawn test actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: `TestActor_${ts}`, location: { x: 0, y: 0, z: 100 } }, expected: 'success' },
+    { scenario: 'Setup: create navigation blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: NAV_BLUEPRINT, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success', captureResult: { key: 'navBlueprintPath', fromField: 'result.assetPath' } },
+    { scenario: 'Setup: spawn nav test actor', toolName: 'control_actor', arguments: { action: 'spawn_blueprint', blueprintPath: '${captured:navBlueprintPath}', actorName: NAV_ACTOR, location: { x: 0, y: 0, z: 100 } }, expected: 'success' },
 
     // === CONFIG ===
     { scenario: 'CONFIG: configure_nav_mesh_settings', toolName: 'manage_ai', arguments: {"action": "configure_nav_mesh_settings", "cellSize": 19, "cellHeight": 10, "tileSizeUU": 1000, "minRegionArea": 0, "mergeRegionSize": 400, "maxSimplificationError": 1.3}, expected: 'success' },
@@ -272,24 +273,26 @@ const testCases = [
     // === ACTION ===
     { scenario: 'ACTION: rebuild_navigation', toolName: 'manage_ai', arguments: {"action": "rebuild_navigation"}, expected: 'success' },
     // === CREATE ===
-    { scenario: 'CREATE: create_nav_modifier_component', toolName: 'manage_ai', arguments: {"action": "create_nav_modifier_component", "blueprintPath": TEST_BLUEPRINT, "componentName": NAV_MODIFIER, "areaClass": OBSTACLE_AREA, "failsafeExtent": {"x": 120, "y": 80, "z": 60}, "save": true}, expected: 'success' },
+    { scenario: 'CREATE: create_nav_modifier_component', toolName: 'manage_ai', arguments: {"action": "create_nav_modifier_component", "blueprintPath": "${captured:navBlueprintPath}", "componentName": NAV_MODIFIER, "areaClass": OBSTACLE_AREA, "failsafeExtent": {"x": 120, "y": 80, "z": 60}, "save": true}, expected: 'success' },
     // === CONFIG ===
     { scenario: 'CONFIG: set_nav_area_class', toolName: 'manage_ai', arguments: {"action": "set_nav_area_class", "actorName": NAV_ACTOR, "areaClass": OBSTACLE_AREA}, expected: 'success' },
     { scenario: 'CONFIG: configure_nav_area_cost', toolName: 'manage_ai', arguments: {"action": "configure_nav_area_cost", "areaClass": OBSTACLE_AREA, "areaCost": 1.0}, expected: 'success' },
     // === CREATE ===
-    { scenario: 'CREATE: create_nav_link_proxy', toolName: 'manage_ai', arguments: {"action": "create_nav_link_proxy", "actorName": NAV_LINK, "location": {"x": 0, "y": 0, "z": 100}, "startPoint": {"x": -100, "y": 0, "z": 0}, "endPoint": {"x": 100, "y": 0, "z": 0}, "direction": "BothWays"}, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_nav_link_proxy', toolName: 'manage_ai', arguments: {"action": "create_nav_link_proxy", "actorName": NAV_LINK, "location": {"x": 0, "y": 0, "z": 100}, "startPoint": {"x": -100, "y": 0, "z": 0}, "endPoint": {"x": 100, "y": 0, "z": 0}, "direction": "BothWays"}, expected: 'success' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_nav_link', toolName: 'manage_ai', arguments: {"action": "configure_nav_link", "actorName": NAV_LINK, "snapRadius": 30}, expected: 'success' },
     { scenario: 'CONFIG: set_nav_link_type', toolName: 'manage_ai', arguments: {"action": "set_nav_link_type", "actorName": NAV_LINK, "linkType": "smart"}, expected: 'success' },
     // === CREATE ===
-    { scenario: 'CREATE: create_smart_link', toolName: 'manage_ai', arguments: {"action": "create_smart_link", "actorName": SMART_LINK, "location": {"x": 0, "y": 200, "z": 100}, "startPoint": {"x": -100, "y": 0, "z": 0}, "endPoint": {"x": 100, "y": 0, "z": 0}, "direction": "BothWays"}, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_smart_link', toolName: 'manage_ai', arguments: {"action": "create_smart_link", "actorName": SMART_LINK, "location": {"x": 0, "y": 200, "z": 100}, "startPoint": {"x": -100, "y": 0, "z": 0}, "endPoint": {"x": 100, "y": 0, "z": 0}, "direction": "BothWays"}, expected: 'success' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_smart_link_behavior', toolName: 'manage_ai', arguments: {"action": "configure_smart_link_behavior", "actorName": SMART_LINK, "linkEnabled": true, "enabledAreaClass": "/Script/NavigationSystem.NavArea_Default", "disabledAreaClass": "/Script/NavigationSystem.NavArea_Null", "broadcastRadius": 900, "broadcastInterval": 0, "bCreateBoxObstacle": true, "obstacleAreaClass": "/Script/NavigationSystem.NavArea_Null", "obstacleExtent": {"x": 75, "y": 50, "z": 40}, "obstacleOffset": {"x": 0, "y": 0, "z": 20}}, expected: 'success' },
     // === INFO ===
     { scenario: 'INFO: get_navigation_info', toolName: 'manage_ai', arguments: {"action": "get_navigation_info"}, expected: 'success' },
 
     // === CLEANUP ===
-    { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: `TestActor_${ts}` }, expected: 'success|not found' },
+    { scenario: 'Cleanup: delete nav test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: NAV_ACTOR }, expected: 'success|not found' },
+    { scenario: 'Cleanup: delete nav link proxy', toolName: 'control_actor', arguments: { action: 'delete', actorName: NAV_LINK }, expected: 'success|not found' },
+    { scenario: 'Cleanup: delete smart link proxy', toolName: 'control_actor', arguments: { action: 'delete', actorName: SMART_LINK }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   );
 }

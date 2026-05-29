@@ -12,6 +12,10 @@ const WIDGET_PATH = `${TEST_FOLDER}/${WIDGET_NAME}`;
 const VALIDATION_MATERIAL = `${TEST_FOLDER}/M_SystemControlValidation`;
 const PYTHON_FILE_RELATIVE = `Saved/MCPTests/system-control-${Date.now()}.py`;
 const PYTHON_FILE_LITERAL = JSON.stringify(PYTHON_FILE_RELATIVE);
+const PROJECT_SETTING_SECTION = '/Script/Engine.Engine';
+const PROJECT_SETTING_KEY = `McpSystemControlSmoke_${Date.now()}`;
+const PROJECT_SETTING_SECTION_LITERAL = JSON.stringify(PROJECT_SETTING_SECTION);
+const PROJECT_SETTING_KEY_LITERAL = JSON.stringify(PROJECT_SETTING_KEY);
 const CREATE_PYTHON_FILE_CODE = `
 import os
 import unreal
@@ -28,6 +32,29 @@ path = os.path.join(unreal.Paths.project_dir(), ${PYTHON_FILE_LITERAL})
 if os.path.exists(path):
     os.remove(path)
 print("system-control-file-cleaned")
+`.trim();
+const CLEANUP_PROJECT_SETTING_CODE = `
+import os
+import unreal
+section = ${PROJECT_SETTING_SECTION_LITERAL}
+key = ${PROJECT_SETTING_KEY_LITERAL}
+config_path = os.path.join(unreal.Paths.project_config_dir(), 'DefaultEngine.ini')
+if os.path.exists(config_path):
+    with open(config_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+    kept = []
+    in_target_section = False
+    section_header = f'[{section}]'
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith('[') and stripped.endswith(']'):
+            in_target_section = stripped == section_header
+        if in_target_section and stripped.split('=', 1)[0].strip() == key:
+            continue
+        kept.append(line)
+    with open(config_path, 'w', encoding='utf-8') as f:
+        f.writelines(kept)
+print("system-control-setting-cleaned")
 `.trim();
 
 const testCases = [
@@ -72,13 +99,14 @@ const testCases = [
   // === ACTION ===
   { scenario: 'ACTION: validate_assets', toolName: 'system_control', arguments: { action: 'validate_assets', paths: [VALIDATION_MATERIAL] }, expected: 'success' },
   // === CONFIG ===
-  { scenario: 'CONFIG: set_project_setting', toolName: 'system_control', arguments: { action: 'set_project_setting', section: '/Script/Engine.Engine', key: 'McpSystemControlSmoke', value: '1' }, expected: 'success' },
+  { scenario: 'CONFIG: set_project_setting', toolName: 'system_control', arguments: { action: 'set_project_setting', section: PROJECT_SETTING_SECTION, key: PROJECT_SETTING_KEY, value: '1' }, expected: 'success' },
   { scenario: 'ACTION: execute_python', toolName: 'system_control', arguments: { action: 'execute_python', code: 'print("system-control-ok")' }, expected: 'success' },
   { scenario: 'Setup: create execute_python file', toolName: 'system_control', arguments: { action: 'execute_python', code: CREATE_PYTHON_FILE_CODE }, expected: 'success' },
   { scenario: 'ACTION: execute_python file', toolName: 'system_control', arguments: { action: 'execute_python', file: PYTHON_FILE_RELATIVE }, expected: 'success', assertions: [{ path: 'structuredContent.result.output', equals: 'system-control-file-ok', label: 'python file output captured' }] },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete execute_python file', toolName: 'system_control', arguments: { action: 'execute_python', code: DELETE_PYTHON_FILE_CODE }, expected: 'success' },
+  { scenario: 'Cleanup: remove project setting', toolName: 'system_control', arguments: { action: 'execute_python', code: CLEANUP_PROJECT_SETTING_CODE }, expected: 'success' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   { scenario: 'ACTION: run_tests', toolName: 'system_control', arguments: { action: 'run_tests', filter: 'System.Core.Time.Comparison' }, expected: 'success' },
 ];

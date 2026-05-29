@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { expectedCondition } from './expectation-utils.mjs';
 
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -41,28 +42,6 @@ const strict = args.includes('--strict');
 const staticOnly = args.includes('--static');
 const optionalStrict = args.includes('--optional-strict') || args.includes('--coverage-strict');
 const fakeSuccessIndicators = ['not implemented', 'unsupported', 'stub', 'no-op', 'noop', 'placeholder'];
-
-function expectedCondition(expectation) {
-  if (expectation && typeof expectation === 'object') {
-    if (typeof expectation.condition === 'string') return expectation.condition;
-
-    const conditions = [];
-    if (typeof expectation.successPattern === 'string') {
-      conditions.push('success', expectation.successPattern);
-    }
-    if (typeof expectation.errorPattern === 'string') {
-      conditions.push('error', expectation.errorPattern);
-    }
-    if (conditions.length > 0) return conditions.join('|');
-
-    try {
-      return JSON.stringify(expectation);
-    } catch {
-      return String(expectation);
-    }
-  }
-  return typeof expectation === 'string' ? expectation : String(expectation ?? '');
-}
 
 function caseKey(suiteName, toolName, args, scenario) {
   return [suiteName, toolName ?? '', args?.action ?? '', argumentSignature(args), scenario ?? ''].join('\u001f');
@@ -218,28 +197,47 @@ function argumentSignature(args) {
     .join('+');
 }
 
-function latestReportForSuite(suiteName) {
-  if (!fs.existsSync(reportsDir)) return undefined;
-  const prefix = `${suiteName}-test-results-`;
-  const candidates = fs.readdirSync(reportsDir)
-    .filter((entry) => entry.startsWith(prefix) && entry.endsWith('.json'))
-    .map((entry) => path.join(reportsDir, entry));
-  let latest;
-  for (const candidate of candidates) {
+function groupCasesByTool(cases) {
+  const groups = new Map();
+  for (const testCase of cases) {
+    const toolCases = groups.get(testCase.toolName);
+    if (toolCases) {
+      toolCases.push(testCase);
+    } else {
+      groups.set(testCase.toolName, [testCase]);
+    }
+  }
+  return groups;
+}
+
+function latestReportsForSuites(suiteNames) {
+  const latestReports = new Map();
+  if (!fs.existsSync(reportsDir)) return latestReports;
+
+  const suitePrefixes = suiteNames.map((suiteName) => ({ suiteName, prefix: `${suiteName}-test-results-` }));
+  for (const entry of fs.readdirSync(reportsDir)) {
+    if (!entry.endsWith('.json')) continue;
+    const suite = suitePrefixes.find(({ prefix }) => entry.startsWith(prefix));
+    if (!suite) continue;
+
+    const candidate = path.join(reportsDir, entry);
     try {
       const report = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+      const latest = latestReports.get(suite.suiteName);
       if (!latest || String(report.generatedAt ?? '') > String(latest.report.generatedAt ?? '')) {
-        latest = { path: candidate, report };
+        latestReports.set(suite.suiteName, { path: candidate, report });
       }
     } catch {
       // Malformed historical reports cannot prove coverage.
     }
   }
-  return latest;
+
+  return latestReports;
 }
 
 function liveReportCases(suites) {
   const suiteNames = [...new Set(suites.map((suite) => suite.name))].sort();
+  const latestReports = latestReportsForSuites(suiteNames);
   const staticCasesByKey = new Map();
   for (const suite of suites) {
     for (const testCase of suite.cases ?? []) {
@@ -255,7 +253,7 @@ function liveReportCases(suites) {
   const cases = [];
 
   for (const suiteName of suiteNames) {
-    const latest = latestReportForSuite(suiteName);
+    const latest = latestReports.get(suiteName);
     if (!latest) {
       missingReports.push(suiteName);
       continue;
@@ -365,16 +363,19 @@ async function buildAudit() {
   const parameterCoverageCases = staticOnly
     ? cases
     : cases.filter((testCase) => testCase.responseSuccess === true);
+  const casesByTool = groupCasesByTool(cases);
+  const parameterCoverageCasesByTool = groupCasesByTool(parameterCoverageCases);
 
   const tools = schemas.map((schema) => {
-    const toolCases = cases.filter((testCase) => testCase.toolName === schema.name);
-    const toolParameterCoverageCases = parameterCoverageCases.filter((testCase) => testCase.toolName === schema.name);
+    const toolCases = casesByTool.get(schema.name) ?? [];
+    const toolParameterCoverageCases = parameterCoverageCasesByTool.get(schema.name) ?? [];
     const testedActions = new Set(toolCases.map((testCase) => testCase.action));
     const usedParameters = new Set(toolCases.flatMap((testCase) => testCase.parameters));
     const successfulParameters = new Set(toolParameterCoverageCases.flatMap((testCase) => testCase.parameters));
     const required = new Set(schema.required);
     const optionalParameters = schema.properties.filter((property) => !required.has(property) && property !== 'action');
     const declaredProperties = new Set(schema.properties);
+    const declaredActions = new Set(schema.actions);
     const missingOptionalParameters = optionalParameters.filter((parameter) => !successfulParameters.has(parameter)).sort();
 
     return {
@@ -382,7 +383,7 @@ async function buildAudit() {
       declaredActions: schema.actions.length,
       testedActions: testedActions.size,
       missingActions: schema.actions.filter((action) => !testedActions.has(action)),
-      extraActions: [...testedActions].filter((action) => !schema.actions.includes(action)).sort(),
+      extraActions: [...testedActions].filter((action) => !declaredActions.has(action)).sort(),
       optionalParameters: optionalParameters.length,
       coveredOptionalParameters: optionalParameters.filter((parameter) => successfulParameters.has(parameter)).length,
       missingOptionalParameters,

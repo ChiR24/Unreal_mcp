@@ -7,6 +7,7 @@
 import { runToolTests } from '../../test-runner.mjs';
 
 const TEST_FOLDER = '/Game/MCPTest/AuthoringAssets';
+const TEST_FOLDER_ALIAS = TEST_FOLDER.slice(1);
 const ts = Date.now();
 
 const SEQUENCE_NAME = `SEQ_Test_${ts}`;
@@ -30,7 +31,7 @@ const testCases = [
   { scenario: 'Setup: spawn sequence actor B', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Sphere', actorName: ACTOR_B, location: { x: 200, y: 0, z: 100 } }, expected: 'success|already exists' },
 
   // === CREATE / OPEN ===
-  { scenario: 'ACTION: create', toolName: 'manage_sequence', arguments: { action: 'create', name: SEQUENCE_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
+  { scenario: 'ACTION: create', toolName: 'manage_sequence', arguments: { action: 'create', name: SEQUENCE_NAME, path: TEST_FOLDER_ALIAS }, expected: 'success|already exists' },
   { scenario: 'ACTION: open', toolName: 'manage_sequence', arguments: { action: 'open', path: SEQUENCE_PATH }, expected: 'success' },
 
   // === BINDINGS ===
@@ -72,7 +73,7 @@ const testCases = [
   { scenario: 'INFO: list_track_types', toolName: 'manage_sequence', arguments: { action: 'list_track_types' }, expected: 'success' },
 
   // === DUPLICATE / RENAME / DELETE ===
-  { scenario: 'ACTION: duplicate', toolName: 'manage_sequence', arguments: { action: 'duplicate', path: SEQUENCE_PATH, destinationPath: TEST_FOLDER, newName: DUPLICATE_NAME }, expected: 'success' },
+  { scenario: 'ACTION: duplicate', toolName: 'manage_sequence', arguments: { action: 'duplicate', path: SEQUENCE_PATH, destinationPath: TEST_FOLDER_ALIAS, newName: DUPLICATE_NAME }, expected: 'success' },
   { scenario: 'ACTION: rename', toolName: 'manage_sequence', arguments: { action: 'rename', path: DUPLICATE_PATH, newName: RENAMED_NAME }, expected: 'success' },
   { scenario: 'DELETE: delete', toolName: 'manage_sequence', arguments: { action: 'delete', path: RENAMED_PATH }, expected: 'success|not found' },
   { scenario: 'DELETE: remove_actors', toolName: 'manage_sequence', arguments: { action: 'remove_actors', path: SEQUENCE_PATH, actorNames: [ACTOR_A, ACTOR_B] }, expected: 'success|not found' },

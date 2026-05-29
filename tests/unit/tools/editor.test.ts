@@ -50,4 +50,12 @@ describe('EditorTools Security', () => {
         // : and ? should be replaced by _
         expect(command).toContain('filename="My_Screenshot_.png"');
     });
+
+    it('should fall back when sanitized screenshot filename is empty', async () => {
+        await editorTools.takeScreenshot('////');
+
+        const executeCommandMock = vi.mocked(bridge.executeConsoleCommand);
+        const command = executeCommandMock.mock.calls[0][0];
+        expect(command).toMatch(/filename="Screenshot_\d+"/);
+    });
 });

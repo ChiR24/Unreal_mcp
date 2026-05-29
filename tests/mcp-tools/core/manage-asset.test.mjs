@@ -117,8 +117,8 @@ const testCases = [
   { scenario: 'ACTION: bulk_rename', toolName: 'manage_asset', arguments: { action: 'bulk_rename', assetPaths: [BULK_RENAME_SOURCE], pattern: `M_BulkRenameSource_${ts}`, replacement: `M_BulkRenamed_${ts}` }, expected: 'success' },
   { scenario: 'ACTION: bulk_rename folderPath options', toolName: 'manage_asset', arguments: { action: 'bulk_rename', folderPath: `${TEST_FOLDER}/BulkFolder`, searchText: `M_BulkFolderSource_${ts}`, replaceText: `M_BulkFolderRenamed_${ts}`, prefix: 'P_', suffix: '_S', checkoutFiles: false }, expected: 'success' },
   { scenario: 'ACTION: bulk_delete', toolName: 'manage_asset', arguments: { action: 'bulk_delete', assetPaths: [BULK_DELETE_SOURCE], showConfirmation: false, fixupRedirectors: false }, expected: 'success' },
-  { scenario: 'ACTION: source_control_checkout', toolName: 'manage_asset', arguments: { action: 'source_control_checkout', assetPaths: [BASE_MATERIAL] }, expected: 'error|SOURCE_CONTROL_DISABLED|SC_DISABLED|success' },
-  { scenario: 'ACTION: source_control_submit', toolName: 'manage_asset', arguments: { action: 'source_control_submit', assetPaths: [BASE_MATERIAL] }, expected: 'error|SOURCE_CONTROL_DISABLED|SC_DISABLED|success' },
+  { scenario: 'ACTION: source_control_checkout', toolName: 'manage_asset', arguments: { action: 'source_control_checkout', assetPaths: [BASE_MATERIAL] }, expected: { condition: 'success', errorPattern: 'SOURCE_CONTROL_DISABLED' } },
+  { scenario: 'ACTION: source_control_submit', toolName: 'manage_asset', arguments: { action: 'source_control_submit', assetPaths: [BASE_MATERIAL] }, expected: { condition: 'success', errorPattern: 'SOURCE_CONTROL_DISABLED' } },
 
   // === MATERIAL GRAPH ACTIONS ===
   { scenario: 'ADD: add_material_node constant', toolName: 'manage_asset', arguments: { action: 'add_material_node', materialPath: BASE_MATERIAL, type: 'Constant', x: -200, y: 0 }, expected: 'success|already exists', captureResult: { key: 'constantNodeId', fromField: 'nodeId' } },

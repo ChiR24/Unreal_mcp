@@ -3,6 +3,7 @@
 import { runToolTests } from '../../test-runner.mjs';
 
 const TEST_FOLDER = '/Game/MCPTest/AuthoringAssets';
+const TEST_FOLDER_ALIAS = TEST_FOLDER.slice(1);
 const ts = Date.now();
 const FADE_ACTOR_NAME = `MCPTestAudioActor_${ts}`;
 const SOUND_CUE = `${TEST_FOLDER}/TestSoundCue`;
@@ -19,10 +20,10 @@ const SOUND_WAVE = '/Engine/VREditor/Sounds/VR_click1.VR_click1';
 const testCases = [
 // === SETUP ===
 { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
-{ scenario: 'Setup: create test sound cue', toolName: 'manage_audio', arguments: { action: 'create_sound_cue', name: 'TestSoundCue', path: TEST_FOLDER }, expected: 'success|already exists' },
+{ scenario: 'Setup: create test sound cue', toolName: 'manage_audio', arguments: { action: 'create_sound_cue', name: 'TestSoundCue', path: TEST_FOLDER_ALIAS }, expected: 'success|already exists' },
 { scenario: 'Setup: create test sound class', toolName: 'manage_audio', arguments: { action: 'create_sound_class', name: 'TestSoundClass', path: TEST_FOLDER }, expected: 'success|already exists' },
 { scenario: 'Setup: create test sound mix', toolName: 'manage_audio', arguments: { action: 'create_sound_mix', name: 'TestSoundMix', path: TEST_FOLDER }, expected: 'success|already exists' },
-{ scenario: 'Setup: create test metasound', toolName: 'manage_audio', arguments: { action: 'create_metasound', name: 'TestMetaSound', path: TEST_FOLDER }, expected: 'success|already exists' },
+{ scenario: 'Setup: create test metasound', toolName: 'manage_audio', arguments: { action: 'create_metasound', name: 'TestMetaSound', path: TEST_FOLDER_ALIAS }, expected: 'success|already exists' },
 { scenario: 'Setup: create test attenuation settings', toolName: 'manage_audio', arguments: { action: 'create_attenuation_settings', name: 'TestAttenuation', path: TEST_FOLDER }, expected: 'success|already exists' },
 { scenario: 'Setup: create test dialogue voice', toolName: 'manage_audio', arguments: { action: 'create_dialogue_voice', name: 'TestDialogueVoice', path: TEST_FOLDER }, expected: 'success|already exists' },
 { scenario: 'Setup: create test dialogue wave', toolName: 'manage_audio', arguments: { action: 'create_dialogue_wave', name: 'TestDialogueWave', path: TEST_FOLDER }, expected: 'success|already exists' },

@@ -7,11 +7,14 @@
 import { runToolTests } from '../../test-runner.mjs';
 
 const TEST_FOLDER = '/Game/MCPTest/WorldAssets';
+const TEST_FOLDER_ALIAS = TEST_FOLDER.slice(1);
 const ts = Date.now();
 const LEVEL_NAME = `StructLevel_${ts}`;
 const SUBLEVEL_NAME = `StructSublevel_${ts}`;
 const LEVEL_PATH = `${TEST_FOLDER}/${LEVEL_NAME}`;
 const SUBLEVEL_PATH = `${TEST_FOLDER}/${SUBLEVEL_NAME}`;
+const LEVEL_PATH_ALIAS = LEVEL_PATH.slice(1);
+const SUBLEVEL_PATH_ALIAS = SUBLEVEL_PATH.slice(1);
 const TEST_ACTOR = `StructActor_${ts}`;
 const DATA_LAYER = `StructDataLayer_${ts}`;
 const HLOD_LAYER = `StructHLOD_${ts}`;
@@ -29,12 +32,12 @@ const testCases = [
   { scenario: 'Setup: spawn actor for data layer assignment', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: TEST_ACTOR, location: { x: 0, y: 0, z: 100 } }, expected: 'success' },
 
   // === CREATE ===
-  { scenario: 'CREATE: create_level', toolName: 'manage_level_structure', arguments: { action: 'create_level', levelName: LEVEL_NAME, levelPath: TEST_FOLDER, bCreateWorldPartition: false, bUseExternalActors: false, save: true }, expected: 'success|already exists' },
-  { scenario: 'CREATE: create_sublevel', toolName: 'manage_level_structure', arguments: { action: 'create_sublevel', sublevelName: SUBLEVEL_NAME, sublevelPath: SUBLEVEL_PATH, parentLevel: LEVEL_PATH, save: true }, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_level', toolName: 'manage_level_structure', arguments: { action: 'create_level', levelName: LEVEL_NAME, levelPath: TEST_FOLDER_ALIAS, bCreateWorldPartition: false, bUseExternalActors: false, save: true }, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_sublevel', toolName: 'manage_level_structure', arguments: { action: 'create_sublevel', sublevelName: SUBLEVEL_NAME, sublevelPath: SUBLEVEL_PATH_ALIAS, parentLevel: LEVEL_PATH_ALIAS, save: true }, expected: 'success|already exists' },
 
   // === LEVEL CONFIG ===
-  { scenario: 'CONFIG: configure_level_streaming', toolName: 'manage_level_structure', arguments: { action: 'configure_level_streaming', levelName: SUBLEVEL_PATH, streamingMethod: 'Blueprint', bShouldBeVisible: true, bShouldBlockOnLoad: false, bDisableDistanceStreaming: false }, expected: 'success|not found' },
-  { scenario: 'CONFIG: set_streaming_distance', toolName: 'manage_level_structure', arguments: { action: 'set_streaming_distance', levelName: SUBLEVEL_PATH, streamingDistance: 5000, streamingUsage: 'Blueprint', volumeLocation: { x: 0, y: 0, z: 0 }, createVolume: true }, expected: 'success|not found' },
+  { scenario: 'CONFIG: configure_level_streaming', toolName: 'manage_level_structure', arguments: { action: 'configure_level_streaming', levelName: SUBLEVEL_PATH_ALIAS, streamingMethod: 'Blueprint', bShouldBeVisible: true, bShouldBlockOnLoad: false, bDisableDistanceStreaming: false }, expected: 'success|not found' },
+  { scenario: 'CONFIG: set_streaming_distance', toolName: 'manage_level_structure', arguments: { action: 'set_streaming_distance', levelName: SUBLEVEL_PATH_ALIAS, streamingDistance: 5000, streamingUsage: 'Blueprint', volumeLocation: { x: 0, y: 0, z: 0 }, createVolume: true }, expected: 'success|not found' },
   { scenario: 'CONFIG: configure_level_bounds', toolName: 'manage_level_structure', arguments: { action: 'configure_level_bounds', bAutoCalculateBounds: false, boundsOrigin: { x: 0, y: 0, z: 0 }, boundsExtent: { x: 1000, y: 1000, z: 1000 } }, expected: 'success' },
 
   // === WORLD PARTITION GUARDED ACTIONS ===

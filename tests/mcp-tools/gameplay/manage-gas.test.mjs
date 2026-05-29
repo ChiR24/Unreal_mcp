@@ -63,7 +63,8 @@ const testCases = [
     toolName: 'manage_gas',
     arguments: { action: 'create_gameplay_effect', name: effectName, path: TEST_FOLDER, durationType: 'Instant' },
     expected: 'success',
-    captureResult: { key: 'effectPath', fromField: 'result.assetPath' }
+    captureResult: { key: 'effectPath', fromField: 'result.assetPath' },
+    assertions: [{ path: 'structuredContent.result.durationType', equals: 'instant', label: 'effect duration type preserved at creation' }]
   },
   { scenario: 'CONFIG: set_ability_costs', toolName: 'manage_gas', arguments: { action: 'set_ability_costs', abilityPath: '${captured:abilityPath}', costEffectPath: '${captured:effectPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.costEffectAssigned', equals: true, label: 'cost effect class assigned' }] },
   { scenario: 'CONFIG: set_ability_cooldown', toolName: 'manage_gas', arguments: { action: 'set_ability_cooldown', abilityPath: '${captured:abilityPath}', cooldownEffectPath: '${captured:effectPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.cooldownEffectAssigned', equals: true, label: 'cooldown effect class assigned' }] },

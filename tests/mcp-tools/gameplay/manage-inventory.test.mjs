@@ -8,6 +8,7 @@ import { runToolTests } from '../../test-runner.mjs';
 
 const ts = Date.now();
 const TEST_FOLDER = `/Game/MCPTest/GameplayInventory_${ts}`;
+const TEST_FOLDER_ALIAS = TEST_FOLDER.slice(1);
 const BLUEPRINT_NAME = `BP_MCP_InventoryActor_${ts}`;
 const ITEM_NAME = `DA_MCP_Item_${ts}`;
 const CATEGORY_NAME = `DA_MCP_Category_${ts}`;
@@ -47,7 +48,7 @@ const testCases = [
   {
     scenario: 'CREATE: create_item_data_asset',
     toolName: 'manage_inventory',
-    arguments: { action: 'create_item_data_asset', name: ITEM_NAME, path: TEST_FOLDER },
+    arguments: { action: 'create_item_data_asset', name: ITEM_NAME, path: TEST_FOLDER_ALIAS },
     expected: 'success',
     captureResult: { key: 'itemPath', fromField: 'result.assetPath' },
     assertions: [{ path: 'structuredContent.result.assetClass', equals: 'McpGenericDataAsset', label: 'item data asset class reported' }]

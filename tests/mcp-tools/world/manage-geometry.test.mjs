@@ -7,8 +7,10 @@
 import { runToolTests } from '../../test-runner.mjs';
 
 const TEST_FOLDER = '/Game/MCPTest/WorldAssets';
+const TEST_FOLDER_ALIAS = TEST_FOLDER.slice(1);
 const ts = Date.now();
 const TEST_MESH = '/Game/MCPTest/TestMesh';
+const TEST_MESH_ALIAS = TEST_MESH.slice(1);
 const EDIT_ACTOR = 'TestBox';
 const TOOL_ACTOR = 'TestSphere';
 const SPLINE_ACTOR = 'TestSpline';
@@ -20,7 +22,7 @@ const testCases = [
   { scenario: 'Setup: spawn test actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: `TestActor_${ts}`, location: { x: 0, y: 0, z: 100 } }, expected: 'success' },
 
   // === CREATE ===
-  { scenario: 'CREATE: create_box', toolName: 'manage_geometry', arguments: {"action": "create_box", "name": `Testbox_${ts}`, "path": "/Game/MCPTest", "width": 120, "height": 80, "depth": 60, "widthSegments": 2, "heightSegments": 2, "depthSegments": 2, "rotation": {"pitch": 0, "yaw": 15, "roll": 0}, "scale": {"x": 1, "y": 1, "z": 1}}, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_box', toolName: 'manage_geometry', arguments: {"action": "create_box", "name": `Testbox_${ts}`, "path": TEST_FOLDER_ALIAS, "width": 120, "height": 80, "depth": 60, "widthSegments": 2, "heightSegments": 2, "depthSegments": 2, "rotation": {"pitch": 0, "yaw": 15, "roll": 0}, "scale": {"x": 1, "y": 1, "z": 1}}, expected: 'success|already exists' },
   { scenario: 'CREATE: create_sphere', toolName: 'manage_geometry', arguments: {"action": "create_sphere", "name": `Testsphere_${ts}`, "path": "/Game/MCPTest", "radius": 45, "radialSegments": 12}, expected: 'success|already exists' },
   { scenario: 'CREATE: create_cylinder', toolName: 'manage_geometry', arguments: {"action": "create_cylinder", "name": `Testcylinder_${ts}`, "path": "/Game/MCPTest", "radius": 40, "height": 120, "numSides": 12}, expected: 'success|already exists' },
   { scenario: 'CREATE: create_cone', toolName: 'manage_geometry', arguments: {"action": "create_cone", "name": `Testcone_${ts}`, "path": "/Game/MCPTest", "radius": 45, "height": 110, "numSides": 12}, expected: 'success|already exists' },
@@ -79,7 +81,7 @@ const testCases = [
   { scenario: 'ACTION: cylindrify', toolName: 'manage_geometry', arguments: {"action": "cylindrify", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: lattice_deform', toolName: 'manage_geometry', arguments: {"action": "lattice_deform", "actorName": EDIT_ACTOR, "latticeResolution": 3, "position": {"x": 0, "y": 0, "z": 0}, "weight": 0.35, "axis": "Z"}, expected: 'success' },
   { scenario: 'Setup: create texture for displacement', toolName: 'manage_asset', arguments: { action: 'create_noise_texture', name: DISPLACE_TEXTURE, path: TEST_FOLDER, width: 32, height: 32, scale: 2, octaves: 2, save: true }, expected: 'success|already exists' },
-  { scenario: 'ACTION: displace_by_texture', toolName: 'manage_geometry', arguments: {"action": "displace_by_texture", "actorName": EDIT_ACTOR, "texturePath": `${TEST_FOLDER}/${DISPLACE_TEXTURE}`, "heightScale": 12, "midpoint": 0.5, "axis": "Z"}, expected: 'success' },
+  { scenario: 'ACTION: displace_by_texture', toolName: 'manage_geometry', arguments: {"action": "displace_by_texture", "actorName": EDIT_ACTOR, "texturePath": `${TEST_FOLDER_ALIAS}/${DISPLACE_TEXTURE}`, "heightScale": 12, "midpoint": 0.5, "axis": "Z"}, expected: 'success' },
   { scenario: 'ACTION: triangulate', toolName: 'manage_geometry', arguments: {"action": "triangulate", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: poke', toolName: 'manage_geometry', arguments: {"action": "poke", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: mirror', toolName: 'manage_geometry', arguments: {"action": "mirror", "actorName": EDIT_ACTOR}, expected: 'success' },
@@ -108,15 +110,15 @@ const testCases = [
   { scenario: 'ACTION: generate_collision', toolName: 'manage_geometry', arguments: {"action": "generate_collision", "actorName": EDIT_ACTOR, "collisionType": "convex"}, expected: 'success|already exists' },
   { scenario: 'ACTION: generate_complex_collision', toolName: 'manage_geometry', arguments: {"action": "generate_complex_collision", "actorName": EDIT_ACTOR, "hullCount": 8, "maxHullCount": 8, "maxVerticesPerHull": 32, "maxHullVerts": 32, "hullPrecision": 100}, expected: 'success|already exists' },
   { scenario: 'ACTION: simplify_collision', toolName: 'manage_geometry', arguments: {"action": "simplify_collision", "actorName": EDIT_ACTOR, "targetHullCount": 4, "simplificationFactor": 0.5}, expected: 'success' },
-  { scenario: 'ACTION: generate_lods', toolName: 'manage_geometry', arguments: {"action": "generate_lods", "assetPath": TEST_MESH, "lodCount": 3}, expected: 'success|already exists' },
+  { scenario: 'ACTION: generate_lods', toolName: 'manage_geometry', arguments: {"action": "generate_lods", "assetPath": TEST_MESH_ALIAS, "lodCount": 3}, expected: 'success|already exists' },
   // === CONFIG ===
-  { scenario: 'CONFIG: set_lod_settings', toolName: 'manage_geometry', arguments: {"action": "set_lod_settings", "assetPath": TEST_MESH, "lodIndex": 0, "reductionPercent": 50, "recomputeNormals": false, "recomputeTangents": false}, expected: 'success' },
-  { scenario: 'CONFIG: set_lod_settings triangle percent', toolName: 'manage_geometry', arguments: {"action": "set_lod_settings", "assetPath": TEST_MESH, "lodIndex": 0, "trianglePercent": 75}, expected: 'success' },
+  { scenario: 'CONFIG: set_lod_settings', toolName: 'manage_geometry', arguments: {"action": "set_lod_settings", "assetPath": TEST_MESH_ALIAS, "lodIndex": 0, "reductionPercent": 50, "recomputeNormals": false, "recomputeTangents": false}, expected: 'success' },
+  { scenario: 'CONFIG: set_lod_settings triangle percent', toolName: 'manage_geometry', arguments: {"action": "set_lod_settings", "assetPath": TEST_MESH_ALIAS, "lodIndex": 0, "trianglePercent": 75}, expected: 'success' },
   { scenario: 'Reset: cleanup geometry actors', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: 'GeoTest' }, expected: 'success|not found' },
-  { scenario: 'CONFIG: set_lod_screen_sizes', toolName: 'manage_geometry', arguments: {"action": "set_lod_screen_sizes", "assetPath": TEST_MESH, "screenSizes": [1.0, 0.5, 0.25]}, expected: 'success' },
+  { scenario: 'CONFIG: set_lod_screen_sizes', toolName: 'manage_geometry', arguments: {"action": "set_lod_screen_sizes", "assetPath": TEST_MESH_ALIAS, "screenSizes": [1.0, 0.5, 0.25]}, expected: 'success' },
   // === ACTION ===
-  { scenario: 'ACTION: convert_to_nanite', toolName: 'manage_geometry', arguments: {"action": "convert_to_nanite", "actorName": EDIT_ACTOR, "outputPath": `/Game/GeneratedMeshes/TestBox_Nanite_${ts}`}, expected: 'success' },
-  { scenario: 'ACTION: convert_to_static_mesh', toolName: 'manage_geometry', arguments: {"action": "convert_to_static_mesh", "actorName": EDIT_ACTOR, "outputPath": `/Game/GeneratedMeshes/TestBox_Static_${ts}`}, expected: 'success' },
+  { scenario: 'ACTION: convert_to_nanite', toolName: 'manage_geometry', arguments: {"action": "convert_to_nanite", "actorName": EDIT_ACTOR, "outputPath": `Game/GeneratedMeshes/TestBox_Nanite_${ts}`}, expected: 'success' },
+  { scenario: 'ACTION: convert_to_static_mesh', toolName: 'manage_geometry', arguments: {"action": "convert_to_static_mesh", "actorName": EDIT_ACTOR, "outputPath": `Game/GeneratedMeshes/TestBox_Static_${ts}`}, expected: 'success' },
   // === INFO ===
   { scenario: 'INFO: get_mesh_info', toolName: 'manage_geometry', arguments: {"action": "get_mesh_info", "actorName": EDIT_ACTOR}, expected: 'success' },
 

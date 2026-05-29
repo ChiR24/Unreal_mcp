@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { EnvSchema } from '../../src/config.js';
+import { getRequiredComponent, resolveClassAlias } from '../../src/config/class-aliases.js';
+import { loadEnv } from '../../src/types/env.js';
 
 describe('EnvSchema env var defaults (Zod v4 compatibility)', () => {
     it('parse({}) returns documented defaults for preprocessed boolean fields', () => {
@@ -118,6 +120,58 @@ describe('EnvSchema env var defaults (Zod v4 compatibility)', () => {
         expect(result.MCP_AUTOMATION_PORT).toBe(8091);
         expect(result.MCP_CONNECTION_TIMEOUT_MS).toBe(5000);
         expect(result.MCP_REQUEST_TIMEOUT_MS).toBe(30000);
+    });
+
+    it('deduplicates and validates additional path prefixes', async () => {
+        const originalEnv = process.env;
+        process.env = {
+            ...originalEnv,
+            MCP_ADDITIONAL_PATH_PREFIXES: 'ProjectObject,/ProjectObject/,../Bad,/Plugin//Bad,/ProjectAnimation'
+        };
+        vi.resetModules();
+
+        const mod = await import('../../src/config.js');
+
+        expect(mod.getAdditionalPathPrefixes()).toEqual(['/ProjectObject/', '/ProjectAnimation/']);
+        process.env = originalEnv;
+        vi.resetModules();
+    });
+});
+
+describe('class aliases', () => {
+    it('resolves aliases case-insensitively without changing unknown class paths', () => {
+        expect(resolveClassAlias('pointlight')).toBe('/Script/Engine.PointLight');
+        expect(resolveClassAlias(' SplineActor ')).toBe('/Script/Engine.Actor');
+        expect(resolveClassAlias('/Script/Engine.Actor')).toBe('/Script/Engine.Actor');
+    });
+
+    it('detects component requirements case-insensitively', () => {
+        expect(getRequiredComponent('splineactor')).toBe('SplineComponent');
+        expect(getRequiredComponent(' Spline ')).toBe('SplineComponent');
+        expect(getRequiredComponent('PointLight')).toBeUndefined();
+    });
+});
+
+describe('loadEnv', () => {
+    const originalEnv = process.env;
+
+    afterEach(() => {
+        process.env = originalEnv;
+    });
+
+    it('normalizes blank optional env vars to undefined', () => {
+        process.env = {
+            ...originalEnv,
+            UE_PROJECT_PATH: '   ',
+            UE_EDITOR_EXE: '',
+            UE_SCREENSHOT_DIR: '/tmp/screenshots',
+        };
+
+        expect(loadEnv()).toEqual({
+            UE_PROJECT_PATH: undefined,
+            UE_EDITOR_EXE: undefined,
+            UE_SCREENSHOT_DIR: '/tmp/screenshots',
+        });
     });
 });
 

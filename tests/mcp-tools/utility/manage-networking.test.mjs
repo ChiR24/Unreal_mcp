@@ -592,6 +592,7 @@ const testCases = [
    */
 
   const TEST_FOLDER = '/Game/MCPTest/AuthoringAssets';
+  const INPUT_FOLDER_ALIAS = 'Game/MCPTest';
   const ts = Date.now();
   const INPUT_ACTION = '/Game/MCPTest/Testinput_action';
   const INPUT_CONTEXT = '/Game/MCPTest/Testinput_mapping_context';
@@ -602,8 +603,8 @@ const testCases = [
     { scenario: 'Setup: create test blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_Test_${ts}`, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
 
     // === CREATE ===
-    { scenario: 'CREATE: create_input_action', toolName: 'manage_networking', arguments: {"action": "create_input_action", "name": "Testinput_action", "path": "/Game/MCPTest"}, expected: 'success|already exists' },
-    { scenario: 'CREATE: create_input_mapping_context', toolName: 'manage_networking', arguments: {"action": "create_input_mapping_context", "name": "Testinput_mapping_context", "path": "/Game/MCPTest"}, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_input_action', toolName: 'manage_networking', arguments: {"action": "create_input_action", "name": "Testinput_action", "path": INPUT_FOLDER_ALIAS}, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_input_mapping_context', toolName: 'manage_networking', arguments: {"action": "create_input_mapping_context", "name": "Testinput_mapping_context", "path": INPUT_FOLDER_ALIAS}, expected: 'success|already exists' },
     // === ADD ===
     { scenario: 'ADD: add_mapping', toolName: 'manage_networking', arguments: { action: 'add_mapping', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'SpaceBar' }, expected: 'success|already exists' },
     // === ACTION ===

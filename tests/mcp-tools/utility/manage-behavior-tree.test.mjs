@@ -38,6 +38,7 @@ import { runToolTests } from '../../test-runner.mjs';
 
 const ts = Date.now();
 const TEST_FOLDER = `/Game/MCPTest/BTSubnode_${ts}`;
+const TEST_FOLDER_ALIAS = TEST_FOLDER.slice(1);
 const bbName = `BB_PR0bFixture_${ts}`;
 const btName = `BT_PR0bFixture_${ts}`;
 
@@ -66,7 +67,7 @@ const testCases = [
   // initializes BTGraph + default Root node). See header note 1.
   { scenario: 'Setup: BT asset (via BT.create for BTGraph init)',
     toolName: 'manage_ai',
-    arguments: { action: 'create', name: btName, savePath: TEST_FOLDER },
+    arguments: { action: 'create', name: btName, savePath: TEST_FOLDER_ALIAS },
     expected: 'success',
     captureResult: { key: 'btPath', fromField: 'result.assetPath' } },
 

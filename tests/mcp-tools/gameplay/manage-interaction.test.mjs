@@ -8,6 +8,7 @@ import { runToolTests } from '../../test-runner.mjs';
 
 const ts = Date.now();
 const TEST_FOLDER = `/Game/MCPTest/GameplayInteraction_${ts}`;
+const TEST_FOLDER_ALIAS = TEST_FOLDER.slice(1);
 const TEST_ACTOR = `TestInteractionActor_${ts}`;
 const BLUEPRINT_NAME = `BP_MCP_InteractionActor_${ts}`;
 const INTERFACE_NAME = `BPI_MCP_Interactable_${ts}`;
@@ -53,7 +54,7 @@ const testCases = [
   { scenario: 'ADD: add_interaction_events', toolName: 'manage_interaction', arguments: { action: 'add_interaction_events', blueprintPath }, expected: 'success', assertions: [{ path: 'structuredContent.result.eventsAdded', length: 4, label: 'interaction event dispatchers added' }, { path: 'structuredContent.result.eventCount', equals: 4, label: 'interaction event count returned' }, { path: 'structuredContent.result.blueprintPath', equals: EXPECTED_BLUEPRINT_PATH, label: 'interaction events target returned' }] },
 
   // === INTERACTABLES ===
-  { scenario: 'CREATE: create_interactable_interface', toolName: 'manage_interaction', arguments: { action: 'create_interactable_interface', name: INTERFACE_NAME, folder: TEST_FOLDER }, expected: 'success', assertions: [{ path: 'structuredContent.result.interfacePath', equals: EXPECTED_INTERFACE_PATH, label: 'interactable interface path returned' }, { path: 'structuredContent.result.created', equals: true, label: 'interactable interface created' }, { path: 'structuredContent.result.functionsAdded', length: 3, label: 'interactable interface functions added' }] },
+  { scenario: 'CREATE: create_interactable_interface', toolName: 'manage_interaction', arguments: { action: 'create_interactable_interface', name: INTERFACE_NAME, folder: TEST_FOLDER_ALIAS }, expected: 'success', assertions: [{ path: 'structuredContent.result.interfacePath', equals: EXPECTED_INTERFACE_PATH, label: 'interactable interface path returned' }, { path: 'structuredContent.result.created', equals: true, label: 'interactable interface created' }, { path: 'structuredContent.result.functionsAdded', length: 3, label: 'interactable interface functions added' }] },
   {
     scenario: 'CREATE: create_door_actor',
     toolName: 'manage_interaction',

@@ -12,6 +12,7 @@ const CHARACTER_NAME = `BP_MCP_Character_${ts}`;
 const ANIM_BLUEPRINT_NAME = `ABP_MCP_Character_${ts}`;
 const TEST_ACTOR = `TestCharacterActor_${ts}`;
 const TEST_SKELETAL_MESH_PATH = '/Engine/EngineMeshes/SkeletalCube';
+const TEST_SKELETON_PATH = '/Engine/EngineMeshes/SkeletalCube_Skeleton';
 
 const testCases = [
   // === SETUP ===
@@ -19,7 +20,7 @@ const testCases = [
   {
     scenario: 'Setup: create animation blueprint for mesh assignment',
     toolName: 'animation_physics',
-    arguments: { action: 'create_anim_blueprint', name: ANIM_BLUEPRINT_NAME, path: TEST_FOLDER, parentClass: 'AnimInstance' },
+    arguments: { action: 'create_anim_blueprint', name: ANIM_BLUEPRINT_NAME, path: TEST_FOLDER, skeletonPath: TEST_SKELETON_PATH, parentClass: 'AnimInstance' },
     expected: 'success|already exists',
     captureResult: { key: 'animBlueprintPath', fromField: 'data.result.assetPath' }
   },

@@ -51,9 +51,11 @@ const testCases = [
   // === IMPORT / EXPORT / INFO ===
   { scenario: 'ACTION: export_level', toolName: 'manage_level', arguments: { action: 'export_level', levelPath: MAIN_LEVEL, exportPath: EXPORTED_LEVEL, timeoutMs: 45000 }, expected: 'success' },
   { scenario: 'ACTION: import_level', toolName: 'manage_level', arguments: { action: 'import_level', packagePath: MAIN_LEVEL, destinationPath: IMPORTED_LEVEL, timeoutMs: 45000 }, expected: 'success|already exists' },
+  { scenario: 'ACTION: import_level targetPath alias', toolName: 'manage_level', arguments: { action: 'import_level', packagePath: MAIN_LEVEL, targetPath: `${TEST_FOLDER}/LevelImportedAlias_${ts}`, timeoutMs: 45000 }, expected: 'success|already exists' },
   { scenario: 'INFO: list_levels', toolName: 'manage_level', arguments: { action: 'list_levels' }, expected: 'success' },
   { scenario: 'INFO: get_summary', toolName: 'manage_level', arguments: { action: 'get_summary', levelPath: MAIN_LEVEL }, expected: 'success' },
   { scenario: 'ACTION: validate_level', toolName: 'manage_level', arguments: { action: 'validate_level', levelPath: MAIN_LEVEL }, expected: 'success' },
+  { scenario: 'ACTION: validate_level assetPath alias', toolName: 'manage_level', arguments: { action: 'validate_level', assetPath: MAIN_LEVEL }, expected: 'success' },
   { scenario: 'INFO: get_current_level', toolName: 'manage_level', arguments: { action: 'get_current_level' }, expected: 'success' },
 
   // === ASSET OPERATIONS ===

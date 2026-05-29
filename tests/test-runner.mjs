@@ -4,6 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import net from 'node:net';
+import { expectedCondition as conditionFromExpectation, splitExpectedConditions } from './expectation-utils.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -135,13 +136,6 @@ function firstNonEmptyString(...values) {
   return null;
 }
 
-function getExpectedConditions(lowerExpected) {
-  if (lowerExpected.includes(' or ')) return lowerExpected.split(' or ').map((condition) => condition.trim()).filter(Boolean);
-  if (lowerExpected.includes('|')) return lowerExpected.split('|').map((condition) => condition.trim()).filter(Boolean);
-  const trimmed = lowerExpected.trim();
-  return trimmed ? [trimmed] : [];
-}
-
 function normalizeConditionText(value) {
   return String(value).replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -177,8 +171,14 @@ const explicitFailureAlternatives = [
   'not exist',
   'not loaded',
   'not_loaded',
+  'not in pie',
+  'not_in_pie',
+  'cannot enable',
+  'not enabled',
   'not partitioned',
   'not_partitioned',
+  'not available',
+  'world partition',
   'sc_disabled'
 ];
 const normalizedExplicitFailureAlternatives = explicitFailureAlternatives.map(normalizeConditionText);
@@ -197,6 +197,66 @@ function findMatchedExplicitFailureAlternative(conditions, responseText) {
     if (conditionMatchesResponseText(condition, responseText)) return condition;
   }
   return null;
+}
+
+function getExpectationIntent(expectation) {
+  const expectedCondition = conditionFromExpectation(expectation);
+  const lowerExpected = expectedCondition.toLowerCase();
+  const expectedConditions = splitExpectedConditions(lowerExpected);
+  const primaryCondition = expectedConditions[0] ?? '';
+
+  return {
+    expectedCondition,
+    lowerExpected,
+    expectedConditions,
+    primaryCondition,
+    containsFailure: failureKeywords.some((word) => lowerExpected.includes(word)),
+    containsSuccess: successKeywords.some((word) => lowerExpected.includes(word)),
+    primaryExpectsSuccess: successKeywords.some((word) => primaryCondition.includes(word)),
+    primaryExpectsFailure: failureKeywords.some((word) => primaryCondition.includes(word)),
+    primaryExpectsTimeout: primaryCondition === 'timeout' || primaryCondition.includes('timeout')
+  };
+}
+
+function normalizeResponseForEvaluation(response) {
+  const normalized = normalizeMcpResponse(response);
+  return { ...response, structuredContent: normalized.structuredContent, contentText: normalized.contentText };
+}
+
+function responseTextContext(response, outcome) {
+  const actualMessage = outcome.actualMessage || response.message || null;
+  const actualError = outcome.actualError || response.error || null;
+  const contentText = typeof response.contentText === 'string'
+    ? response.contentText
+    : normalizeMcpResponse(response).contentText;
+  const messageStr = (actualMessage || '').toString().toLowerCase();
+  const errorStr = (actualError || '').toString().toLowerCase();
+  const contentStr = contentText.toString().toLowerCase();
+
+  return {
+    actualMessage,
+    actualError,
+    contentText,
+    messageStr,
+    errorStr,
+    contentStr,
+    combined: `${messageStr} ${errorStr} ${contentStr}`
+  };
+}
+
+function responseDetail(response) {
+  if (response.isError) {
+    return response.content?.map((entry) => ('text' in entry ? entry.text : JSON.stringify(entry))).join('\n');
+  }
+  if (response.structuredContent) return JSON.stringify(response.structuredContent);
+  if (response.content?.length) {
+    return response.content.map((entry) => ('text' in entry ? entry.text : JSON.stringify(entry))).join('\n');
+  }
+  return 'No structured response returned';
+}
+
+function getTestCaseTimeoutMs(testCase) {
+  return Number(process.env.UNREAL_MCP_TEST_CASE_TIMEOUT_MS ?? testCase.timeoutMs ?? testCase.arguments?.timeoutMs ?? '5000');
 }
 
 export function getResponseOutcome(response) {
@@ -269,59 +329,23 @@ function summarize(toolName, results, resultsPath) {
  */
 export function evaluateExpectation(testCase, response) {
   const expectation = testCase.expected;
-
-  // Normalize expected into a comparable form. If expected is an object
-  // (e.g. {condition: 'success|error', errorPattern: 'SC_DISABLED'}), then
-  // we extract the condition string as the primary expectation string.
-  const expectedCondition = (typeof expectation === 'object' && expectation !== null && expectation.condition)
-    ? expectation.condition
-    : (typeof expectation === 'string' ? expectation : String(expectation));
-
-  const lowerExpected = expectedCondition.toLowerCase();
-
-  // Determine failure/success intent from condition keywords
-  const containsFailure = failureKeywords.some((word) => lowerExpected.includes(word));
-  const containsSuccess = successKeywords.some((word) => lowerExpected.includes(word));
-
-  // CRITICAL FIX: Determine PRIMARY intent (first condition in pipe-separated list)
-  // Tests like "success|error" should have PRIMARY intent of success, meaning
-  // if we get success=false, it should FAIL even though "error" is in the alternatives.
-  const expectedConditions = getExpectedConditions(lowerExpected);
-  const primaryCondition = expectedConditions[0] ?? '';
-  const primaryExpectsSuccess = successKeywords.some((word) => primaryCondition.includes(word));
-  const primaryExpectsFailure = failureKeywords.some((word) => primaryCondition.includes(word));
+  const {
+    expectedCondition,
+    lowerExpected,
+    expectedConditions,
+    primaryCondition,
+    containsFailure,
+    containsSuccess,
+    primaryExpectsSuccess,
+    primaryExpectsFailure
+  } = getExpectationIntent(expectation);
 
   const responseOutcome = getResponseOutcome(response);
   const structuredSuccess = responseOutcome.structuredSuccess;
   const actualSuccess = responseOutcome.actualSuccess;
-  let actualError = responseOutcome.actualError;
-  let actualMessage = responseOutcome.actualMessage;
-
-  // Extract actual error/message from response.
-  // Also check top-level message field (MCP errors may not have structuredContent).
-  if (!actualMessage && response.message) {
-    actualMessage = response.message;
-  }
-  if (!actualError && response.error) {
-    actualError = response.error;
-  }
-
-  // Also extract flattened plain-text content for matching when structured
-  // fields are missing or when MCP errors (e.g. timeouts) are only reported
-  // via the textual content array.
-  let contentText = '';
-  if (Array.isArray(response.content) && response.content.length > 0) {
-    contentText = response.content
-      .map((entry) => (entry && typeof entry.text === 'string' ? entry.text : ''))
-      .filter((t) => t.length > 0)
-      .join('\n');
-  }
-
-  // Helper to get effective actual strings for matching.
-  const messageStr = (actualMessage || '').toString().toLowerCase();
-  const errorStr = (actualError || '').toString().toLowerCase();
-  const contentStr = contentText.toString().toLowerCase();
-  const combined = `${messageStr} ${errorStr} ${contentStr}`;
+  const { actualError, actualMessage, messageStr, errorStr, contentStr, combined } = responseTextContext(response, responseOutcome);
+  const isObjectExpectation = typeof expectation === 'object' && expectation !== null;
+  const serializedResponse = JSON.stringify(response).toLowerCase();
   const matchedExplicitFailureAlternative = !actualSuccess && primaryExpectsSuccess
     ? findMatchedExplicitFailureAlternative(expectedConditions, combined)
     : null;
@@ -330,12 +354,12 @@ export function evaluateExpectation(testCase, response) {
   // (for example NOT_PARTITIONED guards). Honor those before the generic
   // "expected success" rejection below so tests don't need broad `error|...`
   // strings that can mask unrelated failures.
-  if (typeof expectation === 'object' && expectation !== null && !actualSuccess && expectation.errorPattern) {
+  if (isObjectExpectation && !actualSuccess && expectation.errorPattern) {
     const pattern = String(expectation.errorPattern).toLowerCase();
-    const serializedResponse = JSON.stringify(response).toLowerCase();
-    if (serializedResponse.includes(pattern)) {
+    if (serializedResponse.includes(pattern) || combined.includes(pattern)) {
       return { passed: true, reason: `Error pattern matched: ${expectation.errorPattern}` };
     }
+    return { passed: false, reason: `Error pattern not matched: ${expectation.errorPattern}` };
   }
 
   // Pipe alternatives can intentionally allow specific idempotent failure
@@ -363,10 +387,10 @@ export function evaluateExpectation(testCase, response) {
   // even when the engine returns NO_NAVMESH, NOT_FOUND, NO_COMPONENT, etc.
   // Note: 'actor_not_found' is a valid error for negative tests - do NOT add it here
   // as that would fail tests that expect actor_not_found as the error.
-  const hasInfrastructureError = infrastructureErrorCodes.some(code => 
+  const hasInfrastructureError = infrastructureErrorCodes.some(code =>
     errorStr === code || errorStr.includes(code) || messageStr.includes(code)
   );
-  
+
   if (hasInfrastructureError && !primaryExpectsFailure) {
     return {
       passed: false,
@@ -387,25 +411,25 @@ export function evaluateExpectation(testCase, response) {
   const hasDisconnect = /\bdisconnect(ed)?\b/i.test(errorStr) || /\bdisconnect(ed)?\b/i.test(messageStr);
   const hasConnectionLost = /\bconnection lost\b/i.test(errorStr) || /\bconnection lost\b/i.test(messageStr);
   const hasNotConnected = /\bnot connected\b/i.test(errorStr) || /\bnot connected\b/i.test(messageStr);
-  
+
   // Only include 'disconnect' as crash indicator when response indicates FAILURE
   // This fixes false positives for disconnect_nodes action that returns "Disconnect operation completed."
   const crashIndicators = actualSuccess ? baseCrashIndicators : crashIndicatorsWithDisconnect;
-  const hasCrashIndicator = (crashIndicators.some(ind => 
+  const hasCrashIndicator = (crashIndicators.some(ind =>
     errorStr.includes(ind) || messageStr.includes(ind) || combined.includes(ind)
   )) || hasDisconnect || hasConnectionLost || hasNotConnected;
-  
+
   // Only fail on crash indicators if response is NOT successful
   // "Node disconnection partial" is a SUCCESS message, not a crash indicator
   const responseSuccess = structuredSuccess === true;
   const isActuallyCrash = hasCrashIndicator && !responseSuccess;
-  
-  const explicitlyExpectsCrash = lowerExpected.includes('disconnect') || 
-    lowerExpected.includes('crash') || 
+
+  const explicitlyExpectsCrash = lowerExpected.includes('disconnect') ||
+    lowerExpected.includes('crash') ||
     lowerExpected.includes('connection lost') ||
     lowerExpected.includes('ue_not_connected') ||
     lowerExpected.includes('not connected');
-  
+
   // Only treat as crash if response indicates failure AND crash indicators found
   if (isActuallyCrash && !explicitlyExpectsCrash) {
     return {
@@ -422,7 +446,7 @@ export function evaluateExpectation(testCase, response) {
   // in valid parameter lists (e.g., "Valid params: action, name, path, timeoutMs").
   const hasTimeout = /\btimeout\b/i.test(combined) || combined.includes('timed out');
   const explicitlyExpectsTimeout = primaryCondition === 'timeout' || primaryCondition.includes('timeout');
-  
+
   if (hasTimeout && !explicitlyExpectsTimeout) {
     return {
       passed: false,
@@ -441,30 +465,18 @@ export function evaluateExpectation(testCase, response) {
     };
   }
 
-  // If expectation is an object with specific pattern constraints, apply them
-  if (typeof expectation === 'object' && expectation !== null) {
-    // If actual outcome was success, check successPattern
-    if (actualSuccess && expectation.successPattern) {
-      const pattern = expectation.successPattern.toLowerCase();
-      if (combined.includes(pattern)) {
-        return { passed: true, reason: `Success pattern matched: ${expectation.successPattern}` };
-      }
+  if (isObjectExpectation && actualSuccess && expectation.successPattern) {
+    const pattern = String(expectation.successPattern).toLowerCase();
+    if (serializedResponse.includes(pattern) || combined.includes(pattern)) {
+      return { passed: true, reason: `Success pattern matched: ${expectation.successPattern}` };
     }
-    // If actual outcome was error/failure, check errorPattern
-    if (!actualSuccess && expectation.errorPattern) {
-      const pattern = expectation.errorPattern.toLowerCase();
-      if (combined.includes(pattern)) {
-        return { passed: true, reason: `Error pattern matched: ${expectation.errorPattern}` };
-      }
-    }
+    return { passed: false, reason: `Success pattern not matched: ${expectation.successPattern}` };
   }
 
   // Handle multi-condition expectations using "or" or pipe separators
   // e.g., "success or LOAD_FAILED" or "success|no_instances|load_failed"
-  if (lowerExpected.includes(' or ') || lowerExpected.includes('|')) {
-    const separator = lowerExpected.includes(' or ') ? ' or ' : '|';
-    const conditions = lowerExpected.split(separator).map((c) => c.trim()).filter(Boolean);
-    for (const condition of conditions) {
+  if (expectedConditions.length > 1) {
+    for (const condition of expectedConditions) {
       if (successKeywords.some((kw) => condition.includes(kw)) && actualSuccess === true) {
         return { passed: true, reason: JSON.stringify(response.structuredContent) };
       }
@@ -489,14 +501,14 @@ export function evaluateExpectation(testCase, response) {
       // response is success=false with "object_not_found" error - primary was "success"!
       const conditionIsFailure = failureKeywords.some((kw) => condition.includes(kw));
       const conditionIsSuccess = successKeywords.some((kw) => condition.includes(kw));
-      
+
       // CRITICAL FIX: If condition is "error" and response.isError is true, match it
       // This handles cases where the error message doesn't contain the word "error" but
       // isError: true clearly indicates an error state.
       if (condition === 'error' && (response.isError === true || response.structuredContent?.isError === true)) {
         return { passed: true, reason: `Expected condition met: isError=true` };
       }
-      
+
       // Only allow substring match if:
       // 1. Condition is a success keyword AND actualSuccess is true, OR
       // 2. Condition is a failure keyword AND primary expects failure, OR
@@ -574,7 +586,7 @@ export function evaluateExpectation(testCase, response) {
     // Normalize underscores/spaces for comparison (engine may return NOT_FOUND or "not found")
     const normalizedReason = lowerReason.replace(/_/g, ' ');
     const normalizedExpected = expectedErrorType ? expectedErrorType.toLowerCase().replace(/_/g, ' ') : '';
-    let errorTypeMatch = expectedErrorType ? 
+    let errorTypeMatch = expectedErrorType ?
       (normalizedReason.includes(normalizedExpected) || lowerReason.includes(expectedErrorType.toLowerCase()) || lowerReason.includes(expectedErrorType.toUpperCase())) :
       failureKeywords.some(keyword => lowerExpected.includes(keyword) && lowerReason.includes(keyword));
 
@@ -591,7 +603,7 @@ export function evaluateExpectation(testCase, response) {
 
     // If expected outcome specifies an error type, actual error should match it
     if (lowerExpected.includes('not found') || lowerExpected.includes('not_found') || lowerExpected.includes('invalid') ||
-      lowerExpected.includes('missing') || lowerExpected.includes('already exists') || 
+      lowerExpected.includes('missing') || lowerExpected.includes('already exists') ||
       lowerExpected.includes('sc_disabled') || lowerExpected.includes('security') ||
       lowerExpected.includes('blocked') || lowerExpected.includes('violation') ||
       lowerExpected.includes('object_not_found') || lowerExpected.includes('actor_not_found') ||
@@ -599,39 +611,23 @@ export function evaluateExpectation(testCase, response) {
       lowerExpected.includes('class_not_found') || lowerExpected.includes('component_not_found') ||
       lowerExpected.includes('physics_failed') || lowerExpected.includes('function_not_found') ||
       lowerExpected.includes('property_not_found')) {
-      
+
       // CRITICAL FIX: Special handling for actor_not_found vs "actors not found" (plural)
       // The engine may return "Actors not found" for batch operations even for single actor
       if ((lowerExpected.includes('actor_not_found') || lowerExpected.includes('actors not found')) &&
           (normalizedReason.includes('actors not found') || normalizedReason.includes('actor not found'))) {
         return { passed: true, reason: `Expected error type matched (actor/actors not found): ${actualMessage || actualError}` };
       }
-      
+
       const passed = errorTypeMatch;
-      let reason;
-      if (response.isError) {
-        reason = response.content?.map((entry) => ('text' in entry ? entry.text : JSON.stringify(entry))).join('\n');
-      } else if (response.structuredContent) {
-        reason = JSON.stringify(response.structuredContent);
-      } else {
-        reason = 'No structured response returned';
-      }
+      const reason = responseDetail(response);
       return { passed, reason };
     }
   }
 
   // Default evaluation logic
   const passed = expectedFailure ? !actualSuccess : !!actualSuccess;
-  let reason;
-  if (response.isError) {
-    reason = response.content?.map((entry) => ('text' in entry ? entry.text : JSON.stringify(entry))).join('\n');
-  } else if (response.structuredContent) {
-    reason = JSON.stringify(response.structuredContent);
-  } else if (response.content?.length) {
-    reason = response.content.map((entry) => ('text' in entry ? entry.text : JSON.stringify(entry))).join('\n');
-  } else {
-    reason = 'No structured response returned';
-  }
+  const reason = responseDetail(response);
   return { passed, reason };
 }
 
@@ -643,6 +639,231 @@ export function summarizeResponseForReport(response) {
     responseError: outcome.actualError ?? undefined,
     responseMessage: outcome.actualMessage ?? undefined
   };
+}
+
+function createToolCaller(client, { useProgressTimeouts = false } = {}) {
+  return async function callToolOnce(callOptions, baseTimeoutMs) {
+    const envDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000') || 60000;
+    const perCall = Number(callOptions?.arguments?.timeoutMs) || undefined;
+    const base = typeof baseTimeoutMs === 'number' && baseTimeoutMs > 0 ? baseTimeoutMs : (perCall || envDefault);
+    const serverTimeoutMs = base;
+    const clientTimeoutMs = useProgressTimeouts
+      ? Number(process.env.UNREAL_MCP_TEST_CLIENT_TIMEOUT_MS ?? '300000') || 300000
+      : serverTimeoutMs;
+    const timeoutLabel = useProgressTimeouts
+      ? `server timeout: ${serverTimeoutMs}ms, client timeout: ${clientTimeoutMs}ms`
+      : `timeout ${clientTimeoutMs}ms`;
+
+    try {
+      console.log(`[CALL] ${callOptions.name} (${timeoutLabel})`);
+      const outgoing = Object.assign({}, callOptions, { arguments: { ...(callOptions.arguments || {}), timeoutMs: serverTimeoutMs } });
+      let callPromise;
+      try {
+        callPromise = client.callTool(outgoing, undefined, { timeout: clientTimeoutMs });
+      } catch (err) {
+        try {
+          callPromise = client.callTool(outgoing, { timeout: clientTimeoutMs });
+        } catch (inner) {
+          try {
+            callPromise = client.callTool(outgoing);
+          } catch (inner2) {
+            throw inner2 || inner || err;
+          }
+        }
+      }
+
+      let timeoutId;
+      const timeoutPromise = new Promise((_, rej) => {
+        timeoutId = setTimeout(() => rej(new Error(`Local test runner timeout after ${clientTimeoutMs}ms`)), clientTimeoutMs);
+        if (timeoutId && typeof timeoutId.unref === 'function') {
+          timeoutId.unref();
+        }
+      });
+
+      try {
+        return await Promise.race([callPromise, timeoutPromise]);
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    } catch (e) {
+      const msg = String(e?.message || e || '');
+      if (msg.includes('Unknown blueprint action')) {
+        return { structuredContent: { success: false, error: msg } };
+      }
+      throw e;
+    }
+  };
+}
+
+function automationBridgeTarget() {
+  const host = process.env.MCP_AUTOMATION_WS_HOST ?? '127.0.0.1';
+  const ports = process.env.MCP_AUTOMATION_WS_PORTS
+    ? process.env.MCP_AUTOMATION_WS_PORTS.split(',').map((port) => parseInt(port.trim(), 10)).filter(Boolean)
+    : [8090, 8091];
+  return { host, ports };
+}
+
+async function waitForAnyPort(host, ports, timeoutMs = 10000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    for (const port of ports) {
+      try {
+        await new Promise((resolve, reject) => {
+          const sock = new net.Socket();
+          let settled = false;
+          sock.setTimeout(1000);
+          sock.once('connect', () => { settled = true; sock.destroy(); resolve(true); });
+          sock.once('timeout', () => { if (!settled) { settled = true; sock.destroy(); reject(new Error('timeout')); } });
+          sock.once('error', () => { if (!settled) { settled = true; sock.destroy(); reject(new Error('error')); } });
+          sock.connect(port, host);
+        });
+        console.log(`✅ Automation bridge appears to be listening on ${host}:${port}`);
+        return port;
+      } catch {
+        // Ignore and try the next port until the overall timeout expires.
+      }
+    }
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  throw new Error(`Timed out waiting for automation bridge on ports: ${ports.join(',')}`);
+}
+
+async function getLatestMtime(dir) {
+  let latest = 0;
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        const child = await getLatestMtime(fullPath);
+        if (child > latest) latest = child;
+      } else {
+        try {
+          const stat = await fs.stat(fullPath);
+          const mtime = stat.mtimeMs || 0;
+          if (mtime > latest) latest = mtime;
+        } catch {
+          // Ignore files that disappear while scanning mtimes.
+        }
+      }
+    }
+  } catch {
+    // Ignore missing directories when deciding whether dist is stale.
+  }
+  return latest;
+}
+
+async function runNpmBuild() {
+  const { spawn } = await import('node:child_process');
+  await new Promise((resolve, reject) => {
+    const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    const child = process.platform === 'win32'
+      ? spawn(`${npmCmd} run build`, { cwd: repoRoot, stdio: 'inherit', shell: true })
+      : spawn(npmCmd, ['run', 'build'], { cwd: repoRoot, stdio: 'inherit' });
+    child.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`Build failed with code ${code}`))));
+    child.on('error', (err) => reject(err));
+  });
+}
+
+async function resolveServerLaunch() {
+  const distPath = path.join(repoRoot, 'dist', 'cli.js');
+  const srcDir = path.join(repoRoot, 'src');
+  let useDist = false;
+  let distExists = false;
+
+  try {
+    await fs.access(distPath);
+    distExists = true;
+  } catch {
+    distExists = false;
+  }
+
+  if (process.env.UNREAL_MCP_FORCE_DIST === '1') {
+    useDist = true;
+    console.log('Forcing use of dist build via UNREAL_MCP_FORCE_DIST=1');
+  } else if (distExists) {
+    try {
+      const distStat = await fs.stat(distPath);
+      const srcLatest = await getLatestMtime(srcDir);
+      const srcIsNewer = srcLatest > (distStat.mtimeMs || 0);
+      const autoBuildEnabled = process.env.UNREAL_MCP_AUTO_BUILD === '1';
+      const autoBuildDisabled = process.env.UNREAL_MCP_NO_AUTO_BUILD === '1';
+      if (srcIsNewer) {
+        if (!autoBuildEnabled && !autoBuildDisabled) {
+          console.log('Detected newer source files than dist; attempting automatic build to refresh dist/ (set UNREAL_MCP_NO_AUTO_BUILD=1 to disable)');
+        }
+        if (autoBuildEnabled || !autoBuildDisabled) {
+          try {
+            await runNpmBuild();
+            console.log('Build succeeded — using dist/ for live tests');
+            useDist = true;
+          } catch (buildErr) {
+            console.warn('Automatic build failed or could not stat files — falling back to TypeScript source for live tests:', String(buildErr));
+            useDist = false;
+          }
+        } else {
+          console.log('Detected newer source files than dist but automatic build is disabled.');
+          console.log('Set UNREAL_MCP_AUTO_BUILD=1 to enable automatic builds, or run `npm run build` manually.');
+          useDist = false;
+        }
+      } else {
+        useDist = true;
+        console.log('Using built dist for live tests');
+      }
+    } catch (buildErr) {
+      console.warn('Automatic build failed or could not stat files — falling back to TypeScript source for live tests:', String(buildErr));
+      useDist = false;
+      console.log('Preferring TypeScript source for tests to pick up local changes (set UNREAL_MCP_FORCE_DIST=1 to force dist)');
+    }
+  } else {
+    console.log('dist not found — attempting to run `npm run build` to produce dist/ for live tests');
+    try {
+      await runNpmBuild();
+      useDist = true;
+      console.log('Build succeeded — using dist/ for live tests');
+    } catch (buildErr) {
+      console.warn('Automatic build failed — falling back to running TypeScript source with ts-node-esm:', String(buildErr));
+      useDist = false;
+    }
+  }
+
+  if (!useDist) {
+    return {
+      command: process.env.UNREAL_MCP_SERVER_CMD ?? 'npx',
+      args: ['ts-node-esm', path.join(repoRoot, 'src', 'cli.ts')]
+    };
+  }
+
+  return {
+    command: process.env.UNREAL_MCP_SERVER_CMD ?? serverCommand,
+    args: process.env.UNREAL_MCP_SERVER_ARGS?.split(',') ?? serverArgs
+  };
+}
+
+async function createConnectedClient(clientName, waitMs) {
+  const { host, ports } = automationBridgeTarget();
+  console.log(`Waiting up to ${waitMs}ms for automation bridge on ${host}:${ports.join(',')}`);
+  try {
+    await waitForAnyPort(host, ports, waitMs);
+  } catch (err) {
+    throw new Error(`Automation bridge did not become available before tests started: ${err.message}`);
+  }
+
+  const launch = await resolveServerLaunch();
+  const transport = new StdioClientTransport({
+    command: launch.command,
+    args: launch.args,
+    cwd: serverCwd,
+    stderr: 'inherit',
+    env: serverEnv
+  });
+  const client = new Client({ name: clientName, version: '1.0.0' });
+
+  await client.connect(transport);
+  await client.listTools({});
+  console.log('✅ Connected to Unreal MCP Server\n');
+
+  return { transport, client };
 }
 
 function getValueAtPath(source, pathExpression) {
@@ -698,6 +919,43 @@ function evaluateAssertions(testCase, response) {
   return { passed: true };
 }
 
+const capturedPlaceholderPattern = /\$\{captured:([^}]+)\}/g;
+/** @type {(captureKey: string) => void} */
+const noopMissingCapture = () => {};
+
+/**
+ * Resolves ${captured:key} placeholders in nested test arguments.
+ *
+ * @param {unknown} value
+ * @param {Record<string, string>} capturedValues
+ * @param {(captureKey: string) => void} onMissingCapture
+ * @returns {unknown}
+ */
+export function resolveCapturedValues(value, capturedValues, onMissingCapture = noopMissingCapture) {
+  if (typeof value === 'string') {
+    return value.replace(capturedPlaceholderPattern, (match, captureKey) => {
+      const captured = capturedValues[captureKey];
+      if (captured === undefined) {
+        onMissingCapture(captureKey);
+        return match;
+      }
+      return captured;
+    });
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => resolveCapturedValues(entry, capturedValues, onMissingCapture));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, resolveCapturedValues(entry, capturedValues, onMissingCapture)])
+    );
+  }
+
+  return value;
+}
+
 /**
  * Main test runner function
  */
@@ -713,50 +971,14 @@ export async function runToolTests(toolName, testCases) {
     const capturedValues = {};
 
     /**
-     * Resolves ${captured:key} placeholders in arguments with values from previous tests
-     */
-    function resolveCapturedValues(args) {
-      if (!args || typeof args !== 'object') return args;
-      const resolved = {};
-      for (const [key, value] of Object.entries(args)) {
-        if (typeof value === 'string') {
-          // Replace all ${captured:key} placeholders
-          resolved[key] = value.replace(/\$\{captured:([^}]+)\}/g, (match, captureKey) => {
-            const captured = capturedValues[captureKey];
-            if (captured === undefined) {
-              console.warn(`⚠️  Captured value '${captureKey}' not found, using placeholder`);
-              return match;
-            }
-            return captured;
-          });
-        } else if (Array.isArray(value)) {
-          resolved[key] = value.map(item => typeof item === 'string' ? 
-            item.replace(/\$\{captured:([^}]+)\}/g, (match, captureKey) => {
-              const captured = capturedValues[captureKey];
-              if (captured === undefined) {
-                console.warn(`⚠️  Captured value '${captureKey}' not found, using placeholder`);
-                return match;
-              }
-              return captured;
-            }) : item);
-        } else if (typeof value === 'object' && value !== null) {
-          resolved[key] = resolveCapturedValues(value);
-        } else {
-          resolved[key] = value;
-        }
-      }
-      return resolved;
-    }
-
-    /**
      * Captures values from a response based on captureResult configuration
      */
     function captureResultValues(testCase, response) {
       if (!testCase.captureResult || !response?.structuredContent) return;
-      
+
       const { key, fromField } = testCase.captureResult;
       if (!key || !fromField) return;
-      
+
       const value = fromField.includes('.')
         ? getValueAtPath(response.structuredContent, fromField)
         : response.structuredContent[fromField];
@@ -775,246 +997,11 @@ export async function runToolTests(toolName, testCases) {
   let callToolOnce;
 
   try {
-    // Wait for the automation bridge ports to be available so the spawned MCP server
-    // process can successfully connect to the editor plugin.
-    const bridgeHost = process.env.MCP_AUTOMATION_WS_HOST ?? '127.0.0.1';
-    const envPorts = process.env.MCP_AUTOMATION_WS_PORTS
-      ? process.env.MCP_AUTOMATION_WS_PORTS.split(',').map((p) => parseInt(p.trim(), 10)).filter(Boolean)
-      : [8090, 8091];
-    const waitMs = 10000; // Hardcoded increased timeout
+    ({ transport, client } = await createConnectedClient('unreal-mcp-test-runner', 10000));
 
-    console.log(`Waiting up to ${waitMs}ms for automation bridge on ${bridgeHost}:${envPorts.join(',')}`);
-
-    async function waitForAnyPort(host, ports, timeoutMs = 10000) {
-      const start = Date.now();
-      while (Date.now() - start < timeoutMs) {
-        for (const port of ports) {
-          try {
-            await new Promise((resolve, reject) => {
-              const sock = new net.Socket();
-              let settled = false;
-              sock.setTimeout(1000);
-              sock.once('connect', () => { settled = true; sock.destroy(); resolve(true); });
-              sock.once('timeout', () => { if (!settled) { settled = true; sock.destroy(); reject(new Error('timeout')); } });
-              sock.once('error', () => { if (!settled) { settled = true; sock.destroy(); reject(new Error('error')); } });
-              sock.connect(port, host);
-            });
-            console.log(`✅ Automation bridge appears to be listening on ${host}:${port}`);
-            return port;
-          } catch {
-            // ignore and try next port
-          }
-        }
-        // Yield to the event loop once instead of sleeping.
-        await new Promise((r) => setImmediate(r));
-      }
-      throw new Error(`Timed out waiting for automation bridge on ports: ${ports.join(',')}`);
-    }
-
-    try {
-      await waitForAnyPort(bridgeHost, envPorts, waitMs);
-    } catch (err) {
-      throw new Error(`Automation bridge did not become available before tests started: ${err.message}`);
-    }
-
-    // Decide whether to run the built server (dist/cli.js) or to run the
-    // TypeScript source directly. Prefer the built dist when it is up-to-date
-    // with the src tree. Fall back to running src with ts-node when dist is
-    // missing or older than the src modification time to avoid running stale code.
-    const distPath = path.join(repoRoot, 'dist', 'cli.js');
-    const srcDir = path.join(repoRoot, 'src');
-
-    async function getLatestMtime(dir) {
-      let latest = 0;
-      try {
-        const entries = await fs.readdir(dir, { withFileTypes: true });
-        for (const e of entries) {
-          const full = path.join(dir, e.name);
-          if (e.isDirectory()) {
-            const child = await getLatestMtime(full);
-            if (child > latest) latest = child;
-          } else {
-            try {
-              const st = await fs.stat(full);
-              const m = st.mtimeMs || 0;
-              if (m > latest) latest = m;
-            } catch (_) {
-              // Ignore files that disappear while scanning mtimes.
-            }
-          }
-        }
-      } catch (_) {
-        // ignore
-      }
-      return latest;
-    }
-
-    // Choose how to launch the server. Prefer using the built `dist/` executable so
-    // Node resolves ESM imports cleanly. If `dist/` is missing, attempt an automatic
-    // `npm run build` so users that run live tests don't hit ts-node resolution errors.
-    let useDist = false;
-    let distExists = false;
-    try {
-      await fs.access(distPath);
-      distExists = true;
-    } catch (e) {
-      distExists = false;
-    }
-
-    if (process.env.UNREAL_MCP_FORCE_DIST === '1') {
-      useDist = true;
-      console.log('Forcing use of dist build via UNREAL_MCP_FORCE_DIST=1');
-    } else if (distExists) {
-      try {
-        const distStat = await fs.stat(distPath);
-        const srcLatest = await getLatestMtime(srcDir);
-        const srcIsNewer = srcLatest > (distStat.mtimeMs || 0);
-        const autoBuildEnabled = process.env.UNREAL_MCP_AUTO_BUILD === '1';
-        const autoBuildDisabled = process.env.UNREAL_MCP_NO_AUTO_BUILD === '1';
-        if (srcIsNewer) {
-          if (!autoBuildEnabled && !autoBuildDisabled) {
-            console.log('Detected newer source files than dist; attempting automatic build to refresh dist/ (set UNREAL_MCP_NO_AUTO_BUILD=1 to disable)');
-          }
-          if (autoBuildEnabled || !autoBuildDisabled) {
-            const { spawn } = await import('node:child_process');
-            try {
-              await new Promise((resolve, reject) => {
-                const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-                const ps = process.platform === 'win32'
-                  ? spawn(`${npmCmd} run build`, { cwd: repoRoot, stdio: 'inherit', shell: true })
-                  : spawn(npmCmd, ['run', 'build'], { cwd: repoRoot, stdio: 'inherit' });
-                ps.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`Build failed with code ${code}`))));
-                ps.on('error', (err) => reject(err));
-              });
-              console.log('Build succeeded — using dist/ for live tests');
-              useDist = true;
-            } catch (buildErr) {
-              console.warn('Automatic build failed or could not stat files — falling back to TypeScript source for live tests:', String(buildErr));
-              useDist = false;
-            }
-          } else {
-            console.log('Detected newer source files than dist but automatic build is disabled.');
-            console.log('Set UNREAL_MCP_AUTO_BUILD=1 to enable automatic builds, or run `npm run build` manually.');
-            useDist = false;
-          }
-        } else {
-          useDist = true;
-          console.log('Using built dist for live tests');
-        }
-      } catch (buildErr) {
-        console.warn('Automatic build failed or could not stat files — falling back to TypeScript source for live tests:', String(buildErr));
-        useDist = false;
-        console.log('Preferring TypeScript source for tests to pick up local changes (set UNREAL_MCP_FORCE_DIST=1 to force dist)');
-      }
-    } else {
-      console.log('dist not found — attempting to run `npm run build` to produce dist/ for live tests');
-      try {
-        const { spawn } = await import('node:child_process');
-        await new Promise((resolve, reject) => {
-          const ps = spawn(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build'], { cwd: repoRoot, stdio: 'inherit' });
-          ps.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`Build failed with code ${code}`))));
-          ps.on('error', (err) => reject(err));
-        });
-        useDist = true;
-        console.log('Build succeeded — using dist/ for live tests');
-      } catch (buildErr) {
-        console.warn('Automatic build failed — falling back to running TypeScript source with ts-node-esm:', String(buildErr));
-        useDist = false;
-      }
-    }
-
-    if (!useDist) {
-      serverCommand = process.env.UNREAL_MCP_SERVER_CMD ?? 'npx';
-      serverArgs = ['ts-node-esm', path.join(repoRoot, 'src', 'cli.ts')];
-    } else {
-      serverCommand = process.env.UNREAL_MCP_SERVER_CMD ?? serverCommand;
-      serverArgs = process.env.UNREAL_MCP_SERVER_ARGS?.split(',') ?? serverArgs;
-    }
-
-    transport = new StdioClientTransport({
-      command: serverCommand,
-      args: serverArgs,
-      cwd: serverCwd,
-      stderr: 'inherit',
-      env: serverEnv
-    });
-
-    client = new Client({
-      name: 'unreal-mcp-test-runner',
-      version: '1.0.0'
-    });
-
-    await client.connect(transport);
-    await client.listTools({});
-    console.log('✅ Connected to Unreal MCP Server\n');
-
-    // Single-attempt call helper (no retries). This forwards a timeoutMs
-    // argument to the server so server-side automation calls use the same
-    // timeout the test harness expects.
-    // NOTE: This MUST be defined before the setup code below uses it.
-    // CRITICAL: We use TWO different timeouts:
-    // 1. Server-side timeout (progress-extended) - passed via arguments.timeoutMs
-    // 2. Client SDK timeout (fixed) - should be LONGER to allow progress extension
-    callToolOnce = async function (callOptions, baseTimeoutMs) {
-      const envDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000') || 60000;
-      const perCall = Number(callOptions?.arguments?.timeoutMs) || undefined;
-      const base = typeof baseTimeoutMs === 'number' && baseTimeoutMs > 0 ? baseTimeoutMs : (perCall || envDefault);
-      const serverTimeoutMs = base;  // Server-side timeout (can be extended by progress)
-      
-      // Client SDK timeout should be LONGER than server timeout to allow progress extension
-      // Use 5 minutes (ABSOLUTE_MAX_TIMEOUT_MS) to give progress updates time to extend server timeout
-      const clientTimeoutMs = Number(process.env.UNREAL_MCP_TEST_CLIENT_TIMEOUT_MS ?? '300000') || 300000;
-      
-      try {
-        console.log(`[CALL] ${callOptions.name} (server timeout: ${serverTimeoutMs}ms, client timeout: ${clientTimeoutMs}ms)`);
-        const outgoing = Object.assign({}, callOptions, { arguments: { ...(callOptions.arguments || {}), timeoutMs: serverTimeoutMs } });
-        // Prefer instructing the MCP client to use a matching timeout if
-        // the client library supports per-call options; fall back to the
-        // plain call if not supported.
-        // CRITICAL: Use LONG client timeout to allow server-side progress extension
-        let callPromise;
-        try {
-          // Correct parameter order: (params, resultSchema?, options)
-          callPromise = client.callTool(outgoing, undefined, { timeout: clientTimeoutMs });
-        } catch (err) {
-          // Fall back to calling the older signature where options might be second param
-          try {
-            callPromise = client.callTool(outgoing, { timeout: clientTimeoutMs });
-          } catch (inner) {
-            try {
-              callPromise = client.callTool(outgoing);
-            } catch (inner2) {
-              throw inner2 || inner || err;
-            }
-          }
-        }
-
-        let timeoutId;
-        const timeoutPromise = new Promise((_, rej) => {
-          timeoutId = setTimeout(() => rej(new Error(`Local test runner timeout after ${clientTimeoutMs}ms`)), clientTimeoutMs);
-          if (timeoutId && typeof timeoutId.unref === 'function') {
-            timeoutId.unref();
-          }
-        });
-        try {
-          const timed = Promise.race([
-            callPromise,
-            timeoutPromise
-          ]);
-          return await timed;
-        } finally {
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-        }
-      } catch (e) {
-        const msg = String(e?.message || e || '');
-        if (msg.includes('Unknown blueprint action')) {
-          return { structuredContent: { success: false, error: msg } };
-        }
-        throw e;
-      }
-    };
+    // Forward timeoutMs to the server while allowing the MCP client timeout to
+    // stay longer so server-side progress can extend long-running automation.
+    callToolOnce = createToolCaller(client, { useProgressTimeouts: true });
 
     // Retry helper with exponential backoff for setup operations
     // Helps handle transient failures like Intel GPU driver crashes
@@ -1026,7 +1013,7 @@ export async function runToolTests(toolName, testCases) {
         timeoutMs = 15000,
         operationName = callOptions.name
       } = options;
-      
+
       let lastError = null;
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
@@ -1046,7 +1033,7 @@ export async function runToolTests(toolName, testCases) {
                                 errorMsg.toLowerCase().includes('1006') ||
                                 errorMsg.toLowerCase().includes('crash') ||
                                 errorMsg.toLowerCase().includes('exception');
-          
+
           if (attempt < maxRetries) {
             const delay = Math.min(baseDelayMs * Math.pow(2, attempt - 1), maxDelayMs);
             const reason = isDriverCrash ? 'driver instability detected' : 'transient failure';
@@ -1064,7 +1051,7 @@ export async function runToolTests(toolName, testCases) {
       // Delete test levels
       await callToolOnce({ name: 'manage_level', arguments: { action: 'unload', levelName: 'MainLevel' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_level', arguments: { action: 'unload', levelName: 'TestLevel' } }, 10000).catch(() => {});
-      
+
       // Delete geometry actors
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestBox' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestSphere' } }, 5000).catch(() => {});
@@ -1078,7 +1065,7 @@ export async function runToolTests(toolName, testCases) {
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'SplineControlPoints' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'NavLinkProxy_Test' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'SmartNavLink_Test' } }, 5000).catch(() => {});
-      
+
       // Delete test assets (blueprints, materials)
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/BP_Test' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/SplineBP' } }, 10000).catch(() => {});
@@ -1092,15 +1079,15 @@ export async function runToolTests(toolName, testCases) {
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/TestMesh' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/TestMat' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete', path: '/Game/MCPTest/TestInstance', force: true } }, 10000).catch(() => {});
-      
+
       // Delete foliage types
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/Foliage/Grass' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/Foliage/Tree' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/Foliage/Bush' } }, 10000).catch(() => {});
-      
+
       // Delete NavMeshBoundsVolume
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'NavMeshBoundsVolume' } }, 5000).catch(() => {});
-      
+
       console.log('✅ Cleanup complete\n');
     } catch (cleanupErr) {
       console.warn('⚠️  Cleanup had issues:', cleanupErr?.message || cleanupErr);
@@ -1139,10 +1126,10 @@ export async function runToolTests(toolName, testCases) {
           action: 'set_component_property',
           actorName: 'TestActor',
           componentName: 'StaticMeshComponent0',
-          properties: { 
+          properties: {
             'CollisionEnabled': 'QueryAndPhysics',
             'SimulatePhysics': true,
-            'bSimulatePhysics': true 
+            'bSimulatePhysics': true
           }
         }
       }, 10000).catch(err => console.warn('⚠️  Physics setup for TestActor failed:', err?.message || err));
@@ -1412,9 +1399,9 @@ export async function runToolTests(toolName, testCases) {
       // Use retry logic for level creation due to Intel GPU driver instability
       await callWithRetry({
         name: 'manage_level_structure',
-        arguments: { 
-          action: 'create_level', 
-          levelName: 'TestLevel', 
+        arguments: {
+          action: 'create_level',
+          levelName: 'TestLevel',
           levelPath: '/Game/MCPTest',
           bCreateWorldPartition: false,
           save: true
@@ -1424,9 +1411,9 @@ export async function runToolTests(toolName, testCases) {
       // Create MainLevel for streaming/sublevel tests
       await callWithRetry({
         name: 'manage_level_structure',
-        arguments: { 
-          action: 'create_level', 
-          levelName: 'MainLevel', 
+        arguments: {
+          action: 'create_level',
+          levelName: 'MainLevel',
           levelPath: '/Game/MCPTest',
           bCreateWorldPartition: false,
           save: true
@@ -1459,18 +1446,18 @@ export async function runToolTests(toolName, testCases) {
           name: 'control_actor',
           arguments: { action: 'delete', actorName: 'TestBox' }
         }, 5000).catch(() => { /* ignore if doesn't exist */ });
-        
+
         await callToolOnce({
           name: 'control_actor',
           arguments: { action: 'delete', actorName: 'TestSphere' }
         }, 5000).catch(() => { /* ignore if doesn't exist */ });
-        
+
         // Recreate fresh geometry
         await callToolOnce({
           name: 'manage_geometry',
           arguments: { action: 'create_box', name: 'TestBox', width: 100, height: 100, depth: 100 }
         }, 10000);
-        
+
         await callToolOnce({
           name: 'manage_geometry',
           arguments: { action: 'create_sphere', name: 'TestSphere', radius: 50, segments: 16 }
@@ -1483,12 +1470,10 @@ export async function runToolTests(toolName, testCases) {
     // Run each test case
     // Rate limit: 600 req/min = 10 req/sec, so add 100ms delay between tests
     const TEST_THROTTLE_MS = Number(process.env.UNREAL_MCP_TEST_THROTTLE_MS ?? 100);
-    
+
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i];
-      // CRITICAL FIX: Check testCase.timeoutMs FIRST (test case level), then arguments.timeoutMs
-      // Test files put timeoutMs at test case level, not inside arguments
-      const testCaseTimeoutMs = Number(process.env.UNREAL_MCP_TEST_CASE_TIMEOUT_MS ?? testCase.timeoutMs ?? testCase.arguments?.timeoutMs ?? '5000');
+      const testCaseTimeoutMs = getTestCaseTimeoutMs(testCase);
       const startTime = performance.now();
 
       try {
@@ -1503,20 +1488,15 @@ export async function runToolTests(toolName, testCases) {
 
       try {
         // Resolve captured values in arguments before executing
-        const resolvedArgs = resolveCapturedValues(testCase.arguments);
+        const resolvedArgs = resolveCapturedValues(testCase.arguments, capturedValues, (captureKey) => {
+          console.warn(`⚠️  Captured value '${captureKey}' not found, using placeholder`);
+        });
         const response = await callToolOnce({ name: testCase.toolName, arguments: resolvedArgs }, testCaseTimeoutMs);
 
         const endTime = performance.now();
         const durationMs = endTime - startTime;
 
-        let structuredContent = response.structuredContent ?? null;
-        if (structuredContent === null && response.content?.length) {
-          for (const entry of response.content) {
-            if (entry?.type !== 'text' || typeof entry.text !== 'string') continue;
-            try { structuredContent = JSON.parse(entry.text); break; } catch { }
-          }
-        }
-        const normalizedResponse = { ...response, structuredContent };
+        const normalizedResponse = normalizeResponseForEvaluation(response);
         if (RESPONSE_LOGGING_ENABLED) {
           logMcpResponse(testCase.toolName + " :: " + testCase.scenario, normalizeMcpResponse(normalizedResponse));
         }
@@ -1539,23 +1519,21 @@ export async function runToolTests(toolName, testCases) {
         // success=false is the EXPECTED outcome and the test should PASS.
         // This fixes negative test cases (like delete_object with non-existent actor)
         // where success=false is the correct expected result.
-        const isPerformanceTest = testCase.arguments?.timeoutMs !== undefined || 
+        const isPerformanceTest = testCase.arguments?.timeoutMs !== undefined ||
                                   testCase.scenario?.includes('performance');
         const responseSuccess = getResponseOutcome(normalizedResponse).structuredSuccess;
-        
+
         // Check PRIMARY intent - if the test EXPECTS failure, success=false is correct
-        const lowerExpected = (testCase.expected || '').toString().toLowerCase();
-        const primaryCondition = lowerExpected.split('|')[0].split(' or ')[0].trim();
-        const primaryExpectsFailure = failureKeywords.some((word) => primaryCondition.includes(word));
-        
+        const { primaryExpectsFailure } = getExpectationIntent(testCase.expected || '');
+
         // Only fail performance test if:
         // 1. It's a performance test AND
         // 2. Response shows success=false AND
         // 3. PRIMARY expectation is NOT failure (test expected success)
         if (isPerformanceTest && responseSuccess === false && !primaryExpectsFailure) {
           passed = false;
-          const errorMsg = normalizedResponse?.structuredContent?.error || 
-                          normalizedResponse?.structuredContent?.message || 
+          const errorMsg = normalizedResponse?.structuredContent?.error ||
+                          normalizedResponse?.structuredContent?.message ||
                           'Operation failed during performance test';
           reason = `Performance test failed: Operation returned success=false. Error: ${errorMsg}`;
         }
@@ -1606,11 +1584,11 @@ export async function runToolTests(toolName, testCases) {
         // "error" matches any error message.
         const crashIndicators = ['disconnect', '1006', 'econnreset', 'socket hang up', 'connection lost', 'bridge disconnected'];
         const isCrashError = crashIndicators.some(ind => lowerError.includes(ind));
-        const explicitlyExpectsCrash = lowerExpected.includes('disconnect') || 
-          lowerExpected.includes('crash') || 
+        const explicitlyExpectsCrash = lowerExpected.includes('disconnect') ||
+          lowerExpected.includes('crash') ||
           lowerExpected.includes('connection lost') ||
           lowerExpected.includes('ue_not_connected');
-        
+
         if (isCrashError && !explicitlyExpectsCrash) {
           console.log(`[FAILED] ${testCase.scenario} (${durationMs.toFixed(1)} ms) => CRASH/CONNECTION LOSS: ${errorMessage}`);
           results.push({
@@ -1629,16 +1607,12 @@ export async function runToolTests(toolName, testCases) {
           break;
         }
 
-        // Determine PRIMARY intent from expected string
-        // Only pass timeout tests when "timeout" is the PRIMARY expectation,
-        // not just an alternative in the expected string.
-        const primaryCondition = lowerExpected.split('|')[0].split(' or ')[0].trim();
-        const primaryExpectsTimeout = primaryCondition === 'timeout' || primaryCondition.includes('timeout');
+        const { primaryExpectsTimeout } = getExpectationIntent(testCase.expected || '');
 
         // If the test's PRIMARY expectation is a timeout, then an MCP/client timeout
         // should be treated as the expected outcome. Accept both "timeout" and "timed out"
         // phrasing from different MCP client implementations.
-        // 
+        //
         // CRITICAL: This fixes the bug where tests like "error|timeout|success" would pass
         // on timeout even though the PRIMARY expectation is "error" (validation failure).
         // A timeout in such cases is an infrastructure failure, not a validation success.
@@ -1677,21 +1651,21 @@ export async function runToolTests(toolName, testCases) {
           break;
         }
       }
-      
+
       // Throttle to avoid rate limiting (600 req/min = 10 req/sec)
       if (TEST_THROTTLE_MS > 0 && i < testCases.length - 1) {
         await new Promise(resolve => setTimeout(resolve, TEST_THROTTLE_MS));
       }
-      
+
       // GEOMETRY RESET: Reset geometry actors between manage_geometry tests to prevent
       // polygon explosion from accumulating. Destructive operations (subdivide, bevel, shell,
       // etc.) can create millions of triangles, eventually causing OOM crashes.
       // We reset every N destructive geometry tests to balance performance vs memory safety.
       const GEOMETRY_RESET_INTERVAL = 5; // Reset every 5 destructive geometry tests (reduced from 10)
-      
+
       // High-impact operations that cause exponential triangle growth - ALWAYS reset before these
       const HIGH_IMPACT_OPS = ['poke', 'subdivide', 'triangulate', 'array_radial', 'array_linear'];
-      
+
       const isGeometryTest = testCase.toolName === 'manage_geometry';
       const testAction = testCase.arguments?.action || '';
       const isDestructiveGeometryOp = isGeometryTest && [
@@ -1700,7 +1674,7 @@ export async function runToolTests(toolName, testCases) {
         'array_linear', 'array_radial', 'cylindrify', 'spherify', 'bend', 'twist', 'taper',
         'noise_deform', 'smooth', 'relax', 'stretch', 'triangulate'
       ].some(op => testAction.includes(op));
-      
+
       // Always reset BEFORE high-impact operations to prevent POLYGON_LIMIT_EXCEEDED
       const isHighImpactOp = isGeometryTest && HIGH_IMPACT_OPS.some(op => testAction.includes(op));
       if (isHighImpactOp) {
@@ -1769,213 +1743,10 @@ export class TestRunner {
     const results = [];
 
     try {
-      const bridgeHost = process.env.MCP_AUTOMATION_WS_HOST ?? '127.0.0.1';
-      const envPorts = process.env.MCP_AUTOMATION_WS_PORTS
-        ? process.env.MCP_AUTOMATION_WS_PORTS.split(',').map((p) => parseInt(p.trim(), 10)).filter(Boolean)
-        : [8090, 8091];
       const waitMs = parseInt(process.env.UNREAL_MCP_WAIT_PORT_MS ?? '5000', 10);
+      ({ transport, client } = await createConnectedClient('unreal-mcp-step-runner', waitMs));
 
-      async function waitForAnyPort(host, ports, timeoutMs = 10000) {
-        const start = Date.now();
-        while (Date.now() - start < timeoutMs) {
-          for (const port of ports) {
-            try {
-              await new Promise((resolve, reject) => {
-                const sock = new net.Socket();
-                let settled = false;
-                sock.setTimeout(1000);
-                sock.once('connect', () => { settled = true; sock.destroy(); resolve(true); });
-                sock.once('timeout', () => { if (!settled) { settled = true; sock.destroy(); reject(new Error('timeout')); } });
-                sock.once('error', () => { if (!settled) { settled = true; sock.destroy(); reject(new Error('error')); } });
-                sock.connect(port, host);
-              });
-              console.log(`✅ Automation bridge appears to be listening on ${host}:${port}`);
-              return port;
-            } catch {
-            }
-          }
-          await new Promise((r) => setImmediate(r));
-        }
-        throw new Error(`Timed out waiting for automation bridge on ports: ${ports.join(',')}`);
-      }
-
-      try {
-        await waitForAnyPort(bridgeHost, envPorts, waitMs);
-      } catch (err) {
-        throw new Error(`Automation bridge did not become available before tests started: ${err.message}`);
-      }
-
-      const distPath = path.join(repoRoot, 'dist', 'cli.js');
-      const srcDir = path.join(repoRoot, 'src');
-
-      async function getLatestMtime(dir) {
-        let latest = 0;
-        try {
-          const entries = await fs.readdir(dir, { withFileTypes: true });
-          for (const e of entries) {
-            const full = path.join(dir, e.name);
-            if (e.isDirectory()) {
-              const child = await getLatestMtime(full);
-              if (child > latest) latest = child;
-            } else {
-              try {
-                const st = await fs.stat(full);
-                const m = st.mtimeMs || 0;
-                if (m > latest) latest = m;
-              } catch (_) {
-                // Ignore files that disappear while scanning mtimes.
-              }
-            }
-          }
-        } catch (_) {
-          // Ignore missing plugin directories when deciding whether dist is stale.
-        }
-        return latest;
-      }
-
-      let useDist = false;
-      let distExists = false;
-      try {
-        await fs.access(distPath);
-        distExists = true;
-      } catch (e) {
-        distExists = false;
-      }
-
-      if (process.env.UNREAL_MCP_FORCE_DIST === '1') {
-        useDist = true;
-        console.log('Forcing use of dist build via UNREAL_MCP_FORCE_DIST=1');
-      } else if (distExists) {
-        try {
-          const distStat = await fs.stat(distPath);
-          const srcLatest = await getLatestMtime(srcDir);
-          const srcIsNewer = srcLatest > (distStat.mtimeMs || 0);
-          const autoBuildEnabled = process.env.UNREAL_MCP_AUTO_BUILD === '1';
-          const autoBuildDisabled = process.env.UNREAL_MCP_NO_AUTO_BUILD === '1';
-          if (srcIsNewer) {
-            if (!autoBuildEnabled && !autoBuildDisabled) {
-              console.log('Detected newer source files than dist; attempting automatic build to refresh dist/ (set UNREAL_MCP_NO_AUTO_BUILD=1 to disable)');
-            }
-            if (autoBuildEnabled || !autoBuildDisabled) {
-              const { spawn } = await import('node:child_process');
-              try {
-                await new Promise((resolve, reject) => {
-                  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-                  const ps = spawn(npmCmd, ['run', 'build'], { cwd: repoRoot, stdio: 'inherit', shell: process.platform === 'win32' });
-                  ps.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`Build failed with code ${code}`))));
-                  ps.on('error', (err) => reject(err));
-                });
-                console.log('Build succeeded — using dist/ for live tests');
-                useDist = true;
-              } catch (buildErr) {
-                console.warn('Automatic build failed or could not stat files — falling back to TypeScript source for live tests:', String(buildErr));
-                useDist = false;
-              }
-            } else {
-              console.log('Detected newer source files than dist but automatic build is disabled.');
-              console.log('Set UNREAL_MCP_AUTO_BUILD=1 to enable automatic builds, or run `npm run build` manually.');
-              useDist = false;
-            }
-          } else {
-            useDist = true;
-            console.log('Using built dist for live tests');
-          }
-        } catch (buildErr) {
-          console.warn('Automatic build failed or could not stat files — falling back to TypeScript source for live tests:', String(buildErr));
-          useDist = false;
-          console.log('Preferring TypeScript source for tests to pick up local changes (set UNREAL_MCP_FORCE_DIST=1 to force dist)');
-        }
-      } else {
-        console.log('dist not found — attempting to run `npm run build` to produce dist/ for live tests');
-        try {
-          const { spawn } = await import('node:child_process');
-          await new Promise((resolve, reject) => {
-            const ps = spawn(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build'], { cwd: repoRoot, stdio: 'inherit' });
-            ps.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`Build failed with code ${code}`))));
-            ps.on('error', (err) => reject(err));
-          });
-          useDist = true;
-          console.log('Build succeeded — using dist/ for live tests');
-        } catch (buildErr) {
-          console.warn('Automatic build failed — falling back to running TypeScript source with ts-node-esm:', String(buildErr));
-          useDist = false;
-        }
-      }
-
-      if (!useDist) {
-        serverCommand = process.env.UNREAL_MCP_SERVER_CMD ?? 'npx';
-        serverArgs = ['ts-node-esm', path.join(repoRoot, 'src', 'cli.ts')];
-      } else {
-        serverCommand = process.env.UNREAL_MCP_SERVER_CMD ?? serverCommand;
-        serverArgs = process.env.UNREAL_MCP_SERVER_ARGS?.split(',') ?? serverArgs;
-      }
-
-      transport = new StdioClientTransport({
-        command: serverCommand,
-        args: serverArgs,
-        cwd: serverCwd,
-        stderr: 'inherit',
-        env: serverEnv
-      });
-
-      client = new Client({
-        name: 'unreal-mcp-step-runner',
-        version: '1.0.0'
-      });
-
-      await client.connect(transport);
-      await client.listTools({});
-      console.log('✅ Connected to Unreal MCP Server\n');
-
-      const callToolOnce = async function (callOptions, baseTimeoutMs) {
-        const envDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000') || 60000;
-        const perCall = Number(callOptions?.arguments?.timeoutMs) || undefined;
-        const base = typeof baseTimeoutMs === 'number' && baseTimeoutMs > 0 ? baseTimeoutMs : (perCall || envDefault);
-        const timeoutMs = base;
-        try {
-          console.log(`[CALL] ${callOptions.name} (timeout ${timeoutMs}ms)`);
-          const outgoing = Object.assign({}, callOptions, { arguments: { ...(callOptions.arguments || {}), timeoutMs } });
-          let callPromise;
-          try {
-            callPromise = client.callTool(outgoing, undefined, { timeout: timeoutMs });
-          } catch (err) {
-            try {
-              callPromise = client.callTool(outgoing, { timeout: timeoutMs });
-            } catch (inner) {
-              try {
-                callPromise = client.callTool(outgoing);
-              } catch (inner2) {
-                throw inner2 || inner || err;
-              }
-            }
-          }
-
-          let timeoutId;
-          const timeoutPromise = new Promise((_, rej) => {
-            timeoutId = setTimeout(() => rej(new Error(`Local test runner timeout after ${timeoutMs}ms`)), timeoutMs);
-            if (timeoutId && typeof timeoutId.unref === 'function') {
-              timeoutId.unref();
-            }
-          });
-          try {
-            const timed = Promise.race([
-              callPromise,
-              timeoutPromise
-            ]);
-            return await timed;
-          } finally {
-            if (timeoutId) {
-              clearTimeout(timeoutId);
-            }
-          }
-        } catch (e) {
-          const msg = String(e?.message || e || '');
-          if (msg.includes('Unknown blueprint action')) {
-            return { structuredContent: { success: false, error: msg } };
-          }
-          throw e;
-        }
-      };
+      const callToolOnce = createToolCaller(client);
 
       const tools = {
         async executeTool(toolName, args, options = {}) {
@@ -1984,17 +1755,7 @@ export class TestRunner {
           if (isBridgeDisconnectedSignal(response)) {
             throw new Error('Unreal Engine is not connected');
           }
-          let structuredContent = response.structuredContent ?? null;
-          if (structuredContent === null && response.content?.length) {
-            for (const entry of response.content) {
-              if (entry?.type !== 'text' || typeof entry.text !== 'string') continue;
-              try {
-                structuredContent = JSON.parse(entry.text);
-                break;
-              } catch {
-              }
-            }
-          }
+          const { structuredContent } = normalizeResponseForEvaluation(response);
 
           if (structuredContent && typeof structuredContent === 'object') {
             return structuredContent;

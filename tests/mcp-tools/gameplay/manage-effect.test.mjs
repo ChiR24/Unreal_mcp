@@ -6,8 +6,8 @@
 
 import { runToolTests } from '../../test-runner.mjs';
 
-const TEST_FOLDER = '/Game/MCPTest/AuthoringAssets';
 const ts = Date.now();
+const TEST_FOLDER = `/Game/MCPTest/ManageEffect_${ts}`;
 const TEST_ACTOR = `TestActor_${ts}`;
 const EFFECT_ACTOR = `TestEffectActor_${ts}`;
 const SPAWNED_EFFECT_ACTOR = `TestSpawnedEffectActor_${ts}`;

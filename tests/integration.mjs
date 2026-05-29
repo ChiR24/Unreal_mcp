@@ -47,9 +47,9 @@ const testCases = [
   { scenario: 'Sessions: Get info', toolName: 'manage_networking', arguments: { action: 'get_sessions_info' }, expected: 'success' },
   // Phase 23: Level Structure
   { scenario: 'Level Structure: Get info', toolName: 'manage_level_structure', arguments: { action: 'get_level_structure_info' }, expected: 'success' },
-  { scenario: 'Level Structure: Enable World Partition', toolName: 'manage_level_structure', arguments: { action: 'enable_world_partition', bEnableWorldPartition: true }, expected: 'error|cannot enable|success' },
-  { scenario: 'Level Structure: Configure grid size', toolName: 'manage_level_structure', arguments: { action: 'configure_grid_size', gridCellSize: 12800, loadingRange: 25600 }, expected: 'error|not enabled|success' },
-  { scenario: 'Level Structure: Create data layer', toolName: 'manage_level_structure', arguments: { action: 'create_data_layer', dataLayerName: 'TestLayer', dataLayerType: 'Runtime' }, expected: 'error|world partition|success|not available' },
+  { scenario: 'Level Structure: Enable World Partition', toolName: 'manage_level_structure', arguments: { action: 'enable_world_partition', bEnableWorldPartition: true }, expected: 'success|cannot enable' },
+  { scenario: 'Level Structure: Configure grid size', toolName: 'manage_level_structure', arguments: { action: 'configure_grid_size', gridCellSize: 12800, loadingRange: 25600 }, expected: 'success|not enabled' },
+  { scenario: 'Level Structure: Create data layer', toolName: 'manage_level_structure', arguments: { action: 'create_data_layer', dataLayerName: 'TestLayer', dataLayerType: 'Runtime' }, expected: 'success|world partition|not available' },
   { scenario: 'Level Structure: Configure HLOD', toolName: 'manage_level_structure', arguments: { action: 'configure_hlod_layer', hlodLayerName: 'DefaultHLOD', cellSize: 25600 }, expected: 'success' },
   { scenario: 'Level Structure: Open Level Blueprint', toolName: 'manage_level_structure', arguments: { action: 'open_level_blueprint' }, expected: 'success' },
   // Phase 24: Volumes & Zones
