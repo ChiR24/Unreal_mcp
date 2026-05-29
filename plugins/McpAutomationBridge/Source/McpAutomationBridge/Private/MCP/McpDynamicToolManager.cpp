@@ -39,7 +39,7 @@ void FMcpDynamicToolManager::Initialize(const FMcpToolRegistry& Registry, bool b
 		if (CS.Name.IsEmpty())
 		{
 			CS.Name = Category;
-			CS.bEnabled = bEnabled;
+			CS.bEnabled = true;
 			CS.ToolCount = 0;
 			CS.EnabledCount = 0;
 		}
@@ -266,10 +266,15 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::EnableTools(const TArray<FString
 		FToolState* TS = ToolStates.Find(Name);
 		if (TS)
 		{
+			FCategoryState* CS = CategoryStates.Find(TS->Category);
+			if (CS && !CS->bEnabled)
+			{
+				CS->bEnabled = true;
+				bAnyActualChange = true;
+			}
 			if (!TS->bEnabled)
 			{
 				TS->bEnabled = true;
-				FCategoryState* CS = CategoryStates.Find(TS->Category);
 				if (CS) CS->EnabledCount++;
 				bAnyActualChange = true;
 			}

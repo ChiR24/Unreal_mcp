@@ -57,20 +57,20 @@ public class McpAutomationBridge : ModuleRules
         // ============================================================================
         // Using NoPCHs to avoid "Failed to create virtual memory for PCH" errors
         // (C3859/C1076) that occur with large modules on systems with limited memory.
-        // 
+        //
         // This trades slightly longer compile times for reliable builds without
         // requiring system paging file modifications.
         // ============================================================================
-        
+
         // ============================================================================
         // DYNAMIC MEMORY-BASED BUILD CONFIGURATION
         // ============================================================================
         // Automatically adjust build parallelism based on ACTUAL available system memory
         // to prevent "compiler is out of heap space" errors (C1060)
-        
+
         long AvailableMemoryMB = GetActualAvailableMemoryMB();
         long TotalMemoryMB = GetTotalPhysicalMemoryMB();
-        
+
         // ============================================================================
         // UE 5.0-5.2 + MSVC: Disable undefined-identifier-to-errors and define __has_feature macro
         // ============================================================================
@@ -123,17 +123,17 @@ public class McpAutomationBridge : ModuleRules
 
         // UBT already handles parallelism based on 1.5GB/action globally
         // Our job is to prevent HUGE compilation units that exceed heap space
-        
+
         // IMPORTANT: Unity builds combine many .cpp files into one compilation unit
         // This causes each compiler process to need 3-6GB+ heap space instead of 1.5GB
         // For a module with 50+ handler files, unity builds cause heap exhaustion
         // even with plenty of RAM, because Windows page file space is limited
-        
+
         Console.WriteLine(string.Format("McpAutomationBridge: Detected {0}MB available memory (of {1}MB total)", AvailableMemoryMB, TotalMemoryMB));
-        
+
         // Disable PCH to prevent virtual memory exhaustion
         PCHUsage = PCHUsageMode.NoPCHs;
-        
+
         bUseUnity = true;
         TrySetIntMember(this, "NumIncludedBytesPerUnityCPPOverride", 256 * 1024);
 
@@ -148,8 +148,8 @@ public class McpAutomationBridge : ModuleRules
         if (Target.bBuildEditor)
         {
             // Editor-only Public Dependencies (required for all editor builds)
-            PublicDependencyModuleNames.AddRange(new string[] 
-            { 
+            PublicDependencyModuleNames.AddRange(new string[]
+            {
                 "Sequencer", "MovieSceneTools", "Niagara", "UnrealEd",
                 "WorldPartitionEditor", "DataLayerEditor",
                 "MaterialEditor"  // UMaterialExpressionRotator and other material expressions
@@ -262,7 +262,7 @@ public class McpAutomationBridge : ModuleRules
             // 1. SubobjectData Detection
             // UE 5.7 renamed/moved this to SubobjectDataInterface in Editor/
             bool bHasSubobjectDataInterface = Directory.Exists(Path.Combine(EngineDir, "Source", "Editor", "SubobjectDataInterface"));
-            
+
             if (bHasSubobjectDataInterface)
             {
                 PrivateDependencyModuleNames.Add("SubobjectDataInterface");
@@ -429,7 +429,7 @@ public class McpAutomationBridge : ModuleRules
     private bool SearchDirectoryBounded(string rootDir, string targetName, int maxDepth)
     {
         if (maxDepth < 0 || !Directory.Exists(rootDir)) return false;
-        
+
         try
         {
             foreach (string subDir in Directory.GetDirectories(rootDir))
@@ -437,7 +437,7 @@ public class McpAutomationBridge : ModuleRules
                 string dirName = Path.GetFileName(subDir);
                 if (string.Equals(dirName, targetName, StringComparison.OrdinalIgnoreCase))
                     return true;
-                
+
                 if (maxDepth > 0 && SearchDirectoryBounded(subDir, targetName, maxDepth - 1))
                     return true;
             }
@@ -470,7 +470,7 @@ public class McpAutomationBridge : ModuleRules
         {
             // Fall through to heuristics
         }
-        
+
         // Fallback: Check for environment variable hint
         string MemoryHint = Environment.GetEnvironmentVariable("UE_BUILD_MEMORY_MB");
         if (!string.IsNullOrEmpty(MemoryHint))
@@ -481,7 +481,7 @@ public class McpAutomationBridge : ModuleRules
                 return HintValue;
             }
         }
-        
+
         // Conservative fallback - assume 4GB available
         return 4096;
     }
@@ -508,7 +508,7 @@ public class McpAutomationBridge : ModuleRules
         {
             Console.WriteLine(string.Format("McpAutomationBridge: Total memory detection failed: {0}", Ex.Message));
         }
-        
+
         return 8192; // Conservative fallback
     }
 
@@ -578,7 +578,7 @@ public class McpAutomationBridge : ModuleRules
 
     /// <summary>
     /// Adds an optional module as a dependency with Windows delay-load support.
-    /// 
+    ///
     /// NOTE: Delay-load only works for function imports. Modules that export DATA symbols
     /// (variables, constants like `FrontendInvalidID`) cannot be delay-loaded and will fail
     /// with LNK1194. For those modules, use AddOptionalConditionalModule() instead.

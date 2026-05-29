@@ -22,8 +22,16 @@ public:
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		return FMcpSchemaBuilder()
-				.StringEnum(TEXT("action"), McpConsolidatedActions::SystemControl(),
-					TEXT("Action"))
+			.StringEnum(TEXT("action"), McpConsolidatedActions::SystemControl(),
+				TEXT("Action"))
+			.StringEnum(TEXT("type"), {
+				TEXT("CPU"),
+				TEXT("GPU"),
+				TEXT("Memory"),
+				TEXT("RenderThread"),
+				TEXT("GameThread"),
+				TEXT("All")
+			}, TEXT("Profiling or benchmark type."))
 			.String(TEXT("profileType"), TEXT(""))
 			.String(TEXT("category"), TEXT(""))
 			.Number(TEXT("level"), TEXT(""))
@@ -45,6 +53,23 @@ public:
 			.String(TEXT("configName"), TEXT(""))
 			.String(TEXT("code"), TEXT("Python code to execute inline"))
 			.String(TEXT("file"), TEXT("Path to .py file to execute"))
+			.Number(TEXT("duration"), TEXT("Duration in seconds."))
+			.String(TEXT("outputPath"), TEXT("Output file or directory path."))
+			.Bool(TEXT("detailed"), TEXT("Whether to include detailed output."))
+			.Number(TEXT("scale"), TEXT("Resolution scale or percentage."))
+			.Number(TEXT("maxFPS"), TEXT("Frame rate limit."))
+			.Number(TEXT("poolSize"), TEXT("Texture streaming pool size in MB."))
+			.Bool(TEXT("boostPlayerLocation"), TEXT("Whether to boost streaming around the player location."))
+			.Number(TEXT("forceLOD"), TEXT("Forced LOD index."))
+			.Number(TEXT("lodBias"), TEXT("LOD bias."))
+			.Bool(TEXT("enableInstancing"), TEXT("Whether to enable instancing."))
+			.Bool(TEXT("enableBatching"), TEXT("Whether to enable batching."))
+			.Bool(TEXT("mergeActors"), TEXT("Whether to merge source actors."))
+			.Array(TEXT("actors"), TEXT("Actor names."))
+			.Number(TEXT("streamingDistance"), TEXT("World Partition streaming distance."))
+			.Number(TEXT("cellSize"), TEXT("World Partition cell size."))
+			.String(TEXT("packageName"), TEXT("Package name or asset path."))
+			.Bool(TEXT("replaceSourceActors"), TEXT("Whether to replace source actors after merge."))
 			.Required({TEXT("action")})
 			.Build();
 	}

@@ -22,8 +22,8 @@ public:
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		return FMcpSchemaBuilder()
-				.StringEnum(TEXT("action"), McpConsolidatedActions::ManageAI(),
-					TEXT("AI action to perform"))
+			.StringEnum(TEXT("action"), McpConsolidatedActions::ManageAI(),
+				TEXT("AI action to perform"))
 			.String(TEXT("name"), TEXT("Name identifier."))
 			.String(TEXT("path"), TEXT("Directory path for asset creation."))
 			.String(TEXT("blueprintPath"), TEXT("Blueprint asset path."))
@@ -90,6 +90,11 @@ public:
 				TEXT("RunEQS"),
 				TEXT("Custom")
             }, TEXT("Service node type."))
+            .StringEnum(TEXT("subnodeType"), {
+				TEXT("Decorator"),
+				TEXT("Service")
+            }, TEXT("Behavior Tree subnode kind for add_subnode."))
+            .String(TEXT("nodeClass"), TEXT("Behavior Tree subnode class."))
             .String(TEXT("parentNodeId"), TEXT("ID of the node."))
             .String(TEXT("nodeId"), TEXT("ID of the node."))
             .String(TEXT("queryPath"), TEXT("Path to EQS query asset."))

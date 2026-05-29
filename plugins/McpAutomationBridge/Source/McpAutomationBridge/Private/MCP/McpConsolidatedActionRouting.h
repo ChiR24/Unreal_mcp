@@ -23,6 +23,9 @@ inline FString GetPayloadSubAction(const TSharedPtr<FJsonObject>& Payload)
 			Payload->TryGetStringField(TEXT("action"), SubAction);
 		}
 	}
+	SubAction = SubAction.ToLower();
+	SubAction.ReplaceInline(TEXT("-"), TEXT("_"));
+	SubAction.ReplaceInline(TEXT(" "), TEXT("_"));
 	return SubAction;
 }
 
@@ -33,14 +36,9 @@ inline TSharedPtr<FJsonObject> WithPayloadSubAction(const TSharedPtr<FJsonObject
 		return Payload;
 	}
 
-	FString ExistingSubAction;
-	if (Payload->TryGetStringField(TEXT("subAction"), ExistingSubAction) && !ExistingSubAction.IsEmpty())
-	{
-		return Payload;
-	}
-
 	TSharedPtr<FJsonObject> RoutedPayload = MakeShared<FJsonObject>();
 	RoutedPayload->Values = Payload->Values;
+	RoutedPayload->SetStringField(TEXT("action"), SubAction);
 	RoutedPayload->SetStringField(TEXT("subAction"), SubAction);
 	return RoutedPayload;
 }
