@@ -1,8 +1,22 @@
 import net from 'node:net';
+import { WebSocketServer } from 'ws';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AutomationBridge } from './bridge.js';
 
 async function closeTcpServer(server: net.Server): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    server.close(error => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
+}
+
+async function closeWebSocketServer(server: WebSocketServer): Promise<void> {
+  for (const client of server.clients) {
+    client.terminate();
+  }
+
   await new Promise<void>((resolve, reject) => {
     server.close(error => {
       if (error) reject(error);
@@ -104,6 +118,69 @@ describe('AutomationBridge lazy connection recovery', () => {
         socket.destroy();
       }
       await closeTcpServer(server);
+    }
+  });
+
+  it('rejects queued requests when stopped before capacity is available', async () => {
+    let holdRequestId = '';
+    let releaseHold: (() => void) | undefined;
+    const holdReceived = new Promise<void>(resolve => {
+      releaseHold = resolve;
+    });
+    const server = new WebSocketServer({ host: '127.0.0.1', port: 0 });
+
+    server.on('connection', socket => {
+      socket.on('message', data => {
+        const text = typeof data === 'string' ? data : data.toString('utf8');
+        const message = JSON.parse(text) as { type?: string; requestId?: string; action?: string };
+
+        if (message.type === 'bridge_hello') {
+          socket.send(JSON.stringify({ type: 'bridge_ack' }));
+          return;
+        }
+
+        if (message.type === 'automation_request' && message.action === 'hold' && message.requestId) {
+          holdRequestId = message.requestId;
+          releaseHold?.();
+        }
+      });
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.once('listening', () => resolve());
+    });
+
+    const address = server.address();
+    if (!address || typeof address === 'string') {
+      await closeWebSocketServer(server);
+      throw new Error('Failed to bind test WebSocket server');
+    }
+
+    const bridge = new AutomationBridge({
+      clientHost: '127.0.0.1',
+      clientPort: address.port,
+      connectionTimeoutMs: 1000,
+      heartbeatIntervalMs: 0,
+      maxPendingRequests: 1,
+      maxQueuedRequests: 1
+    });
+    bridge.on('error', () => undefined);
+
+    try {
+      const inFlight = bridge.sendAutomationRequest('hold', {}, { timeoutMs: 5000 });
+      await holdReceived;
+      expect(holdRequestId).not.toBe('');
+
+      const queued = bridge.sendAutomationRequest('queued', {}, { timeoutMs: 5000 });
+
+      bridge.stop();
+
+      await expect(inFlight).rejects.toThrow(/server stopped/);
+      await expect(queued).rejects.toThrow(/server stopped/);
+    } finally {
+      bridge.stop();
+      await closeWebSocketServer(server);
     }
   });
 });

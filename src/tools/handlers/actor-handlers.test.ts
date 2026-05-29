@@ -38,6 +38,21 @@ describe('handleActorTools list', () => {
     }, {});
   });
 
+  it('normalizes invalid list limits before Unreal dispatch', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools({
+      success: true,
+      result: { actors: [], count: 0, totalCount: 0 }
+    });
+
+    await handleActorTools('list', { action: 'list', limit: Number.NaN }, tools);
+    await handleActorTools('list', { action: 'list', limit: -5 }, tools);
+    await handleActorTools('list', { action: 'list', limit: 10.9 }, tools);
+
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(1, 'control_actor', expect.objectContaining({ limit: 50 }), {});
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(2, 'control_actor', expect.objectContaining({ limit: 50 }), {});
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(3, 'control_actor', expect.objectContaining({ limit: 10 }), {});
+  });
+
   it('exposes actor-list result fields in the public schemas', async () => {
     const { consolidatedToolDefinitions } = await import('../consolidated-tool-definitions.js');
     const { coreToolDefinitions } = await import('../schemas/core-tools.js');
@@ -131,5 +146,47 @@ describe('handleActorTools list', () => {
     expect(result.count).toBe(1);
     expect(result.totalCount).toBe(84);
     expect(result.message).toBe('Found 84 actors: DefaultPawn_0... and 83 more');
+  });
+});
+
+describe('handleActorTools apply_force', () => {
+  it('auto-enables physics on a mesh component and retries apply_force', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools({ success: true });
+    sendAutomationRequest
+      .mockRejectedValueOnce(new Error('PHYSICS simulation is disabled'))
+      .mockResolvedValueOnce({
+        success: true,
+        components: [{ name: 'StaticMeshComponent0' }]
+      })
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true, impulseApplied: true });
+
+    const result = await handleActorTools('apply_force', {
+      action: 'apply_force',
+      actorName: 'MCP_PhysicsActor',
+      force: { x: 0, y: 0, z: 2500 }
+    }, tools);
+
+    expect(result).toEqual({ success: true, impulseApplied: true });
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(1, 'control_actor', {
+      action: 'apply_force',
+      actorName: 'MCP_PhysicsActor',
+      force: { x: 0, y: 0, z: 2500 }
+    }, {});
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(2, 'control_actor', {
+      action: 'get_components',
+      actorName: 'MCP_PhysicsActor'
+    }, {});
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(3, 'control_actor', {
+      action: 'set_component_properties',
+      actorName: 'MCP_PhysicsActor',
+      componentName: 'StaticMeshComponent0',
+      properties: { SimulatePhysics: true, bSimulatePhysics: true, Mobility: 2 }
+    }, {});
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(4, 'control_actor', {
+      action: 'apply_force',
+      actorName: 'MCP_PhysicsActor',
+      force: { x: 0, y: 0, z: 2500 }
+    }, {});
   });
 });

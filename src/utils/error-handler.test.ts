@@ -12,4 +12,23 @@ describe('ErrorHandler', () => {
     expect(response.message).toContain('Operation timed out');
     expect(response.retriable).toBe(true);
   });
+
+  it('treats string HTTP 5xx statuses as retriable', () => {
+    const response = ErrorHandler.createErrorResponse(
+      { message: 'Service unavailable', response: { status: '503' } },
+      'inspect'
+    );
+
+    expect(response.retriable).toBe(true);
+  });
+
+  it('ignores non-string context scopes', () => {
+    const response = ErrorHandler.createErrorResponse(
+      new Error('Invalid parameter'),
+      'manage_asset',
+      { scope: 42 }
+    );
+
+    expect(response.scope).toBe('tool-call/manage_asset');
+  });
 });

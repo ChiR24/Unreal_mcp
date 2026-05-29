@@ -1,6 +1,6 @@
 /**
  * Dynamic Tool Manager
- * 
+ *
  * Manages MCP tool visibility and enablement at runtime.
  * Allows enabling/disabling individual tools or entire categories.
  */
@@ -126,10 +126,11 @@ class DynamicToolManager {
     for (const name of toolNames) {
       const state = this.toolStates.get(name);
       if (state) {
+        const catState = this.categoryStates.get(state.category);
+        if (catState) catState.enabled = true;
         if (!state.enabled) {
           state.enabled = true;
           // Update category enabled count
-          const catState = this.categoryStates.get(state.category);
           if (catState) catState.enabledCount++;
         }
         enabled.push(name);
@@ -289,7 +290,7 @@ class DynamicToolManager {
       // Still allow disabling individual non-protected tools
     }
 
-    catState.enabled = !protectedCategories.includes(category);
+    catState.enabled = protectedCategories.includes(category);
 
     for (const state of this.toolStates.values()) {
       if (state.category === category && !PROTECTED_TOOL_NAMES.has(state.name)) {
@@ -345,7 +346,7 @@ class DynamicToolManager {
    */
   reset(): { enabled: number } {
     this.ensureInitialized();
-    
+
     let count = 0;
     for (const state of this.toolStates.values()) {
       if (!state.enabled) {
@@ -371,7 +372,7 @@ class DynamicToolManager {
     this.ensureInitialized();
     const state = this.toolStates.get(toolName);
     if (!state) return false;
-    
+
     // Also check category
     const catState = this.categoryStates.get(state.category);
     return state.enabled && (catState?.enabled ?? true);

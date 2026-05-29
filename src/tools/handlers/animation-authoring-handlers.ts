@@ -40,6 +40,48 @@ function validatePath(path: string, fieldName: string): { valid: true; sanitized
   }
 }
 
+function finiteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function finiteNumberOrDefault(value: unknown, fallback: number): number {
+  return finiteNumber(value) ?? fallback;
+}
+
+function positiveNumberOrDefault(value: unknown, fallback: number): number {
+  const parsed = finiteNumber(value);
+  return parsed !== undefined && parsed > 0 ? parsed : fallback;
+}
+
+function positiveIntegerOrDefault(value: unknown, fallback: number): number {
+  const parsed = positiveNumberOrDefault(value, fallback);
+  return Math.floor(parsed);
+}
+
+function optionalPositiveNumber(value: unknown): number | undefined {
+  const parsed = finiteNumber(value);
+  return parsed !== undefined && parsed > 0 ? parsed : undefined;
+}
+
+function nonNegativeNumberOrDefault(value: unknown, fallback: number): number {
+  const parsed = finiteNumber(value);
+  return parsed !== undefined && parsed >= 0 ? parsed : fallback;
+}
+
+function optionalNonNegativeNumber(value: unknown): number | undefined {
+  const parsed = finiteNumber(value);
+  return parsed !== undefined && parsed >= 0 ? parsed : undefined;
+}
+
+function nonNegativeIntegerOrDefault(value: unknown, fallback: number): number {
+  return Math.floor(nonNegativeNumberOrDefault(value, fallback));
+}
+
+function optionalPositiveInteger(value: unknown): number | undefined {
+  const parsed = optionalPositiveNumber(value);
+  return parsed === undefined ? undefined : Math.floor(parsed);
+}
+
 
 
 /**
@@ -84,8 +126,8 @@ export async function handleAnimationAuthoringTools(
     const name = extractString(params, 'name');
     const path = extractOptionalString(params, 'path') ?? '/Game/Animations';
     const skeletonPath = extractOptionalString(params, 'skeletonPath');
-        const numFrames = extractOptionalNumber(params, 'numFrames') ?? 30;
-        const frameRate = extractOptionalNumber(params, 'frameRate') ?? 30;
+        const numFrames = positiveIntegerOrDefault(params['numFrames'], 30);
+        const frameRate = positiveNumberOrDefault(params['frameRate'], 30);
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
@@ -118,8 +160,8 @@ export async function handleAnimationAuthoringTools(
       return assetPathValidation.error;
     }
     const assetPath = assetPathValidation.sanitized;
-    const numFrames = extractOptionalNumber(params, 'numFrames') ?? 30;
-    const frameRate = extractOptionalNumber(params, 'frameRate');
+    const numFrames = positiveIntegerOrDefault(params['numFrames'], 30);
+    const frameRate = optionalPositiveNumber(params['frameRate']);
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
@@ -183,7 +225,7 @@ export async function handleAnimationAuthoringTools(
     }
     const assetPath = assetPathValidation.sanitized;
     const boneName = extractString(params, 'boneName');
-    const frame = extractOptionalNumber(params, 'frame') ?? 0;
+    const frame = nonNegativeIntegerOrDefault(params['frame'], 0);
     const location = extractOptionalObject(params, 'location');
     const rotation = extractOptionalObject(params, 'rotation');
     const scale = extractOptionalObject(params, 'scale');
@@ -223,8 +265,8 @@ export async function handleAnimationAuthoringTools(
     }
     const assetPath = assetPathValidation.sanitized;
     const curveName = extractString(params, 'curveName');
-    const frame = extractOptionalNumber(params, 'frame') ?? 0;
-    const value = extractOptionalNumber(params, 'value') ?? 0;
+    const frame = nonNegativeIntegerOrDefault(params['frame'], 0);
+    const value = finiteNumberOrDefault(params['value'], 0);
     const createIfMissing = extractOptionalBoolean(params, 'createIfMissing') ?? true;
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
@@ -261,8 +303,8 @@ export async function handleAnimationAuthoringTools(
     }
     const assetPath = assetPathValidation.sanitized;
     const notifyClass = extractOptionalString(params, 'notifyClass');
-    const frame = extractOptionalNumber(params, 'frame') ?? 0;
-    const trackIndex = extractOptionalNumber(params, 'trackIndex') ?? 0;
+    const frame = nonNegativeIntegerOrDefault(params['frame'], 0);
+    const trackIndex = nonNegativeIntegerOrDefault(params['trackIndex'], 0);
     const notifyName = extractOptionalString(params, 'notifyName');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
@@ -300,9 +342,9 @@ export async function handleAnimationAuthoringTools(
     }
     const assetPath = assetPathValidation.sanitized;
     const notifyClass = extractOptionalString(params, 'notifyClass');
-    const startFrame = extractOptionalNumber(params, 'startFrame') ?? 0;
-    const endFrame = extractOptionalNumber(params, 'endFrame') ?? 10;
-    const trackIndex = extractOptionalNumber(params, 'trackIndex') ?? 0;
+    const startFrame = nonNegativeIntegerOrDefault(params['startFrame'], 0);
+    const endFrame = nonNegativeIntegerOrDefault(params['endFrame'], 10);
+    const trackIndex = nonNegativeIntegerOrDefault(params['trackIndex'], 0);
     const notifyName = extractOptionalString(params, 'notifyName');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
@@ -338,7 +380,7 @@ export async function handleAnimationAuthoringTools(
     }
     const assetPath = assetPathValidation.sanitized;
     const markerName = extractString(params, 'markerName');
-    const frame = extractOptionalNumber(params, 'frame') ?? 0;
+    const frame = nonNegativeIntegerOrDefault(params['frame'], 0);
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
@@ -409,7 +451,7 @@ export async function handleAnimationAuthoringTools(
     const additiveAnimType = extractOptionalString(params, 'additiveAnimType') ?? 'NoAdditive';
     const basePoseType = extractOptionalString(params, 'basePoseType') ?? 'RefPose';
     const basePoseAnimation = extractOptionalString(params, 'basePoseAnimation');
-    const basePoseFrame = extractOptionalNumber(params, 'basePoseFrame') ?? 0;
+    const basePoseFrame = nonNegativeIntegerOrDefault(params['basePoseFrame'], 0);
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
@@ -474,7 +516,7 @@ export async function handleAnimationAuthoringTools(
     }
     const assetPath = assetPathValidation.sanitized;
     const sectionName = extractString(params, 'sectionName');
-    const startTime = extractOptionalNumber(params, 'startTime') ?? 0;
+    const startTime = nonNegativeNumberOrDefault(params['startTime'], 0);
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
@@ -513,7 +555,7 @@ export async function handleAnimationAuthoringTools(
     }
     const animationPath = animationPathValidation.sanitized;
     const slotName = extractOptionalString(params, 'slotName') ?? 'DefaultSlot';
-    const startTime = extractOptionalNumber(params, 'startTime') ?? 0;
+    const startTime = nonNegativeNumberOrDefault(params['startTime'], 0);
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
@@ -547,8 +589,8 @@ export async function handleAnimationAuthoringTools(
     }
     const assetPath = assetPathValidation.sanitized;
     const sectionName = extractString(params, 'sectionName');
-    const startTime = extractOptionalNumber(params, 'startTime');
-    const length = extractOptionalNumber(params, 'length');
+    const startTime = optionalNonNegativeNumber(params['startTime']);
+    const length = optionalPositiveNumber(params['length']);
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
@@ -583,8 +625,8 @@ export async function handleAnimationAuthoringTools(
     }
     const assetPath = assetPathValidation.sanitized;
     const notifyClass = extractOptionalString(params, 'notifyClass');
-    const time = extractOptionalNumber(params, 'time') ?? 0;
-    const trackIndex = extractOptionalNumber(params, 'trackIndex') ?? 0;
+    const time = nonNegativeNumberOrDefault(params['time'], 0);
+    const trackIndex = nonNegativeIntegerOrDefault(params['trackIndex'], 0);
     const notifyName = extractOptionalString(params, 'notifyName');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
@@ -618,7 +660,7 @@ export async function handleAnimationAuthoringTools(
       return assetPathValidation.error;
     }
     const assetPath = assetPathValidation.sanitized;
-    const blendTime = extractOptionalNumber(params, 'blendTime') ?? 0.25;
+    const blendTime = nonNegativeNumberOrDefault(params['blendTime'], 0.25);
     const blendOption = extractOptionalString(params, 'blendOption') ?? 'Linear';
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
@@ -650,7 +692,7 @@ export async function handleAnimationAuthoringTools(
       return assetPathValidation.error;
     }
     const assetPath = assetPathValidation.sanitized;
-    const blendTime = extractOptionalNumber(params, 'blendTime') ?? 0.25;
+    const blendTime = nonNegativeNumberOrDefault(params['blendTime'], 0.25);
     const blendOption = extractOptionalString(params, 'blendOption') ?? 'Linear';
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
@@ -878,7 +920,7 @@ export async function handleAnimationAuthoringTools(
     const axisName = extractOptionalString(params, 'axisName');
     const minValue = extractOptionalNumber(params, 'minValue');
     const maxValue = extractOptionalNumber(params, 'maxValue');
-    const gridDivisions = extractOptionalNumber(params, 'gridDivisions');
+    const gridDivisions = optionalPositiveInteger(params['gridDivisions']);
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
@@ -913,7 +955,7 @@ export async function handleAnimationAuthoringTools(
     }
     const assetPath = assetPathValidation.sanitized;
     const interpolationType = extractOptionalString(params, 'interpolationType') ?? 'Lerp';
-    const targetWeightInterpolationSpeed = extractOptionalNumber(params, 'targetWeightInterpolationSpeed') ?? 5.0;
+    const targetWeightInterpolationSpeed = nonNegativeNumberOrDefault(params['targetWeightInterpolationSpeed'], 5.0);
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
@@ -1158,7 +1200,7 @@ export async function handleAnimationAuthoringTools(
     const stateMachineName = extractString(params, 'stateMachineName');
     const fromState = extractString(params, 'fromState');
     const toState = extractString(params, 'toState');
-    const blendTime = extractOptionalNumber(params, 'blendTime') ?? 0.2;
+    const blendTime = nonNegativeNumberOrDefault(params['blendTime'], 0.2);
     const blendLogicType = extractOptionalString(params, 'blendLogicType') ?? 'StandardBlend';
     const automaticTriggerRule = extractOptionalString(params, 'automaticTriggerRule');
     const automaticTriggerTime = extractOptionalNumber(params, 'automaticTriggerTime');

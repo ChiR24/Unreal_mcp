@@ -1,4 +1,5 @@
-import { StandardActionResponse } from '../types/tool-interfaces.js';
+import type { AutomationErrorDetail } from '../types/automation-responses.js';
+import type { StandardActionResponse } from '../types/tool-interfaces.js';
 import { cleanObject } from './safe-json.js';
 
 /** Error response with custom code and optional extra fields */
@@ -8,6 +9,14 @@ export interface ErrorResponse {
   error: string;
   message: string;
   [key: string]: unknown;
+}
+
+function isAutomationErrorDetail(value: unknown): value is AutomationErrorDetail {
+    return !(value instanceof Error)
+        && value !== null
+        && typeof value === 'object'
+        && !Array.isArray(value)
+        && typeof (value as Record<string, unknown>).message === 'string';
 }
 
 export class ResponseFactory {
@@ -28,6 +37,17 @@ export class ResponseFactory {
      * @param defaultMessage Fallback message if error is not an Error object
      */
     static error(error: unknown, defaultMessage: string = 'Operation failed'): StandardActionResponse {
+        if (isAutomationErrorDetail(error)) {
+            const detail = cleanObject(error);
+            return {
+                success: false,
+                isError: true,
+                error: detail,
+                message: detail.message,
+                data: null
+            };
+        }
+
         const errorMessage = error instanceof Error ? error.message : String(error || defaultMessage);
 
         return {
@@ -53,7 +73,7 @@ export class ResponseFactory {
     /**
      * Create an error response with a specific error code.
      * Use this for business logic errors that need specific codes like 'SECURITY_VIOLATION', 'NOT_FOUND', etc.
-     * 
+     *
      * @param code Error code (e.g., 'SECURITY_VIOLATION', 'NOT_FOUND', 'INVALID_ARGUMENT')
      * @param message Human-readable error message
      * @param extraFields Optional additional fields to include in the response

@@ -59,6 +59,13 @@ describe('cleanObject', () => {
         expect(() => cleanObject(deep, 10)).not.toThrow();
     });
 
+    it('uses the default depth limit for invalid maxDepth values', () => {
+        const input = { nested: { value: 'safe' } };
+
+        expect(cleanObject(input, -1)).toEqual(input);
+        expect(cleanObject(input, Number.NaN)).toEqual(input);
+    });
+
     it('handles circular reference prevention at max depth', () => {
         const obj: any = { a: 1 };
         obj.self = obj; // circular reference

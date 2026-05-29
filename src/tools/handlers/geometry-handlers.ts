@@ -6,7 +6,7 @@
  */
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
-import { executeAutomationRequest, normalizeLocation } from './common-handlers.js';
+import { executeAutomationRequest, normalizeLocation, normalizePathFields } from './common-handlers.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
 
 // Valid actions for manage_geometry tool
@@ -52,6 +52,8 @@ const GEOMETRY_ACTIONS = [
 
 type GeometryAction = (typeof GEOMETRY_ACTIONS)[number];
 
+const GEOMETRY_PATH_FIELDS = ['assetPath', 'outputPath', 'path', 'texturePath'] as const;
+
 function copyAlias(
   normalized: Record<string, unknown>,
   args: HandlerArgs,
@@ -68,6 +70,22 @@ function getNumberArg(args: HandlerArgs, key: string): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
+function finiteNumberOrZero(value: unknown): number {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function normalizeFiniteLocation(value: unknown): [number, number, number] | undefined {
+  const normalized = normalizeLocation(value);
+  return normalized
+    ? [finiteNumberOrZero(normalized[0]), finiteNumberOrZero(normalized[1]), finiteNumberOrZero(normalized[2])]
+    : undefined;
+}
+
+function normalizeFiniteNumberArray(values: unknown[]): number[] {
+  return values.map(finiteNumberOrZero);
+}
+
 function copyUvPair(
   normalized: Record<string, unknown>,
   args: HandlerArgs,
@@ -81,10 +99,10 @@ function copyUvPair(
   }
 
   const uv = value as Record<string, unknown>;
-  if (normalized[uKey] === undefined && typeof uv.u === 'number') {
+  if (normalized[uKey] === undefined && typeof uv.u === 'number' && Number.isFinite(uv.u)) {
     normalized[uKey] = uv.u;
   }
-  if (normalized[vKey] === undefined && typeof uv.v === 'number') {
+  if (normalized[vKey] === undefined && typeof uv.v === 'number' && Number.isFinite(uv.v)) {
     normalized[vKey] = uv.v;
   }
 }
@@ -188,28 +206,28 @@ function normalizeGeometryArgs(action: string, args: HandlerArgs): Record<string
 
   // Normalize location/position parameters
   if (args.location) {
-    normalized.location = normalizeLocation(args.location);
+    normalized.location = normalizeFiniteLocation(args.location);
   }
   if (args.position) {
-    normalized.position = normalizeLocation(args.position);
+    normalized.position = normalizeFiniteLocation(args.position);
   }
   if (args.center) {
-    normalized.center = normalizeLocation(args.center);
+    normalized.center = normalizeFiniteLocation(args.center);
   }
 
   // Normalize dimensions for primitives
   if (args.dimensions && Array.isArray(args.dimensions)) {
-    normalized.dimensions = args.dimensions.map((v: unknown) => Number(v) || 0);
+    normalized.dimensions = normalizeFiniteNumberArray(args.dimensions);
   }
 
   // Normalize axis vectors
   if (args.axis && Array.isArray(args.axis)) {
-    normalized.axis = args.axis.map((v: unknown) => Number(v) || 0);
+    normalized.axis = normalizeFiniteNumberArray(args.axis);
   }
 
   normalizeGeometryAliases(action, args, normalized);
 
-  return normalized;
+  return normalizePathFields(normalized, GEOMETRY_PATH_FIELDS);
 }
 
 /**

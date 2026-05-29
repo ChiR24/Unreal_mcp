@@ -572,4 +572,3 @@ export type GetToolResponse<T extends ToolName> = ToolResponseMap[T];
 
 // Helper type for getting parameters by tool name
 export type GetToolParams<T extends keyof ConsolidatedToolParams> = ConsolidatedToolParams[T];
-

@@ -13,7 +13,7 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { requireNonEmptyString, executeAutomationRequest, getTimeoutMs, normalizePathFields } from './common-handlers.js';
+import { createSubActionDispatcher, requireNonEmptyString } from './common-handlers.js';
 import { sanitizeAssetName, normalizeAndSanitizeAssetPath } from '../../utils/validation.js';
 
 function toLowerSnakeCase(value: string): string {
@@ -155,40 +155,29 @@ export async function handleGASTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  const argsRecord = normalizePathFields(args as Record<string, unknown>, [
-    'blueprintPath',
-    'attributeSetPath',
-    'abilityPath',
-    'effectPath',
-    'cuePath',
-    'assetPath',
-    'costEffectPath',
-    'cooldownEffectPath',
-    'decalPath',
-    'path'
-  ]);
-  const timeoutMs = getTimeoutMs();
+  const { argsRecord, sendRequest: sendSubAction } = createSubActionDispatcher(tools, args, {
+    toolName: 'manage_gas',
+    domainName: 'GAS',
+    pathFields: [
+      'blueprintPath',
+      'attributeSetPath',
+      'abilityPath',
+      'effectPath',
+      'cuePath',
+      'assetPath',
+      'costEffectPath',
+      'cooldownEffectPath',
+      'decalPath',
+      'path'
+    ],
+    preparePayload: normalizeGASPayloadForBridge
+  });
 
-  // All actions are dispatched to C++ via automation bridge
-  // The C++ handler expects 'blueprintPath' for most actions, so we map
-  // the semantic parameter names (abilityPath, effectPath, etc.) to blueprintPath
   const sendRequest = async (subAction: string, blueprintPathParam?: string): Promise<Record<string, unknown>> => {
-    const payload: Record<string, unknown> = normalizeGASPayloadForBridge({ ...argsRecord, subAction }, subAction);
-    
-    // Map semantic path parameters to blueprintPath for C++ handler compatibility
-    // C++ HandleManageGASAction checks 'BlueprintPath' (case-sensitive in JSON)
-    if (blueprintPathParam && typeof argsRecord[blueprintPathParam] === 'string') {
-      payload.blueprintPath = argsRecord[blueprintPathParam];
-    }
-    
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_gas',
-      payload as HandlerArgs,
-      `Automation bridge not available for GAS action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
+    const extraPayload = blueprintPathParam && typeof argsRecord[blueprintPathParam] === 'string'
+      ? { blueprintPath: argsRecord[blueprintPathParam] }
+      : undefined;
+    return sendSubAction(subAction, extraPayload);
   };
 
   switch (action) {
@@ -287,17 +276,7 @@ export async function handleGASTools(
       const normalizedPath = normalizeAndSanitizeAssetPath(requestedPath);
       const normalizedName = sanitizeAssetName(requestedName);
 
-      // Pass normalized values to C++ to ensure consistency
-      // C++ handles duplicate detection, type verification, and reusedExisting flag
-      const payload = normalizeGASPayloadForBridge({ ...argsRecord, name: normalizedName, path: normalizedPath, subAction: 'create_gameplay_effect' }, 'create_gameplay_effect');
-      const result = await executeAutomationRequest(
-        tools,
-        'manage_gas',
-        payload as HandlerArgs,
-        'Automation bridge not available for GAS action: create_gameplay_effect',
-        { timeoutMs }
-      );
-      return cleanObject(result) as Record<string, unknown>;
+      return sendSubAction('create_gameplay_effect', { name: normalizedName, path: normalizedPath });
     }
 
   case 'set_effect_duration': {
@@ -361,7 +340,7 @@ export async function handleGASTools(
   case 'add_tag_to_asset': {
     requireNonEmptyString(argsRecord.assetPath, 'assetPath', 'Missing required parameter: assetPath');
     // C++ expects 'tag' parameter, but test uses 'tagName' - map it
-    const tagValue = typeof argsRecord.tagName === 'string' ? argsRecord.tagName : 
+    const tagValue = typeof argsRecord.tagName === 'string' ? argsRecord.tagName :
                      (typeof argsRecord.tag === 'string' ? argsRecord.tag : '');
     if (!tagValue) {
       return cleanObject({
@@ -370,15 +349,7 @@ export async function handleGASTools(
         message: 'Missing required parameter: tagName or tag'
       });
     }
-    const payload: Record<string, unknown> = { ...argsRecord, tag: tagValue, subAction: 'add_tag_to_asset' };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_gas',
-      payload as HandlerArgs,
-      'Automation bridge not available for GAS action: add_tag_to_asset',
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
+    return sendSubAction('add_tag_to_asset', { tag: tagValue });
   }
 
     // =========================================================================

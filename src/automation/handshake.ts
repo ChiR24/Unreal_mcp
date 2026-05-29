@@ -16,13 +16,42 @@ export class HandshakeHandler extends EventEmitter {
 
     public initiateHandshake(socket: WebSocket, timeoutMs: number = this.DEFAULT_HANDSHAKE_TIMEOUT_MS): Promise<Record<string, unknown>> {
         return new Promise((resolve, reject) => {
-            let handshakeComplete = false;
+            let settled = false;
+            let helloTimer: NodeJS.Timeout | undefined;
+            let timeout: NodeJS.Timeout;
 
-            const timeout = setTimeout(() => {
-                if (!handshakeComplete) {
+            const cleanup = () => {
+                clearTimeout(timeout);
+                if (helloTimer) {
+                    clearTimeout(helloTimer);
+                    helloTimer = undefined;
+                }
+                socket.off('message', onMessage);
+                socket.off('error', onError);
+                socket.off('close', onClose);
+            };
+
+            const rejectHandshake = (error: Error, closeCode?: number, closeReason?: string): void => {
+                if (settled) return;
+                settled = true;
+                if (closeCode !== undefined) {
+                    socket.close(closeCode, closeReason);
+                }
+                cleanup();
+                reject(error);
+            };
+
+            const resolveHandshake = (metadata: Record<string, unknown>): void => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                resolve(metadata);
+            };
+
+            timeout = setTimeout(() => {
+                if (!settled) {
                     this.log.warn('Automation bridge client handshake timed out');
-                    socket.close(4002, 'Handshake timeout');
-                    reject(new Error('Handshake timeout'));
+                    rejectHandshake(new Error('Handshake timeout'), 4002, 'Handshake timeout');
                 }
             }, timeoutMs);
 
@@ -33,43 +62,28 @@ export class HandshakeHandler extends EventEmitter {
                     parsed = JSON.parse(text) as AutomationBridgeMessage;
                 } catch (error) {
                     this.log.error('Received non-JSON automation message during handshake', error);
-                    socket.close(4003, 'Invalid JSON payload');
-                    cleanup();
-                    reject(new Error('Invalid JSON payload'));
+                    rejectHandshake(new Error('Invalid JSON payload'), 4003, 'Invalid JSON payload');
                     return;
                 }
 
                 const validation = bridgeAckSchema.safeParse(parsed);
                 if (validation.success) {
-                    handshakeComplete = true;
-                    cleanup();
                     const metadata = this.sanitizeHandshakeMetadata(validation.data as Record<string, unknown>);
-                    resolve(metadata);
+                    resolveHandshake(metadata);
                     return;
                 }
 
                 const typeHint = typeof parsed.type === 'string' ? parsed.type : 'unknown';
                 this.log.warn(`Expected bridge_ack handshake, received ${typeHint}`, validation.error.issues);
-                socket.close(4004, 'Handshake expected bridge_ack');
-                cleanup();
-                reject(new Error(`Handshake expected bridge_ack, got ${typeHint}`));
+                rejectHandshake(new Error(`Handshake expected bridge_ack, got ${typeHint}`), 4004, 'Handshake expected bridge_ack');
             };
 
             const onError = (error: Error) => {
-                cleanup();
-                reject(error);
+                rejectHandshake(error);
             };
 
             const onClose = () => {
-                cleanup();
-                reject(new Error('Socket closed during handshake'));
-            };
-
-            const cleanup = () => {
-                clearTimeout(timeout);
-                socket.off('message', onMessage);
-                socket.off('error', onError);
-                socket.off('close', onClose);
+                rejectHandshake(new Error('Socket closed during handshake'));
             };
 
             socket.on('message', onMessage);
@@ -77,8 +91,8 @@ export class HandshakeHandler extends EventEmitter {
             socket.on('close', onClose);
 
             // Send bridge_hello with a slight delay to ensure the server has registered its handlers
-            setTimeout(() => {
-                if (socket.readyState === WebSocket.OPEN) {
+            helloTimer = setTimeout(() => {
+                if (!settled && socket.readyState === WebSocket.OPEN) {
                     const helloPayload: AutomationBridgeMessage = {
                         type: 'bridge_hello',
                         capabilityToken: this.capabilityToken || undefined

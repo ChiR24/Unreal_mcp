@@ -169,6 +169,25 @@ function mergeActionParams(args: Record<string, unknown>): Record<string, unknow
   return merged;
 }
 
+function addErrorContext(response: unknown, toolName: string, action: string | undefined): unknown {
+  if (!isRecord(response)) return response;
+  if (response.success !== false && response.isError !== true) return response;
+
+  return cleanObject({
+    ...response,
+    isError: true,
+    toolName: typeof response.toolName === 'string' ? response.toolName : toolName,
+    action: typeof response.action === 'string' ? response.action : action ?? null
+  });
+}
+
+function classifyExecutionError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes('timeout')) return 'TOOL_TIMEOUT';
+  if (lower.includes('security violation')) return 'SECURITY_VIOLATION';
+  return 'TOOL_EXECUTION_FAILED';
+}
+
 function registerDefaultHandlers() {
   toolRegistry.register('manage_asset', async (args, tools) => {
     const action = getToolAction(args);
@@ -304,11 +323,13 @@ export async function handleConsolidatedToolCall(
 ) {
   const logger = new Logger('ConsolidatedToolHandler');
   const startTime = Date.now();
+  let actionForError: string | undefined;
 
   try {
     const expandedArgs = mergeActionParams(args);
     const normalized = normalizeToolCall(name, expandedArgs);
     const normalizedArgs = normalized.args;
+    actionForError = normalized.action;
 
     if (normalized.action && !normalizedArgs.action) {
       normalizedArgs.action = normalized.action;
@@ -316,21 +337,30 @@ export async function handleConsolidatedToolCall(
 
     const handler = toolRegistry.getHandler(normalized.name);
     if (handler) {
-      return await handler(normalizedArgs, tools);
+      const result = await handler(normalizedArgs, tools);
+      return addErrorContext(result, normalized.name, actionForError);
     }
 
-    return cleanObject({ success: false, error: 'UNKNOWN_TOOL', message: `Unknown consolidated tool: ${name}`, data: null });
+    return ResponseFactory.errorWithCode('UNKNOWN_TOOL', `Unknown consolidated tool: ${name}`, {
+      toolName: name,
+      action: actionForError ?? null
+    });
   } catch (err: unknown) {
     const duration = Date.now() - startTime;
     const errObj = err as Record<string, unknown> | null;
     const errorMessage = typeof errObj?.message === 'string' ? errObj.message : String(err);
     logger.error(`Failed execution of ${name} after ${duration}ms: ${errorMessage}`);
 
-    const isTimeout = errorMessage.toLowerCase().includes('timeout');
+    const errorCode = classifyExecutionError(errorMessage);
+    const isTimeout = errorCode === 'TOOL_TIMEOUT';
     const text = isTimeout
       ? `Tool ${name} timed out. Please check Unreal Engine connection.`
       : `Failed to execute ${name}: ${errorMessage}`;
 
-    return ResponseFactory.error(text);
+    return ResponseFactory.errorWithCode(errorCode, text, {
+      toolName: name,
+      action: actionForError ?? null,
+      durationMs: duration
+    });
   }
 }

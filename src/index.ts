@@ -261,14 +261,14 @@ export async function startStdioServer() {
   process.once('beforeExit', () => {
     runLifecycleCleanup('beforeExit');
   });
- 
+
   process.once('exit', () => {
     runLifecycleCleanup('exit');
   });
 
 
   const originalWrite = process.stdout.write;
-   
+
   process.stdout.write = function (...args: [string | Uint8Array, ...unknown[]]) {
     const message = args[0];
     if (typeof message === 'string' && message.includes('jsonrpc')) {

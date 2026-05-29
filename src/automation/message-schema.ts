@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 const stringArray = z.array(z.string());
+const nonNegativeInteger = z.number().int().min(0);
 
 export const automationResponseSchema = z.looseObject({
     type: z.literal('automation_response'),
@@ -27,11 +28,11 @@ export const bridgeAckSchema = z.looseObject({
     serverName: z.string().optional(),
     serverVersion: z.string().optional(),
     sessionId: z.string().optional(),
-    protocolVersion: z.number().optional(),
+    protocolVersion: nonNegativeInteger.optional(),
     supportedOpcodes: stringArray.optional(),
     expectedResponseOpcodes: stringArray.optional(),
     capabilities: stringArray.optional(),
-    heartbeatIntervalMs: z.number().optional()
+    heartbeatIntervalMs: nonNegativeInteger.optional()
 });
 
 export const bridgeErrorSchema = z.looseObject({

@@ -227,9 +227,9 @@ export class EditorTools extends BaseTool {
       // We use path.basename to strip any directory components, then sanitize the filename
       // usage of new RegExp to avoid eslint no-useless-escape on forward slash in literal
       const invalidChars = new RegExp('[<>:*?"|/\\\\]', 'g');
-      const sanitizedFilename = filename
-        ? path.basename(filename).replace(invalidChars, '_').trim()
-        : `Screenshot_${Date.now()}`;
+      const fallbackFilename = `Screenshot_${Date.now()}`;
+      const requestedFilename = filename ? path.basename(filename).replace(invalidChars, '_').trim() : '';
+      const sanitizedFilename = requestedFilename || fallbackFilename;
 
       const resString = resolution || DEFAULT_SCREENSHOT_RESOLUTION;
       const command = filename ? `highresshot ${resString} filename="${sanitizedFilename}"` : 'shot';

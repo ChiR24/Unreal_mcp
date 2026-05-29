@@ -48,4 +48,11 @@ describe('CommandValidator', () => {
     it('blocks python command alias', () => {
         expect(() => CommandValidator.validate('python print("hello")')).toThrow(/Python console commands are blocked/);
     });
+
+    it('normalizes case and spacing when calculating priority', () => {
+        expect(CommandValidator.getPriority('  STAT FPS')).toBe(8);
+        expect(CommandValidator.getPriority('ShowFlag.Navigation')).toBe(9);
+        expect(CommandValidator.getPriority('MAP BUILDLIGHTING')).toBe(1);
+        expect(CommandValidator.getPriority('Summon SomeActor')).toBe(5);
+    });
 });

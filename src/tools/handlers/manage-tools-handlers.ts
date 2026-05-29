@@ -1,6 +1,6 @@
 /**
  * Dynamic Tools Handler
- * 
+ *
  * Handles the manage_tools MCP tool for dynamic tool loading/unloading.
  */
 
@@ -56,7 +56,7 @@ export async function handleManageToolsTools(
       // ===== List Categories =====
       case 'list_categories': {
         const categories = dynamicToolManager.listCategories();
-        
+
         return ResponseFactory.success({
           categories: categories.map(cat => ({
             name: cat.name,
@@ -71,10 +71,10 @@ export async function handleManageToolsTools(
       // ===== Enable Specific Tools =====
       case 'enable_tools': {
         // Accept both 'tools' and 'toolNames' for flexibility
-        const toolNames = getStringArray('tools').length > 0 
-          ? getStringArray('tools') 
+        const toolNames = getStringArray('tools').length > 0
+          ? getStringArray('tools')
           : getStringArray('toolNames');
-        
+
         if (toolNames.length === 0) {
           return ResponseFactory.error('No tools specified. Provide tools array.', 'MISSING_TOOLS');
         }
@@ -96,10 +96,10 @@ export async function handleManageToolsTools(
       // ===== Disable Specific Tools =====
       case 'disable_tools': {
         // Accept both 'tools' and 'toolNames' for flexibility
-        const toolNames = getStringArray('tools').length > 0 
-          ? getStringArray('tools') 
+        const toolNames = getStringArray('tools').length > 0
+          ? getStringArray('tools')
           : getStringArray('toolNames');
-        
+
         if (toolNames.length === 0) {
           return ResponseFactory.error('No tools specified. Provide tools array.', 'MISSING_TOOLS');
         }
@@ -128,7 +128,7 @@ export async function handleManageToolsTools(
       // ===== Enable Category =====
       case 'enable_category': {
         const category = getString('category') as ToolCategory | undefined;
-        
+
         if (!category) {
           return ResponseFactory.error('No category specified.', 'MISSING_CATEGORY');
         }
@@ -156,7 +156,7 @@ export async function handleManageToolsTools(
       // ===== Disable Category =====
       case 'disable_category': {
         const category = getString('category') as ToolCategory | undefined;
-        
+
         if (!category) {
           return ResponseFactory.error('No category specified.', 'MISSING_CATEGORY');
         }
@@ -192,7 +192,7 @@ export async function handleManageToolsTools(
       // ===== Get Status =====
       case 'get_status': {
         const status = dynamicToolManager.getStatus();
-        
+
         return ResponseFactory.success({
           totalTools: status.totalTools,
           enabledTools: status.enabledTools,
@@ -209,7 +209,7 @@ export async function handleManageToolsTools(
       // ===== Reset =====
       case 'reset': {
         const result = dynamicToolManager.reset();
-        
+
         return ResponseFactory.success({
           enabled: result.enabled
         }, `Reset complete. ${result.enabled} tools re-enabled.`);

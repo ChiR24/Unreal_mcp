@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { SocketInfo } from './types.js';
 import { EventEmitter } from 'node:events';
 
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
 export class ConnectionManager extends EventEmitter {
     private activeSockets = new Map<WebSocket, SocketInfo>();
     private primarySocket?: WebSocket;
@@ -87,15 +89,24 @@ export class ConnectionManager extends EventEmitter {
     }
 
     public recordInboundMessage(socket: WebSocket, isAutomationRequest: boolean): boolean {
+        if (!this.activeSockets.has(socket)) {
+            this.rateLimitState.delete(socket);
+            return false;
+        }
+
         if (this.maxMessagesPerMinute <= 0 && this.maxAutomationRequestsPerMinute <= 0) {
             return true;
         }
 
         const nowMs = Date.now();
-        const state = this.rateLimitState.get(socket) ?? { windowStartMs: nowMs, messageCount: 0, automationCount: 0 };
+        let state = this.rateLimitState.get(socket);
+        if (!state) {
+            state = { windowStartMs: nowMs, messageCount: 0, automationCount: 0 };
+            this.rateLimitState.set(socket, state);
+        }
         const windowElapsedMs = nowMs - state.windowStartMs;
 
-        if (windowElapsedMs >= 60000) {
+        if (windowElapsedMs >= RATE_LIMIT_WINDOW_MS) {
             state.windowStartMs = nowMs;
             state.messageCount = 0;
             state.automationCount = 0;
@@ -105,9 +116,6 @@ export class ConnectionManager extends EventEmitter {
         if (isAutomationRequest) {
             state.automationCount += 1;
         }
-
-        this.rateLimitState.set(socket, state);
-
         if (this.maxMessagesPerMinute > 0 && state.messageCount > this.maxMessagesPerMinute) {
             this.log.warn(`Inbound message rate exceeded (${state.messageCount}/${this.maxMessagesPerMinute} per minute).`);
             return false;

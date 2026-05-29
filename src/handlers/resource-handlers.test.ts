@@ -9,8 +9,17 @@ import { Logger } from '../utils/logger.js';
 import { ResourceHandler, type ResourceServer } from './resource-handlers.js';
 
 type RegisteredResourceHandler = (request: { params: { uri: string } }) => Promise<{ contents: Array<{ text: string }> }>;
+type BridgeStub = {
+  isConnected: boolean;
+  getEngineVersion?: () => Promise<unknown>;
+  getFeatureFlags?: () => Promise<unknown>;
+};
 
-function createRegisteredHandler(status: AutomationBridgeStatus, healthMonitor: HealthMonitor): RegisteredResourceHandler {
+function createRegisteredHandler(
+  status: AutomationBridgeStatus,
+  healthMonitor: HealthMonitor,
+  bridgeStub: BridgeStub = { isConnected: false }
+): RegisteredResourceHandler {
   let registeredHandler: RegisteredResourceHandler | undefined;
   const server = {
     setRequestHandler: (_schema: unknown, handler: unknown) => {
@@ -18,7 +27,7 @@ function createRegisteredHandler(status: AutomationBridgeStatus, healthMonitor: 
     }
   } as ResourceServer;
 
-  const bridge = { isConnected: false } as unknown as UnrealBridge;
+  const bridge = bridgeStub as unknown as UnrealBridge;
   const automationBridge = { getStatus: () => status } as unknown as AutomationBridge;
 
   new ResourceHandler(
@@ -119,5 +128,24 @@ describe('ResourceHandler diagnostics redaction', () => {
     ]) {
       expect(serialized).not.toContain(forbidden);
     }
+  });
+
+  it('keeps health engine and subsystem details object-shaped', async () => {
+    const healthMonitor = new HealthMonitor(new Logger('ResourceHandlerTest', 'error'));
+    const handler = createRegisteredHandler(createAutomationStatus(), healthMonitor, {
+      isConnected: true,
+      getEngineVersion: async () => ['unexpected-version-array'],
+      getFeatureFlags: async () => ({ subsystems: ['unexpected-subsystem-array'] })
+    });
+
+    const health = JSON.parse((await handler({ params: { uri: 'ue://health' } })).contents[0].text) as {
+      unrealConnection: {
+        engineVersion: unknown;
+        features: { subsystems: unknown };
+      };
+    };
+
+    expect(health.unrealConnection.engineVersion).toEqual({});
+    expect(health.unrealConnection.features.subsystems).toEqual({});
   });
 });

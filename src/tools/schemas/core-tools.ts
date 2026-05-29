@@ -1,6 +1,6 @@
 /**
  * Core Tool Schemas - Essential MCP tools for asset, actor, editor, level, system, and introspection control
- * 
+ *
  * Tools included:
  * - manage_tools: Dynamic MCP tool management
  * - manage_asset: Asset creation, import, manipulation
@@ -31,8 +31,8 @@ export const coreToolDefinitions: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        action: { 
-          type: 'string', 
+        action: {
+          type: 'string',
           enum: ['list_tools', 'list_categories', 'enable_tools', 'disable_tools', 'enable_category', 'disable_category', 'get_status', 'reset'],
           description: 'list_tools: show canonical tools with status. list_categories: show category counts. enable/disable_tools: toggle specific tools. enable/disable_category: toggle category. get_status: current state. reset: restore defaults.'
         },

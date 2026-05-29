@@ -19,7 +19,7 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest, getTimeoutMs, normalizePathFields } from './common-handlers.js';
+import { createSubActionDispatcher } from './common-handlers.js';
 
 /**
  * Normalize parameter names from snake_case to camelCase for C++ compatibility.
@@ -52,25 +52,11 @@ export async function handleVolumeTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  // Normalize path fields and parameter names before sending to C++
-  const argsRecord = normalizeParamNames(normalizePathFields(
-    args as Record<string, unknown>,
-    []
-  ));
-  const timeoutMs = getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_volumes',
-      payload as HandlerArgs,
-      `Automation bridge not available for volume action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  const normalizedArgs = normalizeParamNames(args as Record<string, unknown>);
+  const { sendRequest } = createSubActionDispatcher(tools, normalizedArgs as HandlerArgs, {
+    toolName: 'manage_volumes',
+    domainName: 'volume'
+  });
 
   switch (action) {
     // ========================================================================

@@ -16,6 +16,19 @@ function getErrorCode(error: unknown): string | undefined {
   return typeof code === 'string' ? code : undefined;
 }
 
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseSnapshotObject(contents: string): Record<string, unknown> | undefined {
+  try {
+    const parsed: unknown = JSON.parse(contents);
+    return isJsonObject(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function validateSnapshotFilesystemTarget(targetPath: string): Promise<{ success: false; error: string } | { success: true }> {
   const cwd = path.resolve(process.cwd());
   let realCwd: string;
@@ -62,6 +75,10 @@ async function validateSnapshotFilesystemTarget(targetPath: string): Promise<{ s
 }
 
 function validateSnapshotFilename(filename: string): { success: false; error: string } | { success: true } {
+  if (filename.includes('\0')) {
+    return { success: false, error: 'SECURITY_VIOLATION: Filename cannot contain null bytes' };
+  }
+
   if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
     return { success: false, error: 'SECURITY_VIOLATION: Filename cannot contain path separators or traversal' };
   }
@@ -81,6 +98,10 @@ export function validateSnapshotPath(inputPath: unknown): { isValid: false; erro
   const trimmed = inputPath.trim();
   if (trimmed.length === 0) {
     return { isValid: false, error: 'Path cannot be empty' };
+  }
+
+  if (trimmed.includes('\0')) {
+    return { isValid: false, error: 'SECURITY_VIOLATION: Path cannot contain null bytes' };
   }
 
   if (/^[a-zA-Z]:[/\\]/.test(trimmed) || trimmed.includes(':')) {
@@ -232,11 +253,7 @@ export async function importEnvironmentSnapshot(params: { path?: unknown; filena
     let parsed: Record<string, unknown> | undefined = undefined;
     try {
       const contents = await fs.readFile(target.targetPath, 'utf8');
-      try {
-        parsed = JSON.parse(contents) as Record<string, unknown>;
-      } catch {
-        parsed = undefined;
-      }
+      parsed = parseSnapshotObject(contents);
     } catch (error: unknown) {
       const errObj = error as Record<string, unknown> | null;
       if (errObj && (errObj.code === 'ENOENT' || errObj.code === 'ENOTDIR')) {
@@ -251,7 +268,7 @@ export async function importEnvironmentSnapshot(params: { path?: unknown; filena
     return {
       success: true,
       message: `Environment snapshot import handled from ${target.targetPath}`,
-      details: parsed && typeof parsed === 'object' ? parsed : undefined
+      details: parsed
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

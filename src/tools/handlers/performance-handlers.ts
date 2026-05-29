@@ -16,7 +16,7 @@ const MAX_SCALABILITY_LEVEL = 4;
 export async function handlePerformanceTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as PerformanceArgs;
   const argsRecord = args as Record<string, unknown>;
-  
+
   switch (action) {
     case 'start_profiling': {
       const profilingType = argsTyped.type ? String(argsTyped.type).toLowerCase() : 'all';
@@ -123,7 +123,7 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
     case 'apply_baseline_settings': {
       // Delegate to C++ handler which uses IConsoleManager for reliable CVar setting
       const profile = typeof argsRecord.profile === 'string' ? argsRecord.profile : 'balanced';
-      
+
       const res = await executeAutomationRequest(tools, 'apply_baseline_settings', {
         profile
       }) as Record<string, unknown>;
@@ -133,13 +133,13 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
     case 'merge_actors': {
       // If action is merge_actors, force mergeActors param to true
       const mergeParams = action === 'merge_actors' ? { ...argsRecord, mergeActors: true } : argsRecord;
-      
+
       if (mergeParams.mergeActors) {
         // Use automation bridge for actor merging
         const actors = Array.isArray(mergeParams.actors)
           ? mergeParams.actors.filter((name): name is string => typeof name === 'string' && name.length > 0)
           : undefined;
-        
+
         if (!actors || actors.length < 2) {
         return {
           success: false,
@@ -147,7 +147,7 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
           error: 'Merge actors requires an "actors" array with at least 2 valid actor names.'
         };
         }
-        
+
         const res = await executeAutomationRequest(tools, TOOL_ACTIONS.MERGE_ACTORS, {
           enableInstancing: mergeParams.enableInstancing as boolean | undefined,
           mergeActors: true,
@@ -158,7 +158,7 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
         }) as Record<string, unknown>;
         return cleanObject(res);
       }
-      
+
       const res = await executeAutomationRequest(tools, 'optimize_draw_calls', {
         enabled: typeof mergeParams.enabled === 'boolean'
           ? mergeParams.enabled

@@ -17,7 +17,7 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { requireNonEmptyString, executeAutomationRequest, getTimeoutMs, normalizePathFields } from './common-handlers.js';
+import { createSubActionDispatcher, requireNonEmptyString } from './common-handlers.js';
 
 
 /**
@@ -28,30 +28,20 @@ export async function handleAITools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  const argsRecord = normalizePathFields(args as Record<string, unknown>, [
-    'controllerPath',
-    'behaviorTreePath',
-    'blackboardPath',
-    'queryPath',
-    'blueprintPath',
-    'stateTreePath',
-    'definitionPath',
-    'configPath'
-  ]);
-  const timeoutMs = getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_ai',
-      payload as HandlerArgs,
-      `Automation bridge not available for AI action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  const { argsRecord, sendRequest } = createSubActionDispatcher(tools, args, {
+    toolName: 'manage_ai',
+    domainName: 'AI',
+    pathFields: [
+      'controllerPath',
+      'behaviorTreePath',
+      'blackboardPath',
+      'queryPath',
+      'blueprintPath',
+      'stateTreePath',
+      'definitionPath',
+      'configPath'
+    ]
+  });
 
   switch (action) {
     // =========================================================================

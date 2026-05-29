@@ -112,7 +112,7 @@ export class RequestTracker {
      * 1. Max extensions limit (MAX_PROGRESS_EXTENSIONS)
      * 2. Stale detection (percent unchanged for PROGRESS_STALE_THRESHOLD updates)
      * 3. Absolute max timeout cap (ABSOLUTE_MAX_TIMEOUT_MS)
-     * 
+     *
      * @param requestId - The request ID to extend
      * @param percent - Current progress percent (0-100)
      * @param message - Optional progress message
@@ -150,7 +150,7 @@ export class RequestTracker {
 
         // Clear existing timeout and set new one
         clearTimeout(pending.timeout);
-        
+
         const newTimeout = setTimeout(() => {
             if (this.pendingRequests.has(requestId)) {
                 this.cleanupRequest(requestId);
@@ -166,17 +166,22 @@ export class RequestTracker {
         return true;
     }
 
+    private clearRequestTimers(pending: PendingRequest): void {
+        clearTimeout(pending.timeout);
+        if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
+        if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
+    }
+
     /**
      * Clean up request timers and remove from map.
      */
-    private cleanupRequest(requestId: string): void {
+    private cleanupRequest(requestId: string): PendingRequest | undefined {
         const pending = this.pendingRequests.get(requestId);
         if (pending) {
-            clearTimeout(pending.timeout);
-            if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
-            if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
+            this.clearRequestTimers(pending);
             this.pendingRequests.delete(requestId);
         }
+        return pending;
     }
 
     public getPendingRequest(requestId: string): PendingRequest | undefined {
@@ -184,32 +189,22 @@ export class RequestTracker {
     }
 
     public resolveRequest(requestId: string, response: AutomationBridgeResponseMessage): void {
-        const pending = this.pendingRequests.get(requestId);
+        const pending = this.cleanupRequest(requestId);
         if (pending) {
-            clearTimeout(pending.timeout);
-            if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
-            if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
-            this.pendingRequests.delete(requestId);
             pending.resolve(response);
         }
     }
 
     public rejectRequest(requestId: string, error: Error): void {
-        const pending = this.pendingRequests.get(requestId);
+        const pending = this.cleanupRequest(requestId);
         if (pending) {
-            clearTimeout(pending.timeout);
-            if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
-            if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
-            this.pendingRequests.delete(requestId);
             pending.reject(error);
         }
     }
 
     public rejectAll(error: Error): void {
         for (const [, pending] of this.pendingRequests) {
-            clearTimeout(pending.timeout);
-            if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
-            if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
+            this.clearRequestTimers(pending);
             pending.reject(error);
         }
         this.pendingRequests.clear();

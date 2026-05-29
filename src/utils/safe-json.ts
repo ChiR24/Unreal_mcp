@@ -11,10 +11,11 @@ const log = new Logger('safe-json');
  */
 export function cleanObject<T = unknown>(obj: T, maxDepth: number = 10): T {
   const activePath = new WeakSet<object>();
+  const depthLimit = Number.isInteger(maxDepth) && maxDepth >= 0 ? maxDepth : 10;
 
   function clean(value: unknown, depth: number, path: string = 'root'): unknown {
     // Prevent infinite recursion
-    if (depth > maxDepth) {
+    if (depth > depthLimit) {
       return '[Max depth reached]';
     }
 

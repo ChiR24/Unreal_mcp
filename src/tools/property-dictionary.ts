@@ -94,5 +94,5 @@ export function normalizeDictionaryKey(name: string | undefined): string {
 
 export function lookupPropertyMetadata(property: { name?: string } | string) {
   const key = typeof property === 'string' ? normalizeDictionaryKey(property) : normalizeDictionaryKey(property.name);
-  return PROPERTY_DICTIONARY[key];
+  return PROPERTY_DICTIONARY[key] ?? (key.startsWith('b') ? PROPERTY_DICTIONARY[key.slice(1)] : undefined);
 }

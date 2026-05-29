@@ -11,9 +11,8 @@
  */
 
 import { ITools } from '../../types/tool-interfaces.js';
-import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest, getTimeoutMs } from './common-handlers.js';
+import { createSubActionDispatcher } from './common-handlers.js';
 
 
 /**
@@ -24,21 +23,10 @@ export async function handleSessionsTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  const argsRecord = args as Record<string, unknown>;
-  const timeoutMs = typeof argsRecord.timeoutMs === 'number' ? argsRecord.timeoutMs : getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_sessions',
-      payload as HandlerArgs,
-      `Automation bridge not available for sessions action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  const { sendRequest } = createSubActionDispatcher(tools, args, {
+    toolName: 'manage_sessions',
+    domainName: 'sessions'
+  });
 
   switch (action) {
     // ========================================================================
@@ -105,10 +93,10 @@ export async function handleSessionsTools(
       return sendRequest('get_sessions_info');
 
     default:
-      return cleanObject({
+      return {
         success: false,
         error: 'UNKNOWN_ACTION',
         message: `Unknown sessions action: ${action}`
-      });
+      };
   }
 }

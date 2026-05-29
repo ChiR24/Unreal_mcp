@@ -49,7 +49,7 @@ function normalizeSkeletonArgs(action: string, args: HandlerArgs): Record<string
     'modify_socket': 'configure_socket',
     'modify_physics_body': 'configure_physics_body',
   };
-  
+
   const canonicalAction = actionAliases[action] ?? action;
   const normalized: Record<string, unknown> = { ...args, subAction: canonicalAction };
 

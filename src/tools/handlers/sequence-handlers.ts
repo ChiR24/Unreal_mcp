@@ -1,6 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools, StandardActionResponse } from '../../types/tool-interfaces.js';
-import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
+import { executeAutomationRequest, normalizePathFields, requireNonEmptyString } from './common-handlers.js';
 
 /** Extended response with common sequence fields */
 interface SequenceActionResponse extends StandardActionResponse {
@@ -51,11 +51,12 @@ function getMessageString(res: SequenceActionResponse | null | undefined): strin
 
 export async function handleSequenceTools(action: string, args: Record<string, unknown>, tools: ITools) {
   const seqAction = String(action || '').trim();
+  args = normalizePathFields(args, ['path', 'destinationPath']);
   switch (seqAction) {
     case 'create': {
       const name = requireNonEmptyString(args.name, 'name', 'Missing required parameter: name');
       const basePath = typeof args.path === 'string' ? args.path.trim().replace(/\/$/, '') : '/Game/Sequences';
-      
+
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
         name,
@@ -168,14 +169,14 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       if (actorNames.length === 0) {
         throw new Error('Missing required parameter: actorNames (must be non-empty array)');
       }
-      
+
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
         actorNames,
         path,
         subAction: 'add_actors'
       }) as SequenceActionResponse;
-      
+
       const errorCode = getErrorString(res).toUpperCase();
       const msgLower = getMessageString(res).toLowerCase();
       if (actorNames.length === 0 && res && res.success === false && errorCode === 'INVALID_ARGUMENT') {
@@ -354,7 +355,7 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       if (!Number.isFinite(speed) || speed <= 0) {
         throw new Error('Invalid speed: must be a positive number');
       }
-      
+
       // Try setting speed
       let res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,

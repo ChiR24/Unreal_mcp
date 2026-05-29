@@ -12,6 +12,12 @@ function normalizeText(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
 }
 
+function hasExplicitFailurePayload(payload: unknown): boolean {
+  if (!isRecord(payload)) return false;
+  return (typeof payload.success === 'boolean' && payload.success === false) ||
+    (typeof payload.error === 'string' && payload.error.length > 0);
+}
+
 function buildSummaryText(toolName: string, payload: unknown): string {
   if (typeof payload === 'string') {
     const normalized = payload.trim();
@@ -336,12 +342,8 @@ export class ResponseValidator {
       }
       // Promote failure semantics to top-level isError when obvious
       const structuredContent = responseObj.structuredContent ?? structuredPayload;
-      if (isRecord(structuredContent)) {
-        const sc = structuredContent;
-        const hasExplicitFailure = (typeof sc.success === 'boolean' && sc.success === false) || (typeof sc.error === 'string' && (sc.error as string).length > 0);
-        if (hasExplicitFailure && responseObj.isError !== true) {
-          responseObj.isError = true;
-        }
+      if ((hasExplicitFailurePayload(structuredContent) || hasExplicitFailurePayload(responseObj)) && responseObj.isError !== true) {
+        responseObj.isError = true;
       }
       if (!validation.valid) {
         try {
@@ -391,12 +393,8 @@ export class ResponseValidator {
     }
 
     // Promote failure semantics to top-level isError when obvious
-    if (isRecord(wrapped.structuredContent)) {
-      const sc = wrapped.structuredContent;
-      const hasExplicitFailure = (typeof sc.success === 'boolean' && sc.success === false) || (typeof sc.error === 'string' && (sc.error as string).length > 0);
-      if (hasExplicitFailure) {
-        wrapped.isError = true;
-      }
+    if (hasExplicitFailurePayload(wrapped.structuredContent)) {
+      wrapped.isError = true;
     }
 
     if (!validation.valid) {

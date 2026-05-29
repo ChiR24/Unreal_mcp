@@ -4,7 +4,7 @@ import path from 'node:path';
 export async function readIniFile(filePath: string): Promise<Record<string, Record<string, string>>> {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
-    const result: Record<string, Record<string, string>> = {};
+    const result: Record<string, Record<string, string>> = Object.create(null);
     let currentSection = '';
 
     const lines = content.split(/\r?\n/);
@@ -16,7 +16,7 @@ export async function readIniFile(filePath: string): Promise<Record<string, Reco
 
       if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
         currentSection = trimmed.substring(1, trimmed.length - 1);
-        result[currentSection] = {};
+        result[currentSection] = Object.create(null) as Record<string, string>;
       } else if (currentSection) {
         const parts = trimmed.split('=');
         if (parts.length >= 2) {
@@ -43,7 +43,7 @@ export async function getProjectSetting(projectPath: string, category: string, s
     // Possible file names/locations in order of preference (Config/DefaultX.ini, Saved/Config/WindowsEditor/X.ini)
     // category is usually 'Project', 'Engine', 'Game', 'Input', etc.
     const cleanCategory = category.replace(/^Default/, ''); // If caller passed 'DefaultEngine', normalize to 'Engine'
-    
+
     // Security check: category should not contain path traversal characters
     // We strictly allow alphanumeric, underscore, and hyphen characters for categories.
     // Unreal categories are typically "Engine", "Game", "Input", "Editor", "Scalability", etc.

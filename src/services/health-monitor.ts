@@ -13,6 +13,17 @@ export interface PerformanceMetrics {
   recentErrors: Array<{ time: string; scope: string; type: string; message: string; retriable: boolean }>;
 }
 
+const RESPONSE_TIME_SAMPLE_LIMIT = 100;
+const RECENT_ERROR_LIMIT = 20;
+
+function elapsedSince(startTime: number): number {
+  if (!Number.isFinite(startTime)) {
+    return 0;
+  }
+
+  return Math.max(0, Date.now() - startTime);
+}
+
 export class HealthMonitor {
   private logger: Logger;
   public metrics: PerformanceMetrics;
@@ -38,7 +49,7 @@ export class HealthMonitor {
   }
 
   trackPerformance(startTime: number, success: boolean) {
-    const responseTime = Date.now() - startTime;
+    const responseTime = elapsedSince(startTime);
     this.metrics.totalRequests++;
     if (success) {
       this.metrics.successfulRequests++;
@@ -49,7 +60,7 @@ export class HealthMonitor {
     // Keep last 100 response times for average calculation
     this.metrics.responseTimes.push(responseTime);
     this.responseTimeTotal += responseTime;
-    if (this.metrics.responseTimes.length > 100) {
+    if (this.metrics.responseTimes.length > RESPONSE_TIME_SAMPLE_LIMIT) {
       const removed = this.metrics.responseTimes.shift();
       if (removed !== undefined) this.responseTimeTotal -= removed;
     }
@@ -67,7 +78,7 @@ export class HealthMonitor {
         message: typeof errorResponse.error === 'string' ? errorResponse.error : (typeof errorResponse.message === 'string' ? errorResponse.message : 'Unknown error'),
         retriable: Boolean(errorResponse.retriable)
       });
-      if (this.metrics.recentErrors.length > 20) this.metrics.recentErrors.splice(0, this.metrics.recentErrors.length - 20);
+      if (this.metrics.recentErrors.length > RECENT_ERROR_LIMIT) this.metrics.recentErrors.splice(0, this.metrics.recentErrors.length - RECENT_ERROR_LIMIT);
     } catch (error) {
       this.logger.debug('Failed to record health monitor error response', error);
     }

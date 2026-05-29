@@ -44,6 +44,12 @@ describe('sanitizeAssetName', () => {
         expect(sanitizeAssetName('DROP DELETE Table')).toBe('Table');
         expect(sanitizeAssetName('DROP DELETE Table')).toBe('Table');
     });
+
+    it('handles reserved keywords case-insensitively', () => {
+        expect(sanitizeAssetName('None')).toBe('None_Asset');
+        expect(sanitizeAssetName('CLASS')).toBe('CLASS_Asset');
+        expect(sanitizeAssetName('native')).toBe('native_Asset');
+    });
 });
 
 describe('sanitizePath', () => {

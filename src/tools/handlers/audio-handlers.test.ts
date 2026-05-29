@@ -7,6 +7,16 @@ const { executeAutomationRequestMock } = vi.hoisted(() => ({
 
 vi.mock('./common-handlers.js', () => ({
   executeAutomationRequest: executeAutomationRequestMock,
+  normalizePathFields: (args: Record<string, unknown>, pathFields: readonly string[]) => {
+    const result = { ...args };
+    for (const field of pathFields) {
+      const value = result[field];
+      if (typeof value === 'string' && value.startsWith('Game/')) {
+        result[field] = `/${value}`;
+      }
+    }
+    return result;
+  },
   requireNonEmptyString: (value: unknown, fieldName: string, message: string) => {
     if (typeof value !== 'string' || value.trim().length === 0) {
       throw new Error(message || `Missing required parameter: ${fieldName}`);
@@ -42,6 +52,27 @@ describe('handleAudioTools audio payload mapping', () => {
         wavePath: '/Engine/VREditor/Sounds/VR_click1',
         volume: undefined,
         pitch: undefined
+      })
+    );
+  });
+
+  it('normalizes creation path aliases before dispatch', async () => {
+    await handleAudioTools(
+      'set_sound_attenuation',
+      {
+        action: 'set_sound_attenuation',
+        name: 'TestAttenuation',
+        path: 'Game/MCPTest/Audio'
+      },
+      {} as never
+    );
+
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      TOOL_ACTIONS.SET_SOUND_ATTENUATION,
+      expect.objectContaining({
+        name: 'TestAttenuation',
+        path: '/Game/MCPTest/Audio'
       })
     );
   });
@@ -83,6 +114,50 @@ describe('handleAudioTools audio payload mapping', () => {
       TOOL_ACTIONS.SET_BASE_SOUND_MIX,
       expect.objectContaining({
         mixName: '/Game/MCPTest/TestSoundMix'
+      })
+    );
+  });
+
+  it('clamps 2D playback volume and pitch to UE-safe ranges', async () => {
+    await handleAudioTools(
+      'play_sound_2d',
+      {
+        action: 'play_sound_2d',
+        soundPath: '/Game/MCPTest/TestCue',
+        volume: 12,
+        pitch: 0
+      },
+      {} as never
+    );
+
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      TOOL_ACTIONS.PLAY_SOUND_2D,
+      expect.objectContaining({
+        volume: 4,
+        pitch: 0.01
+      })
+    );
+  });
+
+  it('clamps ambient playback volume and pitch to UE-safe ranges', async () => {
+    await handleAudioTools(
+      'create_ambient_sound',
+      {
+        action: 'create_ambient_sound',
+        soundPath: '/Game/MCPTest/TestCue',
+        volume: Number.NaN,
+        pitch: Number.POSITIVE_INFINITY
+      },
+      {} as never
+    );
+
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      TOOL_ACTIONS.CREATE_AMBIENT_SOUND,
+      expect.objectContaining({
+        volume: 1,
+        pitch: 1
       })
     );
   });

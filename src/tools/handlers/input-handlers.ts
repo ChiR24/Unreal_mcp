@@ -2,7 +2,7 @@ import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest, getTimeoutMs } from './common-handlers.js';
+import { executeAutomationRequest, getTimeoutMs, normalizePathFields } from './common-handlers.js';
 import { sanitizePath } from '../../utils/path-security.js';
 
 /** Valid parameters for each input action */
@@ -25,25 +25,26 @@ function validateNoExtraParams(action: string, args: Record<string, unknown>): {
     if (!validParams) {
         return { valid: false, error: `manage_input/${action}: Unknown action` };
     }
-    
+
     const providedParams = Object.keys(args);
     const extraParams = providedParams.filter(p => !validParams.has(p));
-    
+
     if (extraParams.length > 0) {
-        return { 
-            valid: false, 
-            error: `manage_input/${action}: Invalid parameters: ${extraParams.join(', ')}. Valid params: ${[...validParams].join(', ')}` 
+        return {
+            valid: false,
+            error: `manage_input/${action}: Invalid parameters: ${extraParams.join(', ')}. Valid params: ${[...validParams].join(', ')}`
         };
     }
-    
+
     return { valid: true };
 }
 
 /** Validate and sanitize path parameters */
 function validateAndSanitizePaths(paths: Record<string, unknown>, requiredKeys: string[] = []): { valid: boolean; sanitized: Record<string, string>; error?: string } {
     const sanitized: Record<string, string> = {};
-    
-    for (const [key, value] of Object.entries(paths)) {
+    const normalizedPaths = normalizePathFields(paths, Object.keys(paths));
+
+    for (const [key, value] of Object.entries(normalizedPaths)) {
         if (value === undefined || value === null) {
             // If this is a required key, missing value is an error
             if (requiredKeys.includes(key)) {
@@ -51,11 +52,11 @@ function validateAndSanitizePaths(paths: Record<string, unknown>, requiredKeys: 
             }
             continue;
         }
-        
+
         if (typeof value !== 'string') {
             return { valid: false, sanitized: {}, error: `${key} must be a string` };
         }
-        
+
         if (value.length === 0) {
             // If this is a required key, empty string is an error
             if (requiredKeys.includes(key)) {
@@ -63,19 +64,19 @@ function validateAndSanitizePaths(paths: Record<string, unknown>, requiredKeys: 
             }
             continue;
         }
-        
+
         try {
             sanitized[key] = sanitizePath(value);
         } catch (e) {
             const message = e instanceof Error ? e.message : String(e);
-            return { 
-                valid: false, 
-                sanitized: {}, 
-                error: `manage_input: Invalid ${key}: ${message}` 
+            return {
+                valid: false,
+                sanitized: {},
+                error: `manage_input: Invalid ${key}: ${message}`
             };
         }
     }
-    
+
     return { valid: true, sanitized };
 }
 
@@ -113,32 +114,32 @@ export async function handleInputTools(
       // Validate and sanitize path parameters
       const requiredPaths = REQUIRED_PATHS_BY_ACTION[subAction] || [];
       const pathParams: Record<string, unknown> = {};
-      
+
       for (const pathKey of requiredPaths) {
           if (argsRecord[pathKey] !== undefined) {
               pathParams[pathKey] = argsRecord[pathKey];
           }
       }
-      
+
       // Also check for optional path params (path, assetPath, contextPath, actionPath for non-required)
       if (argsRecord.path !== undefined) pathParams.path = argsRecord.path;
       if (argsRecord.assetPath !== undefined) pathParams.assetPath = argsRecord.assetPath;
       if (argsRecord.contextPath !== undefined) pathParams.contextPath = argsRecord.contextPath;
       if (argsRecord.actionPath !== undefined) pathParams.actionPath = argsRecord.actionPath;
-      
+
       const pathValidation = validateAndSanitizePaths(pathParams, requiredPaths);
       if (!pathValidation.valid) {
           return ResponseFactory.error(`manage_input/${subAction}: ${pathValidation.error || 'Invalid path'}`);
       }
-      
+
       // Build sanitized payload
       const sanitizedPayload: Record<string, unknown> = { ...argsRecord, subAction };
-      
+
       // Apply sanitized paths back to payload
       for (const [key, value] of Object.entries(pathValidation.sanitized)) {
           sanitizedPayload[key] = value;
       }
-      
+
       const result = await executeAutomationRequest(
         tools,
         'manage_input',

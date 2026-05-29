@@ -53,7 +53,8 @@ export async function handleAudioAuthoringTools(
       'speakerPath',
       'reverbEffect',
       'effectPresetPath',
-      'parentPath'
+      'parentPath',
+      'path'
     ]);
 
     // Normalize asset paths for StaticLoadObject compatibility (needs /Game/Path/Asset.AssetName)
@@ -120,11 +121,13 @@ export async function handleAudioAuthoringTools(
 
 	// configure_spatialization: C++ reads spatialize (bool) + spatializationAlgorithm
 	if (subAction === 'configure_spatialization') {
-		if (payload.spatialization && !payload.spatialize) {
+		if (payload.spatialization !== undefined) {
 			if (typeof payload.spatialization === 'string') {
 				payload.spatializationAlgorithm = payload.spatialization;
-				payload.spatialize = true;
-			} else {
+				if (payload.spatialize === undefined) {
+					payload.spatialize = true;
+				}
+			} else if (payload.spatialize === undefined) {
 				payload.spatialize = payload.spatialization;
 			}
 			delete payload.spatialization;

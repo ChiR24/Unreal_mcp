@@ -1,7 +1,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, EnvironmentArgs, Vector3 } from '../../types/handler-types.js';
-import { executeAutomationRequest, validateArgsSecurity } from './common-handlers.js';
+import { executeAutomationRequest, normalizePathFields, validateArgsSecurity } from './common-handlers.js';
 import { exportEnvironmentSnapshot, importEnvironmentSnapshot } from '../../utils/environment-snapshot.js';
 
 /** Location item in foliage locations array */
@@ -44,6 +44,58 @@ function getString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 }
 
+const ENVIRONMENT_PATH_FIELDS_BY_ACTION: Record<string, readonly string[]> = {
+  create_landscape: ['materialPath', 'path'],
+  modify_heightmap: ['landscapePath'],
+  sculpt: ['landscapePath'],
+  sculpt_landscape: ['landscapePath'],
+  add_foliage: ['foliageType', 'foliageTypePath', 'meshPath'],
+  paint_foliage: ['foliageType', 'foliageTypePath'],
+  add_foliage_instances: ['foliageType', 'foliageTypePath', 'meshPath'],
+  create_procedural_terrain: ['material', 'path'],
+  create_procedural_foliage: ['path'],
+  set_landscape_material: ['landscapePath', 'materialPath'],
+  create_landscape_grass_type: ['meshPath', 'path', 'staticMesh'],
+  generate_lods: ['assetPath', 'landscapePath', 'path'],
+  create_sky_sphere: ['path'],
+  create_fog_volume: ['path']
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizePathValue(value: unknown): unknown {
+  if (typeof value !== 'string' || value.length === 0) return value;
+  const normalized = normalizePathFields({ path: value }, ['path']).path;
+  return typeof normalized === 'string' ? normalized : value;
+}
+
+function normalizePathArray(value: unknown): unknown {
+  return Array.isArray(value) ? value.map(normalizePathValue) : value;
+}
+
+function normalizeFoliageTypes(value: unknown): unknown {
+  if (!Array.isArray(value)) return value;
+  return value.map(entry => {
+    if (!isRecord(entry) || typeof entry.meshPath !== 'string') return entry;
+    return { ...entry, meshPath: normalizePathValue(entry.meshPath) };
+  });
+}
+
+function normalizeEnvironmentPathArgs(action: string, args: Record<string, unknown>): Record<string, unknown> {
+  const pathFields = ENVIRONMENT_PATH_FIELDS_BY_ACTION[action] ?? [];
+  const normalized = pathFields.length > 0 ? normalizePathFields(args, pathFields) : { ...args };
+  if (action === 'generate_lods') {
+    normalized.assetPaths = normalizePathArray(normalized.assetPaths);
+    normalized.assets = normalizePathArray(normalized.assets);
+  } else if (action === 'create_procedural_foliage') {
+    normalized.foliageTypes = normalizeFoliageTypes(normalized.foliageTypes);
+    normalized.types = normalizeFoliageTypes(normalized.types);
+  }
+  return normalized;
+}
+
 function buildRegionFromTopLevel(args: Record<string, unknown>): { minX: number; minY: number; maxX: number; maxY: number } | undefined {
   const minX = getNumber(args.minX);
   const minY = getNumber(args.minY);
@@ -80,11 +132,11 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
   // SECURITY: Validate raw args FIRST before constructing payloads
   // This catches path traversal and other security violations in params that handlers might not use
   validateArgsSecurity(args);
-  
-  const argsTyped = args as EnvironmentArgs;
-  const argsRecord = args as Record<string, unknown>;
+
   const envAction = String(action || '').toLowerCase();
-  
+  const argsRecord = normalizeEnvironmentPathArgs(envAction, args as Record<string, unknown>);
+  const argsTyped = argsRecord as EnvironmentArgs;
+
   switch (envAction) {
     case 'create_landscape': {
       const componentCount = argsTyped.componentCount;
@@ -203,9 +255,9 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
     case 'add_foliage_instances': {
       const locationsRaw = argsTyped.locations as LocationItem[] | undefined;
       // C++ accepts location as object {x, y, z} or array [x, y, z]
-      const transformsRaw = argsTyped.transforms || 
-        (locationsRaw ? locationsRaw.map((l: LocationItem) => ({ 
-          location: { x: l.x ?? 0, y: l.y ?? 0, z: l.z ?? 0 } 
+      const transformsRaw = argsTyped.transforms ||
+        (locationsRaw ? locationsRaw.map((l: LocationItem) => ({
+          location: { x: l.x ?? 0, y: l.y ?? 0, z: l.z ?? 0 }
         })) : []);
       return cleanObject(await executeAutomationRequest(tools, 'add_foliage_instances', {
         foliageType: argsTyped.foliageType || argsTyped.foliageTypePath || argsTyped.meshPath || '',
@@ -216,10 +268,10 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
       // Get locations array if provided
       const locations = argsTyped.locations as Vector3[] | undefined;
       // Get position/location object, default to {0,0,0} if not provided
-      const position = vec3ToObject(argsRecord.position as Vector3 | undefined) ?? 
-                       vec3ToObject(argsTyped.location) ?? 
+      const position = vec3ToObject(argsRecord.position as Vector3 | undefined) ??
+                       vec3ToObject(argsTyped.location) ??
                        { x: 0, y: 0, z: 0 };
-      
+
       return cleanObject(await executeAutomationRequest(tools, 'paint_foliage', {
         foliageType: argsTyped.foliageType || argsTyped.foliageTypePath || '',
         // C++ expects locations array of objects {x, y, z}

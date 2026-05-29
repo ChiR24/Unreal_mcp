@@ -79,7 +79,7 @@ export class AutomationBridge extends EventEmitter {
     private lastHandshakeFailure?: { reason: string; at: Date };
     private lastDisconnect?: { code: number; reason: string; at: Date };
     private lastError?: { message: string; at: Date };
-     
+
     private queuedRequestItems: QueuedRequestItem[] = [];
     private connectionPromise?: Promise<void>;
     private connectionLock = false;
@@ -90,7 +90,7 @@ export class AutomationBridge extends EventEmitter {
 
     constructor(options: AutomationBridgeOptions = {}) {
         super();
-        
+
         // Check if non-loopback binding is allowed (opt-in for LAN access)
         const allowNonLoopback = options.allowNonLoopback
             ?? (process.env.MCP_AUTOMATION_ALLOW_NON_LOOPBACK?.toLowerCase() === 'true');
@@ -108,7 +108,7 @@ export class AutomationBridge extends EventEmitter {
             }
 
             const lower = trimmed.toLowerCase();
-            
+
             // Always allow loopback addresses
             if (lower === 'localhost' || lower === '127.0.0.1') {
                 return '127.0.0.1';
@@ -124,16 +124,16 @@ export class AutomationBridge extends EventEmitter {
                 if (addressToValidate.startsWith('[') && addressToValidate.endsWith(']')) {
                     addressToValidate = addressToValidate.slice(1, -1);
                 }
-                
+
                 // Strip zone ID if present (e.g., fe80::1%eth0 -> fe80::1)
                 const zoneIndex = addressToValidate.indexOf('%');
-                const addressWithoutZone = zoneIndex >= 0 
-                    ? addressToValidate.slice(0, zoneIndex) 
+                const addressWithoutZone = zoneIndex >= 0
+                    ? addressToValidate.slice(0, zoneIndex)
                     : addressToValidate;
-                
+
                 // Use Node.js net module for validation (IPv4 and IPv6)
                 const ipVersion = net.isIP(addressWithoutZone);
-                
+
                 if (ipVersion === 4 || ipVersion === 6) {
                     this.log.warn(
                         `SECURITY: ${label} set to non-loopback address '${trimmed}'. ` +
@@ -143,7 +143,7 @@ export class AutomationBridge extends EventEmitter {
                     // Brackets will be re-added by formatHostForUrl if needed
                     return addressToValidate;
                 }
-                
+
                 // Check if it's a valid hostname (domain name)
                 // Allow hostnames like "example.com", "server.local", "unreal-pc"
                 // Must contain at least one letter (to distinguish from IPs)
@@ -163,7 +163,7 @@ export class AutomationBridge extends EventEmitter {
                         return trimmed;
                     }
                 }
-                
+
                 // Invalid IP format or hostname
                 this.log.error(
                     `${label} '${trimmed}' is not a valid IPv4/IPv6 address or hostname. ` +
@@ -316,7 +316,7 @@ export class AutomationBridge extends EventEmitter {
         this.messageHandler = new MessageHandler(this.requestTracker);
 
         // Forward events from connection manager
-        // Note: ConnectionManager doesn't emit 'connected'/'disconnected' directly in the same way, 
+        // Note: ConnectionManager doesn't emit 'connected'/'disconnected' directly in the same way,
         // we handle socket events here and use ConnectionManager to track state.
     }
 
@@ -482,14 +482,14 @@ export class AutomationBridge extends EventEmitter {
                         const text = rawDataToUtf8String(data, byteLength);
                         this.log.debug(`[AutomationBridge Client] Received message: ${text.substring(0, 1000)}`);
                         const parsed = JSON.parse(text) as AutomationBridgeMessage;
-                        
+
                         // Check rate limit BEFORE schema validation to prevent DoS via invalid messages
                         if (!this.connectionManager.recordInboundMessage(socket, false)) {
                             this.log.warn('Inbound message rate limit exceeded; closing connection.');
                             socket.close(4008, 'Rate limit exceeded');
                             return;
                         }
-                        
+
                         const validation = automationMessageSchema.safeParse(parsed);
                         if (!validation.success) {
                             this.log.warn('Dropped invalid automation message', validation.error.issues);
@@ -542,6 +542,7 @@ export class AutomationBridge extends EventEmitter {
                 this.log.info(`Automation bridge client socket closed (code=${code}, reason=${reason})`);
 
                 if (!this.connectionManager.isConnected()) {
+                    this.rejectQueuedRequests(new Error(reason || 'Connection lost'));
                     this.requestTracker.rejectAll(new Error(reason || 'Connection lost'));
                 }
             }
@@ -610,6 +611,7 @@ export class AutomationBridge extends EventEmitter {
         this.abortPendingConnection(new Error('Automation bridge server stopped'));
         this.connectionManager.closeAll(1001, 'Server shutdown');
         this.lastHandshakeAck = undefined;
+        this.rejectQueuedRequests(new Error('Automation bridge server stopped'));
         this.requestTracker.rejectAll(new Error('Automation bridge server stopped'));
     }
 
@@ -825,6 +827,11 @@ export class AutomationBridge extends EventEmitter {
     private processRequestQueue() {
         if (this.queuedRequestItems.length === 0) return;
 
+        if (!this.isConnected()) {
+            this.rejectQueuedRequests(new Error('Connection lost'));
+            return;
+        }
+
         // while we have capacity and items
         while (
             this.queuedRequestItems.length > 0 &&
@@ -836,6 +843,12 @@ export class AutomationBridge extends EventEmitter {
                     .then(item.resolve)
                     .catch(item.reject);
             }
+        }
+    }
+
+    private rejectQueuedRequests(error: Error): void {
+        for (const item of this.queuedRequestItems.splice(0)) {
+            item.reject(error);
         }
     }
 

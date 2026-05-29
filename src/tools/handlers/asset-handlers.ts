@@ -421,7 +421,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           paths: normalizedPaths,
           subAction: 'delete'
         }) as AssetOperationResponse;
-        
+
         // CRITICAL FIX: Check if C++ returned success=false and pass it through
         // This prevents false positives where TS wraps a failed C++ response as success
         if (res && typeof res.success === 'boolean' && res.success === false) {
@@ -435,7 +435,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
             data: res
           });
         }
-        
+
         return ResponseFactory.success(res, 'Assets deleted successfully');
       }
 
@@ -558,7 +558,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const name = extractString(params, 'name');
         const parentMaterial = extractString(params, 'parentMaterial');
         const savePath = extractOptionalString(params, 'savePath');
-        
+
         const res = await executeAutomationRequest(
           tools,
           'create_material_instance',
@@ -921,7 +921,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const assetPath = extractString(params, 'assetPath');
         const nodeId = extractOptionalString(params, 'nodeId');
         const expressionIndex = extractOptionalNumber(params, 'expressionIndex');
-        
+
         const res = await executeAutomationRequest(tools, 'get_material_node_details', {
           assetPath,
           nodeId,
@@ -972,7 +972,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         // SECURITY: Validate assetPaths array for traversal attempts
         const assetPathsSecurity = validatePathsSecurity(assetPaths, 'assetPaths');
         if (assetPathsSecurity) return assetPathsSecurity;
-        
+
         if (!folderPath && (!assetPaths || (Array.isArray(assetPaths) && assetPaths.length === 0))) {
           return ResponseFactory.error('INVALID_ARGUMENT', 'Either folderPath or assetPaths is required for bulk_rename');
         }
@@ -983,7 +983,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const replaceText = typeof argsTyped.replaceText === 'string'
           ? argsTyped.replaceText
           : (typeof argsTyped.replacement === 'string' ? argsTyped.replacement : undefined);
-        
+
         const res = await executeAutomationRequest(tools, 'bulk_rename', {
           folderPath,
           assetPaths,
@@ -1000,11 +1000,11 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const argsTyped = args as AssetArgs;
         const folderPath = argsTyped.folderPath ?? argsTyped.path;
         const assetPaths = argsTyped.assetPaths ?? argsTyped.paths;
-        
+
         if (!folderPath && (!assetPaths || (Array.isArray(assetPaths) && assetPaths.length === 0))) {
           return ResponseFactory.error('INVALID_ARGUMENT', 'Either folderPath or assetPaths is required for bulk_delete');
         }
-        
+
         const res = await executeAutomationRequest(tools, 'bulk_delete', {
           ...args,
           folderPath,
@@ -1024,7 +1024,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
             assetPath: (args as AssetArgs).assetPath ?? (args as AssetArgs).path
           });
         }
-        
+
         // Pass all args through to C++ handler for actions that are valid but not explicitly handled
         const res = await executeAutomationRequest(tools, action || 'manage_asset', { ...args, subAction: action }) as AssetOperationResponse;
         const result = res ?? {};

@@ -35,4 +35,3 @@ export const ABSOLUTE_MAX_TIMEOUT_MS = 300000;       // 5 minute hard cap (even 
 
 // Message size limits
 export const MAX_WS_MESSAGE_SIZE_BYTES = 5 * 1024 * 1024;
-

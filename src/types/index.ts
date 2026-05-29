@@ -1,12 +1,16 @@
 /**
  * Central exports for type definitions.
- * 
+ *
  * @example
  * import { StandardActionResponse, HandlerArgs } from '../types/index.js';
  */
 
 // Core response types
 export type {
+  AutomationErrorDetail,
+  Vector3Response,
+  RotatorResponse,
+  ResolutionResponse,
   AutomationResponse,
   LevelResponse,
   ActorResponse,

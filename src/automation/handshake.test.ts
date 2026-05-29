@@ -48,4 +48,31 @@ describe('HandshakeHandler', () => {
 
         await expect(promise).resolves.toEqual({});
     });
+
+    it('cancels the delayed bridge hello when the socket closes first', async () => {
+        const socket = new FakeSocket();
+        const promise = new HandshakeHandler('secret-token').initiateHandshake(socket as unknown as WebSocket, 1000);
+        const assertion = expect(promise).rejects.toThrow('Socket closed during handshake');
+
+        socket.emit('close');
+
+        await assertion;
+        await vi.advanceTimersByTimeAsync(500);
+
+        expect(socket.sent).toHaveLength(0);
+    });
+
+    it('settles timeout failures once and removes listeners', async () => {
+        const socket = new FakeSocket();
+        const promise = new HandshakeHandler().initiateHandshake(socket as unknown as WebSocket, 1000);
+        const assertion = expect(promise).rejects.toThrow('Handshake timeout');
+
+        await vi.advanceTimersByTimeAsync(1000);
+
+        await assertion;
+        expect(socket.close).toHaveBeenCalledOnce();
+        expect(socket.listenerCount('message')).toBe(0);
+        expect(socket.listenerCount('error')).toBe(0);
+        expect(socket.listenerCount('close')).toBe(0);
+    });
 });

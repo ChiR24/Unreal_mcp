@@ -1,7 +1,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { GraphArgs, HandlerArgs, AutomationResponse } from '../../types/handler-types.js';
-import { executeAutomationRequest, promoteScalarResultFields } from './common-handlers.js';
+import { executeAutomationRequest, normalizePathFields, promoteScalarResultFields } from './common-handlers.js';
 import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 
 // AutomationResponse imported from types/handler-types.js
@@ -74,7 +74,7 @@ const BT_NODE_ALIASES: Record<string, { class: string; type: string }> = {
 export async function handleGraphTools(toolName: string, action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
     // Common validation
     if (!args.assetPath && !args.blueprintPath && !args.systemPath) {
-        // Some actions might not need a path if they operate on "currently open" asset, 
+        // Some actions might not need a path if they operate on "currently open" asset,
         // but generally we want an asset path.
     }
 
@@ -118,7 +118,7 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
             if (!processedArgs.variableName) processedArgs.variableName = processedArgs.memberName;
         } else if (processedArgs.nodeType === 'Event' || processedArgs.nodeType === 'CustomEvent' || (processedArgs.nodeType && processedArgs.nodeType.startsWith('K2Node_Event'))) {
             if (!processedArgs.eventName) processedArgs.eventName = processedArgs.memberName;
-            // CustomEvent uses eventName (mapped to CustomFunctionName) or customEventName in some contexts, 
+            // CustomEvent uses eventName (mapped to CustomFunctionName) or customEventName in some contexts,
             // but C++ CustomEvent handler uses 'eventName' payload field.
         } else if (processedArgs.nodeType === 'CallFunction' || processedArgs.nodeType === 'K2Node_CallFunction') {
             // C++ uses 'memberName' for CallFunction, so this is fine.
@@ -217,13 +217,13 @@ async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITool
         if (payload.fromNodeId && !payload.sourceNodeId) {
             payload.sourceNodeId = payload.fromNodeId;
         }
-        
+
         if (payload.toNodeId && !payload.targetNodeId) {
             if (typeof payload.toNodeId === 'string') {
                 payload.targetNodeId = payload.toNodeId.toLowerCase() === 'root' ? 'Main' : payload.toNodeId;
             }
         }
-        
+
         const targetInput = payload.toPin ?? payload.targetPin;
         if (targetInput && !payload.inputName) {
             if (typeof targetInput === 'string') {
@@ -237,8 +237,14 @@ async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITool
 }
 
 async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
-    const processedArgs: ProcessedGraphArgs = { ...args, subAction: action };
-    
+    const processedArgs = normalizePathFields({ ...args, subAction: action }, [
+        'assetPath',
+        'behaviorTreePath',
+        'blackboardPath',
+        'savePath',
+        'path'
+    ]) as ProcessedGraphArgs;
+
     // Map human-friendly node type names to BT class names
     if (processedArgs.nodeType && BT_NODE_ALIASES[processedArgs.nodeType]) {
         const alias = BT_NODE_ALIASES[processedArgs.nodeType];

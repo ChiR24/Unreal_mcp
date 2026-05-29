@@ -28,7 +28,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
   const normalizedArgs = { ...(args as Record<string, unknown>) };
   const argsTyped = normalizedArgs as BlueprintArgs;
   const argsRecord = normalizedArgs;
-  
+
   // Normalize any blueprintPath in the arguments
   if (argsTyped.blueprintPath) {
     argsTyped.blueprintPath = normalizeBlueprintPath(argsTyped.blueprintPath);
@@ -49,7 +49,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       message: 'Blueprint path blocked for security: traversal segments detected'
     }) as Record<string, unknown>;
   }
-  
+
   switch (action) {
     case 'create': {
       // Support 'path' or 'blueprintPath' argument by splitting it into name and savePath if not provided
@@ -454,7 +454,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
 export async function handleBlueprintGet(args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as BlueprintArgs;
   const argsRecord = args as Record<string, unknown>;
-  
+
   const res = await executeAutomationRequest(tools, 'blueprint_get', args, 'Automation bridge not available for blueprint operations') as { success?: boolean; message?: string; [key: string]: unknown } | null;
   if (res && res.success) {
     const blueprintPath = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name;

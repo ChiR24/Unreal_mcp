@@ -12,9 +12,8 @@
  */
 
 import { ITools } from '../../types/tool-interfaces.js';
-import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest, getTimeoutMs, normalizePathFields } from './common-handlers.js';
+import { createSubActionDispatcher } from './common-handlers.js';
 
 /**
  * Handles all navigation actions for the manage_navigation tool.
@@ -24,28 +23,14 @@ export async function handleNavigationTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  // Normalize path fields before sending to C++
-  const argsRecord = normalizePathFields(
-    args as Record<string, unknown>,
-    [
+  const { sendRequest } = createSubActionDispatcher(tools, args, {
+    toolName: 'manage_navigation',
+    domainName: 'navigation',
+    pathFields: [
       'navMeshPath', 'actorPath', 'blueprintPath', 'areaClass', 'areaClassToReplace',
       'enabledAreaClass', 'disabledAreaClass', 'obstacleAreaClass'
     ]
-  );
-  const timeoutMs = getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_navigation',
-      payload as HandlerArgs,
-      `Automation bridge not available for navigation action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  });
 
   switch (action) {
     // ========================================================================
@@ -97,10 +82,10 @@ export async function handleNavigationTools(
       return sendRequest('get_navigation_info');
 
     default:
-      return cleanObject({
+      return {
         success: false,
         error: 'UNKNOWN_ACTION',
         message: `Unknown navigation action: ${action}`
-      });
+      };
   }
 }

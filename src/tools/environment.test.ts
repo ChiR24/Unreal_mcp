@@ -114,7 +114,7 @@ describe('validateSnapshotPath Security', () => {
     it('should accept case-insensitive UE paths (/temp, /TEMP)', () => {
       const result1 = validateSnapshotPath('/temp/test.json');
       expect(result1.isValid).toBe(true);
-      
+
       const result2 = validateSnapshotPath('/TEMP/test.json');
       expect(result2.isValid).toBe(true);
     });
@@ -206,6 +206,15 @@ describe('validateSnapshotPath Security', () => {
       }
     });
 
+    it('should reject paths containing null bytes', () => {
+      const result = validateSnapshotPath('tmp/snapshot\0.json');
+      expect(result.isValid).toBe(false);
+      if (!result.isValid) {
+        expect(result.error).toContain('SECURITY_VIOLATION');
+        expect(result.error).toContain('null bytes');
+      }
+    });
+
     it('should reject null input', () => {
       const result = validateSnapshotPath(null);
       expect(result.isValid).toBe(false);
@@ -286,6 +295,35 @@ describe('validateSnapshotPath Security', () => {
 
         expect(result.success).toBe(false);
         expect(String(result.error)).toContain('SECURITY_VIOLATION');
+      }
+    });
+
+    it('should reject filename parameters containing null bytes', async () => {
+      const result = await exportEnvironmentSnapshot({ path: 'tmp/unreal-mcp', filename: 'env\0snapshot.json' });
+
+      expect(result.success).toBe(false);
+      expect(String(result.error)).toContain('SECURITY_VIOLATION');
+      expect(String(result.error)).toContain('null bytes');
+    });
+  });
+
+  describe('Snapshot import details', () => {
+    it('should only expose parsed object snapshots as details', async () => {
+      const previousCwd = process.cwd();
+      const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mcp-env-project-'));
+
+      try {
+        process.chdir(projectDir);
+        await fs.mkdir(path.join(projectDir, 'tmp', 'unreal-mcp'), { recursive: true });
+        await fs.writeFile(path.join(projectDir, 'tmp', 'unreal-mcp', 'array.json'), '[1,2,3]', 'utf8');
+
+        const result = await importEnvironmentSnapshot({ path: 'tmp/unreal-mcp/array.json' });
+
+        expect(result.success).toBe(true);
+        expect(result.details).toBeUndefined();
+      } finally {
+        process.chdir(previousCwd);
+        await fs.rm(projectDir, { recursive: true, force: true });
       }
     });
   });

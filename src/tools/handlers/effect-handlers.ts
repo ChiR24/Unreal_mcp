@@ -204,7 +204,7 @@ interface ResultPayload {
 export async function handleEffectTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as EffectArgs;
   const mutableArgs = { ...args } as Record<string, unknown>;
-  
+
   if (!mutableArgs || typeof mutableArgs !== 'object') {
     // Create empty object
   }
@@ -440,9 +440,9 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     mutableArgs.subAction = 'activate_niagara';
     // Accept effect, effectHandle, niagaraHandle, actorName, or systemName as the identifier
     mutableArgs.systemName = (mutableArgs.effect as string | undefined) ||
-                             (mutableArgs.effectHandle as string | undefined) || 
+                             (mutableArgs.effectHandle as string | undefined) ||
                              (mutableArgs.niagaraHandle as string | undefined) ||
-                             (mutableArgs.actorName as string | undefined) || 
+                             (mutableArgs.actorName as string | undefined) ||
                              (mutableArgs.systemName as string | undefined) ||
                              DEFAULT_NIAGARA_ACTOR_NAME;
     // Use user's reset value if provided, default to true for activate
@@ -456,9 +456,9 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     mutableArgs.action = 'deactivate_niagara';
     mutableArgs.subAction = 'deactivate_niagara';
     mutableArgs.systemName = (mutableArgs.effect as string | undefined) ||
-                             (mutableArgs.effectHandle as string | undefined) || 
+                             (mutableArgs.effectHandle as string | undefined) ||
                              (mutableArgs.niagaraHandle as string | undefined) ||
-                             (mutableArgs.actorName as string | undefined) || 
+                             (mutableArgs.actorName as string | undefined) ||
                              (mutableArgs.systemName as string | undefined) ||
                              DEFAULT_NIAGARA_ACTOR_NAME;
     return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
@@ -468,9 +468,9 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     mutableArgs.action = 'activate_niagara';
     mutableArgs.subAction = 'activate_niagara';
     mutableArgs.systemName = (mutableArgs.effect as string | undefined) ||
-                             (mutableArgs.effectHandle as string | undefined) || 
+                             (mutableArgs.effectHandle as string | undefined) ||
                              (mutableArgs.niagaraHandle as string | undefined) ||
-                             (mutableArgs.actorName as string | undefined) || 
+                             (mutableArgs.actorName as string | undefined) ||
                              (mutableArgs.systemName as string | undefined) ||
                              DEFAULT_NIAGARA_ACTOR_NAME;
     if (mutableArgs.reset === undefined) {
@@ -483,9 +483,9 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     mutableArgs.action = 'advance_simulation';
     mutableArgs.subAction = 'advance_simulation';
     mutableArgs.systemName = (mutableArgs.effect as string | undefined) ||
-                             (mutableArgs.effectHandle as string | undefined) || 
+                             (mutableArgs.effectHandle as string | undefined) ||
                              (mutableArgs.niagaraHandle as string | undefined) ||
-                             (mutableArgs.actorName as string | undefined) || 
+                             (mutableArgs.actorName as string | undefined) ||
                              (mutableArgs.systemName as string | undefined) ||
                              DEFAULT_NIAGARA_ACTOR_NAME;
     return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
@@ -498,9 +498,9 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     await ensureDefaultNiagaraActor(tools);
     mutableArgs.action = 'set_niagara_parameter';
     mutableArgs.subAction = 'set_niagara_parameter';
-    mutableArgs.systemName = (mutableArgs.effectHandle as string | undefined) || 
+    mutableArgs.systemName = (mutableArgs.effectHandle as string | undefined) ||
                              (mutableArgs.niagaraHandle as string | undefined) ||
-                             (mutableArgs.actorName as string | undefined) || 
+                             (mutableArgs.actorName as string | undefined) ||
                              (mutableArgs.systemName as string | undefined) ||
                              DEFAULT_NIAGARA_ACTOR_NAME;
     if (!mutableArgs.parameterName) {

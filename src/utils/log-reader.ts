@@ -22,6 +22,34 @@ type LogEntry = {
 const log = new Logger('LogReader');
 let cachedLogPath: string | undefined;
 
+function getProjectRoot(projectPath: string | undefined): string | undefined {
+  const trimmed = typeof projectPath === 'string' ? projectPath.trim() : '';
+  if (trimmed.length === 0) return undefined;
+  return trimmed.toLowerCase().endsWith('.uproject') ? path.dirname(trimmed) : trimmed;
+}
+
+async function getRealAllowedLogDirs(): Promise<string[]> {
+  const allowedDirs = [path.resolve(path.join(process.cwd(), 'Saved', 'Logs'))];
+  const projectRoot = getProjectRoot(loadEnv().UE_PROJECT_PATH);
+  if (projectRoot) {
+    allowedDirs.push(path.resolve(path.join(projectRoot, 'Saved', 'Logs')));
+  }
+
+  return (await Promise.all(allowedDirs.map(dir => realpathIfReadable(dir))))
+    .filter((dir): dir is string => dir !== undefined);
+}
+
+async function resolveAllowedLogFile(candidatePath: string): Promise<string | undefined> {
+  const realCandidate = await realpathIfReadable(path.resolve(candidatePath));
+  if (!realCandidate || !realCandidate.toLowerCase().endsWith('.log')) return undefined;
+
+  const realAllowedDirs = await getRealAllowedLogDirs();
+  if (!realAllowedDirs.some(dir => isPathWithin(realCandidate, dir))) return undefined;
+
+  const st = await fs.stat(realCandidate);
+  return st.isFile() ? realCandidate : undefined;
+}
+
 function isPathWithin(candidate: string, directory: string): boolean {
   const directoryWithSep = directory.endsWith(path.sep) ? directory : directory + path.sep;
   return candidate === directory || candidate.startsWith(directoryWithSep);
@@ -42,40 +70,28 @@ async function resolveLogPath(override?: string): Promise<string | undefined> {
       return undefined;
     }
 
-    const resolvedPath = path.resolve(override);
-    const allowedDirs = [path.resolve(path.join(process.cwd(), 'Saved', 'Logs'))];
-    const projectPath = loadEnv().UE_PROJECT_PATH;
-    if (projectPath) {
-      allowedDirs.push(path.resolve(path.join(path.dirname(projectPath), 'Saved', 'Logs')));
-    }
-
-    const realOverride = await realpathIfReadable(resolvedPath);
-    const realAllowedDirs = (await Promise.all(allowedDirs.map(dir => realpathIfReadable(dir))))
-      .filter((dir): dir is string => dir !== undefined);
-    const isAllowed = realOverride !== undefined && realAllowedDirs.some(dir => isPathWithin(realOverride, dir));
-    if (!isAllowed) {
+    const realOverride = await resolveAllowedLogFile(override);
+    if (!realOverride) {
       log.warn(`Blocked attempt to read log from unauthorized location: ${override}`);
       return undefined;
     }
 
-    try {
-      const st = await fs.stat(realOverride);
-      if (st.isFile()) {
-        cachedLogPath = realOverride;
-        return cachedLogPath;
-      }
-    } catch (error) {
-      log.debug('Configured log override is not readable', { path: override, error });
-    }
-  }
-
-  if (cachedLogPath && (await fileExists(cachedLogPath))) {
+    cachedLogPath = realOverride;
     return cachedLogPath;
   }
 
-  const projectPath = loadEnv().UE_PROJECT_PATH;
-  if (projectPath && typeof projectPath === 'string' && projectPath.trim()) {
-    const envLog = await findLatestLogInDir(path.join(path.dirname(projectPath), 'Saved', 'Logs'));
+  if (cachedLogPath) {
+    const safeCachedPath = await resolveAllowedLogFile(cachedLogPath);
+    if (safeCachedPath) {
+      cachedLogPath = safeCachedPath;
+      return cachedLogPath;
+    }
+    cachedLogPath = undefined;
+  }
+
+  const projectRoot = getProjectRoot(loadEnv().UE_PROJECT_PATH);
+  if (projectRoot) {
+    const envLog = await findLatestLogInDir(path.join(projectRoot, 'Saved', 'Logs'));
     if (envLog) {
       return envLog;
     }
@@ -119,15 +135,6 @@ async function findLatestLogInDir(dir: string): Promise<string | undefined> {
     log.debug('Unable to scan log directory', { dir, error });
   }
   return undefined;
-}
-
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    const st = await fs.stat(filePath);
-    return st.isFile();
-  } catch {
-    return false;
-  }
 }
 
 async function tailFile(filePath: string, maxLines: number): Promise<string> {

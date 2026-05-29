@@ -55,7 +55,7 @@ export function sanitizePath(path: string, allowedRoots?: string[]): string {
     }
 
     // Ensure path starts with a valid root
-    // We check case-insensitive for the root prefix to be user-friendly, 
+    // We check case-insensitive for the root prefix to be user-friendly,
     // but Unreal paths are typically case-insensitive anyway.
     const normalizedLower = normalized.toLowerCase();
     const isAllowed = normalizedRoots.some(root =>

@@ -14,9 +14,8 @@
  */
 
 import { ITools } from '../../types/tool-interfaces.js';
-import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { requireNonEmptyString, executeAutomationRequest, getTimeoutMs, normalizePathFields } from './common-handlers.js';
+import { createSubActionDispatcher, requireNonEmptyString } from './common-handlers.js';
 
 
 /**
@@ -27,21 +26,11 @@ export async function handleNetworkingTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  const argsRecord = normalizePathFields(args as Record<string, unknown>, ['blueprintPath']);
-  const timeoutMs = typeof argsRecord.timeoutMs === 'number' ? argsRecord.timeoutMs : getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_networking',
-      payload as HandlerArgs,
-      `Automation bridge not available for networking action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  const { argsRecord, sendRequest } = createSubActionDispatcher(tools, args, {
+    toolName: 'manage_networking',
+    domainName: 'networking',
+    pathFields: ['blueprintPath']
+  });
 
   switch (action) {
     // =========================================================================
@@ -268,6 +257,15 @@ export async function handleNetworkingTools(
     case 'get_networking_info': {
       // Returns networking info for a blueprint or runtime actor
       // Optional: blueprintPath OR actorName
+      const hasBlueprintPath = typeof argsRecord.blueprintPath === 'string' && argsRecord.blueprintPath.trim().length > 0;
+      const hasActorName = typeof argsRecord.actorName === 'string' && argsRecord.actorName.trim().length > 0;
+      if (!hasBlueprintPath && !hasActorName) {
+        return {
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'blueprintPath or actorName is required for get_networking_info'
+        };
+      }
       return sendRequest('get_networking_info');
     }
 
@@ -276,10 +274,10 @@ export async function handleNetworkingTools(
     // =========================================================================
 
     default:
-      return cleanObject({
+      return {
         success: false,
         error: 'UNKNOWN_ACTION',
         message: `Unknown manage_networking action: ${action}`
-      });
+      };
   }
 }

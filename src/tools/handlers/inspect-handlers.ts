@@ -69,8 +69,8 @@ function normalizeInspectAction(action: string): string {
 async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: ITools): Promise<string> {
   const argsTyped = args as InspectArgs;
   const componentName = typeof argsTyped.componentName === 'string' ? argsTyped.componentName.trim() : '';
-  const componentPath = typeof (argsTyped as Record<string, unknown>).componentPath === 'string' 
-    ? ((argsTyped as Record<string, unknown>).componentPath as string).trim() 
+  const componentPath = typeof (argsTyped as Record<string, unknown>).componentPath === 'string'
+    ? ((argsTyped as Record<string, unknown>).componentPath as string).trim()
     : '';
 
   // Direct path provided
@@ -84,8 +84,8 @@ async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: IToo
 
   // Check if objectPath itself is a component path (e.g., "ActorName.ComponentName")
   const rawObjectPath = typeof argsTyped.objectPath === 'string' ? argsTyped.objectPath.trim() : '';
-  const objectPathLooksLikeComponent = rawObjectPath && 
-    !rawObjectPath.includes('/') && 
+  const objectPathLooksLikeComponent = rawObjectPath &&
+    !rawObjectPath.includes('/') &&
     !rawObjectPath.includes('\\') &&
     rawObjectPath.includes('.') &&
     rawObjectPath.split('.').length === 2;
@@ -176,10 +176,10 @@ async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: IToo
 export async function handleInspectTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as InspectArgs;
   const originalAction = action;
-  
+
   // Normalize action name for test compatibility
   const normalizedAction = normalizeInspectAction(action);
-  
+
   // Also normalize parameter names for test compatibility
   const normalizedArgs = {
     ...args,
@@ -191,7 +191,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     propertyName: args.property_name ?? args.propertyName ?? args.propertyPath,
     propertyNames: args.property_names ?? args.propertyNames,
   };
-  
+
   switch (normalizedAction) {
     case 'inspect_object': {
       if (originalAction === 'get_blueprint_details') {
@@ -234,22 +234,22 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
       // Must NOT be a file path (contains slashes or backslashes)
       // and componentName must be provided OR objectPath looks like "ActorName.ComponentName"
       const rawObjectPath = normalizedArgs.objectPath as string | undefined;
-      const hasComponentName = typeof normalizedArgs.componentName === 'string' && 
+      const hasComponentName = typeof normalizedArgs.componentName === 'string' &&
         normalizedArgs.componentName.trim().length > 0;
-      
+
       // Only treat as component path if:
       // 1. componentName is explicitly provided, OR
       // 2. objectPath looks like "ActorName.ComponentName" (no slashes, has exactly one dot with content on both sides)
-      const looksLikeComponentPath = rawObjectPath && 
-        !rawObjectPath.includes('/') && 
+      const looksLikeComponentPath = rawObjectPath &&
+        !rawObjectPath.includes('/') &&
         !rawObjectPath.includes('\\') &&
         rawObjectPath.includes('.') &&
         rawObjectPath.split('.').length === 2 &&
         rawObjectPath.split('.')[0].length > 0 &&
         rawObjectPath.split('.')[1].length > 0;
-      
+
       let objectPath: string;
-      
+
       if (hasComponentName || looksLikeComponentPath) {
         // Use component resolution for dot notation paths
         // This handles "Actor.Component" syntax by finding the actual component path
@@ -258,7 +258,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
         // Standard object path resolution for actors, assets, etc.
         objectPath = await resolveObjectPath(normalizedArgs, tools) ?? '';
       }
-      
+
       if (!objectPath) {
         throw new Error('Invalid objectPath: must be a non-empty string');
       }
@@ -333,8 +333,8 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
 
             // Check if we got a valid object path string or object with path
             const rootValue = rootRes.value as Record<string, unknown> | string | undefined;
-            const rootPath = typeof rootValue === 'string' 
-              ? rootValue 
+            const rootPath = typeof rootValue === 'string'
+              ? rootValue
               : (typeof rootValue === 'object' && rootValue ? (rootValue.path || rootValue.objectPath) as string : undefined);
 
             if (rootRes.success && rootPath && typeof rootPath === 'string' && rootPath.length > 0 && rootPath !== 'None') {
@@ -365,7 +365,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
             }) as InspectResponse;
 
             if (compsRes.success && (Array.isArray(compsRes.components) || Array.isArray(compsRes))) {
-              const list: ComponentInfo[] = Array.isArray(compsRes.components) 
+              const list: ComponentInfo[] = Array.isArray(compsRes.components)
                 ? toComponentList(compsRes.components)
                 : toComponentList(compsRes);
               const triedPathsInner: string[] = [];
@@ -623,7 +623,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
           action: 'delete',
           actorName
         }) as InspectResponse;
-        
+
         // Handle response-based errors (C++ returns success:false without throwing)
         if (res && res.success === false) {
           const msg = String(res.message || res.error || '');

@@ -9,14 +9,20 @@ const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
 
 const LOG_LEVELS = new Set<LogLevel>(['debug', 'info', 'warn', 'error']);
 
+function normalizeLogLevel(value: unknown, fallback: LogLevel): LogLevel {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (LOG_LEVELS.has(normalized as LogLevel)) {
+    return normalized as LogLevel;
+  }
+
+  return fallback;
+}
+
 export class Logger {
   private level: LogLevel;
 
   constructor(private scope: string, level: LogLevel = 'info') {
-    const envLevel = (process.env.LOG_LEVEL || process.env.LOGLEVEL || level).toString().toLowerCase();
-    this.level = LOG_LEVELS.has(envLevel as LogLevel)
-      ? (envLevel as LogLevel)
-      : 'info';
+    this.level = normalizeLogLevel(process.env.LOG_LEVEL ?? process.env.LOGLEVEL, level);
   }
 
   private shouldLog(level: LogLevel) {

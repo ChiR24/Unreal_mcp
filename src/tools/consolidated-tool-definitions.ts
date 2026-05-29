@@ -151,8 +151,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        action: { 
-          type: 'string', 
+        action: {
+          type: 'string',
           enum: ['list_tools', 'list_categories', 'enable_tools', 'disable_tools', 'enable_category', 'disable_category', 'get_status', 'reset'],
           description: 'list_tools: show canonical tools with status. list_categories: show category counts. enable/disable_tools: toggle specific tools. enable/disable_category: toggle category. get_status: current state. reset: restore defaults.'
         },
@@ -2393,10 +2393,14 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           enum: ['DefaultFocus', 'RunEQS', 'Custom'],
           description: 'Service node type.'
         },
+        subnodeType: {
+          type: 'string',
+          enum: ['Decorator', 'Service'],
+          description: 'Behavior Tree subnode kind for add_subnode.'
+        },
+        nodeClass: commonSchemas.nodeClass,
         parentNodeId: commonSchemas.nodeId,
         nodeId: commonSchemas.nodeId,
-        subnodeType: { type: 'string', enum: ['Decorator', 'Service'], description: 'Behavior Tree subnode type for add_subnode.' },
-        nodeClass: commonSchemas.nodeClass,
         queryPath: commonSchemas.queryPath,
         generatorType: {
           type: 'string',

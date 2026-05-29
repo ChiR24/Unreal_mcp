@@ -1,4 +1,5 @@
 import { AutomationBridge } from '../automation/index.js';
+import type { AutomationErrorDetail } from './automation-responses.js';
 
 export interface IBaseTool {
     getAutomationBridge(): AutomationBridge;
@@ -9,11 +10,7 @@ export interface StandardActionResponse<T = unknown> {
     message?: string;
     data?: T;
     warnings?: string[];
-    error?: string | {
-        code?: string;
-        message: string;
-        [key: string]: unknown;
-    } | null;
+    error?: string | AutomationErrorDetail | null;
     [key: string]: unknown;
 }
 
@@ -23,7 +20,7 @@ export interface IAssetResources {
 
 export interface ITools {
     systemTools: {
-        executeConsoleCommand: (command: string) => Promise<unknown>;
+        executeConsoleCommand: (command: string) => Promise<StandardActionResponse>;
         getProjectSettings: (section?: string) => Promise<Record<string, unknown>>;
     };
     elicit?: unknown;

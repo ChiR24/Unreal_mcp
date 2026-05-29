@@ -24,6 +24,8 @@ interface ComponentsResult {
     [key: string]: unknown;
 }
 
+const DEFAULT_ACTOR_LIST_LIMIT = 50;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -54,6 +56,14 @@ function extractActorListPayload(response: Record<string, unknown>): ListActorsR
     }
 
     return undefined;
+}
+
+function normalizeActorListLimit(value: unknown): number {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+        return DEFAULT_ACTOR_LIST_LIMIT;
+    }
+
+    return Math.floor(value);
 }
 
 /**
@@ -357,7 +367,7 @@ const handlers: Record<string, ActorActionHandler> = {
         return result;
     },
     list: async (args, tools) => {
-        const limit = typeof args.limit === 'number' ? args.limit : 50;
+        const limit = normalizeActorListLimit(args.limit);
         const filter = typeof args.filter === 'string' ? args.filter : undefined;
         // Pass limit to C++ handler - C++ may return totalCount for accurate remaining calculation
         const result = await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {

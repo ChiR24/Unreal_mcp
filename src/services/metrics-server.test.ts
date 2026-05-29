@@ -165,4 +165,26 @@ describe('startMetricsServer', () => {
       await closeServer(server);
     }
   });
+
+  it('rate limits unauthorized metrics traffic before token validation', async () => {
+    const port = await getAvailablePort();
+    process.env.MCP_METRICS_PORT = String(port);
+    process.env.MCP_METRICS_HOST = '127.0.0.1';
+    process.env.MCP_METRICS_TOKEN = 'qa-token';
+
+    const server = startMetricsServer(createOptions());
+    expect(server).not.toBeNull();
+    if (!server) return;
+
+    try {
+      await new Promise<void>(resolve => server.once('listening', resolve));
+
+      for (let i = 0; i < 60; i += 1) {
+        await expect(getStatusCode(port)).resolves.toBe(401);
+      }
+      await expect(getStatusCode(port)).resolves.toBe(429);
+    } finally {
+      await closeServer(server);
+    }
+  });
 });

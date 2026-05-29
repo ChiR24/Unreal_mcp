@@ -13,6 +13,20 @@ export type ResourceServer = {
   ): void;
 };
 
+type ResourceContent = { contents: Array<{ uri: string; mimeType: string; text: string }> };
+
+function resourceContent(uri: string, mimeType: string, text: string): ResourceContent {
+  return { contents: [{ uri, mimeType, text }] };
+}
+
+function jsonResource(uri: string, value: unknown): ResourceContent {
+  return resourceContent(uri, 'application/json', JSON.stringify(value, null, 2));
+}
+
+function disconnectedResource(uri: string): ResourceContent {
+  return resourceContent(uri, 'text/plain', 'Unreal Engine not connected (after 3 attempts).');
+}
+
 function redactRecentErrors(errors: Array<{ time: string; scope: string; type: string; message: string; retriable: boolean }>) {
   return errors.map(error => ({
     time: error.time,
@@ -20,6 +34,12 @@ function redactRecentErrors(errors: Array<{ time: string; scope: string; type: s
     type: error.type,
     retriable: error.retriable
   }));
+}
+
+function objectDetails(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
 }
 
 export class ResourceHandler {
@@ -41,46 +61,28 @@ export class ResourceHandler {
       if (uri === 'ue://assets') {
         const ok = await this.ensureConnected();
         if (!ok) {
-          return { contents: [{ uri, mimeType: 'text/plain', text: 'Unreal Engine not connected (after 3 attempts).' }] };
+          return disconnectedResource(uri);
         }
         const list = await this.assetResources.list('/Game', true);
-        return {
-          contents: [{
-            uri,
-            mimeType: 'application/json',
-            text: JSON.stringify(list, null, 2)
-          }]
-        };
+        return jsonResource(uri, list);
       }
 
       if (uri === 'ue://actors') {
         const ok = await this.ensureConnected();
         if (!ok) {
-          return { contents: [{ uri, mimeType: 'text/plain', text: 'Unreal Engine not connected (after 3 attempts).' }] };
+          return disconnectedResource(uri);
         }
         const list = await this.actorResources.listActors();
-        return {
-          contents: [{
-            uri,
-            mimeType: 'application/json',
-            text: JSON.stringify(list, null, 2)
-          }]
-        };
+        return jsonResource(uri, list);
       }
 
       if (uri === 'ue://level') {
         const ok = await this.ensureConnected();
         if (!ok) {
-          return { contents: [{ uri, mimeType: 'text/plain', text: 'Unreal Engine not connected (after 3 attempts).' }] };
+          return disconnectedResource(uri);
         }
         const level = await this.levelResources.getCurrentLevel();
-        return {
-          contents: [{
-            uri,
-            mimeType: 'application/json',
-            text: JSON.stringify(level, null, 2)
-          }]
-        };
+        return jsonResource(uri, level);
       }
 
       if (uri === 'ue://health') {
@@ -90,8 +92,8 @@ export class ResourceHandler {
         let versionInfo: Record<string, unknown> = {};
         let featureFlags: Record<string, unknown> = {};
         if (this.bridge.isConnected) {
-          try { versionInfo = await this.bridge.getEngineVersion(); } catch { versionInfo = {}; }
-          try { featureFlags = await this.bridge.getFeatureFlags(); } catch { featureFlags = {}; }
+          try { versionInfo = objectDetails(await this.bridge.getEngineVersion()); } catch { versionInfo = {}; }
+          try { featureFlags = objectDetails(await this.bridge.getFeatureFlags()); } catch { featureFlags = {}; }
         }
 
         const responseTimes = this.healthMonitor.metrics.responseTimes.slice(-25);
@@ -124,7 +126,7 @@ export class ResourceHandler {
             engineVersion: versionInfo,
             features: {
               pythonEnabled: false,
-              subsystems: featureFlags.subsystems || {},
+              subsystems: objectDetails(featureFlags.subsystems),
               automationBridgeConnected: automationStatus.connected
             }
           },
@@ -132,13 +134,7 @@ export class ResourceHandler {
           automationBridge: automationSummary
         };
 
-        return {
-          contents: [{
-            uri,
-            mimeType: 'application/json',
-            text: JSON.stringify(health, null, 2)
-          }]
-        };
+        return jsonResource(uri, health);
       }
 
       if (uri === 'ue://automation-bridge') {
@@ -164,28 +160,16 @@ export class ResourceHandler {
           listening: status.webSocketListening
         };
 
-        return {
-          contents: [{
-            uri,
-            mimeType: 'application/json',
-            text: JSON.stringify(content, null, 2)
-          }]
-        };
+        return jsonResource(uri, content);
       }
 
       if (uri === 'ue://version') {
         const ok = await this.ensureConnected();
         if (!ok) {
-          return { contents: [{ uri, mimeType: 'text/plain', text: 'Unreal Engine not connected (after 3 attempts).' }] };
+          return disconnectedResource(uri);
         }
         const info = await this.bridge.getEngineVersion();
-        return {
-          contents: [{
-            uri,
-            mimeType: 'application/json',
-            text: JSON.stringify(info, null, 2)
-          }]
-        };
+        return jsonResource(uri, info);
       }
 
       throw new Error(`Unknown resource: ${uri}`);

@@ -5,7 +5,7 @@
   "moduleResolution": "NodeNext",
     "outDir": "dist",
     "rootDir": "src",
-    
+
     // Strict Type Checking
     "strict": true,
     "noImplicitAny": true,
@@ -15,7 +15,7 @@
     "strictPropertyInitialization": true,
     "noImplicitThis": true,
     "alwaysStrict": true,
-    
+
     // Additional Checks
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -23,13 +23,13 @@
     "noFallthroughCasesInSwitch": true,
     "allowUnreachableCode": false,
     "noUncheckedIndexedAccess": false,
-    
+
     // Module & Interop
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    
+
     // Emit
     "declaration": true,
     "declarationMap": true,
@@ -37,12 +37,12 @@
     "removeComments": true,
     "importHelpers": false,
     "emitDeclarationOnly": false,
-    
+
     // Performance
     "skipLibCheck": true,
     "incremental": true,
     "tsBuildInfoFile": "tsconfig.tsbuildinfo",
-    
+
     "types": ["node"],
     "noEmitOnError": false
   },

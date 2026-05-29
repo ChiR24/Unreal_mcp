@@ -441,7 +441,8 @@ export class LevelTools extends BaseTool {
 
     if (params.streaming) {
       try {
-        const simpleName = (params.levelPath || '').split('/').filter(Boolean).pop() || params.levelPath;
+        const rawSimpleName = (params.levelPath || '').split('/').filter(Boolean).pop() || params.levelPath;
+        const simpleName = sanitizeCommandArgument(rawSimpleName);
         await this.bridge.executeConsoleCommand(`StreamLevel ${simpleName} Load Show`);
         this.mutateRecord(normalizedPath, {
           streaming: true,

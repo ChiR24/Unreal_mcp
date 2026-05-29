@@ -251,7 +251,7 @@ export function extractArray<T>(params: Record<string, unknown>, key: string, va
   if (!Array.isArray(val)) {
     throw new Error(`Expected array for '${key}', got ${typeof val}`);
   }
-  
+
   if (validator) {
     val.forEach((item, index) => {
       if (!validator(item, index)) {
@@ -259,7 +259,7 @@ export function extractArray<T>(params: Record<string, unknown>, key: string, va
       }
     });
   }
-  
+
   return val as T[];
 }
 
@@ -274,9 +274,9 @@ export function extractOptionalArray<T>(params: Record<string, unknown>, key: st
     // If it's not an array but not null/undefined, that's a type error
     // We swallow this and return undefined (as if the optional arg wasn't provided)
     // rather than throwing, to allow graceful fallback to default behavior.
-    return undefined; 
+    return undefined;
   }
-  
+
   if (validator) {
     val.forEach((item, index) => {
       if (!validator(item, index)) {
@@ -284,7 +284,7 @@ export function extractOptionalArray<T>(params: Record<string, unknown>, key: st
       }
     });
   }
-  
+
   return val as T[];
 }
 

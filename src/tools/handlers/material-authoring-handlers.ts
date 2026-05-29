@@ -52,13 +52,13 @@ export async function handleMaterialAuthoringTools(
       case 'create_material': {
         // Check if materialPath is provided (full path like /Game/MCPTest/M_Test)
         const rawArgs = args as Record<string, unknown>;
-        const materialPath = extractOptionalString(rawArgs, 'materialPath') ?? 
+        const materialPath = extractOptionalString(rawArgs, 'materialPath') ??
                             extractOptionalString(rawArgs, 'material_path') ??
                             extractOptionalString(rawArgs, 'assetPath');
-        
+
         let name: string;
         let path: string;
-        
+
         if (materialPath) {
           // Normalize and parse full path into name and directory
           const parsed = parseMaterialPath(normalizeAssetPath(materialPath));
@@ -77,7 +77,7 @@ export async function handleMaterialAuthoringTools(
           path = normalizeAssetPath(extractOptionalString(params, 'path') ?? '/Game/Materials');
         }
 
-        const materialDomain = extractOptionalString(rawArgs, 'materialDomain') ?? 
+        const materialDomain = extractOptionalString(rawArgs, 'materialDomain') ??
                               extractOptionalString(rawArgs, 'domain') ?? 'Surface';
         const blendMode = extractOptionalString(rawArgs, 'blendMode') ?? 'Opaque';
         const shadingModel = extractOptionalString(rawArgs, 'shadingModel') ?? 'DefaultLit';
@@ -530,24 +530,24 @@ export async function handleMaterialAuthoringTools(
       case 'connect_nodes':
       case 'connect_material_pins': {
         const rawArgs = args as Record<string, unknown>;
-        const assetPath = extractOptionalString(rawArgs, 'assetPath') ?? 
+        const assetPath = extractOptionalString(rawArgs, 'assetPath') ??
                          extractOptionalString(rawArgs, 'materialPath') ?? '';
-        
+
         // Try both formats: node-based and pin-based
-        const sourceNodeId = extractOptionalString(rawArgs, 'sourceNodeId') ?? 
+        const sourceNodeId = extractOptionalString(rawArgs, 'sourceNodeId') ??
                             extractOptionalString(rawArgs, 'fromNode') ?? '';
-        const targetNodeId = extractOptionalString(rawArgs, 'targetNodeId') ?? 
+        const targetNodeId = extractOptionalString(rawArgs, 'targetNodeId') ??
                             extractOptionalString(rawArgs, 'toNode') ?? '';
-        const sourcePin = extractOptionalString(rawArgs, 'sourcePin') ?? 
+        const sourcePin = extractOptionalString(rawArgs, 'sourcePin') ??
                          extractOptionalString(rawArgs, 'fromPin') ?? '';
-        const targetPin = extractOptionalString(rawArgs, 'targetPin') ?? 
-                         extractOptionalString(rawArgs, 'toPin') ?? 
+        const targetPin = extractOptionalString(rawArgs, 'targetPin') ??
+                         extractOptionalString(rawArgs, 'toPin') ??
                          extractOptionalString(rawArgs, 'inputName') ?? '';
-        
+
         // If node IDs not provided, use pin names as identifiers
         const effectiveSourceId = sourceNodeId || sourcePin;
         const effectiveTargetId = targetNodeId || targetPin;
-        
+
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
           subAction: 'connect_nodes',
           assetPath,
@@ -567,13 +567,13 @@ export async function handleMaterialAuthoringTools(
       case 'disconnect_nodes':
       case 'break_material_connections': {
         const rawArgs = args as Record<string, unknown>;
-        const assetPath = extractOptionalString(rawArgs, 'assetPath') ?? 
+        const assetPath = extractOptionalString(rawArgs, 'assetPath') ??
                          extractOptionalString(rawArgs, 'materialPath') ?? '';
         // Accept both nodeId and pinName as identifiers
-        const nodeId = extractOptionalString(rawArgs, 'nodeId') ?? 
+        const nodeId = extractOptionalString(rawArgs, 'nodeId') ??
                       extractOptionalString(rawArgs, 'pinName') ?? '';
         const pinName = extractOptionalString(rawArgs, 'pinName');
-        
+
         if (!assetPath) {
           return ResponseFactory.error('manage_material_authoring.disconnect_nodes: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }
@@ -689,18 +689,18 @@ export async function handleMaterialAuthoringTools(
       case 'create_material_instance': {
         // Support both old format (name+path+parentMaterial) and new format (instancePath+parentMaterialPath)
         const rawArgs = args as Record<string, unknown>;
-        const instancePath = extractOptionalString(rawArgs, 'instancePath') ?? 
+        const instancePath = extractOptionalString(rawArgs, 'instancePath') ??
                             extractOptionalString(rawArgs, 'instance_path') ??
                             extractOptionalString(rawArgs, 'materialPath');
-        const parentMaterialPath = extractOptionalString(rawArgs, 'parentMaterialPath') ?? 
+        const parentMaterialPath = extractOptionalString(rawArgs, 'parentMaterialPath') ??
                                   extractOptionalString(rawArgs, 'parent_material_path') ??
                                   extractOptionalString(rawArgs, 'parentMaterial') ??
                                   extractOptionalString(rawArgs, 'parent');
-        
+
         let name: string;
         let path: string;
         let parentMaterial: string;
-        
+
         if (instancePath) {
           // Normalize and parse full path into name and directory
           const parsed = parseMaterialPath(normalizeAssetPath(instancePath));
@@ -721,11 +721,11 @@ export async function handleMaterialAuthoringTools(
           path = normalizeAssetPath(extractOptionalString(params, 'path') ?? '/Game/Materials');
           parentMaterial = extractString(params, 'parentMaterial');
         }
-        
+
         if (!parentMaterial) {
           return ResponseFactory.error('manage_material_authoring.create_material_instance: parentMaterialPath or parent is required', 'MISSING_PARENT');
         }
-        
+
         const save = extractOptionalBoolean(rawArgs, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
@@ -1286,13 +1286,13 @@ export async function handleMaterialAuthoringTools(
       // Alias: add_material_node -> add_math_node
       case 'add_material_node': {
         const rawArgs = args as Record<string, unknown>;
-        const assetPath = extractOptionalString(rawArgs, 'assetPath') ?? 
+        const assetPath = extractOptionalString(rawArgs, 'assetPath') ??
                          extractOptionalString(rawArgs, 'materialPath') ?? '';
-        const nodeType = extractOptionalString(rawArgs, 'nodeType') ?? 
+        const nodeType = extractOptionalString(rawArgs, 'nodeType') ??
                         extractOptionalString(rawArgs, 'type') ?? '';
         const x = extractOptionalNumber(rawArgs, 'x') ?? extractOptionalNumber(rawArgs, 'posX') ?? 0;
         const y = extractOptionalNumber(rawArgs, 'y') ?? extractOptionalNumber(rawArgs, 'posY') ?? 0;
-        
+
         if (!assetPath) {
           return ResponseFactory.error('manage_material_authoring.add_material_node: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }
@@ -1329,14 +1329,14 @@ export async function handleMaterialAuthoringTools(
       // Generic parameter setter
       case 'set_material_parameter': {
         const rawArgs = args as Record<string, unknown>;
-        const assetPath = extractOptionalString(rawArgs, 'assetPath') ?? 
-                         extractOptionalString(rawArgs, 'materialPath') ?? 
+        const assetPath = extractOptionalString(rawArgs, 'assetPath') ??
+                         extractOptionalString(rawArgs, 'materialPath') ??
                          extractOptionalString(rawArgs, 'instancePath') ?? '';
         const parameterName = extractOptionalString(rawArgs, 'parameterName') ?? '';
         const parameterType = extractOptionalString(rawArgs, 'parameterType') ?? 'scalar';
         const save = extractOptionalBoolean(rawArgs, 'save') ?? true;
         const value = rawArgs.value;
-        
+
         if (!assetPath) {
           return ResponseFactory.error('manage_material_authoring.set_material_parameter: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }
@@ -1365,10 +1365,10 @@ export async function handleMaterialAuthoringTools(
       // Get node details
       case 'get_material_node_details': {
         const rawArgs = args as Record<string, unknown>;
-        const assetPath = extractOptionalString(rawArgs, 'assetPath') ?? 
+        const assetPath = extractOptionalString(rawArgs, 'assetPath') ??
                          extractOptionalString(rawArgs, 'materialPath') ?? '';
         const nodeId = extractOptionalString(rawArgs, 'nodeId') ?? '';
-        
+
         if (!assetPath) {
           return ResponseFactory.error('manage_material_authoring.get_material_node_details: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }
@@ -1391,10 +1391,10 @@ export async function handleMaterialAuthoringTools(
       // Remove material node
       case 'remove_material_node': {
         const rawArgs = args as Record<string, unknown>;
-        const assetPath = extractOptionalString(rawArgs, 'assetPath') ?? 
+        const assetPath = extractOptionalString(rawArgs, 'assetPath') ??
                          extractOptionalString(rawArgs, 'materialPath') ?? '';
         const nodeId = extractOptionalString(rawArgs, 'nodeId') ?? '';
-        
+
         if (!assetPath) {
           return ResponseFactory.error('manage_material_authoring.remove_material_node: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }

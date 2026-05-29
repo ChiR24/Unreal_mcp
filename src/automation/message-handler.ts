@@ -171,7 +171,7 @@ export class MessageHandler {
      */
     private handleProgressUpdate(message: ProgressUpdateMessage): void {
         const { requestId, percent, message: statusMsg, stillWorking } = message;
-        
+
         if (!requestId) {
             this.log.debug('Received progress_update without requestId');
             return;

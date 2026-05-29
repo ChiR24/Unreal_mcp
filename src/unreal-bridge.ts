@@ -259,7 +259,7 @@ export class UnrealBridge {
 
       const onHandshakeFailed = (info: Record<string, unknown>) => {
         this.log.warn('Automation bridge handshake failed while waiting', info);
-        // We don't resolve false immediately here? The original code didn't. 
+        // We don't resolve false immediately here? The original code didn't.
         // But handshake failed usually means we should stop waiting.
         cleanup();
         resolve(false);
@@ -498,13 +498,6 @@ export class UnrealBridge {
 
   // Execute a console command safely with validation and throttling
   async executeConsoleCommand(command: string): Promise<StandardActionResponse> {
-    const automationAvailable = Boolean(
-      this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function'
-    );
-    if (!automationAvailable) {
-      throw new Error('Automation bridge not connected');
-    }
-
     // Validate command
     CommandValidator.validate(command);
     const cmdTrimmed = command.trim();
@@ -517,6 +510,13 @@ export class UnrealBridge {
     }
 
     const priority = CommandValidator.getPriority(cmdTrimmed);
+
+    const automationAvailable = process.env.MOCK_UNREAL_CONNECTION === 'true' || Boolean(
+      this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function'
+    );
+    if (!automationAvailable) {
+      throw new Error('Automation bridge not connected');
+    }
 
     const executeCommand = async (): Promise<StandardActionResponse> => {
       if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
@@ -587,7 +587,7 @@ export class UnrealBridge {
    * Execute multiple console commands in a single batch request.
    * This is significantly faster than sequential execution as it eliminates
    * the WebSocket round-trip overhead for each command.
-   * 
+   *
    * @param commands Array of console commands to execute
    * @param options Optional configuration
    * @returns Object with execution results

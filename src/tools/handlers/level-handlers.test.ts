@@ -76,4 +76,27 @@ describe('handleLevelTools path normalization', () => {
       tool: 'manage_level_structure'
     });
   });
+
+  it('normalizes delete_level path aliases and level path arrays before dispatch', async () => {
+    const { tools, sendAutomationRequest } = createTools();
+
+    await handleLevelTools('delete_level', { action: 'delete_level', path: 'Content\\Maps\\Demo' }, tools);
+    await handleLevelTools('delete', {
+      action: 'delete',
+      level_paths: ['Content\\Maps\\A', '/Content/Maps/B']
+    }, tools);
+
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(1, 'manage_level', {
+      action: 'delete_level',
+      levelPath: '/Game/Maps/Demo'
+    }, {});
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(2, 'manage_level', {
+      action: 'delete_level',
+      levelPath: '/Game/Maps/A'
+    }, {});
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(3, 'manage_level', {
+      action: 'delete_level',
+      levelPath: '/Game/Maps/B'
+    }, {});
+  });
 });

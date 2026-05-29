@@ -38,6 +38,22 @@ export interface AutomationBridgeResponseMessage extends AutomationBridgeMessage
     result?: unknown;
 }
 
+export type PendingRequestDetail = { requestId: string; action: string; ageMs: number };
+export type AutomationBridgeConnectionInfo = {
+    connectionId: string;
+    sessionId: string | null;
+    remoteAddress: string | null;
+    remotePort: number | null;
+    port: number;
+    connectedAt: string;
+    protocol: string | null;
+    readyState: number;
+    isPrimary: boolean;
+};
+export type AutomationBridgeConnectedEvent = { socket: WebSocket; metadata: Record<string, unknown>; port: number; protocol: string | null };
+export type AutomationBridgeDisconnectedEvent = { code: number; reason: string; port: number; protocol: string | null };
+export type AutomationBridgePortError = Error & { port?: number };
+
 /**
  * Progress update message sent by UE during long operations.
  * Used to extend request timeout and provide status feedback.
@@ -74,18 +90,8 @@ export interface AutomationBridgeStatus {
     lastMessageAt: string | null;
     lastRequestSentAt: string | null;
     pendingRequests: number;
-    pendingRequestDetails: Array<{ requestId: string; action: string; ageMs: number }>;
-    connections: Array<{
-        connectionId: string;
-        sessionId: string | null;
-        remoteAddress: string | null;
-        remotePort: number | null;
-        port: number;
-        connectedAt: string;
-        protocol: string | null;
-        readyState: number;
-        isPrimary: boolean;
-    }>;
+    pendingRequestDetails: PendingRequestDetail[];
+    connections: AutomationBridgeConnectionInfo[];
     webSocketListening: boolean;
     serverLegacyEnabled: boolean;
     serverName: string;
@@ -138,9 +144,9 @@ export interface SocketInfo {
 }
 
 export type AutomationBridgeEvents = {
-    connected: (info: { socket: WebSocket; metadata: Record<string, unknown>; port: number; protocol: string | null }) => void;
-    disconnected: (info: { code: number; reason: string; port: number; protocol: string | null }) => void;
+    connected: (info: AutomationBridgeConnectedEvent) => void;
+    disconnected: (info: AutomationBridgeDisconnectedEvent) => void;
     message: (message: AutomationBridgeMessage) => void;
-    error: (error: Error & { port?: number }) => void;
+    error: (error: AutomationBridgePortError) => void;
     handshakeFailed: (info: { reason: string; port: number }) => void;
 };

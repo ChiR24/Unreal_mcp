@@ -13,7 +13,7 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest, getTimeoutMs, normalizePathFields } from './common-handlers.js';
+import { createSubActionDispatcher, normalizePathFields } from './common-handlers.js';
 
 
 /**
@@ -51,6 +51,14 @@ function validateLevelName(levelName: string): string | null {
   return null;
 }
 
+function normalizeLevelNamePath(args: Record<string, unknown>): Record<string, unknown> {
+  const levelName = args.levelName;
+  if (typeof levelName !== 'string' || !/[\\/]/.test(levelName)) return {};
+  return {
+    levelName: normalizePathFields({ levelName }, ['levelName']).levelName
+  };
+}
+
 /**
  * Handles all level structure actions for the manage_level_structure tool.
  */
@@ -59,28 +67,14 @@ export async function handleLevelStructureTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  // Normalize path fields before sending to C++
-  const argsRecord = normalizePathFields(
-    args as Record<string, unknown>,
-    [
+  const { argsRecord, sendRequest } = createSubActionDispatcher(tools, args, {
+    toolName: 'manage_level_structure',
+    domainName: 'level structure',
+    pathFields: [
       'levelPath', 'sublevelPath', 'levelAssetPath', 'hlodLayerPath',
       'actorPath', 'parentLevel', 'dataLayerAssetPath'
     ]
-  );
-  const timeoutMs = getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_level_structure',
-      payload as HandlerArgs,
-      `Automation bridge not available for level structure action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  });
 
   switch (action) {
     // ========================================================================
@@ -105,10 +99,10 @@ export async function handleLevelStructureTools(
       return sendRequest('create_sublevel');
 
     case 'configure_level_streaming':
-      return sendRequest('configure_level_streaming');
+      return sendRequest('configure_level_streaming', normalizeLevelNamePath(argsRecord));
 
     case 'set_streaming_distance':
-      return sendRequest('set_streaming_distance');
+      return sendRequest('set_streaming_distance', normalizeLevelNamePath(argsRecord));
 
     case 'configure_level_bounds':
       return sendRequest('configure_level_bounds');

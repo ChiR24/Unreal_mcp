@@ -1,4 +1,5 @@
 import { Logger } from './logger.js';
+import { isRecord } from './type-guards.js';
 
 // Minimal helper to opportunistically use MCP Elicitation when available.
 // Safe across clients: validates schema shape and handles timeouts and -32601 errors.
@@ -16,7 +17,6 @@ export interface ElicitSchema {
 
 export interface ElicitOptions {
   timeoutMs?: number;
-  // Handler invoked when elicitation cannot be performed; previously named
   // Handler invoked when elicitation cannot be performed.
   alternate?: () => Promise<{ ok: boolean; value?: unknown; error?: string }>;
 }
@@ -42,10 +42,12 @@ export function createElicitationHelper(server: ElicitCapableServer, log: Logger
   const MAX_TIMEOUT_MS = 10 * 60 * 1000;
   const DEFAULT_TIMEOUT_MS = 3 * 60 * 1000;
 
+  const clampTimeoutMs = (timeoutMs: number): number => Math.min(Math.max(timeoutMs, MIN_TIMEOUT_MS), MAX_TIMEOUT_MS);
+
   const timeoutEnvRaw = process.env.MCP_ELICITATION_TIMEOUT_MS ?? process.env.ELICITATION_TIMEOUT_MS ?? '';
   const parsedEnvTimeout = parsePositiveIntegerEnv(timeoutEnvRaw);
   const defaultTimeoutMs = parsedEnvTimeout !== undefined
-    ? Math.min(Math.max(parsedEnvTimeout, MIN_TIMEOUT_MS), MAX_TIMEOUT_MS)
+    ? clampTimeoutMs(parsedEnvTimeout)
     : DEFAULT_TIMEOUT_MS;
 
   if (timeoutEnvRaw) {
@@ -56,9 +58,10 @@ export function createElicitationHelper(server: ElicitCapableServer, log: Logger
   }
 
   function isSafeSchema(schema: ElicitSchema): boolean {
-    if (!schema || schema.type !== 'object' || typeof schema.properties !== 'object') return false;
+    if (!isRecord(schema) || schema.type !== 'object' || !isRecord(schema.properties)) return false;
 
-    const propertyEntries = Object.entries(schema.properties ?? {});
+    const properties: Record<string, unknown> = schema.properties;
+    const propertyEntries = Object.entries(properties);
     const propertyKeys = propertyEntries.map(([key]) => key);
 
     if (schema.required) {
@@ -68,21 +71,20 @@ export function createElicitationHelper(server: ElicitCapableServer, log: Logger
     }
 
     return propertyEntries.every(([, rawSchema]) => {
-      if (!rawSchema || typeof rawSchema !== 'object') return false;
-      const primitive = rawSchema as PrimitiveSchema & { properties?: unknown; items?: unknown }; // narrow for guards
+      if (!isRecord(rawSchema)) return false;
 
-      if ('properties' in primitive || 'items' in primitive) return false; // nested schemas unsupported
+      if ('properties' in rawSchema || 'items' in rawSchema) return false; // nested schemas unsupported
 
-      if (Array.isArray((primitive as Record<string, unknown>).enum)) {
-        const enumValues = (primitive as Record<string, unknown>).enum as unknown[];
+      if (Array.isArray(rawSchema.enum)) {
+        const enumValues = rawSchema.enum;
         const allStrings = enumValues.every((value: unknown) => typeof value === 'string');
         if (!allStrings) return false;
-        return !('type' in primitive) || (primitive as Record<string, unknown>).type === 'string';
+        return !('type' in rawSchema) || rawSchema.type === 'string';
       }
 
-      if ((primitive as Record<string, unknown>).type === 'string') return true;
-      if ((primitive as Record<string, unknown>).type === 'number' || (primitive as Record<string, unknown>).type === 'integer') return true;
-      if ((primitive as Record<string, unknown>).type === 'boolean') return true;
+      if (rawSchema.type === 'string') return true;
+      if (rawSchema.type === 'number' || rawSchema.type === 'integer') return true;
+      if (rawSchema.type === 'boolean') return true;
 
       return false;
     });
@@ -103,9 +105,15 @@ export function createElicitationHelper(server: ElicitCapableServer, log: Logger
         throw new Error('elicitInput-not-available');
       }
 
-      const requestedTimeout = opts.timeoutMs;
-      const timeoutMs = Math.max(MIN_TIMEOUT_MS, requestedTimeout ?? defaultTimeoutMs);
-      const res = await elicitMethod.call(server, params, { timeout: timeoutMs }) as Record<string, unknown>;
+      const requestedTimeout = typeof opts.timeoutMs === 'number' && Number.isFinite(opts.timeoutMs)
+        ? opts.timeoutMs
+        : undefined;
+      const timeoutMs = requestedTimeout !== undefined ? clampTimeoutMs(requestedTimeout) : defaultTimeoutMs;
+      const res = await elicitMethod.call(server, params, { timeout: timeoutMs });
+      if (!isRecord(res)) {
+        if (opts.alternate) return opts.alternate();
+        return { ok: false, error: 'unexpected-response' };
+      }
       const action = res?.action;
       const content = res?.content;
 
@@ -117,9 +125,10 @@ export function createElicitationHelper(server: ElicitCapableServer, log: Logger
       if (opts.alternate) return opts.alternate();
       return { ok: false, error: 'unexpected-response' };
     } catch (e: unknown) {
-      const errObj = e as Record<string, unknown> | null;
+      const errObj = isRecord(e) ? e : null;
       const msg = String(errObj?.message || e);
-      const code = errObj?.code ?? (errObj?.error as Record<string, unknown> | null)?.code;
+      const nestedError = isRecord(errObj?.error) ? errObj.error : null;
+      const code = errObj?.code ?? nestedError?.code;
       // If client doesn't support it, don’t try again this session
       if (
         msg.includes('Method not found') ||
@@ -129,10 +138,9 @@ export function createElicitationHelper(server: ElicitCapableServer, log: Logger
       ) {
         supported = false;
       }
-  // Use an alternate handler if provided when elicitation fails.
-  log.debug('Elicitation failed; using alternate handler', { error: msg, code });
+      log.debug('Elicitation failed', { error: msg, code, usingAlternate: Boolean(opts.alternate) });
       if (opts.alternate) return opts.alternate();
-      return { ok: false, error: msg.includes('timeout') ? 'timeout' : 'rpc-failed' };
+      return { ok: false, error: msg.toLowerCase().includes('timeout') ? 'timeout' : 'rpc-failed' };
     }
   }
 

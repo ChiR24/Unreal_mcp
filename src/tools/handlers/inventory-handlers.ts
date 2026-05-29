@@ -15,7 +15,7 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { requireNonEmptyString, requireAssetName, executeAutomationRequest, getTimeoutMs, normalizePathFields } from './common-handlers.js';
+import { createSubActionDispatcher, requireNonEmptyString, requireAssetName } from './common-handlers.js';
 
 
 /**
@@ -26,33 +26,24 @@ export async function handleInventoryTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  const argsRecord = normalizePathFields(args as Record<string, unknown>, [
-    'itemPath',
-    'categoryPath',
-    'blueprintPath',
-    'pickupPath',
-    'lootTablePath',
-    'actorPath',
-    'outputItemPath',
-    'recipePath',
-    'ingredientItemPath',
-    'stationPath',
-    'iconPath'
-  ]);
-  const timeoutMs = getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_inventory',
-      payload as HandlerArgs,
-      `Automation bridge not available for inventory action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  const { argsRecord, sendRequest } = createSubActionDispatcher(tools, args, {
+    toolName: 'manage_inventory',
+    domainName: 'inventory',
+    pathFields: [
+      'itemPath',
+      'categoryPath',
+      'blueprintPath',
+      'pickupPath',
+      'lootTablePath',
+      'actorPath',
+      'outputItemPath',
+      'recipePath',
+      'ingredientItemPath',
+      'stationPath',
+      'iconPath',
+      'path'
+    ]
+  });
 
   switch (action) {
     // =========================================================================

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AutomationBridge } from '../../automation/index.js';
 import type { ITools } from '../../types/tool-interfaces.js';
-import { executeAutomationRequest, getTimeoutMs, normalizePathFields, validateSecurityPatterns } from './common-handlers.js';
+import { createSubActionDispatcher, executeAutomationRequest, getTimeoutMs, normalizePathFields, validateSecurityPatterns } from './common-handlers.js';
 
 vi.mock('../../config.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../config.js')>();
@@ -155,5 +155,38 @@ describe('executeAutomationRequest console command validation', () => {
     await executeAutomationRequest(tools, 'console_command', { command: 'stat fps' });
 
     expect(sendAutomationRequest).toHaveBeenCalledWith('console_command', { command: 'stat fps' }, {});
+  });
+});
+
+describe('createSubActionDispatcher', () => {
+  it('normalizes configured paths, applies payload preparation, and uses dispatcher timeout', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools();
+    const dispatcher = createSubActionDispatcher(tools, {
+      action: 'outer_action',
+      assetPath: 'Content\\UI\\WBP_Menu',
+      timeoutMs: 50
+    }, {
+      toolName: 'manage_widget_authoring',
+      domainName: 'widget authoring',
+      pathFields: ['assetPath', 'folderPath'],
+      timeoutMs: 900,
+      preparePayload: (payload, subAction) => ({
+        ...payload,
+        preparedSubAction: subAction
+      })
+    });
+
+    await dispatcher.sendRequest('create_widget', {
+      folderPath: 'ProjectObject\\Menus'
+    });
+
+    expect(dispatcher.argsRecord.assetPath).toBe('/Game/UI/WBP_Menu');
+    expect(sendAutomationRequest).toHaveBeenCalledWith('manage_widget_authoring', {
+      action: 'outer_action',
+      assetPath: '/Game/UI/WBP_Menu',
+      folderPath: '/ProjectObject/Menus',
+      subAction: 'create_widget',
+      preparedSubAction: 'create_widget'
+    }, { timeoutMs: 900 });
   });
 });

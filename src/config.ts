@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Logger } from './utils/logger.js';
+import { isRecord } from './utils/type-guards.js';
 import dotenv from 'dotenv';
 
 // Suppress dotenv output to avoid corrupting MCP stdout stream.
@@ -42,9 +43,9 @@ export const stringToPositiveInteger = (val: unknown, defaultVal: number) => {
 };
 
 function withEnvAliases(val: unknown): unknown {
-  if (!val || typeof val !== 'object' || Array.isArray(val)) return val;
+  if (!isRecord(val)) return val;
 
-  const env = { ...(val as Record<string, unknown>) };
+  const env = { ...val };
   if (env.MCP_REQUEST_TIMEOUT_MS === undefined && env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS !== undefined) {
     env.MCP_REQUEST_TIMEOUT_MS = env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS;
   }
@@ -53,6 +54,18 @@ function withEnvAliases(val: unknown): unknown {
   }
 
   return env;
+}
+
+function normalizeAdditionalPathPrefix(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  let prefix = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  prefix = prefix.replace(/\\/g, '/');
+  if (!prefix.endsWith('/')) prefix += '/';
+
+  if (prefix === '/' || prefix.includes('..') || prefix.includes('//')) return undefined;
+  return prefix;
 }
 
 const EnvSchemaShape = z.object({
@@ -114,15 +127,10 @@ export { config };
 export function getAdditionalPathPrefixes(): string[] {
   const raw = config.MCP_ADDITIONAL_PATH_PREFIXES;
   if (!raw || raw.trim() === '') return [];
-  return raw
-    .split(',')
-    .map(s => s.trim())
-    .filter(s => s.length > 0)
-    .map(s => {
-      let p = s.startsWith('/') ? s : `/${s}`;
-      if (!p.endsWith('/')) p += '/';
-      if (p === '/' || p.includes('..') || p.includes('//')) return '';
-      return p;
-    })
-    .filter(s => s.length > 0);
+  return Array.from(new Set(
+    raw
+      .split(',')
+      .map(normalizeAdditionalPathPrefix)
+      .filter((prefix): prefix is string => prefix !== undefined)
+  ));
 }

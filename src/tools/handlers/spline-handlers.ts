@@ -13,9 +13,8 @@
  */
 
 import { ITools } from '../../types/tool-interfaces.js';
-import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest, getTimeoutMs, normalizePathFields } from './common-handlers.js';
+import { createSubActionDispatcher } from './common-handlers.js';
 
 /**
  * Handles all spline actions for the manage_splines tool.
@@ -25,25 +24,11 @@ export async function handleSplineTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  // Normalize path fields before sending to C++
-  const argsRecord = normalizePathFields(
-    args as Record<string, unknown>,
-    ['actorPath', 'blueprintPath', 'meshPath', 'materialPath', 'splinePath']
-  );
-  const timeoutMs = getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_splines',
-      payload as HandlerArgs,
-      `Automation bridge not available for spline action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  const { sendRequest } = createSubActionDispatcher(tools, args, {
+    toolName: 'manage_splines',
+    domainName: 'spline',
+    pathFields: ['actorPath', 'blueprintPath', 'meshPath', 'materialPath', 'splinePath']
+  });
 
   switch (action) {
     // ========================================================================
@@ -131,10 +116,10 @@ export async function handleSplineTools(
       return sendRequest('get_splines_info');
 
     default:
-      return cleanObject({
+      return {
         success: false,
         error: 'UNKNOWN_ACTION',
         message: `Unknown spline action: ${action}`
-      });
+      };
   }
 }

@@ -1,7 +1,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { EditorArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest, requireNonEmptyString, validateExpectedParams, validateRequiredParams, validateArgsSecurity } from './common-handlers.js';
+import { executeAutomationRequest, normalizePathFields, requireNonEmptyString, validateExpectedParams, validateRequiredParams, validateArgsSecurity } from './common-handlers.js';
 import { sanitizeCommandArgument } from '../../utils/validation.js';
 
 /**
@@ -33,11 +33,11 @@ const EDITOR_ACTION_ALIASES: Record<string, string> = {
  * NOTE: Include both original and normalized action names for proper validation.
  */
 const IDEMPOTENT_ACTIONS = new Set([
-  'stop', 'stop_pie', 'pause', 'resume', 
-  'set_game_speed', 'set_fixed_delta_time', 
-  'set_immersive_mode', 'set_game_view', 
-  'show_stats', 'hide_stats', 
-  'undo', 'redo', 
+  'stop', 'stop_pie', 'pause', 'resume',
+  'set_game_speed', 'set_fixed_delta_time',
+  'set_immersive_mode', 'set_game_view',
+  'show_stats', 'hide_stats',
+  'undo', 'redo',
   'step_frame', 'single_frame_step'
 ]);
 
@@ -118,6 +118,8 @@ const INPUT_TYPE_ALIASES: Record<string, string> = {
 };
 
 const SUPPORTED_INPUT_TYPES = new Set(['key_down', 'key_up', 'mouse_click', 'mouse_move']);
+const EDITOR_ASSET_PATH_ACTIONS = new Set(['open_asset', 'close_asset', 'open_level']);
+const EDITOR_PATH_FIELDS = ['assetPath', 'levelPath', 'path'] as const;
 
 /**
  * Normalize editor action names for test compatibility
@@ -137,20 +139,20 @@ function validateEditorActionArgs(
 ): void {
   // Always validate security patterns first
   validateArgsSecurity({ action, ...args } as Record<string, unknown>);
-  
+
   // Validate required parameters FIRST (applies to ALL actions including idempotent)
   // This ensures required param validation is not skipped for idempotent actions
   const requiredParams = ACTION_REQUIRED_PARAMS[action];
   if (requiredParams !== undefined) {
     validateRequiredParams(args, requiredParams, `control_editor:${action}`);
   }
-  
+
   // Idempotent actions skip allowed params validation (they accept extras gracefully)
   // But they still require their required params to be present (validated above)
   if (IDEMPOTENT_ACTIONS.has(action)) {
     return;
   }
-  
+
   // Validate that only expected parameters are present for non-idempotent actions
   const allowedParams = ACTION_ALLOWED_PARAMS[action];
   if (allowedParams !== undefined) {
@@ -176,11 +178,14 @@ function getInputType(args: EditorArgs): string {
 export async function handleEditorTools(action: string, args: EditorArgs, tools: ITools) {
   // Normalize action name for test compatibility
   const normalizedAction = normalizeEditorAction(action);
-  
+
   // Validate arguments for this action
-  const argsRecord = args as Record<string, unknown>;
+  const argsRecord = EDITOR_ASSET_PATH_ACTIONS.has(normalizedAction)
+    ? normalizePathFields(args as Record<string, unknown>, EDITOR_PATH_FIELDS)
+    : args as Record<string, unknown>;
   validateEditorActionArgs(normalizedAction, argsRecord);
-  
+  const editorArgs = argsRecord as EditorArgs;
+
   switch (normalizedAction) {
     case 'play': {
       const res = await executeAutomationRequest(tools, 'control_editor', { action: 'play' }, undefined, { timeoutMs: args.timeoutMs }) as Record<string, unknown>;
@@ -233,7 +238,7 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       const frameRate = typeof args.frameRate === 'number' ? args.frameRate : undefined;
       const durationSeconds = typeof args.durationSeconds === 'number' ? args.durationSeconds : undefined;
       const metadata = args.metadata;
-      
+
       const safeFilename = sanitizeCommandArgument(filename);
 
       // Try automation bridge first with all params
@@ -252,8 +257,8 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
         }
         // Fallback to console command
         await executeAutomationRequest(tools, 'console_command', { command: `DemoRec ${safeFilename}` });
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: `Started recording to ${safeFilename}`,
           action: 'start_recording',
           filename: safeFilename,
@@ -289,7 +294,7 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       return cleanObject(res);
     }
     case 'open_asset': {
-      const assetPath = requireNonEmptyString(args.assetPath || args.path, 'assetPath');
+      const assetPath = requireNonEmptyString(editorArgs.assetPath || editorArgs.path, 'assetPath');
       const res = await executeAutomationRequest(tools, 'control_editor', { action: 'open_asset', assetPath });
       return cleanObject(res);
     }
@@ -344,7 +349,7 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
     }
     // Additional handlers for test compatibility
     case 'close_asset': {
-      const assetPath = requireNonEmptyString(args.assetPath || args.path, 'assetPath');
+      const assetPath = requireNonEmptyString(editorArgs.assetPath || editorArgs.path, 'assetPath');
       const res = await executeAutomationRequest(tools, 'control_editor', { action: 'close_asset', assetPath });
       return cleanObject(res);
     }
@@ -390,14 +395,14 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
     }
     case 'open_level': {
       // Accept 'assetPath' as alias since users commonly think of level paths as asset paths
-      const levelPath = requireNonEmptyString(args.levelPath || args.path || args.assetPath, 'levelPath');
+      const levelPath = requireNonEmptyString(editorArgs.levelPath || editorArgs.path || editorArgs.assetPath, 'levelPath');
       const res = await executeAutomationRequest(tools, 'control_editor', { action: 'open_level', levelPath });
       return cleanObject(res);
     }
     case 'simulate_input': {
       const mappedType = getInputType(args);
-      
-      const res = await executeAutomationRequest(tools, 'control_editor', { 
+
+      const res = await executeAutomationRequest(tools, 'control_editor', {
         action: 'simulate_input',
         type: mappedType,
         key: args.key,

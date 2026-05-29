@@ -19,7 +19,7 @@ export function interpretStandardResult(
   // Handle automation bridge response format
   const payload = (response && typeof response === 'object' ? response : {}) as Record<string, unknown>;
   const success = payload.success === true;
-  const rawText = typeof payload.message === 'string' ? payload.message : 
+  const rawText = typeof payload.message === 'string' ? payload.message :
                   typeof payload.output === 'string' ? payload.output :
                   String(payload.result ?? '');
 

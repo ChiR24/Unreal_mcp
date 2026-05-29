@@ -57,6 +57,22 @@ describe('handleEditorTools', () => {
     }, {});
   });
 
+  it('normalizes editor asset and level paths before dispatch', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools();
+
+    await handleEditorTools('open_asset', { action: 'open_asset', path: 'Content\\UI\\WBP_Menu' }, tools);
+    await handleEditorTools('open_level', { action: 'open_level', assetPath: '/Content/Maps/Demo' }, tools);
+
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(1, 'control_editor', {
+      action: 'open_asset',
+      assetPath: '/Game/UI/WBP_Menu'
+    }, {});
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(2, 'control_editor', {
+      action: 'open_level',
+      levelPath: '/Game/Maps/Demo'
+    }, {});
+  });
+
   it('maps simulate_input from inputAction without reading the routing action', async () => {
     const { tools, sendAutomationRequest } = createConnectedTools();
 

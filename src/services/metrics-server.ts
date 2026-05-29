@@ -142,12 +142,6 @@ export function startMetricsServer(options: MetricsServerOptions): http.Server |
   const RATE_WINDOW_MS = 60_000;
 
   const server = http.createServer((req, res) => {
-    if (metricsToken && !isAuthorized(req, metricsToken)) {
-      res.writeHead(401, { 'Content-Type': 'text/plain' });
-      res.end('Unauthorized');
-      return;
-    }
-
     const clientIp = req.socket.remoteAddress || 'unknown';
 
     // Rate limiting
@@ -169,6 +163,12 @@ export function startMetricsServer(options: MetricsServerOptions): http.Server |
       if (now > data.resetTime) {
         requestCounts.delete(ip);
       }
+    }
+
+    if (metricsToken && !isAuthorized(req, metricsToken)) {
+      res.writeHead(401, { 'Content-Type': 'text/plain' });
+      res.end('Unauthorized');
+      return;
     }
 
     if (req.url === '/metrics' && req.method === 'GET') {

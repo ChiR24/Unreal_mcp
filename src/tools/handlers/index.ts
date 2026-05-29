@@ -1,6 +1,6 @@
 /**
  * Central exports for tool handlers.
- * 
+ *
  * @example
  * import { handleActorTools, handleAssetTools } from './handlers/index.js';
  */

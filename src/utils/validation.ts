@@ -34,7 +34,7 @@ const SQL_INJECTION_REPLACE_PATTERNS = /('|";|--|\bDROP\b|\bDELETE\b|\bINSERT\b|
  * Reserved keywords that shouldn't be used as names
  */
 const RESERVED_KEYWORDS = new Set([
-  'None', 'null', 'undefined', 'true', 'false',
+  'none', 'null', 'undefined', 'true', 'false',
   'class', 'struct', 'enum', 'interface',
   'default', 'transient', 'native'
 ]);
@@ -138,7 +138,7 @@ export function sanitizeAssetName(name: string): string {
   }
 
   // If name is a reserved keyword, append underscore
-  if (RESERVED_KEYWORDS.has(sanitized)) {
+  if (RESERVED_KEYWORDS.has(sanitized.toLowerCase())) {
     sanitized = `${sanitized}_Asset`;
   }
 

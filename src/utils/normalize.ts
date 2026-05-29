@@ -10,17 +10,8 @@ type VectorInput = Vec3Obj | Vec3Tuple | Record<string, unknown> | unknown[];
 /** Input that may represent a 3D rotation */
 type RotationInput = Rot3Obj | Rot3Tuple | Record<string, unknown> | unknown[];
 
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
-}
-
 function coerceFiniteNumber(value: unknown): number | undefined {
-  try {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  } catch {
-    return undefined;
-  }
+  return toFiniteNumber(value);
 }
 
 /**
@@ -29,8 +20,10 @@ function coerceFiniteNumber(value: unknown): number | undefined {
  */
 export function toVec3Object(input: VectorInput | unknown): Vec3Obj | null {
   if (Array.isArray(input) && input.length === 3) {
-    const [x, y, z] = input;
-    if (isFiniteNumber(x) && isFiniteNumber(y) && isFiniteNumber(z)) {
+    const x = coerceFiniteNumber(input[0]);
+    const y = coerceFiniteNumber(input[1]);
+    const z = coerceFiniteNumber(input[2]);
+    if (x !== undefined && y !== undefined && z !== undefined) {
       return { x, y, z };
     }
   }
@@ -52,8 +45,10 @@ export function toVec3Object(input: VectorInput | unknown): Vec3Obj | null {
  */
 export function toRotObject(input: RotationInput | unknown): Rot3Obj | null {
   if (Array.isArray(input) && input.length === 3) {
-    const [pitch, yaw, roll] = input;
-    if (isFiniteNumber(pitch) && isFiniteNumber(yaw) && isFiniteNumber(roll)) {
+    const pitch = coerceFiniteNumber(input[0]);
+    const yaw = coerceFiniteNumber(input[1]);
+    const roll = coerceFiniteNumber(input[2]);
+    if (pitch !== undefined && yaw !== undefined && roll !== undefined) {
       return { pitch, yaw, roll };
     }
   }

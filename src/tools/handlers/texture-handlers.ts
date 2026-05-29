@@ -57,7 +57,7 @@ export async function handleTextureTools(
 ): Promise<Record<string, unknown>> {
   // Normalize action name for test compatibility
   const normalizedAction = normalizeTextureAction(action);
-  
+
   try {
     switch (normalizedAction) {
       // ===== 9.1 Procedural Generation =====
@@ -826,7 +826,7 @@ export async function handleTextureTools(
         return ResponseFactory.success(res, res.message ?? `Texture imported to '${destinationPath}'`);
       }
 
-      case 'set_filter': 
+      case 'set_filter':
       case 'set_texture_filter': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['texturePath'], required: true },

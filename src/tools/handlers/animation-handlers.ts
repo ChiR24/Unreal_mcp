@@ -38,7 +38,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     'path', 'savePath', 'skeletonPath', 'skeletalMeshPath', 'sourceSkeleton', 'targetSkeleton',
     'assetPath', 'animationPath', 'blueprintPath', 'retargeterPath', 'meshPath', 'montagePath'
   ];
-  
+
   for (const param of allPathParams) {
     const value = (args as Record<string, unknown>)[param];
     if (value && typeof value === 'string') {
@@ -53,7 +53,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
       }
     }
   }
-  
+
   // Validate paths in arrays (e.g., artifacts in cleanup)
   const artifacts = (args as Record<string, unknown>).artifacts;
   if (Array.isArray(artifacts)) {
@@ -77,7 +77,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     const name = argsTyped.name ?? argsTyped.blueprintName;
     const skeletonPath = argsTyped.skeletonPath ?? argsTyped.targetSkeleton;
     let meshPath = argsTyped.meshPath;
-    
+
     // Validate and sanitize savePath
     let savePath: string;
     try {
@@ -96,8 +96,8 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
       try {
         const compsRes = await executeAutomationRequest(tools, 'control_actor', { action: 'get_components', actorName: argsTyped.actorName }) as ComponentsResponse;
         if (compsRes && Array.isArray(compsRes.components)) {
-          const meshComp = compsRes.components.find((c): c is SkeletalMeshComponentInfo => 
-            (c as SkeletalMeshComponentInfo).type === 'SkeletalMeshComponent' || 
+          const meshComp = compsRes.components.find((c): c is SkeletalMeshComponentInfo =>
+            (c as SkeletalMeshComponentInfo).type === 'SkeletalMeshComponent' ||
             (c as SkeletalMeshComponentInfo).className === 'SkeletalMeshComponent'
           );
           // Write back resolved path to the outgoing payload
@@ -165,13 +165,13 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
   if (animAction === 'setup_ragdoll' || animAction === 'activate_ragdoll') {
     // Auto-resolve meshPath from actorName if missing
     const mutableArgs = { ...argsTyped } as AnimationArgs & Record<string, unknown>;
-    
+
     if (argsTyped.actorName && !argsTyped.meshPath && !argsTyped.skeletonPath) {
       try {
         const compsRes = await executeAutomationRequest(tools, 'control_actor', { action: 'get_components', actorName: argsTyped.actorName }) as ComponentsResponse;
         if (compsRes && Array.isArray(compsRes.components)) {
-          const meshComp = compsRes.components.find((c): c is SkeletalMeshComponentInfo => 
-            (c as SkeletalMeshComponentInfo).type === 'SkeletalMeshComponent' || 
+          const meshComp = compsRes.components.find((c): c is SkeletalMeshComponentInfo =>
+            (c as SkeletalMeshComponentInfo).type === 'SkeletalMeshComponent' ||
             (c as SkeletalMeshComponentInfo).className === 'SkeletalMeshComponent'
           );
           if (meshComp && meshComp.path) {

@@ -317,10 +317,6 @@ async function findUbtExecutable(): Promise<string> {
 
 /** Return Unreal's bundled .NET runtime folder for the current platform, if present. */
 async function findBundledDotNetRoot(ubtPath: string): Promise<string | undefined> {
-  const ubtDir = path.dirname(ubtPath);
-  const engineDir = path.resolve(ubtDir, '..', '..', '..');
-  const dotNetBase = path.join(engineDir, 'Binaries', 'ThirdParty', 'DotNet');
-
   const platformFolder = (() => {
     if (process.platform === 'win32') {
       return process.arch === 'arm64' ? 'win-arm64' : 'win-x64';
@@ -331,22 +327,33 @@ async function findBundledDotNetRoot(ubtPath: string): Promise<string | undefine
     return process.arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
   })();
 
-  try {
-    const entries = await fs.promises.readdir(dotNetBase, { withFileTypes: true });
-    const versionDirs = entries
-      .filter(entry => entry.isDirectory())
-      .map(entry => entry.name)
-      .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+  let candidateRoot = path.dirname(ubtPath);
+  for (let depth = 0; depth < 6; depth++) {
+    const dotNetBase = path.join(candidateRoot, 'Binaries', 'ThirdParty', 'DotNet');
 
-    for (const versionDir of versionDirs) {
-      const candidateRoot = path.join(dotNetBase, versionDir, platformFolder);
-      const dotnetExecutable = path.join(candidateRoot, process.platform === 'win32' ? 'dotnet.exe' : 'dotnet');
-      const hit = await tryUbtpath(dotnetExecutable);
-      if (hit) {
-        return candidateRoot;
+    try {
+      const entries = await fs.promises.readdir(dotNetBase, { withFileTypes: true });
+      const versionDirs = entries
+        .filter(entry => entry.isDirectory())
+        .map(entry => entry.name)
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+
+      for (const versionDir of versionDirs) {
+        const runtimeRoot = path.join(dotNetBase, versionDir, platformFolder);
+        const dotnetExecutable = path.join(runtimeRoot, process.platform === 'win32' ? 'dotnet.exe' : 'dotnet');
+        const hit = await tryUbtpath(dotnetExecutable);
+        if (hit) {
+          return runtimeRoot;
+        }
       }
+    } catch { }
+
+    const parent = path.dirname(candidateRoot);
+    if (parent === candidateRoot) {
+      break;
     }
-  } catch { /* bundled runtime unavailable */ }
+    candidateRoot = parent;
+  }
 
   return undefined;
 }

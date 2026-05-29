@@ -1,13 +1,19 @@
 /**
  * Type coercion helpers for handler argument processing.
- * 
+ *
  * These functions safely convert unknown values to specific types,
  * returning undefined for invalid/null/undefined inputs.
- * 
+ *
  * Previously duplicated across multiple handler files.
  */
 
 import type { Vector3, Rotator } from '../types/handler-types.js';
+
+function finiteNumberOrDefault(value: unknown, fallback: number): number {
+  if (value === undefined || value === null) return fallback;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
 
 // ============================================================================
 // PRIMITIVE TYPE COERCION
@@ -20,7 +26,7 @@ import type { Vector3, Rotator } from '../types/handler-types.js';
 export function toNumber(val: unknown): number | undefined {
   if (val === undefined || val === null) return undefined;
   const n = Number(val);
-  return isFinite(n) ? n : undefined;
+  return Number.isFinite(n) ? n : undefined;
 }
 
 /**
@@ -79,7 +85,11 @@ export function toRotArray(r: unknown): [number, number, number] | undefined {
  */
 export function toColor3(val: unknown): [number, number, number] | undefined {
   if (!Array.isArray(val) || val.length < 3) return undefined;
-  return [Number(val[0]) || 0, Number(val[1]) || 0, Number(val[2]) || 0];
+  return [
+    finiteNumberOrDefault(val[0], 0),
+    finiteNumberOrDefault(val[1], 0),
+    finiteNumberOrDefault(val[2], 0)
+  ];
 }
 
 /**
@@ -89,11 +99,19 @@ export function toColor3(val: unknown): [number, number, number] | undefined {
 export function toLocationObj(val: unknown): { x: number; y: number; z: number } | undefined {
   if (!val) return undefined;
   if (Array.isArray(val) && val.length >= 3) {
-    return { x: Number(val[0]) || 0, y: Number(val[1]) || 0, z: Number(val[2]) || 0 };
+    return {
+      x: finiteNumberOrDefault(val[0], 0),
+      y: finiteNumberOrDefault(val[1], 0),
+      z: finiteNumberOrDefault(val[2], 0)
+    };
   }
   if (typeof val === 'object') {
     const obj = val as Record<string, unknown>;
-    return { x: Number(obj.x) || 0, y: Number(obj.y) || 0, z: Number(obj.z) || 0 };
+    return {
+      x: finiteNumberOrDefault(obj.x, 0),
+      y: finiteNumberOrDefault(obj.y, 0),
+      z: finiteNumberOrDefault(obj.z, 0)
+    };
   }
   return undefined;
 }
@@ -105,11 +123,19 @@ export function toLocationObj(val: unknown): { x: number; y: number; z: number }
 export function toRotationObj(val: unknown): { pitch: number; yaw: number; roll: number } | undefined {
   if (!val) return undefined;
   if (Array.isArray(val) && val.length >= 3) {
-    return { pitch: Number(val[0]) || 0, yaw: Number(val[1]) || 0, roll: Number(val[2]) || 0 };
+    return {
+      pitch: finiteNumberOrDefault(val[0], 0),
+      yaw: finiteNumberOrDefault(val[1], 0),
+      roll: finiteNumberOrDefault(val[2], 0)
+    };
   }
   if (typeof val === 'object') {
     const obj = val as Record<string, unknown>;
-    return { pitch: Number(obj.pitch) || 0, yaw: Number(obj.yaw) || 0, roll: Number(obj.roll) || 0 };
+    return {
+      pitch: finiteNumberOrDefault(obj.pitch, 0),
+      yaw: finiteNumberOrDefault(obj.yaw, 0),
+      roll: finiteNumberOrDefault(obj.roll, 0)
+    };
   }
   return undefined;
 }
@@ -123,8 +149,8 @@ export function toRotationObj(val: unknown): { pitch: number; yaw: number; roll:
  * Volume: 0-4, Pitch: 0.01-4
  */
 export function validateAudioParams(volume?: number, pitch?: number): { volume: number; pitch: number } {
-  const v = volume ?? 1.0;
-  const p = pitch ?? 1.0;
+  const v = finiteNumberOrDefault(volume, 1.0);
+  const p = finiteNumberOrDefault(pitch, 1.0);
   return {
     volume: Math.max(0.0, Math.min(v, 4.0)),  // Clamp volume 0-4 (standard UE range)
     pitch: Math.max(0.01, Math.min(p, 4.0))    // Clamp pitch 0.01-4

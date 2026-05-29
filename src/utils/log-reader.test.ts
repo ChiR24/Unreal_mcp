@@ -36,6 +36,38 @@ describe('readOutputLog path safety', () => {
     ]);
   });
 
+  it('discovers logs when UE_PROJECT_PATH points at the project directory', async () => {
+    process.env.UE_PROJECT_PATH = path.join(tmpDir, 'Project');
+    const logPath = path.join(tmpDir, 'Project', 'Saved', 'Logs', 'Project.log');
+    await fs.writeFile(logPath, 'LogMcp: Log: project directory message\n', 'utf8');
+
+    const result = await readOutputLog({ lines: 5 });
+
+    expect(result.success).toBe(true);
+    expect(result.entries).toEqual([
+      { category: 'LogMcp', level: 'Log', message: 'project directory message' }
+    ]);
+  });
+
+  it('does not reuse a cached log path after UE_PROJECT_PATH changes', async () => {
+    const firstLogPath = path.join(tmpDir, 'Project', 'Saved', 'Logs', 'Project.log');
+    await fs.writeFile(firstLogPath, 'LogMcp: Log: first project message\n', 'utf8');
+    await expect(readOutputLog({ logPath: firstLogPath, lines: 5 })).resolves.toMatchObject({ success: true });
+
+    const secondProjectDir = path.join(tmpDir, 'SecondProject');
+    process.env.UE_PROJECT_PATH = path.join(secondProjectDir, 'SecondProject.uproject');
+    await fs.mkdir(path.join(secondProjectDir, 'Saved', 'Logs'), { recursive: true });
+    await fs.writeFile(path.join(secondProjectDir, 'Saved', 'Logs', 'SecondProject.log'), 'LogMcp: Log: second project message\n', 'utf8');
+
+    const result = await readOutputLog({ lines: 5 });
+
+    expect(result.success).toBe(true);
+    expect(JSON.stringify(result)).not.toContain('first project message');
+    expect(result.entries).toEqual([
+      { category: 'LogMcp', level: 'Log', message: 'second project message' }
+    ]);
+  });
+
   it('does not follow log-directory symlinks outside the project', async () => {
     const outsideLog = path.join(tmpDir, 'secret.log');
     const linkedLog = path.join(tmpDir, 'Project', 'Saved', 'Logs', 'linked.log');

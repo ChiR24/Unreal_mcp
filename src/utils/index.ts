@@ -1,6 +1,6 @@
 /**
  * Central exports for utility modules.
- * 
+ *
  * @example
  * import { Logger, ResponseFactory, sanitizePathSecure } from '../utils/index.js';
  */

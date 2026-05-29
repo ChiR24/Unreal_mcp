@@ -46,13 +46,27 @@ export const CLASSES_REQUIRING_COMPONENT: Record<string, string> = {
     'Spline': 'SplineComponent',
 };
 
+const NORMALIZED_ACTOR_CLASS_ALIASES = new Map(
+    Object.entries(ACTOR_CLASS_ALIASES).map(([alias, classPath]) => [alias.toLowerCase(), classPath])
+);
+
+const NORMALIZED_CLASSES_REQUIRING_COMPONENT = new Map(
+    Object.entries(CLASSES_REQUIRING_COMPONENT).map(([className, component]) => [className.toLowerCase(), component])
+);
+
+function normalizeAliasKey(value: string): string {
+    return value.trim().toLowerCase();
+}
+
 /**
  * Resolve a class name alias to its full Unreal class path.
  * @param classNameOrPath - The class name or alias to resolve
  * @returns The full class path, or the original if not an alias
  */
 export function resolveClassAlias(classNameOrPath: string): string {
-    return ACTOR_CLASS_ALIASES[classNameOrPath] || classNameOrPath;
+    return ACTOR_CLASS_ALIASES[classNameOrPath]
+        ?? NORMALIZED_ACTOR_CLASS_ALIASES.get(normalizeAliasKey(classNameOrPath))
+        ?? classNameOrPath;
 }
 
 /**
@@ -61,5 +75,6 @@ export function resolveClassAlias(classNameOrPath: string): string {
  * @returns The component name to add, or undefined
  */
 export function getRequiredComponent(className: string): string | undefined {
-    return CLASSES_REQUIRING_COMPONENT[className];
+    return CLASSES_REQUIRING_COMPONENT[className]
+        ?? NORMALIZED_CLASSES_REQUIRING_COMPONENT.get(normalizeAliasKey(className));
 }

@@ -50,25 +50,40 @@ function normalizeLightType(lightType: unknown): string | undefined {
   return typeof lightType === 'string' ? lightType.trim().toLowerCase() : undefined;
 }
 
+function normalizeLevelPathValue(path: string): string {
+  const normalized = normalizePathFields({ path }, ['path']);
+  return normalized.path as string;
+}
+
+function normalizeLevelPathArray(paths: unknown): string[] | undefined {
+  if (!Array.isArray(paths)) return undefined;
+  return paths
+    .filter((path): path is string => typeof path === 'string')
+    .map(path => normalizeLevelPathValue(path));
+}
+
 /**
  * Normalize level arguments to support both camelCase and snake_case
  */
 function normalizeLevelArgs(args: LevelArgs): LevelArgs {
   const raw = args as Record<string, unknown>;
+  const assetPath = typeof raw.assetPath === 'string' ? raw.assetPath : undefined;
+  const targetPath = typeof raw.targetPath === 'string' ? raw.targetPath : undefined;
+  const pathAlias = typeof raw.path === 'string' ? raw.path : undefined;
   const mapped = {
     ...args,
     // Map snake_case to camelCase
-    levelPath: (raw.level_path as string | undefined) ?? args.levelPath,
+    levelPath: (raw.level_path as string | undefined) ?? args.levelPath ?? assetPath ?? pathAlias,
     levelName: (raw.level_name as string | undefined) ?? args.levelName,
     savePath: (raw.save_path as string | undefined) ?? args.savePath,
-    destinationPath: (raw.destination_path as string | undefined) ?? args.destinationPath,
+    destinationPath: (raw.destination_path as string | undefined) ?? args.destinationPath ?? targetPath,
     subLevelPath: (raw.sublevelPath as string | undefined) ?? (raw.sub_level_path as string | undefined) ?? args.subLevelPath,
     parentLevel: (raw.parent_level as string | undefined) ?? args.parentLevel,
     parentPath: (raw.parent_path as string | undefined) ?? args.parentPath,
     streamingMethod: (raw.streaming_method as 'Blueprint' | 'AlwaysLoaded' | undefined) ?? args.streamingMethod,
     sourcePath: (raw.source_path as string | undefined) ?? args.sourcePath,
     newName: (raw.new_name as string | undefined) ?? (args as Record<string, unknown>).newName as string | undefined,
-    levelPaths: (raw.level_paths as string[] | undefined) ?? args.levelPaths,
+    levelPaths: normalizeLevelPathArray(raw.level_paths ?? args.levelPaths),
     packagePath: (raw.package_path as string | undefined) ?? args.packagePath,
     exportPath: (raw.export_path as string | undefined) ?? args.exportPath,
   };
@@ -81,7 +96,8 @@ function normalizeLevelArgs(args: LevelArgs): LevelArgs {
     'parentPath',
     'sourcePath',
     'packagePath',
-    'exportPath'
+    'exportPath',
+    'path'
   ]) as LevelArgs;
 }
 
@@ -98,7 +114,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       tool: 'manage_level_structure'
     });
   }
-  
+
   // Security validation: check for path traversal attempts
   const securityError = validateSecurityPatterns(argsTyped as Record<string, unknown>);
   if (securityError) {
@@ -109,7 +125,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       action
     });
   }
-  
+
   switch (action) {
     case 'load':
     case 'load_level': {
@@ -368,7 +384,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
     case 'delete_level': {
       const levelPaths = Array.isArray(argsTyped.levelPaths)
         ? argsTyped.levelPaths.filter((p): p is string => typeof p === 'string')
-        : (argsTyped.levelPath || argsTyped.path ? [argsTyped.levelPath || argsTyped.path] : []);
+        : (argsTyped.levelPath ? [argsTyped.levelPath] : []);
       // Validate at least one path is provided for delete
       if (levelPaths.length === 0) {
         return cleanObject({
