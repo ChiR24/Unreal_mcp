@@ -2393,6 +2393,57 @@ TSharedRef<SWidget> SUnrealAgentPanel::MakeComposer(
                     .VAlign(VAlign_Center)
                     [
                         SNew(SBox)
+                        .WidthOverride(156.0f)
+                        [
+                            SAssignNew(OutAgentComboButton, SComboButton)
+                            .Tag(FName(TEXT("UnrealAgent.Agent.Combo")))
+                            .ComboButtonStyle(GetTransparentModelComboButtonStyle())
+                            .ButtonStyle(&FAppStyle::Get().GetWidgetStyle<FButtonStyle>("SimpleButton"))
+                            .ButtonColorAndOpacity(FStyleColors::Transparent)
+                            .ForegroundColor(FSlateColor::UseForeground())
+                            .ContentPadding(FMargin(0.0f))
+                            .HasDownArrow(false)
+                            .MenuPlacement(MenuPlacement_AboveAnchor)
+                            .Method(EPopupMethod::UseCurrentWindow)
+                            .OnGetMenuContent(this, &SUnrealAgentPanel::MakeAgentMenuContent)
+                            .IsEnabled(this, &SUnrealAgentPanel::CanSelectAgent)
+                            .ButtonContent()
+                            [
+                                SNew(SBorder)
+                                .BorderImage(GetModelComboOutlineBrush())
+                                .Padding(FMargin(8.0f, 3.0f, 6.0f, 3.0f))
+                                [
+                                    SNew(SHorizontalBox)
+                                    + SHorizontalBox::Slot()
+                                    .FillWidth(1.0f)
+                                    .VAlign(VAlign_Center)
+                                    [
+                                        SNew(STextBlock)
+                                        .Text(this, &SUnrealAgentPanel::GetSelectedAgentText)
+                                        .ToolTipText(this, &SUnrealAgentPanel::GetSelectedAgentText)
+                                        .ColorAndOpacity(FSlateColor::UseForeground())
+                                        .OverflowPolicy(ETextOverflowPolicy::Ellipsis)
+                                    ]
+                                    + SHorizontalBox::Slot()
+                                    .AutoWidth()
+                                    .VAlign(VAlign_Center)
+                                    .Padding(FMargin(7.0f, 0.0f, 0.0f, 0.0f))
+                                    [
+                                        SNew(SImage)
+                                        .Image(FAppStyle::Get().GetBrush("Icons.ChevronDown"))
+                                        .ColorAndOpacity(FSlateColor::UseSubduedForeground())
+                                        .DesiredSizeOverride(FVector2D(9.0f, 9.0f))
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                    + SHorizontalBox::Slot()
+                    .AutoWidth()
+                    .VAlign(VAlign_Center)
+                    .Padding(FMargin(8.0f, 0.0f, 0.0f, 0.0f))
+                    [
+                        SNew(SBox)
                         .WidthOverride(196.0f)
                         [
                             SAssignNew(OutModelComboButton, SComboButton)
@@ -2474,57 +2525,6 @@ TSharedRef<SWidget> SUnrealAgentPanel::MakeComposer(
                                         SNew(STextBlock)
                                         .Text(this, &SUnrealAgentPanel::GetSelectedThinkingText)
                                         .ToolTipText(this, &SUnrealAgentPanel::GetSelectedThinkingText)
-                                        .ColorAndOpacity(FSlateColor::UseForeground())
-                                        .OverflowPolicy(ETextOverflowPolicy::Ellipsis)
-                                    ]
-                                    + SHorizontalBox::Slot()
-                                    .AutoWidth()
-                                    .VAlign(VAlign_Center)
-                                    .Padding(FMargin(7.0f, 0.0f, 0.0f, 0.0f))
-                                    [
-                                        SNew(SImage)
-                                        .Image(FAppStyle::Get().GetBrush("Icons.ChevronDown"))
-                                        .ColorAndOpacity(FSlateColor::UseSubduedForeground())
-                                        .DesiredSizeOverride(FVector2D(9.0f, 9.0f))
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                    + SHorizontalBox::Slot()
-                    .AutoWidth()
-                    .VAlign(VAlign_Center)
-                    .Padding(FMargin(8.0f, 0.0f, 0.0f, 0.0f))
-                    [
-                        SNew(SBox)
-                        .WidthOverride(156.0f)
-                        [
-                            SAssignNew(OutAgentComboButton, SComboButton)
-                            .Tag(FName(TEXT("UnrealAgent.Agent.Combo")))
-                            .ComboButtonStyle(GetTransparentModelComboButtonStyle())
-                            .ButtonStyle(&FAppStyle::Get().GetWidgetStyle<FButtonStyle>("SimpleButton"))
-                            .ButtonColorAndOpacity(FStyleColors::Transparent)
-                            .ForegroundColor(FSlateColor::UseForeground())
-                            .ContentPadding(FMargin(0.0f))
-                            .HasDownArrow(false)
-                            .MenuPlacement(MenuPlacement_AboveAnchor)
-                            .Method(EPopupMethod::UseCurrentWindow)
-                            .OnGetMenuContent(this, &SUnrealAgentPanel::MakeAgentMenuContent)
-                            .IsEnabled(this, &SUnrealAgentPanel::CanSelectAgent)
-                            .ButtonContent()
-                            [
-                                SNew(SBorder)
-                                .BorderImage(GetModelComboOutlineBrush())
-                                .Padding(FMargin(8.0f, 3.0f, 6.0f, 3.0f))
-                                [
-                                    SNew(SHorizontalBox)
-                                    + SHorizontalBox::Slot()
-                                    .FillWidth(1.0f)
-                                    .VAlign(VAlign_Center)
-                                    [
-                                        SNew(STextBlock)
-                                        .Text(this, &SUnrealAgentPanel::GetSelectedAgentText)
-                                        .ToolTipText(this, &SUnrealAgentPanel::GetSelectedAgentText)
                                         .ColorAndOpacity(FSlateColor::UseForeground())
                                         .OverflowPolicy(ETextOverflowPolicy::Ellipsis)
                                     ]

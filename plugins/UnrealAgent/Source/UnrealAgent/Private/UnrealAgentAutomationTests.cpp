@@ -331,8 +331,8 @@ bool FUnrealAgentAcpPanelSmokeTest::RunTest(const FString& Parameters)
     const bool bFoundModelComboIndex = ComposerModelControls.IsValid() && FindWidgetTraversalIndexByTag(ComposerModelControls.ToSharedRef(), FName(TEXT("UnrealAgent.Model.Combo")), ModelComboIndex);
     const bool bFoundThinkingComboIndex = ComposerModelControls.IsValid() && FindWidgetTraversalIndexByTag(ComposerModelControls.ToSharedRef(), FName(TEXT("UnrealAgent.Thinking.Combo")), ThinkingComboIndex);
     const bool bFoundAgentComboIndex = ComposerModelControls.IsValid() && FindWidgetTraversalIndexByTag(ComposerModelControls.ToSharedRef(), FName(TEXT("UnrealAgent.Agent.Combo")), AgentComboIndex);
+    bPassed &= TestTrue(TEXT("Agent combo appears before the model combo"), bFoundAgentComboIndex && bFoundModelComboIndex && AgentComboIndex < ModelComboIndex);
     bPassed &= TestTrue(TEXT("Thinking combo appears after the model combo"), bFoundModelComboIndex && bFoundThinkingComboIndex && ModelComboIndex < ThinkingComboIndex);
-    bPassed &= TestTrue(TEXT("Agent combo remains after the thinking combo"), bFoundThinkingComboIndex && bFoundAgentComboIndex && ThinkingComboIndex < AgentComboIndex);
     bPassed &= TestTrue(TEXT("Context window status is inside the right side of the action row"), ComposerActionRow.IsValid() && FindWidgetByTag(ComposerActionRow.ToSharedRef(), FName(TEXT("UnrealAgent.Composer.ContextWindow"))).IsValid());
     bPassed &= TestFalse(TEXT("Context window status is not inside the model controls"), ComposerModelControls.IsValid() && FindWidgetByTag(ComposerModelControls.ToSharedRef(), FName(TEXT("UnrealAgent.Composer.ContextWindow"))).IsValid());
     bPassed &= TestTrue(TEXT("Composer helper row is inside the composer footer"), ComposerHelperRow.IsValid() && FindWidgetByTag(ComposerFooter.ToSharedRef(), FName(TEXT("UnrealAgent.Composer.HelperRow"))).IsValid());
