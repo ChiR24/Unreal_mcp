@@ -4,6 +4,7 @@
 #include "MCP/McpToolDefinition.h"
 #include "MCP/McpToolRegistry.h"
 #include "MCP/McpSchemaBuilder.h"
+#include "MCP/McpConsolidatedActionRouting.h"
 
 class FMcpTool_SystemControl : public FMcpToolDefinition
 {
@@ -21,32 +22,8 @@ public:
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		return FMcpSchemaBuilder()
-			.StringEnum(TEXT("action"), {
-				TEXT("profile"),
-				TEXT("show_fps"),
-				TEXT("set_quality"),
-				TEXT("screenshot"),
-				TEXT("set_resolution"),
-				TEXT("set_fullscreen"),
-				TEXT("execute_command"),
-				TEXT("console_command"),
-				TEXT("run_ubt"),
-				TEXT("run_tests"),
-				TEXT("subscribe"),
-				TEXT("unsubscribe"),
-				TEXT("spawn_category"),
-				TEXT("start_session"),
-				TEXT("lumen_update_scene"),
-				TEXT("play_sound"),
-				TEXT("create_widget"),
-				TEXT("show_widget"),
-				TEXT("add_widget_child"),
-				TEXT("set_cvar"),
-				TEXT("get_project_settings"),
-				TEXT("validate_assets"),
-				TEXT("set_project_setting"),
-				TEXT("execute_python")
-			}, TEXT("Action"))
+				.StringEnum(TEXT("action"), McpConsolidatedActions::SystemControl(),
+					TEXT("Action"))
 			.String(TEXT("profileType"), TEXT(""))
 			.String(TEXT("category"), TEXT(""))
 			.Number(TEXT("level"), TEXT(""))

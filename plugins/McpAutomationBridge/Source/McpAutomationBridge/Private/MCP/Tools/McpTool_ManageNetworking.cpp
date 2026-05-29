@@ -4,6 +4,7 @@
 #include "MCP/McpToolDefinition.h"
 #include "MCP/McpToolRegistry.h"
 #include "MCP/McpSchemaBuilder.h"
+#include "MCP/McpConsolidatedActionRouting.h"
 
 class FMcpTool_ManageNetworking : public FMcpToolDefinition
 {
@@ -21,35 +22,8 @@ public:
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		return FMcpSchemaBuilder()
-			.StringEnum(TEXT("action"), {
-				TEXT("set_property_replicated"),
-				TEXT("set_replication_condition"),
-				TEXT("configure_net_update_frequency"),
-				TEXT("configure_net_priority"),
-				TEXT("set_net_dormancy"),
-				TEXT("configure_replication_graph"),
-				TEXT("create_rpc_function"),
-				TEXT("configure_rpc_validation"),
-				TEXT("set_rpc_reliability"),
-				TEXT("set_owner"),
-				TEXT("set_autonomous_proxy"),
-				TEXT("check_has_authority"),
-				TEXT("check_is_locally_controlled"),
-				TEXT("configure_net_cull_distance"),
-				TEXT("set_always_relevant"),
-				TEXT("set_only_relevant_to_owner"),
-				TEXT("configure_net_serialization"),
-				TEXT("set_replicated_using"),
-				TEXT("configure_push_model"),
-				TEXT("configure_client_prediction"),
-				TEXT("configure_server_correction"),
-				TEXT("add_network_prediction_data"),
-				TEXT("configure_movement_prediction"),
-				TEXT("configure_net_driver"),
-				TEXT("set_net_role"),
-				TEXT("configure_replicated_movement"),
-				TEXT("get_networking_info")
-			}, TEXT("Networking action to perform"))
+				.StringEnum(TEXT("action"), McpConsolidatedActions::ManageNetworking(),
+					TEXT("Networking action to perform"))
 			.String(TEXT("blueprintPath"), TEXT("Blueprint asset path."))
 			.String(TEXT("actorName"), TEXT("Name of the actor."))
 			.String(TEXT("propertyName"), TEXT("Name of the property."))

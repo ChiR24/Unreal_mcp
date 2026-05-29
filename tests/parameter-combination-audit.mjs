@@ -9,6 +9,7 @@ import ts from 'typescript';
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 const repoRoot = path.resolve(__dirname, '..');
 const schemaPath = path.join(repoRoot, 'src/tools/consolidated-tool-definitions.ts');
 const testsRoot = path.join(repoRoot, 'tests/mcp-tools');
@@ -183,7 +184,7 @@ function auditRequire(specifier) {
   return require(specifier);
 }
 
-function captureTestSuites() {
+async function captureTestSuites() {
   const suites = [];
   for (const filePath of testSuiteFiles()) {
     let code = fs.readFileSync(filePath, 'utf8').replace(/^#!.*\n/, '');
@@ -195,7 +196,7 @@ function captureTestSuites() {
     code = code.replace(/import path from ['"]node:path['"];?/g, "const path = require('node:path');");
 
     const captured = [];
-    Function('require', '__captured', 'process', 'console', 'Date', code)(
+    await AsyncFunction('require', '__captured', 'process', 'console', 'Date', code)(
       auditRequire,
       captured,
       process,
@@ -335,9 +336,9 @@ function liveReportCases(suites) {
   return { cases, missingReports, failedCases, handledFailureCases, reports };
 }
 
-function buildAudit() {
+async function buildAudit() {
   const schemas = extractToolSchemas();
-  const suites = captureTestSuites();
+  const suites = await captureTestSuites();
   const staticCases = [];
 
   for (const suite of suites) {
@@ -480,7 +481,7 @@ function printSummary(audit, reportPath) {
   }
 }
 
-const audit = buildAudit();
+const audit = await buildAudit();
 const reportPath = writeReport(audit);
 printSummary(audit, reportPath);
 

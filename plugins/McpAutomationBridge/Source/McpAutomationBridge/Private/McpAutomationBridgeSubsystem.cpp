@@ -6,6 +6,7 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "MCP/McpNativeTransport.h"
+#include "MCP/McpConsolidatedActionRouting.h"
 #include "HAL/PlatformTLS.h"
 #include "Interfaces/IPluginManager.h"
 
@@ -1224,6 +1225,13 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsLightingAction(SubAction)) {
+                      return HandleLightingAction(R, TEXT("manage_lighting"), P, S);
+                    }
+                    if (McpConsolidatedActions::IsSplineAction(SubAction)) {
+                      return HandleManageSplinesAction(R, TEXT("manage_splines"), P, S);
+                    }
                     return HandleBuildEnvironmentAction(R, A, P, S);
                   });
 
@@ -1249,6 +1257,10 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsPerformanceAction(SubAction)) {
+                      return HandlePerformanceAction(R, TEXT("manage_performance"), P, S);
+                    }
                     return HandleSystemControlAction(R, A, P, S);
                   });
   RegisterHandler(TEXT("list_blueprints"),
@@ -1302,6 +1314,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsMaterialAuthoringAction(SubAction)) {
+                      return HandleManageMaterialAuthoringAction(
+                          R, TEXT("manage_material_authoring"), P, S);
+                    }
+                    if (McpConsolidatedActions::IsTextureAction(SubAction)) {
+                      return HandleManageTextureAction(R, TEXT("manage_texture"), P, S);
+                    }
                     return HandleAssetAction(R, A, P, S);
                   });
 
@@ -1365,9 +1385,10 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
-                    FString SubAction;
-                    if (P.IsValid()) {
-                      P->TryGetStringField(TEXT("subAction"), SubAction);
+                    FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsWidgetAuthoringAction(SubAction)) {
+                      return HandleManageWidgetAuthoringAction(
+                          R, TEXT("manage_widget_authoring"), P, S);
                     }
                     static const TSet<FString> GraphSubActions = {
                         TEXT("create_node"),       TEXT("delete_node"),
@@ -1463,6 +1484,17 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsInputAction(SubAction)) {
+                      return HandleInputAction(R, TEXT("manage_input"), P, S);
+                    }
+                    if (McpConsolidatedActions::IsGameFrameworkAction(SubAction)) {
+                      return HandleManageGameFrameworkAction(
+                          R, TEXT("manage_game_framework"), P, S);
+                    }
+                    if (McpConsolidatedActions::IsSessionAction(SubAction)) {
+                      return HandleManageSessionsAction(R, TEXT("manage_sessions"), P, S);
+                    }
                     return HandleManageNetworkingAction(R, A, P, S);
                   });
 
@@ -1491,6 +1523,11 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsAudioAuthoringAction(SubAction)) {
+                      return HandleManageAudioAuthoringAction(
+                          R, TEXT("manage_audio_authoring"), P, S);
+                    }
                     return HandleAudioAction(R, A, P, S);
                   });
 
@@ -1521,6 +1558,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsAnimationAuthoringAction(SubAction)) {
+                      return HandleManageAnimationAuthoringAction(
+                          R, TEXT("manage_animation_authoring"), P, S);
+                    }
+                    if (McpConsolidatedActions::IsSkeletonAction(SubAction)) {
+                      return HandleManageSkeleton(R, TEXT("manage_skeleton"), P, S);
+                    }
                     return HandleAnimationPhysicsAction(R, A, P, S);
                   });
 
@@ -1601,6 +1646,10 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsVolumeAction(SubAction)) {
+                      return HandleManageVolumesAction(R, TEXT("manage_volumes"), P, S);
+                    }
                     return HandleManageLevelStructureAction(R, A, P, S);
                   });
 

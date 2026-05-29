@@ -24,7 +24,7 @@ const testCases = [
   { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
 
   // === CREATE / SAVE / LOAD ===
-  { scenario: 'CREATE: create_level', toolName: 'manage_level', arguments: { action: 'create_level', levelName: `LevelMain_${ts}`, levelPath: TEST_FOLDER, useWorldPartition: false, saveDirtyPackages: true }, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_level', toolName: 'manage_level', arguments: { action: 'create_level', levelName: `LevelMain_${ts}`, levelPath: TEST_FOLDER, template: '/Engine/Maps/Templates/OpenWorld', useWorldPartition: false, saveDirtyPackages: true }, expected: 'success|already exists' },
   { scenario: 'ACTION: save', toolName: 'manage_level', arguments: { action: 'save' }, expected: 'success' },
   { scenario: 'ACTION: save_level alias', toolName: 'manage_level', arguments: { action: 'save_level' }, expected: 'success' },
   { scenario: 'ACTION: save_as', toolName: 'manage_level', arguments: { action: 'save_as', savePath: SAVE_AS_LEVEL }, expected: 'success' },
@@ -38,7 +38,7 @@ const testCases = [
   { scenario: 'ACTION: stream', toolName: 'manage_level', arguments: { action: 'stream', levelPath: SUB_LEVEL, shouldBeLoaded: true, shouldBeVisible: true }, expected: 'success|already loaded' },
   { scenario: 'ACTION: unload', toolName: 'manage_level', arguments: { action: 'unload', levelPath: SUB_LEVEL }, expected: 'success|not loaded' },
   { scenario: 'ACTION: unload_level alias', toolName: 'manage_level', arguments: { action: 'unload_level', levelPath: SUB_LEVEL }, expected: 'success|not loaded' },
-  { scenario: 'ADD: add_sublevel', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
+  { scenario: 'ADD: add_sublevel', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, parentLevel: MAIN_LEVEL, parentPath: TEST_FOLDER, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
   { scenario: 'ADD: add_sublevel via sublevelPath alias', toolName: 'manage_level', arguments: { action: 'add_sublevel', sublevelPath: SUB_LEVEL, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
 
   // === LIGHTING ===
@@ -46,7 +46,7 @@ const testCases = [
   { scenario: 'CREATE: build_lighting', toolName: 'manage_level', arguments: { action: 'build_lighting', quality: 'Preview' }, expected: 'success|already exists' },
 
   // === METADATA ===
-  { scenario: 'CONFIG: set_metadata', toolName: 'manage_level', arguments: { action: 'set_metadata', levelPath: MAIN_LEVEL, metadata: { suite: 'manage_level', timestamp: ts } }, expected: 'success' },
+  { scenario: 'CONFIG: set_metadata', toolName: 'manage_level', arguments: { action: 'set_metadata', assetPath: MAIN_LEVEL, metadata: { suite: 'manage_level', timestamp: ts } }, expected: 'success' },
 
   // === IMPORT / EXPORT / INFO ===
   { scenario: 'ACTION: export_level', toolName: 'manage_level', arguments: { action: 'export_level', levelPath: MAIN_LEVEL, exportPath: EXPORTED_LEVEL, timeoutMs: 45000 }, expected: 'success' },
@@ -57,7 +57,7 @@ const testCases = [
   { scenario: 'INFO: get_current_level', toolName: 'manage_level', arguments: { action: 'get_current_level' }, expected: 'success' },
 
   // === ASSET OPERATIONS ===
-  { scenario: 'ACTION: duplicate_level', toolName: 'manage_level', arguments: { action: 'duplicate_level', sourcePath: MAIN_LEVEL, destinationPath: DUPLICATED_LEVEL, overwrite: false }, expected: 'success|already exists' },
+  { scenario: 'ACTION: duplicate_level', toolName: 'manage_level', arguments: { action: 'duplicate_level', sourcePath: MAIN_LEVEL, destinationPath: DUPLICATED_LEVEL, targetPath: TEST_FOLDER, overwrite: false }, expected: 'success|already exists' },
   { scenario: 'ACTION: rename_level', toolName: 'manage_level', arguments: { action: 'rename_level', levelPath: DUPLICATED_LEVEL, newName: RENAMED_LEVEL_NAME, overwrite: false }, expected: 'success|already exists' },
   { scenario: 'DELETE: delete multiple levels', toolName: 'manage_level', arguments: { action: 'delete', levelPaths: [SAVE_AS_LEVEL, SAVE_LEVEL_AS, EXPORTED_LEVEL] }, expected: 'success|not found' },
   { scenario: 'DELETE: delete', toolName: 'manage_level', arguments: { action: 'delete', levelPath: RENAMED_LEVEL }, expected: 'success|not found' },

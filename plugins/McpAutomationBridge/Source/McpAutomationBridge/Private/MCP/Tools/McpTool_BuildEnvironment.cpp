@@ -4,6 +4,7 @@
 #include "MCP/McpToolDefinition.h"
 #include "MCP/McpToolRegistry.h"
 #include "MCP/McpSchemaBuilder.h"
+#include "MCP/McpConsolidatedActionRouting.h"
 
 class FMcpTool_BuildEnvironment : public FMcpToolDefinition
 {
@@ -23,31 +24,8 @@ public:
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		return FMcpSchemaBuilder()
-			.StringEnum(TEXT("action"), {
-				TEXT("create_landscape"),
-				TEXT("sculpt"),
-				TEXT("sculpt_landscape"),
-				TEXT("add_foliage"),
-				TEXT("paint_foliage"),
-				TEXT("create_procedural_terrain"),
-				TEXT("create_procedural_foliage"),
-				TEXT("add_foliage_instances"),
-				TEXT("get_foliage_instances"),
-				TEXT("remove_foliage"),
-				TEXT("paint_landscape"),
-				TEXT("paint_landscape_layer"),
-				TEXT("modify_heightmap"),
-				TEXT("set_landscape_material"),
-				TEXT("create_landscape_grass_type"),
-				TEXT("generate_lods"),
-				TEXT("bake_lightmap"),
-				TEXT("export_snapshot"),
-				TEXT("import_snapshot"),
-				TEXT("delete"),
-				TEXT("create_sky_sphere"),
-				TEXT("set_time_of_day"),
-				TEXT("create_fog_volume")
-			}, TEXT("Action"))
+				.StringEnum(TEXT("action"), McpConsolidatedActions::BuildEnvironment(),
+					TEXT("Action"))
 			.String(TEXT("name"), TEXT("Name identifier."))
 			.String(TEXT("landscapeName"), TEXT(""))
 			.Array(TEXT("heightData"), TEXT(""), TEXT("number"))

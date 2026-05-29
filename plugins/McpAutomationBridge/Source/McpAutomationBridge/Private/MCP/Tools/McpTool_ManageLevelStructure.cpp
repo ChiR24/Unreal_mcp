@@ -4,6 +4,7 @@
 #include "MCP/McpToolDefinition.h"
 #include "MCP/McpToolRegistry.h"
 #include "MCP/McpSchemaBuilder.h"
+#include "MCP/McpConsolidatedActionRouting.h"
 
 class FMcpTool_ManageLevelStructure : public FMcpToolDefinition
 {
@@ -21,25 +22,8 @@ public:
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		return FMcpSchemaBuilder()
-			.StringEnum(TEXT("action"), {
-				TEXT("create_level"),
-				TEXT("create_sublevel"),
-				TEXT("configure_level_streaming"),
-				TEXT("set_streaming_distance"),
-				TEXT("configure_level_bounds"),
-				TEXT("enable_world_partition"),
-				TEXT("configure_grid_size"),
-				TEXT("create_data_layer"),
-				TEXT("assign_actor_to_data_layer"),
-				TEXT("configure_hlod_layer"),
-				TEXT("create_minimap_volume"),
-				TEXT("open_level_blueprint"),
-				TEXT("add_level_blueprint_node"),
-				TEXT("connect_level_blueprint_nodes"),
-				TEXT("create_level_instance"),
-				TEXT("create_packed_level_actor"),
-				TEXT("get_level_structure_info")
-			}, TEXT("Level structure action to perform."))
+				.StringEnum(TEXT("action"), McpConsolidatedActions::ManageLevelStructure(),
+					TEXT("Level structure action to perform."))
 			.String(TEXT("levelName"), TEXT(""))
 			.String(TEXT("levelPath"), TEXT("Level asset path."))
 			.String(TEXT("parentLevel"), TEXT("Parent level path."))

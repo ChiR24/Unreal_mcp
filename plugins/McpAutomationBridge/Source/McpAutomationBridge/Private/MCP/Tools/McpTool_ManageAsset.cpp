@@ -4,6 +4,7 @@
 #include "MCP/McpToolDefinition.h"
 #include "MCP/McpToolRegistry.h"
 #include "MCP/McpSchemaBuilder.h"
+#include "MCP/McpConsolidatedActionRouting.h"
 
 class FMcpTool_ManageAsset : public FMcpToolDefinition
 {
@@ -21,53 +22,8 @@ public:
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		return FMcpSchemaBuilder()
-			.StringEnum(TEXT("action"), {
-				TEXT("list"),
-				TEXT("import"),
-				TEXT("duplicate"),
-				TEXT("duplicate_asset"),
-				TEXT("rename"),
-				TEXT("rename_asset"),
-				TEXT("move"),
-				TEXT("move_asset"),
-				TEXT("delete"),
-				TEXT("delete_asset"),
-				TEXT("delete_assets"),
-				TEXT("create_folder"),
-				TEXT("search_assets"),
-				TEXT("get_dependencies"),
-				TEXT("get_source_control_state"),
-				TEXT("analyze_graph"),
-				TEXT("get_asset_graph"),
-				TEXT("create_thumbnail"),
-				TEXT("set_tags"),
-				TEXT("get_metadata"),
-				TEXT("set_metadata"),
-				TEXT("validate"),
-				TEXT("fixup_redirectors"),
-				TEXT("find_by_tag"),
-				TEXT("generate_report"),
-				TEXT("create_material"),
-				TEXT("create_material_instance"),
-				TEXT("create_render_target"),
-				TEXT("generate_lods"),
-				TEXT("add_material_parameter"),
-				TEXT("list_instances"),
-				TEXT("reset_instance_parameters"),
-				TEXT("exists"),
-				TEXT("get_material_stats"),
-				TEXT("nanite_rebuild_mesh"),
-				TEXT("bulk_rename"),
-				TEXT("bulk_delete"),
-				TEXT("source_control_checkout"),
-				TEXT("source_control_submit"),
-				TEXT("add_material_node"),
-				TEXT("connect_material_pins"),
-				TEXT("remove_material_node"),
-				TEXT("break_material_connections"),
-				TEXT("get_material_node_details"),
-				TEXT("rebuild_material")
-			}, TEXT("Action to perform"))
+				.StringEnum(TEXT("action"), McpConsolidatedActions::ManageAsset(),
+					TEXT("Action to perform"))
 			.String(TEXT("assetPath"), TEXT("Asset path (e.g., /Game/Path/Asset)."))
 			.String(TEXT("directory"), TEXT("Path to a directory."))
 			.Array(TEXT("classNames"), TEXT(""))

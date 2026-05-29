@@ -54,6 +54,7 @@
 
 // MCP Core
 #include "McpAutomationBridgeSubsystem.h"
+#include "MCP/McpConsolidatedActionRouting.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpHandlerUtils.h"
@@ -316,28 +317,12 @@ static bool SanitizeAIAssetPath(const FString& InputPath, FString& OutSanitizedP
 
 static bool IsManageAIBehaviorTreeGraphSubAction(const FString& SubAction)
 {
-    return SubAction == TEXT("create") ||
-           SubAction == TEXT("add_node") ||
-           SubAction == TEXT("connect_nodes") ||
-           SubAction == TEXT("remove_node") ||
-           SubAction == TEXT("break_connections") ||
-           SubAction == TEXT("set_node_properties");
+    return McpConsolidatedActions::IsBehaviorTreeAction(SubAction);
 }
 
 static bool IsManageAINavigationSubAction(const FString& SubAction)
 {
-    return SubAction == TEXT("configure_nav_mesh_settings") ||
-           SubAction == TEXT("set_nav_agent_properties") ||
-           SubAction == TEXT("rebuild_navigation") ||
-           SubAction == TEXT("create_nav_modifier_component") ||
-           SubAction == TEXT("set_nav_area_class") ||
-           SubAction == TEXT("configure_nav_area_cost") ||
-           SubAction == TEXT("create_nav_link_proxy") ||
-           SubAction == TEXT("configure_nav_link") ||
-           SubAction == TEXT("set_nav_link_type") ||
-           SubAction == TEXT("create_smart_link") ||
-           SubAction == TEXT("configure_smart_link_behavior") ||
-           SubAction == TEXT("get_navigation_info");
+    return McpConsolidatedActions::IsNavigationAction(SubAction);
 }
 
 #if WITH_EDITOR

@@ -72,6 +72,7 @@ const testCases = [
 
 // === CREATE (IK Rig - needs skeletonPath) ===
 { scenario: 'CREATE: create_ik_rig', toolName: 'animation_physics', arguments: {"action": "create_ik_rig", "name": "Testik_rig", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'error|IKRIG_FACTORY_UNAVAILABLE|NOT_SUPPORTED' },
+{ scenario: 'CREATE: create_ik_retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_retargeter", "name": "Testik_retargeter", "path": TEST_FOLDER, "sourceIKRigPath": `${TEST_FOLDER}/Testik_rig`, "targetIKRigPath": `${TEST_FOLDER}/Testik_rig`, "save": true}, expected: 'error|IKRETARGET_FACTORY_UNAVAILABLE|NOT_SUPPORTED|success|already exists' },
 { scenario: 'CONFIG: set_retarget_chain_mapping', toolName: 'animation_physics', arguments: {"action": "set_retarget_chain_mapping", "assetPath": `${TEST_FOLDER}/Testik_retargeter`, "sourceChain": "Root", "targetChain": "Root"}, expected: 'error|NOT_SUPPORTED|success' },
 
 // === ACTION (Setup IK - needs name and skeletonPath) ===
@@ -155,6 +156,8 @@ const testCases = [
 
 // === CONFIG (Axis Settings - needs assetPath) ===
 { scenario: 'CONFIG: set_axis_settings', toolName: 'animation_physics', arguments: {"action": "set_axis_settings", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "axis": "X", "axisName": "Speed", "minValue": 0, "maxValue": 600}, expected: 'success' },
+
+{ scenario: 'ACTION: force_rebuild_blend_space', toolName: 'animation_physics', arguments: {"action": "force_rebuild_blend_space", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "rebuildBlendParameters": true, "compileReferencers": false, "save": false}, expected: 'success' },
 
 // === CONFIG (Interpolation Settings - needs assetPath) ===
 { scenario: 'CONFIG: set_interpolation_settings', toolName: 'animation_physics', arguments: {"action": "set_interpolation_settings", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "interpolationType": "Lerp"}, expected: 'success' },

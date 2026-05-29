@@ -38,7 +38,8 @@
     "test:unit:coverage": "vitest run --coverage",
     "test:all": "node tests/integration.mjs",
     "test:smoke": "node --loader ts-node/esm scripts/smoke-test.ts",
-    "test:params": "node tests/parameter-combination-audit.mjs --static --strict --optional-strict",
+    "test:native-parity": "node tests/native-mcp-parity-audit.mjs",
+    "test:params": "npm run test:native-parity && node tests/parameter-combination-audit.mjs --static --strict --optional-strict",
     "type-check": "tsc --noEmit"
   },
   "engines": {

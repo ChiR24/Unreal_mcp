@@ -4,6 +4,7 @@
 #include "MCP/McpToolDefinition.h"
 #include "MCP/McpToolRegistry.h"
 #include "MCP/McpSchemaBuilder.h"
+#include "MCP/McpConsolidatedActionRouting.h"
 
 class FMcpTool_ManageBlueprint : public FMcpToolDefinition
 {
@@ -21,44 +22,8 @@ public:
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		return FMcpSchemaBuilder()
-			.StringEnum(TEXT("action"), {
-				TEXT("create"),
-				TEXT("get_blueprint"),
-				TEXT("get"),
-				TEXT("compile"),
-				TEXT("add_component"),
-				TEXT("set_default"),
-				TEXT("modify_scs"),
-				TEXT("get_scs"),
-				TEXT("add_scs_component"),
-				TEXT("remove_scs_component"),
-				TEXT("reparent_scs_component"),
-				TEXT("set_scs_transform"),
-				TEXT("set_scs_property"),
-				TEXT("ensure_exists"),
-				TEXT("probe_handle"),
-				TEXT("add_variable"),
-				TEXT("remove_variable"),
-				TEXT("rename_variable"),
-				TEXT("add_function"),
-				TEXT("add_event"),
-				TEXT("remove_event"),
-				TEXT("add_construction_script"),
-				TEXT("set_variable_metadata"),
-				TEXT("set_metadata"),
-				TEXT("create_node"),
-				TEXT("add_node"),
-				TEXT("delete_node"),
-				TEXT("connect_pins"),
-				TEXT("break_pin_links"),
-				TEXT("set_node_property"),
-				TEXT("create_reroute_node"),
-				TEXT("get_node_details"),
-				TEXT("get_graph_details"),
-				TEXT("get_pin_details"),
-				TEXT("list_node_types"),
-				TEXT("set_pin_default_value")
-			}, TEXT("Blueprint action"))
+				.StringEnum(TEXT("action"), McpConsolidatedActions::ManageBlueprint(),
+					TEXT("Blueprint action"))
 			.String(TEXT("name"), TEXT("Name identifier."))
 			.String(TEXT("blueprintPath"), TEXT("Blueprint asset path."))
 			.String(TEXT("blueprintType"), TEXT("Path or name of the parent class."))

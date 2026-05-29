@@ -181,6 +181,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }
+  if (SubAction == TEXT("connect_material_pins")) {
+    SubAction = TEXT("connect_nodes");
+  } else if (SubAction == TEXT("break_material_connections")) {
+    SubAction = TEXT("disconnect_nodes");
+  } else if (SubAction == TEXT("rebuild_material")) {
+    SubAction = TEXT("compile_material");
+  }
 
   // ==========================================================================
   // 8.1 Material Creation Actions
