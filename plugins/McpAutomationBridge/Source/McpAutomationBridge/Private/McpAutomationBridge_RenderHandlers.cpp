@@ -2,9 +2,9 @@
 // McpAutomationBridge_RenderHandlers.cpp
 // =============================================================================
 // MCP Automation Bridge - Render Target & Advanced Rendering Handlers
-// 
+//
 // UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-// 
+//
 // Handler Summary:
 // -----------------------------------------------------------------------------
 // Action: manage_render (Editor Only)
@@ -12,16 +12,16 @@
 //   - attach_render_target_to_volume: Attach RT to PostProcessVolume via MID
 //   - nanite_rebuild_mesh: Enable Nanite and rebuild static mesh
 //   - lumen_update_scene: Trigger Lumen scene recapture
-// 
+//
 // Dependencies:
 //   - Core: McpAutomationBridgeSubsystem, McpAutomationBridgeHelpers
 //   - Engine: TextureRenderTarget2D, PostProcessVolume, MaterialInstanceDynamic
 //   - Editor: EditorAssetLibrary, AssetRegistryModule
-// 
+//
 // Version Compatibility Notes:
 //   - UE 5.7+: Nanite settings accessed via GetNaniteSettings()/SetNaniteSettings()
 //   - UE 5.0-5.6: Direct NaniteSettings member access
-// 
+//
 // Safety:
 //   - Uses DoesAssetDirectoryExistOnDisk() to verify parent folder exists
 //   - Checks for existing assets before creation to prevent crash
@@ -58,9 +58,9 @@
 // =============================================================================
 
 bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
-    const FString& RequestId, 
-    const FString& Action, 
-    const TSharedPtr<FJsonObject>& Payload, 
+    const FString& RequestId,
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     // Validate action
@@ -73,7 +73,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -92,8 +92,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
         // Validate required name parameter
         if (Name.IsEmpty())
         {
-            SendAutomationError(RequestingSocket, RequestId, 
-                TEXT("name parameter is required for create_render_target"), 
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("name parameter is required for create_render_target"),
                 TEXT("INVALID_ARGUMENT"));
             return true;
         }
@@ -122,8 +122,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
         // DoesDirectoryExist() uses AssetRegistry cache which may be stale
         if (!DoesAssetDirectoryExistOnDisk(PackagePath))
         {
-            SendAutomationError(RequestingSocket, RequestId, 
-                FString::Printf(TEXT("Parent folder does not exist: %s. Create the folder first or use an existing path."), *PackagePath), 
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Parent folder does not exist: %s. Create the folder first or use an existing path."), *PackagePath),
                 TEXT("PARENT_FOLDER_NOT_FOUND"));
             return true;
         }
@@ -134,8 +134,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
         // CRITICAL: Check for existing asset to prevent crash
         if (UEditorAssetLibrary::DoesAssetExist(FullPath))
         {
-            SendAutomationError(RequestingSocket, RequestId, 
-                FString::Printf(TEXT("Asset already exists at path: %s. Delete it first or use a different name."), *FullPath), 
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Asset already exists at path: %s. Delete it first or use a different name."), *FullPath),
                 TEXT("ASSET_ALREADY_EXISTS"));
             return true;
         }
@@ -143,9 +143,9 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
         // Create render target
         UPackage* Package = CreatePackage(*FullPath);
         UTextureRenderTarget2D* RT = NewObject<UTextureRenderTarget2D>(
-            Package, 
-            UTextureRenderTarget2D::StaticClass(), 
-            FName(*AssetName), 
+            Package,
+            UTextureRenderTarget2D::StaticClass(),
+            FName(*AssetName),
             RF_Public | RF_Standalone);
 
         if (RT)
@@ -198,12 +198,12 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
 
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
             Result->SetStringField(TEXT("assetPath"), RT->GetPathName());
-            SendAutomationResponse(RequestingSocket, RequestId, true, 
+            SendAutomationResponse(RequestingSocket, RequestId, true,
                 TEXT("Render target created."), Result);
         }
         else
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Failed to create render target."), TEXT("CREATE_FAILED"));
         }
         return true;
@@ -224,7 +224,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
         APostProcessVolume* Volume = Cast<APostProcessVolume>(FindObject<AActor>(nullptr, *VolumePath));
         if (!Volume)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Volume not found."), TEXT("ACTOR_NOT_FOUND"));
             return true;
         }
@@ -233,7 +233,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
         UTextureRenderTarget2D* RT = LoadObject<UTextureRenderTarget2D>(nullptr, *TargetPath);
         if (!RT)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Render target not found."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
@@ -247,7 +247,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
 
         if (MaterialPath.IsEmpty() || ParamName.IsEmpty())
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("materialPath and parameterName required."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
@@ -256,7 +256,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
         UMaterialInterface* BaseMat = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
         if (!BaseMat)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Base material not found."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
@@ -274,12 +274,12 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
             Result->SetBoolField(TEXT("attached"), true);
             McpHandlerUtils::AddVerification(Result, Volume);
 
-            SendAutomationResponse(RequestingSocket, RequestId, true, 
+            SendAutomationResponse(RequestingSocket, RequestId, true,
                 TEXT("Render target attached to volume via material."), Result);
         }
         else
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Failed to create MID."), TEXT("CREATE_FAILED"));
         }
         return true;
@@ -293,7 +293,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
         FString AssetPath;
         if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty())
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("assetPath required."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
@@ -301,7 +301,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
         UStaticMesh* StaticMesh = LoadObject<UStaticMesh>(nullptr, *AssetPath);
         if (!StaticMesh)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("StaticMesh not found."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
@@ -329,7 +329,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
         Result->SetBoolField(TEXT("naniteEnabled"), true);
         Result->SetBoolField(TEXT("rebuilt"), true);
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Nanite enabled and mesh rebuilt."), Result);
         return true;
     }
@@ -353,25 +353,25 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
                 Result->SetStringField(TEXT("command"), TEXT("r.Lumen.Scene.Recapture"));
                 Result->SetBoolField(TEXT("executed"), true);
 
-                SendAutomationResponse(RequestingSocket, RequestId, true, 
+                SendAutomationResponse(RequestingSocket, RequestId, true,
                     TEXT("Lumen scene recapture triggered."), Result);
                 return true;
             }
         }
 
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Could not execute command (no world context)."), TEXT("EXECUTION_FAILED"));
         return true;
     }
 
     // Unknown subaction
-    SendAutomationError(RequestingSocket, RequestId, 
+    SendAutomationError(RequestingSocket, RequestId,
         TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;
 
 #else
     // Non-editor build
-    SendAutomationResponse(RequestingSocket, RequestId, false, 
+    SendAutomationResponse(RequestingSocket, RequestId, false,
         TEXT("Render management requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
 #endif

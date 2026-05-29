@@ -31,9 +31,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
   if (Payload.IsValid()) {
     Payload->TryGetStringField(TEXT("action"), SubAction);
   }
-  
+
   const FString Lower = SubAction.ToLower();
-  
+
   // Check if this handler should process this sub-action
   if (!Lower.StartsWith(TEXT("run_ubt")) &&
       !Lower.StartsWith(TEXT("run_tests")) &&
@@ -61,13 +61,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     // Extract optional parameters
     FString Target;
     Payload->TryGetStringField(TEXT("target"), Target);
-    
+
     FString Platform;
     Payload->TryGetStringField(TEXT("platform"), Platform);
-    
+
     FString Configuration;
     Payload->TryGetStringField(TEXT("configuration"), Configuration);
-    
+
     FString AdditionalArgs;
     Payload->TryGetStringField(TEXT("additionalArgs"), AdditionalArgs);
     if (AdditionalArgs.IsEmpty()) {
@@ -141,7 +141,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     // Build UBT path
     FString EngineDir = FPaths::EngineDir();
     FString UBTPath;
-    
+
 #if PLATFORM_WINDOWS
     UBTPath = FPaths::Combine(EngineDir, TEXT("Build/BatchFiles/Build.bat"));
 #elif PLATFORM_MAC
@@ -159,10 +159,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
 
     // Build command line arguments
     FString Arguments;
-    
+
     // Target (project or engine target)
     Arguments += Target + TEXT(" ");
-    
+
     // Platform
     if (!Platform.IsEmpty()) {
       Arguments += Platform + TEXT(" ");
@@ -175,7 +175,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       Arguments += TEXT("Linux ");
 #endif
     }
-    
+
     // Configuration
     if (!Configuration.IsEmpty()) {
       Arguments += Configuration + TEXT(" ");
@@ -187,7 +187,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     if (!ProjectPath.IsEmpty()) {
       Arguments += FString::Printf(TEXT("-Project=\"%s\" "), *ProjectPath);
     }
-    
+
     // Additional args
     if (!AdditionalArgs.IsEmpty()) {
       Arguments += AdditionalArgs;
@@ -198,13 +198,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     int32 ReturnCode = -1;
     FString StdOut;
     FString StdErr;
-    
+
     // Note: FPlatformProcess::ExecProcess is simpler but blocks
     // Using CreateProc with pipes for better control
     void* ReadPipe = nullptr;
     void* WritePipe = nullptr;
     FPlatformProcess::CreatePipe(ReadPipe, WritePipe);
-    
+
     FProcHandle ProcessHandle = FPlatformProcess::CreateProc(
         *UBTPath,
         *Arguments,
@@ -228,29 +228,29 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     // Read output with timeout (30 seconds max wait, but check periodically)
     const double TimeoutSeconds = 300.0; // 5 minute timeout for builds
     const double StartTime = FPlatformTime::Seconds();
-    
+
     while (FPlatformProcess::IsProcRunning(ProcessHandle)) {
       // Read available output
       FString NewOutput = FPlatformProcess::ReadPipe(ReadPipe);
       if (!NewOutput.IsEmpty()) {
         StdOut += NewOutput;
       }
-      
+
       // Check timeout
       if (FPlatformTime::Seconds() - StartTime > TimeoutSeconds) {
         FPlatformProcess::TerminateProc(ProcessHandle, true);
         FPlatformProcess::ClosePipe(ReadPipe, WritePipe);
-        
+
         TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
         Result->SetStringField(TEXT("output"), StdOut);
         Result->SetBoolField(TEXT("timedOut"), true);
-        
+
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("UBT process timed out"), Result,
                                TEXT("TIMEOUT"));
         return true;
       }
-      
+
       // Small sleep to avoid busy waiting
       FPlatformProcess::Sleep(0.1f);
     }
@@ -285,10 +285,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     // Extract test filter
     FString Filter;
     Payload->TryGetStringField(TEXT("filter"), Filter);
-    
+
     FString TestName;
     Payload->TryGetStringField(TEXT("test"), TestName);
-    
+
     // If specific test name provided, use it as filter
     if (!TestName.IsEmpty() && Filter.IsEmpty()) {
       Filter = TestName;
@@ -300,7 +300,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    
+
     // Build automation test command
     FString TestCommand;
     if (Filter.IsEmpty()) {
@@ -314,11 +314,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     // Execute the automation command
     if (GEngine && GEditor && GEditor->GetEditorWorldContext().World()) {
       GEngine->Exec(GEditor->GetEditorWorldContext().World(), *TestCommand);
-      
+
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
       Result->SetStringField(TEXT("command"), TestCommand);
       Result->SetStringField(TEXT("filter"), Filter);
-      
+
       // Note: Automation tests run asynchronously in UE.
       // The command starts the tests, but results come later via automation framework.
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -338,20 +338,20 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     int32 Steps = 5;
     Payload->TryGetNumberField(TEXT("steps"), Steps);
     Steps = FMath::Clamp(Steps, 1, 20);
-    
+
     float StepDurationMs = 500.0f;
     Payload->TryGetNumberField(TEXT("stepDurationMs"), StepDurationMs);
     StepDurationMs = FMath::Clamp(StepDurationMs, 100.0f, 5000.0f);
-    
+
     bool bSendProgress = true;
     if (Payload->HasField(TEXT("sendProgress"))) {
       bSendProgress = Payload->GetBoolField(TEXT("sendProgress"));
     }
-    
+
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("test_progress_protocol: Starting %d steps, %.0fms each, progress=%s"),
            Steps, StepDurationMs, bSendProgress ? TEXT("true") : TEXT("false"));
-    
+
     for (int32 i = 1; i <= Steps; i++) {
       // Send progress update before each step
       if (bSendProgress) {
@@ -359,22 +359,22 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
         FString StatusMsg = FString::Printf(TEXT("Step %d/%d"), i, Steps);
         SendProgressUpdate(RequestId, Percent, StatusMsg, true);
       }
-      
+
       // Simulate work by sleeping
       FPlatformProcess::Sleep(StepDurationMs / 1000.0f);
     }
-    
+
     // Send final progress indicating completion
     if (bSendProgress) {
       SendProgressUpdate(RequestId, 100.0f, TEXT("Complete"), false);
     }
-    
+
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetNumberField(TEXT("steps"), Steps);
     Result->SetNumberField(TEXT("stepDurationMs"), StepDurationMs);
     Result->SetBoolField(TEXT("progressSent"), bSendProgress);
     Result->SetStringField(TEXT("message"), TEXT("Progress protocol test completed"));
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Progress protocol test completed successfully"), Result);
     return true;
@@ -384,21 +384,21 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     int32 StaleCount = 5;
     Payload->TryGetNumberField(TEXT("staleCount"), StaleCount);
     StaleCount = FMath::Clamp(StaleCount, 1, 10);
-    
+
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("test_stale_progress: Sending %d stale updates"), StaleCount);
-    
+
     // Send same progress repeatedly to trigger stale detection
     for (int32 i = 0; i < StaleCount; i++) {
       FString StatusMsg = FString::Printf(TEXT("Stale update %d/%d"), i + 1, StaleCount);
       SendProgressUpdate(RequestId, 50.0f, StatusMsg, true);  // Always 50%
       FPlatformProcess::Sleep(0.1f);  // 100ms between updates
     }
-    
+
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetNumberField(TEXT("staleUpdatesSent"), StaleCount);
     Result->SetBoolField(TEXT("staleDetectionExpected"), true);
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Stale progress test completed"), Result);
     return true;
@@ -406,17 +406,17 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     // Export asset to FBX/OBJ/other format
     FString AssetPath;
     Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-    
+
     FString ExportPath;
     Payload->TryGetStringField(TEXT("exportPath"), ExportPath);
-    
+
     if (AssetPath.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("assetPath is required for export"),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    
+
     FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
     if (SafeAssetPath.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId,
@@ -442,7 +442,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
 
     FString AbsoluteExportPath = FPaths::ProjectDir() / SafeExportPath;
     FPaths::MakeStandardFilename(AbsoluteExportPath);
-    
+
     // CRITICAL: Convert to absolute path for proper comparison
     AbsoluteExportPath = FPaths::ConvertRelativePathToFull(AbsoluteExportPath);
     FPaths::NormalizeFilename(AbsoluteExportPath);
@@ -460,7 +460,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                           TEXT("SECURITY_VIOLATION"));
       return true;
     }
-    
+
     // Check if asset exists
     if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
       SendAutomationError(RequestingSocket, RequestId,
@@ -468,14 +468,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                           TEXT("ASSET_NOT_FOUND"));
       return true;
     }
-    
+
     // Ensure export directory exists
     FString ExportDir = FPaths::GetPath(AbsoluteExportPath);
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
     if (!PlatformFile.DirectoryExists(*ExportDir)) {
       PlatformFile.CreateDirectoryTree(*ExportDir);
     }
-    
+
     // Load the asset
     UObject* Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
     if (!Asset) {
@@ -484,29 +484,29 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                           TEXT("LOAD_FAILED"));
       return true;
     }
-    
+
     // Determine export format from file extension
     FString Extension = FPaths::GetExtension(AbsoluteExportPath).ToLower();
-    
+
     // Try generic asset export via AssetTools
     bool bExportSuccess = false;
     FString ExportError;
-    
+
     // CRITICAL FIX: Use AssetTools ExportAssets with explicit export path
     // This performs automated export without showing modal dialogs
     // The bPromptForIndividualFilenames=false suppresses file dialogs
     FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
     IAssetTools& AssetTools = AssetToolsModule.Get();
-    
+
     // Use ExportAssets with explicit path - this suppresses dialogs for automated export
     // The asset will be exported with its original name to the specified directory
     TArray<UObject*> AssetsToExport;
     AssetsToExport.Add(Asset);
-    
+
     // ExportAssets exports to the specified directory with the asset's name
     // For custom filename, we need to rename temporarily or use UExporter directly
     AssetTools.ExportAssets(AssetsToExport, ExportDir);
-    
+
     // Check if file was created
     FString ExpectedExportPath = ExportDir / FPaths::GetBaseFilename(SafeAssetPath) + TEXT(".") + Extension;
     if (FPaths::FileExists(ExpectedExportPath))
@@ -518,12 +518,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       // Try with the actual requested filename
       bExportSuccess = FPaths::FileExists(AbsoluteExportPath);
     }
-    
+
     if (!bExportSuccess)
     {
       // Fallback: Use UExporter::ExportToFile directly with Prompt=false
       UExporter* Exporter = nullptr;
-      
+
       // Find appropriate exporter for the asset type and extension
       for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt) {
         UClass* CurrentClass = *ClassIt;
@@ -545,20 +545,20 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
           }
         }
       }
-      
+
       if (Exporter) {
         // ExportToFile signature: (Object, Exporter, Filename, InSelectedOnly, NoReplaceIdentical, Prompt)
         // The last parameter (Prompt=false) should suppress dialogs for most exporters
         int32 ExportResult = UExporter::ExportToFile(Asset, Exporter, *AbsoluteExportPath, false, false, false);
         bExportSuccess = (ExportResult != 0);
       }
-      
+
       if (!bExportSuccess) {
         ExportError = FString::Printf(TEXT("Export failed for asset type '%s' and format '%s'"),
                                        *Asset->GetClass()->GetName(), *Extension);
       }
     }
-    
+
     if (bExportSuccess) {
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
       AddAssetVerification(Result, Asset);
@@ -566,7 +566,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       Result->SetStringField(TEXT("exportPath"), AbsoluteExportPath);
       Result->SetStringField(TEXT("format"), Extension);
       Result->SetBoolField(TEXT("success"), true);
-      
+
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              FString::Printf(TEXT("Asset exported to: %s"), *AbsoluteExportPath),
                              Result);
@@ -576,7 +576,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       Result->SetStringField(TEXT("exportPath"), AbsoluteExportPath);
       Result->SetStringField(TEXT("format"), Extension);
       Result->SetStringField(TEXT("error"), ExportError);
-      
+
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              FString::Printf(TEXT("Export failed: %s"), *ExportError),
                              Result, TEXT("EXPORT_FAILED"));

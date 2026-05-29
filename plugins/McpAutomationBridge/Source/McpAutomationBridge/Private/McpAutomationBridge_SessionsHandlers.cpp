@@ -184,7 +184,7 @@ static bool HandleConfigureLocalSessionSettings(
         TEXT("bAllowJoinInProgress"), TEXT("bAllowInvites"), TEXT("bUsesPresence"),
         TEXT("bUseLobbiesIfAvailable"), TEXT("bShouldAdvertise")
     };
-    
+
     bool bHasAnySetting = false;
     if (Payload.IsValid())
     {
@@ -197,7 +197,7 @@ static bool HandleConfigureLocalSessionSettings(
             }
         }
     }
-    
+
     if (!bHasAnySetting)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -303,23 +303,23 @@ static bool HandleConfigureSplitScreen(
         // Note: UE doesn't have a direct "split screen enabled" toggle in GameUserSettings
         // Split-screen is typically controlled by the GameMode and player controller spawning
         // We can configure related settings and save them
-        
+
         // Save the current settings to persist the configuration
         Settings->ApplySettings(false);
         Settings->SaveSettings();
-        
+
         bSuccess = true;
         StatusMessage = TEXT("Game user settings configured and saved");
-        
+
         // Log the configuration for debugging
-        UE_LOG(LogMcpSessionsHandlers, Log, TEXT("Split-screen configured: Enabled=%s, Type=%s"), 
+        UE_LOG(LogMcpSessionsHandlers, Log, TEXT("Split-screen configured: Enabled=%s, Type=%s"),
             bEnabled ? TEXT("true") : TEXT("false"), *SplitScreenType);
     }
     else
     {
         StatusMessage = TEXT("GameUserSettings not available");
     }
-    
+
     // Additionally, we can configure the GameViewportClient if in PIE
     UGameInstance* GI = GetGameInstance();
     if (GI)
@@ -327,13 +327,13 @@ static bool HandleConfigureSplitScreen(
         // The actual split-screen layout is controlled by UGameViewportClient
         // and is typically set up automatically when local players are added
         int32 CurrentPlayers = GI->GetLocalPlayers().Num();
-        
+
         // If we have multiple players, split-screen is implicitly enabled
         bSuccess = true;
         StatusMessage = FString::Printf(TEXT("Split-screen %s with %d local players"),
             bEnabled ? TEXT("configured") : TEXT("disabled"), CurrentPlayers);
     }
-    
+
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
     ResponseJson->SetStringField(TEXT("splitScreenType"), SplitScreenType);
@@ -421,7 +421,7 @@ static bool HandleAddLocalPlayer(
     // Create new local player
     FString Error;
     ULocalPlayer* NewPlayer = GI->CreateLocalPlayer(ControllerId, Error, true);
-    
+
     if (!NewPlayer)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -563,14 +563,14 @@ static bool HandleHostLanServer(
     {
         FullTravelOptions += TravelOptions;
     }
-    
+
     // Ensure map path starts with /Game/ if it doesn't already
     FString FullMapPath = MapName;
     if (!FullMapPath.StartsWith(TEXT("/Game/")) && !FullMapPath.StartsWith(TEXT("/")) && !FullMapPath.Contains(TEXT(":")))
     {
         FullMapPath = FString::Printf(TEXT("/Game/%s"), *MapName);
     }
-    
+
     FString TravelURL = FullMapPath + FullTravelOptions;
     bool bSuccess = true;
     FString StatusMessage = TEXT("configured");
@@ -587,7 +587,7 @@ static bool HandleHostLanServer(
         {
             World = GEditor->GetEditorWorldContext().World();
         }
-        
+
         if (World)
         {
             // Use ServerTravel to start hosting
@@ -703,7 +703,7 @@ static bool HandleEnableVoiceChat(
                         [](const FVoiceChatResult& Result)
                         {
                             // ErrorDesc is a public member in both UE 5.6 and 5.7
-                            UE_LOG(LogMcpSessionsHandlers, Log, TEXT("VoiceChat Connect Result: %s"), 
+                            UE_LOG(LogMcpSessionsHandlers, Log, TEXT("VoiceChat Connect Result: %s"),
                                 Result.IsSuccess() ? TEXT("Success") : *Result.ErrorDesc);
                         }));
                 }
@@ -768,7 +768,7 @@ static bool HandleEnableVoiceChat(
     ResponseJson->SetBoolField(TEXT("voiceChatAvailable"), false);
 #endif
 
-    FString Message = FString::Printf(TEXT("Voice chat %s: %s"), 
+    FString Message = FString::Printf(TEXT("Voice chat %s: %s"),
         bEnabled ? TEXT("enabled") : TEXT("disabled"), *StatusMessage);
     Subsystem->SendAutomationResponse(Socket, RequestId, bSuccess, Message, ResponseJson);
     return true;
@@ -791,14 +791,14 @@ static bool HandleConfigureVoiceSettings(
     }
 
     TSharedPtr<FJsonObject> VoiceSettings = GetObjectField(Payload, TEXT("voiceSettings"));
-    
+
     if (!VoiceSettings.IsValid())
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("voiceSettings must be a valid object"), nullptr);
         return true;
     }
-    
+
     double Volume = 1.0;
     double NoiseGateThreshold = 0.01;
     bool bNoiseSuppression = true;
@@ -812,7 +812,7 @@ static bool HandleConfigureVoiceSettings(
     SampleRate = static_cast<int32>(GetNumberFieldSess(VoiceSettings, TEXT("sampleRate"), 16000));
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    
+
     TSharedPtr<FJsonObject> ConfiguredSettings = McpHandlerUtils::CreateResultObject();
     ConfiguredSettings->SetNumberField(TEXT("volume"), Volume);
     ConfiguredSettings->SetNumberField(TEXT("noiseGateThreshold"), NoiseGateThreshold);
@@ -905,7 +905,7 @@ static bool HandleMutePlayer(
                 VoiceChat->SetPlayerMuted(TargetIdentifier, bMuted);
                 bSuccess = true;
                 bAppliedToVoiceInterface = true;
-                StatusMessage = FString::Printf(TEXT("Player '%s' %s via IVoiceChat"), 
+                StatusMessage = FString::Printf(TEXT("Player '%s' %s via IVoiceChat"),
                     *TargetIdentifier, bMuted ? TEXT("muted") : TEXT("unmuted"));
             }
             else if (VoiceChat->IsInitialized())
@@ -924,7 +924,7 @@ static bool HandleMutePlayer(
                 }
                 bSuccess = true;
                 bAppliedToVoiceInterface = true;
-                StatusMessage = FString::Printf(TEXT("Player '%s' %s locally (voice server not connected)"), 
+                StatusMessage = FString::Printf(TEXT("Player '%s' %s locally (voice server not connected)"),
                     *TargetIdentifier, bMuted ? TEXT("muted") : TEXT("unmuted"));
             }
             else
@@ -962,8 +962,8 @@ static bool HandleMutePlayer(
                         {
                             bSuccess = VoiceInterface->UnmuteRemoteTalker(LocalPlayerNum, *NetId, bSystemWide);
                         }
-                        StatusMessage = bSuccess 
-                            ? FString::Printf(TEXT("Player '%s' %s via OnlineSubsystem"), 
+                        StatusMessage = bSuccess
+                            ? FString::Printf(TEXT("Player '%s' %s via OnlineSubsystem"),
                                 *TargetIdentifier, bMuted ? TEXT("muted") : TEXT("unmuted"))
                             : TEXT("Voice interface mute operation failed");
                         bAppliedToVoiceInterface = bSuccess;
@@ -1035,7 +1035,7 @@ static bool HandleMutePlayer(
     ResponseJson->SetBoolField(TEXT("systemWide"), bSystemWide);
     ResponseJson->SetStringField(TEXT("status"), StatusMessage);
 
-    FString Message = FString::Printf(TEXT("Player '%s' %s: %s"), 
+    FString Message = FString::Printf(TEXT("Player '%s' %s: %s"),
         *TargetIdentifier, bMuted ? TEXT("muted") : TEXT("unmuted"), *StatusMessage);
     Subsystem->SendAutomationResponse(Socket, RequestId, bSuccess, Message, ResponseJson);
     return true;
@@ -1172,7 +1172,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSessionsAction(
     {
         SubAction = GetStringFieldSess(Payload, TEXT("action"));
     }
-    
+
     UE_LOG(LogMcpSessionsHandlers, Log, TEXT("HandleManageSessionsAction: SubAction=%s, RequestId=%s"), *SubAction, *RequestId);
 
     bool bHandled = false;

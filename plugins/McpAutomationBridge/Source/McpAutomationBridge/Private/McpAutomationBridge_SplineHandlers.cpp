@@ -173,7 +173,7 @@ static FRotator GetJsonRotatorFieldSpline(const TSharedPtr<FJsonObject>& Payload
 static AActor* FindActorByName(UWorld* World, const FString& ActorName)
 {
     if (!World || ActorName.IsEmpty()) return nullptr;
-    
+
     for (TActorIterator<AActor> It(World); It; ++It)
     {
         if (It->GetActorLabel() == ActorName || It->GetName() == ActorName)
@@ -188,12 +188,12 @@ static AActor* FindActorByName(UWorld* World, const FString& ActorName)
 static USplineComponent* FindSplineComponent(AActor* Actor, const FString& ComponentName = TEXT(""))
 {
     if (!Actor) return nullptr;
-    
+
     TArray<USplineComponent*> SplineComponents;
     Actor->GetComponents<USplineComponent>(SplineComponents);
-    
+
     if (SplineComponents.Num() == 0) return nullptr;
-    
+
     if (!ComponentName.IsEmpty())
     {
         for (USplineComponent* Comp : SplineComponents)
@@ -205,7 +205,7 @@ static USplineComponent* FindSplineComponent(AActor* Actor, const FString& Compo
         }
         return nullptr;
     }
-    
+
     return SplineComponents[0];
 }
 
@@ -380,7 +380,7 @@ static bool HandleCreateSplineActor(
 
     // Configure spline
     SplineComp->SetClosedLoop(bClosedLoop);
-    
+
     // Set default spline point type for all points
     ESplinePointType::Type PointType = ParseSplinePointType(SplineType);
     for (int32 i = 0; i < SplineComp->GetNumberOfSplinePoints(); i++)
@@ -679,11 +679,11 @@ static bool HandleSetSplinePointTangents(
     // If leaveTangent is provided, log a warning since it cannot be used independently
     if (!LeaveTangent.IsZero() && LeaveTangent != ArriveTangent)
     {
-        UE_LOG(LogMcpSplineHandlers, Warning, 
-            TEXT("leaveTangent ignored for point %d - UE splines use a single tangent per point. Use arriveTangent only."), 
+        UE_LOG(LogMcpSplineHandlers, Warning,
+            TEXT("leaveTangent ignored for point %d - UE splines use a single tangent per point. Use arriveTangent only."),
             PointIndex);
     }
-    
+
     SplineComp->SetTangentAtSplinePoint(PointIndex, ArriveTangent, ESplineCoordinateSpace::Local, true);
     SplineComp->UpdateSpline();
 
@@ -890,7 +890,7 @@ static bool HandleSetSplineType(
             SplineComp->SetSplinePointType(i, PointType, false);
         }
     }
-    
+
     SplineComp->UpdateSpline();
     World->MarkPackageDirty();
 
@@ -1036,7 +1036,7 @@ static bool HandleCreateSplineMeshComponent(
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("componentName"), ComponentName);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-    
+
     // Add verification data
     Result->SetBoolField(TEXT("existsAfter"), true);
     // Use action prefix format expected by TS message-handler.ts enforceActionMatch()
@@ -1304,7 +1304,7 @@ static bool HandleSetSplineMeshMaterial(
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("materialPath"), SafeMaterialPath);
     Result->SetNumberField(TEXT("materialIndex"), MaterialIndex);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, Actor);
     AddComponentVerification(Result, TargetComp);
@@ -1421,7 +1421,7 @@ static bool HandleCreateSplineMeshActor(
     Result->SetStringField(TEXT("actorName"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("actorPath"), NewActor->GetPathName());
     Result->SetStringField(TEXT("componentName"), ComponentName);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
     AddComponentVerification(Result, SplineMeshComp);
@@ -1538,7 +1538,7 @@ static bool HandleScatterMeshesAlongSpline(
 
     float SplineLength = SplineComp->GetSplineLength();
     int32 MeshCount = FMath::FloorToInt(SplineLength / Spacing);
-    
+
     TArray<FString> CreatedMeshes;
 
     for (int32 i = 0; i <= MeshCount; i++)
@@ -1550,7 +1550,7 @@ static bool HandleScatterMeshesAlongSpline(
             Distance = FMath::Clamp(Distance, 0.0f, SplineLength);
         }
         FVector Location = SplineComp->GetLocationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World);
-        FRotator Rotation = bAlignToSpline 
+        FRotator Rotation = bAlignToSpline
             ? SplineComp->GetRotationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World)
             : FRotator::ZeroRotator;
 
@@ -1637,7 +1637,7 @@ static bool HandleConfigureMeshSpacing(
     SetSplineConfigValue(Target, TEXT("useRandomOffset"), BoolToSplineConfigString(bUseRandomOffset));
     SetSplineConfigValue(Target, TEXT("randomOffsetRange"), FString::SanitizeFloat(RandomOffsetRange));
     World->MarkPackageDirty();
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("targetName"), GetSplineConfigTargetName(Target));
     Result->SetStringField(TEXT("targetPath"), Target->GetPathName());
@@ -1896,17 +1896,17 @@ static bool HandleGetSplinesInfo(
             TSharedPtr<FJsonObject> PointObj = McpHandlerUtils::CreateResultObject();
             FVector Loc = SplineComp->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local);
             FRotator Rot = SplineComp->GetRotationAtSplinePoint(i, ESplineCoordinateSpace::Local);
-            
+
             PointObj->SetNumberField(TEXT("index"), i);
-            
+
             TSharedPtr<FJsonObject> LocObj = McpHandlerUtils::CreateResultObject();
             LocObj->SetNumberField(TEXT("x"), Loc.X);
             LocObj->SetNumberField(TEXT("y"), Loc.Y);
             LocObj->SetNumberField(TEXT("z"), Loc.Z);
             PointObj->SetObjectField(TEXT("location"), LocObj);
-            
+
             PointObj->SetStringField(TEXT("type"), SplinePointTypeToString(SplineComp->GetSplinePointType(i)));
-            
+
             PointsArray.Add(MakeShared<FJsonValueObject>(PointObj));
         }
         Result->SetArrayField(TEXT("points"), PointsArray);
@@ -1920,19 +1920,19 @@ static bool HandleGetSplinesInfo(
             AActor* Actor = *It;
             TArray<USplineComponent*> SplineComponents;
             Actor->GetComponents<USplineComponent>(SplineComponents);
-            
+
             if (SplineComponents.Num() > 0)
             {
                 TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
                 ActorObj->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
                 ActorObj->SetNumberField(TEXT("splineComponentCount"), SplineComponents.Num());
-                
+
                 if (SplineComponents[0])
                 {
                     ActorObj->SetNumberField(TEXT("pointCount"), SplineComponents[0]->GetNumberOfSplinePoints());
                     ActorObj->SetNumberField(TEXT("splineLength"), SplineComponents[0]->GetSplineLength());
                 }
-                
+
                 SplinesArray.Add(MakeShared<FJsonValueObject>(ActorObj));
             }
         }
@@ -1959,7 +1959,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSplinesAction(
 {
 #if WITH_EDITOR
     FString SubAction = GetJsonStringFieldSpline(Payload, TEXT("subAction"), TEXT(""));
-    
+
     UE_LOG(LogMcpSplineHandlers, Verbose, TEXT("HandleManageSplinesAction: SubAction=%s"), *SubAction);
 
     // Spline Creation

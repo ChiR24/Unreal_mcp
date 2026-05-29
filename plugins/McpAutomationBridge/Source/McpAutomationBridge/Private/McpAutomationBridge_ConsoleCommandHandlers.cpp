@@ -55,7 +55,7 @@ namespace ConsoleCommandSecurity
         TEXT("recompileglobalshaders"),  // Can cause instability
         TEXT("deriveddatacache"),         // Can corrupt DDC
     };
-    
+
     // Destructive/process commands are blocked until an explicit allow-list exists.
     static const TCHAR* const RESTRICTED_COMMANDS[] = {
         TEXT("delete"),       // Destructive
@@ -119,7 +119,7 @@ namespace ConsoleCommandSecurity
         }
         return false;
     }
-    
+
     bool IsBlockedCommand(const FString& Command)
     {
         FString LowerCommand = Command.TrimStartAndEnd().ToLower();
@@ -132,7 +132,7 @@ namespace ConsoleCommandSecurity
         {
             return true;
         }
-        
+
         // Extract command name (first word)
         TArray<FString> CommandParts;
         LowerCommand.ParseIntoArrayWS(CommandParts);
@@ -147,7 +147,7 @@ namespace ConsoleCommandSecurity
         {
             return true;
         }
-        
+
         // Check blocked list
         if (IsListedCommandName(CommandName, BLOCKED_COMMANDS, UE_ARRAY_COUNT(BLOCKED_COMMANDS)) ||
             IsListedCommandName(CommandName, RESTRICTED_COMMANDS, UE_ARRAY_COUNT(RESTRICTED_COMMANDS)) ||
@@ -163,7 +163,7 @@ namespace ConsoleCommandSecurity
                 return true;
             }
         }
-        
+
         return false;
     }
 }
@@ -180,9 +180,9 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
 {
 #if WITH_EDITOR
     FString LowerAction = Action.ToLower();
-    
+
     UE_LOG(LogMcpConsoleHandlers, Verbose, TEXT("HandleConsoleCommandAction: %s"), *LowerAction);
-    
+
     // ===========================================================================
     // batch_console_commands - Execute multiple console commands
     // ===========================================================================
@@ -194,7 +194,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
                 TEXT("Payload missing for batch_console_commands"), nullptr, TEXT("INVALID_PAYLOAD"));
             return true;
         }
-        
+
         // Get commands array
         const TArray<TSharedPtr<FJsonValue>>* CommandsArray = nullptr;
         if (!Payload->TryGetArrayField(TEXT("commands"), CommandsArray) || !CommandsArray)
@@ -203,38 +203,38 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
                 TEXT("'commands' array is required"), nullptr, TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        
+
         if (CommandsArray->Num() == 0)
         {
             SendAutomationResponse(RequestingSocket, RequestId, true,
                 TEXT("No commands to execute"), nullptr);
             return true;
         }
-        
+
         // Get the world context
         UWorld* World = nullptr;
         if (GEditor)
         {
             World = GEditor->GetEditorWorldContext().World();
         }
-        
+
         if (!World && GEngine)
         {
             World = GEngine->GetWorldContexts().Num() > 0 ? GEngine->GetWorldContexts()[0].World() : nullptr;
         }
-        
+
         if (!World)
         {
             SendAutomationResponse(RequestingSocket, RequestId, false,
                 TEXT("No world available for console command execution"), nullptr, TEXT("NO_WORLD"));
             return true;
         }
-        
+
         int32 TotalCommands = CommandsArray->Num();
         int32 ExecutedCount = 0;
         int32 FailedCount = 0;
         TArray<FString> FailedCommands;
-        
+
         for (const TSharedPtr<FJsonValue>& CommandValue : *CommandsArray)
         {
             FString Command;
@@ -265,7 +265,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
             {
                 continue;
             }
-            
+
             // Security check
             if (ConsoleCommandSecurity::IsBlockedCommand(Command))
             {
@@ -274,10 +274,10 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
                 FailedCommands.Add(Command);
                 continue;
             }
-            
+
             // Execute the console command
             bool bSuccess = false;
-            
+
             // Try to execute via editor first; Exec returns true if command was handled.
             if (GEditor)
             {
@@ -293,20 +293,20 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
             {
                 ExecutedCount++;
             }
-            
+
             if (!bSuccess)
             {
                 FailedCount++;
                 FailedCommands.Add(Command);
             }
         }
-        
+
         // Build response
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetNumberField(TEXT("totalCommands"), TotalCommands);
         Result->SetNumberField(TEXT("executedCount"), ExecutedCount);
         Result->SetNumberField(TEXT("failedCount"), FailedCount);
-        
+
         if (FailedCommands.Num() > 0)
         {
             TArray<TSharedPtr<FJsonValue>> FailedArray;
@@ -316,23 +316,23 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
             }
             Result->SetArrayField(TEXT("failedCommands"), FailedArray);
         }
-        
+
         // Return success if at least some commands executed
         bool bOverallSuccess = (ExecutedCount > 0) && (FailedCount == 0);
         FString Message = FString::Printf(TEXT("Executed %d/%d commands"), ExecutedCount, TotalCommands);
-        
+
         if (FailedCount > 0)
         {
-            Message = FString::Printf(TEXT("Batch command execution completed: %d executed, %d failed"), 
+            Message = FString::Printf(TEXT("Batch command execution completed: %d executed, %d failed"),
                 ExecutedCount, FailedCount);
         }
-        
+
         SendAutomationResponse(RequestingSocket, RequestId, bOverallSuccess, Message, Result,
             bOverallSuccess ? FString() : TEXT("PARTIAL_FAILURE"));
-        
+
         return true;
     }
-    
+
     // ===========================================================================
     // console_command - Execute a single console command
     // ===========================================================================
@@ -344,7 +344,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
                 TEXT("Payload missing for console_command"), nullptr, TEXT("INVALID_PAYLOAD"));
             return true;
         }
-        
+
         FString Command;
         if (!Payload->TryGetStringField(TEXT("command"), Command) || Command.TrimStartAndEnd().IsEmpty())
         {
@@ -352,9 +352,9 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
                 TEXT("'command' parameter is required"), nullptr, TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        
+
         Command = Command.TrimStartAndEnd();
-        
+
         // Security check
         if (ConsoleCommandSecurity::IsBlockedCommand(Command))
         {
@@ -363,26 +363,26 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
                 nullptr, TEXT("COMMAND_BLOCKED"));
             return true;
         }
-        
+
         // Get the world context
         UWorld* World = nullptr;
         if (GEditor)
         {
             World = GEditor->GetEditorWorldContext().World();
         }
-        
+
         if (!World && GEngine)
         {
             World = GEngine->GetWorldContexts().Num() > 0 ? GEngine->GetWorldContexts()[0].World() : nullptr;
         }
-        
+
         if (!World)
         {
             SendAutomationResponse(RequestingSocket, RequestId, false,
                 TEXT("No world available for console command execution"), nullptr, TEXT("NO_WORLD"));
             return true;
         }
-        
+
         // Execute the command through the editor first, then engine fallback.
         bool bSuccess = false;
         if (GEditor)
@@ -394,19 +394,19 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
         {
             bSuccess = GEngine->Exec(World, *Command);
         }
-        
+
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("command"), Command);
         Result->SetBoolField(TEXT("success"), bSuccess);
-        
+
         SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
             bSuccess ? FString::Printf(TEXT("Command executed: %s"), *Command)
                      : FString::Printf(TEXT("Command not executed: %s"), *Command),
             Result, bSuccess ? FString() : TEXT("EXEC_FAILED"));
-        
+
         return true;
     }
-    
+
     return false; // Not handled
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false,

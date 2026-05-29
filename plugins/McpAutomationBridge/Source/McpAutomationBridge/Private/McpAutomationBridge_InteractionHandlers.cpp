@@ -519,11 +519,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     }
 
     // Define event dispatchers to add
-    TArray<FString> EventNames = { 
-      TEXT("OnInteractionStart"), 
-      TEXT("OnInteractionEnd"), 
-      TEXT("OnInteractableFound"), 
-      TEXT("OnInteractableLost") 
+    TArray<FString> EventNames = {
+      TEXT("OnInteractionStart"),
+      TEXT("OnInteractionEnd"),
+      TEXT("OnInteractableFound"),
+      TEXT("OnInteractableLost")
     };
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -593,8 +593,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
 #if WITH_EDITOR
     // Normalize the path
     FString PackagePath = Folder.IsEmpty() ? TEXT("/Game/Interfaces") : Folder;
-    if (!PackagePath.StartsWith(TEXT("/"))) { 
-      PackagePath = TEXT("/Game/") + PackagePath; 
+    if (!PackagePath.StartsWith(TEXT("/"))) {
+      PackagePath = TEXT("/Game/") + PackagePath;
     }
     FString PackageName = PackagePath / Name;
 
@@ -613,7 +613,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     Factory->ParentClass = UInterface::StaticClass();
 
     UBlueprint* InterfaceBP = Cast<UBlueprint>(
-        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, FName(*Name), 
+        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, FName(*Name),
                                   RF_Public | RF_Standalone, nullptr, GWarn));
 
     if (InterfaceBP) {
@@ -732,7 +732,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
 
     if (DoorBP) {
       USimpleConstructionScript* SCS = DoorBP->SimpleConstructionScript;
-      
+
       // Step 1: Create all nodes
       USCS_Node* RootNode = SCS->CreateNode(USceneComponent::StaticClass(), TEXT("Root"));
       USCS_Node* PivotNode = SCS->CreateNode(USceneComponent::StaticClass(), TEXT("DoorPivot"));
@@ -946,7 +946,7 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
     if (SwitchBP) {
       USimpleConstructionScript* SCS = SwitchBP->SimpleConstructionScript;
-      
+
       // Step 1: Create all nodes
       USCS_Node* RootNode = SCS->CreateNode(USceneComponent::StaticClass(), TEXT("Root"));
       USCS_Node* MeshNode = SCS->CreateNode(UStaticMeshComponent::StaticClass(), TEXT("SwitchMesh"));
@@ -1124,7 +1124,7 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
     if (ChestBP) {
       USimpleConstructionScript* SCS = ChestBP->SimpleConstructionScript;
-      
+
       // Step 1: Create all nodes
       USCS_Node* RootNode = SCS->CreateNode(USceneComponent::StaticClass(), TEXT("Root"));
       USCS_Node* BaseMeshNode = SCS->CreateNode(UStaticMeshComponent::StaticClass(), TEXT("ChestBase"));
@@ -1325,7 +1325,7 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
     if (LeverBP) {
       USimpleConstructionScript* SCS = LeverBP->SimpleConstructionScript;
-      
+
       // Step 1: Create all nodes
       USCS_Node* RootNode = SCS->CreateNode(USceneComponent::StaticClass(), TEXT("Root"));
       USCS_Node* BaseMeshNode = SCS->CreateNode(UStaticMeshComponent::StaticClass(), TEXT("LeverBase"));

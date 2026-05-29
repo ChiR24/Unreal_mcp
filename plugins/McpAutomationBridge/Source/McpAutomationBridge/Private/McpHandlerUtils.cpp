@@ -66,7 +66,7 @@ FString JsonValueToString(const TSharedPtr<FJsonValue>& Value)
     // Handle object and array types by serializing
     FString Serialized;
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Serialized);
-    
+
     if (Value->Type == EJson::Object)
     {
         const TSharedPtr<FJsonObject> Obj = Value->AsObject();
@@ -83,7 +83,7 @@ FString JsonValueToString(const TSharedPtr<FJsonValue>& Value)
     {
         Writer->WriteValue(Value->AsString());
     }
-    
+
     Writer->Close();
     return Serialized;
 }
@@ -100,7 +100,7 @@ FString ValidateAssetPath(const FString& Path)
     }
 
     FString CleanPath = Path;
-    
+
     // Reject Windows absolute paths
     if (CleanPath.Len() >= 2 && CleanPath[1] == TEXT(':'))
     {
@@ -110,7 +110,7 @@ FString ValidateAssetPath(const FString& Path)
 
     // Normalize slashes
     CleanPath.ReplaceInline(TEXT("\\"), TEXT("/"));
-    
+
     // Remove double slashes
     while (CleanPath.Contains(TEXT("//")))
     {
@@ -261,7 +261,7 @@ UActorComponent* FindActorComponentByName(AActor* Actor, const FString& Componen
     {
         return StartsWithMatch;
     }
-    
+
     return ExactMatch;
 }
 #endif
@@ -342,7 +342,7 @@ FString MakeUniqueAssetName(const FString& BaseName, const FString& PackagePath)
 #if WITH_EDITOR
     FString TestName = ToSafeAssetName(BaseName);
     FString TestPath = PackagePath / TestName;
-    
+
     // Check if the name is already unique
     if (!UEditorAssetLibrary::DoesAssetExist(TestPath))
     {
@@ -355,7 +355,7 @@ FString MakeUniqueAssetName(const FString& BaseName, const FString& PackagePath)
     {
         FString Candidate = FString::Printf(TEXT("%s_%d"), *TestName, Suffix);
         TestPath = PackagePath / Candidate;
-        
+
         if (!UEditorAssetLibrary::DoesAssetExist(TestPath))
         {
             return Candidate;
@@ -379,15 +379,15 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
     {
         return nullptr;
     }
-    
+
     FString Path = ObjectPath;
-    
+
     // Handle component paths in "ActorName.ComponentName" format
     if (Path.Contains(TEXT(".")) && !Path.StartsWith(TEXT("/")))
     {
         FString ActorName = Path.Left(Path.Find(TEXT(".")));
         FString ComponentName = Path.Right(Path.Len() - ActorName.Len() - 1);
-        
+
         if (!ActorName.IsEmpty() && !ComponentName.IsEmpty())
         {
             if (AActor* Actor = FindActorByName(ActorName))
@@ -403,7 +403,7 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
             }
         }
     }
-    
+
     // Try to find as actor by name
     if (AActor* FoundActor = FindActorByName(Path))
     {
@@ -413,7 +413,7 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
         }
         return FoundActor;
     }
-    
+
     // Try to find by actor label (display name) as fallback
     if (GEditor)
     {
@@ -435,7 +435,7 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
             }
         }
     }
-    
+
     // Try to load as asset (whitelist known roots + engine-registered mount points)
     if (Path.StartsWith(TEXT("/Game/")) || Path.StartsWith(TEXT("/Engine/")) || Path.StartsWith(TEXT("/Script/")) ||
         FPackageName::IsValidLongPackageName(Path, true))
@@ -462,7 +462,7 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
             }
             return LoadedPackage;
         }
-        
+
         // Try StaticFindObject for engine assets that may not need package loading
         if (UObject* Found = FindObject<UObject>(nullptr, *Path))
         {
@@ -473,7 +473,7 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
             return Found;
         }
     }
-    
+
     return nullptr;
 }
 #endif
@@ -481,19 +481,19 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
 FPropertyResolveResult ResolveProperty(UObject* Object, const FString& PropertyName)
 {
     FPropertyResolveResult Result;
-    
+
     if (!Object)
     {
         Result.Error = TEXT("Object is null");
         return Result;
     }
-    
+
     if (PropertyName.IsEmpty())
     {
         Result.Error = TEXT("Property name is empty");
         return Result;
     }
-    
+
     // Handle nested property paths
     if (PropertyName.Contains(TEXT(".")))
     {
@@ -504,13 +504,13 @@ FPropertyResolveResult ResolveProperty(UObject* Object, const FString& PropertyN
         // Simple property name
         Result.Container = Object;
         Result.Property = Object->GetClass()->FindPropertyByName(*PropertyName);
-        
+
         if (!Result.Property)
         {
             Result.Error = FString::Printf(TEXT("Property '%s' not found on object"), *PropertyName);
         }
     }
-    
+
     return Result;
 }
 
@@ -520,7 +520,7 @@ void AddVerification(TSharedPtr<FJsonObject>& Result, UObject* Object)
     {
         return;
     }
-    
+
 #if WITH_EDITOR
     if (AActor* AsActor = Cast<AActor>(Object))
     {
@@ -796,7 +796,7 @@ FEdGraphPinType MakePinType(const FString& InType)
             }
         }
     }
-    
+
     return PinType;
 }
 
@@ -871,7 +871,7 @@ UK2Node_VariableGet* CreateVariableGetter(UEdGraph* Graph, const FMemberReferenc
     NewGet->NodePosY = NodePosY;
     NewGet->AllocateDefaultPins();
     NewGet->Modify();
-    
+
     return NewGet;
 }
 

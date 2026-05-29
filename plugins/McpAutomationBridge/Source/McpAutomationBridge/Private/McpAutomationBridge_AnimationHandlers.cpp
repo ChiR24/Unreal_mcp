@@ -1073,7 +1073,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
                       if (BoneIndex == INDEX_NONE)
                       {
                         // Bone doesn't exist in skeleton - skip this track
-                        UE_LOG(LogTemp, Warning, TEXT("create_procedural_anim: Bone '%s' not found in skeleton %s"), 
+                        UE_LOG(LogTemp, Warning, TEXT("create_procedural_anim: Bone '%s' not found in skeleton %s"),
                                *BoneName, *TargetSkeleton->GetName());
                         continue;
                       }
@@ -2551,7 +2551,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 #else
           // UE 5.0: Use ResolveClassByName instead of deprecated ANY_PACKAGE
           LoadedNotifyClass = ResolveClassByName(SearchName);
-          
+
           // 2. Try with U prefix
           if (!LoadedNotifyClass && !SearchName.StartsWith(TEXT("U"))) {
             LoadedNotifyClass = ResolveClassByName(TEXT("U") + SearchName);
@@ -2872,7 +2872,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         Resp->SetStringField(TEXT("error"), Message);
       } else {
         AnimSeq->Modify();
-        
+
         // Use the AnimDataModel API for UE5 to set sequence length
 #if WITH_EDITOR
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -2921,7 +2921,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         Resp->SetStringField(TEXT("error"), Message);
       } else {
         AnimSeq->Modify();
-        
+
 #if WITH_EDITOR
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         // UE 5.1+: GetController() returns IAnimationDataController& (reference)
@@ -3094,10 +3094,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         // UE 5.1+: GetController() returns IAnimationDataController& (reference)
         IAnimationDataController& Controller = AnimSeq->GetController();
-        
+
         // Add curve if it doesn't exist
         Controller.AddCurve(CurveId, AACF_DefaultCurve);
-        
+
         // Add key to curve
         Controller.SetCurveKey(CurveId, FRichCurveKey(static_cast<float>(Time), static_cast<float>(Value)));
         // Success - set the response
@@ -3241,7 +3241,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         Resp->SetStringField(TEXT("error"), Message);
       } else {
         Montage->Modify();
-        
+
 #if WITH_EDITOR
         int32 SectionIndex = Montage->AddAnimCompositeSection(FName(*SectionName), static_cast<float>(StartTime));
         if (SectionIndex != INDEX_NONE) {
@@ -3251,7 +3251,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           Resp->SetStringField(TEXT("sectionName"), SectionName);
           Resp->SetNumberField(TEXT("sectionIndex"), SectionIndex);
           Resp->SetNumberField(TEXT("startTime"), StartTime);
-          
+
           Montage->MarkPackageDirty();
           McpSafeAssetSave(Montage);
         } else {
@@ -3289,13 +3289,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         Resp->SetStringField(TEXT("error"), Message);
       } else {
         Montage->Modify();
-        
+
         FSlotAnimationTrack& NewSlot = Montage->AddSlot(FName(*SlotName));
         bSuccess = true;
         Message = FString::Printf(TEXT("Slot '%s' added to montage"), *SlotName);
         Resp->SetStringField(TEXT("assetPath"), AssetPath);
         Resp->SetStringField(TEXT("slotName"), SlotName);
-        
+
         Montage->MarkPackageDirty();
         McpSafeAssetSave(Montage);
       }
@@ -3819,7 +3819,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         Payload->TryGetBoolField(TEXT("is1D"), bIs1D);
 
         UClass *AimOffsetClass = bIs1D ? UAimOffsetBlendSpace1D::StaticClass() : UAimOffsetBlendSpace::StaticClass();
-        
+
         // Create using the appropriate factory
         UFactory *Factory = nullptr;
         if (bIs1D) {

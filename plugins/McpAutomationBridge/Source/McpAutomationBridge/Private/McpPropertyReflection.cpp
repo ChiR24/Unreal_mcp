@@ -445,7 +445,7 @@ FString GetPropertyTypeName(FProperty* Property)
 bool IsPropertyTypeSupported(FProperty* Property)
 {
     if (!Property) return false;
-    
+
     return Property->IsA<FStrProperty>() ||
            Property->IsA<FNameProperty>() ||
            Property->IsA<FBoolProperty>() ||
@@ -650,7 +650,7 @@ bool ImportJsonToArray(void* Container, FArrayProperty* ArrayProp, const TArray<
 bool ApplyJsonValueToProperty(void* TargetContainer, FProperty* Property, const TSharedPtr<FJsonValue>& ValueField, FString& OutError)
 {
     // Standalone property importer used by reflection callers during the helper refactor.
-    
+
     OutError.Empty();
     if (!TargetContainer || !Property || !ValueField.IsValid())
     {
@@ -750,7 +750,7 @@ bool ApplyJsonValueToProperty(void* TargetContainer, FProperty* Property, const 
 
     // Additional type handling would continue here...
     // For brevity, the full implementation is available in McpAutomationBridgeHelpers.h
-    
+
     OutError = FString::Printf(TEXT("Unsupported property type: %s"), *Property->GetClass()->GetName());
     return false;
 }

@@ -201,7 +201,7 @@ static void ApplyPropertiesToObject(UObject *TargetObj,
  * @param RequestId Identifier for the incoming request; used when sending the response.
  * @param LocalPayload JSON payload for the probe request (may include "componentClass").
  * @param RequestingSocket WebSocket of the requesting client; may be null for non-socket invocations.
- * @return true if the request was handled (a response was sent). 
+ * @return true if the request was handled (a response was sent).
  */
 bool FBlueprintCreationHandlers::HandleBlueprintProbeSubobjectHandle(
     UMcpAutomationBridgeSubsystem *Self, const FString &RequestId,
@@ -452,7 +452,7 @@ bool FBlueprintCreationHandlers::HandleBlueprintProbeSubobjectHandle(
  * @param RequestId Identifier for the request; included in the completion response.
  * @param LocalPayload JSON payload describing the blueprint to create (see Expected payload fields above).
  * @param RequestingSocket Optional socket to which the immediate response should be sent; coalesced waiters will also be notified.
- * @return true if the request was handled and a response was sent to the requester (or coalesced waiters). 
+ * @return true if the request was handled and a response was sent to the requester (or coalesced waiters).
  */
 bool FBlueprintCreationHandlers::HandleBlueprintCreate(
     UMcpAutomationBridgeSubsystem *Self, const FString &RequestId,
@@ -478,7 +478,7 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
   LocalPayload->TryGetStringField(TEXT("savePath"), SavePath);
   if (SavePath.TrimStartAndEnd().IsEmpty())
     SavePath = TEXT("/Game");
-  
+
   // Sanitize savePath to prevent traversal attacks
   SavePath = SanitizeProjectRelativePath(SavePath);
   if (SavePath.IsEmpty())

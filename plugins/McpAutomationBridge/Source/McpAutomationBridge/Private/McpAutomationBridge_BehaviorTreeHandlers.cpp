@@ -477,7 +477,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
         if (NodeInstanceClass) {
           NewNode->ClassData = FGraphNodeClassData(NodeInstanceClass, TEXT(""));
         }
-        
+
         // Use provided ID if valid, otherwise keep the generated one
         FGuid NewGuid;
         if (!ProvidedNodeId.IsEmpty() &&
@@ -487,7 +487,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
 
         NewNode->NodePosX = X;
         NewNode->NodePosY = Y;
-        
+
         // Add node to graph and initialize
         BTGraph->AddNode(NewNode, true, false);
         NewNode->PostPlacedNewNode();

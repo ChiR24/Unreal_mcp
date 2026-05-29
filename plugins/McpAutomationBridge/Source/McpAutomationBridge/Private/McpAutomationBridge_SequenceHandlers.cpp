@@ -1999,7 +1999,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTickResolution(
   if (Sequence && Sequence->GetMovieScene()) {
     // Get current tick resolution as fallback
     FFrameRate TickResolution = Sequence->GetMovieScene()->GetTickResolution();
-    
+
     // Parse user-provided resolution string
     if (!ResolutionStr.IsEmpty()) {
       if (ResolutionStr.Contains(TEXT("24000")))

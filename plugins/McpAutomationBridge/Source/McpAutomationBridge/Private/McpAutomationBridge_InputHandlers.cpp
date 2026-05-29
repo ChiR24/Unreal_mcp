@@ -2,9 +2,9 @@
 // McpAutomationBridge_InputHandlers.cpp
 // =============================================================================
 // MCP Automation Bridge - Enhanced Input System Handlers
-// 
+//
 // UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-// 
+//
 // Handler Summary:
 // -----------------------------------------------------------------------------
 // Action: manage_input (Editor Only)
@@ -18,13 +18,13 @@
 //   - enable_input_mapping: Enable mapping context at runtime
 //   - disable_input_action: Disable input action
 //   - get_input_info: Get info about input asset
-// 
+//
 // Dependencies:
 //   - Core: McpAutomationBridgeSubsystem, McpAutomationBridgeHelpers
 //   - Engine: InputAction, InputMappingContext
 //   - Editor: AssetTools, EditorAssetLibrary
 //   - UE 5.1+: EnhancedInputEditorSubsystem
-// 
+//
 // Security:
 //   - All paths sanitized via SanitizeProjectRelativePath()
 //   - Asset names validated for path traversal attempts
@@ -175,7 +175,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -189,7 +189,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
         return true;
     }
 
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, 
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
         TEXT("HandleInputAction: %s"), *SubAction);
 
     // -------------------------------------------------------------------------
@@ -419,7 +419,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
         AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
 
         SendAutomationResponse(RequestingSocket, RequestId, true,
-            SubAction == TEXT("map_input_action") ? 
+            SubAction == TEXT("map_input_action") ?
             TEXT("Input action mapped to key.") : TEXT("Mapping added."), Result);
         return true;
     }
@@ -559,7 +559,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
 
         // Create the appropriate trigger based on type
         UInputTrigger* NewTrigger = nullptr;
-        
+
         // Map common trigger type names to their classes
         if (TriggerType == TEXT("Pressed") || TriggerType == TEXT("InputTriggerPressed"))
         {
@@ -601,7 +601,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
             NewTrigger = NewObject<UInputTriggerTap>(InAction);
 #endif
         }
-        
+
         if (!NewTrigger)
         {
             SendAutomationError(RequestingSocket, RequestId,

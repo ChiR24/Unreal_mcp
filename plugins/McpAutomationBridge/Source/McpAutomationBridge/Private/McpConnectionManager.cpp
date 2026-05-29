@@ -939,17 +939,17 @@ void FMcpConnectionManager::SendProgressUpdate(
   TSharedRef<FJsonObject> Update = MakeShared<FJsonObject>();
   Update->SetStringField(TEXT("type"), TEXT("progress_update"));
   Update->SetStringField(TEXT("requestId"), RequestId);
-  
+
   if (Percent >= 0.0f) {
     Update->SetNumberField(TEXT("percent"), Percent);
   }
-  
+
   if (!Message.IsEmpty()) {
     Update->SetStringField(TEXT("message"), Message);
   }
-  
+
   Update->SetBoolField(TEXT("stillWorking"), bStillWorking);
-  
+
   // Add timestamp in ISO format
   const FDateTime Now = FDateTime::UtcNow();
   const FString Timestamp = FString::Printf(TEXT("%04d-%02d-%02dT%02d:%02d:%02d.%03dZ"),
@@ -957,12 +957,12 @@ void FMcpConnectionManager::SendProgressUpdate(
     Now.GetHour(), Now.GetMinute(), Now.GetSecond(),
     Now.GetMillisecond());
   Update->SetStringField(TEXT("timestamp"), Timestamp);
-  
+
   FString Serialized;
   const TSharedRef<TJsonWriter<>> Writer =
       TJsonWriterFactory<>::Create(&Serialized);
   FJsonSerializer::Serialize(Update, Writer);
-  
+
   // Find the socket for this request and send the progress update
   TSharedPtr<FMcpBridgeWebSocket> TargetSocket;
   {
@@ -971,7 +971,7 @@ void FMcpConnectionManager::SendProgressUpdate(
       TargetSocket = *Found;
     }
   }
-  
+
   if (TargetSocket.IsValid() && TargetSocket->IsConnected()) {
     if (!TargetSocket->Send(Serialized)) {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,

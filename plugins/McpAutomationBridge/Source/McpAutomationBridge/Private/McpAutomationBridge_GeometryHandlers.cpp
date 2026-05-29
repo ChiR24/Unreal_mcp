@@ -73,7 +73,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpGeometryHandlers, Log, All);
 #include "GeometryScript/GeometryScriptTypes.h"
 #else
 // Fallback for when headers are directly in include path or different folder
-#include "GeometryScriptTypes.h" 
+#include "GeometryScriptTypes.h"
 #endif
 
 #include "GeometryScript/MeshQueryFunctions.h"
@@ -117,13 +117,13 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpGeometryHandlers, Log, All);
 #else
 #define MCP_HAS_FULL_GEOMETRY_SCRIPT 0
 #endif
- 
+
 // Helper macros for JSON field access
 #define GetStringFieldGeom GetJsonStringField
 #define GetNumberFieldGeom GetJsonNumberField
 #define GetBoolFieldGeom GetJsonBoolField
 #define GetIntFieldGeom GetJsonIntField
- 
+
 // Helper to read FVector from JSON (supports both object and array formats)
 static FVector ReadVectorFromPayload(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, FVector Default = FVector::ZeroVector)
 {
@@ -248,7 +248,7 @@ static AActor* SpawnDynamicMeshActorWithMesh(
         SpawnParams.OverrideLevel = World->GetCurrentLevel();
         World->Modify();
     }
-    
+
     const FVector SpawnLocation = Transform.GetLocation();
     const FRotator SpawnRotation = Transform.Rotator();
     AActor* NewActor = World->SpawnActor(
@@ -256,19 +256,19 @@ static AActor* SpawnDynamicMeshActorWithMesh(
         &SpawnLocation,
         &SpawnRotation,
         SpawnParams);
-    
+
     if (!NewActor)
     {
         OutError = TEXT("Failed to spawn DynamicMeshActor");
         return nullptr;
     }
-    
+
     NewActor->Modify();
     NewActor->SetActorLocationAndRotation(SpawnLocation,
                                           SpawnRotation, false, nullptr,
                                           ETeleportType::TeleportPhysics);
     NewActor->SetActorLabel(Name);
-    
+
     if (ADynamicMeshActor* DMActor = Cast<ADynamicMeshActor>(NewActor))
     {
         if (UDynamicMeshComponent* DMComp = DMActor->GetDynamicMeshComponent())
@@ -276,7 +276,7 @@ static AActor* SpawnDynamicMeshActorWithMesh(
             DMComp->SetDynamicMesh(DynMesh);
         }
     }
-    
+
     return NewActor;
 }
 
@@ -300,7 +300,7 @@ static bool IsMemoryPressureSafe()
 {
 #if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
     FPlatformMemoryStats MemStats = FPlatformMemory::GetStats();
-    double UsagePercent = static_cast<double>(MemStats.UsedPhysical) / 
+    double UsagePercent = static_cast<double>(MemStats.UsedPhysical) /
                           static_cast<double>(MemStats.TotalPhysical);
     return UsagePercent < MEMORY_PRESSURE_CRITICAL;
 #else
@@ -312,7 +312,7 @@ static double GetMemoryUsagePercent()
 {
 #if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
     FPlatformMemoryStats MemStats = FPlatformMemory::GetStats();
-    return static_cast<double>(MemStats.UsedPhysical) / 
+    return static_cast<double>(MemStats.UsedPhysical) /
            static_cast<double>(MemStats.TotalPhysical) * 100.0;
 #else
     return 0.0;
@@ -586,7 +586,7 @@ static bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& 
     Result->SetNumberField(TEXT("depth"), Depth);
     Result->SetNumberField(TEXT("estimatedTriangles"), static_cast<double>(EstimatedTriangles));
     Result->SetBoolField(TEXT("dimensionsClamped"), bDimensionsClamped);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
 
@@ -631,7 +631,7 @@ static bool HandleCreateSphere(UMcpAutomationBridgeSubsystem* Self, const FStrin
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Result->SetNumberField(TEXT("radius"), Radius);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
 
@@ -677,7 +677,7 @@ static bool HandleCreateCylinder(UMcpAutomationBridgeSubsystem* Self, const FStr
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
 
@@ -724,10 +724,10 @@ double BaseRadius = GetNumberFieldGeom(Payload, TEXT("baseRadius"), 50.0);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), Name);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
-    
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Cone mesh created"), Result);
     return true;
 }
@@ -773,10 +773,10 @@ double Length = GetNumberFieldGeom(Payload, TEXT("length"), 100.0);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), Name);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
-    
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Capsule mesh created"), Result);
     return true;
 }
@@ -1006,9 +1006,9 @@ static bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FS
     // Safety: Check memory pressure before heavy operation
     if (!IsMemoryPressureSafe())
     {
-        Self->SendAutomationError(Socket, RequestId, 
-            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Boolean %s blocked to prevent OOM."), 
-                           GetMemoryUsagePercent(), *OpName), 
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Boolean %s blocked to prevent OOM."),
+                           GetMemoryUsagePercent(), *OpName),
             TEXT("MEMORY_PRESSURE"));
         return true;
     }
@@ -1047,21 +1047,21 @@ static bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FS
     if (ResultMesh)
     {
         ResultTriCount = ResultMesh->GetTriangleCount();
-        
+
         // Check if result exceeds limit
         if (ResultTriCount > MAX_TRIANGLES_PER_DYNAMIC_MESH)
         {
             // Log warning but don't fail - the operation already completed
-            UE_LOG(LogMcpGeometryHandlers, Warning, 
-                   TEXT("Boolean %s result has %d triangles (exceeds limit of %d)"), 
+            UE_LOG(LogMcpGeometryHandlers, Warning,
+                   TEXT("Boolean %s result has %d triangles (exceeds limit of %d)"),
                    *OpName, ResultTriCount, MAX_TRIANGLES_PER_DYNAMIC_MESH);
         }
-        
+
         // Warning if approaching limit
         if (ResultTriCount > WARNING_TRIANGLE_THRESHOLD)
         {
-            UE_LOG(LogMcpGeometryHandlers, Warning, 
-                   TEXT("Boolean %s result has %d triangles (warning threshold: %d)"), 
+            UE_LOG(LogMcpGeometryHandlers, Warning,
+                   TEXT("Boolean %s result has %d triangles (warning threshold: %d)"),
                    *OpName, ResultTriCount, WARNING_TRIANGLE_THRESHOLD);
         }
     }
@@ -1069,7 +1069,7 @@ static bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FS
     {
         // Boolean operation returned null - this typically means the operation failed
         // (e.g., empty result from intersection, non-overlapping meshes)
-        UE_LOG(LogMcpGeometryHandlers, Warning, 
+        UE_LOG(LogMcpGeometryHandlers, Warning,
                TEXT("Boolean %s returned null result - operation may have produced empty geometry"), *OpName);
     }
 
@@ -1090,8 +1090,8 @@ static bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FS
         Result->SetNumberField(TEXT("resultTriangles"), ResultTriCount);
     }
 
-    Self->SendAutomationResponse(Socket, RequestId, bBooleanSucceeded, 
-        bBooleanSucceeded ? FString::Printf(TEXT("Boolean %s completed"), *OpName) : FString::Printf(TEXT("Boolean %s failed - operation produced empty geometry"), *OpName), 
+    Self->SendAutomationResponse(Socket, RequestId, bBooleanSucceeded,
+        bBooleanSucceeded ? FString::Printf(TEXT("Boolean %s completed"), *OpName) : FString::Printf(TEXT("Boolean %s failed - operation produced empty geometry"), *OpName),
         Result);
     return true;
 }
@@ -1159,7 +1159,7 @@ static bool HandleGetMeshInfo(UMcpAutomationBridgeSubsystem* Self, const FString
     }
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
-    
+
     // UE 5.7: FGeometryScriptMeshInfo and GetMeshInfo() were removed
     // Use individual query functions instead
     int32 VertexCount = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexCount(Mesh);
@@ -1395,16 +1395,16 @@ static bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& 
     Iterations = FMath::Clamp(Iterations, 1, MAX_SUBDIVIDE_ITERATIONS);
     if (Iterations != OriginalIterations)
     {
-        UE_LOG(LogMcpGeometryHandlers, Warning, TEXT("Subdivide iterations clamped from %d to %d (MAX_SUBDIVIDE_ITERATIONS)"), 
+        UE_LOG(LogMcpGeometryHandlers, Warning, TEXT("Subdivide iterations clamped from %d to %d (MAX_SUBDIVIDE_ITERATIONS)"),
                OriginalIterations, Iterations);
     }
 
     // Check memory pressure before heavy operation
     if (!IsMemoryPressureSafe())
     {
-        Self->SendAutomationError(Socket, RequestId, 
-            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Subdivide blocked to prevent OOM."), 
-                           GetMemoryUsagePercent()), 
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Subdivide blocked to prevent OOM."),
+                           GetMemoryUsagePercent()),
             TEXT("MEMORY_PRESSURE"));
         return true;
     }
@@ -1447,12 +1447,12 @@ static bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& 
     {
         EstimatedTriangles *= 4;  // Each subdivision ~4x triangles
     }
-    
+
     if (EstimatedTriangles > MAX_TRIANGLES_PER_DYNAMIC_MESH)
     {
-        Self->SendAutomationError(Socket, RequestId, 
-            FString::Printf(TEXT("Subdivide would exceed triangle limit. Current: %d, Estimated after: %lld, Max allowed: %d"), 
-                           TriCountBefore, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH), 
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Subdivide would exceed triangle limit. Current: %d, Estimated after: %lld, Max allowed: %d"),
+                           TriCountBefore, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH),
             TEXT("POLYGON_LIMIT_EXCEEDED"));
         return true;
     }
@@ -1469,7 +1469,7 @@ static bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& 
     // Warning if approaching limit
     if (TriCountAfter > WARNING_TRIANGLE_THRESHOLD)
     {
-        UE_LOG(LogMcpGeometryHandlers, Warning, TEXT("Subdivide result has %d triangles (warning threshold: %d)"), 
+        UE_LOG(LogMcpGeometryHandlers, Warning, TEXT("Subdivide result has %d triangles (warning threshold: %d)"),
                TriCountAfter, WARNING_TRIANGLE_THRESHOLD);
     }
 
@@ -2606,7 +2606,7 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
     FGeometryScriptCollisionFromMeshOptions CollisionOptions;
     CollisionOptions.bEmitTransaction = false;
-    
+
     // Set method based on collision type
     if (CollisionType == TEXT("box") || CollisionType == TEXT("boxes"))
     {
@@ -2652,7 +2652,7 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
     // UE 5.4: Use SetDynamicMeshCollisionFromMesh directly (GenerateCollisionFromMesh not available)
     FGeometryScriptCollisionFromMeshOptions CollisionOptions;
     CollisionOptions.bEmitTransaction = false;
-    
+
     // Set method based on collision type
     if (CollisionType == TEXT("box") || CollisionType == TEXT("boxes"))
     {
@@ -2839,9 +2839,9 @@ static bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString
     // Safety: Check memory pressure before array operation
     if (!IsMemoryPressureSafe())
     {
-        Self->SendAutomationError(Socket, RequestId, 
-            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Array operation blocked to prevent OOM."), 
-                           GetMemoryUsagePercent()), 
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Array operation blocked to prevent OOM."),
+                           GetMemoryUsagePercent()),
             TEXT("MEMORY_PRESSURE"));
         return true;
     }
@@ -2849,12 +2849,12 @@ static bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString
     // Safety: Estimate triangles after array and check against limit
     int32 TriCountBefore = Mesh->GetTriangleCount();
     int64 EstimatedTriangles = static_cast<int64>(TriCountBefore) * Count;
-    
+
     if (EstimatedTriangles > MAX_TRIANGLES_PER_DYNAMIC_MESH)
     {
-        Self->SendAutomationError(Socket, RequestId, 
-            FString::Printf(TEXT("Array would exceed triangle limit. Current: %d, Estimated: %lld, Max: %d"), 
-                           TriCountBefore, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH), 
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Array would exceed triangle limit. Current: %d, Estimated: %lld, Max: %d"),
+                           TriCountBefore, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH),
             TEXT("POLYGON_LIMIT_EXCEEDED"));
         return true;
     }
@@ -2931,9 +2931,9 @@ static bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString
     // Safety: Check memory pressure before array operation
     if (!IsMemoryPressureSafe())
     {
-        Self->SendAutomationError(Socket, RequestId, 
-            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Array operation blocked to prevent OOM."), 
-                           GetMemoryUsagePercent()), 
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Array operation blocked to prevent OOM."),
+                           GetMemoryUsagePercent()),
             TEXT("MEMORY_PRESSURE"));
         return true;
     }
@@ -2941,12 +2941,12 @@ static bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString
     // Safety: Estimate triangles after array and check against limit
     int32 TriCountBefore = Mesh->GetTriangleCount();
     int64 EstimatedTriangles = static_cast<int64>(TriCountBefore) * Count;
-    
+
     if (EstimatedTriangles > MAX_TRIANGLES_PER_DYNAMIC_MESH)
     {
-        Self->SendAutomationError(Socket, RequestId, 
-            FString::Printf(TEXT("Array would exceed triangle limit. Current: %d, Estimated: %lld, Max: %d"), 
-                           TriCountBefore, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH), 
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Array would exceed triangle limit. Current: %d, Estimated: %lld, Max: %d"),
+                           TriCountBefore, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH),
             TEXT("POLYGON_LIMIT_EXCEEDED"));
         return true;
     }
@@ -3174,9 +3174,9 @@ static bool HandleTriangulate(UMcpAutomationBridgeSubsystem* Self, const FString
     // Safety: Check memory pressure before triangulation
     if (!IsMemoryPressureSafe())
     {
-        Self->SendAutomationError(Socket, RequestId, 
-            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Triangulation blocked to prevent OOM."), 
-                           GetMemoryUsagePercent()), 
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Triangulation blocked to prevent OOM."),
+                           GetMemoryUsagePercent()),
             TEXT("MEMORY_PRESSURE"));
         return true;
     }
@@ -3185,9 +3185,9 @@ static bool HandleTriangulate(UMcpAutomationBridgeSubsystem* Self, const FString
     int32 TriCountBefore = Mesh->GetTriangleCount();
     if (TriCountBefore > MAX_TRIANGLES_PER_DYNAMIC_MESH)
     {
-        Self->SendAutomationError(Socket, RequestId, 
-            FString::Printf(TEXT("Mesh has too many triangles (%d). Max allowed: %d"), 
-                           TriCountBefore, MAX_TRIANGLES_PER_DYNAMIC_MESH), 
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Mesh has too many triangles (%d). Max allowed: %d"),
+                           TriCountBefore, MAX_TRIANGLES_PER_DYNAMIC_MESH),
             TEXT("POLYGON_LIMIT_EXCEEDED"));
         return true;
     }
@@ -3247,9 +3247,9 @@ static bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     // Safety: Check memory pressure before poke operation
     if (!IsMemoryPressureSafe())
     {
-        Self->SendAutomationError(Socket, RequestId, 
-            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Poke operation blocked to prevent OOM."), 
-                           GetMemoryUsagePercent()), 
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Poke operation blocked to prevent OOM."),
+                           GetMemoryUsagePercent()),
             TEXT("MEMORY_PRESSURE"));
         return true;
     }
@@ -3258,12 +3258,12 @@ static bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     // Poke with PNTessellation roughly triples triangle count (each face gets subdivided)
     int32 TriCountBefore = Mesh->GetTriangleCount();
     int64 EstimatedTriangles = static_cast<int64>(TriCountBefore) * 4;  // 4x safety margin for subdivision
-    
+
     if (EstimatedTriangles > MAX_TRIANGLES_PER_DYNAMIC_MESH)
     {
-        Self->SendAutomationError(Socket, RequestId, 
-            FString::Printf(TEXT("Poke would exceed triangle limit. Current: %d, Estimated: %lld, Max: %d"), 
-                           TriCountBefore, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH), 
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Poke would exceed triangle limit. Current: %d, Estimated: %lld, Max: %d"),
+                           TriCountBefore, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH),
             TEXT("POLYGON_LIMIT_EXCEEDED"));
         return true;
     }
@@ -3285,7 +3285,7 @@ static bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     // Warning if approaching limit
     if (TriCountAfter > WARNING_TRIANGLE_THRESHOLD)
     {
-        UE_LOG(LogMcpGeometryHandlers, Warning, TEXT("Poke result has %d triangles (warning threshold: %d)"), 
+        UE_LOG(LogMcpGeometryHandlers, Warning, TEXT("Poke result has %d triangles (warning threshold: %d)"),
                TriCountAfter, WARNING_TRIANGLE_THRESHOLD);
     }
 
@@ -3696,7 +3696,7 @@ static bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& R
     FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
     FVector Center = BBox.GetCenter();
     double TargetRadius = BBox.GetExtent().GetMax();
-    
+
     // Real spherify implementation:
     // 1. Get all vertex IDs
     // 2. For each vertex, calculate direction from center
@@ -3704,32 +3704,32 @@ static bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& R
     FGeometryScriptIndexList VertexIDList;
     bool bHasGaps = false;
     UGeometryScriptLibrary_MeshQueryFunctions::GetAllVertexIDs(Mesh, VertexIDList, bHasGaps);
-    
+
     int32 NumVertices = VertexIDList.List.IsValid() ? VertexIDList.List->Num() : 0;
     int32 VerticesModified = 0;
-    
+
     for (int32 i = 0; i < NumVertices; ++i)
     {
         int32 VertexID = (*VertexIDList.List)[i];
         bool bIsValid = false;
         FVector OriginalPos = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexPosition(Mesh, VertexID, bIsValid);
-        
+
         if (bIsValid)
         {
             // Calculate direction from center to vertex
             FVector Direction = OriginalPos - Center;
             double CurrentDistance = Direction.Size();
-            
+
             if (CurrentDistance > KINDA_SMALL_NUMBER)
             {
                 Direction.Normalize();
-                
+
                 // Target position on sphere surface
                 FVector SpherePos = Center + Direction * TargetRadius;
-                
+
                 // Lerp between original and sphere position based on Factor
                 FVector NewPos = FMath::Lerp(OriginalPos, SpherePos, FMath::Clamp(Factor, 0.0, 1.0));
-                
+
                 // Set the new position
                 bool bVertexValid = false;
                 UGeometryScriptLibrary_MeshBasicEditFunctions::SetVertexPosition(Mesh, VertexID, NewPos, bVertexValid, true);
@@ -3740,7 +3740,7 @@ static bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& R
             }
         }
     }
-    
+
     // Recompute normals after vertex modifications
     #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
     // UE 5.3+: RecomputeNormals takes 4 parameters
@@ -3808,24 +3808,24 @@ static bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString&
     // Calculate bounding box center and average perpendicular radius from axis
     FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
     FVector Center = BBox.GetCenter();
-    
+
     // Get all vertex IDs
     FGeometryScriptIndexList VertexIDList;
     bool bHasGaps = false;
     UGeometryScriptLibrary_MeshQueryFunctions::GetAllVertexIDs(Mesh, VertexIDList, bHasGaps);
-    
+
     int32 NumVertices = VertexIDList.List.IsValid() ? VertexIDList.List->Num() : 0;
-    
+
     // First pass: compute average radius perpendicular to the cylinder axis
     double TotalRadius = 0.0;
     int32 ValidVertexCount = 0;
-    
+
     for (int32 i = 0; i < NumVertices; ++i)
     {
         int32 VertexID = (*VertexIDList.List)[i];
         bool bIsValid = false;
         FVector Pos = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexPosition(Mesh, VertexID, bIsValid);
-        
+
         if (bIsValid)
         {
             // Calculate perpendicular distance from axis
@@ -3835,53 +3835,53 @@ static bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString&
             if (AxisIndex == 0) Perpendicular.X = 0;
             else if (AxisIndex == 1) Perpendicular.Y = 0;
             else Perpendicular.Z = 0;
-            
+
             double PerpDist = Perpendicular.Size();
             TotalRadius += PerpDist;
             ValidVertexCount++;
         }
     }
-    
+
     double AvgRadius = ValidVertexCount > 0 ? TotalRadius / ValidVertexCount : 1.0;
     if (AvgRadius < KINDA_SMALL_NUMBER) AvgRadius = 1.0;
-    
+
     // Second pass: project each vertex to cylinder surface
     int32 VerticesModified = 0;
-    
+
     for (int32 i = 0; i < NumVertices; ++i)
     {
         int32 VertexID = (*VertexIDList.List)[i];
         bool bIsValid = false;
         FVector OriginalPos = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexPosition(Mesh, VertexID, bIsValid);
-        
+
         if (bIsValid)
         {
             // Calculate perpendicular vector from axis
             FVector FromCenter = OriginalPos - Center;
             FVector Perpendicular = FromCenter;
             double AxisCoord = 0.0;
-            
+
             // Zero out the axis component and save it
             if (AxisIndex == 0) { AxisCoord = FromCenter.X; Perpendicular.X = 0; }
             else if (AxisIndex == 1) { AxisCoord = FromCenter.Y; Perpendicular.Y = 0; }
             else { AxisCoord = FromCenter.Z; Perpendicular.Z = 0; }
-            
+
             double PerpDist = Perpendicular.Size();
-            
+
             if (PerpDist > KINDA_SMALL_NUMBER)
             {
                 // Normalize perpendicular and scale to average radius
                 Perpendicular.Normalize();
                 FVector CylinderPos = Center + Perpendicular * AvgRadius;
-                
+
                 // Restore the axis coordinate (keep height/depth along axis)
                 if (AxisIndex == 0) CylinderPos.X = Center.X + AxisCoord;
                 else if (AxisIndex == 1) CylinderPos.Y = Center.Y + AxisCoord;
                 else CylinderPos.Z = Center.Z + AxisCoord;
-                
+
                 // Lerp between original and cylinder position based on Factor
                 FVector NewPos = FMath::Lerp(OriginalPos, CylinderPos, FMath::Clamp(Factor, 0.0, 1.0));
-                
+
                 // Set the new position
                 bool bVertexValid = false;
                 UGeometryScriptLibrary_MeshBasicEditFunctions::SetVertexPosition(Mesh, VertexID, NewPos, bVertexValid, true);
@@ -3892,7 +3892,7 @@ static bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString&
             }
         }
     }
-    
+
     // Recompute normals after vertex modifications
     #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
     // UE 5.3+: RecomputeNormals takes 4 parameters
@@ -4201,7 +4201,7 @@ static bool HandleMergeVertices(UMcpAutomationBridgeSubsystem* Self, const FStri
     }
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
-    
+
     // UE 5.7: GetVertexCount() is not a member of UDynamicMesh - use MeshQueryFunctions
     int32 VertsBefore = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexCount(Mesh);
 
@@ -4240,7 +4240,7 @@ static bool HandleTransformUVs(UMcpAutomationBridgeSubsystem* Self, const FStrin
 {
     FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
     int32 UVChannel = GetIntFieldGeom(Payload, TEXT("uvChannel"), 0);
-    
+
     // Transform parameters
 double TranslateU = GetNumberFieldGeom(Payload, TEXT("translateU"), 0.0);
     double TranslateV = GetNumberFieldGeom(Payload, TEXT("translateV"), 0.0);
@@ -4505,10 +4505,10 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
     // Get direct access to FDynamicMesh3 for low-level operations
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
-    
+
     // Find boundary loops using GeometryCore's FMeshBoundaryLoops (UE 5.5+)
     UE::Geometry::FMeshBoundaryLoops BoundaryLoops(&EditMesh, true);
-    
+
     if (BoundaryLoops.bAborted)
     {
         BridgeStatus = TEXT("Boundary loop computation aborted (mesh topology issue)");
@@ -4517,7 +4517,7 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
     {
         // Not enough boundary loops for bridging - fall back to hole filling
         BridgeStatus = FString::Printf(TEXT("Only %d boundary loop(s) found, need at least 2 for bridging. Filling holes instead."), BoundaryLoops.GetLoopCount());
-        
+
         FGeometryScriptFillHolesOptions FillOptions;
         FillOptions.FillMethod = EGeometryScriptFillHolesMethod::MinimalFill;
         int32 NumFilledHoles = 0;
@@ -4530,29 +4530,29 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
         int32 LoopCount = BoundaryLoops.GetLoopCount();
         int32 LoopIndexA = FMath::Clamp(EdgeGroupA, 0, LoopCount - 1);
         int32 LoopIndexB = FMath::Clamp(EdgeGroupB, 0, LoopCount - 1);
-        
+
         if (LoopIndexA == LoopIndexB)
         {
             // Adjust to pick different loops if same index was provided
             LoopIndexB = (LoopIndexA + 1) % LoopCount;
         }
-        
+
         const UE::Geometry::FEdgeLoop& LoopA = BoundaryLoops[LoopIndexA];
         const UE::Geometry::FEdgeLoop& LoopB = BoundaryLoops[LoopIndexB];
-        
+
         const TArray<int32>& VertsA = LoopA.Vertices;
         const TArray<int32>& VertsB = LoopB.Vertices;
-        
+
         int32 NumVertsA = VertsA.Num();
         int32 NumVertsB = VertsB.Num();
-        
+
         if (NumVertsA > 0 && NumVertsB > 0)
         {
             // Find the closest starting vertex on LoopB to LoopA's first vertex
             FVector3d StartPosA = EditMesh.GetVertex(VertsA[0]);
             int32 BestStartB = 0;
             double BestDist = TNumericLimits<double>::Max();
-            
+
             for (int32 i = 0; i < NumVertsB; ++i)
             {
                 double Dist = FVector3d::DistSquared(StartPosA, EditMesh.GetVertex(VertsB[i]));
@@ -4562,11 +4562,11 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
                     BestStartB = i;
                 }
             }
-            
+
             // Create triangle strips between the two loops
             // Handle loops of different sizes by using modular indexing
             int32 MaxVerts = FMath::Max(NumVertsA, NumVertsB);
-            
+
             for (int32 i = 0; i < MaxVerts; ++i)
             {
                 // Map indices to actual loop vertices with modular wrap
@@ -4574,12 +4574,12 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
                 int32 iA_Next = (i + 1) % NumVertsA;
                 int32 iB = (BestStartB + i) % NumVertsB;
                 int32 iB_Next = (BestStartB + i + 1) % NumVertsB;
-                
+
                 int32 vA0 = VertsA[iA];
                 int32 vA1 = VertsA[iA_Next];
                 int32 vB0 = VertsB[iB];
                 int32 vB1 = VertsB[iB_Next];
-                
+
                 // Create two triangles forming a quad between the loops
                 // Triangle 1: vA0 -> vA1 -> vB0
                 if (vA0 != vA1 && vA1 != vB0 && vB0 != vA0)
@@ -4587,7 +4587,7 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
                     int32 Result = EditMesh.AppendTriangle(vA0, vA1, vB0);
                     if (Result >= 0) TrianglesCreated++;
                 }
-                
+
                 // Triangle 2: vB0 -> vA1 -> vB1
                 if (vB0 != vA1 && vA1 != vB1 && vB1 != vB0)
                 {
@@ -4595,8 +4595,8 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
                     if (Result >= 0) TrianglesCreated++;
                 }
             }
-            
-            BridgeStatus = FString::Printf(TEXT("Bridged loop %d (%d verts) to loop %d (%d verts), created %d triangles"), 
+
+            BridgeStatus = FString::Printf(TEXT("Bridged loop %d (%d verts) to loop %d (%d verts), created %d triangles"),
                 LoopIndexA, NumVertsA, LoopIndexB, NumVertsB, TrianglesCreated);
         }
         else
@@ -4607,7 +4607,7 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
 #else
     // UE 5.3 fallback: Use hole filling instead of bridging
     BridgeStatus = TEXT("Bridging requires UE 5.4+ (FMeshBoundaryLoops). Using hole filling instead.");
-    
+
     FGeometryScriptFillHolesOptions FillOptions;
     FillOptions.FillMethod = EGeometryScriptFillHolesMethod::MinimalFill;
     int32 NumFilledHoles = 0;
@@ -4693,12 +4693,12 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     // Real loft implementation:
     // If profileActors provided, use them as cross-sections for lofting
     // Otherwise, perform a simple Z-axis extrusion based on existing mesh bounds
-    
+
     if (ProfileActors.Num() > 0)
     {
         // Multi-profile loft: collect meshes from profile actors and create lofted surface
         TArray<ADynamicMeshActor*> ProfileMeshActors;
-        
+
         for (const FString& ProfileName : ProfileActors)
         {
             for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -4710,17 +4710,17 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                 }
             }
         }
-        
+
         if (ProfileMeshActors.Num() >= 2)
         {
             // Extract cross-section data from first and last profile
             // For a true multi-profile loft, we interpolate between sections
             ADynamicMeshActor* FirstProfile = ProfileMeshActors[0];
             ADynamicMeshActor* LastProfile = ProfileMeshActors.Last();
-            
+
             UDynamicMeshComponent* FirstDMC = FirstProfile->GetDynamicMeshComponent();
             UDynamicMeshComponent* LastDMC = LastProfile->GetDynamicMeshComponent();
-            
+
             if (FirstDMC && FirstDMC->GetDynamicMesh() && LastDMC && LastDMC->GetDynamicMesh())
             {
                 // Get positions of profile actors for path
@@ -4728,22 +4728,22 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                 FVector EndPos = LastProfile->GetActorLocation();
                 FVector Direction = EndPos - StartPos;
                 double PathLength = Direction.Size();
-                
+
                 if (PathLength > KINDA_SMALL_NUMBER)
                 {
                     Direction.Normalize();
-                    
+
                     // Build polygon from first profile's boundary vertices
                     UDynamicMesh* FirstMesh = FirstDMC->GetDynamicMesh();
                     FBox FirstBBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(FirstMesh);
                     FVector ProfileCenter = FirstBBox.GetCenter();
                     FVector ProfileExtent = FirstBBox.GetExtent();
-                    
+
                     // Create a simple polygon approximating the first profile's cross-section
                     TArray<FVector2D> PolygonVertices;
                     int32 NumPolySides = FMath::Clamp(8 + Subdivisions, 4, 64);
                     double ProfileRadius = FMath::Max(ProfileExtent.X, ProfileExtent.Y);
-                    
+
                     for (int32 i = 0; i < NumPolySides; ++i)
                     {
                         double Angle = 2.0 * PI * i / NumPolySides;
@@ -4752,21 +4752,21 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                             FMath::Sin(Angle) * ProfileRadius
                         ));
                     }
-                    
+
                     // Build path frames for sweeping
                     TArray<FTransform> PathFrames;
                     int32 NumPathSteps = FMath::Clamp(Subdivisions, 2, 64);
-                    
+
                     for (int32 Step = 0; Step <= NumPathSteps; ++Step)
                     {
                         double T = (double)Step / NumPathSteps;
                         FVector Pos = StartPos + Direction * PathLength * T;
-                        
+
                         // Create frame at this position
                         FQuat Rotation = FQuat::FindBetweenNormals(FVector::UpVector, Direction);
                         PathFrames.Add(FTransform(Rotation, Pos));
                     }
-                    
+
                     // Use AppendSweepPolygon to create the lofted surface
                     // Note: FGeometryScriptSimplePolygon was introduced in UE 5.4 but is not needed here
                     // as AppendSweepPolygon takes TArray<FVector2D> directly
@@ -4775,7 +4775,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                     PrimOptions.bFlipOrientation = false;
                     FTransform SweepTransform(FRotator::ZeroRotator, StartPos);
                     // Use PolygonVertices directly for AppendSweepPolygon (no conversion needed)
-                    
+
                     // AppendSweepPolygon signature varies by UE version
                     // UE 5.4+ signature: AppendSweepPolygon(TargetMesh, PrimOptions, Transform, PolygonVertices, SweepPath,
                     //                                         bLoop, bCapped, StartScale, EndScale, RotationAngleDeg, MiterLimit, Debug)
@@ -4808,13 +4808,13 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                         FVector PosB = PathFrames[i + 1].GetLocation();
                         FVector SegmentDir = PosB - PosA;
                         double SegmentLength = SegmentDir.Size();
-                        
+
                         if (SegmentLength > KINDA_SMALL_NUMBER)
                         {
                             SegmentDir.Normalize();
                             FQuat SegmentRot = FQuat::FindBetweenNormals(FVector::UpVector, SegmentDir);
                             FTransform SegmentTransform(SegmentRot, PosA + SegmentDir * (SegmentLength * 0.5));
-                            
+
                             // Use a small capsule/cylinder segment (approximate)
                             UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCapsule(
                                 Mesh, PrimOptions, SegmentTransform,
@@ -4826,7 +4826,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                                 EGeometryScriptPrimitiveOriginMode::Center, nullptr);
                         }
                     }
-                    
+
                     ProfilesUsed = ProfileMeshActors.Num();
                 }
             }
@@ -4839,15 +4839,15 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
         FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
         FVector Center = BBox.GetCenter();
         FVector Extent = BBox.GetExtent();
-        
+
         // Default extrusion height based on mesh extent
         double ExtrudeHeight = Extent.Z > KINDA_SMALL_NUMBER ? Extent.Z : 100.0;
-        
+
         // Create a simple extruded shape based on the XY bounds
         TArray<FVector2D> PolygonVertices;
         int32 NumPolySides = FMath::Clamp(8 + Subdivisions, 4, 64);
         double Radius = FMath::Max(Extent.X, Extent.Y);
-        
+
         for (int32 i = 0; i < NumPolySides; ++i)
         {
             double Angle = 2.0 * PI * i / NumPolySides;
@@ -4856,23 +4856,23 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                 FMath::Sin(Angle) * Radius
             ));
         }
-        
+
         // Build vertical path for extrusion
         TArray<FTransform> PathFrames;
         int32 NumPathSteps = FMath::Clamp(Subdivisions, 2, 32);
-        
+
         for (int32 Step = 0; Step <= NumPathSteps; ++Step)
         {
             double T = (double)Step / NumPathSteps;
             FVector Pos = Center + FVector(0, 0, -ExtrudeHeight/2 + ExtrudeHeight * T);
             PathFrames.Add(FTransform(FQuat::Identity, Pos));
         }
-        
+
         // Note: FGeometryScriptSimplePolygon is not needed here - the path is already built
         // For compatibility, just log that sweep was attempted
         UE_LOG(LogMcpGeometryHandlers, Log, TEXT("Sweep polygon path created with %d frames"), PathFrames.Num());
     }
-    
+
     // Recompute normals for smooth shading if requested
     if (bSmooth)
     {
@@ -4966,22 +4966,22 @@ FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"), T
     float SplineLength = 0.0f;
     FString SweepStatus;
     int32 PathStepsUsed = 0;
-    
+
     // Get mesh bounding box to derive profile shape
     FBox MeshBBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
     FVector MeshCenter = MeshBBox.GetCenter();
     FVector MeshExtent = MeshBBox.GetExtent();
-    
+
     // Create a cross-section profile from mesh XY bounds
     TArray<FVector2D> PolygonVertices;
     int32 NumPolySides = FMath::Clamp(Steps / 2, 4, 32);
     double ProfileRadius = FMath::Max(MeshExtent.X, MeshExtent.Y);
-    
+
     if (ProfileRadius < KINDA_SMALL_NUMBER)
     {
         ProfileRadius = 50.0; // Default fallback
     }
-    
+
     for (int32 i = 0; i < NumPolySides; ++i)
     {
         double Angle = 2.0 * PI * i / NumPolySides;
@@ -4990,10 +4990,10 @@ FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"), T
             FMath::Sin(Angle) * ProfileRadius
         ));
     }
-    
+
     // Build sweep path
     TArray<FTransform> PathFrames;
-    
+
     if (SplineActor)
     {
         USplineComponent* SplineComp = SplineActor->FindComponentByClass<USplineComponent>();
@@ -5001,28 +5001,28 @@ FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"), T
         {
             SplineLength = SplineComp->GetSplineLength();
             PathStepsUsed = FMath::Clamp(Steps, 2, 256);
-            
+
             // Sample the spline at regular intervals to build the path
             for (int32 i = 0; i <= PathStepsUsed; ++i)
             {
                 float Alpha = (float)i / PathStepsUsed;
                 float Dist = SplineLength * Alpha;
-                
+
                 // Get spline location and rotation at this distance
                 FVector Location = SplineComp->GetLocationAtDistanceAlongSpline(Dist, ESplineCoordinateSpace::World);
                 FQuat Rotation = SplineComp->GetQuaternionAtDistanceAlongSpline(Dist, ESplineCoordinateSpace::World);
-                
+
                 // Apply twist interpolation
                 float TwistAngle = FMath::DegreesToRadians(Twist * Alpha);
                 FQuat TwistRotation = FQuat(FVector::ForwardVector, TwistAngle);
                 Rotation = Rotation * TwistRotation;
-                
+
                 // Apply scale interpolation
                 float Scale = FMath::Lerp((float)ScaleStart, (float)ScaleEnd, Alpha);
-                
+
                 PathFrames.Add(FTransform(Rotation, Location, FVector(Scale)));
             }
-            
+
             SweepStatus = FString::Printf(TEXT("Swept along spline with %d steps, length %.1f"), PathStepsUsed, SplineLength);
         }
         else
@@ -5030,34 +5030,34 @@ FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"), T
             SweepStatus = TEXT("Spline actor found but no USplineComponent - using linear sweep");
         }
     }
-    
+
     // Fallback: If no spline or spline invalid, create a linear vertical sweep
     if (PathFrames.Num() < 2)
     {
         double SweepHeight = MeshExtent.Z > KINDA_SMALL_NUMBER ? MeshExtent.Z * 2 : 100.0;
         PathStepsUsed = FMath::Clamp(Steps, 2, 256);
-        
+
         for (int32 i = 0; i <= PathStepsUsed; ++i)
         {
             float Alpha = (float)i / PathStepsUsed;
             FVector Location = MeshCenter + FVector(0, 0, -SweepHeight/2 + SweepHeight * Alpha);
-            
+
             // Apply twist
             float TwistAngle = FMath::DegreesToRadians(Twist * Alpha);
             FQuat Rotation = FQuat(FVector::UpVector, TwistAngle);
-            
+
             // Apply scale interpolation
             float Scale = FMath::Lerp((float)ScaleStart, (float)ScaleEnd, Alpha);
-            
+
             PathFrames.Add(FTransform(Rotation, Location, FVector(Scale)));
         }
-        
+
         if (SweepStatus.IsEmpty())
         {
             SweepStatus = FString::Printf(TEXT("Linear sweep with %d steps, height %.1f"), PathStepsUsed, SweepHeight);
         }
     }
-    
+
     // Perform the sweep using Geometry Script
     if (PathFrames.Num() >= 2)
     {
@@ -5152,7 +5152,7 @@ int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 10);
     // Create duplicates along spline
     float SplineLength = SplineComp->GetSplineLength();
     TArray<FString> CreatedActors;
-    
+
     UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
     if (!ActorSS)
     {
@@ -5172,14 +5172,14 @@ int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 10);
         {
             NewActor->SetActorLocation(Location);
             NewActor->SetActorRotation(Rotation);
-            
+
             // Apply scale variation if requested
             if (ScaleVariation > 0.0)
             {
                 double ScaleFactor = 1.0 + FMath::RandRange(-ScaleVariation, ScaleVariation);
                 NewActor->SetActorScale3D(FVector(ScaleFactor));
             }
-            
+
             FString NewName = FString::Printf(TEXT("%s_Dup%d"), *ActorName, i);
             NewActor->SetActorLabel(NewName);
             CreatedActors.Add(NewName);
@@ -5243,20 +5243,20 @@ static bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 
     // Get optional axis parameter (default to Z for horizontal cuts)
     FString Axis = GetStringFieldGeom(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
-    
+
     // Real loop cut implementation using plane cutting
     // Unlike PN tessellation which subdivides ALL faces uniformly,
     // plane cutting inserts edges ONLY where the plane intersects the mesh
-    
+
     // Get mesh bounds from the underlying FDynamicMesh3
     FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
     UE::Geometry::FAxisAlignedBox3d Bounds = EditMesh.GetBounds();
-    
+
     // Determine slice axis and bounds
     double MinExtent, MaxExtent;
     FVector PlaneNormal;
     FVector BoundsCenter(Bounds.Center().X, Bounds.Center().Y, Bounds.Center().Z);
-    
+
     if (Axis == TEXT("X"))
     {
         MinExtent = Bounds.Min.X;
@@ -5275,15 +5275,15 @@ static bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& Re
         MaxExtent = Bounds.Max.Z;
         PlaneNormal = FVector(0.0, 0.0, 1.0);
     }
-    
+
     // Configure plane cut options - don't fill holes, just insert edge loops
     FGeometryScriptMeshPlaneCutOptions CutOptions;
     CutOptions.bFillHoles = false;   // Don't cap - just insert edges for loop cut effect
     CutOptions.bFillSpans = false;   // Don't fill boundary spans
     CutOptions.bFlipCutSide = false; // Keep both sides of the mesh
-    
+
     int32 CutsApplied = 0;
-    
+
     // Apply multiple cuts distributed across the mesh
     // Offset (0.0-1.0) controls the range within the mesh bounds
     // With NumCuts > 1, cuts are evenly distributed within the offset range
@@ -5304,9 +5304,9 @@ static bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& Re
             double RangeEnd = 0.5 + (Offset * 0.5);
             CutFraction = FMath::Lerp(RangeStart, RangeEnd, (double)(CutIdx + 1) / (double)(NumCuts + 1));
         }
-        
+
         double PlanePosition = FMath::Lerp(MinExtent, MaxExtent, CutFraction);
-        
+
         // Build the cut plane transform
         FVector PlaneLocation = BoundsCenter;
         if (Axis == TEXT("X"))
@@ -5315,13 +5315,13 @@ static bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& Re
             PlaneLocation.Y = PlanePosition;
         else
             PlaneLocation.Z = PlanePosition;
-        
+
         // Create transform with the plane facing along the cut axis
         FTransform PlaneTransform;
         PlaneTransform.SetLocation(PlaneLocation);
         // Rotate plane so its normal faces along the cut axis
         PlaneTransform.SetRotation(FQuat::FindBetweenNormals(FVector::UpVector, PlaneNormal));
-        
+
         // Apply the plane cut
         UGeometryScriptLibrary_MeshBooleanFunctions::ApplyMeshPlaneCut(
             Mesh,
@@ -5329,7 +5329,7 @@ static bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& Re
             CutOptions,
             nullptr // UGeometryScriptDebug*
         );
-        
+
         ++CutsApplied;
     }
 
@@ -5463,7 +5463,7 @@ static bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FStr
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    
+
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
@@ -5510,15 +5510,15 @@ static bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FStr
 
     // Use the internal mesh directly to append triangle
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
-    
+
     // Append vertices
     int32 Idx0 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V0));
     int32 Idx1 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V1));
     int32 Idx2 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V2));
-    
+
     // Append triangle
     int32 TriIdx = EditMesh.AppendTriangle(Idx0, Idx1, Idx2, GroupID);
-    
+
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -5611,7 +5611,7 @@ static bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FStr
     }
     else
     {
-        Self->SendAutomationError(Socket, RequestId, 
+        Self->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Invalid vertex index: %d"), VertexIndex), TEXT("INVALID_VERTEX"));
         return true;
     }
@@ -5721,18 +5721,18 @@ static bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& Req
                 ElementsModified++;
             }
         }
-        
+
         // If no elements exist for this vertex, we need to handle it differently
         if (ElementsModified == 0)
         {
-            Self->SendAutomationError(Socket, RequestId, 
+            Self->SendAutomationError(Socket, RequestId,
                 FString::Printf(TEXT("No UV elements found for vertex %d"), VertexIndex), TEXT("NO_UV_ELEMENTS"));
             return true;
         }
     }
     else
     {
-        Self->SendAutomationError(Socket, RequestId, 
+        Self->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Invalid vertex index: %d"), VertexIndex), TEXT("INVALID_VERTEX"));
         return true;
     }
@@ -5758,7 +5758,7 @@ static bool HandleAppendVertex(UMcpAutomationBridgeSubsystem* Self, const FStrin
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    
+
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
@@ -5799,9 +5799,9 @@ static bool HandleAppendVertex(UMcpAutomationBridgeSubsystem* Self, const FStrin
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
-    
+
     int32 VertexIndex = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(Position));
-    
+
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -5821,7 +5821,7 @@ static bool HandleDeleteVertex(UMcpAutomationBridgeSubsystem* Self, const FStrin
 {
     FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
     int32 VertexIndex = GetIntFieldGeom(Payload, TEXT("vertexIndex"), -1);
-    
+
     if (ActorName.IsEmpty() || VertexIndex < 0)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("actorName and vertexIndex required"), TEXT("INVALID_ARGUMENT"));
@@ -5860,18 +5860,18 @@ static bool HandleDeleteVertex(UMcpAutomationBridgeSubsystem* Self, const FStrin
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
-    
+
     if (!EditMesh.IsVertex(VertexIndex))
     {
-        Self->SendAutomationError(Socket, RequestId, 
+        Self->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Invalid vertex index: %d"), VertexIndex), TEXT("INVALID_VERTEX"));
         return true;
     }
-    
+
     // Remove the vertex (this will also remove any triangles using it)
     UE::Geometry::EMeshResult RemoveResult = EditMesh.RemoveVertex(VertexIndex);
     bool bSuccess = (RemoveResult == UE::Geometry::EMeshResult::Ok);
-    
+
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -5892,7 +5892,7 @@ static bool HandleDeleteTriangle(UMcpAutomationBridgeSubsystem* Self, const FStr
 {
     FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
     int32 TriangleIndex = GetIntFieldGeom(Payload, TEXT("triangleIndex"), -1);
-    
+
     if (ActorName.IsEmpty() || TriangleIndex < 0)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("actorName and triangleIndex required"), TEXT("INVALID_ARGUMENT"));
@@ -5931,17 +5931,17 @@ static bool HandleDeleteTriangle(UMcpAutomationBridgeSubsystem* Self, const FStr
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
-    
+
     if (!EditMesh.IsTriangle(TriangleIndex))
     {
-        Self->SendAutomationError(Socket, RequestId, 
+        Self->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Invalid triangle index: %d"), TriangleIndex), TEXT("INVALID_TRIANGLE"));
         return true;
     }
-    
+
     UE::Geometry::EMeshResult RemoveResult = EditMesh.RemoveTriangle(TriangleIndex);
     bool bSuccess = (RemoveResult == UE::Geometry::EMeshResult::Ok);
-    
+
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -5962,7 +5962,7 @@ static bool HandleGetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const F
 {
     FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
     int32 VertexIndex = GetIntFieldGeom(Payload, TEXT("vertexIndex"), -1);
-    
+
     if (ActorName.IsEmpty() || VertexIndex < 0)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("actorName and vertexIndex required"), TEXT("INVALID_ARGUMENT"));
@@ -5995,13 +5995,13 @@ static bool HandleGetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const F
     }
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
-    
+
     bool bIsValidVertex = false;
     FVector Position = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexPosition(Mesh, VertexIndex, bIsValidVertex);
-    
+
     if (!bIsValidVertex)
     {
-        Self->SendAutomationError(Socket, RequestId, 
+        Self->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Invalid vertex index: %d"), VertexIndex), TEXT("INVALID_VERTEX"));
         return true;
     }
@@ -6009,13 +6009,13 @@ static bool HandleGetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const F
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("vertexIndex"), VertexIndex);
-    
+
     TSharedPtr<FJsonObject> PosObj = McpHandlerUtils::CreateResultObject();
     PosObj->SetNumberField(TEXT("x"), Position.X);
     PosObj->SetNumberField(TEXT("y"), Position.Y);
     PosObj->SetNumberField(TEXT("z"), Position.Z);
     Result->SetObjectField(TEXT("position"), PosObj);
-    
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Vertex position retrieved"), Result);
     return true;
 }
@@ -6030,7 +6030,7 @@ static bool HandleSetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const F
     FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
     int32 VertexIndex = GetIntFieldGeom(Payload, TEXT("vertexIndex"), -1);
     FVector Position = ReadVectorFromPayload(Payload, TEXT("position"), FVector::ZeroVector);
-    
+
     if (ActorName.IsEmpty() || VertexIndex < 0)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("actorName and vertexIndex required"), TEXT("INVALID_ARGUMENT"));
@@ -6064,27 +6064,27 @@ static bool HandleSetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const F
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
-    
+
     if (!EditMesh.IsVertex(VertexIndex))
     {
-        Self->SendAutomationError(Socket, RequestId, 
+        Self->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Invalid vertex index: %d"), VertexIndex), TEXT("INVALID_VERTEX"));
         return true;
     }
-    
+
     EditMesh.SetVertex(VertexIndex, Position);
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("vertexIndex"), VertexIndex);
-    
+
     TSharedPtr<FJsonObject> PosObj = McpHandlerUtils::CreateResultObject();
     PosObj->SetNumberField(TEXT("x"), Position.X);
     PosObj->SetNumberField(TEXT("y"), Position.Y);
     PosObj->SetNumberField(TEXT("z"), Position.Z);
     Result->SetObjectField(TEXT("position"), PosObj);
-    
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Vertex position set"), Result);
     return true;
 }
@@ -6098,7 +6098,7 @@ static bool HandleTranslateMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
 {
     FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
     FVector Translation = ReadVectorFromPayload(Payload, TEXT("translation"), FVector::ZeroVector);
-    
+
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
@@ -6131,7 +6131,7 @@ static bool HandleTranslateMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
     }
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
-    
+
     // Use Geometry Script to translate the mesh
     // UE 5.7+: TranslateMesh is in MeshTransformFunctions
     // UE 5.5+: TranslateMesh is in MeshTransformFunctions
@@ -6140,13 +6140,13 @@ static bool HandleTranslateMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
-    
+
     TSharedPtr<FJsonObject> TransObj = McpHandlerUtils::CreateResultObject();
     TransObj->SetNumberField(TEXT("x"), Translation.X);
     TransObj->SetNumberField(TEXT("y"), Translation.Y);
     TransObj->SetNumberField(TEXT("z"), Translation.Z);
     Result->SetObjectField(TEXT("translation"), TransObj);
-    
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Mesh translated"), Result);
     return true;
 }
@@ -6531,7 +6531,7 @@ static bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const 
     Result->SetNumberField(TEXT("segments"), Segments);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
-    
+
     // Add verification data for the target actor
     if (TargetActor)
     {
@@ -6550,7 +6550,7 @@ static bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& 
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    
+
     // Parse edge indices to split (can be array or single number)
     TArray<int32> EdgeIndices;
     const TArray<TSharedPtr<FJsonValue>>* EdgeArray = nullptr;
@@ -6573,7 +6573,7 @@ static bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& 
             EdgeIndices.Add(EdgeIndex);
         }
     }
-    
+
     double SplitFactor = GetNumberFieldGeom(Payload, TEXT("splitFactor"), 0.5);
     bool bWeldVertices = GetBoolFieldGeom(Payload, TEXT("weldVertices"), true);
     double WeldTolerance = GetNumberFieldGeom(Payload, TEXT("weldTolerance"), 0.0001);
@@ -6611,11 +6611,11 @@ static bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& 
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     int32 TrisBefore = Mesh->GetTriangleCount();
-    
+
     // Use FDynamicMesh3 directly for edge splitting
     // GeometryScript doesn't have a direct edge split function, so we use the low-level API
     UE::Geometry::FDynamicMesh3& DynMesh = Mesh->GetMeshRef();
-    
+
     int32 EdgesSplit = 0;
     for (int32 EdgeID : EdgeIndices)
     {
@@ -6623,38 +6623,38 @@ static bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& 
         {
             // Get edge vertices
             UE::Geometry::FIndex2i EdgeV = DynMesh.GetEdgeV(EdgeID);
-            
+
             // Compute midpoint position
             FVector3d V0 = DynMesh.GetVertex(EdgeV.A);
             FVector3d V1 = DynMesh.GetVertex(EdgeV.B);
             FVector3d Midpoint = V0 + (V1 - V0) * SplitFactor;
-            
+
             // Insert new vertex at midpoint
             int32 NewVertexID = DynMesh.AppendVertex(Midpoint);
-            
+
             // Split triangles connected to this edge
             UE::Geometry::FIndex2i EdgeT = DynMesh.GetEdgeT(EdgeID);
             TArray<int32> TrisToModify;
             if (EdgeT.A >= 0) TrisToModify.Add(EdgeT.A);
             if (EdgeT.B >= 0) TrisToModify.Add(EdgeT.B);
-            
+
             for (int32 TriID : TrisToModify)
             {
                 if (DynMesh.IsTriangle(TriID))
                 {
                     UE::Geometry::FIndex3i Tri = DynMesh.GetTriangle(TriID);
-                    
+
                     // Find which edges to split
                     int32 ReplaceV = -1;
                     int32 KeepV1 = -1, KeepV2 = -1;
-                    
+
                     if (Tri.A == EdgeV.A && Tri.B == EdgeV.B) { ReplaceV = Tri.B; KeepV1 = Tri.A; KeepV2 = Tri.C; }
                     else if (Tri.B == EdgeV.A && Tri.C == EdgeV.B) { ReplaceV = Tri.C; KeepV1 = Tri.A; KeepV2 = Tri.B; }
                     else if (Tri.C == EdgeV.A && Tri.A == EdgeV.B) { ReplaceV = Tri.A; KeepV1 = Tri.B; KeepV2 = Tri.C; }
                     else if (Tri.A == EdgeV.B && Tri.B == EdgeV.A) { ReplaceV = Tri.B; KeepV1 = Tri.A; KeepV2 = Tri.C; }
                     else if (Tri.B == EdgeV.B && Tri.C == EdgeV.A) { ReplaceV = Tri.C; KeepV1 = Tri.A; KeepV2 = Tri.B; }
                     else if (Tri.C == EdgeV.B && Tri.A == EdgeV.A) { ReplaceV = Tri.A; KeepV1 = Tri.B; KeepV2 = Tri.C; }
-                    
+
                     if (ReplaceV >= 0)
                     {
                         // Remove old triangle and add two new ones
@@ -6667,7 +6667,7 @@ static bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& 
             }
         }
     }
-    
+
     // Weld vertices if requested
     if (bWeldVertices && WeldTolerance > 0)
     {
@@ -6686,10 +6686,10 @@ static bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& 
     Result->SetNumberField(TEXT("edgesSplit"), EdgesSplit);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, TargetActor);
-    
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Edge split applied"), Result);
     return true;
 }
@@ -6743,11 +6743,11 @@ static bool HandleQuadrangulate(UMcpAutomationBridgeSubsystem* Self, const FStri
     // Note: UE5 doesn't have a direct quadrangulation function in GeometryScript
     // We use a workaround: retriangulate with PolyGroups to create more quad-like topology
     // Then merge pairs of triangles where possible
-    
+
     FGeometryScriptRemeshOptions RemeshOptions;
     RemeshOptions.bDiscardAttributes = false;
     RemeshOptions.bReprojectToInputMesh = true;
-    
+
     FGeometryScriptUniformRemeshOptions UniformOptions;
     // Use TriangleCount target type since EdgeLength is not available
     int32 TargetTris = FMath::Max(100, TrisBefore / 2);  // Target half the triangles
@@ -6770,10 +6770,10 @@ static bool HandleQuadrangulate(UMcpAutomationBridgeSubsystem* Self, const FStri
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
     Result->SetStringField(TEXT("note"), TEXT("Partial quadrangulation applied - full quad remesh requires external library"));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, TargetActor);
-    
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Quadrangulation applied"), Result);
     return true;
 }
@@ -6829,15 +6829,15 @@ static bool HandleRemeshVoxel(UMcpAutomationBridgeSubsystem* Self, const FString
     FGeometryScriptRemeshOptions RemeshOptions;
     RemeshOptions.bDiscardAttributes = false;
     RemeshOptions.bReprojectToInputMesh = true;
-    
+
     FGeometryScriptUniformRemeshOptions UniformOptions;
     // Calculate target triangle count based on voxel size
     int32 TargetTris = FMath::Max(100, TrisBefore / 2);
     UniformOptions.TargetType = EGeometryScriptUniformRemeshTargetType::TriangleCount;
     UniformOptions.TargetTriangleCount = TargetTris;
-    
+
     UGeometryScriptLibrary_RemeshingFunctions::ApplyUniformRemesh(Mesh, RemeshOptions, UniformOptions, nullptr);
-    
+
     // Fill holes if requested
     if (bFillHoles)
     {
@@ -6857,10 +6857,10 @@ static bool HandleRemeshVoxel(UMcpAutomationBridgeSubsystem* Self, const FString
     Result->SetNumberField(TEXT("voxelSize"), VoxelSize);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, TargetActor);
-    
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Voxel remesh applied"), Result);
     return true;
 }
@@ -6915,7 +6915,7 @@ static bool HandleGenerateComplexCollision(UMcpAutomationBridgeSubsystem* Self, 
     CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::ConvexHulls;
     CollisionOptions.MaxConvexHullsPerMesh = FMath::Clamp(MaxHullCount, 1, 64);
     CollisionOptions.bEmitTransaction = false;
-    
+
     // Generate collision from mesh
     FGeometryScriptSimpleCollision Collision = UGeometryScriptLibrary_CollisionFunctions::GenerateCollisionFromMesh(
         Mesh, CollisionOptions, nullptr);
@@ -6932,10 +6932,10 @@ static bool HandleGenerateComplexCollision(UMcpAutomationBridgeSubsystem* Self, 
     Result->SetNumberField(TEXT("hullCount"), MaxHullCount);
     Result->SetNumberField(TEXT("shapeCount"), ShapeCount);
     Result->SetStringField(TEXT("collisionType"), TEXT("convex_decomposition"));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, TargetActor);
-    
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Complex collision generated"), Result);
 #else
     Self->SendAutomationError(Socket, RequestId, TEXT("Complex collision generation requires UE 5.4+"), TEXT("VERSION_NOT_SUPPORTED"));
@@ -6993,11 +6993,11 @@ static bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const F
     FGeometryScriptSimplifyMeshOptions SimplifyOptions;
     SimplifyOptions.Method = EGeometryScriptRemoveMeshSimplificationType::StandardQEM;
     SimplifyOptions.bAllowSeamCollapse = true;
-    
+
     // Calculate target triangle count based on simplification factor
     int32 CurrentTris = Mesh->GetTriangleCount();
     int32 TargetTris = FMath::Max(4, static_cast<int32>(CurrentTris * SimplificationFactor));
-    
+
     UGeometryScriptLibrary_MeshSimplifyFunctions::ApplySimplifyToTriangleCount(
         Mesh, TargetTris, SimplifyOptions, nullptr);
 
@@ -7006,7 +7006,7 @@ static bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const F
     CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::ConvexHulls;
     CollisionOptions.MaxConvexHullsPerMesh = FMath::Clamp(TargetHullCount, 1, 16);
     CollisionOptions.bEmitTransaction = false;
-    
+
     // SetDynamicMeshCollisionFromMesh generates and applies collision in one step
     UGeometryScriptLibrary_CollisionFunctions::SetDynamicMeshCollisionFromMesh(
         Mesh, DMC, CollisionOptions, nullptr);
@@ -7015,7 +7015,7 @@ static bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const F
     FGeometryScriptSetSimpleCollisionOptions SetOptions;
     FGeometryScriptSimpleCollision Collision = UGeometryScriptLibrary_CollisionFunctions::GetSimpleCollisionFromComponent(
         DMC, nullptr);
-    
+
     int32 ShapeCount = UGeometryScriptLibrary_CollisionFunctions::GetSimpleCollisionShapeCount(Collision);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -7023,10 +7023,10 @@ static bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const F
     Result->SetNumberField(TEXT("trianglesBefore"), CurrentTris);
     Result->SetNumberField(TEXT("trianglesAfter"), Mesh->GetTriangleCount());
     Result->SetNumberField(TEXT("shapeCount"), ShapeCount);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, TargetActor);
-    
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Collision simplified"), Result);
 #else
     Self->SendAutomationError(Socket, RequestId, TEXT("Collision simplification requires UE 5.4+"), TEXT("VERSION_NOT_SUPPORTED"));
@@ -7044,7 +7044,7 @@ static bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, cons
     FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
     int32 LODCount = GetIntFieldGeom(Payload, TEXT("lodCount"), 4);
     FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"), TEXT(""));
-    
+
     if (ActorName.IsEmpty() && AssetPath.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("actorName or assetPath required"), TEXT("INVALID_ARGUMENT"));
@@ -7056,7 +7056,7 @@ static bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, cons
 #if WITH_EDITOR
     UStaticMesh* StaticMesh = nullptr;
     FString TargetPath;
-    
+
     // If we have an asset path, load the existing static mesh
     if (!AssetPath.IsEmpty())
     {
@@ -7066,7 +7066,7 @@ static bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, cons
             Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Invalid asset path: %s"), *AssetPath), TEXT("INVALID_ASSET_PATH"));
             return true;
         }
-        
+
         StaticMesh = LoadObject<UStaticMesh>(nullptr, *SafePath);
         if (!StaticMesh)
         {
@@ -7104,21 +7104,21 @@ static bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, cons
         }
 
         UDynamicMesh* DynMesh = DMC->GetDynamicMesh();
-        
+
         // Convert to StaticMesh
         FString MeshName = ActorName + TEXT("_LOD");
         TargetPath = FString::Printf(TEXT("/Game/MCPTest/%s"), *MeshName);
-        
+
         FGeometryScriptCreateNewStaticMeshAssetOptions AssetOptions;
         AssetOptions.bEnableRecomputeNormals = true;
         AssetOptions.bEnableRecomputeTangents = true;
         AssetOptions.bEnableNanite = false;
-        
+
         EGeometryScriptOutcomePins Outcome;
-        
+
         StaticMesh = UGeometryScriptLibrary_CreateNewAssetFunctions::CreateNewStaticMeshAssetFromMesh(
             DynMesh, TargetPath, AssetOptions, Outcome, nullptr);
-            
+
         if (Outcome != EGeometryScriptOutcomePins::Success || !StaticMesh)
         {
             Self->SendAutomationError(Socket, RequestId, TEXT("Failed to convert DynamicMesh to StaticMesh"), TEXT("CONVERSION_FAILED"));
@@ -7155,10 +7155,10 @@ static bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, cons
     Result->SetStringField(TEXT("assetPath"), TargetPath);
     Result->SetNumberField(TEXT("lodCount"), LODCount);
     Result->SetNumberField(TEXT("triangles"), StaticMesh->GetNumTriangles(0));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, StaticMesh);
-    
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LODs generated for geometry"), Result);
 #else
     Self->SendAutomationError(Socket, RequestId, TEXT("Requires editor build"), TEXT("NOT_SUPPORTED"));
@@ -7207,13 +7207,13 @@ static bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FStr
     }
 
     StaticMesh->Modify();
-    
+
     FStaticMeshSourceModel& SourceModel = StaticMesh->GetSourceModel(LODIndex);
-    
+
     // Set reduction settings
     SourceModel.ReductionSettings.PercentTriangles = TrianglePercent / 100.0f;
     SourceModel.ReductionSettings.PercentVertices = TrianglePercent / 100.0f;
-    
+
     // Set build settings
     SourceModel.BuildSettings.bRecomputeNormals = bRecomputeNormals;
     SourceModel.BuildSettings.bRecomputeTangents = bRecomputeTangents;
@@ -7227,10 +7227,10 @@ static bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FStr
     Result->SetStringField(TEXT("assetPath"), SafePath);
     Result->SetNumberField(TEXT("lodIndex"), LODIndex);
     Result->SetNumberField(TEXT("trianglePercent"), TrianglePercent);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, StaticMesh);
-    
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LOD settings updated"), Result);
 #else
     Self->SendAutomationError(Socket, RequestId, TEXT("Requires editor build"), TEXT("NOT_SUPPORTED"));
@@ -7246,7 +7246,7 @@ static bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const F
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"));
-    
+
     // Parse screen sizes (can be array or object)
     TArray<float> ScreenSizes;
     const TArray<TSharedPtr<FJsonValue>>* SizeArray = nullptr;
@@ -7289,13 +7289,13 @@ static bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const F
     }
 
     StaticMesh->Modify();
-    
+
     // Set screen sizes for each LOD
     // Note: UE5 doesn't have a direct SetLODScreenSize API on UStaticMesh
     // Screen sizes are typically managed via the LODGroup or platform-specific settings
     // Here we configure the reduction settings which indirectly affect LOD switching
     int32 NumLODs = StaticMesh->GetNumSourceModels();
-    
+
     for (int32 i = 0; i < FMath::Min(ScreenSizes.Num(), NumLODs); i++)
     {
         // Configure reduction settings based on screen size
@@ -7317,10 +7317,10 @@ static bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const F
     Result->SetStringField(TEXT("assetPath"), SafePath);
     Result->SetNumberField(TEXT("lodCount"), NumLODs);
     Result->SetNumberField(TEXT("screenSizesSet"), ScreenSizes.Num());
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, StaticMesh);
-    
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LOD screen sizes updated"), Result);
 #else
     Self->SendAutomationError(Socket, RequestId, TEXT("Requires editor build"), TEXT("NOT_SUPPORTED"));

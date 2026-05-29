@@ -901,7 +901,7 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
     }
 
     UWorld* CurrentWorld = GEditor->GetEditorWorldContext().World();
-    
+
     // CRITICAL FIX: Check if current world has World Partition before cleanup
     // World Partition uninitialize can freeze for 20+ seconds in UE 5.7
     // We need to handle this specially to avoid the freeze
@@ -912,19 +912,19 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
         if (WorldPartition)
         {
             UE_LOG(LogTemp, Warning, TEXT("McpSafeNewMap: Current world '%s' has World Partition - cleanup may be slow"), *CurrentWorld->GetName());
-            
+
             // Send progress update warning about WP cleanup
             if (Subsystem && !RequestId.IsEmpty())
             {
                 Subsystem->SendProgressUpdate(RequestId, 2.0f, TEXT("Warning: Current world has World Partition - cleanup may be slow..."));
             }
-            
+
             // Note: There's no API to speed up WP uninitialize
             // The freeze is unavoidable if the current world has WP
             // Solution: Don't create WP levels for tests (useWorldPartition=false)
         }
     }
-    
+
     if (CurrentWorld)
     {
         // Send initial progress update
@@ -932,9 +932,9 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
         {
             Subsystem->SendProgressUpdate(RequestId, 5.0f, TEXT("Starting level creation cleanup..."));
         }
-        
+
         UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Cleaning up current world '%s'"), *CurrentWorld->GetName());
-        
+
         // STEP 1: Mark all levels as invisible to prevent FillLevelList from adding them
         // This is CRITICAL - FillLevelList only adds levels where bIsVisible is true
         for (ULevel* Level : CurrentWorld->GetLevels())
@@ -944,7 +944,7 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
                 Level->bIsVisible = false;
             }
         }
-        
+
         // STEP 2: Unregister all tick functions (not just disable)
         // CRITICAL: SetActorTickEnabled(false) only DISABLES ticking - it doesn't UNREGISTER
         // the tick function from FTickTaskManager. The assertion "!LevelList.Contains(TickTaskLevel)"
@@ -955,7 +955,7 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
         for (ULevel* Level : CurrentWorld->GetLevels())
         {
             if (!Level) continue;
-            
+
             for (AActor* Actor : Level->Actors)
             {
                 if (Actor)
@@ -967,7 +967,7 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
                         Actor->PrimaryActorTick.UnRegisterTickFunction();
                         UnregisteredActorCount++;
                     }
-                    
+
                     // Also unregister all component tick functions
                     for (UActorComponent* Component : Actor->GetComponents())
                     {
@@ -981,25 +981,25 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
             }
         }
         UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Unregistered %d actor ticks and %d component ticks"), UnregisteredActorCount, UnregisteredComponentCount);
-        
+
         // Progress update: unregistered ticking
         if (Subsystem && !RequestId.IsEmpty())
         {
             Subsystem->SendProgressUpdate(RequestId, 15.0f, FString::Printf(TEXT("Unregistered %d actor ticks and %d component ticks"), UnregisteredActorCount, UnregisteredComponentCount));
         }
-        
+
         // STEP 3: Send end-of-frame updates to complete any pending tick work
         CurrentWorld->SendAllEndOfFrameUpdates();
-        
+
         // STEP 4: Flush rendering commands to ensure all GPU work is complete
         FlushRenderingCommands();
-        
+
         // Progress update: flushing GPU
         if (Subsystem && !RequestId.IsEmpty())
         {
             Subsystem->SendProgressUpdate(RequestId, 25.0f, TEXT("Flushing GPU commands..."));
         }
-        
+
         // STEP 5: Explicitly unload streaming levels
         // This prevents UE-197643 where tick prerequisites cross level boundaries
         TArray<ULevelStreaming*> StreamingLevels = CurrentWorld->GetStreamingLevels();
@@ -1011,28 +1011,28 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
                 StreamingLevel->SetShouldBeVisible(false);
             }
         }
-        
+
         // STEP 6: Flush rendering commands again after streaming level changes
         FlushRenderingCommands();
-        
+
         // Progress update: streaming levels unloaded
         if (Subsystem && !RequestId.IsEmpty())
         {
             Subsystem->SendProgressUpdate(RequestId, 40.0f, TEXT("Unloaded streaming levels"));
         }
-        
+
         // STEP 7: Force garbage collection to clean up any remaining references
         GEditor->ForceGarbageCollection(true);
-        
+
         // STEP 8: Another flush after GC
         FlushRenderingCommands();
-        
+
         // Progress update: GC complete
         if (Subsystem && !RequestId.IsEmpty())
         {
             Subsystem->SendProgressUpdate(RequestId, 55.0f, TEXT("Garbage collection complete"));
         }
-        
+
         // STEP 9: Do not call FTickTaskManagerInterface::EndFrame() from an
         // automation handler. EndFrame belongs to the engine frame lifecycle;
         // invoking it here can corrupt active tick state and later crash during
@@ -1045,28 +1045,28 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
         {
             Subsystem->SendProgressUpdate(RequestId, 65.0f, TEXT("Completed tick cleanup"));
         }
-        
+
         // STEP 10: Give the engine a moment to process cleanup
         FPlatformProcess::Sleep(0.10f); // 100ms delay for full cleanup
     }
-    
+
     // STEP 11: Now safe to create new map
-    UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Creating new map (bForceNewMap=%s, bUseWorldPartition=%s)"), 
+    UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Creating new map (bForceNewMap=%s, bUseWorldPartition=%s)"),
            bForceNewMap ? TEXT("true") : TEXT("false"), bUseWorldPartition ? TEXT("true") : TEXT("false"));
-    
+
     // Progress update: creating new map
     if (Subsystem && !RequestId.IsEmpty())
     {
         Subsystem->SendProgressUpdate(RequestId, 75.0f, TEXT("Creating new level..."));
     }
-    
+
     // CRITICAL FIX: Use GEditor->NewMap() with bIsPartitionedWorld parameter
     // This is the proper way to control World Partition creation
     // Reference: Engine/Source/Editor/UnrealEd/Classes/Editor/EditorEngine.h line 2007
     // UWorld* NewMap(bool bIsPartitionedWorld = false);
     // Default is false, but we pass it explicitly for clarity
     UWorld* NewWorld = GEditor->NewMap(bUseWorldPartition);
-    
+
     if (NewWorld)
     {
         // STEP 12: CRITICAL - Unregister ticking on the new world's actors immediately.
@@ -1093,37 +1093,37 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
                 }
             }
         }
-        
+
         // STEP 13: Flush any pending operations from world creation
         FlushRenderingCommands();
-        
+
         // Progress update: finalizing new world
         if (Subsystem && !RequestId.IsEmpty())
         {
             Subsystem->SendProgressUpdate(RequestId, 90.0f, TEXT("Finalizing new level..."));
         }
-        
+
         // STEP 14: REMOVED - Calling StartFrame triggers assertion if TickCompletionEvents is not empty
         // The new world's actors already have ticking disabled from Step 12, so no tick functions
         // should be registered. We skip the StartFrame/EndFrame cycle to avoid the assertion.
         // Instead, we rely on Step 15's additional delay for stability.
-        
+
         // STEP 15: Additional delay to ensure engine is stable
         FPlatformProcess::Sleep(0.10f); // Increased from 0.05f for better stability
-        
+
         // Progress update: complete
         if (Subsystem && !RequestId.IsEmpty())
         {
             Subsystem->SendProgressUpdate(RequestId, 95.0f, TEXT("Level creation complete"));
         }
-        
+
         UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Successfully created new world '%s'"), *NewWorld->GetName());
     }
     else
     {
         UE_LOG(LogTemp, Error, TEXT("McpSafeNewMap: Failed to create new map"));
     }
-    
+
     return NewWorld;
 }
 
@@ -1226,22 +1226,22 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       // 2. Flat (legacy): /Game/Path/LevelName.umap
       // We must check BOTH paths before returning FILE_NOT_FOUND to prevent
       // the "Pure virtual not implemented" crash when LoadMap fails.
-      
+
       FString FilenameToCheck;
       bool bFileExists = false;
-      
+
       // Build both possible paths
       FString FlatMapPath, FullFlatMapPath, FolderMapPath, FullFolderMapPath;
       if (FPackageName::TryConvertLongPackageNameToFilename(
               LevelPath, FlatMapPath, FPackageName::GetMapPackageExtension())) {
         FullFlatMapPath = FPaths::ConvertRelativePathToFull(FlatMapPath);
-        
+
         // Also build folder-based path: /Game/Path/LevelName -> /Game/Path/LevelName/LevelName.umap
         FString LevelName = FPaths::GetBaseFilename(LevelPath);
         FolderMapPath = FPaths::GetPath(FlatMapPath) / LevelName / (LevelName + FPackageName::GetMapPackageExtension());
         FullFolderMapPath = FPaths::ConvertRelativePathToFull(FolderMapPath);
       }
-      
+
       // Check both paths - prefer folder-based (UE 5.x standard)
       if (!FullFolderMapPath.IsEmpty() && IFileManager::Get().FileExists(*FullFolderMapPath)) {
         bFileExists = true;
@@ -1255,7 +1255,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         ExpectedLoadedPath = LevelPath;
         UE_LOG(LogTemp, Log, TEXT("load: Found level at flat path: %s"), *FullFlatMapPath);
       }
-      
+
       // Also check if it's a valid package path (for levels in memory but not on disk yet)
       if (!bFileExists && !FPackageName::DoesPackageExist(LevelPath)) {
         TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
@@ -1269,7 +1269,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         ErrorDetails->SetStringField(TEXT("hint"), TEXT("Unreal levels are typically stored as /Game/Path/LevelName/LevelName.umap"));
         SendAutomationResponse(
             RequestingSocket, RequestId, false,
-            FString::Printf(TEXT("Level file not found. Checked:\n  Folder: %s\n  Flat: %s"), 
+            FString::Printf(TEXT("Level file not found. Checked:\n  Folder: %s\n  Flat: %s"),
                           *FullFolderMapPath, *FullFlatMapPath),
             ErrorDetails, TEXT("FILE_NOT_FOUND"));
         return true;
@@ -1339,7 +1339,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
             return true;
           }
         }
-        
+
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetStringField(TEXT("requestedPath"), LevelPath);
         Resp->SetStringField(TEXT("loadedPath"), ExpectedLoadedPath);
@@ -1448,12 +1448,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
   auto GetAllLevelsFromWorld = [](UWorld* World) -> TArray<ULevel*> {
     TArray<ULevel*> Levels;
     if (!World) return Levels;
-    
+
     // Add persistent level
     if (World->PersistentLevel) {
       Levels.Add(World->PersistentLevel);
     }
-    
+
     // Add streaming levels
     for (const ULevelStreaming* StreamingLevel : World->GetStreamingLevels()) {
       if (StreamingLevel) {
@@ -1463,7 +1463,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         }
       }
     }
-    
+
     return Levels;
   };
 
@@ -1542,20 +1542,20 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     }
 
     // CRITICAL: Check if the current level is transient (unsaved/Untitled)
-    // Saving a transient level causes fatal error: "Attempted to create a package 
+    // Saving a transient level causes fatal error: "Attempted to create a package
     // with name containing double slashes" when HLOD/Instancing generates paths
     // like /Game//Temp/Untitled_1_HLOD0_Instancing
     FString PackageName = World->GetOutermost()->GetName();
     bool bIsTransient = PackageName.StartsWith(TEXT("/Temp/")) ||
                         PackageName.StartsWith(TEXT("/Engine/Transient")) ||
                         PackageName.Contains(TEXT("Untitled"));
-    
+
     if (bIsTransient) {
       TSharedPtr<FJsonObject> ErrorDetail = McpHandlerUtils::CreateResultObject();
       ErrorDetail->SetStringField(TEXT("attemptedPath"), PackageName);
-      ErrorDetail->SetStringField(TEXT("reason"), 
+      ErrorDetail->SetStringField(TEXT("reason"),
           TEXT("Level is unsaved/temporary. Use save_level_as with a valid path first."));
-      ErrorDetail->SetStringField(TEXT("hint"), 
+      ErrorDetail->SetStringField(TEXT("hint"),
           TEXT("Use manage_level with action='save_as' and provide savePath parameter"));
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -1655,7 +1655,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
           ErrorDetail->SetNumberField(TEXT("maxLength"), SafePathLength);
           SendAutomationResponse(
               RequestingSocket, RequestId, false,
-              FString::Printf(TEXT("Path too long (%d chars, max %d): %s"), 
+              FString::Printf(TEXT("Path too long (%d chars, max %d): %s"),
                   AbsoluteFilePath.Len(), SafePathLength, *SavePath),
               ErrorDetail, TEXT("PATH_TOO_LONG"));
           return true;
@@ -1867,7 +1867,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     // If only levelName is provided and it starts with '/', it's treated as a full path
     // If only levelPath is provided, it's treated as a full path (backwards compatibility)
     FString SavePath;
-    
+
     if (!SanitizedLevelPath.IsEmpty() && !LevelName.IsEmpty()) {
       // Both provided: levelPath is parent directory, levelName is the level name
       // Combine them: /Game/MCPTest + TestLevel = /Game/MCPTest/TestLevel
@@ -1972,13 +1972,13 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       {
           UWorldPartition* WorldPartition = NewWorld->GetWorldPartition();
           bWorldPartitionActuallyEnabled = (WorldPartition != nullptr);
-          
+
           // If WP was requested but GetWorldPartition() returns null,
           // we need to explicitly create it via CreateOrRepairWorldPartition
           if (!bWorldPartitionActuallyEnabled)
           {
               UE_LOG(LogTemp, Warning, TEXT("create_new_level: World Partition was requested but not initialized by NewMap. Forcing creation..."));
-              
+
               AWorldSettings* WorldSettings = NewWorld->GetWorldSettings();
               if (WorldSettings)
               {
@@ -2016,26 +2016,26 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       // to prevent Intel GPU driver crashes (MONZA DdiThreadingContext)
       // during level save operations
       bool bSaved = McpSafeLevelSave(NewWorld->PersistentLevel, SavePath);
-      
+
       // CRITICAL FIX: Verify the save actually succeeded using MULTIPLE methods
       // 1. File system check (most reliable if path conversion works)
       // 2. Asset Registry check (works even if path conversion fails)
       // 3. Package existence check (UE's internal method)
-      
+
       FString ActualFilename;
       bool bFileOnDisk = false;
       bool bPathConversionOk = FPackageName::TryConvertLongPackageNameToFilename(
           SavePath, ActualFilename, FPackageName::GetMapPackageExtension());
-      
+
       if (bPathConversionOk && !ActualFilename.IsEmpty()) {
         ActualFilename = FPaths::ConvertRelativePathToFull(ActualFilename);
         bFileOnDisk = IFileManager::Get().FileExists(*ActualFilename);
         UE_LOG(LogTemp, Log, TEXT("create_new_level: File check - path=%s, exists=%d"), *ActualFilename, bFileOnDisk);
       }
-      
+
       // Fallback verification using Asset Registry
       IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-      
+
       // Force scan the directory first
       FString DirectoryPath = FPaths::GetPath(SavePath);
       if (!DirectoryPath.IsEmpty()) {
@@ -2043,7 +2043,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         ScanPaths.Add(DirectoryPath);
         AssetRegistry.ScanPathsSynchronous(ScanPaths, true);
       }
-      
+
       // Check Asset Registry for the saved level
       bool bAssetRegistryOk = FPackageName::DoesPackageExist(SavePath);
       if (!bAssetRegistryOk) {
@@ -2055,13 +2055,13 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         #endif
         bAssetRegistryOk = AssetData.IsValid();
       }
-      
-      UE_LOG(LogTemp, Log, TEXT("create_new_level: Verification - saved=%d, fileOnDisk=%d, assetRegistry=%d, packageExists=%d"), 
+
+      UE_LOG(LogTemp, Log, TEXT("create_new_level: Verification - saved=%d, fileOnDisk=%d, assetRegistry=%d, packageExists=%d"),
              bSaved, bFileOnDisk, bAssetRegistryOk, FPackageName::DoesPackageExist(SavePath));
-      
+
       // Consider success if Asset Registry shows it exists (file check may fail due to path issues)
       bool bSuccess = bSaved && (bFileOnDisk || bAssetRegistryOk);
-      
+
       if (bSuccess) {
         // Also scan the specific file if path conversion worked
         if (bFileOnDisk && !ActualFilename.IsEmpty()) {
@@ -2069,11 +2069,11 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
           FilesToScan.Add(ActualFilename);
           AssetRegistry.ScanFilesSynchronous(FilesToScan, true);
         }
-        
+
         // Wait for Asset Registry to process
         FlushRenderingCommands();
         FPlatformProcess::Sleep(0.05f);
-        
+
         // CRITICAL FIX: Reload the saved level to ensure the world has the correct package name.
         // UEditorLoadingAndSavingUtils::SaveMap() saves to disk but doesn't update the world's
         // outer package. This causes "World Memory Leaks" crashes when load_level is called
@@ -2093,7 +2093,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         {
             UE_LOG(LogTemp, Log, TEXT("create_new_level: Successfully reloaded level with correct package name: %s"), *SavePath);
         }
-        
+
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetStringField(TEXT("levelPath"), SavePath);
         Resp->SetStringField(TEXT("packagePath"), SavePath);
@@ -2107,7 +2107,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         Resp->SetBoolField(TEXT("assetRegistryOk"), bAssetRegistryOk);
         Resp->SetBoolField(TEXT("worldPartitionEnabled"), bWorldPartitionActuallyEnabled);
         Resp->SetBoolField(TEXT("worldPartitionRequested"), bUseWorldPartition);
-        
+
         // Build response message with WP status if applicable
         FString ResponseMsg = FString::Printf(TEXT("Level created: %s"), *SavePath);
         if (bUseWorldPartition && !bWorldPartitionActuallyEnabled)
@@ -2118,7 +2118,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         {
             ResponseMsg += TEXT(" (World Partition enabled)");
         }
-        
+
         SendAutomationResponse(
             RequestingSocket, RequestId, true,
             *ResponseMsg, Resp,
@@ -2197,12 +2197,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     // Find the streaming level by name/path
     ULevelStreaming* TargetStreamingLevel = nullptr;
     FString NormalizedLevelName = LevelName;
-    
+
     // Normalize the path - remove .umap extension if present
     if (NormalizedLevelName.EndsWith(TEXT(".umap"))) {
       NormalizedLevelName = NormalizedLevelName.LeftChop(5);
     }
-    
+
     // Search for the streaming level
     for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels()) {
       if (StreamingLevel) {
@@ -2225,14 +2225,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       // Use the streaming level API directly
       TargetStreamingLevel->SetShouldBeLoaded(bLoad);
       TargetStreamingLevel->SetShouldBeVisible(bVis);
-      
-      Result->SetStringField(TEXT("streamingState"), 
+
+      Result->SetStringField(TEXT("streamingState"),
           TargetStreamingLevel->IsStreamingStatePending() ? TEXT("Pending") :
           TargetStreamingLevel->IsLevelLoaded() ? TEXT("Loaded") : TEXT("Unloaded"));
-      
+
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              FString::Printf(TEXT("Streaming level state updated: %s (Loaded=%s, Visible=%s)"),
-                                 *NormalizedLevelName, 
+                                 *NormalizedLevelName,
                                  bLoad ? TEXT("true") : TEXT("false"),
                                  bVis ? TEXT("true") : TEXT("false")),
                              Result);
@@ -2249,13 +2249,13 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
           FString::Printf(TEXT("StreamLevel %s %s %s"), *NormalizedLevelName,
                           bLoad ? TEXT("Load") : TEXT("Unload"),
                           bVis ? TEXT("Show") : TEXT("Hide"));
-      
+
       // Execute console command and check result
       bool bCmdSuccess = false;
       if (World) {
         bCmdSuccess = GEditor->Exec(World, *Cmd);
       }
-      
+
       if (bCmdSuccess) {
         Result->SetStringField(TEXT("method"), TEXT("console_command"));
         SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -2267,7 +2267,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         Result->SetStringField(TEXT("command"), Cmd);
         Result->SetBoolField(TEXT("handled"), true);
         SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Streaming command submitted (level may not be in world yet)"), 
+                               TEXT("Streaming command submitted (level may not be in world yet)"),
                                Result);
       }
     }
@@ -2707,9 +2707,9 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
           // Check if the existing streaming level is actually valid/loaded
           // If it failed to load (file doesn't exist), it's a broken reference
           ULevel* ExistingLevel = ExistingStreamingLevel->GetLoadedLevel();
-          bool bIsValidStreaming = ExistingLevel != nullptr || 
+          bool bIsValidStreaming = ExistingLevel != nullptr ||
                                    ExistingStreamingLevel->IsStreamingStatePending();
-          
+
           if (bIsValidStreaming) {
             // Sublevel already exists and is valid - return success with info
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -2745,13 +2745,13 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       // Give the engine a moment to attempt loading
       FlushRenderingCommands();
       FPlatformProcess::Sleep(0.1f);
-      
+
       // Check if the level is actually loaded or pending load
       // If the level file doesn't exist, GetLoadedLevel() will be null and
       // the streaming state will not be pending
       ULevel* LoadedLevel = NewLevel->GetLoadedLevel();
       bool bIsPendingLoad = NewLevel->IsStreamingStatePending();
-      
+
       // If level is loaded or pending, it's a valid streaming level
       if (LoadedLevel || bIsPendingLoad) {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -3395,39 +3395,39 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         return true;
       }
     }
-    
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
-    
+
     ULevel* TargetLevel = World->GetCurrentLevel();
     if (!TargetLevel) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No current level"), nullptr, TEXT("NO_LEVEL"));
       return true;
     }
-    
+
     FString CurrentLevelPath = TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT("");
-    
+
     // If a specific level path was requested, validate it matches the current level
     if (!RequestedLevelPath.IsEmpty()) {
       if (CurrentLevelPath.ToLower() != RequestedLevelPath.ToLower()) {
         SendAutomationResponse(
             RequestingSocket, RequestId, false,
-            FString::Printf(TEXT("Requested level '%s' is not loaded (current: %s)"), 
+            FString::Printf(TEXT("Requested level '%s' is not loaded (current: %s)"),
                            *RequestedLevelPath, *CurrentLevelPath),
             nullptr, TEXT("LEVEL_NOT_LOADED"));
         return true;
       }
     }
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("levelPath"), CurrentLevelPath);
     Result->SetBoolField(TEXT("settingsApplied"), true);
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("World settings updated"), Result);
     return true;
   }
@@ -3447,39 +3447,39 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         return true;
       }
     }
-    
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
-    
+
     ULevel* TargetLevel = World->GetCurrentLevel();
     if (!TargetLevel) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No current level"), nullptr, TEXT("NO_LEVEL"));
       return true;
     }
-    
+
     FString CurrentLevelPath = TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT("");
-    
+
     // If a specific level path was requested, validate it matches the current level
     if (!RequestedLevelPath.IsEmpty()) {
       if (CurrentLevelPath.ToLower() != RequestedLevelPath.ToLower()) {
         SendAutomationResponse(
             RequestingSocket, RequestId, false,
-            FString::Printf(TEXT("Requested level '%s' is not loaded (current: %s)"), 
+            FString::Printf(TEXT("Requested level '%s' is not loaded (current: %s)"),
                            *RequestedLevelPath, *CurrentLevelPath),
             nullptr, TEXT("LEVEL_NOT_LOADED"));
         return true;
       }
     }
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("levelPath"), CurrentLevelPath);
     Result->SetBoolField(TEXT("lightingSet"), true);
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level lighting settings updated"), Result);
     return true;
   }
@@ -3489,7 +3489,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
       if (LevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("level_path"), LevelPath);
     }
-    
+
     if (LevelPath.IsEmpty()) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("levelPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
@@ -3518,14 +3518,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
           nullptr, TEXT("PACKAGE_NOT_FOUND"));
       return true;
     }
-    
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
-    
+
     ULevelStreaming* StreamingLevel = UEditorLevelUtils::AddLevelToWorld(World, *LevelPath, ULevelStreamingDynamic::StaticClass());
     if (StreamingLevel) {
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -3559,14 +3559,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
                              TEXT("SECURITY_VIOLATION"));
       return true;
     }
-    
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
-    
+
     TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
     ULevel* TargetLevel = nullptr;
     for (ULevel* Level : Levels) {
@@ -3575,7 +3575,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         break;
       }
     }
-    
+
     if (TargetLevel) {
       bool bRemoved = UEditorLevelUtils::RemoveLevelFromWorld(TargetLevel);
       if (bRemoved) {
@@ -3616,14 +3616,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
                              TEXT("SECURITY_VIOLATION"));
       return true;
     }
-    
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
-    
+
     TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
     ULevel* TargetLevel = nullptr;
     for (ULevel* Level : Levels) {
@@ -3632,7 +3632,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         break;
       }
     }
-    
+
     if (TargetLevel) {
       UEditorLevelUtils::SetLevelVisibility(TargetLevel, bVisible, true);
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -3668,14 +3668,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
                              TEXT("SECURITY_VIOLATION"));
       return true;
     }
-    
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
-    
+
     TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
     ULevel* TargetLevel = nullptr;
     for (ULevel* Level : Levels) {
@@ -3684,7 +3684,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         break;
       }
     }
-    
+
     if (TargetLevel) {
       if (bLocked != FLevelUtils::IsLevelLocked(TargetLevel)) {
         FLevelUtils::ToggleLevelLock(TargetLevel);
@@ -3716,14 +3716,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         return true;
       }
     }
-    
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
-    
+
     ULevel* TargetLevel = nullptr;
     if (!LevelPath.IsEmpty()) {
       TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
@@ -3736,26 +3736,26 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     } else {
       TargetLevel = World->GetCurrentLevel();
     }
-    
+
     if (!TargetLevel) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              FString::Printf(TEXT("Level not found: %s"), *LevelPath),
                              nullptr, TEXT("LEVEL_NOT_FOUND"));
       return true;
     }
-    
+
     TArray<TSharedPtr<FJsonValue>> ActorsArray;
     for (AActor* Actor : TargetLevel->Actors) {
       if (Actor) {
         ActorsArray.Add(MakeShared<FJsonValueString>(Actor->GetName()));
       }
     }
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("levelPath"), TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT(""));
     Result->SetNumberField(TEXT("count"), ActorsArray.Num());
     Result->SetArrayField(TEXT("actors"), ActorsArray);
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level actors retrieved"), Result);
     return true;
   }
@@ -3775,14 +3775,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         return true;
       }
     }
-    
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
-    
+
     ULevel* TargetLevel = nullptr;
     if (!LevelPath.IsEmpty()) {
       TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
@@ -3795,24 +3795,24 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     } else {
       TargetLevel = World->GetCurrentLevel();
     }
-    
+
     if (!TargetLevel) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              FString::Printf(TEXT("Level not found: %s"), *LevelPath),
                              nullptr, TEXT("LEVEL_NOT_FOUND"));
       return true;
     }
-    
+
     FBox LevelBounds(ForceInit);
     if (TargetLevel->LevelBoundsActor.IsValid()) {
       LevelBounds = TargetLevel->LevelBoundsActor->GetComponentsBoundingBox();
     }
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("levelPath"), TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT(""));
     Result->SetStringField(TEXT("min"), FString::Printf(TEXT("X=%f Y=%f Z=%f"), LevelBounds.Min.X, LevelBounds.Min.Y, LevelBounds.Min.Z));
     Result->SetStringField(TEXT("max"), FString::Printf(TEXT("X=%f Y=%f Z=%f"), LevelBounds.Max.X, LevelBounds.Max.Y, LevelBounds.Max.Z));
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level bounds retrieved"), Result);
     return true;
   }
@@ -3823,7 +3823,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
-    
+
     TArray<TSharedPtr<FJsonValue>> Scenarios;
     TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
     for (ULevel* Level : Levels) {
@@ -3834,11 +3834,11 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         Scenarios.Add(MakeShared<FJsonValueObject>(ScenarioInfo));
       }
     }
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("scenarios"), Scenarios);
     Result->SetNumberField(TEXT("count"), Scenarios.Num());
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lighting scenarios retrieved"), Result);
     return true;
   }
@@ -3849,12 +3849,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
-    
+
     FEditorBuildUtils::EditorBuild(World, FBuildOptions::BuildLighting);
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("buildStarted"), true);
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lighting build started"), Result);
     return true;
   }
@@ -3865,12 +3865,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
-    
+
     FEditorBuildUtils::EditorBuild(World, FBuildOptions::BuildAIPaths);
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("buildStarted"), true);
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Navigation build started"), Result);
     return true;
   }
@@ -3881,12 +3881,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
-    
+
     FEditorBuildUtils::EditorBuild(World, FBuildOptions::BuildAll);
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("buildStarted"), true);
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Full build started"), Result);
     return true;
   }

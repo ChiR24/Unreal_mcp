@@ -2,20 +2,20 @@
 // McpAutomationBridge_PipelineHandlers.cpp
 // =============================================================================
 // MCP Automation Bridge - Pipeline & Build Automation Handlers
-// 
+//
 // UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-// 
+//
 // Handler Summary:
 // -----------------------------------------------------------------------------
 // Action: manage_pipeline
 //   - run_ubt: Launch UnrealBuildTool process with target/platform/config
 //   - list_categories: Return all available automation tool categories
 //   - get_status: Return automation bridge status and version info
-// 
+//
 // Dependencies:
 //   - Core: McpAutomationBridgeSubsystem, McpAutomationBridgeHelpers
 //   - Engine: PlatformProcess, Paths, EngineVersion, App
-// 
+//
 // Notes:
 //   - UBT spawns as detached process; results logged separately
 //   - Status includes engine version, platform, PIE state, project name
@@ -47,9 +47,9 @@
 // =============================================================================
 
 bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
-    const FString& RequestId, 
-    const FString& Action, 
-    const TSharedPtr<FJsonObject>& Payload, 
+    const FString& RequestId,
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     // Validate action
@@ -61,7 +61,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -81,13 +81,13 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
     {
         FString Target;
         Payload->TryGetStringField(TEXT("target"), Target);
-        
+
         FString Platform;
         Payload->TryGetStringField(TEXT("platform"), Platform);
-        
+
         FString Configuration;
         Payload->TryGetStringField(TEXT("configuration"), Configuration);
-        
+
         FString ExtraArgs;
         Payload->TryGetStringField(TEXT("extraArgs"), ExtraArgs);
         if (ExtraArgs.IsEmpty())
@@ -221,12 +221,12 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
             Result->SetStringField(TEXT("configuration"), Configuration);
             Result->SetBoolField(TEXT("processStarted"), true);
 
-            SendAutomationResponse(RequestingSocket, RequestId, true, 
+            SendAutomationResponse(RequestingSocket, RequestId, true,
                 TEXT("UBT process started."), Result);
         }
         else
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Failed to launch UBT."), TEXT("LAUNCH_FAILED"));
         }
         return true;
@@ -267,7 +267,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
         Result->SetArrayField(TEXT("categories"), Categories);
         Result->SetNumberField(TEXT("count"), Categories.Num());
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Listed %d canonical MCP tools"), Categories.Num()), Result);
         return true;
     }
@@ -302,19 +302,19 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
 
         // Runtime info
         Result->SetStringField(TEXT("platform"), *UGameplayStatics::GetPlatformName());
-        Result->SetBoolField(TEXT("isPlayInEditor"), 
+        Result->SetBoolField(TEXT("isPlayInEditor"),
             GEditor ? GEditor->IsPlaySessionInProgress() : false);
 
         // Project info
         Result->SetStringField(TEXT("projectName"), FApp::GetProjectName());
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Automation bridge status retrieved"), Result);
         return true;
     }
 
     // Unknown subaction
-    SendAutomationError(RequestingSocket, RequestId, 
+    SendAutomationError(RequestingSocket, RequestId,
         TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;
 }

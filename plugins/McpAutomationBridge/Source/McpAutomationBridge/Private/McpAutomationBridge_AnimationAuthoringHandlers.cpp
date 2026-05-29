@@ -292,13 +292,13 @@ static FString NormalizeAnimPath(const FString& Path)
     FString Normalized = Path;
     Normalized.ReplaceInline(TEXT("/Content"), TEXT("/Game"));
     Normalized.ReplaceInline(TEXT("\\"), TEXT("/"));
-    
+
     // Remove trailing slashes
     while (Normalized.EndsWith(TEXT("/")))
     {
         Normalized.LeftChopInline(1);
     }
-    
+
     return Normalized;
 }
 
@@ -332,7 +332,7 @@ static bool SaveAnimAsset(UObject* Asset, bool bShouldSave)
     {
         return true;
     }
-    
+
     Asset->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(Asset);
 
@@ -401,7 +401,7 @@ static UEdGraph* GetAnimGraphFromBlueprint(UAnimBlueprint* AnimBP)
     {
         return nullptr;
     }
-    
+
     // Search through UbergraphPages first (most common location for AnimGraph)
     for (UEdGraph* Graph : AnimBP->UbergraphPages)
     {
@@ -410,7 +410,7 @@ static UEdGraph* GetAnimGraphFromBlueprint(UAnimBlueprint* AnimBP)
             return Graph;
         }
     }
-    
+
     // Also search through function graphs
     for (UEdGraph* Graph : AnimBP->FunctionGraphs)
     {
@@ -419,7 +419,7 @@ static UEdGraph* GetAnimGraphFromBlueprint(UAnimBlueprint* AnimBP)
             return Graph;
         }
     }
-    
+
     // Fallback: look for any graph with AnimGraph in the name
     for (UEdGraph* Graph : AnimBP->UbergraphPages)
     {
@@ -428,7 +428,7 @@ static UEdGraph* GetAnimGraphFromBlueprint(UAnimBlueprint* AnimBP)
             return Graph;
         }
     }
-    
+
     return nullptr;
 }
 
@@ -439,7 +439,7 @@ static UAnimGraphNode_StateMachine* FindStateMachineNode(UEdGraph* Graph, const 
     {
         return nullptr;
     }
-    
+
     for (UEdGraphNode* Node : Graph->Nodes)
     {
         if (UAnimGraphNode_StateMachine* SMNode = Cast<UAnimGraphNode_StateMachine>(Node))
@@ -452,7 +452,7 @@ static UAnimGraphNode_StateMachine* FindStateMachineNode(UEdGraph* Graph, const 
             }
         }
     }
-    
+
     return nullptr;
 }
 
@@ -490,7 +490,7 @@ static UAnimStateNode* FindStateNode(UAnimationStateMachineGraph* SMGraph, const
     {
         return nullptr;
     }
-    
+
     for (UEdGraphNode* Node : SMGraph->Nodes)
     {
         if (UAnimStateNode* StateNode = Cast<UAnimStateNode>(Node))
@@ -509,7 +509,7 @@ static UAnimStateNode* FindStateNode(UAnimationStateMachineGraph* SMGraph, const
             }
         }
     }
-    
+
     return nullptr;
 }
 
@@ -548,11 +548,11 @@ static UAnimStateTransitionNode* FindTransitionNode(UAnimationStateMachineGraph*
 static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    
+
     FString SubAction = GetStringFieldAnimAuth(Params, TEXT("subAction"), TEXT(""));
-    
+
     // ===== 10.1 Animation Sequences =====
-    
+
     if (SubAction == TEXT("create_animation_sequence"))
     {
     FString Name = GetStringFieldAnimAuth(Params, TEXT("name"), TEXT(""));
@@ -603,14 +603,14 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
                     // Different type - return error to prevent crash
                     FString ExistingClassName = ExistingAsset->GetClass()->GetName();
                     ANIM_ERROR_RESPONSE(
-                        FString::Printf(TEXT("Cannot create animation sequence: asset '%s' already exists as type '%s'"), 
+                        FString::Printf(TEXT("Cannot create animation sequence: asset '%s' already exists as type '%s'"),
                             *ObjectPath, *ExistingClassName),
                         TEXT("ASSET_TYPE_MISMATCH")
                     );
                 }
             }
         }
-        
+
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -618,7 +618,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
         }
-        
+
         UAnimSequenceFactory* Factory = NewObject<UAnimSequenceFactory>();
         Factory->TargetSkeleton = Skeleton;
         UAnimSequence* NewSequence = Cast<UAnimSequence>(
@@ -629,10 +629,10 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create animation sequence"), TEXT("CREATE_FAILED"));
         }
-        
+
         // Set sequence length
         float Duration = static_cast<float>(NumFrames) / static_cast<float>(FrameRate);
-        
+
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         // UE 5.1+: Use SetNumberOfFrames with FFrameNumber
         NewSequence->GetController().SetFrameRate(FFrameRate(FrameRate, 1));
@@ -643,7 +643,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         NewSequence->SequenceLength = Duration;
         PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
-        
+
         SaveAnimAsset(NewSequence, bSave);
 
         FString FullPath = Path / Name;
@@ -660,15 +660,15 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         int32 NumFrames = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("numFrames"), 30));
         int32 FrameRate = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("frameRate"), 30));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
         if (!Sequence)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
-        
+
         float Duration = static_cast<float>(NumFrames) / static_cast<float>(FrameRate);
-        
+
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         // UE 5.1+: Use SetNumberOfFrames with FFrameNumber
         Sequence->GetController().SetFrameRate(FFrameRate(FrameRate, 1));
@@ -683,7 +683,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         Sequence->SequenceLength = Duration;
         PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
-        
+
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Sequence length updated"));
@@ -696,27 +696,27 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
         FString BoneName = GetStringFieldAnimAuth(Params, TEXT("boneName"), TEXT(""));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (BoneName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("boneName is required"), TEXT("MISSING_BONE_NAME"));
         }
-        
+
         UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
         if (!Sequence)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
-        
+
         // Validate that the bone exists in the skeleton before trying to add a track
         USkeleton* Skeleton = Sequence->GetSkeleton();
         if (!Skeleton)
         {
             ANIM_ERROR_RESPONSE(TEXT("Animation sequence has no skeleton reference"), TEXT("NO_SKELETON"));
         }
-        
+
         FName BoneFName(*BoneName);
-        
+
         // Check if the bone exists in the skeleton's reference skeleton
         const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
         int32 BoneIndex = RefSkeleton.FindBoneIndex(BoneFName);
@@ -734,13 +734,13 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             {
                 BoneList += FString::Printf(TEXT(" ... and %d more"), RefSkeleton.GetNum() - 10);
             }
-            
+
             ANIM_ERROR_RESPONSE(
                 FString::Printf(TEXT("Bone '%s' not found in skeleton. Available bones: %s"), *BoneName, *BoneList),
                 TEXT("BONE_NOT_FOUND_IN_SKELETON")
             );
         }
-        
+
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         // UE 5.1+ uses IAnimationDataController with IsValidBoneTrackName and AddBoneCurve
         IAnimationDataController& Controller = Sequence->GetController();
@@ -778,7 +778,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
 #elif ENGINE_MAJOR_VERSION >= 5
         // UE 5.0 approach - uses FindBoneTrackByName which returns a pointer
         IAnimationDataController& Controller = Sequence->GetController();
-        
+
         const FBoneAnimationTrack* Track = Controller.GetModel()->FindBoneTrackByName(BoneFName);
         if (Track == nullptr)
         {
@@ -812,7 +812,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             PRAGMA_ENABLE_DEPRECATION_WARNINGS
         }
 #endif
-        
+
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Bone track '%s' added"), *BoneName));
@@ -826,22 +826,22 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         FString BoneName = GetStringFieldAnimAuth(Params, TEXT("boneName"), TEXT(""));
         int32 Frame = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("frame"), 0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         TSharedPtr<FJsonObject> LocationObj = Params->HasField(TEXT("location")) ? Params->GetObjectField(TEXT("location")) : nullptr;
         TSharedPtr<FJsonObject> RotationObj = Params->HasField(TEXT("rotation")) ? Params->GetObjectField(TEXT("rotation")) : nullptr;
         TSharedPtr<FJsonObject> ScaleObj = Params->HasField(TEXT("scale")) ? Params->GetObjectField(TEXT("scale")) : nullptr;
-        
+
         if (BoneName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("boneName is required"), TEXT("MISSING_BONE_NAME"));
         }
-        
+
         UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
         if (!Sequence)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
-        
+
         // Build transform key
         FVector Location = LocationObj.IsValid() ? GetVectorFromJsonAnim(LocationObj) : FVector::ZeroVector;
         FQuat Rotation = RotationObj.IsValid() ? GetRotatorFromJsonAnim(RotationObj).Quaternion() : FQuat::Identity;
@@ -929,7 +929,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         // UE 5.0 fallback: SetBoneTrackKeys replaces the entire track (no UpdateBoneTrackKeys available)
         Controller.SetBoneTrackKeys(BoneFName, {Location}, {Rotation}, {Scale});
 #endif
-        
+
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Bone key set at frame %d"), Frame));
@@ -945,18 +945,18 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         float Value = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("value"), 0.0));
         bool bCreateIfMissing = GetBoolFieldAnimAuth(Params, TEXT("createIfMissing"), true);
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (CurveName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("curveName is required"), TEXT("MISSING_CURVE_NAME"));
         }
-        
+
         UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
         if (!Sequence)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
-        
+
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         // UE 5.3+ API - FAnimationCurveIdentifier takes FName directly
         IAnimationDataController& Controller = Sequence->GetController();
@@ -976,12 +976,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         {
             Controller.AddCurve(CurveId, AACF_DefaultCurve);
         }
-        
+
         // Set key value
         float FrameTime = static_cast<float>(Frame) / Sequence->GetSamplingFrameRate().AsDecimal();
         Controller.SetCurveKey(CurveId, FRichCurveKey(FrameTime, Value));
 #endif
-        
+
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Curve key set at frame %d"), Frame));
@@ -1194,7 +1194,7 @@ if (SubAction == TEXT("add_notify_state"))
     }
 
         AnimAsset->RefreshCacheData();
-        
+
         SaveAnimAsset(AnimAsset, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Notify state added"));
@@ -1208,33 +1208,33 @@ if (SubAction == TEXT("add_notify_state"))
         FString MarkerName = GetStringFieldAnimAuth(Params, TEXT("markerName"), TEXT(""));
         int32 Frame = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("frame"), 0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (MarkerName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("markerName is required"), TEXT("MISSING_MARKER_NAME"));
         }
-        
+
         UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
         if (!Sequence)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
-        
+
         // Calculate time from frame
         float FrameRate = 30.0f;
 #if ENGINE_MAJOR_VERSION >= 5
         FrameRate = Sequence->GetSamplingFrameRate().AsDecimal();
 #endif
         float Time = static_cast<float>(Frame) / FrameRate;
-        
+
         // Add sync marker
         FAnimSyncMarker NewMarker;
         NewMarker.MarkerName = FName(*MarkerName);
         NewMarker.Time = Time;
-        
+
         Sequence->AuthoredSyncMarkers.Add(NewMarker);
         Sequence->RefreshSyncMarkerDataFromAuthored();
-        
+
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Sync marker '%s' added"), *MarkerName));
@@ -1249,16 +1249,16 @@ if (SubAction == TEXT("add_notify_state"))
         FString RootMotionRootLock = GetStringFieldAnimAuth(Params, TEXT("rootMotionRootLock"), TEXT("RefPose"));
         bool bForceRootLock = GetBoolFieldAnimAuth(Params, TEXT("forceRootLock"), false);
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
         if (!Sequence)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
-        
+
         Sequence->bEnableRootMotion = bEnableRootMotion;
         Sequence->bForceRootLock = bForceRootLock;
-        
+
         // Set root motion lock type
         if (RootMotionRootLock == TEXT("AnimFirstFrame"))
         {
@@ -1272,7 +1272,7 @@ if (SubAction == TEXT("add_notify_state"))
         {
             Sequence->RootMotionRootLock = ERootMotionRootLock::RefPose;
         }
-        
+
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Root motion settings updated"));
@@ -1288,13 +1288,13 @@ if (SubAction == TEXT("add_notify_state"))
         FString BasePoseAnimation = GetStringFieldAnimAuth(Params, TEXT("basePoseAnimation"), TEXT(""));
         int32 BasePoseFrame = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("basePoseFrame"), 0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
         if (!Sequence)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
-        
+
         // Set additive anim type
         if (AdditiveAnimType == TEXT("LocalSpaceAdditive"))
         {
@@ -1308,7 +1308,7 @@ if (SubAction == TEXT("add_notify_state"))
         {
             Sequence->AdditiveAnimType = AAT_None;
         }
-        
+
         // Set base pose type
         if (BasePoseType == TEXT("AnimationFrame"))
         {
@@ -1323,7 +1323,7 @@ if (SubAction == TEXT("add_notify_state"))
         {
             Sequence->RefPoseType = ABPT_RefPose;
         }
-        
+
         // Set base pose animation if provided
         if (!BasePoseAnimation.IsEmpty())
         {
@@ -1333,7 +1333,7 @@ if (SubAction == TEXT("add_notify_state"))
                 Sequence->RefPoseSeq = BaseAnim;
             }
         }
-        
+
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Additive settings updated"));
@@ -1342,7 +1342,7 @@ if (SubAction == TEXT("add_notify_state"))
     }
 
     // ===== 10.2 Animation Montages =====
-    
+
     if (SubAction == TEXT("create_montage"))
     {
     FString Name = GetStringFieldAnimAuth(Params, TEXT("name"), TEXT(""));
@@ -1373,7 +1373,7 @@ if (SubAction == TEXT("add_notify_state"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
         }
-        
+
         UAnimMontageFactory* Factory = NewObject<UAnimMontageFactory>();
         Factory->TargetSkeleton = Skeleton;
         UAnimMontage* NewMontage = Cast<UAnimMontage>(
@@ -1384,14 +1384,14 @@ if (SubAction == TEXT("add_notify_state"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create montage"), TEXT("CREATE_FAILED"));
         }
-        
+
         // Add default slot
         if (!SlotName.IsEmpty())
         {
             FSlotAnimationTrack& SlotTrack = NewMontage->SlotAnimTracks.AddDefaulted_GetRef();
             SlotTrack.SlotName = FName(*SlotName);
         }
-        
+
         SaveAnimAsset(NewMontage, bSave);
 
         FString FullPath = Path / Name;
@@ -1407,21 +1407,21 @@ if (SubAction == TEXT("add_notify_state"))
         FString SectionName = GetStringFieldAnimAuth(Params, TEXT("sectionName"), TEXT(""));
         float StartTime = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("startTime"), 0.0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (SectionName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("sectionName is required"), TEXT("MISSING_SECTION_NAME"));
         }
-        
+
         UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
         if (!Montage)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
         }
-        
+
         // Add new section
         int32 SectionIndex = Montage->AddAnimCompositeSection(FName(*SectionName), StartTime);
-        
+
         SaveAnimAsset(Montage, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Section '%s' added at index %d"), *SectionName, SectionIndex));
@@ -1436,19 +1436,19 @@ if (SubAction == TEXT("add_notify_state"))
         FString SlotName = GetStringFieldAnimAuth(Params, TEXT("slotName"), TEXT("DefaultSlot"));
         float StartTime = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("startTime"), 0.0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
         if (!Montage)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
         }
-        
+
         UAnimSequence* Animation = LoadAnimSequenceFromPath(AnimationPath);
         if (!Animation)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation: %s"), *AnimationPath), TEXT("ANIMATION_NOT_FOUND"));
         }
-        
+
         // Find or create slot track
         FSlotAnimationTrack* SlotTrack = nullptr;
         for (FSlotAnimationTrack& Track : Montage->SlotAnimTracks)
@@ -1459,13 +1459,13 @@ if (SubAction == TEXT("add_notify_state"))
                 break;
             }
         }
-        
+
         if (!SlotTrack)
         {
             SlotTrack = &Montage->SlotAnimTracks.AddDefaulted_GetRef();
             SlotTrack->SlotName = FName(*SlotName);
         }
-        
+
         // Add animation to slot track
         FAnimSegment& Segment = SlotTrack->AnimTrack.AnimSegments.AddDefaulted_GetRef();
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
@@ -1479,7 +1479,7 @@ if (SubAction == TEXT("add_notify_state"))
         Segment.AnimEndTime = Animation->GetPlayLength();
         Segment.AnimPlayRate = 1.0f;
         Segment.LoopingCount = 1;
-        
+
         SaveAnimAsset(Montage, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Animation added to montage slot"));
@@ -1492,24 +1492,24 @@ if (SubAction == TEXT("add_notify_state"))
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
         FString SectionName = GetStringFieldAnimAuth(Params, TEXT("sectionName"), TEXT(""));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (SectionName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("sectionName is required"), TEXT("MISSING_SECTION_NAME"));
         }
-        
+
         UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
         if (!Montage)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
         }
-        
+
         int32 SectionIndex = Montage->GetSectionIndex(FName(*SectionName));
         if (SectionIndex == INDEX_NONE)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Section not found: %s"), *SectionName), TEXT("SECTION_NOT_FOUND"));
         }
-        
+
         // Update section timing if startTime is provided
         if (Params->HasField(TEXT("startTime")))
         {
@@ -1517,7 +1517,7 @@ if (SubAction == TEXT("add_notify_state"))
             FCompositeSection& Section = Montage->CompositeSections[SectionIndex];
             Section.SetTime(StartTime);
         }
-        
+
         SaveAnimAsset(Montage, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Section timing updated"));
@@ -1635,15 +1635,15 @@ if (SubAction == TEXT("add_montage_notify"))
         float BlendTime = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("blendTime"), 0.25));
         FString BlendOption = GetStringFieldAnimAuth(Params, TEXT("blendOption"), TEXT("Linear"));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
         if (!Montage)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
         }
-        
+
         Montage->BlendIn.SetBlendTime(BlendTime);
-        
+
         // Set blend option
         if (BlendOption == TEXT("Cubic"))
         {
@@ -1657,7 +1657,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             Montage->BlendIn.SetBlendOption(EAlphaBlendOption::Linear);
         }
-        
+
         SaveAnimAsset(Montage, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Blend in settings updated"));
@@ -1671,15 +1671,15 @@ if (SubAction == TEXT("add_montage_notify"))
         float BlendTime = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("blendTime"), 0.25));
         FString BlendOption = GetStringFieldAnimAuth(Params, TEXT("blendOption"), TEXT("Linear"));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
         if (!Montage)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
         }
-        
+
         Montage->BlendOut.SetBlendTime(BlendTime);
-        
+
         // Set blend option
         if (BlendOption == TEXT("Cubic"))
         {
@@ -1693,7 +1693,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             Montage->BlendOut.SetBlendOption(EAlphaBlendOption::Linear);
         }
-        
+
         SaveAnimAsset(Montage, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Blend out settings updated"));
@@ -1707,18 +1707,18 @@ if (SubAction == TEXT("add_montage_notify"))
         FString FromSection = GetStringFieldAnimAuth(Params, TEXT("fromSection"), TEXT(""));
         FString ToSection = GetStringFieldAnimAuth(Params, TEXT("toSection"), TEXT(""));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (FromSection.IsEmpty() || ToSection.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("fromSection and toSection are required"), TEXT("MISSING_SECTIONS"));
         }
-        
+
         UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
         if (!Montage)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
         }
-        
+
         // Set next section using section index-based API
         int32 FromSectionIndex = Montage->GetSectionIndex(FName(*FromSection));
         int32 ToSectionIndex = Montage->GetSectionIndex(FName(*ToSection));
@@ -1726,7 +1726,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             Montage->CompositeSections[FromSectionIndex].NextSectionName = FName(*ToSection);
         }
-        
+
         SaveAnimAsset(Montage, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Linked '%s' to '%s'"), *FromSection, *ToSection));
@@ -1735,7 +1735,7 @@ if (SubAction == TEXT("add_montage_notify"))
     }
 
     // ===== 10.3 Blend Spaces =====
-    
+
     if (SubAction == TEXT("create_blend_space_1d"))
     {
 #if MCP_HAS_BLENDSPACE_FACTORY
@@ -1782,14 +1782,14 @@ if (SubAction == TEXT("add_montage_notify"))
                     // Different type - return error to prevent modal dialog
                     FString ExistingClassName = ExistingAsset->GetClass()->GetName();
                     ANIM_ERROR_RESPONSE(
-                        FString::Printf(TEXT("Cannot create BlendSpace1D: asset '%s' already exists as type '%s'"), 
+                        FString::Printf(TEXT("Cannot create BlendSpace1D: asset '%s' already exists as type '%s'"),
                             *ObjectPath, *ExistingClassName),
                         TEXT("ASSET_TYPE_MISMATCH")
                     );
                 }
             }
         }
-        
+
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -1797,7 +1797,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
         }
-        
+
         UBlendSpaceFactory1D* Factory = NewObject<UBlendSpaceFactory1D>();
         Factory->TargetSkeleton = Skeleton;
         UBlendSpace1D* NewBlendSpace = Cast<UBlendSpace1D>(
@@ -1808,7 +1808,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create blend space 1D"), TEXT("CREATE_FAILED"));
         }
-        
+
         // Configure axis - use reflection since BlendParameters is protected
         FBlendParameter NewParam;
         NewParam.DisplayName = AxisName;
@@ -1817,7 +1817,7 @@ if (SubAction == TEXT("add_montage_notify"))
         NewParam.GridNum = 4;
         NewParam.bSnapToGrid = false;
         NewParam.bWrapInput = false;
-        
+
         // Use FProperty reflection to set the protected BlendParameters array
         if (FProperty* BlendParamsProp = UBlendSpace::StaticClass()->FindPropertyByName(TEXT("BlendParameters")))
         {
@@ -1828,9 +1828,9 @@ if (SubAction == TEXT("add_montage_notify"))
                 BlendParamsPtr[0] = NewParam;
             }
         }
-        
+
         NewBlendSpace->PostEditChange();
-        
+
         SaveAnimAsset(NewBlendSpace, bSave);
 
         FString FullPath = Path / Name;
@@ -1892,14 +1892,14 @@ if (SubAction == TEXT("add_montage_notify"))
                     // Different type - return error to prevent modal dialog
                     FString ExistingClassName = ExistingAsset->GetClass()->GetName();
                     ANIM_ERROR_RESPONSE(
-                        FString::Printf(TEXT("Cannot create BlendSpace: asset '%s' already exists as type '%s'"), 
+                        FString::Printf(TEXT("Cannot create BlendSpace: asset '%s' already exists as type '%s'"),
                             *ObjectPath, *ExistingClassName),
                         TEXT("ASSET_TYPE_MISMATCH")
                     );
                 }
             }
         }
-        
+
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -1907,7 +1907,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
         }
-        
+
         UBlendSpaceFactoryNew* Factory = NewObject<UBlendSpaceFactoryNew>();
         Factory->TargetSkeleton = Skeleton;
         UBlendSpace* NewBlendSpace = Cast<UBlendSpace>(
@@ -1918,7 +1918,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create blend space 2D"), TEXT("CREATE_FAILED"));
         }
-        
+
         // Configure axes using reflection since BlendParameters is protected in UE 5.7+
         FBlendParameter HParam;
         HParam.DisplayName = HorizontalAxisName;
@@ -1927,7 +1927,7 @@ if (SubAction == TEXT("add_montage_notify"))
         HParam.GridNum = 4;
         HParam.bSnapToGrid = false;
         HParam.bWrapInput = false;
-        
+
         FBlendParameter VParam;
         VParam.DisplayName = VerticalAxisName;
         VParam.Min = VerticalMin;
@@ -1935,7 +1935,7 @@ if (SubAction == TEXT("add_montage_notify"))
         VParam.GridNum = 4;
         VParam.bSnapToGrid = false;
         VParam.bWrapInput = false;
-        
+
         // Use FProperty reflection to set the protected BlendParameters array
         if (FProperty* BlendParamsProp = UBlendSpace::StaticClass()->FindPropertyByName(TEXT("BlendParameters")))
         {
@@ -1947,11 +1947,11 @@ if (SubAction == TEXT("add_montage_notify"))
                 BlendParamsPtr[1] = VParam;
             }
         }
-        
+
         NewBlendSpace->PostEditChange();
-        
+
         SaveAnimAsset(NewBlendSpace, bSave);
-        
+
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend Space 2D '%s' created"), *Name));
@@ -1960,28 +1960,28 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_blend_sample"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
         FString AnimationPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("animationPath"), TEXT("")));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         UBlendSpace* BlendSpace2D = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
         UBlendSpace1D* BlendSpace1D = Cast<UBlendSpace1D>(StaticLoadObject(UBlendSpace1D::StaticClass(), nullptr, *AssetPath));
-        
+
         UBlendSpace* BlendSpace = BlendSpace2D ? BlendSpace2D : BlendSpace1D;
         if (!BlendSpace)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load blend space: %s"), *AssetPath), TEXT("BLENDSPACE_NOT_FOUND"));
         }
-        
+
         UAnimSequence* Animation = LoadAnimSequenceFromPath(AnimationPath);
         if (!Animation)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation: %s"), *AnimationPath), TEXT("ANIMATION_NOT_FOUND"));
         }
-        
+
         // Get sample value
         FVector SampleValue = FVector::ZeroVector;
         if (Params->HasField(TEXT("sampleValue")))
@@ -2003,7 +2003,7 @@ if (SubAction == TEXT("add_montage_notify"))
                 }
             }
         }
-        
+
         // Add sample
         BlendSpace->AddSample(Animation, SampleValue);
 
@@ -2139,69 +2139,69 @@ if (SubAction == TEXT("add_montage_notify"))
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
         FString Axis = GetStringFieldAnimAuth(Params, TEXT("axis"), TEXT("Horizontal"));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         UBlendSpace* BlendSpace2D = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
         UBlendSpace1D* BlendSpace1D = Cast<UBlendSpace1D>(StaticLoadObject(UBlendSpace1D::StaticClass(), nullptr, *AssetPath));
-        
+
         UBlendSpace* BlendSpace = BlendSpace2D ? BlendSpace2D : BlendSpace1D;
         if (!BlendSpace)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load blend space: %s"), *AssetPath), TEXT("BLENDSPACE_NOT_FOUND"));
         }
-        
+
         // Determine axis index
         int32 AxisIndex = 0;
         if (Axis == TEXT("Vertical") || Axis == TEXT("Y"))
         {
             AxisIndex = 1;
         }
-        
+
         // Update axis settings - UE 5.7+ GetBlendParameter returns const ref
         // We need to use Modify() pattern or just read and report the constraint
         // For now, skip direct modification since BlendParameters is protected
         // The creation flow above already sets defaults, this is for runtime update which
         // may need different approach per UE version
-        
+
         // Log info about what was requested but note it may not take effect in UE 5.7+
         FString RequestedAxisName = GetStringFieldAnimAuth(Params, TEXT("axisName"), TEXT(""));
         float RequestedMin = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("minValue"), 0.0));
         float RequestedMax = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("maxValue"), 100.0));
         int32 RequestedGridNum = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("gridDivisions"), 4));
-        
+
         // Trigger PostEditChange to ensure any internal updates
         BlendSpace->PostEditChange();
         BlendSpace->MarkPackageDirty();
-        
+
         SaveAnimAsset(BlendSpace, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Axis settings updated"));
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_interpolation_settings"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
         FString InterpolationType = GetStringFieldAnimAuth(Params, TEXT("interpolationType"), TEXT("Lerp"));
         float TargetWeightSpeed = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("targetWeightInterpolationSpeed"), 5.0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         UBlendSpace* BlendSpace2D = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
         UBlendSpace1D* BlendSpace1D = Cast<UBlendSpace1D>(StaticLoadObject(UBlendSpace1D::StaticClass(), nullptr, *AssetPath));
-        
+
         UBlendSpace* BlendSpace = BlendSpace2D ? BlendSpace2D : BlendSpace1D;
         if (!BlendSpace)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load blend space: %s"), *AssetPath), TEXT("BLENDSPACE_NOT_FOUND"));
         }
-        
+
         BlendSpace->TargetWeightInterpolationSpeedPerSec = TargetWeightSpeed;
-        
+
         SaveAnimAsset(BlendSpace, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Interpolation settings updated"));
         return Response;
     }
-    
+
     if (SubAction == TEXT("create_aim_offset"))
     {
 #if MCP_HAS_BLENDSPACE_FACTORY
@@ -2232,7 +2232,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
         }
-        
+
         UBlendSpaceFactoryNew* Factory = NewObject<UBlendSpaceFactoryNew>();
         Factory->TargetSkeleton = Skeleton;
         UAimOffsetBlendSpace* NewAimOffset = Cast<UAimOffsetBlendSpace>(
@@ -2243,15 +2243,15 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create aim offset"), TEXT("CREATE_FAILED"));
         }
-        
+
         // Configure default aim offset axes (Yaw and Pitch)
         // Note: In UE 5.7+, GetBlendParameter returns const ref
         // The factory should have set reasonable defaults, just trigger update
         NewAimOffset->PostEditChange();
         NewAimOffset->MarkPackageDirty();
-        
+
         SaveAnimAsset(NewAimOffset, bSave);
-        
+
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Aim Offset '%s' created"), *Name));
@@ -2260,7 +2260,7 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_aim_offset_sample"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -2268,7 +2268,7 @@ if (SubAction == TEXT("add_montage_notify"))
         float Yaw = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("yaw"), 0.0));
         float Pitch = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("pitch"), 0.0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         UAimOffsetBlendSpace* AimOffset = Cast<UAimOffsetBlendSpace>(StaticLoadObject(UAimOffsetBlendSpace::StaticClass(), nullptr, *AssetPath));
         if (!AimOffset)
         {
@@ -2281,37 +2281,37 @@ if (SubAction == TEXT("add_montage_notify"))
                 {
                     ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation: %s"), *AnimationPath), TEXT("ANIMATION_NOT_FOUND"));
                 }
-                
+
                 FVector SampleValue(Yaw, Pitch, 0.0f);
                 BlendSpace->AddSample(Animation, SampleValue);
-                
+
                 SaveAnimAsset(BlendSpace, bSave);
-                
+
                 ANIM_SUCCESS_RESPONSE(TEXT("Aim offset sample added"));
                 return Response;
             }
-            
+
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load aim offset: %s"), *AssetPath), TEXT("AIMOFFSET_NOT_FOUND"));
         }
-        
+
         UAnimSequence* Animation = LoadAnimSequenceFromPath(AnimationPath);
         if (!Animation)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation: %s"), *AnimationPath), TEXT("ANIMATION_NOT_FOUND"));
         }
-        
+
         // Add sample with yaw/pitch coordinates
         FVector SampleValue(Yaw, Pitch, 0.0f);
         AimOffset->AddSample(Animation, SampleValue);
-        
+
         SaveAnimAsset(AimOffset, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Aim offset sample added"));
         return Response;
     }
-    
+
     // ===== 10.4 Animation Blueprints =====
-    
+
     if (SubAction == TEXT("create_anim_blueprint"))
     {
     FString Name = GetStringFieldAnimAuth(Params, TEXT("name"), TEXT(""));
@@ -2383,7 +2383,7 @@ if (SubAction == TEXT("add_montage_notify"))
                                 ? ExistingBlueprint->ParentClass->GetPathName()
                                 : TEXT("<none>");
                         ANIM_ERROR_RESPONSE(
-                            FString::Printf(TEXT("Cannot create AnimBlueprint: asset '%s' already exists as type '%s' (parent=%s)"), 
+                            FString::Printf(TEXT("Cannot create AnimBlueprint: asset '%s' already exists as type '%s' (parent=%s)"),
                                 *ObjectPath, *ExistingClassName, *ExistingParentClassName),
                             TEXT("ASSET_TYPE_MISMATCH")
                         );
@@ -2391,7 +2391,7 @@ if (SubAction == TEXT("add_montage_notify"))
                 }
             }
         }
-        
+
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -2399,7 +2399,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
         }
-        
+
         UAnimBlueprintFactory* Factory = NewObject<UAnimBlueprintFactory>();
         Factory->TargetSkeleton = Skeleton;
         Factory->ParentClass = UAnimInstance::StaticClass();
@@ -2411,18 +2411,18 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create animation blueprint"), TEXT("CREATE_FAILED"));
         }
-        
+
         // Compile the blueprint
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(NewAnimBP);
-        
+
         SaveAnimAsset(NewAnimBP, bSave);
-        
+
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation Blueprint '%s' created"), *Name));
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_state_machine"))
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
@@ -2430,12 +2430,12 @@ if (SubAction == TEXT("add_montage_notify"))
         int32 NodePosX = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionX"), 0));
         int32 NodePosY = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionY"), 0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (StateMachineName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("stateMachineName is required"), TEXT("MISSING_STATE_MACHINE_NAME"));
         }
-        
+
         // Try to find in-memory version first (may have unsaved changes from create_anim_blueprint)
         UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
         if (!AnimBP)
@@ -2447,7 +2447,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
-        
+
 #if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
@@ -2463,14 +2463,14 @@ if (SubAction == TEXT("add_montage_notify"))
             ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State machine '%s' already exists in %s"), *StateMachineName, *BlueprintPath));
             return Response;
         }
-        
+
         // Create the State Machine Node using FGraphNodeCreator
         FGraphNodeCreator<UAnimGraphNode_StateMachine> NodeCreator(*AnimGraph);
         UAnimGraphNode_StateMachine* SMNode = NodeCreator.CreateNode();
         SMNode->NodePosX = NodePosX;
         SMNode->NodePosY = NodePosY;
         NodeCreator.Finalize();
-        
+
         // Create the internal State Machine Graph using FBlueprintEditorUtils
         UAnimationStateMachineGraph* InnerGraph = Cast<UAnimationStateMachineGraph>(
             FBlueprintEditorUtils::CreateNewGraph(
@@ -2484,11 +2484,11 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create animation state machine graph"), TEXT("CREATE_GRAPH_FAILED"));
         }
-        
+
         // Link the State Machine Node to its internal graph
         SMNode->EditorStateMachineGraph = InnerGraph;
         InnerGraph->OwnerAnimGraphNode = SMNode;
-        
+
         // Initialize Entry Node (required for State Machines)
         const UAnimationStateMachineSchema* Schema = Cast<UAnimationStateMachineSchema>(InnerGraph->GetSchema());
         if (!Schema)
@@ -2496,10 +2496,10 @@ if (SubAction == TEXT("add_montage_notify"))
             ANIM_ERROR_RESPONSE(TEXT("Animation state machine graph has an invalid schema"), TEXT("INVALID_SCHEMA"));
         }
         Schema->CreateDefaultNodesForGraph(*InnerGraph);
-        
+
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
-        
+
         Response->SetStringField(TEXT("nodeName"), StateMachineName);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State machine '%s' created with entry node"), *StateMachineName));
 #else
@@ -2510,7 +2510,7 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_state"))
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
@@ -2519,12 +2519,12 @@ if (SubAction == TEXT("add_montage_notify"))
         int32 NodePosX = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionX"), 200));
         int32 NodePosY = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionY"), 0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (StateName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("stateName is required"), TEXT("MISSING_STATE_NAME"));
         }
-        
+
         // Try to find in-memory version first (may have unsaved changes from add_state_machine)
         UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
         if (!AnimBP)
@@ -2536,7 +2536,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
-        
+
 #if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
@@ -2585,14 +2585,14 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Invalid state machine graph"), TEXT("INVALID_GRAPH"));
         }
-        
+
         // Create the State Node using FGraphNodeCreator
         FGraphNodeCreator<UAnimStateNode> StateCreator(*SMGraph);
         UAnimStateNode* StateNode = StateCreator.CreateNode();
         StateNode->NodePosX = NodePosX;
         StateNode->NodePosY = NodePosY;
         StateCreator.Finalize();
-        
+
         // IMPORTANT: FGraphNodeCreator does NOT call PostPlacedNewNode(), which is where
         // the BoundGraph is normally created. We must create it manually here.
         // This mirrors UAnimStateNode::PostPlacedNewNode() logic exactly.
@@ -2606,20 +2606,20 @@ if (SubAction == TEXT("add_montage_notify"))
                 UAnimationStateGraph::StaticClass(),
                 UAnimationStateGraphSchema::StaticClass()
             );
-            
+
             if (StateNode->BoundGraph)
             {
                 // Use RenameGraphWithSuggestion for proper name validation (matches UE behavior)
                 TSharedPtr<INameValidatorInterface> NameValidator = FNameValidatorFactory::MakeValidator(StateNode);
                 FBlueprintEditorUtils::RenameGraphWithSuggestion(StateNode->BoundGraph, NameValidator, *StateName);
-                
+
                 // Initialize the state graph with default nodes (result node, etc.)
                 const UEdGraphSchema* StateSchema = StateNode->BoundGraph->GetSchema();
                 if (StateSchema)
                 {
                     StateSchema->CreateDefaultNodesForGraph(*StateNode->BoundGraph);
                 }
-                
+
                 // Add the new graph as a child of the state machine graph
                 if (SMGraph->SubGraphs.Find(StateNode->BoundGraph) == INDEX_NONE)
                 {
@@ -2632,13 +2632,13 @@ if (SubAction == TEXT("add_montage_notify"))
             // BoundGraph already exists (shouldn't happen with FGraphNodeCreator), rename it
             FBlueprintEditorUtils::RenameGraph(StateNode->BoundGraph, *StateName);
         }
-        
+
         // Get the actual state name that was assigned (may differ from requested due to validation)
         FString ActualStateName = StateNode->GetStateName();
-        
+
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
-        
+
         Response->SetStringField(TEXT("stateName"), ActualStateName);
         Response->SetStringField(TEXT("requestedName"), StateName);
         Response->SetStringField(TEXT("stateMachine"), StateMachineName);
@@ -2650,7 +2650,7 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_transition"))
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
@@ -2659,12 +2659,12 @@ if (SubAction == TEXT("add_montage_notify"))
         FString ToState = GetStringFieldAnimAuth(Params, TEXT("toState"), TEXT(""));
         float CrossfadeDuration = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("crossfadeDuration"), 0.2));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (FromState.IsEmpty() || ToState.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("fromState and toState are required"), TEXT("MISSING_STATES"));
         }
-        
+
         // Try to find in-memory version first (may have unsaved changes from add_state)
         UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
         if (!AnimBP)
@@ -2676,7 +2676,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
-        
+
 #if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA && MCP_HAS_ANIM_STATE_TRANSITION
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
@@ -2748,7 +2748,7 @@ if (SubAction == TEXT("add_montage_notify"))
         // Find the source and target states in the selected graph
         UAnimStateNode* FromNode = FindStateNode(SMGraph, FromState);
         UAnimStateNode* ToNode = FindStateNode(SMGraph, ToState);
-        
+
         if (!FromNode)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Source state '%s' not found"), *FromState), TEXT("SOURCE_STATE_NOT_FOUND"));
@@ -2757,22 +2757,22 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Target state '%s' not found"), *ToState), TEXT("TARGET_STATE_NOT_FOUND"));
         }
-        
+
         // Create the Transition Node
         FGraphNodeCreator<UAnimStateTransitionNode> TransCreator(*SMGraph);
         UAnimStateTransitionNode* TransNode = TransCreator.CreateNode();
         TransCreator.Finalize();
-        
+
         // Establish the connection between states
         TransNode->CreateConnections(FromNode, ToNode);
-        
+
         // Configure transition properties
         TransNode->CrossfadeDuration = CrossfadeDuration;
         TransNode->BlendMode = EAlphaBlendOption::Linear;
-        
+
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
-        
+
         Response->SetStringField(TEXT("fromState"), FromState);
         Response->SetStringField(TEXT("toState"), ToState);
         Response->SetNumberField(TEXT("crossfadeDuration"), CrossfadeDuration);
@@ -2785,7 +2785,7 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_transition_rules"))
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
@@ -2797,7 +2797,7 @@ if (SubAction == TEXT("add_montage_notify"))
         bool bAutomatic = GetBoolFieldAnimAuth(Params, TEXT("automaticRule"), false);
         bool bBidirectional = GetBoolFieldAnimAuth(Params, TEXT("bidirectional"), false);
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         // Try to find in-memory version first (may have unsaved changes)
         UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
         if (!AnimBP)
@@ -2809,7 +2809,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
-        
+
 #if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA && MCP_HAS_ANIM_STATE_TRANSITION
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
@@ -2849,7 +2849,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Transition from '%s' to '%s' not found"), *FromState, *ToState), TEXT("TRANSITION_NOT_FOUND"));
         }
-        
+
         // Update transition properties
         if (CrossfadeDuration >= 0.0f)
         {
@@ -2861,10 +2861,10 @@ if (SubAction == TEXT("add_montage_notify"))
         }
         TransNode->bAutomaticRuleBasedOnSequencePlayerInState = bAutomatic;
         TransNode->Bidirectional = bBidirectional;
-        
+
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Transition rules updated for '%s' -> '%s'"), *FromState, *ToState));
 #else
         // AnimGraph headers not available - return error instead of fake success
@@ -2874,7 +2874,7 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_blend_node"))
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
@@ -2883,13 +2883,13 @@ if (SubAction == TEXT("add_montage_notify"))
         int32 NodePosX = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionX"), 0));
         int32 NodePosY = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionY"), 0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
         if (!AnimBP)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
-        
+
 #if MCP_HAS_ANIM_STATE_MACHINE_GRAPH
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
@@ -2897,10 +2897,10 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
         }
-        
+
         FString CreatedNodeType;
         FString CreatedNodeName = NodeName;
-        
+
 #if MCP_HAS_TWO_WAY_BLEND
         if (BlendType == TEXT("TwoWayBlend") || BlendType == TEXT("Blend"))
         {
@@ -2968,10 +2968,10 @@ if (SubAction == TEXT("add_montage_notify"))
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Cannot create blend node '%s': AnimGraph blend node headers not available in this build."), *BlendType), TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
 #endif
         }
-        
+
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
-        
+
         Response->SetStringField(TEXT("nodeType"), CreatedNodeType);
         Response->SetStringField(TEXT("nodeName"), CreatedNodeName);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend node '%s' (name: %s) created"), *CreatedNodeType, *CreatedNodeName));
@@ -2983,7 +2983,7 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_cached_pose"))
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
@@ -2991,18 +2991,18 @@ if (SubAction == TEXT("add_montage_notify"))
         int32 NodePosX = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionX"), 0));
         int32 NodePosY = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionY"), 0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (CacheName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("cacheName is required"), TEXT("MISSING_CACHE_NAME"));
         }
-        
+
         UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
         if (!AnimBP)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
-        
+
 #if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_CACHED_POSE
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
@@ -3010,7 +3010,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
         }
-        
+
         // Create the Save Cached Pose node
         FGraphNodeCreator<UAnimGraphNode_SaveCachedPose> NodeCreator(*AnimGraph);
         UAnimGraphNode_SaveCachedPose* CachedPoseNode = NodeCreator.CreateNode();
@@ -3018,10 +3018,10 @@ if (SubAction == TEXT("add_montage_notify"))
         CachedPoseNode->NodePosY = NodePosY;
         CachedPoseNode->CacheName = CacheName;
         NodeCreator.Finalize();
-        
+
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
-        
+
         Response->SetStringField(TEXT("cacheName"), CacheName);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Cached pose node '%s' created"), *CacheName));
 #else
@@ -3031,7 +3031,7 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_slot_node"))
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
@@ -3040,18 +3040,18 @@ if (SubAction == TEXT("add_montage_notify"))
         int32 NodePosX = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionX"), 0));
         int32 NodePosY = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionY"), 0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (SlotName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("slotName is required"), TEXT("MISSING_SLOT_NAME"));
         }
-        
+
         UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
         if (!AnimBP)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
-        
+
 #if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_SLOT_NODE
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
@@ -3059,22 +3059,22 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
         }
-        
+
         // Create the Slot node
         FGraphNodeCreator<UAnimGraphNode_Slot> NodeCreator(*AnimGraph);
         UAnimGraphNode_Slot* SlotNode = NodeCreator.CreateNode();
         SlotNode->NodePosX = NodePosX;
         SlotNode->NodePosY = NodePosY;
-        
+
         // Set the slot name (format: "GroupName.SlotName")
         FString FullSlotName = FString::Printf(TEXT("%s.%s"), *GroupName, *SlotName);
         SlotNode->Node.SlotName = FName(*FullSlotName);
-        
+
         NodeCreator.Finalize();
-        
+
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
-        
+
         Response->SetStringField(TEXT("slotName"), FullSlotName);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Slot node '%s' created"), *FullSlotName));
 #else
@@ -3085,7 +3085,7 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_layered_blend_per_bone"))
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
@@ -3093,13 +3093,13 @@ if (SubAction == TEXT("add_montage_notify"))
         int32 NodePosX = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionX"), 0));
         int32 NodePosY = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionY"), 0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
         if (!AnimBP)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
-        
+
 #if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_LAYERED_BLEND
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
@@ -3107,20 +3107,20 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
         }
-        
+
         // Create the Layered Bone Blend node
         FGraphNodeCreator<UAnimGraphNode_LayeredBoneBlend> NodeCreator(*AnimGraph);
         UAnimGraphNode_LayeredBoneBlend* BlendNode = NodeCreator.CreateNode();
         BlendNode->NodePosX = NodePosX;
         BlendNode->NodePosY = NodePosY;
         NodeCreator.Finalize();
-        
+
         // Note: Configuring specific bone layers requires access to BlendNode->Node.LayerSetup
         // which is typically done through the editor UI. Basic node creation is complete.
-        
+
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Layered blend per bone node created"));
 #else
         // AnimGraph headers not available - return error instead of fake success
@@ -3130,25 +3130,25 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_anim_graph_node_value"))
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
         FString NodeName = GetStringFieldAnimAuth(Params, TEXT("nodeName"), TEXT(""));
         FString PropertyName = GetStringFieldAnimAuth(Params, TEXT("propertyName"), TEXT(""));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (NodeName.IsEmpty() || PropertyName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("nodeName and propertyName are required"), TEXT("MISSING_PARAMETERS"));
         }
-        
+
         UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
         if (!AnimBP)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
-        
+
 #if MCP_HAS_ANIM_STATE_MACHINE_GRAPH
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
@@ -3156,7 +3156,7 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
         }
-        
+
         // Find the node by name (search both NodeTitle and NodeComment)
         UEdGraphNode* FoundNode = nullptr;
         for (UEdGraphNode* Node : AnimGraph->Nodes)
@@ -3177,18 +3177,18 @@ if (SubAction == TEXT("add_montage_notify"))
                 }
             }
         }
-        
+
         if (!FoundNode)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Node '%s' not found in AnimGraph"), *NodeName), TEXT("NODE_NOT_FOUND"));
         }
-        
+
         // Find and set the property using reflection
         // Support dot notation for nested properties (e.g., "BlendNode.Alpha")
         void* TargetContainer = FoundNode;
         FProperty* Property = nullptr;
         FString RemainingPath = PropertyName;
-        
+
         while (!RemainingPath.IsEmpty())
         {
             FString CurrentPart;
@@ -3203,11 +3203,11 @@ if (SubAction == TEXT("add_montage_notify"))
                 CurrentPart = RemainingPath;
                 RemainingPath.Empty();
             }
-            
-            FProperty* CurrentProp = TargetContainer 
+
+            FProperty* CurrentProp = TargetContainer
                 ? FoundNode->GetClass()->FindPropertyByName(FName(*CurrentPart))
                 : nullptr;
-            
+
             // If searching on a struct, use the struct's property lookup
             if (!CurrentProp && Property)
             {
@@ -3222,36 +3222,36 @@ if (SubAction == TEXT("add_montage_notify"))
                     }
                 }
             }
-            
+
             if (!CurrentProp)
             {
                 ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Property '%s' not found on node '%s'"), *CurrentPart, *NodeName), TEXT("PROPERTY_NOT_FOUND"));
             }
-            
+
             Property = CurrentProp;
         }
-        
+
         if (!Property)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Property '%s' not found on node '%s'"), *PropertyName, *NodeName), TEXT("PROPERTY_NOT_FOUND"));
         }
-        
+
         // Get the value from params and apply it
         TSharedPtr<FJsonValue> ValueField = Params->TryGetField(TEXT("value"));
         if (!ValueField.IsValid())
         {
             ANIM_ERROR_RESPONSE(TEXT("value parameter is required"), TEXT("MISSING_VALUE"));
         }
-        
+
         FString ApplyError;
         if (!ApplyJsonValueToProperty(FoundNode, Property, ValueField, ApplyError))
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to set property: %s"), *ApplyError), TEXT("PROPERTY_SET_FAILED"));
         }
-        
+
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
-        
+
         Response->SetStringField(TEXT("nodeName"), NodeName);
         Response->SetStringField(TEXT("propertyName"), PropertyName);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Property '%s' set on node '%s'"), *PropertyName, *NodeName));
@@ -3263,9 +3263,9 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     // ===== 10.5 Control Rig =====
-    
+
     if (SubAction == TEXT("create_control_rig"))
     {
 // ControlRig factory static methods (CreateNewControlRigAsset, CreateControlRigFromSkeletalMeshOrSkeleton)
@@ -3312,17 +3312,17 @@ if (SubAction == TEXT("add_montage_notify"))
         {
             ControlRigBP = UControlRigBlueprintFactory::CreateNewControlRigAsset(FullPath, bModularRig);
         }
-        
+
         if (!ControlRigBP)
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create Control Rig blueprint"), TEXT("CREATION_FAILED"));
         }
-        
+
         if (!SaveAnimAsset(ControlRigBP, bSave))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to save Control Rig blueprint"), TEXT("SAVE_FAILED"));
         }
-        
+
         Response->SetStringField(TEXT("assetPath"), ControlRigBP->GetPathName());
         Response->SetBoolField(TEXT("modularRig"), bModularRig);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Control Rig '%s' created successfully"), *Name));
@@ -3404,7 +3404,7 @@ if (SubAction == TEXT("add_montage_notify"))
                 ControlRigBP->SetPreviewMesh(PreviewMesh);
             }
         }
-        
+
         if (!SaveAnimAsset(ControlRigBP, GetBoolFieldAnimAuth(Params, TEXT("save"), true)))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to save Control Rig Blueprint"), TEXT("SAVE_FAILED"));
@@ -3418,19 +3418,19 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_control"))
     {
 #if MCP_HAS_CONTROLRIG
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
         FString ControlName = GetStringFieldAnimAuth(Params, TEXT("controlName"), TEXT(""));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (ControlName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("controlName is required"), TEXT("MISSING_CONTROL_NAME"));
         }
-        
+
         ANIM_ERROR_RESPONSE(
             TEXT("add_control is handled by the animation_physics runtime authoring route; call animation_physics with action=add_control."),
             TEXT("WRONG_HANDLER_ROUTE"));
@@ -3439,13 +3439,13 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_rig_unit"))
     {
 #if MCP_HAS_CONTROLRIG
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
         FString UnitType = GetStringFieldAnimAuth(Params, TEXT("unitType"), TEXT(""));
-        
+
         ANIM_ERROR_RESPONSE(
             TEXT("add_rig_unit is handled by the animation_physics runtime authoring route; call animation_physics with action=add_rig_unit."),
             TEXT("WRONG_HANDLER_ROUTE"));
@@ -3454,7 +3454,7 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("connect_rig_elements"))
     {
 #if MCP_HAS_CONTROLRIG
@@ -3466,7 +3466,7 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("create_pose_library"))
     {
 #if MCP_HAS_POSEASSET
@@ -3474,18 +3474,18 @@ if (SubAction == TEXT("add_montage_notify"))
         FString Path = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("path"), TEXT("/Game/Animations")));
         FString SkeletonPath = GetStringFieldAnimAuth(Params, TEXT("skeletonPath"), TEXT(""));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (Name.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
         }
-        
+
         USkeleton* Skeleton = LoadSkeletonFromPathAnim(SkeletonPath);
         if (!Skeleton)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
         }
-        
+
         ANIM_ERROR_RESPONSE(
             TEXT("create_pose_library is handled by the animation_physics runtime authoring route; call animation_physics with action=create_pose_library."),
             TEXT("WRONG_HANDLER_ROUTE"));
@@ -3494,9 +3494,9 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
         return Response;
     }
-    
+
     // ===== 10.6 Retargeting =====
-    
+
 if (SubAction == TEXT("create_ik_rig"))
 {
 #if MCP_HAS_IKRIG_FACTORY && MCP_HAS_IKRIG
@@ -3577,18 +3577,18 @@ if (SubAction == TEXT("create_ik_rig"))
 #endif
     return Response;
 }
-    
+
     if (SubAction == TEXT("add_ik_chain"))
     {
 #if MCP_HAS_IKRIG
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
         FString ChainName = GetStringFieldAnimAuth(Params, TEXT("chainName"), TEXT(""));
-        
+
         if (ChainName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("chainName is required"), TEXT("MISSING_CHAIN_NAME"));
         }
-        
+
         ANIM_ERROR_RESPONSE(
             TEXT("add_ik_chain is handled by the animation_physics runtime authoring route; call animation_physics with action=add_ik_chain."),
             TEXT("WRONG_HANDLER_ROUTE"));
@@ -3597,7 +3597,7 @@ if (SubAction == TEXT("create_ik_rig"))
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("create_ik_retargeter"))
     {
 #if MCP_HAS_IKRETARGET_FACTORY && MCP_HAS_IKRETARGETER
@@ -3606,12 +3606,12 @@ if (SubAction == TEXT("create_ik_rig"))
         FString SourceIKRigPath = GetStringFieldAnimAuth(Params, TEXT("sourceIKRigPath"), TEXT(""));
         FString TargetIKRigPath = GetStringFieldAnimAuth(Params, TEXT("targetIKRigPath"), TEXT(""));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
-        
+
         if (Name.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
         }
-        
+
         // Create the IK Retargeter using factory
         FString FullPath = Path / Name;
         FString PackageName = FullPath;
@@ -3620,9 +3620,9 @@ if (SubAction == TEXT("create_ik_rig"))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create package for IK Retargeter"), TEXT("PACKAGE_ERROR"));
         }
-        
+
         UIKRetargetFactory* Factory = NewObject<UIKRetargetFactory>();
-        
+
         UIKRetargeter* Retargeter = Cast<UIKRetargeter>(Factory->FactoryCreateNew(
             UIKRetargeter::StaticClass(),
             Package,
@@ -3631,12 +3631,12 @@ if (SubAction == TEXT("create_ik_rig"))
             nullptr,
             GWarn
         ));
-        
+
         if (!Retargeter)
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create IK Retargeter"), TEXT("CREATION_FAILED"));
         }
-        
+
 // Set source and target IK Rigs using the controller (UE 5.1+ requires this as direct access is private)
 #if MCP_HAS_IKRETARGETER_CONTROLLER
 if (UIKRetargeterController* Controller = UIKRetargeterController::GetController(Retargeter))
@@ -3677,12 +3677,12 @@ Retargeter->TargetIKRigAsset = TargetRig;
 }
 }
 #endif
-        
+
         if (!SaveAnimAsset(Retargeter, bSave))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to save IK Retargeter asset"), TEXT("SAVE_FAILED"));
         }
-        
+
         Response->SetStringField(TEXT("assetPath"), Retargeter->GetPathName());
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("IK Retargeter '%s' created successfully"), *Name));
 #elif MCP_HAS_IKRETARGETER
@@ -3694,40 +3694,40 @@ Retargeter->TargetIKRigAsset = TargetRig;
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_retarget_chain_mapping"))
     {
 #if MCP_HAS_IKRETARGETER
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
         FString SourceChain = GetStringFieldAnimAuth(Params, TEXT("sourceChain"), TEXT(""));
         FString TargetChain = GetStringFieldAnimAuth(Params, TEXT("targetChain"), TEXT(""));
-        
+
         if (SourceChain.IsEmpty() || TargetChain.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("sourceChain and targetChain are required"), TEXT("MISSING_CHAINS"));
         }
-        
+
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Chain mapping '%s' -> '%s' set"), *SourceChain, *TargetChain));
 #else
         ANIM_ERROR_RESPONSE(TEXT("IK Retargeter module not available"), TEXT("NOT_SUPPORTED"));
 #endif
         return Response;
     }
-    
+
     // ===== Utility =====
-    
+
     if (SubAction == TEXT("get_animation_info"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        
+
         UObject* Asset = StaticLoadObject(UObject::StaticClass(), nullptr, *AssetPath);
         if (!Asset)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load asset: %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
         }
-        
+
         TSharedPtr<FJsonObject> AnimInfo = McpHandlerUtils::CreateResultObject();
-        
+
         if (UAnimSequence* Sequence = Cast<UAnimSequence>(Asset))
         {
             AnimInfo->SetStringField(TEXT("assetType"), TEXT("AnimSequence"));
@@ -3778,12 +3778,12 @@ Retargeter->TargetIKRigAsset = TargetRig;
         {
             AnimInfo->SetStringField(TEXT("assetType"), Asset->GetClass()->GetName());
         }
-        
+
         Response->SetObjectField(TEXT("animationInfo"), AnimInfo);
         ANIM_SUCCESS_RESPONSE(TEXT("Animation info retrieved"));
         return Response;
     }
-    
+
     // Unknown action
     Response->SetBoolField(TEXT("success"), false);
     Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Unknown animation authoring action: %s"), *SubAction));
@@ -3802,16 +3802,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAnimationAuthoringAction(
     {
         return false; // Not handled
     }
-    
+
     // Call the internal processing function
     TSharedPtr<FJsonObject> Result = HandleAnimationAuthoringRequest(Payload);
-    
+
     // Send response
     if (Result.IsValid())
     {
         bool bSuccess = Result->HasField(TEXT("success")) && GetJsonBoolField(Result, TEXT("success"));
         FString Message = Result->HasField(TEXT("message")) ? GetJsonStringField(Result, TEXT("message")) : TEXT("");
-        
+
         if (bSuccess)
         {
             SendAutomationResponse(RequestingSocket, RequestId, true, Message, Result);
@@ -3824,7 +3824,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAnimationAuthoringAction(
         }
         return true;
     }
-    
+
     SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to process animation authoring action"), TEXT("PROCESSING_FAILED"));
     return true;
 }

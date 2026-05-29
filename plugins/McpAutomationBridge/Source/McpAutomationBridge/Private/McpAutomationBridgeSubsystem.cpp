@@ -30,7 +30,7 @@ static bool IsKnownBenignMcpCompilerWarning(const FString& Message)
  * Custom output device that captures errors and warnings during request processing.
  * This is temporarily attached to GLog during handler execution to detect
  * engine-level errors (like ensure failures) that don't propagate as exceptions.
- * 
+ *
  * Note: Uses the subsystem's shared capture with mutex-protected access and
  * only records messages from the request thread that enabled capture.
  */
@@ -97,7 +97,7 @@ public:
                 Capture.bHasWarnings = true;
             }
         }
-        
+
         // Note: We do not explicitly forward here. When this device is attached to GLog,
         // the engine still routes messages to all other output devices; this class only
         // captures errors and warnings without suppressing normal logging.
@@ -513,7 +513,7 @@ TArray<FString> UMcpAutomationBridgeSubsystem::EndErrorCapture()
     {
         GLog->RemoveOutputDevice(RequestErrorDevice.Get());
     }
-    
+
     // Get captured errors (thread-safe)
     FScopeLock Lock(&ErrorCaptureMutex);
 
@@ -530,7 +530,7 @@ TArray<FString> UMcpAutomationBridgeSubsystem::EndErrorCapture()
     }
     CurrentErrorCapture.bActive = false;
     CurrentErrorCapture.CapturingThreadId = 0;
-    
+
     return AllMessages;
 }
 
@@ -1227,10 +1227,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
                     if (McpConsolidatedActions::IsLightingAction(SubAction)) {
-                      return HandleLightingAction(R, TEXT("manage_lighting"), P, S);
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleLightingAction(R, TEXT("manage_lighting"), RoutedPayload, S);
                     }
                     if (McpConsolidatedActions::IsSplineAction(SubAction)) {
-                      return HandleManageSplinesAction(R, TEXT("manage_splines"), P, S);
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleManageSplinesAction(R, TEXT("manage_splines"), RoutedPayload, S);
                     }
                     return HandleBuildEnvironmentAction(R, A, P, S);
                   });
@@ -1259,7 +1263,9 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
                     if (McpConsolidatedActions::IsPerformanceAction(SubAction)) {
-                      return HandlePerformanceAction(R, TEXT("manage_performance"), P, S);
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandlePerformanceAction(R, TEXT("manage_performance"), RoutedPayload, S);
                     }
                     return HandleSystemControlAction(R, A, P, S);
                   });
@@ -1316,11 +1322,60 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
                     if (McpConsolidatedActions::IsMaterialAuthoringAction(SubAction)) {
+                      FString RoutedSubAction = SubAction;
+                      if (RoutedSubAction == TEXT("connect_material_pins")) {
+                        RoutedSubAction = TEXT("connect_nodes");
+                      } else if (RoutedSubAction == TEXT("break_material_connections")) {
+                        RoutedSubAction = TEXT("disconnect_nodes");
+                      } else if (RoutedSubAction == TEXT("rebuild_material")) {
+                        RoutedSubAction = TEXT("compile_material");
+                      }
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, RoutedSubAction);
+                      if (RoutedPayload.IsValid() && RoutedSubAction == TEXT("connect_nodes")) {
+                        auto ReadFirstNonEmpty = [RoutedPayload](const TCHAR* First, const TCHAR* Second, const TCHAR* Third, FString& OutValue) {
+                          FString Candidate;
+                          if (RoutedPayload->TryGetStringField(First, Candidate) && !Candidate.IsEmpty()) {
+                            OutValue = Candidate;
+                            return true;
+                          }
+                          if (RoutedPayload->TryGetStringField(Second, Candidate) && !Candidate.IsEmpty()) {
+                            OutValue = Candidate;
+                            return true;
+                          }
+                          if (RoutedPayload->TryGetStringField(Third, Candidate) && !Candidate.IsEmpty()) {
+                            OutValue = Candidate;
+                            return true;
+                          }
+                          return false;
+                        };
+
+                        FString ExistingValue;
+                        FString AliasValue;
+                        if ((!RoutedPayload->TryGetStringField(TEXT("sourceNodeId"), ExistingValue) || ExistingValue.IsEmpty()) &&
+                            ReadFirstNonEmpty(TEXT("fromNodeId"), TEXT("fromNode"), TEXT("sourceNode"), AliasValue)) {
+                          RoutedPayload->SetStringField(TEXT("sourceNodeId"), AliasValue);
+                        }
+                        if ((!RoutedPayload->TryGetStringField(TEXT("targetNodeId"), ExistingValue) || ExistingValue.IsEmpty()) &&
+                            ReadFirstNonEmpty(TEXT("toNodeId"), TEXT("toNode"), TEXT("targetNode"), AliasValue)) {
+                          RoutedPayload->SetStringField(TEXT("targetNodeId"), AliasValue);
+                        }
+                        if ((!RoutedPayload->TryGetStringField(TEXT("sourcePin"), ExistingValue) || ExistingValue.IsEmpty()) &&
+                            ReadFirstNonEmpty(TEXT("fromPin"), TEXT("outputPin"), TEXT("sourceOutputPin"), AliasValue)) {
+                          RoutedPayload->SetStringField(TEXT("sourcePin"), AliasValue);
+                        }
+                        if ((!RoutedPayload->TryGetStringField(TEXT("inputName"), ExistingValue) || ExistingValue.IsEmpty()) &&
+                            ReadFirstNonEmpty(TEXT("targetPin"), TEXT("toPin"), TEXT("inputPin"), AliasValue)) {
+                          RoutedPayload->SetStringField(TEXT("inputName"), AliasValue);
+                        }
+                      }
                       return HandleManageMaterialAuthoringAction(
-                          R, TEXT("manage_material_authoring"), P, S);
+                          R, TEXT("manage_material_authoring"), RoutedPayload, S);
                     }
                     if (McpConsolidatedActions::IsTextureAction(SubAction)) {
-                      return HandleManageTextureAction(R, TEXT("manage_texture"), P, S);
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleManageTextureAction(R, TEXT("manage_texture"), RoutedPayload, S);
                     }
                     return HandleAssetAction(R, A, P, S);
                   });
@@ -1387,8 +1442,10 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
                     if (McpConsolidatedActions::IsWidgetAuthoringAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
                       return HandleManageWidgetAuthoringAction(
-                          R, TEXT("manage_widget_authoring"), P, S);
+                          R, TEXT("manage_widget_authoring"), RoutedPayload, S);
                     }
                     static const TSet<FString> GraphSubActions = {
                         TEXT("create_node"),       TEXT("delete_node"),
@@ -1405,7 +1462,9 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                         TEXT("list_animbp_graphs"),
                         TEXT("get_transition_rule_graph")};
                     if (GraphSubActions.Contains(SubAction)) {
-                      return HandleBlueprintGraphAction(R, A, P, S);
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleBlueprintGraphAction(R, A, RoutedPayload, S);
                     }
                     return HandleBlueprintAction(R, A, P, S);
                   });
@@ -1486,14 +1545,20 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
                     if (McpConsolidatedActions::IsInputAction(SubAction)) {
-                      return HandleInputAction(R, TEXT("manage_input"), P, S);
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleInputAction(R, TEXT("manage_input"), RoutedPayload, S);
                     }
                     if (McpConsolidatedActions::IsGameFrameworkAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
                       return HandleManageGameFrameworkAction(
-                          R, TEXT("manage_game_framework"), P, S);
+                          R, TEXT("manage_game_framework"), RoutedPayload, S);
                     }
                     if (McpConsolidatedActions::IsSessionAction(SubAction)) {
-                      return HandleManageSessionsAction(R, TEXT("manage_sessions"), P, S);
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleManageSessionsAction(R, TEXT("manage_sessions"), RoutedPayload, S);
                     }
                     return HandleManageNetworkingAction(R, A, P, S);
                   });
@@ -1568,7 +1633,9 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                           R, TEXT("manage_animation_authoring"), RoutedPayload, S);
                     }
                     if (McpConsolidatedActions::IsSkeletonAction(SubAction)) {
-                      return HandleManageSkeleton(R, TEXT("manage_skeleton"), P, S);
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleManageSkeleton(R, TEXT("manage_skeleton"), RoutedPayload, S);
                     }
                     return HandleAnimationPhysicsAction(R, A, P, S);
                   });
@@ -1723,7 +1790,7 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
                     bool bIsInPIE = false;
                     FString PieState = TEXT("stopped");
-                    
+
                     if (GEditor && GEditor->PlayWorld) {
                       bIsInPIE = true;
                       if (GEditor->PlayWorld->IsPaused()) {
@@ -1732,11 +1799,11 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                         PieState = TEXT("playing");
                       }
                     }
-                    
+
                     Result->SetBoolField(TEXT("isInPIE"), bIsInPIE);
                     Result->SetStringField(TEXT("pieState"), PieState);
-                    
-                    SendAutomationResponse(S, R, true, 
+
+                    SendAutomationResponse(S, R, true,
                         bIsInPIE ? TEXT("PIE is active") : TEXT("PIE is not active"),
                         Result);
                     return true;
@@ -1799,7 +1866,7 @@ bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
 #if WITH_EDITOR
   // GEditor operations must run on the game thread
   check(IsInGameThread());
-  
+
   if (!GEditor) {
     OutErrorMessage = TEXT("Editor not available");
     return false;

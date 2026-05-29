@@ -203,7 +203,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     // Validate and sanitize the asset name
     FString OriginalName = Name;
     FString SanitizedName = SanitizeAssetName(Name);
-    
+
     // Check if sanitization significantly changed the name (indicates invalid characters)
     // If the sanitized name is different and doesn't just have underscores added/removed
     FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
@@ -250,7 +250,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     // Validate parent folder exists
     FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
     IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
-    
+
     FString ParentFolderPath = FPackageName::GetLongPackagePath(ValidatedPath);
     if (!AssetRegistry.PathExists(FName(*ParentFolderPath))) {
       SendAutomationError(Socket, RequestId,
@@ -1862,7 +1862,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     // Validate and sanitize the asset name (same as create_material)
     FString OriginalName = Name;
     FString SanitizedName = SanitizeAssetName(Name);
-    
+
     // Check if sanitization significantly changed the name (indicates invalid characters)
     FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
     FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
@@ -2197,7 +2197,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     // Validate and sanitize the asset name (same as create_material)
     FString OriginalName = Name;
     FString SanitizedName = SanitizeAssetName(Name);
-    
+
     FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
     FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
     if (NormalizedSanitized != NormalizedOriginal) {
@@ -2639,7 +2639,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       SendAutomationError(Socket, RequestId, TEXT("Missing 'layerName'."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    
+
     // Accept path via multiple parameter names (assetPath, materialPath, or path)
     FString Path;
     if (Payload->TryGetStringField(TEXT("assetPath"), Path) && !Path.IsEmpty()) {
@@ -2651,7 +2651,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     } else {
       Path = TEXT("/Game/Landscape/Layers");
     }
-    
+
     // Validate path security - reject traversal and invalid paths
     FString ValidatedPath = SanitizeProjectRelativePath(Path);
     if (ValidatedPath.IsEmpty()) {
@@ -2661,7 +2661,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       return true;
     }
     Path = ValidatedPath;
-    
+
     // Validate the full package path
     FString PackagePath = Path / LayerName;
     if (!FPackageName::IsValidLongPackageName(PackagePath)) {
@@ -2670,7 +2670,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
                           TEXT("INVALID_PATH"));
       return true;
     }
-    
+
     // Create the landscape layer info asset
     FString PackageName = PackagePath;
     UPackage* Package = CreatePackage(*PackageName);
@@ -2678,20 +2678,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       SendAutomationError(Socket, RequestId, TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
       return true;
     }
-    
+
     ULandscapeLayerInfoObject* LayerInfo = NewObject<ULandscapeLayerInfoObject>(
         Package, FName(*LayerName), RF_Public | RF_Standalone);
-    
+
     if (!LayerInfo) {
       SendAutomationError(Socket, RequestId, TEXT("Failed to create layer info."), TEXT("CREATION_ERROR"));
       return true;
     }
-    
+
     // Set layer name
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
     LayerInfo->LayerName = FName(*LayerName);
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
-    
+
     // Set optional properties
     double Hardness = 0.5;
     if (Payload->TryGetNumberField(TEXT("hardness"), Hardness)) {
@@ -2699,7 +2699,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
       LayerInfo->Hardness = static_cast<float>(Hardness);
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
-    
+
     // Set physical material if provided
     FString PhysMaterialPath;
     if (Payload->TryGetStringField(TEXT("physicalMaterialPath"), PhysMaterialPath) && !PhysMaterialPath.IsEmpty()) {
@@ -2720,7 +2720,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
       }
     }
-    
+
 #if WITH_EDITORONLY_DATA
     // Set blend method if specified (replaces bNoWeightBlend)
     bool bNoWeightBlend = false;
@@ -2734,7 +2734,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
     }
 #endif
-    
+
     // Save the asset
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
@@ -2744,14 +2744,14 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       if (DotIndex != INDEX_NONE) { AssetPathStr.LeftInline(DotIndex); }
       LayerInfo->MarkPackageDirty();
     }
-    
+
     // Notify asset registry
     FAssetRegistryModule::AssetCreated(LayerInfo);
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, LayerInfo);
     Result->SetStringField(TEXT("layerName"), LayerName);
-    
+
     SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Landscape layer '%s' created."), *LayerName),
                            Result);
@@ -2761,7 +2761,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     return true;
 #endif
   }
-  
+
   if (SubAction == TEXT("configure_layer_blend")) {
     // Configure layer blend by adding layer weight parameters and blend setup
     FString AssetPath;
@@ -2775,7 +2775,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    
+
     // SECURITY: Validate path BEFORE loading asset
     FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
     if (ValidatedPath.IsEmpty()) {
@@ -2785,14 +2785,14 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       return true;
     }
     AssetPath = ValidatedPath;
-    
+
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
       SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),
                           TEXT("ASSET_NOT_FOUND"));
       return true;
     }
-    
+
     // Parse layers array
     const TArray<TSharedPtr<FJsonValue>> *LayersArray;
     if (!Payload->TryGetArrayField(TEXT("layers"), LayersArray) ||
@@ -2801,66 +2801,66 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    
+
     TArray<FString> CreatedNodeIds;
     int32 BaseX = 0, BaseY = 0;
     Payload->TryGetNumberField(TEXT("x"), BaseX);
     Payload->TryGetNumberField(TEXT("y"), BaseY);
-    
+
     // For each layer, create a scalar parameter for layer weight
     for (int32 i = 0; i < LayersArray->Num(); ++i) {
       const TSharedPtr<FJsonObject> *LayerObj;
       if (!(*LayersArray)[i]->TryGetObject(LayerObj)) {
         continue;
       }
-      
+
       FString LayerName;
       if (!(*LayerObj)->TryGetStringField(TEXT("name"), LayerName) ||
           LayerName.IsEmpty()) {
         continue;
       }
-      
+
       FString BlendType;
       (*LayerObj)->TryGetStringField(TEXT("blendType"), BlendType);
-      
+
       // Create scalar parameter for layer weight
       UMaterialExpressionScalarParameter *WeightParam =
           NewObject<UMaterialExpressionScalarParameter>(
               Material, UMaterialExpressionScalarParameter::StaticClass(),
               NAME_None, RF_Transactional);
-      
+
       WeightParam->ParameterName = FName(*LayerName);
       WeightParam->DefaultValue = (i == 0) ? 1.0f : 0.0f; // First layer enabled by default
       WeightParam->MaterialExpressionEditorX = BaseX;
       WeightParam->MaterialExpressionEditorY = BaseY + (i * 150);
-      
+
 #if WITH_EDITORONLY_DATA
       MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(WeightParam);
 #endif
-      
+
       CreatedNodeIds.Add(MCP_NODE_ID(WeightParam));
     }
-    
+
     Material->PostEditChange();
     Material->MarkPackageDirty();
-    
+
     // Save if requested
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave) {
       SaveMaterialAsset(Material);
     }
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), AssetPath);
     Result->SetNumberField(TEXT("layerCount"), CreatedNodeIds.Num());
-    
+
     TArray<TSharedPtr<FJsonValue>> NodeIdArray;
     for (const FString &NodeId : CreatedNodeIds) {
       NodeIdArray.Add(MakeShared<FJsonValueString>(NodeId));
     }
     Result->SetArrayField(TEXT("nodeIds"), NodeIdArray);
-    
+
     SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Layer blend configured with %d layers."),
                                           CreatedNodeIds.Num()),
@@ -4379,7 +4379,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       ExpressionClass = UMaterialExpressionMultiply::StaticClass();
     else if (NodeType == TEXT("Constant") || NodeType == TEXT("Float") || NodeType == TEXT("Scalar"))
       ExpressionClass = UMaterialExpressionConstant::StaticClass();
-    else if (NodeType == TEXT("Constant3Vector") || NodeType == TEXT("ConstantVector") || 
+    else if (NodeType == TEXT("Constant3Vector") || NodeType == TEXT("ConstantVector") ||
              NodeType == TEXT("Color") || NodeType == TEXT("Vector3"))
       ExpressionClass = UMaterialExpressionConstant3Vector::StaticClass();
     else if (NodeType == TEXT("Lerp") || NodeType == TEXT("LinearInterpolate"))

@@ -477,17 +477,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   // Build response matching the outputWithActor schema:
   // { actor: { id, name, path }, actorPath, classPath?, meshPath? }
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  
+
   // Actor object with id, name and path
   TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
   ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
   ActorObj->SetStringField(TEXT("name"), Spawned->GetActorLabel());
   ActorObj->SetStringField(TEXT("path"), Spawned->GetPathName());
   Data->SetObjectField(TEXT("actor"), ActorObj);
-  
+
   // actorPath for convenience
   Data->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
-  
+
   // Provide the resolved class path useful for referencing
   if (ResolvedClass)
     Data->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
@@ -507,7 +507,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     return Values;
   };
   Data->SetArrayField(TEXT("scale"), MakeVectorArray(Spawned->GetActorScale3D()));
-  
+
   // Add verification data
 	McpHandlerUtils::AddVerification(Data, Spawned);
 
@@ -629,14 +629,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   // Build response matching the outputWithActor schema:
   // { actor: { id, name, path }, actorPath, classPath }
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  
+
   // Actor object with id, name and path
   TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
   ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
   ActorObj->SetStringField(TEXT("name"), Spawned->GetActorLabel());
   ActorObj->SetStringField(TEXT("path"), Spawned->GetPathName());
   Resp->SetObjectField(TEXT("actor"), ActorObj);
-  
+
   // actorPath for convenience
   Resp->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
   Resp->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
@@ -648,7 +648,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
     return Values;
   };
   Resp->SetArrayField(TEXT("scale"), MakeVectorArray(Spawned->GetActorScale3D()));
-  
+
   // Add verification data
 	McpHandlerUtils::AddVerification(Resp, Spawned);
 
@@ -1421,12 +1421,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetArrayField(TEXT("components"), ComponentsArray);
   Data->SetNumberField(TEXT("count"), ComponentsArray.Num());
-  
+
   // Add verification data
   if (Found) {
     McpHandlerUtils::AddVerification(Data, Found);
   }
-  
+
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Actor components retrieved"), Data);
   return true;
@@ -1656,8 +1656,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
   UEditorActorSubsystem *ActorSS =
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
-  
-  
+
+
   // Log total actors being searched
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT("HandleControlActorFindByTag: Searching %d actors in level"), AllActors.Num());
@@ -2275,10 +2275,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
   }
 
   // Additional security: Reject absolute filesystem paths
-  if (ClassName.StartsWith(TEXT("/")) && !ClassName.StartsWith(TEXT("/Script/")) && 
+  if (ClassName.StartsWith(TEXT("/")) && !ClassName.StartsWith(TEXT("/Script/")) &&
       !ClassName.StartsWith(TEXT("/Game/")) && !ClassName.StartsWith(TEXT("/Engine/"))) {
     // Could be a path traversal attempt disguised as a valid path
-    if (ClassName.Contains(TEXT("/etc/")) || ClassName.Contains(TEXT("/usr/")) || 
+    if (ClassName.Contains(TEXT("/etc/")) || ClassName.Contains(TEXT("/usr/")) ||
         ClassName.Contains(TEXT("/var/")) || ClassName.Contains(TEXT("/home/")) ||
         ClassName.Contains(TEXT("/root/")) || ClassName.Contains(TEXT("/tmp/")) ||
         ClassName.Contains(TEXT("C:\\")) || ClassName.Contains(TEXT("D:\\"))) {
@@ -2335,31 +2335,31 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
   if (ActorName.IsEmpty()) {
     Payload->TryGetStringField(TEXT("actor_name"), ActorName);
   }
-  
+
   FString ComponentName;
   Payload->TryGetStringField(TEXT("componentName"), ComponentName);
   if (ComponentName.IsEmpty()) {
     Payload->TryGetStringField(TEXT("component_name"), ComponentName);
   }
-  
+
   if (ActorName.IsEmpty()) {
     SendAutomationError(Socket, RequestId, TEXT("actorName is required"), TEXT("MISSING_PARAM"));
     return true;
   }
-  
+
   if (ComponentName.IsEmpty()) {
     SendAutomationError(Socket, RequestId, TEXT("componentName is required"), TEXT("MISSING_PARAM"));
     return true;
   }
-  
+
   AActor* Actor = FindActorByName(ActorName);
   if (!Actor) {
-    SendAutomationError(Socket, RequestId, 
+    SendAutomationError(Socket, RequestId,
                         FString::Printf(TEXT("Actor not found: %s"), *ActorName),
                         TEXT("ACTOR_NOT_FOUND"));
     return true;
   }
-  
+
   // CRITICAL FIX: Use FindComponentByName helper which supports fuzzy matching
   UActorComponent* Component = FindComponentByName(Actor, ComponentName);
   if (Component) {
@@ -2375,7 +2375,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
     SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Component removed"), Data);
     return true;
   }
-  
+
   SendAutomationError(Socket, RequestId,
                       FString::Printf(TEXT("Component not found: %s"), *ComponentName),
                       TEXT("COMPONENT_NOT_FOUND"));
@@ -2396,43 +2396,43 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
   if (PropertyName.IsEmpty()) {
     Payload->TryGetStringField(TEXT("propertyPath"), PropertyName);
   }
-  
+
   if (ActorName.IsEmpty() || ComponentName.IsEmpty() || PropertyName.IsEmpty()) {
     SendAutomationError(Socket, RequestId, TEXT("actorName, componentName, and propertyName are required"), TEXT("MISSING_PARAM"));
     return true;
   }
-  
+
   AActor* Actor = FindActorByName(ActorName);
   if (!Actor) {
     SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
     return true;
   }
-  
+
   // CRITICAL FIX: Use FindComponentByName helper which supports fuzzy matching
   // This handles cases where component names have numeric suffixes (e.g., "StaticMeshComponent0")
   UActorComponent* Component = FindComponentByName(Actor, ComponentName);
   if (!Component) {
-    SendAutomationError(Socket, RequestId, 
-        FString::Printf(TEXT("Component not found: %s on actor: %s"), *ComponentName, *ActorName), 
+    SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Component not found: %s on actor: %s"), *ComponentName, *ActorName),
         TEXT("COMPONENT_NOT_FOUND"));
     return true;
   }
-  
+
   // Get property using reflection
   FProperty* Property = Component->GetClass()->FindPropertyByName(*PropertyName);
   if (!Property) {
-    SendAutomationError(Socket, RequestId, 
-        FString::Printf(TEXT("Property not found: %s on component: %s"), *PropertyName, *ComponentName), 
+    SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Property not found: %s on component: %s"), *PropertyName, *ComponentName),
         TEXT("PROPERTY_NOT_FOUND"));
     return true;
   }
-  
+
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("actorName"), ActorName);
   Data->SetStringField(TEXT("componentName"), ComponentName);
   Data->SetStringField(TEXT("propertyName"), PropertyName);
   Data->SetStringField(TEXT("propertyType"), Property->GetClass()->GetName());
-  
+
   // Extract property value using the existing helper function
   TSharedPtr<FJsonValue> PropertyValue = ExportPropertyToJsonValue(Component, Property);
   if (PropertyValue.IsValid()) {
@@ -2440,7 +2440,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
   } else {
     Data->SetStringField(TEXT("value"), TEXT("<unsupported property type>"));
   }
-  
+
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Property retrieved"), Data);
   return true;
 #else
@@ -2454,29 +2454,29 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
 #if WITH_EDITOR
   FString ActorName;
   bool bCollisionEnabled = true;
-  
+
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   if (ActorName.IsEmpty()) {
     Payload->TryGetStringField(TEXT("actor_name"), ActorName);
   }
-  
+
   if (Payload->HasField(TEXT("collisionEnabled"))) {
     bCollisionEnabled = GetJsonBoolField(Payload, TEXT("collisionEnabled"), true);
   } else if (Payload->HasField(TEXT("collision_enabled"))) {
     bCollisionEnabled = GetJsonBoolField(Payload, TEXT("collision_enabled"), true);
   }
-  
+
   if (ActorName.IsEmpty()) {
     SendAutomationError(Socket, RequestId, TEXT("actorName is required"), TEXT("MISSING_PARAM"));
     return true;
   }
-  
+
   AActor* Actor = FindActorByName(ActorName);
   if (!Actor) {
     SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
     return true;
   }
-  
+
   // Set collision on root component
   if (USceneComponent* RootComp = Actor->GetRootComponent()) {
     if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(RootComp)) {
@@ -2487,7 +2487,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
       }
     }
   }
-  
+
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("actorName"), ActorName);
   Data->SetBoolField(TEXT("collisionEnabled"), bCollisionEnabled);
@@ -2505,18 +2505,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
   FString ActorName, FunctionName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   Payload->TryGetStringField(TEXT("functionName"), FunctionName);
-  
+
   if (ActorName.IsEmpty() || FunctionName.IsEmpty()) {
     SendAutomationError(Socket, RequestId, TEXT("actorName and functionName are required"), TEXT("MISSING_PARAM"));
     return true;
   }
-  
+
   AActor* Actor = FindActorByName(ActorName);
   if (!Actor) {
     SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
     return true;
   }
-  
+
   // Find and call the function
   UFunction* Function = Actor->FindFunction(*FunctionName);
   if (Function) {
@@ -2527,24 +2527,24 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
       // Allocate zeroed memory for parameters
       void* ParmsBuffer = FMemory::Malloc(Function->ParmsSize, 16);
       FMemory::Memzero(ParmsBuffer, Function->ParmsSize);
-      
+
       // Call with parameter buffer
       Actor->ProcessEvent(Function, ParmsBuffer);
-      
+
       // Free the buffer
       FMemory::Free(ParmsBuffer);
     } else {
       // No parameters, safe to pass nullptr
       Actor->ProcessEvent(Function, nullptr);
     }
-    
+
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetStringField(TEXT("actorName"), ActorName);
     Data->SetStringField(TEXT("functionName"), FunctionName);
     SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Function called"), Data);
     return true;
   }
-  
+
   SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Function not found: %s"), *FunctionName), TEXT("FUNCTION_NOT_FOUND"));
   return true;
 #else
@@ -2763,7 +2763,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
   // Use Eject console command instead of RequestEndPlayMap
   // This ejects the player from the possessed pawn without stopping PIE
   GEditor->Exec(GEditor->PlayWorld, TEXT("Eject"));
-  
+
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("ejected"), true);
@@ -3294,7 +3294,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   // SECURITY: Sanitize filename to prevent path traversal
   // Remove any path components and keep only the base filename
   Filename = FPaths::GetCleanFilename(Filename);
-  
+
   // Validate filename doesn't contain suspicious patterns
   if (Filename.Contains(TEXT("..")) || Filename.Contains(TEXT("/")) || Filename.Contains(TEXT("\\"))) {
     // Reject suspicious filename and use default
@@ -3728,11 +3728,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
   // Get the level editor module and active viewport
   FLevelEditorModule& LevelEditorModule = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
   TSharedPtr<IAssetViewport> ActiveViewport = LevelEditorModule.GetFirstActiveViewport();
-  
+
   if (ActiveViewport.IsValid()) {
     FEditorViewportClient& ViewportClient = ActiveViewport->GetAssetViewportClient();
     ViewportClient.SetRealtime(bRealtime);
-    
+
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("realtime"), bRealtime);
@@ -3788,7 +3788,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
   if (InputType.IsEmpty()) {
     Payload->TryGetStringField(TEXT("inputAction"), InputType);
   }
-  
+
   // Map action values to C++ expected type values
   InputType = InputType.ToLower();
   if (InputType == TEXT("pressed") || InputType == TEXT("down")) {
@@ -3890,12 +3890,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
 
     FSlateApplication& SlateApp = FSlateApplication::Get();
     FVector2D Position((float)X, (float)Y);
-    
+
     // UE 5.7: FPointerEvent constructor signature changed
     // FPointerEvent(uint32 InPointerIndex, ScreenSpacePosition, LastScreenSpacePosition, Delta, PressedButtons, ModifierKeys)
     TSet<FKey> PressedButtons;
     PressedButtons.Add(MouseButtonKey);
-    
+
     // Simulate mouse down then up for a click
     FPointerEvent MouseDownEvent(
         0,  // PointerIndex
@@ -3906,7 +3906,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
         FModifierKeysState()
     );
     SlateApp.ProcessMouseButtonDownEvent(nullptr, MouseDownEvent);
-    
+
     TSet<FKey> ReleasedButtons;  // Empty set for mouse up
     FPointerEvent MouseUpEvent(
         0,  // PointerIndex
@@ -3918,7 +3918,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
     );
     SlateApp.ProcessMouseButtonUpEvent(MouseUpEvent);
     bHandledBySlate = true;
-    
+
     bSuccess = true;
     Message = FString::Printf(TEXT("Mouse click at (%f, %f)"), X, Y);
   } else if (InputType == TEXT("mouse_move") || InputType == TEXT("move")) {
@@ -3930,7 +3930,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
     FVector2D Position((float)X, (float)Y);
     SlateApp.SetCursorPos(Position);
     bHandledBySlate = true;
-    
+
     bSuccess = true;
     Message = FString::Printf(TEXT("Mouse moved to (%f, %f)"), X, Y);
   } else {
@@ -4109,7 +4109,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
   Resp->SetNumberField(TEXT("totalDirty"), TotalDirty);
   Resp->SetArrayField(TEXT("skippedPackages"), MakeStringArray(SkippedPackages));
   Resp->SetArrayField(TEXT("failedPackages"), MakeStringArray(FailedPackages));
-  
+
   // Only report outer success if the operation actually succeeded
   if (bSuccess || TotalDirty == 0) {
     SendAutomationResponse(Socket, RequestId, true,
@@ -4197,7 +4197,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetEditorMode(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("mode"), Mode);
-  SendAutomationResponse(Socket, RequestId, true, 
+  SendAutomationResponse(Socket, RequestId, true,
                          FString::Printf(TEXT("Editor mode set to %s"), *Mode), Resp, FString());
   return true;
 #else
@@ -4274,14 +4274,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameView(
   }
 
   // Toggle game view via console command
-  GEditor->Exec(GEditor->GetEditorWorldContext().World(), 
+  GEditor->Exec(GEditor->GetEditorWorldContext().World(),
                 bEnabled ? TEXT("ToggleGameView 1") : TEXT("ToggleGameView 0"));
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("gameViewEnabled"), bEnabled);
-  SendAutomationResponse(Socket, RequestId, true, 
-                         FString::Printf(TEXT("Game view %s"), bEnabled ? TEXT("enabled") : TEXT("disabled")), 
+  SendAutomationResponse(Socket, RequestId, true,
+                         FString::Printf(TEXT("Game view %s"), bEnabled ? TEXT("enabled") : TEXT("disabled")),
                          Resp, FString());
   return true;
 #else
@@ -4339,7 +4339,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetFixedDeltaTime(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("fixedDeltaTime"), DeltaTime);
-  SendAutomationResponse(Socket, RequestId, true, 
+  SendAutomationResponse(Socket, RequestId, true,
                          FString::Printf(TEXT("Fixed delta time set to %f"), DeltaTime), Resp, FString());
   return true;
 #else
@@ -4393,12 +4393,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
 
   // Use FEditorFileUtils to load the map
   FString MapPath = LevelPath + TEXT(".umap");
-  
+
   // CRITICAL FIX: Unreal stores levels in TWO possible path patterns:
   // 1. Folder-based (standard): /Game/Path/LevelName/LevelName.umap
   // 2. Flat (legacy): /Game/Path/LevelName.umap
   // We must check BOTH paths before returning FILE_NOT_FOUND.
-  
+
   // Build both possible paths
   FString FlatMapPath = LevelPath + TEXT(".umap");
   // Check if path is /Engine/ or /Game/ and extract accordingly
@@ -4410,17 +4410,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
   }
   FString FullFlatMapPath = ContentDir + FlatMapPath.Mid(PrefixLen);
   FullFlatMapPath = FPaths::ConvertRelativePathToFull(FullFlatMapPath);
-  
+
   // Folder-based path: /Game/Path/LevelName -> /Game/Path/LevelName/LevelName.umap
   FString LevelName = FPaths::GetBaseFilename(LevelPath);
   FString FolderMapPath = LevelPath + TEXT("/") + LevelName + TEXT(".umap");
   FString FullFolderMapPath = ContentDir + FolderMapPath.Mid(PrefixLen);
   FullFolderMapPath = FPaths::ConvertRelativePathToFull(FullFolderMapPath);
-  
+
   // Check which path exists
   FString MapPathToLoad;
   FString FullMapPath;
-  
+
   // Prefer folder-based path (Unreal's standard) if it exists
   if (FPaths::FileExists(FullFolderMapPath)) {
     MapPathToLoad = FolderMapPath;
@@ -4441,8 +4441,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     ErrorDetails->SetStringField(TEXT("checkedFlat"), FullFlatMapPath);
     ErrorDetails->SetStringField(TEXT("hint"), TEXT("Unreal levels are typically stored as /Game/Path/LevelName/LevelName.umap"));
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("FILE_NOT_FOUND"),
-                              FString::Printf(TEXT("Level file not found. Checked:\n  Folder: %s\n  Flat: %s"), 
-                                            *FullFolderMapPath, *FullFlatMapPath), 
+                              FString::Printf(TEXT("Level file not found. Checked:\n  Folder: %s\n  Flat: %s"),
+                                            *FullFolderMapPath, *FullFlatMapPath),
                               ErrorDetails);
     return true;
   }
@@ -4484,7 +4484,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
       return true;
     }
   }
-  
+
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
   FTSTicker::GetCoreTicker().AddTicker(
       FTickerDelegate::CreateLambda([WeakThis, Socket, RequestId, LevelPath,

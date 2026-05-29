@@ -241,7 +241,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // Dispatch to specific handlers
   // CRITICAL: These actions must match what TS sends as 'action' (not just 'subAction')
   // When TS calls executeAutomationRequest(tools, 'search_assets', {...}), Action='search_assets'
-  
+
   // Asset Operations
   if (Lower == TEXT("import"))
     return HandleImportAsset(RequestId, Payload, RequestingSocket);
@@ -289,7 +289,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleDoesAssetExist(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("get_material_stats"))
     return HandleGetMaterialStats(RequestId, Payload, RequestingSocket);
-  
+
   // Search (CRITICAL: search_assets must be dispatched - was missing causing timeouts)
   if (Lower == TEXT("search_assets"))
     return HandleSearchAssets(RequestId, Action, Payload, RequestingSocket);
@@ -366,7 +366,7 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
   // Get directory path - REQUIRED for proper error reporting
   FString DirectoryPath;
   Payload->TryGetStringField(TEXT("directoryPath"), DirectoryPath);
-  
+
   // Also check for "path" as alias
   if (DirectoryPath.IsEmpty()) {
     Payload->TryGetStringField(TEXT("path"), DirectoryPath);
@@ -757,7 +757,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlEnable(
   }
 
   ISourceControlModule& SourceControlModule = ISourceControlModule::Get();
-  
+
   // Check if already enabled
   if (SourceControlModule.IsEnabled()) {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -773,12 +773,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlEnable(
   if (!Provider.IsEmpty() && !Provider.Equals(TEXT("None"), ESearchCase::IgnoreCase)) {
     SourceControlModule.SetProvider(FName(*Provider));
   }
-  
+
   bool bEnabled = SourceControlModule.IsEnabled();
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("success"), bEnabled);
   Result->SetStringField(TEXT("provider"), SourceControlModule.GetProvider().GetName().ToString());
-  
+
   if (bEnabled) {
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Source control enabled"), Result, FString());
@@ -858,27 +858,27 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
                             TEXT("SECURITY_VIOLATION"));
         return true;
       }
-      
+
       // Get all assets in the folder
       FAssetRegistryModule &AssetRegistryModule =
           FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
       IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
-      
+
       FARFilter Filter;
       Filter.PackagePaths.Add(FName(*NormalizedPath));
       Filter.bRecursivePaths = true;
-      
+
       // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
       // Asset listing uses cached AssetRegistry data exclusively.
       // LIMITATION: Assets not yet indexed by the editor's background scanner
       // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
       TArray<FAssetData> AssetDataList;
       AssetRegistry.GetAssets(Filter, AssetDataList);
-      
+
       for (const FAssetData &AssetData : AssetDataList) {
         AssetPaths.Add(AssetData.ToSoftObjectPath().ToString());
       }
-      
+
       if (AssetPaths.Num() == 0) {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("success"), true);
@@ -1038,7 +1038,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     Payload->TryGetStringField(TEXT("folderPath"), FolderPath);
     Payload->TryGetStringField(TEXT("path"), FolderPath);  // alias
     Payload->TryGetStringField(TEXT("pattern"), Pattern);
-    
+
     if (!FolderPath.IsEmpty()) {
       // Normalize path
       FString NormalizedPath = FolderPath;
@@ -1053,23 +1053,23 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
                             TEXT("SECURITY_VIOLATION"));
         return true;
       }
-      
+
       // Get all assets in the folder
       FAssetRegistryModule &AssetRegistryModule =
           FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
       IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
-      
+
       FARFilter Filter;
       Filter.PackagePaths.Add(FName(*NormalizedPath));
       Filter.bRecursivePaths = true;
-      
+
       // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
       // Asset listing uses cached AssetRegistry data exclusively.
       // LIMITATION: Assets not yet indexed by the editor's background scanner
       // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
       TArray<FAssetData> AssetDataList;
       AssetRegistry.GetAssets(Filter, AssetDataList);
-      
+
       for (const FAssetData &AssetData : AssetDataList) {
         FString AssetPath = AssetData.ToSoftObjectPath().ToString();
         // If pattern is specified, filter by it
@@ -1081,7 +1081,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
         }
         AssetPaths.Add(AssetPath);
       }
-      
+
       if (AssetPaths.Num() == 0) {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("success"), true);
@@ -1677,7 +1677,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
   Resp->SetNumberField(TEXT("updatedKeys"), UpdatedCount);
-  
+
   // Add verification data
   McpHandlerUtils::AddVerification(Resp, Asset);
 
@@ -1924,13 +1924,13 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPath);
-    
+
     // Add verification data
     UObject* RenamedAsset = UEditorAssetLibrary::LoadAsset(DestinationPath);
     if (RenamedAsset) {
       McpHandlerUtils::AddVerification(Resp, RenamedAsset);
     }
-    
+
     SendAutomationResponse(Socket, RequestId, true, TEXT("Asset renamed"), Resp,
                            FString());
   } else {
@@ -1993,7 +1993,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   int32 DeletedCount = 0;
   TArray<FString> NotFoundPaths;
   TArray<FString> FailedToDeletePaths;
-  
+
   for (const FString &Path : PathsToDelete) {
     const FString SafePath = SanitizeProjectRelativePath(Path);
     if (SafePath.IsEmpty()) {
@@ -2034,13 +2034,13 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  
+
   // Return success only if at least one asset was deleted
   bool bSuccess = DeletedCount > 0;
   Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetNumberField(TEXT("deletedCount"), DeletedCount);
   Resp->SetBoolField(TEXT("existsAfter"), false);
-  
+
   if (NotFoundPaths.Num() > 0) {
     TArray<TSharedPtr<FJsonValue>> NotFoundArray;
     for (const FString& P : NotFoundPaths) {
@@ -2049,7 +2049,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     Resp->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
     Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
   }
-  
+
   if (FailedToDeletePaths.Num() > 0) {
     TArray<TSharedPtr<FJsonValue>> FailedArray;
     for (const FString& P : FailedToDeletePaths) {
@@ -2058,14 +2058,14 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     Resp->SetArrayField(TEXT("failedToDeletePaths"), FailedArray);
     Resp->SetNumberField(TEXT("failedCount"), FailedToDeletePaths.Num());
   }
-  
+
   if (bSuccess) {
     SendAutomationResponse(Socket, RequestId, true, TEXT("Assets deleted"), Resp, FString());
   } else {
     // Nothing was deleted - determine the reason
     FString ErrorMessage;
     FString ErrorCode;
-    
+
     if (NotFoundPaths.Num() > 0 && FailedToDeletePaths.Num() == 0) {
       // All paths were not found
       ErrorMessage = FString::Printf(TEXT("No assets deleted. %d path(s) not found."), NotFoundPaths.Num());
@@ -2076,11 +2076,11 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
       ErrorCode = TEXT("DELETE_FAILED");
     } else {
       // Mixed: some not found, some failed to delete
-      ErrorMessage = FString::Printf(TEXT("No assets deleted. %d path(s) not found, %d failed to delete."), 
+      ErrorMessage = FString::Printf(TEXT("No assets deleted. %d path(s) not found, %d failed to delete."),
                                       NotFoundPaths.Num(), FailedToDeletePaths.Num());
       ErrorCode = TEXT("DELETE_FAILED");
     }
-    
+
     SendAutomationResponse(Socket, RequestId, false, ErrorMessage, Resp, ErrorCode);
   }
   return true;
@@ -2173,7 +2173,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
 
   // Check if asset exists - return error for non-existent assets
   if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
-    SendAutomationError(Socket, RequestId, 
+    SendAutomationError(Socket, RequestId,
                         FString::Printf(TEXT("Asset not found: %s"), *SafeAssetPath),
                         TEXT("ASSET_NOT_FOUND"));
     return true;
@@ -2235,7 +2235,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
 
   // Check if asset exists - return error for non-existent assets
   if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
-    SendAutomationError(Socket, RequestId, 
+    SendAutomationError(Socket, RequestId,
                         FString::Printf(TEXT("Asset not found: %s"), *SafeAssetPath),
                         TEXT("ASSET_NOT_FOUND"));
     return true;
@@ -2892,17 +2892,17 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
                             TEXT("SECURITY_VIOLATION"));
         return;
       }
-      
+
       FString AbsoluteOutput = FPaths::ProjectDir() / SafeOutputPath;
       AbsoluteOutput = FPaths::ConvertRelativePathToFull(AbsoluteOutput);
       FPaths::NormalizeFilename(AbsoluteOutput);
-      
+
       FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
       FPaths::NormalizeDirectoryName(NormalizedProjectDir);
       if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
         NormalizedProjectDir += TEXT("/");
       }
-      
+
       if (!AbsoluteOutput.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
         StrongThis->SendAutomationError(Socket, RequestId,
                             FString::Printf(TEXT("Output path escapes project directory: %s"), *OutputPath),
@@ -3648,11 +3648,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
   // Support both landscapePath (single) and assetPaths (array)
   FString LandscapePath;
   Payload->TryGetStringField(TEXT("landscapePath"), LandscapePath);
-  
+
   // Support both assetPath (single) and assetPaths (array)
   FString SingleAssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), SingleAssetPath);
-  
+
   const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
   if (!Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray)) {
     Payload->TryGetArrayField(TEXT("assets"), AssetPathsArray);
@@ -3666,7 +3666,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
 
   // Build list of paths to process
   TArray<FString> Paths;
-  
+
   // Add landscape path if provided
   if (!LandscapePath.IsEmpty()) {
     // Validate landscape path
@@ -3679,7 +3679,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     }
     Paths.Add(SafePath);
   }
-  
+
   // Add single asset path if provided
   if (!SingleAssetPath.IsEmpty()) {
     FString SafePath = SanitizeProjectRelativePath(SingleAssetPath);
@@ -3691,7 +3691,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     }
     Paths.Add(SafePath);
   }
-  
+
   // Add asset paths if provided
   if (AssetPathsArray) {
     for (const auto &Val : *AssetPathsArray) {
@@ -3833,7 +3833,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    
+
     // CRITICAL FIX: Return proper success/failure based on actual results
     // Previously always returned success=true even when 0 meshes processed
     bool bSuccess = SuccessCount > 0;
@@ -3841,7 +3841,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     Resp->SetNumberField(TEXT("processed"), SuccessCount);
     Resp->SetNumberField(TEXT("requested"), Paths.Num());
     Resp->SetNumberField(TEXT("lodCount"), NumLODs);
-    
+
     // Add details about failures
     if (NotFoundPaths.Num() > 0) {
       TArray<TSharedPtr<FJsonValue>> NotFoundArray;
@@ -3851,7 +3851,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
       Resp->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
       Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
     }
-    
+
     if (NotMeshPaths.Num() > 0) {
       TArray<TSharedPtr<FJsonValue>> NotMeshArray;
       for (const FString& P : NotMeshPaths) {
@@ -3860,10 +3860,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
       Resp->SetArrayField(TEXT("notMeshPaths"), NotMeshArray);
       Resp->SetNumberField(TEXT("notMeshCount"), NotMeshPaths.Num());
     }
-    
+
     FString Message;
     FString ErrorCode;
-    
+
     if (bSuccess) {
       Message = FString::Printf(TEXT("Generated LODs for %d mesh(es)"), SuccessCount);
     } else if (NotFoundPaths.Num() > 0 && NotMeshPaths.Num() == 0) {
@@ -3873,11 +3873,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
       Message = FString::Printf(TEXT("No static meshes found. %d asset(s) are not meshes."), NotMeshPaths.Num());
       ErrorCode = TEXT("INVALID_ASSET_TYPE");
     } else {
-      Message = FString::Printf(TEXT("No LODs generated. %d not found, %d not meshes."), 
+      Message = FString::Printf(TEXT("No LODs generated. %d not found, %d not meshes."),
                                 NotFoundPaths.Num(), NotMeshPaths.Num());
       ErrorCode = TEXT("LOD_GENERATION_FAILED");
     }
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
                                       Message, Resp, ErrorCode);
 
@@ -4056,7 +4056,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
   FMeshNaniteSettings Settings = StaticMesh->GetNaniteSettings();
   Settings.bEnabled = bEnableNanite;
   Settings.PositionPrecision = 8; // Default precision
-  
+
   // bPreserveArea replaced with ShapePreservation enum
   if (bPreserveArea) {
     Settings.ShapePreservation = ENaniteShapePreservation::PreserveArea;
@@ -4176,14 +4176,14 @@ bool UMcpAutomationBridgeSubsystem::HandleFindByTag(
           ResultObj->SetStringField(TEXT("label"), Actor->GetActorLabel());
           ResultObj->SetStringField(TEXT("path"), Actor->GetPathName());
           ResultObj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
-          
+
           const FVector Location = Actor->GetActorLocation();
           TSharedPtr<FJsonObject> LocObj = McpHandlerUtils::CreateResultObject();
           LocObj->SetNumberField(TEXT("x"), Location.X);
           LocObj->SetNumberField(TEXT("y"), Location.Y);
           LocObj->SetNumberField(TEXT("z"), Location.Z);
           ResultObj->SetObjectField(TEXT("location"), LocObj);
-          
+
           Results.Add(MakeShared<FJsonValueObject>(ResultObj));
         }
       }
@@ -5041,7 +5041,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
     for (int32 i = 0; i < Expressions.Num(); ++i) {
       UMaterialExpression *Expr = Expressions[i];
       if (!Expr) continue;
-      
+
       TSharedPtr<FJsonObject> NodeInfo = McpHandlerUtils::CreateResultObject();
       NodeInfo->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
       NodeInfo->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
@@ -5070,7 +5070,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
       }
       NodeList.Add(MakeShared<FJsonValueObject>(NodeInfo));
     }
-    
+
     Resp->SetArrayField(TEXT("nodes"), NodeList);
     Resp->SetNumberField(TEXT("nodeCount"), Expressions.Num());
 

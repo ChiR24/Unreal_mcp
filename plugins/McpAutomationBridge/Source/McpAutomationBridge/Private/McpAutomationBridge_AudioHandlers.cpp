@@ -564,23 +564,23 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
   // Action Routing
   // -------------------------------------------------------------------------
   const FString Lower = Action.ToLower();
-	if (!Lower.StartsWith(TEXT("audio_")) && 
-		!Lower.StartsWith(TEXT("create_sound_")) && 
-		!Lower.StartsWith(TEXT("play_sound_")) && 
-		!Lower.StartsWith(TEXT("set_sound_")) && 
-		!Lower.StartsWith(TEXT("push_sound_")) && 
-		!Lower.StartsWith(TEXT("pop_sound_")) && 
-		!Lower.StartsWith(TEXT("create_audio_")) && 
-		!Lower.StartsWith(TEXT("create_ambient_")) && 
-		!Lower.StartsWith(TEXT("create_reverb_")) && 
-		!Lower.StartsWith(TEXT("enable_audio_")) && 
-		!Lower.StartsWith(TEXT("fade_sound")) && 
-		!Lower.StartsWith(TEXT("set_doppler_")) && 
-		!Lower.StartsWith(TEXT("set_audio_")) && 
-		!Lower.StartsWith(TEXT("clear_sound_")) && 
-		!Lower.StartsWith(TEXT("set_base_sound_")) && 
-		!Lower.StartsWith(TEXT("prime_")) && 
-		!Lower.StartsWith(TEXT("spawn_sound_")) && 
+	if (!Lower.StartsWith(TEXT("audio_")) &&
+		!Lower.StartsWith(TEXT("create_sound_")) &&
+		!Lower.StartsWith(TEXT("play_sound_")) &&
+		!Lower.StartsWith(TEXT("set_sound_")) &&
+		!Lower.StartsWith(TEXT("push_sound_")) &&
+		!Lower.StartsWith(TEXT("pop_sound_")) &&
+		!Lower.StartsWith(TEXT("create_audio_")) &&
+		!Lower.StartsWith(TEXT("create_ambient_")) &&
+		!Lower.StartsWith(TEXT("create_reverb_")) &&
+		!Lower.StartsWith(TEXT("enable_audio_")) &&
+		!Lower.StartsWith(TEXT("fade_sound")) &&
+		!Lower.StartsWith(TEXT("set_doppler_")) &&
+		!Lower.StartsWith(TEXT("set_audio_")) &&
+		!Lower.StartsWith(TEXT("clear_sound_")) &&
+		!Lower.StartsWith(TEXT("set_base_sound_")) &&
+		!Lower.StartsWith(TEXT("prime_")) &&
+		!Lower.StartsWith(TEXT("spawn_sound_")) &&
 		!Lower.Equals(TEXT("add_source_effect"))) {
     return false;
   }

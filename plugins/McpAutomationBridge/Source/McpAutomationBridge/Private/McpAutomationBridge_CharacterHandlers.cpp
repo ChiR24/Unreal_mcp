@@ -370,10 +370,10 @@ static void AddPlayerViewStateReportChar(UWorld* World, TSharedPtr<FJsonObject> 
 
 /**
  * SetBPVarDefaultValue - Set blueprint variable default value (multi-version compatible)
- * 
+ *
  * SetBlueprintVariableDefaultValue doesn't exist in UE 5.6 or 5.7, so defaults are persisted by
  * updating the Blueprint variable description and importing the value into the generated CDO.
- * 
+ *
  * @param Blueprint     Target blueprint
  * @param VarName       Variable name to set default for
  * @param DefaultValue  String representation of the default value
@@ -432,10 +432,10 @@ static void SetBPVarDefaultValue(UBlueprint* Blueprint, FName VarName, const FSt
 
 /**
  * CreateCharacterBlueprint - Create a new Character Blueprint asset
- * 
+ *
  * Creates a Blueprint derived from ACharacter at the specified path.
  * Includes security validation via IsValidAssetPath() and duplicate detection.
- * 
+ *
  * @param Path      Asset directory path (e.g. "/Game/Characters")
  * @param Name      Blueprint asset name
  * @param OutError  Error message if creation fails
@@ -486,7 +486,7 @@ static UBlueprint* CreateCharacterBlueprint(const FString& Path, const FString& 
 
 /**
  * GetVectorFromJsonChar - Extract FVector from a JSON object
- * 
+ *
  * @param Obj  JSON object with "x", "y", "z" number fields
  * @return Parsed FVector or ZeroVector if invalid
  */
@@ -502,7 +502,7 @@ static FVector GetVectorFromJsonChar(const TSharedPtr<FJsonObject>& Obj)
 
 /**
  * GetRotatorFromJsonChar - Extract FRotator from a JSON object
- * 
+ *
  * @param Obj  JSON object with "pitch", "yaw", "roll" number fields
  * @return Parsed FRotator or ZeroRotator if invalid
  */
@@ -519,10 +519,10 @@ static FRotator GetRotatorFromJsonChar(const TSharedPtr<FJsonObject>& Obj)
 namespace {
 /**
  * AddBlueprintVariableChar - Add a Blueprint variable with proper category
- * 
+ *
  * In anonymous namespace with "Char" suffix to avoid Unity build collisions
  * with identically-named helpers in other handler files.
- * 
+ *
  * @param Blueprint  Target blueprint
  * @param VarName    Variable name
  * @param PinType    Variable pin type (bool, float, int, struct, etc.)
@@ -532,14 +532,14 @@ namespace {
 static bool AddBlueprintVariableChar(UBlueprint* Blueprint, const FString& VarName, const FEdGraphPinType& PinType, const FString& Category = TEXT(""))
 {
     if (!Blueprint) return false;
-    
+
     bool bSuccess = FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*VarName), PinType);
-    
+
     if (bSuccess && !Category.IsEmpty())
     {
         FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, FName(*VarName), nullptr, FText::FromString(Category));
     }
-    
+
     return bSuccess;
 }
 } // namespace
@@ -632,7 +632,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         {
             for (USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
             {
-                if (Node && Node->ComponentTemplate && 
+                if (Node && Node->ComponentTemplate &&
                     Node->ComponentTemplate->IsA<USkeletalMeshComponent>())
                 {
                     USkeletalMeshComponent* MeshComp = Cast<USkeletalMeshComponent>(Node->ComponentTemplate);
@@ -681,7 +681,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -690,10 +690,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         float CapsuleHalfHeight = static_cast<float>(GetNumberFieldChar(Payload, TEXT("capsuleHalfHeight"), 96.0));
 
         // Find capsule component in SCS or CDO
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCapsuleComponent())
         {
             CharCDO->GetCapsuleComponent()->SetCapsuleRadius(CapsuleRadius);
@@ -733,7 +733,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -768,10 +768,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         bool bSkeletalMeshAssigned = false;
         bool bAnimBlueprintAssigned = false;
 
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetMesh())
         {
             if (RequestedMesh)
@@ -846,7 +846,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -946,18 +946,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
         bool bHasAppliedWalkSpeed = false;
         bool bRunSpeedApplied = false;
         double AppliedWalkSpeed = 0.0;
-        
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -1036,15 +1036,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -1094,15 +1094,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -1151,7 +1151,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1184,10 +1184,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         SetBPVarDefaultValue(Blueprint, FName(*SpeedVarName), FString::SanitizeFloat(CustomSpeed));
 
         // Configure CharacterMovementComponent if available
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -1228,15 +1228,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -1286,7 +1286,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1352,7 +1352,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1418,7 +1418,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1452,10 +1452,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         SetBPVarDefaultValue(Blueprint, FName(TEXT("ClimbableTag")), ClimbableTag);
 
         // Configure CMC for custom movement mode
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -1497,7 +1497,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1564,7 +1564,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1594,10 +1594,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         AddBlueprintVariableChar(Blueprint, TEXT("WallRunNormal"), VectorPinType, TEXT("Wall Running"));
 
         // Configure CMC for custom movement mode
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -1641,7 +1641,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1712,7 +1712,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1769,7 +1769,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1814,7 +1814,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1871,7 +1871,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1880,10 +1880,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("assetName"), Blueprint->GetName());
 
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO)
         {
             if (CharCDO->GetCapsuleComponent())
@@ -2348,7 +2348,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // ============================================================
     // UNKNOWN SUB-ACTION FALLBACK
     // ============================================================
-    SendAutomationError(RequestingSocket, RequestId, 
+    SendAutomationError(RequestingSocket, RequestId,
         FString::Printf(TEXT("Unknown character subAction: %s"), *SubAction), TEXT("UNKNOWN_SUBACTION"));
     return true;
 

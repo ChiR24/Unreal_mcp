@@ -249,9 +249,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
           {
               McpPropertyReflection::JsonArrayToVector(ValueField->AsArray(), NewLoc);
           }
-          
+
           Actor->SetActorLocation(NewLoc);
-          
+
           TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
           ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
           ResultPayload->SetBoolField(TEXT("saved"), true);
@@ -260,7 +260,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
           SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor location updated."), ResultPayload);
           return true;
       }
-      
+
       // ActorRotation
       if (PropertyName.Equals(TEXT("ActorRotation"), ESearchCase::IgnoreCase))
       {
@@ -273,9 +273,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
           {
               McpPropertyReflection::JsonArrayToRotator(ValueField->AsArray(), NewRot);
           }
-          
+
           Actor->SetActorRotation(NewRot);
-          
+
           TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
           ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
           ResultPayload->SetBoolField(TEXT("saved"), true);
@@ -284,7 +284,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
           SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor rotation updated."), ResultPayload);
           return true;
       }
-      
+
       // ActorScale / ActorScale3D
       if (PropertyName.Equals(TEXT("ActorScale"), ESearchCase::IgnoreCase) ||
           PropertyName.Equals(TEXT("ActorScale3D"), ESearchCase::IgnoreCase))
@@ -298,9 +298,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
           {
               McpPropertyReflection::JsonArrayToVector(ValueField->AsArray(), NewScale);
           }
-          
+
           Actor->SetActorScale3D(NewScale);
-          
+
           TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
           ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
           ResultPayload->SetBoolField(TEXT("saved"), true);
@@ -309,7 +309,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
           SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor scale updated."), ResultPayload);
           return true;
       }
-      
+
       // bHidden (visibility) — skip runtime setter for CDOs, let generic path handle it
       if (!bIsClassDefaultObject && PropertyName.Equals(TEXT("bHidden"), ESearchCase::IgnoreCase))
       {
@@ -318,9 +318,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
               bHidden = ValueField->AsBool();
           else if (ValueField->Type == EJson::Number)
               bHidden = ValueField->AsNumber() != 0;
-          
+
           Actor->SetActorHiddenInGame(bHidden);
-          
+
           TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
           ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
           ResultPayload->SetBoolField(TEXT("saved"), true);
@@ -634,7 +634,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
   TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetField(TEXT("value"), CurrentValue);
-  
+
   // Add verification based on object type
   if (AActor* AsActor = Cast<AActor>(RootObject)) {
     McpHandlerUtils::AddVerification(ResultPayload, AsActor);
@@ -792,7 +792,7 @@ TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("newIndex"), NewIndex);
   ResultPayload->SetNumberField(TEXT("newSize"), Helper.Num());
-  
+
   // Add verification based on object type
   if (AActor* AsActor = Cast<AActor>(RootObject)) {
     McpHandlerUtils::AddVerification(ResultPayload, AsActor);
@@ -907,7 +907,7 @@ TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("removedIndex"), Index);
   ResultPayload->SetNumberField(TEXT("newSize"), Helper.Num());
-  
+
   // Add verification based on object type
   if (AActor* AsActor = Cast<AActor>(RootObject)) {
     McpHandlerUtils::AddVerification(ResultPayload, AsActor);
@@ -1006,7 +1006,7 @@ TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("previousSize"), PrevSize);
   ResultPayload->SetNumberField(TEXT("newSize"), 0);
-  
+
   // Add verification based on object type
   if (AActor* AsActor = Cast<AActor>(RootObject)) {
     McpHandlerUtils::AddVerification(ResultPayload, AsActor);

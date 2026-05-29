@@ -111,7 +111,8 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   const FString RequestAction = Action.ToLower();
   FString Lower = RequestAction;
-  if (RequestAction == TEXT("manage_performance") && Payload.IsValid()) {
+  if ((RequestAction == TEXT("manage_performance") ||
+       RequestAction == TEXT("system_control")) && Payload.IsValid()) {
     FString SubAction;
     Payload->TryGetStringField(TEXT("subAction"), SubAction);
     if (SubAction.IsEmpty()) {
@@ -123,6 +124,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
   }
 
   if (RequestAction != TEXT("manage_performance") &&
+      RequestAction != TEXT("system_control") &&
       !Lower.StartsWith(TEXT("generate_memory_report")) &&
       !Lower.StartsWith(TEXT("configure_texture_streaming")) &&
       !Lower.StartsWith(TEXT("merge_actors")) &&
@@ -267,7 +269,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
       }
 
       if (!bIsValidCategory) {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
                             TEXT("Invalid stat category name. Only alphanumeric characters and underscores allowed."),
                             TEXT("INVALID_CATEGORY"));
         return true;
@@ -848,10 +850,14 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
   // ===========================================================================
   else if (Lower == TEXT("optimize_draw_calls")) {
     bool bEnabled = true;
-    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+    if (!Payload->TryGetBoolField(TEXT("enabled"), bEnabled)) {
+      Payload->TryGetBoolField(TEXT("enableBatching"), bEnabled);
+    }
 
     bool bInstancing = true;
-    Payload->TryGetBoolField(TEXT("instancing"), bInstancing);
+    if (!Payload->TryGetBoolField(TEXT("instancing"), bInstancing)) {
+      Payload->TryGetBoolField(TEXT("enableInstancing"), bInstancing);
+    }
 
     auto SetCVar = [](const TCHAR *Name, int32 Value) {
       if (IConsoleVariable *CVar =
@@ -977,6 +983,10 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     double LoadingRange = 0.0;
     bool bHasLoadingRange =
         Payload->TryGetNumberField(TEXT("loadingRange"), LoadingRange);
+    if (!bHasLoadingRange) {
+      bHasLoadingRange =
+          Payload->TryGetNumberField(TEXT("streamingDistance"), LoadingRange);
+    }
 
     auto SetCVar = [](const TCHAR *Name, int32 Value) {
       if (IConsoleVariable *CVar =

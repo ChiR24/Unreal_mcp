@@ -352,11 +352,11 @@ static TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArr
  * HandleBuildEnvironmentAction
  * ----------------------------
  * Main dispatcher for environment building actions.
- * 
+ *
  * Payload:
  *   - action: string (required) - Sub-action to execute
  *   - Other params vary by sub-action
- * 
+ *
  * Supported Sub-actions:
  *   - add_foliage_instances: Dispatch to HandlePaintFoliage
  *   - get_foliage_instances: Dispatch to HandleGetFoliageInstances
@@ -406,7 +406,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     Payload->TryGetStringField(TEXT("action"), SubAction);
     const FString LowerSub = SubAction.ToLower();
 
-    UE_LOG(LogMcpEnvironmentHandlers, Verbose, 
+    UE_LOG(LogMcpEnvironmentHandlers, Verbose,
            TEXT("HandleBuildEnvironmentAction: SubAction=%s"), *LowerSub);
 
     // =========================================================================
@@ -462,7 +462,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         Payload->TryGetStringField(TEXT("foliageType"), FoliageTypePath);
         bool bRemoveAll = false;
         Payload->TryGetBoolField(TEXT("removeAll"), bRemoveAll);
-        
+
         TSharedPtr<FJsonObject> FoliagePayload = McpHandlerUtils::CreateResultObject();
         if (!FoliageTypePath.IsEmpty())
         {
@@ -558,7 +558,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     {
         FString Path;
         Payload->TryGetStringField(TEXT("path"), Path);
-        
+
         if (Path.IsEmpty())
         {
             bSuccess = false;
@@ -651,7 +651,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     {
         FString Path;
         Payload->TryGetStringField(TEXT("path"), Path);
-        
+
         if (Path.IsEmpty())
         {
             bSuccess = false;
@@ -832,7 +832,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     {
         // Initialize to false - only set true on successful creation
         bSuccess = false;
-        
+
         if (!GEditor)
         {
             Message = TEXT("Editor not available");
@@ -958,7 +958,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     {
         // Initialize to false - only set true on successful creation
         bSuccess = false;
-        
+
         FVector Location(0, 0, 0);
         // Support both top-level x/y/z and location object
         const TSharedPtr<FJsonObject> *LocObj = nullptr;
@@ -1038,12 +1038,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
  * HandleControlEnvironmentAction
  * -------------------------------
  * Handle environment control actions (time, lighting, etc.)
- * 
+ *
  * Payload:
  *   - action: string (required) - Sub-action to execute
  *   - hour: number (optional) - For set_time_of_day
  *   - intensity: number (optional) - For set_sun_intensity/set_skylight_intensity
- * 
+ *
  * Response:
  *   - success: bool
  *   - hour/intensity: number (depending on action)
@@ -1288,10 +1288,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(
  * HandleBakeLightmap
  * -------------------
  * Build lighting via editor function.
- * 
+ *
  * Payload:
  *   - quality: string (optional) - Lighting build quality (default: "Preview")
- * 
+ *
  * Dispatches to HandleExecuteEditorFunction with BUILD_LIGHTING.
  */
 bool UMcpAutomationBridgeSubsystem::HandleBakeLightmap(
@@ -1332,7 +1332,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBakeLightmap(
  * HandleCreateProceduralTerrain
  * -------------------------------
  * Create a procedural terrain mesh with configurable parameters.
- * 
+ *
  * Payload:
  *   - sizeX: int (optional, default 100) - Terrain width in grid units
  *   - sizeY: int (optional, default 100) - Terrain depth in grid units
@@ -1343,7 +1343,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBakeLightmap(
  *   - location: {x, y, z} (optional) - Spawn location
  *   - rotation: {pitch, yaw, roll} (optional) - Spawn rotation
  *   - material: string (optional) - Material asset path
- * 
+ *
  * Response:
  *   - success: bool
  *   - actorName: string - Spawned actor name
@@ -1609,9 +1609,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
  * HandleInspectAction
  * --------------------
  * Object introspection and inspection handler.
- * 
+ *
  * Supports both global actions (no objectPath required) and object-specific actions.
- * 
+ *
  * Global Actions (no objectPath required):
  *   - get_project_settings: Retrieve project settings
  *   - get_editor_settings: Retrieve editor settings
@@ -1625,12 +1625,12 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
  *   - find_by_class: Find actors by class name
  *   - find_by_tag: Find actors by tag
  *   - inspect_class: Inspect a class by name
- * 
+ *
  * Actor Actions (delegated to HandleControlActorAction):
  *   - get_components, get_component_property, set_component_property
  *   - get_metadata, add_tag, create_snapshot, restore_snapshot
  *   - export, delete_object, get_bounding_box, set_property, get_property
- * 
+ *
  * Payload:
  *   - action: string (required) - Sub-action to execute
  *   - objectPath: string (required for non-global actions) - Object to inspect
@@ -2229,7 +2229,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     // Find the target object using centralized helper
     FString ResolvedPath;
     UObject* TargetObject = McpHandlerUtils::ResolveObjectFromPath(ObjectPath, &ResolvedPath);
-    
+
     if (!TargetObject)
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -2237,7 +2237,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
                             TEXT("OBJECT_NOT_FOUND"));
         return true;
     }
-    
+
     // Update path for error messages
     if (!ResolvedPath.IsEmpty())
     {

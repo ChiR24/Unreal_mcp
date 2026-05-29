@@ -103,7 +103,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
         CapturedErrors = EndErrorCapture();
         bHadEngineErrors = HasCapturedErrors();
       }
-      
+
       if (bHadEngineErrors && bDispatchHandled)
       {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
@@ -112,13 +112,13 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
                     "Errors: %s"),
                *RequestId, *Action,
                CapturedErrors.Num() > 0 ? *FString::Join(CapturedErrors, TEXT("; ")) : TEXT("unknown"));
-        
+
         // The handler response path converts successful responses to
         // ENGINE_ERROR failures when captured errors exist. Keep this warning as
         // a secondary audit trail for handlers that returned after logging an
         // engine error.
       }
-      
+
       bProcessingAutomationRequest = false;
       CurrentRequestOrigin = ERequestOrigin::WebSocket;
       const double DispatchEndSeconds = FPlatformTime::Seconds();

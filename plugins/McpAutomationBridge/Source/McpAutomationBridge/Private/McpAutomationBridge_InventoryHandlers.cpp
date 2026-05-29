@@ -75,18 +75,18 @@
 static UPackage* CreateValidatedAssetPackage(const FString& Path, const FString& Name, FString& OutError) {
   FString PackageName;
   FString SanitizedName = SanitizeAssetName(Name);
-  
+
   if (!ValidateAssetCreationPath(Path, SanitizedName, PackageName, OutError)) {
     return nullptr;
   }
-  
+
   return CreatePackage(*PackageName);
 }
 
 // Legacy helper for backward compatibility - validates internally
 static UPackage* CreateAssetPackage(const FString& Path, const FString& Name) {
   FString PackagePath = Path.IsEmpty() ? TEXT("/Game/Items") : Path;
-  
+
   // Normalize and validate
   FString PackageName;
   FString PathError;
@@ -95,7 +95,7 @@ static UPackage* CreateAssetPackage(const FString& Path, const FString& Name) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("CreateAssetPackage: %s"), *PathError);
     return nullptr;
   }
-  
+
   return CreatePackage(*PackageName);
 }
 
@@ -1777,7 +1777,7 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       if (NewIdx != INDEX_NONE) {
         EntryIndex = NewIdx;
         bEntryAdded = true;
-        // Note: The new element's inner fields (item path, weight, quantities) 
+        // Note: The new element's inner fields (item path, weight, quantities)
         // would need to be populated via reflection based on the struct definition
       } else {
         bEntryAdded = false;
@@ -2913,7 +2913,7 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     FString PickupPath = GetPayloadString(Payload, TEXT("pickupPath"));
 
     // Validate that at least one path is provided
-    if (BlueprintPath.IsEmpty() && ItemPath.IsEmpty() && LootTablePath.IsEmpty() && 
+    if (BlueprintPath.IsEmpty() && ItemPath.IsEmpty() && LootTablePath.IsEmpty() &&
         RecipePath.IsEmpty() && PickupPath.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("At least one path parameter is required (blueprintPath, itemPath, lootTablePath, recipePath, or pickupPath)"),

@@ -112,7 +112,7 @@ void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
   FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
   bOutCompiled = McpSafeCompileBlueprint(Blueprint);
 
-  
+
   // UE 5.7+ Fix: Save through the editor-owned safe helper path to avoid the
   // legacy UEditorAssetLibrary::SaveLoadedAsset thumbnail/render-thread path.
   bOutSaved = McpSafeAssetSave(Blueprint);

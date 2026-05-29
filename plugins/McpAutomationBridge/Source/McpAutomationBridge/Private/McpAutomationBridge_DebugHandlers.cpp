@@ -2,18 +2,18 @@
 // McpAutomationBridge_DebugHandlers.cpp
 // =============================================================================
 // MCP Automation Bridge - Gameplay Debugger Handlers
-// 
+//
 // UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-// 
+//
 // Handler Summary:
 // -----------------------------------------------------------------------------
 // Action: manage_debug
 //   - spawn_category: Toggle gameplay debugger category visibility
-// 
+//
 // Dependencies:
 //   - Core: McpAutomationBridgeSubsystem, McpAutomationBridgeHelpers
 //   - Engine: GameplayDebugger module (optional)
-// 
+//
 // Notes:
 //   - Uses console command "GameplayDebuggerCategory [name]" for robustness
 //   - Alternative: IGameplayDebugger::Get().ToggleCategory() (requires module)
@@ -55,9 +55,9 @@
 // =============================================================================
 
 bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
-    const FString& RequestId, 
-    const FString& Action, 
-    const TSharedPtr<FJsonObject>& Payload, 
+    const FString& RequestId,
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     // Validate action
@@ -70,7 +70,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -99,7 +99,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
             // Fallback to 'category' field if 'categoryName' not found
             Payload->TryGetStringField(TEXT("category"), CategoryName);
         }
-        
+
         if (CategoryName.TrimStartAndEnd().IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId,
@@ -120,7 +120,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
                 break;
             }
         }
-        
+
         if (bHasInvalidChars)
         {
             SendAutomationError(RequestingSocket, RequestId,
@@ -233,7 +233,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
             Result->SetNumberField(TEXT("categoryIndex"), UpdatedCategoryIndex);
         }
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Gameplay debugger category %s: %s"),
                 bEnabled ? TEXT("enabled") : TEXT("disabled"), *CategoryName),
             Result);
@@ -241,7 +241,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
     }
 
     // Unknown subaction
-    SendAutomationError(RequestingSocket, RequestId, 
+    SendAutomationError(RequestingSocket, RequestId,
         TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;
 }

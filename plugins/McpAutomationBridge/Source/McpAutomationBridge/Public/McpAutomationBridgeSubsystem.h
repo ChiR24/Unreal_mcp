@@ -123,13 +123,13 @@ public:
   /**
    * Send a progress update message during long-running operations.
    * This keeps the request alive by extending its timeout on the server side.
-   * 
+   *
    * @param RequestId The request ID being tracked
    * @param Percent Optional progress percent (0-100), negative to omit
    * @param Message Optional status message
    * @param bStillWorking True if operation is still in progress (prevents stale detection)
    */
-  void SendProgressUpdate(const FString &RequestId, float Percent = -1.0f, 
+  void SendProgressUpdate(const FString &RequestId, float Percent = -1.0f,
                           const FString &Message = TEXT(""), bool bStillWorking = true,
                           ERequestOrigin Origin = ERequestOrigin::WebSocket);
 
@@ -157,7 +157,7 @@ public:
   // =========================================================================
   // Per-Request Error Capture (Public for handler access)
   // =========================================================================
-  
+
   /**
    * Storage for capturing errors during request execution.
    * This is used to detect engine-level errors (like ensure failures)
@@ -178,7 +178,7 @@ public:
     std::atomic<bool> bHasWarnings{false};
     uint32 CapturingThreadId = 0;
     bool bActive = false;
-    
+
     // Reset is for internal use only - must be called with ErrorCaptureMutex held
     void Reset()
     {
@@ -194,16 +194,16 @@ public:
       bActive = false;
     }
   };
-  
+
   /** Get the current request's error capture */
   FRequestErrorCapture& GetCurrentErrorCapture();
-  
+
   /** Begin capturing errors for a request */
   void BeginErrorCapture();
-  
+
   /** End capturing errors and return any captured errors */
   TArray<FString> EndErrorCapture();
-  
+
   /** Check if any errors were captured during the current request */
   bool HasCapturedErrors() const;
 
@@ -216,10 +216,10 @@ public:
 private:
   /** Request-scoped error capture (shared, not thread-local) */
   FRequestErrorCapture CurrentErrorCapture;
-  
+
   /** Mutex for thread-safe access to error capture from worker threads */
   mutable FCriticalSection ErrorCaptureMutex;
-  
+
   /** Custom log output device for per-request error capture */
   TSharedPtr<class FMcpRequestErrorDevice> RequestErrorDevice;
 

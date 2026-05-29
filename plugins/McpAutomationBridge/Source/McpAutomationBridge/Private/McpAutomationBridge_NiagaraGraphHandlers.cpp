@@ -2,9 +2,9 @@
 // McpAutomationBridge_NiagaraGraphHandlers.cpp
 // =============================================================================
 // MCP Automation Bridge - Niagara Graph Manipulation Handlers
-// 
+//
 // UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-// 
+//
 // Handler Summary:
 // -----------------------------------------------------------------------------
 // Action: manage_niagara_graph (Editor Only)
@@ -12,17 +12,17 @@
 //   - connect_pins: Connect two pins in Niagara graph
 //   - remove_node: Remove node from Niagara graph
 //   - set_parameter: Set exposed parameter value (Float/Bool only)
-// 
+//
 // Dependencies:
 //   - Core: McpAutomationBridgeSubsystem, McpAutomationBridgeHelpers
 //   - Engine: NiagaraSystem, NiagaraEmitter, NiagaraScript, NiagaraGraph
 //   - Editor: Niagara nodes, EdGraph
-// 
+//
 // Version Compatibility Notes:
 //   - UE 5.1+: GetInstance() returns FNiagaraEmitterHandleRef with .Emitter
 //   - UE 5.0: GetInstance() returns UNiagaraEmitter* directly
 //   - GetLatestEmitterData() can be null - must guard before dereferencing
-// 
+//
 // Architecture:
 //   - System has multiple scripts (Spawn, Update, etc.)
 //   - Emitter has multiple scripts per lifecycle stage
@@ -63,9 +63,9 @@
 // =============================================================================
 
 bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
-    const FString& RequestId, 
-    const FString& Action, 
-    const TSharedPtr<FJsonObject>& Payload, 
+    const FString& RequestId,
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     // Validate action
@@ -78,7 +78,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -87,7 +87,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
     FString AssetPath;
     if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -96,7 +96,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
     UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *AssetPath);
     if (!System)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
         return true;
     }
@@ -116,7 +116,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
     {
         // System script (default to Spawn, can override via scriptType)
         TargetScript = System->GetSystemSpawnScript();
-        
+
         FString ScriptType;
         if (Payload->TryGetStringField(TEXT("scriptType"), ScriptType))
         {
@@ -148,7 +148,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
 
                     // Default to Spawn script
                     TargetScript = EmitterData->SpawnScriptProps.Script;
-                    
+
                     FString ScriptType;
                     if (Payload->TryGetStringField(TEXT("scriptType"), ScriptType))
                     {
@@ -164,7 +164,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
                 if (Emitter)
                 {
                     TargetScript = Emitter->SpawnScriptProps.Script;
-                    
+
                     FString ScriptType;
                     if (Payload->TryGetStringField(TEXT("scriptType"), ScriptType))
                     {
@@ -191,7 +191,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
 
     if (!TargetGraph)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Could not resolve target Niagara Graph."), TEXT("GRAPH_NOT_FOUND"));
         return true;
     }
@@ -207,7 +207,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         UNiagaraScript* ModuleScript = LoadObject<UNiagaraScript>(nullptr, *ModulePath);
         if (!ModuleScript)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Could not load module script."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
@@ -221,7 +221,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         Result->SetStringField(TEXT("modulePath"), ModulePath);
         Result->SetStringField(TEXT("nodeId"), FuncNode->NodeGuid.ToString());
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Module node added."), Result);
         return true;
     }
@@ -297,8 +297,8 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
                 return true;
             }
 
-            SendAutomationError(RequestingSocket, RequestId, 
-                TEXT("connect_pins requires fromNode, fromPin, toNode, toPin"), 
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("connect_pins requires fromNode, fromPin, toNode, toPin"),
                 TEXT("INVALID_ARGUMENT"));
             return true;
         }
@@ -325,7 +325,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
 
         if (!FromNode || !ToNode)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Could not find source or destination node."), TEXT("NODE_NOT_FOUND"));
             return true;
         }
@@ -339,7 +339,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         {
             for (UEdGraphPin* Pin : FromNode->Pins)
             {
-                if (Pin->PinName.ToString() == FromPinName || 
+                if (Pin->PinName.ToString() == FromPinName ||
                     Pin->GetDisplayName().ToString() == FromPinName)
                 {
                     FromPin = Pin;
@@ -352,7 +352,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         {
             for (UEdGraphPin* Pin : ToNode->Pins)
             {
-                if (Pin->PinName.ToString() == ToPinName || 
+                if (Pin->PinName.ToString() == ToPinName ||
                     Pin->GetDisplayName().ToString() == ToPinName)
                 {
                     ToPin = Pin;
@@ -363,7 +363,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
 
         if (!FromPin || !ToPin)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Could not find source or destination pin."), TEXT("PIN_NOT_FOUND"));
             return true;
         }
@@ -380,13 +380,13 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
             Result->SetStringField(TEXT("toPin"), ToPinName);
             Result->SetBoolField(TEXT("connected"), true);
 
-            SendAutomationResponse(RequestingSocket, RequestId, true, 
+            SendAutomationResponse(RequestingSocket, RequestId, true,
                 TEXT("Pins connected successfully."), Result);
         }
         else
         {
-            SendAutomationError(RequestingSocket, RequestId, 
-                TEXT("Failed to connect pins (schema blocked connection)."), 
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Failed to connect pins (schema blocked connection)."),
                 TEXT("CONNECTION_FAILED"));
         }
         return true;
@@ -419,12 +419,12 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
             Result->SetStringField(TEXT("nodeId"), NodeId);
             Result->SetBoolField(TEXT("removed"), true);
 
-            SendAutomationResponse(RequestingSocket, RequestId, true, 
+            SendAutomationResponse(RequestingSocket, RequestId, true,
                 TEXT("Node removed."), Result);
         }
         else
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
         }
         return true;
@@ -463,7 +463,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         if (UserStore.FindParameterVariable(
             FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName))))
         {
-            UserStore.SetParameterValue(FloatValue, 
+            UserStore.SetParameterValue(FloatValue,
                 FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName)));
 
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -471,7 +471,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
             Result->SetStringField(TEXT("parameterName"), ParamName);
             Result->SetNumberField(TEXT("value"), FloatValue);
 
-            SendAutomationResponse(RequestingSocket, RequestId, true, 
+            SendAutomationResponse(RequestingSocket, RequestId, true,
                 TEXT("Float parameter set."), Result);
             return true;
         }
@@ -480,7 +480,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         if (UserStore.FindParameterVariable(
             FNiagaraVariable(FNiagaraTypeDefinition::GetBoolDef(), FName(*ParamName))))
         {
-            UserStore.SetParameterValue(BoolValue, 
+            UserStore.SetParameterValue(BoolValue,
                 FNiagaraVariable(FNiagaraTypeDefinition::GetBoolDef(), FName(*ParamName)));
 
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -488,25 +488,25 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
             Result->SetStringField(TEXT("parameterName"), ParamName);
             Result->SetBoolField(TEXT("value"), BoolValue);
 
-            SendAutomationResponse(RequestingSocket, RequestId, true, 
+            SendAutomationResponse(RequestingSocket, RequestId, true,
                 TEXT("Bool parameter set."), Result);
             return true;
         }
 
-        SendAutomationError(RequestingSocket, RequestId, 
-            TEXT("Parameter not found or type not supported (Float/Bool only)."), 
+        SendAutomationError(RequestingSocket, RequestId,
+            TEXT("Parameter not found or type not supported (Float/Bool only)."),
             TEXT("PARAM_FAILED"));
         return true;
     }
 
     // Unknown subaction
-    SendAutomationError(RequestingSocket, RequestId, 
+    SendAutomationError(RequestingSocket, RequestId,
         FString::Printf(TEXT("Unknown subAction: %s"), *SubAction), TEXT("INVALID_SUBACTION"));
     return true;
 
 #else
     // Non-editor build
-    SendAutomationError(RequestingSocket, RequestId, 
+    SendAutomationError(RequestingSocket, RequestId,
         TEXT("Editor only."), TEXT("EDITOR_ONLY"));
     return true;
 #endif

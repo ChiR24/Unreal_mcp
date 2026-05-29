@@ -81,7 +81,7 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
     return FString();
 
   FString CleanPath = InPath;
-  
+
   // Reject Windows absolute paths early (contain drive letter colon)
   if (CleanPath.Len() >= 2 && CleanPath[1] == TEXT(':')) {
     UE_LOG(
@@ -90,7 +90,7 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
         *InPath);
     return FString();
   }
-  
+
   FPaths::NormalizeFilename(CleanPath);
 
   // CRITICAL: FPaths::NormalizeFilename converts / to \ on Windows
@@ -463,9 +463,9 @@ static inline bool McpIsSafeAutomationTestFilter(const FString &Value) {
  * or Windows drive letters (":"); `false` otherwise.
  */
 static inline bool IsValidAssetPath(const FString &Path) {
-  return !Path.IsEmpty() && 
+  return !Path.IsEmpty() &&
          Path.StartsWith(TEXT("/")) &&
-         !Path.Contains(TEXT("..")) && 
+         !Path.Contains(TEXT("..")) &&
          !Path.Contains(TEXT("//")) &&
          !Path.Contains(TEXT(":"));  // Reject Windows absolute paths
 }
@@ -483,7 +483,7 @@ static inline FString SanitizeAssetName(const FString &InName) {
     return TEXT("Asset");
 
   FString Sanitized = InName.TrimStartAndEnd();
-  
+
   // Replace SQL injection pattern characters with underscore
   // Block: semicolons, quotes, double-dashes, and SQL keywords
   Sanitized = Sanitized.Replace(TEXT(";"), TEXT("_"));
@@ -491,7 +491,7 @@ static inline FString SanitizeAssetName(const FString &InName) {
   Sanitized = Sanitized.Replace(TEXT("\""), TEXT("_"));
   Sanitized = Sanitized.Replace(TEXT("--"), TEXT("_"));
   Sanitized = Sanitized.Replace(TEXT("`"), TEXT("_"));
-  
+
   // Replace other invalid characters for Unreal asset names
   // Invalid: @ # % $ & * ( ) + = [ ] { } < > ? | \ : ~ ! and whitespace
   const TArray<TCHAR> InvalidChars = {
@@ -500,17 +500,17 @@ static inline FString SanitizeAssetName(const FString &InName) {
     TEXT('{'), TEXT('}'), TEXT('<'), TEXT('>'), TEXT('?'), TEXT('|'),
     TEXT('\\'), TEXT(':'), TEXT('~'), TEXT('!'), TEXT(' ')
   };
-  
+
   for (TCHAR C : InvalidChars) {
     TCHAR CharStr[2] = { C, TEXT('\0') };
     Sanitized = Sanitized.Replace(CharStr, TEXT("_"));
   }
-  
+
   // Remove consecutive underscores
   while (Sanitized.Contains(TEXT("__"))) {
     Sanitized = Sanitized.Replace(TEXT("__"), TEXT("_"));
   }
-  
+
   // Remove leading/trailing underscores
   while (Sanitized.StartsWith(TEXT("_"))) {
     Sanitized.RemoveAt(0);
@@ -518,21 +518,21 @@ static inline FString SanitizeAssetName(const FString &InName) {
   while (Sanitized.EndsWith(TEXT("_"))) {
     Sanitized.RemoveAt(Sanitized.Len() - 1);
   }
-  
+
   // If empty after sanitization, use default
   if (Sanitized.IsEmpty())
     return TEXT("Asset");
-    
+
   // Ensure name starts with a letter or underscore
   if (!FChar::IsAlpha(Sanitized[0]) && Sanitized[0] != TEXT('_')) {
     Sanitized = TEXT("Asset_") + Sanitized;
   }
-  
+
   // Truncate to reasonable length (64 chars is UE max for asset names)
   if (Sanitized.Len() > 64) {
     Sanitized = Sanitized.Left(64);
   }
-  
+
   return Sanitized;
 }
 
@@ -547,7 +547,7 @@ static inline FString SanitizeAssetName(const FString &InName) {
  * @returns true if path is valid and safe for asset creation
  */
 static inline bool ValidateAssetCreationPath(
-    const FString &FolderPath, 
+    const FString &FolderPath,
     const FString &AssetName,
     FString &OutFullPath,
     FString &OutError)
@@ -558,23 +558,23 @@ static inline bool ValidateAssetCreationPath(
     OutError = TEXT("Invalid folder path: contains traversal or invalid characters");
     return false;
   }
-  
+
   // Sanitize asset name
   FString SanitizedName = SanitizeAssetName(AssetName);
   if (SanitizedName.IsEmpty()) {
     OutError = TEXT("Invalid asset name after sanitization");
     return false;
   }
-  
+
   // Build full path
   OutFullPath = SanitizedFolder / SanitizedName;
-  
+
   // Final validation
   if (!IsValidAssetPath(OutFullPath)) {
     OutError = FString::Printf(TEXT("Invalid asset path after normalization: %s"), *OutFullPath);
     return false;
   }
-  
+
   return true;
 }
 
@@ -722,17 +722,17 @@ static inline FString ResolveAssetPath(const FString &InputPath) {
   // or providing full paths when possible.
   if (!InputPath.Contains(TEXT("/"))) {
     FString ShortName = FPaths::GetBaseFilename(InputPath);
-    
+
     FAssetRegistryModule &AssetRegistryModule =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
     TArray<FAssetData> FoundAssets;
     TArray<FAssetData> AllGameAssets;
-    
+
     // Use GetAssetsByPath with recursive search - more efficient than GetAllAssets
     AssetRegistry.GetAssetsByPath(FName(TEXT("/Game")), AllGameAssets, /*bRecursive=*/true);
-    
+
     // Filter by name match (case-insensitive)
     for (const FAssetData &Asset : AllGameAssets) {
       if (Asset.AssetName.ToString().Equals(ShortName, ESearchCase::IgnoreCase)) {
@@ -789,7 +789,7 @@ using McpSafeOperations::McpLoadMaterialWithFallback;
 /**
  * Resolve a component from an actor by component name with fuzzy matching.
  * Supports exact name match, partial name match (starts with), and common suffixes.
- * 
+ *
  * This helper resolves component paths in "ActorName.ComponentName" format where
  * the component name may be a partial match (e.g., "StaticMeshComponent" matches "StaticMeshComponent0").
  *
@@ -811,7 +811,7 @@ static inline UActorComponent* FindComponentByName(AActor* Actor, const FString&
     // Iterate all components on the actor
     TArray<UActorComponent*> Components;
     Actor->GetComponents(Components);
-    
+
     for (UActorComponent* Comp : Components)
     {
         if (!Comp)
@@ -885,8 +885,8 @@ static inline UActorComponent* ResolveComponentPath(const FString& ObjectPath, F
 {
     // Check if this looks like a component path: "ActorName.ComponentName"
     // Must contain exactly one dot, no slashes, and both parts must be non-empty
-    if (ObjectPath.IsEmpty() || 
-        ObjectPath.Contains(TEXT("/")) || 
+    if (ObjectPath.IsEmpty() ||
+        ObjectPath.Contains(TEXT("/")) ||
         ObjectPath.Contains(TEXT("\\")) ||
         !ObjectPath.Contains(TEXT(".")))
     {
@@ -934,7 +934,7 @@ static inline UActorComponent* ResolveComponentPath(const FString& ObjectPath, F
  * has finished processing the current world before LoadMap destroys it.
  *
  * CRITICAL: This function must be called from the Game Thread.
- * 
+ *
  * @param MapPath The map path to load (e.g., /Game/Maps/MyMap)
  * @param bForceCleanup If true, perform aggressive cleanup before loading (default: true)
  * @return bool True if the map was loaded successfully
@@ -943,31 +943,31 @@ static inline UActorComponent* ResolveComponentPath(const FString& ObjectPath, F
 #if WITH_EDITOR
 /**
  * Safe compilation helper to avoid D3D12RHI viewport crashes in UE 5.7
- * 
+ *
  * Compiling blueprints can trigger Slate UI updates (progress bars, compiler logs)
  * When invoked from the automation bridge, this can race with the render thread
  * and cause Fatal Error 80070005 in WindowsD3D12Viewport.cpp
- * 
+ *
  * @param Blueprint The blueprint to compile
  * @return True if compilation succeeded, false otherwise
  */
 static inline bool McpSafeCompileBlueprint(UBlueprint* Blueprint)
 {
     if (!Blueprint) return false;
-    
+
     // 1. Flush rendering commands to ensure GPU is idle before compilation UI opens
     FlushRenderingCommands();
-    
+
     // 2. Compile without forcing garbage collection (can cause issues during automation)
     // Note: FKismetEditorUtilities::CompileBlueprint returns void in UE 5.7+
     FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
-    
+
     // 3. Flush again to ensure any UI updates from compilation are complete
     FlushRenderingCommands();
-    
+
     // 4. Check compilation status - success if UpToDate or UpToDateWithWarnings
     const bool bSuccess = (Blueprint->Status == EBlueprintStatus::BS_UpToDate || Blueprint->Status == EBlueprintStatus::BS_UpToDateWithWarnings);
-    
+
     return bSuccess;
 }
 #else
@@ -2319,17 +2319,17 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
   if (!Path.StartsWith(TEXT("/"))) {
     Path = TEXT("/Game/") + Path;
   }
-  
+
   FString ObjectPath = Path;
   FString PackagePath = Path;
-  
+
   if (Path.Contains(TEXT("."))) {
     PackagePath = Path.Left(Path.Find(TEXT(".")));
   } else {
     FString AssetName = FPaths::GetBaseFilename(Path);
     ObjectPath = Path + TEXT(".") + AssetName;
   }
-  
+
   FString AssetName = FPaths::GetBaseFilename(PackagePath);
 
   // Method 1: FindObject with full object path (fastest for in-memory)
@@ -2655,7 +2655,7 @@ static inline void SendStandardErrorResponse(
 
   TSharedPtr<FJsonObject> Envelope = MakeShared<FJsonObject>();
   Envelope->SetBoolField(TEXT("success"), false);
-  
+
   // CRITICAL: Add empty data object for schema compliance
   // The MCP schema requires data: { type: 'object' } in all responses
   Envelope->SetObjectField(TEXT("data"), MakeShared<FJsonObject>());
@@ -2774,7 +2774,7 @@ SpawnActorInActiveWorld(UClass *ActorClass, const FVector &Location,
  */
 static inline void AddActorVerification(TSharedPtr<FJsonObject> Response, AActor* Actor) {
   if (!Response || !Actor) return;
-  
+
   // Use GetPackage()->GetPathName() for the asset path
   FString ActorPath = Actor->GetPackage() ? Actor->GetPackage()->GetPathName() : Actor->GetPathName();
   Response->SetStringField(TEXT("actorPath"), ActorPath);
@@ -2790,7 +2790,7 @@ static inline void AddActorVerification(TSharedPtr<FJsonObject> Response, AActor
  */
 static inline void AddComponentVerification(TSharedPtr<FJsonObject> Response, USceneComponent* Component) {
   if (!Response || !Component) return;
-  
+
   Response->SetStringField(TEXT("componentName"), Component->GetName());
   Response->SetStringField(TEXT("componentClass"), Component->GetClass()->GetName());
   if (AActor* Owner = Component->GetOwner()) {
@@ -2804,7 +2804,7 @@ static inline void AddComponentVerification(TSharedPtr<FJsonObject> Response, US
  */
 static inline void AddAssetVerification(TSharedPtr<FJsonObject> Response, UObject* Asset) {
   if (!Response || !Asset) return;
-  
+
   FString AssetPath = Asset->GetPackage() ? Asset->GetPackage()->GetPathName() : Asset->GetPathName();
   Response->SetStringField(TEXT("assetPath"), AssetPath);
   Response->SetStringField(TEXT("assetName"), Asset->GetName());
@@ -2821,7 +2821,7 @@ static inline void AddAssetVerification(TSharedPtr<FJsonObject> Response, UObjec
  */
 static inline void AddAssetVerificationNested(TSharedPtr<FJsonObject> Response, const FString& FieldName, UObject* Asset) {
   if (!Response || !Asset) return;
-  
+
   TSharedPtr<FJsonObject> VerificationObj = MakeShared<FJsonObject>();
   FString AssetPath = Asset->GetPackage() ? Asset->GetPackage()->GetPathName() : Asset->GetPathName();
   VerificationObj->SetStringField(TEXT("assetPath"), AssetPath);
@@ -2845,12 +2845,12 @@ static inline bool VerifyAssetExists(TSharedPtr<FJsonObject> Response, const FSt
 
 /**
  * Check if a UE asset directory path ACTUALLY exists on disk.
- * 
+ *
  * UEditorAssetLibrary::DoesDirectoryExist() uses the AssetRegistry cache which may
  * contain stale entries for directories that no longer exist or never existed.
  * This function converts the UE path to an absolute file system path and checks
  * if the directory actually exists on disk.
- * 
+ *
  * @param AssetPath UE asset path (e.g., /Game/MyFolder)
  * @returns true if the directory exists on disk, false otherwise
  */
@@ -2863,17 +2863,17 @@ static inline bool DoesAssetDirectoryExistOnDisk(const FString& AssetPath) {
       AssetPath.Equals(TEXT("/Engine/"), ESearchCase::IgnoreCase)) {
     return true;
   }
-  
+
   // Normalize the path - remove trailing slash
   FString NormalizedPath = AssetPath;
   if (NormalizedPath.EndsWith(TEXT("/"))) {
     NormalizedPath.RemoveAt(NormalizedPath.Len() - 1);
   }
-  
+
   // Convert UE asset path to file system path
   // /Game/Folder -> Project/Content/Folder
   FString FileSystemPath;
-  
+
   if (NormalizedPath.StartsWith(TEXT("/Game/"))) {
     // /Game/... -> Project/Content/...
     FString RelativePath = NormalizedPath.RightChop(6); // Remove "/Game/"
@@ -2892,7 +2892,7 @@ static inline bool DoesAssetDirectoryExistOnDisk(const FString& AssetPath) {
       return UEditorAssetLibrary::DoesDirectoryExist(AssetPath);
     }
   }
-  
+
   // Check if the directory exists on disk using IFileManager
   IFileManager& FileManager = IFileManager::Get();
   return FileManager.DirectoryExists(*FileSystemPath);
@@ -2905,7 +2905,7 @@ static inline bool DoesAssetDirectoryExistOnDisk(const FString& AssetPath) {
 /**
  * Check if a parent directory exists for asset creation.
  * Combines AssetRegistry check (for valid paths) with disk check (for actual existence).
- * 
+ *
  * @param AssetPath UE asset path for the asset to be created
  * @return true if parent directory exists, false otherwise
  */
@@ -2916,7 +2916,7 @@ static inline bool DoesParentDirectoryExist(const FString& AssetPath) {
   if (ParentPath.IsEmpty()) {
     return false;
   }
-  
+
   // Check if parent exists on disk
   return DoesAssetDirectoryExistOnDisk(ParentPath);
 #else

@@ -790,7 +790,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
           StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
     }
     if (!Landscape) {
-      FString ErrorMessage = LandscapeName.IsEmpty() 
+      FString ErrorMessage = LandscapeName.IsEmpty()
           ? FString::Printf(TEXT("Landscape not found at path: %s"), *LandscapePath)
           : FString::Printf(TEXT("Landscape '%s' not found (path: %s)"), *LandscapeName, *LandscapePath);
       Subsystem->SendAutomationError(RequestingSocket, RequestId,
@@ -959,7 +959,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
           1.0f, FText::FromString(TEXT("Flushing changes to GPU")));
       LandscapeEditWrite.Flush();
     }
-    
+
     // Use MarkPackageDirty instead of PostEditChange to avoid full landscape rebuild
     // PostEditChange triggers collision rebuild, shader recompilation, and nav mesh update
     // which can take 60+ seconds for large landscapes
@@ -975,7 +975,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
     Resp->SetNumberField(TEXT("regionSizeY"), SizeY);
     Resp->SetBoolField(TEXT("flushSkipped"), bSkipFlush);
     Resp->SetBoolField(TEXT("updateNormals"), bUpdateNormals);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Resp, Landscape);
 
@@ -1154,7 +1154,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
           StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
     }
     if (!Landscape) {
-      FString ErrorMessage = LandscapeName.IsEmpty() 
+      FString ErrorMessage = LandscapeName.IsEmpty()
           ? FString::Printf(TEXT("Landscape not found at path: %s"), *LandscapePath)
           : FString::Printf(TEXT("Landscape '%s' not found (path: %s)"), *LandscapeName, *LandscapePath);
       Subsystem->SendAutomationError(RequestingSocket, RequestId,
@@ -1182,7 +1182,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
     const FVector LandscapeScale = Landscape->GetActorScale3D();
     const float ScaleX = LandscapeScale.X;
     const float ScaleZ = LandscapeScale.Z;
-    
+
     // Guard against zero scale which would cause division by zero
     if (FMath::IsNearlyZero(ScaleX) || FMath::IsNearlyZero(ScaleZ))
     {
@@ -1191,7 +1191,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
                                      TEXT("INVALID_SCALE"));
       return;
     }
-    
+
     int32 RadiusVerts = FMath::Max(1, FMath::RoundToInt(BrushRadius / ScaleX));
     int32 FalloffVerts = FMath::RoundToInt(RadiusVerts * BrushFalloff);
 
@@ -1451,7 +1451,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
     }
     if (!Landscape) {
       // Provide helpful error message distinguishing between "no landscape found" and "wrong name"
-      FString ErrorMessage = LandscapeName.IsEmpty() 
+      FString ErrorMessage = LandscapeName.IsEmpty()
           ? FString::Printf(TEXT("Landscape not found at path: %s"), *LandscapePath)
           : FString::Printf(TEXT("Landscape '%s' not found (path: %s)"), *LandscapeName, *LandscapePath);
       Subsystem->SendAutomationError(RequestingSocket, RequestId,
@@ -1521,7 +1521,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
     int32 PaintMinY = MinY;
     int32 PaintMaxX = MaxX;
     int32 PaintMaxY = MaxY;
-    
+
     // Clamp paint region to landscape extents
     int32 LMinX, LMinY, LMaxX, LMaxY;
     if (LandscapeInfo->GetLandscapeExtent(LMinX, LMinY, LMaxX, LMaxY))
@@ -1531,7 +1531,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
       PaintMaxX = FMath::Clamp(PaintMaxX, LMinX, LMaxX);
       PaintMaxY = FMath::Clamp(PaintMaxY, LMinY, LMaxY);
     }
-    
+
     // Validate region is valid
     if (PaintMinX > PaintMaxX || PaintMinY > PaintMaxY)
     {
@@ -1546,7 +1546,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
     const uint8 PaintValue = static_cast<uint8>(Strength * 255.0);
     const int32 RegionSizeX = (PaintMaxX - PaintMinX + 1);
     const int32 RegionSizeY = (PaintMaxY - PaintMinY + 1);
-    
+
     // Validate region size to prevent huge allocations
     constexpr int32 MaxRegionPixels = 16777216; // 16M pixels = ~16MB for uint8
     if (RegionSizeX * RegionSizeY > MaxRegionPixels)
@@ -1706,7 +1706,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetLandscapeMaterial(
           StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
     }
     if (!Landscape) {
-      FString ErrorMessage = LandscapeName.IsEmpty() 
+      FString ErrorMessage = LandscapeName.IsEmpty()
           ? FString::Printf(TEXT("Landscape not found at path: %s"), *LandscapePath)
           : FString::Printf(TEXT("Landscape '%s' not found (path: %s)"), *LandscapeName, *LandscapePath);
       Subsystem->SendAutomationError(RequestingSocket, RequestId,
@@ -1891,7 +1891,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscapeGrassType(
     // AddZeroed() allocates memory and zeros it without invoking any constructor
     int32 NewIndex = GrassType->GrassVarieties.AddZeroed();
     FGrassVariety& Variety = GrassType->GrassVarieties[NewIndex];
-    
+
     // Explicitly initialize all fields (memory is zero-initialized from AddZeroed)
     Variety.GrassMesh = StaticMesh;
     Variety.GrassDensity.Default = static_cast<float>(Density);

@@ -322,7 +322,7 @@ FMcpBridgeWebSocket::~FMcpBridgeWebSocket() {
     FPlatformProcess::ReturnSynchEventToPool(HandlerReadyEvent);
     HandlerReadyEvent = nullptr;
   }
-  
+
   if (Thread) {
     // Wait for thread completion. The Close() call above should have unblocked
     // any waiting socket operations by destroying ListenSocket/Socket.
@@ -331,7 +331,7 @@ FMcpBridgeWebSocket::~FMcpBridgeWebSocket() {
     delete Thread;
     Thread = nullptr;
   }
-  
+
   if (StopEvent) {
     FPlatformProcess::ReturnSynchEventToPool(StopEvent);
     StopEvent = nullptr;
@@ -823,12 +823,12 @@ uint32 FMcpBridgeWebSocket::RunClient() {
 uint32 FMcpBridgeWebSocket::RunServer() {
   // Determine if we need IPv6 socket based on host address
   const bool bIsIpv6Host = ListenHost.Contains(TEXT(":"));
-  
+
   ISocketSubsystem *SocketSubsystem = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("FMcpBridgeWebSocket::RunServer begin (host=%s, port=%d, IPv6=%s)"),
          *ListenHost, Port, bIsIpv6Host ? TEXT("true") : TEXT("false"));
-  
+
   // Create socket with proper protocol family for IPv6 support
   // Use FName-based protocol specification (non-deprecated API)
   const FName ProtocolName = bIsIpv6Host ? FName(TEXT("IPv6")) : FName();
@@ -878,7 +878,7 @@ uint32 FMcpBridgeWebSocket::RunServer() {
     if (!bResolvedHost && HostToBind.Equals(TEXT("::1"), ESearchCase::IgnoreCase)) {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("IPv6 loopback '::1' not supported on this system. Falling back to 127.0.0.1."));
-      
+
       // Re-create socket as IPv4 since we're falling back to IPv4 address
       SocketSubsystem->DestroySocket(ListenSocket);
       ListenSocket = SocketSubsystem->CreateSocket(
@@ -890,7 +890,7 @@ uint32 FMcpBridgeWebSocket::RunServer() {
       ListenSocket->SetReuseAddr(true);
       ListenSocket->SetNonBlocking(false);
       UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Re-created socket for IPv4 fallback."));
-      
+
       bool bFallbackIsValidIp = false;
       ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);
       bResolvedHost = bFallbackIsValidIp;
@@ -911,14 +911,14 @@ uint32 FMcpBridgeWebSocket::RunServer() {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
              TEXT("'%s' is not a valid IP address. Attempting DNS resolution..."),
              *HostToBind);
-      
+
       FAddressInfoResult AddrInfoResult = SocketSubsystem->GetAddressInfo(
-          *HostToBind, 
-          nullptr, 
+          *HostToBind,
+          nullptr,
           EAddressInfoFlags::Default,
           NAME_None,
           ESocketType::SOCKTYPE_Streaming);
-      
+
       if (AddrInfoResult.ReturnCode == SE_NO_ERROR && AddrInfoResult.Results.Num() > 0) {
         // Use the first resolved address
         ListenAddr = AddrInfoResult.Results[0].Address;
@@ -926,7 +926,7 @@ uint32 FMcpBridgeWebSocket::RunServer() {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
                TEXT("Successfully resolved '%s' to address '%s'."),
                *HostToBind, *ListenAddr->ToString(true));
-        
+
         // Check if resolved address family matches socket family
         // UE 5.7 uses GetProtocolType() which returns FName instead of GetProtocolFamily()
         const FName ProtocolType = ListenAddr->GetProtocolType();
@@ -936,13 +936,13 @@ uint32 FMcpBridgeWebSocket::RunServer() {
                  TEXT("DNS resolved to %s but socket is %s. Recreating socket..."),
                  bResolvedIsIpv6 ? TEXT("IPv6") : TEXT("IPv4"),
                  bIsIpv6Host ? TEXT("IPv6") : TEXT("IPv4"));
-          
+
           SocketSubsystem->DestroySocket(ListenSocket);
           const FName NewProtocolName = bResolvedIsIpv6 ? FName(TEXT("IPv6")) : FName();
           ListenSocket = SocketSubsystem->CreateSocket(
               NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), NewProtocolName);
           if (!ListenSocket) {
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Error, 
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
                    TEXT("Failed to re-create socket for resolved address family."));
             return 0;
           }
@@ -1028,7 +1028,7 @@ uint32 FMcpBridgeWebSocket::RunServer() {
     // This thread owns ListenSocket destruction (done after loop exits).
     FSocket *ClientSocket =
         ListenSocket->Accept(TEXT("McpAutomationBridgeClient"));
-    
+
     // Check again after Accept() returns - socket may have been closed
     if (bStopping || !ListenSocket) {
       if (ClientSocket) {
@@ -1038,7 +1038,7 @@ uint32 FMcpBridgeWebSocket::RunServer() {
       }
       break;
     }
-    
+
     if (ClientSocket) {
       TSharedRef<FInternetAddr> PeerAddr = SocketSubsystem->CreateInternetAddr();
       if (ClientSocket->GetPeerAddress(*PeerAddr)) {

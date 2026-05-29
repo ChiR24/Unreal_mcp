@@ -2,9 +2,9 @@
 // McpAutomationBridge_AssetQueryHandlers.cpp
 // =============================================================================
 // MCP Automation Bridge - Asset Query & Search Handlers
-// 
+//
 // UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-// 
+//
 // Handler Summary:
 // -----------------------------------------------------------------------------
 // Action: asset_query
@@ -12,24 +12,24 @@
 //   - find_by_tag: Find assets by metadata tag value
 //   - search_assets: Query assets by class, path, and other filters
 //   - get_source_control_state: Get source control state for asset (Editor Only)
-// 
+//
 // Action: search_assets (wrapper)
 //   - Delegates to asset_query with subAction="search_assets"
-// 
+//
 // Dependencies:
 //   - Core: McpAutomationBridgeSubsystem, McpAutomationBridgeHelpers
 //   - Engine: AssetRegistry, ARFilter
 //   - Editor: EditorAssetLibrary, SourceControl
-// 
+//
 // Version Compatibility Notes:
 //   - UE 5.1+: AssetClassPath (FTopLevelAssetPath) for class references
 //   - UE 5.0: AssetClass (FName) for class references
 //   - GetSoftObjectPath() vs ToSoftObjectPath() differs by version
-// 
+//
 // Security:
 //   - All paths sanitized via SanitizeProjectRelativePath() to prevent traversal
 //   - Default search path is /Game to prevent massive project scans
-// 
+//
 // Performance:
 //   - Uses AssetRegistry cached data - no asset loading required
 //   - ScanPathsSynchronous() was REMOVED to prevent GameThread blocking
@@ -87,7 +87,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -105,7 +105,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 
         if (AssetPath.IsEmpty())
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Missing assetPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
@@ -127,7 +127,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         bool bIncludeSoftDependencies = false;
         Payload->TryGetBoolField(TEXT("includeSoftDependencies"), bIncludeSoftDependencies);
 
-        FAssetRegistryModule& AssetRegistryModule = 
+        FAssetRegistryModule& AssetRegistryModule =
             FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 
         TArray<FName> Dependencies;
@@ -146,9 +146,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         }
 
         AssetRegistryModule.Get().GetDependencies(
-            FName(*SanitizedAssetPath), 
+            FName(*SanitizedAssetPath),
             Dependencies,
-            UE::AssetRegistry::EDependencyCategory::Package, 
+            UE::AssetRegistry::EDependencyCategory::Package,
             Query);
 
         // Build response
@@ -162,7 +162,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 
         Result->SetArrayField(TEXT("dependencies"), DepArray);
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Dependencies retrieved."), Result);
         return true;
     }
@@ -180,7 +180,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 
         if (Tag.IsEmpty())
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("tag required"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
@@ -208,7 +208,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         }
 
         // Query AssetRegistry (uses cached data, no loading required)
-        FAssetRegistryModule& AssetRegistryModule = 
+        FAssetRegistryModule& AssetRegistryModule =
             FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
         IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
@@ -265,7 +265,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         Result->SetArrayField(TEXT("assets"), AssetsArray);
         Result->SetNumberField(TEXT("count"), AssetsArray.Num());
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Assets found by tag"), Result);
         return true;
     }
@@ -402,7 +402,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         bool bHasValidPaths = false;
 
         // Check for packagePaths array
-        if (Payload->TryGetArrayField(TEXT("packagePaths"), PackagePathsPtr) && 
+        if (Payload->TryGetArrayField(TEXT("packagePaths"), PackagePathsPtr) &&
             PackagePathsPtr && PackagePathsPtr->Num() > 0)
         {
             for (const TSharedPtr<FJsonValue>& Val : *PackagePathsPtr)
@@ -557,7 +557,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         Result->SetNumberField(TEXT("offset"), Offset);
         Result->SetNumberField(TEXT("limit"), Limit);
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Assets found."), Result);
         return true;
     }
@@ -615,18 +615,18 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
                 Result->SetBoolField(TEXT("isDeleted"), State->IsDeleted());
                 Result->SetBoolField(TEXT("isModified"), State->IsModified());
 
-                SendAutomationResponse(RequestingSocket, RequestId, true, 
+                SendAutomationResponse(RequestingSocket, RequestId, true,
                     TEXT("Source control state retrieved."), Result);
             }
             else
             {
-                SendAutomationError(RequestingSocket, RequestId, 
+                SendAutomationError(RequestingSocket, RequestId,
                     TEXT("Could not get source control state."), TEXT("STATE_FAILED"));
             }
         }
         else
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Source control not enabled."), TEXT("SC_DISABLED"));
         }
         return true;
@@ -634,7 +634,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 #endif
 
     // Unknown subaction
-    SendAutomationError(RequestingSocket, RequestId, 
+    SendAutomationError(RequestingSocket, RequestId,
         TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;
 }

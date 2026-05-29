@@ -1743,12 +1743,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
         Op->TryGetStringField(TEXT("componentClass"), ComponentClassPath);
         FString AttachToName;
         Op->TryGetStringField(TEXT("attachTo"), AttachToName);
-        
+
         // UE 5.7 FIX: Use ResolveClassByName to handle short class names like "StaticMeshComponent"
         // FSoftClassPath triggers ensure failure when given short package names in UE 5.7+
         // ResolveClassByName handles short name resolution via prefix guessing and TObjectIterator
         UClass *ComponentClass = ResolveClassByName(ComponentClassPath);
-        
+
         // Fallback: Only use FSoftClassPath if it looks like a full path (contains /)
         if (!ComponentClass && ComponentClassPath.Contains(TEXT("/"))) {
           FSoftClassPath ComponentClassSoftPath(ComponentClassPath);
@@ -1833,7 +1833,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                     // Generate unique name if target already exists
                     FString UniqueName = ComponentName;
                     FName TargetVarName = FName(*UniqueName);
-                    
+
                     // Check if variable already exists in blueprint
                     if (LocalBP->GeneratedClass) {
                       // Check for existing member variable with same name
@@ -1844,7 +1844,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                           break;
                         }
                       }
-                      
+
                       // Also check the _GEN_VARIABLE suffix naming
                       FString GenVarName = UniqueName + TEXT("_GEN_VARIABLE");
                       FName GenVarFName = FName(*GenVarName);
@@ -1854,14 +1854,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                           break;
                         }
                       }
-                      
+
                       if (bNameExists) {
                         // Generate unique name by appending number
                         int32 Suffix = 1;
                         while (Suffix < 1000) {
                           UniqueName = FString::Printf(TEXT("%s_%d"), *ComponentName, Suffix);
                           TargetVarName = FName(*UniqueName);
-                          
+
                           bNameExists = false;
                           for (TFieldIterator<FProperty> It(LocalBP->GeneratedClass); It; ++It) {
                             if (It->GetFName() == TargetVarName) {
@@ -1869,16 +1869,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                               break;
                             }
                           }
-                          
+
                           if (!bNameExists) break;
                           Suffix++;
                         }
-                        
+
                         OpSummary->SetStringField(TEXT("originalName"), ComponentName);
                         OpSummary->SetStringField(TEXT("renamedTo"), UniqueName);
                       }
                     }
-                    
+
                     Subsystem->RenameSubobjectMemberVariable(
                         LocalBP, NewHandle, TargetVarName);
                   }
@@ -4292,8 +4292,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 
   // blueprint_get: return the lightweight registry entry for a blueprint
   if ((ActionMatchesPattern(TEXT("blueprint_get")) ||
+       ActionMatchesPattern(TEXT("get_blueprint")) ||
        ActionMatchesPattern(TEXT("get")) ||
-       AlphaNumLower.Contains(TEXT("blueprintget"))) &&
+       AlphaNumLower.Contains(TEXT("blueprintget")) ||
+       AlphaNumLower.Contains(TEXT("getblueprint"))) &&
       !Lower.Contains(TEXT("scs"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_get handler: RequestId=%s"), *RequestId);

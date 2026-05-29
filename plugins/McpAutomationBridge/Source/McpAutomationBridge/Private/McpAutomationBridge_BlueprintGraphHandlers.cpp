@@ -145,7 +145,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
   {
     FString AssetPathParam;
     FString BlueprintPathParam;
-    
+
     if (Payload->TryGetStringField(TEXT("assetPath"), AssetPathParam) && !AssetPathParam.IsEmpty()) {
       FString SanitizedAssetPath = SanitizeProjectRelativePath(AssetPathParam);
       if (SanitizedAssetPath.IsEmpty()) {
@@ -155,7 +155,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         return true;
       }
     }
-    
+
     if (Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPathParam) && !BlueprintPathParam.IsEmpty()) {
       FString SanitizedBlueprintPath = SanitizeProjectRelativePath(BlueprintPathParam);
       if (SanitizedBlueprintPath.IsEmpty()) {
@@ -203,7 +203,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       AssetPath = BlueprintPath;
     }
   }
-  
+
   // SECURITY: Sanitize the path before loading
   FString SanitizedAssetPath = SanitizeProjectRelativePath(AssetPath);
   if (SanitizedAssetPath.IsEmpty()) {
@@ -382,7 +382,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         NodeCreator.Finalize();
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        
+
         // CRITICAL: Save the blueprint to persist the new node.
         // Without this, the node exists only in memory and can be lost
         // between requests when the blueprint is reloaded.
@@ -803,7 +803,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         NodeType == TEXT("K2Node_CustomEvent")) {
       FString EventName;
       Payload->TryGetStringField(TEXT("eventName"), EventName);
-      
+
       // Helper lambda to convert a type string into an FEdGraphPinType
       auto ResolvePinType = [&](const FString& TypeStr) -> FEdGraphPinType {
         FEdGraphPinType PinType;
@@ -877,13 +877,13 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
         // Structs (FVector, etc.) – try qualified path first, then short name, then iterate
         UScriptStruct* Struct = nullptr;
-        
+
         // 1) Try full path (e.g., /Script/CoreUObject.Vector)
         if (CleanType.Contains(TEXT("/Script/")))
         {
           Struct = LoadObject<UScriptStruct>(nullptr, *CleanType);
         }
-        
+
         // 2) Try short name with optional leading 'F'
         if (!Struct)
         {
@@ -898,7 +898,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
             Struct = FindObject<UScriptStruct>(nullptr, *CleanType);
           }
         }
-        
+
         // 3) Fallback: iterate over all structs and match by name (case-insensitive)
         if (!Struct)
         {
@@ -911,7 +911,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
             }
           }
         }
-        
+
         if (Struct)
         {
           PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
@@ -1168,12 +1168,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         NewNode->NodePosX = X;
         NewNode->NodePosY = Y;
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        
+
         // CRITICAL: Save the blueprint to persist the new node.
         // Without this, the node exists only in memory and can be lost
         // between requests when the blueprint is reloaded.
         SaveLoadedAssetThrottled(Blueprint);
-        
+
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
         Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
@@ -1262,10 +1262,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
     if (TargetGraph->GetSchema()->TryCreateConnection(FromPin, ToPin)) {
       FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-      
+
       // CRITICAL: Save the blueprint to persist changes.
       SaveLoadedAssetThrottled(Blueprint);
-      
+
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       McpHandlerUtils::AddVerification(Result, Blueprint);
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1374,10 +1374,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     TargetNode->Modify();
     TargetGraph->GetSchema()->BreakPinLinks(*Pin, true);
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    
+
     // CRITICAL: Save the blueprint to persist changes.
     SaveLoadedAssetThrottled(Blueprint);
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1398,10 +1398,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
     if (TargetNode) {
       FBlueprintEditorUtils::RemoveNode(Blueprint, TargetNode, true);
-      
+
       // CRITICAL: Save the blueprint to persist changes.
       SaveLoadedAssetThrottled(Blueprint);
-      
+
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       McpHandlerUtils::AddVerification(Result, Blueprint);
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1431,7 +1431,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     NodeCreator.Finalize();
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    
+
     // CRITICAL: Save the blueprint to persist the new node.
     // Without this, the node exists only in memory and can be lost
     // between requests when the blueprint is reloaded.
@@ -1499,10 +1499,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       if (bHandled) {
         TargetGraph->NotifyGraphChanged();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        
+
         // CRITICAL: Save the blueprint to persist changes.
         SaveLoadedAssetThrottled(Blueprint);
-        
+
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("nodeId"), TargetNode->NodeGuid.ToString());
         Result->SetStringField(TEXT("nodeName"), TargetNode->GetName());
@@ -1772,7 +1772,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     Schema->TrySetDefaultValue(*Pin, Value);
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    
+
     // CRITICAL: Save the blueprint to persist changes.
     SaveLoadedAssetThrottled(Blueprint);
 

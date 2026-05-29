@@ -39,7 +39,7 @@ namespace McpPropertyReflection
 
     /**
      * Convert a single Unreal property value from a container into a JSON value.
-     * 
+     *
      * Supported property types:
      * - Strings (FStrProperty)
      * - Names (FNameProperty)
@@ -58,7 +58,7 @@ namespace McpPropertyReflection
      * @return JSON value representing the property, or null for unsupported types
      */
     MCPAUTOMATIONBRIDGE_API TSharedPtr<FJsonValue> ExportPropertyToJsonValue(
-        void* TargetContainer, 
+        void* TargetContainer,
         FProperty* Property);
 
     /**
@@ -68,7 +68,7 @@ namespace McpPropertyReflection
      * @return JSON object with all property values
      */
     MCPAUTOMATIONBRIDGE_API TSharedPtr<FJsonObject> ExportObjectToJson(
-        UObject* Object, 
+        UObject* Object,
         bool bIncludeTransient = false);
 
     /**
@@ -87,7 +87,7 @@ namespace McpPropertyReflection
 
     /**
      * Apply a JSON value to a reflected property on a target container.
-     * 
+     *
      * Supports conversion from JSON to:
      * - Bool (from boolean, number, or "true"/"false" string)
      * - String/Name (from string)
@@ -160,13 +160,13 @@ namespace McpPropertyReflection
         {
             return nullptr;
         }
-        
+
         UClass* Class = Object->GetClass();
         if (!Class)
         {
             return nullptr;
         }
-        
+
         return Class->FindPropertyByName(PropertyName);
     }
 
@@ -248,7 +248,7 @@ namespace McpPropertyReflection
         {
             return false;
         }
-        
+
         OutVector.X = JsonArray[0]->AsNumber();
         OutVector.Y = JsonArray[1]->AsNumber();
         OutVector.Z = JsonArray[2]->AsNumber();
@@ -267,7 +267,7 @@ namespace McpPropertyReflection
         {
             return false;
         }
-        
+
         double X = 0.0, Y = 0.0, Z = 0.0;
         if (!JsonObject->TryGetNumberField(TEXT("x"), X))
         {
@@ -319,7 +319,7 @@ namespace McpPropertyReflection
         {
             return false;
         }
-        
+
         OutRotator.Pitch = JsonArray[0]->AsNumber();
         OutRotator.Yaw = JsonArray[1]->AsNumber();
         OutRotator.Roll = JsonArray[2]->AsNumber();
@@ -338,7 +338,7 @@ namespace McpPropertyReflection
         {
             return false;
         }
-        
+
         double Pitch = 0.0, Yaw = 0.0, Roll = 0.0;
         if (!JsonObject->TryGetNumberField(TEXT("pitch"), Pitch))
         {
@@ -391,13 +391,13 @@ namespace McpPropertyReflection
         {
             return false;
         }
-        
+
         double R = 255.0, G = 255.0, B = 255.0, A = 255.0;
         Obj->TryGetNumberField(TEXT("r"), R);
         Obj->TryGetNumberField(TEXT("g"), G);
         Obj->TryGetNumberField(TEXT("b"), B);
         Obj->TryGetNumberField(TEXT("a"), A);
-        
+
         OutColor = FColor(
             static_cast<uint8>(FMath::Clamp(static_cast<int>(R), 0, 255)),
             static_cast<uint8>(FMath::Clamp(static_cast<int>(G), 0, 255)),
@@ -429,13 +429,13 @@ namespace McpPropertyReflection
         {
             return false;
         }
-        
+
         double R = 1.0, G = 1.0, B = 1.0, A = 1.0;
         Obj->TryGetNumberField(TEXT("r"), R);
         Obj->TryGetNumberField(TEXT("g"), G);
         Obj->TryGetNumberField(TEXT("b"), B);
         Obj->TryGetNumberField(TEXT("a"), A);
-        
+
         OutColor = FLinearColor(R, G, B, A);
         return true;
     }

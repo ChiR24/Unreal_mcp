@@ -2,18 +2,18 @@
 // McpAutomationBridge_InsightsHandlers.cpp
 // =============================================================================
 // MCP Automation Bridge - Profiling & Insights Handlers
-// 
+//
 // UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-// 
+//
 // Handler Summary:
 // -----------------------------------------------------------------------------
 // Action: manage_insights
 //   - start_session: Start Unreal Insights trace session with optional channels
-// 
+//
 // Dependencies:
 //   - Core: McpAutomationBridgeSubsystem, McpAutomationBridgeHelpers
 //   - Engine: Trace system (built-in)
-// 
+//
 // Notes:
 //   - Uses console command "Trace.Start [channels]" for compatibility
 //   - Channels are optional; default trace starts without specific channels
@@ -40,9 +40,9 @@
 // =============================================================================
 
 bool UMcpAutomationBridgeSubsystem::HandleInsightsAction(
-    const FString& RequestId, 
-    const FString& Action, 
-    const TSharedPtr<FJsonObject>& Payload, 
+    const FString& RequestId,
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     // Validate action
@@ -54,7 +54,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInsightsAction(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -73,7 +73,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInsightsAction(
     if (SubAction == TEXT("start_session"))
     {
         FString Channels;
-        const bool bHasChannels = Payload->TryGetStringField(TEXT("channels"), Channels) 
+        const bool bHasChannels = Payload->TryGetStringField(TEXT("channels"), Channels)
             && !Channels.TrimStartAndEnd().IsEmpty();
 
         if (bHasChannels)
@@ -136,13 +136,13 @@ bool UMcpAutomationBridgeSubsystem::HandleInsightsAction(
             Result->SetStringField(TEXT("channels"), Channels);
         }
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Trace session started."), Result);
         return true;
     }
 
     // Unknown subaction
-    SendAutomationError(RequestingSocket, RequestId, 
+    SendAutomationError(RequestingSocket, RequestId,
         TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;
 }

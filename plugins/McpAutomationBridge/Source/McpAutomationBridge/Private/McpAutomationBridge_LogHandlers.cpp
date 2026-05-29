@@ -2,24 +2,24 @@
 // McpAutomationBridge_LogHandlers.cpp
 // =============================================================================
 // MCP Automation Bridge - Log Streaming Handlers
-// 
+//
 // UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-// 
+//
 // Handler Summary:
 // -----------------------------------------------------------------------------
 // Action: manage_logs
 //   - subscribe: Enable log streaming to connected clients
 //   - unsubscribe: Disable log streaming
-// 
+//
 // Dependencies:
 //   - Core: McpAutomationBridgeSubsystem, McpAutomationBridgeHelpers
 //   - Engine: OutputDevice, Async
-// 
+//
 // Architecture:
 //   - FMcpLogOutputDevice: Custom FOutputDevice that intercepts all log output
 //   - Thread-safe: Uses AsyncTask to dispatch to game thread for socket sending
 //   - Filtering: Excludes noisy categories (LogRHI, LogEOSSDK, LogCsvProfiler)
-// 
+//
 // Notes:
 //   - LogCaptureDevice lifetime managed by subsystem
 //   - Weak pointer used to prevent crashes if subsystem destroyed during callback
@@ -160,9 +160,9 @@ private:
 // =============================================================================
 
 bool UMcpAutomationBridgeSubsystem::HandleLogAction(
-    const FString& RequestId, 
-    const FString& Action, 
-    const TSharedPtr<FJsonObject>& Payload, 
+    const FString& RequestId,
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     // Validate action
@@ -174,7 +174,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -257,7 +257,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
     }
 
     // Unknown subaction
-    SendAutomationError(RequestingSocket, RequestId, 
+    SendAutomationError(RequestingSocket, RequestId,
         TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;
 }

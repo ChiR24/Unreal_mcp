@@ -251,14 +251,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
         if (PathToCheck.Len() > 512) {
-            SendAutomationError(RequestingSocket, RequestId, 
-                FString::Printf(TEXT("'%s' is too long (%d chars). Maximum allowed is 512 characters."), *ParamName, PathToCheck.Len()), 
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("'%s' is too long (%d chars). Maximum allowed is 512 characters."), *ParamName, PathToCheck.Len()),
                 TEXT("INVALID_ARGUMENT"));
             return false;
         }
         FString SanitizedPath = SanitizeProjectRelativePath(PathToCheck);
         if (SanitizedPath.IsEmpty()) {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("'%s' has invalid format. Path must be a valid Unreal asset path without traversal or invalid roots."), *ParamName),
                 TEXT("INVALID_ARGUMENT"));
             return false;
@@ -320,7 +320,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         if (!Path.EndsWith(TEXT("/"))) Path += TEXT("/");
         FString FullPath = Path + Name;
         FString PackagePath = FPackageName::ObjectPathToPackageName(FullPath);
-        
+
         UPackage* Package = CreatePackage(*PackagePath);
         if (!Package)
         {
@@ -380,7 +380,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         FAssetRegistryModule::AssetCreated(NewSystem);
-        
+
         if (bSave)
         {
             McpSafeAssetSave(NewSystem);
@@ -403,7 +403,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         if (!Path.EndsWith(TEXT("/"))) Path += TEXT("/");
         FString FullPath = Path + Name;
         FString PackagePath = FPackageName::ObjectPathToPackageName(FullPath);
-        
+
         UPackage* Package = CreatePackage(*PackagePath);
         if (!Package)
         {
@@ -430,7 +430,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 #endif
 
         FAssetRegistryModule::AssetCreated(NewEmitter);
-        
+
         if (bSave)
         {
             McpSafeAssetSave(NewEmitter);
@@ -505,7 +505,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         FNiagaraEmitterHandle NewHandle = System->AddEmitterHandle(*Emitter, FName(*Emitter->GetName()));
         AddedEmitterName = NewHandle.GetName().ToString();
 #endif
-        
+
         if (bSave)
         {
             System->MarkPackageDirty();
@@ -542,13 +542,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
                 break;
             }
         }
-        
+
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found in system."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
             return true;
         }
-        
+
         const TSharedPtr<FJsonObject>* PropsObj;
         if (Payload->TryGetObjectField(TEXT("emitterProperties"), PropsObj) && PropsObj->IsValid())
         {
@@ -908,7 +908,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         );
 
         bool bModuleAdded = (NewModule != nullptr);
-        
+
         // Also set user-exposed parameters if available
         FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
         FNiagaraVariable SpawnRateVar(FNiagaraTypeDefinition::GetFloatDef(), FName(TEXT("SpawnRate")));
@@ -1151,7 +1151,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         double ForceStrength = GetNumberFieldNiagAuth(Payload, TEXT("forceStrength"), 980.0);
-        
+
         const TSharedPtr<FJsonObject>* ForceVectorObj;
         FVector ForceVector = FVector(0, 0, -980);
         if (Payload->TryGetObjectField(TEXT("forceVector"), ForceVectorObj))
@@ -1921,7 +1921,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
-        
+
         FNiagaraTypeDefinition TypeDef;
         if (ParamType == TEXT("Float"))
         {
@@ -1987,7 +1987,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
-        
+
         // Try to find and set the parameter value
         FNiagaraVariable FloatVar(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName));
         FNiagaraVariable IntVar(FNiagaraTypeDefinition::GetIntDef(), FName(*ParamName));
@@ -2819,7 +2819,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *TargetPath);
         UNiagaraEmitter* Emitter = nullptr;
-        
+
         if (!System)
         {
             Emitter = LoadObject<UNiagaraEmitter>(nullptr, *TargetPath);
@@ -2844,7 +2844,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
                 TSharedPtr<FJsonObject> EmitterObj = McpHandlerUtils::CreateResultObject();
                 EmitterObj->SetStringField(TEXT("name"), Handle.GetName().ToString());
                 EmitterObj->SetBoolField(TEXT("enabled"), Handle.GetIsEnabled());
-                
+
                 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
                 UNiagaraEmitter* Em = Handle.GetInstance().Emitter;
                 #else
@@ -2858,7 +2858,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
                         EmitterObj->SetStringField(TEXT("simulationTarget"), EmData->SimTarget == ENiagaraSimTarget::GPUComputeSim ? TEXT("GPU") : TEXT("CPU"));
                     }
                 }
-                
+
                 EmittersArray.Add(MakeShared<FJsonValueObject>(EmitterObj));
             }
             InfoObj->SetArrayField(TEXT("emitters"), EmittersArray);
@@ -2867,9 +2867,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
             TArray<FNiagaraVariable> Params;
             UserStore.GetParameters(Params);
-            
+
             InfoObj->SetNumberField(TEXT("userParameterCount"), Params.Num());
-            
+
             TArray<TSharedPtr<FJsonValue>> ParamsArray;
             for (const FNiagaraVariable& Param : Params)
             {
@@ -2901,7 +2901,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         {
             InfoObj->SetStringField(TEXT("assetType"), TEXT("Emitter"));
             InfoObj->SetStringField(TEXT("name"), Emitter->GetName());
-            
+
             MCP_NIAGARA_EMITTER_DATA_TYPE* EmData = MCP_GET_LATEST_EMITTER_DATA(Emitter);
             if (EmData)
             {

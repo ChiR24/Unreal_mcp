@@ -170,11 +170,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
   // Note: Factories are editor-internal and not exported for plugin use
   FString PackagePath = SavePath;
   FString AssetName = SystemName;
-  
+
   if (!PackagePath.EndsWith(TEXT("/"))) PackagePath += TEXT("/");
   FString FullPath = PackagePath + AssetName;
   FString ActualPackagePath = FPackageName::ObjectPathToPackageName(FullPath);
-  
+
   UPackage *Package = CreatePackage(*ActualPackagePath);
   if (!Package) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -182,7 +182,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
                         TEXT("PACKAGE_ERROR"));
     return true;
   }
-  
+
   // Create Niagara system with proper initialization
   UNiagaraSystem *NiagaraSystem = NewObject<UNiagaraSystem>(Package, FName(*AssetName), RF_Public | RF_Standalone | RF_Transactional);
   if (NiagaraSystem)
@@ -196,20 +196,20 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
     // Initialize system scripts
     UNiagaraScript* SystemSpawnScript = NiagaraSystem->GetSystemSpawnScript();
     UNiagaraScript* SystemUpdateScript = NiagaraSystem->GetSystemUpdateScript();
-    
+
     // Create script source and graph for system
     UNiagaraScriptSource* SystemScriptSource = NewObject<UNiagaraScriptSource>(SystemSpawnScript, TEXT("SystemScriptSource"), RF_Transactional);
     if (SystemScriptSource)
     {
       UNiagaraGraph* SystemGraph = NewObject<UNiagaraGraph>(SystemScriptSource, TEXT("SystemScriptGraph"), RF_Transactional);
       SystemScriptSource->NodeGraph = SystemGraph;
-      
+
       // Set source on both system scripts
       SystemSpawnScript->SetLatestSource(SystemScriptSource);
       SystemUpdateScript->SetLatestSource(SystemScriptSource);
     }
 #endif
-    
+
     // Add default emitter with proper GraphSource initialization
     UNiagaraEmitter *NewEmitter = NewObject<UNiagaraEmitter>(NiagaraSystem, FName(TEXT("DefaultEmitter")), RF_Transactional);
     if (NewEmitter)
@@ -227,14 +227,14 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
       {
         UNiagaraGraph* EmitterGraph = NewObject<UNiagaraGraph>(EmitterSource, NAME_None, RF_Transactional);
         EmitterSource->NodeGraph = EmitterGraph;
-        
+
         // Set GraphSource - API differs between engine versions
         // UE 5.0: GraphSource is directly on UNiagaraEmitter
         // UE 5.1+: GraphSource is on FVersionedNiagaraEmitterData, accessed via GetLatestEmitterData()
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
         // UE 5.0: Set GraphSource directly on emitter
         NewEmitter->GraphSource = EmitterSource;
-        
+
         // Set source on emitter scripts
         if (NewEmitter->SpawnScriptProps.Script)
           NewEmitter->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
@@ -252,7 +252,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
         if (EmitterData)
         {
           EmitterData->GraphSource = EmitterSource;
-          
+
           // Set source on emitter scripts
           if (EmitterData->SpawnScriptProps.Script)
             EmitterData->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
@@ -268,7 +268,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
 #endif
       }
 #endif
-      
+
       // AddEmitterHandle: UE 5.0 uses 2 params, UE 5.1+ uses 3 params (with FGuid)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
       NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")));
@@ -289,14 +289,14 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
 #endif
     }
   }
-  
+
   if (!NiagaraSystem) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Failed to create Niagara system"),
                         TEXT("CREATE_FAILED"));
     return true;
   }
-  
+
   FAssetRegistryModule::AssetCreated(NiagaraSystem);
   if (bSave) {
     McpSafeAssetSave(NiagaraSystem);
@@ -384,11 +384,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
   // Note: Factories are editor-internal and not exported for plugin use
   FString PackagePath = SavePath;
   FString AssetName = EmitterName;
-  
+
   if (!PackagePath.EndsWith(TEXT("/"))) PackagePath += TEXT("/");
   FString FullPath = PackagePath + AssetName;
   FString ActualPackagePath = FPackageName::ObjectPathToPackageName(FullPath);
-  
+
   UPackage *Package = CreatePackage(*ActualPackagePath);
   if (!Package) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -396,16 +396,16 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
                         TEXT("PACKAGE_ERROR"));
     return true;
   }
-  
+
   UNiagaraEmitter *NiagaraEmitter = NewObject<UNiagaraEmitter>(Package, FName(*AssetName), RF_Public | RF_Standalone | RF_Transactional);
-  
+
   if (!NiagaraEmitter) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Failed to create Niagara emitter"),
                         TEXT("CREATE_FAILED"));
     return true;
   }
-  
+
   // Initialize emitter with GraphSource to prevent crashes
   {
 #if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW
@@ -421,14 +421,14 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
     {
       UNiagaraGraph* EmitterGraph = NewObject<UNiagaraGraph>(EmitterSource, NAME_None, RF_Transactional);
       EmitterSource->NodeGraph = EmitterGraph;
-      
+
       // Set GraphSource - API differs between engine versions
       // UE 5.0: GraphSource is directly on UNiagaraEmitter
       // UE 5.1+: GraphSource is on FVersionedNiagaraEmitterData, accessed via GetLatestEmitterData()
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
       // UE 5.0: Set GraphSource directly on emitter
       NiagaraEmitter->GraphSource = EmitterSource;
-      
+
       // Set source on emitter scripts
       if (NiagaraEmitter->SpawnScriptProps.Script)
         NiagaraEmitter->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
@@ -446,7 +446,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
       if (EmitterData)
       {
         EmitterData->GraphSource = EmitterSource;
-        
+
         // Set source on emitter scripts
         if (EmitterData->SpawnScriptProps.Script)
           EmitterData->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
@@ -463,7 +463,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
     }
 #endif
   }
-  
+
   FAssetRegistryModule::AssetCreated(NiagaraEmitter);
   if (bSave) {
     McpSafeAssetSave(NiagaraEmitter);

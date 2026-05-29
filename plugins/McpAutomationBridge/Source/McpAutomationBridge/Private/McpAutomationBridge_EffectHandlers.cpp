@@ -1841,7 +1841,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     // Create environment effect - requires a Niagara system asset
     FString SystemPath;
     LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
-    
+
     if (!SystemPath.IsEmpty()) {
       return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
                                  TEXT("create_environment_effect"), SystemPath);
@@ -1980,7 +1980,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     LocalPayload->TryGetNumberField(TEXT("burstInterval"), BurstInterval);
     SendNiagaraModuleResponse(true, TEXT("SpawnBurst"), ModuleSystemPath,
                               ModuleEmitterName,
-                              FString::Printf(TEXT("Spawn burst module configured: count=%d, interval=%.3f"), 
+                              FString::Printf(TEXT("Spawn burst module configured: count=%d, interval=%.3f"),
                                               BurstCount, BurstInterval));
     return true;
   }

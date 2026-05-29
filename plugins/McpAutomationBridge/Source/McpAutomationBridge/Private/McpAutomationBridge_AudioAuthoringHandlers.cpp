@@ -283,7 +283,7 @@ static FString NormalizeAudioPath(const FString& Path, bool bForLoad = true)
 
 	return Normalized;
 }
-    
+
 
 // Helper to save asset - UE 5.7+ Fix: Do not save immediately to avoid modal dialogs.
 // modal progress dialogs that block automation. Instead, just mark dirty and notify registry.
@@ -293,7 +293,7 @@ static bool SaveAudioAsset(UObject* Asset, bool bShouldSave)
     {
         return true;
     }
-    
+
     // Mark dirty and notify asset registry - do NOT save to disk
     // This avoids modal dialogs and allows the editor to save later
     Asset->MarkPackageDirty();
@@ -392,11 +392,11 @@ static USoundEffectSourcePreset* CreateSourceEffectPresetByType(const FString& E
 static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    
+
     FString SubAction = McpHandlerUtils::GetOptionalString(Params, TEXT("subAction"), TEXT(""));
-    
+
     // ===== 11.1 Sound Cues =====
-    
+
     if (SubAction == TEXT("create_sound_cue"))
     {
         FString Name = McpHandlerUtils::GetOptionalString(Params, TEXT("name"), TEXT(""));
@@ -406,12 +406,12 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         float Volume = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("volume"), 1.0));
         float Pitch = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("pitch"), 1.0));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (Name.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
         }
-        
+
         // Create package and asset directly to avoid UI dialogs
         // AssetToolsModule.CreateAsset() shows "Overwrite Existing Object" dialogs
         // which cause recursive FlushRenderingCommands and D3D12 crashes
@@ -421,7 +421,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
         }
-        
+
         USoundCueFactoryNew* Factory = NewObject<USoundCueFactoryNew>();
         USoundCue* NewCue = Cast<USoundCue>(
             Factory->FactoryCreateNew(USoundCue::StaticClass(), Package,
@@ -505,20 +505,20 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
 	}
 
 	SaveAudioAsset(NewCue, bSave);
-        
+
         FString FullPath = NewCue->GetPathName();
         Response->SetStringField(TEXT("assetPath"), FullPath);
         Response = McpHandlerUtils::BuildSuccessResponse(FString::Printf(TEXT("SoundCue '%s' created"), *Name));
         McpHandlerUtils::AddVerification(Response, NewCue);
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_cue_node"))
     {
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         FString NodeType = McpHandlerUtils::GetOptionalString(Params, TEXT("nodeType"), TEXT("wave_player"));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
 	USoundCue* Cue = LoadSoundCueFromPath(AssetPath);
 	if (!Cue)
 	{
@@ -533,7 +533,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
 
 	USoundNode* NewNode = nullptr;
 	FString NodeTypeLower = NodeType.ToLower();
-        
+
         if (NodeTypeLower == TEXT("wave_player") || NodeTypeLower == TEXT("waveplayer"))
         {
             USoundNodeWavePlayer* Player = Cue->ConstructSoundNode<USoundNodeWavePlayer>();
@@ -606,12 +606,12 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("UNKNOWN_NODE_TYPE"), FString::Printf(TEXT("Unknown node type: %s"), *NodeType));
         }
-        
+
         if (!NewNode)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_NODE_FAILED"), TEXT("Failed to create sound node"));
         }
-        
+
 	// Do NOT call CompileSoundNodesFromGraphNodes() here — the newly created node
 	// is disconnected from the tree and has no parent linking it. Compile walks
 	// the entire graph and rebuilds ALL ChildNodes arrays from pin connections,
@@ -624,7 +624,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
 	McpHandlerUtils::AddVerification(Response, Cue);
 	return Response;
     }
-    
+
     if (SubAction == TEXT("connect_cue_nodes"))
     {
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
@@ -632,7 +632,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         FString TargetNodeId = McpHandlerUtils::GetOptionalString(Params, TEXT("targetNodeId"), TEXT(""));
         int32 ChildIndex = static_cast<int32>(McpHandlerUtils::GetOptionalInt(Params, TEXT("childIndex"), 0));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
 	USoundCue* Cue = LoadSoundCueFromPath(AssetPath);
 	if (!Cue)
 	{
@@ -647,7 +647,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
 	// Find source and target nodes
         USoundNode* SourceNode = nullptr;
         USoundNode* TargetNode = nullptr;
-        
+
         for (USoundNode* Node : Cue->AllNodes)
         {
             if (Node && Node->GetName() == SourceNodeId)
@@ -659,7 +659,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
                 TargetNode = Node;
             }
         }
-        
+
         if (!SourceNode)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("SOURCE_NODE_NOT_FOUND"), FString::Printf(TEXT("Source node not found: %s"), *SourceNodeId));
@@ -668,7 +668,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("TARGET_NODE_NOT_FOUND"), FString::Printf(TEXT("Target node not found: %s"), *TargetNodeId));
         }
-        
+
 	// Connect target as child of source using the graph API
 	// Direct ChildNodes manipulation + LinkGraphNodesFromSoundNodes() crashes UE
 	// when graph pin count doesn't match ChildNodes count (assert in SoundCueGraph.cpp:61)
@@ -709,24 +709,24 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
 
 	Cue->CompileSoundNodesFromGraphNodes();
 	SaveAudioAsset(Cue, bSave);
-        
+
         McpHandlerUtils::AddVerification(Response, Cue);
         Response->SetBoolField(TEXT("success"), true);
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_cue_attenuation"))
     {
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         FString AttenuationPath = McpHandlerUtils::GetOptionalString(Params, TEXT("attenuationPath"), TEXT(""));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         USoundCue* Cue = LoadSoundCueFromPath(AssetPath);
         if (!Cue)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CUE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundCue: %s"), *AssetPath));
         }
-        
+
         if (!AttenuationPath.IsEmpty())
         {
             USoundAttenuation* Atten = LoadSoundAttenuationFromPath(AttenuationPath);
@@ -739,7 +739,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         {
             Cue->AttenuationSettings = nullptr;
         }
-        
+
 	SaveAudioAsset(Cue, bSave);
 
 	if (Cue->AttenuationSettings)
@@ -760,13 +760,13 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         FString ConcurrencyPath = McpHandlerUtils::GetOptionalString(Params, TEXT("concurrencyPath"), TEXT(""));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         USoundCue* Cue = LoadSoundCueFromPath(AssetPath);
         if (!Cue)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CUE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundCue: %s"), *AssetPath));
         }
-        
+
         if (!ConcurrencyPath.IsEmpty())
         {
             USoundConcurrency* Conc = Cast<USoundConcurrency>(
@@ -781,7 +781,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         {
             Cue->ConcurrencySet.Empty();
         }
-        
+
 	SaveAudioAsset(Cue, bSave);
 
 	Response->SetNumberField(TEXT("concurrencyCount"), Cue->ConcurrencySet.Num());
@@ -791,7 +791,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
 }
 
 	// ===== 11.2 MetaSounds =====
-    
+
 if (SubAction == TEXT("create_metasound"))
 	{
 #if MCP_HAS_METASOUND
@@ -847,12 +847,12 @@ if (SubAction == TEXT("create_metasound"))
         FString NodeClassName = McpHandlerUtils::GetOptionalString(Params, TEXT("nodeClassName"), TEXT(""));
         FString NodeType = McpHandlerUtils::GetOptionalString(Params, TEXT("nodeType"), TEXT(""));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (AssetPath.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_PATH"), TEXT("Asset path is required"));
         }
-        
+
         // Load the MetaSound asset
         UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(
             StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
@@ -860,14 +860,14 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath));
         }
-        
+
         // Use the Frontend Document Builder API
         IMetaSoundDocumentInterface* DocInterface = Cast<IMetaSoundDocumentInterface>(MetaSound);
         if (!DocInterface)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("INTERFACE_ERROR"), TEXT("MetaSound does not implement document interface"));
         }
-        
+
         // Create a builder for this MetaSound
         TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
         #if MCP_HAS_METASOUND_FRONTEND_V2
@@ -875,7 +875,7 @@ if (SubAction == TEXT("create_metasound"))
 #else
         FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
 #endif
-        
+
 	// Determine node class name from nodeType if not explicitly provided
 	// MetaSound nodes are registered with 3-part class names: {Namespace, Name, Variant}
 	// Standard audio nodes use Namespace="UE", Variant="Audio"
@@ -956,7 +956,7 @@ if (SubAction == TEXT("create_metasound"))
 	FMetasoundFrontendClassName ClassName = FMetasoundFrontendClassName(
 		FName(*ActualNamespace), FName(*ActualName), FName(*ActualVariant));
         const FMetasoundFrontendNode* NewNode = Builder.AddNodeByClassName(ClassName, 1, FGuid::NewGuid());
-        
+
 	if (NewNode)
 	{
 		McpSafeAssetSave(MetaSound);
@@ -980,7 +980,7 @@ if (SubAction == TEXT("create_metasound"))
 		Response->SetStringField(TEXT("errorCode"), TEXT("NODE_CLASS_NOT_FOUND"));
 		Response->SetStringField(TEXT("code"), TEXT("NODE_CLASS_NOT_FOUND"));
 	}
-        
+
         #if MCP_HAS_METASOUND_FRONTEND_V2
         Builder.FinishBuilding();
 #endif
@@ -989,7 +989,7 @@ if (SubAction == TEXT("create_metasound"))
         // FIX: Return error when MetaSound Frontend Builder not available
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         FString NodeType = McpHandlerUtils::GetOptionalString(Params, TEXT("nodeType"), TEXT(""));
-        
+
         Response->SetBoolField(TEXT("success"), false);
         Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Cannot add MetaSound node '%s' - Frontend Builder not available"), *NodeType));
         Response->SetStringField(TEXT("errorCode"), TEXT("METASOUND_FRONTEND_NOT_SUPPORTED"));
@@ -1000,7 +1000,7 @@ if (SubAction == TEXT("create_metasound"))
         return McpHandlerUtils::BuildErrorResponse(TEXT("METASOUND_NOT_AVAILABLE"), TEXT("MetaSound support not available"));
 #endif
     }
-    
+
     if (SubAction == TEXT("connect_metasound_nodes"))
     {
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
@@ -1010,12 +1010,12 @@ if (SubAction == TEXT("create_metasound"))
         FString TargetNodeId = McpHandlerUtils::GetOptionalString(Params, TEXT("targetNodeId"), TEXT(""));
         FString TargetInputName = McpHandlerUtils::GetOptionalString(Params, TEXT("targetInputName"), TEXT(""));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (AssetPath.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_PATH"), TEXT("Asset path is required"));
         }
-        
+
         // Load the MetaSound asset
         UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(
             StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
@@ -1023,7 +1023,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath));
         }
-        
+
         // Use the Frontend Document Builder API
         TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
         #if MCP_HAS_METASOUND_FRONTEND_V2
@@ -1031,14 +1031,14 @@ if (SubAction == TEXT("create_metasound"))
 #else
         FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
 #endif
-        
+
         // Parse node IDs
         FGuid SourceGuid, TargetGuid;
         if (!FGuid::Parse(SourceNodeId, SourceGuid) || !FGuid::Parse(TargetNodeId, TargetGuid))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_GUID"), TEXT("Invalid node ID format - must be valid GUID"));
         }
-        
+
         // Create the edge connection
         Metasound::Frontend::FNamedEdge NamedEdge{
             SourceGuid,
@@ -1046,13 +1046,13 @@ if (SubAction == TEXT("create_metasound"))
             TargetGuid,
             FName(*TargetInputName)
         };
-        
+
         TSet<Metasound::Frontend::FNamedEdge> Edges;
         Edges.Add(NamedEdge);
-        
+
         TArray<const FMetasoundFrontendEdge*> CreatedEdges;
         bool bSuccess = Builder.AddNamedEdges(Edges, &CreatedEdges, true);
-        
+
 	if (bSuccess && CreatedEdges.Num() > 0)
 	{
 		McpSafeAssetSave(MetaSound);
@@ -1091,7 +1091,7 @@ if (SubAction == TEXT("create_metasound"))
 			Response->SetArrayField(TEXT("availableNodes"), NodeIdArray);
 		}
 	}
-        
+
         #if MCP_HAS_METASOUND_FRONTEND_V2
         Builder.FinishBuilding();
 #endif
@@ -1109,7 +1109,7 @@ if (SubAction == TEXT("create_metasound"))
         return McpHandlerUtils::BuildErrorResponse(TEXT("METASOUND_NOT_AVAILABLE"), TEXT("MetaSound support not available"));
 #endif
     }
-    
+
     if (SubAction == TEXT("add_metasound_input"))
     {
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
@@ -1117,17 +1117,17 @@ if (SubAction == TEXT("create_metasound"))
         FString InputName = McpHandlerUtils::GetOptionalString(Params, TEXT("inputName"), TEXT(""));
         FString InputType = McpHandlerUtils::GetOptionalString(Params, TEXT("inputType"), TEXT("Float"));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (AssetPath.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_PATH"), TEXT("Asset path is required"));
         }
-        
+
         if (InputName.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_INPUT_NAME"), TEXT("Input name is required"));
         }
-        
+
         // Load the MetaSound asset
         UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(
             StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
@@ -1135,7 +1135,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath));
         }
-        
+
         // Use the Frontend Document Builder API
         TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
         #if MCP_HAS_METASOUND_FRONTEND_V2
@@ -1143,7 +1143,7 @@ if (SubAction == TEXT("create_metasound"))
 #else
         FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
 #endif
-        
+
         // Create the graph input
         FMetasoundFrontendClassInput ClassInput;
         ClassInput.Name = FName(*InputName);
@@ -1151,13 +1151,13 @@ if (SubAction == TEXT("create_metasound"))
         ClassInput.VertexID = FGuid::NewGuid();
         ClassInput.NodeID = FGuid::NewGuid();
         ClassInput.AccessType = EMetasoundFrontendVertexAccessType::Reference;
-        
+
         const FMetasoundFrontendNode* InputNode = Builder.AddGraphInput(ClassInput);
-        
+
         if (InputNode)
         {
             McpSafeAssetSave(MetaSound);
-            
+
             Response->SetStringField(TEXT("inputName"), InputName);
             Response->SetStringField(TEXT("inputType"), InputType);
             Response->SetStringField(TEXT("nodeId"), InputNode->GetID().ToString());
@@ -1172,7 +1172,7 @@ if (SubAction == TEXT("create_metasound"))
             Response->SetStringField(TEXT("errorCode"), TEXT("INPUT_FAILED"));
             Response->SetStringField(TEXT("code"), TEXT("INPUT_FAILED"));
         }
-        
+
         #if MCP_HAS_METASOUND_FRONTEND_V2
         Builder.FinishBuilding();
 #endif
@@ -1181,7 +1181,7 @@ if (SubAction == TEXT("create_metasound"))
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         FString InputName = McpHandlerUtils::GetOptionalString(Params, TEXT("inputName"), TEXT(""));
         FString InputType = McpHandlerUtils::GetOptionalString(Params, TEXT("inputType"), TEXT("Float"));
-        
+
         Response->SetStringField(TEXT("inputName"), InputName);
         Response->SetStringField(TEXT("inputType"), InputType);
         Response->SetBoolField(TEXT("success"), true);
@@ -1192,7 +1192,7 @@ if (SubAction == TEXT("create_metasound"))
         return McpHandlerUtils::BuildErrorResponse(TEXT("METASOUND_NOT_AVAILABLE"), TEXT("MetaSound support not available"));
 #endif
     }
-    
+
     if (SubAction == TEXT("add_metasound_output"))
     {
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
@@ -1200,17 +1200,17 @@ if (SubAction == TEXT("create_metasound"))
         FString OutputName = McpHandlerUtils::GetOptionalString(Params, TEXT("outputName"), TEXT(""));
         FString OutputType = McpHandlerUtils::GetOptionalString(Params, TEXT("outputType"), TEXT("Audio"));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (AssetPath.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_PATH"), TEXT("Asset path is required"));
         }
-        
+
         if (OutputName.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_OUTPUT_NAME"), TEXT("Output name is required"));
         }
-        
+
         // Load the MetaSound asset
         UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(
             StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
@@ -1218,7 +1218,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath));
         }
-        
+
         // Use the Frontend Document Builder API
         TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
         #if MCP_HAS_METASOUND_FRONTEND_V2
@@ -1226,7 +1226,7 @@ if (SubAction == TEXT("create_metasound"))
 #else
         FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
 #endif
-        
+
         // Create the graph output
         FMetasoundFrontendClassOutput ClassOutput;
         ClassOutput.Name = FName(*OutputName);
@@ -1234,13 +1234,13 @@ if (SubAction == TEXT("create_metasound"))
         ClassOutput.VertexID = FGuid::NewGuid();
         ClassOutput.NodeID = FGuid::NewGuid();
         ClassOutput.AccessType = EMetasoundFrontendVertexAccessType::Reference;
-        
+
         const FMetasoundFrontendNode* OutputNode = Builder.AddGraphOutput(ClassOutput);
-        
+
         if (OutputNode)
         {
             McpSafeAssetSave(MetaSound);
-            
+
             Response->SetStringField(TEXT("outputName"), OutputName);
             Response->SetStringField(TEXT("outputType"), OutputType);
             Response->SetStringField(TEXT("nodeId"), OutputNode->GetID().ToString());
@@ -1255,7 +1255,7 @@ if (SubAction == TEXT("create_metasound"))
             Response->SetStringField(TEXT("errorCode"), TEXT("OUTPUT_FAILED"));
             Response->SetStringField(TEXT("code"), TEXT("OUTPUT_FAILED"));
         }
-        
+
         #if MCP_HAS_METASOUND_FRONTEND_V2
         Builder.FinishBuilding();
 #endif
@@ -1264,7 +1264,7 @@ if (SubAction == TEXT("create_metasound"))
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         FString OutputName = McpHandlerUtils::GetOptionalString(Params, TEXT("outputName"), TEXT(""));
         FString OutputType = McpHandlerUtils::GetOptionalString(Params, TEXT("outputType"), TEXT("Audio"));
-        
+
         Response->SetStringField(TEXT("outputName"), OutputName);
         Response->SetStringField(TEXT("outputType"), OutputType);
         Response->SetBoolField(TEXT("success"), true);
@@ -1275,24 +1275,24 @@ if (SubAction == TEXT("create_metasound"))
         return McpHandlerUtils::BuildErrorResponse(TEXT("METASOUND_NOT_AVAILABLE"), TEXT("MetaSound support not available"));
 #endif
     }
-    
+
     if (SubAction == TEXT("set_metasound_default"))
     {
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         FString InputName = McpHandlerUtils::GetOptionalString(Params, TEXT("inputName"), TEXT(""));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (AssetPath.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_PATH"), TEXT("Asset path is required"));
         }
-        
+
         if (InputName.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_INPUT_NAME"), TEXT("Input name is required"));
         }
-        
+
         // Load the MetaSound asset
         UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(
             StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
@@ -1300,7 +1300,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath));
         }
-        
+
         // Use the Frontend Document Builder API
         TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
         #if MCP_HAS_METASOUND_FRONTEND_V2
@@ -1308,10 +1308,10 @@ if (SubAction == TEXT("create_metasound"))
 #else
         FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
 #endif
-        
+
         // Create the literal value based on provided parameters
         FMetasoundFrontendLiteral Literal;
-        
+
         if (Params->HasField(TEXT("floatValue")))
         {
             float Value = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("floatValue"), 0.0));
@@ -1338,13 +1338,13 @@ if (SubAction == TEXT("create_metasound"))
             // Default to float 0.0
             Literal.Set(0.0f);
         }
-        
+
         bool bSuccess = Builder.SetGraphInputDefault(FName(*InputName), Literal);
-        
+
         if (bSuccess)
         {
             McpSafeAssetSave(MetaSound);
-            
+
             Response->SetBoolField(TEXT("success"), true);
             Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound default for '%s' set"), *InputName));
             McpHandlerUtils::AddVerification(Response, MetaSound);
@@ -1356,7 +1356,7 @@ if (SubAction == TEXT("create_metasound"))
             Response->SetStringField(TEXT("errorCode"), TEXT("SET_DEFAULT_FAILED"));
             Response->SetStringField(TEXT("code"), TEXT("SET_DEFAULT_FAILED"));
         }
-        
+
         #if MCP_HAS_METASOUND_FRONTEND_V2
         Builder.FinishBuilding();
 #endif
@@ -1364,7 +1364,7 @@ if (SubAction == TEXT("create_metasound"))
 #elif MCP_HAS_METASOUND
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         FString InputName = McpHandlerUtils::GetOptionalString(Params, TEXT("inputName"), TEXT(""));
-        
+
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound default for '%s' noted"), *InputName));
         Response->SetStringField(TEXT("note"), TEXT("MetaSound Frontend Builder not available - upgrade to UE 5.3+ for full support"));
@@ -1373,20 +1373,20 @@ if (SubAction == TEXT("create_metasound"))
         return McpHandlerUtils::BuildErrorResponse(TEXT("METASOUND_NOT_AVAILABLE"), TEXT("MetaSound support not available"));
 #endif
     }
-    
+
     // ===== 11.3 Sound Classes & Mixes =====
-    
+
     if (SubAction == TEXT("create_sound_class"))
     {
         FString Name = McpHandlerUtils::GetOptionalString(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Classes")), false);
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (Name.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
         }
-        
+
         // Create package and asset directly to avoid UI dialogs
         // AssetToolsModule.CreateAsset() shows "Overwrite Existing Object" dialogs
         // which cause recursive FlushRenderingCommands and D3D12 crashes
@@ -1396,37 +1396,37 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
         }
-        
+
         USoundClass* NewClass = NewObject<USoundClass>(Package, FName(*Name), RF_Public | RF_Standalone);
         if (!NewClass)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create SoundClass"));
         }
-        
+
         // Set initial properties if provided
         NewClass->Properties.Volume = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("volume"), 1.0));
         NewClass->Properties.Pitch = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("pitch"), 1.0));
-        
+
         SaveAudioAsset(NewClass, bSave);
-        
+
         FString FullPath = NewClass->GetPathName();
         Response->SetStringField(TEXT("assetPath"), FullPath);
         McpHandlerUtils::AddVerification(Response, NewClass);
         Response->SetBoolField(TEXT("success"), true);
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_class_properties"))
     {
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         USoundClass* SoundClass = LoadSoundClassFromPath(AssetPath);
         if (!SoundClass)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CLASS_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundClass: %s"), *AssetPath));
         }
-        
+
         if (Params->HasField(TEXT("volume")))
         {
             SoundClass->Properties.Volume = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("volume"), 1.0));
@@ -1448,7 +1448,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             SoundClass->Properties.VoiceCenterChannelVolume = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("voiceCenterChannelVolume"), 0.0));
         }
-        
+
 	SaveAudioAsset(SoundClass, bSave);
 
 	Response->SetNumberField(TEXT("volume"), SoundClass->Properties.Volume);
@@ -1464,13 +1464,13 @@ if (SubAction == TEXT("create_metasound"))
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         FString ParentPath = McpHandlerUtils::GetOptionalString(Params, TEXT("parentPath"), TEXT(""));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         USoundClass* SoundClass = LoadSoundClassFromPath(AssetPath);
         if (!SoundClass)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CLASS_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundClass: %s"), *AssetPath));
         }
-        
+
         if (!ParentPath.IsEmpty())
         {
             USoundClass* ParentClass = LoadSoundClassFromPath(ParentPath);
@@ -1483,7 +1483,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             SoundClass->ParentClass = nullptr;
         }
-        
+
 	SaveAudioAsset(SoundClass, bSave);
 
 	if (SoundClass->ParentClass)
@@ -1504,12 +1504,12 @@ if (SubAction == TEXT("create_metasound"))
         FString Name = McpHandlerUtils::GetOptionalString(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Mixes")), false);
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (Name.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
         }
-        
+
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -1517,7 +1517,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
         }
-        
+
         USoundMixFactory* Factory = NewObject<USoundMixFactory>();
         USoundMix* NewMix = Cast<USoundMix>(
             Factory->FactoryCreateNew(USoundMix::StaticClass(), Package,
@@ -1527,15 +1527,15 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create SoundMix"));
         }
-        
+
         SaveAudioAsset(NewMix, bSave);
-        
+
         FString FullPath = NewMix->GetPathName();
         Response->SetStringField(TEXT("assetPath"), FullPath);
         McpHandlerUtils::AddVerification(Response, NewMix);
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_mix_modifier"))
     {
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
@@ -1546,19 +1546,19 @@ if (SubAction == TEXT("create_metasound"))
         float FadeOutTime = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("fadeOutTime"), 0.0));
         bool bApplyToChildren = McpHandlerUtils::GetOptionalBool(Params, TEXT("applyToChildren"), true);
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         USoundMix* Mix = LoadSoundMixFromPath(AssetPath);
         if (!Mix)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MIX_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundMix: %s"), *AssetPath));
         }
-        
+
         USoundClass* SoundClass = LoadSoundClassFromPath(SoundClassPath);
         if (!SoundClass)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CLASS_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundClass: %s"), *SoundClassPath));
         }
-        
+
         FSoundClassAdjuster Adjuster;
         Adjuster.SoundClassObject = SoundClass;
         Adjuster.VolumeAdjuster = VolumeAdjust;
@@ -1566,7 +1566,7 @@ if (SubAction == TEXT("create_metasound"))
         Adjuster.bApplyToChildren = bApplyToChildren;
         // Note: FadeInTime and FadeOutTime are properties of USoundMix, not FSoundClassAdjuster in UE 5.7+
         // Use Mix->FadeInTime and Mix->FadeOutTime if you need to control mix fade timing
-        
+
 	Mix->SoundClassEffects.Add(Adjuster);
 
 	SaveAudioAsset(Mix, bSave);
@@ -1580,27 +1580,27 @@ if (SubAction == TEXT("create_metasound"))
 	Response->SetBoolField(TEXT("success"), true);
 	return Response;
 }
-    
+
     if (SubAction == TEXT("configure_mix_eq"))
     {
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         USoundMix* Mix = LoadSoundMixFromPath(AssetPath);
         if (!Mix)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MIX_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundMix: %s"), *AssetPath));
         }
-        
+
         // Configure EQ settings from parameters
         // Enable EQ if we're configuring it
         Mix->bApplyEQ = McpHandlerUtils::GetOptionalBool(Params, TEXT("applyEQ"), true);
-        
+
         if (Params->HasField(TEXT("eqPriority")))
         {
             Mix->EQPriority = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("eqPriority"), 1.0));
         }
-        
+
         // EQ settings object - 4 bands available
         const TSharedPtr<FJsonObject>* EQObj;
         if (Params->TryGetObjectField(TEXT("eqSettings"), EQObj) && EQObj->IsValid())
@@ -1618,7 +1618,7 @@ if (SubAction == TEXT("create_metasound"))
             {
                 Mix->EQSettings.Bandwidth0 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("bandwidth0")));
             }
-            
+
             // Band 1 (Low-Mid)
             if ((*EQObj)->HasField(TEXT("frequencyCenter1")))
             {
@@ -1632,7 +1632,7 @@ if (SubAction == TEXT("create_metasound"))
             {
                 Mix->EQSettings.Bandwidth1 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("bandwidth1")));
             }
-            
+
             // Band 2 (High-Mid)
             if ((*EQObj)->HasField(TEXT("frequencyCenter2")))
             {
@@ -1646,7 +1646,7 @@ if (SubAction == TEXT("create_metasound"))
             {
                 Mix->EQSettings.Bandwidth2 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("bandwidth2")));
             }
-            
+
             // Band 3 (High)
             if ((*EQObj)->HasField(TEXT("frequencyCenter3")))
             {
@@ -1697,7 +1697,7 @@ if (SubAction == TEXT("create_metasound"))
                 Mix->EQSettings.Gain3 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("highGain"), 1.0));
             }
         }
-        
+
         // Clamp EQ values to valid ranges
         // NOTE: FAudioEQEffect::ClampValues may not be exported in all UE versions
         // Manually clamp values instead of calling ClampValues() to avoid linker errors
@@ -1722,9 +1722,9 @@ if (SubAction == TEXT("create_metasound"))
         ClampBandwidth(Mix->EQSettings.Bandwidth1);
         ClampBandwidth(Mix->EQSettings.Bandwidth2);
         ClampBandwidth(Mix->EQSettings.Bandwidth3);
-        
+
         SaveAudioAsset(Mix, bSave);
-        
+
         // Return configured EQ info
         TSharedPtr<FJsonObject> EQInfo = McpHandlerUtils::CreateResultObject();
         EQInfo->SetNumberField(TEXT("frequencyCenter0"), Mix->EQSettings.FrequencyCenter0);
@@ -1736,25 +1736,25 @@ if (SubAction == TEXT("create_metasound"))
         EQInfo->SetNumberField(TEXT("frequencyCenter3"), Mix->EQSettings.FrequencyCenter3);
         EQInfo->SetNumberField(TEXT("gain3"), Mix->EQSettings.Gain3);
         Response->SetObjectField(TEXT("eqSettings"), EQInfo);
-        
+
         McpHandlerUtils::AddVerification(Response, Mix);
         Response->SetBoolField(TEXT("success"), true);
         return Response;
     }
-    
+
     // ===== 11.4 Attenuation & Spatialization =====
-    
+
     if (SubAction == TEXT("create_attenuation_settings"))
     {
         FString Name = McpHandlerUtils::GetOptionalString(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Attenuation")), false);
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (Name.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
         }
-        
+
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -1762,7 +1762,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
         }
-        
+
         USoundAttenuationFactory* Factory = NewObject<USoundAttenuationFactory>();
         USoundAttenuation* NewAtten = Cast<USoundAttenuation>(
             Factory->FactoryCreateNew(USoundAttenuation::StaticClass(), Package,
@@ -1772,7 +1772,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create SoundAttenuation"));
         }
-        
+
         // Set basic attenuation properties
         if (Params->HasField(TEXT("innerRadius")))
         {
@@ -1782,27 +1782,27 @@ if (SubAction == TEXT("create_metasound"))
         {
             NewAtten->Attenuation.FalloffDistance = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("falloffDistance"), 3600.0));
         }
-        
+
         SaveAudioAsset(NewAtten, bSave);
-        
+
         FString FullPath = NewAtten->GetPathName();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("assetPath"), FullPath);
         McpHandlerUtils::AddVerification(Response, NewAtten);
         return Response;
     }
-    
+
     if (SubAction == TEXT("configure_distance_attenuation"))
     {
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         USoundAttenuation* Atten = LoadSoundAttenuationFromPath(AssetPath);
         if (!Atten)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AssetPath));
         }
-        
+
         // Configure distance attenuation
         if (Params->HasField(TEXT("innerRadius")))
         {
@@ -1812,7 +1812,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             Atten->Attenuation.FalloffDistance = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("falloffDistance"), 3600.0));
         }
-        
+
         FString FunctionType = McpHandlerUtils::GetOptionalString(Params, TEXT("distanceAlgorithm"), TEXT("linear")).ToLower();
         if (FunctionType == TEXT("linear"))
         {
@@ -1830,28 +1830,28 @@ if (SubAction == TEXT("create_metasound"))
         {
             Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::NaturalSound;
         }
-        
+
         SaveAudioAsset(Atten, bSave);
-        
+
         McpHandlerUtils::AddVerification(Response, Atten);
         Response->SetBoolField(TEXT("success"), true);
         return Response;
     }
-    
+
     if (SubAction == TEXT("configure_spatialization"))
     {
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         USoundAttenuation* Atten = LoadSoundAttenuationFromPath(AssetPath);
         if (!Atten)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AssetPath));
         }
-        
+
         // Configure spatialization
         Atten->Attenuation.bSpatialize = McpHandlerUtils::GetOptionalBool(Params, TEXT("spatialize"), true);
-        
+
         if (Params->HasField(TEXT("spatializationAlgorithm")))
         {
             FString Algorithm = McpHandlerUtils::GetOptionalString(Params, TEXT("spatializationAlgorithm"), TEXT("panner"));
@@ -1864,7 +1864,7 @@ if (SubAction == TEXT("create_metasound"))
                 Atten->Attenuation.SpatializationAlgorithm = ESoundSpatializationAlgorithm::SPATIALIZATION_HRTF;
             }
         }
-        
+
 	SaveAudioAsset(Atten, bSave);
 
 	Response->SetBoolField(TEXT("spatialize"), Atten->Attenuation.bSpatialize);
@@ -1889,16 +1889,16 @@ if (SubAction == TEXT("create_metasound"))
     {
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         USoundAttenuation* Atten = LoadSoundAttenuationFromPath(AssetPath);
         if (!Atten)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AssetPath));
         }
-        
+
         // Configure occlusion
         Atten->Attenuation.bEnableOcclusion = McpHandlerUtils::GetOptionalBool(Params, TEXT("enableOcclusion"), true);
-        
+
         if (Params->HasField(TEXT("occlusionLowPassFilterFrequency")))
         {
             Atten->Attenuation.OcclusionLowPassFilterFrequency = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("occlusionLowPassFilterFrequency"), 20000.0));
@@ -1911,7 +1911,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             Atten->Attenuation.OcclusionInterpolationTime = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("occlusionInterpolationTime"), 0.5));
         }
-        
+
 	SaveAudioAsset(Atten, bSave);
 
 	Response->SetBoolField(TEXT("enableOcclusion"), Atten->Attenuation.bEnableOcclusion);
@@ -1927,16 +1927,16 @@ if (SubAction == TEXT("create_metasound"))
     {
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         USoundAttenuation* Atten = LoadSoundAttenuationFromPath(AssetPath);
         if (!Atten)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AssetPath));
         }
-        
+
         // Configure reverb send
         Atten->Attenuation.bEnableReverbSend = McpHandlerUtils::GetOptionalBool(Params, TEXT("enableReverbSend"), true);
-        
+
         if (Params->HasField(TEXT("reverbWetLevelMin")))
         {
             Atten->Attenuation.ReverbWetLevelMin = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("reverbWetLevelMin"), 0.3));
@@ -1953,7 +1953,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             Atten->Attenuation.ReverbDistanceMax = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("reverbDistanceMax"), 0.0));
         }
-        
+
 	SaveAudioAsset(Atten, bSave);
 
 	Response->SetBoolField(TEXT("enableReverbSend"), Atten->Attenuation.bEnableReverbSend);
@@ -1967,7 +1967,7 @@ if (SubAction == TEXT("create_metasound"))
 }
 
 	// ===== 11.5 Dialogue System =====
-    
+
     if (SubAction == TEXT("create_dialogue_voice"))
     {
 #if MCP_HAS_DIALOGUE && MCP_HAS_DIALOGUE_FACTORY
@@ -1976,18 +1976,18 @@ if (SubAction == TEXT("create_metasound"))
         FString Gender = McpHandlerUtils::GetOptionalString(Params, TEXT("gender"), TEXT("Masculine"));
         FString Plurality = McpHandlerUtils::GetOptionalString(Params, TEXT("plurality"), TEXT("Singular"));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (Name.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
         }
-        
+
         // Validate name length to prevent engine crash (UE FName limit is ~1024, but practical limit is much lower)
         if (Name.Len() > 100)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("NAME_TOO_LONG"), TEXT("Asset name exceeds maximum length of 100 characters"));
         }
-        
+
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -1995,7 +1995,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
         }
-        
+
         UDialogueVoiceFactory* Factory = NewObject<UDialogueVoiceFactory>();
         UDialogueVoice* NewVoice = Cast<UDialogueVoice>(
             Factory->FactoryCreateNew(UDialogueVoice::StaticClass(), Package,
@@ -2005,7 +2005,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create DialogueVoice"));
         }
-        
+
         // Set gender
         if (Gender.ToLower() == TEXT("masculine"))
         {
@@ -2019,7 +2019,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             NewVoice->Gender = EGrammaticalGender::Neuter;
         }
-        
+
         // Set plurality
         if (Plurality.ToLower() == TEXT("singular"))
         {
@@ -2029,9 +2029,9 @@ if (SubAction == TEXT("create_metasound"))
         {
             NewVoice->Plurality = EGrammaticalNumber::Plural;
         }
-        
+
         SaveAudioAsset(NewVoice, bSave);
-        
+
         FString FullPath = NewVoice->GetPathName();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("assetPath"), FullPath);
@@ -2041,7 +2041,7 @@ if (SubAction == TEXT("create_metasound"))
         return McpHandlerUtils::BuildErrorResponse(TEXT("DIALOGUE_NOT_AVAILABLE"), TEXT("Dialogue system not available"));
 #endif
     }
-    
+
     if (SubAction == TEXT("create_dialogue_wave"))
     {
 #if MCP_HAS_DIALOGUE && MCP_HAS_DIALOGUE_FACTORY
@@ -2049,18 +2049,18 @@ if (SubAction == TEXT("create_metasound"))
         FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Dialogue")), false);
         FString SpokenText = McpHandlerUtils::GetOptionalString(Params, TEXT("spokenText"), TEXT(""));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (Name.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
         }
-        
+
         // Validate name length to prevent engine crash (UE FName limit is ~1024, but practical limit is much lower)
         if (Name.Len() > 100)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("NAME_TOO_LONG"), TEXT("Asset name exceeds maximum length of 100 characters"));
         }
-        
+
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -2068,7 +2068,7 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
         }
-        
+
         UDialogueWaveFactory* Factory = NewObject<UDialogueWaveFactory>();
         UDialogueWave* NewWave = Cast<UDialogueWave>(
             Factory->FactoryCreateNew(UDialogueWave::StaticClass(), Package,
@@ -2078,11 +2078,11 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create DialogueWave"));
         }
-        
+
         NewWave->SpokenText = SpokenText;
-        
+
         SaveAudioAsset(NewWave, bSave);
-        
+
         FString FullPath = NewWave->GetPathName();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("assetPath"), FullPath);
@@ -2092,7 +2092,7 @@ if (SubAction == TEXT("create_metasound"))
         return McpHandlerUtils::BuildErrorResponse(TEXT("DIALOGUE_NOT_AVAILABLE"), TEXT("Dialogue system not available"));
 #endif
     }
-    
+
     if (SubAction == TEXT("set_dialogue_context"))
     {
 #if MCP_HAS_DIALOGUE
@@ -2100,13 +2100,13 @@ if (SubAction == TEXT("create_metasound"))
         FString SpeakerPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("speakerPath"), TEXT("")));
         FString SoundWavePath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("soundWavePath"), TEXT("")));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         UDialogueWave* Wave = Cast<UDialogueWave>(StaticLoadObject(UDialogueWave::StaticClass(), nullptr, *AssetPath));
         if (!Wave)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("WAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load DialogueWave: %s"), *AssetPath));
         }
-        
+
         // Load the speaker voice
         UDialogueVoice* SpeakerVoice = nullptr;
         if (!SpeakerPath.IsEmpty())
@@ -2117,7 +2117,7 @@ if (SubAction == TEXT("create_metasound"))
                 return McpHandlerUtils::BuildErrorResponse(TEXT("SPEAKER_NOT_FOUND"), FString::Printf(TEXT("Could not load speaker DialogueVoice: %s"), *SpeakerPath));
             }
         }
-        
+
         // Load the sound wave
         USoundWave* ContextSoundWave = nullptr;
         if (!SoundWavePath.IsEmpty())
@@ -2128,7 +2128,7 @@ if (SubAction == TEXT("create_metasound"))
                 return McpHandlerUtils::BuildErrorResponse(TEXT("SOUNDWAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundWave: %s"), *SoundWavePath));
             }
         }
-        
+
         // Load target voices if provided
         TArray<UDialogueVoice*> TargetVoices;
         const TArray<TSharedPtr<FJsonValue>>* TargetArray;
@@ -2148,7 +2148,7 @@ if (SubAction == TEXT("create_metasound"))
                 }
             }
         }
-        
+
         // Create and add the context mapping
         FDialogueContextMapping NewMapping;
         NewMapping.Context.Speaker = SpeakerVoice;
@@ -2158,7 +2158,7 @@ if (SubAction == TEXT("create_metasound"))
         }
         NewMapping.SoundWave = ContextSoundWave;
         NewMapping.LocalizationKeyFormat = McpHandlerUtils::GetOptionalString(Params, TEXT("localizationKeyFormat"), TEXT("{ContextHash}"));
-        
+
         // Check if we should replace existing or add new
         bool bReplaceExisting = McpHandlerUtils::GetOptionalBool(Params, TEXT("replace"), false);
         if (bReplaceExisting)
@@ -2183,9 +2183,9 @@ if (SubAction == TEXT("create_metasound"))
         {
             Wave->ContextMappings.Add(NewMapping);
         }
-        
+
         SaveAudioAsset(Wave, bSave);
-        
+
         Response->SetNumberField(TEXT("contextCount"), Wave->ContextMappings.Num());
         McpHandlerUtils::AddVerification(Response, Wave);
         Response->SetBoolField(TEXT("success"), true);
@@ -2194,21 +2194,21 @@ if (SubAction == TEXT("create_metasound"))
         return McpHandlerUtils::BuildErrorResponse(TEXT("DIALOGUE_NOT_AVAILABLE"), TEXT("Dialogue system not available"));
 #endif
     }
-    
+
     // ===== 11.6 Effects =====
-    
+
     if (SubAction == TEXT("create_reverb_effect"))
     {
 #if MCP_HAS_REVERB_EFFECT
         FString Name = McpHandlerUtils::GetOptionalString(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Effects")), false);
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (Name.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
         }
-        
+
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -2216,14 +2216,14 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
         }
-        
+
         UReverbEffect* NewEffect = NewObject<UReverbEffect>(Package, FName(*Name), RF_Public | RF_Standalone);
-        
+
         if (!NewEffect)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create ReverbEffect"));
         }
-        
+
         // Set reverb properties if provided
         if (Params->HasField(TEXT("density")))
         {
@@ -2249,9 +2249,9 @@ if (SubAction == TEXT("create_metasound"))
         {
             NewEffect->DecayHFRatio = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("decayHFRatio"), 0.83));
         }
-        
+
         SaveAudioAsset(NewEffect, bSave);
-        
+
         FString FullPath = NewEffect->GetPathName();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("assetPath"), FullPath);
@@ -2261,19 +2261,19 @@ if (SubAction == TEXT("create_metasound"))
         return McpHandlerUtils::BuildErrorResponse(TEXT("REVERB_NOT_AVAILABLE"), TEXT("Reverb effect not available"));
 #endif
     }
-    
+
     if (SubAction == TEXT("create_source_effect_chain"))
     {
 #if MCP_HAS_SOURCE_EFFECT
         FString Name = McpHandlerUtils::GetOptionalString(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Effects")), false);
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (Name.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
         }
-        
+
         // Create package for the source effect chain
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -2281,18 +2281,18 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
         }
-        
+
         // Create SoundEffectSourcePresetChain asset
         USoundEffectSourcePresetChain* NewChain = NewObject<USoundEffectSourcePresetChain>(
             Package, FName(*Name), RF_Public | RF_Standalone);
-        
+
         if (!NewChain)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create source effect chain"));
         }
-        
+
         McpSafeAssetSave(NewChain);
-        
+
         FString FullPath = NewChain->GetPathName();
         Response->SetStringField(TEXT("assetPath"), FullPath);
         Response->SetBoolField(TEXT("success"), true);
@@ -2303,12 +2303,12 @@ if (SubAction == TEXT("create_metasound"))
         // Fallback: create a basic container but note that full effect chain requires AudioMixer
         FString Name = McpHandlerUtils::GetOptionalString(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Effects")), false);
-        
+
         if (Name.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
         }
-        
+
         Response->SetStringField(TEXT("assetPath"), Path / Name);
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Source effect chain '%s' - AudioMixer module not available"), *Name));
@@ -2316,7 +2316,7 @@ if (SubAction == TEXT("create_metasound"))
         return Response;
 #endif
     }
-    
+
 	if (SubAction == TEXT("add_source_effect"))
 	{
 #if MCP_HAS_SOURCE_EFFECT
@@ -2381,14 +2381,14 @@ if (SubAction == TEXT("create_metasound"))
 #else
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         FString EffectType = McpHandlerUtils::GetOptionalString(Params, TEXT("effectType"), TEXT(""));
-        
+
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Source effect '%s' noted"), *EffectType));
         Response->SetStringField(TEXT("note"), TEXT("AudioMixer module not available - enable AudioMixer plugin for full support"));
         return Response;
 #endif
     }
-    
+
     if (SubAction == TEXT("create_submix_effect"))
     {
 #if MCP_HAS_SUBMIX
@@ -2396,12 +2396,12 @@ if (SubAction == TEXT("create_metasound"))
         FString EffectType = McpHandlerUtils::GetOptionalString(Params, TEXT("effectType"), TEXT(""));
         FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Effects")), false);
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-        
+
         if (Name.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
         }
-        
+
         // Create package for the submix
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -2409,24 +2409,24 @@ if (SubAction == TEXT("create_metasound"))
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
         }
-        
+
         // Create SoundSubmix asset
         USoundSubmix* NewSubmix = NewObject<USoundSubmix>(Package, FName(*Name), RF_Public | RF_Standalone);
-        
+
         if (!NewSubmix)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create submix"));
         }
-        
+
         // Configure submix properties if provided
         // Note: OutputVolume, WetLevel, DryLevel direct properties were removed in modern UE.
         // These are now controlled via OutputVolumeModulation, WetLevelModulation, DryLevelModulation.
         // For backwards compatibility with older UE versions, we use SetSubmixOutputVolume/WetLevel/DryLevel functions at runtime.
         // Since this is asset creation, we skip these deprecated properties.
         // The submix will use default levels which can be adjusted via Blueprint or runtime functions.
-        
+
         McpSafeAssetSave(NewSubmix);
-        
+
         FString FullPath = NewSubmix->GetPathName();
         Response->SetStringField(TEXT("assetPath"), FullPath);
         Response->SetBoolField(TEXT("success"), true);
@@ -2436,12 +2436,12 @@ if (SubAction == TEXT("create_metasound"))
 #else
         FString Name = McpHandlerUtils::GetOptionalString(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Effects")), false);
-        
+
         if (Name.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
         }
-        
+
         Response->SetStringField(TEXT("assetPath"), Path / Name);
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Submix '%s' noted - AudioMixer module not available"), *Name));
@@ -2449,23 +2449,23 @@ if (SubAction == TEXT("create_metasound"))
         return Response;
 #endif
     }
-    
+
     // ===== Utility =====
-    
+
     if (SubAction == TEXT("get_audio_info"))
     {
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-        
+
         // Try to load as various audio types
         UObject* Asset = StaticLoadObject(UObject::StaticClass(), nullptr, *AssetPath);
         if (!Asset)
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load asset: %s"), *AssetPath));
         }
-        
+
         Response->SetStringField(TEXT("assetPath"), AssetPath);
         Response->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
-        
+
         // Get type-specific info
         if (USoundCue* Cue = Cast<USoundCue>(Asset))
         {
@@ -2509,11 +2509,11 @@ if (SubAction == TEXT("create_metasound"))
         {
             Response->SetStringField(TEXT("type"), TEXT("Unknown"));
         }
-        
+
         Response->SetBoolField(TEXT("success"), true);
         return Response;
     }
-    
+
     // Unknown subAction
     return McpHandlerUtils::BuildErrorResponse(TEXT("UNKNOWN_ACTION"), FString::Printf(TEXT("Unknown audio authoring action: %s"), *SubAction));
 }
@@ -2540,16 +2540,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioAuthoringAction(
                            TEXT("Audio authoring payload missing"), TEXT("INVALID_PAYLOAD"));
         return true;
     }
-    
+
     TSharedPtr<FJsonObject> Response = HandleAudioAuthoringRequest(Payload);
-    
+
     if (Response.IsValid())
     {
         bool bSuccess = Response->HasField(TEXT("success")) && GetJsonBoolField(Response, TEXT("success"));
         FString Message = Response->HasField(TEXT("message")) ? GetJsonStringField(Response, TEXT("message")) : TEXT("Operation complete");
         // BuildErrorResponse uses "code" field, not "errorCode"
         FString ErrorCode = Response->HasField(TEXT("code")) ? GetJsonStringField(Response, TEXT("code")) : TEXT("");
-        
+
         if (bSuccess)
         {
             SendAutomationResponse(RequestingSocket, RequestId, true, Message, Response);
@@ -2566,7 +2566,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioAuthoringAction(
         SendAutomationError(RequestingSocket, RequestId,
                            TEXT("Failed to process audio authoring request"), TEXT("PROCESS_FAILED"));
     }
-    
+
     return true;
 #else
     SendAutomationError(RequestingSocket, RequestId,
