@@ -1,13 +1,15 @@
-# Unreal Engine 5.6 API Reference for MCP Implementation
+# Unreal Engine 5.x API Reference for MCP Implementation
 
 This document provides key engine API information to guide implementation of the MCP roadmap phases.
+
+Paths below use `<UE_ROOT>` as the Unreal Engine installation root, for example `/data/UnrealEngine` or `C:/Program Files/Epic Games/UE_5.6`.
 
 ---
 
 ## Phase 6: Geometry & Mesh Creation
 
 ### Plugin Location
-`X:/Unreal_Engine/UE_5.6/Engine/Plugins/Runtime/GeometryScripting/`
+`<UE_ROOT>/Engine/Plugins/Runtime/GeometryScripting/`
 
 ### Key Headers
 | File | Purpose |
@@ -37,7 +39,7 @@ Options.UVMode = EGeometryScriptPrimitiveUVMode::Uniform;
 All functions are BlueprintCallable static methods in `UGeometryScript*` classes:
 ```cpp
 UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendBox(
-    TargetMesh, 
+    TargetMesh,
     Options,
     FTransform::Identity,
     Width, Height, Depth,
@@ -113,7 +115,7 @@ MorphTarget->PopulateDeltas(Deltas, LODIndex, BaseMesh);
 ```cpp
 // Create expression node
 UMaterialExpression* Expr = UMaterialEditingLibrary::CreateMaterialExpression(
-    Material, 
+    Material,
     UMaterialExpressionTextureSample::StaticClass(),
     NodePosX, NodePosY
 );
@@ -126,7 +128,7 @@ UMaterialEditingLibrary::ConnectMaterialExpressions(
 
 // Connect to material property
 UMaterialEditingLibrary::ConnectMaterialProperty(
-    Expr, "RGB", 
+    Expr, "RGB",
     EMaterialProperty::MP_BaseColor
 );
 
@@ -325,7 +327,7 @@ Concurrency->Concurrency.ResolutionRule = EMaxConcurrentResolutionRule::StopLowe
 ## Phase 12: Complete Niagara VFX System
 
 ### Plugin Location
-`X:/Unreal_Engine/UE_5.6/Engine/Plugins/FX/Niagara/`
+`<UE_ROOT>/Engine/Plugins/FX/Niagara/`
 
 ### Key Headers
 | File | Purpose |
@@ -374,7 +376,7 @@ NiagaraComp->SetVariableObject(FName("Mesh"), StaticMesh);
 ## Phase 13: Gameplay Ability System (GAS)
 
 ### Plugin Location
-`X:/Unreal_Engine/UE_5.6/Engine/Plugins/Runtime/GameplayAbilities/`
+`<UE_ROOT>/Engine/Plugins/Runtime/GameplayAbilities/`
 
 ### Key Headers
 | File | Purpose |
@@ -572,13 +574,13 @@ UKismetSystemLibrary::CapsuleTraceSingle(...);
 ```cpp
 // Task execution
 virtual EBTNodeResult::Type ExecuteTask(
-    UBehaviorTreeComponent& OwnerComp, 
+    UBehaviorTreeComponent& OwnerComp,
     uint8* NodeMemory
 ) override;
 
 // Decorator condition
 virtual bool CalculateRawConditionValue(
-    UBehaviorTreeComponent& OwnerComp, 
+    UBehaviorTreeComponent& OwnerComp,
     uint8* NodeMemory
 ) const override;
 ```
@@ -616,16 +618,16 @@ class UItemDataAsset : public UPrimaryDataAsset
 {
     UPROPERTY(EditDefaultsOnly)
     FName ItemID;
-    
+
     UPROPERTY(EditDefaultsOnly)
     FText DisplayName;
-    
+
     UPROPERTY(EditDefaultsOnly)
     UTexture2D* Icon;
-    
+
     UPROPERTY(EditDefaultsOnly)
     int32 MaxStackSize = 1;
-    
+
     // For Asset Manager
     virtual FPrimaryAssetId GetPrimaryAssetId() const override
     {
@@ -641,13 +643,13 @@ class UInventoryComponent : public UActorComponent
 {
     UPROPERTY(Replicated)
     TArray<FInventorySlot> Slots;
-    
+
     UFUNCTION(BlueprintCallable)
     bool AddItem(UItemDataAsset* Item, int32 Count);
-    
+
     UFUNCTION(BlueprintCallable)
     bool RemoveItem(UItemDataAsset* Item, int32 Count);
-    
+
     UFUNCTION(BlueprintCallable)
     int32 GetItemCount(UItemDataAsset* Item) const;
 };
@@ -662,7 +664,7 @@ TArray<FPrimaryAssetId> ItemIds;
 AM.GetPrimaryAssetIdList(FPrimaryAssetType("Item"), ItemIds);
 
 // Async load
-AM.LoadPrimaryAssets(ItemIds, TArray<FName>(), 
+AM.LoadPrimaryAssets(ItemIds, TArray<FName>(),
     FStreamableDelegate::CreateLambda([](){ /* Loaded */ }));
 ```
 
@@ -691,10 +693,10 @@ class IInteractableInterface
 public:
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
     bool CanInteract(AActor* Interactor) const;
-    
+
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
     void OnInteract(AActor* Interactor);
-    
+
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
     FText GetInteractionPrompt() const;
 };
@@ -707,16 +709,16 @@ class UInteractionComponent : public UActorComponent
 {
     UPROPERTY(EditDefaultsOnly)
     float InteractionRange = 300.f;
-    
+
     UPROPERTY(EditDefaultsOnly)
     TEnumAsByte<ECollisionChannel> TraceChannel;
-    
+
     UFUNCTION(BlueprintCallable)
     AActor* GetFocusedInteractable();
-    
+
     UFUNCTION(BlueprintCallable)
     bool TryInteract();
-    
+
 private:
     void PerformInteractionTrace();
 };
@@ -1073,7 +1075,7 @@ SplineMesh->SetEndScale(FVector2D(1.5f, 1.5f));
 ## Phase 27: PCG Framework
 
 ### Plugin Location
-`X:/Unreal_Engine/UE_5.6/Engine/Plugins/PCG/`
+`<UE_ROOT>/Engine/Plugins/PCG/`
 
 ### Key Headers
 | File | Purpose |
@@ -1352,7 +1354,7 @@ BlueprintNativizationMethod=Disabled
 
 ### Automation Test Definition
 ```cpp
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMyTest, "Project.Category.TestName", 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMyTest, "Project.Category.TestName",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
 bool FMyTest::RunTest(const FString& Parameters)
@@ -1360,13 +1362,13 @@ bool FMyTest::RunTest(const FString& Parameters)
     // Arrange
     int32 A = 5;
     int32 B = 3;
-    
+
     // Act
     int32 Result = A + B;
-    
+
     // Assert
     TestEqual(TEXT("Addition works"), Result, 8);
-    
+
     return true;
 }
 ```
@@ -1376,7 +1378,7 @@ bool FMyTest::RunTest(const FString& Parameters)
 IMPLEMENT_COMPLEX_AUTOMATION_TEST(FMyComplexTest, "Project.Complex.Test",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-void FMyComplexTest::GetTests(TArray<FString>& OutBeautifiedNames, 
+void FMyComplexTest::GetTests(TArray<FString>& OutBeautifiedNames,
     TArray<FString>& OutTestCommands) const
 {
     OutBeautifiedNames.Add("TestCase1");
@@ -1399,7 +1401,7 @@ class AFunctionalTest_MyFeature : public AFunctionalTest
 {
     virtual void PrepareTest() override;
     virtual void StartTest() override;
-    
+
     // Call when done
     void OnTestComplete()
     {
@@ -1465,7 +1467,7 @@ class UMyEditorTask : public UEditorUtilityTask
 {
     virtual void BeginExecution() override;
     virtual void EndExecution(EEditorScriptExecutionResult Result) override;
-    
+
     // Use FinishExecutingTask() when done
 };
 ```
@@ -1489,16 +1491,16 @@ struct FQuestObjective
 {
     UPROPERTY(EditDefaultsOnly)
     FName ObjectiveID;
-    
+
     UPROPERTY(EditDefaultsOnly)
     FText Description;
-    
+
     UPROPERTY(BlueprintReadWrite)
     int32 CurrentProgress = 0;
-    
+
     UPROPERTY(EditDefaultsOnly)
     int32 RequiredProgress = 1;
-    
+
     bool IsComplete() const { return CurrentProgress >= RequiredProgress; }
 };
 
@@ -1507,10 +1509,10 @@ class UQuestDataAsset : public UPrimaryDataAsset
 {
     UPROPERTY(EditDefaultsOnly)
     FName QuestID;
-    
+
     UPROPERTY(EditDefaultsOnly)
     TArray<FQuestObjective> Objectives;
-    
+
     UPROPERTY(EditDefaultsOnly)
     TArray<UQuestDataAsset*> Prerequisites;
 };
@@ -1540,16 +1542,16 @@ struct FDialogueNode
 {
     UPROPERTY(EditDefaultsOnly)
     FText SpeakerName;
-    
+
     UPROPERTY(EditDefaultsOnly)
     FText DialogueText;
-    
+
     UPROPERTY(EditDefaultsOnly)
     USoundWave* VoiceOver;
-    
+
     UPROPERTY(EditDefaultsOnly)
     TArray<FDialogueChoice> Choices;
-    
+
     UPROPERTY(EditDefaultsOnly)
     FName NextNodeID;  // If no choices
 };
@@ -1662,7 +1664,7 @@ UDisplayClusterConfigurationData* Config = RootActor->GetConfigData();
 ### ICVFX (In-Camera VFX)
 ```cpp
 // Access ICVFX camera settings
-FDisplayClusterConfigurationICVFX_CameraSettings& CamSettings = 
+FDisplayClusterConfigurationICVFX_CameraSettings& CamSettings =
     Config->StageSettings.DefaultCamera;
 
 CamSettings.bEnable = true;
@@ -1844,10 +1846,10 @@ protected:
         EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadWrite);
         EntityQuery.AddRequirement<FVelocityFragment>(EMassFragmentAccess::ReadOnly);
     }
-    
+
     virtual void Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context) override
     {
-        EntityQuery.ForEachEntityChunk(EntityManager, Context, 
+        EntityQuery.ForEachEntityChunk(EntityManager, Context,
             [](FMassExecutionContext& Context)
         {
             // Process entities in chunk
@@ -1914,7 +1916,7 @@ selected = unreal.EditorLevelLibrary.get_selected_level_actors()
 
 # Spawn actor
 actor = unreal.EditorLevelLibrary.spawn_actor_from_class(
-    unreal.StaticMeshActor, 
+    unreal.StaticMeshActor,
     unreal.Vector(0, 0, 0)
 )
 
@@ -1970,16 +1972,16 @@ class UAccessibilitySettings : public UDeveloperSettings
 {
     UPROPERTY(Config, EditAnywhere)
     bool bEnableSubtitles = true;
-    
+
     UPROPERTY(Config, EditAnywhere)
     float SubtitleScale = 1.0f;
-    
+
     UPROPERTY(Config, EditAnywhere)
     bool bHighContrastMode = false;
-    
+
     UPROPERTY(Config, EditAnywhere)
     EColorBlindMode ColorBlindMode = EColorBlindMode::Off;
-    
+
     UPROPERTY(Config, EditAnywhere)
     bool bReducedMotion = false;
 };
@@ -2047,16 +2049,16 @@ struct FModManifest
 {
     UPROPERTY()
     FString ModName;
-    
+
     UPROPERTY()
     FString Version;
-    
+
     UPROPERTY()
     FString Author;
-    
+
     UPROPERTY()
     TArray<FString> Dependencies;
-    
+
     UPROPERTY()
     FString EntryPointClass;  // Blueprint class to spawn
 };

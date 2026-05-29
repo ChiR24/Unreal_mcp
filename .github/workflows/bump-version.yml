@@ -36,7 +36,7 @@ jobs:
     name: Bump Version
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -84,15 +84,15 @@ jobs:
         run: |
           CURRENT="$CURRENT_VERSION"
           INCREMENT="$AUTO_INCREMENT"
-          
+
           echo "Current version: $CURRENT"
           echo "Increment type: $INCREMENT"
-          
+
           # Parse version
           MAJOR=$(echo $CURRENT | cut -d. -f1)
           MINOR=$(echo $CURRENT | cut -d. -f2)
           PATCH=$(echo $CURRENT | cut -d. -f3)
-          
+
           # Increment based on type
           case $INCREMENT in
             major)
@@ -108,7 +108,7 @@ jobs:
               PATCH=$((PATCH + 1))
               ;;
           esac
-          
+
           NEW_VERSION="$MAJOR.$MINOR.$PATCH"
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "New npm version: $NEW_VERSION"
@@ -149,20 +149,20 @@ jobs:
           FINAL_VERSION: ${{ steps.final_version.outputs.version }}
         run: |
           VERSION="$FINAL_VERSION"
-          
+
           # Update only the DEFAULT_SERVER_VERSION fallback string (targeted replacement)
           perl -0777 -i -pe "s/(const DEFAULT_SERVER_VERSION[\\s\\S]*?:\\s*)'[^']+';/\${1}'$VERSION';/" src/index.ts
-          
+
           echo "✅ Updated src/index.ts DEFAULT_SERVER_VERSION fallback to $VERSION"
 
       - name: Verify no hardcoded npm versions remain
         env:
           OLD_VERSION: ${{ steps.current_version.outputs.version }}
         run: |
-          
+
           # Search for remaining occurrences (excluding expected files)
           FOUND=$(grep -r "$OLD_VERSION" --include="*.json" --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.git 2>/dev/null | grep -v "CHANGELOG.md" | grep -v "package-lock.json" || true)
-          
+
           if [ -n "$FOUND" ]; then
             echo "⚠️ Warning: Found remaining instances of $OLD_VERSION in code:"
             echo "$FOUND"
@@ -178,67 +178,67 @@ jobs:
         run: |
           VERSION="$FINAL_VERSION"
           DATE=$(date +%Y-%m-%d)
-          
+
           # Create new CHANGELOG entry
           cat > changelog_entry.tmp << 'CHANGELOG_EOF'
           ## 🏷️ [VERSION_PLACEHOLDER] - DATE_PLACEHOLDER
-          
+
           > [!NOTE]
           > ### 🚀 New Release
           > This is a new release. Fill in changelog details below.
-          
+
           ### ✨ Added
-          
+
           <details>
           <summary><b>New Features</b></summary>
-          
+
           | Feature | Description |
           |---------|-------------|
           | | |
-          
+
           </details>
-          
+
           ### 🔧 Changed
-          
+
           <details>
           <summary><b>Improvements</b></summary>
-          
+
           | Component | Change |
           |-----------|--------|
           | | |
-          
+
           </details>
-          
+
           ### 🐛 Fixed
-          
-          - 
-          
+
+          -
+
           ### 📊 Statistics
-          
-          - **Files Changed:** 
-          - **New Features:** 
-          - **Bug Fixes:** 
-          
+
+          - **Files Changed:**
+          - **New Features:**
+          - **Bug Fixes:**
+
           ---
-          
+
           CHANGELOG_EOF
-          
+
           # Replace placeholders
           sed -i "s/VERSION_PLACEHOLDER/$VERSION/g" changelog_entry.tmp
           sed -i "s/DATE_PLACEHOLDER/$DATE/g" changelog_entry.tmp
-          
+
           # Read the new entry
           NEW_ENTRY=$(cat changelog_entry.tmp)
-          
+
           # Insert after the first --- line (after header)
           awk -v entry="$NEW_ENTRY" '
             /^---$/ && !found { print; found=1; getline; print entry; next }
             { print }
           ' CHANGELOG.md > CHANGELOG.md.tmp
-          
+
           mv CHANGELOG.md.tmp CHANGELOG.md
           rm changelog_entry.tmp
-          
+
           echo "✅ Created CHANGELOG entry for $VERSION"
 
       - name: Show changes
@@ -257,19 +257,19 @@ jobs:
           CREATE_CHANGELOG: ${{ inputs.create_changelog }}
         run: |
           VERSION="$FINAL_VERSION"
-          
+
           if [ "$CREATE_CHANGELOG" == "true" ]; then
             COMMIT_MESSAGE="chore(release): bump version to v$VERSION"
           else
             COMMIT_MESSAGE="chore: bump version to v$VERSION"
           fi
-          
+
           git add package.json package-lock.json server.json src/index.ts
-          
+
           if [ "$CREATE_CHANGELOG" == "true" ]; then
             git add CHANGELOG.md
           fi
-          
+
           git commit -m "$COMMIT_MESSAGE"
           echo "✅ Committed changes"
 
@@ -279,7 +279,7 @@ jobs:
         run: |
           # Push commit only (no tag creation - tags are created manually)
           git push origin "$TARGET_BRANCH"
-          
+
           echo "✅ Pushed changes to $TARGET_BRANCH"
 
       - name: Create Release Summary
@@ -290,7 +290,7 @@ jobs:
         run: |
           VERSION="$FINAL_VERSION"
           CURRENT="$CURRENT_VERSION"
-          
+
           echo "## ✅ Version Bump Complete!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Previous Version:** \`$CURRENT\`" >> $GITHUB_STEP_SUMMARY
@@ -300,11 +300,11 @@ jobs:
           echo "- \`package.json\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`server.json\` (2 occurrences)" >> $GITHUB_STEP_SUMMARY
           echo "- \`src/index.ts\`" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ "$CREATE_CHANGELOG" == "true" ]; then
             echo "- \`CHANGELOG.md\`" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📊 Changes:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

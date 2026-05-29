@@ -13,7 +13,7 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -51,11 +51,11 @@ jobs:
             found && /^## .*\[/ { exit }
             found { print }
           ' CHANGELOG.md)
-          
+
           if [ -z "$CHANGELOG" ]; then
             CHANGELOG="Release $TAG"
           fi
-          
+
           echo "$CHANGELOG" > release_notes.md
           echo "Generated release notes:"
           cat release_notes.md
@@ -65,7 +65,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p release-artifacts
-          
+
           # Pre-built archive (ready to run)
           tar -czvf release-artifacts/unreal-engine-mcp-server-${VERSION}.tar.gz \
             dist/ \
@@ -73,19 +73,19 @@ jobs:
             README.md \
             CHANGELOG.md \
             LICENSE
-          
+
           zip -r release-artifacts/unreal-engine-mcp-server-${VERSION}.zip \
             dist/ \
             package.json \
             README.md \
             CHANGELOG.md \
             LICENSE
-          
+
           # Source archive (for rebuilding)
           OPTIONAL_PATHS=""
           [ -d "wasm" ] && OPTIONAL_PATHS="$OPTIONAL_PATHS wasm/"
           [ -f "server.json" ] && OPTIONAL_PATHS="$OPTIONAL_PATHS server.json"
-          
+
           tar -czvf release-artifacts/unreal-engine-mcp-server-${VERSION}-source.tar.gz \
             dist/ \
             src/ \
@@ -97,7 +97,7 @@ jobs:
             CHANGELOG.md \
             LICENSE \
             $OPTIONAL_PATHS
-          
+
           zip -r release-artifacts/unreal-engine-mcp-server-${VERSION}-source.zip \
             dist/ \
             src/ \
@@ -117,10 +117,10 @@ jobs:
           if [ -d "plugins/McpAutomationBridge" ]; then
             tar -czvf release-artifacts/McpAutomationBridge-plugin-${VERSION}.tar.gz \
               plugins/McpAutomationBridge/
-            
+
             zip -r release-artifacts/McpAutomationBridge-plugin-${VERSION}.zip \
               plugins/McpAutomationBridge/
-            
+
             echo "Plugin archive created"
           else
             echo "Plugin directory not found, skipping plugin archive"

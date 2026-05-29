@@ -18,7 +18,7 @@ Please be respectful and constructive in all interactions. We're building someth
 
 ### Prerequisites
 
-- **Node.js** 18+ 
+- **Node.js** 18+
 - **Unreal Engine** 5.0-5.8 Preview (for live testing)
 - **Git**
 
@@ -91,7 +91,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/). PR titles m
 Examples:
 feat: add new animation blending tool
 fix: resolve WebSocket connection timeout
-docs: update installation instructions  
+docs: update installation instructions
 refactor: simplify blueprint graph handler
 ```
 

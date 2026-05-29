@@ -39,6 +39,7 @@ body:
         - 'UE 5.5'
         - 'UE 5.6'
         - 'UE 5.7'
+        - 'UE 5.8 Preview'
         - 'Other'
     validations:
       required: true
@@ -74,9 +75,9 @@ body:
       label: 'Steps to Reproduce'
       description: 'How can we reproduce the issue?'
       value: |-
-        1. 
-        2. 
-        3. 
+        1.
+        2.
+        3.
     validations:
       required: true
 

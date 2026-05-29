@@ -2247,7 +2247,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 > ### 🔄 Major Architecture Migration
 > This release marks the **complete migration** from Unreal's built-in Remote Plugin to a native C++ **McpAutomationBridge** plugin. This provides:
 > - ⚡ Better performance
-> - 🔗 Tighter editor integration  
+> - 🔗 Tighter editor integration
 > - 🚫 No dependency on Unreal's Remote API
 >
 > **BREAKING CHANGE:** Response format has been standardized across all automation tools. Clients should expect responses to follow the new `StandardActionResponse` format with `success`, `data`, `warnings`, and `error` fields.

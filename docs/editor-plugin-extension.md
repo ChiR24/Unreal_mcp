@@ -18,7 +18,7 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 ## Plugin Architecture (Current: v0.1.4)
 
 ### Core Components
-- **Plugin Location**: `plugins/McpAutomationBridge/` (source) and `Public/McpAutomationBridge/` (distribution)
+- **Plugin Location**: `plugins/McpAutomationBridge/` (source and distribution-ready plugin folder)
 - **Module Type**: Editor-only subsystem (`UEditorSubsystem`)
 - **Main Class**: `UMcpAutomationBridgeSubsystem` - manages WebSocket connections, request routing, and automation execution
 - **WebSocket Implementation**: `FMcpBridgeWebSocket` - custom lightweight WebSocket client (no external dependencies)
@@ -331,7 +331,7 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 ## Installation & Configuration
 
 ### Plugin Installation
-1. Copy `Public/McpAutomationBridge/` to your project's `Plugins/` directory
+1. Copy `plugins/McpAutomationBridge/` to your project's `Plugins/` directory, or unpack a packaged `McpAutomationBridge/` build there
 2. Regenerate project files
 3. Enable plugin via **Edit ▸ Plugins ▸ MCP Automation Bridge**
 4. Restart editor
@@ -368,6 +368,6 @@ Contributions welcome! Please open an issue or discussion before starting major 
 - Register new handlers in `ProcessAutomationRequest()`
 - Update `McpAutomationBridgeSubsystem.h` with handler declarations
 - Add comprehensive error handling with structured error codes
-- Test across multiple UE versions (5.0-5.8 Preview)
+- Test across multiple UE versions (5.0-5.8 preview)
 - Document new actions in this file
 - **No Python dependencies** - All new features must be native C++

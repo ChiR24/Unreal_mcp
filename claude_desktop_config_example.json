@@ -3,10 +3,10 @@
     "unreal-engine": {
       "command": "node",
       "args": [
-        "PathToMCP\\UnrealMCP\\unreal-engine-mcp-server\\dist\\cli.js"
+        "C:\\Path\\To\\Unreal_mcp\\dist\\cli.js"
       ],
       "env": {
-        "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject",
+        "UE_PROJECT_PATH": "C:/Users/YourName/Documents/Unreal Projects/YourProject/YourProject.uproject",
         "MCP_AUTOMATION_HOST": "127.0.0.1",
         "MCP_AUTOMATION_PORT": "8091"
       }

@@ -27,20 +27,20 @@ jobs:
         script: |
           const actor = context.actor;
           const repo = context.repo;
-          
+
           // Check if this is a PR or Issue event
           const isPullRequest = context.payload.pull_request !== undefined;
           const isIssue = context.payload.issue !== undefined;
-          
+
           if (!isPullRequest && !isIssue) {
             console.log('Not a PR or Issue event, skipping.');
             return;
           }
-          
+
           // For PRs: Only check PR history (don't check issues - that's the bug in first-interaction)
           // For Issues: Only check issue history (don't check PRs)
           let isFirstContribution = false;
-          
+
           if (isPullRequest) {
             // Search for previous PRs by this user
             const { data: prs } = await github.rest.pulls.list({
@@ -49,16 +49,16 @@ jobs:
               state: 'all',
               per_page: 100
             });
-            
+
             // Count PRs by this user (excluding the current one)
-            const userPrs = prs.filter(pr => 
-              pr.user.login === actor && 
+            const userPrs = prs.filter(pr =>
+              pr.user.login === actor &&
               pr.number !== context.payload.pull_request.number
             );
-            
+
             isFirstContribution = userPrs.length === 0;
             console.log(`Found ${userPrs.length} previous PRs by ${actor}`);
-            
+
             if (isFirstContribution) {
               const message = '👋 Thanks for your first Pull Request! We love contributions. Please ensure you have signed off your commits and followed the contribution guidelines.';
               await github.rest.issues.createComment({
@@ -72,7 +72,7 @@ jobs:
               console.log(`${actor} is not a first-time PR contributor, skipping greeting.`);
             }
           }
-          
+
           if (isIssue) {
             // Search for previous issues by this user
             const { data: issues } = await github.rest.issues.listForRepo({
@@ -81,17 +81,17 @@ jobs:
               state: 'all',
               per_page: 100
             });
-            
+
             // Count issues by this user (excluding the current one and PRs)
-            const userIssues = issues.filter(issue => 
-              issue.user.login === actor && 
+            const userIssues = issues.filter(issue =>
+              issue.user.login === actor &&
               !issue.pull_request && // Exclude PRs from the issues list
               issue.number !== context.payload.issue.number
             );
-            
+
             isFirstContribution = userIssues.length === 0;
             console.log(`Found ${userIssues.length} previous issues by ${actor}`);
-            
+
             if (isFirstContribution) {
               const message = "👋 Thanks for opening this issue! We appreciate your feedback and report. A maintainer will check this out soon.";
               await github.rest.issues.createComment({

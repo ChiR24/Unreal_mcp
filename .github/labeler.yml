@@ -6,16 +6,22 @@ area/server:
   - changed-files:
     - any-glob-to-any-file: 'src/**/*'
     - any-glob-to-any-file: 'package.json'
+    - any-glob-to-any-file: 'package-lock.json'
+    - any-glob-to-any-file: 'server.json'
     - any-glob-to-any-file: 'tsconfig.json'
+    - any-glob-to-any-file: 'eslint.config.js'
 
 area/docs:
   - changed-files:
     - any-glob-to-any-file: '*.md'
+    - any-glob-to-any-file: 'mcp-config-example.json'
+    - any-glob-to-any-file: 'claude_desktop_config_example.json'
     - any-glob-to-any-file: 'docs/**/*'
 
 area/tools:
   - changed-files:
     - any-glob-to-any-file: 'scripts/**/*'
+    - any-glob-to-any-file: '.github/**/*'
 
 area/testing:
   - changed-files:

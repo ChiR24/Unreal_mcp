@@ -29,7 +29,12 @@ set "_ARG=%~1"
 if "!_ARG:~0,1!"=="-" (
     set "EXTRA_ARGS=!EXTRA_ARGS! %~1"
 ) else (
-    if "!OUTPUT_DIR!"=="" set "OUTPUT_DIR=%~1"
+    if "!OUTPUT_DIR!"=="" (
+        set "OUTPUT_DIR=%~1"
+    ) else (
+        echo ERROR: Unexpected extra output directory argument: %~1
+        exit /b 1
+    )
 )
 shift
 goto parse_args

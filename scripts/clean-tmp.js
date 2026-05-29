@@ -36,7 +36,7 @@ if (!isPathWithin(realTmpDir, realRepoRoot)) {
   process.exit(1);
 }
 
-for (const f of fs.readdirSync(TMP_DIR)) {
+for (const f of fs.readdirSync(TMP_DIR).sort()) {
   const p = path.join(TMP_DIR, f);
   try {
     fs.rmSync(p, { recursive: true, force: true });

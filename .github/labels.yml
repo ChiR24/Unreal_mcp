@@ -35,6 +35,58 @@
   description: "Questions or support"
   color: "d876e3"
 
+- name: "bug"
+  description: "Bug fixes and reports"
+  color: "d73a4a"
+
+- name: "enhancement"
+  description: "Feature requests and improvements"
+  color: "a2eeef"
+
+- name: "feature"
+  description: "New functionality"
+  color: "0e8a16"
+
+- name: "fix"
+  description: "Fixes for existing behavior"
+  color: "d73a4a"
+
+- name: "documentation"
+  description: "Documentation-only changes"
+  color: "0075ca"
+
+- name: "tooling"
+  description: "Developer tooling and scripts"
+  color: "5319e7"
+
+- name: "test"
+  description: "Test coverage and test infrastructure"
+  color: "fbca04"
+
+- name: "chore"
+  description: "Maintenance work"
+  color: "ededed"
+
+- name: "maintenance"
+  description: "Repository and dependency maintenance"
+  color: "ededed"
+
+- name: "security"
+  description: "Security-sensitive issues and fixes"
+  color: "ee0701"
+
+- name: "major"
+  description: "Release Drafter major-version signal"
+  color: "b60205"
+
+- name: "minor"
+  description: "Release Drafter minor-version signal"
+  color: "fbca04"
+
+- name: "patch"
+  description: "Release Drafter patch-version signal"
+  color: "0e8a16"
+
 # Size labels (for PRs)
 - name: "size/xs"
   description: "Extra small PR (<10 lines)"

@@ -26,7 +26,13 @@ EXTRA_ARGS=()
 for arg in "$@"; do
     case "$arg" in
         -*) EXTRA_ARGS+=("$arg") ;;
-        *)  [ -z "$OUTPUT_DIR" ] && OUTPUT_DIR="$arg" ;;
+        *)
+            if [ -n "$OUTPUT_DIR" ]; then
+                echo "ERROR: Unexpected extra output directory argument: $arg"
+                exit 1
+            fi
+            OUTPUT_DIR="$arg"
+            ;;
     esac
 done
 OUTPUT_DIR="${OUTPUT_DIR:-}"

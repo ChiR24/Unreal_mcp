@@ -52,11 +52,24 @@ const requests = [
 
 let buffer = '';
 let passed = false;
+const timeout = setTimeout(() => {
+    if (!passed) {
+        console.error('Buffer contents:', buffer);
+        failSmokeTest('Timeout waiting for smoke test');
+    }
+}, 15000);
 
 function failSmokeTest(message: string): never {
+    clearTimeout(timeout);
     console.error(`❌ ${message}`);
     child.kill();
     process.exit(1);
+}
+
+function passSmokeTest(): void {
+    clearTimeout(timeout);
+    passed = true;
+    child.kill();
 }
 
 function parseJsonLine(line: string): unknown | undefined {
@@ -107,8 +120,7 @@ child.stdout.on('data', (data) => {
                     throw new Error('manage_tools params smoke check failed');
                 }
                 console.log('✅ manage_tools params check success');
-                passed = true;
-                child.kill();
+                passSmokeTest();
             }
 
         } catch (error) {
@@ -129,11 +141,3 @@ child.on('exit', (_code) => {
 // Start by sending initialize
 console.log('Sending initialize...');
 child.stdin.write(JSON.stringify(requests[0]) + '\n');
-
-// Timeout safety
-setTimeout(() => {
-    if (!passed) {
-        console.error('Buffer contents:', buffer);
-        failSmokeTest('Timeout waiting for smoke test');
-    }
-}, 15000);
