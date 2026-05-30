@@ -4,6 +4,56 @@
 #include "Serialization/JsonWriter.h"
 #include "Policies/CondensedJsonPrintPolicy.h"
 
+namespace
+{
+TSharedPtr<FJsonObject> MakeToolTextData(const TSharedPtr<FJsonObject>& Data)
+{
+	if (!Data.IsValid() || !Data->HasField(TEXT("imageBase64")))
+	{
+		return Data;
+	}
+
+	TSharedPtr<FJsonObject> TextData = MakeShared<FJsonObject>();
+	for (const TPair<FString, TSharedPtr<FJsonValue>>& Field : Data->Values)
+	{
+		if (Field.Key != TEXT("imageBase64"))
+		{
+			TextData->SetField(Field.Key, Field.Value);
+		}
+	}
+	TextData->SetStringField(TEXT("imageBase64"), TEXT("<omitted; see image content>"));
+	return TextData;
+}
+
+void AddImageContentIfPresent(const TSharedPtr<FJsonObject>& Data,
+	TArray<TSharedPtr<FJsonValue>>& Content)
+{
+	if (!Data.IsValid())
+	{
+		return;
+	}
+
+	FString ImageBase64;
+	if (!Data->TryGetStringField(TEXT("imageBase64"), ImageBase64) || ImageBase64.IsEmpty())
+	{
+		return;
+	}
+
+	FString MimeType;
+	Data->TryGetStringField(TEXT("mimeType"), MimeType);
+	if (MimeType.IsEmpty())
+	{
+		MimeType = TEXT("image/png");
+	}
+
+	TSharedPtr<FJsonObject> ImageContent = MakeShared<FJsonObject>();
+	ImageContent->SetStringField(TEXT("type"), TEXT("image"));
+	ImageContent->SetStringField(TEXT("data"), ImageBase64);
+	ImageContent->SetStringField(TEXT("mimeType"), MimeType);
+	Content.Add(MakeShared<FJsonValueObject>(ImageContent));
+}
+}
+
 FMcpJsonRpcRequest FMcpJsonRpc::ParseRequest(const FString& Body)
 {
 	FMcpJsonRpcRequest Result;
@@ -110,7 +160,7 @@ TSharedPtr<FJsonObject> FMcpJsonRpc::BuildToolResult(
 		Text = Message;
 		if (Data.IsValid())
 		{
-			Text += TEXT("\n\n") + JsonToString(Data);
+			Text += TEXT("\n\n") + JsonToString(MakeToolTextData(Data));
 		}
 	}
 	else
@@ -129,8 +179,13 @@ TSharedPtr<FJsonObject> FMcpJsonRpc::BuildToolResult(
 	TextContent->SetStringField(TEXT("type"), TEXT("text"));
 	TextContent->SetStringField(TEXT("text"), Text);
 	Content.Add(MakeShared<FJsonValueObject>(TextContent));
+	AddImageContentIfPresent(Data, Content);
 
 	Result->SetArrayField(TEXT("content"), Content);
+	if (Data.IsValid())
+	{
+		Result->SetObjectField(TEXT("structuredContent"), Data);
+	}
 	Result->SetBoolField(TEXT("isError"), !bSuccess);
 
 	return Result;

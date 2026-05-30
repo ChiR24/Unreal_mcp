@@ -14,7 +14,7 @@ public:
 	FString GetDescription() const override
 	{
 		return TEXT("Run profiling, set quality/CVars, execute console commands, "
-			"execute Python scripts, run UBT, and manage widgets.");
+			"execute Python scripts, run UBT, manage widgets, and take screenshots.");
 	}
 
 	FString GetCategory() const override { return TEXT("core"); }
@@ -45,6 +45,11 @@ public:
 			.String(TEXT("configName"), TEXT(""))
 			.String(TEXT("code"), TEXT("Python code to execute inline"))
 			.String(TEXT("file"), TEXT("Path to .py file to execute"))
+			.String(TEXT("filename"), TEXT("Screenshot filename."))
+			.String(TEXT("mode"), TEXT("Screenshot source: editor_viewport, game_viewport, full_editor_window."))
+			.Bool(TEXT("returnBase64"), TEXT("Return PNG image data as base64 when supported. Defaults to true for full_editor_window and game_viewport modes."))
+			.Bool(TEXT("includeMetadata"), TEXT("Attach caller-provided metadata to the response."))
+			.FreeformObject(TEXT("metadata"), TEXT("Caller-provided screenshot metadata."))
 			.Required({TEXT("action")})
 			.Build();
 	}
