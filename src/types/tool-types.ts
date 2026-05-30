@@ -387,8 +387,10 @@ export interface ConsolidatedToolParams {
     filename?: string;
     path?: string;
     resolution?: string;
-    mode?: ScreenshotMode;
+    mode?: string;
     returnBase64?: boolean;
+    includeMetadata?: boolean;
+    metadata?: Record<string, unknown>;
     fov?: number;
     width?: number;
     height?: number;
@@ -550,6 +552,8 @@ export interface ConsolidatedToolParams {
     resolution?: string;
     mode?: ScreenshotMode;
     returnBase64?: boolean;
+    includeMetadata?: boolean;
+    metadata?: Record<string, unknown>;
     // Resolution / fullscreen helpers
     width?: number;
     height?: number;

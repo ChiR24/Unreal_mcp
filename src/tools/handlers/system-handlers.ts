@@ -25,17 +25,17 @@ interface AssetValidationResult {
 
 const SUPPORTED_SCREENSHOT_MODES = new Set(['editor_viewport', 'game_viewport', 'full_editor_window']);
 
-function getScreenshotMode(args: SystemArgs): string | undefined {
+function getScreenshotMode(args: SystemArgs): { mode?: string; error?: string } {
   if (typeof args.mode !== 'string' || args.mode.trim() === '') {
-    return undefined;
+    return {};
   }
 
   const mode = args.mode.trim().toLowerCase();
   if (!SUPPORTED_SCREENSHOT_MODES.has(mode)) {
-    throw new Error(`Unknown screenshot mode: ${args.mode}. Supported: editor_viewport, game_viewport, full_editor_window`);
+    return { error: `Unknown screenshot mode: ${args.mode}. Supported: editor_viewport, game_viewport, full_editor_window` };
   }
 
-  return mode;
+  return { mode };
 }
 
 function buildScreenshotPayload(filename: string | undefined, resolution: unknown, mode: string | undefined, returnBase64: boolean | undefined): Record<string, unknown> {
@@ -576,7 +576,21 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
         : undefined;
       const metadata = argsTyped.metadata;
       const resolution = argsTyped.resolution;
-      const mode = getScreenshotMode(argsTyped);
+      const modeResult = getScreenshotMode(argsTyped);
+      if (modeResult.error) {
+        return {
+          success: false,
+          type: 'INVALID_ARGUMENT',
+          error: 'INVALID_ARGUMENT',
+          message: modeResult.error,
+          action: {
+            tool: 'system_control',
+            command: 'screenshot'
+          }
+        };
+      }
+
+      const mode = modeResult.mode;
       const returnBase64 = typeof argsTyped.returnBase64 === 'boolean'
         ? argsTyped.returnBase64
         : (mode === 'full_editor_window' || mode === 'game_viewport' ? true : undefined);
@@ -586,11 +600,15 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
         const baseName = filenameArg && filenameArg.trim().length > 0
           ? filenameArg.trim()
           : `Screenshot_${Date.now()}`;
-        const payload = buildScreenshotPayload(baseName, resolution, mode, returnBase64);
+        const payload = {
+          ...buildScreenshotPayload(baseName, resolution, mode, returnBase64),
+          includeMetadata: true
+        };
 
         try {
           // Try to pass metadata to C++ screenshot handler
-          const screenshotRes = await executeAutomationRequest(tools, targetAction, { ...payload, metadata });
+          const screenshotPayload = metadata === undefined ? payload : { ...payload, metadata };
+          const screenshotRes = await executeAutomationRequest(tools, targetAction, screenshotPayload);
           const cleanedRes = typeof screenshotRes === 'object' && screenshotRes !== null ? screenshotRes : {};
           return cleanObject({
             ...cleanedRes,

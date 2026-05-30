@@ -91,6 +91,8 @@ public:
 			.String(TEXT("name"), TEXT("Name identifier."))
 			.String(TEXT("mode"), TEXT("Editor mode for set_editor_mode, or screenshot source: editor_viewport, game_viewport, full_editor_window."))
 			.Bool(TEXT("returnBase64"), TEXT("Return PNG image data as base64 when supported. Defaults to true for full_editor_window and game_viewport modes."))
+			.Bool(TEXT("includeMetadata"), TEXT("Attach caller-provided metadata to the response."))
+			.FreeformObject(TEXT("metadata"), TEXT("Caller-provided screenshot metadata."))
 			.Number(TEXT("deltaTime"), TEXT(""))
 			.String(TEXT("resolution"), TEXT("Resolution setting (e.g., 1024x1024)."))
 			.Bool(TEXT("realtime"), TEXT(""))

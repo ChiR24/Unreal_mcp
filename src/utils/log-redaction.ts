@@ -28,5 +28,5 @@ export function redactImagePayloadForLog(value: unknown): unknown {
 export function redactImagePayloadTextForLog(text: string): string {
   return text
     .replace(/("imageBase64"\s*:\s*")([^"]*)(")/g, `$1${REDACTED_IMAGE_PAYLOAD}$3`)
-    .replace(/("data"\s*:\s*")([A-Za-z0-9+/=]{80,})(")/g, `$1${REDACTED_IMAGE_PAYLOAD}$3`);
+    .replace(/("data"\s*:\s*")([^"]*)(")/g, `$1${REDACTED_IMAGE_PAYLOAD}$3`);
 }

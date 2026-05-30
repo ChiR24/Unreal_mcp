@@ -234,6 +234,8 @@ export interface EditorArgs extends HandlerArgs {
     resolution?: string;
     mode?: string;
     returnBase64?: boolean;
+    includeMetadata?: boolean;
+    metadata?: Record<string, unknown>;
     type?: string;
     inputType?: string;
     inputAction?: string;

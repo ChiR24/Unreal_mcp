@@ -3502,6 +3502,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     AddScreenshotMetadataForMcp(Resp, Payload);
     if (!bSaved && !bReturnBase64) {
       const FString SaveError = TEXT("Full editor window screenshot captured but failed to save, and returnBase64=false leaves no image output.");
+      Resp->SetBoolField(TEXT("success"), false);
       Resp->SetStringField(TEXT("error"), SaveError);
       Resp->SetStringField(TEXT("message"), SaveError);
       SendAutomationResponse(Socket, RequestId, false, SaveError, Resp,
@@ -3510,6 +3511,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     }
     if (bReturnBase64 && PngData.Num() > MaxScreenshotPngBytesForBase64ForMcp) {
       const FString SizeError = MakeScreenshotTooLargeMessageForMcp(PngData.Num());
+      Resp->SetBoolField(TEXT("success"), false);
       Resp->SetStringField(TEXT("error"), SizeError);
       Resp->SetStringField(TEXT("message"), SizeError);
       SendAutomationResponse(Socket, RequestId, false, SizeError, Resp,

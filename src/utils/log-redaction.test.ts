@@ -34,13 +34,13 @@ describe('log redaction', () => {
     const raw = JSON.stringify({
       type: 'automation_response',
       result: {
-        imageBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAE=',
+        imageBase64: 'short-image',
         mimeType: 'image/png'
       },
       content: [
         {
           type: 'image',
-          data: 'iVBORw0KGgoAAAANSUhEUgAAAAE='.repeat(4),
+          data: 'short-data',
           mimeType: 'image/png'
         }
       ]
@@ -50,6 +50,7 @@ describe('log redaction', () => {
 
     expect(redacted).toContain(`"imageBase64":"${REDACTED_IMAGE_PAYLOAD}"`);
     expect(redacted).toContain(`"data":"${REDACTED_IMAGE_PAYLOAD}"`);
-    expect(redacted).not.toContain('iVBORw0KGgoAAAANSUhEUgAAAAE=');
+    expect(redacted).not.toContain('short-image');
+    expect(redacted).not.toContain('short-data');
   });
 });

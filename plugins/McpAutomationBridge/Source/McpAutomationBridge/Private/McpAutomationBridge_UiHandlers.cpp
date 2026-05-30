@@ -405,7 +405,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     FString Mode;
     Payload->TryGetStringField(TEXT("mode"), Mode);
     Mode = Mode.TrimStartAndEnd().ToLower();
-    if (Mode.IsEmpty() && Action == TEXT("system_control")) {
+    if (Mode.IsEmpty() && bIsSystemControl) {
       return HandleControlEditorScreenshot(RequestId, Payload, RequestingSocket);
     }
     if (Mode == TEXT("full_editor_window") || Mode == TEXT("editor_viewport")) {

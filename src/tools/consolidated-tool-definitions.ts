@@ -775,6 +775,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         // Action-specific parameters
         mode: { type: 'string', description: 'Editor mode for set_editor_mode, or screenshot source: editor_viewport, game_viewport, full_editor_window.' },
         returnBase64: { type: 'boolean', description: 'Return PNG image data as base64 when supported. Defaults to true for full_editor_window and game_viewport modes.' },
+        includeMetadata: commonSchemas.booleanProp,
+        metadata: commonSchemas.objectProp,
         deltaTime: commonSchemas.numberProp,
         resolution: commonSchemas.resolution,
         realtime: commonSchemas.booleanProp,
@@ -791,7 +793,13 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         button: commonSchemas.stringProp,
         id: commonSchemas.stringProp
       },
-      required: ['action']
+      required: ['action'],
+      allOf: [
+        {
+          if: { properties: { action: { enum: ['screenshot', 'take_screenshot'] } }, required: ['action'] },
+          then: { properties: { mode: screenshotModeSchema } }
+        }
+      ]
     },
     outputSchema: {
       type: 'object',
