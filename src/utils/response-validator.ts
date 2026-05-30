@@ -4,7 +4,7 @@ import { cleanObject } from './safe-json.js';
 import { isRecord } from './type-guards.js';
 const log = new Logger('ResponseValidator');
 
-const SUMMARY_SKIP_KEYS = new Set(['requestId', 'type', 'data', 'result', 'warnings']);
+const SUMMARY_SKIP_KEYS = new Set(['requestId', 'type', 'data', 'result', 'warnings', 'imageBase64']);
 
 type AjvModuleWithDefault = typeof Ajv & { default?: typeof Ajv.default };
 
@@ -187,6 +187,37 @@ function buildSummaryText(toolName: string, payload: unknown): string {
   return parts.length > 0 ? parts.join(' | ') : `${toolName} responded`;
 }
 
+function findImagePayload(payload: unknown, depth = 0): Record<string, unknown> | undefined {
+  if (!isRecord(payload) || depth > 5) return undefined;
+
+  if (typeof payload.imageBase64 === 'string' && payload.imageBase64.trim() !== '') {
+    return payload;
+  }
+
+  const resultPayload = findImagePayload(payload.result, depth + 1);
+  if (resultPayload) return resultPayload;
+
+  return findImagePayload(payload.data, depth + 1);
+}
+
+function buildImageContent(payload: unknown): Record<string, string> | undefined {
+  const imagePayload = findImagePayload(payload);
+  if (!imagePayload) return undefined;
+
+  const imageBase64 = imagePayload.imageBase64;
+  if (typeof imageBase64 !== 'string' || imageBase64.trim() === '') return undefined;
+
+  const mimeType = typeof imagePayload.mimeType === 'string' && imagePayload.mimeType.trim() !== ''
+    ? imagePayload.mimeType.trim()
+    : 'image/png';
+
+  return {
+    type: 'image',
+    data: imageBase64,
+    mimeType
+  };
+}
+
 /**
  * Response Validator for MCP Tool Outputs
  * Validates tool responses against their defined output schemas
@@ -350,6 +381,13 @@ export class ResponseValidator {
           log.debug(`Unable to attach validation metadata for ${toolName}`, error);
         }
       }
+      const imageContent = buildImageContent(responseObj.structuredContent ?? structuredPayload);
+      if (imageContent && Array.isArray(responseObj.content)) {
+        const hasImageContent = responseObj.content.some((part: unknown) => isRecord(part) && part.type === 'image');
+        if (!hasImageContent) {
+          responseObj.content.push(imageContent);
+        }
+      }
       return responseObj;
     }
 
@@ -401,6 +439,11 @@ export class ResponseValidator {
 
     if (!validation.valid) {
       wrapped._validation = { valid: false, errors: validation.errors };
+    }
+
+    const imageContent = buildImageContent(wrapped.structuredContent ?? structuredPayload ?? safeResponse);
+    if (imageContent) {
+      (wrapped.content as Array<Record<string, unknown>>).push(imageContent);
     }
 
     // Mark explicit error when success is false to avoid false positives in
