@@ -104,6 +104,25 @@ namespace
             || Name == TEXT("modes");
     }
 
+    bool IsModelConfigOption(const TSharedPtr<FJsonObject>& Option)
+    {
+        const FString OptionId = GetConfigOptionId(Option).ToLower();
+        const FString Category = GetStringFieldOrEmpty(Option, TEXT("category")).ToLower();
+        const FString Name = GetStringFieldOrEmpty(Option, TEXT("name")).ToLower();
+        return OptionId == TEXT("model")
+            || OptionId == TEXT("models")
+            || OptionId == TEXT("current_model")
+            || OptionId == TEXT("currentmodel")
+            || Category == TEXT("model")
+            || Category == TEXT("models")
+            || Category == TEXT("current_model")
+            || Category == TEXT("currentmodel")
+            || Name == TEXT("model")
+            || Name == TEXT("models")
+            || Name == TEXT("current_model")
+            || Name == TEXT("currentmodel");
+    }
+
     bool IsThinkingConfigOption(const TSharedPtr<FJsonObject>& Option)
     {
         const FString OptionId = GetConfigOptionId(Option).ToLower();
@@ -579,6 +598,17 @@ bool FOpenCodeAcpClient::Start(const FString& InWorkingDirectory)
 
 void FOpenCodeAcpClient::Stop()
 {
+    const bool bWasActive = bRunning
+        || bInitialized
+        || bReady
+        || ProcessHandle.IsValid()
+        || OutputReadPipe != nullptr
+        || OutputWritePipe != nullptr
+        || ErrorReadPipe != nullptr
+        || ErrorWritePipe != nullptr
+        || InputReadPipe != nullptr
+        || InputWritePipe != nullptr;
+
     if (ProcessHandle.IsValid())
     {
         TerminateAndCloseProcess(ProcessHandle);
@@ -586,7 +616,10 @@ void FOpenCodeAcpClient::Stop()
 
     CloseProcessPipes();
     ResetState();
-    OnStopped.ExecuteIfBound();
+    if (bWasActive)
+    {
+        OnStopped.ExecuteIfBound();
+    }
 }
 
 void FOpenCodeAcpClient::Tick()
@@ -1596,14 +1629,15 @@ bool FOpenCodeAcpClient::ParseModelOptionsFromResult(const TSharedPtr<FJsonObjec
         for (const TSharedPtr<FJsonValue>& OptionValue : *ConfigOptions)
         {
             const TSharedPtr<FJsonObject> Option = OptionValue.IsValid() ? OptionValue->AsObject() : nullptr;
-            if (!Option.IsValid() || GetStringFieldOrEmpty(Option, TEXT("id")) != TEXT("model"))
+            if (!Option.IsValid() || !IsModelConfigOption(Option))
             {
                 continue;
             }
 
-            ModelConfigId = TEXT("model");
-            FString NewCurrentModel;
-            const bool bHasCurrentModel = Option->TryGetStringField(TEXT("currentValue"), NewCurrentModel) && !NewCurrentModel.IsEmpty();
+            const FString OptionId = GetConfigOptionId(Option);
+            ModelConfigId = OptionId.IsEmpty() ? TEXT("model") : OptionId;
+            const FString NewCurrentModel = GetConfigOptionValue(Option);
+            const bool bHasCurrentModel = !NewCurrentModel.IsEmpty();
             if (bHasCurrentModel)
             {
                 SetCurrentModel(NewCurrentModel);
@@ -1854,7 +1888,23 @@ void FOpenCodeAcpClient::ParseModelOption(const TSharedPtr<FJsonObject>& Option)
 
     FOpenCodeAcpModelOption ModelOption;
     Option->TryGetStringField(TEXT("value"), ModelOption.Id);
+    if (ModelOption.Id.IsEmpty())
+    {
+        Option->TryGetStringField(TEXT("id"), ModelOption.Id);
+    }
+    if (ModelOption.Id.IsEmpty())
+    {
+        Option->TryGetStringField(TEXT("optionId"), ModelOption.Id);
+    }
+    if (ModelOption.Id.IsEmpty())
+    {
+        Option->TryGetStringField(TEXT("modelId"), ModelOption.Id);
+    }
     Option->TryGetStringField(TEXT("name"), ModelOption.Name);
+    if (ModelOption.Name.IsEmpty())
+    {
+        Option->TryGetStringField(TEXT("label"), ModelOption.Name);
+    }
     ModelOption.Provider = GetModelProviderField(Option);
     ModelOption.ContextWindowTokens = GetModelContextWindowTokens(Option);
     if (!ModelOption.Id.IsEmpty())
@@ -1872,7 +1922,12 @@ bool FOpenCodeAcpClient::ParseFallbackModels(const TSharedPtr<FJsonObject>& Resu
     }
 
     FString NewCurrentModel;
-    const bool bHasCurrentModel = (*Models)->TryGetStringField(TEXT("currentModelId"), NewCurrentModel) && !NewCurrentModel.IsEmpty();
+    const bool bHasCurrentModel = ((*Models)->TryGetStringField(TEXT("currentModelId"), NewCurrentModel)
+        || (*Models)->TryGetStringField(TEXT("currentModel"), NewCurrentModel)
+        || (*Models)->TryGetStringField(TEXT("currentValue"), NewCurrentModel)
+        || (*Models)->TryGetStringField(TEXT("value"), NewCurrentModel)
+        || (*Models)->TryGetStringField(TEXT("optionValue"), NewCurrentModel))
+        && !NewCurrentModel.IsEmpty();
     if (bHasCurrentModel)
     {
         SetCurrentModel(NewCurrentModel);
@@ -1896,7 +1951,23 @@ bool FOpenCodeAcpClient::ParseFallbackModels(const TSharedPtr<FJsonObject>& Resu
 
         FOpenCodeAcpModelOption ModelOption;
         Model->TryGetStringField(TEXT("modelId"), ModelOption.Id);
+        if (ModelOption.Id.IsEmpty())
+        {
+            Model->TryGetStringField(TEXT("value"), ModelOption.Id);
+        }
+        if (ModelOption.Id.IsEmpty())
+        {
+            Model->TryGetStringField(TEXT("id"), ModelOption.Id);
+        }
+        if (ModelOption.Id.IsEmpty())
+        {
+            Model->TryGetStringField(TEXT("optionId"), ModelOption.Id);
+        }
         Model->TryGetStringField(TEXT("name"), ModelOption.Name);
+        if (ModelOption.Name.IsEmpty())
+        {
+            Model->TryGetStringField(TEXT("label"), ModelOption.Name);
+        }
         ModelOption.Provider = GetModelProviderField(Model);
         ModelOption.ContextWindowTokens = GetModelContextWindowTokens(Model);
         if (!ModelOption.Id.IsEmpty())
@@ -1914,19 +1985,8 @@ void FOpenCodeAcpClient::HandleModelUpdate(const TSharedPtr<FJsonObject>& Update
         return;
     }
 
-    const FString OptionId = !GetStringFieldOrEmpty(Update, TEXT("id")).IsEmpty()
-        ? GetStringFieldOrEmpty(Update, TEXT("id"))
-        : GetStringFieldOrEmpty(Update, TEXT("configOptionId"));
-
-    FString NewModel = GetStringFieldOrEmpty(Update, TEXT("currentValue"));
-    if (NewModel.IsEmpty())
-    {
-        NewModel = GetStringFieldOrEmpty(Update, TEXT("value"));
-    }
-    if (NewModel.IsEmpty())
-    {
-        NewModel = GetStringFieldOrEmpty(Update, TEXT("optionValue"));
-    }
+    const FString OptionId = GetConfigOptionId(Update);
+    FString NewModel = GetConfigOptionValue(Update);
     if (NewModel.IsEmpty())
     {
         NewModel = GetStringFieldOrEmpty(Update, TEXT("modelId"));
@@ -1935,8 +1995,12 @@ void FOpenCodeAcpClient::HandleModelUpdate(const TSharedPtr<FJsonObject>& Update
     {
         NewModel = GetStringFieldOrEmpty(Update, TEXT("currentModelId"));
     }
+    if (NewModel.IsEmpty())
+    {
+        NewModel = GetStringFieldOrEmpty(Update, TEXT("currentModel"));
+    }
 
-    if (!NewModel.IsEmpty() && (OptionId.IsEmpty() || OptionId == ModelConfigId || OptionId == TEXT("model")))
+    if (!NewModel.IsEmpty() && (OptionId.IsEmpty() || OptionId == ModelConfigId || IsModelConfigOption(Update)))
     {
         SetCurrentModel(NewModel);
         OnModelsChanged.ExecuteIfBound();

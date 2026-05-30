@@ -766,7 +766,7 @@ namespace
             + TEXT("current_model = 'model-a'\n")
             + TEXT("current_thinking = 'medium'\n")
             + TEXT("current_agent = 'build'\n")
-            + TEXT("model_options = [{'value': 'model-a', 'name': 'Model A', 'providerName': 'NVIDIA', 'contextWindow': 128000}, {'value': 'model-b', 'name': 'Model B', 'providerName': 'Modal', 'contextWindow': 64000}, {'value': 'openai/gpt-5.5', 'name': 'openai/gpt-5.5'}]\n")
+            + TEXT("model_options = [{'id': 'model-a', 'label': 'Model A', 'provider': {'name': 'NVIDIA'}, 'contextLength': 128000}, {'optionId': 'model-b', 'name': 'Model B', 'vendor': 'Modal', 'maxInputTokens': 64000}, {'modelId': 'openai/gpt-5.5', 'name': 'openai/gpt-5.5'}]\n")
             + TEXT("thinking_options = [{'value': 'low', 'name': 'Low', 'description': 'Short reasoning'}, {'value': 'medium', 'name': 'Medium', 'description': 'Balanced reasoning'}, {'value': 'high', 'name': 'High', 'description': 'Deep reasoning'}]\n")
             + TEXT("agent_options = [{'value': 'build', 'name': 'Build', 'description': 'Default OpenCode agent'}, {'value': 'unreal-agent', 'name': 'Unreal Agent', 'description': 'Live Unreal editor specialist'}]\n")
             + TEXT("expected_mcp_url = 'http://127.0.0.1:43123/mcp'\n")
@@ -782,7 +782,7 @@ namespace
             + TEXT("        current_agent = agent\n")
             + TEXT("    if thinking is not None:\n")
             + TEXT("        current_thinking = thinking\n")
-            + TEXT("    return {'configOptions': [{'id': 'model', 'currentValue': current_model, 'options': model_options}, {'id': 'effort', 'name': 'Thinking', 'category': 'thought_level', 'currentValue': current_thinking, 'options': thinking_options}, {'id': 'mode', 'name': 'Mode', 'currentValue': current_agent, 'options': agent_options}]}\n")
+            + TEXT("    return {'configOptions': [{'configOptionId': 'preferred_model', 'name': 'Current Model', 'category': 'current_model', 'optionValue': current_model, 'options': model_options}, {'id': 'effort', 'name': 'Thinking', 'category': 'thought_level', 'currentValue': current_thinking, 'options': thinking_options}, {'id': 'mode', 'name': 'Mode', 'currentValue': current_agent, 'options': agent_options}]}\n")
             + TEXT("def validate_mcp_servers(params):\n")
             + TEXT("    servers = params.get('mcpServers', [])\n")
             + TEXT("    if not isinstance(servers, list) or len(servers) != 1:\n")
@@ -831,7 +831,7 @@ namespace
             + TEXT("            send({'jsonrpc': '2.0', 'id': msg_id, 'result': config_result(agent=value)})\n")
             + TEXT("        elif config_id == 'effort':\n")
             + TEXT("            send({'jsonrpc': '2.0', 'id': msg_id, 'result': config_result(thinking=value)})\n")
-            + TEXT("        elif config_id == 'model':\n")
+            + TEXT("        elif config_id in ('model', 'preferred_model'):\n")
             + TEXT("            result = config_result(model=value)\n")
             + TEXT("            update = dict(result)\n")
             + TEXT("            update['sessionUpdate'] = 'config_option_update'\n")
@@ -968,6 +968,7 @@ bool FUnrealAgentAcpClientProtocolTest::RunTest(const FString& Parameters)
     FString LastPermission;
     TArray<FString> TranscriptEntries;
     int32 ModelChangeCount = 0;
+    int32 StopCount = 0;
 
     Client.OnStatus.BindLambda([&LastStatus](const FString& Status)
     {
@@ -985,6 +986,10 @@ bool FUnrealAgentAcpClientProtocolTest::RunTest(const FString& Parameters)
     {
         ++ModelChangeCount;
     });
+    Client.OnStopped.BindLambda([&StopCount]()
+    {
+        ++StopCount;
+    });
 
     bool bPassed = true;
     bool bClientStarted = false;
@@ -994,6 +999,7 @@ bool FUnrealAgentAcpClientProtocolTest::RunTest(const FString& Parameters)
     }
     if (TestTrue(TEXT("Fake ACP client starts with ignored parent SIGPWR"), bClientStarted))
     {
+        bPassed &= TestEqual(TEXT("Starting the client does not emit a stopped callback"), StopCount, 0);
         FString GeneratedAgentPrompt;
         const FString GeneratedAgentPromptPath = FPaths::Combine(TestDirectory, TEXT(".opencode/agents/unreal-agent.md"));
         bPassed &= TestTrue(TEXT("Generated Unreal Agent prompt is written"), FPaths::FileExists(GeneratedAgentPromptPath) && FFileHelper::LoadFileToString(GeneratedAgentPrompt, *GeneratedAgentPromptPath));
@@ -1124,6 +1130,7 @@ bool FUnrealAgentAcpClientProtocolTest::RunTest(const FString& Parameters)
     }
 
     Client.Stop();
+    bPassed &= TestEqual(TEXT("Stopped callback fires only when an active client stops"), StopCount, bClientStarted ? 1 : 0);
     if (GConfig != nullptr)
     {
         if (bHadNativeMcpEnabled)
