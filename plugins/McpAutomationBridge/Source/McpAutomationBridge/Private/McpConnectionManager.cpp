@@ -30,6 +30,12 @@ static inline FString SanitizeForLogConnMgr(const FString &In) {
   return Out;
 }
 
+static inline bool IsImagePayloadPreviewField(const FString &Key) {
+  return Key.Equals(TEXT("imageBase64"), ESearchCase::IgnoreCase) ||
+         Key.Equals(TEXT("imageData"), ESearchCase::IgnoreCase) ||
+         Key.Equals(TEXT("data"), ESearchCase::IgnoreCase);
+}
+
 FMcpConnectionManager::FMcpConnectionManager() {}
 
 FMcpConnectionManager::~FMcpConnectionManager() { Stop(); }
@@ -834,7 +840,9 @@ void FMcpConnectionManager::SendAutomationResponse(
       TArray<FString> Parts;
       for (auto& Pair : Result->Values) {
         FString Val;
-        if (Pair.Value->Type == EJson::String) {
+        if (IsImagePayloadPreviewField(Pair.Key)) {
+          Val = TEXT("\"<omitted; see image content>\"");
+        } else if (Pair.Value->Type == EJson::String) {
           Val = FString::Printf(TEXT("\"%s\""), *Pair.Value->AsString().Left(40));
         } else if (Pair.Value->Type == EJson::Boolean) {
           Val = Pair.Value->AsBool() ? TEXT("true") : TEXT("false");
