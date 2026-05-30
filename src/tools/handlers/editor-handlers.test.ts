@@ -42,6 +42,8 @@ describe('handleEditorTools', () => {
       expect(properties).toHaveProperty('x');
       expect(properties).toHaveProperty('y');
       expect(properties).toHaveProperty('button');
+      expect(properties).toHaveProperty('mode');
+      expect(properties).toHaveProperty('returnBase64');
     }
   });
 
@@ -71,6 +73,48 @@ describe('handleEditorTools', () => {
       action: 'open_level',
       levelPath: '/Game/Maps/Demo'
     }, {});
+  });
+
+  it('requests image data for full editor window screenshots', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools();
+
+    await handleEditorTools('screenshot', { action: 'screenshot', filename: 'FullEditor', mode: 'full_editor_window' }, tools);
+
+    expect(sendAutomationRequest).toHaveBeenCalledWith('control_editor', {
+      action: 'screenshot',
+      filename: 'FullEditor',
+      resolution: undefined,
+      mode: 'full_editor_window',
+      returnBase64: true
+    }, {});
+  });
+
+  it('routes game viewport screenshots to the game viewport capture path', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools();
+
+    await handleEditorTools('screenshot', { action: 'screenshot', filename: 'GameViewport', mode: 'game_viewport' }, tools);
+
+    expect(sendAutomationRequest).toHaveBeenCalledWith('system_control', {
+      action: 'screenshot',
+      filename: 'GameViewport',
+      resolution: undefined,
+      mode: 'game_viewport',
+      returnBase64: true
+    }, {});
+  });
+
+  it('returns string action for invalid screenshot modes', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools();
+
+    const result = await handleEditorTools('screenshot', { action: 'screenshot', mode: 'bad_mode' }, tools);
+
+    expect(result).toMatchObject({
+      success: false,
+      type: 'INVALID_ARGUMENT',
+      error: 'INVALID_ARGUMENT',
+      action: 'screenshot'
+    });
+    expect(sendAutomationRequest).not.toHaveBeenCalled();
   });
 
   it('maps simulate_input from inputAction without reading the routing action', async () => {

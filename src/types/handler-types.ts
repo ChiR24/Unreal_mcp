@@ -232,6 +232,10 @@ export interface EditorArgs extends HandlerArgs {
     command?: string;
     filename?: string;
     resolution?: string;
+    mode?: string;
+    returnBase64?: boolean;
+    includeMetadata?: boolean;
+    metadata?: Record<string, unknown>;
     type?: string;
     inputType?: string;
     inputAction?: string;
@@ -605,6 +609,11 @@ export interface GraphArgs extends HandlerArgs {
 
 export interface SystemArgs extends HandlerArgs {
     command?: string;
+    filename?: string;
+    mode?: string;
+    returnBase64?: boolean;
+    includeMetadata?: boolean;
+    metadata?: Record<string, unknown>;
     category?: string;
     profileType?: string;
     level?: number;

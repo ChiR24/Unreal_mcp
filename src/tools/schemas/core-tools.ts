@@ -13,6 +13,12 @@
 
 import { addActionParamsSchema, commonSchemas } from '../tool-definition-utils.js';
 
+const screenshotModeSchema = {
+  type: 'string',
+  enum: ['editor_viewport', 'game_viewport', 'full_editor_window'],
+  description: 'Screenshot source. editor_viewport captures the active editor viewport; game_viewport captures the PIE/game viewport; full_editor_window captures the full Slate editor window and returns imageBase64 by default.'
+};
+
 /** MCP Tool Definition type for explicit annotation to avoid TS7056 */
 export interface ToolDefinition {
   category?: 'core' | 'world' | 'gameplay' | 'utility';
@@ -305,7 +311,10 @@ export const coreToolDefinitions: ToolDefinition[] = [
         actorName: commonSchemas.actorName,
         name: commonSchemas.name,
         // Action-specific parameters
-        mode: commonSchemas.stringProp,
+        mode: { type: 'string', description: 'Editor mode for set_editor_mode, or screenshot source: editor_viewport, game_viewport, full_editor_window.' },
+        returnBase64: { type: 'boolean', description: 'Return PNG image data as base64 when supported. Defaults to true for full_editor_window and game_viewport modes.' },
+        includeMetadata: commonSchemas.booleanProp,
+        metadata: commonSchemas.objectProp,
         deltaTime: commonSchemas.numberProp,
         resolution: commonSchemas.resolution,
         realtime: commonSchemas.booleanProp,
@@ -321,12 +330,26 @@ export const coreToolDefinitions: ToolDefinition[] = [
         y: commonSchemas.numberProp,
         button: commonSchemas.stringProp
       },
-      required: ['action']
+      required: ['action'],
+      allOf: [
+        {
+          if: { properties: { action: { enum: ['screenshot', 'take_screenshot'] } }, required: ['action'] },
+          then: { properties: { mode: screenshotModeSchema } }
+        }
+      ]
     },
     outputSchema: {
       type: 'object',
       properties: {
-        ...commonSchemas.outputBase
+        ...commonSchemas.outputBase,
+        imageBase64: commonSchemas.stringProp,
+        mimeType: commonSchemas.stringProp,
+        width: commonSchemas.numberProp,
+        height: commonSchemas.numberProp,
+        sizeBytes: commonSchemas.numberProp,
+        path: commonSchemas.stringProp,
+        screenshotPath: commonSchemas.stringProp,
+        mode: commonSchemas.stringProp
       }
     }
   },
@@ -438,7 +461,11 @@ export const coreToolDefinitions: ToolDefinition[] = [
         section: commonSchemas.stringProp,
         key: commonSchemas.stringProp,
         value: commonSchemas.stringProp,
-        configName: commonSchemas.stringProp
+        configName: commonSchemas.stringProp,
+        mode: screenshotModeSchema,
+        returnBase64: { type: 'boolean', description: 'Return PNG image data as base64 when supported. Defaults to true for full_editor_window and game_viewport screenshot modes.' },
+        includeMetadata: commonSchemas.booleanProp,
+        metadata: commonSchemas.objectProp
       },
       required: ['action']
     },
@@ -446,7 +473,15 @@ export const coreToolDefinitions: ToolDefinition[] = [
       type: 'object',
       properties: {
         ...commonSchemas.outputBase,
-        output: commonSchemas.stringProp
+        output: commonSchemas.stringProp,
+        imageBase64: commonSchemas.stringProp,
+        mimeType: commonSchemas.stringProp,
+        width: commonSchemas.numberProp,
+        height: commonSchemas.numberProp,
+        sizeBytes: commonSchemas.numberProp,
+        path: commonSchemas.stringProp,
+        screenshotPath: commonSchemas.stringProp,
+        mode: commonSchemas.stringProp
       }
     }
   },

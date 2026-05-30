@@ -62,10 +62,9 @@ public:
 				TEXT("undo"),
 				TEXT("redo"),
 				TEXT("save_all")
-			}, TEXT("Editor action. Note: screenshot/take_screenshot is async "
-				"\u2014 the file is written on the next rendered viewport frame, "
-				"not immediately. The editor window must be visible and actively "
-				"rendering for capture to complete."))
+			}, TEXT("Editor action. Note: editor_viewport screenshots are async "
+				"and are written on the next rendered viewport frame. "
+				"full_editor_window captures synchronously and can return image content."))
 			.Object(TEXT("location"), TEXT("3D location (x, y, z)."),
 				[](FMcpSchemaBuilder& S) {
 				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
@@ -90,7 +89,10 @@ public:
 			.String(TEXT("path"), TEXT("Path to a directory."))
 			.String(TEXT("actorName"), TEXT("Name of the actor."))
 			.String(TEXT("name"), TEXT("Name identifier."))
-			.String(TEXT("mode"), TEXT(""))
+			.String(TEXT("mode"), TEXT("Editor mode for set_editor_mode, or screenshot source: editor_viewport, game_viewport, full_editor_window."))
+			.Bool(TEXT("returnBase64"), TEXT("Return PNG image data as base64 when supported. Defaults to true for full_editor_window and game_viewport modes."))
+			.Bool(TEXT("includeMetadata"), TEXT("Attach caller-provided metadata to the response."))
+			.FreeformObject(TEXT("metadata"), TEXT("Caller-provided screenshot metadata."))
 			.Number(TEXT("deltaTime"), TEXT(""))
 			.String(TEXT("resolution"), TEXT("Resolution setting (e.g., 1024x1024)."))
 			.Bool(TEXT("realtime"), TEXT(""))

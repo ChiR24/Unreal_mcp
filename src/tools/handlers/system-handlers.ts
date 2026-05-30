@@ -23,6 +23,38 @@ interface AssetValidationResult {
   [key: string]: unknown;
 }
 
+const SUPPORTED_SCREENSHOT_MODES = new Set(['editor_viewport', 'game_viewport', 'full_editor_window']);
+
+function getScreenshotMode(args: SystemArgs): { mode?: string; error?: string } {
+  if (typeof args.mode !== 'string' || args.mode.trim() === '') {
+    return {};
+  }
+
+  const mode = args.mode.trim().toLowerCase();
+  if (!SUPPORTED_SCREENSHOT_MODES.has(mode)) {
+    return { error: `Unknown screenshot mode: ${args.mode}. Supported: editor_viewport, game_viewport, full_editor_window` };
+  }
+
+  return { mode };
+}
+
+function buildScreenshotPayload(filename: string | undefined, resolution: unknown, mode: string | undefined, returnBase64: boolean | undefined): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    action: 'screenshot',
+    filename,
+    resolution
+  };
+
+  if (mode !== undefined) {
+    payload.mode = mode;
+  }
+  if (returnBase64 !== undefined) {
+    payload.returnBase64 = returnBase64;
+  }
+
+  return payload;
+}
+
 export async function handleSystemTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   // Security validation: Check all arguments for path traversal before processing
   // This catches malicious parameters even if they're not used by the specific action
@@ -538,26 +570,45 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       }
     }
     case 'screenshot': {
-      const includeMetadata = (argsTyped as Record<string, unknown>).includeMetadata === true;
-      const filenameArg = typeof (argsTyped as Record<string, unknown>).filename === 'string'
-        ? (argsTyped as Record<string, unknown>).filename as string
+      const includeMetadata = argsTyped.includeMetadata === true;
+      const filenameArg = typeof argsTyped.filename === 'string'
+        ? argsTyped.filename
         : undefined;
-      const metadata = (argsTyped as Record<string, unknown>).metadata;
-      const resolution = (argsTyped as Record<string, unknown>).resolution;
+      const metadata = argsTyped.metadata;
+      const resolution = argsTyped.resolution;
+      const modeResult = getScreenshotMode(argsTyped);
+      if (modeResult.error) {
+        return {
+          success: false,
+          type: 'INVALID_ARGUMENT',
+          error: 'INVALID_ARGUMENT',
+          message: modeResult.error,
+          action: {
+            tool: 'system_control',
+            command: 'screenshot'
+          }
+        };
+      }
+
+      const mode = modeResult.mode;
+      const returnBase64 = typeof argsTyped.returnBase64 === 'boolean'
+        ? argsTyped.returnBase64
+        : (mode === 'full_editor_window' || mode === 'game_viewport' ? true : undefined);
+      const targetAction = mode === 'game_viewport' ? 'system_control' : 'control_editor';
 
       if (includeMetadata) {
         const baseName = filenameArg && filenameArg.trim().length > 0
           ? filenameArg.trim()
           : `Screenshot_${Date.now()}`;
+        const payload = {
+          ...buildScreenshotPayload(baseName, resolution, mode, returnBase64),
+          includeMetadata: true
+        };
 
         try {
           // Try to pass metadata to C++ screenshot handler
-          const screenshotRes = await executeAutomationRequest(tools, 'control_editor', {
-            action: 'screenshot',
-            filename: baseName,
-            resolution,
-            metadata
-          });
+          const screenshotPayload = metadata === undefined ? payload : { ...payload, metadata };
+          const screenshotRes = await executeAutomationRequest(tools, targetAction, screenshotPayload);
           const cleanedRes = typeof screenshotRes === 'object' && screenshotRes !== null ? screenshotRes : {};
           return cleanObject({
             ...cleanedRes,
@@ -568,10 +619,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
           });
         } catch {
           // Fallback to standard screenshot
-          await executeAutomationRequest(tools, 'control_editor', {
-            action: 'screenshot',
-            filename: baseName
-          });
+          await executeAutomationRequest(tools, targetAction, payload);
 
         }
 
@@ -587,11 +635,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       }
 
       // Standard screenshot - pass all args through
-      const res = await executeAutomationRequest(tools, 'control_editor', {
-        action: 'screenshot',
-        filename: filenameArg,
-        resolution
-      }) as Record<string, unknown>;
+      const res = await executeAutomationRequest(tools, targetAction, buildScreenshotPayload(filenameArg, resolution, mode, returnBase64)) as Record<string, unknown>;
       const cleanedStdRes = typeof res === 'object' && res !== null ? res : {};
       return cleanObject({
         ...cleanedStdRes,
