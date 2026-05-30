@@ -28,6 +28,7 @@ import { HandshakeHandler } from './handshake.js';
 import { MessageHandler } from './message-handler.js';
 import { automationMessageSchema } from './message-schema.js';
 import { config } from '../config.js';
+import { redactImagePayloadTextForLog } from '../utils/log-redaction.js';
 
 const require = createRequire(import.meta.url);
 
@@ -480,7 +481,7 @@ export class AutomationBridge extends EventEmitter {
                         }
 
                         const text = rawDataToUtf8String(data, byteLength);
-                        this.log.debug(`[AutomationBridge Client] Received message: ${text.substring(0, 1000)}`);
+                        this.log.debug(`[AutomationBridge Client] Received message: ${redactImagePayloadTextForLog(text).substring(0, 1000)}`);
                         const parsed = JSON.parse(text) as AutomationBridgeMessage;
                         
                         // Check rate limit BEFORE schema validation to prevent DoS via invalid messages

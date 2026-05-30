@@ -10,6 +10,7 @@ import { responseValidator } from '../utils/response-validator.js';
 import { ErrorHandler } from '../utils/error-handler.js';
 import { cleanObject } from '../utils/safe-json.js';
 import { isRecord } from '../utils/type-guards.js';
+import { redactImagePayloadForLog } from '../utils/log-redaction.js';
 import { createElicitationHelper, PrimitiveSchema } from '../utils/elicitation.js';
 import { AssetResources } from '../resources/assets.js';
 import { ActorResources } from '../resources/actors.js';
@@ -618,7 +619,7 @@ export class ToolRegistry {
                 }
 
                 if (this.logger.isEnabled('debug')) {
-                    const responsePreview = JSON.stringify(wrappedResult).substring(0, 100);
+                    const responsePreview = JSON.stringify(redactImagePayloadForLog(wrappedResult)).substring(0, 100);
                     this.logger.debug(`Returning response to MCP client: ${responsePreview}...`);
                 }
 
