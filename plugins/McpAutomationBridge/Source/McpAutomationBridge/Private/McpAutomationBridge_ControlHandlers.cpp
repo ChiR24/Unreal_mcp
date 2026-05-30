@@ -151,13 +151,23 @@
 // Editor-only Includes: Export & Output
 // -----------------------------------------------------------------------------
 #include "Exporters/Exporter.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Framework/Docking/TabManager.h"
+#include "ImageUtils.h"
+#include "IImageWrapper.h"
+#include "IImageWrapperModule.h"
+#include "Misc/Base64.h"
+#include "Misc/FileHelper.h"
 #include "Misc/OutputDevice.h"
 #include "UnrealClient.h" // For FScreenshotRequest
+#include "Widgets/SWindow.h"
 
 #endif // WITH_EDITOR
 
 #if WITH_EDITOR
 namespace {
+constexpr int32 MaxScreenshotPngBytesForBase64ForMcp = 3 * 1024 * 1024;
+
 bool IsSafeConsoleArgumentToken(const FString &Value) {
   const FString Trimmed = Value.TrimStartAndEnd();
   return !Trimmed.IsEmpty() && !Trimmed.Contains(TEXT("\n")) &&
@@ -176,6 +186,149 @@ FString MakeSafeConsoleName(const FString &RawName, const TCHAR *Prefix) {
         *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
   }
   return CleanName;
+}
+
+FString MakeSafeScreenshotFilenameForMcp(
+    const TSharedPtr<FJsonObject> &Payload) {
+  FString Filename;
+  if (Payload.IsValid()) {
+    Payload->TryGetStringField(TEXT("filename"), Filename);
+  }
+
+  if (Filename.IsEmpty()) {
+    Filename = FString::Printf(TEXT("Screenshot_%s"),
+        *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+  }
+
+  Filename = FPaths::GetCleanFilename(Filename);
+  if (Filename.Contains(TEXT("..")) || Filename.Contains(TEXT("/")) ||
+      Filename.Contains(TEXT("\\"))) {
+    Filename = FString::Printf(TEXT("Screenshot_%s"),
+        *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+  }
+
+  if (!Filename.EndsWith(TEXT(".png"))) {
+    Filename += TEXT(".png");
+  }
+
+  return Filename;
+}
+
+void AddScreenshotMetadataForMcp(const TSharedPtr<FJsonObject> &Resp,
+                                 const TSharedPtr<FJsonObject> &Payload) {
+  if (!Resp.IsValid() || !Payload.IsValid()) {
+    return;
+  }
+
+  bool bIncludeMetadata = false;
+  if (!Payload->TryGetBoolField(TEXT("includeMetadata"), bIncludeMetadata) ||
+      !bIncludeMetadata) {
+    return;
+  }
+
+  const TSharedPtr<FJsonObject> *Metadata = nullptr;
+  if (Payload->TryGetObjectField(TEXT("metadata"), Metadata) && Metadata &&
+      Metadata->IsValid()) {
+    Resp->SetObjectField(TEXT("metadata"), *Metadata);
+  }
+}
+
+FString MakeScreenshotTooLargeMessageForMcp(int32 SizeBytes) {
+  return FString::Printf(
+      TEXT("Screenshot PNG is too large to return as base64 (%d bytes, max %d bytes). Retry with returnBase64=false or a smaller viewport/window."),
+      SizeBytes, MaxScreenshotPngBytesForBase64ForMcp);
+}
+
+bool IsUsableSlateWindowForMcp(const TSharedPtr<SWindow> &Window) {
+  return Window.IsValid() && Window->IsVisible() && !Window->IsWindowMinimized();
+}
+
+TSharedPtr<SWindow> GetFullEditorSlateWindowForMcp() {
+  if (!FSlateApplication::IsInitialized() ||
+      !FSlateApplication::Get().CanDisplayWindows()) {
+    return nullptr;
+  }
+
+  TSharedPtr<SWindow> RootWindow = FGlobalTabmanager::Get()->GetRootWindow();
+  if (IsUsableSlateWindowForMcp(RootWindow)) {
+    return RootWindow;
+  }
+
+#if MCP_HAS_LEVEL_EDITOR_MODULE
+  if (FModuleManager::Get().IsModuleLoaded(TEXT("LevelEditor"))) {
+    if (FLevelEditorModule* LevelEditorModule =
+            FModuleManager::GetModulePtr<FLevelEditorModule>(TEXT("LevelEditor"))) {
+      TSharedPtr<IAssetViewport> ActiveViewport =
+          LevelEditorModule->GetFirstActiveViewport();
+      if (ActiveViewport.IsValid()) {
+        TSharedPtr<SWindow> ViewportWindow =
+            FSlateApplication::Get().FindWidgetWindow(ActiveViewport->AsWidget());
+        if (IsUsableSlateWindowForMcp(ViewportWindow)) {
+          return ViewportWindow;
+        }
+      }
+    }
+  }
+#endif
+
+  TSharedPtr<SWindow> ActiveWindow = FSlateApplication::Get().GetActiveTopLevelWindow();
+  if (IsUsableSlateWindowForMcp(ActiveWindow)) {
+    return ActiveWindow;
+  }
+
+  return nullptr;
+}
+
+bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
+                                 TArray<uint8> &OutPngData,
+                                 FIntVector &OutSize,
+                                 FString &OutError) {
+  TSharedRef<SWidget> WindowWidget = Window;
+  TArray<FColor> Bitmap;
+
+  FSlateApplication::Get().ForceRedrawWindow(Window);
+  if (!FSlateApplication::Get().TakeScreenshot(WindowWidget, Bitmap, OutSize) ||
+      Bitmap.Num() == 0 || OutSize.X <= 0 || OutSize.Y <= 0) {
+    OutError = TEXT("Failed to capture Slate window pixels");
+    return false;
+  }
+
+  for (FColor &Pixel : Bitmap) {
+    Pixel.A = 255;
+  }
+
+  IImageWrapperModule &ImageWrapperModule =
+      FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+  TSharedPtr<IImageWrapper> ImageWrapper =
+      ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+  if (!ImageWrapper.IsValid()) {
+    OutError = TEXT("Failed to create PNG image wrapper");
+    return false;
+  }
+
+  TArray<uint8> RawData;
+  RawData.SetNumUninitialized(Bitmap.Num() * 4);
+  for (int32 PixelIndex = 0; PixelIndex < Bitmap.Num(); ++PixelIndex) {
+    const FColor &Pixel = Bitmap[PixelIndex];
+    RawData[PixelIndex * 4 + 0] = Pixel.R;
+    RawData[PixelIndex * 4 + 1] = Pixel.G;
+    RawData[PixelIndex * 4 + 2] = Pixel.B;
+    RawData[PixelIndex * 4 + 3] = Pixel.A;
+  }
+
+  if (!ImageWrapper->SetRaw(RawData.GetData(), RawData.Num(), OutSize.X,
+                            OutSize.Y, ERGBFormat::RGBA, 8)) {
+    OutError = TEXT("Failed to prepare Slate window screenshot pixels for PNG encoding");
+    return false;
+  }
+  OutPngData = ImageWrapper->GetCompressed(100);
+
+  if (OutPngData.Num() == 0) {
+    OutError = TEXT("Failed to encode Slate window screenshot as PNG");
+    return false;
+  }
+
+  return true;
 }
 
 FEditorViewportClient* GetActiveEditorViewportClientForMcp() {
@@ -3282,35 +3435,100 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     return true;
   }
 
-  // Get optional filename from payload
-  FString Filename;
-  Payload->TryGetStringField(TEXT("filename"), Filename);
-  if (Filename.IsEmpty()) {
-    // Generate default filename with timestamp
-    Filename = FString::Printf(TEXT("Screenshot_%s"),
-        *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+  FString Mode;
+  Payload->TryGetStringField(TEXT("mode"), Mode);
+  Mode = Mode.TrimStartAndEnd().ToLower();
+  if (Mode.IsEmpty()) {
+    Mode = TEXT("editor_viewport");
   }
 
-  // SECURITY: Sanitize filename to prevent path traversal
-  // Remove any path components and keep only the base filename
-  Filename = FPaths::GetCleanFilename(Filename);
-  
-  // Validate filename doesn't contain suspicious patterns
-  if (Filename.Contains(TEXT("..")) || Filename.Contains(TEXT("/")) || Filename.Contains(TEXT("\\"))) {
-    // Reject suspicious filename and use default
-    Filename = FString::Printf(TEXT("Screenshot_%s"),
-        *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+  if (Mode == TEXT("game_viewport")) {
+    return HandleUiAction(RequestId, TEXT("system_control"), Payload, Socket);
   }
 
-  // Ensure filename ends with .png
-  if (!Filename.EndsWith(TEXT(".png"))) {
-    Filename += TEXT(".png");
+  if (Mode != TEXT("editor_viewport") && Mode != TEXT("full_editor_window")) {
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+        TEXT("Invalid screenshot mode. Supported modes: editor_viewport, game_viewport, full_editor_window"),
+        nullptr);
+    return true;
   }
+
+  const FString Filename = MakeSafeScreenshotFilenameForMcp(Payload);
 
   // Build the full path - save to project's Saved/Screenshots folder
   const FString ScreenshotDir = FPaths::ProjectSavedDir() / TEXT("Screenshots");
   IFileManager::Get().MakeDirectory(*ScreenshotDir, true);
   const FString FullPath = ScreenshotDir / Filename;
+
+  if (Mode == TEXT("full_editor_window")) {
+    TSharedPtr<SWindow> EditorWindow = GetFullEditorSlateWindowForMcp();
+    if (!EditorWindow.IsValid()) {
+      SendStandardErrorResponse(this, Socket, RequestId,
+                                TEXT("EDITOR_WINDOW_NOT_AVAILABLE"),
+                                TEXT("No visible editor window available for full editor screenshot"),
+                                nullptr);
+      return true;
+    }
+
+    TArray<uint8> PngData;
+    FIntVector ImageSize(0, 0, 0);
+    FString CaptureError;
+    if (!CaptureSlateWindowPngForMcp(EditorWindow.ToSharedRef(), PngData,
+                                     ImageSize, CaptureError)) {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"),
+                                CaptureError, nullptr);
+      return true;
+    }
+
+    const bool bSaved = FFileHelper::SaveArrayToFile(PngData, *FullPath);
+
+    bool bReturnBase64 = true;
+    Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
+
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("filename"), Filename);
+    Resp->SetStringField(TEXT("mode"), Mode);
+    Resp->SetBoolField(TEXT("saved"), bSaved);
+    Resp->SetNumberField(TEXT("width"), ImageSize.X);
+    Resp->SetNumberField(TEXT("height"), ImageSize.Y);
+    Resp->SetNumberField(TEXT("sizeBytes"), PngData.Num());
+    Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
+    if (bSaved) {
+      Resp->SetStringField(TEXT("path"), FullPath);
+      Resp->SetStringField(TEXT("screenshotPath"), FullPath);
+    }
+    AddScreenshotMetadataForMcp(Resp, Payload);
+    if (!bSaved && !bReturnBase64) {
+      const FString SaveError = TEXT("Full editor window screenshot captured but failed to save, and returnBase64=false leaves no image output.");
+      Resp->SetStringField(TEXT("error"), SaveError);
+      Resp->SetStringField(TEXT("message"), SaveError);
+      SendAutomationResponse(Socket, RequestId, false, SaveError, Resp,
+                             TEXT("SAVE_FAILED"));
+      return true;
+    }
+    if (bReturnBase64 && PngData.Num() > MaxScreenshotPngBytesForBase64ForMcp) {
+      const FString SizeError = MakeScreenshotTooLargeMessageForMcp(PngData.Num());
+      Resp->SetStringField(TEXT("error"), SizeError);
+      Resp->SetStringField(TEXT("message"), SizeError);
+      SendAutomationResponse(Socket, RequestId, false, SizeError, Resp,
+                             TEXT("IMAGE_TOO_LARGE"));
+      return true;
+    }
+    if (bReturnBase64) {
+      Resp->SetStringField(TEXT("imageBase64"), FBase64::Encode(PngData));
+    }
+    Resp->SetStringField(TEXT("message"),
+        bReturnBase64
+            ? TEXT("Full editor window screenshot captured and returned as image/png base64.")
+            : TEXT("Full editor window screenshot captured."));
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Full editor window screenshot captured"), Resp,
+                           FString());
+    return true;
+  }
 
   // Get the active viewport
   FViewport* Viewport = GEditor->GetActiveViewport();
@@ -3328,6 +3546,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("filename"), Filename);
+  Resp->SetStringField(TEXT("mode"), Mode);
   Resp->SetStringField(TEXT("path"), FullPath);
   Resp->SetBoolField(TEXT("async"), true);
   Resp->SetStringField(TEXT("message"),
@@ -3335,6 +3554,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
            "(typically within 100-200ms). Poll the file path to confirm availability. "
            "The editor window must be visible for capture to complete."));
   Resp->SetStringField(TEXT("expectedDelay"), TEXT("200ms"));
+  AddScreenshotMetadataForMcp(Resp, Payload);
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Screenshot queued"), Resp, FString());
