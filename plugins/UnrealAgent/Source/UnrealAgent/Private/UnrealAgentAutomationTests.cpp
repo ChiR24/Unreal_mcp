@@ -718,7 +718,33 @@ bool FUnrealAgentStudioKitAndContextTest::RunTest(const FString& Parameters)
     bPassed &= TestTrue(TEXT("OpenCode config is generated"), FPaths::FileExists(ConfigPath));
     FString OpenCodeConfigText;
     bPassed &= TestTrue(TEXT("OpenCode config is readable"), FFileHelper::LoadFileToString(OpenCodeConfigText, *ConfigPath));
-    bPassed &= TestFalse(TEXT("OpenCode config does not contain unknown Studio Kit keys"), OpenCodeConfigText.Contains(TEXT("unreal_agent_studio_kit_version")));
+    bPassed &= TestTrue(TEXT("OpenCode config has Studio Kit comment marker"), OpenCodeConfigText.Contains(FUnrealAgentStudioKit::GetStudioKitVersionMarker()));
+    bPassed &= TestFalse(TEXT("OpenCode config does not contain unknown Studio Kit keys"), OpenCodeConfigText.Contains(TEXT("\"unreal_agent_studio_kit_version\"")));
+
+    const FString LegacyConfigDirectory = FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("UnrealAgentStudioKitLegacyConfigTest")));
+    IFileManager::Get().DeleteDirectory(*LegacyConfigDirectory, false, true);
+    const FString LegacyConfigPath = FPaths::Combine(LegacyConfigDirectory, TEXT(".opencode/opencode.json"));
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(LegacyConfigPath), true);
+    const FString LegacyConfigText = FString()
+        + TEXT("{\n")
+        + TEXT("  \"$schema\": \"https://opencode.ai/config.json\",\n")
+        + TEXT("  \"permission\": {\n")
+        + TEXT("    \"read\": \"allow\",\n")
+        + TEXT("    \"glob\": \"allow\",\n")
+        + TEXT("    \"grep\": \"allow\",\n")
+        + TEXT("    \"list\": \"allow\",\n")
+        + TEXT("    \"edit\": \"ask\",\n")
+        + TEXT("    \"bash\": \"ask\",\n")
+        + TEXT("    \"skill\": {\n")
+        + TEXT("      \"unreal-*\": \"allow\"\n")
+        + TEXT("    }\n")
+        + TEXT("  }\n")
+        + TEXT("}\n");
+    bPassed &= TestTrue(TEXT("Legacy generated OpenCode config is seeded"), FFileHelper::SaveStringToFile(LegacyConfigText, *LegacyConfigPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM));
+    FUnrealAgentStudioKit::EnsureForProject(LegacyConfigDirectory);
+    FString UpgradedLegacyConfigText;
+    bPassed &= TestTrue(TEXT("Legacy generated OpenCode config remains readable"), FFileHelper::LoadFileToString(UpgradedLegacyConfigText, *LegacyConfigPath));
+    bPassed &= TestTrue(TEXT("Legacy generated OpenCode config is upgraded with marker"), UpgradedLegacyConfigText.Contains(FUnrealAgentStudioKit::GetStudioKitVersionMarker()));
 
     const FString Redacted = FUnrealAgentStudioKit::RedactSensitiveText(TEXT("Authorization: Bearer abc123\nX-MCP-Capability-Token: fake-capability-token\nsafe: value"));
     bPassed &= TestFalse(TEXT("Redaction removes bearer token"), Redacted.Contains(TEXT("abc123")));
@@ -774,15 +800,22 @@ bool FUnrealAgentStudioKitAndContextTest::RunTest(const FString& Parameters)
     const FString CustomDirectory = FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("UnrealAgentStudioKitCustomTest")));
     IFileManager::Get().DeleteDirectory(*CustomDirectory, false, true);
     const FString CustomAgentPath = FPaths::Combine(CustomDirectory, TEXT(".opencode/agents/unreal-agent.md"));
+    const FString CustomConfigPath = FPaths::Combine(CustomDirectory, TEXT(".opencode/opencode.json"));
     IFileManager::Get().MakeDirectory(*FPaths::GetPath(CustomAgentPath), true);
     const FString CustomAgentText = TEXT("custom user-owned Unreal Agent prompt");
+    const FString CustomConfigText = TEXT("{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"permission\": {\n    \"read\": \"deny\"\n  }\n}\n");
     FFileHelper::SaveStringToFile(CustomAgentText, *CustomAgentPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+    FFileHelper::SaveStringToFile(CustomConfigText, *CustomConfigPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
     FUnrealAgentStudioKit::EnsureForProject(CustomDirectory);
     FString PreservedAgentText;
+    FString PreservedConfigText;
     bPassed &= TestTrue(TEXT("Custom prompt remains readable"), FFileHelper::LoadFileToString(PreservedAgentText, *CustomAgentPath));
     bPassed &= TestEqual(TEXT("Custom unmarked prompt is preserved"), PreservedAgentText, CustomAgentText);
+    bPassed &= TestTrue(TEXT("Custom OpenCode config remains readable"), FFileHelper::LoadFileToString(PreservedConfigText, *CustomConfigPath));
+    bPassed &= TestEqual(TEXT("Custom unmarked OpenCode config is preserved"), PreservedConfigText, CustomConfigText);
 
     IFileManager::Get().DeleteDirectory(*TestDirectory, false, true);
+    IFileManager::Get().DeleteDirectory(*LegacyConfigDirectory, false, true);
     IFileManager::Get().DeleteDirectory(*CustomDirectory, false, true);
     IFileManager::Get().DeleteDirectory(*BrokenDecisionsDirectory, false, true);
     IFileManager::Get().DeleteDirectory(*BrokenStateDirectory, false, true);
@@ -1053,7 +1086,8 @@ bool FUnrealAgentAcpClientProtocolTest::RunTest(const FString& Parameters)
         FString GeneratedOpenCodeConfig;
         const FString GeneratedOpenCodeConfigPath = FPaths::Combine(TestDirectory, TEXT(".opencode/opencode.json"));
         bPassed &= TestTrue(TEXT("Generated OpenCode config is written"), FPaths::FileExists(GeneratedOpenCodeConfigPath) && FFileHelper::LoadFileToString(GeneratedOpenCodeConfig, *GeneratedOpenCodeConfigPath));
-        bPassed &= TestFalse(TEXT("Generated OpenCode config does not contain unknown Studio Kit keys"), GeneratedOpenCodeConfig.Contains(TEXT("unreal_agent_studio_kit_version")));
+        bPassed &= TestTrue(TEXT("Generated OpenCode config has Studio Kit comment marker"), GeneratedOpenCodeConfig.Contains(FUnrealAgentStudioKit::GetStudioKitVersionMarker()));
+        bPassed &= TestFalse(TEXT("Generated OpenCode config does not contain unknown Studio Kit keys"), GeneratedOpenCodeConfig.Contains(TEXT("\"unreal_agent_studio_kit_version\"")));
         bPassed &= TestTrue(TEXT("Studio Kit summary is exposed"), Client.GetLastStudioKitSummary().Contains(TEXT("Studio Kit:")));
 
         const FString ContextEnvelope = Client.RefreshEditorContext();

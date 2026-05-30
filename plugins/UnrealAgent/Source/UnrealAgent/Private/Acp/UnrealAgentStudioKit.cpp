@@ -276,6 +276,7 @@ namespace
     FString MakeOpenCodeConfig()
     {
         return FString()
+            + TEXT("// unreal_agent_studio_kit_version: 1\n")
             + TEXT("{\n")
             + TEXT("  \"$schema\": \"https://opencode.ai/config.json\",\n")
             + TEXT("  \"permission\": {\n")
@@ -290,6 +291,13 @@ namespace
             + TEXT("    }\n")
             + TEXT("  }\n")
             + TEXT("}\n");
+    }
+
+    FString MakeLegacyOpenCodeConfig()
+    {
+        FString Config = MakeOpenCodeConfig();
+        Config.RemoveFromStart(TEXT("// unreal_agent_studio_kit_version: 1\n"));
+        return Config;
     }
 
     FString MakeEvidenceReadme()
@@ -349,6 +357,7 @@ namespace
     bool WriteTemplateFile(const FString& ProjectDirectory, const FStudioKitTemplateFile& TemplateFile, FUnrealAgentStudioKitResult& Result)
     {
         const FString Path = FPaths::Combine(ProjectDirectory, TemplateFile.RelativePath);
+        const bool bIsOpenCodeConfig = TemplateFile.RelativePath == TEXT(".opencode/opencode.json");
         FString ExistingText;
         if (FPaths::FileExists(Path) && FFileHelper::LoadFileToString(ExistingText, *Path))
         {
@@ -359,7 +368,8 @@ namespace
             }
 
             const bool bManaged = FUnrealAgentStudioKit::IsManagedFileText(ExistingText)
-                || (TemplateFile.RelativePath == TEXT(".opencode/opencode.json") && ExistingText.Contains(TEXT("\"unreal_agent_studio_kit_version\"")))
+                || (bIsOpenCodeConfig && ExistingText.Contains(TEXT("\"unreal_agent_studio_kit_version\"")))
+                || (bIsOpenCodeConfig && ExistingText == MakeLegacyOpenCodeConfig())
                 || (TemplateFile.bOverwriteLegacyPrompt && LooksLikeLegacyManagedPrompt(ExistingText));
             if (!bManaged)
             {
