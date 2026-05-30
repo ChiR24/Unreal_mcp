@@ -3,7 +3,7 @@
 Editor-only Unreal plugin for an in-editor OpenCode ACP assistant panel. This is separate from `plugins/McpAutomationBridge`; it does not expose MCP tools itself, but it can pass the configured `unreal-engine` MCP server to OpenCode ACP sessions.
 
 ## STRUCTURE
-```
+```text
 UnrealAgent/
 |-- UnrealAgent.uplugin          # plugin metadata, version `0.1.0`
 |-- Config/FilterPlugin.ini      # package filter for Studio Kit resources
