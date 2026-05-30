@@ -47,7 +47,7 @@ The prompt tells OpenCode to work like a compact Unreal game studio:
 - `.opencode/opencode.json` with conservative default permissions.
 - `Saved/UnrealAgent/` for `state.json`, `decisions.md`, and evidence records.
 
-Managed Studio Kit files carry `unreal_agent_studio_kit_version: 1` where the target format permits plugin metadata. `.opencode/opencode.json` intentionally contains only OpenCode-recognized config keys. Existing unmarked user-authored files are preserved.
+Managed Studio Kit files carry `unreal_agent_studio_kit_version: 1` where the target format permits plugin metadata. `.opencode/opencode.json` uses a JSONC comment marker so it remains upgradeable without adding unknown OpenCode config keys. Existing unmarked user-authored files are preserved.
 
 ## Editor Context And Evidence
 
