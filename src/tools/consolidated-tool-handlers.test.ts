@@ -130,4 +130,22 @@ describe('consolidated action params compatibility', () => {
       overwrite: true
     }), expect.any(Object));
   });
+
+  it('routes full editor screenshot mode with base64 image return enabled', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools();
+
+    await handleConsolidatedToolCall('system_control', {
+      action: 'screenshot',
+      filename: 'FullEditor',
+      mode: 'full_editor_window'
+    }, tools);
+
+    expect(sendAutomationRequest).toHaveBeenCalledWith('control_editor', {
+      action: 'screenshot',
+      filename: 'FullEditor',
+      resolution: undefined,
+      mode: 'full_editor_window',
+      returnBase64: true
+    }, {});
+  });
 });
