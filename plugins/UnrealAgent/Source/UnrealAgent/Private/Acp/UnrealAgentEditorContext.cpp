@@ -140,7 +140,7 @@ FUnrealAgentEditorContextSnapshot FUnrealAgentEditorContext::Capture(const FStri
     AppendLine(Envelope, TEXT("<unreal_editor_context version=\"1\">"));
     AppendLine(Envelope, FString::Printf(TEXT("generatedAt: %s"), *FDateTime::UtcNow().ToIso8601()));
     AppendLine(Envelope, FString::Printf(TEXT("projectName: %s"), FApp::GetProjectName()));
-    AppendLine(Envelope, FString::Printf(TEXT("projectDir: %s"), *NormalizedProjectDirectory));
+    AppendLine(Envelope, TEXT("projectDir: [redacted project root]"));
     AppendLine(Envelope, FString::Printf(TEXT("engineVersion: %s"), *FEngineVersion::Current().ToString()));
     AppendLine(Envelope, FString::Printf(TEXT("currentMap: %s"), *MapName));
     AppendLine(Envelope, FString::Printf(TEXT("pieActive: %s"), Snapshot.bPieActive ? TEXT("true") : TEXT("false")));

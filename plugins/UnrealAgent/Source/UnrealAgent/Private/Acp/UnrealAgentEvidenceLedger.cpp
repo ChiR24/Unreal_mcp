@@ -5,6 +5,7 @@
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
+#include "Misc/Guid.h"
 #include "Misc/Paths.h"
 #include "Policies/CondensedJsonPrintPolicy.h"
 #include "Serialization/JsonSerializer.h"
@@ -136,14 +137,21 @@ bool FUnrealAgentEvidenceLedger::EnsureLedger(const FString& ProjectDirectory, F
 
 bool FUnrealAgentEvidenceLedger::RecordEvent(const FString& ProjectDirectory, const FString& EventType, const FString& Status, const FString& Summary, const FString& Details, FString* OutEvidencePath)
 {
+    if (OutEvidencePath != nullptr)
+    {
+        OutEvidencePath->Reset();
+    }
+
     if (!EnsureLedger(ProjectDirectory))
     {
         return false;
     }
 
     const FString SafeEventType = MakeSafeSlug(EventType);
-    const FString Timestamp = FDateTime::UtcNow().ToString(TEXT("%Y%m%d-%H%M%S"));
-    const FString EvidencePath = FPaths::Combine(GetEvidenceDirectory(ProjectDirectory), FString::Printf(TEXT("%s-%s.json"), *Timestamp, *SafeEventType));
+    const FDateTime CreatedAt = FDateTime::UtcNow();
+    const FString Timestamp = CreatedAt.ToString(TEXT("%Y%m%d-%H%M%S"));
+    const FString UniqueSuffix = FGuid::NewGuid().ToString(EGuidFormats::Digits);
+    const FString EvidencePath = FPaths::Combine(GetEvidenceDirectory(ProjectDirectory), FString::Printf(TEXT("%s-%s-%s.json"), *Timestamp, *SafeEventType, *UniqueSuffix));
 
     TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
     Root->SetStringField(TEXT("version"), LedgerVersion);
@@ -151,7 +159,7 @@ bool FUnrealAgentEvidenceLedger::RecordEvent(const FString& ProjectDirectory, co
     Root->SetStringField(TEXT("status"), Status);
     Root->SetStringField(TEXT("summary"), FUnrealAgentStudioKit::RedactSensitiveText(Summary));
     Root->SetStringField(TEXT("details"), FUnrealAgentStudioKit::RedactSensitiveText(Details));
-    Root->SetStringField(TEXT("createdAt"), FDateTime::UtcNow().ToIso8601());
+    Root->SetStringField(TEXT("createdAt"), CreatedAt.ToIso8601());
 
     if (!FFileHelper::SaveStringToFile(JsonObjectToString(Root), *EvidencePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
     {
@@ -160,12 +168,18 @@ bool FUnrealAgentEvidenceLedger::RecordEvent(const FString& ProjectDirectory, co
 
     const FString DecisionLine = FString::Printf(
         TEXT("- %s [%s] %s: %s\n"),
-        *FDateTime::UtcNow().ToIso8601(),
+        *CreatedAt.ToIso8601(),
         *Status,
         *EventType,
         *FUnrealAgentStudioKit::RedactSensitiveText(Summary));
-    FFileHelper::SaveStringToFile(DecisionLine, *GetDecisionsPath(ProjectDirectory), FFileHelper::EEncodingOptions::AutoDetect, &IFileManager::Get(), FILEWRITE_Append);
-    SaveStateFile(ProjectDirectory, Summary);
+    if (!FFileHelper::SaveStringToFile(DecisionLine, *GetDecisionsPath(ProjectDirectory), FFileHelper::EEncodingOptions::AutoDetect, &IFileManager::Get(), FILEWRITE_Append))
+    {
+        return false;
+    }
+    if (!SaveStateFile(ProjectDirectory, Summary))
+    {
+        return false;
+    }
 
     if (OutEvidencePath != nullptr)
     {

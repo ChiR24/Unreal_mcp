@@ -53,11 +53,11 @@ FUnrealAgentValidationResult FUnrealAgentValidationRunner::RunFastValidation(con
     {
         Result.bPassed = false;
         Result.Errors.Add(FString::Printf(TEXT("Project directory does not exist: %s"), *NormalizedProjectDirectory));
+        Result.Summary = TEXT("Validation failed because the project directory does not exist.");
+        return Result;
     }
-    else
-    {
-        Result.Checks.Add(FString::Printf(TEXT("OK project directory: %s"), *NormalizedProjectDirectory));
-    }
+
+    Result.Checks.Add(FString::Printf(TEXT("OK project directory: %s"), *NormalizedProjectDirectory));
 
     const FString Marker = FUnrealAgentStudioKit::GetStudioKitVersionMarker();
     AddFileCheck(Result, TEXT("primary agent"), FPaths::Combine(NormalizedProjectDirectory, TEXT(".opencode/agents/unreal-agent.md")), FUnrealAgentStudioKit::GetPromptVersionMarker());
