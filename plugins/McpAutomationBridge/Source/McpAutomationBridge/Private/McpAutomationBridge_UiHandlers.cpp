@@ -92,6 +92,63 @@
 // Handler Implementation
 // =============================================================================
 
+#if WITH_EDITOR
+namespace {
+constexpr int32 MaxScreenshotPngBytesForBase64ForMcp = 3 * 1024 * 1024;
+
+FString MakeSafeUiScreenshotFilenameForMcp(
+    const TSharedPtr<FJsonObject> &Payload) {
+  FString Filename;
+  if (Payload.IsValid()) {
+    Payload->TryGetStringField(TEXT("filename"), Filename);
+  }
+
+  if (Filename.IsEmpty()) {
+    Filename = FString::Printf(TEXT("Screenshot_%lld"),
+                               FDateTime::Now().ToUnixTimestamp());
+  }
+
+  Filename = FPaths::GetCleanFilename(Filename);
+  if (Filename.Contains(TEXT("..")) || Filename.Contains(TEXT("/")) ||
+      Filename.Contains(TEXT("\\"))) {
+    Filename = FString::Printf(TEXT("Screenshot_%lld"),
+                               FDateTime::Now().ToUnixTimestamp());
+  }
+
+  if (!Filename.EndsWith(TEXT(".png"))) {
+    Filename += TEXT(".png");
+  }
+
+  return Filename;
+}
+
+void AddScreenshotMetadataForUiMcp(const TSharedPtr<FJsonObject> &Resp,
+                                   const TSharedPtr<FJsonObject> &Payload) {
+  if (!Resp.IsValid() || !Payload.IsValid()) {
+    return;
+  }
+
+  bool bIncludeMetadata = false;
+  if (!Payload->TryGetBoolField(TEXT("includeMetadata"), bIncludeMetadata) ||
+      !bIncludeMetadata) {
+    return;
+  }
+
+  const TSharedPtr<FJsonObject> *Metadata = nullptr;
+  if (Payload->TryGetObjectField(TEXT("metadata"), Metadata) && Metadata &&
+      Metadata->IsValid()) {
+    Resp->SetObjectField(TEXT("metadata"), *Metadata);
+  }
+}
+
+FString MakeScreenshotTooLargeMessageForUiMcp(int32 SizeBytes) {
+  return FString::Printf(
+      TEXT("Screenshot PNG is too large to return as base64 (%d bytes, max %d bytes). Retry with returnBase64=false or a smaller viewport/window."),
+      SizeBytes, MaxScreenshotPngBytesForBase64ForMcp);
+}
+}
+#endif
+
 /**
  * @brief Handles UI widget operations and system control actions.
  *
@@ -345,6 +402,23 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // SubAction: screenshot
   // ===========================================================================
   else if (LowerSub == TEXT("screenshot")) {
+    FString Mode;
+    Payload->TryGetStringField(TEXT("mode"), Mode);
+    Mode = Mode.TrimStartAndEnd().ToLower();
+    if (Mode.IsEmpty() && Action == TEXT("system_control")) {
+      return HandleControlEditorScreenshot(RequestId, Payload, RequestingSocket);
+    }
+    if (Mode == TEXT("full_editor_window") || Mode == TEXT("editor_viewport")) {
+      return HandleControlEditorScreenshot(RequestId, Payload, RequestingSocket);
+    }
+    if (!Mode.IsEmpty() && Mode != TEXT("game_viewport")) {
+      Message = TEXT("Invalid screenshot mode. Supported modes: editor_viewport, game_viewport, full_editor_window");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+      SendAutomationResponse(RequestingSocket, RequestId, false, Message, Resp, ErrorCode);
+      return true;
+    }
+
     // Take a screenshot of the viewport and return as base64
     FString RawScreenshotPath;
     Payload->TryGetStringField(TEXT("path"), RawScreenshotPath);
@@ -382,22 +456,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       }
     }
 
-    FString Filename;
-    Payload->TryGetStringField(TEXT("filename"), Filename);
-    
-    // SECURITY: Sanitize filename to prevent path traversal
-    // Strip directory components and validate against traversal patterns
-    Filename = FPaths::GetCleanFilename(Filename);
-    if (Filename.Contains(TEXT("..")) || Filename.Contains(TEXT("/")) || Filename.Contains(TEXT("\\"))) {
-      // Reject suspicious filename and use default
-      Filename = FString::Printf(TEXT("Screenshot_%lld"),
-                                 FDateTime::Now().ToUnixTimestamp());
-    }
-    
-    if (Filename.IsEmpty()) {
-      Filename = FString::Printf(TEXT("Screenshot_%lld"),
-                                 FDateTime::Now().ToUnixTimestamp());
-    }
+    const FString Filename = MakeSafeUiScreenshotFilenameForMcp(Payload);
 
     bool bReturnBase64 = true;
     Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
@@ -431,44 +490,39 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
           const int32 Width = Size.X;
           const int32 Height = Size.Y;
 
-          // Compress to PNG
-          // Note: ThumbnailCompressImageArray was introduced in UE 5.1
           TArray<uint8> PngData;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-          FImageUtils::ThumbnailCompressImageArray(Width, Height, Bitmap,
-                                                   PngData);
-#else
-          // UE 5.0 fallback - use CompressImageArray
-          FImageUtils::CompressImageArray(Width, Height, Bitmap, PngData);
-#endif
+          IImageWrapperModule &ImageWrapperModule =
+              FModuleManager::LoadModuleChecked<IImageWrapperModule>(
+                  FName("ImageWrapper"));
+          TSharedPtr<IImageWrapper> ImageWrapper =
+              ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
 
-          if (PngData.Num() == 0) {
-            // Alternative: compress as PNG using IImageWrapper
-            IImageWrapperModule &ImageWrapperModule =
-                FModuleManager::LoadModuleChecked<IImageWrapperModule>(
-                    FName("ImageWrapper"));
-            TSharedPtr<IImageWrapper> ImageWrapper =
-                ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+          if (ImageWrapper.IsValid()) {
+            TArray<uint8> RawData;
+            RawData.SetNumUninitialized(Width * Height * 4);
+            for (int32 i = 0; i < Bitmap.Num(); ++i) {
+              RawData[i * 4 + 0] = Bitmap[i].R;
+              RawData[i * 4 + 1] = Bitmap[i].G;
+              RawData[i * 4 + 2] = Bitmap[i].B;
+              RawData[i * 4 + 3] = 255;
+            }
 
-            if (ImageWrapper.IsValid()) {
-              TArray<uint8> RawData;
-              RawData.SetNum(Width * Height * 4);
-              for (int32 i = 0; i < Bitmap.Num(); ++i) {
-                RawData[i * 4 + 0] = Bitmap[i].R;
-                RawData[i * 4 + 1] = Bitmap[i].G;
-                RawData[i * 4 + 2] = Bitmap[i].B;
-                RawData[i * 4 + 3] = Bitmap[i].A;
-              }
-
-              if (ImageWrapper->SetRaw(RawData.GetData(), RawData.Num(), Width,
-                                       Height, ERGBFormat::RGBA, 8)) {
-                PngData = ImageWrapper->GetCompressed(100);
-              }
+            if (ImageWrapper->SetRaw(RawData.GetData(), RawData.Num(), Width,
+                                     Height, ERGBFormat::RGBA, 8)) {
+              PngData = ImageWrapper->GetCompressed(100);
             }
           }
 
+          if (PngData.Num() == 0) {
+            Message = TEXT("Failed to encode viewport screenshot as PNG");
+            ErrorCode = TEXT("CAPTURE_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
+            SendAutomationResponse(RequestingSocket, RequestId, false, Message, Resp, ErrorCode);
+            return true;
+          }
+
           FString FullPath =
-              FPaths::Combine(ScreenshotPath, Filename + TEXT(".png"));
+              FPaths::Combine(ScreenshotPath, Filename);
           FPaths::MakeStandardFilename(FullPath);
 
           // Always save to disk
@@ -480,15 +534,30 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
                                     Height);
           Resp->SetStringField(TEXT("screenshotPath"), FullPath);
           Resp->SetStringField(TEXT("filename"), Filename);
+          Resp->SetStringField(TEXT("mode"), TEXT("game_viewport"));
+          Resp->SetBoolField(TEXT("saved"), bSaved);
           Resp->SetNumberField(TEXT("width"), Width);
           Resp->SetNumberField(TEXT("height"), Height);
           Resp->SetNumberField(TEXT("sizeBytes"), PngData.Num());
+          Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
+          AddScreenshotMetadataForUiMcp(Resp, Payload);
+
+          if (!bSaved && !bReturnBase64) {
+            bSuccess = false;
+            Message = TEXT("Screenshot captured but failed to save, and returnBase64=false leaves no image output.");
+            ErrorCode = TEXT("SAVE_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
+          } else if (bReturnBase64 && PngData.Num() > MaxScreenshotPngBytesForBase64ForMcp) {
+            bSuccess = false;
+            Message = MakeScreenshotTooLargeMessageForUiMcp(PngData.Num());
+            ErrorCode = TEXT("IMAGE_TOO_LARGE");
+            Resp->SetStringField(TEXT("error"), Message);
+          }
 
           // Return base64 encoded image if requested
-          if (bReturnBase64 && PngData.Num() > 0) {
+          if (bSuccess && bReturnBase64) {
             FString Base64Data = FBase64::Encode(PngData);
             Resp->SetStringField(TEXT("imageBase64"), Base64Data);
-            Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
           }
         }
       }
