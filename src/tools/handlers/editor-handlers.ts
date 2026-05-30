@@ -236,10 +236,7 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
           type: 'INVALID_ARGUMENT',
           error: 'INVALID_ARGUMENT',
           message: modeResult.error,
-          action: {
-            tool: 'control_editor',
-            command: 'screenshot'
-          }
+          action: 'screenshot'
         };
       }
 

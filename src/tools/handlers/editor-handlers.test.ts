@@ -87,6 +87,20 @@ describe('handleEditorTools', () => {
     }, {});
   });
 
+  it('returns string action for invalid screenshot modes', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools();
+
+    const result = await handleEditorTools('screenshot', { action: 'screenshot', mode: 'bad_mode' }, tools);
+
+    expect(result).toMatchObject({
+      success: false,
+      type: 'INVALID_ARGUMENT',
+      error: 'INVALID_ARGUMENT',
+      action: 'screenshot'
+    });
+    expect(sendAutomationRequest).not.toHaveBeenCalled();
+  });
+
   it('maps simulate_input from inputAction without reading the routing action', async () => {
     const { tools, sendAutomationRequest } = createConnectedTools();
 
