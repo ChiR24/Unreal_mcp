@@ -9,6 +9,12 @@ export interface ToolDefinition {
 }
 import { addActionParamsSchema, commonSchemas } from './tool-definition-utils.js';
 
+const screenshotModeSchema = {
+  type: 'string',
+  enum: ['editor_viewport', 'game_viewport', 'full_editor_window'],
+  description: 'Screenshot source. editor_viewport captures the active editor viewport; game_viewport captures the PIE/game viewport; full_editor_window captures the full Slate editor window and returns imageBase64 by default.'
+};
+
 /** Canonical list of material authoring actions — single source of truth for schema and handler. */
 export const MATERIAL_AUTHORING_ACTIONS = [
   'create_material', 'set_blend_mode', 'set_shading_model', 'set_material_domain',
@@ -767,7 +773,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         actorName: commonSchemas.actorName,
         name: commonSchemas.name,
         // Action-specific parameters
-        mode: commonSchemas.stringProp,
+        mode: { type: 'string', description: 'Editor mode for set_editor_mode, or screenshot source: editor_viewport, game_viewport, full_editor_window.' },
+        returnBase64: { type: 'boolean', description: 'Return PNG image data as base64 when supported. Defaults to true for full_editor_window and game_viewport modes.' },
         deltaTime: commonSchemas.numberProp,
         resolution: commonSchemas.resolution,
         realtime: commonSchemas.booleanProp,
@@ -789,7 +796,15 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     outputSchema: {
       type: 'object',
       properties: {
-        ...commonSchemas.outputBase
+        ...commonSchemas.outputBase,
+        imageBase64: commonSchemas.stringProp,
+        mimeType: commonSchemas.stringProp,
+        width: commonSchemas.numberProp,
+        height: commonSchemas.numberProp,
+        sizeBytes: commonSchemas.numberProp,
+        path: commonSchemas.stringProp,
+        screenshotPath: commonSchemas.stringProp,
+        mode: commonSchemas.stringProp
       }
     }
   },
@@ -1202,6 +1217,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         code: { type: 'string', description: 'Python code to execute inline', maxLength: 1048576 }, // 1MB max — prevents resource exhaustion via oversized payloads
         file: { type: 'string', description: 'Path to .py file to execute', maxLength: 4096 } // Max path length on most OS
       ,
+        mode: screenshotModeSchema,
+        returnBase64: { type: 'boolean', description: 'Return PNG image data as base64 when supported. Defaults to true for full_editor_window and game_viewport screenshot modes.' },
+        includeMetadata: commonSchemas.booleanProp,
+        metadata: commonSchemas.objectProp,
         type: { type: 'string', enum: ['CPU', 'GPU', 'Memory', 'RenderThread', 'GameThread', 'All'] },
         duration: commonSchemas.numberProp,
         outputPath: commonSchemas.outputPath,
@@ -1239,7 +1258,15 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       type: 'object',
       properties: {
         ...commonSchemas.outputBase,
-        output: commonSchemas.stringProp
+        output: commonSchemas.stringProp,
+        imageBase64: commonSchemas.stringProp,
+        mimeType: commonSchemas.stringProp,
+        width: commonSchemas.numberProp,
+        height: commonSchemas.numberProp,
+        sizeBytes: commonSchemas.numberProp,
+        path: commonSchemas.stringProp,
+        screenshotPath: commonSchemas.stringProp,
+        mode: commonSchemas.stringProp
       }
     }
   },
