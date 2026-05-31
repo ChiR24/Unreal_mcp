@@ -86,6 +86,7 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BehaviorTreeTypes.h"
 #include "BehaviorTree/BlackboardData.h"
+#include "McpAutomationBridge_BehaviorTreeSerializers.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Bool.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Int.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Float.h"
@@ -3446,18 +3447,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             UBlackboardData* BB = LoadObject<UBlackboardData>(nullptr, *BBPath);
             if (BB)
             {
+                // Backward-compat: assignedBlackboard stays a short name (BB->GetName()).
                 AIInfo->SetStringField(TEXT("assignedBlackboard"), BB->GetName());
-                AIInfo->SetNumberField(TEXT("keyCount"), BB->Keys.Num());
-                TArray<TSharedPtr<FJsonValue>> KeysArray;
-                for (const FBlackboardEntry& Entry : BB->Keys)
-                {
-                    TSharedPtr<FJsonObject> KeyObj = McpHandlerUtils::CreateResultObject();
-                    KeyObj->SetStringField(TEXT("name"), Entry.EntryName.ToString());
-                    KeyObj->SetStringField(TEXT("type"), Entry.KeyType ? Entry.KeyType->GetClass()->GetName() : TEXT("Unknown"));
-                    KeyObj->SetBoolField(TEXT("instanceSynced"), Entry.bInstanceSynced);
-                    KeysArray.Add(MakeShared<FJsonValueObject>(KeyObj));
-                }
-                AIInfo->SetArrayField(TEXT("blackboardKeys"), KeysArray);
+                // keyCount + blackboardKeys (+ parentBlackboard) via the shared serializer.
+                // For a no-parent BB this is bit-identical to the prior output plus additive
+                // per-key enrichment fields (the PR0a characterization tolerates added fields).
+                McpBehaviorTreeSerializers::SerializeBlackboardData(BB, AIInfo.ToSharedRef());
             }
         }
 
