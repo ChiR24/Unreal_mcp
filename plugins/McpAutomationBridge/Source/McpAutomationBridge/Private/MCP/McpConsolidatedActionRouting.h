@@ -573,7 +573,8 @@ inline const TArray<FString>& BehaviorTree()
 	static const TArray<FString> Actions = {
 		TEXT("create"), TEXT("add_node"), TEXT("connect_nodes"),
 		TEXT("remove_node"), TEXT("break_connections"),
-		TEXT("set_node_properties"), TEXT("add_subnode")
+		TEXT("set_node_properties"), TEXT("add_subnode"),
+		TEXT("get_tree")
 	};
 	return Actions;
 }

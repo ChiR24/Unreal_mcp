@@ -1,4 +1,4 @@
-// McpTool_ManageBehaviorTree.cpp — manage_behavior_tree tool definition (7 actions)
+// McpTool_ManageBehaviorTree.cpp — manage_behavior_tree tool definition (8 actions)
 
 #include "McpVersionCompatibility.h"
 #include "MCP/McpToolDefinition.h"
@@ -28,7 +28,8 @@ public:
 				TEXT("remove_node"),
 				TEXT("break_connections"),
 				TEXT("set_node_properties"),
-				TEXT("add_subnode")
+				TEXT("add_subnode"),
+				TEXT("get_tree")
 			}, TEXT("Action"))
 			.String(TEXT("name"), TEXT("Name identifier."))
 			.String(TEXT("savePath"), TEXT("Path to save the asset."))

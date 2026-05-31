@@ -68,6 +68,7 @@
 #include "BehaviorTree/Tasks/BTTask_Wait.h"
 #include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/BehaviorTreeTypes.h"   // FBlackboardKeySelector
+#include "McpAutomationBridge_BehaviorTreeSerializers.h"
 
 // Behavior Tree Graph (UE 5.3+)
 // BehaviorTreeGraph classes are only exported (BEHAVIORTREEEDITOR_API) starting from UE 5.3
@@ -144,9 +145,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
   // because it instantiates UBehaviorTreeGraph classes. Without graph support (UE 5.0-5.2),
   // "create" only uses core BehaviorTree runtime classes.
 #if MCP_HAS_BEHAVIOR_TREE_GRAPH
-  const bool bNeedsEditorModule = true;  // UE 5.3+: All operations need BehaviorTreeEditor for graph classes
+  // get_tree is a runtime-only read (walks BT->RootNode); it must NOT require the
+  // BehaviorTreeEditor module so it works on projects without the BT editor plugin.
+  const bool bNeedsEditorModule = (SubAction != TEXT("get_tree"));
 #else
-  const bool bNeedsEditorModule = (SubAction != TEXT("create"));  // UE 5.0-5.2: Only graph ops need editor module
+  const bool bNeedsEditorModule = (SubAction != TEXT("create") && SubAction != TEXT("get_tree"));
 #endif
   if (bNeedsEditorModule && !FModuleManager::Get().IsModuleLoaded(TEXT("BehaviorTreeEditor")))
   {
@@ -251,6 +254,44 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Behavior Tree created."), Result);
+    return true;
+  }
+
+  // SubAction: get_tree — read-only structured tree introspection.
+  // Placed before the shared BT-load/GRAPH_NOT_FOUND block so a graphless/uninitialized
+  // BT returns the null-RootNode contract (success + rootNode:null) rather than an error,
+  // and so it runs runtime-only (see the bNeedsEditorModule carve-out above). Does its own
+  // LoadObject and walks the runtime BT->RootNode; never touches the editor BTGraph.
+  if (SubAction == TEXT("get_tree")) {
+    FString GetTreeAssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), GetTreeAssetPath) || GetTreeAssetPath.IsEmpty()) {
+      if (!Payload->TryGetStringField(TEXT("behaviorTreePath"), GetTreeAssetPath) || GetTreeAssetPath.IsEmpty()) {
+        Payload->TryGetStringField(TEXT("path"), GetTreeAssetPath);
+      }
+    }
+    if (GetTreeAssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+          TEXT("get_tree requires 'assetPath' (or 'behaviorTreePath'/'path')."),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    UBehaviorTree *GetTreeBT = LoadObject<UBehaviorTree>(nullptr, *GetTreeAssetPath);
+    if (!GetTreeBT) {
+      SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("Could not load Behavior Tree at '%s'."), *GetTreeAssetPath),
+          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+    // Nest the serialized tree under "tree" (mirrors get_ai_info's "aiInfo" nesting).
+    // This keeps every field under structuredContent.result.tree.* and prevents the TS
+    // promoteScalarResultFields step from hoisting scalars (hasRootNode/nodeCount) to a
+    // less predictable path — so the live test's assertion paths are deterministic.
+    TSharedRef<FJsonObject> GetTreeData = MakeShared<FJsonObject>();
+    McpBehaviorTreeSerializers::SerializeBehaviorTree(GetTreeBT, GetTreeData);
+    TSharedRef<FJsonObject> GetTreeResult = MakeShared<FJsonObject>();
+    GetTreeResult->SetObjectField(TEXT("tree"), GetTreeData);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Behavior tree retrieved."), GetTreeResult);
     return true;
   }
 
