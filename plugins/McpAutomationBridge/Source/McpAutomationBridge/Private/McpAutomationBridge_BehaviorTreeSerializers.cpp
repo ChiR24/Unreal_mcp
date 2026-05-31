@@ -46,6 +46,10 @@ TArray<TSharedPtr<FJsonValue>> SerializeDecoratorOpsRaw(const TArray<FBTDecorato
             default:                      OpName = TEXT("Invalid"); break;
         }
         Entry->SetStringField(TEXT("op"), OpName);
+        // Test.number indexes the SOURCE decorator array (Child.Decorators / RootDecorators),
+        // NOT the emitted decorators array — SerializeBTNode skips null decorator slots, so a
+        // consumer correlating ops to emitted decorators by position must account for dropped
+        // nulls (PR1b will parse these ops; this raw form preserves the engine's source indices).
         Entry->SetNumberField(TEXT("number"), Op.Number);   // Test: decorator index; And/Or/Not: operand count
         Out.Add(MakeShared<FJsonValueObject>(Entry));
     }
