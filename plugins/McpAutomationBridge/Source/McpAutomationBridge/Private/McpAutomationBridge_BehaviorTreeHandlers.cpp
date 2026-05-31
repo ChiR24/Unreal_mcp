@@ -275,7 +275,18 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UBehaviorTree *GetTreeBT = LoadObject<UBehaviorTree>(nullptr, *GetTreeAssetPath);
+    // Reject path traversal / absolute-host paths before LoadObject (same guard the
+    // sister get_ai_info path uses, AIHandlers.cpp). ValidateAssetPath normalizes the
+    // path and returns empty for invalid input.
+    const FString GetTreeNormalizedPath =
+        McpHandlerUtils::ValidateAssetPath(GetTreeAssetPath.TrimStartAndEnd());
+    if (GetTreeNormalizedPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("Invalid asset path: '%s'."), *GetTreeAssetPath),
+          TEXT("INVALID_PATH"));
+      return true;
+    }
+    UBehaviorTree *GetTreeBT = LoadObject<UBehaviorTree>(nullptr, *GetTreeNormalizedPath);
     if (!GetTreeBT) {
       SendAutomationError(RequestingSocket, RequestId,
           FString::Printf(TEXT("Could not load Behavior Tree at '%s'."), *GetTreeAssetPath),
