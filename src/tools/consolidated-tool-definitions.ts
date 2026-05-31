@@ -2661,6 +2661,20 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           },
           description: 'AI configuration info (for get_ai_info).'
         },
+        tree: {
+          type: 'object',
+          properties: {
+            assetPath: commonSchemas.assetPath,
+            blackboardAsset: commonSchemas.stringProp,
+            hasRootNode: commonSchemas.booleanProp,
+            nodeCount: commonSchemas.integerProp,
+            executionNodeCount: commonSchemas.integerProp,
+            rootDecorators: commonSchemas.arrayOfObjects,
+            rootDecoratorOpsRaw: commonSchemas.arrayOfObjects,
+            rootNode: commonSchemas.objectProp
+          },
+          description: 'Navigable Behavior Tree hierarchy (for get_tree): recursive rootNode with ordered children[], per-edge entryDecorators[]/entryDecoratorOpsRaw[], composite/task services[], top-level rootDecorators[]/rootDecoratorOpsRaw[], and per-node keyProperties{}.'
+        },
         error: commonSchemas.stringProp
       }
     }
