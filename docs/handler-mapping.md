@@ -262,6 +262,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `break_connections` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
 | `set_node_properties` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | Handles `FBlackboardKeySelector` struct properties via `SelectedKeyName` + `ResolveSelectedKey` |
 | `add_subnode` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | Add decorator/service as subnode attached to a parent graph node (`"root"` sentinel for root-level decorators) |
+| `get_tree` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | Read-only. Returns the navigable BT hierarchy (recursive `rootNode`, per-edge `entryDecorators`/`entryDecoratorOpsRaw`, `services`, `rootDecorators`/`rootDecoratorOpsRaw`, per-node `keyProperties`). Runtime-only walk of `BT->RootNode`; no BehaviorTreeEditor module required. |
 
 ## Blueprint Graph Actions (`manage_blueprint`)
 
