@@ -161,7 +161,7 @@ public class McpAutomationBridge : ModuleRules
                 "ApplicationCore","Slate","SlateCore","Projects","InputCore","DeveloperSettings","Settings","EngineSettings",
                 "Sockets","Networking","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph","SSL",
                 "Kismet","KismetCompiler","AssetRegistry","AssetTools","SourceControl",
-                "AudioEditor", "AudioMixer",
+                "AudioEditor", "AudioMixer", "PythonScriptPlugin",
                 // Native MCP uses raw sockets (Sockets/Networking already listed above)
                 // Optional plugins are handled by AddOptionalDynamicModule() below with delay-load
             });

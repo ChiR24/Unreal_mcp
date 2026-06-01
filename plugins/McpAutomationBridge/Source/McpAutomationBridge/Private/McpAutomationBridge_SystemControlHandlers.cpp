@@ -19,6 +19,7 @@
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "Exporters/Exporter.h"
+#include "IPythonScriptPlugin.h"
 #include "Misc/FileHelper.h"
 #endif
 
@@ -654,6 +655,19 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
 
     // Build Python wrapper
     FString Wrapper;
+    auto AppendPythonExec = [&Wrapper](const FString& PyScriptPath,
+                                       const FString& PyScriptDir) {
+      Wrapper += FString::Printf(TEXT("    _script_path = r'%s'\n"), *PyScriptPath);
+      Wrapper += FString::Printf(TEXT("    _script_dir = r'%s'\n"), *PyScriptDir);
+      Wrapper += TEXT("    _exec_globals = globals()\n");
+      Wrapper += TEXT("    _exec_globals['__name__'] = '__main__'\n");
+      Wrapper += TEXT("    _exec_globals['__file__'] = _script_path\n");
+      Wrapper += TEXT("    _exec_globals['__package__'] = None\n");
+      Wrapper += TEXT("    _exec_globals['__cached__'] = None\n");
+      Wrapper += TEXT("    if _script_dir and _script_dir not in sys.path:\n");
+      Wrapper += TEXT("        sys.path.insert(0, _script_dir)\n");
+      Wrapper += FString::Printf(TEXT("    exec(compile(_user_code, r'%s', 'exec'), _exec_globals)\n"), *PyScriptPath);
+    };
     Wrapper += TEXT("import sys\nimport traceback\n\n");
     Wrapper += FString::Printf(TEXT("_out = open(r'%s', 'w', encoding='utf-8')\n"), *PyOutputPath);
     Wrapper += FString::Printf(TEXT("_err = open(r'%s', 'w', encoding='utf-8')\n"), *PyErrorPath);
@@ -670,9 +684,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
         return true;
       }
       FString PyCodePath = NormalizePyPath(CodePath);
+      FString PyCodeDir = NormalizePyPath(FPaths::GetPath(CodePath));
       Wrapper += FString::Printf(TEXT("    with open(r'%s', 'r', encoding='utf-8') as _f:\n"), *PyCodePath);
       Wrapper += TEXT("        _user_code = _f.read()\n");
-      Wrapper += FString::Printf(TEXT("    exec(compile(_user_code, r'%s', 'exec'))\n"), *PyCodePath);
+      AppendPythonExec(PyCodePath, PyCodeDir);
     } else {
       // SECURITY: Sanitize file path to prevent directory traversal
       FString SafeFilePath = SanitizeProjectFilePath(File);
@@ -717,9 +732,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
 
       // Use absolute path in Python wrapper (forward slashes)
       FString PyFilePath = NormalizePyPath(AbsoluteFilePath);
+      FString PyFileDir = NormalizePyPath(FPaths::GetPath(AbsoluteFilePath));
       Wrapper += FString::Printf(TEXT("    with open(r'%s', 'r', encoding='utf-8') as _f:\n"), *PyFilePath);
       Wrapper += TEXT("        _user_code = _f.read()\n");
-      Wrapper += FString::Printf(TEXT("    exec(compile(_user_code, r'%s', 'exec'))\n"), *PyFilePath);
+      AppendPythonExec(PyFilePath, PyFileDir);
     }
 
     Wrapper += TEXT("except:\n");
@@ -740,25 +756,35 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       return true;
     }
 
-    // Get world context (same pattern as console_command handler)
-    UWorld* World = nullptr;
-    if (GEditor) {
-      World = GEditor->GetEditorWorldContext().World();
-    }
-    if (!World && GEngine && GEngine->GetWorldContexts().Num() > 0) {
-      World = GEngine->GetWorldContexts()[0].World();
-    }
-
     SendProgressUpdate(RequestId, 0.0f, TEXT("Executing Python script"), true, CurrentRequestOrigin);
 
-    // Execute via py console command with execution time tracking
-    static constexpr double MaxPythonExecutionSeconds = 60.0;
-    FString PyCommand = FString::Printf(TEXT("py \"%s\""), *ScriptPath);
-    bool bExecHandled = false;
-    double ExecStartTime = FPlatformTime::Seconds();
-    if (GEngine) {
-      bExecHandled = GEngine->Exec(World, *PyCommand);
+    IPythonScriptPlugin* PythonPlugin = FModuleManager::LoadModulePtr<IPythonScriptPlugin>(TEXT("PythonScriptPlugin"));
+    if (!PythonPlugin) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Python Editor Script Plugin module is not loaded"),
+                          TEXT("PYTHON_NOT_AVAILABLE"));
+      return true;
     }
+    if (!PythonPlugin->IsPythonInitialized()) {
+      PythonPlugin->ForceEnablePythonAtRuntime();
+    }
+    if (!PythonPlugin->IsPythonInitialized()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Python Editor Script Plugin is not initialized yet"),
+                          TEXT("PYTHON_NOT_AVAILABLE"));
+      return true;
+    }
+
+    // Execute through PythonScriptPlugin directly. The console "py" command can
+    // defer file loading on a fresh editor startup, racing temp-file cleanup.
+    static constexpr double MaxPythonExecutionSeconds = 60.0;
+    FPythonCommandEx PythonCommand;
+    PythonCommand.Command = FString::Printf(TEXT("\"%s\""), *ScriptPath);
+    PythonCommand.ExecutionMode = EPythonCommandExecutionMode::ExecuteFile;
+    PythonCommand.FileExecutionScope = EPythonFileExecutionScope::Private;
+    PythonCommand.Flags |= EPythonCommandFlags::Unattended;
+    double ExecStartTime = FPlatformTime::Seconds();
+    bool bPythonCommandSucceeded = PythonPlugin->ExecPythonCommandEx(PythonCommand);
     double ExecElapsed = FPlatformTime::Seconds() - ExecStartTime;
     SendProgressUpdate(RequestId, 90.0f, TEXT("Collecting Python output"), true, CurrentRequestOrigin);
     if (ExecElapsed > MaxPythonExecutionSeconds) {
@@ -773,18 +799,25 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     FFileHelper::LoadFileToString(Output, *OutputPath);
     FFileHelper::LoadFileToString(Error, *ErrorPath);
     FFileHelper::LoadFileToString(Status, *StatusPath);
+    if (!bPythonCommandSucceeded && Status.TrimStartAndEnd().IsEmpty()) {
+      FString PythonError = PythonCommand.CommandResult;
+      for (const FPythonLogOutputEntry& LogOutput : PythonCommand.LogOutput) {
+        if (!PythonError.IsEmpty()) {
+          PythonError += TEXT("\n");
+        }
+        PythonError += FString::Printf(TEXT("[%s] %s"), LexToString(LogOutput.Type), *LogOutput.Output);
+      }
+      if (!PythonError.IsEmpty()) {
+        if (!Error.IsEmpty()) {
+          Error += TEXT("\n");
+        }
+        Error += PythonError;
+      }
+    }
 
     // Cleanup happens automatically via FTempFileCleanup destructor
 
-    // Check if Python is available
-    if (!bExecHandled && Status.IsEmpty()) {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Python command not recognized. Is the Python Editor Script Plugin enabled?"),
-                          TEXT("PYTHON_NOT_AVAILABLE"));
-      return true;
-    }
-
-    bool bSuccess = Status.TrimStartAndEnd().Equals(TEXT("1"));
+    bool bSuccess = bPythonCommandSucceeded && Status.TrimStartAndEnd().Equals(TEXT("1"));
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("output"), Output.TrimEnd());
     Result->SetStringField(TEXT("error"), Error.TrimEnd());

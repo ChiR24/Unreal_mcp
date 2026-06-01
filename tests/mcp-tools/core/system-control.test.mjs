@@ -10,8 +10,11 @@ const TEST_FOLDER = '/Game/MCPTest/SystemControl';
 const WIDGET_NAME = 'WBP_SystemControl_Test';
 const WIDGET_PATH = `${TEST_FOLDER}/${WIDGET_NAME}`;
 const VALIDATION_MATERIAL = `${TEST_FOLDER}/M_SystemControlValidation`;
-const PYTHON_FILE_RELATIVE = `Saved/MCPTests/system-control-${Date.now()}.py`;
+const PYTHON_TEST_ID = Date.now();
+const PYTHON_FILE_RELATIVE = `Saved/MCPTests/system-control-${PYTHON_TEST_ID}.py`;
+const PYTHON_HELPER_RELATIVE = `Saved/MCPTests/system-control-${PYTHON_TEST_ID}-helper.txt`;
 const PYTHON_FILE_LITERAL = JSON.stringify(PYTHON_FILE_RELATIVE);
+const PYTHON_HELPER_LITERAL = JSON.stringify(PYTHON_HELPER_RELATIVE);
 const PROJECT_SETTING_SECTION = '/Script/Engine.Engine';
 const PROJECT_SETTING_KEY = `McpSystemControlSmoke_${Date.now()}`;
 const PROJECT_SETTING_SECTION_LITERAL = JSON.stringify(PROJECT_SETTING_SECTION);
@@ -20,17 +23,26 @@ const CREATE_PYTHON_FILE_CODE = `
 import os
 import unreal
 path = os.path.join(unreal.Paths.project_dir(), ${PYTHON_FILE_LITERAL})
+helper_path = os.path.join(unreal.Paths.project_dir(), ${PYTHON_HELPER_LITERAL})
 os.makedirs(os.path.dirname(path), exist_ok=True)
+with open(helper_path, 'w', encoding='utf-8') as f:
+    f.write('sibling-file-ok')
 with open(path, 'w', encoding='utf-8') as f:
-    f.write('print("system-control-file-ok")\\n')
+    f.write('import os\\n')
+    f.write('helper_path = os.path.join(os.path.dirname(__file__), os.path.basename(${PYTHON_HELPER_LITERAL}))\\n')
+    f.write('with open(helper_path, "r", encoding="utf-8") as helper:\\n')
+    f.write('    print("system-control-file-ok:" + helper.read())\\n')
 print("system-control-file-created")
 `.trim();
 const DELETE_PYTHON_FILE_CODE = `
 import os
 import unreal
 path = os.path.join(unreal.Paths.project_dir(), ${PYTHON_FILE_LITERAL})
+helper_path = os.path.join(unreal.Paths.project_dir(), ${PYTHON_HELPER_LITERAL})
 if os.path.exists(path):
     os.remove(path)
+if os.path.exists(helper_path):
+    os.remove(helper_path)
 print("system-control-file-cleaned")
 `.trim();
 const CLEANUP_PROJECT_SETTING_CODE = `
@@ -102,7 +114,9 @@ const testCases = [
   { scenario: 'CONFIG: set_project_setting', toolName: 'system_control', arguments: { action: 'set_project_setting', section: PROJECT_SETTING_SECTION, key: PROJECT_SETTING_KEY, value: '1' }, expected: 'success' },
   { scenario: 'ACTION: execute_python', toolName: 'system_control', arguments: { action: 'execute_python', code: 'print("system-control-ok")' }, expected: 'success' },
   { scenario: 'Setup: create execute_python file', toolName: 'system_control', arguments: { action: 'execute_python', code: CREATE_PYTHON_FILE_CODE }, expected: 'success' },
-  { scenario: 'ACTION: execute_python file', toolName: 'system_control', arguments: { action: 'execute_python', file: PYTHON_FILE_RELATIVE }, expected: 'success', assertions: [{ path: 'structuredContent.result.output', equals: 'system-control-file-ok', label: 'python file output captured' }] },
+  // This result is asserted on the returned MCP response, so it also catches
+  // temp wrapper cleanup racing file execution before output/status are written.
+  { scenario: 'ACTION: execute_python file', toolName: 'system_control', arguments: { action: 'execute_python', file: PYTHON_FILE_RELATIVE }, expected: 'success', assertions: [{ path: 'structuredContent.result.output', equals: 'system-control-file-ok:sibling-file-ok', label: 'python file has __file__ and synchronous output' }] },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete execute_python file', toolName: 'system_control', arguments: { action: 'execute_python', code: DELETE_PYTHON_FILE_CODE }, expected: 'success' },
