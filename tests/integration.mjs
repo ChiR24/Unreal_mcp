@@ -2,7 +2,7 @@
 /**
  * Canonical Integration Test Suite
  *
- * Covers the 22 exposed MCP tools, with advanced capabilities routed as
+ * Covers the 23 exposed MCP tools, with advanced capabilities routed as
  * parent-tool actions instead of separate child tools.
  *
  * Usage:
@@ -14,6 +14,7 @@ import { runToolTests } from './test-runner.mjs';
 
 const TEST_FOLDER = '/Game/IntegrationTest';
 const ADV_TEST_FOLDER = '/Game/AdvancedIntegrationTest';
+const PCG_TEST_GRAPH = `${ADV_TEST_FOLDER}/PCG_IT_Main`;
 
 const testCases = [
   { scenario: 'System: execute safe console command (log)', toolName: 'system_control', arguments: { action: 'execute_command', command: 'Log Integration test started' }, expected: 'success|handled|blocked' },
@@ -75,6 +76,7 @@ const testCases = [
   { scenario: 'Splines: Create road spline', toolName: 'build_environment', arguments: { action: 'create_road_spline', actorName: 'IT_RoadSpline', location: { x: 1000, y: 0, z: 0 }, width: 400 }, expected: 'success' },
   { scenario: 'Splines: Get splines info', toolName: 'build_environment', arguments: { action: 'get_splines_info' }, expected: 'success' },
   { scenario: 'Splines: Get specific spline info', toolName: 'build_environment', arguments: { action: 'get_splines_info', actorName: 'IT_SplineActor' }, expected: 'success|not found' },
+  { scenario: 'PCG: Create graph', toolName: 'manage_pcg', arguments: { action: 'create_pcg_graph', graphPath: PCG_TEST_GRAPH, overwrite: true, save: false }, expected: { successPattern: 'PCG graph', errorPattern: 'PCG_PLUGIN' } },
   { scenario: 'Cleanup: delete spline actors', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_SplineActor' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete road spline', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_RoadSpline' }, expected: 'success|not found' },
   // search_assets: searchText filtering (fix for Issue #233)

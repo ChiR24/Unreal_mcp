@@ -151,6 +151,11 @@
 		"Name": "Synthesis",
 		"Enabled": true,
 		"Optional": true
+	},
+	{
+		"Name": "PCG",
+		"Enabled": true,
+		"Optional": true
 	}
   ]
 }

@@ -231,6 +231,9 @@ public class McpAutomationBridge : ModuleRules
             AddOptionalDynamicModule(Target, EngineDir, "GeometryScriptingCore", "GeometryScriptingCore");
             AddOptionalDynamicModule(Target, EngineDir, "GeometryScriptingEditor", "GeometryScriptingEditor");
 
+            bool bHasPCG = AddOptionalDynamicModule(Target, EngineDir, "PCG", "PCG");
+            PublicDefinitions.Add(bHasPCG ? "MCP_HAS_PCG=1" : "MCP_HAS_PCG=0");
+
             // LevelSequenceEditor (optional plugin) - for Sequencer/Cinematics
             AddOptionalDynamicModule(Target, EngineDir, "LevelSequenceEditor", "LevelSequenceEditor");
 
@@ -323,6 +326,7 @@ public class McpAutomationBridge : ModuleRules
             PublicDefinitions.Add("MCP_HAS_EDGRAPH_SCHEMA_K2=0");
             PublicDefinitions.Add("MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=0");
             PublicDefinitions.Add("MCP_HAS_WP_FOR_EACH_DATALAYER=0");
+            PublicDefinitions.Add("MCP_HAS_PCG=0");
         }
 
         // ============================================================================
