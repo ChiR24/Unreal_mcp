@@ -42,13 +42,13 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 - [ ] **Extensibility Framework**: Dynamic handler registry via JSON config and support for custom C++ handlers.
 - [ ] **Remote Profiling**: Deep integration with Unreal Insights for remote performance tuning.
 
-## Context Reduction Initiative (Phases 48-53)
+## Context Reduction Initiative (Completed Workstream)
 
 **Goal**: Reduce AI context overhead from ~78,000 tokens to ~25,000 tokens through multiple optimization strategies.
 
 ---
 
-### Phase 48: Schema Pruning (Complete)
+### CRI-1: Schema Pruning (Complete)
 
 **Issue**: [#106](https://github.com/ChiR24/Unreal_mcp/issues/106)
 
@@ -62,7 +62,7 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 
 ---
 
-### Phase 49: Common Schema Extraction (Complete)
+### CRI-2: Common Schema Extraction (Complete)
 
 **Issue**: [#108](https://github.com/ChiR24/Unreal_mcp/issues/108)
 
@@ -75,7 +75,7 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 
 ---
 
-### Phase 50: Dynamic Tool Loading (Complete)
+### CRI-3: Dynamic Tool Loading (Complete)
 
 **Issue**: [#109](https://github.com/ChiR24/Unreal_mcp/issues/109)
 
@@ -90,11 +90,11 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 
 ---
 
-### Phase 53: Strategic Tool Merging (Complete)
+### CRI-4: Strategic Tool Merging (Complete)
 
 **Issue**: [#111](https://github.com/ChiR24/Unreal_mcp/issues/111)
 
-**Results**: Consolidated the public MCP surface to 22 canonical tools while keeping domain actions on parent tools.
+**Results**: Consolidated the public MCP surface to 23 canonical tools while keeping domain actions on parent tools.
 
 #### Tool Consolidations
 - [x] Blueprint graph and widget authoring actions live on `manage_blueprint`
@@ -386,7 +386,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 11: Complete Audio System
+## Phase 11: Complete Audio System (Complete)
 
 **Goal**: Full audio authoring including MetaSounds.
 
@@ -432,7 +432,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 12: Complete Niagara VFX System
+## Phase 12: Complete Niagara VFX System (Complete)
 
 **Goal**: Full Niagara system authoring.
 
@@ -482,7 +482,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 13: Gameplay Ability System (GAS)
+## Phase 13: Gameplay Ability System (GAS) (Complete)
 
 **Goal**: Complete GAS implementation for abilities, effects, and attributes.
 
@@ -1053,7 +1053,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 25: Navigation System
+## Phase 25: Navigation System (Complete)
 
 **Goal**: Complete navigation mesh and pathfinding.
 
@@ -1125,37 +1125,37 @@ The following phases represent the comprehensive expansion to enable **full proj
 **Tool**: `manage_pcg`
 
 ### 27.1 Graph Management
-- [ ] `create_pcg_graph`, `create_pcg_subgraph`
-- [ ] `add_pcg_node`
-- [ ] `connect_pcg_pins`
-- [ ] `set_pcg_node_settings`
+- [x] `create_pcg_graph`, `create_pcg_subgraph`
+- [x] `add_pcg_node`
+- [x] `connect_pcg_pins`
+- [x] `set_pcg_node_settings`
 
 ### 27.2 Input Nodes
-- [ ] `add_landscape_data_node`
-- [ ] `add_spline_data_node`
-- [ ] `add_volume_data_node`
-- [ ] `add_actor_data_node`
-- [ ] `add_texture_data_node`
+- [x] `add_landscape_data_node`
+- [x] `add_spline_data_node`
+- [x] `add_volume_data_node`
+- [x] `add_actor_data_node`
+- [x] `add_texture_data_node`
 
 ### 27.3 Point Operations
-- [ ] `add_surface_sampler`, `add_mesh_sampler`
-- [ ] `add_spline_sampler`, `add_volume_sampler`
-- [ ] `add_bounds_modifier`
-- [ ] `add_density_filter`, `add_height_filter`
-- [ ] `add_slope_filter`, `add_distance_filter`
-- [ ] `add_bounds_filter`, `add_self_pruning`
-- [ ] `add_transform_points`
-- [ ] `add_project_to_surface`
-- [ ] `add_copy_points`, `add_merge_points`
+- [x] `add_surface_sampler`, `add_mesh_sampler`
+- [x] `add_spline_sampler`, `add_volume_sampler`
+- [x] `add_bounds_modifier`
+- [x] `add_density_filter`, `add_height_filter`
+- [x] `add_slope_filter`, `add_distance_filter`
+- [x] `add_bounds_filter`, `add_self_pruning`
+- [x] `add_transform_points`
+- [x] `add_project_to_surface`
+- [x] `add_copy_points`, `add_merge_points`
 
 ### 27.4 Spawning
-- [ ] `add_static_mesh_spawner`
-- [ ] `add_actor_spawner`
-- [ ] `add_spline_spawner`
+- [x] `add_static_mesh_spawner`
+- [x] `add_actor_spawner`
+- [x] `add_spline_spawner`
 
 ### 27.5 Execution
-- [ ] `execute_pcg_graph`
-- [ ] `set_pcg_partition_grid_size`
+- [x] `execute_pcg_graph`
+- [x] `set_pcg_partition_grid_size`
 
 ---
 

@@ -22,7 +22,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Multiple concurrent sessions** — Cursor, Claude Code, and other clients can connect simultaneously
 - **Session management** with `Mcp-Session-Id` header, 1-hour inactivity timeout, `DELETE /mcp` termination
 - **Dynamic tool manager** — enable/disable tools and categories at runtime via `manage_tools`
-- **Native tool schemas** generated from self-describing C++ tool classes with full `inputSchema` and categories (core, world, authoring, gameplay, utility); the TypeScript bridge exposes 22 canonical parent MCP tools.
+- **Native tool schemas** generated from self-describing C++ tool classes with full `inputSchema` and categories (core, world, authoring, gameplay, utility); the TypeScript bridge exposes 23 canonical parent MCP tools.
 - **`listChanged` notifications** — broadcast `notifications/tools/list_changed` to all active SSE connections when tool state changes
 - **Load All Tools on Start** project setting — toggle between the core set and all available native tool schemas at startup
 - **Status bar indicator** — `● MCP :3000 (2)` in UE editor status bar, click to open settings
