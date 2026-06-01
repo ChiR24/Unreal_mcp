@@ -168,6 +168,7 @@ Enable via **Edit → Plugins**, then restart the editor.
 | **Chaos Cloth** | Cloth simulation |
 | **Interchange** | Asset import/export |
 | **Data Validation** | Data validation |
+| **PCG** | `manage_pcg` graph authoring and execution |
 | **Procedural Mesh Component** | Procedural geometry |
 | **OnlineSubsystem** | Session/networking operations |
 | **OnlineSubsystemUtils** | Session/networking operations |
@@ -335,7 +336,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 ## Available Tools
 
-**22 exposed MCP tools** in broad all-tools mode. Related actions live directly on their parent tools so clients load less context without losing capabilities.
+**23 exposed MCP tools** in broad all-tools mode. Related actions live directly on their parent tools so clients load less context without losing capabilities.
 
 <details>
 <summary><b>Core Tools</b></summary>
@@ -361,6 +362,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 | `build_environment` | Landscapes, foliage, procedural terrain, lighting, spline roads/rivers/fences |
 | `manage_level_structure` | Levels, sublevels, World Partition, streaming, data layers, HLOD, volumes |
 | `manage_geometry` | Procedural mesh creation and editing with Geometry Script |
+| `manage_pcg` | PCG graph assets, subgraphs, input/sampler/filter/spawner nodes, pin connections, execution, partition grid size, and node settings |
 
 </details>
 
@@ -432,7 +434,7 @@ npm run test:all    # Run all tests
 
 | Resource | Description |
 |----------|-------------|
-| [Project Roadmap](https://github.com/users/ChiR24/projects/3) | Track development progress across 47 phases |
+| [Project Roadmap](https://github.com/users/ChiR24/projects/3) | Track development progress across 48 phases |
 | [Discussions](https://github.com/ChiR24/Unreal_mcp/discussions) | Ask questions, share ideas, get help |
 | [Issues](https://github.com/ChiR24/Unreal_mcp/issues) | Report bugs and request features |
 
