@@ -138,6 +138,10 @@
 // Internationalization
 #include "Internationalization/StringTableCore.h"
 #include "Internationalization/StringTableRegistry.h"
+#include "UmgFileTransformation.h"
+#include "UmgGetSubsystem.h"
+#include "UmgSetSubsystem.h"
+#include "UmgAttentionSubsystem.h"
 
 // =============================================================================
 // Widget Authoring Helper Functions
@@ -7247,6 +7251,237 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added quest tracker"), ResultJson);
+        return true;
+    }
+
+    // =========================================================================
+    // 19.4 Advanced UMG JSON & Properties (from UnrealMotionGraphicsMCP)
+    // =========================================================================
+
+    if (SubAction.Equals(TEXT("export_widget_tree"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        if (WidgetPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing widgetPath"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        FString JsonData = UUmgFileTransformation::ExportUmgAssetToJsonString(WidgetPath);
+        if (JsonData.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to export widget tree"), TEXT("EXPORT_ERROR"));
+            return true;
+        }
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("widgetTreeJson"), JsonData);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Exported widget tree"), ResultJson);
+        return true;
+    }
+
+    if (SubAction.Equals(TEXT("apply_widget_tree"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString JsonData = GetJsonStringField(Payload, TEXT("widgetTreeJson"));
+        FString TargetWidgetName = GetJsonStringField(Payload, TEXT("targetWidgetName")); // optional
+
+        if (WidgetPath.IsEmpty() || JsonData.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing widgetPath or widgetTreeJson"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        bool bApplied = UUmgFileTransformation::ApplyJsonStringToUmgAsset(WidgetPath, JsonData, TargetWidgetName);
+        if (!bApplied)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to apply widget tree"), TEXT("APPLY_ERROR"));
+            return true;
+        }
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Applied widget tree"), ResultJson);
+        return true;
+    }
+
+    if (SubAction.Equals(TEXT("query_widget_properties"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        const TArray<TSharedPtr<FJsonValue>>* PropsArray = GetArrayField(Payload, TEXT("properties"));
+
+        if (WidgetPath.IsEmpty() || WidgetName.IsEmpty() || !PropsArray)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing widgetPath, widgetName, or properties array"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        TArray<FString> Properties;
+        for (const auto& Val : *PropsArray)
+        {
+            Properties.Add(Val->AsString());
+        }
+
+        UUmgGetSubsystem* GetSubsystem = GEditor->GetEditorSubsystem<UUmgGetSubsystem>();
+        FString PropsJson = GetSubsystem->QueryWidgetProperties(WidgetBP, WidgetName, Properties);
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("propertiesJson"), PropsJson);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Queried widget properties"), ResultJson);
+        return true;
+    }
+
+    if (SubAction.Equals(TEXT("set_widget_properties"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        FString PropertiesJson = GetJsonStringField(Payload, TEXT("propertiesJson"));
+
+        if (WidgetPath.IsEmpty() || WidgetName.IsEmpty() || PropertiesJson.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing widgetPath, widgetName, or propertiesJson"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UUmgSetSubsystem* SetSubsystem = GEditor->GetEditorSubsystem<UUmgSetSubsystem>();
+        bool bSet = SetSubsystem->SetWidgetProperties(WidgetBP, WidgetName, PropertiesJson);
+
+        ResultJson->SetBoolField(TEXT("success"), bSet);
+        if (bSet)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Set widget properties"), ResultJson);
+        }
+        else
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to set widget properties"), TEXT("SET_ERROR"));
+        }
+        return true;
+    }
+
+    if (SubAction.Equals(TEXT("get_layout_data"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        int32 ResolutionWidth = Payload->HasField(TEXT("resolutionWidth")) ? Payload->GetNumberField(TEXT("resolutionWidth")) : 1920;
+        int32 ResolutionHeight = Payload->HasField(TEXT("resolutionHeight")) ? Payload->GetNumberField(TEXT("resolutionHeight")) : 1080;
+
+        if (WidgetPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing widgetPath"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UUmgGetSubsystem* GetSubsystem = GEditor->GetEditorSubsystem<UUmgGetSubsystem>();
+        FString LayoutJson = GetSubsystem->GetLayoutData(WidgetBP, ResolutionWidth, ResolutionHeight);
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("layoutDataJson"), LayoutJson);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Got layout data"), ResultJson);
+        return true;
+    }
+
+    if (SubAction.Equals(TEXT("reparent_widget"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        FString NewParentName = GetJsonStringField(Payload, TEXT("newParentName"));
+
+        if (WidgetPath.IsEmpty() || WidgetName.IsEmpty() || NewParentName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing widgetPath, widgetName, or newParentName"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UUmgSetSubsystem* SetSubsystem = GEditor->GetEditorSubsystem<UUmgSetSubsystem>();
+        bool bReparented = SetSubsystem->ReparentWidget(WidgetBP, WidgetName, NewParentName);
+
+        ResultJson->SetBoolField(TEXT("success"), bReparented);
+        if (bReparented)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Reparented widget"), ResultJson);
+        }
+        else
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to reparent widget"), TEXT("REPARENT_ERROR"));
+        }
+        return true;
+    }
+
+    if (SubAction.Equals(TEXT("delete_widget"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+
+        if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing widgetPath or widgetName"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UUmgSetSubsystem* SetSubsystem = GEditor->GetEditorSubsystem<UUmgSetSubsystem>();
+        bool bDeleted = SetSubsystem->DeleteWidget(WidgetBP, WidgetName);
+
+        ResultJson->SetBoolField(TEXT("success"), bDeleted);
+        if (bDeleted)
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Deleted widget"), ResultJson);
+        }
+        else
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to delete widget"), TEXT("DELETE_ERROR"));
+        }
+        return true;
+    }
+
+    if (SubAction.Equals(TEXT("get_widget_schema"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetType = GetJsonStringField(Payload, TEXT("widgetType"));
+        if (WidgetType.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing widgetType"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UUmgGetSubsystem* GetSubsystem = GEditor->GetEditorSubsystem<UUmgGetSubsystem>();
+        FString SchemaJson = GetSubsystem->GetWidgetSchema(WidgetType);
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("schemaJson"), SchemaJson);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Got widget schema"), ResultJson);
         return true;
     }
 

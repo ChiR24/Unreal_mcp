@@ -2946,6 +2946,438 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
     }
   },
   {
+    name: 'manage_widget_authoring',
+    category: 'utility',
+    description: 'Create UMG widgets: buttons, text, images, sliders. Configure layouts, bindings, animations. Build HUDs and menus.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'create_widget_blueprint',
+            'set_widget_parent_class',
+            'add_canvas_panel',
+            'add_horizontal_box',
+            'add_vertical_box',
+            'add_overlay',
+            'add_grid_panel',
+            'add_uniform_grid',
+            'add_wrap_box',
+            'add_scroll_box',
+            'add_size_box',
+            'add_scale_box',
+            'add_border',
+            'add_text_block',
+            'add_rich_text_block',
+            'add_image',
+            'add_button',
+            'add_check_box',
+            'add_slider',
+            'add_progress_bar',
+            'add_text_input',
+            'add_combo_box',
+            'add_spin_box',
+            'add_list_view',
+            'add_tree_view',
+            'set_anchor',
+            'set_alignment',
+            'set_position',
+            'set_size',
+            'set_padding',
+            'set_z_order',
+            'set_render_transform',
+            'set_visibility',
+            'set_style',
+            'set_clipping',
+            'create_property_binding',
+            'bind_text',
+            'bind_visibility',
+            'bind_color',
+            'bind_enabled',
+            'bind_on_clicked',
+            'bind_on_hovered',
+            'bind_on_value_changed',
+            'create_widget_animation',
+            'add_animation_track',
+            'add_animation_keyframe',
+            'set_animation_loop',
+            'create_main_menu',
+            'create_pause_menu',
+            'create_settings_menu',
+            'create_loading_screen',
+            'create_hud_widget',
+            'add_health_bar',
+            'add_ammo_counter',
+            'add_minimap',
+            'add_crosshair',
+            'add_compass',
+            'add_interaction_prompt',
+            'add_objective_tracker',
+            'add_damage_indicator',
+            'create_inventory_ui',
+            'create_dialog_widget',
+            'create_radial_menu',
+            'get_widget_info',
+            'preview_widget',
+            'export_widget_tree',
+            'apply_widget_tree',
+            'query_widget_properties',
+            'get_layout_data',
+            'get_widget_schema',
+            'set_widget_properties',
+            'reparent_widget',
+            'delete_widget'
+          ],
+          description: 'The widget authoring action to perform.'
+        },
+        name: commonSchemas.name,
+        folder: commonSchemas.directoryPath,
+        widgetPath: commonSchemas.widgetPath,
+        widgetTreeJson: { type: 'string', description: 'JSON representation of the widget tree' },
+        propertiesJson: { type: 'string', description: 'JSON representation of properties' },
+        targetWidgetName: { type: 'string', description: 'Target widget name for replacement' },
+        newParentName: { type: 'string', description: 'New parent name for reparenting' },
+        widgetName: { type: 'string', description: 'Name of the widget element' },
+        properties: { type: 'array', items: { type: 'string' }, description: 'List of properties to query' },
+        widgetType: { type: 'string', description: 'Type of widget for schema query' },
+        resolutionWidth: { type: 'number', description: 'Resolution width' },
+        resolutionHeight: { type: 'number', description: 'Resolution height' },
+        slotName: commonSchemas.slotName,
+        parentSlot: { type: 'string', description: 'Parent slot to add widget to.' },
+        parentClass: commonSchemas.parentClass,
+        anchorMin: {
+          type: 'object',
+          properties: commonSchemas.vector2.properties,
+          description: 'Minimum anchor point (0-1).'
+        },
+        anchorMax: {
+          type: 'object',
+          properties: commonSchemas.vector2.properties,
+          description: 'Maximum anchor point (0-1).'
+        },
+        alignment: {
+          type: 'object',
+          properties: commonSchemas.vector2.properties,
+          description: 'Widget alignment (0-1).'
+        },
+        alignmentX: { type: 'number', description: 'Horizontal alignment (0-1).' },
+        alignmentY: { type: 'number', description: 'Vertical alignment (0-1).' },
+        positionX: { type: 'number', description: 'X position.' },
+        positionY: { type: 'number', description: 'Y position.' },
+        sizeX: { type: 'number', description: 'Width.' },
+        sizeY: { type: 'number', description: 'Height.' },
+        sizeToContent: { type: 'boolean', description: 'Size to content.' },
+        left: { type: 'number', description: 'Left padding.' },
+        top: { type: 'number', description: 'Top padding.' },
+        right: { type: 'number', description: 'Right padding.' },
+        bottom: { type: 'number', description: 'Bottom padding.' },
+        zOrder: { type: 'number', description: 'Z-order for canvas slot.' },
+        translation: {
+          type: 'object',
+          properties: commonSchemas.vector2.properties,
+          description: 'Render translation.'
+        },
+        scale: {
+          type: 'object',
+          properties: commonSchemas.vector2.properties,
+          description: 'Render scale.'
+        },
+        shear: {
+          type: 'object',
+          properties: commonSchemas.vector2.properties,
+          description: 'Render shear.'
+        },
+        angle: commonSchemas.angle,
+        pivot: {
+          type: 'object',
+          properties: commonSchemas.vector2.properties,
+          description: 'Rotation/scale pivot.'
+        },
+        visibility: {
+          type: 'string',
+          enum: ['Visible', 'Collapsed', 'Hidden', 'HitTestInvisible', 'SelfHitTestInvisible'],
+          description: 'Widget visibility state.'
+        },
+        clipping: {
+          type: 'string',
+          enum: ['Inherit', 'ClipToBounds', 'ClipToBoundsWithoutIntersecting', 'ClipToBoundsAlways', 'OnDemand'],
+          description: 'Widget clipping mode.'
+        },
+        text: commonSchemas.text,
+        font: { type: 'string', description: 'Font asset path.' },
+        fontSize: { type: 'number', description: 'Font size.' },
+        colorAndOpacity: {
+          type: 'object',
+          properties: commonSchemas.colorObject.properties,
+          description: 'Color and opacity (0-1 values).'
+        },
+        justification: {
+          type: 'string',
+          enum: ['Left', 'Center', 'Right'],
+          description: 'Text justification.'
+        },
+        autoWrap: { type: 'boolean', description: 'Enable text auto-wrap.' },
+        texturePath: commonSchemas.texturePath,
+        brushSize: {
+          type: 'object',
+          properties: commonSchemas.vector2.properties,
+          description: 'Brush/image size.'
+        },
+        brushTiling: {
+          type: 'string',
+          enum: ['NoTile', 'Horizontal', 'Vertical', 'Both'],
+          description: 'Image tiling mode.'
+        },
+        isEnabled: { type: 'boolean', description: 'Widget enabled state.' },
+        isChecked: { type: 'boolean', description: 'Checkbox checked state.' },
+        value: { type: 'number', description: 'Slider/spinbox value.' },
+        minValue: commonSchemas.minValue,
+        maxValue: commonSchemas.maxValue,
+        stepSize: { type: 'number', description: 'Value step size.' },
+        delta: { type: 'number', description: 'Spinbox increment.' },
+        percent: { type: 'number', description: 'Progress bar percentage (0-1).' },
+        fillColorAndOpacity: {
+          type: 'object',
+          properties: commonSchemas.colorObject.properties,
+          description: 'Fill color for progress bar.'
+        },
+        barFillType: {
+          type: 'string',
+          enum: ['LeftToRight', 'RightToLeft', 'TopToBottom', 'BottomToTop', 'FillFromCenter'],
+          description: 'Progress bar fill direction.'
+        },
+        isMarquee: { type: 'boolean', description: 'Progress bar marquee mode.' },
+        inputType: { type: 'string', enum: ['single', 'multi'], description: 'Text input type.' },
+        hintText: { type: 'string', description: 'Placeholder hint text.' },
+        isPassword: { type: 'boolean', description: 'Password masking.' },
+        options: {
+          type: 'array',
+          items: commonSchemas.stringProp,
+          description: 'Combo box options.'
+        },
+        selectedOption: { type: 'string', description: 'Selected combo box option.' },
+        entryWidgetClass: { type: 'string', description: 'List/tree view entry widget class.' },
+        orientation: {
+          type: 'string',
+          enum: ['Horizontal', 'Vertical'],
+          description: 'Widget orientation.'
+        },
+        selectionMode: {
+          type: 'string',
+          enum: ['None', 'Single', 'Multi'],
+          description: 'Selection mode for list/tree.'
+        },
+        scrollBarVisibility: {
+          type: 'string',
+          enum: ['Visible', 'Collapsed', 'Auto'],
+          description: 'Scroll bar visibility.'
+        },
+        alwaysShowScrollbar: { type: 'boolean', description: 'Always show scrollbar.' },
+        columnCount: { type: 'number', description: 'Number of columns.' },
+        rowCount: { type: 'number', description: 'Number of rows.' },
+        slotPadding: { type: 'number', description: 'Padding between slots.' },
+        minDesiredSlotWidth: { type: 'number', description: 'Minimum slot width.' },
+        minDesiredSlotHeight: { type: 'number', description: 'Minimum slot height.' },
+        innerSlotPadding: { type: 'number', description: 'Inner slot padding.' },
+        wrapWidth: { type: 'number', description: 'Wrap width for wrap box.' },
+        explicitWrapWidth: { type: 'boolean', description: 'Use explicit wrap width.' },
+        widthOverride: { type: 'number', description: 'Width override for size box.' },
+        heightOverride: { type: 'number', description: 'Height override for size box.' },
+        minDesiredWidth: { type: 'number', description: 'Minimum desired width.' },
+        minDesiredHeight: { type: 'number', description: 'Minimum desired height.' },
+        stretch: {
+          type: 'string',
+          enum: ['None', 'Fill', 'ScaleToFit', 'ScaleToFitX', 'ScaleToFitY', 'ScaleToFill', 'UserSpecified'],
+          description: 'Scale box stretch mode.'
+        },
+        stretchDirection: {
+          type: 'string',
+          enum: ['Both', 'DownOnly', 'UpOnly'],
+          description: 'Scale box stretch direction.'
+        },
+        userSpecifiedScale: { type: 'number', description: 'User specified scale value.' },
+        brushColor: {
+          type: 'object',
+          properties: commonSchemas.colorObject.properties,
+          description: 'Border brush color.'
+        },
+        padding: { type: 'number', description: 'Uniform padding.' },
+        horizontalAlignment: {
+          type: 'string',
+          enum: ['Fill', 'Left', 'Center', 'Right'],
+          description: 'Horizontal alignment.'
+        },
+        verticalAlignment: {
+          type: 'string',
+          enum: ['Fill', 'Top', 'Center', 'Bottom'],
+          description: 'Vertical alignment.'
+        },
+        color: {
+          type: 'object',
+          properties: commonSchemas.colorObject.properties,
+          description: 'Widget color.'
+        },
+        opacity: { type: 'number', description: 'Widget opacity (0-1).' },
+        brush: { type: 'string', description: 'Brush asset path.' },
+        backgroundImage: { type: 'string', description: 'Background image path.' },
+        style: { type: 'string', description: 'Style preset name.' },
+        propertyName: commonSchemas.propertyName,
+        bindingType: { type: 'string', enum: ['function', 'variable'], description: 'Binding type.' },
+        bindingSource: { type: 'string', description: 'Variable or function name to bind to.' },
+        functionName: commonSchemas.functionName,
+        onHoveredFunction: { type: 'string', description: 'Function to call on hover.' },
+        onUnhoveredFunction: { type: 'string', description: 'Function to call on unhover.' },
+        animationName: commonSchemas.animationName,
+        length: { type: 'number', description: 'Animation length in seconds.' },
+        trackType: {
+          type: 'string',
+          enum: ['transform', 'color', 'opacity', 'renderOpacity', 'material'],
+          description: 'Animation track type.'
+        },
+        time: { type: 'number', description: 'Keyframe time.' },
+        interpolation: {
+          type: 'string',
+          enum: ['linear', 'cubic', 'constant'],
+          description: 'Keyframe interpolation.'
+        },
+        loopCount: { type: 'number', description: 'Number of loops (-1 for infinite).' },
+        playMode: {
+          type: 'string',
+          enum: ['forward', 'reverse', 'pingpong'],
+          description: 'Animation play mode.'
+        },
+        includePlayButton: { type: 'boolean', description: 'Include play button in menu.' },
+        includeSettingsButton: { type: 'boolean', description: 'Include settings button.' },
+        includeQuitButton: { type: 'boolean', description: 'Include quit button.' },
+        includeResumeButton: { type: 'boolean', description: 'Include resume button.' },
+        includeQuitToMenuButton: { type: 'boolean', description: 'Include quit to menu button.' },
+        settingsType: {
+          type: 'string',
+          enum: ['video', 'audio', 'controls', 'gameplay', 'all'],
+          description: 'Settings menu type.'
+        },
+        includeApplyButton: { type: 'boolean', description: 'Include apply button.' },
+        includeResetButton: { type: 'boolean', description: 'Include reset button.' },
+        includeProgressBar: { type: 'boolean', description: 'Include progress bar.' },
+        includeTipText: { type: 'boolean', description: 'Include tip text.' },
+        includeBackgroundImage: { type: 'boolean', description: 'Include background image.' },
+        titleText: { type: 'string', description: 'Menu title text.' },
+        elements: {
+          type: 'array',
+          items: commonSchemas.stringProp,
+          description: 'HUD elements to include.'
+        },
+        barStyle: {
+          type: 'string',
+          enum: ['simple', 'segmented', 'radial'],
+          description: 'Health bar style.'
+        },
+        showNumbers: { type: 'boolean', description: 'Show numeric values.' },
+        barColor: {
+          type: 'object',
+          properties: commonSchemas.colorObject.properties,
+          description: 'Bar color.'
+        },
+        ammoStyle: {
+          type: 'string',
+          enum: ['numeric', 'icon'],
+          description: 'Ammo counter style.'
+        },
+        showReserve: { type: 'boolean', description: 'Show reserve ammo.' },
+        ammoIcon: { type: 'string', description: 'Ammo icon texture.' },
+        minimapSize: { type: 'number', description: 'Minimap size.' },
+        minimapShape: {
+          type: 'string',
+          enum: ['circle', 'square'],
+          description: 'Minimap shape.'
+        },
+        rotateWithPlayer: { type: 'boolean', description: 'Rotate minimap with player.' },
+        showObjectives: { type: 'boolean', description: 'Show objectives on minimap.' },
+        crosshairStyle: {
+          type: 'string',
+          enum: ['dot', 'cross', 'circle', 'custom'],
+          description: 'Crosshair style.'
+        },
+        crosshairSize: { type: 'number', description: 'Crosshair size.' },
+        spreadMultiplier: { type: 'number', description: 'Crosshair spread multiplier.' },
+        showDegrees: { type: 'boolean', description: 'Show compass degrees.' },
+        showCardinals: { type: 'boolean', description: 'Show cardinal directions.' },
+        promptFormat: { type: 'string', description: 'Interaction prompt format.' },
+        showKeyIcon: { type: 'boolean', description: 'Show key icon in prompt.' },
+        keyIconStyle: { type: 'string', description: 'Key icon style.' },
+        maxVisibleObjectives: { type: 'number', description: 'Maximum visible objectives.' },
+        showProgress: { type: 'boolean', description: 'Show objective progress.' },
+        animateUpdates: { type: 'boolean', description: 'Animate objective updates.' },
+        indicatorStyle: {
+          type: 'string',
+          enum: ['directional', 'vignette', 'both'],
+          description: 'Damage indicator style.'
+        },
+        fadeTime: commonSchemas.fadeTime,
+        gridSize: {
+          type: 'object',
+          properties: { columns: commonSchemas.numberProp, rows: commonSchemas.numberProp },
+          description: 'Inventory grid size.'
+        },
+        slotSize: { type: 'number', description: 'Inventory slot size.' },
+        showEquipment: { type: 'boolean', description: 'Show equipment panel.' },
+        showDetails: { type: 'boolean', description: 'Show item details panel.' },
+        showPortrait: { type: 'boolean', description: 'Show speaker portrait.' },
+        showSpeakerName: { type: 'boolean', description: 'Show speaker name.' },
+        choiceLayout: {
+          type: 'string',
+          enum: ['vertical', 'horizontal', 'radial'],
+          description: 'Dialog choice layout.'
+        },
+        segmentCount: { type: 'number', description: 'Number of radial segments.' },
+        innerRadius: { type: 'number', description: 'Inner radius of radial menu.' },
+        outerRadius: { type: 'number', description: 'Outer radius of radial menu.' },
+        showIcons: { type: 'boolean', description: 'Show icons in radial menu.' },
+        showLabels: { type: 'boolean', description: 'Show labels in radial menu.' },
+        previewSize: {
+          type: 'string',
+          enum: ['1080p', '720p', 'mobile', 'custom'],
+          description: 'Preview resolution preset.'
+        },
+        customWidth: { type: 'number', description: 'Custom preview width.' },
+        customHeight: { type: 'number', description: 'Custom preview height.' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: commonSchemas.booleanProp,
+        message: commonSchemas.stringProp,
+        widgetPath: commonSchemas.widgetPath,
+        slotName: commonSchemas.slotName,
+        animationName: commonSchemas.animationName,
+        trackIndex: { type: 'number', description: 'Index of created track.' },
+        keyframeIndex: { type: 'number', description: 'Index of created keyframe.' },
+        bindingCreated: { type: 'boolean', description: 'Whether binding was created.' },
+        widgetTreeJson: { type: 'string', description: 'Exported JSON tree' },
+        propertiesJson: { type: 'string', description: 'Queried properties JSON' },
+        layoutDataJson: { type: 'string', description: 'Layout data JSON' },
+        schemaJson: { type: 'string', description: 'Widget schema JSON' },
+        widgetInfo: {
+          type: 'object',
+          properties: {
+            widgetClass: commonSchemas.stringProp,
+            parentClass: commonSchemas.stringProp,
+            slots: commonSchemas.arrayOfStrings,
+            animations: commonSchemas.arrayOfStrings,
+            variables: commonSchemas.arrayOfStrings,
+            functions: commonSchemas.arrayOfStrings,
+            eventDispatchers: commonSchemas.arrayOfStrings
+          },
+          description: 'Widget info (for get_widget_info).'
+        },
+        error: commonSchemas.stringProp
+      }
+    }
+  },
+  {
     name: 'manage_networking',
     category: 'utility',
     description: 'Configure multiplayer and player flow: replication, RPCs, authority/relevancy, network prediction, sessions, split-screen, LAN/voice chat, game framework classes, match rules, and input mappings.',

@@ -588,6 +588,57 @@ export async function handleWidgetAuthoringTools(
     }
 
     // =========================================================================
+    // 19.9 Advanced UMG JSON & Properties
+    // =========================================================================
+
+    case 'export_widget_tree': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      return sendRequest('export_widget_tree');
+    }
+
+    case 'apply_widget_tree': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      requireNonEmptyString(argsRecord.widgetTreeJson, 'widgetTreeJson', 'Missing required parameter: widgetTreeJson');
+      return sendRequest('apply_widget_tree');
+    }
+
+    case 'query_widget_properties': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
+      return sendRequest('query_widget_properties');
+    }
+
+    case 'set_widget_properties': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
+      requireNonEmptyString(argsRecord.propertiesJson, 'propertiesJson', 'Missing required parameter: propertiesJson');
+      return sendRequest('set_widget_properties');
+    }
+
+    case 'get_layout_data': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      return sendRequest('get_layout_data');
+    }
+
+    case 'reparent_widget': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
+      requireNonEmptyString(argsRecord.newParentName, 'newParentName', 'Missing required parameter: newParentName');
+      return sendRequest('reparent_widget');
+    }
+
+    case 'delete_widget': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
+      return sendRequest('delete_widget');
+    }
+
+    case 'get_widget_schema': {
+      requireNonEmptyString(argsRecord.widgetType, 'widgetType', 'Missing required parameter: widgetType');
+      return sendRequest('get_widget_schema');
+    }
+
+    // =========================================================================
     // Default / Unknown Action
     // =========================================================================
 
