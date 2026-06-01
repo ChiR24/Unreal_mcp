@@ -765,6 +765,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                           TEXT("PYTHON_NOT_AVAILABLE"));
       return true;
     }
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
     if (!PythonPlugin->IsPythonInitialized()) {
       PythonPlugin->ForceEnablePythonAtRuntime();
     }
@@ -774,6 +775,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                           TEXT("PYTHON_NOT_AVAILABLE"));
       return true;
     }
+#else
+    // UE 5.0-5.5 IPythonScriptPlugin does not expose initialization helpers.
+    // Loading the module and executing through ExecPythonCommandEx is the
+    // compatible path for those versions.
+#endif
 
     // Execute through PythonScriptPlugin directly. The console "py" command can
     // defer file loading on a fresh editor startup, racing temp-file cleanup.
