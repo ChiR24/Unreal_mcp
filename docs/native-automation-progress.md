@@ -434,4 +434,4 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 7. ~~Continue implementation of Phase 24 (Volumes & Zones) per Roadmap.~~ ✅ Done
 8. ~~Continue implementation of Phase 25 (Navigation System) per Roadmap.~~ ✅ Done
 9. ~~Continue implementation of Phase 26 (Spline System) per Roadmap.~~ ✅ Done
-10. Continue implementation of Phase 27 (PCG Framework) per Roadmap.
+10. Phase 27 (PCG Framework) complete. ✅ Done

@@ -2,7 +2,7 @@
 
 This document maps the TypeScript tool definitions to their corresponding C++ handlers in the Unreal Engine plugin.
 
-> **Note:** The TypeScript bridge exposes 22 canonical MCP tools. Former child tool names are not exposed or accepted as direct MCP tool names; their actions live on the canonical parent tools shown below.
+> **Note:** The TypeScript bridge exposes 23 canonical MCP tools. Former child tool names are not exposed or accepted as direct MCP tool names; their actions live on the canonical parent tools shown below.
 
 ## Asset Manager (`manage_asset`)
 
@@ -1127,3 +1127,44 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `create_pipe_spline` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Creates pipe with radius and segments |
 | **Utility** | | | |
 | `get_splines_info` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Returns spline info (points, length, closed) |
+
+## PCG Manager (`manage_pcg`) - Phase 27
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Graph Assets** | | | |
+| `create_pcg_graph` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Creates or reuses a PCG graph asset |
+| `create_pcg_subgraph` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Creates a PCG subgraph and can insert a subgraph node in a parent graph |
+| **Graph Editing** | | | |
+| `add_pcg_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds a PCG settings node by class name or alias |
+| `connect_pcg_pins` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Connects PCG node pins by label, defaulting to actual source output and target input pins (for graph I/O nodes: `In` -> `Out`) |
+| `set_pcg_node_settings` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Applies reflected PCG settings properties and node metadata |
+| **Input Nodes** | | | |
+| `add_landscape_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGGetLandscapeSettings` |
+| `add_spline_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGGetSplineSettings` |
+| `add_volume_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGGetVolumeSettings` |
+| `add_actor_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGDataFromActorSettings` |
+| `add_texture_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGTextureSamplerSettings`; `texturePath` maps to `Texture` |
+| **Point Operations** | | | |
+| `add_surface_sampler` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGSurfaceSamplerSettings` |
+| `add_mesh_sampler` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGPointFromMeshSettings`; `meshPath` maps to `Mesh` |
+| `add_spline_sampler` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGSplineSamplerSettings` |
+| `add_volume_sampler` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGVolumeSamplerSettings` |
+| `add_bounds_modifier` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGBoundsModifierSettings` |
+| `add_density_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGDensityFilterSettings` |
+| `add_height_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGAttributeFilteringRangeSettings` for reflected height-range configuration |
+| `add_slope_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGNormalToDensitySettings` |
+| `add_distance_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGDistanceSettings` |
+| `add_bounds_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGCullPointsOutsideActorBoundsSettings` |
+| `add_self_pruning` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGSelfPruningSettings` |
+| `add_transform_points` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGTransformPointsSettings` |
+| `add_project_to_surface` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGProjectionSettings` |
+| `add_copy_points` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGCopyPointsSettings` |
+| `add_merge_points` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGMergeSettings` |
+| **Spawning** | | | |
+| `add_static_mesh_spawner` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGStaticMeshSpawnerSettings` |
+| `add_actor_spawner` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGSpawnActorSettings`; `actorClass`/`classPath` maps to `TemplateActorClass` |
+| `add_spline_spawner` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGSpawnSplineSettings` |
+| **Execution** | | | |
+| `execute_pcg_graph` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Assigns a graph to a resolved/created `UPCGComponent` and starts local generation |
+| `set_pcg_partition_grid_size` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Updates world-scoped `APCGWorldActor::PartitionGridSize` or component-scoped generation grid size |
