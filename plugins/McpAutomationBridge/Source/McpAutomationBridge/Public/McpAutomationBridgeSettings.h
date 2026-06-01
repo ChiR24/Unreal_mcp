@@ -146,7 +146,7 @@ public:
                 ClampMin = "1024", ClampMax = "65535"))
     int32 NativeMCPPort = 3000;
 
-    /** Load all 22 canonical tools on startup. */
+    /** Load all 23 canonical tools on startup. */
     UPROPERTY(config, EditAnywhere, Category = "Native MCP",
         meta = (DisplayName = "Load All Tools on Start", EditCondition = "bEnableNativeMCP"))
     bool bLoadAllToolsOnStart = true;

@@ -1570,6 +1570,13 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleManageSplinesAction(R, A, P, S);
                   });
 
+  RegisterHandler(TEXT("manage_pcg"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManagePCGAction(R, A, P, S);
+                  });
+
   RegisterHandler(TEXT("manage_pipeline"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
