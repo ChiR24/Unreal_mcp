@@ -20,7 +20,7 @@ McpAutomationBridge/
         |-- MCP/                  # native MCP transport and self-describing tools
         |-- McpSafeOperations.h   # UE 5.7-safe save/load wrappers
         |-- McpAutomationBridgeHelpers.h
-        `-- McpAutomationBridge_*Handlers.cpp  # 57 domain handler files
+        `-- McpAutomationBridge_*Handlers.cpp  # 58 domain handler files
 ```
 
 ## WHERE TO LOOK
