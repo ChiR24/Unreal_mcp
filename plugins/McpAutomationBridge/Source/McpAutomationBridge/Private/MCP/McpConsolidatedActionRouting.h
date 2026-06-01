@@ -257,6 +257,29 @@ inline TArray<FString> BuildEnvironment()
 	return Actions;
 }
 
+inline const TArray<FString>& PCG()
+{
+ static const TArray<FString> Actions = {
+		TEXT("create_pcg_graph"), TEXT("create_pcg_subgraph"),
+		TEXT("add_pcg_node"), TEXT("connect_pcg_pins"),
+		TEXT("set_pcg_node_settings"),
+		TEXT("add_landscape_data_node"), TEXT("add_spline_data_node"),
+		TEXT("add_volume_data_node"), TEXT("add_actor_data_node"),
+		TEXT("add_texture_data_node"), TEXT("add_surface_sampler"),
+		TEXT("add_mesh_sampler"), TEXT("add_spline_sampler"),
+		TEXT("add_volume_sampler"), TEXT("add_bounds_modifier"),
+		TEXT("add_density_filter"), TEXT("add_height_filter"),
+		TEXT("add_slope_filter"), TEXT("add_distance_filter"),
+		TEXT("add_bounds_filter"), TEXT("add_self_pruning"),
+		TEXT("add_transform_points"), TEXT("add_project_to_surface"),
+		TEXT("add_copy_points"), TEXT("add_merge_points"),
+		TEXT("add_static_mesh_spawner"), TEXT("add_actor_spawner"),
+		TEXT("add_spline_spawner"), TEXT("execute_pcg_graph"),
+		TEXT("set_pcg_partition_grid_size")
+	};
+	return Actions;
+}
+
 inline const TArray<FString>& AnimationPhysicsCore()
 {
 	static const TArray<FString> Actions = {
@@ -620,4 +643,5 @@ inline bool IsSessionAction(const FString& Action) { return ContainsAction(Sessi
 inline bool IsVolumeAction(const FString& Action) { return ContainsAction(Volumes(), Action); }
 inline bool IsBehaviorTreeAction(const FString& Action) { return ContainsAction(BehaviorTree(), Action); }
 inline bool IsNavigationAction(const FString& Action) { return ContainsAction(Navigation(), Action); }
+inline bool IsPCGAction(const FString& Action) { return ContainsAction(PCG(), Action); }
 }
