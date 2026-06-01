@@ -56,6 +56,7 @@ import { handleLevelStructureTools } from './handlers/level-structure-handlers.j
 import { handleVolumeTools } from './handlers/volume-handlers.js';
 import { handleNavigationTools } from './handlers/navigation-handlers.js';
 import { handleSplineTools } from './handlers/spline-handlers.js';
+import { handlePCGTools } from './handlers/pcg-handlers.js';
 import { handleManageToolsTools } from './handlers/manage-tools-handlers.js';
 
 type NormalizedToolCall = {
@@ -289,6 +290,7 @@ function registerDefaultHandlers() {
   });
 
   toolRegistry.register('manage_geometry', async (args, tools) => await handleGeometryTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_pcg', async (args, tools) => await handlePCGTools(getToolAction(args), args, tools));
 
   toolRegistry.register('manage_gas', async (args, tools) => await handleGASTools(getToolAction(args), args, tools));
   toolRegistry.register('manage_character', async (args, tools) => await handleCharacterTools(getToolAction(args), args, tools));
