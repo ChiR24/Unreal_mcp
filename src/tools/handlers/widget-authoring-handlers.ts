@@ -14,10 +14,21 @@
  * @module widget-authoring-handlers
  */
 
+import { sanitizePath } from '../../utils/path-security.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
 import { requireNonEmptyString, executeAutomationRequest, getTimeoutMs, normalizePathFields } from './common-handlers.js';
+
+
+function requireValidJson(jsonString: string | undefined, paramName: string): void {
+  requireNonEmptyString(jsonString, paramName, `Missing required parameter: ${paramName}`);
+  try {
+    JSON.parse(jsonString as string);
+  } catch (e) {
+    throw new Error(`Invalid JSON provided for ${paramName}: ${(e as Error).message}`);
+  }
+}
 
 function finiteNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
@@ -593,30 +604,35 @@ export async function handleWidgetAuthoringTools(
 
     case 'export_widget_tree': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      argsRecord.widgetPath = sanitizePath(argsRecord.widgetPath as string);
       return sendRequest('export_widget_tree');
     }
 
     case 'apply_widget_tree': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
-      requireNonEmptyString(argsRecord.widgetTreeJson, 'widgetTreeJson', 'Missing required parameter: widgetTreeJson');
+      requireValidJson(argsRecord.widgetTreeJson as string, 'widgetTreeJson');
+      argsRecord.widgetPath = sanitizePath(argsRecord.widgetPath as string);
       return sendRequest('apply_widget_tree');
     }
 
     case 'query_widget_properties': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
       requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
+      argsRecord.widgetPath = sanitizePath(argsRecord.widgetPath as string);
       return sendRequest('query_widget_properties');
     }
 
     case 'set_widget_properties': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
       requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
-      requireNonEmptyString(argsRecord.propertiesJson, 'propertiesJson', 'Missing required parameter: propertiesJson');
+      requireValidJson(argsRecord.propertiesJson as string, 'propertiesJson');
+      argsRecord.widgetPath = sanitizePath(argsRecord.widgetPath as string);
       return sendRequest('set_widget_properties');
     }
 
     case 'get_layout_data': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      argsRecord.widgetPath = sanitizePath(argsRecord.widgetPath as string);
       return sendRequest('get_layout_data');
     }
 
@@ -624,12 +640,14 @@ export async function handleWidgetAuthoringTools(
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
       requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
       requireNonEmptyString(argsRecord.newParentName, 'newParentName', 'Missing required parameter: newParentName');
+      argsRecord.widgetPath = sanitizePath(argsRecord.widgetPath as string);
       return sendRequest('reparent_widget');
     }
 
     case 'delete_widget': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
       requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
+      argsRecord.widgetPath = sanitizePath(argsRecord.widgetPath as string);
       return sendRequest('delete_widget');
     }
 

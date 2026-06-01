@@ -1,6 +1,6 @@
 // Copyright (c) 2025-2026 Winyunq. All rights reserved.
 
-#include "Widget/UmgSetSubsystem.h"
+#include "UmgSetSubsystem.h"
 #include "FileManage/UmgAttentionSubsystem.h"
 #include "Editor.h"
 #include "WidgetBlueprint.h"
@@ -14,6 +14,7 @@
 #include "FileHelpers.h"
 #include "FileManage/UmgFileTransformation.h"
 #include "Components/CanvasPanelSlot.h"
+#include "McpAutomationBridgeHelpers.h"
 
 DEFINE_LOG_CATEGORY(LogUmgSet);
 
@@ -520,19 +521,7 @@ bool UUmgSetSubsystem::SaveAsset(UWidgetBlueprint* WidgetBlueprint)
         return false;
     }
 
-    UPackage* Package = WidgetBlueprint->GetOutermost();
-    if (!Package)
-    {
-        UE_LOG(LogUmgSet, Error, TEXT("SaveAsset: Failed to get package for asset '%s'."), *WidgetBlueprint->GetPathName());
-        return false;
-    }
-
-    TArray<UPackage*> PackagesToSave;
-    PackagesToSave.Add(Package);
-
-    FEditorFileUtils::EPromptReturnCode ReturnCode = FEditorFileUtils::PromptForCheckoutAndSave(PackagesToSave, false, false);
-    
-    if (ReturnCode == FEditorFileUtils::EPromptReturnCode::PR_Success)
+    if (McpSafeAssetSave(WidgetBlueprint))
     {
         UE_LOG(LogUmgSet, Log, TEXT("SaveAsset: Successfully saved asset '%s'."), *WidgetBlueprint->GetPathName());
         return true;

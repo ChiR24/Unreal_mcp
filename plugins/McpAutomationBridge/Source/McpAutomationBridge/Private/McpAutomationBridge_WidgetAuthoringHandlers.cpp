@@ -6135,17 +6135,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         return true;
     }
 
-    if (SubAction.Equals(TEXT("reparent_widget"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"));
-        FString NewParent = GetJsonStringField(Payload, TEXT("newParent"));
-
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty() || NewParent.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, slotName, newParent"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
+    
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP || !WidgetBP->WidgetTree)
@@ -7260,7 +7250,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("export_widget_tree"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = SanitizeProjectRelativePath(GetJsonStringField(Payload, TEXT("widgetPath")));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing widgetPath"), TEXT("MISSING_PARAMETER"));
@@ -7282,7 +7272,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("apply_widget_tree"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = SanitizeProjectRelativePath(GetJsonStringField(Payload, TEXT("widgetPath")));
         FString JsonData = GetJsonStringField(Payload, TEXT("widgetTreeJson"));
         FString TargetWidgetName = GetJsonStringField(Payload, TEXT("targetWidgetName")); // optional
 
@@ -7306,7 +7296,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("query_widget_properties"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = SanitizeProjectRelativePath(GetJsonStringField(Payload, TEXT("widgetPath")));
         FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
         const TArray<TSharedPtr<FJsonValue>>* PropsArray = GetArrayField(Payload, TEXT("properties"));
 
@@ -7329,6 +7319,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             Properties.Add(Val->AsString());
         }
 
+        if (!GEditor)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Editor is not available"), TEXT("EDITOR_UNAVAILABLE"));
+            return true;
+        }
         UUmgGetSubsystem* GetSubsystem = GEditor->GetEditorSubsystem<UUmgGetSubsystem>();
         FString PropsJson = GetSubsystem->QueryWidgetProperties(WidgetBP, WidgetName, Properties);
 
@@ -7340,7 +7335,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("set_widget_properties"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = SanitizeProjectRelativePath(GetJsonStringField(Payload, TEXT("widgetPath")));
         FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
         FString PropertiesJson = GetJsonStringField(Payload, TEXT("propertiesJson"));
 
@@ -7357,6 +7352,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        if (!GEditor)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Editor is not available"), TEXT("EDITOR_UNAVAILABLE"));
+            return true;
+        }
         UUmgSetSubsystem* SetSubsystem = GEditor->GetEditorSubsystem<UUmgSetSubsystem>();
         bool bSet = SetSubsystem->SetWidgetProperties(WidgetBP, WidgetName, PropertiesJson);
 
@@ -7374,7 +7374,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("get_layout_data"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = SanitizeProjectRelativePath(GetJsonStringField(Payload, TEXT("widgetPath")));
         int32 ResolutionWidth = Payload->HasField(TEXT("resolutionWidth")) ? Payload->GetNumberField(TEXT("resolutionWidth")) : 1920;
         int32 ResolutionHeight = Payload->HasField(TEXT("resolutionHeight")) ? Payload->GetNumberField(TEXT("resolutionHeight")) : 1080;
 
@@ -7391,6 +7391,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        if (!GEditor)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Editor is not available"), TEXT("EDITOR_UNAVAILABLE"));
+            return true;
+        }
         UUmgGetSubsystem* GetSubsystem = GEditor->GetEditorSubsystem<UUmgGetSubsystem>();
         FString LayoutJson = GetSubsystem->GetLayoutData(WidgetBP, ResolutionWidth, ResolutionHeight);
 
@@ -7402,7 +7407,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("reparent_widget"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = SanitizeProjectRelativePath(GetJsonStringField(Payload, TEXT("widgetPath")));
         FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
         FString NewParentName = GetJsonStringField(Payload, TEXT("newParentName"));
 
@@ -7419,6 +7424,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        if (!GEditor)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Editor is not available"), TEXT("EDITOR_UNAVAILABLE"));
+            return true;
+        }
         UUmgSetSubsystem* SetSubsystem = GEditor->GetEditorSubsystem<UUmgSetSubsystem>();
         bool bReparented = SetSubsystem->ReparentWidget(WidgetBP, WidgetName, NewParentName);
 
@@ -7436,7 +7446,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("delete_widget"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = SanitizeProjectRelativePath(GetJsonStringField(Payload, TEXT("widgetPath")));
         FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
 
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
@@ -7452,6 +7462,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        if (!GEditor)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Editor is not available"), TEXT("EDITOR_UNAVAILABLE"));
+            return true;
+        }
         UUmgSetSubsystem* SetSubsystem = GEditor->GetEditorSubsystem<UUmgSetSubsystem>();
         bool bDeleted = SetSubsystem->DeleteWidget(WidgetBP, WidgetName);
 
@@ -7476,6 +7491,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        if (!GEditor)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Editor is not available"), TEXT("EDITOR_UNAVAILABLE"));
+            return true;
+        }
         UUmgGetSubsystem* GetSubsystem = GEditor->GetEditorSubsystem<UUmgGetSubsystem>();
         FString SchemaJson = GetSubsystem->GetWidgetSchema(WidgetType);
 

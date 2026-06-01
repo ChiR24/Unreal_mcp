@@ -413,6 +413,10 @@ bool UUmgGetSubsystem::CheckWidgetOverlap(UWidgetBlueprint* WidgetBlueprint, con
     {
         if (Widget && Widget->GetCachedWidget().IsValid())
         {
+            if (WidgetIds.Num() > 0 && !WidgetIds.Contains(Widget->GetName()))
+            {
+                continue;
+            }
             BoundingBoxes.Add(Widget->GetCachedWidget()->GetTickSpaceGeometry().GetLayoutBoundingRect());
         }
     }
