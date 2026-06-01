@@ -12,7 +12,7 @@ MCP tooling for Unreal Engine 5.0-5.8 Preview. Server package version `0.5.21`; 
 ./
 |-- src/                         # TypeScript MCP server, NodeNext ESM
 |   |-- server/                  # MCP tool/resource registration and dynamic filtering
-|   |-- tools/                   # 22 parent tool schemas, action enums, TS dispatch
+|   |-- tools/                   # 23 parent tool schemas, action enums, TS dispatch
 |   |-- automation/              # WebSocket client, handshake, request tracking
 |   |-- services/                # health and optional Prometheus metrics
 |   `-- utils/                   # path safety, command validation, logging, schemas
@@ -92,7 +92,7 @@ MCP tooling for Unreal Engine 5.0-5.8 Preview. Server package version `0.5.21`; 
 - Generated knowledge bases: do not place AGENTS files in `dist/`, `build/`, `coverage/`, `tests/reports/`, `tmp/`, plugin `Binaries/`, plugin `Intermediate/`, or uppercase staging mirrors such as `Plugins/`.
 
 ## UNIQUE STYLES
-- 22 canonical parent tools hide hundreds of actions behind action enums to reduce client context.
+- 23 canonical parent tools hide hundreds of actions behind action enums to reduce client context.
 - Dynamic tool management exists in both TS and native MCP; `manage_tools` and `inspect` are protected.
 - The native plugin has self-describing MCP tool definitions in C++ separate from TS JSON schemas.
 - Test expectations use string grammar such as `success|error|timeout`; first token is the primary intent.

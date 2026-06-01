@@ -1,6 +1,6 @@
 # src/tools
 
-Canonical TypeScript MCP tool contracts and dispatch glue. This directory defines 22 parent tools and hundreds of action variants; Unreal execution still happens through handlers and the plugin bridge.
+Canonical TypeScript MCP tool contracts and dispatch glue. This directory defines 23 parent tools and hundreds of action variants; Unreal execution still happens through handlers and the plugin bridge.
 
 ## STRUCTURE
 ```

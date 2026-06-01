@@ -1,6 +1,6 @@
 # src/tools/handlers
 
-Domain-specific TypeScript action handlers. There are 42 runtime TS files here, including 40 `*-handlers.ts` domain files plus shared helpers. They do argument cleanup and then dispatch to Unreal; they should not contain editor-side business logic that belongs in C++.
+Domain-specific TypeScript action handlers. There are 43 runtime TS files here, including 41 `*-handlers.ts` domain files plus shared helpers. They do argument cleanup and then dispatch to Unreal; they should not contain editor-side business logic that belongs in C++.
 
 ## STRUCTURE
 ```
