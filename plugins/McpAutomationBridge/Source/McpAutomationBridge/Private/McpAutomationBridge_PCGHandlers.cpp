@@ -896,6 +896,49 @@ UPCGComponent* CreatePCGComponent(AActor* Actor, const FString& ComponentName)
     return Component;
 }
 
+bool SaveEditorWorldIfRequested(UWorld* World, bool bSave, bool& bOutSaved, FString& OutError)
+{
+    bOutSaved = false;
+    if (!World)
+    {
+        OutError = TEXT("Could not resolve the editor world for level save.");
+        return false;
+    }
+
+    if (!bSave)
+    {
+        return true;
+    }
+
+    if (!World->PersistentLevel)
+    {
+        OutError = TEXT("Could not resolve the persistent level for PCG save.");
+        return false;
+    }
+
+    UPackage* WorldPackage = World->GetOutermost();
+    const FString LevelPath = WorldPackage ? WorldPackage->GetName() : FString();
+    if (LevelPath.IsEmpty())
+    {
+        OutError = TEXT("Could not resolve the current level package path for PCG save.");
+        return false;
+    }
+
+    World->Modify();
+    World->MarkPackageDirty();
+    World->PersistentLevel->Modify();
+    World->PersistentLevel->MarkPackageDirty();
+
+    bOutSaved = McpSafeLevelSave(World->PersistentLevel, LevelPath);
+    if (!bOutSaved)
+    {
+        OutError = FString::Printf(TEXT("Failed to save current level '%s' after PCG change."), *LevelPath);
+        return false;
+    }
+
+    return true;
+}
+
 void ApplyNodeMetadata(UPCGNode* Node, const TSharedPtr<FJsonObject>& Payload)
 {
     if (!Node || !Payload.IsValid())
@@ -1106,11 +1149,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
         }
 
         const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-        const FString ComponentName = GetFirstStringField(Payload, {TEXT("componentName"), TEXT("componentPath")});
+        const FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
+        const FString ComponentPath = GetJsonStringField(Payload, TEXT("componentPath"));
+        const FString ComponentSelector = !ComponentPath.IsEmpty() ? ComponentPath : ComponentName;
         const bool bCreateComponent = GetJsonBoolField(Payload, TEXT("createComponent"), false);
         AActor* Actor = nullptr;
-        UPCGComponent* Component = FindPCGComponent(World, ActorName, ComponentName, Actor);
-        if (!Component && !bCreateComponent && !HasPCGComponentSelector(ActorName, ComponentName))
+        UPCGComponent* Component = FindPCGComponent(World, ActorName, ComponentSelector, Actor);
+        if (!Component && !bCreateComponent && !HasPCGComponentSelector(ActorName, ComponentSelector))
         {
             SendAutomationError(Socket, RequestId, TEXT("execute_pcg_graph requires actorName, componentName, or componentPath when createComponent is false."), TEXT("INVALID_ARGUMENT"));
             return true;
@@ -1145,6 +1190,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
             return true;
         }
 
+        bool bLevelSaved = false;
+        if (!SaveEditorWorldIfRequested(World, bSave, bLevelSaved, Error))
+        {
+            SendAutomationError(Socket, RequestId, Error, TEXT("SAVE_FAILED"));
+            return true;
+        }
+
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("graphPath"), GraphPath);
         Result->SetStringField(TEXT("actorName"), Actor ? Actor->GetName() : FString());
@@ -1152,6 +1204,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
         Result->SetStringField(TEXT("componentPath"), Component->GetPathName());
         Result->SetNumberField(TEXT("taskId"), static_cast<double>(TaskId));
         Result->SetBoolField(TEXT("force"), bForceGenerate);
+        Result->SetBoolField(TEXT("saved"), bLevelSaved);
         McpHandlerUtils::AddVerification(Result, Component);
         SendAutomationResponse(Socket, RequestId, true, TEXT("PCG graph generation started."), Result);
         return true;
@@ -1188,14 +1241,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
         if (Scope == TEXT("component"))
         {
             const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-            const FString ComponentName = GetFirstStringField(Payload, {TEXT("componentName"), TEXT("componentPath")});
-            if (!HasPCGComponentSelector(ActorName, ComponentName))
+            const FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
+            const FString ComponentPath = GetJsonStringField(Payload, TEXT("componentPath"));
+            const FString ComponentSelector = !ComponentPath.IsEmpty() ? ComponentPath : ComponentName;
+            if (!HasPCGComponentSelector(ActorName, ComponentSelector))
             {
                 SendAutomationError(Socket, RequestId, TEXT("component-scoped partition grid size requires actorName, componentName, or componentPath."), TEXT("INVALID_ARGUMENT"));
                 return true;
             }
             AActor* Actor = nullptr;
-            UPCGComponent* Component = FindPCGComponent(World, ActorName, ComponentName, Actor);
+            UPCGComponent* Component = FindPCGComponent(World, ActorName, ComponentSelector, Actor);
             if (!Component)
             {
                 SendAutomationError(Socket, RequestId, TEXT("Could not resolve a PCG component for component-scoped grid size."), TEXT("COMPONENT_NOT_FOUND"));
@@ -1207,6 +1262,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
             Component->SetGenerationGridSize(static_cast<uint32>(GridSize));
             Component->PostEditChange();
 
+            FString Error;
+            bool bLevelSaved = false;
+            if (!SaveEditorWorldIfRequested(World, bSave, bLevelSaved, Error))
+            {
+                SendAutomationError(Socket, RequestId, Error, TEXT("SAVE_FAILED"));
+                return true;
+            }
+
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
             Result->SetStringField(TEXT("scope"), TEXT("component"));
             Result->SetStringField(TEXT("actorName"), Actor ? Actor->GetName() : FString());
@@ -1214,6 +1277,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
             Result->SetStringField(TEXT("componentPath"), Component->GetPathName());
             Result->SetNumberField(TEXT("previousGridSize"), PreviousGridSize);
             Result->SetNumberField(TEXT("gridSize"), GridSize);
+            Result->SetBoolField(TEXT("saved"), bLevelSaved);
             McpHandlerUtils::AddVerification(Result, Component);
             SendAutomationResponse(Socket, RequestId, true, TEXT("PCG component generation grid size updated."), Result);
             return true;
@@ -1244,10 +1308,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
             PCGWorldActor->PostEditChange();
         }
 
+        FString Error;
+        bool bLevelSaved = false;
+        if (!SaveEditorWorldIfRequested(World, bSave, bLevelSaved, Error))
+        {
+            SendAutomationError(Socket, RequestId, Error, TEXT("SAVE_FAILED"));
+            return true;
+        }
+
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("scope"), TEXT("world"));
         Result->SetNumberField(TEXT("previousGridSize"), PreviousGridSize);
         Result->SetNumberField(TEXT("gridSize"), PCGWorldActor->PartitionGridSize);
+        Result->SetBoolField(TEXT("saved"), bLevelSaved);
         McpHandlerUtils::AddVerification(Result, PCGWorldActor);
         SendAutomationResponse(Socket, RequestId, true, TEXT("PCG partition grid size updated."), Result);
         return true;

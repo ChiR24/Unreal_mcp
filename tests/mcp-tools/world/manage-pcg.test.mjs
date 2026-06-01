@@ -20,6 +20,7 @@ const EXEC_ACTOR = `PCG_RW_Executor_${ts}`;
 const SECOND_ACTOR = `PCG_RW_SecondExecutor_${ts}`;
 const BOUNDSLESS_ACTOR = `PCG_RW_Boundsless_${ts}`;
 const COMPONENT_NAME = `PCG_RW_Component_${ts}`;
+const PATH_CREATE_COMPONENT = `PCG_RW_PathCreateComponent_${ts}`;
 const MESH_SAMPLER_NODE = `PCG_RW_MeshSampler_${ts}`;
 const STATIC_MESH_SPAWNER_NODE = `PCG_RW_StaticMeshSpawner_${ts}`;
 const ACTOR_SPAWNER_NODE = `PCG_RW_ActorSpawner_${ts}`;
@@ -80,7 +81,7 @@ const basicCoverageCases = [
   { scenario: 'ACTION: connect_pcg_pins', toolName: 'manage_pcg', arguments: { action: 'connect_pcg_pins', graphPath: BASIC_GRAPH_PATH, sourceNodeId: 'input', targetNodeId: 'output', save: false }, expected: pcgOptionalExpected },
   { scenario: 'CONFIG: set_pcg_node_settings', toolName: 'manage_pcg', arguments: { action: 'set_pcg_node_settings', graphPath: BASIC_GRAPH_PATH, nodeId: BASIC_REROUTE_NODE, title: BASIC_UPDATED_REROUTE_NODE, save: false }, expected: pcgOptionalExpected },
   { scenario: 'EXECUTE: execute_pcg_graph', toolName: 'manage_pcg', arguments: { action: 'execute_pcg_graph', graphPath: BASIC_GRAPH_PATH, actorName: BASIC_PCG_ACTOR, componentName: `PCGComponent_${ts}`, createComponent: true, force: true, save: false }, expected: pcgOptionalExpected },
-  { scenario: 'CONFIG: set_pcg_partition_grid_size', toolName: 'manage_pcg', arguments: { action: 'set_pcg_partition_grid_size', gridSize: 3200, scope: 'world' }, expected: pcgOptionalExpected },
+  { scenario: 'CONFIG: set_pcg_partition_grid_size', toolName: 'manage_pcg', arguments: { action: 'set_pcg_partition_grid_size', gridSize: 3200, scope: 'world', save: false }, expected: pcgOptionalExpected },
   { scenario: 'Cleanup: delete PCG execution actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: BASIC_PCG_ACTOR }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete PCG test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: BASIC_TEST_FOLDER, force: true }, expected: 'success|not found' }
 ];
@@ -337,6 +338,16 @@ const realWorldCoverageCases = [
     ]
   },
   {
+    scenario: 'EXECUTE: componentPath stays a selector when creating a new component',
+    toolName: 'manage_pcg',
+    arguments: { action: 'execute_pcg_graph', graphPath: REAL_GRAPH_PATH, actorName: SECOND_ACTOR, componentPath: `MissingComponentPath_${ts}`, componentName: PATH_CREATE_COMPONENT, createComponent: true, force: true, save: false },
+    expected: pcgExpected,
+    assertions: [
+      { path: 'structuredContent.result.componentName', equals: PATH_CREATE_COMPONENT, label: 'new component uses componentName instead of selector path' },
+      { path: 'structuredContent.result.saved', equals: false, label: 'save=false does not persist the level' }
+    ]
+  },
+  {
     scenario: 'EXECUTE: same graph on a second mesh actor',
     toolName: 'manage_pcg',
     arguments: { action: 'execute_pcg_graph', graphPath: REAL_GRAPH_PATH, actorName: SECOND_ACTOR, componentName: `${COMPONENT_NAME}_Second`, createComponent: true, force: true, save: false },
@@ -424,6 +435,12 @@ const realWorldCoverageCases = [
     toolName: 'control_actor',
     arguments: { action: 'delete', actorName: BOUNDSLESS_ACTOR },
     expected: 'success|not found'
+  },
+  {
+    scenario: 'ERROR: save world partition grid size on transient level reports save failure',
+    toolName: 'manage_pcg',
+    arguments: { action: 'set_pcg_partition_grid_size', scope: 'world', gridSize: 9600, save: true },
+    expected: { errorPattern: 'SAVE_FAILED' }
   },
   {
     scenario: 'Cleanup: delete real-world PCG folder',
