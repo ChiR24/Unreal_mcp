@@ -251,7 +251,7 @@ namespace NetworkingHelpers
             // Try loading as blueprint
             UBlueprint* BP = Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *CleanPath));
             if (BP) return BP;
-            
+
             // Try with .uasset suffix removed
             if (CleanPath.EndsWith(TEXT(".uasset")))
             {
@@ -275,7 +275,7 @@ namespace NetworkingHelpers
     AActor* FindActorByName(UWorld* World, const FString& ActorName)
     {
         if (!World) return nullptr;
-        
+
         for (TActorIterator<AActor> It(World); It; ++It)
         {
             AActor* Actor = *It;
@@ -470,6 +470,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         // Mark blueprint modified
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Property %s replication set to %s"), *PropertyName, bReplicated ? TEXT("true") : TEXT("false")));
@@ -528,6 +529,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replication condition set to %s"), *Condition));
@@ -589,6 +591,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net update frequency set to %.1f (min: %.1f)"), NetUpdateFrequency, MinNetUpdateFrequency));
@@ -629,6 +632,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net priority set to %.2f"), NetPriority));
@@ -670,6 +674,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net dormancy set to %s"), *Dormancy));
@@ -712,7 +717,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         {
             // Configure actor-specific replication graph settings
             CDO->bNetLoadOnClient = bNetLoadOnClient;
-            
+
             // Set replication flags relevant to replication graph decisions
             // Note: bReplicateUsingRegisteredSubObjectList is protected in both UE 5.6 and 5.7
             // Cannot access directly from external code
@@ -724,12 +729,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("spatiallyLoaded"), bSpatiallyLoaded);
         ResultJson->SetBoolField(TEXT("netLoadOnClient"), bNetLoadOnClient);
         ResultJson->SetStringField(TEXT("replicationPolicy"), ReplicationPolicy);
-        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replication graph settings configured (netLoadOnClient=%s, spatiallyLoaded=%s)"), 
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replication graph settings configured (netLoadOnClient=%s, spatiallyLoaded=%s)"),
             bNetLoadOnClient ? TEXT("true") : TEXT("false"),
             bSpatiallyLoaded ? TEXT("true") : TEXT("false")));
         McpHandlerUtils::AddVerification(ResultJson, Blueprint);
@@ -786,13 +792,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
                 {
                     // Start with base network function flag
                     int32 NetFlags = FUNC_Net;
-                    
+
                     // Add reliability flag if requested
                     if (bReliable)
                     {
                         NetFlags |= FUNC_NetReliable;
                     }
-                    
+
                     // Add RPC type flag
                     if (RpcType.Equals(TEXT("Server"), ESearchCase::IgnoreCase))
                     {
@@ -806,7 +812,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
                     {
                         NetFlags |= FUNC_NetMulticast;
                     }
-                    
+
                     EntryNode->AddExtraFlags(NetFlags);
                     break;
                 }
@@ -815,6 +821,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             Blueprint->Modify();
             FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
             McpSafeCompileBlueprint(Blueprint);
+            McpSafeAssetSave(Blueprint);
 
             ResultJson->SetBoolField(TEXT("success"), true);
             ResultJson->SetStringField(TEXT("functionName"), FunctionName);
@@ -901,6 +908,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("withValidation"), bWithValidation);
@@ -980,6 +988,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("reliable"), bReliable);
@@ -1087,6 +1096,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             Blueprint->Modify();
             FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
             McpSafeCompileBlueprint(Blueprint);
+            McpSafeAssetSave(Blueprint);
         }
 
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -1240,6 +1250,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net cull distance squared set to %.0f"), NetCullDistanceSquared));
@@ -1280,6 +1291,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Always relevant set to %s"), bAlwaysRelevant ? TEXT("true") : TEXT("false")));
@@ -1320,6 +1332,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Only relevant to owner set to %s"), bOnlyRelevantToOwner ? TEXT("true") : TEXT("false")));
@@ -1370,6 +1383,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("customSerialization"), bCustomSerialization);
@@ -1431,6 +1445,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("ReplicatedUsing set to %s for property %s"), *RepNotifyFunc, *PropertyName));
@@ -1490,6 +1505,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             Blueprint->Modify();
             FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
             McpSafeCompileBlueprint(Blueprint);
+            McpSafeAssetSave(Blueprint);
         }
 
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -1535,7 +1551,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         if (CharacterCDO && CharacterCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* CMC = CharacterCDO->GetCharacterMovement();
-            
+
             // Enable/disable client prediction
             if (bEnablePrediction)
             {
@@ -1550,6 +1566,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("enablePrediction"), bEnablePrediction);
@@ -1590,7 +1607,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         if (CharacterCDO && CharacterCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* CMC = CharacterCDO->GetCharacterMovement();
-            
+
             // Set server correction smoothing parameters
             CMC->NetworkSimulatedSmoothLocationTime = static_cast<float>(SmoothingRate);
             CMC->NetworkSimulatedSmoothRotationTime = static_cast<float>(SmoothingRate);
@@ -1600,6 +1617,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetNumberField(TEXT("correctionThreshold"), CorrectionThreshold);
@@ -1640,11 +1658,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         // Add a replicated variable for network prediction data
         FString VarName = VariableName.IsEmpty() ? FString::Printf(TEXT("PredictionData_%s"), *DataType) : VariableName;
-        
+
         // Determine pin type based on data type
         FEdGraphPinType PinType;
         PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-        
+
         // Map common prediction data types to their struct types
         if (DataType == TEXT("Transform"))
         {
@@ -1667,7 +1685,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         // Add the variable with replication flags
         bool bSuccess = FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*VarName), PinType);
-        
+
         if (bSuccess)
         {
             // Find and configure the variable for replication
@@ -1685,6 +1703,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), bSuccess);
         ResultJson->SetStringField(TEXT("variableName"), VarName);
@@ -1732,6 +1751,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Movement prediction configured"));
@@ -1766,7 +1786,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         if (World && World->GetNetDriver())
         {
             UNetDriver* NetDriver = World->GetNetDriver();
-            
+
             // Configure net driver settings
             NetDriver->MaxClientRate = static_cast<int32>(MaxClientRate);
             NetDriver->MaxInternetClientRate = static_cast<int32>(MaxInternetClientRate);
@@ -1778,7 +1798,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             NetDriver->NetServerMaxTickRate = static_cast<int32>(NetServerMaxTickRate);
             PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
-            
+
             bConfigApplied = true;
         }
 
@@ -1787,7 +1807,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetNumberField(TEXT("maxClientRate"), MaxClientRate);
         ResultJson->SetNumberField(TEXT("maxInternetClientRate"), MaxInternetClientRate);
         ResultJson->SetNumberField(TEXT("netServerMaxTickRate"), NetServerMaxTickRate);
-        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net driver configured (maxClientRate=%.0f, maxInternetClientRate=%.0f, tickRate=%.0f)"), 
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net driver configured (maxClientRate=%.0f, maxInternetClientRate=%.0f, tickRate=%.0f)"),
             MaxClientRate, MaxInternetClientRate, NetServerMaxTickRate));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net driver configured"), ResultJson);
         return true;
@@ -1819,7 +1839,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
         ENetRole NetRole = GetNetRole(Role);
-        
+
         if (CDO)
         {
             // Configure replication based on role
@@ -1840,6 +1860,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("role"), Role);
@@ -1882,6 +1903,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replicate movement set to %s"), bReplicateMovement ? TEXT("true") : TEXT("false")));

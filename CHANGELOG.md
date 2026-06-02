@@ -11,7 +11,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`manage_behavior_tree.add_subnode` action** — authors decorators and services as subnodes attached to root/composite/task graph nodes (rather than as standalone graph nodes). Supports `parentNodeId="root"` sentinel for top-level decorators that populate `UBehaviorTree::RootDecorators` after editor compile. Validates subnode UClass against `UBTDecorator` / `UBTService` and rejects Services on the root graph node (`INVALID_PARENT_FOR_SUBNODE`).
+- **`manage_behavior_tree.set_node_properties` now handles `FBlackboardKeySelector` struct properties** — pass `properties: { BlackboardKey: "<key name>" }` and the handler calls `ResolveSelectedKey` against the BT's assigned blackboard. Returns `BB_KEY_NOT_FOUND` when the resolved selector ID is invalid (silent-failure guard).
+- **`FindGraphNodeByIdOrName` now walks `UAIGraphNode::SubNodes`** — all four BT SubActions (`connect_nodes`, `remove_node`, `break_connections`, `set_node_properties`) gain subnode-aware lookup as a side effect, enabling `set_node_properties` on a decorator/service via its `nodeId`.
+- **Native MCP Streamable HTTP Transport** — built-in HTTP/SSE MCP server directly in the C++ plugin, no TypeScript bridge or Node.js required. AI clients connect via `http://localhost:3000/mcp`. Supports SSE streaming, multiple concurrent sessions, dynamic tool management. Opt-in via `bEnableNativeMCP` project setting.
+- **`execute_python` action** in `system_control` — execute Python code inline or from `.py` files with stdout/stderr capture, execution time tracking, and RAII temp file cleanup. Max code size: 1 MB.
+- **Capability token authentication** for native MCP transport — validates `X-MCP-Capability-Token` header when `bRequireCapabilityToken` is enabled.
+- **Native C++ self-describing tool definitions** with `FMcpSchemaBuilder` fluent API — replaces JSON schema loader. The TypeScript bridge exposes 23 canonical parent MCP tools.
+- **Dynamic tool manager** — enable/disable tools and categories at runtime via `manage_tools`, with protected tools/categories.
+- **Editor status bar indicator** — shows MCP port and active session count.
+- **`animation_physics: force_rebuild_blend_space` action** — explicit rebuild for `UBlendSpace` / `UBlendSpace1D` assets whose `SampleData` or `BlendParameters` UPROPERTY were mutated via a path that bypasses `PostEditChangeProperty` (e.g. raw Python `set_editor_property` or scripted `sample_data` writes), which otherwise leaves the BlendSpace's cached grid stale and causes referencing `AnimBlueprint` compiles to warn `sample out of bounds`. The handler calls `ValidateSampleData()` to drop invalid/out-of-range samples, then `PostEditChangeProperty` against the `SampleData` UPROPERTY to force grid + RuntimeBuilder rebuild. Optional `rebuildBlendParameters: true` triggers an additional event for `BlendParameters` (axis min/max). Optional `compileReferencers: true` (default) cascade-compiles every `AnimBlueprint` referencing the BlendSpace via `IAssetRegistry::GetReferencers`, returning `referencersCompiled` count and `compiledAnimBlueprints` path list. Also adds a `PostEditChange()` call to the existing `add_blend_sample` handler so MCP's own sample additions can no longer leave the grid stale.
+- **`manage_behavior_tree.get_tree` action** — read-only Behavior Tree introspection returning the navigable hierarchy: a recursive `rootNode` with ordered `children[]`, per-edge `entryDecorators[]` + `entryDecoratorOpsRaw[]` (UE postfix logic ops), composite/task `services[]`, top-level `rootDecorators[]` + `rootDecoratorOpsRaw[]`, per-node `keyProperties{}` enumerating ALL `FBlackboardKeySelector` properties, `nodeCount`/`executionNodeCount`, RunBehavior/RunBehaviorDynamic subtree references, and a null-`RootNode` contract (`success` + `rootNode: null` for empty/uninitialized trees). Walks the runtime `UBehaviorTree::RootNode` (asset-load; no PIE, no BehaviorTreeEditor module). `executionIndex` reflects the value baked into the asset at editor compile/save and is omitted when `0` (e.g. the root composite, or an uncompiled tree). The postfix `*DecoratorOpsRaw` arrays are populated only for explicit decorator-logic composition (And/Or/Not grouping); simple AND-stacked decorators leave them empty. Introduces a shared `BehaviorTreeSerializers` module; the `manage_ai.get_ai_info` Blackboard branch is refactored onto its `SerializeBlackboardData`, which additively enriches each key with `baseClass`/`enumClass`/`enumName`/`entryCategory`/`sourceBlackboard`/`inherited` and adds `parentBlackboard` (the existing `name`/`type`/`instanceSynced` fields are unchanged).
+
+### Security
+
+- **Symlink escape prevention** in `execute_python` file path validation — resolves symlinks and re-validates against project directory.
+- **Code size limit** — `execute_python` enforces 1 MB maximum for inline code payloads.
+- **Explicit request origin tracking** (`ERequestOrigin`) — routes HTTP vs WebSocket responses by explicit origin instead of inferring from `TargetSocket==nullptr`.
+- **Tool registry thread safety** — `Register()` holds `CacheMutex` for entire body; `GetAllTools()` returns copy.
+- **Dynamic tool manager protection** — `EnableCategory("all")` respects protected categories and initial state.
+
+### Changed
+
+- Tool categories now use four groups: `core`, `world`, `gameplay`, and `utility`. The singleton `authoring` category was removed, and `manage_blueprint` moved into `core`.
+- `manage_blueprint` schema: `location`, `rotation`, `scale` changed from flat number arrays to structured objects with named sub-fields — matches TypeScript schema.
+- `system_control` schema: removed `export_asset` action (not in TS) and `additionalArgs` parameter.
+- `control_editor` schema: added `set_editor_mode` action.
+- `ScanPathsSynchronous` removed from asset query/workflow handlers to prevent GameThread blocking. Documented limitation: newly-added assets may not appear until editor rescan.
+- Screenshot handler now returns `async: true` with `expectedDelay` field and timing guidance.
+
 - **`inspect_cdo` sub-action** for the `inspect` tool – inspect any Blueprint's Class Default Object without spawning an actor. Reads CDO property values via reflection. For Actor BPs, enumerates all components: native CDO components with effective override values, plus Blueprint SCS components from node templates (full parent chain). Includes parent attachment info for SCS components. Source classified as Native, SCS, or SCS_Inherited. Key fields (mesh, animClass, transform) included in summary; full property export via detailed or propertyNames filter.
+
+### Fixed
+
+- **Game Feature Plugin path validation** – `SanitizeProjectRelativePath` now uses `FPackageName::IsValidLongPackageName` instead of a manual `/Content/` heuristic, correctly recognizing all registered engine mount points (game feature plugins like `/MyGameFeature/`, `/ShooterCore/`, `/ALS/`, etc.).
+- **`manage_level: get_level_info` no longer requires the level to be loaded** – previously returned `LEVEL_NOT_FOUND` for any map asset path that hadn't already been `load_level`'d. Now falls back to `IAssetRegistry::GetAssetByObjectPath` and returns `objectPath`, `assetName`, `packageName`, `assetClass`, and the asset's `tagsAndValues` map alongside `loaded: false`. The loaded case is unchanged but now also includes `loaded: true`. Does not auto-load the level.
+- **`inspect: set_property` refreshes stale node title cache for `K2Node_EnhancedInputAction`** – `HandleSetObjectProperty` writes any UObject's UPROPERTY by reflection, which includes K2Node subobjects when `objectPath` resolves to one. For K2Node types whose `GetNodeTitle` derives from a written property (e.g. `K2Node_EnhancedInputAction::InputAction`), the editor's `FNodeTextCache` is keyed off the schema's visualization cache ID, which `PostEditChange` does not bump. The result: the title kept rendering its prior value ("`EnhancedInputAction None`") until the user manually clicked the node, even though the binding had taken. After `PostEditChange`, if `RootObject` is a `UK2Node` whose class name is in a narrow whitelist (currently only `K2Node_EnhancedInputAction`), the handler now calls `K2Node::ReconstructNode()` and `Schema::ForceVisualizationCacheClear()` on the owning graph, followed by `NotifyGraphChanged()`, so the cached title is invalidated and the next render computes a fresh one. Other K2Node classes are unaffected (no `ReconstructNode` invoked outside the whitelist), and non-K2Node writes follow the unchanged path.
+- **`manage_blueprint: create_node nodeType=VariableSet/VariableGet` now supports inherited UPROPERTY via `memberClass`** – previously the handler only consulted `Blueprint->NewVariables` and `Blueprint->GeneratedClass->FindPropertyByName`, so any attempt to reference a UPROPERTY that lives on a parent or SCS component class (e.g. `UCharacterMovementComponent::MaxWalkSpeed` from a `Character` Blueprint) returned `VARIABLE_NOT_FOUND`. Adds `McpFindPropertyRecursive` (walks the `UClass` parent chain) and accepts an optional `memberClass` payload field, supporting both short names (`"CharacterMovementComponent"`) and full paths (`"/Script/Engine.CharacterMovementComponent"`). Uses `IsChildOf` to classify self- vs external-context: properties on the Blueprint's own ancestor chain still use `SetSelfMember`; properties on an unrelated owner class use `SetFromField<FProperty>` so the K2Node exposes a `Target` pin the caller wires to a component reference. This makes generated graphs compile cleanly instead of failing with "Get CharacterMovement uses an invalid target".
+- **`manage_blueprint`: AnimBP graph discovery actions now route to the correct handler** – `list_animbp_graphs` and `get_transition_rule_graph` are implemented in `HandleBlueprintGraphAction` (`McpAutomationBridge_BlueprintGraphHandlers.cpp`) but were missing from the dispatcher's `GraphSubActions` set in `McpAutomationBridgeSubsystem.cpp`, so requests fell through to `HandleBlueprintAction` and returned `UNKNOWN_ACTION`. Adds both actions to the routing set. No handler changes required.
+
+### Tests
+
+- Added characterization integration test for `manage_ai.get_ai_info(blackboardPath)` BB key serialization shape. Pins `assignedBlackboard`, `keyCount`, and `blackboardKeys[].{name,type,instanceSynced}` so future BB serializer refactors cannot silently regress callers.
 
 ---
 
@@ -2207,7 +2248,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 > ### 🔄 Major Architecture Migration
 > This release marks the **complete migration** from Unreal's built-in Remote Plugin to a native C++ **McpAutomationBridge** plugin. This provides:
 > - ⚡ Better performance
-> - 🔗 Tighter editor integration  
+> - 🔗 Tighter editor integration
 > - 🚫 No dependency on Unreal's Remote API
 >
 > **BREAKING CHANGE:** Response format has been standardized across all automation tools. Clients should expect responses to follow the new `StandardActionResponse` format with `success`, `data`, `warnings`, and `error` fields.

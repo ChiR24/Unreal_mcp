@@ -150,13 +150,15 @@ export class CommandValidator {
      * @returns Priority level (1=heavy, 5=medium, 7=default, 8-9=light)
      */
     static getPriority(command: string): number {
-        if (command.includes('BuildLighting') || command.includes('BuildPaths')) {
+        const normalized = command.trim().toLowerCase();
+
+        if (normalized.includes('buildlighting') || normalized.includes('buildpaths')) {
             return 1; // Heavy operation
-        } else if (command.includes('summon') || command.includes('spawn')) {
+        } else if (normalized.includes('summon') || normalized.includes('spawn')) {
             return 5; // Medium operation
-        } else if (command.startsWith('stat')) {
+        } else if (normalized.startsWith('stat')) {
             return 8; // Dedicated throttling for stat commands
-        } else if (command.startsWith('show')) {
+        } else if (normalized.startsWith('show')) {
             return 9; // Light operation
         }
         return 7; // Default priority

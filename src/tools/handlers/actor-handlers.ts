@@ -24,6 +24,48 @@ interface ComponentsResult {
     [key: string]: unknown;
 }
 
+const DEFAULT_ACTOR_LIST_LIMIT = 50;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function extractActorListPayload(response: Record<string, unknown>): ListActorsResult | undefined {
+    if (response.success === false) {
+        return undefined;
+    }
+
+    if (Array.isArray(response.actors)) {
+        return response as ListActorsResult;
+    }
+
+    const result = response.result;
+    if (isRecord(result)) {
+        if (result.success === false) {
+            return undefined;
+        }
+
+        if (Array.isArray(result.actors)) {
+            return result as ListActorsResult;
+        }
+
+        const data = result.data;
+        if (isRecord(data) && Array.isArray(data.actors)) {
+            return data as ListActorsResult;
+        }
+    }
+
+    return undefined;
+}
+
+function normalizeActorListLimit(value: unknown): number {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+        return DEFAULT_ACTOR_LIST_LIMIT;
+    }
+
+    return Math.floor(value);
+}
+
 /**
  * Action aliases for test compatibility
  * Maps test action names (snake_case) to handler action names
@@ -91,6 +133,7 @@ const handlers: Record<string, ActorActionHandler> = {
             actorName,
             location: args.location,
             rotation: args.rotation,
+            scale: args.scale,
             meshPath: typeof args.meshPath === 'string' ? args.meshPath : undefined
         };
         if (componentToAdd) {
@@ -324,22 +367,26 @@ const handlers: Record<string, ActorActionHandler> = {
         return result;
     },
     list: async (args, tools) => {
-        const limit = typeof args.limit === 'number' ? args.limit : 50;
+        const limit = normalizeActorListLimit(args.limit);
+        const filter = typeof args.filter === 'string' ? args.filter : undefined;
         // Pass limit to C++ handler - C++ may return totalCount for accurate remaining calculation
         const result = await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
             action: 'list',
-            limit
-        }) as ListActorsResult & { totalCount?: number };
-        if (result && result.actors && Array.isArray(result.actors)) {
-            const returnedCount = result.actors.length;
+            limit,
+            filter
+        }) as Record<string, unknown>;
+        const listPayload = extractActorListPayload(result);
+        if (listPayload) {
+            Object.assign(result, listPayload);
+            const returnedCount = listPayload.actors?.length ?? 0;
             // Use totalCount from C++ if available, otherwise use returned count
-            const totalCount = typeof result.totalCount === 'number' ? result.totalCount : returnedCount;
-            const names = result.actors.map((a) => a.label || a.name || 'unknown').join(', ');
+            const totalCount = typeof listPayload.totalCount === 'number' ? listPayload.totalCount : returnedCount;
+            const names = (listPayload.actors ?? []).map((a) => a.label || a.name || 'unknown').join(', ');
             const remaining = totalCount - returnedCount;
             const suffix = remaining > 0 ? `... and ${remaining} more` : '';
-            (result as Record<string, unknown>).message = `Found ${totalCount} actors: ${names}${suffix}`;
+            result.message = `Found ${totalCount} actors: ${names}${suffix}`;
         }
-        return result as Record<string, unknown>;
+        return result;
     },
     find_by_name: async (args, tools) => {
         // Support both actorName and name parameters for consistency

@@ -1,95 +1,85 @@
 
-import { spawn } from 'child_process';
-import path from 'path';
-import { fileURLToPath } from 'url';
+/// <reference types="node" />
+
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { z } from 'zod';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const serverPath = path.join(__dirname, '../dist/cli.js');
+const serverModulePath = path.join(__dirname, '../dist/index.js');
 
 console.log('🚬 Running Smoke Test (Mock Mode)...');
-console.log(`🔌 Server Path: ${serverPath}`);
+console.log(`🔌 Server Module: ${serverModulePath}`);
 
-const env = { ...process.env, MOCK_UNREAL_CONNECTION: 'true' };
-
-const child = spawn('node', [serverPath], {
-    env,
-    stdio: ['pipe', 'pipe', 'inherit'] // pipe stdin/stdout, inherit stderr
+const ManageToolsStatusSchema = z.object({
+    success: z.literal(true),
+    totalTools: z.literal(23)
 });
 
-const requests = [
-    {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: {
-            protocolVersion: '2024-11-05',
-            capabilities: {},
-            clientInfo: { name: 'smoke-test', version: '1.0' }
-        }
-    },
-    {
-        jsonrpc: '2.0',
-        id: 2,
-        method: 'tools/list',
-        params: {}
+const TextContentItemsSchema = z.array(z.object({
+    type: z.literal('text'),
+    text: z.string()
+})).nonempty();
+
+class SmokeTestError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'SmokeTestError';
     }
-];
+}
 
-let buffer = '';
-let passed = false;
-
-child.stdout.on('data', (data) => {
-    const chunk = data.toString();
-    buffer += chunk;
-
-    // Try to parse JSON lines
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || ''; // Keep the incomplete last line
-
-    for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-            const msg = JSON.parse(line);
-            console.log('Received:', JSON.stringify(msg).substring(0, 100) + '...');
-
-            if (msg.id === 1 && msg.result) {
-                console.log('✅ Initialize success');
-                // Send list tools request
-                child.stdin.write(JSON.stringify(requests[1]) + '\n');
-            }
-
-            if (msg.id === 2 && msg.result) {
-                console.log(`✅ Tools check success: Found ${msg.result.tools?.length || 0} tools`);
-                passed = true;
-                child.kill();
-            }
-
-        } catch (_e) {
-            // Ignore non-JSON output (logs)
-        }
+function getFirstTextContent(content: unknown): string {
+    const parsed = TextContentItemsSchema.safeParse(content);
+    if (!parsed.success) {
+        throw new SmokeTestError('manage_tools did not return text content');
     }
-});
+    return parsed.data[0].text;
+}
 
-child.on('exit', (_code) => {
-    if (passed) {
+async function runSmokeTest(): Promise<void> {
+    process.env.MOCK_UNREAL_CONNECTION = 'true';
+    process.env.NODE_ENV = 'test';
+
+    const client = new Client(
+        { name: 'smoke-test', version: '1.0.0' },
+        { capabilities: {} }
+    );
+    const { createServer } = await import(pathToFileURL(serverModulePath).href);
+    const { server, bridge, automationBridge, metricsServer } = createServer();
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+    try {
+        console.log('Sending initialize...');
+        await server.connect(serverTransport);
+        await client.connect(clientTransport, { timeout: 15000 });
+        console.log('✅ Initialize success');
+
+        const toolsResult = await client.listTools(undefined, { timeout: 15000 });
+        console.log(`✅ Tools check success: Found ${toolsResult.tools.length} tools`);
+
+        const statusResult = await client.callTool({
+            name: 'manage_tools',
+            arguments: {
+                params: {
+                    action: 'get_status'
+                }
+            }
+        }, undefined, { timeout: 15000 });
+        const payload = ManageToolsStatusSchema.parse(JSON.parse(getFirstTextContent(statusResult.content)));
+        console.log(`✅ manage_tools params check success: ${payload.totalTools} tools`);
         console.log('🎉 Smoke Test PASSED');
-        process.exit(0);
-    } else {
-        console.error('❌ Smoke Test FAILED - Server exited without passing checks');
-        process.exit(1);
+    } finally {
+        await clientTransport.close();
+        automationBridge.stop();
+        bridge.dispose();
+        metricsServer?.close();
     }
+}
+
+runSmokeTest().catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`❌ ${message}`);
+    process.exit(1);
 });
-
-// Start by sending initialize
-console.log('Sending initialize...');
-child.stdin.write(JSON.stringify(requests[0]) + '\n');
-
-// Timeout safety
-setTimeout(() => {
-    if (!passed) {
-        console.error('❌ Timeout waiting for smoke test');
-        console.error('Buffer contents:', buffer);
-        child.kill();
-        process.exit(1);
-    }
-}, 15000);

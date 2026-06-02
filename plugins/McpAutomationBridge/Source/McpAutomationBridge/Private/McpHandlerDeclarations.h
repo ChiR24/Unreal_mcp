@@ -29,7 +29,7 @@ class FMcpBridgeWebSocket;
 /**
  * Standard handler function signature.
  * All handlers follow this consistent pattern for maintainability.
- * 
+ *
  * @param RequestId Unique identifier for the request
  * @param Action The action string that was dispatched
  * @param Payload JSON payload containing action parameters
@@ -55,7 +55,7 @@ class IMcpHandler
 {
 public:
     virtual ~IMcpHandler() = default;
-    
+
     /**
      * Execute the handler with the given parameters.
      * @return true if the request was handled successfully
@@ -66,12 +66,12 @@ public:
         const TSharedPtr<FJsonObject>& Payload,
         TSharedPtr<FMcpBridgeWebSocket> Socket
     ) = 0;
-    
+
     /**
      * Get the action name this handler responds to.
      */
     virtual FString GetActionName() const = 0;
-    
+
     /**
      * Get the domain this handler belongs to.
      */
@@ -164,7 +164,7 @@ namespace McpHandlers
     namespace Actor
     {
         MCP_DECLARE_HANDLER(ControlActorAction);
-        
+
         // Actor sub-handlers
         MCP_DECLARE_HANDLER_CUSTOM(ControlActorSpawn, (
             const FString& RequestId,
@@ -329,7 +329,7 @@ namespace McpHandlers
     namespace Editor
     {
         MCP_DECLARE_HANDLER(ControlEditorAction);
-        
+
         // Editor sub-handlers
         MCP_DECLARE_HANDLER_CUSTOM(ControlEditorPlay, (
             const FString& RequestId,
@@ -510,7 +510,7 @@ namespace McpHandlers
     namespace Sequence
     {
         MCP_DECLARE_HANDLER(SequenceAction);
-        
+
         // Sequence sub-handlers
         MCP_DECLARE_HANDLER_CUSTOM(SequenceCreate, (
             const FString& RequestId,

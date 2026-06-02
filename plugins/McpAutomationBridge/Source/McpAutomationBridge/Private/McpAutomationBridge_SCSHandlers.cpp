@@ -112,12 +112,9 @@ void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
   FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
   bOutCompiled = McpSafeCompileBlueprint(Blueprint);
 
-  
-  // UE 5.7+ Fix: Use McpSafeAssetSave instead of SaveLoadedAssetThrottled.
-  // SaveLoadedAssetThrottled triggers UEditorAssetLibrary::SaveLoadedAsset() which
-  // causes thumbnail generation and recursive FlushRenderingCommands calls (11+ times).
-  // This corrupts render thread state and causes access violations in RenderCore.dll.
-  // McpSafeAssetSave marks package dirty without triggering disk save operations.
+
+  // UE 5.7+ Fix: Save through the editor-owned safe helper path to avoid the
+  // legacy UEditorAssetLibrary::SaveLoadedAsset thumbnail/render-thread path.
   bOutSaved = McpSafeAssetSave(Blueprint);
   if (!bOutSaved) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
@@ -162,6 +159,128 @@ static TSharedPtr<FJsonObject> PIEActiveError() {
            "(PIE). Please stop the play session first."));
   Result->SetStringField(TEXT("errorCode"), TEXT("PIE_ACTIVE"));
   return Result;
+}
+
+static FString GetSCSNodeName(const USCS_Node *Node) {
+  if (!Node || !Node->GetVariableName().IsValid()) {
+    return FString();
+  }
+  return Node->GetVariableName().ToString();
+}
+
+static USCS_Node *FindSCSNodeByVariableName(USimpleConstructionScript *SCS,
+                                            const FString &Name) {
+  if (!SCS || Name.IsEmpty()) {
+    return nullptr;
+  }
+  for (USCS_Node *Node : SCS->GetAllNodes()) {
+    if (Node && Node->GetVariableName().IsValid() &&
+        Node->GetVariableName().ToString().Equals(Name,
+                                                  ESearchCase::IgnoreCase)) {
+      return Node;
+    }
+  }
+  return nullptr;
+}
+
+static USCS_Node *FindSCSParentNode(USimpleConstructionScript *SCS,
+                                    USCS_Node *ChildNode) {
+  if (!SCS || !ChildNode) {
+    return nullptr;
+  }
+  for (USCS_Node *Candidate : SCS->GetAllNodes()) {
+    if (Candidate && Candidate->GetChildNodes().Contains(ChildNode)) {
+      return Candidate;
+    }
+  }
+  return nullptr;
+}
+
+static bool IsSCSRootNode(USimpleConstructionScript *SCS, USCS_Node *Node) {
+  return SCS && Node && SCS->GetRootNodes().Contains(Node);
+}
+
+static TSharedPtr<FJsonObject> MakeTransformJson(const FTransform &Transform) {
+  TSharedPtr<FJsonObject> TransformObj = MakeShared<FJsonObject>();
+  const FVector Loc = Transform.GetLocation();
+  const FRotator Rot = Transform.GetRotation().Rotator();
+  const FVector Scale = Transform.GetScale3D();
+
+  TArray<TSharedPtr<FJsonValue>> LocationArray;
+  LocationArray.Add(MakeShared<FJsonValueNumber>(Loc.X));
+  LocationArray.Add(MakeShared<FJsonValueNumber>(Loc.Y));
+  LocationArray.Add(MakeShared<FJsonValueNumber>(Loc.Z));
+  TransformObj->SetArrayField(TEXT("location"), LocationArray);
+
+  TArray<TSharedPtr<FJsonValue>> RotationArray;
+  RotationArray.Add(MakeShared<FJsonValueNumber>(Rot.Pitch));
+  RotationArray.Add(MakeShared<FJsonValueNumber>(Rot.Yaw));
+  RotationArray.Add(MakeShared<FJsonValueNumber>(Rot.Roll));
+  TransformObj->SetArrayField(TEXT("rotation"), RotationArray);
+
+  TArray<TSharedPtr<FJsonValue>> ScaleArray;
+  ScaleArray.Add(MakeShared<FJsonValueNumber>(Scale.X));
+  ScaleArray.Add(MakeShared<FJsonValueNumber>(Scale.Y));
+  ScaleArray.Add(MakeShared<FJsonValueNumber>(Scale.Z));
+  TransformObj->SetArrayField(TEXT("scale"), ScaleArray);
+
+  return TransformObj;
+}
+
+static void AddSCSNodeVerification(TSharedPtr<FJsonObject> Result,
+                                   USimpleConstructionScript *SCS,
+                                   USCS_Node *Node) {
+  if (!Result || !SCS || !Node) {
+    return;
+  }
+
+  const FString NodeName = GetSCSNodeName(Node);
+  TSharedPtr<FJsonObject> Verification = MakeShared<FJsonObject>();
+  Verification->SetStringField(TEXT("componentName"), NodeName);
+  Verification->SetBoolField(
+      TEXT("existsInSCS"), FindSCSNodeByVariableName(SCS, NodeName) == Node);
+  Verification->SetBoolField(TEXT("isRoot"), IsSCSRootNode(SCS, Node));
+  Verification->SetNumberField(TEXT("childCount"), Node->GetChildNodes().Num());
+  if (Node->ComponentClass) {
+    Verification->SetStringField(TEXT("componentClass"),
+                                 Node->ComponentClass->GetName());
+  }
+
+  USCS_Node *ParentNode = FindSCSParentNode(SCS, Node);
+  Verification->SetStringField(TEXT("parent"),
+                               ParentNode ? GetSCSNodeName(ParentNode)
+                                          : TEXT("(root)"));
+  Verification->SetBoolField(TEXT("parentVerified"),
+                             ParentNode != nullptr || IsSCSRootNode(SCS, Node));
+
+  if (USceneComponent *SceneComp = Cast<USceneComponent>(Node->ComponentTemplate)) {
+    Verification->SetObjectField(TEXT("transform"),
+                                 MakeTransformJson(SceneComp->GetRelativeTransform()));
+  }
+
+  Result->SetObjectField(TEXT("scsVerification"), Verification);
+}
+
+/**
+ * Verify that an SCS node is attached to the expected parent.
+ *
+ * An empty expected parent means the node should be root-like; nodes with no
+ * discoverable parent are accepted even if root registration has not refreshed
+ * yet. Non-empty parent names are compared against the resolved parent node name
+ * so callers can pass canonical names after resolving root aliases.
+ */
+static bool SCSParentMatches(USimpleConstructionScript *SCS, USCS_Node *Node,
+                             const FString &ExpectedParentName) {
+  if (!SCS || !Node) {
+    return false;
+  }
+  USCS_Node *ActualParent = FindSCSParentNode(SCS, Node);
+  if (ExpectedParentName.IsEmpty()) {
+    return ActualParent == nullptr || IsSCSRootNode(SCS, Node);
+  }
+  return ActualParent &&
+         GetSCSNodeName(ActualParent).Equals(ExpectedParentName,
+                                             ESearchCase::IgnoreCase);
 }
 #endif
 
@@ -215,64 +334,84 @@ FSCSHandlers::GetBlueprintSCS(const FString &BlueprintPath) {
     return Result;
   }
 
-  // Get SCS
-  USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
-  if (!SCS) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(TEXT("error"),
-                           TEXT("Blueprint has no SimpleConstructionScript"));
-    return Result;
+  TArray<UBlueprint *> Chain;
+  {
+    UBlueprint *Current = Blueprint;
+    while (Current) {
+      Chain.Add(Current);
+      UClass *ParentClass = Current->ParentClass;
+      UBlueprint *ParentBP =
+          ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy)
+                      : nullptr;
+      if (!ParentBP || ParentBP == Current || Chain.Contains(ParentBP)) {
+        break;
+      }
+      Current = ParentBP;
+    }
   }
 
-  // Build component tree
   TArray<TSharedPtr<FJsonValue>> Components;
-  const TArray<USCS_Node *> &AllNodes = SCS->GetAllNodes();
+  for (int32 ChainIdx = Chain.Num() - 1; ChainIdx >= 0; --ChainIdx) {
+    UBlueprint *CurrentBP = Chain[ChainIdx];
+    USimpleConstructionScript *SCS = CurrentBP->SimpleConstructionScript;
+    if (!SCS) {
+      continue;
+    }
+    const bool bInherited = (CurrentBP != Blueprint);
+    const TArray<USCS_Node *> &AllNodes = SCS->GetAllNodes();
 
-  for (USCS_Node *Node : AllNodes) {
-    if (Node && Node->GetVariableName().IsValid()) {
-      TSharedPtr<FJsonObject> ComponentObj = McpHandlerUtils::CreateResultObject();
-      ComponentObj->SetStringField(TEXT("name"),
-                                   Node->GetVariableName().ToString());
-      ComponentObj->SetStringField(
-          TEXT("class"), Node->ComponentClass ? Node->ComponentClass->GetName()
-                                              : TEXT("Unknown"));
-      if (!Node->ParentComponentOrVariableName.IsNone()) {
+    for (USCS_Node *Node : AllNodes) {
+      if (Node && Node->GetVariableName().IsValid()) {
+        TSharedPtr<FJsonObject> ComponentObj = McpHandlerUtils::CreateResultObject();
+        ComponentObj->SetStringField(TEXT("name"),
+                                     Node->GetVariableName().ToString());
         ComponentObj->SetStringField(
-            TEXT("parent"), Node->ParentComponentOrVariableName.ToString());
-      }
-
-      // Add transform if component template exists (cast to SceneComponent for
-      // UE 5.6)
-      if (Node->ComponentTemplate) {
-        FTransform Transform = FTransform::Identity;
-        if (USceneComponent *SceneComp =
-                Cast<USceneComponent>(Node->ComponentTemplate)) {
-          Transform = SceneComp->GetRelativeTransform();
+            TEXT("class"), Node->ComponentClass ? Node->ComponentClass->GetName()
+                                                : TEXT("Unknown"));
+        if (!Node->ParentComponentOrVariableName.IsNone()) {
+          ComponentObj->SetStringField(
+              TEXT("parent"), Node->ParentComponentOrVariableName.ToString());
         }
-        TSharedPtr<FJsonObject> TransformObj = McpHandlerUtils::CreateResultObject();
 
-        FVector Loc = Transform.GetLocation();
-        FRotator Rot = Transform.GetRotation().Rotator();
-        FVector Scale = Transform.GetScale3D();
+        // Add transform if component template exists (cast to SceneComponent for
+        // UE 5.6)
+        if (Node->ComponentTemplate) {
+          FTransform Transform = FTransform::Identity;
+          if (USceneComponent *SceneComp =
+                  Cast<USceneComponent>(Node->ComponentTemplate)) {
+            Transform = SceneComp->GetRelativeTransform();
+          }
+          TSharedPtr<FJsonObject> TransformObj = McpHandlerUtils::CreateResultObject();
 
-        TransformObj->SetStringField(
-            TEXT("location"),
-            FString::Printf(TEXT("X=%.2f Y=%.2f Z=%.2f"), Loc.X, Loc.Y, Loc.Z));
-        TransformObj->SetStringField(
-            TEXT("rotation"), FString::Printf(TEXT("P=%.2f Y=%.2f R=%.2f"),
-                                              Rot.Pitch, Rot.Yaw, Rot.Roll));
-        TransformObj->SetStringField(
-            TEXT("scale"), FString::Printf(TEXT("X=%.2f Y=%.2f Z=%.2f"),
-                                           Scale.X, Scale.Y, Scale.Z));
+          FVector Loc = Transform.GetLocation();
+          FRotator Rot = Transform.GetRotation().Rotator();
+          FVector Scale = Transform.GetScale3D();
 
-        ComponentObj->SetObjectField(TEXT("transform"), TransformObj);
+          TransformObj->SetStringField(
+              TEXT("location"),
+              FString::Printf(TEXT("X=%.2f Y=%.2f Z=%.2f"), Loc.X, Loc.Y, Loc.Z));
+          TransformObj->SetStringField(
+              TEXT("rotation"), FString::Printf(TEXT("P=%.2f Y=%.2f R=%.2f"),
+                                                Rot.Pitch, Rot.Yaw, Rot.Roll));
+          TransformObj->SetStringField(
+              TEXT("scale"), FString::Printf(TEXT("X=%.2f Y=%.2f Z=%.2f"),
+                                             Scale.X, Scale.Y, Scale.Z));
+
+          ComponentObj->SetObjectField(TEXT("transform"), TransformObj);
+        }
+
+        // Add child count
+        ComponentObj->SetNumberField(TEXT("child_count"),
+                                     Node->GetChildNodes().Num());
+
+        if (bInherited) {
+          ComponentObj->SetBoolField(TEXT("inherited"), true);
+          ComponentObj->SetStringField(TEXT("declaringBlueprint"),
+                                       CurrentBP->GetName());
+        }
+
+        Components.Add(MakeShared<FJsonValueObject>(ComponentObj));
       }
-
-      // Add child count
-      ComponentObj->SetNumberField(TEXT("child_count"),
-                                   Node->GetChildNodes().Num());
-
-      Components.Add(MakeShared<FJsonValueObject>(ComponentObj));
     }
   }
 
@@ -457,23 +596,27 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   bool bSaved = false;
   FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
 
-  // Real test: Verify component exists in SCS
-  bool bVerified = false;
-  for (USCS_Node *Node : SCS->GetAllNodes()) {
-    if (Node && Node->GetVariableName().IsValid() &&
-        Node->GetVariableName().ToString().Equals(ComponentName,
-                                                  ESearchCase::IgnoreCase)) {
-      bVerified = true;
-      break;
-    }
-  }
+  USCS_Node *VerifiedNode = FindSCSNodeByVariableName(SCS, ComponentName);
+  const bool bVerified = VerifiedNode != nullptr;
+  const bool bParentVerified =
+      bVerified && SCSParentMatches(SCS, VerifiedNode, ParentComponentName);
 
-  if (!bVerified) {
+  if (!bVerified || !bParentVerified) {
     Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"), FString::Printf(TEXT("Verification failed: Component "
-                                            "'%s' not found in SCS after add"),
-                                       *ComponentName));
+    Result->SetStringField(TEXT("error"),
+                           bVerified
+                               ? FString::Printf(
+                                     TEXT("Verification failed: Component '%s' "
+                                          "parent did not match requested parent '%s'"),
+                                     *ComponentName, *ParentComponentName)
+                               : FString::Printf(
+                                     TEXT("Verification failed: Component '%s' "
+                                          "not found in SCS after add"),
+                                     *ComponentName));
+    Result->SetStringField(TEXT("errorCode"), TEXT("SCS_VERIFICATION_FAILED"));
+    if (VerifiedNode) {
+      AddSCSNodeVerification(Result, SCS, VerifiedNode);
+    }
     return Result;
   }
 
@@ -488,6 +631,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
                                              : ParentComponentName);
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
+  AddSCSNodeVerification(Result, SCS, VerifiedNode);
   // Feature #1, #2: Report mesh/material assignment status
   Result->SetBoolField(TEXT("mesh_applied"), bMeshApplied);
   Result->SetBoolField(TEXT("material_applied"), bMaterialApplied);
@@ -586,7 +730,12 @@ FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
 }
 
 /**
- * @brief Reparent component within SCS.
+ * @brief Reparent component within SCS and verify the resolved parent.
+ *
+ * Root aliases such as `Root`, `RootComponent`, and `DefaultSceneRoot` are
+ * resolved before mutation. Verification uses the resolved parent node name so
+ * successful reparent operations are not rejected because the caller used an
+ * alias instead of the concrete SCS variable name.
  *
  * @param BlueprintPath Path to the Blueprint asset.
  * @param ComponentName Variable name of component to reparent.
@@ -658,7 +807,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
       const TArray<USCS_Node *> &Roots = SCS->GetRootNodes();
       // Prefer an explicit DefaultSceneRoot if present
       for (USCS_Node *R : Roots) {
-        if (R && R->GetVariableName().IsValid() &&
+        if (R && R != ComponentNode && R->GetVariableName().IsValid() &&
             R->GetVariableName().ToString().Equals(TEXT("DefaultSceneRoot"),
                                                    ESearchCase::IgnoreCase)) {
           NewParentNode = R;
@@ -688,24 +837,34 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
     }
 
     if (!NewParentNode) {
-      // If caller asked for RootComponent and we can't resolve it, treat as a
-      // benign no-op
-      if (bRootSynonym) {
-        Result->SetBoolField(TEXT("success"), true);
-        Result->SetStringField(
-            TEXT("message"),
-            TEXT("Requested RootComponent not found; component remains at "
-                 "current hierarchy (treated as success)."));
-        McpHandlerUtils::AddVerification(Result, Blueprint);
-        return Result;
-      }
       Result->SetBoolField(TEXT("success"), false);
-      Result->SetStringField(
-          TEXT("error"),
-          FString::Printf(TEXT("New parent not found: %s"), *NewParentName));
+      const FString ParentError =
+          bRootSynonym
+              ? FString::Printf(TEXT("Requested root parent alias '%s' could not be resolved to an SCS root node"),
+                                *NewParentName)
+              : FString::Printf(TEXT("New parent not found: %s"),
+                                *NewParentName);
+      Result->SetStringField(TEXT("error"), ParentError);
+      Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PARENT_NOT_FOUND"));
+      AddSCSNodeVerification(Result, SCS, ComponentNode);
       return Result;
     }
   }
+
+  if (NewParentNode == ComponentNode) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(
+        TEXT("error"),
+        TEXT("Cannot reparent a component to itself"));
+    Result->SetStringField(TEXT("errorCode"), TEXT("SCS_SELF_REPARENT"));
+    AddSCSNodeVerification(Result, SCS, ComponentNode);
+    return Result;
+  }
+
+  const FString ExpectedParentName =
+      NewParentNode ? GetSCSNodeName(NewParentNode) : FString();
+  const FString ParentDisplayName =
+      ExpectedParentName.IsEmpty() ? FString(TEXT("(root)")) : ExpectedParentName;
 
   // Helper: check if B is a descendant of A (prevent cycles)
   auto IsDescendantOf = [](USCS_Node *A, USCS_Node *B) -> bool {
@@ -745,13 +904,14 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   }
 
   // No-op checks (already under desired parent)
-  if ((OldParent == nullptr && NewParentNode && SCS->GetRootNodes().Num() > 0 &&
-       NewParentNode == SCS->GetRootNodes()[0]) ||
+  if ((NewParentNode == nullptr && OldParent == nullptr &&
+       IsSCSRootNode(SCS, ComponentNode)) ||
       (OldParent != nullptr && NewParentNode == OldParent)) {
     Result->SetBoolField(TEXT("success"), true);
     Result->SetStringField(
         TEXT("message"),
         TEXT("Component already under requested parent; no changes made"));
+    AddSCSNodeVerification(Result, SCS, ComponentNode);
     McpHandlerUtils::AddVerification(Result, Blueprint);
     return Result;
   }
@@ -790,14 +950,30 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   bool bSaved = false;
   FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
 
+  USCS_Node *VerifiedNode = FindSCSNodeByVariableName(SCS, ComponentName);
+  if (!VerifiedNode || !SCSParentMatches(SCS, VerifiedNode, ExpectedParentName)) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(
+        TEXT("error"),
+        FString::Printf(TEXT("Verification failed: Component '%s' was not reparented to '%s'"),
+                        *ComponentName, *ParentDisplayName));
+    Result->SetStringField(TEXT("errorCode"), TEXT("SCS_REPARENT_VERIFICATION_FAILED"));
+    if (VerifiedNode) {
+      AddSCSNodeVerification(Result, SCS, VerifiedNode);
+    }
+    Result->SetBoolField(TEXT("compiled"), bCompiled);
+    Result->SetBoolField(TEXT("saved"), bSaved);
+    return Result;
+  }
+
   Result->SetBoolField(TEXT("success"), true);
   Result->SetStringField(
       TEXT("message"),
       FString::Printf(TEXT("Component '%s' reparented to '%s'"), *ComponentName,
-                      NewParentName.IsEmpty() ? TEXT("(root)")
-                                              : *NewParentName));
+                      *ParentDisplayName));
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
+  AddSCSNodeVerification(Result, SCS, VerifiedNode);
   McpHandlerUtils::AddVerification(Result, Blueprint);
 #else
   return UnsupportedSCSAction();
@@ -882,6 +1058,14 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
     Location.X = (*LocArray)[0]->AsNumber();
     Location.Y = (*LocArray)[1]->AsNumber();
     Location.Z = (*LocArray)[2]->AsNumber();
+  } else {
+    const TSharedPtr<FJsonObject> *LocObj = nullptr;
+    if (TransformData->TryGetObjectField(TEXT("location"), LocObj) && LocObj &&
+        LocObj->IsValid()) {
+      (*LocObj)->TryGetNumberField(TEXT("x"), Location.X);
+      (*LocObj)->TryGetNumberField(TEXT("y"), Location.Y);
+      (*LocObj)->TryGetNumberField(TEXT("z"), Location.Z);
+    }
   }
 
   // Parse rotation array [pitch, yaw, roll]
@@ -891,6 +1075,14 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
     Rotation.Pitch = (*RotArray)[0]->AsNumber();
     Rotation.Yaw = (*RotArray)[1]->AsNumber();
     Rotation.Roll = (*RotArray)[2]->AsNumber();
+  } else {
+    const TSharedPtr<FJsonObject> *RotObj = nullptr;
+    if (TransformData->TryGetObjectField(TEXT("rotation"), RotObj) && RotObj &&
+        RotObj->IsValid()) {
+      (*RotObj)->TryGetNumberField(TEXT("pitch"), Rotation.Pitch);
+      (*RotObj)->TryGetNumberField(TEXT("yaw"), Rotation.Yaw);
+      (*RotObj)->TryGetNumberField(TEXT("roll"), Rotation.Roll);
+    }
   }
 
   // Parse scale array [x, y, z]
@@ -900,6 +1092,14 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
     Scale.X = (*ScaleArray)[0]->AsNumber();
     Scale.Y = (*ScaleArray)[1]->AsNumber();
     Scale.Z = (*ScaleArray)[2]->AsNumber();
+  } else {
+    const TSharedPtr<FJsonObject> *ScaleObj = nullptr;
+    if (TransformData->TryGetObjectField(TEXT("scale"), ScaleObj) && ScaleObj &&
+        ScaleObj->IsValid()) {
+      (*ScaleObj)->TryGetNumberField(TEXT("x"), Scale.X);
+      (*ScaleObj)->TryGetNumberField(TEXT("y"), Scale.Y);
+      (*ScaleObj)->TryGetNumberField(TEXT("z"), Scale.Z);
+    }
   }
 
   // Apply transform to component template
@@ -913,6 +1113,26 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
     bool bSaved = false;
     FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
 
+    USCS_Node *VerifiedNode = FindSCSNodeByVariableName(SCS, ComponentName);
+    USceneComponent *VerifiedSceneComp =
+        VerifiedNode ? Cast<USceneComponent>(VerifiedNode->ComponentTemplate)
+                     : nullptr;
+    if (!VerifiedSceneComp ||
+        !VerifiedSceneComp->GetRelativeTransform().Equals(NewTransform)) {
+      Result->SetBoolField(TEXT("success"), false);
+      Result->SetStringField(
+          TEXT("error"),
+          FString::Printf(TEXT("Verification failed: Transform did not stick for component '%s'"),
+                          *ComponentName));
+      Result->SetStringField(TEXT("errorCode"), TEXT("SCS_TRANSFORM_VERIFICATION_FAILED"));
+      Result->SetBoolField(TEXT("compiled"), bCompiled);
+      Result->SetBoolField(TEXT("saved"), bSaved);
+      if (VerifiedNode) {
+        AddSCSNodeVerification(Result, SCS, VerifiedNode);
+      }
+      return Result;
+    }
+
     Result->SetBoolField(TEXT("success"), true);
     Result->SetStringField(
         TEXT("message"),
@@ -920,6 +1140,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
                         *ComponentName));
     Result->SetBoolField(TEXT("compiled"), bCompiled);
     Result->SetBoolField(TEXT("saved"), bSaved);
+    AddSCSNodeVerification(Result, SCS, VerifiedNode);
     McpHandlerUtils::AddVerification(Result, Blueprint);
   } else {
     Result->SetBoolField(TEXT("success"), false);
@@ -1052,6 +1273,42 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
   bool bSaved = false;
   FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
 
+  USCS_Node *VerifiedNode = FindSCSNodeByVariableName(SCS, ComponentName);
+  if (!VerifiedNode || !VerifiedNode->ComponentTemplate) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(
+        TEXT("error"),
+        FString::Printf(TEXT("Verification failed: Component '%s' missing after property set"),
+                        *ComponentName));
+    Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PROPERTY_VERIFICATION_FAILED"));
+    Result->SetBoolField(TEXT("compiled"), bCompiled);
+    Result->SetBoolField(TEXT("saved"), bSaved);
+    return Result;
+  }
+
+  void *VerifiedContainerPtr = nullptr;
+  FString VerifiedResolveError;
+  FProperty *VerifiedProp = ResolveNestedPropertyPath(
+      VerifiedNode->ComponentTemplate, PropertyName, VerifiedContainerPtr,
+      VerifiedResolveError);
+  if (!VerifiedProp || !VerifiedContainerPtr) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(
+        TEXT("error"),
+        VerifiedResolveError.IsEmpty()
+            ? FString::Printf(TEXT("Verification failed: Property not found after set: %s"),
+                              *PropertyName)
+            : VerifiedResolveError);
+    Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PROPERTY_VERIFICATION_FAILED"));
+    Result->SetBoolField(TEXT("compiled"), bCompiled);
+    Result->SetBoolField(TEXT("saved"), bSaved);
+    AddSCSNodeVerification(Result, SCS, VerifiedNode);
+    return Result;
+  }
+
+  TSharedPtr<FJsonValue> VerifiedValue =
+      ExportPropertyToJsonValue(VerifiedContainerPtr, VerifiedProp);
+
   Result->SetBoolField(TEXT("success"), true);
   Result->SetStringField(
       TEXT("message"),
@@ -1059,6 +1316,10 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
                       *PropertyName, *ComponentName));
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
+  AddSCSNodeVerification(Result, SCS, VerifiedNode);
+  if (VerifiedValue.IsValid()) {
+    Result->SetField(TEXT("verifiedValue"), VerifiedValue);
+  }
   McpHandlerUtils::AddVerification(Result, Blueprint);
 #else
   return UnsupportedSCSAction();

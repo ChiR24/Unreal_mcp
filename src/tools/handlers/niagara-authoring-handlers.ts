@@ -12,14 +12,9 @@
  */
 
 import { ITools } from '../../types/tool-interfaces.js';
-import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { requireNonEmptyString, executeAutomationRequest } from './common-handlers.js';
+import { createSubActionDispatcher, requireNonEmptyString } from './common-handlers.js';
 
-function getTimeoutMs(): number {
-  const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
-  return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
-}
 
 /**
  * Handles all Niagara authoring actions for the manage_niagara_authoring tool.
@@ -29,23 +24,34 @@ export async function handleNiagaraAuthoringTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  const argsRecord = args as Record<string, unknown>;
-  const timeoutMs = getTimeoutMs();
+  const preparedArgs = { ...args } as Record<string, unknown>;
 
   // Normalize parameter aliases - tests may use 'system', 'assetPath' instead of 'systemPath'
-  if (!argsRecord.systemPath && argsRecord.system) {
-    argsRecord.systemPath = argsRecord.system;
+  if (!preparedArgs.systemPath && preparedArgs.system) {
+    preparedArgs.systemPath = preparedArgs.system;
   }
-  if (!argsRecord.systemPath && argsRecord.assetPath) {
-    argsRecord.systemPath = argsRecord.assetPath;
+  if (!preparedArgs.systemPath && preparedArgs.assetPath) {
+    preparedArgs.systemPath = preparedArgs.assetPath;
   }
   // For get_niagara_info which specifically uses assetPath
-  if (!argsRecord.assetPath && argsRecord.systemPath) {
-    argsRecord.assetPath = argsRecord.systemPath;
+  if (!preparedArgs.assetPath && preparedArgs.systemPath) {
+    preparedArgs.assetPath = preparedArgs.systemPath;
   }
-  if (!argsRecord.assetPath && argsRecord.system) {
-    argsRecord.assetPath = argsRecord.system;
+  if (!preparedArgs.assetPath && preparedArgs.system) {
+    preparedArgs.assetPath = preparedArgs.system;
   }
+  const { argsRecord, sendRequest } = createSubActionDispatcher(tools, preparedArgs as HandlerArgs, {
+    toolName: 'manage_niagara_authoring',
+    domainName: 'Niagara authoring',
+    pathFields: [
+      'systemPath',
+      'assetPath',
+      'emitterPath',
+      'meshPath',
+      'splinePath',
+      'audioPath'
+    ]
+  });
 
   // Map emitterName to name for create_niagara_emitter
   if (!argsRecord.name && argsRecord.emitterName) {
@@ -59,19 +65,6 @@ export async function handleNiagaraAuthoringTools(
       argsRecord.name = lastPart;
     }
   }
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_niagara_authoring',
-      payload as HandlerArgs,
-      `Automation bridge not available for Niagara authoring action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
 
   switch (action) {
     // =========================================================================
@@ -317,10 +310,10 @@ export async function handleNiagaraAuthoringTools(
     // =========================================================================
 
     default:
-      return cleanObject({
+      return {
         success: false,
         error: 'UNKNOWN_ACTION',
         message: `Unknown Niagara authoring action: ${action}`
-      });
+      };
   }
 }

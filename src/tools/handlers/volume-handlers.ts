@@ -19,42 +19,7 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest } from './common-handlers.js';
-
-function getTimeoutMs(): number {
-  const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
-  return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
-}
-
-/**
- * Normalize path fields to ensure they start with /Game/ and use forward slashes.
- * Returns a copy of the args with normalized paths.
- */
-function normalizePathFields(args: Record<string, unknown>): Record<string, unknown> {
-  const result = { ...args };
-  const pathFields = [
-    'volumePath', 'reverbEffect', 'damageType', 'areaClass'
-  ];
-
-  for (const field of pathFields) {
-    const value = result[field];
-    if (typeof value === 'string' && value.length > 0) {
-      let normalized = value.replace(/\\/g, '/');
-      // Replace /Content/ with /Game/ for common user mistake
-      if (normalized.startsWith('/Content/')) {
-        normalized = '/Game/' + normalized.slice('/Content/'.length);
-      }
-      // Ensure path starts with /Game/ if it doesn't start with a valid root
-      // Allow plugin paths like /MyPlugin/Assets to pass through unchanged
-      if (!normalized.startsWith('/')) {
-        normalized = '/Game/' + normalized;
-      }
-      result[field] = normalized;
-    }
-  }
-
-  return result;
-}
+import { createSubActionDispatcher } from './common-handlers.js';
 
 /**
  * Normalize parameter names from snake_case to camelCase for C++ compatibility.
@@ -64,7 +29,6 @@ function normalizeParamNames(args: Record<string, unknown>): Record<string, unkn
   const result = { ...args };
   const paramMappings: Record<string, string> = {
     'volume_name': 'volumeName',
-    'volume_path': 'volumePath',
     'box_extent': 'boxExtent',
     'sphere_radius': 'sphereRadius',
     'capsule_radius': 'capsuleRadius',
@@ -88,22 +52,11 @@ export async function handleVolumeTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  // Normalize path fields and parameter names before sending to C++
-  const argsRecord = normalizeParamNames(normalizePathFields(args as Record<string, unknown>));
-  const timeoutMs = getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_volumes',
-      payload as HandlerArgs,
-      `Automation bridge not available for volume action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  const normalizedArgs = normalizeParamNames(args as Record<string, unknown>);
+  const { sendRequest } = createSubActionDispatcher(tools, normalizedArgs as HandlerArgs, {
+    toolName: 'manage_volumes',
+    domainName: 'volume'
+  });
 
   switch (action) {
     // ========================================================================

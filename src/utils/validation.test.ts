@@ -4,12 +4,13 @@
 import { describe, it, expect } from 'vitest';
 import {
     sanitizeAssetName,
-    sanitizePath,
+    normalizeAndSanitizeAssetPath,
     validatePathLength,
     validateAssetParams,
     ensureVector3,
     ensureRotation
 } from './validation.js';
+import { sanitizePath } from './path-security.js';
 
 describe('sanitizeAssetName', () => {
     it('removes invalid characters', () => {
@@ -38,6 +39,17 @@ describe('sanitizeAssetName', () => {
         const result = sanitizeAssetName('My__Asset');
         expect(result).not.toContain('__');
     });
+
+    it('sanitizes SQL-like patterns consistently across repeated calls', () => {
+        expect(sanitizeAssetName('DROP DELETE Table')).toBe('Table');
+        expect(sanitizeAssetName('DROP DELETE Table')).toBe('Table');
+    });
+
+    it('handles reserved keywords case-insensitively', () => {
+        expect(sanitizeAssetName('None')).toBe('None_Asset');
+        expect(sanitizeAssetName('CLASS')).toBe('CLASS_Asset');
+        expect(sanitizeAssetName('native')).toBe('native_Asset');
+    });
 });
 
 describe('sanitizePath', () => {
@@ -59,8 +71,12 @@ describe('sanitizePath', () => {
 
     it('sanitizes path segments with dots', () => {
         expect(() => sanitizePath('/Game/../MyAsset')).toThrow(
-            'Path traversal (..) is not allowed'
+            'directory traversal (..) is not allowed'
         );
+    });
+
+    it('preserves Niagara root paths', () => {
+        expect(normalizeAndSanitizeAssetPath('/Niagara/Modules/EmitterState')).toBe('/Niagara/Modules/EmitterState');
     });
 });
 

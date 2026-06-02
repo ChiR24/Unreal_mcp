@@ -1,24 +1,23 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
-import type { HandlerArgs, InputArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest } from './common-handlers.js';
+import type { HandlerArgs } from '../../types/handler-types.js';
+import { executeAutomationRequest, getTimeoutMs, normalizePathFields } from './common-handlers.js';
 import { sanitizePath } from '../../utils/path-security.js';
-import { TOOL_ACTIONS } from '../../utils/action-constants.js';
-function getTimeoutMs(): number {
-  const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
-  return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
-}
 
 /** Valid parameters for each input action */
 const VALID_PARAMS_BY_ACTION: Record<string, Set<string>> = {
-    create_input_action: new Set(['action', 'name', 'path', 'timeoutMs']),
-    create_input_mapping_context: new Set(['action', 'name', 'path', 'timeoutMs']),
-    add_mapping: new Set(['action', 'contextPath', 'actionPath', 'key', 'timeoutMs']),
-    remove_mapping: new Set(['action', 'contextPath', 'actionPath', 'timeoutMs']),
+    create_input_action: new Set(['action', 'name', 'path', 'priority', 'timeoutMs']),
+    create_input_mapping_context: new Set(['action', 'name', 'path', 'priority', 'timeoutMs']),
+    add_mapping: new Set(['action', 'contextPath', 'actionPath', 'key', 'triggerType', 'modifierType', 'timeoutMs']),
+    remove_mapping: new Set(['action', 'contextPath', 'actionPath', 'key', 'timeoutMs']),
+    add_legacy_action_mapping: new Set(['action', 'name', 'actionName', 'key', 'shift', 'ctrl', 'alt', 'cmd', 'timeoutMs']),
+    remove_legacy_action_mapping: new Set(['action', 'name', 'actionName', 'key', 'shift', 'ctrl', 'alt', 'cmd', 'timeoutMs']),
+    add_legacy_axis_mapping: new Set(['action', 'name', 'axisName', 'key', 'scale', 'timeoutMs']),
+    remove_legacy_axis_mapping: new Set(['action', 'name', 'axisName', 'key', 'scale', 'timeoutMs']),
     map_input_action: new Set(['action', 'contextPath', 'actionPath', 'key', 'timeoutMs']),
     set_input_trigger: new Set(['action', 'actionPath', 'triggerType', 'timeoutMs']),
-    set_input_modifier: new Set(['action', 'actionPath', 'modifierType', 'timeoutMs']),
+    set_input_modifier: new Set(['action', 'contextPath', 'actionPath', 'key', 'modifierType', 'timeoutMs']),
     enable_input_mapping: new Set(['action', 'contextPath', 'priority', 'timeoutMs']),
     disable_input_action: new Set(['action', 'actionPath', 'timeoutMs']),
     get_input_info: new Set(['action', 'assetPath', 'timeoutMs']),
@@ -30,25 +29,26 @@ function validateNoExtraParams(action: string, args: Record<string, unknown>): {
     if (!validParams) {
         return { valid: false, error: `manage_input/${action}: Unknown action` };
     }
-    
+
     const providedParams = Object.keys(args);
     const extraParams = providedParams.filter(p => !validParams.has(p));
-    
+
     if (extraParams.length > 0) {
-        return { 
-            valid: false, 
-            error: `manage_input/${action}: Invalid parameters: ${extraParams.join(', ')}. Valid params: ${[...validParams].join(', ')}` 
+        return {
+            valid: false,
+            error: `manage_input/${action}: Invalid parameters: ${extraParams.join(', ')}. Valid params: ${[...validParams].join(', ')}`
         };
     }
-    
+
     return { valid: true };
 }
 
 /** Validate and sanitize path parameters */
 function validateAndSanitizePaths(paths: Record<string, unknown>, requiredKeys: string[] = []): { valid: boolean; sanitized: Record<string, string>; error?: string } {
     const sanitized: Record<string, string> = {};
-    
-    for (const [key, value] of Object.entries(paths)) {
+    const normalizedPaths = normalizePathFields(paths, Object.keys(paths));
+
+    for (const [key, value] of Object.entries(normalizedPaths)) {
         if (value === undefined || value === null) {
             // If this is a required key, missing value is an error
             if (requiredKeys.includes(key)) {
@@ -56,11 +56,11 @@ function validateAndSanitizePaths(paths: Record<string, unknown>, requiredKeys: 
             }
             continue;
         }
-        
+
         if (typeof value !== 'string') {
             return { valid: false, sanitized: {}, error: `${key} must be a string` };
         }
-        
+
         if (value.length === 0) {
             // If this is a required key, empty string is an error
             if (requiredKeys.includes(key)) {
@@ -68,19 +68,19 @@ function validateAndSanitizePaths(paths: Record<string, unknown>, requiredKeys: 
             }
             continue;
         }
-        
+
         try {
             sanitized[key] = sanitizePath(value);
         } catch (e) {
             const message = e instanceof Error ? e.message : String(e);
-            return { 
-                valid: false, 
-                sanitized: {}, 
-                error: `manage_input: Invalid ${key}: ${message}` 
+            return {
+                valid: false,
+                sanitized: {},
+                error: `manage_input: Invalid ${key}: ${message}`
             };
         }
     }
-    
+
     return { valid: true, sanitized };
 }
 
@@ -103,10 +103,9 @@ export async function handleInputTools(
     args: HandlerArgs,
     tools: ITools
 ): Promise<Record<string, unknown>> {
-    const argsTyped = args as InputArgs;
     const argsRecord = args as Record<string, unknown>;
 
-    const timeoutMs = getTimeoutMs();
+    const timeoutMs = typeof argsRecord.timeoutMs === 'number' ? argsRecord.timeoutMs : getTimeoutMs();
 
     // Validate no extraneous parameters
     const paramValidation = validateNoExtraParams(action, argsRecord);
@@ -119,30 +118,32 @@ export async function handleInputTools(
       // Validate and sanitize path parameters
       const requiredPaths = REQUIRED_PATHS_BY_ACTION[subAction] || [];
       const pathParams: Record<string, unknown> = {};
-      
+
       for (const pathKey of requiredPaths) {
           if (argsRecord[pathKey] !== undefined) {
               pathParams[pathKey] = argsRecord[pathKey];
           }
       }
-      
-      // Also check for optional path params (path, assetPath for non-required)
+
+      // Also check for optional path params (path, assetPath, contextPath, actionPath for non-required)
       if (argsRecord.path !== undefined) pathParams.path = argsRecord.path;
       if (argsRecord.assetPath !== undefined) pathParams.assetPath = argsRecord.assetPath;
-      
+      if (argsRecord.contextPath !== undefined) pathParams.contextPath = argsRecord.contextPath;
+      if (argsRecord.actionPath !== undefined) pathParams.actionPath = argsRecord.actionPath;
+
       const pathValidation = validateAndSanitizePaths(pathParams, requiredPaths);
       if (!pathValidation.valid) {
           return ResponseFactory.error(`manage_input/${subAction}: ${pathValidation.error || 'Invalid path'}`);
       }
-      
+
       // Build sanitized payload
       const sanitizedPayload: Record<string, unknown> = { ...argsRecord, subAction };
-      
+
       // Apply sanitized paths back to payload
       for (const [key, value] of Object.entries(pathValidation.sanitized)) {
           sanitizedPayload[key] = value;
       }
-      
+
       const result = await executeAutomationRequest(
         tools,
         'manage_input',
@@ -154,71 +155,29 @@ export async function handleInputTools(
     };
 
     switch (action) {
-        case 'create_input_action': {
-            // Validate path parameter
-            const pathValidation = validateAndSanitizePaths({ path: argsTyped.path }, ['path']);
-            if (!pathValidation.valid) {
-                return ResponseFactory.error(pathValidation.error || 'Invalid path');
-            }
-            const sanitizedPath = pathValidation.sanitized.path ?? (argsTyped.path ?? '');
-            const result = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_INPUT, {
-                action: 'create_input_action',
-                name: argsTyped.name || '',
-                path: sanitizedPath
-            }, undefined, { timeoutMs });
-            return cleanObject(result) as Record<string, unknown>;
-        }
-        case 'create_input_mapping_context': {
-            // Validate path parameter
-            const pathValidation = validateAndSanitizePaths({ path: argsTyped.path }, ['path']);
-            if (!pathValidation.valid) {
-                return ResponseFactory.error(pathValidation.error || 'Invalid path');
-            }
-            const sanitizedPath = pathValidation.sanitized.path ?? (argsTyped.path ?? '');
-            const result = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_INPUT, {
-                action: 'create_input_mapping_context',
-                name: argsTyped.name || '',
-                path: sanitizedPath
-            }, undefined, { timeoutMs });
-            return cleanObject(result) as Record<string, unknown>;
-        }
-        case 'add_mapping': {
-            // Validate path parameters
-            const pathValidation = validateAndSanitizePaths({ 
-                contextPath: argsTyped.contextPath, 
-                actionPath: argsTyped.actionPath 
-            }, ['contextPath', 'actionPath']);
-            if (!pathValidation.valid) {
-                return ResponseFactory.error(pathValidation.error || 'Invalid path');
-            }
-            const sanitizedContextPath = pathValidation.sanitized.contextPath ?? (argsTyped.contextPath ?? '');
-            const sanitizedActionPath = pathValidation.sanitized.actionPath ?? (argsTyped.actionPath ?? '');
-            const result = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_INPUT, {
-                action: 'add_mapping',
-                contextPath: sanitizedContextPath,
-                actionPath: sanitizedActionPath,
-                key: argsTyped.key ?? ''
-            }, undefined, { timeoutMs });
-            return cleanObject(result) as Record<string, unknown>;
-        }
-        case 'remove_mapping': {
-            // Validate path parameters
-            const pathValidation = validateAndSanitizePaths({ 
-                contextPath: argsTyped.contextPath, 
-                actionPath: argsTyped.actionPath 
-            }, ['contextPath', 'actionPath']);
-            if (!pathValidation.valid) {
-                return ResponseFactory.error(pathValidation.error || 'Invalid path');
-            }
-            const sanitizedContextPath = pathValidation.sanitized.contextPath ?? (argsTyped.contextPath ?? '');
-            const sanitizedActionPath = pathValidation.sanitized.actionPath ?? (argsTyped.actionPath ?? '');
-            const result = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_INPUT, {
-                action: 'remove_mapping',
-                contextPath: sanitizedContextPath,
-                actionPath: sanitizedActionPath
-            }, undefined, { timeoutMs });
-            return cleanObject(result) as Record<string, unknown>;
-        }
+        case 'create_input_action':
+            return sendRequest('create_input_action');
+
+        case 'create_input_mapping_context':
+            return sendRequest('create_input_mapping_context');
+
+        case 'add_mapping':
+            return sendRequest('add_mapping');
+
+        case 'remove_mapping':
+            return sendRequest('remove_mapping');
+
+        case 'add_legacy_action_mapping':
+            return sendRequest('add_legacy_action_mapping');
+
+        case 'remove_legacy_action_mapping':
+            return sendRequest('remove_legacy_action_mapping');
+
+        case 'add_legacy_axis_mapping':
+            return sendRequest('add_legacy_axis_mapping');
+
+        case 'remove_legacy_axis_mapping':
+            return sendRequest('remove_legacy_axis_mapping');
 
         // New actions - dispatched to C++ via automation bridge
         case 'map_input_action':

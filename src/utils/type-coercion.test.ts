@@ -97,6 +97,10 @@ describe('toColor3', () => {
     expect(toColor3([255, 128, 0])).toEqual([255, 128, 0]);
     expect(toColor3([1.0, 0.5, 0.0])).toEqual([1.0, 0.5, 0.0]);
   });
+
+  it('should replace non-finite color components with zero', () => {
+    expect(toColor3([Infinity, -Infinity, NaN])).toEqual([0, 0, 0]);
+  });
 });
 
 describe('toLocationObj', () => {
@@ -112,6 +116,11 @@ describe('toLocationObj', () => {
   it('should convert object format', () => {
     expect(toLocationObj({ x: 10, y: 20, z: 30 })).toEqual({ x: 10, y: 20, z: 30 });
   });
+
+  it('should replace non-finite location components with zero', () => {
+    expect(toLocationObj([Infinity, -Infinity, NaN])).toEqual({ x: 0, y: 0, z: 0 });
+    expect(toLocationObj({ x: Infinity, y: -Infinity, z: NaN })).toEqual({ x: 0, y: 0, z: 0 });
+  });
 });
 
 describe('toRotationObj', () => {
@@ -126,6 +135,11 @@ describe('toRotationObj', () => {
 
   it('should convert object format', () => {
     expect(toRotationObj({ pitch: 10, yaw: 20, roll: 30 })).toEqual({ pitch: 10, yaw: 20, roll: 30 });
+  });
+
+  it('should replace non-finite rotation components with zero', () => {
+    expect(toRotationObj([Infinity, -Infinity, NaN])).toEqual({ pitch: 0, yaw: 0, roll: 0 });
+    expect(toRotationObj({ pitch: Infinity, yaw: -Infinity, roll: NaN })).toEqual({ pitch: 0, yaw: 0, roll: 0 });
   });
 });
 
@@ -146,6 +160,11 @@ describe('validateAudioParams', () => {
     expect(validateAudioParams(1.0, 5.0).pitch).toBe(4.0);
     expect(validateAudioParams(1.0, 0.001).pitch).toBe(0.01);
     expect(validateAudioParams(1.0, 2.0).pitch).toBe(2.0);
+  });
+
+  it('should fall back to defaults for non-finite audio params', () => {
+    expect(validateAudioParams(NaN, NaN)).toEqual({ volume: 1.0, pitch: 1.0 });
+    expect(validateAudioParams(Infinity, -Infinity)).toEqual({ volume: 1.0, pitch: 1.0 });
   });
 });
 

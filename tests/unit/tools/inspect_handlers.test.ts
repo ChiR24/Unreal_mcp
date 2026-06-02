@@ -140,6 +140,67 @@ describe('Inspect Handlers', () => {
     expect(actionEnum).toContain('inspect_cdo');
   });
 
+  it('keeps unsupported inspect export file-path params out of the schema', async () => {
+    const { consolidatedToolDefinitions } = await import('../../../src/tools/consolidated-tool-definitions.js');
+    const { coreToolDefinitions } = await import('../../../src/tools/schemas/core-tools.js');
+    const inspectTool = consolidatedToolDefinitions.find((t: { name: string }) => t.name === 'inspect');
+    const coreInspectTool = coreToolDefinitions.find((t: { name: string }) => t.name === 'inspect');
+    const tools = [inspectTool, coreInspectTool];
+
+    for (const tool of tools) {
+      const properties = (tool?.inputSchema as Record<string, unknown> & {
+        properties: Record<string, unknown>
+      })?.properties;
+      expect(properties).not.toHaveProperty('destinationPath');
+      expect(properties).not.toHaveProperty('outputPath');
+      expect(properties).not.toHaveProperty('format');
+    }
+  });
+
+  it('normalizes name and propertyPath aliases for get_property', async () => {
+    mockExecuteAutomationRequest
+      .mockResolvedValueOnce({ success: true, actors: [{ path: '/Game/Test/ResolvedActor' }] })
+      .mockResolvedValueOnce({ success: true, value: 0 });
+
+    await handleInspectTools(
+      'get_property',
+      { name: 'ReadableActorName', propertyPath: 'InitialLifeSpan' },
+      mockTools
+    );
+
+    expect(mockExecuteAutomationRequest).toHaveBeenNthCalledWith(
+      2,
+      mockTools,
+      'inspect',
+      {
+        name: 'ReadableActorName',
+        propertyPath: 'InitialLifeSpan',
+        action: 'get_property',
+        propertyName: 'InitialLifeSpan',
+        objectPath: '/Game/Test/ResolvedActor'
+      }
+    );
+  });
+
+  it('normalizes classPath alias for inspect_class', async () => {
+    mockExecuteAutomationRequest.mockResolvedValue({ success: true, classPath: '/Script/Engine.StaticMeshActor' });
+
+    await handleInspectTools(
+      'inspect_class',
+      { classPath: '/Script/Engine.StaticMeshActor' },
+      mockTools
+    );
+
+    expect(mockExecuteAutomationRequest).toHaveBeenCalledWith(
+      mockTools,
+      'inspect',
+      {
+        action: 'inspect_class',
+        className: '/Script/Engine.StaticMeshActor'
+      }
+    );
+  });
+
   it('keeps inspect_object on the inspect automation path', async () => {
     mockExecuteAutomationRequest.mockResolvedValue({ success: true, objectPath: '/Game/Test/BP_Test' });
 

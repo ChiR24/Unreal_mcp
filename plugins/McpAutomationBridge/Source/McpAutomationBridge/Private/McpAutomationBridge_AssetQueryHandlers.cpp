@@ -2,9 +2,9 @@
 // McpAutomationBridge_AssetQueryHandlers.cpp
 // =============================================================================
 // MCP Automation Bridge - Asset Query & Search Handlers
-// 
+//
 // UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-// 
+//
 // Handler Summary:
 // -----------------------------------------------------------------------------
 // Action: asset_query
@@ -12,27 +12,35 @@
 //   - find_by_tag: Find assets by metadata tag value
 //   - search_assets: Query assets by class, path, and other filters
 //   - get_source_control_state: Get source control state for asset (Editor Only)
-// 
+//
 // Action: search_assets (wrapper)
 //   - Delegates to asset_query with subAction="search_assets"
-// 
+//
 // Dependencies:
 //   - Core: McpAutomationBridgeSubsystem, McpAutomationBridgeHelpers
 //   - Engine: AssetRegistry, ARFilter
 //   - Editor: EditorAssetLibrary, SourceControl
-// 
+//
 // Version Compatibility Notes:
 //   - UE 5.1+: AssetClassPath (FTopLevelAssetPath) for class references
 //   - UE 5.0: AssetClass (FName) for class references
 //   - GetSoftObjectPath() vs ToSoftObjectPath() differs by version
-// 
+//
 // Security:
 //   - All paths sanitized via SanitizeProjectRelativePath() to prevent traversal
 //   - Default search path is /Game to prevent massive project scans
-// 
+//
 // Performance:
 //   - Uses AssetRegistry cached data - no asset loading required
-//   - REMOVED ScanPathsSynchronous() to prevent indefinite hangs on unindexed paths
+//   - ScanPathsSynchronous() was REMOVED to prevent GameThread blocking
+//     (which caused SSE/HTTP transport timeouts on slow projects).
+//     Asset listing now uses cached AssetRegistry data exclusively.
+//
+// LIMITATION: Recently-added assets (created on disk but not yet indexed
+// by the editor's background scanner) will NOT appear in search results
+// until the editor rescans. Use the Asset Registry's "Rescan" button in
+// the Content Browser, or call system_control rescan_content_directory,
+// to force an update before querying.
 // =============================================================================
 
 #include "McpVersionCompatibility.h"  // MUST be first - UE version compatibility macros
@@ -51,6 +59,7 @@
 #include "Dom/JsonObject.h"
 #include "AssetRegistry/ARFilter.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Misc/PackageName.h"
 
 #if WITH_EDITOR
 #include "EditorAssetLibrary.h"
@@ -78,7 +87,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -96,7 +105,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 
         if (AssetPath.IsEmpty())
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Missing assetPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
@@ -118,7 +127,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         bool bIncludeSoftDependencies = false;
         Payload->TryGetBoolField(TEXT("includeSoftDependencies"), bIncludeSoftDependencies);
 
-        FAssetRegistryModule& AssetRegistryModule = 
+        FAssetRegistryModule& AssetRegistryModule =
             FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 
         TArray<FName> Dependencies;
@@ -137,9 +146,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         }
 
         AssetRegistryModule.Get().GetDependencies(
-            FName(*SanitizedAssetPath), 
+            FName(*SanitizedAssetPath),
             Dependencies,
-            UE::AssetRegistry::EDependencyCategory::Package, 
+            UE::AssetRegistry::EDependencyCategory::Package,
             Query);
 
         // Build response
@@ -153,7 +162,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 
         Result->SetArrayField(TEXT("dependencies"), DepArray);
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Dependencies retrieved."), Result);
         return true;
     }
@@ -171,7 +180,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 
         if (Tag.IsEmpty())
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("tag required"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
@@ -199,7 +208,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         }
 
         // Query AssetRegistry (uses cached data, no loading required)
-        FAssetRegistryModule& AssetRegistryModule = 
+        FAssetRegistryModule& AssetRegistryModule =
             FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
         IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
@@ -207,6 +216,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         Filter.PackagePaths.Add(FName(*Path));
         Filter.bRecursivePaths = true;
 
+        // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+        // Asset listing uses cached AssetRegistry data exclusively.
+        // LIMITATION: Assets not yet indexed by the editor's background scanner
+        // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
         TArray<FAssetData> AssetDataList;
         AssetRegistry.GetAssets(Filter, AssetDataList);
 
@@ -252,7 +265,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         Result->SetArrayField(TEXT("assets"), AssetsArray);
         Result->SetNumberField(TEXT("count"), AssetsArray.Num());
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Assets found by tag"), Result);
         return true;
     }
@@ -389,7 +402,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         bool bHasValidPaths = false;
 
         // Check for packagePaths array
-        if (Payload->TryGetArrayField(TEXT("packagePaths"), PackagePathsPtr) && 
+        if (Payload->TryGetArrayField(TEXT("packagePaths"), PackagePathsPtr) &&
             PackagePathsPtr && PackagePathsPtr->Num() > 0)
         {
             for (const TSharedPtr<FJsonValue>& Val : *PackagePathsPtr)
@@ -434,8 +447,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         FString SearchText;
         Payload->TryGetStringField(TEXT("searchText"), SearchText);
 
-        // Parse recursion (default to false for safety, but true when searchText is provided)
-        bool bRecursivePaths = !SearchText.IsEmpty(); // default true for text search
+        // Parse recursion: default to true so that classNames-only / path-only searches
+        // traverse the full content tree. Callers can opt out with recursivePaths=false.
+        bool bRecursivePaths = true;
         if (Payload->HasField(TEXT("recursivePaths")))
         {
             Payload->TryGetBoolField(TEXT("recursivePaths"), bRecursivePaths);
@@ -454,6 +468,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
             FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
         IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
+        // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+        // Asset listing uses cached AssetRegistry data exclusively.
+        // LIMITATION: Assets not yet indexed by the editor's background scanner
+        // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
         TArray<FAssetData> AssetDataList;
         AssetRegistry.GetAssets(Filter, AssetDataList);
 
@@ -539,7 +557,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         Result->SetNumberField(TEXT("offset"), Offset);
         Result->SetNumberField(TEXT("limit"), Limit);
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Assets found."), Result);
         return true;
     }
@@ -553,31 +571,62 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         FString AssetPath;
         Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
 
+        if (AssetPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Missing assetPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        const FString SanitizedAssetPath = SanitizeProjectRelativePath(AssetPath);
+        if (SanitizedAssetPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Invalid assetPath: '%s' contains traversal or invalid characters."), *AssetPath),
+                TEXT("INVALID_PATH"));
+            return true;
+        }
+
         if (ISourceControlModule::Get().IsEnabled())
         {
             ISourceControlProvider& Provider = ISourceControlModule::Get().GetProvider();
-            FSourceControlStatePtr State = Provider.GetState(AssetPath, EStateCacheUsage::Use);
+            const FString PackageName = FPackageName::ObjectPathToPackageName(SanitizedAssetPath);
+            FString FilePath;
+            if (!FPackageName::TryConvertLongPackageNameToFilename(
+                    PackageName, FilePath, FPackageName::GetAssetPackageExtension()) &&
+                !FPackageName::TryConvertLongPackageNameToFilename(
+                    PackageName, FilePath, FPackageName::GetMapPackageExtension()))
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Could not convert assetPath to source-control filename: %s"), *SanitizedAssetPath),
+                    TEXT("INVALID_PATH"));
+                return true;
+            }
+
+            FSourceControlStatePtr State = Provider.GetState(FilePath, EStateCacheUsage::Use);
 
             if (State.IsValid())
             {
                 TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+                Result->SetStringField(TEXT("assetPath"), SanitizedAssetPath);
+                Result->SetStringField(TEXT("filePath"), FilePath);
                 Result->SetBoolField(TEXT("isCheckedOut"), State->IsCheckedOut());
                 Result->SetBoolField(TEXT("isAdded"), State->IsAdded());
                 Result->SetBoolField(TEXT("isDeleted"), State->IsDeleted());
                 Result->SetBoolField(TEXT("isModified"), State->IsModified());
 
-                SendAutomationResponse(RequestingSocket, RequestId, true, 
+                SendAutomationResponse(RequestingSocket, RequestId, true,
                     TEXT("Source control state retrieved."), Result);
             }
             else
             {
-                SendAutomationError(RequestingSocket, RequestId, 
+                SendAutomationError(RequestingSocket, RequestId,
                     TEXT("Could not get source control state."), TEXT("STATE_FAILED"));
             }
         }
         else
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Source control not enabled."), TEXT("SC_DISABLED"));
         }
         return true;
@@ -585,7 +634,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 #endif
 
     // Unknown subaction
-    SendAutomationError(RequestingSocket, RequestId, 
+    SendAutomationError(RequestingSocket, RequestId,
         TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;
 }

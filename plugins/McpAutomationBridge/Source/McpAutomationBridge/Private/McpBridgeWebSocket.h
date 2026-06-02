@@ -116,8 +116,6 @@ private:
     TMap<FString, FString> Headers;
     FString ListenHost;
 
-    // Server tuning (moved later to ensure proper initialization order)
-
     TArray<uint8> PendingReceived;
     TArray<uint8> FragmentAccumulator;
     bool bFragmentMessageActive;
@@ -162,7 +160,7 @@ private:
     bool bNativeSocketReleased;
     FString TlsCertificatePath;
     FString TlsPrivateKeyPath;
-    
+
     // Synchronization event used to coordinate between the server socket
     // worker thread and the game thread. When a server-accepted connection
     // completes the HTTP/WebSocket upgrade the worker thread will wait for

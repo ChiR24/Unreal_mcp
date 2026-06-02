@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EditorTools } from '../../../src/tools/editor';
-import { UnrealBridge } from '../../../src/unreal-bridge';
+import { EditorTools } from '../../../src/tools/editor.js';
+import { UnrealBridge } from '../../../src/unreal-bridge.js';
 
 describe('EditorTools Security', () => {
     let bridge: UnrealBridge;
@@ -18,7 +18,7 @@ describe('EditorTools Security', () => {
 
         await editorTools.takeScreenshot(maliciousFilename);
 
-        const executeCommandMock = bridge.executeConsoleCommand as any;
+        const executeCommandMock = vi.mocked(bridge.executeConsoleCommand);
         expect(executeCommandMock).toHaveBeenCalled();
 
         const command = executeCommandMock.mock.calls[0][0];
@@ -36,7 +36,7 @@ describe('EditorTools Security', () => {
         const safeFilename = 'MyScreenshot';
         await editorTools.takeScreenshot(safeFilename);
 
-        const executeCommandMock = bridge.executeConsoleCommand as any;
+        const executeCommandMock = vi.mocked(bridge.executeConsoleCommand);
         const command = executeCommandMock.mock.calls[0][0];
         expect(command).toContain('filename="MyScreenshot"');
     });
@@ -45,9 +45,17 @@ describe('EditorTools Security', () => {
         const invalidFilename = 'My:Screenshot?.png';
         await editorTools.takeScreenshot(invalidFilename);
 
-        const executeCommandMock = bridge.executeConsoleCommand as any;
+        const executeCommandMock = vi.mocked(bridge.executeConsoleCommand);
         const command = executeCommandMock.mock.calls[0][0];
         // : and ? should be replaced by _
         expect(command).toContain('filename="My_Screenshot_.png"');
+    });
+
+    it('should fall back when sanitized screenshot filename is empty', async () => {
+        await editorTools.takeScreenshot('////');
+
+        const executeCommandMock = vi.mocked(bridge.executeConsoleCommand);
+        const command = executeCommandMock.mock.calls[0][0];
+        expect(command).toMatch(/filename="Screenshot_\d+"/);
     });
 });

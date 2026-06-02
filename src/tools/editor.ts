@@ -1,11 +1,11 @@
 import { BaseTool } from './base-tool.js';
-import { IEditorTools, StandardActionResponse } from '../types/tool-interfaces.js';
+import { StandardActionResponse } from '../types/tool-interfaces.js';
 import { toVec3Object, toRotObject } from '../utils/normalize.js';
 import { DEFAULT_SCREENSHOT_RESOLUTION } from '../constants.js';
 import { EditorResponse } from '../types/automation-responses.js';
-import path from 'path';
+import path from 'node:path';
 
-export class EditorTools extends BaseTool implements IEditorTools {
+export class EditorTools extends BaseTool {
   private cameraBookmarks = new Map<string, { location: [number, number, number]; rotation: [number, number, number]; savedAt: number }>();
   private editorPreferences = new Map<string, Record<string, unknown>>();
   private activeRecording?: { name?: string; options?: Record<string, unknown>; startedAt: number };
@@ -227,9 +227,9 @@ export class EditorTools extends BaseTool implements IEditorTools {
       // We use path.basename to strip any directory components, then sanitize the filename
       // usage of new RegExp to avoid eslint no-useless-escape on forward slash in literal
       const invalidChars = new RegExp('[<>:*?"|/\\\\]', 'g');
-      const sanitizedFilename = filename
-        ? path.basename(filename).replace(invalidChars, '_').trim()
-        : `Screenshot_${Date.now()}`;
+      const fallbackFilename = `Screenshot_${Date.now()}`;
+      const requestedFilename = filename ? path.basename(filename).replace(invalidChars, '_').trim() : '';
+      const sanitizedFilename = requestedFilename || fallbackFilename;
 
       const resString = resolution || DEFAULT_SCREENSHOT_RESOLUTION;
       const command = filename ? `highresshot ${resString} filename="${sanitizedFilename}"` : 'shot';

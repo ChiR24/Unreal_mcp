@@ -489,10 +489,10 @@ static bool HandleCreateTriggerVolume(
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerVolume"));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
-    
+
     // Add location for verification
     TSharedPtr<FJsonObject> LocationObj = McpHandlerUtils::CreateResultObject();
     LocationObj->SetNumberField(TEXT("x"), Volume->GetActorLocation().X);
@@ -563,10 +563,10 @@ static bool HandleCreateTriggerBox(
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerBox"));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
-    
+
     // Add box extent for verification
     TSharedPtr<FJsonObject> ExtentObj = McpHandlerUtils::CreateResultObject();
     ExtentObj->SetNumberField(TEXT("x"), Extent.X);
@@ -642,7 +642,7 @@ static bool HandleCreateTriggerSphere(
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerSphere"));
     ResponseJson->SetNumberField(TEXT("radius"), Radius);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -716,7 +716,7 @@ static bool HandleCreateTriggerCapsule(
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerCapsule"));
     ResponseJson->SetNumberField(TEXT("radius"), Radius);
     ResponseJson->SetNumberField(TEXT("halfHeight"), HalfHeight);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -783,7 +783,7 @@ static bool HandleCreateBlockingVolume(
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ABlockingVolume"));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -846,7 +846,7 @@ static bool HandleCreateKillZVolume(
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AKillZVolume"));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -918,7 +918,7 @@ static bool HandleCreatePainCausingVolume(
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APainCausingVolume"));
     ResponseJson->SetBoolField(TEXT("bPainCausing"), bPainCausing);
     ResponseJson->SetNumberField(TEXT("damagePerSec"), DamagePerSec);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -996,7 +996,7 @@ static bool HandleCreatePhysicsVolume(
     ResponseJson->SetNumberField(TEXT("fluidFriction"), FluidFriction);
     ResponseJson->SetNumberField(TEXT("terminalVelocity"), TerminalVelocity);
     ResponseJson->SetNumberField(TEXT("priority"), Priority);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -1065,7 +1065,7 @@ static bool HandleCreateAudioVolume(
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AAudioVolume"));
     ResponseJson->SetBoolField(TEXT("bEnabled"), bEnabled);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -1132,7 +1132,7 @@ static bool HandleCreateReverbVolume(
 
     // Configure reverb settings
     Volume->SetEnabled(bEnabled);
-    
+
     // Get the reverb settings and modify them
     FReverbSettings ReverbSettings = Volume->GetReverbSettings();
     ReverbSettings.bApplyReverb = true;
@@ -1146,7 +1146,7 @@ static bool HandleCreateReverbVolume(
     ResponseJson->SetBoolField(TEXT("bEnabled"), bEnabled);
     ResponseJson->SetNumberField(TEXT("reverbVolume"), ReverbVolumeLevel);
     ResponseJson->SetNumberField(TEXT("fadeTime"), FadeTime);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -1195,7 +1195,7 @@ static bool HandleCreatePostProcessVolume(
     float BlendRadius = GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0f);
     float BlendWeight = GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0f);
     bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
-    bool bUnbound = GetJsonBoolField(Payload, TEXT("unbound"), false);
+    bool bUnbound = GetJsonBoolField(Payload, TEXT("bUnbound"), false);
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -1224,28 +1224,28 @@ static bool HandleCreatePostProcessVolume(
     if (Payload->HasTypedField<EJson::Object>(TEXT("postProcessSettings")))
     {
         TSharedPtr<FJsonObject> SettingsJson = Payload->GetObjectField(TEXT("postProcessSettings"));
-        
+
         // Bloom
         if (SettingsJson->HasTypedField<EJson::Boolean>(TEXT("bloomEnabled")))
         {
             Volume->Settings.bOverride_BloomIntensity = true;
             Volume->Settings.BloomIntensity = SettingsJson->GetBoolField(TEXT("bloomEnabled")) ? 1.0f : 0.0f;
         }
-        
+
         // Exposure
         if (SettingsJson->HasTypedField<EJson::Number>(TEXT("exposureBias")))
         {
             Volume->Settings.bOverride_AutoExposureBias = true;
             Volume->Settings.AutoExposureBias = SettingsJson->GetNumberField(TEXT("exposureBias"));
         }
-        
+
         // Vignette
         if (SettingsJson->HasTypedField<EJson::Number>(TEXT("vignetteIntensity")))
         {
             Volume->Settings.bOverride_VignetteIntensity = true;
             Volume->Settings.VignetteIntensity = SettingsJson->GetNumberField(TEXT("vignetteIntensity"));
         }
-        
+
         // Saturation
         if (SettingsJson->HasTypedField<EJson::Number>(TEXT("saturation")))
         {
@@ -1256,7 +1256,7 @@ static bool HandleCreatePostProcessVolume(
             Saturation.Z = SettingsJson->GetNumberField(TEXT("saturation"));
             Volume->Settings.ColorSaturation = Saturation;
         }
-        
+
         // Contrast
         if (SettingsJson->HasTypedField<EJson::Number>(TEXT("contrast")))
         {
@@ -1267,7 +1267,7 @@ static bool HandleCreatePostProcessVolume(
             Contrast.Z = SettingsJson->GetNumberField(TEXT("contrast"));
             Volume->Settings.ColorContrast = Contrast;
         }
-        
+
         // Gamma
         if (SettingsJson->HasTypedField<EJson::Number>(TEXT("gamma")))
         {
@@ -1288,7 +1288,7 @@ static bool HandleCreatePostProcessVolume(
     ResponseJson->SetNumberField(TEXT("blendWeight"), BlendWeight);
     ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
     ResponseJson->SetBoolField(TEXT("unbound"), bUnbound);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -1354,7 +1354,7 @@ static bool HandleCreateCullDistanceVolume(
     {
         TArray<TSharedPtr<FJsonValue>> CullDistancesJson = Payload->GetArrayField(TEXT("cullDistances"));
         TArray<FCullDistanceSizePair> CullDistances;
-        
+
         for (const TSharedPtr<FJsonValue>& Entry : CullDistancesJson)
         {
             if (Entry->Type == EJson::Object)
@@ -1366,7 +1366,7 @@ static bool HandleCreateCullDistanceVolume(
                 CullDistances.Add(Pair);
             }
         }
-        
+
         if (CullDistances.Num() > 0)
         {
             Volume->CullDistances = CullDistances;
@@ -1376,7 +1376,7 @@ static bool HandleCreateCullDistanceVolume(
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACullDistanceVolume"));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -1439,7 +1439,7 @@ static bool HandleCreatePrecomputedVisibilityVolume(
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APrecomputedVisibilityVolume"));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -1502,7 +1502,7 @@ static bool HandleCreateLightmassImportanceVolume(
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ALightmassImportanceVolume"));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -1565,7 +1565,7 @@ static bool HandleCreateNavMeshBoundsVolume(
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ANavMeshBoundsVolume"));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -1628,7 +1628,7 @@ static bool HandleCreateNavModifierVolume(
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ANavModifierVolume"));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -1691,7 +1691,7 @@ static bool HandleCreateCameraBlockingVolume(
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACameraBlockingVolume"));
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
@@ -1759,7 +1759,7 @@ static bool HandleSetVolumeExtent(
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, VolumeActor);
 
@@ -1858,11 +1858,11 @@ static bool HandleSetVolumeProperties(
             AudioVol->SetEnabled(GetJsonBoolField(Payload, TEXT("bEnabled"), true));
             PropertiesSet.Add(TEXT("bEnabled"));
         }
-        
+
         // Batch reverb settings changes to avoid multiple SetReverbSettings calls
         bool bModifiedReverb = false;
         FReverbSettings ReverbSettings = AudioVol->GetReverbSettings();
-        
+
         if (Payload->HasField(TEXT("reverbVolume")))
         {
             ReverbSettings.Volume = GetJsonNumberField(Payload, TEXT("reverbVolume"), 0.5f);
@@ -1875,7 +1875,7 @@ static bool HandleSetVolumeProperties(
             PropertiesSet.Add(TEXT("fadeTime"));
             bModifiedReverb = true;
         }
-        
+
         if (bModifiedReverb)
         {
             AudioVol->SetReverbSettings(ReverbSettings);
@@ -1884,7 +1884,7 @@ static bool HandleSetVolumeProperties(
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, VolumeActor);
 
@@ -2039,11 +2039,11 @@ static bool HandleGetVolumesInfo(
     }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    
+
     TSharedPtr<FJsonObject> VolumesInfo = McpHandlerUtils::CreateResultObject();
     VolumesInfo->SetNumberField(TEXT("totalCount"), TotalCount);
     VolumesInfo->SetArrayField(TEXT("volumes"), VolumesArray);
-    
+
     ResponseJson->SetObjectField(TEXT("volumesInfo"), VolumesInfo);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
@@ -2203,7 +2203,7 @@ static bool HandleAddTriggerVolume(
     // Create trigger volume at actor's location
     FVector Location = TargetActor->GetActorLocation();
     FRotator Rotation = TargetActor->GetActorRotation();
-    
+
     FString VolumeName = TargetActor->GetActorLabel() + TEXT("_TriggerVolume");
     ATriggerVolume* Volume = SpawnVolumeActor<ATriggerVolume>(World, VolumeName, Location, Rotation, Extent);
     if (!Volume)
@@ -2239,16 +2239,16 @@ static bool HandleAddTriggerVolume(
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     // If attachment failed, return success=false since user's intent (attach to actor) failed
     // Volume was still created, so include it in response for debugging
-    FString ResponseMessage = bAttachmentSucceeded 
+    FString ResponseMessage = bAttachmentSucceeded
         ? FString::Printf(TEXT("Added TriggerVolume to actor: %s"), *TargetActor->GetActorLabel())
         : FString::Printf(TEXT("TriggerVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
-    
+
     Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
         bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
     return true;
@@ -2304,7 +2304,7 @@ static bool HandleAddBlockingVolume(
 
     FVector Location = TargetActor->GetActorLocation();
     FRotator Rotation = TargetActor->GetActorRotation();
-    
+
     FString VolumeName = TargetActor->GetActorLabel() + TEXT("_BlockingVolume");
     ABlockingVolume* Volume = SpawnVolumeActor<ABlockingVolume>(World, VolumeName, Location, Rotation, Extent);
     if (!Volume)
@@ -2340,16 +2340,16 @@ static bool HandleAddBlockingVolume(
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ABlockingVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     // If attachment failed, return success=false since user's intent (attach to actor) failed
     // Volume was still created, so include it in response for debugging
-    FString ResponseMessage = bAttachmentSucceeded 
+    FString ResponseMessage = bAttachmentSucceeded
         ? FString::Printf(TEXT("Added BlockingVolume to actor: %s"), *TargetActor->GetActorLabel())
         : FString::Printf(TEXT("BlockingVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
-    
+
     Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
         bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
     return true;
@@ -2380,7 +2380,7 @@ static bool HandleAddKillZVolume(
 
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(1000.0f, 1000.0f, 100.0f));
     float KillZHeight = GetJsonNumberField(Payload, TEXT("killZHeight"), 0.0f);
-    
+
     FString ValidationError;
     if (!ValidateExtent(Extent, ValidationError))
     {
@@ -2412,7 +2412,7 @@ static bool HandleAddKillZVolume(
         Location.Z = KillZHeight;
     }
     FRotator Rotation = TargetActor->GetActorRotation();
-    
+
     FString VolumeName = TargetActor->GetActorLabel() + TEXT("_KillZVolume");
     AKillZVolume* Volume = SpawnVolumeActor<AKillZVolume>(World, VolumeName, Location, Rotation, Extent);
     if (!Volume)
@@ -2449,16 +2449,16 @@ static bool HandleAddKillZVolume(
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetNumberField(TEXT("killZHeight"), Location.Z);
     ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     // If attachment failed, return success=false since user's intent (attach to actor) failed
     // Volume was still created, so include it in response for debugging
-    FString ResponseMessage = bAttachmentSucceeded 
+    FString ResponseMessage = bAttachmentSucceeded
         ? FString::Printf(TEXT("Added KillZVolume to actor: %s"), *TargetActor->GetActorLabel())
         : FString::Printf(TEXT("KillZVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
-    
+
     Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
         bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
     return true;
@@ -2519,7 +2519,7 @@ static bool HandleAddPhysicsVolume(
 
     FVector Location = TargetActor->GetActorLocation();
     FRotator Rotation = TargetActor->GetActorRotation();
-    
+
     FString VolumeName = TargetActor->GetActorLabel() + TEXT("_PhysicsVolume");
     APhysicsVolume* Volume = SpawnVolumeActor<APhysicsVolume>(World, VolumeName, Location, Rotation, Extent);
     if (!Volume)
@@ -2561,16 +2561,16 @@ static bool HandleAddPhysicsVolume(
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetBoolField(TEXT("bWaterVolume"), bWaterVolume);
     ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     // If attachment failed, return success=false since user's intent (attach to actor) failed
     // Volume was still created, so include it in response for debugging
-    FString ResponseMessage = bAttachmentSucceeded 
+    FString ResponseMessage = bAttachmentSucceeded
         ? FString::Printf(TEXT("Added PhysicsVolume to actor: %s"), *TargetActor->GetActorLabel())
         : FString::Printf(TEXT("PhysicsVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
-    
+
     Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
         bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
     return true;
@@ -2626,7 +2626,7 @@ static bool HandleAddCullDistanceVolume(
 
     FVector Location = TargetActor->GetActorLocation();
     FRotator Rotation = TargetActor->GetActorRotation();
-    
+
     FString VolumeName = TargetActor->GetActorLabel() + TEXT("_CullDistanceVolume");
     ACullDistanceVolume* Volume = SpawnVolumeActor<ACullDistanceVolume>(World, VolumeName, Location, Rotation, Extent);
     if (!Volume)
@@ -2641,7 +2641,7 @@ static bool HandleAddCullDistanceVolume(
     {
         TArray<TSharedPtr<FJsonValue>> CullDistancesJson = Payload->GetArrayField(TEXT("cullDistances"));
         TArray<FCullDistanceSizePair> CullDistances;
-        
+
         for (const TSharedPtr<FJsonValue>& Entry : CullDistancesJson)
         {
             if (Entry->Type == EJson::Object)
@@ -2653,7 +2653,7 @@ static bool HandleAddCullDistanceVolume(
                 CullDistances.Add(Pair);
             }
         }
-        
+
         if (CullDistances.Num() > 0)
         {
             Volume->CullDistances = CullDistances;
@@ -2686,16 +2686,16 @@ static bool HandleAddCullDistanceVolume(
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACullDistanceVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     // If attachment failed, return success=false since user's intent (attach to actor) failed
     // Volume was still created, so include it in response for debugging
-    FString ResponseMessage = bAttachmentSucceeded 
+    FString ResponseMessage = bAttachmentSucceeded
         ? FString::Printf(TEXT("Added CullDistanceVolume to actor: %s"), *TargetActor->GetActorLabel())
         : FString::Printf(TEXT("CullDistanceVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
-    
+
     Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
         bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
     return true;
@@ -2738,7 +2738,7 @@ static bool HandleAddPostProcessVolume(
     float BlendRadius = GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0f);
     float BlendWeight = GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0f);
     bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
-    bool bUnbound = GetJsonBoolField(Payload, TEXT("unbound"), false);
+    bool bUnbound = GetJsonBoolField(Payload, TEXT("bUnbound"), false);
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -2758,7 +2758,7 @@ static bool HandleAddPostProcessVolume(
 
     FVector Location = TargetActor->GetActorLocation();
     FRotator Rotation = TargetActor->GetActorRotation();
-    
+
     FString VolumeName = TargetActor->GetActorLabel() + TEXT("_PostProcessVolume");
     APostProcessVolume* Volume = SpawnVolumeActor<APostProcessVolume>(World, VolumeName, Location, Rotation, Extent);
     if (!Volume)
@@ -2802,16 +2802,16 @@ static bool HandleAddPostProcessVolume(
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetNumberField(TEXT("priority"), Priority);
     ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     // If attachment failed, return success=false since user's intent (attach to actor) failed
     // Volume was still created, so include it in response for debugging
-    FString ResponseMessage = bAttachmentSucceeded 
+    FString ResponseMessage = bAttachmentSucceeded
         ? FString::Printf(TEXT("Added PostProcessVolume to actor: %s"), *TargetActor->GetActorLabel())
         : FString::Printf(TEXT("PostProcessVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
-    
+
     Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
         bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
     return true;
@@ -2917,7 +2917,7 @@ static bool HandleSetVolumeBounds(
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(ResponseJson, VolumeActor);
 

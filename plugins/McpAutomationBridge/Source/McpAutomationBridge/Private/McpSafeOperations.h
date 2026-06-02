@@ -17,9 +17,8 @@
 #include "HAL/PlatformTime.h"
 #include "Misc/Paths.h"
 #include "Misc/ScopeLock.h"
-#include "Runtime/Launch/Resources/Version.h"
 
-// Include version compatibility macros FIRST before other engine includes
+// Include version compatibility macros before version-specific checks
 #include "McpVersionCompatibility.h"
 
 #if WITH_EDITOR
@@ -52,6 +51,7 @@
 #include "AssetViewUtils.h"
 #include "Materials/MaterialInterface.h"
 #include "Editor/EditorEngine.h"
+#include "UObject/UObjectHash.h"
 #include "UObject/UObjectIterator.h"
 #include "ObjectTools.h"
 
@@ -129,7 +129,7 @@ namespace McpSafeOperations
 /**
  * Safe asset saving helper - marks package dirty, registers the asset, and
  * persists the owning package through the editor's save flow.
- * 
+ *
  * CRITICAL FOR UE 5.7+:
  * DO NOT use raw UPackage::SavePackage(). Use the editor-owned package save path
  * so asset packages are persisted without manual package-file handling.
@@ -144,26 +144,109 @@ inline bool McpSafeAssetSave(UObject* Asset)
         return false;
     }
 
-    Asset->MarkPackageDirty();
-    FAssetRegistryModule::AssetCreated(Asset);
+    UObject* AssetToSave = Asset;
+    UPackage* Package = Cast<UPackage>(Asset);
+    if (Package)
+    {
+        AssetToSave = nullptr;
+        ForEachObjectWithPackage(Package, [&AssetToSave](UObject* Object) -> bool
+        {
+            if (Object && !Object->IsA<UPackage>() && Object->HasAnyFlags(RF_Public | RF_Standalone))
+            {
+                AssetToSave = Object;
+                return false;
+            }
+            return true;
+        }, false);
+    }
+    else
+    {
+        Package = Asset->GetOutermost();
+    }
+    if (!Package)
+    {
+        return false;
+    }
 
-#if MCP_HAS_PACKAGE_TOOLS
-    TArray<UObject*> ObjectsToSave;
-    ObjectsToSave.Add(Asset);
+    const FString PackageName = Package->GetName();
+    if (PackageName.StartsWith(TEXT("/Temp/")) ||
+        PackageName.StartsWith(TEXT("/Transient/")) ||
+        PackageName.StartsWith(TEXT("/Engine/Transient")) ||
+        Package->HasAnyFlags(RF_Transient))
+    {
+        return false;
+    }
 
-    FlushRenderingCommands();
+    Package->SetDirtyFlag(true);
+    if (AssetToSave && AssetToSave != Package)
+    {
+        AssetToSave->MarkPackageDirty();
+        FAssetRegistryModule::AssetCreated(AssetToSave);
+    }
 
-    const bool bSaved = UPackageTools::SavePackagesForObjects(ObjectsToSave);
-    if (bSaved)
+    auto ScanSavedPackage = [&PackageName]()
     {
         TArray<FString> PathsToScan;
-        PathsToScan.Add(FPaths::GetPath(Asset->GetOutermost()->GetName()));
+        PathsToScan.Add(FPaths::GetPath(PackageName));
         FAssetRegistryModule& AssetRegistryModule =
             FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
         AssetRegistryModule.Get().ScanPathsSynchronous(PathsToScan, false);
+    };
+
+    auto PackageExistsOnDisk = [&PackageName]()
+    {
+        FString AssetFilename;
+        FString MapFilename;
+        const bool bHasAssetFilename = FPackageName::TryConvertLongPackageNameToFilename(
+            PackageName, AssetFilename, FPackageName::GetAssetPackageExtension());
+        const bool bHasMapFilename = FPackageName::TryConvertLongPackageNameToFilename(
+            PackageName, MapFilename, FPackageName::GetMapPackageExtension());
+
+        return
+            (bHasAssetFilename && IFileManager::Get().FileExists(*FPaths::ConvertRelativePathToFull(AssetFilename))) ||
+            (bHasMapFilename && IFileManager::Get().FileExists(*FPaths::ConvertRelativePathToFull(MapFilename)));
+    };
+
+#if MCP_HAS_PACKAGE_TOOLS
+    if (AssetToSave && AssetToSave != Package)
+    {
+        TArray<UObject*> ObjectsToSave;
+        ObjectsToSave.Add(AssetToSave);
+
+        FlushRenderingCommands();
+
+        const bool bSaved = UPackageTools::SavePackagesForObjects(ObjectsToSave);
+        if (bSaved && PackageExistsOnDisk())
+        {
+            ScanSavedPackage();
+            return true;
+        }
+
+        if (bSaved)
+        {
+            UE_LOG(LogMcpSafeOperations, Warning,
+                TEXT("McpSafeAssetSave: SavePackagesForObjects reported success but no package file exists for %s; trying package save fallback"),
+                *PackageName);
+        }
     }
 
-    return bSaved;
+    TArray<UPackage*> PackagesToSave;
+    PackagesToSave.Add(Package);
+    const FEditorFileUtils::EPromptReturnCode PromptSaveResult =
+        FEditorFileUtils::PromptForCheckoutAndSave(PackagesToSave, false, false);
+    const bool bPromptSaveSucceeded =
+        PromptSaveResult == FEditorFileUtils::PR_Success;
+    const bool bEditorSaveSucceeded =
+        !bPromptSaveSucceeded && UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, false);
+    const bool bExistsOnDisk = PackageExistsOnDisk();
+
+    if (bPromptSaveSucceeded || bEditorSaveSucceeded || bExistsOnDisk)
+    {
+        ScanSavedPackage();
+        return true;
+    }
+
+    return false;
 #else
     return false;
 #endif
@@ -186,7 +269,7 @@ inline bool McpSafeAssetSave(UObject* Asset)
  * @param MaxRetries Unused (kept for API compatibility)
  * @return true if save succeeded and file exists
  */
-inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRetries = 1)
+inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRetries = 5)
 {
     if (!Level)
     {
@@ -199,8 +282,8 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
         FullPath.StartsWith(TEXT("/Engine/Transient")) ||
         FullPath.Contains(TEXT("Untitled")))
     {
-        UE_LOG(LogMcpSafeOperations, Error, 
-            TEXT("McpSafeLevelSave: Cannot save transient level: %s. Use save_as with a valid path."), 
+        UE_LOG(LogMcpSafeOperations, Error,
+            TEXT("McpSafeLevelSave: Cannot save transient level: %s. Use save_as with a valid path."),
             *FullPath);
         return false;
     }
@@ -214,7 +297,7 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
         }
         else
         {
-            UE_LOG(LogMcpSafeOperations, Error, 
+            UE_LOG(LogMcpSafeOperations, Error,
                 TEXT("McpSafeLevelSave: Invalid path (not under /Game/): %s"), *PackagePath);
             return false;
         }
@@ -223,7 +306,7 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
     // Validate no double slashes in the path
     if (PackagePath.Contains(TEXT("//")))
     {
-        UE_LOG(LogMcpSafeOperations, Error, 
+        UE_LOG(LogMcpSafeOperations, Error,
             TEXT("McpSafeLevelSave: Path contains double slashes: %s"), *PackagePath);
         return false;
     }
@@ -237,17 +320,17 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
     // CRITICAL: Validate path length to prevent Windows Error 87
     {
         FString AbsoluteFilePath;
-        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, AbsoluteFilePath, 
+        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, AbsoluteFilePath,
             FPackageName::GetMapPackageExtension()))
         {
             AbsoluteFilePath = FPaths::ConvertRelativePathToFull(AbsoluteFilePath);
             const int32 SafePathLength = 240;
             if (AbsoluteFilePath.Len() > SafePathLength)
             {
-                UE_LOG(LogMcpSafeOperations, Error, 
-                    TEXT("McpSafeLevelSave: Path too long (%d chars, max %d): %s"), 
+                UE_LOG(LogMcpSafeOperations, Error,
+                    TEXT("McpSafeLevelSave: Path too long (%d chars, max %d): %s"),
                     AbsoluteFilePath.Len(), SafePathLength, *AbsoluteFilePath);
-                UE_LOG(LogMcpSafeOperations, Error, 
+                UE_LOG(LogMcpSafeOperations, Error,
                     TEXT("McpSafeLevelSave: Use a shorter path or enable Windows long paths"));
                 return false;
             }
@@ -258,13 +341,13 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
     {
         FString ExistingLevelFilename;
         bool bLevelExists = false;
-        
-        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, ExistingLevelFilename, 
+
+        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, ExistingLevelFilename,
             FPackageName::GetMapPackageExtension()))
         {
             FString AbsolutePath = FPaths::ConvertRelativePathToFull(ExistingLevelFilename);
             bLevelExists = IFileManager::Get().FileExists(*AbsolutePath);
-            
+
             if (!bLevelExists)
             {
                 FString LevelName = FPaths::GetBaseFilename(PackagePath);
@@ -272,12 +355,12 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
                 bLevelExists = IFileManager::Get().FileExists(*FolderPath);
             }
         }
-        
+
         if (!bLevelExists)
         {
             bLevelExists = FPackageName::DoesPackageExist(PackagePath);
         }
-        
+
         if (bLevelExists)
         {
             UWorld* LevelWorld = Level ? Level->GetWorld() : nullptr;
@@ -286,13 +369,13 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
                 FString CurrentLevelPath = LevelWorld->GetOutermost()->GetName();
                 if (CurrentLevelPath.Equals(PackagePath, ESearchCase::IgnoreCase))
                 {
-                    UE_LOG(LogMcpSafeOperations, Log, 
+                    UE_LOG(LogMcpSafeOperations, Log,
                         TEXT("McpSafeLevelSave: Overwriting existing level: %s"), *PackagePath);
                 }
                 else
                 {
-                    UE_LOG(LogMcpSafeOperations, Warning, 
-                        TEXT("McpSafeLevelSave: Level already exists at %s (current level is %s)"), 
+                    UE_LOG(LogMcpSafeOperations, Warning,
+                        TEXT("McpSafeLevelSave: Level already exists at %s (current level is %s)"),
                         *PackagePath, *CurrentLevelPath);
                     return false;
                 }
@@ -306,47 +389,81 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
     // Small delay after flush to ensure GPU is completely idle
     FPlatformProcess::Sleep(0.050f); // 50ms wait
 
+    FString SaveFilename;
+    if (!FPackageName::TryConvertLongPackageNameToFilename(PackagePath, SaveFilename,
+        FPackageName::GetMapPackageExtension()))
+    {
+        UE_LOG(LogMcpSafeOperations, Error,
+            TEXT("McpSafeLevelSave: Failed to convert package path to filename: %s"), *PackagePath);
+        return false;
+    }
+
     // Perform the actual save
     // CRITICAL FIX: Always use FEditorFileUtils::SaveLevel instead of UEditorLoadingAndSavingUtils::SaveMap.
     // UEditorLoadingAndSavingUtils::SaveMap saves to a new package but doesn't update the world's outer
     // package name. This causes "World Memory Leaks" crashes when load_level is called because
     // McpSafeLoadMap doesn't recognize the saved level as the current level (package name mismatch).
     // FEditorFileUtils::SaveLevel properly updates the world's package to match the save path.
-    bool bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *PackagePath);
+    bool bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *SaveFilename);
 
     if (bSaveSucceeded)
     {
-        // Small delay before verification
-        FPlatformProcess::Sleep(0.050f);
-
-        // Verify file exists on disk
+        // Verify file exists on disk with bounded retries. File systems can report
+        // success before directory metadata is immediately visible, especially on
+        // slow or network-backed project folders.
         FString VerifyFilename;
-        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, VerifyFilename, 
+        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, VerifyFilename,
             FPackageName::GetMapPackageExtension()))
         {
             FString AbsoluteVerifyFilename = FPaths::ConvertRelativePathToFull(VerifyFilename);
-            
-            if (IFileManager::Get().FileExists(*VerifyFilename) || 
+
+            const int32 ActualRetries = FMath::Clamp(MaxRetries, 1, 10);
+            const float RetryDelays[] = { 0.05f, 0.10f, 0.25f, 0.50f, 1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f };
+
+            for (int32 Retry = 0; Retry < ActualRetries; ++Retry)
+            {
+                FPlatformProcess::Sleep(RetryDelays[Retry]);
+
+                if (IFileManager::Get().FileExists(*VerifyFilename) ||
+                    IFileManager::Get().FileExists(*AbsoluteVerifyFilename))
+                {
+                    UE_LOG(LogMcpSafeOperations, Log,
+                        TEXT("McpSafeLevelSave: Successfully saved level: %s"), *PackagePath);
+                    return true;
+                }
+
+                if (FPackageName::DoesPackageExist(PackagePath))
+                {
+                    UE_LOG(LogMcpSafeOperations, Log,
+                        TEXT("McpSafeLevelSave: Package exists in UE system: %s"), *PackagePath);
+                    return true;
+                }
+            }
+
+            FlushRenderingCommands();
+            FPlatformProcess::Sleep(0.5f);
+            if (IFileManager::Get().FileExists(*VerifyFilename) ||
                 IFileManager::Get().FileExists(*AbsoluteVerifyFilename))
             {
-                UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeLevelSave: Successfully saved level: %s"), *PackagePath);
+                UE_LOG(LogMcpSafeOperations, Log,
+                    TEXT("McpSafeLevelSave: Successfully saved level after final flush: %s"), *PackagePath);
                 return true;
             }
-            
-            // FALLBACK: Check if package exists in UE's package system
+
             if (FPackageName::DoesPackageExist(PackagePath))
             {
-                UE_LOG(LogMcpSafeOperations, Log, 
-                    TEXT("McpSafeLevelSave: Package exists in UE system: %s"), *PackagePath);
+                UE_LOG(LogMcpSafeOperations, Log,
+                    TEXT("McpSafeLevelSave: Package exists in UE system after final flush: %s"), *PackagePath);
                 return true;
             }
-            
-            UE_LOG(LogMcpSafeOperations, Error, 
-                TEXT("McpSafeLevelSave: Save reported success but file not found: %s"), *VerifyFilename);
+
+            UE_LOG(LogMcpSafeOperations, Error,
+                TEXT("McpSafeLevelSave: Save reported success but file not found after %d retries: %s"),
+                ActualRetries, *VerifyFilename);
         }
         else
         {
-            UE_LOG(LogMcpSafeOperations, Warning, 
+            UE_LOG(LogMcpSafeOperations, Warning,
                 TEXT("McpSafeLevelSave: Failed to convert package path to filename: %s"), *PackagePath);
         }
     }
@@ -397,7 +514,7 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
     }
     if (AsyncWaitCount > 0)
     {
-        UE_LOG(LogMcpSafeOperations, Log, 
+        UE_LOG(LogMcpSafeOperations, Log,
             TEXT("McpSafeLoadMap: Waited %d frames for async loading to complete"), AsyncWaitCount);
     }
 
@@ -417,7 +534,7 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
     }
 
     UWorld* CurrentWorld = GEditor->GetEditorWorldContext().World();
-    
+
     // CRITICAL: Check if the map we're trying to load is already the current map FIRST.
     // This must happen BEFORE cleanup to avoid unnecessary cleanup on the same level.
     // If we cleanup first and then check, we destroy tick functions on the level we want to keep.
@@ -425,19 +542,19 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
     {
         FString CurrentMapPath = CurrentWorld->GetOutermost()->GetName();
         FString NormalizedMapPath = MapPath;
-        
+
         if (NormalizedMapPath.EndsWith(TEXT(".umap")))
         {
             NormalizedMapPath.LeftChopInline(5);
         }
-        
+
         if (CurrentMapPath.Equals(NormalizedMapPath, ESearchCase::IgnoreCase))
         {
             UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeLoadMap: Map '%s' is already loaded, skipping"), *MapPath);
             return true;
         }
     }
-    
+
     // CRITICAL: Check for World Partition
     if (CurrentWorld)
     {
@@ -445,16 +562,16 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
         UWorldPartition* CurrentWorldPartition = WorldSettings ? WorldSettings->GetWorldPartition() : nullptr;
         if (CurrentWorldPartition)
         {
-            UE_LOG(LogMcpSafeOperations, Warning, 
-                TEXT("McpSafeLoadMap: Current world '%s' has World Partition - tick cleanup may be incomplete"), 
+            UE_LOG(LogMcpSafeOperations, Warning,
+                TEXT("McpSafeLoadMap: Current world '%s' has World Partition - tick cleanup may be incomplete"),
                 *CurrentWorld->GetName());
         }
     }
-    
+
     if (CurrentWorld && bForceCleanup)
     {
-        UE_LOG(LogMcpSafeOperations, Log, 
-            TEXT("McpSafeLoadMap: Cleaning up current world '%s' before loading '%s'"), 
+        UE_LOG(LogMcpSafeOperations, Log,
+            TEXT("McpSafeLoadMap: Cleaning up current world '%s' before loading '%s'"),
             *CurrentWorld->GetName(), *MapPath);
 
 #if MCP_HAS_ASSET_EDITOR_SUBSYSTEM
@@ -472,16 +589,79 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
         UE_LOG(LogMcpSafeOperations, Log,
             TEXT("McpSafeLoadMap: Minimal cleanup completed before map load"));
     }
-    
+
+    // UE 5.7 World Memory Leaks guard: if the target world package is still in
+    // memory from a prior CreateWorld flow, clean it up before LoadMap attempts
+    // to reuse the package. Otherwise EditorServer can fatal while reporting
+    // leaked world objects that could not be garbage collected.
+    {
+        FString NormalizedMapPath = MapPath;
+        if (NormalizedMapPath.EndsWith(TEXT(".umap")))
+        {
+            NormalizedMapPath.LeftChopInline(5);
+        }
+
+        UPackage* ExistingPackage = FindObject<UPackage>(nullptr, *NormalizedMapPath);
+        if (ExistingPackage)
+        {
+            UWorld* ExistingWorld = FindObject<UWorld>(ExistingPackage, *FPaths::GetBaseFilename(NormalizedMapPath));
+            if (ExistingWorld != CurrentWorld)
+            {
+                UE_LOG(LogMcpSafeOperations, Warning,
+                    TEXT("McpSafeLoadMap: Target package '%s' already exists in memory; unloading before load"),
+                    *NormalizedMapPath);
+
+#if MCP_HAS_PACKAGE_TOOLS
+                TArray<UPackage*> PackagesToUnload;
+                PackagesToUnload.Add(ExistingPackage);
+                TWeakObjectPtr<UPackage> WeakExistingPackage = ExistingPackage;
+
+                FText UnloadError;
+                const bool bUnloadSucceeded = UPackageTools::UnloadPackages(PackagesToUnload, UnloadError, true);
+                if (!UnloadError.IsEmpty())
+                {
+                    UE_LOG(LogMcpSafeOperations, Warning,
+                        TEXT("McpSafeLoadMap: UnloadPackages reported for '%s': %s"),
+                        *NormalizedMapPath,
+                        *UnloadError.ToString());
+                }
+
+                FlushRenderingCommands();
+                CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
+                FlushRenderingCommands();
+
+                if (!bUnloadSucceeded || WeakExistingPackage.IsValid())
+                {
+                    UE_LOG(LogMcpSafeOperations, Error,
+                        TEXT("McpSafeLoadMap: Failed to unload pre-existing target package '%s'; aborting map load to avoid EditorServer fatal"),
+                        *NormalizedMapPath);
+                    return false;
+                }
+
+                UE_LOG(LogMcpSafeOperations, Log,
+                    TEXT("McpSafeLoadMap: Unloaded pre-existing world package '%s'"),
+                    *NormalizedMapPath);
+#else
+                UE_LOG(LogMcpSafeOperations, Error,
+                    TEXT("McpSafeLoadMap: PackageTools unavailable and target package '%s' is already loaded; aborting map load to avoid EditorServer fatal"),
+                    *NormalizedMapPath);
+                return false;
+#endif
+            }
+        }
+    }
+
     // STEP 11: Load the map
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeLoadMap: Loading map '%s'"), *MapPath);
     bool bLoaded = FEditorFileUtils::LoadMap(*MapPath);
-    
+
     if (bLoaded)
     {
         UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeLoadMap: Successfully loaded map '%s'"), *MapPath);
-        
-        // STEP 13: Disable ticking on new world's actors
+
+        // STEP 13: Unregister ticking on new world's actors. Disabling alone
+        // leaves tick functions registered with TickTaskManager, which can keep
+        // stale level entries alive during rapid automation map transitions.
         UWorld* NewWorld = GEditor->GetEditorWorldContext().World();
         if (NewWorld && NewWorld->PersistentLevel)
         {
@@ -489,12 +669,15 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
             {
                 if (Actor)
                 {
-                    Actor->SetActorTickEnabled(false);
+                    if (Actor->PrimaryActorTick.IsTickFunctionRegistered())
+                    {
+                        Actor->PrimaryActorTick.UnRegisterTickFunction();
+                    }
                     for (UActorComponent* Component : Actor->GetComponents())
                     {
-                        if (Component)
+                        if (Component && Component->PrimaryComponentTick.IsTickFunctionRegistered())
                         {
-                            Component->SetComponentTickEnabled(false);
+                            Component->PrimaryComponentTick.UnRegisterTickFunction();
                         }
                     }
                 }
@@ -505,7 +688,7 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
     {
         UE_LOG(LogMcpSafeOperations, Error, TEXT("McpSafeLoadMap: Failed to load map '%s'"), *MapPath);
     }
-    
+
     return bLoaded;
 }
 
@@ -529,11 +712,11 @@ inline UMaterialInterface* McpLoadMaterialWithFallback(const FString& MaterialPa
         }
         if (!bSilent)
         {
-            UE_LOG(LogMcpSafeOperations, Warning, 
+            UE_LOG(LogMcpSafeOperations, Warning,
                 TEXT("McpLoadMaterialWithFallback: Requested material not found: %s"), *MaterialPath);
         }
     }
-    
+
     // Fallback chain for engine materials
     const TCHAR* FallbackPaths[] = {
         TEXT("/Engine/EngineMaterials/DefaultMaterial"),
@@ -541,7 +724,7 @@ inline UMaterialInterface* McpLoadMaterialWithFallback(const FString& MaterialPa
         TEXT("/Engine/EngineMaterials/DefaultDeferredDecalMaterial"),
         TEXT("/Engine/EngineMaterials/DefaultTextMaterialOpaque")
     };
-    
+
     for (const TCHAR* FallbackPath : FallbackPaths)
     {
         UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, FallbackPath);
@@ -549,15 +732,15 @@ inline UMaterialInterface* McpLoadMaterialWithFallback(const FString& MaterialPa
         {
             if (!bSilent && !MaterialPath.IsEmpty())
             {
-                UE_LOG(LogMcpSafeOperations, Log, 
-                    TEXT("McpLoadMaterialWithFallback: Using fallback '%s' for '%s'"), 
+                UE_LOG(LogMcpSafeOperations, Log,
+                    TEXT("McpLoadMaterialWithFallback: Using fallback '%s' for '%s'"),
                     FallbackPath, *MaterialPath);
             }
             return Material;
         }
     }
-    
-    UE_LOG(LogMcpSafeOperations, Error, 
+
+    UE_LOG(LogMcpSafeOperations, Error,
         TEXT("McpLoadMaterialWithFallback: All fallback materials unavailable - engine content may be missing"));
     return nullptr;
 }
@@ -593,7 +776,7 @@ inline bool SaveLoadedAssetThrottled(UObject* Asset, double ThrottleSecondsOverr
  */
 inline void ScanPathSynchronous(const FString& InPath, bool bRecursive = true)
 {
-    FAssetRegistryModule& AssetRegistryModule = 
+    FAssetRegistryModule& AssetRegistryModule =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
@@ -604,14 +787,14 @@ inline void ScanPathSynchronous(const FString& InPath, bool bRecursive = true)
 
 /**
  * Pre-clear BlueprintActionDatabase entry before deletion.
- * 
+ *
  * WORKAROUND FOR UE 5.7 BUG:
  * FBlueprintActionDatabase::ClearAssetActions() has a use-after-free bug:
  *   1. ActionRegistry.Remove(AssetObjectKey) removes the entry
  *   2. Then ActionList->Num() is called on the now-dangling pointer
  * This corrupts heap state on the first Blueprint deletion, causing crashes
  * on subsequent deletions with 0xFFFFFFFFFFFFFFFF access violations.
- * 
+ *
  * By pre-clearing the entry HERE before ForceDeleteObjects runs, we ensure
  * that when the engine's OnAssetsPreDelete delegate fires ClearAssetActions,
  * the entry is already gone and the buggy code path is skipped.
@@ -632,8 +815,8 @@ inline void McpPreClearBlueprintActionDatabase(UObject* Asset)
         return;
     }
 
-    UE_LOG(LogMcpSafeOperations, Log, 
-        TEXT("McpPreClearBlueprintActionDatabase: Pre-clearing action database for '%s'"), 
+    UE_LOG(LogMcpSafeOperations, Log,
+        TEXT("McpPreClearBlueprintActionDatabase: Pre-clearing action database for '%s'"),
         *Asset->GetName());
 
     // Clear the entry BEFORE ForceDeleteObjects runs, but do not instantiate the
@@ -649,15 +832,15 @@ inline void McpPreClearBlueprintActionDatabase(UObject* Asset)
             *Asset->GetName());
     }
 
-    UE_LOG(LogMcpSafeOperations, Log, 
-        TEXT("McpPreClearBlueprintActionDatabase: Pre-clear complete for '%s'"), 
+    UE_LOG(LogMcpSafeOperations, Log,
+        TEXT("McpPreClearBlueprintActionDatabase: Pre-clear complete for '%s'"),
         *Asset->GetName());
 #endif
 }
 
 /**
  * Perform garbage collection after asset deletion.
- * 
+ *
  * CRITICAL FOR UE 5.7+:
  * After deleting assets (especially AnimBlueprints, IKRigs, IKRetargeters),
  * garbage collection must be forced to prevent access violations during
@@ -668,25 +851,25 @@ inline void McpPreClearBlueprintActionDatabase(UObject* Asset)
 inline void McpSafePostDeleteGC(bool bFullPurge = true)
 {
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafePostDeleteGC: Starting post-delete cleanup"));
-    
+
     // Flush rendering commands to ensure all GPU work is complete
     FlushRenderingCommands();
-    
+
     // Force garbage collection
     if (GEditor)
     {
         GEditor->ForceGarbageCollection(bFullPurge);
     }
-    
+
     // Flush again to process any pending destroy operations
     FlushRenderingCommands();
-    
+
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafePostDeleteGC: Post-delete cleanup completed"));
 }
 
 /**
  * Fully quiesce all editor state before asset deletion.
- * 
+ *
  * CRITICAL FOR UE 5.7+:
  * Force-deleting animation/IK assets crashes if compilation, rendering, or editor
  * state is not fully quiesced. This function ensures:
@@ -700,7 +883,7 @@ inline void McpSafePostDeleteGC(bool bFullPurge = true)
 inline void McpQuiesceAllState()
 {
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpQuiesceAllState: Starting full editor quiesce"));
-    
+
     // STEP 1: Finish all pending asset compilation
     // This is critical for animation assets that may be compiling in background
 #if MCP_HAS_ASSET_COMPILING_MANAGER
@@ -708,37 +891,37 @@ inline void McpQuiesceAllState()
     int32 RemainingAssets = CompilingManager.GetNumRemainingAssets();
     if (RemainingAssets > 0)
     {
-        UE_LOG(LogMcpSafeOperations, Log, 
+        UE_LOG(LogMcpSafeOperations, Log,
             TEXT("McpQuiesceAllState: Waiting for %d compiling assets"), RemainingAssets);
         CompilingManager.FinishAllCompilation();
     }
 #endif
-    
+
     // STEP 2: Flush rendering commands to ensure GPU is idle
     FlushRenderingCommands();
-    
+
     // STEP 3: Small delay to allow any pending UI/editor operations to complete
     FPlatformProcess::Sleep(0.016f); // ~1 frame at 60fps
-    
+
     // STEP 4: Flush again after delay
     FlushRenderingCommands();
-    
+
     // STEP 5: Force garbage collection to clean up any stale references
     if (GEditor)
     {
         GEditor->ForceGarbageCollection(true);
     }
-    
+
     // STEP 6: Final flush to process GC cleanup
     FlushRenderingCommands();
-    
+
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpQuiesceAllState: Editor quiesce completed"));
 }
 
 /**
  * Finish compilation for a specific batch of objects before/after deletion.
  * Uses FinishCompilationForObjects if available (UE 5.7+), falls back to FinishAllCompilation.
- * 
+ *
  * CRITICAL FOR UE 5.7+:
  * This provides tighter compilation barriers than just FinishAllCompilation() by
  * targeting the specific objects being deleted.
@@ -750,13 +933,13 @@ inline void McpFinishCompilationForBatch(TArray<UObject*>& BatchObjects, const T
 {
 #if MCP_HAS_ASSET_COMPILING_MANAGER
     FAssetCompilingManager& CompilingManager = FAssetCompilingManager::Get();
-    
+
     // Log current state
     int32 GlobalRemaining = CompilingManager.GetNumRemainingAssets();
-    UE_LOG(LogMcpSafeOperations, Log, 
-        TEXT("McpFinishCompilationForBatch: [%s] %d global compiling assets, %d objects in batch"), 
+    UE_LOG(LogMcpSafeOperations, Log,
+        TEXT("McpFinishCompilationForBatch: [%s] %d global compiling assets, %d objects in batch"),
         Context, GlobalRemaining, BatchObjects.Num());
-    
+
 	// STEP 1: Finish compilation for specific batch objects (tightest barrier)
 	// This is more targeted than FinishAllCompilation and prevents race conditions
 	// with the specific assets being deleted
@@ -764,25 +947,25 @@ inline void McpFinishCompilationForBatch(TArray<UObject*>& BatchObjects, const T
 	{
 		MCP_FINISH_COMPILATION_FOR_OBJECTS(CompilingManager, BatchObjects);
 	}
-    
+
     // STEP 2: Global compilation barrier (catches any dependencies)
     // After batch-specific finish, ensure nothing else is compiling that might
     // reference the batch objects
     GlobalRemaining = CompilingManager.GetNumRemainingAssets();
     if (GlobalRemaining > 0)
     {
-        UE_LOG(LogMcpSafeOperations, Log, 
-            TEXT("McpFinishCompilationForBatch: [%s] Finishing remaining %d global assets"), 
+        UE_LOG(LogMcpSafeOperations, Log,
+            TEXT("McpFinishCompilationForBatch: [%s] Finishing remaining %d global assets"),
             Context, GlobalRemaining);
         CompilingManager.FinishAllCompilation();
     }
-    
-    UE_LOG(LogMcpSafeOperations, Log, 
+
+    UE_LOG(LogMcpSafeOperations, Log,
         TEXT("McpFinishCompilationForBatch: [%s] Compilation barriers complete"), Context);
 #else
     // Without FAssetCompilingManager, just log that we're skipping
-    UE_LOG(LogMcpSafeOperations, Log, 
-        TEXT("McpFinishCompilationForBatch: [%s] FAssetCompilingManager not available, skipping batch compilation"), 
+    UE_LOG(LogMcpSafeOperations, Log,
+        TEXT("McpFinishCompilationForBatch: [%s] FAssetCompilingManager not available, skipping batch compilation"),
         Context);
     (void)BatchObjects; // Suppress unused parameter warning
     (void)Context;
@@ -905,7 +1088,7 @@ inline bool UnloadLoadedPackagesForAssets(const TArray<FAssetData>& Assets, cons
 
 /**
  * Pre-delete quiesce for a batch of risky assets.
- * 
+ *
  * CRITICAL FOR UE 5.7+:
  * Must be called immediately before each batch deletion to ensure:
  * 1. Editors are closed for the batch (prevents editor references)
@@ -918,10 +1101,10 @@ inline bool UnloadLoadedPackagesForAssets(const TArray<FAssetData>& Assets, cons
  */
 inline void McpQuiesceBeforeBatchDelete(TArray<UObject*>& BatchObjects)
 {
-    UE_LOG(LogMcpSafeOperations, Log, 
-        TEXT("McpQuiesceBeforeBatchDelete: Starting pre-delete quiesce for %d objects"), 
+    UE_LOG(LogMcpSafeOperations, Log,
+        TEXT("McpQuiesceBeforeBatchDelete: Starting pre-delete quiesce for %d objects"),
         BatchObjects.Num());
-    
+
     // STEP 1: Close editors for batch objects
 #if MCP_HAS_ASSET_EDITOR_SUBSYSTEM
     UAssetEditorSubsystem* AssetEditorSubsystem = GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
@@ -936,35 +1119,35 @@ inline void McpQuiesceBeforeBatchDelete(TArray<UObject*>& BatchObjects)
         }
     }
 #endif
-    
+
     // STEP 2: Batch-specific compilation barrier
     McpFinishCompilationForBatch(BatchObjects, TEXT("pre-delete"));
-    
+
     // STEP 3: Flush rendering commands
     FlushRenderingCommands();
-    
+
     // STEP 4: Small delay for editor state to settle
     FPlatformProcess::Sleep(0.016f);
-    
+
     // STEP 5: Flush again
     FlushRenderingCommands();
-    
+
     // STEP 6: Force garbage collection to clean up editor references
     if (GEditor)
     {
         GEditor->ForceGarbageCollection(true);
     }
-    
+
     // STEP 7: Final flush
     FlushRenderingCommands();
-    
-    UE_LOG(LogMcpSafeOperations, Log, 
+
+    UE_LOG(LogMcpSafeOperations, Log,
         TEXT("McpQuiesceBeforeBatchDelete: Pre-delete quiesce complete"));
 }
 
 /**
  * Post-delete quiesce after a batch deletion.
- * 
+ *
  * CRITICAL FOR UE 5.7+:
  * Must be called immediately after each batch deletion to ensure:
  * 1. Any compilation triggered by deletion completes
@@ -975,46 +1158,46 @@ inline void McpQuiesceBeforeBatchDelete(TArray<UObject*>& BatchObjects)
  */
 inline void McpQuiesceAfterBatchDelete(const TArray<UObject*>& BatchObjects)
 {
-    UE_LOG(LogMcpSafeOperations, Log, 
-        TEXT("McpQuiesceAfterBatchDelete: Starting post-delete quiesce for %d objects"), 
+    UE_LOG(LogMcpSafeOperations, Log,
+        TEXT("McpQuiesceAfterBatchDelete: Starting post-delete quiesce for %d objects"),
         BatchObjects.Num());
-    
+
     // STEP 1: Flush rendering commands to process destruction
     FlushRenderingCommands();
-    
+
     // STEP 2: Small delay for destruction to complete
     FPlatformProcess::Sleep(0.016f);
-    
+
     // STEP 3: Flush again
     FlushRenderingCommands();
-    
+
     // STEP 4: Force garbage collection to clean up deleted object references
     if (GEditor)
     {
         GEditor->ForceGarbageCollection(true);
     }
-    
+
     // STEP 5: Final flush
     // NOTE: We do NOT call FinishAllCompilation() here because:
     // 1. It can trigger compilation of assets that reference deleted objects
     // 2. After ForceGarbageCollection, any pending compilations may have stale refs
     // 3. Compilation barrier is handled in McpQuiesceBeforeBatchDelete BEFORE deletion
     FlushRenderingCommands();
-    
-    UE_LOG(LogMcpSafeOperations, Log, 
+
+    UE_LOG(LogMcpSafeOperations, Log,
         TEXT("McpQuiesceAfterBatchDelete: Post-delete quiesce complete"));
 }
 
 /**
  * AnimBlueprint-specific pre-delete quiesce.
- * 
+ *
  * CRITICAL FOR UE 5.7+:
  * AnimBlueprints have additional complexity beyond regular Blueprints:
  * - UAnimBlueprintGeneratedClass with animation debug data
  * - TargetSkeleton reference
  * - Active Persona editors, anim graph previews, and debug sessions
  * - Editor selection state
- * 
+ *
  * IMPORTANT: This function must NOT modify internal AnimBlueprint state that
  * ForceDeleteObjects relies on for proper generated-class teardown. The engine's
  * ForceDeleteObjects() handles:
@@ -1036,8 +1219,8 @@ inline void McpQuiesceAnimBlueprintBeforeDelete(UAnimBlueprint* AnimBlueprint)
         return;
     }
 
-    UE_LOG(LogMcpSafeOperations, Log, 
-        TEXT("McpQuiesceAnimBlueprintBeforeDelete: Starting AnimBlueprint-specific quiesce for '%s'"), 
+    UE_LOG(LogMcpSafeOperations, Log,
+        TEXT("McpQuiesceAnimBlueprintBeforeDelete: Starting AnimBlueprint-specific quiesce for '%s'"),
         *AnimBlueprint->GetName());
 
     // STEP 1: Close ALL editors for this AnimBlueprint
@@ -1054,8 +1237,8 @@ for (int32 i = 0; i < 3; ++i)
 	AssetEditorSubsystem->CloseAllEditorsForAsset(AnimBlueprint);
 }
 
-UE_LOG(LogMcpSafeOperations, Log, 
-	TEXT("McpQuiesceAnimBlueprintBeforeDelete: Closed all editors for '%s'"), 
+UE_LOG(LogMcpSafeOperations, Log,
+	TEXT("McpQuiesceAnimBlueprintBeforeDelete: Closed all editors for '%s'"),
 	*AnimBlueprint->GetName());
 }
 #endif
@@ -1069,8 +1252,8 @@ USelection* SelectedObjects = GEditor->GetSelectedObjects();
 if (SelectedObjects && SelectedObjects->IsSelected(AnimBlueprint))
 {
 	SelectedObjects->Deselect(AnimBlueprint);
-	UE_LOG(LogMcpSafeOperations, Log, 
-		TEXT("McpQuiesceAnimBlueprintBeforeDelete: Deselected AnimBlueprint '%s'"), 
+	UE_LOG(LogMcpSafeOperations, Log,
+		TEXT("McpQuiesceAnimBlueprintBeforeDelete: Deselected AnimBlueprint '%s'"),
 		*AnimBlueprint->GetName());
 }
 
@@ -1083,21 +1266,21 @@ GEditor->SelectNone(false, true, false);
     // DO NOT modify internal AnimBlueprint state here - ForceDeleteObjects
     // needs that state intact for proper generated-class teardown.
     FlushRenderingCommands();
-    
+
     // Small delay to allow async editor cleanup
     FPlatformProcess::Sleep(0.050f); // 50ms wait
-    
+
     // Final flush
     FlushRenderingCommands();
 
-    UE_LOG(LogMcpSafeOperations, Log, 
-        TEXT("McpQuiesceAnimBlueprintBeforeDelete: AnimBlueprint-specific quiesce complete for '%s'"), 
+    UE_LOG(LogMcpSafeOperations, Log,
+        TEXT("McpQuiesceAnimBlueprintBeforeDelete: AnimBlueprint-specific quiesce complete for '%s'"),
         *AnimBlueprint->GetName());
 }
 
 /**
  * Check if an asset is an AnimBlueprint by class name (registry-only, no asset load).
- * 
+ *
  * @param AssetData The asset data from registry (metadata only)
  * @return true if the asset is an AnimBlueprint type
  */
@@ -1110,9 +1293,9 @@ inline bool IsAnimBlueprintAsset(const FAssetData& AssetData)
 /**
  * Check if an asset is any Blueprint-derived type that needs the action database workaround.
  * Uses ONLY registry metadata (no GetClass/GetAsset calls that load packages).
- * 
+ *
  * The UE 5.7 BlueprintActionDatabase bug affects ALL Blueprint types, not just AnimBlueprints.
- * 
+ *
  * @param AssetData The asset data from registry (metadata only)
  * @return true if the asset is any Blueprint type
  */
@@ -1139,7 +1322,7 @@ inline bool IsAnyBlueprintAsset(const FAssetData& AssetData)
 inline bool IsRiskyAnimationAsset(const FAssetData& AssetData)
 {
     FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
-    
+
     // Animation assets that commonly crash on force-delete
     // These have complex compilation/render state that must be quiesced first
     static const TArray<FString> RiskyAnimationClasses = {
@@ -1157,7 +1340,7 @@ inline bool IsRiskyAnimationAsset(const FAssetData& AssetData)
         TEXT("PoseAsset"),
         TEXT("Skeleton")
     };
-    
+
     for (const FString& RiskyClass : RiskyAnimationClasses)
     {
         if (ClassName.Contains(RiskyClass))
@@ -1165,7 +1348,7 @@ inline bool IsRiskyAnimationAsset(const FAssetData& AssetData)
             return true;
         }
     }
-    
+
     return false;
 }
 
@@ -1248,11 +1431,11 @@ inline bool IsMixedAnimationRigCluster(const TArray<FAssetData>& Assets)
 
 /**
  * Delete the known crash-prone animation/rig cluster in explicit class order.
- * 
+ *
  * CRITICAL FOR UE 5.7+: AnimBlueprints have cross-package references (linked anim graphs,
  * skeleton references, debug data) that cause 0xFFFFFFFFFFFFFFFF crashes when:
  * - ForceDeleteObjects tries to delete them while loaded
- * 
+ *
  * SOLUTION: Only unload truly in-memory-only packages. For file-backed assets,
  * use the engine-owned force-delete path in explicit order so Blueprint-generated
  * classes/CDOs are torn down by ObjectTools instead of raw file deletion.
@@ -1350,9 +1533,8 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
 
         if (!UnloadLoadedPackagesForAssets(InMemoryOnlyAssets, TEXT("DeleteAnimationRigClusterOrdered[InMemoryOnly]")))
         {
-            UE_LOG(LogMcpSafeOperations, Error,
-                TEXT("DeleteAnimationRigClusterOrdered: Failed to unload one or more in-memory-only packages before delete"));
-            return INDEX_NONE;
+            UE_LOG(LogMcpSafeOperations, Warning,
+                TEXT("DeleteAnimationRigClusterOrdered: One or more in-memory-only packages remained loaded before delete; continuing with filesystem-backed cleanup"));
         }
     }
 
@@ -1479,16 +1661,16 @@ TArray<FAssetData> OtherFileBackedAssets;
 
 for (const FAssetData& AssetData : FileBackedAssets)
 {
-const FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
-if (ClassName.Contains(TEXT("AnimBlueprint")))
-{
-AnimBlueprintAssets.Add(AssetData);
-}
-else if (ClassName.Contains(TEXT("ControlRigBlueprint")))
-{
-ControlRigBlueprintAssets.Add(AssetData);
-}
-else if (ClassName.Contains(TEXT("Blueprint")))
+        const FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
+        if (ClassName.Contains(TEXT("AnimBlueprint")))
+        {
+            AnimBlueprintAssets.Add(AssetData);
+        }
+        else if (ClassName.Contains(TEXT("ControlRigBlueprint")))
+        {
+            ControlRigBlueprintAssets.Add(AssetData);
+        }
+        else if (ClassName.Contains(TEXT("Blueprint")))
         {
             GenericBlueprintAssets.Add(AssetData);
         }
@@ -1561,9 +1743,8 @@ inline bool PrepareAssetBatchForDelete(
         FString AssetFilePath;
         bool bHasBackingFile = false;
 const FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
-const bool bIsWorldAsset = ClassName.Contains(TEXT("World")) ||
-                           ClassName.Contains(TEXT("Map")) ||
-                           ClassName.Contains(TEXT("Level"));
+const bool bIsWorldAsset = ClassName.Equals(TEXT("/Script/Engine.World"), ESearchCase::IgnoreCase) ||
+                           ClassName.EndsWith(TEXT(".World"), ESearchCase::IgnoreCase);
         const FString PackageExtension = bIsWorldAsset
             ? FPackageName::GetMapPackageExtension()
             : FPackageName::GetAssetPackageExtension();
@@ -1633,11 +1814,11 @@ inline bool IsRiskyAssetClassForDelete(const FString& AssetPath)
         TEXT("WidgetBlueprint"),
         TEXT("Blueprint")
     };
-    
-    FAssetRegistryModule& AssetRegistryModule = 
+
+    FAssetRegistryModule& AssetRegistryModule =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
-    
+
     // Use FSoftObjectPath for UE 5.1+ (FName version deprecated in 5.6)
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
     FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(AssetPath));
@@ -1667,10 +1848,11 @@ return false;
 inline bool IsWorldAsset(const FAssetData& AssetData)
 {
 FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
-// Check for World, Map, Level asset types using string matching only
-return ClassName.Contains(TEXT("World")) ||
-       ClassName.Contains(TEXT("Map")) ||
-       ClassName.Contains(TEXT("Level"));
+// Only actual UWorld/map packages should use the world deletion path. Avoid
+// broad substring checks: non-world assets such as LevelSequence contain
+// "Level" in their class names but must remain on the normal asset path.
+return ClassName.Equals(TEXT("/Script/Engine.World"), ESearchCase::IgnoreCase) ||
+       ClassName.EndsWith(TEXT(".World"), ESearchCase::IgnoreCase);
 }
 
 /**
@@ -1770,9 +1952,22 @@ inline int32 DeleteWorldPackagesByPath(const TArray<FAssetData>& WorldAssets)
         ScanPaths.Add(FPaths::GetPath(PackagePath));
         AssetRegistry.ScanPathsSynchronous(ScanPaths, false);
 
-        if (bDeletedMap || !FileManager.FileExists(*AbsoluteMapFilename))
+        TArray<FAssetData> RemainingWorldAssets;
+        AssetRegistry.GetAssetsByPackageName(AssetData.PackageName, RemainingWorldAssets, true);
+        const bool bRegistryPackageGone = RemainingWorldAssets.Num() == 0;
+
+        if (bDeletedMap && !FileManager.FileExists(*AbsoluteMapFilename) && bRegistryPackageGone)
         {
             ++DeletedCount;
+        }
+        else
+        {
+            UE_LOG(LogMcpSafeOperations, Warning,
+                TEXT("DeleteWorldPackagesByPath: World package still present after delete attempt (package=%s deletedMap=%d fileExists=%d registryCount=%d)"),
+                *PackagePath,
+                bDeletedMap ? 1 : 0,
+                FileManager.FileExists(*AbsoluteMapFilename) ? 1 : 0,
+                RemainingWorldAssets.Num());
         }
     }
 
@@ -1788,7 +1983,7 @@ inline int32 DeleteWorldPackagesByPath(const TArray<FAssetData>& WorldAssets)
 
 /**
  * Safely delete a folder and all its contents with proper cleanup.
- * 
+ *
  * CRITICAL FOR UE 5.7+:
  * This function prevents crashes during folder deletion by:
  * 1. Enumerating all assets using REGISTRY ONLY (no GetAsset/GetClass)
@@ -1804,39 +1999,73 @@ inline int32 DeleteWorldPackagesByPath(const TArray<FAssetData>& WorldAssets)
 inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
 {
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Starting deletion of '%s' (force=%d)"), *FolderPath, bForce);
-    
-    FAssetRegistryModule& AssetRegistryModule = 
+
+    FAssetRegistryModule& AssetRegistryModule =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
-    
+
     // STEP 1: Enumerate all assets in the folder recursively using REGISTRY ONLY
     // DO NOT call GetAsset() or GetClass() here - only use metadata
     FARFilter Filter;
     Filter.PackagePaths.Add(FName(*FolderPath));
     Filter.bRecursivePaths = true;
-    
+
     TArray<FAssetData> AllAssets;
     AssetRegistry.GetAssets(Filter, AllAssets);
-    
+
     if (AllAssets.Num() == 0)
     {
         UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: No assets found in '%s'"), *FolderPath);
-        // No assets - just delete the empty folder
-        return UEditorAssetLibrary::DeleteDirectory(FolderPath);
+
+        // Empty content browser folders do not need the editor asset deletion path.
+        // UEditorAssetLibrary::DeleteDirectory can block on live editor state even when
+        // the asset registry has no packages to delete, so remove the registry paths
+        // and physical directory directly, then verify both states.
+        TArray<FString> EmptySubPaths;
+        AssetRegistry.GetSubPaths(FolderPath, EmptySubPaths, true);
+        EmptySubPaths.Sort([](const FString& A, const FString& B)
+        {
+            return A.Len() > B.Len();
+        });
+        for (const FString& SubPath : EmptySubPaths)
+        {
+            AssetRegistry.RemovePath(SubPath);
+        }
+        AssetRegistry.RemovePath(FolderPath);
+
+        FString EmptyLocalPath;
+        bool bDirectoryExistsOnDisk = false;
+        if (FPackageName::TryConvertLongPackageNameToFilename(FolderPath, EmptyLocalPath))
+        {
+            IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+            if (PlatformFile.DirectoryExists(*EmptyLocalPath))
+            {
+                PlatformFile.DeleteDirectoryRecursively(*EmptyLocalPath);
+            }
+            bDirectoryExistsOnDisk = PlatformFile.DirectoryExists(*EmptyLocalPath);
+        }
+
+        TArray<FString> RemainingEmptySubPaths;
+        AssetRegistry.GetSubPaths(FolderPath, RemainingEmptySubPaths, true);
+        const bool bDeleted = RemainingEmptySubPaths.Num() == 0 && !bDirectoryExistsOnDisk;
+        UE_LOG(LogMcpSafeOperations, Log,
+            TEXT("McpSafeDeleteFolder: Empty folder deletion result for '%s' (remainingSubPaths=%d existsOnDisk=%d)"),
+            *FolderPath, RemainingEmptySubPaths.Num(), bDirectoryExistsOnDisk ? 1 : 0);
+        return bDeleted;
     }
-    
+
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Found %d assets in '%s'"), AllAssets.Num(), *FolderPath);
-    
+
     // STEP 2: Separate world/map assets from other assets using REGISTRY ONLY
     TArray<FAssetData> WorldAssets;
     TArray<FAssetData> OtherAssets;
-    
+
 for (const FAssetData& AssetData : AllAssets)
 {
 if (IsWorldAsset(AssetData))
 {
 WorldAssets.Add(AssetData);
-UE_LOG(LogMcpSafeOperations, Log, TEXT(" World asset: %s (%s)"), 
+UE_LOG(LogMcpSafeOperations, Log, TEXT(" World asset: %s (%s)"),
 *AssetData.AssetName.ToString(), *MCP_ASSET_DATA_GET_CLASS_PATH(AssetData));
 }
 else
@@ -1847,7 +2076,7 @@ OtherAssets.Add(AssetData);
 
 UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: %d world assets, %d other assets"),
 WorldAssets.Num(), OtherAssets.Num());
-    
+
     // STEP 3: If folder contains world assets, switch to a known engine map using the
     // safe map-transition helper. Raw NewBlankMap triggers TickTaskManager assertions in UE 5.7.
     if (WorldAssets.Num() > 0)
@@ -1898,23 +2127,23 @@ WorldAssets.Num(), OtherAssets.Num());
                 bTargetWorldLoaded ? 1 : 0);
         }
     }
-    
+
     // STEP 4: GLOBAL QUIESCE - Critical for UE 5.7+ animation/IK asset deletion
     // Must quiesce ALL editor state before ANY deletions to prevent crashes
     McpQuiesceAllState();
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Global quiesce completed before deletions"));
-    
+
     // STEP 5: Partition other assets into special-delete vs safe categories.
     // Special-delete includes all risky animation assets plus generic Blueprint assets.
     TArray<FAssetData> RiskyAnimationAssets;
     TArray<FAssetData> SafeAssets;
-    
+
 for (const FAssetData& AssetData : OtherAssets)
 {
 if (IsRiskyAnimationAsset(AssetData) || IsAnyBlueprintAsset(AssetData))
 {
 RiskyAnimationAssets.Add(AssetData);
-UE_LOG(LogMcpSafeOperations, Log, TEXT(" Risky special-delete asset: %s (%s)"), 
+UE_LOG(LogMcpSafeOperations, Log, TEXT(" Risky special-delete asset: %s (%s)"),
 *AssetData.AssetName.ToString(), *MCP_ASSET_DATA_GET_CLASS_PATH(AssetData));
 }
 else
@@ -1926,7 +2155,7 @@ SafeAssets.Add(AssetData);
 UE_LOG(LogMcpSafeOperations, Log,
 TEXT("McpSafeDeleteFolder: Partitioned: %d risky special-delete, %d safe, %d world"),
 RiskyAnimationAssets.Num(), SafeAssets.Num(), WorldAssets.Num());
-    
+
     // STEP 6: Delete RISKY ANIMATION ASSETS.
     // CRITICAL FOR UE 5.7+: The remaining crash is isolated to a mixed cluster of
     // IKRigDefinition, AnimSequence, AnimBlueprint, and ControlRigBlueprint.
@@ -1973,68 +2202,62 @@ RiskyAnimationAssets.Num(), SafeAssets.Num(), WorldAssets.Num());
         // ordered engine-owned path, which now keeps file-backed assets on
         // ObjectTools::ForceDeleteObjects and only unloads true in-memory packages.
         const int32 TotalRisky = GenericRiskyAssets.Num();
-        
+
         if (TotalRisky > 0)
         {
             UE_LOG(LogMcpSafeOperations, Warning,
                 TEXT("McpSafeDeleteFolder: Deleting %d remaining risky special-delete assets via ordered engine-owned deletion"),
                 TotalRisky);
-            
+
             // Use the same ordered engine-owned deletion approach as the mixed cluster
             const int32 GenericDeleted = DeleteAnimationRigClusterOrdered(GenericRiskyAssets, bForce);
             DeletedRisky += GenericDeleted;
-            
-            UE_LOG(LogMcpSafeOperations, Log, 
+
+            UE_LOG(LogMcpSafeOperations, Log,
                 TEXT("McpSafeDeleteFolder: Deleted %d/%d remaining risky special-delete assets via ordered engine-owned deletion"),
                 GenericDeleted, TotalRisky);
         }
-        
-        UE_LOG(LogMcpSafeOperations, Log, 
+
+        UE_LOG(LogMcpSafeOperations, Log,
             TEXT("McpSafeDeleteFolder: Deleted %d total risky special-delete assets"), DeletedRisky);
     }
-    
+
     // STEP 7: Delete SAFE non-world assets with tight compilation barriers
     if (SafeAssets.Num() > 0)
     {
-        TArray<UObject*> SafeObjectsToDelete;
-        int32 SafeInMemoryOnlyCount = 0;
-        if (!PrepareAssetBatchForDelete(
-            SafeAssets,
-            TEXT("McpSafeDeleteFolder[SafeAssets]"),
-            SafeObjectsToDelete,
-            SafeInMemoryOnlyCount))
-        {
-            return false;
-        }
+        UE_LOG(LogMcpSafeOperations, Log,
+            TEXT("McpSafeDeleteFolder: Deleting %d safe assets via UEditorAssetLibrary::DeleteAsset"),
+            SafeAssets.Num());
 
-        if (SafeInMemoryOnlyCount > 0)
+        int32 DeletedSafeAssets = 0;
+        for (const FAssetData& SafeAsset : SafeAssets)
         {
-            UE_LOG(LogMcpSafeOperations, Warning,
-                TEXT("McpSafeDeleteFolder: %d safe assets are in-memory only and were routed through GC cleanup"),
-                SafeInMemoryOnlyCount);
-        }
-        
-        if (SafeObjectsToDelete.Num() > 0)
-        {
-            // Pre-deletion quiesce with batch-specific compilation barrier
-            McpQuiesceBeforeBatchDelete(SafeObjectsToDelete);
-
-            for (UObject* SafeObject : SafeObjectsToDelete)
+            const FString SafeAssetPath = SafeAsset.PackageName.ToString();
+            if (SafeAssetPath.IsEmpty())
             {
-                McpPreClearBlueprintActionDatabase(SafeObject);
+                continue;
             }
-            
-            UE_LOG(LogMcpSafeOperations, Log,
-                TEXT("McpSafeDeleteFolder: Deleting %d file-backed safe assets via AssetViewUtils::DeleteAssets"),
-                SafeObjectsToDelete.Num());
 
-            AssetViewUtils::DeleteAssets(SafeObjectsToDelete);
-            
-            // Post-deletion quiesce
-            McpQuiesceAfterBatchDelete(SafeObjectsToDelete);
+            const bool bDeletedSafeAsset = UEditorAssetLibrary::DeleteAsset(SafeAssetPath);
+            const bool bExistsAfterDelete = UEditorAssetLibrary::DoesAssetExist(SafeAssetPath);
+            if (bDeletedSafeAsset && !bExistsAfterDelete)
+            {
+                ++DeletedSafeAssets;
+            }
+            else
+            {
+                UE_LOG(LogMcpSafeOperations, Error,
+                    TEXT("McpSafeDeleteFolder: Failed to delete safe asset '%s' (deleteResult=%d existsAfter=%d)"),
+                    *SafeAssetPath, bDeletedSafeAsset ? 1 : 0, bExistsAfterDelete ? 1 : 0);
+                return false;
+            }
         }
+
+        UE_LOG(LogMcpSafeOperations, Log,
+            TEXT("McpSafeDeleteFolder: Deleted %d/%d safe assets"),
+            DeletedSafeAssets, SafeAssets.Num());
     }
-    
+
     // STEP 8: Delete WORLD ASSETS LAST (they should be unloaded now)
     if (WorldAssets.Num() > 0)
     {
@@ -2065,7 +2288,7 @@ RiskyAnimationAssets.Num(), SafeAssets.Num(), WorldAssets.Num());
     {
         ScanPathSynchronous(ParentFolderPath, true);
     }
-    
+
     // STEP 9: Remove the folder and any subpaths from asset registry
     TArray<FString> SubPathsToRemove;
     AssetRegistry.GetSubPaths(FolderPath, SubPathsToRemove, true);
@@ -2078,7 +2301,7 @@ RiskyAnimationAssets.Num(), SafeAssets.Num(), WorldAssets.Num());
         AssetRegistry.RemovePath(SubPath);
     }
     AssetRegistry.RemovePath(FolderPath);
-    
+
     // STEP 10: Delete the empty physical directory
     FString LocalPath;
     if (FPackageName::TryConvertLongPackageNameToFilename(FolderPath, LocalPath))
@@ -2104,7 +2327,7 @@ RiskyAnimationAssets.Num(), SafeAssets.Num(), WorldAssets.Num());
             }
         }
     }
-    
+
     // Verify deletion using both asset-registry and filesystem state.
     FARFilter RemainingFilter;
     RemainingFilter.PackagePaths.Add(FName(*FolderPath));
@@ -2112,6 +2335,40 @@ RiskyAnimationAssets.Num(), SafeAssets.Num(), WorldAssets.Num());
 
     TArray<FAssetData> RemainingAssets;
     AssetRegistry.GetAssets(RemainingFilter, RemainingAssets);
+
+    TArray<FAssetData> RemainingFileBackedAssets;
+    auto AssetDataHasBackingFile = [](const FAssetData& AssetData)
+    {
+        const FString PackagePath = AssetData.PackageName.ToString();
+
+        FString AssetFilename;
+        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, AssetFilename, FPackageName::GetAssetPackageExtension()))
+        {
+            if (IFileManager::Get().FileExists(*FPaths::ConvertRelativePathToFull(AssetFilename)))
+            {
+                return true;
+            }
+        }
+
+        FString MapFilename;
+        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, MapFilename, FPackageName::GetMapPackageExtension()))
+        {
+            if (IFileManager::Get().FileExists(*FPaths::ConvertRelativePathToFull(MapFilename)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    for (const FAssetData& RemainingAsset : RemainingAssets)
+    {
+        if (AssetDataHasBackingFile(RemainingAsset))
+        {
+            RemainingFileBackedAssets.Add(RemainingAsset);
+        }
+    }
 
     TArray<FString> RemainingSubPaths;
     AssetRegistry.GetSubPaths(FolderPath, RemainingSubPaths, true);
@@ -2128,16 +2385,23 @@ RiskyAnimationAssets.Num(), SafeAssets.Num(), WorldAssets.Num());
         UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Successfully deleted '%s'"), *FolderPath);
         return true;
     }
+    else if (RemainingFileBackedAssets.Num() == 0 && RemainingSubPaths.Num() == 0 && !bDirectoryExistsOnDisk)
+    {
+        UE_LOG(LogMcpSafeOperations, Warning,
+            TEXT("McpSafeDeleteFolder: Physical folder '%s' deleted; only %d in-memory package(s) without backing files remain"),
+            *FolderPath, RemainingAssets.Num());
+        return true;
+    }
     else
     {
         UE_LOG(LogMcpSafeOperations, Warning,
-            TEXT("McpSafeDeleteFolder: Directory still exists after deletion attempt (remainingAssets=%d remainingSubPaths=%d existsOnDisk=%d)"),
-            RemainingAssets.Num(), RemainingSubPaths.Num(), bDirectoryExistsOnDisk ? 1 : 0);
+            TEXT("McpSafeDeleteFolder: Directory still exists after deletion attempt (remainingAssets=%d remainingFileBackedAssets=%d remainingSubPaths=%d existsOnDisk=%d)"),
+            RemainingAssets.Num(), RemainingFileBackedAssets.Num(), RemainingSubPaths.Num(), bDirectoryExistsOnDisk ? 1 : 0);
 
 for (const FAssetData& RemainingAsset : RemainingAssets)
 {
-UE_LOG(LogMcpSafeOperations, Warning, TEXT("McpSafeDeleteFolder: Remaining asset: %s (%s)"), 
-*MCP_ASSET_DATA_GET_SOFT_PATH(RemainingAsset), 
+UE_LOG(LogMcpSafeOperations, Warning, TEXT("McpSafeDeleteFolder: Remaining asset: %s (%s)"),
+*MCP_ASSET_DATA_GET_SOFT_PATH(RemainingAsset),
 *MCP_ASSET_DATA_GET_CLASS_PATH(RemainingAsset));
 }
 
@@ -2153,7 +2417,7 @@ UE_LOG(LogMcpSafeOperations, Warning, TEXT("McpSafeDeleteFolder: Remaining asset
 
 #else
 
-// Non-editor stubs
+// Non-editor explicit failure fallbacks
 inline bool McpSafeAssetSave(void* Asset) { return false; }
 inline bool McpSafeLevelSave(void* Level, const FString& Path, int32 = 1) { return false; }
 inline bool McpSafeLoadMap(const FString& MapPath, bool = true) { return false; }

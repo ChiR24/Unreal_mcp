@@ -1,8 +1,8 @@
 /**
  * Central exports for utility modules.
- * 
+ *
  * @example
- * import { Logger, ResponseFactory, sanitizePath } from '../utils/index.js';
+ * import { Logger, ResponseFactory, sanitizePathSecure } from '../utils/index.js';
  */
 
 // Command validation
@@ -75,6 +75,7 @@ export { UnrealCommandQueue } from './unreal-command-queue.js';
 export {
   sanitizeCommandArgument,
   sanitizeAssetName,
+  normalizeAndSanitizeAssetPath,
   sanitizePath,
   validatePathLength,
   validateAssetParams,
@@ -107,3 +108,6 @@ export {
   validateAudioParams,
   normalizeName,
 } from './type-coercion.js';
+
+// Type guards
+export { isRecord } from './type-guards.js';

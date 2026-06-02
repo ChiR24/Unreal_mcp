@@ -1,7 +1,7 @@
 name: 'Feature Request'
 description: 'Suggest a new feature or improvement for Unreal Engine MCP Server'
 labels:
-  - 'enhancement'
+  - 'type/enhancement'
 body:
   - type: 'markdown'
     attributes:

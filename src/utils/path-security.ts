@@ -1,14 +1,10 @@
 import { getAdditionalPathPrefixes } from '../config.js';
 
-export function sanitizePath(path: string, allowedRoots?: string[]): string {
-    // Default roots: all standard UE paths plus configured additional prefixes
-    const defaultRoots = ['/Game', '/Engine', '/Script', '/Temp'];
-    const sourceRoots = allowedRoots ?? [
-        ...defaultRoots,
-        ...getAdditionalPathPrefixes().map(p => p.replace(/\/$/, '')),
-    ];
-    // Normalize and validate all roots (including caller-supplied)
-    const normalizedRoots = [...new Set(
+const DEFAULT_ROOTS = ['/Game', '/Engine', '/Script', '/Temp', '/Niagara'];
+let cachedDefaultRoots: string[] | undefined;
+
+function normalizeRoots(sourceRoots: string[]): string[] {
+    return [...new Set(
         sourceRoots
             .map(r => r.trim().replace(/\/+$/, ''))
             .filter(r =>
@@ -19,10 +15,23 @@ export function sanitizePath(path: string, allowedRoots?: string[]): string {
                 !r.includes('//')
             )
     )];
+}
+
+function getDefaultRoots(): string[] {
+    if (!cachedDefaultRoots) {
+        cachedDefaultRoots = normalizeRoots([
+            ...DEFAULT_ROOTS,
+            ...getAdditionalPathPrefixes().map(p => p.replace(/\/$/, '')),
+        ]);
+    }
+    return cachedDefaultRoots;
+}
+
+export function sanitizePath(path: string, allowedRoots?: string[]): string {
+    const normalizedRoots = allowedRoots ? normalizeRoots(allowedRoots) : getDefaultRoots();
     if (normalizedRoots.length === 0) {
         throw new Error('Invalid allowedRoots: no valid roots configured');
     }
-    allowedRoots = normalizedRoots;
     if (!path || typeof path !== 'string') {
         throw new Error('Invalid path: must be a non-empty string');
     }
@@ -46,15 +55,16 @@ export function sanitizePath(path: string, allowedRoots?: string[]): string {
     }
 
     // Ensure path starts with a valid root
-    // We check case-insensitive for the root prefix to be user-friendly, 
+    // We check case-insensitive for the root prefix to be user-friendly,
     // but Unreal paths are typically case-insensitive anyway.
-    const isAllowed = allowedRoots.some(root =>
-        normalized.toLowerCase() === root.toLowerCase() ||
-        normalized.toLowerCase().startsWith(`${root.toLowerCase()}/`)
+    const normalizedLower = normalized.toLowerCase();
+    const isAllowed = normalizedRoots.some(root =>
+        normalizedLower === root.toLowerCase() ||
+        normalizedLower.startsWith(`${root.toLowerCase()}/`)
     );
 
     if (!isAllowed) {
-        throw new Error(`Invalid path: must start with one of [${allowedRoots.join(', ')}]`);
+        throw new Error(`Invalid path: must start with one of [${normalizedRoots.join(', ')}]`);
     }
 
     // Basic character validation (Unreal strictness)

@@ -13,12 +13,8 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest } from './common-handlers.js';
+import { createSubActionDispatcher, normalizePathFields } from './common-handlers.js';
 
-function getTimeoutMs(): number {
-  const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
-  return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
-}
 
 /**
  * Validates level name for invalid characters and length.
@@ -55,34 +51,12 @@ function validateLevelName(levelName: string): string | null {
   return null;
 }
 
-/**
- * Normalize path fields to ensure they start with /Game/ and use forward slashes.
- * Returns a copy of the args with normalized paths.
- */
-function normalizePathFields(args: Record<string, unknown>): Record<string, unknown> {
-  const result = { ...args };
-  const pathFields = [
-    'levelPath', 'sublevelPath', 'levelAssetPath', 'hlodLayerPath', 'templateLevel',
-    'actorPath', 'parentLevel', 'dataLayerAssetPath'
-  ];
-
-  for (const field of pathFields) {
-    const value = result[field];
-    if (typeof value === 'string' && value.length > 0) {
-      let normalized = value.replace(/\\/g, '/');
-      // Replace /Content/ with /Game/ for common user mistake
-      if (normalized.startsWith('/Content/')) {
-        normalized = '/Game/' + normalized.slice('/Content/'.length);
-      }
-      // Ensure path starts with /Game/ if it doesn't start with a valid root
-      if (!normalized.startsWith('/Game/') && !normalized.startsWith('/Engine/') && !normalized.startsWith('/')) {
-        normalized = '/Game/' + normalized;
-      }
-      result[field] = normalized;
-    }
-  }
-
-  return result;
+function normalizeLevelNamePath(args: Record<string, unknown>): Record<string, unknown> {
+  const levelName = args.levelName;
+  if (typeof levelName !== 'string' || !/[\\/]/.test(levelName)) return {};
+  return {
+    levelName: normalizePathFields({ levelName }, ['levelName']).levelName
+  };
 }
 
 /**
@@ -93,22 +67,14 @@ export async function handleLevelStructureTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  // Normalize path fields before sending to C++
-  const argsRecord = normalizePathFields(args as Record<string, unknown>);
-  const timeoutMs = getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_level_structure',
-      payload as HandlerArgs,
-      `Automation bridge not available for level structure action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  const { argsRecord, sendRequest } = createSubActionDispatcher(tools, args, {
+    toolName: 'manage_level_structure',
+    domainName: 'level structure',
+    pathFields: [
+      'levelPath', 'sublevelPath', 'levelAssetPath', 'hlodLayerPath',
+      'actorPath', 'parentLevel', 'dataLayerAssetPath'
+    ]
+  });
 
   switch (action) {
     // ========================================================================
@@ -133,10 +99,10 @@ export async function handleLevelStructureTools(
       return sendRequest('create_sublevel');
 
     case 'configure_level_streaming':
-      return sendRequest('configure_level_streaming');
+      return sendRequest('configure_level_streaming', normalizeLevelNamePath(argsRecord));
 
     case 'set_streaming_distance':
-      return sendRequest('set_streaming_distance');
+      return sendRequest('set_streaming_distance', normalizeLevelNamePath(argsRecord));
 
     case 'configure_level_bounds':
       return sendRequest('configure_level_bounds');

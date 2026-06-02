@@ -37,6 +37,7 @@
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "UObject/UObjectIterator.h"
 
 // =============================================================================
@@ -82,6 +83,14 @@
 // Handler Implementation
 // =============================================================================
 
+/**
+ * Dispatch and execute native lighting actions for the automation bridge.
+ *
+ * `manage_lighting` requests are routed through their payload `action` field so
+ * consolidated-tool calls reach the same sub-action handlers as direct bridge
+ * calls. Light spawning keeps the UE 5.7 safe deferred-spawn path and returns a
+ * response only after the actor is created and verified.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -90,24 +99,46 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     // -------------------------------------------------------------------------
     // Action Routing
     // -------------------------------------------------------------------------
-    const FString Lower = Action.ToLower();
-    if (!Lower.StartsWith(TEXT("spawn_light")) &&
-        !Lower.StartsWith(TEXT("spawn_sky_light")) &&
-        !Lower.StartsWith(TEXT("create_sky_light")) &&
-        !Lower.StartsWith(TEXT("create_light")) &&
-        !Lower.StartsWith(TEXT("build_lighting")) &&
-        !Lower.StartsWith(TEXT("bake_lightmap")) &&
-        !Lower.StartsWith(TEXT("ensure_single_sky_light")) &&
-        !Lower.StartsWith(TEXT("create_lighting_enabled_level")) &&
-        !Lower.StartsWith(TEXT("create_lightmass_volume")) &&
-        !Lower.StartsWith(TEXT("create_dynamic_light")) &&
-        !Lower.StartsWith(TEXT("setup_volumetric_fog")) &&
-        !Lower.StartsWith(TEXT("setup_global_illumination")) &&
-        !Lower.StartsWith(TEXT("configure_shadows")) &&
-        !Lower.StartsWith(TEXT("set_exposure")) &&
-        !Lower.StartsWith(TEXT("list_light_types")) &&
-        !Lower.StartsWith(TEXT("set_ambient_occlusion")))
+    FString EffectiveAction = Action;
+    if (Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase) && Payload.IsValid())
     {
+        FString PayloadAction;
+        if (Payload->TryGetStringField(TEXT("action"), PayloadAction) && !PayloadAction.IsEmpty())
+        {
+            EffectiveAction = PayloadAction;
+        }
+    }
+    const FString Lower = EffectiveAction.ToLower();
+    const bool bKnownLightingAction =
+        Lower.StartsWith(TEXT("spawn_light")) ||
+        Lower.StartsWith(TEXT("spawn_sky_light")) ||
+        Lower.StartsWith(TEXT("create_sky_light")) ||
+        Lower.StartsWith(TEXT("create_light")) ||
+        Lower.StartsWith(TEXT("build_lighting")) ||
+        Lower.StartsWith(TEXT("bake_lightmap")) ||
+        Lower.StartsWith(TEXT("ensure_single_sky_light")) ||
+        Lower.StartsWith(TEXT("create_lighting_enabled_level")) ||
+        Lower.StartsWith(TEXT("create_lightmass_volume")) ||
+        Lower.StartsWith(TEXT("create_dynamic_light")) ||
+        Lower.StartsWith(TEXT("setup_volumetric_fog")) ||
+        Lower.StartsWith(TEXT("setup_global_illumination")) ||
+        Lower.StartsWith(TEXT("configure_shadows")) ||
+        Lower.StartsWith(TEXT("set_exposure")) ||
+        Lower.StartsWith(TEXT("list_light_types")) ||
+        Lower.StartsWith(TEXT("set_ambient_occlusion"));
+    if (!bKnownLightingAction)
+    {
+        if (Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase))
+        {
+            const bool bMissingSubAction = EffectiveAction.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase);
+            SendAutomationError(RequestingSocket, RequestId,
+                bMissingSubAction
+                    ? TEXT("manage_lighting requires a non-empty 'action' field in payload")
+                    : FString::Printf(TEXT("Unknown manage_lighting action: %s"), *EffectiveAction),
+                bMissingSubAction ? TEXT("INVALID_ARGUMENT") : TEXT("UNKNOWN_ACTION"));
+            return true;
+        }
+
         return false;
     }
 
@@ -352,7 +383,8 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
             ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
         // CRITICAL: Validate world before spawning to prevent crashes
-        UWorld* World = ActorSS->GetWorld();
+        // Use the editor world for persistent authoring instead of transient PIE worlds.
+        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
         if (!World || !World->IsValidLowLevel())
         {
             SendAutomationError(RequestingSocket, RequestId,
@@ -1284,6 +1316,31 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
         }
         Path = SanitizedPath;
 
+        FString LevelFilename;
+        const bool bHasLevelFilename = FPackageName::TryConvertLongPackageNameToFilename(
+            Path, LevelFilename, FPackageName::GetMapPackageExtension());
+        const bool bLevelExistsOnDisk = bHasLevelFilename &&
+            IFileManager::Get().FileExists(*FPaths::ConvertRelativePathToFull(LevelFilename));
+        const bool bLevelExistsInRegistry = FPackageName::DoesPackageExist(Path);
+        if (bLevelExistsOnDisk || bLevelExistsInRegistry)
+        {
+            TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetStringField(TEXT("path"), Path);
+            Resp->SetBoolField(TEXT("alreadyExisted"), true);
+            Resp->SetBoolField(TEXT("existsAfter"), true);
+            Resp->SetStringField(TEXT("levelPath"), Path);
+
+            SendAutomationResponse(RequestingSocket, RequestId, true,
+                FString::Printf(TEXT("Level already exists with lighting path: %s"), *Path), Resp);
+            return true;
+        }
+
+        if (bHasLevelFilename)
+        {
+            IFileManager::Get().MakeDirectory(*FPaths::GetPath(LevelFilename), true);
+        }
+
         if (GEditor)
         {
             // Create a new blank map
@@ -1297,10 +1354,19 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
 
             // Save the level using McpSafeLevelSave to prevent Intel GPU driver crashes
             // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time)
-            bool bSaved = McpSafeLevelSave(
-                GEditor->GetEditorWorldContext().World()->PersistentLevel, *Path, 5);
+            UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
+            bool bSaved = EditorWorld && EditorWorld->PersistentLevel &&
+                McpSafeLevelSave(EditorWorld->PersistentLevel, Path, 5);
             if (bSaved)
             {
+                if (bHasLevelFilename)
+                {
+                    IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+                    TArray<FString> FilesToScan;
+                    FilesToScan.Add(LevelFilename);
+                    AssetRegistry.ScanFilesSynchronous(FilesToScan, true);
+                }
+
                 TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
                 Resp->SetBoolField(TEXT("success"), true);
                 Resp->SetStringField(TEXT("path"), Path);
@@ -1325,6 +1391,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
                 TEXT("Editor not available"),
                 TEXT("EDITOR_NOT_AVAILABLE"));
         }
+        return true;
+    }
+
+    if (Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase))
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Unknown manage_lighting action: %s"), *EffectiveAction),
+            TEXT("UNKNOWN_ACTION"));
         return true;
     }
 

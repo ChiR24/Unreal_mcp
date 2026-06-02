@@ -1,9 +1,9 @@
 /**
  * Centralized action name constants for executeAutomationRequest calls.
- * 
+ *
  * This file eliminates string literal duplication across handlers,
  * making refactoring safer and providing single source of truth.
- * 
+ *
  * Categories:
  * - TOOL_ACTIONS: Primary tool/domain names (2nd param to executeAutomationRequest)
  * - ACTOR_ACTIONS: Inner actions for control_actor tool
@@ -24,8 +24,7 @@ export const TOOL_ACTIONS = {
   SYSTEM_CONTROL: 'system_control',
   INSPECT: 'inspect',
   MANAGE_TOOLS: 'manage_tools',
-  MANAGE_PIPELINE: 'manage_pipeline',
-  
+
   // ==================== WORLD TOOLS ====================
   BUILD_ENVIRONMENT: 'build_environment',
   MANAGE_LIGHTING: 'manage_lighting',
@@ -33,14 +32,14 @@ export const TOOL_ACTIONS = {
   MANAGE_NAVIGATION: 'manage_navigation',
   MANAGE_SPLINES: 'manage_splines',
   MANAGE_LEVEL_STRUCTURE: 'manage_level_structure',
-  
+
   // ==================== AUTHORING TOOLS ====================
   MANAGE_BLUEPRINT: 'manage_blueprint',
   MANAGE_MATERIAL_AUTHORING: 'manage_material_authoring',
   MANAGE_TEXTURE: 'manage_texture',
   MANAGE_GEOMETRY: 'manage_geometry',
   MANAGE_SKELETON: 'manage_skeleton',
-  
+
   // ==================== GAMEPLAY TOOLS ====================
   ANIMATION_PHYSICS: 'animation_physics',
   MANAGE_EFFECT: 'manage_effect',
@@ -58,18 +57,18 @@ export const TOOL_ACTIONS = {
   MANAGE_NETWORKING: 'manage_networking',
   MANAGE_GAME_FRAMEWORK: 'manage_game_framework',
   MANAGE_SESSIONS: 'manage_sessions',
-  
+
   // ==================== UTILITY TOOLS ====================
   MANAGE_PERFORMANCE: 'manage_performance',
-  
+
   // ==================== INTERNAL ROUTING TOOLS ====================
   // These are not in schema but used for internal dispatch
   MANAGE_RENDER: 'manage_render',
   MANAGE_WORLD_PARTITION: 'manage_world_partition',
-  
+
   // ==================== CONSOLE/SYSTEM ====================
   CONSOLE_COMMAND: 'console_command',
-  
+
   // ==================== AUDIO ACTIONS ====================
   CREATE_SOUND_CUE: 'create_sound_cue',
   PLAY_SOUND_AT_LOCATION: 'play_sound_at_location',
@@ -92,7 +91,7 @@ export const TOOL_ACTIONS = {
   CLEAR_SOUND_MIX_CLASS_OVERRIDE: 'clear_sound_mix_class_override',
   SET_BASE_SOUND_MIX: 'set_base_sound_mix',
   PRIME_SOUND: 'prime_sound',
-  
+
   // ==================== LIGHTING ACTIONS ====================
   SPAWN_LIGHT: 'spawn_light',
   SPAWN_SKY_LIGHT: 'spawn_sky_light',
@@ -106,7 +105,7 @@ export const TOOL_ACTIONS = {
   SET_AMBIENT_OCCLUSION: 'set_ambient_occlusion',
   SETUP_VOLUMETRIC_FOG: 'setup_volumetric_fog',
   LIST_LIGHT_TYPES: 'list_light_types',
-  
+
   // ==================== PERFORMANCE ACTIONS ====================
   START_PROFILING: 'start_profiling',
   STOP_PROFILING: 'stop_profiling',
@@ -164,6 +163,10 @@ export const INPUT_ACTIONS = {
   CREATE_INPUT_MAPPING_CONTEXT: 'create_input_mapping_context',
   ADD_MAPPING: 'add_mapping',
   REMOVE_MAPPING: 'remove_mapping',
+  ADD_LEGACY_ACTION_MAPPING: 'add_legacy_action_mapping',
+  REMOVE_LEGACY_ACTION_MAPPING: 'remove_legacy_action_mapping',
+  ADD_LEGACY_AXIS_MAPPING: 'add_legacy_axis_mapping',
+  REMOVE_LEGACY_AXIS_MAPPING: 'remove_legacy_axis_mapping',
 } as const;
 
 // ============================================================================

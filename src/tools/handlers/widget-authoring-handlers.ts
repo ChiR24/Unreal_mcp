@@ -17,38 +17,29 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { requireNonEmptyString, executeAutomationRequest } from './common-handlers.js';
+import { requireNonEmptyString, executeAutomationRequest, getTimeoutMs, normalizePathFields } from './common-handlers.js';
 
-function getTimeoutMs(): number {
-  const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
-  return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
+function finiteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
-/**
- * Normalize path fields to ensure they start with /Game/ and use forward slashes.
- * Returns a copy of the args with normalized paths.
- */
-function normalizePathFields(args: Record<string, unknown>, fields: string[]): Record<string, unknown> {
-  const result = { ...args };
-
-  for (const field of fields) {
-    const value = result[field];
-    if (typeof value === 'string' && value.length > 0) {
-      let normalized = value.replace(/\\/g, '/');
-      // Replace /Content/ with /Game/ for common user mistake
-      if (normalized.startsWith('/Content/')) {
-        normalized = '/Game/' + normalized.slice('/Content/'.length);
-      }
-      // Ensure path starts with /Game/ if it doesn't start with a valid root
-      // Allow plugin paths like /MyPlugin/Assets to pass through unchanged
-      if (!normalized.startsWith('/')) {
-        normalized = '/Game/' + normalized;
-      }
-      result[field] = normalized;
-    }
+function normalizeVector2Alias(payload: Record<string, unknown>, objectKey: string, xKey: string, yKey: string): void {
+  if (payload[objectKey] !== undefined) {
+    return;
   }
 
-  return result;
+  const x = finiteNumber(payload[xKey]);
+  const y = finiteNumber(payload[yKey]);
+  if (x === undefined && y === undefined) {
+    return;
+  }
+
+  const value: Record<string, number> = {};
+  if (x !== undefined) value.x = x;
+  if (y !== undefined) value.y = y;
+  payload[objectKey] = value;
+  delete payload[xKey];
+  delete payload[yKey];
 }
 
 /**
@@ -60,12 +51,18 @@ export async function handleWidgetAuthoringTools(
   tools: ITools
 ): Promise<Record<string, unknown>> {
   // Normalize path fields before processing
-  const argsRecord = normalizePathFields(args as Record<string, unknown>, ['widgetPath', 'folder']);
+  const argsRecord = normalizePathFields(args as Record<string, unknown>, ['widgetPath', 'folder', 'path']);
   const timeoutMs = getTimeoutMs();
 
   // All actions are dispatched to C++ via automation bridge
   const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
     const payload = { ...argsRecord, subAction };
+    if (subAction === 'set_position') {
+      normalizeVector2Alias(payload, 'position', 'positionX', 'positionY');
+    }
+    if (subAction === 'set_size') {
+      normalizeVector2Alias(payload, 'size', 'sizeX', 'sizeY');
+    }
     const result = await executeAutomationRequest(
       tools,
       'manage_widget_authoring',

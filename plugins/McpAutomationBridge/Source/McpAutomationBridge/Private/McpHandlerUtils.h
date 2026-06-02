@@ -2,7 +2,7 @@
 // McpHandlerUtils.h
 // =============================================================================
 // Centralized utility functions and macros for MCP Automation Bridge handlers.
-// 
+//
 // This file provides:
 // - Standardized JSON parsing helpers
 // - Common response building utilities
@@ -14,7 +14,7 @@
 // - Functions extracted from McpAutomationBridge_BlueprintHandlers.cpp (900+ lines)
 // - Response building standardized across all 56 handler files
 // - JSON parsing patterns consolidated from duplicated implementations
-// 
+//
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 // =============================================================================
 
@@ -44,7 +44,7 @@ namespace McpHandlerUtils
     // =========================================================================
     // JSON Response Building
     // =========================================================================
-    
+
     /**
      * Build a standardized success response object.
      * @param Message Human-readable success message
@@ -111,19 +111,19 @@ namespace McpHandlerUtils
             OutError = FString::Printf(TEXT("Payload is null when extracting '%s'"), *FieldName);
             return false;
         }
-        
+
         if (!Payload->TryGetStringField(FieldName, OutValue))
         {
             OutError = FString::Printf(TEXT("Missing required field '%s'"), *FieldName);
             return false;
         }
-        
+
         if (OutValue.IsEmpty())
         {
             OutError = FString::Printf(TEXT("Field '%s' is empty"), *FieldName);
             return false;
         }
-        
+
         return true;
     }
 
@@ -157,13 +157,13 @@ namespace McpHandlerUtils
             OutError = FString::Printf(TEXT("Payload is null when extracting '%s'"), *FieldName);
             return false;
         }
-        
+
         if (!Payload->TryGetNumberField(FieldName, OutValue))
         {
             OutError = FString::Printf(TEXT("Missing required integer field '%s'"), *FieldName);
             return false;
         }
-        
+
         return true;
     }
 
@@ -213,13 +213,13 @@ namespace McpHandlerUtils
             OutError = FString::Printf(TEXT("Payload is null when extracting '%s'"), *FieldName);
             return false;
         }
-        
+
         if (!Payload->TryGetNumberField(FieldName, OutValue))
         {
             OutError = FString::Printf(TEXT("Missing required number field '%s'"), *FieldName);
             return false;
         }
-        
+
         return true;
     }
 
@@ -237,13 +237,13 @@ namespace McpHandlerUtils
             OutError = FString::Printf(TEXT("Payload is null when extracting '%s'"), *FieldName);
             return false;
         }
-        
+
         if (!Payload->TryGetBoolField(FieldName, OutValue))
         {
             OutError = FString::Printf(TEXT("Missing required boolean field '%s'"), *FieldName);
             return false;
         }
-        
+
         return true;
     }
 
@@ -277,14 +277,14 @@ namespace McpHandlerUtils
             OutError = FString::Printf(TEXT("Payload is null when extracting '%s'"), *FieldName);
             return false;
         }
-        
+
         const TSharedPtr<FJsonObject>* ObjectPtr;
         if (!Payload->TryGetObjectField(FieldName, ObjectPtr))
         {
             OutError = FString::Printf(TEXT("Missing required object field '%s'"), *FieldName);
             return false;
         }
-        
+
         OutValue = *ObjectPtr;
         return OutValue.IsValid();
     }
@@ -303,14 +303,14 @@ namespace McpHandlerUtils
             OutError = FString::Printf(TEXT("Payload is null when extracting '%s'"), *FieldName);
             return false;
         }
-        
+
         const TArray<TSharedPtr<FJsonValue>>* ArrayPtr;
         if (!Payload->TryGetArrayField(FieldName, ArrayPtr))
         {
             OutError = FString::Printf(TEXT("Missing required array field '%s'"), *FieldName);
             return false;
         }
-        
+
         OutValue = *ArrayPtr;
         return true;
     }
@@ -370,12 +370,12 @@ namespace McpHandlerUtils
         {
             return false;
         }
-        
+
         double X = 0.0, Y = 0.0, Z = 0.0;
         Obj->TryGetNumberField(TEXT("x"), X);
         Obj->TryGetNumberField(TEXT("y"), Y);
         Obj->TryGetNumberField(TEXT("z"), Z);
-        
+
         // Also try uppercase keys
         if (!Obj->HasField(TEXT("x")))
         {
@@ -383,7 +383,7 @@ namespace McpHandlerUtils
             Obj->TryGetNumberField(TEXT("Y"), Y);
             Obj->TryGetNumberField(TEXT("Z"), Z);
         }
-        
+
         OutVector = FVector(X, Y, Z);
         return true;
     }
@@ -397,12 +397,12 @@ namespace McpHandlerUtils
         {
             return false;
         }
-        
+
         double Pitch = 0.0, Yaw = 0.0, Roll = 0.0;
         Obj->TryGetNumberField(TEXT("pitch"), Pitch);
         Obj->TryGetNumberField(TEXT("yaw"), Yaw);
         Obj->TryGetNumberField(TEXT("roll"), Roll);
-        
+
         // Also try uppercase keys
         if (!Obj->HasField(TEXT("pitch")))
         {
@@ -410,7 +410,7 @@ namespace McpHandlerUtils
             Obj->TryGetNumberField(TEXT("Yaw"), Yaw);
             Obj->TryGetNumberField(TEXT("Roll"), Roll);
         }
-        
+
         OutRotator = FRotator(Pitch, Yaw, Roll);
         return true;
     }
@@ -425,13 +425,13 @@ namespace McpHandlerUtils
         {
             return false;
         }
-        
+
         double R = 1.0, G = 1.0, B = 1.0, A = 1.0;
         Obj->TryGetNumberField(TEXT("r"), R);
         Obj->TryGetNumberField(TEXT("g"), G);
         Obj->TryGetNumberField(TEXT("b"), B);
         Obj->TryGetNumberField(TEXT("a"), A);
-        
+
         OutColor = FLinearColor(R, G, B, A);
         return true;
     }
@@ -456,7 +456,7 @@ namespace McpHandlerUtils
     /**
      * Normalize an action string for case-insensitive comparison.
      * Also extracts sub-action from payload if present.
-     * 
+     *
      * @param Action The action string to normalize
      * @param Payload Optional payload to check for subAction field
      * @return Normalized lowercase action string
@@ -464,7 +464,7 @@ namespace McpHandlerUtils
     inline FString NormalizeAction(const FString& Action, const TSharedPtr<FJsonObject>& Payload = nullptr)
     {
         FString Normalized = Action.ToLower();
-        
+
         // Check for subAction in payload
         if (Payload.IsValid())
         {
@@ -474,7 +474,7 @@ namespace McpHandlerUtils
                 Normalized = SubAction.ToLower();
             }
         }
-        
+
         return Normalized;
     }
 
@@ -559,7 +559,7 @@ namespace McpHandlerUtils
      * @return Found component or nullptr
      */
     MCPAUTOMATIONBRIDGE_API class UActorComponent* FindActorComponentByName(
-        class AActor* Actor, 
+        class AActor* Actor,
         const FString& ComponentName);
 #endif
 
@@ -596,7 +596,7 @@ namespace McpHandlerUtils
     // =========================================================================
     // Object and Property Resolution Helpers
     // =========================================================================
-    
+
 #if WITH_EDITOR
     /**
      * Resolve an object from various path formats.
@@ -609,7 +609,7 @@ namespace McpHandlerUtils
         const FString& ObjectPath,
         FString* OutResolvedPath = nullptr);
 #endif
-    
+
     /**
      * Result struct for property resolution.
      */
@@ -620,7 +620,7 @@ namespace McpHandlerUtils
         FString Error;
         bool IsValid() const { return Property != nullptr && Container != nullptr; }
     };
-    
+
     /**
      * Resolve a property from an object, handling both simple and nested paths.
      * @param Object The object to resolve the property on
@@ -646,7 +646,7 @@ namespace McpHandlerUtils
     // =========================================================================
     // Standard Response Builders (reduces MakeShared<FJsonObject> duplication)
     // =========================================================================
-    
+
     /**
      * Create a result object with common fields.
      * Pattern: Result->SetStringField(TEXT("name"), Name);
@@ -655,7 +655,7 @@ namespace McpHandlerUtils
     {
         return MakeShared<FJsonObject>();
     }
-    
+
     /**
      * Create a result object with a single string field.
      */
@@ -665,7 +665,7 @@ namespace McpHandlerUtils
         Result->SetStringField(Key, Value);
         return Result;
     }
-    
+
     /**
      * Create a result object with name and path fields (common pattern).
      */
@@ -676,7 +676,7 @@ namespace McpHandlerUtils
         Result->SetStringField(TEXT("path"), Path);
         return Result;
     }
-    
+
     /**
      * Add common verification fields to a result object.
      * Determines actor vs asset automatically.

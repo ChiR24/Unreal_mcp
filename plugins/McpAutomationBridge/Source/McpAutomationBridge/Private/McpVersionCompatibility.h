@@ -1,10 +1,10 @@
 // =============================================================================
 // McpVersionCompatibility.h
 // =============================================================================
-// UE 5.0 - 5.7+ API Compatibility Macros
+// UE 5.0 - 5.8+ API Compatibility Macros
 //
 // These macros abstract API differences between UE versions to allow the same
-// code to compile across UE 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, and 5.7.
+// code to compile across UE 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, and 5.8.
 //
 // REFACTORING NOTES:
 // - Extracted from McpAutomationBridgeHelpers.h for better organization
@@ -42,12 +42,16 @@
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   #define MCP_GET_MATERIAL_EXPRESSIONS(Material) \
     (Material)->GetEditorOnlyData()->ExpressionCollection.Expressions
+  #define MCP_GET_FUNCTION_EXPRESSIONS(Function) \
+    (Function)->GetEditorOnlyData()->ExpressionCollection.Expressions
   #define MCP_GET_MATERIAL_INPUT(Material, InputName) \
     (Material)->GetEditorOnlyData()->InputName
   #define MCP_HAS_MATERIAL_EDITOR_ONLY_DATA 1
 #else
   #define MCP_GET_MATERIAL_EXPRESSIONS(Material) \
     (Material)->Expressions
+  #define MCP_GET_FUNCTION_EXPRESSIONS(Function) \
+    (Function)->FunctionExpressions
   #define MCP_GET_MATERIAL_INPUT(Material, InputName) \
     (Material)->InputName
   #define MCP_HAS_MATERIAL_EDITOR_ONLY_DATA 0
@@ -144,7 +148,7 @@
     (Property)->ExportTextItem_Direct(OutText, ValuePtr, DefaultValuePtr, Container, Flags)
 #else
   #define MCP_PROPERTY_EXPORT_TEXT(Property, OutText, ValuePtr, DefaultValuePtr, Container, Flags) \
-    (Property)->ExportText_Direct(OutText, ValuePtr, DefaultValuePtr, Flags, Container)
+    (Property)->ExportText_Direct(OutText, ValuePtr, DefaultValuePtr, Container, Flags, nullptr)
 #endif
 
 // =============================================================================
@@ -202,7 +206,7 @@
 #endif
 
 // =============================================================================
-// K2Node Header Location Compatibility (UE 5.0 - 5.7)
+// K2Node Header Location Compatibility (UE 5.0 - 5.8)
 // =============================================================================
 // K2Node headers moved between engine versions:
 // UE 5.0-5.3: K2Node_*.h at root level
@@ -212,7 +216,7 @@
 // The MCP_HAS_K2NODE_HEADERS macro is set during include probing
 
 // =============================================================================
-// EdGraphSchema_K2 Compatibility (UE 5.0 - 5.7)
+// EdGraphSchema_K2 Compatibility (UE 5.0 - 5.8)
 // =============================================================================
 
 // Pin category constants - resolved at include time in source files
@@ -244,24 +248,25 @@
 // UPackageTools API Compatibility (UE 5.0 vs 5.1+)
 // =============================================================================
 // We always use the simple overload UnloadPackages(TArray<UPackage*>, FText&, bool)
-// because it works reliably across all UE 5.x versions (5.0 through 5.7+).
+// because it works reliably across all UE 5.x versions (5.0 through 5.8+).
 // The FUnloadPackageParams struct is version‑unstable and removed in 5.7+.
 #define MCP_HAS_UNLOAD_PACKAGE_PARAMS 0
 // MCP_UNLOAD_PACKAGE_PARAMS_TYPE is not defined because it is never used.
 
 // =============================================================================
-// UWidgetBlueprint API Compatibility (UE 5.0 vs 5.1 vs 5.2 vs 5.3+)
+// UWidgetBlueprint API Compatibility (UE 5.0 vs 5.1 vs 5.2-5.6 vs 5.7+)
 // =============================================================================
 // UE 5.0: No WidgetVariableNameToGuidMap - use UBlueprint::NewVariables
 // UE 5.1: WidgetVariableNameToGuidMap exists
 // UE 5.2: WidgetVariableNameToGuidMap does NOT exist (or is private)
 // UE 5.3: WidgetVariableNameToGuidMap does NOT exist (not present in engine)
-// UE 5.4+: Unknown; assume fallback to NewVariables for safety
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+// UE 5.4-5.6: WidgetVariableNameToGuidMap does NOT exist in public headers
+// UE 5.7+: WidgetVariableNameToGuidMap exists again in UMGEditor/Public/WidgetBlueprint.h
+#if ENGINE_MAJOR_VERSION == 5 && (ENGINE_MINOR_VERSION == 1 || ENGINE_MINOR_VERSION >= 7)
     #define MCP_HAS_WIDGET_VARIABLE_GUID_MAP 1
     #define MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP) (WidgetBP)->WidgetVariableNameToGuidMap
 #else
-    // UE 5.0, 5.2, 5.3+: WidgetVariableNameToGuidMap does not exist.
+    // UE 5.0, 5.2-5.6: WidgetVariableNameToGuidMap does not exist.
     // The macro is never used because MCP_HAS_WIDGET_VARIABLE_GUID_MAP is 0,
     // but we define it to a no-op to avoid "macro redefined" warnings.
     #define MCP_HAS_WIDGET_VARIABLE_GUID_MAP 0

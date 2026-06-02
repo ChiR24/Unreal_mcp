@@ -11,14 +11,9 @@
  */
 
 import { ITools } from '../../types/tool-interfaces.js';
-import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest } from './common-handlers.js';
+import { createSubActionDispatcher } from './common-handlers.js';
 
-function getTimeoutMs(): number {
-  const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
-  return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
-}
 
 /**
  * Handles all sessions and local multiplayer actions for the manage_sessions tool.
@@ -28,21 +23,10 @@ export async function handleSessionsTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  const argsRecord = args as Record<string, unknown>;
-  const timeoutMs = getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_sessions',
-      payload as HandlerArgs,
-      `Automation bridge not available for sessions action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  const { sendRequest } = createSubActionDispatcher(tools, args, {
+    toolName: 'manage_sessions',
+    domainName: 'sessions'
+  });
 
   switch (action) {
     // ========================================================================
@@ -109,10 +93,10 @@ export async function handleSessionsTools(
       return sendRequest('get_sessions_info');
 
     default:
-      return cleanObject({
+      return {
         success: false,
         error: 'UNKNOWN_ACTION',
         message: `Unknown sessions action: ${action}`
-      });
+      };
   }
 }

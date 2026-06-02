@@ -98,40 +98,38 @@
 //
 // setup_mantling:
 //   Payload:  { "blueprintPath": string, "mantleHeight"?: number,
-//               "mantleReachDistance"?: number, "mantleAnimationPath"?: string }
+//               "mantleReachDistance"?: number }
 //   Response: { "blueprintPath": string, "mantleHeight": number,
 //               "mantleReachDistance": number, "stateVariable": string, "targetVariable": string }
 //
 // setup_vaulting:
 //   Payload:  { "blueprintPath": string, "vaultHeight"?: number,
-//               "vaultDepth"?: number, "vaultAnimationPath"?: string }
+//               "vaultDepth"?: number }
 //   Response: { "blueprintPath": string, "vaultHeight": number, "vaultDepth": number,
 //               "stateVariable": string }
 //
 // setup_climbing:
 //   Payload:  { "blueprintPath": string, "climbSpeed"?: number,
-//               "climbableTag"?: string, "climbAnimationPath"?: string }
+//               "climbableTag"?: string }
 //   Response: { "blueprintPath": string, "climbSpeed": number, "climbableTag": string,
 //               "stateVariable": string }
 //
 // setup_sliding:
 //   Payload:  { "blueprintPath": string, "slideSpeed"?: number, "slideDuration"?: number,
-//               "slideCooldown"?: number, "slideAnimationPath"?: string }
+//               "slideCooldown"?: number }
 //   Response: { "blueprintPath": string, "slideSpeed": number, "slideDuration": number,
 //               "slideCooldown": number, "stateVariable": string }
 //
 // setup_wall_running:
 //   Payload:  { "blueprintPath": string, "wallRunSpeed"?: number,
-//               "wallRunDuration"?: number, "wallRunGravityScale"?: number,
-//               "wallRunAnimationPath"?: string }
+//               "wallRunDuration"?: number, "wallRunGravityScale"?: number }
 //   Response: { "blueprintPath": string, "wallRunSpeed": number,
 //               "wallRunDuration": number, "wallRunGravityScale": number,
 //               "stateVariable": string }
 //
 // setup_grappling:
 //   Payload:  { "blueprintPath": string, "grappleRange"?: number,
-//               "grappleSpeed"?: number, "grappleTargetTag"?: string,
-//               "grappleCablePath"?: string }
+//               "grappleSpeed"?: number, "grappleTargetTag"?: string }
 //   Response: { "blueprintPath": string, "grappleRange": number, "grappleSpeed": number,
 //               "grappleTargetTag": string, "stateVariable": string }
 //
@@ -143,9 +141,7 @@
 //               "socketRight": string, "traceDistance": number }
 //
 // map_surface_to_sound:
-//   Payload:  { "blueprintPath": string, "surfaceType": string,
-//               "footstepSoundPath"?: string, "footstepParticlePath"?: string,
-//               "footstepDecalPath"?: string }
+//   Payload:  { "blueprintPath": string, "surfaceType": string }
 //   Response: { "blueprintPath": string, "surfaceType": string, "mapVariable": string }
 //
 // configure_footstep_fx:
@@ -157,7 +153,10 @@
 //   Payload:  { "blueprintPath": string }
 //   Response: { "blueprintPath": string, "assetName": string, "capsuleRadius": number,
 //               "capsuleHalfHeight": number, "walkSpeed": number, "jumpZVelocity": number,
-//               "hasSpringArm": bool, "hasCamera": bool, "movementVariables"?: string[] }
+//               "hasSpringArm": bool, "hasCamera": bool,
+//               "springArmTemplates": object[], "cameraTemplates": object[],
+//               "bFindCameraComponentWhenViewTarget"?: bool, "playerViewState": object,
+//               "movementVariables"?: string[] }
 //
 // VERSION COMPATIBILITY:
 // ----------------------
@@ -171,8 +170,8 @@
 // REFACTORING NOTES:
 // ------------------
 // - Security validation via IsValidAssetPath() for all blueprint paths.
-// - Blueprint variable defaults use SetBPVarDefaultValue() stub (manual editor setting).
-// - SavePackageHelperChar() uses McpSafeAssetSave for UE 5.7+ compatibility.
+// - Blueprint variable defaults use SetBPVarDefaultValue() with Blueprint metadata and CDO reflection.
+// - McpSafeAssetSave() is used directly for UE 5.7+ compatibility.
 // - #define aliases (GetStringFieldChar, etc.) for backward-compatible JSON helpers.
 // - AddBlueprintVariableChar in anonymous namespace to avoid Unity build collisions.
 //
@@ -204,7 +203,6 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
-#include "UObject/SavePackage.h"
 #include "Misc/PackageName.h"
 #include "HAL/FileManager.h"
 
@@ -220,6 +218,9 @@
 // Camera Includes
 // =============================================================================
 #include "Camera/CameraComponent.h"
+#include "Camera/PlayerCameraManager.h"
+#include "EngineUtils.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 
 // =============================================================================
@@ -252,53 +253,189 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpCharacterHandlers, Log, All);
 // Section 0: Helper Functions
 // =============================================================================
 
-/**
- * SavePackageHelperChar - Save package using McpSafeAssetSave
- * 
- * Note: This helper is used for NEW assets created with CreatePackage + factory.
- * FullyLoad() must NOT be called on new packages - it corrupts bulkdata in UE 5.7+.
- * 
- * @param Package  The UPackage to save
- * @param Asset    The asset object within the package
- * @return true if save was initiated
- */
-static bool SavePackageHelperChar(UPackage* Package, UObject* Asset)
+#if WITH_EDITOR
+
+
+static FString GetSceneComponentParentNameChar(const USceneComponent* Component)
 {
-    if (!Package || !Asset) return false;
-    
-    // Use McpSafeAssetSave helper for consistency across all handlers
-    McpSafeAssetSave(Asset);
-    return true;
+    if (!Component)
+    {
+        return TEXT("");
+    }
+
+    const USceneComponent* Parent = Component->GetAttachParent();
+    return Parent ? Parent->GetName() : TEXT("");
 }
+
+static TSharedPtr<FJsonObject> CreateCameraComponentReportChar(const UCameraComponent* Camera)
+{
+    TSharedPtr<FJsonObject> Report = MakeShared<FJsonObject>();
+    if (!Camera)
+    {
+        return Report;
+    }
+
+    Report->SetStringField(TEXT("name"), Camera->GetName());
+    Report->SetStringField(TEXT("class"), Camera->GetClass()->GetName());
+    Report->SetStringField(TEXT("attachParent"), GetSceneComponentParentNameChar(Camera));
+    Report->SetBoolField(TEXT("active"), Camera->IsActive());
+    Report->SetBoolField(TEXT("visible"), Camera->IsVisible());
+    Report->SetBoolField(TEXT("usePawnControlRotation"), Camera->bUsePawnControlRotation);
+    Report->SetNumberField(TEXT("fieldOfView"), Camera->FieldOfView);
+    Report->SetObjectField(TEXT("relativeLocation"), McpHandlerUtils::VectorToJson(Camera->GetRelativeLocation()));
+    Report->SetObjectField(TEXT("relativeRotation"), McpHandlerUtils::RotatorToJson(Camera->GetRelativeRotation()));
+    Report->SetObjectField(TEXT("worldLocation"), McpHandlerUtils::VectorToJson(Camera->GetComponentLocation()));
+    Report->SetObjectField(TEXT("worldRotation"), McpHandlerUtils::RotatorToJson(Camera->GetComponentRotation()));
+    return Report;
+}
+
+static TSharedPtr<FJsonObject> CreateSpringArmComponentReportChar(const USpringArmComponent* SpringArm)
+{
+    TSharedPtr<FJsonObject> Report = MakeShared<FJsonObject>();
+    if (!SpringArm)
+    {
+        return Report;
+    }
+
+    Report->SetStringField(TEXT("name"), SpringArm->GetName());
+    Report->SetStringField(TEXT("class"), SpringArm->GetClass()->GetName());
+    Report->SetStringField(TEXT("attachParent"), GetSceneComponentParentNameChar(SpringArm));
+    Report->SetBoolField(TEXT("active"), SpringArm->IsActive());
+    Report->SetBoolField(TEXT("visible"), SpringArm->IsVisible());
+    Report->SetNumberField(TEXT("targetArmLength"), SpringArm->TargetArmLength);
+    Report->SetBoolField(TEXT("usePawnControlRotation"), SpringArm->bUsePawnControlRotation);
+    Report->SetBoolField(TEXT("enableCameraLag"), SpringArm->bEnableCameraLag);
+    Report->SetNumberField(TEXT("cameraLagSpeed"), SpringArm->CameraLagSpeed);
+    Report->SetObjectField(TEXT("relativeLocation"), McpHandlerUtils::VectorToJson(SpringArm->GetRelativeLocation()));
+    Report->SetObjectField(TEXT("relativeRotation"), McpHandlerUtils::RotatorToJson(SpringArm->GetRelativeRotation()));
+    Report->SetObjectField(TEXT("worldLocation"), McpHandlerUtils::VectorToJson(SpringArm->GetComponentLocation()));
+    Report->SetObjectField(TEXT("worldRotation"), McpHandlerUtils::RotatorToJson(SpringArm->GetComponentRotation()));
+    return Report;
+}
+
+static void AddPlayerViewStateReportChar(UWorld* World, TSharedPtr<FJsonObject> Result)
+{
+    TSharedPtr<FJsonObject> ViewState = MakeShared<FJsonObject>();
+    ViewState->SetBoolField(TEXT("isPIE"), World && World->WorldType == EWorldType::PIE);
+
+    if (!World)
+    {
+        ViewState->SetStringField(TEXT("status"), TEXT("No active PIE world"));
+        Result->SetObjectField(TEXT("playerViewState"), ViewState);
+        return;
+    }
+
+    APlayerController* PlayerController = World->GetFirstPlayerController();
+    if (!PlayerController)
+    {
+        ViewState->SetStringField(TEXT("status"), TEXT("No player controller"));
+        Result->SetObjectField(TEXT("playerViewState"), ViewState);
+        return;
+    }
+
+    ViewState->SetStringField(TEXT("playerController"), PlayerController->GetName());
+    ViewState->SetStringField(TEXT("playerControllerClass"), PlayerController->GetClass()->GetName());
+
+    APawn* Pawn = PlayerController->GetPawn();
+    if (Pawn)
+    {
+        ViewState->SetStringField(TEXT("pawn"), Pawn->GetName());
+        ViewState->SetStringField(TEXT("pawnClass"), Pawn->GetClass()->GetName());
+        ViewState->SetBoolField(TEXT("bFindCameraComponentWhenViewTarget"), Pawn->bFindCameraComponentWhenViewTarget);
+    }
+
+    AActor* ViewTarget = PlayerController->GetViewTarget();
+    if (ViewTarget)
+    {
+        ViewState->SetStringField(TEXT("viewTarget"), ViewTarget->GetName());
+        ViewState->SetStringField(TEXT("viewTargetClass"), ViewTarget->GetClass()->GetName());
+        ViewState->SetBoolField(TEXT("viewTargetFindsCameraComponent"), ViewTarget->bFindCameraComponentWhenViewTarget);
+    }
+
+    APlayerCameraManager* CameraManager = PlayerController->PlayerCameraManager;
+    if (CameraManager)
+    {
+        TSharedPtr<FJsonObject> CameraManagerJson = MakeShared<FJsonObject>();
+        CameraManagerJson->SetStringField(TEXT("name"), CameraManager->GetName());
+        CameraManagerJson->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(CameraManager->GetCameraLocation()));
+        CameraManagerJson->SetObjectField(TEXT("rotation"), McpHandlerUtils::RotatorToJson(CameraManager->GetCameraRotation()));
+        CameraManagerJson->SetNumberField(TEXT("fov"), CameraManager->GetFOVAngle());
+        ViewState->SetObjectField(TEXT("playerCameraManager"), CameraManagerJson);
+    }
+
+    Result->SetObjectField(TEXT("playerViewState"), ViewState);
+}
+
+#endif // WITH_EDITOR
 
 /**
  * SetBPVarDefaultValue - Set blueprint variable default value (multi-version compatible)
- * 
- * SetBlueprintVariableDefaultValue doesn't exist in UE 5.6 or 5.7.
- * The variable will use its type default. Users can set defaults in the Blueprint editor.
- * 
+ *
+ * SetBlueprintVariableDefaultValue doesn't exist in UE 5.6 or 5.7, so defaults are persisted by
+ * updating the Blueprint variable description and importing the value into the generated CDO.
+ *
  * @param Blueprint     Target blueprint
  * @param VarName       Variable name to set default for
  * @param DefaultValue  String representation of the default value
  */
 static void SetBPVarDefaultValue(UBlueprint* Blueprint, FName VarName, const FString& DefaultValue)
 {
-    // Setting Blueprint variable default values requires version-specific approaches
-    // that are not universally available. The variable will use its type default.
-    // Users can set defaults manually in the Blueprint editor.
-    UE_LOG(LogMcpCharacterHandlers, Log, 
-           TEXT("Variable '%s' created. Set default value in Blueprint editor if needed."), 
-           *VarName.ToString());
+#if WITH_EDITOR
+    if (!Blueprint)
+    {
+        return;
+    }
+
+    bool bUpdatedVariableDescription = false;
+    for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
+    {
+        if (VarDesc.VarName == VarName)
+        {
+            VarDesc.DefaultValue = DefaultValue;
+            bUpdatedVariableDescription = true;
+            break;
+        }
+    }
+
+    bool bAppliedToCDO = false;
+    McpSafeCompileBlueprint(Blueprint);
+    if (Blueprint->GeneratedClass)
+    {
+        if (UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject())
+        {
+            if (FProperty* Property = FindFProperty<FProperty>(Blueprint->GeneratedClass, VarName))
+            {
+                void* ValuePtr = Property->ContainerPtrToValuePtr<void>(CDO);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+                Property->ImportText_Direct(*DefaultValue, ValuePtr, CDO, 0);
+#else
+                Property->ImportText(*DefaultValue, ValuePtr, PPF_None, CDO);
+#endif
+                bAppliedToCDO = true;
+            }
+        }
+    }
+
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    Blueprint->MarkPackageDirty();
+
+    if (!bUpdatedVariableDescription && !bAppliedToCDO)
+    {
+        UE_LOG(LogMcpCharacterHandlers, Warning,
+               TEXT("Variable '%s' default value could not be applied; variable was not found on Blueprint '%s'."),
+               *VarName.ToString(), *Blueprint->GetName());
+    }
+#endif
 }
 
 #if WITH_EDITOR
 
 /**
  * CreateCharacterBlueprint - Create a new Character Blueprint asset
- * 
+ *
  * Creates a Blueprint derived from ACharacter at the specified path.
  * Includes security validation via IsValidAssetPath() and duplicate detection.
- * 
+ *
  * @param Path      Asset directory path (e.g. "/Game/Characters")
  * @param Name      Blueprint asset name
  * @param OutError  Error message if creation fails
@@ -349,7 +486,7 @@ static UBlueprint* CreateCharacterBlueprint(const FString& Path, const FString& 
 
 /**
  * GetVectorFromJsonChar - Extract FVector from a JSON object
- * 
+ *
  * @param Obj  JSON object with "x", "y", "z" number fields
  * @return Parsed FVector or ZeroVector if invalid
  */
@@ -365,7 +502,7 @@ static FVector GetVectorFromJsonChar(const TSharedPtr<FJsonObject>& Obj)
 
 /**
  * GetRotatorFromJsonChar - Extract FRotator from a JSON object
- * 
+ *
  * @param Obj  JSON object with "pitch", "yaw", "roll" number fields
  * @return Parsed FRotator or ZeroRotator if invalid
  */
@@ -382,10 +519,10 @@ static FRotator GetRotatorFromJsonChar(const TSharedPtr<FJsonObject>& Obj)
 namespace {
 /**
  * AddBlueprintVariableChar - Add a Blueprint variable with proper category
- * 
+ *
  * In anonymous namespace with "Char" suffix to avoid Unity build collisions
  * with identically-named helpers in other handler files.
- * 
+ *
  * @param Blueprint  Target blueprint
  * @param VarName    Variable name
  * @param PinType    Variable pin type (bool, float, int, struct, etc.)
@@ -395,14 +532,14 @@ namespace {
 static bool AddBlueprintVariableChar(UBlueprint* Blueprint, const FString& VarName, const FEdGraphPinType& PinType, const FString& Category = TEXT(""))
 {
     if (!Blueprint) return false;
-    
+
     bool bSuccess = FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*VarName), PinType);
-    
+
     if (bSuccess && !Category.IsEmpty())
     {
         FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, FName(*VarName), nullptr, FText::FromString(Category));
     }
-    
+
     return bSuccess;
 }
 } // namespace
@@ -469,6 +606,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
             return true;
         }
 
+        FString SkeletalMeshPath = GetStringFieldChar(Payload, TEXT("skeletalMeshPath"));
+        USkeletalMesh* RequestedMesh = nullptr;
+        if (!SkeletalMeshPath.IsEmpty())
+        {
+            RequestedMesh = LoadObject<USkeletalMesh>(nullptr, *SkeletalMeshPath);
+            if (!RequestedMesh)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Skeletal mesh not found: %s"), *SkeletalMeshPath), TEXT("ASSET_NOT_FOUND"));
+                return true;
+            }
+        }
+
         FString Error;
         UBlueprint* Blueprint = CreateCharacterBlueprint(Path, Name, Error);
         if (!Blueprint)
@@ -477,35 +627,36 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
             return true;
         }
 
-        // Set skeletal mesh if provided
-        FString SkeletalMeshPath = GetStringFieldChar(Payload, TEXT("skeletalMeshPath"));
-        if (!SkeletalMeshPath.IsEmpty())
+        bool bSkeletalMeshAssigned = false;
+        if (RequestedMesh)
         {
             for (USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
             {
-                if (Node && Node->ComponentTemplate && 
+                if (Node && Node->ComponentTemplate &&
                     Node->ComponentTemplate->IsA<USkeletalMeshComponent>())
                 {
                     USkeletalMeshComponent* MeshComp = Cast<USkeletalMeshComponent>(Node->ComponentTemplate);
                     if (MeshComp)
                     {
-                        USkeletalMesh* Mesh = LoadObject<USkeletalMesh>(nullptr, *SkeletalMeshPath);
-                        if (Mesh)
-                        {
-                            MeshComp->SetSkeletalMesh(Mesh);
-                        }
+                        MeshComp->SetSkeletalMesh(RequestedMesh);
+                        bSkeletalMeshAssigned = true;
                     }
                     break;
                 }
             }
         }
 
-        SavePackageHelperChar(Blueprint->GetOutermost(), Blueprint);
+        McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Path / Name);
         Result->SetStringField(TEXT("name"), Name);
         Result->SetStringField(TEXT("parentClass"), TEXT("Character"));
+        if (!SkeletalMeshPath.IsEmpty())
+        {
+            Result->SetStringField(TEXT("skeletalMesh"), SkeletalMeshPath);
+            Result->SetBoolField(TEXT("skeletalMeshAssigned"), bSkeletalMeshAssigned);
+        }
         McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Character blueprint created"), Result);
         return true;
@@ -530,7 +681,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -539,10 +690,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         float CapsuleHalfHeight = static_cast<float>(GetNumberFieldChar(Payload, TEXT("capsuleHalfHeight"), 96.0));
 
         // Find capsule component in SCS or CDO
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCapsuleComponent())
         {
             CharCDO->GetCapsuleComponent()->SetCapsuleRadius(CapsuleRadius);
@@ -582,36 +733,57 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 
         FString SkeletalMeshPath = GetStringFieldChar(Payload, TEXT("skeletalMeshPath"));
         FString AnimBPPath = GetStringFieldChar(Payload, TEXT("animBlueprintPath"));
+        USkeletalMesh* RequestedMesh = nullptr;
+        UAnimBlueprint* RequestedAnimBP = nullptr;
 
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        if (!SkeletalMeshPath.IsEmpty())
+        {
+            RequestedMesh = LoadObject<USkeletalMesh>(nullptr, *SkeletalMeshPath);
+            if (!RequestedMesh)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Skeletal mesh not found: %s"), *SkeletalMeshPath), TEXT("ASSET_NOT_FOUND"));
+                return true;
+            }
+        }
+
+        if (!AnimBPPath.IsEmpty())
+        {
+            RequestedAnimBP = LoadObject<UAnimBlueprint>(nullptr, *AnimBPPath);
+            if (!RequestedAnimBP || !RequestedAnimBP->GeneratedClass)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Animation Blueprint not found: %s"), *AnimBPPath), TEXT("ASSET_NOT_FOUND"));
+                return true;
+            }
+        }
+
+        bool bSkeletalMeshAssigned = false;
+        bool bAnimBlueprintAssigned = false;
+
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetMesh())
         {
-            if (!SkeletalMeshPath.IsEmpty())
+            if (RequestedMesh)
             {
-                USkeletalMesh* Mesh = LoadObject<USkeletalMesh>(nullptr, *SkeletalMeshPath);
-                if (Mesh)
-                {
-                    CharCDO->GetMesh()->SetSkeletalMesh(Mesh);
-                }
+                CharCDO->GetMesh()->SetSkeletalMesh(RequestedMesh);
+                bSkeletalMeshAssigned = true;
             }
 
-            if (!AnimBPPath.IsEmpty())
+            if (RequestedAnimBP)
             {
-                UAnimBlueprint* AnimBP = LoadObject<UAnimBlueprint>(nullptr, *AnimBPPath);
-                if (AnimBP && AnimBP->GeneratedClass)
-                {
-                    CharCDO->GetMesh()->SetAnimInstanceClass(AnimBP->GeneratedClass);
-                }
+                CharCDO->GetMesh()->SetAnimInstanceClass(RequestedAnimBP->GeneratedClass);
+                bAnimBlueprintAssigned = true;
             }
 
             // Handle offset
@@ -635,8 +807,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        if (!SkeletalMeshPath.IsEmpty()) Result->SetStringField(TEXT("skeletalMesh"), SkeletalMeshPath);
-        if (!AnimBPPath.IsEmpty()) Result->SetStringField(TEXT("animBlueprint"), AnimBPPath);
+        if (!SkeletalMeshPath.IsEmpty())
+        {
+            Result->SetStringField(TEXT("skeletalMesh"), SkeletalMeshPath);
+            Result->SetBoolField(TEXT("skeletalMeshAssigned"), bSkeletalMeshAssigned);
+        }
+        if (!AnimBPPath.IsEmpty())
+        {
+            Result->SetStringField(TEXT("animBlueprint"), AnimBPPath);
+            Result->SetBoolField(TEXT("animBlueprintAssigned"), bAnimBlueprintAssigned);
+        }
         McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Mesh configured"), Result);
         return true;
@@ -666,7 +846,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -766,15 +946,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+        bool bHasAppliedWalkSpeed = false;
+        bool bRunSpeedApplied = false;
+        double AppliedWalkSpeed = 0.0;
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -795,6 +978,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
 		else if (Payload->HasField(TEXT("runSpeed")))
 		{
 			Movement->MaxWalkSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("runSpeed"), 600.0));
+			bRunSpeedApplied = true;
 		}
 		if (Payload->HasField(TEXT("crouchSpeed")))
 			Movement->MaxWalkSpeedCrouched = static_cast<float>(GetNumberFieldChar(Payload, TEXT("crouchSpeed"), 300.0));
@@ -808,12 +992,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
 			Movement->BrakingDecelerationWalking = static_cast<float>(GetNumberFieldChar(Payload, TEXT("deceleration"), 2048.0));
 		if (Payload->HasField(TEXT("groundFriction")))
 			Movement->GroundFriction = static_cast<float>(GetNumberFieldChar(Payload, TEXT("groundFriction"), 8.0));
+		AppliedWalkSpeed = Movement->MaxWalkSpeed;
+		bHasAppliedWalkSpeed = true;
 	}
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        if (Payload->HasField(TEXT("runSpeed")))
+        {
+            Result->SetNumberField(TEXT("runSpeed"), GetNumberFieldChar(Payload, TEXT("runSpeed"), 600.0));
+            Result->SetBoolField(TEXT("runSpeedApplied"), bRunSpeedApplied);
+        }
+        if (bHasAppliedWalkSpeed)
+        {
+            Result->SetNumberField(TEXT("walkSpeed"), AppliedWalkSpeed);
+        }
         McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Movement speeds configured"), Result);
         return true;
@@ -841,15 +1036,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -899,15 +1094,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -956,7 +1151,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -989,10 +1184,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         SetBPVarDefaultValue(Blueprint, FName(*SpeedVarName), FString::SanitizeFloat(CustomSpeed));
 
         // Configure CharacterMovementComponent if available
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -1033,15 +1228,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -1075,7 +1270,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // MantleTargetLocation (FVector).
     //
     // Payload:  { "blueprintPath": string, "mantleHeight"?: 200,
-    //             "mantleReachDistance"?: 100, "mantleAnimationPath"?: string }
+    //             "mantleReachDistance"?: 100 }
     // Response: { "blueprintPath": string, "mantleHeight": number,
     //             "mantleReachDistance": number, "stateVariable": string,
     //             "targetVariable": string }
@@ -1091,15 +1286,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 
         float MantleHeight = static_cast<float>(GetNumberFieldChar(Payload, TEXT("mantleHeight"), 200.0));
         float MantleReach = static_cast<float>(GetNumberFieldChar(Payload, TEXT("mantleReachDistance"), 100.0));
-        FString MantleAnim = GetStringFieldChar(Payload, TEXT("mantleAnimationPath"));
-
         // Add mantling state and configuration variables
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
@@ -1129,7 +1322,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetNumberField(TEXT("mantleHeight"), MantleHeight);
         Result->SetNumberField(TEXT("mantleReachDistance"), MantleReach);
-        if (!MantleAnim.IsEmpty()) Result->SetStringField(TEXT("mantleAnimation"), MantleAnim);
         Result->SetStringField(TEXT("stateVariable"), TEXT("bIsMantling"));
         Result->SetStringField(TEXT("targetVariable"), TEXT("MantleTargetLocation"));
         McpHandlerUtils::AddVerification(Result, Blueprint);
@@ -1145,7 +1337,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // VaultStartLocation, VaultEndLocation (FVector).
     //
     // Payload:  { "blueprintPath": string, "vaultHeight"?: 100,
-    //             "vaultDepth"?: 100, "vaultAnimationPath"?: string }
+    //             "vaultDepth"?: 100 }
     // Response: { "blueprintPath": string, "vaultHeight": number, "vaultDepth": number,
     //             "stateVariable": string }
     // -------------------------------------------------------------------------
@@ -1160,15 +1352,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 
         float VaultHeight = static_cast<float>(GetNumberFieldChar(Payload, TEXT("vaultHeight"), 100.0));
         float VaultDepth = static_cast<float>(GetNumberFieldChar(Payload, TEXT("vaultDepth"), 100.0));
-        FString VaultAnim = GetStringFieldChar(Payload, TEXT("vaultAnimationPath"));
-
         // Add vaulting state and configuration variables
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
@@ -1199,7 +1389,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetNumberField(TEXT("vaultHeight"), VaultHeight);
         Result->SetNumberField(TEXT("vaultDepth"), VaultDepth);
-        if (!VaultAnim.IsEmpty()) Result->SetStringField(TEXT("vaultAnimation"), VaultAnim);
         Result->SetStringField(TEXT("stateVariable"), TEXT("bIsVaulting"));
         McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Vaulting system configured with state variables"), Result);
@@ -1214,7 +1403,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // Also sets MaxCustomMovementSpeed on the CMC.
     //
     // Payload:  { "blueprintPath": string, "climbSpeed"?: 300,
-    //             "climbableTag"?: "Climbable", "climbAnimationPath"?: string }
+    //             "climbableTag"?: "Climbable" }
     // Response: { "blueprintPath": string, "climbSpeed": number,
     //             "climbableTag": string, "stateVariable": string }
     // -------------------------------------------------------------------------
@@ -1229,15 +1418,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 
         float ClimbSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("climbSpeed"), 300.0));
         FString ClimbableTag = GetStringFieldChar(Payload, TEXT("climbableTag"), TEXT("Climbable"));
-        FString ClimbAnim = GetStringFieldChar(Payload, TEXT("climbAnimationPath"));
-
         // Add climbing state and configuration variables
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
@@ -1265,10 +1452,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         SetBPVarDefaultValue(Blueprint, FName(TEXT("ClimbableTag")), ClimbableTag);
 
         // Configure CMC for custom movement mode
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -1281,7 +1468,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetNumberField(TEXT("climbSpeed"), ClimbSpeed);
         Result->SetStringField(TEXT("climbableTag"), ClimbableTag);
-        if (!ClimbAnim.IsEmpty()) Result->SetStringField(TEXT("climbAnimation"), ClimbAnim);
         Result->SetStringField(TEXT("stateVariable"), TEXT("bIsClimbing"));
         McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Climbing system configured with state variables"), Result);
@@ -1296,7 +1482,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // SlideTimeRemaining, SlideCooldownRemaining.
     //
     // Payload:  { "blueprintPath": string, "slideSpeed"?: 800, "slideDuration"?: 1.0,
-    //             "slideCooldown"?: 0.5, "slideAnimationPath"?: string }
+    //             "slideCooldown"?: 0.5 }
     // Response: { "blueprintPath": string, "slideSpeed": number, "slideDuration": number,
     //             "slideCooldown": number, "stateVariable": string }
     // -------------------------------------------------------------------------
@@ -1311,7 +1497,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1319,8 +1505,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         float SlideSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("slideSpeed"), 800.0));
         float SlideDuration = static_cast<float>(GetNumberFieldChar(Payload, TEXT("slideDuration"), 1.0));
         float SlideCooldown = static_cast<float>(GetNumberFieldChar(Payload, TEXT("slideCooldown"), 0.5));
-        FString SlideAnim = GetStringFieldChar(Payload, TEXT("slideAnimationPath"));
-
         // Add sliding state and configuration variables
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
@@ -1349,7 +1533,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetNumberField(TEXT("slideSpeed"), SlideSpeed);
         Result->SetNumberField(TEXT("slideDuration"), SlideDuration);
         Result->SetNumberField(TEXT("slideCooldown"), SlideCooldown);
-        if (!SlideAnim.IsEmpty()) Result->SetStringField(TEXT("slideAnimation"), SlideAnim);
         Result->SetStringField(TEXT("stateVariable"), TEXT("bIsSliding"));
         McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Sliding system configured with state and timing variables"), Result);
@@ -1365,8 +1548,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // WallRunNormal (FVector). Also sets MaxCustomMovementSpeed on the CMC.
     //
     // Payload:  { "blueprintPath": string, "wallRunSpeed"?: 600,
-    //             "wallRunDuration"?: 2.0, "wallRunGravityScale"?: 0.25,
-    //             "wallRunAnimationPath"?: string }
+    //             "wallRunDuration"?: 2.0, "wallRunGravityScale"?: 0.25 }
     // Response: { "blueprintPath": string, "wallRunSpeed": number,
     //             "wallRunDuration": number, "wallRunGravityScale": number,
     //             "stateVariable": string }
@@ -1382,7 +1564,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1390,8 +1572,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         float WallRunSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("wallRunSpeed"), 600.0));
         float WallRunDuration = static_cast<float>(GetNumberFieldChar(Payload, TEXT("wallRunDuration"), 2.0));
         float WallRunGravity = static_cast<float>(GetNumberFieldChar(Payload, TEXT("wallRunGravityScale"), 0.25));
-        FString WallRunAnim = GetStringFieldChar(Payload, TEXT("wallRunAnimationPath"));
-
         // Add wall running state and configuration variables
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
@@ -1414,10 +1594,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         AddBlueprintVariableChar(Blueprint, TEXT("WallRunNormal"), VectorPinType, TEXT("Wall Running"));
 
         // Configure CMC for custom movement mode
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -1431,7 +1611,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetNumberField(TEXT("wallRunSpeed"), WallRunSpeed);
         Result->SetNumberField(TEXT("wallRunDuration"), WallRunDuration);
         Result->SetNumberField(TEXT("wallRunGravityScale"), WallRunGravity);
-        if (!WallRunAnim.IsEmpty()) Result->SetStringField(TEXT("wallRunAnimation"), WallRunAnim);
         Result->SetStringField(TEXT("stateVariable"), TEXT("bIsWallRunning"));
         McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Wall running system configured with state variables"), Result);
@@ -1446,8 +1625,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // GrappleTargetTag (FName), GrappleTargetLocation (FVector).
     //
     // Payload:  { "blueprintPath": string, "grappleRange"?: 2000,
-    //             "grappleSpeed"?: 1500, "grappleTargetTag"?: "Grapple",
-    //             "grappleCablePath"?: string }
+    //             "grappleSpeed"?: 1500, "grappleTargetTag"?: "Grapple" }
     // Response: { "blueprintPath": string, "grappleRange": number,
     //             "grappleSpeed": number, "grappleTargetTag": string,
     //             "stateVariable": string }
@@ -1463,7 +1641,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1471,8 +1649,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         float GrappleRange = static_cast<float>(GetNumberFieldChar(Payload, TEXT("grappleRange"), 2000.0));
         float GrappleSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("grappleSpeed"), 1500.0));
         FString GrappleTarget = GetStringFieldChar(Payload, TEXT("grappleTargetTag"), TEXT("Grapple"));
-        FString GrappleCable = GetStringFieldChar(Payload, TEXT("grappleCablePath"));
-
         // Add grappling state and configuration variables
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
@@ -1502,7 +1678,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetNumberField(TEXT("grappleRange"), GrappleRange);
         Result->SetNumberField(TEXT("grappleSpeed"), GrappleSpeed);
         Result->SetStringField(TEXT("grappleTargetTag"), GrappleTarget);
-        if (!GrappleCable.IsEmpty()) Result->SetStringField(TEXT("grappleCable"), GrappleCable);
         Result->SetStringField(TEXT("stateVariable"), TEXT("bIsGrappling"));
         McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Grappling system configured with state variables"), Result);
@@ -1537,7 +1712,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1580,9 +1755,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // Creates a TMap<FName, FSoftObjectPath> Blueprint variable for surface-to-sound
     // lookup. This is used to map physical surface types to footstep sounds/particles.
     //
-    // Payload:  { "blueprintPath": string, "surfaceType": string,
-    //             "footstepSoundPath"?: string, "footstepParticlePath"?: string,
-    //             "footstepDecalPath"?: string }
+    // Payload:  { "blueprintPath": string, "surfaceType": string }
     // Response: { "blueprintPath": string, "surfaceType": string, "mapVariable": string }
     // -------------------------------------------------------------------------
     if (SubAction == TEXT("map_surface_to_sound"))
@@ -1596,16 +1769,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 
         FString SurfaceType = GetStringFieldChar(Payload, TEXT("surfaceType"));
-        FString SoundPath = GetStringFieldChar(Payload, TEXT("footstepSoundPath"));
-        FString ParticlePath = GetStringFieldChar(Payload, TEXT("footstepParticlePath"));
-        FString DecalPath = GetStringFieldChar(Payload, TEXT("footstepDecalPath"));
-
         // Add a Map variable for surface-to-sound lookup if not exists
         // This uses a TMap<FName, FSoftObjectPath> pattern
         FEdGraphPinType MapPinType;
@@ -1619,9 +1788,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("surfaceType"), SurfaceType);
-        if (!SoundPath.IsEmpty()) Result->SetStringField(TEXT("sound"), SoundPath);
-        if (!ParticlePath.IsEmpty()) Result->SetStringField(TEXT("particle"), ParticlePath);
-        if (!DecalPath.IsEmpty()) Result->SetStringField(TEXT("decal"), DecalPath);
         Result->SetStringField(TEXT("mapVariable"), TEXT("FootstepSoundMap"));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Surface mapping configured with map variable"), Result);
         return true;
@@ -1648,7 +1814,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1681,7 +1847,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // get_character_info
     // -------------------------------------------------------------------------
     // Retrieves comprehensive info about a Character Blueprint including:
-    // capsule dimensions, movement speeds, jump settings, camera setup,
+    // capsule dimensions, movement speeds, jump settings, Blueprint camera
+    // templates, active camera discovery flags, PIE player view state,
     // and all movement-related Blueprint variables.
     //
     // Payload:  { "blueprintPath": string }
@@ -1689,6 +1856,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     //             "capsuleRadius": number, "capsuleHalfHeight": number,
     //             "walkSpeed": number, "jumpZVelocity": number, "airControl": number,
     //             "hasSpringArm": bool, "hasCamera": bool,
+    //             "springArmTemplates": object[], "cameraTemplates": object[],
+    //             "bFindCameraComponentWhenViewTarget"?: bool, "playerViewState": object,
     //             "movementVariables"?: string[] }
     // -------------------------------------------------------------------------
     if (SubAction == TEXT("get_character_info"))
@@ -1702,7 +1871,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
@@ -1711,10 +1880,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("assetName"), Blueprint->GetName());
 
-        ACharacter* CharCDO = Blueprint->GeneratedClass 
+        ACharacter* CharCDO = Blueprint->GeneratedClass
             ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
             : nullptr;
-        
+
         if (CharCDO)
         {
             if (CharCDO->GetCapsuleComponent())
@@ -1738,19 +1907,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
             Result->SetBoolField(TEXT("useControllerRotationYaw"), CharCDO->bUseControllerRotationYaw);
         }
 
-        // Check for spring arm and camera
+        // Check for spring arm and camera templates on the Blueprint asset.
         bool bHasSpringArm = false;
         bool bHasCamera = false;
+        TArray<TSharedPtr<FJsonValue>> SpringArmTemplates;
+        TArray<TSharedPtr<FJsonValue>> CameraTemplates;
         for (USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
         {
             if (Node && Node->ComponentTemplate)
             {
-                if (Node->ComponentTemplate->IsA<USpringArmComponent>()) bHasSpringArm = true;
-                if (Node->ComponentTemplate->IsA<UCameraComponent>()) bHasCamera = true;
+                if (USpringArmComponent* SpringArm = Cast<USpringArmComponent>(Node->ComponentTemplate))
+                {
+                    bHasSpringArm = true;
+                    SpringArmTemplates.Add(MakeShared<FJsonValueObject>(CreateSpringArmComponentReportChar(SpringArm)));
+                }
+                else if (UCameraComponent* Camera = Cast<UCameraComponent>(Node->ComponentTemplate))
+                {
+                    bHasCamera = true;
+                    CameraTemplates.Add(MakeShared<FJsonValueObject>(CreateCameraComponentReportChar(Camera)));
+                }
             }
         }
         Result->SetBoolField(TEXT("hasSpringArm"), bHasSpringArm);
         Result->SetBoolField(TEXT("hasCamera"), bHasCamera);
+        Result->SetArrayField(TEXT("springArmTemplates"), SpringArmTemplates);
+        Result->SetArrayField(TEXT("cameraTemplates"), CameraTemplates);
+
+        if (CharCDO)
+        {
+            Result->SetBoolField(TEXT("bFindCameraComponentWhenViewTarget"), CharCDO->bFindCameraComponentWhenViewTarget);
+        }
+
+        UWorld* PIEWorld = (GEditor && GEditor->PlayWorld) ? GEditor->PlayWorld.Get() : nullptr;
+        AddPlayerViewStateReportChar(PIEWorld, Result);
 
         // List blueprint variables related to movement states
         TArray<TSharedPtr<FJsonValue>> MovementVars;
@@ -2159,7 +2348,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // ============================================================
     // UNKNOWN SUB-ACTION FALLBACK
     // ============================================================
-    SendAutomationError(RequestingSocket, RequestId, 
+    SendAutomationError(RequestingSocket, RequestId,
         FString::Printf(TEXT("Unknown character subAction: %s"), *SubAction), TEXT("UNKNOWN_SUBACTION"));
     return true;
 

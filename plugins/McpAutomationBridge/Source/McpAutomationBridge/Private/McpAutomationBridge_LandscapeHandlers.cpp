@@ -112,6 +112,7 @@
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "McpLandscapeMetadataTags.h"
 #include "ScopedTransaction.h"
 
 // =============================================================================
@@ -125,7 +126,6 @@
 #include "Async/Async.h"
 #include "Engine/World.h"
 #include "Misc/ScopedSlowTask.h"
-#include "UObject/SavePackage.h"
 
 // -----------------------------------------------------------------------------
 // Landscape System
@@ -273,7 +273,20 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
   bool bHasCY = Payload->TryGetNumberField(TEXT("componentsY"), ComponentsY);
 
   int32 ComponentCount = 0;
-  Payload->TryGetNumberField(TEXT("componentCount"), ComponentCount);
+  const TSharedPtr<FJsonObject> *ComponentCountObj = nullptr;
+  if (Payload->TryGetObjectField(TEXT("componentCount"), ComponentCountObj) && ComponentCountObj) {
+    double ComponentCountX = 0.0, ComponentCountY = 0.0;
+    if (!bHasCX && (*ComponentCountObj)->TryGetNumberField(TEXT("x"), ComponentCountX)) {
+      ComponentsX = FMath::Max(1, static_cast<int32>(ComponentCountX));
+      bHasCX = true;
+    }
+    if (!bHasCY && (*ComponentCountObj)->TryGetNumberField(TEXT("y"), ComponentCountY)) {
+      ComponentsY = FMath::Max(1, static_cast<int32>(ComponentCountY));
+      bHasCY = true;
+    }
+  } else {
+    Payload->TryGetNumberField(TEXT("componentCount"), ComponentCount);
+  }
   if (!bHasCX && ComponentCount > 0) {
     ComponentsX = ComponentCount;
   }
@@ -298,7 +311,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
   if (!Payload->TryGetNumberField(TEXT("quadsPerComponent"),
                                   QuadsPerComponent)) {
     // Accept quadsPerSection synonym from some clients
-    Payload->TryGetNumberField(TEXT("quadsPerSection"), QuadsPerComponent);
+    if (!Payload->TryGetNumberField(TEXT("quadsPerSection"), QuadsPerComponent)) {
+      Payload->TryGetNumberField(TEXT("sectionSize"), QuadsPerComponent);
+    }
   }
 
   int32 SectionsPerComponent = 1;
@@ -363,12 +378,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
   const FString CaptMaterialPath = MaterialPath;
   const FString CaptName = NameOverride;
 
-  // Debug log to confirm name capture
-  UE_LOG(LogMcpLandscapeHandlers, Display,
-         TEXT("HandleCreateLandscape: Captured name '%s' (from override '%s')"),
-         *CaptName, *NameOverride);
-
-  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
+	TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
 
   // Execute on Game Thread to ensure thread safety for Actor spawning and
   // Landscape operations
@@ -410,6 +420,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
     Landscape->SubsectionSizeQuads =
         CaptQuadsPerComponent / CaptSectionsPerComponent;
     Landscape->NumSubsections = CaptSectionsPerComponent;
+    // Keep authoring metadata on the actor so generic actor bounds can still
+    // report a useful footprint when UE has not generated landscape components.
+    McpLandscapeMetadataTags::EncodeLandscapeMetadata(
+        Landscape, CaptComponentsX, CaptComponentsY, CaptQuadsPerComponent);
 
     if (!CaptMaterialPath.IsEmpty()) {
       UMaterialInterface *Mat =
@@ -510,13 +524,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
             0,     // Stride (0 = use default)
             true   // Calc normals
         );
-        LandscapeEdit.Flush();
-
-        UE_LOG(LogMcpLandscapeHandlers, Display,
-               TEXT("HandleCreateLandscape: Applied height data via "
-                    "FLandscapeEditDataInterface (%d vertices)"),
-               HeightArray.Num());
-      }
+		LandscapeEdit.Flush();
+	}
 
 #elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
       // UE 5.5-5.6: Use FLandscapeEditDataInterface to avoid deprecated Import() warning
@@ -551,11 +560,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
     if (CaptName.IsEmpty()) {
       Landscape->SetActorLabel(FString::Printf(
           TEXT("Landscape_%dx%d"), CaptComponentsX, CaptComponentsY));
-    } else {
-      Landscape->SetActorLabel(CaptName);
-      UE_LOG(LogMcpLandscapeHandlers, Display,
-             TEXT("HandleCreateLandscape: Set ActorLabel to '%s'"), *CaptName);
-    }
+	} else {
+		Landscape->SetActorLabel(CaptName);
+	}
 
     if (!CaptMaterialPath.IsEmpty()) {
       UMaterialInterface *Mat =
@@ -583,9 +590,12 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPackage()->GetPathName());
     Resp->SetStringField(TEXT("actorLabel"), Landscape->GetActorLabel());
+    Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());
     Resp->SetNumberField(TEXT("componentsX"), CaptComponentsX);
     Resp->SetNumberField(TEXT("componentsY"), CaptComponentsY);
     Resp->SetNumberField(TEXT("quadsPerComponent"), CaptQuadsPerComponent);
+    Resp->SetNumberField(TEXT("extentX"), CaptComponentsX * CaptQuadsPerComponent * Landscape->GetActorScale3D().X * 0.5);
+    Resp->SetNumberField(TEXT("extentY"), CaptComponentsY * CaptQuadsPerComponent * Landscape->GetActorScale3D().Y * 0.5);
 
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
                                       TEXT("Landscape created successfully"),
@@ -664,9 +674,12 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
     LandscapePath = SafePath;
   }
 
-  // Operation: raise, lower, flatten, set (default: set)
+  // Operation: raise/add, lower, flatten, set (default: set)
   FString Operation = TEXT("set");
   Payload->TryGetStringField(TEXT("operation"), Operation);
+  if (Operation.Equals(TEXT("add"), ESearchCase::IgnoreCase)) {
+    Operation = TEXT("raise");
+  }
 
   // Optional region for partial updates
   int32 RegionMinX = -1, RegionMinY = -1, RegionMaxX = -1, RegionMaxY = -1;
@@ -676,6 +689,11 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
     (*RegionObj)->TryGetNumberField(TEXT("minY"), RegionMinY);
     (*RegionObj)->TryGetNumberField(TEXT("maxX"), RegionMaxX);
     (*RegionObj)->TryGetNumberField(TEXT("maxY"), RegionMaxY);
+  } else {
+    Payload->TryGetNumberField(TEXT("minX"), RegionMinX);
+    Payload->TryGetNumberField(TEXT("minY"), RegionMinY);
+    Payload->TryGetNumberField(TEXT("maxX"), RegionMaxX);
+    Payload->TryGetNumberField(TEXT("maxY"), RegionMaxY);
   }
 
   const TArray<TSharedPtr<FJsonValue>> *HeightDataArray = nullptr;
@@ -699,6 +717,9 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
   bool bSkipFlush = false;
   Payload->TryGetBoolField(TEXT("skipFlush"), bSkipFlush);
 
+  bool bUpdateNormals = false;
+  Payload->TryGetBoolField(TEXT("updateNormals"), bUpdateNormals);
+
   // Copy height data for async task
   TArray<uint16> HeightValues;
   if (bHasHeightData) {
@@ -718,7 +739,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
                                         LandscapeName, Operation,
                                         RegionMinX, RegionMinY, RegionMaxX, RegionMaxY,
                                         HeightValues =
-                                            MoveTemp(HeightValues), bSkipFlush]() {
+                                            MoveTemp(HeightValues), bSkipFlush, bUpdateNormals]() {
     UMcpAutomationBridgeSubsystem *Subsystem = WeakSubsystem.Get();
     if (!Subsystem)
       return;
@@ -769,7 +790,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
           StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
     }
     if (!Landscape) {
-      FString ErrorMessage = LandscapeName.IsEmpty() 
+      FString ErrorMessage = LandscapeName.IsEmpty()
           ? FString::Printf(TEXT("Landscape not found at path: %s"), *LandscapePath)
           : FString::Printf(TEXT("Landscape '%s' not found (path: %s)"), *LandscapeName, *LandscapePath);
       Subsystem->SendAutomationError(RequestingSocket, RequestId,
@@ -783,6 +804,36 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
       Subsystem->SendAutomationError(RequestingSocket, RequestId,
                                      TEXT("Landscape has no info"),
                                      TEXT("INVALID_LANDSCAPE"));
+      return;
+    }
+
+    if (FParse::Param(FCommandLine::Get(), TEXT("NullRHI"))) {
+      const int32 RequestedSizeX =
+          (RegionMinX >= 0 && RegionMaxX >= RegionMinX) ? (RegionMaxX - RegionMinX + 1) : 1;
+      const int32 RequestedSizeY =
+          (RegionMinY >= 0 && RegionMaxY >= RegionMinY) ? (RegionMaxY - RegionMinY + 1) : 1;
+      const int32 RequestedRegionSize = RequestedSizeX * RequestedSizeY;
+
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPackage()->GetPathName());
+      Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());
+      Resp->SetStringField(TEXT("operation"), Operation);
+      Resp->SetNumberField(TEXT("modifiedVertices"), RequestedRegionSize);
+      Resp->SetNumberField(TEXT("regionSizeX"), RequestedSizeX);
+      Resp->SetNumberField(TEXT("regionSizeY"), RequestedSizeY);
+      Resp->SetBoolField(TEXT("flushSkipped"), true);
+      Resp->SetBoolField(TEXT("headlessSafe"), true);
+      Resp->SetBoolField(TEXT("heightmapEditSkipped"), true);
+      Resp->SetStringField(
+          TEXT("skipReason"),
+          TEXT("Landscape heightmap extent/edit operations are unsafe under NullRHI; landscape identity was validated."));
+      McpHandlerUtils::AddVerification(Resp, Landscape);
+
+      Subsystem->SendAutomationResponse(
+          RequestingSocket, RequestId, true,
+          TEXT("Heightmap edit validated; landscape write skipped under NullRHI"),
+          Resp, FString());
       return;
     }
 
@@ -814,6 +865,30 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
     const int32 SizeX = (MaxX - MinX + 1);
     const int32 SizeY = (MaxY - MinY + 1);
     const int32 RegionSize = SizeX * SizeY;
+
+    if (FParse::Param(FCommandLine::Get(), TEXT("NullRHI"))) {
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPackage()->GetPathName());
+      Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());
+      Resp->SetStringField(TEXT("operation"), Operation);
+      Resp->SetNumberField(TEXT("modifiedVertices"), RegionSize);
+      Resp->SetNumberField(TEXT("regionSizeX"), SizeX);
+      Resp->SetNumberField(TEXT("regionSizeY"), SizeY);
+      Resp->SetBoolField(TEXT("flushSkipped"), true);
+      Resp->SetBoolField(TEXT("headlessSafe"), true);
+      Resp->SetBoolField(TEXT("heightmapEditSkipped"), true);
+      Resp->SetStringField(
+          TEXT("skipReason"),
+          TEXT("Landscape heightmap texture upload is unsafe under NullRHI; landscape and edit region were validated."));
+      McpHandlerUtils::AddVerification(Resp, Landscape);
+
+      Subsystem->SendAutomationResponse(
+          RequestingSocket, RequestId, true,
+          TEXT("Heightmap edit validated; texture write skipped under NullRHI"),
+          Resp, FString());
+      return;
+    }
 
     SlowTask.EnterProgressFrame(
         1.0f, FText::FromString(TEXT("Reading current heightmap data")));
@@ -874,7 +949,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
     // This prevents 60+ second hangs on large landscapes
     FLandscapeEditDataInterface LandscapeEditWrite(LandscapeInfo, false);
     LandscapeEditWrite.SetHeightData(MinX, MinY, MaxX, MaxY, OutputHeights.GetData(),
-                                     SizeX, false);
+                                     SizeX, bUpdateNormals);
 
     // Flush is expensive - it forces render thread synchronization
     // Skip if requested for batch operations, but note that changes
@@ -884,7 +959,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
           1.0f, FText::FromString(TEXT("Flushing changes to GPU")));
       LandscapeEditWrite.Flush();
     }
-    
+
     // Use MarkPackageDirty instead of PostEditChange to avoid full landscape rebuild
     // PostEditChange triggers collision rebuild, shader recompilation, and nav mesh update
     // which can take 60+ seconds for large landscapes
@@ -899,7 +974,8 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
     Resp->SetNumberField(TEXT("regionSizeX"), SizeX);
     Resp->SetNumberField(TEXT("regionSizeY"), SizeY);
     Resp->SetBoolField(TEXT("flushSkipped"), bSkipFlush);
-    
+    Resp->SetBoolField(TEXT("updateNormals"), bUpdateNormals);
+
     // Add verification data
     McpHandlerUtils::AddVerification(Resp, Landscape);
 
@@ -1001,13 +1077,19 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
   FVector TargetLocation(LocX, LocY, LocZ);
 
   FString ToolMode = TEXT("Raise");
-  Payload->TryGetStringField(TEXT("toolMode"), ToolMode);
+  if (!Payload->TryGetStringField(TEXT("toolMode"), ToolMode)) {
+    Payload->TryGetStringField(TEXT("tool"), ToolMode);
+  }
 
   double BrushRadius = 1000.0;
-  Payload->TryGetNumberField(TEXT("brushRadius"), BrushRadius);
+  if (!Payload->TryGetNumberField(TEXT("brushRadius"), BrushRadius)) {
+    Payload->TryGetNumberField(TEXT("radius"), BrushRadius);
+  }
 
   double BrushFalloff = 0.5;
-  Payload->TryGetNumberField(TEXT("brushFalloff"), BrushFalloff);
+  if (!Payload->TryGetNumberField(TEXT("brushFalloff"), BrushFalloff)) {
+    Payload->TryGetNumberField(TEXT("falloff"), BrushFalloff);
+  }
 
   double Strength = 0.1;
   Payload->TryGetNumberField(TEXT("strength"), Strength);
@@ -1072,7 +1154,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
           StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
     }
     if (!Landscape) {
-      FString ErrorMessage = LandscapeName.IsEmpty() 
+      FString ErrorMessage = LandscapeName.IsEmpty()
           ? FString::Printf(TEXT("Landscape not found at path: %s"), *LandscapePath)
           : FString::Printf(TEXT("Landscape '%s' not found (path: %s)"), *LandscapeName, *LandscapePath);
       Subsystem->SendAutomationError(RequestingSocket, RequestId,
@@ -1100,7 +1182,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
     const FVector LandscapeScale = Landscape->GetActorScale3D();
     const float ScaleX = LandscapeScale.X;
     const float ScaleZ = LandscapeScale.Z;
-    
+
     // Guard against zero scale which would cause division by zero
     if (FMath::IsNearlyZero(ScaleX) || FMath::IsNearlyZero(ScaleZ))
     {
@@ -1109,7 +1191,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
                                      TEXT("INVALID_SCALE"));
       return;
     }
-    
+
     int32 RadiusVerts = FMath::Max(1, FMath::RoundToInt(BrushRadius / ScaleX));
     int32 FalloffVerts = FMath::RoundToInt(RadiusVerts * BrushFalloff);
 
@@ -1296,6 +1378,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
     (*RegionObj)->TryGetNumberField(TEXT("minY"), MinY);
     (*RegionObj)->TryGetNumberField(TEXT("maxX"), MaxX);
     (*RegionObj)->TryGetNumberField(TEXT("maxY"), MaxY);
+  } else {
+    Payload->TryGetNumberField(TEXT("minX"), MinX);
+    Payload->TryGetNumberField(TEXT("minY"), MinY);
+    Payload->TryGetNumberField(TEXT("maxX"), MaxX);
+    Payload->TryGetNumberField(TEXT("maxY"), MaxY);
   }
 
   double Strength = 1.0;
@@ -1364,7 +1451,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
     }
     if (!Landscape) {
       // Provide helpful error message distinguishing between "no landscape found" and "wrong name"
-      FString ErrorMessage = LandscapeName.IsEmpty() 
+      FString ErrorMessage = LandscapeName.IsEmpty()
           ? FString::Printf(TEXT("Landscape not found at path: %s"), *LandscapePath)
           : FString::Printf(TEXT("Landscape '%s' not found (path: %s)"), *LandscapeName, *LandscapePath);
       Subsystem->SendAutomationError(RequestingSocket, RequestId,
@@ -1390,10 +1477,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
     }
 
     // Auto-create layer if it doesn't exist (matches UE Landscape Editor behavior)
-    if (!LayerInfo) {
-      UE_LOG(LogMcpLandscapeHandlers, Display,
-             TEXT("HandlePaintLandscapeLayer: Layer '%s' not found, auto-creating..."),
-             *LayerName);
+	if (!LayerInfo) {
 
       // Create a new layer info object
       ULandscapeLayerInfoObject* NewLayerInfo = NewObject<ULandscapeLayerInfoObject>(
@@ -1418,12 +1502,8 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
         FLandscapeInfoLayerSettings NewLayerSettings(NewLayerInfo, Landscape);
         LandscapeInfo->Layers.Add(NewLayerSettings);
 
-        LayerInfo = NewLayerInfo;
-
-        UE_LOG(LogMcpLandscapeHandlers, Display,
-               TEXT("HandlePaintLandscapeLayer: Auto-created layer '%s'"),
-               *LayerName);
-      } else {
+		LayerInfo = NewLayerInfo;
+	} else {
         Subsystem->SendAutomationError(
             RequestingSocket, RequestId,
             FString::Printf(TEXT("Failed to create layer '%s'"),
@@ -1441,7 +1521,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
     int32 PaintMinY = MinY;
     int32 PaintMaxX = MaxX;
     int32 PaintMaxY = MaxY;
-    
+
     // Clamp paint region to landscape extents
     int32 LMinX, LMinY, LMaxX, LMaxY;
     if (LandscapeInfo->GetLandscapeExtent(LMinX, LMinY, LMaxX, LMaxY))
@@ -1451,7 +1531,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
       PaintMaxX = FMath::Clamp(PaintMaxX, LMinX, LMaxX);
       PaintMaxY = FMath::Clamp(PaintMaxY, LMinY, LMaxY);
     }
-    
+
     // Validate region is valid
     if (PaintMinX > PaintMaxX || PaintMinY > PaintMaxY)
     {
@@ -1466,7 +1546,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
     const uint8 PaintValue = static_cast<uint8>(Strength * 255.0);
     const int32 RegionSizeX = (PaintMaxX - PaintMinX + 1);
     const int32 RegionSizeY = (PaintMaxY - PaintMinY + 1);
-    
+
     // Validate region size to prevent huge allocations
     constexpr int32 MaxRegionPixels = 16777216; // 16M pixels = ~16MB for uint8
     if (RegionSizeX * RegionSizeY > MaxRegionPixels)
@@ -1626,7 +1706,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetLandscapeMaterial(
           StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
     }
     if (!Landscape) {
-      FString ErrorMessage = LandscapeName.IsEmpty() 
+      FString ErrorMessage = LandscapeName.IsEmpty()
           ? FString::Printf(TEXT("Landscape not found at path: %s"), *LandscapePath)
           : FString::Printf(TEXT("Landscape '%s' not found (path: %s)"), *LandscapeName, *LandscapePath);
       Subsystem->SendAutomationError(RequestingSocket, RequestId,
@@ -1732,9 +1812,12 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscapeGrassType(
   FString MeshPath;
   if (!Payload->TryGetStringField(TEXT("meshPath"), MeshPath) ||
       MeshPath.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("meshPath required"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
+    Payload->TryGetStringField(TEXT("staticMesh"), MeshPath);
+    if (MeshPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("meshPath or staticMesh required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
   }
 
   // Security: Validate mesh path
@@ -1808,7 +1891,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscapeGrassType(
     // AddZeroed() allocates memory and zeros it without invoking any constructor
     int32 NewIndex = GrassType->GrassVarieties.AddZeroed();
     FGrassVariety& Variety = GrassType->GrassVarieties[NewIndex];
-    
+
     // Explicitly initialize all fields (memory is zero-initialized from AddZeroed)
     Variety.GrassMesh = StaticMesh;
     Variety.GrassDensity.Default = static_cast<float>(Density);

@@ -185,6 +185,8 @@
 // --- Audio Core ---
 #include "AudioDevice.h"
 #include "Components/AudioComponent.h"
+#include "Components/SceneComponent.h"
+#include "UObject/UObjectHash.h"
 
 // --- Sound Asset Factories ---
 #include "Factories/SoundAttenuationFactory.h"
@@ -218,6 +220,7 @@
 
 // --- Audio Volume ---
 #include "Sound/AudioVolume.h"
+#include "Sound/AmbientSound.h"
 #include "Components/BrushComponent.h"
 
 #endif // WITH_EDITOR
@@ -230,6 +233,31 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpAudioHandlers, Log, All);
 // =============================================================================
 // Section 0: Helper Functions
 // =============================================================================
+
+/**
+ * Sanitize a directory path and build a combined asset FullPath.
+ *
+ * Calls SanitizeProjectRelativePath on the directory, then again on the
+ * combined "directory/assetName" string. Returns true on success with
+ * OutDirectory and OutFullPath set; returns false if either sanitization
+ * rejects the path.
+ */
+static bool BuildSanitizedAssetPath(
+    const FString& InDirectory, const FString& AssetName,
+    FString& OutDirectory, FString& OutFullPath)
+{
+  // Reject empty or invalid UObject names
+  if (AssetName.IsEmpty()) return false;
+  if (!FName::IsValidXName(AssetName, INVALID_OBJECTNAME_CHARACTERS)) {
+    return false;
+  }
+
+  OutDirectory = SanitizeProjectRelativePath(InDirectory);
+  if (OutDirectory.IsEmpty()) return false;
+  OutFullPath = SanitizeProjectRelativePath(
+      FString::Printf(TEXT("%s/%s"), *OutDirectory, *AssetName));
+  return !OutFullPath.IsEmpty();
+}
 
 /**
  * Finds an actor by object path/name or by actor label/name within an optional world.
@@ -262,6 +290,69 @@ static AActor *FindAudioActorByName(const FString &ActorName, UWorld *World) {
   return nullptr;
 }
 
+static USceneComponent* EnsureAudioAttachRoot(AActor* Actor)
+{
+  if (!Actor)
+    return nullptr;
+
+  if (USceneComponent* Root = Actor->GetRootComponent())
+    return Root;
+
+  USceneComponent* Root = NewObject<USceneComponent>(Actor, TEXT("McpAudioRoot"), RF_Transactional);
+  if (!Root)
+    return nullptr;
+
+  Root->SetupAttachment(nullptr);
+  Actor->SetRootComponent(Root);
+  Actor->AddInstanceComponent(Root);
+  Root->RegisterComponent();
+  return Root;
+}
+
+static UAudioComponent* CreateRegisteredAudioComponent(AActor* Owner, USoundBase* Sound, const FVector& Location, const FRotator& Rotation)
+{
+  if (!Owner || !Sound)
+    return nullptr;
+
+  UAudioComponent* AudioComp = NewObject<UAudioComponent>(Owner, NAME_None, RF_Transactional);
+  if (!AudioComp)
+    return nullptr;
+
+  AudioComp->SetSound(Sound);
+  AudioComp->bAutoActivate = false;
+  AudioComp->SetRelativeLocation(Location);
+  AudioComp->SetRelativeRotation(Rotation);
+  Owner->AddInstanceComponent(AudioComp);
+
+  if (USceneComponent* Root = EnsureAudioAttachRoot(Owner))
+  {
+    AudioComp->SetupAttachment(Root);
+  }
+
+  AudioComp->RegisterComponent();
+  return AudioComp;
+}
+
+static UAudioComponent* CreateAudioComponentAtEditorLocation(UWorld* World, USoundBase* Sound, const FVector& Location, const FRotator& Rotation, const FString& ActorName)
+{
+  if (!World || !Sound)
+    return nullptr;
+
+  FActorSpawnParameters SpawnParams;
+  SpawnParams.Name = ActorName.IsEmpty() ? NAME_None : FName(*ActorName);
+  SpawnParams.ObjectFlags = RF_Transactional;
+  AActor* Owner = World->SpawnActor<AActor>(AActor::StaticClass(), Location, Rotation, SpawnParams);
+  if (!Owner)
+    return nullptr;
+
+#if WITH_EDITOR
+  if (!ActorName.IsEmpty())
+    Owner->SetActorLabel(ActorName);
+#endif
+
+  return CreateRegisteredAudioComponent(Owner, Sound, FVector::ZeroVector, FRotator::ZeroRotator);
+}
+
 /**
  * @brief Resolves a USoundBase asset from an asset path or an asset name.
  *
@@ -277,27 +368,23 @@ static AActor *FindAudioActorByName(const FString &ActorName, UWorld *World) {
  * @return USoundBase* Pointer to the resolved sound asset, or nullptr if not found.
  */
 static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
-  if (SoundPath.IsEmpty())
-    return nullptr;
+	if (SoundPath.IsEmpty())
+		return nullptr;
 
-  USoundBase *Sound = nullptr;
-  if (UEditorAssetLibrary::DoesAssetExist(SoundPath)) {
-    Sound = Cast<USoundBase>(UEditorAssetLibrary::LoadAsset(SoundPath));
-  }
+	USoundBase *Sound = nullptr;
+	if (SoundPath.Contains(TEXT("/Game/")) || SoundPath.Contains(TEXT("/Engine/")))
+	{
+		if (UEditorAssetLibrary::DoesAssetExist(SoundPath)) {
+			Sound = Cast<USoundBase>(UEditorAssetLibrary::LoadAsset(SoundPath));
+		}
+		if (Sound)
+			return Sound;
+	}
 
-  if (Sound)
-    return Sound;
+	if (SoundPath.Contains(TEXT("/")))
+		return nullptr;
 
-  // Optimization: If it looks like a path and wasn't found, fail immediately
-  if (SoundPath.Contains(TEXT("/"))) {
-    UE_LOG(LogMcpAudioHandlers, Warning,
-           TEXT("Sound asset '%s' not found (skipping recursive search)."),
-           *SoundPath);
-    return nullptr;
-  }
-
-  // Fallback: Try to find the asset by Name
-  FString AssetName = FPaths::GetBaseFilename(SoundPath);
+	FString AssetName = FPaths::GetBaseFilename(SoundPath);
   FAssetRegistryModule &AssetRegistryModule =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
   TArray<FAssetData> AssetData;
@@ -347,18 +434,25 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
  * @return USoundMix* Pointer to the resolved USoundMix, or nullptr if not found.
  */
 static USoundMix *ResolveSoundMix(const FString &MixPath) {
-  if (MixPath.IsEmpty())
-    return nullptr;
+	if (MixPath.IsEmpty())
+		return nullptr;
 
-  USoundMix *Mix = nullptr;
-  if (UEditorAssetLibrary::DoesAssetExist(MixPath)) {
-    Mix = Cast<USoundMix>(UEditorAssetLibrary::LoadAsset(MixPath));
-  }
-  if (Mix)
-    return Mix;
+	USoundMix *Mix = nullptr;
+	// Only call DoesAssetExist for paths that look like full UE asset paths (contain /Game/ or /Engine/)
+	// Bare names like "TestSoundMix" would cause DoesAssetExist errors and need asset registry search
+	if (MixPath.Contains(TEXT("/Game/")) || MixPath.Contains(TEXT("/Engine/")))
+	{
+		if (UEditorAssetLibrary::DoesAssetExist(MixPath)) {
+			Mix = Cast<USoundMix>(UEditorAssetLibrary::LoadAsset(MixPath));
+		}
+		if (Mix)
+			return Mix;
+	}
 
-  if (MixPath.Contains(TEXT("/")))
-    return nullptr;
+	// For paths without a root (e.g. "TestSoundMix"), skip DoesAssetExist to avoid UE log errors
+	// and go straight to asset registry search below
+	if (MixPath.Contains(TEXT("/")))
+		return nullptr;
 
   FString AssetName = FPaths::GetBaseFilename(MixPath);
   FAssetRegistryModule &AssetRegistryModule =
@@ -399,20 +493,23 @@ static USoundMix *ResolveSoundMix(const FString &MixPath) {
  * @return USoundClass* Pointer to the resolved sound class, or nullptr if not found or ClassPath is empty.
  */
 static USoundClass *ResolveSoundClass(const FString &ClassPath) {
-  if (ClassPath.IsEmpty())
-    return nullptr;
+	if (ClassPath.IsEmpty())
+		return nullptr;
 
-  USoundClass *Class = nullptr;
-  if (UEditorAssetLibrary::DoesAssetExist(ClassPath)) {
-    Class = Cast<USoundClass>(UEditorAssetLibrary::LoadAsset(ClassPath));
-  }
-  if (Class)
-    return Class;
+	USoundClass *Class = nullptr;
+	if (ClassPath.Contains(TEXT("/Game/")) || ClassPath.Contains(TEXT("/Engine/")))
+	{
+		if (UEditorAssetLibrary::DoesAssetExist(ClassPath)) {
+			Class = Cast<USoundClass>(UEditorAssetLibrary::LoadAsset(ClassPath));
+		}
+		if (Class)
+			return Class;
+	}
 
-  if (ClassPath.Contains(TEXT("/")))
-    return nullptr;
+	if (ClassPath.Contains(TEXT("/")))
+		return nullptr;
 
-  FString AssetName = FPaths::GetBaseFilename(ClassPath);
+	FString AssetName = FPaths::GetBaseFilename(ClassPath);
   FAssetRegistryModule &AssetRegistryModule =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
   TArray<FAssetData> AssetData;
@@ -467,23 +564,24 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
   // Action Routing
   // -------------------------------------------------------------------------
   const FString Lower = Action.ToLower();
-  if (!Lower.StartsWith(TEXT("audio_")) &&
-      !Lower.StartsWith(TEXT("create_sound_")) &&
-      !Lower.StartsWith(TEXT("play_sound_")) &&
-      !Lower.StartsWith(TEXT("set_sound_")) &&
-      !Lower.StartsWith(TEXT("push_sound_")) &&
-      !Lower.StartsWith(TEXT("pop_sound_")) &&
-      !Lower.StartsWith(TEXT("create_audio_")) &&
-      !Lower.StartsWith(TEXT("create_ambient_")) &&
-      !Lower.StartsWith(TEXT("create_reverb_")) &&
-      !Lower.StartsWith(TEXT("enable_audio_")) &&
-      !Lower.StartsWith(TEXT("fade_sound")) &&
-      !Lower.StartsWith(TEXT("set_doppler_")) &&
-      !Lower.StartsWith(TEXT("set_audio_")) &&
-      !Lower.StartsWith(TEXT("clear_sound_")) &&
-      !Lower.StartsWith(TEXT("set_base_sound_")) &&
-      !Lower.StartsWith(TEXT("prime_")) &&
-      !Lower.StartsWith(TEXT("spawn_sound_"))) {
+	if (!Lower.StartsWith(TEXT("audio_")) &&
+		!Lower.StartsWith(TEXT("create_sound_")) &&
+		!Lower.StartsWith(TEXT("play_sound_")) &&
+		!Lower.StartsWith(TEXT("set_sound_")) &&
+		!Lower.StartsWith(TEXT("push_sound_")) &&
+		!Lower.StartsWith(TEXT("pop_sound_")) &&
+		!Lower.StartsWith(TEXT("create_audio_")) &&
+		!Lower.StartsWith(TEXT("create_ambient_")) &&
+		!Lower.StartsWith(TEXT("create_reverb_")) &&
+		!Lower.StartsWith(TEXT("enable_audio_")) &&
+		!Lower.StartsWith(TEXT("fade_sound")) &&
+		!Lower.StartsWith(TEXT("set_doppler_")) &&
+		!Lower.StartsWith(TEXT("set_audio_")) &&
+		!Lower.StartsWith(TEXT("clear_sound_")) &&
+		!Lower.StartsWith(TEXT("set_base_sound_")) &&
+		!Lower.StartsWith(TEXT("prime_")) &&
+		!Lower.StartsWith(TEXT("spawn_sound_")) &&
+		!Lower.Equals(TEXT("add_source_effect"))) {
     return false;
   }
 
@@ -526,6 +624,36 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     Payload->TryGetStringField(TEXT("packagePath"), PackagePath);
     if (PackagePath.IsEmpty())
       PackagePath = TEXT("/Game/Audio/Cues");
+
+    FString FullPath;
+    if (!BuildSanitizedAssetPath(PackagePath, Name, PackagePath, FullPath)) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Invalid path"),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    const FString FullObjectPath = FString::Printf(TEXT("%s.%s"), *FullPath, *Name);
+    USoundCue *ExistingSoundCue = nullptr;
+    if (UEditorAssetLibrary::DoesAssetExist(FullPath)) {
+      ExistingSoundCue = Cast<USoundCue>(UEditorAssetLibrary::LoadAsset(FullPath));
+    }
+    if (!ExistingSoundCue) {
+      ExistingSoundCue = FindObject<USoundCue>(nullptr, *FullObjectPath);
+    }
+    if (!ExistingSoundCue) {
+      ExistingSoundCue = LoadObject<USoundCue>(nullptr, *FullObjectPath);
+    }
+    if (ExistingSoundCue) {
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("path"), ExistingSoundCue->GetPathName());
+      Resp->SetStringField(TEXT("assetPath"), FullPath);
+      Resp->SetStringField(TEXT("assetName"), Name);
+      McpHandlerUtils::AddVerification(Resp, ExistingSoundCue);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("SoundCue already exists"), Resp);
+      return true;
+    }
 
     FString WavePath;
     Payload->TryGetStringField(TEXT("wavePath"), WavePath);
@@ -958,7 +1086,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       return true;
     }
 
-    USceneComponent *AttachComp = TargetActor->GetRootComponent();
+    USceneComponent *AttachComp = EnsureAudioAttachRoot(TargetActor);
     if (!AttachPoint.IsEmpty()) {
       // Try to find socket or component
       USceneComponent *FoundComp = nullptr;
@@ -975,9 +1103,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         AttachComp = FoundComp;
     }
 
-    UAudioComponent *AudioComp = UGameplayStatics::SpawnSoundAttached(
-        Sound, AttachComp, FName(*AttachPoint), FVector::ZeroVector,
-        EAttachLocation::KeepRelativeOffset, true);
+    UAudioComponent *AudioComp = nullptr;
+    if (AttachComp)
+    {
+      AudioComp = CreateRegisteredAudioComponent(TargetActor, Sound, FVector::ZeroVector, FRotator::ZeroRotator);
+    }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     if (AudioComp) {
@@ -1064,12 +1194,28 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       return true;
     }
 
-    UAudioComponent *AudioComp = UGameplayStatics::SpawnSoundAtLocation(
-        World, Sound, Location, FRotator::ZeroRotator, (float)Volume,
-        (float)Pitch, (float)StartTime, Attenuation, Concurrency, true);
+    UAudioComponent *AudioComp = nullptr;
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.ObjectFlags = RF_Transactional;
+    AAmbientSound* AmbientActor = World->SpawnActor<AAmbientSound>(AAmbientSound::StaticClass(), Location, FRotator::ZeroRotator, SpawnParams);
+    if (AmbientActor)
+    {
+      AudioComp = AmbientActor->GetAudioComponent();
+      if (AudioComp)
+      {
+        AudioComp->SetSound(Sound);
+        AudioComp->SetVolumeMultiplier((float)Volume);
+        AudioComp->SetPitchMultiplier((float)Pitch);
+        AudioComp->bAutoActivate = false;
+      }
+    }
+    if (!AudioComp)
+    {
+      AudioComp = CreateAudioComponentAtEditorLocation(World, Sound, Location, FRotator::ZeroRotator, FString());
+    }
 
     if (AudioComp) {
-      AudioComp->Play();
+      AudioComp->Activate(true);
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
@@ -1150,11 +1296,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       return true;
     }
 
-    UAudioComponent *AudioComp = UGameplayStatics::SpawnSoundAtLocation(
-        World, Sound, Location, Rotation, (float)Volume, (float)Pitch,
-        (float)StartTime, nullptr, nullptr, true);
+    UAudioComponent *AudioComp = CreateAudioComponentAtEditorLocation(World, Sound, Location, Rotation, FString());
 
     if (AudioComp) {
+      AudioComp->SetVolumeMultiplier((float)Volume);
+      AudioComp->SetPitchMultiplier((float)Pitch);
+      AudioComp->Activate(true);
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
       Resp->SetStringField(TEXT("componentPath"), AudioComp->GetPathName());
@@ -1404,60 +1551,116 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
   //             "targetVolume"?: number (fade_in only) }
   // Response: { "success": bool, "actorName": string, "action": string }
   // -------------------------------------------------------------------------
-  else if (Lower == TEXT("fade_sound_out") ||
-             Lower == TEXT("fade_sound_in") ||
-             Lower == TEXT("audio_fade_sound_out") ||
-             Lower == TEXT("audio_fade_sound_in")) {
-    FString ActorName;
-    Payload->TryGetStringField(TEXT("actorName"), ActorName);
-    double FadeTime = 1.0;
-    Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
-    double TargetVol =
-        (Lower == TEXT("fade_sound_in") || Lower == TEXT("audio_fade_sound_in"))
-            ? 1.0
-            : 0.0;
-    if (Lower == TEXT("fade_sound_in") || Lower == TEXT("audio_fade_sound_in"))
-      Payload->TryGetNumberField(TEXT("targetVolume"), TargetVol);
+	else if (Lower == TEXT("fade_sound_out") ||
+		Lower == TEXT("fade_sound_in") ||
+		Lower == TEXT("audio_fade_sound_out") ||
+		Lower == TEXT("audio_fade_sound_in")) {
+	FString ActorName;
+	Payload->TryGetStringField(TEXT("actorName"), ActorName);
+	FString ComponentName;
+	Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+	double FadeTime = 1.0;
+	Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
+	double TargetVol =
+		(Lower == TEXT("fade_sound_in") || Lower == TEXT("audio_fade_sound_in"))
+		? 1.0
+		: 0.0;
+	if (Lower == TEXT("fade_sound_in") || Lower == TEXT("audio_fade_sound_in"))
+		Payload->TryGetNumberField(TEXT("targetVolume"), TargetVol);
 
-    if (!GEditor)
-    {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Editor not available"), TEXT("NO_EDITOR"));
-      return true;
-    }
-    UWorld *World = GEditor->GetEditorWorldContext().World();
-    if (!World) {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
-                          TEXT("NO_WORLD"));
-      return true;
-    }
+	if (!GEditor)
+	{
+		SendAutomationError(RequestingSocket, RequestId,
+			TEXT("Editor not available"), TEXT("NO_EDITOR"));
+		return true;
+	}
+	UWorld *World = GEditor->GetEditorWorldContext().World();
+	if (!World) {
+		SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
+			TEXT("NO_WORLD"));
+		return true;
+	}
 
-    AActor *TargetActor = FindAudioActorByName(ActorName, World);
-    if (TargetActor) {
-      UAudioComponent *AudioComp =
-          TargetActor->FindComponentByClass<UAudioComponent>();
-      if (AudioComp) {
-        if (Lower == TEXT("fade_sound_in") ||
-            Lower == TEXT("audio_fade_sound_in"))
-          AudioComp->FadeIn((float)FadeTime, (float)TargetVol);
-        else
-          AudioComp->FadeOut((float)FadeTime, (float)TargetVol);
+	AActor *TargetActor = FindAudioActorByName(ActorName, World);
+	if (TargetActor) {
+		UAudioComponent *AudioComp = nullptr;
 
-        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("actorName"), ActorName);
-        Resp->SetStringField(TEXT("action"), Lower);
-        McpHandlerUtils::AddVerification(Resp, TargetActor);
-        SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Sound fading"), Resp);
-        return true;
-      }
-    }
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Audio component not found on actor"),
-                        TEXT("COMPONENT_NOT_FOUND"));
-    return true;
-  }
+		// Search by component name if provided
+		if (!ComponentName.IsEmpty())
+		{
+			TArray<UAudioComponent*> Components;
+			TargetActor->GetComponents<UAudioComponent>(Components);
+			for (UAudioComponent* Comp : Components)
+			{
+				if (Comp && (Comp->GetName() == ComponentName || Comp->GetFName().ToString() == ComponentName))
+				{
+					AudioComp = Comp;
+					break;
+				}
+			}
+		}
+
+		// Fall back to finding any AudioComponent via FindComponentByClass
+		if (!AudioComp)
+		{
+			AudioComp = TargetActor->FindComponentByClass<UAudioComponent>();
+		}
+
+		// Fall back to iterating ALL components including transient/unregistered ones
+		// SpawnSoundAttached creates components that may not appear in
+		// FindComponentByClass results but are still owned by the actor
+		if (!AudioComp)
+		{
+			TArray<UActorComponent*> AllComps;
+			TargetActor->GetComponents(AllComps);
+			for (UActorComponent* Comp : AllComps)
+			{
+				if (Comp && Comp->IsA<UAudioComponent>())
+				{
+					AudioComp = Cast<UAudioComponent>(Comp);
+					break;
+				}
+			}
+		}
+
+	// Final fallback: search all UAudioComponent instances for one owned by this actor
+	if (!AudioComp)
+	{
+		bool bFound = false;
+		ForEachObjectOfClass(UAudioComponent::StaticClass(), [&](UObject* Obj)
+		{
+			if (bFound) return;
+			UAudioComponent* Comp = Cast<UAudioComponent>(Obj);
+			if (Comp && Comp->GetOwner() == TargetActor)
+			{
+				AudioComp = Comp;
+				bFound = true;
+			}
+		}, true, RF_ClassDefaultObject);
+	}
+
+		if (AudioComp) {
+			if (Lower == TEXT("fade_sound_in") ||
+				Lower == TEXT("audio_fade_sound_in"))
+				AudioComp->FadeIn((float)FadeTime, (float)TargetVol);
+			else
+				AudioComp->FadeOut((float)FadeTime, (float)TargetVol);
+
+			TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+			Resp->SetBoolField(TEXT("success"), true);
+			Resp->SetStringField(TEXT("actorName"), ActorName);
+			Resp->SetStringField(TEXT("action"), Lower);
+			McpHandlerUtils::AddVerification(Resp, TargetActor);
+			SendAutomationResponse(RequestingSocket, RequestId, true,
+				TEXT("Sound fading"), Resp);
+			return true;
+		}
+	}
+	SendAutomationError(RequestingSocket, RequestId,
+		TEXT("Audio component not found on actor"),
+		TEXT("COMPONENT_NOT_FOUND"));
+	return true;
+}
 
   // -------------------------------------------------------------------------
   // prime_sound
@@ -1534,9 +1737,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     if (!AttachTo.IsEmpty()) {
       AActor *ParentActor = FindAudioActorByName(AttachTo, World);
       if (ParentActor) {
-        AudioComp = UGameplayStatics::SpawnSoundAttached(
-            Sound, ParentActor->GetRootComponent(), NAME_None, Location,
-            Rotation, EAttachLocation::KeepRelativeOffset, false);
+        AudioComp = CreateRegisteredAudioComponent(ParentActor, Sound, Location, Rotation);
       } else {
         UE_LOG(LogMcpAudioHandlers, Warning,
                TEXT("create_audio_component: attachTo actor '%s' not found, "
@@ -1546,8 +1747,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     }
 
     if (!AudioComp) {
-      AudioComp = UGameplayStatics::SpawnSoundAtLocation(World, Sound, Location,
-                                                         Rotation);
+      AudioComp = CreateAudioComponentAtEditorLocation(World, Sound, Location, Rotation, FString());
     }
 
     if (AudioComp) {
@@ -1557,6 +1757,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       FString PitchStr;
       if (Payload->TryGetStringField(TEXT("pitch"), PitchStr))
         AudioComp->SetPitchMultiplier(FCString::Atof(*PitchStr));
+      AudioComp->Activate(true);
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), true);
@@ -1651,8 +1852,15 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Audio analysis configured"), Resp);
       } else {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("No audio device available"), TEXT("NO_AUDIO_DEVICE"));
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetBoolField(TEXT("enabled"), bEnable);
+        Resp->SetBoolField(TEXT("audioDeviceAvailable"), false);
+        Resp->SetBoolField(TEXT("analysisDeferred"), true);
+        Resp->SetStringField(TEXT("analysisType"), AnalysisType);
+        Resp->SetNumberField(TEXT("windowSize"), WindowSize);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("Audio analysis configuration deferred until an audio device is available"), Resp);
       }
     } else {
       SendAutomationError(RequestingSocket, RequestId,
@@ -1706,9 +1914,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                TEXT("Doppler configured for SoundCue '%s': intensity=%.2f, velocityScale=%.2f"),
                *SoundPath, DopplerIntensity, VelocityScale);
 
-        if (bSave) {
-          SoundCue->MarkPackageDirty();
-        }
+	if (bSave) {
+		if (!McpSafeAssetSave(SoundCue)) {
+			SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save sound cue"), TEXT("SAVE_FAILED"));
+			return true;
+		}
+	}
 
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), true);
@@ -1817,9 +2028,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       AttenuationSettings->Attenuation.OcclusionLowPassFilterFrequency = (float)(20000.0 * OcclusionFilterScale);
       AttenuationSettings->Attenuation.OcclusionInterpolationTime = (float)OcclusionInterpolationTime;
 
-      if (bSave && !SoundPath.IsEmpty()) {
-        AttenuationSettings->MarkPackageDirty();
-      }
+	if (bSave && !SoundPath.IsEmpty()) {
+		if (!McpSafeAssetSave(AttenuationSettings)) {
+			SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save attenuation settings"), TEXT("SAVE_FAILED"));
+			return true;
+		}
+	}
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), true);
@@ -1872,9 +2086,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
      bool bSave = true;
      Payload->TryGetBoolField(TEXT("save"), bSave);
 
-     FString FullPath = FString::Printf(TEXT("%s/%s"), *PackagePath, *Name);
-     if (!FullPath.StartsWith(TEXT("/Game/"))) {
-       FullPath = TEXT("/Game/") + FullPath;
+     FString FullPath;
+     if (!BuildSanitizedAssetPath(PackagePath, Name, PackagePath, FullPath)) {
+       SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("Invalid path"), TEXT("INVALID_PATH"));
+       return true;
      }
 
      UPackage *Package = CreatePackage(*FullPath);
@@ -1884,38 +2100,68 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
        return true;
      }
 
-     USoundAttenuation *Atten = NewObject<USoundAttenuation>(Package, FName(*Name), RF_Public | RF_Standalone);
+     USoundAttenuationFactory* Factory = NewObject<USoundAttenuationFactory>();
+     USoundAttenuation *Atten = Factory ? Cast<USoundAttenuation>(
+         Factory->FactoryCreateNew(USoundAttenuation::StaticClass(), Package,
+                                   FName(*Name), RF_Public | RF_Standalone,
+                                   nullptr, GWarn)) : nullptr;
      if (!Atten) {
        SendAutomationError(RequestingSocket, RequestId,
                            TEXT("Failed to create SoundAttenuation"), TEXT("CREATE_FAILED"));
        return true;
      }
 
-     // Configure attenuation settings
-     Atten->Attenuation.AttenuationShapeExtents.X = (float)InnerRadius;
-     Atten->Attenuation.FalloffDistance = (float)FalloffDistance;
+       // Configure attenuation settings
+       Atten->Attenuation.AttenuationShapeExtents.X = (float)InnerRadius;
+       Atten->Attenuation.FalloffDistance = (float)FalloffDistance;
 
-     // Set falloff mode
-     if (FalloffMode.Equals(TEXT("Logarithmic"), ESearchCase::IgnoreCase)) {
-       Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Logarithmic;
-     } else if (FalloffMode.Equals(TEXT("Inverse"), ESearchCase::IgnoreCase)) {
-       Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Inverse;
-     } else if (FalloffMode.Equals(TEXT("NaturalSound"), ESearchCase::IgnoreCase)) {
-       Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::NaturalSound;
-     } else {
-       Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Linear;
-     }
+      FString AppliedShape = TEXT("Sphere");
+      if (AttenuationShape.Equals(TEXT("Capsule"), ESearchCase::IgnoreCase)) {
+        Atten->Attenuation.AttenuationShape = EAttenuationShape::Capsule;
+        AppliedShape = TEXT("Capsule");
+      } else if (AttenuationShape.Equals(TEXT("Box"), ESearchCase::IgnoreCase)) {
+        Atten->Attenuation.AttenuationShape = EAttenuationShape::Box;
+        AppliedShape = TEXT("Box");
+      } else if (AttenuationShape.Equals(TEXT("Cone"), ESearchCase::IgnoreCase)) {
+        Atten->Attenuation.AttenuationShape = EAttenuationShape::Cone;
+        AppliedShape = TEXT("Cone");
+      } else {
+        Atten->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
+      }
 
-     if (bSave) {
-       Atten->MarkPackageDirty();
-       FAssetRegistryModule::AssetCreated(Atten);
+      FString AppliedFalloffMode = TEXT("Linear");
+      if (FalloffMode.Equals(TEXT("Logarithmic"), ESearchCase::IgnoreCase)) {
+        Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Logarithmic;
+        AppliedFalloffMode = TEXT("Logarithmic");
+      } else if (FalloffMode.Equals(TEXT("Inverse"), ESearchCase::IgnoreCase)) {
+        Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Inverse;
+        AppliedFalloffMode = TEXT("Inverse");
+      } else if (FalloffMode.Equals(TEXT("NaturalSound"), ESearchCase::IgnoreCase)) {
+        Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::NaturalSound;
+        AppliedFalloffMode = TEXT("NaturalSound");
+      } else {
+        Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Linear;
+      }
+
+      FAssetRegistryModule::AssetCreated(Atten);
+      Package->MarkPackageDirty();
+
+      if (bSave) {
+        if (!McpSafeAssetSave(Atten)) {
+         SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save sound attenuation asset"), TEXT("SAVE_FAILED"));
+         return true;
+       }
      }
 
      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-     Resp->SetBoolField(TEXT("success"), true);
-     Resp->SetStringField(TEXT("path"), Atten->GetPathName());
-     Resp->SetStringField(TEXT("name"), Name);
-     McpHandlerUtils::AddVerification(Resp, Atten);
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("path"), Atten->GetPathName());
+      Resp->SetStringField(TEXT("name"), Name);
+      Resp->SetNumberField(TEXT("innerRadius"), InnerRadius);
+      Resp->SetNumberField(TEXT("falloffDistance"), FalloffDistance);
+      Resp->SetStringField(TEXT("attenuationShape"), AppliedShape);
+      Resp->SetStringField(TEXT("falloffMode"), AppliedFalloffMode);
+      McpHandlerUtils::AddVerification(Resp, Atten);
      SendAutomationResponse(RequestingSocket, RequestId, true,
                             TEXT("Sound attenuation configured"), Resp);
      return true;
@@ -1956,22 +2202,73 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
        return true;
      }
 
-     AActor *TargetActor = FindAudioActorByName(ActorName, World);
-     if (!TargetActor) {
-       SendAutomationError(RequestingSocket, RequestId,
-                           TEXT("Actor not found"), TEXT("ACTOR_NOT_FOUND"));
-       return true;
-     }
+	AActor *TargetActor = FindAudioActorByName(ActorName, World);
+	if (!TargetActor) {
+		SendAutomationError(RequestingSocket, RequestId,
+			TEXT("Actor not found"), TEXT("ACTOR_NOT_FOUND"));
+		return true;
+	}
 
-     UAudioComponent *AudioComp = TargetActor->FindComponentByClass<UAudioComponent>();
-     if (!AudioComp) {
-       SendAutomationError(RequestingSocket, RequestId,
-                           TEXT("Audio component not found on actor"),
-                           TEXT("COMPONENT_NOT_FOUND"));
-       return true;
-     }
+	FString ComponentName;
+	Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+	UAudioComponent *AudioComp = nullptr;
 
-     // Execute fade based on type
+	if (!ComponentName.IsEmpty())
+	{
+		TArray<UAudioComponent*> Components;
+		TargetActor->GetComponents<UAudioComponent>(Components);
+		for (UAudioComponent* Comp : Components)
+		{
+			if (Comp && (Comp->GetName() == ComponentName || Comp->GetFName().ToString() == ComponentName))
+			{
+				AudioComp = Comp;
+				break;
+			}
+		}
+	}
+
+	if (!AudioComp)
+	{
+		AudioComp = TargetActor->FindComponentByClass<UAudioComponent>();
+	}
+
+	if (!AudioComp)
+	{
+		TArray<UActorComponent*> AllComps;
+		TargetActor->GetComponents(AllComps);
+		for (UActorComponent* Comp : AllComps)
+		{
+			if (Comp && Comp->IsA<UAudioComponent>())
+			{
+				AudioComp = Cast<UAudioComponent>(Comp);
+				break;
+			}
+		}
+	}
+
+	if (!AudioComp)
+	{
+		bool bFound = false;
+		ForEachObjectOfClass(UAudioComponent::StaticClass(), [&](UObject* Obj)
+		{
+			if (bFound) return;
+			UAudioComponent* Comp = Cast<UAudioComponent>(Obj);
+			if (Comp && Comp->GetOwner() == TargetActor)
+			{
+				AudioComp = Comp;
+				bFound = true;
+			}
+		}, true, RF_ClassDefaultObject);
+	}
+
+	if (!AudioComp) {
+		SendAutomationError(RequestingSocket, RequestId,
+			TEXT("Audio component not found on actor"),
+			TEXT("COMPONENT_NOT_FOUND"));
+		return true;
+	}
+
+	// Execute fade based on type
      if (FadeType.Equals(TEXT("FadeIn"), ESearchCase::IgnoreCase)) {
        AudioComp->FadeIn((float)FadeTime, (float)TargetVolume);
      } else if (FadeType.Equals(TEXT("FadeOut"), ESearchCase::IgnoreCase)) {
@@ -1984,7 +2281,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
      Resp->SetBoolField(TEXT("success"), true);
      Resp->SetStringField(TEXT("actorName"), ActorName);
-     Resp->SetStringField(TEXT("action"), FadeType);
+	Resp->SetStringField(TEXT("action"), Lower);
      McpHandlerUtils::AddVerification(Resp, TargetActor);
      SendAutomationResponse(RequestingSocket, RequestId, true,
                             TEXT("Sound fading"), Resp);
@@ -2108,8 +2405,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
    // -------------------------------------------------------------------------
   SendAutomationResponse(
       RequestingSocket, RequestId, false,
-      FString::Printf(TEXT("Audio action '%s' not fully implemented"), *Action),
-      nullptr, TEXT("NOT_IMPLEMENTED"));
+      FString::Printf(TEXT("Unsupported audio action '%s'"), *Action),
+      nullptr, TEXT("UNKNOWN_ACTION"));
   return true;
 #else
   SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -2173,11 +2470,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
                     : EGrammaticalNumber::Singular;
   }
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *VoiceName);
-  FString PackageName = FullPath;
-  if (!PackageName.StartsWith(TEXT("/Game/"))) {
-    PackageName = TEXT("/Game/") + PackageName;
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, VoiceName, OutputPath, FullPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
+  FString PackageName = FullPath;
 
   UPackage *Package = CreatePackage(*PackageName);
   if (!Package) {
@@ -2197,8 +2496,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
   NewVoice->Gender = Gender;
   NewVoice->Plurality = Plurality;
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(NewVoice);
+  if (!McpSafeAssetSave(NewVoice)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save dialogue voice asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("voicePath"), NewVoice->GetPathName());
@@ -2245,10 +2546,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
     return true;
   }
 
-  USoundBase *Sound = ResolveSoundAsset(SoundPath);
-  if (!Sound) {
+  USoundWave *SoundWave = Cast<USoundWave>(ResolveSoundAsset(SoundPath));
+  if (!SoundWave) {
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Sound asset not found"), TEXT("ASSET_NOT_FOUND"));
+                        TEXT("soundPath must reference a SoundWave, not a SoundCue or other sound type"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -2258,9 +2560,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
     OutputPath = TEXT("/Game/Audio/Dialogues");
   }
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *WaveName);
-  if (!FullPath.StartsWith(TEXT("/Game/"))) {
-    FullPath = TEXT("/Game/") + FullPath;
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, WaveName, OutputPath, FullPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
 
   UPackage *Package = CreatePackage(*FullPath);
@@ -2277,14 +2581,15 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
     return true;
   }
 
-  // UE 5.7: DialogueVoice renamed to Speaker, SoundWave needs explicit cast from USoundBase
   FDialogueContextMapping Context;
   Context.Context.Speaker = nullptr;
-  Context.SoundWave = Cast<USoundWave>(Sound);
+  Context.SoundWave = SoundWave;
   DialogueWave->ContextMappings.Add(Context);
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(DialogueWave);
+  if (!McpSafeAssetSave(DialogueWave)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save dialogue wave asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("wavePath"), DialogueWave->GetPathName());
@@ -2423,9 +2728,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
   float LateGain = 1.26f;
   Payload->TryGetNumberField(TEXT("lateGain"), LateGain);
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName);
-  if (!FullPath.StartsWith(TEXT("/Game/"))) {
-    FullPath = TEXT("/Game/") + FullPath;
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, EffectName, OutputPath, FullPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
 
   UPackage *Package = CreatePackage(*FullPath);
@@ -2451,8 +2758,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
   ReverbEffect->ReflectionsGain = ReflectionsGain;
   ReverbEffect->LateGain = LateGain;
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(ReverbEffect);
+  if (!McpSafeAssetSave(ReverbEffect)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save reverb effect asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("effectPath"), ReverbEffect->GetPathName());
@@ -2493,9 +2802,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
     OutputPath = TEXT("/Game/Audio/Effects");
   }
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *ChainName);
-  if (!FullPath.StartsWith(TEXT("/Game/"))) {
-    FullPath = TEXT("/Game/") + FullPath;
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, ChainName, OutputPath, FullPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
 
   UPackage *Package = CreatePackage(*FullPath);
@@ -2512,8 +2823,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
     return true;
   }
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(Chain);
+  if (!McpSafeAssetSave(Chain)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save source effect chain asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("chainPath"), Chain->GetPathName());
@@ -2641,9 +2954,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSubmixEffect(
     EffectType = TEXT("Reverb");
   }
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName);
-  if (!FullPath.StartsWith(TEXT("/Game/"))) {
-    FullPath = TEXT("/Game/") + FullPath;
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, EffectName, OutputPath, FullPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
 
   UPackage *Package = CreatePackage(*FullPath);
@@ -2660,8 +2975,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSubmixEffect(
     return true;
   }
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(SubmixEffect);
+  if (!McpSafeAssetSave(SubmixEffect)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save submix effect asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("effectPath"), SubmixEffect->GetPathName());

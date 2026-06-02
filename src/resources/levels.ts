@@ -1,6 +1,10 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { coerceString } from '../utils/result-helpers.js';
+import { isRecord } from '../utils/type-guards.js';
+
+const LIST_LEVELS_ACTION = 'list_levels';
+const BRIDGE_UNAVAILABLE = 'Automation bridge is not available';
 
 export class LevelResources {
   private automationBridge: AutomationBridge | undefined;
@@ -11,15 +15,13 @@ export class LevelResources {
 
   async getCurrentLevel() {
     try {
-      if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
-        return { success: false, error: 'Automation bridge is not available' };
+      const resp = await this.sendAutomationRequest(LIST_LEVELS_ACTION);
+      if (!resp) {
+        return { success: false, error: BRIDGE_UNAVAILABLE };
       }
 
-      // Use list_levels action which returns currentMap and currentMapPath
-      const resp = await this.automationBridge.sendAutomationRequest('list_levels', {}) as Record<string, unknown>;
-      if (resp && resp.success !== false) {
-        // Check both top level and result for the data (response format varies)
-        const result = resp.result as Record<string, unknown> | undefined;
+      if (resp.success !== false) {
+        const result = this.getNestedResult(resp);
         const name = coerceString(resp.currentMap) ?? coerceString(result?.currentMap) ?? 'None';
         const path = coerceString(resp.currentMapPath) ?? coerceString(result?.currentMapPath) ?? 'None';
         return { success: true, name, path };
@@ -27,21 +29,19 @@ export class LevelResources {
 
       return { success: false, error: 'Failed to get current level' };
     } catch (err) {
-      return { error: `Failed to get current level: ${err}`, success: false };
+      return { error: `Failed to get current level: ${this.getErrorMessage(err)}`, success: false };
     }
   }
 
   async getLevelName() {
     try {
-      if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
-        return { success: false, error: 'Automation bridge is not available' };
+      const resp = await this.sendAutomationRequest(LIST_LEVELS_ACTION);
+      if (!resp) {
+        return { success: false, error: BRIDGE_UNAVAILABLE };
       }
 
-      // Use list_levels action which returns currentMapPath
-      const resp = await this.automationBridge.sendAutomationRequest('list_levels', {}) as Record<string, unknown>;
-      if (resp && resp.success !== false) {
-        // Check both top level and result for the data
-        const result = resp.result as Record<string, unknown> | undefined;
+      if (resp.success !== false) {
+        const result = this.getNestedResult(resp);
         return {
           success: true,
           path: coerceString(resp.currentMapPath) ?? coerceString(result?.currentMapPath) ?? ''
@@ -50,24 +50,41 @@ export class LevelResources {
 
       return { success: false, error: 'Failed to get level name' };
     } catch (err) {
-      return { error: `Failed to get level name: ${err}`, success: false };
+      return { error: `Failed to get level name: ${this.getErrorMessage(err)}`, success: false };
     }
   }
 
   async saveCurrentLevel() {
     try {
-      if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
-        return { success: false, error: 'Automation bridge is not available' };
+      const resp = await this.sendAutomationRequest('save_level');
+      if (!resp) {
+        return { success: false, error: BRIDGE_UNAVAILABLE };
       }
 
-      const resp = await this.automationBridge.sendAutomationRequest('save_level', {}) as Record<string, unknown>;
-      if (resp && resp.success !== false) {
+      if (resp.success !== false) {
         return { success: true, message: 'Level saved' };
       }
 
       return { success: false, error: 'Failed to save level' };
     } catch (err) {
-      return { error: `Failed to save level: ${err}`, success: false };
+      return { error: `Failed to save level: ${this.getErrorMessage(err)}`, success: false };
     }
+  }
+
+  private async sendAutomationRequest(action: string): Promise<Record<string, unknown> | undefined> {
+    if (!this.automationBridge || typeof this.automationBridge.sendAutomationRequest !== 'function') {
+      return undefined;
+    }
+
+    const response = await this.automationBridge.sendAutomationRequest(action, {});
+    return isRecord(response) ? response : {};
+  }
+
+  private getNestedResult(response: Record<string, unknown>): Record<string, unknown> | undefined {
+    return isRecord(response.result) ? response.result : undefined;
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
   }
 }

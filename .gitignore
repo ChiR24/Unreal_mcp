@@ -1,3 +1,6 @@
+# Claude Code
+CLAUDE.md
+
 # Dependencies
 node_modules/
 npm-debug.log*
@@ -10,6 +13,7 @@ build/
 *.js.map
 *.d.ts.map
 .tsbuildinfo
+*.tsbuildinfo
 
 # WASM build outputs (Rust/wasm-pack)
 wasm/target/
@@ -18,6 +22,8 @@ src/wasm/pkg/
 # Unreal Plugin build artifacts
 Plugins/**/Binaries/
 Plugins/**/Intermediate/
+plugins/**/Binaries/
+plugins/**/Intermediate/
 
 # Environment files (keep .env.production as reference)
 .env
@@ -46,6 +52,12 @@ tests/reports/
 *_backup.*
 *_old.*
 tmp/
+.research/
+.lcm/
+.omo/
+.unreal-agent/
+/Saved/
+plugins/*/Saved/
 
 # Cache
 .cache/
@@ -71,8 +83,11 @@ plugins/McpAutomationBridge/Source/McpAutomationBridge/ue_stubs.h
 .claude/
 .opencode/
 .clangd
+.mcp.json
+.cursor/
 compile_commands_50.json
 compile_commands_55.json
 compile_commands_56.json
 compile_commands_57.json
 compile_commands.json
+opencode.json

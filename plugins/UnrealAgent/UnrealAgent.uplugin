@@ -1,0 +1,24 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "Unreal Agent",
+  "Description": "In-editor OpenCode ACP agent panel for Unreal Editor.",
+  "Category": "Editor|AI",
+  "CreatedBy": "",
+  "CreatedByURL": "",
+  "DocsURL": "",
+  "SupportURL": "",
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "IsExperimentalVersion": true,
+  "EnabledByDefault": true,
+  "Modules": [
+    {
+      "Name": "UnrealAgent",
+      "Type": "Editor",
+      "LoadingPhase": "Default",
+      "PlatformAllowList": ["Win64", "Mac", "Linux"]
+    }
+  ]
+}

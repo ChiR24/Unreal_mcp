@@ -10,6 +10,9 @@ describe('AutomationBridge Host Validation', () => {
         delete process.env.MCP_AUTOMATION_ALLOW_NON_LOOPBACK;
         delete process.env.MCP_AUTOMATION_HOST;
         delete process.env.MCP_AUTOMATION_WS_HOST;
+        delete process.env.MCP_AUTOMATION_WS_PORT;
+        delete process.env.MCP_AUTOMATION_CLIENT_PORT;
+        delete process.env.MCP_AUTOMATION_PORT;
     });
 
     afterEach(() => {
@@ -57,46 +60,46 @@ describe('AutomationBridge Host Validation', () => {
 
     describe('Non-loopback addresses with allowNonLoopback=true (option)', () => {
         it('should accept 0.0.0.0 when allowNonLoopback is true', () => {
-            const bridge = new AutomationBridge({ 
-                host: '0.0.0.0', 
-                port: 8091, 
-                allowNonLoopback: true 
+            const bridge = new AutomationBridge({
+                host: '0.0.0.0',
+                port: 8091,
+                allowNonLoopback: true
             });
             expect(bridge.getStatus().host).toBe('0.0.0.0');
         });
 
         it('should accept LAN IP when allowNonLoopback is true', () => {
-            const bridge = new AutomationBridge({ 
-                host: '192.168.1.100', 
-                port: 8091, 
-                allowNonLoopback: true 
+            const bridge = new AutomationBridge({
+                host: '192.168.1.100',
+                port: 8091,
+                allowNonLoopback: true
             });
             expect(bridge.getStatus().host).toBe('192.168.1.100');
         });
 
         it('should accept any valid IPv4 when allowNonLoopback is true', () => {
-            const bridge = new AutomationBridge({ 
-                host: '10.0.0.1', 
-                port: 8091, 
-                allowNonLoopback: true 
+            const bridge = new AutomationBridge({
+                host: '10.0.0.1',
+                port: 8091,
+                allowNonLoopback: true
             });
             expect(bridge.getStatus().host).toBe('10.0.0.1');
         });
 
         it('should reject invalid hostname format even with allowNonLoopback', () => {
-            const bridge = new AutomationBridge({ 
-                host: '-invalid-hostname', 
-                port: 8091, 
-                allowNonLoopback: true 
+            const bridge = new AutomationBridge({
+                host: '-invalid-hostname',
+                port: 8091,
+                allowNonLoopback: true
             });
             expect(bridge.getStatus().host).toBe('127.0.0.1');
         });
 
         it('should reject out-of-range IPv4 octets', () => {
-            const bridge = new AutomationBridge({ 
-                host: '256.1.1.1', 
-                port: 8091, 
-                allowNonLoopback: true 
+            const bridge = new AutomationBridge({
+                host: '256.1.1.1',
+                port: 8091,
+                allowNonLoopback: true
             });
             expect(bridge.getStatus().host).toBe('127.0.0.1');
         });
@@ -151,10 +154,10 @@ describe('AutomationBridge Host Validation', () => {
 
         it('option allowNonLoopback should override env var false', () => {
             process.env.MCP_AUTOMATION_ALLOW_NON_LOOPBACK = 'false';
-            const bridge = new AutomationBridge({ 
-                host: '0.0.0.0', 
-                port: 8091, 
-                allowNonLoopback: true 
+            const bridge = new AutomationBridge({
+                host: '0.0.0.0',
+                port: 8091,
+                allowNonLoopback: true
             });
             expect(bridge.getStatus().host).toBe('0.0.0.0');
         });

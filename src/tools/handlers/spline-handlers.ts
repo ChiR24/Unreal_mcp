@@ -13,44 +13,8 @@
  */
 
 import { ITools } from '../../types/tool-interfaces.js';
-import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest } from './common-handlers.js';
-
-function getTimeoutMs(): number {
-  const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
-  return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
-}
-
-/**
- * Normalize path fields to ensure they start with /Game/ and use forward slashes.
- * Returns a copy of the args with normalized paths.
- */
-function normalizePathFields(args: Record<string, unknown>): Record<string, unknown> {
-  const result = { ...args };
-  const pathFields = [
-    'actorPath', 'blueprintPath', 'meshPath', 'materialPath', 'splinePath'
-  ];
-
-  for (const field of pathFields) {
-    const value = result[field];
-    if (typeof value === 'string' && value.length > 0) {
-      let normalized = value.replace(/\\/g, '/');
-      // Replace /Content/ with /Game/ for common user mistake
-      if (normalized.startsWith('/Content/')) {
-        normalized = '/Game/' + normalized.slice('/Content/'.length);
-      }
-      // Allow /Script/ paths for built-in UE classes
-      // Allow plugin paths like /MyPlugin/Assets to pass through unchanged
-      if (!normalized.startsWith('/')) {
-        normalized = '/Game/' + normalized;
-      }
-      result[field] = normalized;
-    }
-  }
-
-  return result;
-}
+import { createSubActionDispatcher } from './common-handlers.js';
 
 /**
  * Handles all spline actions for the manage_splines tool.
@@ -60,22 +24,11 @@ export async function handleSplineTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  // Normalize path fields before sending to C++
-  const argsRecord = normalizePathFields(args as Record<string, unknown>);
-  const timeoutMs = getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_splines',
-      payload as HandlerArgs,
-      `Automation bridge not available for spline action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  const { sendRequest } = createSubActionDispatcher(tools, args, {
+    toolName: 'manage_splines',
+    domainName: 'spline',
+    pathFields: ['actorPath', 'blueprintPath', 'meshPath', 'materialPath', 'splinePath']
+  });
 
   switch (action) {
     // ========================================================================
@@ -163,10 +116,10 @@ export async function handleSplineTools(
       return sendRequest('get_splines_info');
 
     default:
-      return cleanObject({
+      return {
         success: false,
         error: 'UNKNOWN_ACTION',
         message: `Unknown spline action: ${action}`
-      });
+      };
   }
 }

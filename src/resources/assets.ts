@@ -5,11 +5,32 @@ import { AutomationResponse } from '../types/automation-responses.js';
 import { Logger } from '../utils/logger.js';
 
 const log = new Logger('AssetResources');
+const DEFAULT_ASSET_LIST_TTL_MS = 10000;
+const DEFAULT_PAGE_SIZE = 30;
+const MAX_PAGE_SIZE = 50;
+
+function getAssetListTtlMs(): number {
+  const raw = process.env.ASSET_LIST_TTL_MS;
+  if (raw === undefined || raw.trim().length === 0) return DEFAULT_ASSET_LIST_TTL_MS;
+  if (!/^\d+$/.test(raw.trim())) return DEFAULT_ASSET_LIST_TTL_MS;
+
+  const parsed = Number(raw.trim());
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : DEFAULT_ASSET_LIST_TTL_MS;
+}
+
+function normalizePage(value: number): number {
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+function normalizePageSize(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return DEFAULT_PAGE_SIZE;
+  return Math.min(Math.floor(value), MAX_PAGE_SIZE);
+}
 
 export class AssetResources extends BaseTool implements IAssetResources {
   // Simple in-memory cache for asset listing
   private cache = new Map<string, { timestamp: number; data: unknown }>();
-  private get ttlMs(): number { return Number(process.env.ASSET_LIST_TTL_MS || 10000); }
+  private get ttlMs(): number { return getAssetListTtlMs(); }
   private makeKey(dir: string, recursive: boolean, page?: number) {
     return page !== undefined ? `${dir}::${recursive ? 1 : 0}::${page}` : `${dir}::${recursive ? 1 : 0}`;
   }
@@ -90,7 +111,9 @@ export class AssetResources extends BaseTool implements IAssetResources {
         const cachedData = entry.data as Record<string, unknown>;
         return { success: true, ...cachedData };
       }
-    } catch { }
+    } catch (error) {
+      log.debug('Asset cache lookup failed; continuing with live listing', error);
+    }
 
     // Check if bridge is connected
     if (!this.bridge.isConnected) {
@@ -116,13 +139,13 @@ export class AssetResources extends BaseTool implements IAssetResources {
    * @param pageSize Number of assets per page (max 50 to avoid socket failures)
    */
   async listPaged(dir = '/Game', page = 0, pageSize = 30, recursive = false) {
-    // Ensure pageSize doesn't exceed safe limit
-    const safePageSize = Math.min(pageSize, 50);
-    const offset = page * safePageSize;
+    const safePage = normalizePage(page);
+    const safePageSize = normalizePageSize(pageSize);
+    const offset = safePage * safePageSize;
 
     // Normalize directory and check cache for this specific page
     dir = this.normalizeDir(dir);
-    const cacheKey = this.makeKey(dir, recursive, page);
+    const cacheKey = this.makeKey(dir, recursive, safePage);
     const cached = this.cache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < this.ttlMs) {
       return cached.data;
@@ -131,7 +154,7 @@ export class AssetResources extends BaseTool implements IAssetResources {
     if (!this.bridge.isConnected) {
       return {
         assets: [],
-        page,
+        page: safePage,
         pageSize: safePageSize,
         warning: 'Unreal Engine is not connected.',
         connectionStatus: 'disconnected'
@@ -150,7 +173,7 @@ export class AssetResources extends BaseTool implements IAssetResources {
 
       const result = {
         assets: pagedAssets,
-        page,
+        page: safePage,
         pageSize: safePageSize,
         count: pagedAssets.length,
         totalCount: allAssets.assets ? allAssets.assets.length : 0,
@@ -167,8 +190,8 @@ export class AssetResources extends BaseTool implements IAssetResources {
 
     return {
       assets: [],
-      page,
-      pageSize: safePageSize,
+        page: safePage,
+        pageSize: safePageSize,
       error: 'Failed to fetch page'
     };
   }
@@ -227,7 +250,9 @@ export class AssetResources extends BaseTool implements IAssetResources {
           this.cache.set(key, { timestamp: Date.now(), data: result });
           return result;
         }
-      } catch { }
+      } catch (error) {
+        log.debug('AssetRegistry list via automation bridge failed', error);
+      }
 
       // No fallback available
     } catch (err: unknown) {

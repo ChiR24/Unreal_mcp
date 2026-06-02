@@ -43,6 +43,8 @@ export interface Rotation3D {
   roll: number;
 }
 
+export type ScreenshotMode = 'editor_viewport' | 'game_viewport' | 'full_editor_window';
+
 export interface ControlActorResponse extends BaseToolResponse {
   actor?: string;
   actorName?: string;
@@ -68,6 +70,17 @@ export interface ControlEditorResponse extends BaseToolResponse {
   location?: [number, number, number];
   rotation?: [number, number, number];
   viewMode?: string;
+  filename?: string;
+  path?: string;
+  screenshotPath?: string;
+  mode?: ScreenshotMode;
+  async?: boolean;
+  saved?: boolean;
+  imageBase64?: string;
+  mimeType?: string;
+  width?: number;
+  height?: number;
+  sizeBytes?: number;
 }
 
 // Level Management Types
@@ -124,7 +137,17 @@ export interface SystemControlResponse extends BaseToolResponse {
   widgetPath?: string;
   widgetVisible?: boolean;
   imagePath?: string;
+  filename?: string;
+  path?: string;
+  screenshotPath?: string;
+  mode?: ScreenshotMode;
+  async?: boolean;
+  saved?: boolean;
   imageBase64?: string;
+  mimeType?: string;
+  width?: number;
+  height?: number;
+  sizeBytes?: number;
   pid?: number;
   logPath?: string;
   entries?: Array<{ timestamp?: string; category?: string; level?: string; message: string }>;
@@ -283,7 +306,7 @@ export type ActorAction =
   | 'create_snapshot'
   | 'attach'
   | 'detach';
-export type EditorAction = 'play' | 'stop' | 'set_camera' | 'set_view_mode';
+export type EditorAction = 'play' | 'stop' | 'set_camera' | 'set_view_mode' | 'screenshot' | 'take_screenshot';
 export type LevelAction = 'load' | 'save' | 'stream' | 'create_light' | 'build_lighting';
 export type AnimationAction =
   | 'create_animation_bp'
@@ -362,6 +385,12 @@ export interface ConsolidatedToolParams {
     viewMode?: string;
     speed?: number;
     filename?: string;
+    path?: string;
+    resolution?: string;
+    mode?: string;
+    returnBase64?: boolean;
+    includeMetadata?: boolean;
+    metadata?: Record<string, unknown>;
     fov?: number;
     width?: number;
     height?: number;
@@ -519,6 +548,12 @@ export interface ConsolidatedToolParams {
     widgetName?: string;
     widgetType?: string;
     visible?: boolean;
+    filename?: string;
+    resolution?: string;
+    mode?: ScreenshotMode;
+    returnBase64?: boolean;
+    includeMetadata?: boolean;
+    metadata?: Record<string, unknown>;
     // Resolution / fullscreen helpers
     width?: number;
     height?: number;
@@ -572,4 +607,3 @@ export type GetToolResponse<T extends ToolName> = ToolResponseMap[T];
 
 // Helper type for getting parameters by tool name
 export type GetToolParams<T extends keyof ConsolidatedToolParams> = ConsolidatedToolParams[T];
-

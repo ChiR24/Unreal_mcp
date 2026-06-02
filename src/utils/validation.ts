@@ -27,16 +27,50 @@ const INVALID_CHARS = /[@#%$&*()+=\[\]{}<>?|\\;:'"`,~!\s]/g;
  * SQL injection patterns to reject in asset names
  * These patterns could be dangerous if passed to database queries or eval contexts
  */
-const SQL_INJECTION_PATTERNS = /('|";|--|\bDROP\b|\bDELETE\b|\bINSERT\b|\bUPDATE\b|\bEXEC\b|\bEXECUTE\b)/gi;
+const SQL_INJECTION_PATTERNS = /('|";|--|\bDROP\b|\bDELETE\b|\bINSERT\b|\bUPDATE\b|\bEXEC\b|\bEXECUTE\b)/i;
+const SQL_INJECTION_REPLACE_PATTERNS = /('|";|--|\bDROP\b|\bDELETE\b|\bINSERT\b|\bUPDATE\b|\bEXEC\b|\bEXECUTE\b)/gi;
 
 /**
  * Reserved keywords that shouldn't be used as names
  */
-const RESERVED_KEYWORDS = [
-  'None', 'null', 'undefined', 'true', 'false',
+const RESERVED_KEYWORDS = new Set([
+  'none', 'null', 'undefined', 'true', 'false',
   'class', 'struct', 'enum', 'interface',
   'default', 'transient', 'native'
-];
+]);
+
+const DEFAULT_ASSET_ROOTS = ['Game', 'Engine', 'Script', 'Temp', 'Niagara'];
+let cachedAssetRoots: Set<string> | undefined;
+
+function getAssetRoots(): Set<string> {
+  if (!cachedAssetRoots) {
+    const additionalRoots = getAdditionalPathPrefixes()
+      .map(p => p.replace(/^\//, '').replace(/\/$/, ''));
+    cachedAssetRoots = new Set([...DEFAULT_ASSET_ROOTS, ...additionalRoots]);
+  }
+  return cachedAssetRoots;
+}
+
+const SKELETON_TO_MESH_MAP: Record<string, string> = {
+  '/Game/Mannequin/Character/Mesh/UE4_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
+  '/Game/Characters/Mannequins/Meshes/SK_Mannequin': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
+  '/Game/Mannequin/Character/Mesh/SK_Mannequin': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
+  '/Game/Characters/Mannequin_UE4/Meshes/UE4_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple',
+  '/Game/Characters/Mannequins/Skeletons/UE5_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
+  '/Game/Characters/Mannequins/Skeletons/UE5_Female_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple',
+  '/Game/Characters/Mannequins/Skeletons/UE5_Manny_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
+  '/Game/Characters/Mannequins/Skeletons/UE5_Quinn_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple'
+};
+
+const SKELETAL_MESH_REPLACEMENTS: Record<string, string> = {
+  '/SK_': '/SKM_',
+  'UE4_Mannequin': 'SKM_Manny',
+  'UE5_Mannequin': 'SKM_Manny',
+  'UE5_Manny': 'SKM_Manny',
+  'UE5_Quinn': 'SKM_Quinn'
+};
+
+const SKELETAL_MESH_REPLACEMENT_PATTERN = /\/SK_|UE4_Mannequin|UE5_Mannequin|UE5_Manny|UE5_Quinn/g;
 
 /**
  * Sanitize a command argument to prevent injection attacks
@@ -86,7 +120,7 @@ export function sanitizeAssetName(name: string): string {
   // Check for SQL injection patterns and reject early
   if (SQL_INJECTION_PATTERNS.test(sanitized)) {
     // Replace dangerous patterns with underscores instead of throwing
-    sanitized = sanitized.replace(SQL_INJECTION_PATTERNS, '_');
+    sanitized = sanitized.replace(SQL_INJECTION_REPLACE_PATTERNS, '_');
   }
 
   // Replace invalid characters with underscores
@@ -104,7 +138,7 @@ export function sanitizeAssetName(name: string): string {
   }
 
   // If name is a reserved keyword, append underscore
-  if (RESERVED_KEYWORDS.includes(sanitized)) {
+  if (RESERVED_KEYWORDS.has(sanitized.toLowerCase())) {
     sanitized = `${sanitized}_Asset`;
   }
 
@@ -122,11 +156,15 @@ export function sanitizeAssetName(name: string): string {
 }
 
 /**
- * Sanitize a path for Unreal Engine
+ * Normalize and sanitize an Unreal asset path.
+ *
+ * Unlike the strict path-security helper, this function accepts partial paths,
+ * defaults empty input to /Game, prefixes unknown roots with /Game, and
+ * sanitizes individual path segments.
  * @param path The path to sanitize
  * @returns Sanitized path
  */
-export function sanitizePath(path: string): string {
+export function normalizeAndSanitizeAssetPath(path: string): string {
   if (!path || typeof path !== 'string') {
     return '/Game';
   }
@@ -156,10 +194,8 @@ export function sanitizePath(path: string): string {
     return '/Game';
   }
 
-  // Ensure the first segment is a valid root (Game, Engine, Script, Temp, or configured extras)
-  const additionalRoots = getAdditionalPathPrefixes()
-    .map(p => p.replace(/^\//, '').replace(/\/$/, ''));
-  const ROOTS = new Set(['Game', 'Engine', 'Script', 'Temp', ...additionalRoots]);
+  // Ensure the first segment is a valid root (Game, Engine, Script, Temp, Niagara, or configured extras)
+  const ROOTS = getAssetRoots();
   if (!ROOTS.has(segments[0])) {
     segments = ['Game', ...segments];
   }
@@ -173,10 +209,14 @@ export function sanitizePath(path: string): string {
   });
 
   // Reconstruct path
-  const sanitizedPath = '/' + sanitizedSegments.join('/');
-
-  return sanitizedPath;
+  return '/' + sanitizedSegments.join('/');
 }
+
+/**
+ * @deprecated Use normalizeAndSanitizeAssetPath for lenient asset path normalization,
+ * or import sanitizePath from path-security.ts for strict security validation.
+ */
+export const sanitizePath = normalizeAndSanitizeAssetPath;
 
 /**
  * Validate path length
@@ -212,7 +252,7 @@ export function validateAssetParams(params: {
 
   // Sanitize path if provided
   const sanitizedPath = params.savePath
-    ? sanitizePath(params.savePath)
+    ? normalizeAndSanitizeAssetPath(params.savePath)
     : params.savePath;
 
   // Construct full path for validation
@@ -289,46 +329,25 @@ export function resolveSkeletalMeshPath(input: string): string | null {
   let normalizedInput = input;
   if (input.includes('/')) {
     try {
-      normalizedInput = sanitizePath(input);
+      normalizedInput = normalizeAndSanitizeAssetPath(input);
     } catch {
       // If sanitization fails, return null (invalid path)
       return null;
     }
   }
 
-  // Common skeleton to mesh mappings
-  const skeletonToMeshMap: { [key: string]: string } = {
-    '/Game/Mannequin/Character/Mesh/UE4_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
-    '/Game/Characters/Mannequins/Meshes/SK_Mannequin': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
-    '/Game/Mannequin/Character/Mesh/SK_Mannequin': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
-    '/Game/Characters/Mannequin_UE4/Meshes/UE4_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple',
-    '/Game/Characters/Mannequins/Skeletons/UE5_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
-    '/Game/Characters/Mannequins/Skeletons/UE5_Female_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple',
-    '/Game/Characters/Mannequins/Skeletons/UE5_Manny_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
-    '/Game/Characters/Mannequins/Skeletons/UE5_Quinn_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple'
-  };
-
   // Check if this is a known skeleton path
-  if (skeletonToMeshMap[normalizedInput]) {
-    return skeletonToMeshMap[normalizedInput];
+  if (SKELETON_TO_MESH_MAP[normalizedInput]) {
+    return SKELETON_TO_MESH_MAP[normalizedInput];
   }
 
   // If it contains _Skeleton, try to convert to mesh name
   if (normalizedInput.includes('_Skeleton')) {
     // Try common replacements
     let meshPath = normalizedInput.replace('_Skeleton', '');
-    // Mapping for replacements
-    const replacements: { [key: string]: string } = {
-      '/SK_': '/SKM_',
-      'UE4_Mannequin': 'SKM_Manny',
-      'UE5_Mannequin': 'SKM_Manny',
-      'UE5_Manny': 'SKM_Manny',
-      'UE5_Quinn': 'SKM_Quinn'
-    };
-    // Apply all replacements using regex
     meshPath = meshPath.replace(
-      new RegExp(Object.keys(replacements).join('|'), 'g'),
-      match => replacements[match]
+      SKELETAL_MESH_REPLACEMENT_PATTERN,
+      match => SKELETAL_MESH_REPLACEMENTS[match]
     );
     return meshPath;
   }

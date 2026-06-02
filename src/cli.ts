@@ -4,31 +4,35 @@
 // ts-node-esm or similar dev workflows where compiled JS isn't available.
 
 import { Logger } from './utils/logger.js';
+import { isRecord } from './utils/type-guards.js';
 
 const log = new Logger('CLI');
 
+type ServerModule = {
+  startStdioServer?: unknown;
+};
+
+async function startFromModule(module: ServerModule, source: string): Promise<void> {
+  if (typeof module.startStdioServer !== 'function') {
+    throw new Error(`startStdioServer not exported from ${source}`);
+  }
+
+  await module.startStdioServer();
+}
+
+function isResolvableSourceError(error: unknown): boolean {
+  return (isRecord(error) && error.code === 'ERR_MODULE_NOT_FOUND') || String(error).includes('Unable to resolve');
+}
+
 (async () => {
   try {
-    const m = await import('./index.js');
-    if (m && typeof m.startStdioServer === 'function') {
-      await m.startStdioServer();
-    } else {
-      throw new Error('startStdioServer not exported from index.js');
-    }
+    await startFromModule(await import('./index.js'), 'index.js');
   } catch (err) {
-    // If index.js cannot be resolved, try importing the TypeScript source
-    // at runtime (useful when running via ts-node-esm). Cast the error when
-    // inspecting runtime-only properties like `code`.
-    const errObj = err as Record<string, unknown> | null;
-    if (err && ((errObj?.code === 'ERR_MODULE_NOT_FOUND') || String(err).includes('Unable to resolve'))) {
+    if (isResolvableSourceError(err)) {
       try {
-          const tsModuleSpecifier = new URL('./index.ts', import.meta.url).href;
-          const m2 = await import(tsModuleSpecifier);
-          if (m2 && typeof m2.startStdioServer === 'function') {
-            await m2.startStdioServer();
-          } else {
-            throw new Error('startStdioServer not exported from index.ts');
-          }
+        const tsModuleSpecifier = new URL('./index.ts', import.meta.url).href;
+        await startFromModule(await import(tsModuleSpecifier), 'index.ts');
+        return;
       } catch (err2) {
         log.error('Failed to start server (fallback to TypeScript failed):', err2);
         process.exit(1);

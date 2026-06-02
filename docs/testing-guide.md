@@ -2,9 +2,9 @@
 
 ## Overview
 
-This project uses consolidated integration test suites covering all MCP tools:
-- **Core Suite** (17 original tools, 44 scenarios)
-- **Advanced Suite** (15 new Phase 6-20 tools, 80 scenarios)
+This project uses consolidated integration test suites covering the 23 canonical MCP tools:
+- **Canonical Integration Suite** (`tests/integration.mjs`) for cross-tool workflows
+- **Per-Tool MCP Suites** (`tests/mcp-tools/**/*.test.mjs`) for every exposed parent tool
 
 Plus Vitest for unit tests and a CI smoke test for mock-mode validation.
 
@@ -12,9 +12,9 @@ Plus Vitest for unit tests and a CI smoke test for mock-mode validation.
 
 | Command | Description | Requires UE? |
 |---------|-------------|--------------|
-| `npm test` | Run core integration suite | Yes |
-| `npm run test:advanced` | Run advanced integration suite (Phases 6-20) | Yes |
-| `npm run test:all` | Run both integration suites | Yes |
+| `npm test` | Run canonical integration suite | Yes |
+| `node tests/mcp-tools/<category>/<tool>.test.mjs` | Run one per-tool MCP suite | Yes |
+| `npm run test:all` | Run canonical integration entrypoint | Yes |
 | `npm run test:unit` | Run Vitest unit tests | No |
 | `npm run test:smoke` | CI smoke test (mock mode) | No |
 
@@ -24,14 +24,14 @@ Plus Vitest for unit tests and a CI smoke test for mock-mode validation.
 
 ```bash
 # Ensure Unreal Engine is running with MCP Automation Bridge plugin enabled
-npm test              # Core suite (44 tests)
-npm run test:advanced # Advanced suite (80 tests)
-npm run test:all      # Both suites (124 tests)
+npm test
+node tests/mcp-tools/core/manage-asset.test.mjs
+for f in tests/mcp-tools/{core,gameplay,utility,world}/*.test.mjs; do node "$f"; done
 ```
 
-### Core Suite (`tests/integration.mjs`)
+### Canonical Integration Suite (`tests/integration.mjs`)
 
-Covers 44 scenarios across the original 17 tool categories:
+Covers cross-tool workflows across the 23 canonical MCP tools:
 - Infrastructure & Discovery
 - Asset & Material Lifecycle
 - Actor Control & Introspection
@@ -41,31 +41,20 @@ Covers 44 scenarios across the original 17 tool categories:
 - Cinematics & Audio
 - Operations & Performance
 
-### Advanced Suite (`tests/integration-advanced.mjs`)
+### Per-Tool MCP Suites (`tests/mcp-tools/**/*.test.mjs`)
 
-Covers 80 scenarios across the 15 new Phase 6-20 tools:
-- Phase 6: Geometry & Mesh Creation (`manage_geometry`)
-- Phase 7: Skeletal Mesh & Rigging (`manage_skeleton`)
-- Phase 8: Advanced Material Authoring (`manage_material_authoring`)
-- Phase 9: Texture Generation (`manage_texture`)
-- Phase 10: Animation Authoring (`manage_animation_authoring`)
-- Phase 11: Audio Authoring (`manage_audio_authoring`)
-- Phase 12: Niagara VFX Authoring (`manage_niagara_authoring`)
-- Phase 13: Gameplay Ability System (`manage_gas`)
-- Phase 14: Character & Movement (`manage_character`)
-- Phase 15: Combat & Weapons (`manage_combat`)
-- Phase 16: AI System - Enhanced (`manage_ai`)
-- Phase 17: Inventory & Items (`manage_inventory`)
-- Phase 18: Interaction System (`manage_interaction`)
-- Phase 19: Widget Authoring (`manage_widget_authoring`)
-- Phase 20: Networking & Multiplayer (`manage_networking`)
+Covers every exposed parent tool with domain-specific setup and teardown:
+- Core: `manage_tools`, `manage_asset`, `manage_blueprint`, `control_actor`, `control_editor`, `manage_level`, `inspect`, `system_control`
+- World: `build_environment`, `manage_level_structure`, `manage_geometry`, `manage_pcg`
+- Gameplay: `animation_physics`, `manage_effect`, `manage_ai`, `manage_gas`, `manage_character`, `manage_combat`, `manage_inventory`, `manage_interaction`
+- Utility: `manage_audio`, `manage_sequence`, `manage_networking`
 
 ### Test Structure
 
 ```
 tests/
-├── integration.mjs          # Core test suite (44 scenarios)
-├── integration-advanced.mjs # Advanced test suite (80 scenarios)
+├── integration.mjs          # Canonical integration suite
+├── mcp-tools/               # Per-tool canonical MCP suites
 ├── test-runner.mjs          # Shared test harness
 └── reports/                 # JSON test results (gitignored)
 ```
@@ -122,13 +111,14 @@ Runs in GitHub Actions on every push/PR. Uses mock mode to validate server start
 ## Prerequisites
 
 ### Unreal Engine Setup
-1. **Unreal Engine 5.0–5.7** must be running
+1. **Unreal Engine 5.0–5.8 Preview** must be running
 2. **MCP Automation Bridge plugin** enabled and listening on port 8091
 
 ### Environment Variables (optional)
 ```bash
 MCP_AUTOMATION_HOST=127.0.0.1  # Default
 MCP_AUTOMATION_PORT=8091       # Default
+MCP_CONNECTION_TIMEOUT_MS=5000 # Connection and handshake timeout
 ```
 
 ## Troubleshooting

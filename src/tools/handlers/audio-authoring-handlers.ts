@@ -15,12 +15,23 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { requireNonEmptyString, executeAutomationRequest } from './common-handlers.js';
+import { requireNonEmptyString, executeAutomationRequest, getTimeoutMs, normalizePathFields } from './common-handlers.js';
 
-function getTimeoutMs(): number {
-  const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
-  return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
+/**
+ * Normalize an asset path for StaticLoadObject which requires the full
+ * UE object path format: /Game/Path/AssetName.AssetName
+ * If the path already contains a dot (e.g., /Game/X/Y.Y), return as-is.
+ * Otherwise, append .AssetName where AssetName is the last path segment.
+ */
+function normalizeAssetPathForLoadObject(assetPath: string): string {
+  if (!assetPath || !assetPath.startsWith('/')) return assetPath;
+  // If already has the .ObjectName suffix, return as-is
+  const lastSegment = assetPath.split('/').pop() ?? '';
+  if (lastSegment.includes('.')) return assetPath;
+  // Append .AssetName
+  return `${assetPath}.${lastSegment}`;
 }
+
 
 /**
  * Handles all audio authoring actions for the manage_audio_authoring tool.
@@ -35,8 +46,115 @@ export async function handleAudioAuthoringTools(
 
   // All actions are dispatched to C++ via automation bridge
   const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
+    const payload: Record<string, unknown> = normalizePathFields({ ...argsRecord, subAction }, [
+      'assetPath',
+      'attenuationPath',
+      'soundClassPath',
+      'speakerPath',
+      'reverbEffect',
+      'effectPresetPath',
+      'parentPath',
+      'path',
+      'savePath',
+      'packagePath',
+      'soundPath',
+      'wavePath'
+    ]);
+
+    if ((subAction === 'create_sound_cue' || subAction === 'create_sound_class' || subAction === 'create_sound_mix') && payload.path === undefined) {
+      payload.path = payload.savePath ?? payload.packagePath;
+    }
+
+    if (subAction === 'create_sound_cue' && payload.wavePath === undefined && payload.soundPath !== undefined) {
+      payload.wavePath = payload.soundPath;
+    }
+
+    // Normalize asset paths for StaticLoadObject compatibility (needs /Game/Path/Asset.AssetName)
+    if (payload.assetPath && typeof payload.assetPath === 'string') {
+      payload.assetPath = normalizeAssetPathForLoadObject(payload.assetPath);
+    }
+    if (payload.attenuationPath && typeof payload.attenuationPath === 'string') {
+      payload.attenuationPath = normalizeAssetPathForLoadObject(payload.attenuationPath);
+    }
+    if (payload.soundClassPath && typeof payload.soundClassPath === 'string') {
+      payload.soundClassPath = normalizeAssetPathForLoadObject(payload.soundClassPath);
+    }
+  if (payload.speakerPath && typeof payload.speakerPath === 'string') {
+    payload.speakerPath = normalizeAssetPathForLoadObject(payload.speakerPath);
+  }
+  if (payload.reverbEffect && typeof payload.reverbEffect === 'string') {
+    payload.reverbEffect = normalizeAssetPathForLoadObject(payload.reverbEffect);
+  }
+
+  // Parameter remapping: TS API names → C++ field names
+  // connect_metasound_nodes: C++ reads sourceNodeId/sourceOutputName/targetNodeId/targetInputName
+  if (subAction === 'connect_metasound_nodes') {
+    if (payload.sourceNode && !payload.sourceNodeId) {
+      payload.sourceNodeId = payload.sourceNode;
+      delete payload.sourceNode;
+    }
+    if (payload.sourcePin && !payload.sourceOutputName) {
+      payload.sourceOutputName = payload.sourcePin;
+      delete payload.sourcePin;
+    }
+    if (payload.targetNode && !payload.targetNodeId) {
+      payload.targetNodeId = payload.targetNode;
+      delete payload.targetNode;
+    }
+    if (payload.targetPin && !payload.targetInputName) {
+      payload.targetInputName = payload.targetPin;
+      delete payload.targetPin;
+    }
+  }
+
+	// set_metasound_default: C++ reads floatValue/intValue/boolValue/stringValue
+	if (subAction === 'set_metasound_default') {
+		if (payload.defaultValue !== undefined && payload.floatValue === undefined) {
+			payload.floatValue = payload.defaultValue;
+			delete payload.defaultValue;
+		}
+	}
+
+	// add_source_effect: C++ authoring handler reads assetPath + effectPresetPath + effectType
+	// (Note: main C++ handler reads chainPath — but authoring route reads assetPath)
+	if (subAction === 'add_source_effect') {
+		if (payload.effectPresetPath && typeof payload.effectPresetPath === 'string') {
+			payload.effectPresetPath = normalizeAssetPathForLoadObject(payload.effectPresetPath as string);
+		}
+	}
+
+	// set_class_parent: C++ reads parentPath (not parentClass)
+	if (subAction === 'set_class_parent') {
+		if (payload.parentClass && !payload.parentPath) {
+			payload.parentPath = payload.parentClass;
+			delete payload.parentClass;
+		}
+	}
+
+	// configure_spatialization: C++ reads spatialize (bool) + spatializationAlgorithm
+	if (subAction === 'configure_spatialization') {
+		if (payload.spatialization !== undefined) {
+			if (typeof payload.spatialization === 'string') {
+				payload.spatializationAlgorithm = payload.spatialization;
+				if (payload.spatialize === undefined) {
+					payload.spatialize = true;
+				}
+			} else if (payload.spatialize === undefined) {
+				payload.spatialize = payload.spatialization;
+			}
+			delete payload.spatialization;
+		}
+	}
+
+	// configure_occlusion: C++ reads enableOcclusion (not enable)
+	if (subAction === 'configure_occlusion') {
+		if (payload.enable !== undefined && payload.enableOcclusion === undefined) {
+			payload.enableOcclusion = payload.enable;
+			delete payload.enable;
+		}
+	}
+
+  const result = await executeAutomationRequest(
       tools,
       'manage_audio_authoring',
       payload as HandlerArgs,
@@ -96,10 +214,10 @@ export async function handleAudioAuthoringTools(
 
     case 'connect_metasound_nodes': {
       requireNonEmptyString(argsRecord.assetPath, 'assetPath', 'Missing required parameter: assetPath');
-      requireNonEmptyString(argsRecord.sourceNode, 'sourceNode', 'Missing required parameter: sourceNode');
-      requireNonEmptyString(argsRecord.sourcePin, 'sourcePin', 'Missing required parameter: sourcePin');
-      requireNonEmptyString(argsRecord.targetNode, 'targetNode', 'Missing required parameter: targetNode');
-      requireNonEmptyString(argsRecord.targetPin, 'targetPin', 'Missing required parameter: targetPin');
+      requireNonEmptyString(argsRecord.sourceNodeId ?? argsRecord.sourceNode, 'sourceNodeId', 'Missing required parameter: sourceNodeId');
+      requireNonEmptyString(argsRecord.sourceOutputName ?? argsRecord.sourcePin, 'sourceOutputName', 'Missing required parameter: sourceOutputName');
+      requireNonEmptyString(argsRecord.targetNodeId ?? argsRecord.targetNode, 'targetNodeId', 'Missing required parameter: targetNodeId');
+      requireNonEmptyString(argsRecord.targetInputName ?? argsRecord.targetPin, 'targetInputName', 'Missing required parameter: targetInputName');
       return sendRequest('connect_metasound_nodes');
     }
 

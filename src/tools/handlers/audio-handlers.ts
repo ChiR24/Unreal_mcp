@@ -5,16 +5,31 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs, AudioArgs } from '../../types/handler-types.js';
-import { requireNonEmptyString } from './common-handlers.js';
+import { normalizePathFields, requireNonEmptyString } from './common-handlers.js';
 import { executeAutomationRequest } from './common-handlers.js';
 import { toNumber, toBoolean, toString as toStringValue, toVec3Array, toRotArray, validateAudioParams } from '../../utils/type-coercion.js';
 import { TOOL_ACTIONS } from '../../utils/action-constants.js';
+
+const AUDIO_PATH_FIELDS = [
+  'wavePath',
+  'savePath',
+  'path',
+  'attenuationPath',
+  'concurrencyPath',
+  'reverbEffect'
+] as const;
+
+function normalizeAudioArgs(args: AudioArgs): AudioArgs {
+  return normalizePathFields(args as Record<string, unknown>, AUDIO_PATH_FIELDS) as AudioArgs;
+}
+
 /**
  * Create sound cue
  */
 async function createSoundCue(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  args = normalizeAudioArgs(args);
   requireNonEmptyString(args?.name, 'name', 'Missing required parameter: name');
-  requireNonEmptyString(args?.wavePath ?? args?.soundPath, 'soundPath', 'Missing required parameter: soundPath (or wavePath)');
+  // wavePath/soundPath is optional - C++ accepts cues without a wave (empty cue graph)
 
   const name = args.name ?? '';
   const wavePath = args.wavePath ?? args.soundPath ?? '';
@@ -30,7 +45,7 @@ async function createSoundCue(tools: ITools, args: AudioArgs): Promise<Record<st
     attenuationPath: toStringValue(args.settings?.attenuationSettings),
     volume: explicitVolume === undefined ? undefined : validatedAudio.volume,
     pitch: explicitPitch === undefined ? undefined : validatedAudio.pitch,
-    looping: toBoolean(args.settings?.looping)
+    looping: toBoolean(args.looping ?? args.settings?.looping)
   };
 
   return (await executeAutomationRequest(tools, TOOL_ACTIONS.CREATE_SOUND_CUE, payload)) as Record<string, unknown>;
@@ -75,6 +90,7 @@ async function setBaseSoundMix(tools: ITools, args: AudioArgs): Promise<Record<s
  * Play sound at location
  */
 async function playSoundAtLocation(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  args = normalizeAudioArgs(args);
   requireNonEmptyString(args?.soundPath, 'soundPath', 'Missing required parameter: soundPath');
 
   const soundPath = args.soundPath ?? '';
@@ -100,12 +116,14 @@ async function playSoundAtLocation(tools: ITools, args: AudioArgs): Promise<Reco
  * Play sound 2D
  */
 async function playSound2D(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  args = normalizeAudioArgs(args);
   requireNonEmptyString(args?.soundPath, 'soundPath', 'Missing required parameter: soundPath');
+  const { volume, pitch } = validateAudioParams(toNumber(args.volume), toNumber(args.pitch));
 
   const payload = {
     soundPath: args.soundPath ?? '',
-    volume: toNumber(args.volume) ?? 1.0,
-    pitch: toNumber(args.pitch) ?? 1.0,
+    volume,
+    pitch,
     startTime: toNumber(args.startTime) ?? 0.0
   };
 
@@ -116,9 +134,9 @@ async function playSound2D(tools: ITools, args: AudioArgs): Promise<Record<strin
  * Create audio component
  */
 async function createAudioComponent(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
-  requireNonEmptyString(args?.actorName, 'actorName', 'Missing required parameter: actorName');
-  requireNonEmptyString(args?.componentName, 'componentName', 'Missing required parameter: componentName');
+  args = normalizeAudioArgs(args);
   requireNonEmptyString(args?.soundPath, 'soundPath', 'Missing required parameter: soundPath');
+  // actorName/componentName are optional - C++ creates at location if no attach target
 
   const payload = {
     actorName: args.actorName ?? '',
@@ -135,10 +153,13 @@ async function createAudioComponent(tools: ITools, args: AudioArgs): Promise<Rec
  * Set sound attenuation
  */
 async function setSoundAttenuation(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  args = normalizeAudioArgs(args);
   requireNonEmptyString(args?.name, 'name', 'Missing required parameter: name');
 
   const payload = {
     name: args.name ?? '',
+    path: toStringValue(args.path ?? args.savePath),
+    save: toBoolean(args.save),
     innerRadius: toNumber(args.innerRadius),
     falloffDistance: toNumber(args.falloffDistance),
     attenuationShape: toStringValue(args.attenuationShape),
@@ -152,6 +173,7 @@ async function setSoundAttenuation(tools: ITools, args: AudioArgs): Promise<Reco
  * Create sound class
  */
 async function createSoundClass(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  args = normalizeAudioArgs(args);
   requireNonEmptyString(args?.name, 'name', 'Missing required parameter: name');
 
   const payload = {
@@ -168,6 +190,7 @@ async function createSoundClass(tools: ITools, args: AudioArgs): Promise<Record<
  * Create sound mix
  */
 async function createSoundMix(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  args = normalizeAudioArgs(args);
   requireNonEmptyString(args?.name, 'name', 'Missing required parameter: name');
 
   const payload = {
@@ -209,13 +232,15 @@ async function popSoundMix(tools: ITools, args: AudioArgs): Promise<Record<strin
  * Create ambient sound
  */
 async function createAmbientSound(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  args = normalizeAudioArgs(args);
   requireNonEmptyString(args?.soundPath, 'soundPath', 'Missing required parameter: soundPath');
+  const { volume, pitch } = validateAudioParams(toNumber(args.volume), toNumber(args.pitch));
 
   const payload = {
     soundPath: args.soundPath ?? '',
     location: toVec3Array(args.location) ?? [0, 0, 0],
-    volume: toNumber(args.volume) ?? 1.0,
-    pitch: toNumber(args.pitch) ?? 1.0,
+    volume,
+    pitch,
     startTime: toNumber(args.startTime) ?? 0.0,
     attenuationPath: toStringValue(args.attenuationPath),
     concurrencyPath: toStringValue(args.concurrencyPath)
@@ -228,6 +253,7 @@ async function createAmbientSound(tools: ITools, args: AudioArgs): Promise<Recor
  * Create reverb zone
  */
 async function createReverbZone(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  args = normalizeAudioArgs(args);
   requireNonEmptyString(args?.name, 'name', 'Missing required parameter: name');
 
   const payload = {
@@ -246,11 +272,8 @@ async function createReverbZone(tools: ITools, args: AudioArgs): Promise<Record<
  * Enable audio analysis - Toggle real-time audio analysis
  */
 async function enableAudioAnalysis(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
-  // enable is required
-  const enable = toBoolean(args.enable ?? args.enabled);
-  if (enable === undefined) {
-    throw new Error('Missing required parameter: enable');
-  }
+  // Default to true if not specified - C++ also defaults to false but action intent is "enable"
+  const enable = toBoolean(args.enable ?? args.enabled) ?? true;
 
   const payload = {
     enable,
@@ -281,6 +304,7 @@ async function fadeSound(tools: ITools, args: AudioArgs): Promise<Record<string,
  * Set doppler effect - Configure doppler effect for sounds
  */
 async function setDopplerEffect(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  args = normalizeAudioArgs(args);
   const payload = {
     soundPath: toStringValue(args.soundPath), // Optional - applies to attenuation settings
     dopplerIntensity: toNumber(args.dopplerIntensity) ?? 1.0,
@@ -295,6 +319,7 @@ async function setDopplerEffect(tools: ITools, args: AudioArgs): Promise<Record<
  * Set audio occlusion - Configure audio occlusion settings
  */
 async function setAudioOcclusion(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  args = normalizeAudioArgs(args);
   const payload = {
     soundPath: toStringValue(args.soundPath),
     enable: toBoolean(args.enable) ?? true,
@@ -383,11 +408,29 @@ export async function handleAudioTools(
     case 'prime_sound':
       return cleanObject(await executeAutomationRequest(tools, TOOL_ACTIONS.PRIME_SOUND, argsRecord)) as Record<string, unknown>;
 
-    case 'fade_sound_in':
-    case 'fade_sound_out':
-      return cleanObject(await executeAutomationRequest(tools, action, argsRecord)) as Record<string, unknown>;
+  case 'fade_sound_in':
+  case 'fade_sound_out':
+    return cleanObject(await executeAutomationRequest(tools, action, argsRecord)) as Record<string, unknown>;
 
-    default:
+  case 'add_source_effect': {
+    // Main C++ handler reads "chainPath" not "assetPath" - remap for compatibility
+    const addEffectPayload: Record<string, unknown> = { ...argsRecord };
+    if (!addEffectPayload.chainPath && addEffectPayload.assetPath) {
+      addEffectPayload.chainPath = addEffectPayload.assetPath;
+      delete addEffectPayload.assetPath;
+    }
+    // C++ uses LoadObject which needs full UE path (e.g., /Game/X/Asset.AssetName)
+    if (addEffectPayload.chainPath && typeof addEffectPayload.chainPath === 'string') {
+      const p = addEffectPayload.chainPath;
+      const last = p.split('/').pop() ?? '';
+      if (!last.includes('.')) {
+        addEffectPayload.chainPath = `${p}.${last}`;
+      }
+    }
+    return cleanObject(await executeAutomationRequest(tools, 'add_source_effect', addEffectPayload as HandlerArgs)) as Record<string, unknown>;
+  }
+
+  default:
       return cleanObject({ success: false, isError: true, error: 'UNKNOWN_ACTION', message: `Unknown audio action: ${action}` });
   }
 }

@@ -1,5 +1,5 @@
 import { BaseTool } from './base-tool.js';
-import { ILevelTools, StandardActionResponse } from '../types/tool-interfaces.js';
+import { StandardActionResponse } from '../types/tool-interfaces.js';
 import { LevelResponse } from '../types/automation-responses.js';
 import { sanitizePath } from '../utils/path-security.js';
 import { sanitizeCommandArgument } from '../utils/validation.js';
@@ -24,7 +24,7 @@ type ManagedLevelRecord = {
   lights: Array<{ name: string; type: string; createdAt: number; details?: Record<string, unknown> }>;
 };
 
-export class LevelTools extends BaseTool implements ILevelTools {
+export class LevelTools extends BaseTool {
   private managedLevels = new Map<string, ManagedLevelRecord>();
   private listCache?: { result: { success: true; message: string; count: number; levels: Array<Record<string, unknown>> }; timestamp: number };
   private readonly LIST_CACHE_TTL_MS = 750;
@@ -51,10 +51,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     try {
       formatted = sanitizePath(formatted);
     } catch (e: unknown) {
-      // If sanitizePath fails, we should probably propagate that error, 
-      // but normalizeLevelPath signature expects to return an object.
-      // For now, let's log and rethrow or fallback? 
-      // Throwing is safer as it prevents operation on invalid path.
+      // Reject invalid paths before any console fallback can use them.
       throw new Error(`Security validation failed for level path: ${e instanceof Error ? e.message : String(e)}`);
     }
 
@@ -444,7 +441,8 @@ export class LevelTools extends BaseTool implements ILevelTools {
 
     if (params.streaming) {
       try {
-        const simpleName = (params.levelPath || '').split('/').filter(Boolean).pop() || params.levelPath;
+        const rawSimpleName = (params.levelPath || '').split('/').filter(Boolean).pop() || params.levelPath;
+        const simpleName = sanitizeCommandArgument(rawSimpleName);
         await this.bridge.executeConsoleCommand(`StreamLevel ${simpleName} Load Show`);
         this.mutateRecord(normalizedPath, {
           streaming: true,

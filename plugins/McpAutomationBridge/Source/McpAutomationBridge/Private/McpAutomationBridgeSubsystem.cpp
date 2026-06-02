@@ -1,23 +1,38 @@
-// Ensure the subsystem type and bridge socket types are available
-// Include helpers first to ensure MCP_HAS_CONTROLRIG_FACTORY is properly defined
-// before McpAutomationBridgeSubsystem.h sets default values
+// Ensure the subsystem type and bridge socket helpers are available before the
+// generated subsystem header pulls in UE version-dependent declarations.
 #if WITH_EDITOR
 #include "McpAutomationBridgeHelpers.h"
 #endif
 
 #include "McpAutomationBridgeSubsystem.h"
+#include "MCP/McpNativeTransport.h"
+#include "MCP/McpConsolidatedActionRouting.h"
+#include "HAL/PlatformTLS.h"
+#include "Interfaces/IPluginManager.h"
 
 // =============================================================================
 // FMcpRequestErrorDevice - Custom log device for per-request error capture
 // =============================================================================
 
+static constexpr int32 MaxCapturedRequestMessages = 32;
+static constexpr int32 MaxCapturedRequestMessageChars = 1024;
+
+static bool IsKnownBenignMcpCompilerWarning(const FString& Message)
+{
+    return Message.Contains(TEXT("CooldownGameplayEffectClass"), ESearchCase::IgnoreCase) &&
+        (Message.Contains(TEXT("no tags"), ESearchCase::IgnoreCase) ||
+         Message.Contains(TEXT("grant any tags"), ESearchCase::IgnoreCase) ||
+         Message.Contains(TEXT("grants no tag"), ESearchCase::IgnoreCase) ||
+         Message.Contains(TEXT("granting no tag"), ESearchCase::IgnoreCase));
+}
+
 /**
  * Custom output device that captures errors and warnings during request processing.
  * This is temporarily attached to GLog during handler execution to detect
  * engine-level errors (like ensure failures) that don't propagate as exceptions.
- * 
- * Note: Uses the subsystem's shared capture with mutex-protected access since
- * GLog may route messages from worker threads.
+ *
+ * Note: Uses the subsystem's shared capture with mutex-protected access and
+ * only records messages from the request thread that enabled capture.
  */
 class FMcpRequestErrorDevice : public FOutputDevice
 {
@@ -36,28 +51,66 @@ public:
             {
                 return;
             }
-            
-            FString Message = FString::Printf(TEXT("[%s] %s"), *Category.ToString(), V);
-            
+
             // Thread-safe access to shared capture
             FScopeLock Lock(&Subsystem->ErrorCaptureMutex);
             auto& Capture = Subsystem->CurrentErrorCapture;
-            
-            if (Verbosity == ELogVerbosity::Error)
+            if (!Capture.bActive ||
+                Capture.CapturingThreadId != FPlatformTLS::GetCurrentThreadId())
             {
-                Capture.ErrorMessages.Add(Message);
+                return;
+            }
+
+            FString Message = FString::Printf(TEXT("[%s] %s"), *Category.ToString(), V);
+            if (Message.Len() > MaxCapturedRequestMessageChars)
+            {
+                Message = Message.Left(MaxCapturedRequestMessageChars) + TEXT("[TRUNCATED]");
+            }
+
+            const bool bTreatAsWarning =
+                Verbosity == ELogVerbosity::Warning || IsKnownBenignMcpCompilerWarning(Message);
+
+            if (!bTreatAsWarning)
+            {
+                ++Capture.ErrorCount;
+                if (Capture.ErrorMessages.Num() < MaxCapturedRequestMessages)
+                {
+                    Capture.ErrorMessages.Add(Message);
+                }
+                else
+                {
+                    Capture.bErrorMessagesTruncated = true;
+                }
                 Capture.bHasErrors = true;
             }
             else
             {
-                Capture.WarningMessages.Add(Message);
+                ++Capture.WarningCount;
+                if (Capture.WarningMessages.Num() < MaxCapturedRequestMessages)
+                {
+                    Capture.WarningMessages.Add(Message);
+                }
+                else
+                {
+                    Capture.bWarningMessagesTruncated = true;
+                }
                 Capture.bHasWarnings = true;
             }
         }
-        
+
         // Note: We do not explicitly forward here. When this device is attached to GLog,
         // the engine still routes messages to all other output devices; this class only
         // captures errors and warnings without suppressing normal logging.
+    }
+
+    virtual bool CanBeUsedOnAnyThread() const override
+    {
+        return true;
+    }
+
+    virtual bool CanBeUsedOnMultipleThreads() const override
+    {
+        return true;
     }
 
 private:
@@ -87,9 +140,6 @@ private:
 // Define the subsystem log category declared in the public header.
 DEFINE_LOG_CATEGORY(LogMcpAutomationBridgeSubsystem);
 
-// Sanitize incoming text for logging: replace control characters with
-// '?' and truncate long messages so logs remain readable and do not
-// attempt to render unprintable glyphs in the editor which can spam
 /**
  * @brief Produces a log-safe copy of a string by replacing control characters
  * and truncating long input.
@@ -116,6 +166,134 @@ static inline FString SanitizeForLog(const FString &In) {
   }
   if (Out.Len() > 512)
     Out = Out.Left(512) + TEXT("[TRUNCATED]");
+  return Out;
+}
+
+static inline bool IsAllowedUnrealMountPrefixAt(
+    const FString &Value, int32 Index, const TCHAR *Mount) {
+  const int32 MountLen = FCString::Strlen(Mount);
+  if (Index + MountLen > Value.Len()) {
+    return false;
+  }
+
+  if (!Value.Mid(Index, MountLen).Equals(Mount, ESearchCase::CaseSensitive)) {
+    return false;
+  }
+
+  const int32 AfterMount = Index + MountLen;
+  return AfterMount == Value.Len() || Value[AfterMount] == '/';
+}
+
+static inline bool IsAllowedUnrealMountPath(const FString &Value, int32 Index) {
+  return IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Game")) ||
+         IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Engine")) ||
+         IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Script")) ||
+         IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Temp")) ||
+         IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Niagara"));
+}
+
+static inline bool IsResponsePathChar(TCHAR C) {
+  return FChar::IsAlnum(C) || C == '/' || C == '\\' || C == '.' ||
+         C == '_' || C == '-' || C == ':' || C == '(' || C == ')' ||
+         C == '+' || C == '~' || C == ' ';
+}
+
+static inline bool IsUnrealMountPathChar(TCHAR C) {
+  return FChar::IsAlnum(C) || C == '/' || C == '.' || C == '_' ||
+         C == '-' || C == ':';
+}
+
+static FString RedactFilesystemPathsForResponse(const FString &Input) {
+  FString Output;
+  Output.Reserve(Input.Len());
+
+  for (int32 Index = 0; Index < Input.Len();) {
+    const bool bAllowedUnrealPath = Input[Index] == '/' &&
+                                    IsAllowedUnrealMountPath(Input, Index);
+    const bool bUnixPath = Input[Index] == '/' && !bAllowedUnrealPath;
+    const bool bWindowsPath = Index + 2 < Input.Len() &&
+                              FChar::IsAlpha(Input[Index]) &&
+                              Input[Index + 1] == ':' &&
+                              (Input[Index + 2] == '/' || Input[Index + 2] == '\\');
+    const bool bUncPath = Index + 1 < Input.Len() &&
+                          Input[Index] == '\\' && Input[Index + 1] == '\\';
+
+    if (bAllowedUnrealPath) {
+      while (Index < Input.Len() && IsUnrealMountPathChar(Input[Index])) {
+        Output.AppendChar(Input[Index]);
+        ++Index;
+      }
+      continue;
+    }
+
+    if (bUnixPath || bWindowsPath || bUncPath) {
+      Output += TEXT("[path redacted]");
+      while (Index < Input.Len() && IsResponsePathChar(Input[Index])) {
+        ++Index;
+      }
+      continue;
+    }
+
+    Output.AppendChar(Input[Index]);
+    ++Index;
+  }
+
+  return Output;
+}
+
+static void RedactFollowingValueForResponse(FString &Text, const FString &Marker) {
+  const auto IsValueDelimiter = [](TCHAR C) {
+    return C == ';' || C == '&' || C == ',' || C == '\r' || C == '\n';
+  };
+  const auto IsHeaderDelimiter = [](TCHAR C) {
+    return C == ';' || C == '&' || C == '\r' || C == '\n';
+  };
+
+  int32 SearchStart = 0;
+  while (SearchStart < Text.Len()) {
+    const int32 MarkerIndex = Text.Find(
+        Marker, ESearchCase::IgnoreCase, ESearchDir::FromStart, SearchStart);
+    if (MarkerIndex == INDEX_NONE) {
+      return;
+    }
+
+    const int32 ValueStart = MarkerIndex + Marker.Len();
+    const bool bAllowWhitespaceInValue = Marker.EndsWith(TEXT(":"));
+    int32 ValueEnd = ValueStart;
+    if (bAllowWhitespaceInValue) {
+      while (ValueEnd < Text.Len() && FChar::IsWhitespace(Text[ValueEnd]) &&
+             Text[ValueEnd] != '\r' && Text[ValueEnd] != '\n') {
+        ++ValueEnd;
+      }
+      while (ValueEnd < Text.Len() && !IsHeaderDelimiter(Text[ValueEnd])) {
+        ++ValueEnd;
+      }
+    } else {
+      while (ValueEnd < Text.Len() && !IsValueDelimiter(Text[ValueEnd]) &&
+             !FChar::IsWhitespace(Text[ValueEnd])) {
+        ++ValueEnd;
+      }
+    }
+
+    Text = Text.Left(ValueStart) + TEXT("[redacted]") + Text.Mid(ValueEnd);
+    SearchStart = ValueStart + 10;
+  }
+}
+
+static FString SanitizeEngineErrorForResponse(const FString &In) {
+  FString Out = RedactFilesystemPathsForResponse(SanitizeForLog(In));
+  RedactFollowingValueForResponse(Out, TEXT("token="));
+  RedactFollowingValueForResponse(Out, TEXT("capabilitytoken="));
+  RedactFollowingValueForResponse(Out, TEXT("password="));
+  RedactFollowingValueForResponse(Out, TEXT("secret="));
+  RedactFollowingValueForResponse(Out, TEXT("api_key="));
+  RedactFollowingValueForResponse(Out, TEXT("apikey="));
+  RedactFollowingValueForResponse(Out, TEXT("authorization:"));
+  RedactFollowingValueForResponse(Out, TEXT("bearer "));
+
+  if (Out.Len() > 512) {
+    Out = Out.Left(512) + TEXT("[TRUNCATED]");
+  }
   return Out;
 }
 
@@ -161,7 +339,7 @@ void UMcpAutomationBridgeSubsystem::Initialize(
           this, [this](const FString &RequestId, const FString &Action,
                        const TSharedPtr<FJsonObject> &Payload,
                        TSharedPtr<FMcpBridgeWebSocket> Socket) {
-            ProcessAutomationRequest(RequestId, Action, Payload, Socket);
+            QueueAutomationRequest(RequestId, Action, Payload, Socket);
           }));
 
   // Initialize the handler registry
@@ -170,11 +348,38 @@ void UMcpAutomationBridgeSubsystem::Initialize(
   // Start the connection manager
   ConnectionManager->Start();
 
-  // Register Ticker
+  // Native MCP Streamable HTTP transport (opt-in)
+  {
+    const auto* Settings = GetDefault<UMcpAutomationBridgeSettings>();
+    if (Settings && Settings->bEnableNativeMCP)
+    {
+      // Find plugin directory for loading tool schemas
+      FString PluginDir;
+      TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("McpAutomationBridge"));
+      if (Plugin.IsValid())
+      {
+        PluginDir = Plugin->GetBaseDir();
+      }
+
+      NativeTransport = MakeShared<FMcpNativeTransport>(this);
+      if (!NativeTransport->Start(Settings->NativeMCPPort, PluginDir, Settings->bLoadAllToolsOnStart,
+                                  Settings->NativeMCPInstructions,
+                                  Settings->ListenHost, Settings->bAllowNonLoopback))
+      {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
+               TEXT("Failed to start Native MCP server on port %d"), Settings->NativeMCPPort);
+        NativeTransport.Reset();
+      }
+    }
+  }
+
+  // Register Ticker. Automation requests are drained here, after the engine
+  // world tick has completed, so map transitions do not run from arbitrary
+  // GameThread task-graph points inside active tick groups.
   TickHandle = FTSTicker::GetCoreTicker().AddTicker(
       FTickerDelegate::CreateUObject(this,
                                      &UMcpAutomationBridgeSubsystem::Tick),
-      0.1f // Tick every 0.1s is sufficient for automation queue processing
+      0.0f
   );
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
@@ -207,6 +412,12 @@ void UMcpAutomationBridgeSubsystem::Deinitialize() {
            TEXT("McpAutomationBridgeSubsystem deinitializing."));
   }
 
+  if (NativeTransport)
+  {
+    NativeTransport->Shutdown();
+    NativeTransport.Reset();
+  }
+
   if (ConnectionManager.IsValid()) {
     ConnectionManager->Stop();
     ConnectionManager.Reset();
@@ -220,6 +431,7 @@ void UMcpAutomationBridgeSubsystem::Deinitialize() {
 
   // Clean up RequestErrorDevice to prevent dangling pointer in GLog
   if (RequestErrorDevice.IsValid()) {
+    FScopeLock Lock(&ErrorCaptureMutex);
     if (GLog)
       GLog->RemoveOutputDevice(RequestErrorDevice.Get());
     RequestErrorDevice.Reset();
@@ -273,16 +485,20 @@ UMcpAutomationBridgeSubsystem::FRequestErrorCapture& UMcpAutomationBridgeSubsyst
 
 void UMcpAutomationBridgeSubsystem::BeginErrorCapture()
 {
-    // Clear any previous capture state (thread-safe)
-    FScopeLock Lock(&ErrorCaptureMutex);
-    CurrentErrorCapture.Reset();
-    
     // Create and attach the error capture device if not already
     if (!RequestErrorDevice.IsValid())
     {
         RequestErrorDevice = MakeShared<FMcpRequestErrorDevice>(this);
     }
-    
+
+    {
+        // Clear any previous capture state (thread-safe)
+        FScopeLock Lock(&ErrorCaptureMutex);
+        CurrentErrorCapture.Reset();
+        CurrentErrorCapture.CapturingThreadId = FPlatformTLS::GetCurrentThreadId();
+        CurrentErrorCapture.bActive = true;
+    }
+
     // Attach to GLog to capture errors
     if (GLog && RequestErrorDevice.IsValid())
     {
@@ -297,20 +513,43 @@ TArray<FString> UMcpAutomationBridgeSubsystem::EndErrorCapture()
     {
         GLog->RemoveOutputDevice(RequestErrorDevice.Get());
     }
-    
+
     // Get captured errors (thread-safe)
     FScopeLock Lock(&ErrorCaptureMutex);
-    
+
     TArray<FString> AllMessages;
-    AllMessages.Append(CurrentErrorCapture.ErrorMessages);
-    AllMessages.Append(CurrentErrorCapture.WarningMessages);
-    
+    AllMessages.Reserve(CurrentErrorCapture.ErrorMessages.Num() +
+                        CurrentErrorCapture.WarningMessages.Num());
+    for (const FString& ErrorMessage : CurrentErrorCapture.ErrorMessages)
+    {
+        AllMessages.Add(SanitizeEngineErrorForResponse(ErrorMessage));
+    }
+    for (const FString& WarningMessage : CurrentErrorCapture.WarningMessages)
+    {
+        AllMessages.Add(SanitizeEngineErrorForResponse(WarningMessage));
+    }
+    CurrentErrorCapture.bActive = false;
+    CurrentErrorCapture.CapturingThreadId = 0;
+
     return AllMessages;
 }
 
 bool UMcpAutomationBridgeSubsystem::HasCapturedErrors() const
 {
+    FScopeLock Lock(&ErrorCaptureMutex);
     return CurrentErrorCapture.bHasErrors.load();
+}
+
+TArray<FString> UMcpAutomationBridgeSubsystem::GetCapturedErrorMessages() const
+{
+    FScopeLock Lock(&ErrorCaptureMutex);
+    TArray<FString> SanitizedMessages;
+    SanitizedMessages.Reserve(CurrentErrorCapture.ErrorMessages.Num());
+    for (const FString& ErrorMessage : CurrentErrorCapture.ErrorMessages)
+    {
+        SanitizedMessages.Add(SanitizeEngineErrorForResponse(ErrorMessage));
+    }
+    return SanitizedMessages;
 }
 
 /**
@@ -339,13 +578,38 @@ bool UMcpAutomationBridgeSubsystem::SendRawMessage(const FString &Message) {
  * @return true to remain registered and continue receiving ticks.
  */
 bool UMcpAutomationBridgeSubsystem::Tick(float DeltaTime) {
-  // Check if we have pending requests that were deferred due to unsafe engine
-  // states
-  if (bPendingRequestsScheduled && !GIsSavingPackage &&
-      !IsGarbageCollecting() && !IsAsyncLoading()) {
+  // Drain pending requests only outside unsafe engine states.
+  if (!GIsSavingPackage && !IsGarbageCollecting() && !IsAsyncLoading()) {
     ProcessPendingAutomationRequests();
   }
+  // Cleanup stale HTTP pending requests (5 minute timeout)
+  if (NativeTransport)
+  {
+    NativeTransport->CleanupStaleRequests();
+  }
   return true;
+}
+
+void UMcpAutomationBridgeSubsystem::QueueAutomationRequest(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+    ERequestOrigin Origin) {
+  FPendingAutomationRequest Pending;
+  Pending.RequestId = RequestId;
+  Pending.Action = Action;
+  Pending.Payload = Payload;
+  Pending.RequestingSocket = RequestingSocket;
+  Pending.Origin = Origin;
+
+  {
+    FScopeLock Lock(&PendingAutomationRequestsMutex);
+    PendingAutomationRequests.Add(MoveTemp(Pending));
+  }
+
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+         TEXT("Queued automation request for core ticker: RequestId=%s action=%s"),
+         *RequestId, *Action);
 }
 
 // The in-file implementation of ProcessAutomationRequest was intentionally
@@ -365,15 +629,110 @@ bool UMcpAutomationBridgeSubsystem::Tick(float DeltaTime) {
  * response.
  * @param Result Optional JSON object containing result data; may be null.
  * @param ErrorCode Error code string to include when `bSuccess` is `false`.
+ *
+ * Successful handler responses are converted to ENGINE_ERROR failures when
+ * Unreal logged errors during the active automation request. This keeps tool
+ * results aligned with the editor log instead of reporting success for a
+ * request whose handler triggered engine errors.
  */
 
 void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString &RequestId,
     const bool bSuccess, const FString &Message,
-    const TSharedPtr<FJsonObject> &Result, const FString &ErrorCode) {
+    const TSharedPtr<FJsonObject> &Result, const FString &ErrorCode,
+    ERequestOrigin Origin) {
+  bool bEffectiveSuccess = bSuccess;
+  FString EffectiveMessage = Message;
+  FString EffectiveErrorCode = ErrorCode;
+  TSharedPtr<FJsonObject> EffectiveResult = Result;
+
+  if (bSuccess && bProcessingAutomationRequest)
+  {
+    TArray<FString> CapturedErrors;
+    int32 TotalCapturedErrorCount = 0;
+    bool bCapturedErrorsTruncated = false;
+    {
+      FScopeLock Lock(&ErrorCaptureMutex);
+      if (CurrentErrorCapture.bHasErrors.load())
+      {
+        CapturedErrors = CurrentErrorCapture.ErrorMessages;
+        TotalCapturedErrorCount = CurrentErrorCapture.ErrorCount;
+        bCapturedErrorsTruncated = CurrentErrorCapture.bErrorMessagesTruncated;
+      }
+    }
+
+    if (CapturedErrors.Num() > 0)
+    {
+      bEffectiveSuccess = false;
+      EffectiveErrorCode = TEXT("ENGINE_ERROR");
+      const FString FirstError = SanitizeEngineErrorForResponse(CapturedErrors[0]);
+      EffectiveMessage = FString::Printf(
+          TEXT("Handler reported success but Unreal logged errors: %s"),
+          *FirstError.Left(240));
+
+      TSharedPtr<FJsonObject> AugmentedResult = MakeShared<FJsonObject>();
+      if (Result.IsValid())
+      {
+        for (const auto &Pair : Result->Values)
+        {
+          AugmentedResult->SetField(Pair.Key, Pair.Value);
+        }
+      }
+
+      TArray<TSharedPtr<FJsonValue>> ErrorValues;
+      const int32 MaxErrorsInResponse = 3;
+      const int32 ErrorResponseCount = FMath::Min(CapturedErrors.Num(), MaxErrorsInResponse);
+      for (int32 ErrorIndex = 0; ErrorIndex < ErrorResponseCount; ++ErrorIndex)
+      {
+        ErrorValues.Add(MakeShared<FJsonValueString>(
+            SanitizeEngineErrorForResponse(CapturedErrors[ErrorIndex])));
+      }
+      AugmentedResult->SetBoolField(TEXT("success"), false);
+      AugmentedResult->SetNumberField(TEXT("engineErrorCount"), TotalCapturedErrorCount);
+      AugmentedResult->SetArrayField(TEXT("engineErrors"), ErrorValues);
+      if (bCapturedErrorsTruncated || CapturedErrors.Num() > MaxErrorsInResponse)
+      {
+        AugmentedResult->SetBoolField(TEXT("engineErrorsTruncated"), true);
+      }
+
+      TSharedPtr<FJsonObject> ErrorObj = MakeShared<FJsonObject>();
+      ErrorObj->SetStringField(TEXT("code"), EffectiveErrorCode);
+      ErrorObj->SetStringField(TEXT("message"), EffectiveMessage);
+      AugmentedResult->SetObjectField(TEXT("error"), ErrorObj);
+      EffectiveResult = AugmentedResult;
+    }
+  }
+
+  if (!bEffectiveSuccess)
+  {
+    EffectiveMessage = SanitizeEngineErrorForResponse(EffectiveMessage);
+  }
+
+  // When handlers omit Origin (default WebSocket), use the stored
+  // CurrentRequestOrigin from the active ProcessAutomationRequest call.
+  ERequestOrigin EffectiveOrigin = (Origin == ERequestOrigin::WebSocket)
+      ? CurrentRequestOrigin : Origin;
+  // Some handlers complete later via AsyncTask(GameThread) after the request
+  // scope has already reset CurrentRequestOrigin. A live native pending request
+  // is authoritative in that case and must receive the response over SSE.
+  if (Origin == ERequestOrigin::WebSocket && NativeTransport &&
+      NativeTransport->HasPendingRequest(RequestId))
+  {
+    EffectiveOrigin = ERequestOrigin::NativeHTTP;
+  }
+  if (EffectiveOrigin == ERequestOrigin::NativeHTTP && NativeTransport)
+  {
+    if (!NativeTransport->CompletePendingRequest(RequestId, bEffectiveSuccess, EffectiveMessage, EffectiveResult, EffectiveErrorCode))
+    {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+        TEXT("Native HTTP response for %s dropped — request already expired or unknown"),
+        *RequestId);
+    }
+    return;
+  }
   if (ConnectionManager.IsValid()) {
-    ConnectionManager->SendAutomationResponse(TargetSocket, RequestId, bSuccess,
-                                              Message, Result, ErrorCode);
+    ConnectionManager->SendAutomationResponse(TargetSocket, RequestId, bEffectiveSuccess,
+                                              EffectiveMessage, EffectiveResult, EffectiveErrorCode);
   }
 }
 
@@ -416,7 +775,13 @@ void UMcpAutomationBridgeSubsystem::SendAutomationError(
  * @param bStillWorking True if operation is still in progress
  */
 void UMcpAutomationBridgeSubsystem::SendProgressUpdate(
-    const FString &RequestId, float Percent, const FString &Message, bool bStillWorking) {
+    const FString &RequestId, float Percent, const FString &Message, bool bStillWorking,
+    ERequestOrigin Origin) {
+  if (Origin == ERequestOrigin::NativeHTTP && NativeTransport)
+  {
+    NativeTransport->SendSSEProgressUpdate(RequestId, Percent, Message);
+    return;
+  }
   if (ConnectionManager.IsValid()) {
     ConnectionManager->SendProgressUpdate(RequestId, Percent, Message, bStillWorking);
   }
@@ -677,6 +1042,12 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleSetLandscapeMaterial(R, A, P, S);
                   });
+  RegisterHandler(TEXT("modify_heightmap"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleModifyHeightmap(R, A, P, S);
+                  });
   RegisterHandler(TEXT("edit_landscape"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
@@ -752,6 +1123,12 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleModifyNiagaraParameter(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_niagara_authoring"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageNiagaraAuthoringAction(R, A, P, S);
                   });
 
   // Animation
@@ -848,6 +1225,17 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsLightingAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleLightingAction(R, TEXT("manage_lighting"), RoutedPayload, S);
+                    }
+                    if (McpConsolidatedActions::IsSplineAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleManageSplinesAction(R, TEXT("manage_splines"), RoutedPayload, S);
+                    }
                     return HandleBuildEnvironmentAction(R, A, P, S);
                   });
 
@@ -862,7 +1250,7 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
-                    return HandleExecuteEditorFunction(R, A, P, S);
+                    return HandleConsoleCommandAction(R, A, P, S);
                   });
   RegisterHandler(TEXT("inspect"), [this](const FString &R, const FString &A,
                                           const TSharedPtr<FJsonObject> &P,
@@ -873,13 +1261,13 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsPerformanceAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandlePerformanceAction(R, TEXT("manage_performance"), RoutedPayload, S);
+                    }
                     return HandleSystemControlAction(R, A, P, S);
-                  });
-  RegisterHandler(TEXT("manage_blueprint_graph"),
-                  [this](const FString &R, const FString &A,
-                         const TSharedPtr<FJsonObject> &P,
-                         TSharedPtr<FMcpBridgeWebSocket> S) {
-                    return HandleBlueprintGraphAction(R, A, P, S);
                   });
   RegisterHandler(TEXT("list_blueprints"),
                   [this](const FString &R, const FString &A,
@@ -932,6 +1320,63 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsMaterialAuthoringAction(SubAction)) {
+                      FString RoutedSubAction = SubAction;
+                      if (RoutedSubAction == TEXT("connect_material_pins")) {
+                        RoutedSubAction = TEXT("connect_nodes");
+                      } else if (RoutedSubAction == TEXT("break_material_connections")) {
+                        RoutedSubAction = TEXT("disconnect_nodes");
+                      } else if (RoutedSubAction == TEXT("rebuild_material")) {
+                        RoutedSubAction = TEXT("compile_material");
+                      }
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, RoutedSubAction);
+                      if (RoutedPayload.IsValid() && RoutedSubAction == TEXT("connect_nodes")) {
+                        auto ReadFirstNonEmpty = [RoutedPayload](const TCHAR* First, const TCHAR* Second, const TCHAR* Third, FString& OutValue) {
+                          FString Candidate;
+                          if (RoutedPayload->TryGetStringField(First, Candidate) && !Candidate.IsEmpty()) {
+                            OutValue = Candidate;
+                            return true;
+                          }
+                          if (RoutedPayload->TryGetStringField(Second, Candidate) && !Candidate.IsEmpty()) {
+                            OutValue = Candidate;
+                            return true;
+                          }
+                          if (RoutedPayload->TryGetStringField(Third, Candidate) && !Candidate.IsEmpty()) {
+                            OutValue = Candidate;
+                            return true;
+                          }
+                          return false;
+                        };
+
+                        FString ExistingValue;
+                        FString AliasValue;
+                        if ((!RoutedPayload->TryGetStringField(TEXT("sourceNodeId"), ExistingValue) || ExistingValue.IsEmpty()) &&
+                            ReadFirstNonEmpty(TEXT("fromNodeId"), TEXT("fromNode"), TEXT("sourceNode"), AliasValue)) {
+                          RoutedPayload->SetStringField(TEXT("sourceNodeId"), AliasValue);
+                        }
+                        if ((!RoutedPayload->TryGetStringField(TEXT("targetNodeId"), ExistingValue) || ExistingValue.IsEmpty()) &&
+                            ReadFirstNonEmpty(TEXT("toNodeId"), TEXT("toNode"), TEXT("targetNode"), AliasValue)) {
+                          RoutedPayload->SetStringField(TEXT("targetNodeId"), AliasValue);
+                        }
+                        if ((!RoutedPayload->TryGetStringField(TEXT("sourcePin"), ExistingValue) || ExistingValue.IsEmpty()) &&
+                            ReadFirstNonEmpty(TEXT("fromPin"), TEXT("outputPin"), TEXT("sourceOutputPin"), AliasValue)) {
+                          RoutedPayload->SetStringField(TEXT("sourcePin"), AliasValue);
+                        }
+                        if ((!RoutedPayload->TryGetStringField(TEXT("inputName"), ExistingValue) || ExistingValue.IsEmpty()) &&
+                            ReadFirstNonEmpty(TEXT("targetPin"), TEXT("toPin"), TEXT("inputPin"), AliasValue)) {
+                          RoutedPayload->SetStringField(TEXT("inputName"), AliasValue);
+                        }
+                      }
+                      return HandleManageMaterialAuthoringAction(
+                          R, TEXT("manage_material_authoring"), RoutedPayload, S);
+                    }
+                    if (McpConsolidatedActions::IsTextureAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleManageTextureAction(R, TEXT("manage_texture"), RoutedPayload, S);
+                    }
                     return HandleAssetAction(R, A, P, S);
                   });
 
@@ -990,11 +1435,37 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleManageMaterialAuthoringAction(R, A, P, S);
                   });
 
-  // === Missing registrations for Phase 35+ tools ===
+  // === Consolidated and legacy action namespace registrations ===
   RegisterHandler(TEXT("manage_blueprint"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsWidgetAuthoringAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleManageWidgetAuthoringAction(
+                          R, TEXT("manage_widget_authoring"), RoutedPayload, S);
+                    }
+                    static const TSet<FString> GraphSubActions = {
+                        TEXT("create_node"),       TEXT("delete_node"),
+                        TEXT("connect_pins"),      TEXT("break_pin_links"),
+                        TEXT("set_node_property"), TEXT("create_reroute_node"),
+                        TEXT("get_node_details"),  TEXT("get_graph_details"),
+                        TEXT("get_pin_details"),   TEXT("list_node_types"),
+                        TEXT("set_pin_default_value"),
+                        // Wave 6B Path-a AnimBP graph discovery actions —
+                        // implemented in HandleBlueprintGraphAction (early
+                        // dispatch L691/831) but were missing from this routing
+                        // set, so manage_blueprint requests fell through to
+                        // HandleBlueprintAction and returned UNKNOWN_ACTION.
+                        TEXT("list_animbp_graphs"),
+                        TEXT("get_transition_rule_graph")};
+                    if (GraphSubActions.Contains(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleBlueprintGraphAction(R, A, RoutedPayload, S);
+                    }
                     return HandleBlueprintAction(R, A, P, S);
                   });
 
@@ -1072,6 +1543,23 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsInputAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleInputAction(R, TEXT("manage_input"), RoutedPayload, S);
+                    }
+                    if (McpConsolidatedActions::IsGameFrameworkAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleManageGameFrameworkAction(
+                          R, TEXT("manage_game_framework"), RoutedPayload, S);
+                    }
+                    if (McpConsolidatedActions::IsSessionAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleManageSessionsAction(R, TEXT("manage_sessions"), RoutedPayload, S);
+                    }
                     return HandleManageNetworkingAction(R, A, P, S);
                   });
 
@@ -1080,6 +1568,13 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageSplinesAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_pcg"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManagePCGAction(R, A, P, S);
                   });
 
   RegisterHandler(TEXT("manage_pipeline"),
@@ -1100,6 +1595,13 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsAudioAuthoringAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleManageAudioAuthoringAction(
+                          R, TEXT("manage_audio_authoring"), RoutedPayload, S);
+                    }
                     return HandleAudioAction(R, A, P, S);
                   });
 
@@ -1130,6 +1632,18 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsAnimationAuthoringAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleManageAnimationAuthoringAction(
+                          R, TEXT("manage_animation_authoring"), RoutedPayload, S);
+                    }
+                    if (McpConsolidatedActions::IsSkeletonAction(SubAction)) {
+                      const TSharedPtr<FJsonObject> RoutedPayload =
+                          McpConsolidatedActions::WithPayloadSubAction(P, SubAction);
+                      return HandleManageSkeleton(R, TEXT("manage_skeleton"), RoutedPayload, S);
+                    }
                     return HandleAnimationPhysicsAction(R, A, P, S);
                   });
 
@@ -1169,6 +1683,25 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandlePerformanceAction(R, A, P, S);
                   });
+  RegisterHandler(TEXT("enable_gpu_timing"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandlePerformanceAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_debug"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleDebugAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("spawn_category"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleDebugAction(R, A, P, S);
+                  });
 
   // Phase 21: Game Framework
   RegisterHandler(TEXT("manage_game_framework"),
@@ -1191,6 +1724,10 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
+                    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(P);
+                    if (McpConsolidatedActions::IsVolumeAction(SubAction)) {
+                      return HandleManageVolumesAction(R, TEXT("manage_volumes"), P, S);
+                    }
                     return HandleManageLevelStructureAction(R, A, P, S);
                   });
 
@@ -1260,7 +1797,7 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
                     bool bIsInPIE = false;
                     FString PieState = TEXT("stopped");
-                    
+
                     if (GEditor && GEditor->PlayWorld) {
                       bIsInPIE = true;
                       if (GEditor->PlayWorld->IsPaused()) {
@@ -1269,11 +1806,11 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                         PieState = TEXT("playing");
                       }
                     }
-                    
+
                     Result->SetBoolField(TEXT("isInPIE"), bIsInPIE);
                     Result->SetStringField(TEXT("pieState"), PieState);
-                    
-                    SendAutomationResponse(S, R, true, 
+
+                    SendAutomationResponse(S, R, true,
                         bIsInPIE ? TEXT("PIE is active") : TEXT("PIE is not active"),
                         Result);
                     return true;
@@ -1306,17 +1843,15 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests() {
   {
     FScopeLock Lock(&PendingAutomationRequestsMutex);
     if (PendingAutomationRequests.Num() == 0) {
-      bPendingRequestsScheduled = false;
       return;
     }
     LocalQueue = MoveTemp(PendingAutomationRequests);
     PendingAutomationRequests.Empty();
-    bPendingRequestsScheduled = false;
   }
 
   for (const FPendingAutomationRequest &Req : LocalQueue) {
     ProcessAutomationRequest(Req.RequestId, Req.Action, Req.Payload,
-                             Req.RequestingSocket);
+                             Req.RequestingSocket, Req.Origin);
   }
 }
 
@@ -1338,7 +1873,7 @@ bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
 #if WITH_EDITOR
   // GEditor operations must run on the game thread
   check(IsInGameThread());
-  
+
   if (!GEditor) {
     OutErrorMessage = TEXT("Editor not available");
     return false;
@@ -1351,22 +1886,31 @@ bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
   }
 
   for (const FString &Command : Commands) {
-    if (Command.IsEmpty()) {
+    const FString TrimmedCommand = Command.TrimStartAndEnd();
+    if (TrimmedCommand.IsEmpty()) {
       continue;
+    }
+
+    if (McpContainsUnsafeCommandSeparator(TrimmedCommand)) {
+      OutErrorMessage = FString::Printf(
+          TEXT("Rejected unsafe editor command: %s"), *TrimmedCommand);
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+             TEXT("ExecuteEditorCommands: %s"), *OutErrorMessage);
+      return false;
     }
 
     // Execute the command via GEditor
     // Note: GEditor->Exec returns true if the command was handled
-    if (!GEditor->Exec(EditorWorld, *Command)) {
+    if (!GEditor->Exec(EditorWorld, *TrimmedCommand)) {
       OutErrorMessage =
-          FString::Printf(TEXT("Failed to execute command: %s"), *Command);
+          FString::Printf(TEXT("Failed to execute command: %s"), *TrimmedCommand);
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("ExecuteEditorCommands: %s"), *OutErrorMessage);
       return false;
     }
 
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-           TEXT("ExecuteEditorCommands: Executed '%s'"), *Command);
+           TEXT("ExecuteEditorCommands: Executed '%s'"), *TrimmedCommand);
   }
 
   return true;

@@ -6,11 +6,11 @@
 
 <!-- List the key changes made in this PR. -->
 
-- 
+-
 
 ## Related Issues
 
-<!-- Use keywords to auto-close issues (Closes #123, Fixes #456). 
+<!-- Use keywords to auto-close issues (Closes #123, Fixes #456).
      If only related, use: Related to #123 -->
 
 ## Type of Change

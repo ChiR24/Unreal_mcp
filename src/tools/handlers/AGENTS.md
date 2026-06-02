@@ -1,64 +1,35 @@
 # src/tools/handlers
 
-Domain-specific tool handler implementations (42 files).
-
-## OVERVIEW
-Handler functions for each MCP tool domain. Call `executeAutomationRequest()` to dispatch to C++ bridge.
+Domain-specific TypeScript action handlers. There are 43 runtime TS files here, including 41 `*-handlers.ts` domain files plus shared helpers. They do argument cleanup and then dispatch to Unreal; they should not contain editor-side business logic that belongs in C++.
 
 ## STRUCTURE
 ```
 handlers/
-├── actor-handlers.ts        # control_actor actions
-├── asset-handlers.ts        # manage_asset actions
-├── blueprint-handlers.ts    # manage_blueprint actions
-├── level-handlers.ts        # manage_level actions
-├── editor-handlers.ts       # control_editor actions
-├── lighting-handlers.ts     # manage_lighting actions
-├── animation-handlers.ts    # animation_physics actions
-├── effect-handlers.ts       # manage_effect actions
-├── sequence-handlers.ts     # manage_sequence actions
-├── geometry-handlers.ts     # manage_geometry actions
-├── spline-handlers.ts       # manage_splines actions
-├── navigation-handlers.ts   # manage_navigation actions
-├── audio-handlers.ts        # manage_audio actions
-├── gas-handlers.ts          # manage_gas actions
-├── combat-handlers.ts       # manage_combat actions
-├── ai-handlers.ts           # manage_ai actions
-├── character-handlers.ts    # manage_character actions
-├── inventory-handlers.ts    # manage_inventory actions
-├── interaction-handlers.ts  # manage_interaction actions
-├── network-handlers.ts      # manage_networking actions
-├── session-handlers.ts      # manage_sessions actions
-├── gameplay-handlers.ts     # manage_game_framework actions
-├── behavior-tree-handlers.ts # manage_behavior_tree actions
-├── input-handlers.ts        # manage_input actions
-├── skeleton-handlers.ts     # manage_skeleton actions
-├── material-handlers.ts     # manage_material_authoring actions
-├── texture-handlers.ts      # manage_texture actions
-├── widget-handlers.ts       # manage_widget_authoring actions
-├── volume-handlers.ts       # manage_volumes actions
-├── level-structure-handlers.ts # manage_level_structure actions
-├── environment-handlers.ts  # build_environment actions
-├── inspect-handlers.ts      # inspect actions
-├── system-handlers.ts       # system_control actions
-├── performance-handlers.ts  # manage_performance actions
-├── common-handlers.ts       # executeAutomationRequest(), requireAction()
-└── ... (42 total files)
+|-- common-handlers.ts            # executeAutomationRequest(), requireAction(), parsing/errors
+|-- argument-helper.ts            # shared argument extraction helpers
+|-- actor/asset/blueprint/editor/level style handlers
+|-- animation/audio/effect/geometry/material/widget authoring handlers
+|-- ai/gas/character/combat/inventory/interaction handlers
+|-- networking/sessions/game-framework/input handlers
+|-- system/performance/pipeline/inspect handlers
+`-- *.test.ts                    # focused Vitest coverage for subtle handler behavior
 ```
 
 ## WHERE TO LOOK
 | Task | File | Notes |
 |------|------|-------|
-| Add action handler | `*-handlers.ts` | Match domain to file name |
-| Common utilities | `common-handlers.ts` | `executeAutomationRequest()`, `requireAction()` |
-| Error formatting | `common-handlers.ts` | `formatToolError()` |
-| Response parsing | `common-handlers.ts` | `parseAutomationResponse()` |
+| Add action branch | matching `*-handlers.ts` | Match the parent tool domain and existing switch style |
+| Dispatch to Unreal | `common-handlers.ts` | Use `executeAutomationRequest(action, params)` |
+| Require action | `common-handlers.ts` | Use `requireAction(args)` for action-based tools |
+| Parse/format errors | `common-handlers.ts` | Preserve tool/action context in returned errors |
+| Normalize common inputs | `argument-helper.ts`, `src/utils/normalize.ts` | Reuse existing coercion helpers |
 
 ## CONVENTIONS
-- **Action Dispatch**: Switch on `args.action` in handler function
-- **Bridge Call**: Always use `executeAutomationRequest(action, params)` — never raw WebSocket
-- **Error Context**: Include tool/action names in all error messages
-- **Path Normalization**: Call `normalizePath()` before sending to bridge
+- Switch on `args.action` after validating that arguments are records.
+- Keep TS action names exactly aligned with C++ action registration and native MCP schema strings.
+- Normalize paths, vectors, rotations, and transforms before bridge dispatch.
+- Console commands must pass through `CommandValidator`; do not create alternate command execution paths.
+- Return MCP tool responses through the shared response/parser helpers so output validation remains meaningful.
 
 ### Handler Pattern
 ```typescript
@@ -66,22 +37,16 @@ export async function handleFoo(args: unknown): Promise<ToolResponse> {
   const action = requireAction(args);
   switch (action) {
     case 'bar': {
-      // Validate params, normalize paths
+      const params = { /* validated and normalized fields */ };
       return executeAutomationRequest('foo_bar', params);
     }
-    // ... more actions
   }
 }
 ```
 
 ## ANTI-PATTERNS
-- **Direct WebSocket**: Never use `bridge.send()` — use `executeAutomationRequest()`
-- **Bypassing Registry**: Never call handler functions directly — use `toolRegistry.register()`
-- **Raw Params**: Always validate/normalize before bridge call
-- **Missing Error Context**: All errors must include tool/action name
-- **Stubbed Actions**: No "Not Implemented" — full TS + C++ coverage required
-
-## NOTES
-- **Non-Standard Location**: Handlers nested 2 levels deep (`src/tools/handlers/`)
-- **C++ Requirement**: Every TS action must have corresponding C++ handler in plugin
-- **Registry Pattern**: All handlers registered in `consolidated-tool-handlers.ts`
+- Raw `AutomationBridge` or WebSocket calls from handler modules.
+- Broad catch blocks that erase the action/tool name from errors.
+- Accepting path-like strings without `sanitizePath()` or a domain-specific normalizer.
+- Adding permissive fallbacks for unreleased draft action shapes.
+- Stubbed or "not implemented" branches in public action enums.

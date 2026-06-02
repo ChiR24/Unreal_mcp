@@ -16,12 +16,8 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { requireNonEmptyString, executeAutomationRequest } from './common-handlers.js';
+import { createSubActionDispatcher, requireNonEmptyString } from './common-handlers.js';
 
-function getTimeoutMs(): number {
-  const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
-  return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
-}
 
 /**
  * Handles all combat & weapon actions for the manage_combat tool.
@@ -31,21 +27,17 @@ export async function handleCombatTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  const argsRecord = args as Record<string, unknown>;
-  const timeoutMs = getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_combat',
-      payload as HandlerArgs,
-      `Automation bridge not available for combat action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  const { argsRecord, sendRequest } = createSubActionDispatcher(tools, args, {
+    toolName: 'manage_combat',
+    domainName: 'combat',
+    pathFields: [
+      'blueprintPath',
+      'meshPath',
+      'projectilePath',
+      'damageTypePath',
+      'effectPath'
+    ]
+  });
 
   switch (action) {
     // =========================================================================

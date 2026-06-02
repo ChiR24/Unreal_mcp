@@ -59,16 +59,16 @@ jobs:
           script: |
             const title = '🔗 Broken links detected in documentation';
             const body = `The weekly link check found broken links in the documentation.
-            
+
             Please review the [workflow run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}) for details.`;
-            
+
             const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
               labels: 'area/docs'
             });
-            
+
             const existingIssue = issues.find(i => i.title === title);
             if (!existingIssue) {
               await github.rest.issues.create({

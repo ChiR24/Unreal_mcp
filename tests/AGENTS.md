@@ -1,73 +1,68 @@
 # tests
 
-Integration and unit testing infrastructure for Unreal MCP.
-
-## OVERVIEW
-Dual test runners: Vitest (unit) + Custom MCP runner (integration with Unreal Engine).
+Test infrastructure for Unreal MCP. Unit tests use Vitest; integration tests use a custom MCP runner and usually require Unreal Editor with the plugin available.
 
 ## STRUCTURE
 ```
 tests/
-├── test-runner.mjs     # Core MCP test runner (1100+ lines)
-├── integration.mjs     # Main integration entry (84 test cases)
-├── mcp-tools/          # Domain-specific integration tests
-│   ├── core/           # manage_asset, control_actor, control_editor, inspect
-│   ├── world/          # build_environment, manage_geometry, manage_navigation
-│   ├── authoring/      # manage_blueprint, manage_material, manage_texture
-│   ├── gameplay/       # manage_ai, manage_behavior_tree, manage_combat
-│   └── utility/        # manage_sessions, manage_performance, system_control
-├── unit/               # Vitest unit tests (security, validation, utils)
-└── reports/            # JSON test results output
+|-- test-runner.mjs                 # custom MCP runner, expectations, reports, cleanup
+|-- integration.mjs                 # canonical integration entry
+|-- parameter-combination-audit.mjs # parameter coverage audit script
+|-- mcp-tools/
+|   |-- core/                       # asset, blueprint, actor/editor/level, inspect, system, tools
+|   |-- world/                      # environment, level structure, geometry
+|   |-- gameplay/                   # animation, effects, AI, GAS, character, combat, inventory, interaction
+|   `-- utility/                    # audio, sequence, networking
+|-- unit/                           # Vitest unit tests for config/security/handlers
+`-- reports/                        # generated JSON output; never add AGENTS here
 ```
 
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
-| Run integration | `npm test` | Requires Unreal Editor running |
-| Run unit tests | `npm run test:unit` | Vitest, no UE required |
-| Run smoke test | `npm run test:smoke` | Mock mode, no UE required |
-| Add integration test | `tests/mcp-tools/*/*.test.mjs` | Domain subdirectories |
-| Add unit test | `src/**/*.test.ts` | Colocate with source |
+| Run unit tests | `npm run test:unit` | Vitest, no Unreal required |
+| Run smoke test | `npm run test:smoke` | Mock mode path |
+| Run integration | `npm test` or `npm run test:all` | Unreal-dependent integration entry |
+| Add integration case | `tests/mcp-tools/*/*.test.mjs` | Use `runToolTests(toolName, testCases)` |
+| Add unit test | `src/**/*.test.ts` or `tests/unit/**/*.ts` | Follow nearby Vitest setup/cleanup style |
+| Audit parameter coverage | `npm run test:params` | Writes reports under `tests/reports/` |
 
-## CONVENTIONS
-### Test Case Structure
+## TEST CASE SHAPE
 ```javascript
 {
-  id: 'action_basic_0',              // Unique test ID
-  scenario: 'human description',      // Test description
-  toolName: 'manage_navigation',      // MCP tool name
-  arguments: { action: '...', ... },  // Tool arguments
-  expected: 'success|error|timeout'   // Pipe-separated expectations
+  scenario: 'human-readable behavior',
+  toolName: 'manage_ai',
+  arguments: { action: '...', ... },
+  expected: 'success|error',
+  assertions: [/* optional custom checks */],
+  captureResult: 'optionalName'
 }
 ```
 
-### Expectation System
-- **Pipe-separated**: Pass if ANY condition matches
-- **Primary intent**: First condition determines pass/fail for infrastructure errors
-- **Keywords**: `success`, `error`, `handled`, `skipped`, `not found`, `timeout`
+## EXPECTATION GRAMMAR
+- String expectations are pipe-separated or `or`-separated; any matching condition can pass.
+- The first token is the primary intent and controls whether infra failures can pass.
+- Common keywords: `success`, `error`, `handled`, `skipped`, `not found`, `timeout`.
+- Suite-specific phrases such as `already exists`, `not loaded`, and `NOT_PARTITIONED` are intentional.
+- Object expectations can use `{ condition, successPattern, errorPattern }`.
+- Crashes, disconnects, `UE_NOT_CONNECTED`, and timeouts fail unless the primary expectation explicitly allows them.
 
-### Test Generation
-Most test files auto-generate test cases:
-```javascript
-const IMPLEMENTED_ACTIONS = ['action1', 'action2', ...];
-for (const a of IMPLEMENTED_ACTIONS) {
-  tc.push({ scenario: `tool: ${a}`, toolName: '...', ... });
-}
-```
+## ENVIRONMENT AND TIMEOUTS
+- Server spawn: `UNREAL_MCP_SERVER_CMD`, `UNREAL_MCP_SERVER_ARGS`, `UNREAL_MCP_SERVER_CWD`.
+- Build/source mode: `UNREAL_MCP_AUTO_BUILD`, `UNREAL_MCP_FORCE_DIST`.
+- Logging: `UNREAL_MCP_TEST_LOG_RESPONSES`, `UNREAL_MCP_TEST_RESPONSE_MAX_CHARS`.
+- Timing defaults: throttle `100ms`, case timeout `5000ms`, call timeout `60000ms`, client timeout `300000ms`.
+- `callWithRetry()` defaults to 3 retries with exponential backoff.
 
-### Timeout Tiers
-- **DEFAULT_TIMEOUT**: 10 seconds
-- **HEAVY_TIMEOUT**: 60 seconds (landscape, lighting, LODs)
-- **EXTREME_TIMEOUT**: 90 seconds (heightmap modifications)
+## CLEANUP PATTERNS
+- Use `Date.now()` plus counters/tags for unique asset and actor names.
+- Include setup cases before dependent actions and explicit cleanup cases at the end.
+- Cleanup uses delete actions, `delete_asset`, `delete_by_tag`, or folder deletion with `force: true`.
+- `manage_geometry` resets around destructive operations; keep the reset cadence before high-impact edits such as poke/subdivide/triangulate/array operations.
+- Runtime temp paths such as `./tmp/unreal-mcp/build-environment` are artifacts, not source.
 
 ## ANTI-PATTERNS
-- **Infrastructure errors passing**: Crashes/disconnections must FAIL tests unless explicitly expected
-- **Missing setup**: CREATE_ACTIONS must have corresponding setup tests
-- **Hardcoded actor names**: Use `Date.now()` + counter for uniqueness
-- **False positives**: "error|timeout|success" passes on timeout — use primary intent detection
-
-## UNIQUE STYLES
-- **Geometry Reset**: Actors reset every 10 destructive operations to prevent OOM
-- **Permissive Tools**: Some tools accept empty params (listed in PERMISSIVE_TOOLS)
-- **Path Security Tests**: Auto-generated for all path-accepting actions
-- **Setup Tests**: Create prerequisite actors before main test loop
+- Writing AGENTS or hand-authored docs under `tests/reports/`.
+- Letting infrastructure failures pass through broad strings like `error|timeout|success` when success is the real intent.
+- Reusing fixed actor/asset names across integration cases.
+- Removing setup/cleanup because a case passes locally.

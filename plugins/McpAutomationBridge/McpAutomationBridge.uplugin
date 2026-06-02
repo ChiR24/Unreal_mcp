@@ -3,7 +3,7 @@
   "Version": 3,
   "VersionName": "0.1.4",
   "FriendlyName": "MCP Automation Bridge",
-  "Description": "Editor automation bridge enabling AI assistants (Claude, Cursor, etc.) to control Unreal Engine via Model Context Protocol (MCP). Provides 200+ automation actions for assets, actors, levels, animation, AI, Niagara, materials, foliage, landscapes, and more. Supports UE 5.0-5.7 with TLS/SSL security.",
+  "Description": "Editor automation bridge enabling AI assistants (Claude, Cursor, etc.) to control Unreal Engine via Model Context Protocol (MCP). Provides 200+ automation actions for assets, actors, levels, animation, AI, Niagara, materials, foliage, landscapes, and more. Supports UE 5.0-5.8 Preview with TLS/SSL security.",
   "Category": "Editor|Automation|AI",
   "CreatedBy": "ChiR24",
   "CreatedByURL": "https://github.com/ChiR24/Unreal_mcp",
@@ -24,6 +24,10 @@
     }
   ],
   "Plugins": [
+    {
+      "Name": "PythonScriptPlugin",
+      "Enabled": true
+    },
     {
       "Name": "EditorScriptingUtilities",
       "Enabled": true
@@ -113,6 +117,11 @@
       "Optional": true
     },
     {
+      "Name": "StructUtils",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
       "Name": "Metasound",
       "Enabled": true,
       "Optional": true
@@ -137,10 +146,20 @@
       "Enabled": true,
       "Optional": true
     },
-    {
-      "Name": "OnlineSubsystemUtils",
-      "Enabled": true,
-      "Optional": true
-    }
+	{
+		"Name": "OnlineSubsystemUtils",
+		"Enabled": true,
+		"Optional": true
+	},
+	{
+		"Name": "Synthesis",
+		"Enabled": true,
+		"Optional": true
+	},
+	{
+		"Name": "PCG",
+		"Enabled": true,
+		"Optional": true
+	}
   ]
 }
