@@ -1,19 +1,18 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-// import { ListPromptsRequestSchema, GetPromptRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { UnrealBridge } from './unreal-bridge.js';
 import { AutomationBridge } from './automation/index.js';
 import { Logger } from './utils/logger.js';
 import { HealthMonitor } from './services/health-monitor.js';
-// import { prompts } from './prompts/index.js';
 import { AssetResources } from './resources/assets.js';
 import { ActorResources } from './resources/actors.js';
 import { LevelResources } from './resources/levels.js';
 import { ResourceRegistry } from './server/resource-registry.js';
 import { ToolRegistry } from './server/tool-registry.js';
-import fs from 'fs';
+import fs from 'node:fs';
+
+type McpServer = ConstructorParameters<typeof ToolRegistry>[0];
 
 export class ServerSetup {
-  private server: Server;
+  private server: McpServer;
   private bridge: UnrealBridge;
   private automationBridge: AutomationBridge;
   private logger: Logger;
@@ -23,7 +22,7 @@ export class ServerSetup {
   private levelResources: LevelResources;
 
   constructor(
-    server: Server,
+    server: McpServer,
     bridge: UnrealBridge,
     automationBridge: AutomationBridge,
     logger: Logger,
@@ -41,7 +40,7 @@ export class ServerSetup {
     this.levelResources = new LevelResources(bridge, automationBridge);
   }
 
-  async setup() {
+  async setup(): Promise<void> {
     this.validateEnvironment();
 
     const ensureConnected = this.ensureConnectedOnDemand.bind(this);
@@ -72,30 +71,35 @@ export class ServerSetup {
       ensureConnected
     );
     toolRegistry.register();
-
-    // this.registerPrompts();
   }
 
-  private validateEnvironment() {
-    const projectPath = process.env.UE_PROJECT_PATH;
-    if (projectPath) {
-      if (!fs.existsSync(projectPath)) {
-        this.logger.warn(`UE_PROJECT_PATH is set to '${projectPath}' but the path does not exist.`);
-      } else {
-        this.logger.info(`UE_PROJECT_PATH validated: ${projectPath}`);
+  private validateEnvironment(): void {
+    const enginePath = process.env.UE_ENGINE_PATH || process.env.UNREAL_ENGINE_PATH;
+
+    this.validateConfiguredPath(
+      'UE_PROJECT_PATH',
+      process.env.UE_PROJECT_PATH,
+      'UE_PROJECT_PATH is not set. Offline project settings fallback will be disabled.'
+    );
+    this.validateConfiguredPath('UE_ENGINE_PATH', enginePath);
+  }
+
+  private validateConfiguredPath(envName: string, configuredPath: string | undefined, notSetMessage?: string): void {
+    const pathToValidate = configuredPath?.trim();
+
+    if (!pathToValidate) {
+      if (notSetMessage) {
+        this.logger.info(notSetMessage);
       }
-    } else {
-      this.logger.info('UE_PROJECT_PATH is not set. Offline project settings fallback will be disabled.');
+      return;
     }
 
-    const enginePath = process.env.UE_ENGINE_PATH || process.env.UNREAL_ENGINE_PATH;
-    if (enginePath) {
-      if (!fs.existsSync(enginePath)) {
-        this.logger.warn(`UE_ENGINE_PATH is set to '${enginePath}' but the path does not exist.`);
-      } else {
-        this.logger.info(`UE_ENGINE_PATH validated: ${enginePath}`);
-      }
+    if (!fs.existsSync(pathToValidate)) {
+      this.logger.warn(`${envName} is set to '${pathToValidate}' but the path does not exist.`);
+      return;
     }
+
+    this.logger.info(`${envName} validated: ${pathToValidate}`);
   }
 
   private async ensureConnectedOnDemand(): Promise<boolean> {

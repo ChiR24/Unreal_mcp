@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,14 +31,23 @@ function parseArgs(argv) {
     help: false
   };
 
-  for (let i = 2; i < argv.length; i += 1) {
+  function readOptionValue(optionName) {
+    const value = argv[++i];
+    if (!value || value.startsWith('--')) {
+      throw new Error(`Missing value for ${optionName}`);
+    }
+    return value;
+  }
+
+  let i = 2;
+  for (; i < argv.length; i += 1) {
     const token = argv[i];
     switch (token) {
       case '--engine':
-        args.engine = argv[++i];
+        args.engine = readOptionValue(token);
         break;
       case '--project':
-        args.project = argv[++i];
+        args.project = readOptionValue(token);
         break;
       case '--dry-run':
         args.dryRun = true;
@@ -132,7 +141,7 @@ function main() {
     copyDir(projectDest, args.dryRun);
   }
 
-  console.log('Done. Remember to clear the plugin Binaries/Intermediate folders if requested by Unreal.');
+  console.log('Done. Clean sync removes plugin binaries/intermediates; rebuild the project if Unreal cannot find the module.');
 }
 
 try {

@@ -303,7 +303,7 @@ async function createSkyLight(
   if (castShadows !== undefined) properties.CastShadows = castShadows;
   if (realTimeCapture !== undefined) properties.RealTimeCapture = realTimeCapture;
   if (color) properties.LightColor = { r: color[0], g: color[1], b: color[2], a: 1.0 };
-  
+
   if (Object.keys(properties).length > 0) payload.properties = properties;
 
   return (await executeAutomationRequest(tools, TOOL_ACTIONS.SPAWN_SKY_LIGHT, payload, 'Automation bridge not available for sky light creation')) as Record<string, unknown>;
@@ -342,7 +342,7 @@ async function setupGlobalIllumination(
   // Normalize method
   let normalizedMethod: string | undefined;
   const methodLower = String(args.method).toLowerCase();
-  
+
   if (methodLower === 'lumen' || methodLower === 'lumengi') {
     normalizedMethod = 'LumenGI';
   } else if (methodLower === 'screenspace' || methodLower === 'ssgi') {
@@ -373,11 +373,11 @@ async function setupGlobalIllumination(
 
   // If bridge fails with connection error, fall back to console commands
   const resultObj = result as Record<string, unknown>;
-  if (resultObj.success === false && typeof resultObj.error === 'string' && 
+  if (resultObj.success === false && typeof resultObj.error === 'string' &&
       (resultObj.error.includes('not available') || resultObj.error.includes('Connection'))) {
     // Console command fallback
     const commands: string[] = [];
-    
+
     switch (normalizedMethod) {
       case 'Lightmass': commands.push('r.DynamicGlobalIlluminationMethod 0'); break;
       case 'LumenGI': commands.push('r.DynamicGlobalIlluminationMethod 1'); break;

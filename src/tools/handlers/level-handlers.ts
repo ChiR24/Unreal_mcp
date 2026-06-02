@@ -1,9 +1,40 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, LevelArgs, AutomationResponse } from '../../types/handler-types.js';
-import { executeAutomationRequest, requireNonEmptyString, validateSecurityPatterns } from './common-handlers.js';
+import { executeAutomationRequest, normalizePathFields, requireNonEmptyString, validateSecurityPatterns } from './common-handlers.js';
 
 // AutomationResponse now imported from types/handler-types.js
+
+const LEVEL_STRUCTURE_ONLY_ACTIONS = new Set([
+  'load_cells',
+  'set_datalayer',
+  'cleanup_invalid_datalayers',
+  'create_datalayer'
+]);
+const LIGHT_TYPE_CLASS_PATHS = new Map<string, string>([
+  ['point', '/Script/Engine.PointLight'],
+  ['pointlight', '/Script/Engine.PointLight'],
+  ['directional', '/Script/Engine.DirectionalLight'],
+  ['directionallight', '/Script/Engine.DirectionalLight'],
+  ['spot', '/Script/Engine.SpotLight'],
+  ['spotlight', '/Script/Engine.SpotLight'],
+  ['sky', '/Script/Engine.SkyLight'],
+  ['skylight', '/Script/Engine.SkyLight'],
+  ['rect', '/Script/Engine.RectLight'],
+  ['rectlight', '/Script/Engine.RectLight']
+]);
+const CREATE_LIGHT_TYPES = new Set<string>([
+  'point',
+  'directional',
+  'spot',
+  'sky',
+  'rect',
+  'pointlight',
+  'directionallight',
+  'spotlight',
+  'skylight',
+  'rectlight'
+]);
 
 /** Result payload structure for level responses */
 interface ResultPayload {
@@ -15,36 +46,77 @@ interface ResultPayload {
   [key: string]: unknown;
 }
 
+function normalizeLightType(lightType: unknown): string | undefined {
+  return typeof lightType === 'string' ? lightType.trim().toLowerCase() : undefined;
+}
+
+function normalizeLevelPathValue(path: string): string {
+  const normalized = normalizePathFields({ path }, ['path']);
+  return normalized.path as string;
+}
+
+function normalizeLevelPathArray(paths: unknown): string[] | undefined {
+  if (!Array.isArray(paths)) return undefined;
+  return paths
+    .filter((path): path is string => typeof path === 'string')
+    .map(path => normalizeLevelPathValue(path));
+}
+
 /**
  * Normalize level arguments to support both camelCase and snake_case
  */
 function normalizeLevelArgs(args: LevelArgs): LevelArgs {
   const raw = args as Record<string, unknown>;
-  return {
+  const assetPath = typeof raw.assetPath === 'string' ? raw.assetPath : undefined;
+  const targetPath = typeof raw.targetPath === 'string' ? raw.targetPath : undefined;
+  const pathAlias = typeof raw.path === 'string' ? raw.path : undefined;
+  const mapped = {
     ...args,
     // Map snake_case to camelCase
-    levelPath: (raw.level_path as string | undefined) ?? args.levelPath,
+    levelPath: (raw.level_path as string | undefined) ?? args.levelPath ?? assetPath ?? pathAlias,
     levelName: (raw.level_name as string | undefined) ?? args.levelName,
     savePath: (raw.save_path as string | undefined) ?? args.savePath,
-    destinationPath: (raw.destination_path as string | undefined) ?? args.destinationPath,
-    subLevelPath: (raw.sub_level_path as string | undefined) ?? args.subLevelPath,
+    destinationPath: (raw.destination_path as string | undefined) ?? args.destinationPath ?? targetPath,
+    subLevelPath: (raw.sublevelPath as string | undefined) ?? (raw.sub_level_path as string | undefined) ?? args.subLevelPath,
     parentLevel: (raw.parent_level as string | undefined) ?? args.parentLevel,
     parentPath: (raw.parent_path as string | undefined) ?? args.parentPath,
     streamingMethod: (raw.streaming_method as 'Blueprint' | 'AlwaysLoaded' | undefined) ?? args.streamingMethod,
     sourcePath: (raw.source_path as string | undefined) ?? args.sourcePath,
     newName: (raw.new_name as string | undefined) ?? (args as Record<string, unknown>).newName as string | undefined,
-    levelPaths: (raw.level_paths as string[] | undefined) ?? args.levelPaths,
+    levelPaths: normalizeLevelPathArray(raw.level_paths ?? args.levelPaths),
     packagePath: (raw.package_path as string | undefined) ?? args.packagePath,
     exportPath: (raw.export_path as string | undefined) ?? args.exportPath,
   };
+  return normalizePathFields(mapped as Record<string, unknown>, [
+    'levelPath',
+    'savePath',
+    'destinationPath',
+    'subLevelPath',
+    'parentLevel',
+    'parentPath',
+    'sourcePath',
+    'packagePath',
+    'exportPath',
+    'path'
+  ]) as LevelArgs;
 }
 
 export async function handleLevelTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   // Normalize args to support both camelCase and snake_case
   const argsTyped = normalizeLevelArgs(args as LevelArgs);
-  
+
+  if (LEVEL_STRUCTURE_ONLY_ACTIONS.has(action)) {
+    return cleanObject({
+      success: false,
+      error: 'INVALID_ACTION',
+      message: `${action} belongs to manage_level_structure/world partition handlers, not manage_level`,
+      action,
+      tool: 'manage_level_structure'
+    });
+  }
+
   // Security validation: check for path traversal attempts
-  const securityError = validateSecurityPatterns(args as Record<string, unknown>);
+  const securityError = validateSecurityPatterns(argsTyped as Record<string, unknown>);
   if (securityError) {
     return cleanObject({
       success: false,
@@ -53,7 +125,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       action
     });
   }
-  
+
   switch (action) {
     case 'load':
     case 'load_level': {
@@ -102,14 +174,44 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
     case 'create_level': {
       const levelPathStr = typeof argsTyped.levelPath === 'string' ? argsTyped.levelPath : '';
       const levelName = requireNonEmptyString(argsTyped.levelName || levelPathStr.split('/').pop() || '', 'levelName', 'Missing required parameter: levelName');
-      // CRITICAL: Pass useWorldPartition to C++ - default to false to avoid 20+ second freeze during World Partition uninitialize
-      // World Partition levels cause permanent hang when unloaded via GEditor->NewMap()
-      const res = await executeAutomationRequest(tools, 'create_new_level', {
-        levelPath: argsTyped.savePath || argsTyped.levelPath || `/Game/Maps/${levelName}`,
+      // Use the inactive-world creation path, then load the saved level so
+      // manage_level create_level preserves its historical "create and open"
+      // behavior without calling the UE 5.7-crashy GEditor->NewMap path.
+      const levelParentPath = argsTyped.savePath || argsTyped.levelPath || '/Game/Maps';
+      const createRes = await executeAutomationRequest(tools, 'manage_level_structure', {
+        subAction: 'create_level',
+        levelPath: levelParentPath,
         levelName,
-        useWorldPartition: argsTyped.useWorldPartition ?? false
+        bCreateWorldPartition: argsTyped.useWorldPartition ?? false,
+        save: true
       }) as Record<string, unknown>;
-      return cleanObject(res);
+      if (createRes.success !== true) {
+        return cleanObject(createRes);
+      }
+
+      const result = createRes.result && typeof createRes.result === 'object' && !Array.isArray(createRes.result)
+        ? createRes.result as Record<string, unknown>
+        : {};
+      const createdLevelPath = typeof result.levelPath === 'string'
+        ? result.levelPath
+        : `${String(levelParentPath).replace(/\/+$/, '')}/${levelName}`;
+
+      const loadRes = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'load',
+        levelPath: createdLevelPath,
+        saveDirtyPackages: argsTyped.saveDirtyPackages === true
+      }) as Record<string, unknown>;
+      if (loadRes.success !== true) {
+        return cleanObject(loadRes);
+      }
+
+      return cleanObject({
+        ...createRes,
+        result: {
+          ...result,
+          loaded: true
+        }
+      });
     }
     case 'add_sublevel': {
       const subLevelPath = requireNonEmptyString(argsTyped.subLevelPath || argsTyped.levelPath, 'subLevelPath', 'Missing required parameter: subLevelPath');
@@ -178,47 +280,50 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         return cleanObject({
           success: false,
           error: 'INVALID_ARGUMENT',
-          message: 'Missing required parameter: type (or lightType). Valid types: Point, Directional, Spot, Sky, Rect',
+          message: 'Missing required parameter: type (or lightType). Valid types: Point, Directional, Spot, Sky, Rect, PointLight, DirectionalLight, SpotLight, SkyLight, RectLight',
           action
         });
       }
       // Validate light type is one of the supported types
-      const validTypes = ['Point', 'Directional', 'Spot', 'Sky', 'Rect', 'PointLight', 'DirectionalLight', 'SpotLight', 'SkyLight', 'RectLight'];
-      if (!validTypes.some(t => t.toLowerCase() === lightType.toLowerCase())) {
+      const normalizedLightType = normalizeLightType(lightType);
+      if (!normalizedLightType || !CREATE_LIGHT_TYPES.has(normalizedLightType)) {
         return cleanObject({
           success: false,
           error: 'INVALID_ARGUMENT',
-          message: `Invalid light type: ${lightType}. Valid types: Point, Directional, Spot, Sky, Rect`,
+          message: `Invalid light type: ${lightType}. Valid types: Point, Directional, Spot, Sky, Rect, PointLight, DirectionalLight, SpotLight, SkyLight, RectLight`,
           action
         });
       }
-      // CRITICAL FIX: Normalize 'type' to 'lightType' for C++ handler compatibility
-      // The C++ handler checks for 'lightType' field, not 'type'
-      const normalizedArgs = {
-        ...args,
-        lightType: lightType,
-        // Remove 'type' to avoid confusion
-        type: undefined
-      };
-      // Remove undefined fields
-      const cleanNormalizedArgs = Object.fromEntries(
-        Object.entries(normalizedArgs).filter(([, v]) => v !== undefined)
-      );
-      const res = await executeAutomationRequest(tools, 'manage_level', cleanNormalizedArgs);
+      const properties: Record<string, unknown> = {};
+      if (typeof argsTyped.intensity === 'number') {
+        properties.intensity = argsTyped.intensity;
+      }
+      const color = (argsTyped as Record<string, unknown>).color;
+      if (Array.isArray(color) && color.length >= 3) {
+        properties.color = {
+          r: Number(color[0]),
+          g: Number(color[1]),
+          b: Number(color[2]),
+          a: color.length > 3 ? Number(color[3]) : 1
+        };
+      } else if (color && typeof color === 'object') {
+        properties.color = color;
+      }
+
+      const res = await executeAutomationRequest(tools, 'manage_lighting', {
+        action: 'create_light',
+        lightType,
+        name: argsTyped.name,
+        location: argsTyped.location,
+        rotation: argsTyped.rotation,
+        properties: Object.keys(properties).length > 0 ? properties : undefined
+      });
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'spawn_light': {
       // Fallback to control_actor spawn if manage_level spawn_light is not supported
-      const lightClassMap: Record<string, string> = {
-        'Point': '/Script/Engine.PointLight',
-        'Directional': '/Script/Engine.DirectionalLight',
-        'Spot': '/Script/Engine.SpotLight',
-        'Sky': '/Script/Engine.SkyLight',
-        'Rect': '/Script/Engine.RectLight'
-      };
-
-      const lightType = argsTyped.lightType || 'Point';
-      const classPath = lightClassMap[lightType] || '/Script/Engine.PointLight';
+      const lightType = normalizeLightType(argsTyped.lightType) ?? normalizeLightType((argsTyped as Record<string, unknown>).type) ?? 'point';
+      const classPath = LIGHT_TYPE_CLASS_PATHS.get(lightType) || '/Script/Engine.PointLight';
 
       try {
         const res = await executeAutomationRequest(tools, 'control_actor', {
@@ -226,7 +331,8 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
           classPath,
           actorName: argsTyped.name,
           location: argsTyped.location,
-          rotation: argsTyped.rotation
+          rotation: argsTyped.rotation,
+          scale: argsTyped.scale
         }) as Record<string, unknown>;
         return { ...cleanObject(res), action: 'spawn_light' };
       } catch (_e) {
@@ -258,6 +364,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         action: 'import_level',
         packagePath: argsTyped.packagePath ?? argsTyped.sourcePath ?? '',
         destinationPath: argsTyped.destinationPath,
+        overwrite: argsTyped.overwrite === true,
         timeoutMs: typeof argsTyped.timeoutMs === 'number' ? argsTyped.timeoutMs : undefined
       }) as Record<string, unknown>;
       return cleanObject(res);
@@ -287,11 +394,31 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
           action
         });
       }
-      const res = await executeAutomationRequest(tools, 'manage_level', {
-        action: 'delete_levels',
-        levelPaths
-      }) as Record<string, unknown>;
-      return cleanObject(res);
+      if (levelPaths.length === 1) {
+        const res = await executeAutomationRequest(tools, 'manage_level', {
+          action: 'delete_level',
+          levelPath: levelPaths[0]
+        }) as Record<string, unknown>;
+        return cleanObject(res);
+      }
+
+      const results: Record<string, unknown>[] = [];
+      for (const levelPath of levelPaths) {
+        const result = await executeAutomationRequest(tools, 'manage_level', {
+          action: 'delete_level',
+          levelPath
+        }) as Record<string, unknown>;
+        results.push(cleanObject(result));
+      }
+
+      const failed = results.find(result => result.success === false || result.isError === true);
+      return cleanObject({
+        success: !failed,
+        deletedCount: results.filter(result => result.success !== false && result.isError !== true).length,
+        results,
+        error: failed ? 'DELETE_FAILED' : undefined,
+        message: failed ? 'One or more level deletes failed' : 'Levels deleted'
+      });
     }
     case 'rename_level': {
       const sourcePath = argsTyped.levelPath || argsTyped.sourcePath;
@@ -318,7 +445,8 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       const res = await executeAutomationRequest(tools, 'manage_level', {
         action: 'rename',
         levelPath: sourcePath,
-        destinationPath
+        destinationPath,
+        overwrite: argsTyped.overwrite === true
       });
       return cleanObject(res) as Record<string, unknown>;
     }
@@ -343,158 +471,19 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       const res = await executeAutomationRequest(tools, 'manage_level', {
         action: 'duplicate',
         sourcePath,
-        destinationPath: argsTyped.destinationPath
+        destinationPath: argsTyped.destinationPath,
+        overwrite: argsTyped.overwrite === true
       });
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'get_current_level': {
-      const res = await executeAutomationRequest(tools, 'list_levels', {}) as Record<string, unknown>;
-      const resTyped = res as { currentMap?: string; currentMapPath?: string };
-      return cleanObject({
-        success: true,
-        levelName: resTyped.currentMap,
-        levelPath: resTyped.currentMapPath,
-        ...res
-      });
+      const res = await executeAutomationRequest(tools, 'manage_level', { action }) as Record<string, unknown>;
+      return cleanObject(res) as Record<string, unknown>;
     }
     case 'set_metadata': {
       const levelPath = requireNonEmptyString(argsTyped.levelPath, 'levelPath', 'Missing required parameter: levelPath');
       const metadata = (argsTyped.metadata && typeof argsTyped.metadata === 'object') ? argsTyped.metadata : {};
       const res = await executeAutomationRequest(tools, 'set_metadata', { assetPath: levelPath, metadata });
-      return cleanObject(res) as Record<string, unknown>;
-    }
-    case 'load_cells': {
-      // CRITICAL FIX: levelPath is REQUIRED for World Partition operations
-      // Without levelPath, the handler cannot load the correct World Partition level
-      if (!argsTyped.levelPath || typeof argsTyped.levelPath !== 'string' || argsTyped.levelPath.trim() === '') {
-        return cleanObject({
-          success: false,
-          error: 'INVALID_ARGUMENT',
-          message: 'Missing required parameter: levelPath (World Partition level path required)',
-          action
-        });
-      }
-      // Validate required parameters for load_cells
-      const hasCells = Array.isArray(argsTyped.cells) && argsTyped.cells.length > 0;
-      const hasOrigin = Array.isArray(argsTyped.origin) && argsTyped.origin.length >= 2;
-      const hasExtent = Array.isArray(argsTyped.extent) && argsTyped.extent.length >= 2;
-      const hasMin = Array.isArray(argsTyped.min) && argsTyped.min.length >= 2;
-      const hasMax = Array.isArray(argsTyped.max) && argsTyped.max.length >= 2;
-      if (!hasCells && !(hasOrigin && hasExtent) && !(hasMin && hasMax)) {
-        return cleanObject({
-          success: false,
-          error: 'INVALID_ARGUMENT',
-          message: 'Missing required parameters: must provide either cells array, or origin+extent, or min+max',
-          action,
-          levelPath: argsTyped.levelPath
-        });
-      }
-
-      // CRITICAL FIX: DO NOT load the level here - let the C++ handler do it
-      // The C++ HandleWorldPartitionAction already checks if the level needs to be loaded
-      // and will only load if the current world differs from the requested levelPath.
-      // Loading here would destroy unsaved actors in the current world.
-      // Calculate origin/extent if min/max provided for C++ handler compatibility
-      let origin = argsTyped.origin;
-      let extent = argsTyped.extent;
-      if (argsTyped.min && argsTyped.max) {
-        const min = argsTyped.min;
-        const max = argsTyped.max;
-        origin = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
-        extent = [(max[0] - min[0]) / 2, (max[1] - min[1]) / 2, (max[2] - min[2]) / 2];
-      }
-      const payload = {
-        subAction: 'load_cells',
-        levelPath: argsTyped.levelPath,
-        origin: origin,
-        extent: extent,
-        ...args // Allow other args to override if explicit
-      };
-      const res = await executeAutomationRequest(tools, 'manage_world_partition', payload);
-      return cleanObject(res) as Record<string, unknown>;
-    }
-    case 'set_datalayer': {
-      // CRITICAL FIX: levelPath is REQUIRED for World Partition operations
-      // Without levelPath, the handler cannot load the correct World Partition level
-      if (!argsTyped.levelPath || typeof argsTyped.levelPath !== 'string' || argsTyped.levelPath.trim() === '') {
-        return cleanObject({
-          success: false,
-          error: 'INVALID_ARGUMENT',
-          message: 'Missing required parameter: levelPath (World Partition level path required)',
-          action
-        });
-      }
-
-      // Validate actorPath is provided
-      const actorPath = argsTyped.actorPath || argsTyped.actorName;
-      if (!actorPath || typeof actorPath !== 'string' || actorPath.trim() === '') {
-        return cleanObject({
-          success: false,
-          error: 'INVALID_ARGUMENT',
-          message: 'Missing required parameter: actorPath (actor name or path)',
-          action,
-          levelPath: argsTyped.levelPath
-        });
-      }
-      const dataLayerName = argsTyped.dataLayerName || argsTyped.dataLayerLabel;
-      if (!dataLayerName || typeof dataLayerName !== 'string' || dataLayerName.trim().length === 0) {
-        return cleanObject({
-          success: false,
-          error: 'INVALID_ARGUMENT',
-          message: 'Missing required parameter: dataLayerLabel (or dataLayerName)',
-          action,
-          levelPath: argsTyped.levelPath,
-          actorPath
-        });
-      }
-
-      // CRITICAL FIX: DO NOT load the level here - let the C++ handler do it
-      // The C++ HandleWorldPartitionAction already checks if the level needs to be loaded
-      // and will only load if the current world differs from the requested levelPath.
-      // Loading here would destroy unsaved actors in the current world.
-      const res = await executeAutomationRequest(tools, 'manage_world_partition', {
-        subAction: 'set_datalayer',
-        levelPath: argsTyped.levelPath,
-        actorPath: actorPath,
-        dataLayerName
-      });
-      return cleanObject(res) as Record<string, unknown>;
-    }
-    case 'cleanup_invalid_datalayers': {
-      // CRITICAL FIX: DO NOT load the level here - let the C++ handler do it
-      // The C++ HandleWorldPartitionAction already checks if the level needs to be loaded
-      // and will only load if the current world differs from the requested levelPath.
-      // Loading here would destroy unsaved actors in the current world.
-      
-      // Route to manage_world_partition
-      
-      // Route to manage_world_partition
-      const res = await executeAutomationRequest(tools, 'manage_world_partition', {
-        subAction: 'cleanup_invalid_datalayers',
-        levelPath: argsTyped.levelPath
-      }, 'World Partition support not available');
-      return cleanObject(res) as Record<string, unknown>;
-    }
-    case 'create_datalayer': {
-      // Route to manage_world_partition
-      const dataLayerName = argsTyped.dataLayerName || argsTyped.dataLayerLabel;
-      if (!dataLayerName || typeof dataLayerName !== 'string' || dataLayerName.trim().length === 0) {
-        return cleanObject({
-          success: false,
-          error: 'INVALID_ARGUMENT',
-          message: 'Missing required parameter: dataLayerName',
-          action
-        });
-      }
-      // CRITICAL FIX: DO NOT load the level here - let the C++ handler do it
-      // The C++ HandleWorldPartitionAction already checks if the level needs to be loaded
-      // and will only load if the current world differs from the requested levelPath.
-      // Loading here would destroy unsaved actors in the current world.
-      const res = await executeAutomationRequest(tools, 'manage_world_partition', {
-        subAction: 'create_datalayer',
-        levelPath: argsTyped.levelPath,
-        dataLayerName
-      }, 'World Partition support not available');
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'validate_level': {

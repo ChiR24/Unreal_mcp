@@ -9,57 +9,57 @@ import { handleConsolidatedToolCall } from '../tools/consolidated-tool-handlers.
 import { responseValidator } from '../utils/response-validator.js';
 import { ErrorHandler } from '../utils/error-handler.js';
 import { cleanObject } from '../utils/safe-json.js';
+import { isRecord } from '../utils/type-guards.js';
+import { redactImagePayloadForLog } from '../utils/log-redaction.js';
 import { createElicitationHelper, PrimitiveSchema } from '../utils/elicitation.js';
 import { AssetResources } from '../resources/assets.js';
 import { ActorResources } from '../resources/actors.js';
 import { LevelResources } from '../resources/levels.js';
-import { ActorTools } from '../tools/actors.js';
-import { AssetTools } from '../tools/assets.js';
-import { EditorTools } from '../tools/editor.js';
-import { BlueprintTools } from '../tools/blueprint.js';
-import { LevelTools } from '../tools/level.js';
-import { LandscapeTools } from '../tools/landscape.js';
-import { FoliageTools } from '../tools/foliage.js';
-import { EnvironmentTools } from '../tools/environment.js';
-import { SequenceTools } from '../tools/sequence.js';
-import { LogTools } from '../tools/logs.js';
-
 import { getProjectSetting } from '../utils/ini-reader.js';
 import { config } from '../config.js';
 import { mcpClients } from 'mcp-client-capabilities';
-import { dynamicToolManager } from '../tools/dynamic-tool-manager.js';
+import { dynamicToolManager, type ToolCategory } from '../tools/dynamic-tool-manager.js';
 
 // Parse default categories from config
 function parseDefaultCategories(): string[] {
-    const raw = config.MCP_DEFAULT_CATEGORIES || 'core';
+    const raw = config.MCP_DEFAULT_CATEGORIES || 'all';
     const cats = raw.split(',').map(c => c.trim().toLowerCase()).filter(c => c.length > 0);
-    return cats.length > 0 ? cats : ['core'];
+    return cats.length > 0 ? cats : ['all'];
 }
+
+const KNOWN_DYNAMIC_CLIENT_NAMES = ['cursor', 'cline', 'windsurf', 'kilo', 'opencode', 'vscode', 'visual studio code'];
 
 // Check if a client supports tools.listChanged based on known client capabilities
 function clientSupportsListChanged(clientName: string | undefined): boolean {
     if (!clientName) return false;
-    
+
     // Normalize client name (lowercase, trim)
     const normalizedName = clientName.toLowerCase().trim();
-    
+
     // Check in the mcp-client-capabilities database
     for (const [key, clientInfo] of Object.entries(mcpClients)) {
-        if (key.toLowerCase() === normalizedName || 
+        if (key.toLowerCase() === normalizedName ||
             (clientInfo.title && clientInfo.title.toLowerCase() === normalizedName)) {
             // Check if tools.listChanged is supported
             const tools = clientInfo.tools as { listChanged?: boolean } | undefined;
             return Boolean(tools?.listChanged);
         }
     }
-    
+
     // Fallback: check for known clients by partial name match
-    const knownDynamicClients = ['cursor', 'cline', 'windsurf', 'kilo', 'opencode', 'vscode', 'visual studio code'];
-    for (const known of knownDynamicClients) {
+    for (const known of KNOWN_DYNAMIC_CLIENT_NAMES) {
         if (normalizedName.includes(known)) return true;
     }
-    
+
     return false;
+}
+
+function mergeActionParams(args: Record<string, unknown>): Record<string, unknown> {
+    if (!isRecord(args.params)) return args;
+
+    const merged = { ...args.params, ...args };
+    delete merged.params;
+    return merged;
 }
 
 export class ToolRegistry {
@@ -77,54 +77,11 @@ export class ToolRegistry {
         private levelResources: LevelResources,
         private ensureConnected: () => Promise<boolean>
     ) { }
-    
-    private async handlePipelineCall(args: Record<string, unknown>): Promise<Record<string, unknown>> {
-        const action = args.action as string;
-        if (action === 'set_categories') {
-            const newCats = Array.isArray(args.categories) ? args.categories as string[] : [];
-            this.currentCategories = newCats.length > 0 ? newCats : ['all'];
-            this.logger.info(`MCP Categories updated to: ${this.currentCategories.join(', ')}`);
-            
-            // Trigger list_changed notification
-            this.server.notification({
-                method: 'notifications/tools/list_changed',
-                params: {}
-            }).catch(err => this.logger.error('Failed to send list_changed notification', err));
-
-            return { success: true, message: `Categories updated to ${this.currentCategories.join(', ')}`, categories: this.currentCategories };
-        } else if (action === 'list_categories') {
-            const categories = dynamicToolManager.listCategories();
-            return { 
-                success: true, 
-                categories: this.currentCategories, 
-                available: ['core', 'world', 'authoring', 'gameplay', 'utility', 'all'],
-                categoryDetails: categories.map(c => ({
-                    name: c.name,
-                    enabled: c.enabled,
-                    toolCount: c.toolCount,
-                    enabledCount: c.enabledCount
-                }))
-            };
-        } else if (action === 'get_status') {
-            const status = dynamicToolManager.getStatus();
-            return { 
-                success: true, 
-                categories: this.currentCategories,
-                toolCount: status.totalTools,
-                enabledCount: status.enabledTools,
-                disabledCount: status.disabledTools,
-                filteredCount: dynamicToolManager.getEnabledToolDefinitions().length
-            };
-        }
-        // Delegate unknown actions (like run_ubt) to the registered handler in consolidated-tool-handlers
-        // This allows handlePipelineTools to process run_ubt etc.
-        return { _delegateToHandler: true, action, args };
-    }
 
     private async handleManageToolsCall(args: Record<string, unknown>): Promise<Record<string, unknown>> {
         const action = args.action as string;
-        type ToolCategory = 'core' | 'world' | 'authoring' | 'gameplay' | 'utility';
-        
+        const validCategories: ToolCategory[] = ['core', 'world', 'gameplay', 'utility', 'all'];
+
         // Helper to safely extract string array
         const getStringArray = (key: string): string[] => {
             const val = args[key];
@@ -145,7 +102,7 @@ export class ToolRegistry {
                 const toolStates = dynamicToolManager.listTools();
                 const tools = toolStates.map(state => ({
                     name: state.name,
-                    enabled: state.enabled,
+                    enabled: dynamicToolManager.isToolEnabled(state.name),
                     category: state.category,
                     description: state.description.substring(0, 100) + (state.description.length > 100 ? '...' : '')
                 }));
@@ -177,8 +134,8 @@ export class ToolRegistry {
 
             case 'enable_tools': {
                 // Accept both 'tools' and 'toolNames' for flexibility
-                const toolNames = getStringArray('tools').length > 0 
-                    ? getStringArray('tools') 
+                const toolNames = getStringArray('tools').length > 0
+                    ? getStringArray('tools')
                     : getStringArray('toolNames');
                 if (toolNames.length === 0) {
                     return { success: false, error: 'No tools specified. Provide tools array.', errorCode: 'MISSING_TOOLS' };
@@ -188,7 +145,7 @@ export class ToolRegistry {
                     success: true,
                     enabled: result.enabled,
                     notFound: result.notFound,
-                    message: result.notFound.length > 0 
+                    message: result.notFound.length > 0
                         ? `Enabled ${result.enabled.length} tools. ${result.notFound.length} not found.`
                         : `Enabled ${result.enabled.length} tools`
                 };
@@ -196,16 +153,16 @@ export class ToolRegistry {
 
             case 'disable_tools': {
                 // Accept both 'tools' and 'toolNames' for flexibility
-                const toolNames = getStringArray('tools').length > 0 
-                    ? getStringArray('tools') 
+                const toolNames = getStringArray('tools').length > 0
+                    ? getStringArray('tools')
                     : getStringArray('toolNames');
                 if (toolNames.length === 0) {
                     return { success: false, error: 'No tools specified. Provide tools array.', errorCode: 'MISSING_TOOLS' };
                 }
                 const result = dynamicToolManager.disableTools(toolNames);
                 if (result.protected.length > 0 && result.disabled.length === 0) {
-                    return { 
-                        success: false, 
+                    return {
+                        success: false,
                         error: `Cannot disable protected tools: ${result.protected.join(', ')}`,
                         errorCode: 'PROTECTED_TOOLS'
                     };
@@ -228,10 +185,9 @@ export class ToolRegistry {
                 if (!category) {
                     return { success: false, error: 'No category specified.', errorCode: 'MISSING_CATEGORY' };
                 }
-                const validCategories: ToolCategory[] = ['core', 'world', 'authoring', 'gameplay', 'utility'];
                 if (!validCategories.includes(category)) {
-                    return { 
-                        success: false, 
+                    return {
+                        success: false,
                         error: `Invalid category '${category}'. Valid: ${validCategories.join(', ')}`,
                         errorCode: 'INVALID_CATEGORY'
                     };
@@ -253,10 +209,9 @@ export class ToolRegistry {
                 if (!category) {
                     return { success: false, error: 'No category specified.', errorCode: 'MISSING_CATEGORY' };
                 }
-                const validCategories: ToolCategory[] = ['core', 'world', 'authoring', 'gameplay', 'utility'];
                 if (!validCategories.includes(category)) {
-                    return { 
-                        success: false, 
+                    return {
+                        success: false,
                         error: `Invalid category '${category}'. Valid: ${validCategories.join(', ')}`,
                         errorCode: 'INVALID_CATEGORY'
                     };
@@ -266,8 +221,8 @@ export class ToolRegistry {
                     return { success: false, error: `Category '${category}' not found`, errorCode: 'CATEGORY_NOT_FOUND' };
                 }
                 if (result.protected.length > 0 && result.disabled.length === 0) {
-                    return { 
-                        success: false, 
+                    return {
+                        success: false,
                         error: `Cannot fully disable protected category '${category}'. Protected tools: ${result.protected.join(', ')}`,
                         errorCode: 'PROTECTED_CATEGORY'
                     };
@@ -308,8 +263,8 @@ export class ToolRegistry {
             }
 
             default:
-                return { 
-                    success: false, 
+                return {
+                    success: false,
                     error: `Unknown action: ${action}. Available: list_tools, list_categories, enable_tools, disable_tools, enable_category, disable_category, get_status, reset`,
                     errorCode: 'UNKNOWN_ACTION'
                 };
@@ -317,22 +272,6 @@ export class ToolRegistry {
     }
 
     register() {
-        // Initialize tools needed for file I/O operations
-        const actorTools = new ActorTools(this.bridge);
-        const assetTools = new AssetTools(this.bridge);
-        const editorTools = new EditorTools(this.bridge);
-        const blueprintTools = new BlueprintTools(this.bridge);
-        const levelTools = new LevelTools(this.bridge);
-        const landscapeTools = new LandscapeTools(this.bridge);
-        const foliageTools = new FoliageTools(this.bridge);
-        const environmentTools = new EnvironmentTools(this.bridge);
-        const sequenceTools = new SequenceTools(this.bridge);
-        const logTools = new LogTools(this.bridge);
-
-        // Wire AutomationBridge for EnvironmentTools (needed for non-file I/O operations)
-        environmentTools.setAutomationBridge(this.automationBridge);
-
-
         // Lightweight system tools facade
         const systemTools = {
             executeConsoleCommand: (command: string) => this.bridge.executeConsoleCommand(command),
@@ -379,7 +318,7 @@ export class ToolRegistry {
                                         source: 'disk'
                                     };
                                 } catch (_diskErr) {
-                                    // Ignore and fall through to stub
+                                    // Ignore and fall through to an explicit unavailable response
                                 }
                             }
 
@@ -443,9 +382,8 @@ export class ToolRegistry {
             try {
                 // Get client info - the server stores this from the initialize request
                 // Note: _clientVersion is a private SDK property (fragile but necessary)
-                const serverObj = this.server as unknown as Record<string, unknown>;
-                const clientInfo = serverObj._clientVersion as { name?: string } | undefined;
-                clientName = clientInfo?.name;
+                const clientInfo = Reflect.get(this.server, '_clientVersion');
+                clientName = isRecord(clientInfo) && typeof clientInfo.name === 'string' ? clientInfo.name : undefined;
                 supportsListChanged = clientSupportsListChanged(clientName);
                 this.logger.debug(`Client detection: name=${clientName}, supportsListChanged=${supportsListChanged}`);
             } catch (_e) {
@@ -459,56 +397,78 @@ export class ToolRegistry {
                 : this.currentCategories;
 
             this.logger.info(`Serving tools for categories: ${effectiveCategories.join(', ')} (client=${clientName || 'unknown'}, supportsListChanged=${supportsListChanged})`);
-            
+
             // Use DynamicToolManager for filtering
             const allTools = dynamicToolManager.getAllToolDefinitions();
             const status = dynamicToolManager.getStatus();
-            
-            // Filter by: 1) tool enabled in DynamicToolManager, 2) category, 3) hide manage_pipeline from non-dynamic clients
+
+            // Filter by: 1) tool enabled in DynamicToolManager, 2) category
             const filtered = allTools
                 .filter((t: ToolDefinition) => {
                     // Check if tool is enabled
                     if (!dynamicToolManager.isToolEnabled(t.name)) return false;
-                    
+
                     // Check category filter
                     const category = t.category;
                     if (category && !effectiveCategories.includes(category) && !effectiveCategories.includes('all')) {
                         return false;
                     }
-                    
-                    // Hide manage_pipeline from clients that can't use it
-                    if (!supportsListChanged && t.name === 'manage_pipeline') return false;
-                    
+
                     return true;
                 });
-            
+
             this.logger.debug(`Tool filtering: ${status.enabledTools}/${status.totalTools} enabled, ${filtered.length} visible`);
-            
+
             const sanitized = filtered.map((t: ToolDefinition) => {
-                try {
-                    const copy = JSON.parse(JSON.stringify(t)) as Record<string, unknown>;
-                    delete copy.outputSchema;
-                    return copy;
-                } catch (_e) {
-                    return t;
+                const properties: Record<string, unknown> = {};
+                const actionValues = new Set<string>();
+                let actionDescription = 'Action to perform.';
+                const sourceProperties = isRecord(t.inputSchema.properties) ? t.inputSchema.properties : {};
+                for (const [name, schema] of Object.entries(sourceProperties)) {
+                    if (properties[name] === undefined) properties[name] = schema;
                 }
+                const sourceAction = isRecord(sourceProperties.action) ? sourceProperties.action : undefined;
+                if (typeof sourceAction?.description === 'string') actionDescription = sourceAction.description;
+                if (Array.isArray(sourceAction?.enum)) {
+                    for (const value of sourceAction.enum) {
+                        if (typeof value === 'string') actionValues.add(value);
+                    }
+                }
+                const actionSchema: Record<string, unknown> = {
+                    type: 'string',
+                    description: actionDescription
+                };
+                if (actionValues.size > 0) {
+                    actionSchema.enum = Array.from(actionValues);
+                }
+                properties.action = actionSchema;
+                const parameterNames = Object.keys(properties).filter(name => name !== 'action');
+                const parameterSummary = parameterNames.length > 0 ? ` Params by action: ${parameterNames.join(', ')}.` : '';
+                const actionGuidance = ' Required: action. Select one enum value, then provide only parameters relevant to that action.';
+                const sourceRequired = Array.isArray(t.inputSchema.required)
+                    ? t.inputSchema.required.filter((name): name is string => typeof name === 'string')
+                    : ['action'];
+                const required = sourceRequired.includes('action') ? sourceRequired : ['action', ...sourceRequired];
+
+                return {
+                    name: t.name,
+                    description: `${t.description}${actionGuidance}${parameterSummary}`,
+                    category: t.category,
+                    inputSchema: {
+                        ...t.inputSchema,
+                        type: 'object',
+                        properties,
+                        required,
+                        additionalProperties: t.inputSchema.additionalProperties ?? true
+                    }
+                };
             });
             return { tools: sanitized };
         });
 
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const { name } = request.params;
-            let args: Record<string, unknown> = request.params.arguments || {};
-
-            if (name === 'manage_pipeline') {
-                const result = await this.handlePipelineCall(args);
-                // If handler indicates delegation, fall through to consolidated handler
-                if (result._delegateToHandler) {
-                    // Fall through to the consolidated handler below
-                } else {
-                    return { content: [{ type: 'text', text: JSON.stringify(result) }] };
-                }
-            }
+            let args: Record<string, unknown> = mergeActionParams(request.params.arguments || {});
 
             // Handle manage_tools for dynamic tool management
             if (name === 'manage_tools') {
@@ -522,6 +482,21 @@ export class ToolRegistry {
                     }).catch(err => this.logger.error('Failed to send list_changed notification', err));
                 }
                 return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+            }
+
+            if (!dynamicToolManager.getToolState(name)) {
+                return {
+                    content: [{ type: 'text', text: `Unknown tool: ${name}` }],
+                    isError: true
+                };
+            }
+
+            if (!dynamicToolManager.isToolEnabled(name)) {
+                this.healthMonitor.trackPerformance(Date.now(), false);
+                return {
+                    content: [{ type: 'text', text: `Cannot execute tool '${name}': tool is disabled or not available.` }],
+                    isError: true
+                };
             }
 
             const startTime = Date.now();
@@ -541,8 +516,6 @@ export class ToolRegistry {
             }
 
             const tools = {
-                actorTools, assetTools, editorTools, blueprintTools, levelTools,
-                landscapeTools, foliageTools, environmentTools, sequenceTools, logTools,
                 systemTools,
                 elicit: elicitation.elicit,
                 supportsElicitation: elicitation.supports,
@@ -627,14 +600,12 @@ export class ToolRegistry {
                 const wrappedResult = await responseValidator.wrapResponse(name, result);
 
                 let wrappedSuccess: boolean | undefined = undefined;
-                try {
-                    const wrappedObj = wrappedResult as Record<string, unknown>;
-                    const sc = wrappedObj.structuredContent as Record<string, unknown> | undefined;
+                if (isRecord(wrappedResult.structuredContent)) {
+                    const sc = wrappedResult.structuredContent;
                     if (sc && typeof sc.success === 'boolean') wrappedSuccess = Boolean(sc.success);
-                } catch { }
+                }
 
-                const wrappedResultObj = wrappedResult as Record<string, unknown>;
-                const isErrorResponse = Boolean(wrappedResultObj?.isError === true);
+                const isErrorResponse = Boolean(wrappedResult.isError === true);
                 const tentative = explicitSuccess ?? wrappedSuccess;
                 const finalSuccess = tentative === true && !isErrorResponse;
 
@@ -647,21 +618,31 @@ export class ToolRegistry {
                     this.logger.warn(`Tool ${name} completed with errors in ${durationMs}ms`);
                 }
 
-                const responsePreview = JSON.stringify(wrappedResult).substring(0, 100);
-                this.logger.debug(`Returning response to MCP client: ${responsePreview}...`);
+                if (this.logger.isEnabled('debug')) {
+                    const responsePreview = JSON.stringify(redactImagePayloadForLog(wrappedResult)).substring(0, 100);
+                    this.logger.debug(`Returning response to MCP client: ${responsePreview}...`);
+                }
 
                 return wrappedResult;
             } catch (error) {
                 this.healthMonitor.trackPerformance(startTime, false);
                 const errorResponse = ErrorHandler.createErrorResponse(error, name, { ...args, scope: `tool-call/${name}` });
                 this.logger.error(`Tool execution failed: ${name}`, errorResponse);
-                this.healthMonitor.recordError(errorResponse as unknown as Record<string, unknown>);
+                if (isRecord(errorResponse)) {
+                    this.healthMonitor.recordError(errorResponse);
+                }
 
-                const sanitizedError = cleanObject(errorResponse) as unknown as Record<string, unknown>;
-                try {
+                const sanitizedError = cleanObject(errorResponse);
+                if (isRecord(sanitizedError)) {
                     sanitizedError.isError = true;
-                } catch { }
-                return responseValidator.wrapResponse(name, sanitizedError);
+                    return responseValidator.wrapResponse(name, sanitizedError);
+                }
+                return responseValidator.wrapResponse(name, {
+                    success: false,
+                    isError: true,
+                    error: 'UNKNOWN_ERROR',
+                    message: `Failed to execute ${name}`
+                });
             }
         });
     }

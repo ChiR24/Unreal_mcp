@@ -1,5 +1,6 @@
 import { Logger } from './logger.js';
 import { BaseToolResponse } from '../types/tool-types.js';
+import { isRecord } from './type-guards.js';
 
 const log = new Logger('ErrorHandler');
 
@@ -47,6 +48,21 @@ interface ErrorLike {
   response?: { status?: number };
 }
 
+function stringFromUnknown(value: unknown): string | undefined {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  return undefined;
+}
+
+function numberFromUnknown(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value.trim());
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
 /**
  * Normalize any error type to ErrorLike interface
  */
@@ -55,22 +71,20 @@ function normalizeErrorToLike(error: unknown): ErrorLike {
     return {
       message: error.message,
       stack: error.stack,
-      code: (error as NodeJS.ErrnoException).code
+      code: stringFromUnknown((error as NodeJS.ErrnoException).code)
     };
   }
-  if (typeof error === 'object' && error !== null) {
-    const obj = error as Record<string, unknown>;
+  if (isRecord(error)) {
+    const response = isRecord(error.response) ? error.response : null;
     return {
-      message: typeof obj.message === 'string' ? obj.message : undefined,
-      code: typeof obj.code === 'string' ? obj.code : undefined,
-      type: typeof obj.type === 'string' ? obj.type : undefined,
-      errorType: typeof obj.errorType === 'string' ? obj.errorType : undefined,
-      stack: typeof obj.stack === 'string' ? obj.stack : undefined,
-      response: typeof obj.response === 'object' && obj.response !== null
+      message: stringFromUnknown(error.message),
+      code: stringFromUnknown(error.code),
+      type: stringFromUnknown(error.type),
+      errorType: stringFromUnknown(error.errorType),
+      stack: typeof error.stack === 'string' ? error.stack : undefined,
+      response: response
         ? {
-          status: typeof (obj.response as Record<string, unknown>).status === 'number'
-            ? (obj.response as Record<string, unknown>).status as number
-            : undefined
+          status: numberFromUnknown(response.status)
         }
         : undefined
     };
@@ -97,7 +111,9 @@ export class ErrorHandler {
     const errorType = this.categorizeError(errorObj);
     const userMessage = this.getUserFriendlyMessage(errorType, errorObj);
     const retriable = this.isRetriable(errorObj);
-    const scope = (context?.scope as string) || `tool-call/${toolName}`;
+    const scope = typeof context?.scope === 'string' && context.scope.trim()
+      ? context.scope
+      : `tool-call/${toolName}`;
     const errorMessage = errorObj.message || String(error);
     const errorStack = errorObj.stack;
 
@@ -136,19 +152,24 @@ export class ErrorHandler {
    * Categorize error by type
    * @param error - The error to categorize
    */
-  private static categorizeError(error: ErrorLike | Error | string): ErrorType {
-    const errorObj = typeof error === 'object' ? error as ErrorLike : null;
+  private static categorizeError(error: unknown): ErrorType {
+    const errorObj = normalizeErrorToLike(error);
     const explicitType = (errorObj?.type || errorObj?.errorType || '').toString().toUpperCase();
     if (explicitType && Object.values(ErrorType).includes(explicitType as ErrorType)) {
       return explicitType as ErrorType;
     }
 
-    const errorMessage = (errorObj?.message || String(error)).toLowerCase();
+    const errorMessage = (errorObj.message || String(error)).toLowerCase();
+
+    // Timeout errors should use timeout-specific guidance instead of the
+    // broader connection category below.
+    if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+      return ErrorType.TIMEOUT;
+    }
 
     // Connection errors
     if (
       errorMessage.includes('econnrefused') ||
-      errorMessage.includes('timeout') ||
       errorMessage.includes('connection') ||
       errorMessage.includes('network')
     ) {
@@ -185,11 +206,6 @@ export class ErrorHandler {
       return ErrorType.PARAMETER;
     }
 
-    // Timeout errors
-    if (errorMessage.includes('timeout')) {
-      return ErrorType.TIMEOUT;
-    }
-
     return ErrorType.UNKNOWN;
   }
 
@@ -198,10 +214,9 @@ export class ErrorHandler {
    * @param type - The categorized error type
    * @param error - The original error
    */
-  private static getUserFriendlyMessage(type: ErrorType, error: ErrorLike | Error | string): string {
-    const originalMessage = (typeof error === 'object' && error !== null && 'message' in error)
-      ? (error as { message?: string }).message || String(error)
-      : String(error);
+  private static getUserFriendlyMessage(type: ErrorType, error: unknown): string {
+    const errorObj = normalizeErrorToLike(error);
+    const originalMessage = errorObj.message || String(error);
 
     switch (type) {
       case ErrorType.CONNECTION:
@@ -231,15 +246,15 @@ export class ErrorHandler {
    * Determine if an error is likely retriable
    * @param error - The error to check
    */
-  private static isRetriable(error: ErrorLike | Error | string): boolean {
+  private static isRetriable(error: unknown): boolean {
     try {
-      const errorObj = typeof error === 'object' ? error as ErrorLike : null;
+      const errorObj = normalizeErrorToLike(error);
       const code = (errorObj?.code || '').toString().toUpperCase();
       const msg = (errorObj?.message || String(error) || '').toLowerCase();
-      const status = Number(errorObj?.response?.status);
+      const status = numberFromUnknown(errorObj?.response?.status);
       if (['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EPIPE'].includes(code)) return true;
       if (/timeout|timed out|network|connection|closed|unavailable|busy|temporar/.test(msg)) return true;
-      if (!isNaN(status) && (status === 429 || (status >= 500 && status < 600))) return true;
+      if (status !== undefined && (status === 408 || status === 429 || (status >= 500 && status < 600))) return true;
     } catch (err) {
       // Error checking retriability is uncommon; log at debug level
       log.debug('isRetriable check failed', err instanceof Error ? err.message : String(err));
@@ -259,14 +274,14 @@ export class ErrorHandler {
       initialDelay?: number;
       maxDelay?: number;
       backoffMultiplier?: number;
-      shouldRetry?: (error: ErrorLike | Error | unknown) => boolean;
+      shouldRetry?: (error: unknown) => boolean;
     } = {}
   ): Promise<T> {
     const maxRetries = options.maxRetries ?? 3;
     const initialDelay = options.initialDelay ?? 1000;
     const maxDelay = options.maxDelay ?? 10000;
     const multiplier = options.backoffMultiplier ?? 2;
-    const shouldRetry = options.shouldRetry ?? ((err: unknown) => this.isRetriable(err as ErrorLike));
+    const shouldRetry = options.shouldRetry ?? ((err: unknown) => this.isRetriable(err));
 
     let delay = initialDelay;
 

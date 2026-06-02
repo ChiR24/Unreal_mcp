@@ -2,20 +2,20 @@
 // McpAutomationBridge_PipelineHandlers.cpp
 // =============================================================================
 // MCP Automation Bridge - Pipeline & Build Automation Handlers
-// 
+//
 // UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-// 
+//
 // Handler Summary:
 // -----------------------------------------------------------------------------
 // Action: manage_pipeline
 //   - run_ubt: Launch UnrealBuildTool process with target/platform/config
 //   - list_categories: Return all available automation tool categories
 //   - get_status: Return automation bridge status and version info
-// 
+//
 // Dependencies:
 //   - Core: McpAutomationBridgeSubsystem, McpAutomationBridgeHelpers
 //   - Engine: PlatformProcess, Paths, EngineVersion, App
-// 
+//
 // Notes:
 //   - UBT spawns as detached process; results logged separately
 //   - Status includes engine version, platform, PIE state, project name
@@ -47,9 +47,9 @@
 // =============================================================================
 
 bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
-    const FString& RequestId, 
-    const FString& Action, 
-    const TSharedPtr<FJsonObject>& Payload, 
+    const FString& RequestId,
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     // Validate action
@@ -61,13 +61,18 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
         return true;
     }
 
-    // Extract subaction
-    const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
+    // Extract subaction. Native MCP clients send the public tool action in
+    // "action"; TS bridge fallback sends the internal "subAction" field.
+    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
+    if (SubAction.IsEmpty())
+    {
+        SubAction = GetJsonStringField(Payload, TEXT("action"));
+    }
 
     // -------------------------------------------------------------------------
     // run_ubt: Launch UnrealBuildTool process
@@ -76,24 +81,122 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
     {
         FString Target;
         Payload->TryGetStringField(TEXT("target"), Target);
-        
+
         FString Platform;
         Payload->TryGetStringField(TEXT("platform"), Platform);
-        
+
         FString Configuration;
         Payload->TryGetStringField(TEXT("configuration"), Configuration);
-        
+
         FString ExtraArgs;
         Payload->TryGetStringField(TEXT("extraArgs"), ExtraArgs);
+        if (ExtraArgs.IsEmpty())
+        {
+            Payload->TryGetStringField(TEXT("arguments"), ExtraArgs);
+        }
 
-        // Construct UBT executable path
-        // Location: Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.exe
+        Target.TrimStartAndEndInline();
+        Platform.TrimStartAndEndInline();
+        Configuration.TrimStartAndEndInline();
+        ExtraArgs.TrimStartAndEndInline();
+
+        if (Target.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Target is required for run_ubt."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        if (Platform.IsEmpty())
+        {
+#if PLATFORM_WINDOWS
+            Platform = TEXT("Win64");
+#elif PLATFORM_MAC
+            Platform = TEXT("Mac");
+#else
+            Platform = TEXT("Linux");
+#endif
+        }
+
+        if (Configuration.IsEmpty())
+        {
+            Configuration = TEXT("Development");
+        }
+
+        auto ValidateBuildToken = [&](const FString& Value, const TCHAR* FieldName) -> bool {
+            if (!McpIsSafeUbtPositionalToken(Value))
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Invalid %s for run_ubt: %s must be a positional token"), FieldName, *Value),
+                    TEXT("INVALID_ARGUMENT"));
+                return false;
+            }
+            return true;
+        };
+
+        if (!ValidateBuildToken(Target, TEXT("target")) ||
+            !ValidateBuildToken(Platform, TEXT("platform")) ||
+            !ValidateBuildToken(Configuration, TEXT("configuration")))
+        {
+            return true;
+        }
+
+        if (!McpIsAllowedUbtPlatform(Platform))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Platform is not allowed for run_ubt: %s"), *Platform),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        if (!McpIsAllowedUbtConfiguration(Configuration))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Configuration is not allowed for run_ubt: %s"), *Configuration),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        if (!McpIsSafeUbtArgumentList(ExtraArgs))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("UBT arguments contain unsafe characters."),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        // Construct the platform build wrapper path. On Linux/macOS the UBT .exe
+        // wrapper does not exist; Build.sh/Build.bat is the stable editor-owned
+        // entry point across installed and source engine layouts.
+#if PLATFORM_WINDOWS
         const FString UBTPath = FPaths::ConvertRelativePathToFull(
-            FPaths::EngineDir() / TEXT("Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.exe"));
-        
+            FPaths::EngineDir() / TEXT("Build/BatchFiles/Build.bat"));
+#elif PLATFORM_MAC
+        const FString UBTPath = FPaths::ConvertRelativePathToFull(
+            FPaths::EngineDir() / TEXT("Build/BatchFiles/Mac/Build.sh"));
+#else
+        const FString UBTPath = FPaths::ConvertRelativePathToFull(
+            FPaths::EngineDir() / TEXT("Build/BatchFiles/Linux/Build.sh"));
+#endif
+
+        if (!FPaths::FileExists(UBTPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("UBT build wrapper not found at: %s"), *UBTPath),
+                TEXT("UBT_NOT_FOUND"));
+            return true;
+        }
+
+        FString ProjectPath = FPaths::GetProjectFilePath();
+        FString ProjectArg;
+        if (!ProjectPath.IsEmpty())
+        {
+            ProjectArg = FString::Printf(TEXT(" -Project=\"%s\""), *ProjectPath);
+        }
+
         // Build command line
-        const FString Params = FString::Printf(TEXT("%s %s %s %s"), 
-            *Target, *Platform, *Configuration, *ExtraArgs);
+        const FString Params = FString::Printf(TEXT("%s %s %s%s %s"),
+            *Target, *Platform, *Configuration, *ProjectArg, *ExtraArgs);
 
         // Spawn UBT as detached process
         FProcHandle ProcHandle = FPlatformProcess::CreateProc(
@@ -111,18 +214,19 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
         if (ProcHandle.IsValid())
         {
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-            Result->SetStringField(TEXT("action"), TEXT("run_ubt"));
+            Result->SetStringField(TEXT("action"), TEXT("manage_pipeline"));
+            Result->SetStringField(TEXT("subAction"), TEXT("run_ubt"));
             Result->SetStringField(TEXT("target"), Target);
             Result->SetStringField(TEXT("platform"), Platform);
             Result->SetStringField(TEXT("configuration"), Configuration);
             Result->SetBoolField(TEXT("processStarted"), true);
 
-            SendAutomationResponse(RequestingSocket, RequestId, true, 
+            SendAutomationResponse(RequestingSocket, RequestId, true,
                 TEXT("UBT process started."), Result);
         }
         else
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Failed to launch UBT."), TEXT("LAUNCH_FAILED"));
         }
         return true;
@@ -135,69 +239,36 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
     {
         TArray<TSharedPtr<FJsonValue>> Categories;
 
-        // Core Actor & Asset Tools
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_actor")));
+        // Canonical public MCP tools
+        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_tools")));
         Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_asset")));
         Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_blueprint")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_level")));
-
-        // Editor & System Tools
+        Categories.Add(MakeShared<FJsonValueString>(TEXT("control_actor")));
         Categories.Add(MakeShared<FJsonValueString>(TEXT("control_editor")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("system_control")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_pipeline")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("inspect")));
-
-        // Visual & Effects Tools
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_lighting")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_effect")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_material_authoring")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_texture")));
-
-        // Animation & Physics Tools
+        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_level")));
+        Categories.Add(MakeShared<FJsonValueString>(TEXT("build_environment")));
         Categories.Add(MakeShared<FJsonValueString>(TEXT("animation_physics")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_skeleton")));
+        Categories.Add(MakeShared<FJsonValueString>(TEXT("system_control")));
         Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_sequence")));
-
-        // Audio Tools
+        Categories.Add(MakeShared<FJsonValueString>(TEXT("inspect")));
         Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_audio")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_audio_authoring")));
-
-        // Gameplay Tools
+        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_geometry")));
+        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_effect")));
+        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_gas")));
         Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_character")));
         Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_combat")));
+        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_ai")));
         Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_inventory")));
         Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_interaction")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_gas")));
-
-        // AI Tools
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_ai")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_behavior_tree")));
-
-        // World Building Tools
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("build_environment")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_geometry")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_level_structure")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_volumes")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_navigation")));
-
-        // UI Tools
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_widget_authoring")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_input")));
-
-        // Networking & Multiplayer Tools
         Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_networking")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_sessions")));
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_game_framework")));
-
-        // Performance Tools
-        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_performance")));
+        Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_level_structure")));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetArrayField(TEXT("categories"), Categories);
         Result->SetNumberField(TEXT("count"), Categories.Num());
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
-            FString::Printf(TEXT("Listed %d automation categories"), Categories.Num()), Result);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+            FString::Printf(TEXT("Listed %d canonical MCP tools"), Categories.Num()), Result);
         return true;
     }
 
@@ -227,23 +298,23 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
 
         // Action statistics
         Result->SetNumberField(TEXT("totalActions"), 1069);
-        Result->SetNumberField(TEXT("toolCategories"), 35);
+        Result->SetNumberField(TEXT("toolCategories"), 22);
 
         // Runtime info
         Result->SetStringField(TEXT("platform"), *UGameplayStatics::GetPlatformName());
-        Result->SetBoolField(TEXT("isPlayInEditor"), 
+        Result->SetBoolField(TEXT("isPlayInEditor"),
             GEditor ? GEditor->IsPlaySessionInProgress() : false);
 
         // Project info
         Result->SetStringField(TEXT("projectName"), FApp::GetProjectName());
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Automation bridge status retrieved"), Result);
         return true;
     }
 
     // Unknown subaction
-    SendAutomationError(RequestingSocket, RequestId, 
+    SendAutomationError(RequestingSocket, RequestId,
         TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;
 }

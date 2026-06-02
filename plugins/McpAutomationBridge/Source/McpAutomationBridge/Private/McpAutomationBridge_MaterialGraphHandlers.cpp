@@ -151,6 +151,16 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
 
         // Search by GUID, name, path, or parameter name
         const FString Needle = IdOrName.TrimStartAndEnd();
+        FString ShortNeedle = Needle;
+        int32 SeparatorIndex = INDEX_NONE;
+        if (ShortNeedle.FindLastChar(TEXT(':'), SeparatorIndex))
+        {
+            ShortNeedle = ShortNeedle.Mid(SeparatorIndex + 1);
+        }
+        if (ShortNeedle.FindLastChar(TEXT('.'), SeparatorIndex))
+        {
+            ShortNeedle = ShortNeedle.Mid(SeparatorIndex + 1);
+        }
         for (UMaterialExpression *Expr : MCP_GET_MATERIAL_EXPRESSIONS(Material))
         {
             if (!Expr)
@@ -165,7 +175,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
             }
 
             // Match by name
-            if (Expr->GetName() == Needle)
+            if (Expr->GetName() == Needle || Expr->GetName() == ShortNeedle)
             {
                 return Expr;
             }
@@ -179,7 +189,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
             // Match by parameter name (for parameter nodes)
             if (UMaterialExpressionParameter *ParamExpr = Cast<UMaterialExpressionParameter>(Expr))
             {
-                if (ParamExpr->ParameterName.ToString() == Needle)
+                if (ParamExpr->ParameterName.ToString() == Needle || ParamExpr->ParameterName.ToString() == ShortNeedle)
                 {
                     return Expr;
                 }

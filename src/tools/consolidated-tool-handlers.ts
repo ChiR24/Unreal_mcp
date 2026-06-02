@@ -3,6 +3,21 @@ import { Logger } from '../utils/logger.js';
 import { ResponseFactory } from '../utils/response-factory.js';
 import { ITools } from '../types/tool-interfaces.js';
 import { toolRegistry } from './dynamic-handler-registry.js';
+import {
+  BEHAVIOR_TREE_ACTIONS,
+  GAME_FRAMEWORK_ACTIONS,
+  INPUT_ACTIONS,
+  LIGHTING_ACTIONS,
+  MATERIAL_AUTHORING_ACTIONS,
+  NAVIGATION_ACTIONS,
+  PERFORMANCE_ACTIONS,
+  SESSION_ACTIONS,
+  SKELETON_ACTIONS,
+  SPLINE_ACTIONS,
+  TEXTURE_ACTIONS,
+  VOLUME_ACTIONS,
+  WIDGET_AUTHORING_ACTIONS
+} from './consolidated-tool-definitions.js';
 import { executeAutomationRequest, requireAction } from './handlers/common-handlers.js';
 import { handleAssetTools } from './handlers/asset-handlers.js';
 import { handleActorTools } from './handlers/actor-handlers.js';
@@ -27,7 +42,6 @@ import { handleMaterialAuthoringTools } from './handlers/material-authoring-hand
 import { handleTextureTools } from './handlers/texture-handlers.js';
 import { handleAnimationAuthoringTools } from './handlers/animation-authoring-handlers.js';
 import { handleAudioAuthoringTools } from './handlers/audio-authoring-handlers.js';
-import { handleNiagaraAuthoringTools } from './handlers/niagara-authoring-handlers.js';
 import { handleGASTools } from './handlers/gas-handlers.js';
 import { handleCharacterTools } from './handlers/character-handlers.js';
 import { handleCombatTools } from './handlers/combat-handlers.js';
@@ -42,30 +56,21 @@ import { handleLevelStructureTools } from './handlers/level-structure-handlers.j
 import { handleVolumeTools } from './handlers/volume-handlers.js';
 import { handleNavigationTools } from './handlers/navigation-handlers.js';
 import { handleSplineTools } from './handlers/spline-handlers.js';
+import { handlePCGTools } from './handlers/pcg-handlers.js';
 import { handleManageToolsTools } from './handlers/manage-tools-handlers.js';
-// import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
-// import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
 type NormalizedToolCall = {
   name: string;
-  action: string;
+  action?: string;
   args: Record<string, unknown>;
 };
-
-// Interface for deprecation warning flags (stored in globalThis for once-per-session warnings)
-interface DeprecationFlags {
-  __blueprintGraphDeprecationLogged?: boolean;
-  __audioAuthoringDeprecationLogged?: boolean;
-  __niagaraAuthoringDeprecationLogged?: boolean;
-  __animationAuthoringDeprecationLogged?: boolean;
-}
 
 const MATERIAL_GRAPH_ACTION_MAP: Record<string, string> = {
   add_material_node: 'add_node',
   connect_material_pins: 'connect_pins',
   remove_material_node: 'remove_node',
   break_material_connections: 'break_connections',
-  get_material_node_details: 'get_node_details',
+  get_material_node_details: 'get_node_details'
 };
 
 const BEHAVIOR_TREE_ACTION_MAP: Record<string, string> = {
@@ -76,12 +81,10 @@ const BEHAVIOR_TREE_ACTION_MAP: Record<string, string> = {
   set_bt_node_properties: 'set_node_properties'
 };
 
-const NIAGARA_GRAPH_ACTION_MAP: Record<string, string> = {
-  add_niagara_module: 'add_module',
-  connect_niagara_pins: 'connect_pins',
-  remove_niagara_node: 'remove_node',
-  set_niagara_parameter: 'set_parameter'
-};
+function getToolAction(args: Record<string, unknown>): string {
+  const action = args.action ?? args.subAction;
+  return typeof action === 'string' ? action : requireAction(args);
+}
 
 function isMaterialGraphAction(action: string): boolean {
   return (
@@ -100,64 +103,99 @@ function isBehaviorTreeGraphAction(action: string): boolean {
   );
 }
 
-function isNiagaraGraphAction(action: string): boolean {
-  return (
-    Object.prototype.hasOwnProperty.call(NIAGARA_GRAPH_ACTION_MAP, action) ||
-    action.includes('niagara_module') ||
-    action.includes('niagara_pins') ||
-    action.includes('niagara_node') ||
-    action.includes('niagara_parameter')
-  );
-}
+const materialAuthoringActionSet = new Set<string>(MATERIAL_AUTHORING_ACTIONS);
+const textureActionSet = new Set<string>(TEXTURE_ACTIONS);
+const skeletonActionSet = new Set<string>(SKELETON_ACTIONS);
+const lightingActionSet = new Set<string>(LIGHTING_ACTIONS);
+const splineActionSet = new Set<string>(SPLINE_ACTIONS);
+const performanceActionSet = new Set<string>(PERFORMANCE_ACTIONS);
+const behaviorTreeActionSet = new Set<string>(BEHAVIOR_TREE_ACTIONS);
+const navigationActionSet = new Set<string>(NAVIGATION_ACTIONS);
+const widgetAuthoringActionSet = new Set<string>(WIDGET_AUTHORING_ACTIONS);
+const sessionActionSet = new Set<string>(SESSION_ACTIONS);
+const gameFrameworkActionSet = new Set<string>(GAME_FRAMEWORK_ACTIONS);
+const inputActionSet = new Set<string>(INPUT_ACTIONS);
+const volumeActionSet = new Set<string>(VOLUME_ACTIONS);
+const blueprintGraphActionSet = new Set<string>([
+  'create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property',
+  'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
+  'list_node_types', 'set_pin_default_value'
+]);
+const animationAuthoringActionSet = new Set<string>([
+  'create_animation_sequence', 'set_sequence_length', 'add_bone_track', 'set_bone_key', 'set_curve_key',
+  'add_notify_state', 'add_sync_marker', 'set_root_motion_settings', 'set_additive_settings',
+  'create_montage', 'add_montage_section', 'add_montage_slot', 'set_section_timing',
+  'add_montage_notify', 'set_blend_in', 'set_blend_out', 'link_sections',
+  'create_blend_space_1d', 'create_blend_space_2d', 'add_blend_sample', 'force_rebuild_blend_space', 'set_axis_settings', 'set_interpolation_settings',
+  'create_aim_offset', 'add_aim_offset_sample',
+  'create_anim_blueprint', 'create_animation_bp', 'create_animation_blueprint', 'add_state_machine', 'add_state', 'add_transition', 'set_transition_rules',
+  'add_blend_node', 'add_cached_pose', 'add_slot_node', 'add_layered_blend_per_bone', 'set_anim_graph_node_value',
+  'create_control_rig', 'create_ik_rig', 'create_ik_retargeter', 'set_retarget_chain_mapping', 'get_animation_info'
+]);
+const audioAuthoringActionSet = new Set<string>([
+  'create_sound_cue', 'create_sound_class', 'create_sound_mix',
+  'add_cue_node', 'connect_cue_nodes', 'set_cue_attenuation', 'set_cue_concurrency',
+  'create_metasound', 'add_metasound_node', 'connect_metasound_nodes',
+  'add_metasound_input', 'add_metasound_output', 'set_metasound_default',
+  'set_class_properties', 'set_class_parent', 'add_mix_modifier', 'configure_mix_eq',
+  'create_attenuation_settings', 'configure_distance_attenuation',
+  'configure_spatialization', 'configure_occlusion', 'configure_reverb_send',
+  'create_dialogue_voice', 'create_dialogue_wave', 'set_dialogue_context',
+  'create_reverb_effect', 'create_source_effect_chain', 'add_source_effect', 'create_submix_effect',
+  'get_audio_info'
+]);
 
 function normalizeToolCall(
   name: string,
   args: Record<string, unknown>
 ): NormalizedToolCall {
-  let normalizedName = name;
-  let action: string;
-
-  if (args && typeof args.action === 'string') {
-    action = args.action;
-  } else if (normalizedName === 'console_command') {
-    normalizedName = 'system_control';
-    action = 'console_command';
-  } else {
-    action = requireAction(args);
-  }
-
-  if (normalizedName === 'create_effect') normalizedName = 'manage_effect';
-  if (normalizedName === 'console_command') {
-    normalizedName = 'system_control';
-    action = 'console_command';
-  }
-  // manage_pipeline has its own handler registered - don't normalize to system_control
-  // handlePipelineTools handles: run_ubt (local), list_categories/get_status (via system_control)
-  if (normalizedName === 'manage_tests') {
-    normalizedName = 'system_control';
-    action = 'run_tests';
-  }
+  const actionValue = args.action ?? args.subAction;
+  const action = typeof actionValue === 'string' ? actionValue : undefined;
 
   return {
-    name: normalizedName,
+    name,
     action,
     args
   };
 }
 
-// Registration of default handlers
-function registerDefaultHandlers() {
-  // Helper to extract action string from args
-  const getAction = (args: Record<string, unknown>): string => {
-    const action = args.action ?? args.subAction;
-    return typeof action === 'string' ? action : requireAction(args);
-  };
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-  // 1. ASSET MANAGER
+function mergeActionParams(args: Record<string, unknown>): Record<string, unknown> {
+  if (!isRecord(args.params)) return args;
+
+  const merged = { ...args.params, ...args };
+  delete merged.params;
+  return merged;
+}
+
+function addErrorContext(response: unknown, toolName: string, action: string | undefined): unknown {
+  if (!isRecord(response)) return response;
+  if (response.success !== false && response.isError !== true) return response;
+
+  return cleanObject({
+    ...response,
+    isError: true,
+    toolName: typeof response.toolName === 'string' ? response.toolName : toolName,
+    action: typeof response.action === 'string' ? response.action : action ?? null
+  });
+}
+
+function classifyExecutionError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes('timeout')) return 'TOOL_TIMEOUT';
+  if (lower.includes('security violation')) return 'SECURITY_VIOLATION';
+  return 'TOOL_EXECUTION_FAILED';
+}
+
+function registerDefaultHandlers() {
   toolRegistry.register('manage_asset', async (args, tools) => {
-    const action = getAction(args);
-    // Reroute merged functionality
-    if (['create_render_target', 'nanite_rebuild_mesh'].includes(action)) {
+    const action = getToolAction(args);
+    if (materialAuthoringActionSet.has(action)) return await handleMaterialAuthoringTools(action, args, tools);
+    if (textureActionSet.has(action)) return await handleTextureTools(action, args, tools);
+    if (action === 'nanite_rebuild_mesh') {
       const payload = { ...args, subAction: action };
       return cleanObject(await executeAutomationRequest(tools, 'manage_render', payload, `Automation bridge not available for ${action}`));
     }
@@ -172,303 +210,115 @@ function registerDefaultHandlers() {
     return await handleAssetTools(action, args, tools);
   });
 
-  // 2. BLUEPRINT MANAGER (includes merged manage_blueprint_graph - Phase 53)
   toolRegistry.register('manage_blueprint', async (args, tools) => {
-    const action = getAction(args);
-    if (action === 'get_blueprint') {
-      return await handleBlueprintGet(args, tools);
-    }
-    // Graph actions (merged from manage_blueprint_graph)
-    const graphActions = ['create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details', 'list_node_types', 'set_pin_default_value'];
-    if (graphActions.includes(action)) {
-      return await handleGraphTools('manage_blueprint_graph', action, args, tools);
-    }
+    const action = getToolAction(args);
+    if (action === 'create_blueprint') return await handleBlueprintTools('create', args, tools);
+    if (action === 'get_blueprint') return await handleBlueprintGet(args, tools);
+    if (widgetAuthoringActionSet.has(action)) return await handleWidgetAuthoringTools(action, args, tools);
+    if (blueprintGraphActionSet.has(action)) return await handleGraphTools('manage_blueprint', action, args, tools);
     return await handleBlueprintTools(action, args, tools);
   });
 
-  // DEPRECATED: manage_blueprint_graph now merged into manage_blueprint (Phase 53)
-  // Kept for backward compatibility - routes to manage_blueprint
-  toolRegistry.register('manage_blueprint_graph', async (args, tools) => {
-    // Deprecation warning logged once per session
-    const globalObj = globalThis as unknown as DeprecationFlags;
-    if (!globalObj.__blueprintGraphDeprecationLogged) {
-      const deprecationLogger = new Logger('DeprecationWarning');
-      deprecationLogger.warn('manage_blueprint_graph is deprecated and merged into manage_blueprint. Use manage_blueprint instead.');
-      globalObj.__blueprintGraphDeprecationLogged = true;
-    }
-    return await handleGraphTools('manage_blueprint_graph', getAction(args), args, tools);
-  });
+  toolRegistry.register('control_actor', async (args, tools) => await handleActorTools(getToolAction(args), args, tools));
+  toolRegistry.register('control_editor', async (args, tools) => await handleEditorTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_level', async (args, tools) => await handleLevelTools(getToolAction(args), args, tools));
 
-  // 3. ACTOR CONTROL
-  toolRegistry.register('control_actor', async (args, tools) => {
-    return await handleActorTools(getAction(args), args, tools);
-  });
 
-  // 4. EDITOR CONTROL
-  toolRegistry.register('control_editor', async (args, tools) => {
-    const action = getAction(args);
-    // CRITICAL FIX: Removed simulate_input special case that bypassed validation.
-    // All actions now go through handleEditorTools which validates via validateEditorActionArgs.
-    // This ensures unknown parameters like 'invalidExtraParam' are properly rejected.
-    return await handleEditorTools(action, args, tools);
-  });
-
-  // 5. LEVEL MANAGER
-  toolRegistry.register('manage_level', async (args, tools) => {
-    const action = getAction(args);
-    // CRITICAL FIX: Route ALL actions through handleLevelTools for proper validation
-    // Previously load_cells and set_datalayer bypassed validation by going directly to executeAutomationRequest
-    // handleLevelTools validates required params (levelPath, cells/origin/extent, actorPath, dataLayerName, dataLayerState)
-    // and then calls executeAutomationRequest with proper payload
-    return await handleLevelTools(action, args, tools);
-  });
-
-  // 6. ANIMATION & PHYSICS (merged with manage_animation_authoring - Phase 53)
-  const ANIMATION_AUTHORING_ACTIONS = new Set([
-    'create_animation_sequence', 'set_sequence_length', 'add_bone_track', 'set_bone_key', 'set_curve_key',
-    'add_notify_state', 'add_sync_marker', 'set_root_motion_settings', 'set_additive_settings',
-    'create_montage', 'add_montage_section', 'add_montage_slot', 'set_section_timing',
-    'add_montage_notify', 'set_blend_in', 'set_blend_out', 'link_sections',
-    'create_blend_space_1d', 'create_blend_space_2d', 'add_blend_sample', 'set_axis_settings', 'set_interpolation_settings',
-    'create_aim_offset', 'add_aim_offset_sample',
-    'create_anim_blueprint', 'create_animation_bp', 'create_animation_blueprint', 'add_state_machine', 'add_state', 'add_transition', 'set_transition_rules',
-    'add_blend_node', 'add_cached_pose', 'add_slot_node', 'add_layered_blend_per_bone', 'set_anim_graph_node_value',
-    'create_control_rig', 'add_control', 'add_rig_unit', 'connect_rig_elements', 'create_pose_library',
-    'create_ik_rig', 'add_ik_chain', 'create_ik_retargeter', 'set_retarget_chain_mapping',
-    'get_animation_info'
-  ]);
   toolRegistry.register('animation_physics', async (args, tools) => {
-    const action = getAction(args);
-    // Route authoring-specific actions to the authoring handler
-    if (ANIMATION_AUTHORING_ACTIONS.has(action)) {
-      return await handleAnimationAuthoringTools(action, args, tools);
-    }
-    // Handle add_notify conflict resolution:
-    // - frame-based (args.frame) or asset-based (args.assetPath) = authoring handler (animation sequence notifies)
-    // - time-based (args.time) or montage-based (args.montagePath) = runtime handler (montage notifies)
-    // - If neither, default to runtime handler which will return appropriate error if invalid
+    const action = getToolAction(args);
+    if (skeletonActionSet.has(action)) return await handleSkeletonTools(action, args, tools);
+    if (animationAuthoringActionSet.has(action)) return await handleAnimationAuthoringTools(action, args, tools);
     if (action === 'add_notify' && (args.frame !== undefined || args.assetPath !== undefined)) {
       return await handleAnimationAuthoringTools(action, args, tools);
     }
     return await handleAnimationTools(action, args, tools);
   });
 
-  // 7. EFFECTS MANAGER (merged with manage_niagara_authoring - Phase 53)
-  const NIAGARA_AUTHORING_ACTIONS = new Set([
-    'add_emitter_to_system', 'set_emitter_properties',
-    'add_spawn_rate_module', 'add_spawn_burst_module', 'add_spawn_per_unit_module',
-    'add_initialize_particle_module', 'add_particle_state_module',
-    'add_force_module', 'add_velocity_module', 'add_acceleration_module',
-    'add_size_module', 'add_color_module',
-    'add_sprite_renderer_module', 'add_mesh_renderer_module', 'add_ribbon_renderer_module', 'add_light_renderer_module',
-    'add_collision_module', 'add_kill_particles_module', 'add_camera_offset_module',
-    'add_user_parameter', 'set_parameter_value', 'bind_parameter_to_source',
-    'add_skeletal_mesh_data_interface', 'add_static_mesh_data_interface', 'add_spline_data_interface',
-    'add_audio_spectrum_data_interface', 'add_collision_query_data_interface',
-    'add_event_generator', 'add_event_receiver', 'configure_event_payload',
-    'enable_gpu_simulation', 'add_simulation_stage',
-    'get_niagara_info', 'validate_niagara_system'
-  ]);
-  toolRegistry.register('manage_effect', async (args, tools) => {
-    const action = getAction(args);
-    // Route authoring-specific actions to the authoring handler
-    if (NIAGARA_AUTHORING_ACTIONS.has(action)) {
-      return await handleNiagaraAuthoringTools(action, args, tools);
-    }
-    if (isNiagaraGraphAction(action)) {
-      // Instance check
-      const isInstanceOp = action === 'set_niagara_parameter' && (args.actorName || (args.systemName && !args.assetPath && !args.systemPath));
-      if (isInstanceOp) {
-        return await handleEffectTools(action, args, tools);
-      }
-      const subAction = NIAGARA_GRAPH_ACTION_MAP[action] || action;
-      return await handleGraphTools('manage_niagara_graph', subAction, args, tools);
-    }
-    return await handleEffectTools(action, args, tools);
+  toolRegistry.register('manage_effect', async (args, tools) => await handleEffectTools(getToolAction(args), args, tools));
+
+  toolRegistry.register('build_environment', async (args, tools) => {
+    const action = getToolAction(args);
+    if (lightingActionSet.has(action)) return await handleLightingTools(action, args, tools);
+    if (splineActionSet.has(action)) return await handleSplineTools(action, args, tools);
+    return await handleEnvironmentTools(action, args, tools);
   });
 
-  // 8. ENVIRONMENT BUILDER
-  toolRegistry.register('build_environment', async (args, tools) => await handleEnvironmentTools(getAction(args), args, tools));
-
-  // 9. SYSTEM CONTROL
   toolRegistry.register('system_control', async (args, tools) => {
-    const action = getAction(args);
+    const action = getToolAction(args);
     if (action === 'console_command') return await handleConsoleCommand(args, tools);
     if (action === 'run_ubt') return await handlePipelineTools(action, args, tools);
-
+    if (performanceActionSet.has(action)) return await handlePerformanceTools(action, args, tools);
     if (action === 'run_tests') return cleanObject(await executeAutomationRequest(tools, 'manage_tests', { ...args, subAction: action }, 'Bridge unavailable'));
-    if (action === 'subscribe' || action === 'unsubscribe') return cleanObject(await executeAutomationRequest(tools, 'manage_logs', { ...args, subAction: action }, 'Bridge unavailable'));
-    if (action === 'spawn_category') return cleanObject(await executeAutomationRequest(tools, 'manage_debug', { ...args, subAction: action }, 'Bridge unavailable'));
-    if (action === 'start_session') return cleanObject(await executeAutomationRequest(tools, 'manage_insights', { ...args, subAction: action }, 'Bridge unavailable'));
-    // Note: lumen_update_scene is now available directly via manage_render tool, not system_control
-
+    if (action === 'subscribe' || action === 'unsubscribe') {
+      return cleanObject(await executeAutomationRequest(tools, 'manage_logs', { ...args, subAction: action }, 'Bridge unavailable'));
+    }
+    if (action === 'spawn_category') {
+      const categoryName = typeof args.categoryName === 'string'
+        ? args.categoryName.trim()
+        : (typeof args.category === 'string' ? args.category.trim() : 'AI');
+      if (!/^[A-Za-z0-9_-]+$/.test(categoryName)) {
+        return { success: false, error: 'INVALID_CATEGORY_NAME', message: 'Category names may only contain letters, numbers, underscores, and hyphens.' };
+      }
+      const payload = { ...(args as Record<string, unknown>), subAction: action, categoryName };
+      const res = await executeAutomationRequest(tools, 'manage_debug', payload, 'Bridge unavailable') as Record<string, unknown>;
+      return cleanObject(Object.assign({}, res, { action, categoryName }));
+    }
+    if (action === 'start_session') {
+      const channels = typeof args.channels === 'string' ? args.channels.trim() : '';
+      if (channels && !/^[A-Za-z0-9_, -]+$/.test(channels)) {
+        return { success: false, error: 'INVALID_CHANNELS', message: 'Trace channels contain unsupported characters.' };
+      }
+      const res = await executeAutomationRequest(tools, 'manage_insights', {
+        ...args,
+        action,
+        subAction: action,
+        channels
+      }, 'Bridge unavailable') as Record<string, unknown>;
+      return cleanObject({ ...res, action, channels, sessionType: 'trace' });
+    }
+    if (action === 'lumen_update_scene') return cleanObject(await executeAutomationRequest(tools, 'manage_render', { ...args, subAction: action }, 'Bridge unavailable'));
     return await handleSystemTools(action, args, tools);
   });
 
-  // 10. SEQUENCER
-  toolRegistry.register('manage_sequence', async (args, tools) => await handleSequenceTools(getAction(args), args, tools));
-
-  // 11. INTROSPECTION
-  toolRegistry.register('inspect', async (args, tools) => await handleInspectTools(getAction(args), args, tools));
-
-  // 12. DYNAMIC TOOLS MANAGEMENT
-  toolRegistry.register('manage_tools', async (args, tools) => await handleManageToolsTools(getAction(args), args, tools));
-
-  // 13. MANAGE_PIPELINE - Routes to handlePipelineTools with action dispatch
-  // Actions: run_ubt (local spawn), list_categories, get_status (via system_control)
-  toolRegistry.register('manage_pipeline', async (args, tools) => {
-    const action = getAction(args);
-    // list_categories and get_status route through system_control
-    if (action === 'list_categories' || action === 'get_status') {
-      return cleanObject(await executeAutomationRequest(tools, 'manage_tools', { ...args, subAction: action }, 'Automation bridge not available'));
-    }
-    // run_ubt handled locally in pipeline-handlers.ts
-    return await handlePipelineTools(action, args, tools);
-  });
-
-  // 13. AUDIO (merged with manage_audio_authoring - Phase 53)
-  const AUDIO_AUTHORING_ACTIONS = new Set([
-    'add_cue_node', 'connect_cue_nodes', 'set_cue_attenuation', 'set_cue_concurrency',
-    'create_metasound', 'add_metasound_node', 'connect_metasound_nodes',
-    'add_metasound_input', 'add_metasound_output', 'set_metasound_default',
-    'set_class_properties', 'set_class_parent', 'add_mix_modifier', 'configure_mix_eq',
-    'create_attenuation_settings', 'configure_distance_attenuation',
-    'configure_spatialization', 'configure_occlusion', 'configure_reverb_send',
-    'create_dialogue_voice', 'create_dialogue_wave', 'set_dialogue_context',
-    'create_reverb_effect', 'create_source_effect_chain', 'add_source_effect', 'create_submix_effect',
-    'get_audio_info'
-  ]);
+  toolRegistry.register('manage_sequence', async (args, tools) => await handleSequenceTools(getToolAction(args), args, tools));
+  toolRegistry.register('inspect', async (args, tools) => await handleInspectTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_tools', async (args, tools) => await handleManageToolsTools(getToolAction(args), args, tools));
   toolRegistry.register('manage_audio', async (args, tools) => {
-    const action = getAction(args);
-    // Route authoring-specific actions to the authoring handler
-    if (AUDIO_AUTHORING_ACTIONS.has(action)) {
-      return await handleAudioAuthoringTools(action, args, tools);
-    }
+    const action = getToolAction(args);
+    if (audioAuthoringActionSet.has(action)) return await handleAudioAuthoringTools(action, args, tools);
     return await handleAudioTools(action, args, tools);
   });
 
-  // 13. BEHAVIOR TREE
-  toolRegistry.register('manage_behavior_tree', async (args, tools) => await handleGraphTools('manage_behavior_tree', getAction(args), args, tools));
+  toolRegistry.register('manage_geometry', async (args, tools) => await handleGeometryTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_pcg', async (args, tools) => await handlePCGTools(getToolAction(args), args, tools));
 
-  // 14. [REMOVED] manage_blueprint_graph - now merged into manage_blueprint (Phase 53)
-  // See registration after manage_blueprint for backward compatibility alias
-
-  // 15. RENDER TOOLS
-  toolRegistry.register('manage_render', async (args, tools) => {
-    const action = getAction(args);
-    return cleanObject(await executeAutomationRequest(tools, 'manage_render', { ...args, subAction: action }, 'Bridge unavailable'));
+  toolRegistry.register('manage_gas', async (args, tools) => await handleGASTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_character', async (args, tools) => await handleCharacterTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_combat', async (args, tools) => await handleCombatTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_ai', async (args, tools) => {
+    const action = getToolAction(args);
+    if (behaviorTreeActionSet.has(action)) return await handleGraphTools('manage_behavior_tree', action, args, tools);
+    if (navigationActionSet.has(action)) return await handleNavigationTools(action, args, tools);
+    return await handleAITools(action, args, tools);
   });
-
-  // 16. WORLD PARTITION
-  toolRegistry.register('manage_world_partition', async (args, tools) => {
-    const action = getAction(args);
-    return cleanObject(await executeAutomationRequest(tools, 'manage_world_partition', { ...args, subAction: action }, 'Bridge unavailable'));
+  toolRegistry.register('manage_inventory', async (args, tools) => await handleInventoryTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_interaction', async (args, tools) => await handleInteractionTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_networking', async (args, tools) => {
+    const action = getToolAction(args);
+    if (sessionActionSet.has(action)) return await handleSessionsTools(action, args, tools);
+    if (gameFrameworkActionSet.has(action)) return await handleGameFrameworkTools(action, args, tools);
+    if (inputActionSet.has(action)) return await handleInputTools(action, args, tools);
+    return await handleNetworkingTools(action, args, tools);
   });
-
-  // 17. LIGHTING
-  toolRegistry.register('manage_lighting', async (args, tools) => await handleLightingTools(getAction(args), args, tools));
-
-  // 18. PERFORMANCE
-  toolRegistry.register('manage_performance', async (args, tools) => await handlePerformanceTools(getAction(args), args, tools));
-
-  // 19. INPUT
-  toolRegistry.register('manage_input', async (args, tools) => await handleInputTools(getAction(args), args, tools));
-
-  // 20. GEOMETRY SCRIPT (Phase 6)
-  toolRegistry.register('manage_geometry', async (args, tools) => await handleGeometryTools(getAction(args), args, tools));
-
-  // 21. SKELETON MANAGER (Phase 7)
-  toolRegistry.register('manage_skeleton', async (args, tools) => await handleSkeletonTools(getAction(args), args, tools));
-
-  // 22. MATERIAL AUTHORING (Phase 8)
-  toolRegistry.register('manage_material_authoring', async (args, tools) => await handleMaterialAuthoringTools(getAction(args), args, tools));
-
-  // 23. TEXTURE MANAGEMENT (Phase 9)
-  toolRegistry.register('manage_texture', async (args, tools) => await handleTextureTools(getAction(args), args, tools));
-
-  // 24. [DEPRECATED] ANIMATION AUTHORING - now merged into animation_physics (Phase 53)
-  // Backward compatibility alias - logs deprecation warning once per session
-  toolRegistry.register('manage_animation_authoring', async (args, tools) => {
-    const globalObj = globalThis as unknown as DeprecationFlags;
-    if (!globalObj.__animationAuthoringDeprecationLogged) {
-      const deprecationLogger = new Logger('DeprecationWarning');
-      deprecationLogger.warn('manage_animation_authoring is deprecated and merged into animation_physics. Use animation_physics instead.');
-      globalObj.__animationAuthoringDeprecationLogged = true;
-    }
-    return await handleAnimationAuthoringTools(getAction(args), args, tools);
+  toolRegistry.register('manage_level_structure', async (args, tools) => {
+    const action = getToolAction(args);
+    if (volumeActionSet.has(action)) return await handleVolumeTools(action, args, tools);
+    return await handleLevelStructureTools(action, args, tools);
   });
-
-  // 25. [DEPRECATED] AUDIO AUTHORING - now merged into manage_audio (Phase 53)
-  // Backward compatibility alias - logs deprecation warning once per session
-  toolRegistry.register('manage_audio_authoring', async (args, tools) => {
-    const globalObj = globalThis as unknown as DeprecationFlags;
-    if (!globalObj.__audioAuthoringDeprecationLogged) {
-      const deprecationLogger = new Logger('DeprecationWarning');
-      deprecationLogger.warn('manage_audio_authoring is deprecated and merged into manage_audio. Use manage_audio instead.');
-      globalObj.__audioAuthoringDeprecationLogged = true;
-    }
-    return await handleAudioAuthoringTools(getAction(args), args, tools);
-  });
-
-  // 26. [DEPRECATED] NIAGARA AUTHORING - now merged into manage_effect (Phase 53)
-  // Backward compatibility alias - logs deprecation warning once per session
-  toolRegistry.register('manage_niagara_authoring', async (args, tools) => {
-    const globalObj = globalThis as unknown as DeprecationFlags;
-    if (!globalObj.__niagaraAuthoringDeprecationLogged) {
-      const deprecationLogger = new Logger('DeprecationWarning');
-      deprecationLogger.warn('manage_niagara_authoring is deprecated and merged into manage_effect. Use manage_effect instead.');
-      globalObj.__niagaraAuthoringDeprecationLogged = true;
-    }
-    return await handleNiagaraAuthoringTools(getAction(args), args, tools);
-  });
-
-  // 27. GAS - GAMEPLAY ABILITY SYSTEM (Phase 13)
-  toolRegistry.register('manage_gas', async (args, tools) => await handleGASTools(getAction(args), args, tools));
-
-  // 28. CHARACTER & MOVEMENT SYSTEM (Phase 14)
-  toolRegistry.register('manage_character', async (args, tools) => await handleCharacterTools(getAction(args), args, tools));
-
-  // 29. COMBAT & WEAPONS SYSTEM (Phase 15)
-  toolRegistry.register('manage_combat', async (args, tools) => await handleCombatTools(getAction(args), args, tools));
-
-  // 30. AI SYSTEM (Phase 16)
-  toolRegistry.register('manage_ai', async (args, tools) => await handleAITools(getAction(args), args, tools));
-
-  // 31. INVENTORY & ITEMS SYSTEM (Phase 17)
-  toolRegistry.register('manage_inventory', async (args, tools) => await handleInventoryTools(getAction(args), args, tools));
-
-  // 32. INTERACTION SYSTEM (Phase 18)
-  toolRegistry.register('manage_interaction', async (args, tools) => await handleInteractionTools(getAction(args), args, tools));
-
-  // 33. WIDGET AUTHORING SYSTEM (Phase 19)
-  toolRegistry.register('manage_widget_authoring', async (args, tools) => await handleWidgetAuthoringTools(getAction(args), args, tools));
-
-  // 34. NETWORKING & MULTIPLAYER (Phase 20)
-  toolRegistry.register('manage_networking', async (args, tools) => await handleNetworkingTools(getAction(args), args, tools));
-
-  // 35. GAME FRAMEWORK (Phase 21)
-  toolRegistry.register('manage_game_framework', async (args, tools) => await handleGameFrameworkTools(getAction(args), args, tools));
-
-  // 36. SESSIONS & LOCAL MULTIPLAYER (Phase 22)
-  toolRegistry.register('manage_sessions', async (args, tools) => await handleSessionsTools(getAction(args), args, tools));
-
-  // 37. LEVEL STRUCTURE (Phase 23)
-  toolRegistry.register('manage_level_structure', async (args, tools) => await handleLevelStructureTools(getAction(args), args, tools));
-
-  // 38. VOLUMES & ZONES (Phase 24)
-  toolRegistry.register('manage_volumes', async (args, tools) => await handleVolumeTools(getAction(args), args, tools));
-
-  // 39. NAVIGATION SYSTEM (Phase 25)
-  toolRegistry.register('manage_navigation', async (args, tools) => await handleNavigationTools(getAction(args), args, tools));
-
-  // 40. SPLINE SYSTEM (Phase 26)
-  toolRegistry.register('manage_splines', async (args, tools) => await handleSplineTools(getAction(args), args, tools));
 }
 
-// Initialize default handlers immediately
 registerDefaultHandlers();
 
-// Export the main consolidated tool call handler
 export async function handleConsolidatedToolCall(
   name: string,
   args: Record<string, unknown>,
@@ -476,44 +326,44 @@ export async function handleConsolidatedToolCall(
 ) {
   const logger = new Logger('ConsolidatedToolHandler');
   const startTime = Date.now();
-  logger.info(`Starting execution of ${name} at ${new Date().toISOString()}`);
+  let actionForError: string | undefined;
 
   try {
-    const normalized = normalizeToolCall(name, args);
-    const normalizedName = normalized.name;
+    const expandedArgs = mergeActionParams(args);
+    const normalized = normalizeToolCall(name, expandedArgs);
     const normalizedArgs = normalized.args;
-    // Note: action extracted inside handler usually, but here we might pass it if needed.
-    // The handlers above re-extract or use normalizedArgs.action. 
-    // `normalizeToolCall` puts `action` into `normalized.action` but does NOT necessarily put it into `normalized.args.action`.
-    // Let's ensure args has action if we relied on it above.
+    actionForError = normalized.action;
+
     if (normalized.action && !normalizedArgs.action) {
       normalizedArgs.action = normalized.action;
     }
 
-    const handler = toolRegistry.getHandler(normalizedName);
-
+    const handler = toolRegistry.getHandler(normalized.name);
     if (handler) {
-      return await handler(normalizedArgs, tools);
+      const result = await handler(normalizedArgs, tools);
+      return addErrorContext(result, normalized.name, actionForError);
     }
 
-    // Fallback or Unknown
-    return cleanObject({ success: false, error: 'UNKNOWN_TOOL', message: `Unknown consolidated tool: ${name}`, data: null });
-
+    return ResponseFactory.errorWithCode('UNKNOWN_TOOL', `Unknown consolidated tool: ${name}`, {
+      toolName: name,
+      action: actionForError ?? null
+    });
   } catch (err: unknown) {
     const duration = Date.now() - startTime;
     const errObj = err as Record<string, unknown> | null;
     const errorMessage = typeof errObj?.message === 'string' ? errObj.message : String(err);
     logger.error(`Failed execution of ${name} after ${duration}ms: ${errorMessage}`);
-    const lowerError = errorMessage.toString().toLowerCase();
-    const isTimeout = lowerError.includes('timeout');
 
-    let text: string;
-    if (isTimeout) {
-      text = `Tool ${name} timed out. Please check Unreal Engine connection.`;
-    } else {
-      text = `Failed to execute ${name}: ${errorMessage}`;
-    }
+    const errorCode = classifyExecutionError(errorMessage);
+    const isTimeout = errorCode === 'TOOL_TIMEOUT';
+    const text = isTimeout
+      ? `Tool ${name} timed out. Please check Unreal Engine connection.`
+      : `Failed to execute ${name}: ${errorMessage}`;
 
-    return ResponseFactory.error(text);
+    return ResponseFactory.errorWithCode(errorCode, text, {
+      toolName: name,
+      action: actionForError ?? null,
+      durationMs: duration
+    });
   }
 }

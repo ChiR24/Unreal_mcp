@@ -20,7 +20,7 @@ describe('LevelTools Injection Security', () => {
         const maliciousName = 'MyLevel;Quit';
         await levelTools.createSubLevel({ name: maliciousName, type: 'Persistent' });
 
-        const executeCommandMock = bridge.executeConsoleCommand as any;
+        const executeCommandMock = vi.mocked(bridge.executeConsoleCommand);
         expect(executeCommandMock).toHaveBeenCalled();
         const command = executeCommandMock.mock.calls[0][0];
 
@@ -38,10 +38,18 @@ describe('LevelTools Injection Security', () => {
         const maliciousName = 'MyLevel;Quit';
         await levelTools.setLevelVisibility({ levelName: maliciousName, visible: true });
 
-        const executeCommandMock = bridge.executeConsoleCommand as any;
+        const executeCommandMock = vi.mocked(bridge.executeConsoleCommand);
         expect(executeCommandMock).toHaveBeenCalled();
         const command = executeCommandMock.mock.calls[0][0];
 
         expect(command).not.toContain(';Quit');
+    });
+
+    it('should NOT allow command injection in streaming load fallback', async () => {
+        await levelTools.loadLevel({ levelPath: '/Game/Maps/MyLevel;Quit', streaming: true });
+
+        const executeCommandMock = vi.mocked(bridge.executeConsoleCommand);
+        const command = executeCommandMock.mock.calls[0][0];
+        expect(command).toBe('StreamLevel MyLevel_Quit Load Show');
     });
 });

@@ -55,7 +55,6 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
-#include "UObject/SavePackage.h"
 
 // -----------------------------------------------------------------------------
 // Foliage System
@@ -281,7 +280,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
   if (UEditorAssetLibrary::DoesAssetExist(FoliageTypePath)) {
     FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
   }
-  
+
   // If not a FoliageType, try loading as StaticMesh and auto-create FoliageType
   if (!FoliageType) {
     UStaticMesh *StaticMesh = LoadObject<UStaticMesh>(nullptr, *FoliageTypePath);
@@ -294,9 +293,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
       if (UEditorAssetLibrary::DoesAssetExist(AutoFTPath)) {
         FoliageType = LoadObject<UFoliageType>(nullptr, *AutoFTPath);
         if (FoliageType) {
-          FoliageTypePath = AutoFTPath;
-          UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-                 TEXT("HandlePaintFoliage: Using existing auto-created FoliageType: %s"), *FoliageTypePath);
+			FoliageTypePath = AutoFTPath;
         }
       } else {
         // Issue 5 fix: Add null check for CreatePackage
@@ -310,15 +307,13 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
             AutoFT->ReapplyDensity = true;
             McpSafeAssetSave(AutoFT);
             FoliageType = AutoFT;
-            FoliageTypePath = AutoFT->GetPathName();
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-                   TEXT("HandlePaintFoliage: Auto-created FoliageType from StaticMesh: %s"), *FoliageTypePath);
+			FoliageTypePath = AutoFT->GetPathName();
           }
         }
       }
     }
   }
-  
+
   if (!FoliageType) {
     SendAutomationError(
         RequestingSocket, RequestId,
@@ -363,7 +358,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
   Resp->SetNumberField(TEXT("instancesPlaced"), PlacedLocations.Num());
-  
+
   // Add verification data
   Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
   Resp->SetStringField(TEXT("foliageActorName"), IFA->GetName());
@@ -480,7 +475,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("instancesRemoved"), RemovedCount);
-  
+
   // Add verification data
   Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
   Resp->SetBoolField(TEXT("existsAfter"), true);
@@ -619,7 +614,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetArrayField(TEXT("instances"), InstancesArray);
   Resp->SetNumberField(TEXT("count"), InstancesArray.Num());
-  
+
   // Add verification data
   Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
   Resp->SetBoolField(TEXT("existsAfter"), true);
@@ -729,6 +724,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
   bool RandomYaw = true;
   Payload->TryGetBoolField(TEXT("randomYaw"), RandomYaw);
 
+  int32 CullDistance = 0;
+  Payload->TryGetNumberField(TEXT("cullDistance"), CullDistance);
+
   // Use Silent load to avoid engine warnings
   UStaticMesh *StaticMesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
   if (!StaticMesh) {
@@ -807,6 +805,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
   FoliageType->ScaleZ.Max = static_cast<float>(MaxScale);
   FoliageType->AlignToNormal = AlignToNormal;
   FoliageType->RandomYaw = RandomYaw;
+  if (CullDistance > 0) {
+    FoliageType->CullDistance.Min = 0;
+    FoliageType->CullDistance.Max = CullDistance;
+  }
   FoliageType->ReapplyDensity = true;
 
   McpSafeAssetSave(FoliageType);
@@ -818,7 +820,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
   Resp->SetStringField(TEXT("asset_path"), FoliageType->GetPathName());
   Resp->SetStringField(TEXT("used_mesh"), MeshPath);
   Resp->SetStringField(TEXT("method"), TEXT("native_asset_creation"));
-  
+
   // Add verification data
   McpHandlerUtils::AddVerification(Resp, FoliageType);
 
@@ -1003,6 +1005,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
     }
   }
 
+  if (ParsedTransforms.Num() == 0) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("transforms or locations must contain at least one valid location"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
   if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
@@ -1016,7 +1025,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
   UFoliageType *FoliageType = Cast<UFoliageType>(
       StaticLoadObject(UFoliageType::StaticClass(), nullptr, *FoliageTypePath,
                        nullptr, LOAD_NoWarn));
-  
+
   // If not a FoliageType, try loading as StaticMesh and auto-create FoliageType
   if (!FoliageType) {
     UStaticMesh *StaticMesh = LoadObject<UStaticMesh>(nullptr, *FoliageTypePath);
@@ -1033,13 +1042,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
         AutoFT->ReapplyDensity = true;
         McpSafeAssetSave(AutoFT);
         FoliageType = AutoFT;
-        FoliageTypePath = AutoFT->GetPathName();
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-               TEXT("HandleAddFoliageInstances: Auto-created FoliageType from StaticMesh: %s"), *FoliageTypePath);
+				FoliageTypePath = AutoFT->GetPathName();
       }
     }
   }
-  
+
   if (!FoliageType) {
     SendAutomationError(
         RequestingSocket, RequestId,
@@ -1080,12 +1087,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("instances_count"), Added);
-  
+
   // Add verification data
   Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
   Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
   Resp->SetBoolField(TEXT("existsAfter"), true);
-  
+
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Foliage instances added"), Resp, FString());
   return true;
@@ -1210,7 +1217,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
     return true;
   }
 
-  Spawner->TileSize = 1000.0f; // Default tile size
+  double TileSize = 1000.0;
+  Payload->TryGetNumberField(TEXT("tileSize"), TileSize);
+  Spawner->TileSize = static_cast<float>(FMath::Max(1.0, TileSize));
   Spawner->NumUniqueTiles = 10;
   Spawner->RandomSeed = Seed;
 
@@ -1294,6 +1303,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
   // For a 1000x1000x1000 volume with Size=(1000,1000,1000), scale = 5.0
   Volume->SetActorScale3D(Size / 200.0f);
 
+  bool bResimulated = false;
+  bool bProceduralComponentConfigured = false;
   if (UProceduralFoliageComponent *ProcComp = Volume->ProceduralComponent) {
     ProcComp->FoliageSpawner = Spawner;
     ProcComp->TileOverlap = 0.0f;
@@ -1302,8 +1313,16 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
     // Note: ResimulateProceduralFoliage might be async or require specific
     // context. In 5.6 it might take a callback or be void. We'll try calling
     // it.
-    bool bResult = ProcComp->ResimulateProceduralFoliage(
+    bResimulated = ProcComp->ResimulateProceduralFoliage(
         [](const TArray<FDesiredFoliageInstance> &) {});
+    bProceduralComponentConfigured = true;
+  }
+  else
+  {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Procedural foliage component not available on spawned volume"),
+                        TEXT("COMPONENT_NOT_FOUND"));
+    return true;
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -1311,8 +1330,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
   Resp->SetStringField(TEXT("volume_actor"), Volume->GetActorLabel());
   Resp->SetStringField(TEXT("spawner_path"), Spawner->GetPathName());
   Resp->SetNumberField(TEXT("foliage_types_count"), TypeIndex);
-  Resp->SetBoolField(TEXT("resimulated"), true);
-  
+  Resp->SetBoolField(TEXT("resimulated"), bResimulated);
+  Resp->SetBoolField(TEXT("proceduralComponentConfigured"), bProceduralComponentConfigured);
+
   // Add verification data
   McpHandlerUtils::AddVerification(Resp, Volume);
   McpHandlerUtils::AddVerification(Resp, Spawner);

@@ -79,6 +79,7 @@
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/WorldSettings.h"
 #endif
 
 // =============================================================================
@@ -172,7 +173,7 @@ static FRotator GetJsonRotatorFieldSpline(const TSharedPtr<FJsonObject>& Payload
 static AActor* FindActorByName(UWorld* World, const FString& ActorName)
 {
     if (!World || ActorName.IsEmpty()) return nullptr;
-    
+
     for (TActorIterator<AActor> It(World); It; ++It)
     {
         if (It->GetActorLabel() == ActorName || It->GetName() == ActorName)
@@ -187,12 +188,12 @@ static AActor* FindActorByName(UWorld* World, const FString& ActorName)
 static USplineComponent* FindSplineComponent(AActor* Actor, const FString& ComponentName = TEXT(""))
 {
     if (!Actor) return nullptr;
-    
+
     TArray<USplineComponent*> SplineComponents;
     Actor->GetComponents<USplineComponent>(SplineComponents);
-    
+
     if (SplineComponents.Num() == 0) return nullptr;
-    
+
     if (!ComponentName.IsEmpty())
     {
         for (USplineComponent* Comp : SplineComponents)
@@ -204,7 +205,7 @@ static USplineComponent* FindSplineComponent(AActor* Actor, const FString& Compo
         }
         return nullptr;
     }
-    
+
     return SplineComponents[0];
 }
 
@@ -232,6 +233,92 @@ static FString SplinePointTypeToString(ESplinePointType::Type Type)
         case ESplinePointType::CurveCustomTangent: return TEXT("CurveCustomTangent");
         default: return TEXT("Unknown");
     }
+}
+
+static FString MakeSplineConfigTagPrefix(const FString& Key)
+{
+    return FString::Printf(TEXT("MCP.Spline.%s="), *Key);
+}
+
+static void SetSplineConfigValue(AActor* Target, const FString& Key, const FString& Value)
+{
+    if (!Target) return;
+
+    const FString Prefix = MakeSplineConfigTagPrefix(Key);
+    for (int32 Index = Target->Tags.Num() - 1; Index >= 0; --Index)
+    {
+        if (Target->Tags[Index].ToString().StartsWith(Prefix))
+        {
+            Target->Tags.RemoveAt(Index);
+        }
+    }
+
+    Target->Modify();
+    Target->Tags.Add(FName(*(Prefix + Value)));
+    Target->MarkPackageDirty();
+}
+
+static bool TryGetSplineConfigValue(AActor* Target, const FString& Key, FString& OutValue)
+{
+    if (!Target) return false;
+
+    const FString Prefix = MakeSplineConfigTagPrefix(Key);
+    for (const FName& Tag : Target->Tags)
+    {
+        const FString TagString = Tag.ToString();
+        if (TagString.StartsWith(Prefix))
+        {
+            OutValue = TagString.RightChop(Prefix.Len());
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static AActor* ResolveSplineConfigTarget(UWorld* World, const FString& ActorName)
+{
+    if (!World) return nullptr;
+
+    if (!ActorName.TrimStartAndEnd().IsEmpty())
+    {
+        return FindActorByName(World, ActorName.TrimStartAndEnd());
+    }
+
+    return World->GetWorldSettings();
+}
+
+static FString GetSplineConfigTargetName(AActor* Target)
+{
+    if (!Target) return TEXT("");
+    return Target->GetActorLabel().IsEmpty() ? Target->GetName() : Target->GetActorLabel();
+}
+
+static bool GetConfiguredSplineBool(AActor* Actor, UWorld* World, const FString& Key, bool DefaultValue)
+{
+    FString Value;
+    if (TryGetSplineConfigValue(Actor, Key, Value) || TryGetSplineConfigValue(World ? World->GetWorldSettings() : nullptr, Key, Value))
+    {
+        return Value.Equals(TEXT("true"), ESearchCase::IgnoreCase) || Value == TEXT("1");
+    }
+
+    return DefaultValue;
+}
+
+static double GetConfiguredSplineNumber(AActor* Actor, UWorld* World, const FString& Key, double DefaultValue)
+{
+    FString Value;
+    if (TryGetSplineConfigValue(Actor, Key, Value) || TryGetSplineConfigValue(World ? World->GetWorldSettings() : nullptr, Key, Value))
+    {
+        return FCString::Atod(*Value);
+    }
+
+    return DefaultValue;
+}
+
+static FString BoolToSplineConfigString(bool bValue)
+{
+    return bValue ? TEXT("true") : TEXT("false");
 }
 
 // ============================================================================
@@ -293,7 +380,7 @@ static bool HandleCreateSplineActor(
 
     // Configure spline
     SplineComp->SetClosedLoop(bClosedLoop);
-    
+
     // Set default spline point type for all points
     ESplinePointType::Type PointType = ParseSplinePointType(SplineType);
     for (int32 i = 0; i < SplineComp->GetNumberOfSplinePoints(); i++)
@@ -592,11 +679,11 @@ static bool HandleSetSplinePointTangents(
     // If leaveTangent is provided, log a warning since it cannot be used independently
     if (!LeaveTangent.IsZero() && LeaveTangent != ArriveTangent)
     {
-        UE_LOG(LogMcpSplineHandlers, Warning, 
-            TEXT("leaveTangent ignored for point %d - UE splines use a single tangent per point. Use arriveTangent only."), 
+        UE_LOG(LogMcpSplineHandlers, Warning,
+            TEXT("leaveTangent ignored for point %d - UE splines use a single tangent per point. Use arriveTangent only."),
             PointIndex);
     }
-    
+
     SplineComp->SetTangentAtSplinePoint(PointIndex, ArriveTangent, ESplineCoordinateSpace::Local, true);
     SplineComp->UpdateSpline();
 
@@ -803,7 +890,7 @@ static bool HandleSetSplineType(
             SplineComp->SetSplinePointType(i, PointType, false);
         }
     }
-    
+
     SplineComp->UpdateSpline();
     World->MarkPackageDirty();
 
@@ -949,7 +1036,7 @@ static bool HandleCreateSplineMeshComponent(
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("componentName"), ComponentName);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-    
+
     // Add verification data
     Result->SetBoolField(TEXT("existsAfter"), true);
     // Use action prefix format expected by TS message-handler.ts enforceActionMatch()
@@ -1217,7 +1304,7 @@ static bool HandleSetSplineMeshMaterial(
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("materialPath"), SafeMaterialPath);
     Result->SetNumberField(TEXT("materialIndex"), MaterialIndex);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, Actor);
     AddComponentVerification(Result, TargetComp);
@@ -1334,7 +1421,7 @@ static bool HandleCreateSplineMeshActor(
     Result->SetStringField(TEXT("actorName"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("actorPath"), NewActor->GetPathName());
     Result->SetStringField(TEXT("componentName"), ComponentName);
-    
+
     // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
     AddComponentVerification(Result, SplineMeshComp);
@@ -1356,7 +1443,6 @@ static bool HandleScatterMeshesAlongSpline(
 {
     FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
     FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
-    double Spacing = GetJsonNumberFieldSpline(Payload, TEXT("spacing"), 100.0);
     bool bAlignToSpline = GetJsonBoolFieldSpline(Payload, TEXT("alignToSpline"), true);
 
     // Sanitize mesh path
@@ -1366,14 +1452,6 @@ static bool HandleScatterMeshesAlongSpline(
         Self->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(TEXT("Invalid or unsafe meshPath: %s. Path must be relative to project (e.g., /Game/...)"), *MeshPath),
             nullptr, TEXT("SECURITY_VIOLATION"));
-        return true;
-    }
-
-    // Validate spacing to prevent division by zero
-    if (Spacing <= 0.0)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("spacing must be greater than 0"), nullptr, TEXT("INVALID_PARAM"));
         return true;
     }
 
@@ -1401,6 +1479,40 @@ static bool HandleScatterMeshesAlongSpline(
         return true;
     }
 
+    const bool bHasSpacing = Payload.IsValid() && Payload->HasField(TEXT("spacing"));
+    const bool bHasUseRandomOffset = Payload.IsValid() && Payload->HasField(TEXT("useRandomOffset"));
+    const bool bHasRandomOffsetRange = Payload.IsValid() && Payload->HasField(TEXT("randomOffsetRange"));
+    const bool bHasRandomizeScale = Payload.IsValid() && Payload->HasField(TEXT("randomizeScale"));
+    const bool bHasMinScale = Payload.IsValid() && Payload->HasField(TEXT("minScale"));
+    const bool bHasMaxScale = Payload.IsValid() && Payload->HasField(TEXT("maxScale"));
+    const bool bHasRandomizeRotation = Payload.IsValid() && Payload->HasField(TEXT("randomizeRotation"));
+    const bool bHasRotationRange = Payload.IsValid() && Payload->HasField(TEXT("rotationRange"));
+
+    double Spacing = bHasSpacing
+        ? GetJsonNumberFieldSpline(Payload, TEXT("spacing"), 100.0)
+        : GetConfiguredSplineNumber(Actor, World, TEXT("meshSpacing"), 100.0);
+    const bool bUseRandomOffset = bHasUseRandomOffset
+        ? GetJsonBoolFieldSpline(Payload, TEXT("useRandomOffset"), false)
+        : GetConfiguredSplineBool(Actor, World, TEXT("useRandomOffset"), false);
+    const double RandomOffsetRange = bHasRandomOffsetRange
+        ? GetJsonNumberFieldSpline(Payload, TEXT("randomOffsetRange"), 0.0)
+        : GetConfiguredSplineNumber(Actor, World, TEXT("randomOffsetRange"), 0.0);
+    const bool bRandomizeScale = bHasRandomizeScale
+        ? GetJsonBoolFieldSpline(Payload, TEXT("randomizeScale"), false)
+        : GetConfiguredSplineBool(Actor, World, TEXT("randomizeScale"), false);
+    const double MinScale = bHasMinScale
+        ? GetJsonNumberFieldSpline(Payload, TEXT("minScale"), 0.8)
+        : GetConfiguredSplineNumber(Actor, World, TEXT("minScale"), 0.8);
+    const double MaxScale = bHasMaxScale
+        ? GetJsonNumberFieldSpline(Payload, TEXT("maxScale"), 1.2)
+        : GetConfiguredSplineNumber(Actor, World, TEXT("maxScale"), 1.2);
+    const bool bRandomizeRotation = bHasRandomizeRotation
+        ? GetJsonBoolFieldSpline(Payload, TEXT("randomizeRotation"), false)
+        : GetConfiguredSplineBool(Actor, World, TEXT("randomizeRotation"), false);
+    const double RotationRange = bHasRotationRange
+        ? GetJsonNumberFieldSpline(Payload, TEXT("rotationRange"), 360.0)
+        : GetConfiguredSplineNumber(Actor, World, TEXT("rotationRange"), 360.0);
+
     UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
     if (!Mesh)
     {
@@ -1409,18 +1521,43 @@ static bool HandleScatterMeshesAlongSpline(
         return true;
     }
 
+    // Validate spacing/randomization before creating components.
+    if (Spacing <= 0.0)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("spacing must be greater than 0"), nullptr, TEXT("INVALID_PARAM"));
+        return true;
+    }
+
+    if (RandomOffsetRange < 0.0 || MinScale <= 0.0 || MaxScale <= 0.0 || MinScale > MaxScale || RotationRange < 0.0)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid spline mesh randomization configuration"), nullptr, TEXT("INVALID_PARAM"));
+        return true;
+    }
+
     float SplineLength = SplineComp->GetSplineLength();
     int32 MeshCount = FMath::FloorToInt(SplineLength / Spacing);
-    
+
     TArray<FString> CreatedMeshes;
 
     for (int32 i = 0; i <= MeshCount; i++)
     {
-        float Distance = i * Spacing;
+        float Distance = static_cast<float>(i * Spacing);
+        if (bUseRandomOffset && RandomOffsetRange > 0.0)
+        {
+            Distance += FMath::FRandRange(static_cast<float>(-RandomOffsetRange), static_cast<float>(RandomOffsetRange));
+            Distance = FMath::Clamp(Distance, 0.0f, SplineLength);
+        }
         FVector Location = SplineComp->GetLocationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World);
-        FRotator Rotation = bAlignToSpline 
+        FRotator Rotation = bAlignToSpline
             ? SplineComp->GetRotationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World)
             : FRotator::ZeroRotator;
+
+        if (bRandomizeRotation && RotationRange > 0.0)
+        {
+            Rotation.Yaw += FMath::FRandRange(static_cast<float>(-RotationRange), static_cast<float>(RotationRange));
+        }
 
         // Create a static mesh component for each instance
         UStaticMeshComponent* MeshComp = NewObject<UStaticMeshComponent>(Actor);
@@ -1428,6 +1565,11 @@ static bool HandleScatterMeshesAlongSpline(
         {
             MeshComp->SetStaticMesh(Mesh);
             MeshComp->SetWorldLocationAndRotation(Location, Rotation);
+            if (bRandomizeScale)
+            {
+                const float UniformScale = FMath::FRandRange(static_cast<float>(MinScale), static_cast<float>(MaxScale));
+                MeshComp->SetWorldScale3D(FVector(UniformScale));
+            }
             MeshComp->RegisterComponent();
             Actor->AddInstanceComponent(MeshComp);
             MeshComp->AttachToComponent(SplineComp, FAttachmentTransformRules::KeepWorldTransform);
@@ -1441,6 +1583,13 @@ static bool HandleScatterMeshesAlongSpline(
     Result->SetNumberField(TEXT("meshesCreated"), CreatedMeshes.Num());
     Result->SetNumberField(TEXT("splineLength"), SplineLength);
     Result->SetNumberField(TEXT("spacing"), Spacing);
+    Result->SetBoolField(TEXT("useRandomOffset"), bUseRandomOffset);
+    Result->SetNumberField(TEXT("randomOffsetRange"), RandomOffsetRange);
+    Result->SetBoolField(TEXT("randomizeScale"), bRandomizeScale);
+    Result->SetNumberField(TEXT("minScale"), MinScale);
+    Result->SetNumberField(TEXT("maxScale"), MaxScale);
+    Result->SetBoolField(TEXT("randomizeRotation"), bRandomizeRotation);
+    Result->SetNumberField(TEXT("rotationRange"), RotationRange);
 
     // Add verification data
     McpHandlerUtils::AddVerification(Result, Actor);
@@ -1456,17 +1605,49 @@ static bool HandleConfigureMeshSpacing(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    // VALIDATION-ONLY: This action validates spacing parameters and echoes them back.
-    // Storage is not implemented - spacing must be passed directly to scatter_meshes_along_spline.
-    // Future enhancement: Store in actor metadata via UMetaData component.
-    
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+        return true;
+    }
+
+    const FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    AActor* Target = ResolveSplineConfigTarget(World, ActorName);
+    if (!Target)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Spline configuration target not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    const double Spacing = GetJsonNumberFieldSpline(Payload, TEXT("spacing"), 100.0);
+    const bool bUseRandomOffset = GetJsonBoolFieldSpline(Payload, TEXT("useRandomOffset"), false);
+    const double RandomOffsetRange = GetJsonNumberFieldSpline(Payload, TEXT("randomOffsetRange"), 0.0);
+
+    if (Spacing <= 0.0 || RandomOffsetRange < 0.0)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("spacing must be greater than 0 and randomOffsetRange must be non-negative"), nullptr, TEXT("INVALID_PARAM"));
+        return true;
+    }
+
+    SetSplineConfigValue(Target, TEXT("meshSpacing"), FString::SanitizeFloat(Spacing));
+    SetSplineConfigValue(Target, TEXT("useRandomOffset"), BoolToSplineConfigString(bUseRandomOffset));
+    SetSplineConfigValue(Target, TEXT("randomOffsetRange"), FString::SanitizeFloat(RandomOffsetRange));
+    World->MarkPackageDirty();
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetNumberField(TEXT("spacing"), GetJsonNumberFieldSpline(Payload, TEXT("spacing"), 100.0));
-    Result->SetBoolField(TEXT("useRandomOffset"), GetJsonBoolFieldSpline(Payload, TEXT("useRandomOffset"), false));
-    Result->SetNumberField(TEXT("randomOffsetRange"), GetJsonNumberFieldSpline(Payload, TEXT("randomOffsetRange"), 0.0));
+    Result->SetStringField(TEXT("targetName"), GetSplineConfigTargetName(Target));
+    Result->SetStringField(TEXT("targetPath"), Target->GetPathName());
+    Result->SetBoolField(TEXT("stored"), true);
+    Result->SetNumberField(TEXT("spacing"), Spacing);
+    Result->SetBoolField(TEXT("useRandomOffset"), bUseRandomOffset);
+    Result->SetNumberField(TEXT("randomOffsetRange"), RandomOffsetRange);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
-        TEXT("Mesh spacing parameters validated (storage not implemented - pass to scatter_meshes_along_spline)"), Result);
+        TEXT("Mesh spacing configuration stored on Unreal spline target"), Result);
     return true;
 }
 
@@ -1476,18 +1657,55 @@ static bool HandleConfigureMeshRandomization(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    // VALIDATION-ONLY: This action validates randomization parameters and echoes them back.
-    // Storage is not implemented - pass randomization params to scatter_meshes_along_spline.
-    // Future enhancement: Store in actor metadata via UMetaData component.
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+        return true;
+    }
+
+    const FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    AActor* Target = ResolveSplineConfigTarget(World, ActorName);
+    if (!Target)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Spline configuration target not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    const bool bRandomizeScale = GetJsonBoolFieldSpline(Payload, TEXT("randomizeScale"), false);
+    const double MinScale = GetJsonNumberFieldSpline(Payload, TEXT("minScale"), 0.8);
+    const double MaxScale = GetJsonNumberFieldSpline(Payload, TEXT("maxScale"), 1.2);
+    const bool bRandomizeRotation = GetJsonBoolFieldSpline(Payload, TEXT("randomizeRotation"), false);
+    const double RotationRange = GetJsonNumberFieldSpline(Payload, TEXT("rotationRange"), 360.0);
+
+    if (MinScale <= 0.0 || MaxScale <= 0.0 || MinScale > MaxScale || RotationRange < 0.0)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Scale values must be positive, minScale must not exceed maxScale, and rotationRange must be non-negative"), nullptr, TEXT("INVALID_PARAM"));
+        return true;
+    }
+
+    SetSplineConfigValue(Target, TEXT("randomizeScale"), BoolToSplineConfigString(bRandomizeScale));
+    SetSplineConfigValue(Target, TEXT("minScale"), FString::SanitizeFloat(MinScale));
+    SetSplineConfigValue(Target, TEXT("maxScale"), FString::SanitizeFloat(MaxScale));
+    SetSplineConfigValue(Target, TEXT("randomizeRotation"), BoolToSplineConfigString(bRandomizeRotation));
+    SetSplineConfigValue(Target, TEXT("rotationRange"), FString::SanitizeFloat(RotationRange));
+    World->MarkPackageDirty();
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetBoolField(TEXT("randomizeScale"), GetJsonBoolFieldSpline(Payload, TEXT("randomizeScale"), false));
-    Result->SetNumberField(TEXT("minScale"), GetJsonNumberFieldSpline(Payload, TEXT("minScale"), 0.8));
-    Result->SetNumberField(TEXT("maxScale"), GetJsonNumberFieldSpline(Payload, TEXT("maxScale"), 1.2));
-    Result->SetBoolField(TEXT("randomizeRotation"), GetJsonBoolFieldSpline(Payload, TEXT("randomizeRotation"), false));
-    Result->SetNumberField(TEXT("rotationRange"), GetJsonNumberFieldSpline(Payload, TEXT("rotationRange"), 360.0));
+    Result->SetStringField(TEXT("targetName"), GetSplineConfigTargetName(Target));
+    Result->SetStringField(TEXT("targetPath"), Target->GetPathName());
+    Result->SetBoolField(TEXT("stored"), true);
+    Result->SetBoolField(TEXT("randomizeScale"), bRandomizeScale);
+    Result->SetNumberField(TEXT("minScale"), MinScale);
+    Result->SetNumberField(TEXT("maxScale"), MaxScale);
+    Result->SetBoolField(TEXT("randomizeRotation"), bRandomizeRotation);
+    Result->SetNumberField(TEXT("rotationRange"), RotationRange);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
-        TEXT("Mesh randomization parameters validated (storage not implemented - pass to scatter_meshes_along_spline)"), Result);
+        TEXT("Mesh randomization configuration stored on Unreal spline target"), Result);
     return true;
 }
 
@@ -1678,17 +1896,17 @@ static bool HandleGetSplinesInfo(
             TSharedPtr<FJsonObject> PointObj = McpHandlerUtils::CreateResultObject();
             FVector Loc = SplineComp->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local);
             FRotator Rot = SplineComp->GetRotationAtSplinePoint(i, ESplineCoordinateSpace::Local);
-            
+
             PointObj->SetNumberField(TEXT("index"), i);
-            
+
             TSharedPtr<FJsonObject> LocObj = McpHandlerUtils::CreateResultObject();
             LocObj->SetNumberField(TEXT("x"), Loc.X);
             LocObj->SetNumberField(TEXT("y"), Loc.Y);
             LocObj->SetNumberField(TEXT("z"), Loc.Z);
             PointObj->SetObjectField(TEXT("location"), LocObj);
-            
+
             PointObj->SetStringField(TEXT("type"), SplinePointTypeToString(SplineComp->GetSplinePointType(i)));
-            
+
             PointsArray.Add(MakeShared<FJsonValueObject>(PointObj));
         }
         Result->SetArrayField(TEXT("points"), PointsArray);
@@ -1702,19 +1920,19 @@ static bool HandleGetSplinesInfo(
             AActor* Actor = *It;
             TArray<USplineComponent*> SplineComponents;
             Actor->GetComponents<USplineComponent>(SplineComponents);
-            
+
             if (SplineComponents.Num() > 0)
             {
                 TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
                 ActorObj->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
                 ActorObj->SetNumberField(TEXT("splineComponentCount"), SplineComponents.Num());
-                
+
                 if (SplineComponents[0])
                 {
                     ActorObj->SetNumberField(TEXT("pointCount"), SplineComponents[0]->GetNumberOfSplinePoints());
                     ActorObj->SetNumberField(TEXT("splineLength"), SplineComponents[0]->GetSplineLength());
                 }
-                
+
                 SplinesArray.Add(MakeShared<FJsonValueObject>(ActorObj));
             }
         }
@@ -1741,7 +1959,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSplinesAction(
 {
 #if WITH_EDITOR
     FString SubAction = GetJsonStringFieldSpline(Payload, TEXT("subAction"), TEXT(""));
-    
+
     UE_LOG(LogMcpSplineHandlers, Verbose, TEXT("HandleManageSplinesAction: SubAction=%s"), *SubAction);
 
     // Spline Creation

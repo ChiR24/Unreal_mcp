@@ -16,7 +16,7 @@ export class ActorResources {
   private isAutomationBridgeAvailable(): boolean {
     return Boolean(this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function');
   }
-  
+
   private getFromCache(key: string): unknown | null {
     const entry = this.cache.get(key);
     if (entry && (Date.now() - entry.timestamp) < this.CACHE_TTL_MS) {
@@ -25,7 +25,7 @@ export class ActorResources {
     this.cache.delete(key);
     return null;
   }
-  
+
   private setCache(key: string, data: unknown): void {
     this.cache.set(key, { data, timestamp: Date.now() });
   }
@@ -36,7 +36,7 @@ export class ActorResources {
     if (cached !== null) {
       return cached;
     }
-    
+
     try {
       if (!this.isAutomationBridgeAvailable() || !this.automationBridge) {
         return { success: false, error: 'Automation bridge is not available. Please ensure Unreal Engine is running with the MCP Automation Bridge plugin.' };
@@ -46,15 +46,15 @@ export class ActorResources {
       // Response structure: { result: { data: { actors: [...] } } } or { result: { data: [...] } }
       const respResult = resp?.result as Record<string, unknown> | undefined;
       const resultData = respResult?.data as Record<string, unknown> | Array<unknown> | undefined;
-      
+
       // Check multiple possible locations for actors array
       const actors = Array.isArray(resp?.actors) ? resp.actors as Array<Record<string, unknown>>
         : Array.isArray(respResult?.actors) ? respResult.actors as Array<Record<string, unknown>>
         : Array.isArray(resultData) ? resultData as Array<Record<string, unknown>>
-        : (resultData && Array.isArray((resultData as Record<string, unknown>).actors)) 
+        : (resultData && Array.isArray((resultData as Record<string, unknown>).actors))
           ? (resultData as Record<string, unknown>).actors as Array<Record<string, unknown>>
         : null;
-      
+
       if (resp && resp.success !== false && actors) {
         const count = coerceNumber(resp.count) ?? coerceNumber(respResult?.count) ?? actors.length;
         const payload = { success: true as const, count, actors };

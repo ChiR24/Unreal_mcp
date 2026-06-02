@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
 const stringArray = z.array(z.string());
+const nonNegativeInteger = z.number().int().min(0);
 
-export const automationResponseSchema = z.object({
+export const automationResponseSchema = z.looseObject({
     type: z.literal('automation_response'),
     requestId: z.string().min(1),
     success: z.boolean().optional(),
@@ -10,61 +11,61 @@ export const automationResponseSchema = z.object({
     error: z.string().optional(),
     result: z.unknown().optional(),
     action: z.string().optional()
-}).passthrough();
+});
 
-export const automationEventSchema = z.object({
+export const automationEventSchema = z.looseObject({
     type: z.literal('automation_event'),
     requestId: z.string().optional(),
     event: z.string().optional(),
     payload: z.unknown().optional(),
     result: z.unknown().optional(),
     message: z.string().optional()
-}).passthrough();
+});
 
-export const bridgeAckSchema = z.object({
+export const bridgeAckSchema = z.looseObject({
     type: z.literal('bridge_ack'),
     message: z.string().optional(),
     serverName: z.string().optional(),
     serverVersion: z.string().optional(),
     sessionId: z.string().optional(),
-    protocolVersion: z.number().optional(),
+    protocolVersion: nonNegativeInteger.optional(),
     supportedOpcodes: stringArray.optional(),
     expectedResponseOpcodes: stringArray.optional(),
     capabilities: stringArray.optional(),
-    heartbeatIntervalMs: z.number().optional()
-}).passthrough();
+    heartbeatIntervalMs: nonNegativeInteger.optional()
+});
 
-export const bridgeErrorSchema = z.object({
+export const bridgeErrorSchema = z.looseObject({
     type: z.literal('bridge_error'),
     error: z.string().optional(),
     message: z.string().optional()
-}).passthrough();
+});
 
-export const bridgePingSchema = z.object({
+export const bridgePingSchema = z.looseObject({
     type: z.literal('bridge_ping'),
     timestamp: z.string().optional()
-}).passthrough();
+});
 
-export const bridgePongSchema = z.object({
+export const bridgePongSchema = z.looseObject({
     type: z.literal('bridge_pong'),
     timestamp: z.string().optional()
-}).passthrough();
+});
 
-export const bridgeGoodbyeSchema = z.object({
+export const bridgeGoodbyeSchema = z.looseObject({
     type: z.literal('bridge_goodbye'),
     reason: z.string().optional(),
     timestamp: z.string().optional()
-}).passthrough();
+});
 
 // Progress update message - sent by UE during long operations to keep request alive
-export const progressUpdateSchema = z.object({
+export const progressUpdateSchema = z.looseObject({
     type: z.literal('progress_update'),
     requestId: z.string().min(1),
     percent: z.number().min(0).max(100).optional(),
     message: z.string().optional(),
     timestamp: z.string().optional(),
     stillWorking: z.boolean().optional()  // True if operation is still in progress
-}).passthrough();
+});
 
 export const automationMessageSchema = z.discriminatedUnion('type', [
     automationResponseSchema,

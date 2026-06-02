@@ -30,15 +30,14 @@ export class UnrealCommandQueue {
    */
   async execute<T>(command: () => Promise<T>, priority: number = 5): Promise<T> {
     return new Promise((resolve, reject) => {
-      this.queue.push({
+      const item: CommandQueueItem = {
         command: command as () => Promise<unknown>,
         resolve: resolve as (value: unknown) => void,
         reject,
         priority
-      });
+      };
 
-      // Sort by priority (lower number = higher priority)
-      this.queue.sort((a, b) => a.priority - b.priority);
+      this.enqueue(item);
 
       // Process queue if not already processing
       if (!this.isProcessing) {
@@ -54,71 +53,89 @@ export class UnrealCommandQueue {
 
     this.isProcessing = true;
 
-    while (this.queue.length > 0) {
-      const item = this.queue.shift();
-      if (!item) continue;
+    try {
+      while (this.queue.length > 0) {
+        const item = this.queue.shift();
+        if (!item) continue;
 
-      // Calculate delay based on time since last command
-      const timeSinceLastCommand = Date.now() - this.lastCommandTime;
-      const requiredDelay = this.calculateDelay(item.priority);
+        // Calculate delay based on time since last command
+        const timeSinceLastCommand = Date.now() - this.lastCommandTime;
+        const requiredDelay = this.calculateDelay(item.priority);
 
-      if (timeSinceLastCommand < requiredDelay) {
-        await this.delay(requiredDelay - timeSinceLastCommand);
-      }
-
-      try {
-        const result = await item.command();
-        item.resolve(result);
-      } catch (error: unknown) {
-        // Enhanced retry policy
-        const errObj = error as Record<string, unknown> | null;
-        const msgRaw = errObj?.message ?? String(error);
-        const msg = String(msgRaw).toLowerCase();
-        if (item.retryCount === undefined) item.retryCount = 0;
-
-        const isTransient = (
-          msg.includes('timeout') ||
-          msg.includes('timed out') ||
-          msg.includes('connect') ||
-          msg.includes('econnrefused') ||
-          msg.includes('econnreset') ||
-          msg.includes('broken pipe') ||
-          msg.includes('automation bridge') ||
-          msg.includes('not connected')
-        );
-
-        const isDeterministicFailure = (
-          msg.includes('command not executed') ||
-          msg.includes('exec_failed') ||
-          msg.includes('invalid command') ||
-          msg.includes('invalid argument') ||
-          msg.includes('unknown_plugin_action') ||
-          msg.includes('unknown action')
-        );
-
-        if (isTransient && item.retryCount < 3) {
-          item.retryCount++;
-          this.log.warn(`Command failed (transient), retrying (${item.retryCount}/3)`);
-          this.queue.unshift({
-            command: item.command,
-            resolve: item.resolve,
-            reject: item.reject,
-            priority: Math.max(1, item.priority - 1),
-            retryCount: item.retryCount
-          });
-          await this.delay(500);
-        } else {
-          if (isDeterministicFailure) {
-            this.log.warn(`Command failed (non-retryable): ${msgRaw}`);
-          }
-          item.reject(error);
+        if (timeSinceLastCommand < requiredDelay) {
+          await this.delay(requiredDelay - timeSinceLastCommand);
         }
+
+        this.recordCommandStart(item.priority);
+
+        try {
+          const result = await item.command();
+          item.resolve(result);
+        } catch (error: unknown) {
+          // Enhanced retry policy
+          const errObj = error as Record<string, unknown> | null;
+          const msgRaw = errObj?.message ?? String(error);
+          const msg = String(msgRaw).toLowerCase();
+          if (item.retryCount === undefined) item.retryCount = 0;
+
+          const isTransient = (
+            msg.includes('timeout') ||
+            msg.includes('timed out') ||
+            msg.includes('connect') ||
+            msg.includes('econnrefused') ||
+            msg.includes('econnreset') ||
+            msg.includes('broken pipe') ||
+            msg.includes('automation bridge') ||
+            msg.includes('not connected')
+          );
+
+          const isDeterministicFailure = (
+            msg.includes('command not executed') ||
+            msg.includes('exec_failed') ||
+            msg.includes('invalid command') ||
+            msg.includes('invalid argument') ||
+            msg.includes('unknown_plugin_action') ||
+            msg.includes('unknown action')
+          );
+
+          if (isTransient && item.retryCount < 3) {
+            item.retryCount++;
+            this.log.warn(`Command failed (transient), retrying (${item.retryCount}/3)`);
+            this.queue.unshift({
+              command: item.command,
+              resolve: item.resolve,
+              reject: item.reject,
+              priority: Math.max(1, item.priority - 1),
+              retryCount: item.retryCount
+            });
+            await this.delay(500);
+          } else {
+            if (isDeterministicFailure) {
+              this.log.warn(`Command failed (non-retryable): ${msgRaw}`);
+            }
+            item.reject(error);
+          }
+        }
+
+        this.lastCommandTime = Date.now();
       }
-
-      this.lastCommandTime = Date.now();
+    } finally {
+      this.isProcessing = false;
     }
+  }
 
-    this.isProcessing = false;
+  private enqueue(item: CommandQueueItem): void {
+    let low = 0;
+    let high = this.queue.length;
+    while (low < high) {
+      const mid = Math.floor((low + high) / 2);
+      if (this.queue[mid].priority <= item.priority) {
+        low = mid + 1;
+      } else {
+        high = mid;
+      }
+    }
+    this.queue.splice(low, 0, item);
   }
 
   private calculateDelay(priority: number): number {
@@ -127,16 +144,25 @@ export class UnrealCommandQueue {
     } else if (priority <= 6) {
       return 200;
     } else if (priority === 8) {
+      if (this.lastStatCommandTime === 0) {
+        return 150;
+      }
+
       const timeSinceLastStat = Date.now() - this.lastStatCommandTime;
       if (timeSinceLastStat < this.STAT_COMMAND_DELAY) {
         return this.STAT_COMMAND_DELAY;
       }
-      this.lastStatCommandTime = Date.now();
       return 150;
     } else {
       const baseDelay = this.MIN_COMMAND_DELAY;
       const jitter = Math.random() * 50;
       return baseDelay + jitter;
+    }
+  }
+
+  private recordCommandStart(priority: number): void {
+    if (priority === 8) {
+      this.lastStatCommandTime = Date.now();
     }
   }
 

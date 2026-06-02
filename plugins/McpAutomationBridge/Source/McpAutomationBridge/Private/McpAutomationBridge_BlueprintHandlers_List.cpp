@@ -30,13 +30,13 @@ bool UMcpAutomationBridgeSubsystem::HandleListBlueprints(const FString& RequestI
     if (Payload->TryGetObjectField(TEXT("filter"), FilterObj) && FilterObj)
     {
         (*FilterObj)->TryGetStringField(TEXT("path"), PathFilter);
-        
+
         FString UserClass;
         if ((*FilterObj)->TryGetStringField(TEXT("class"), UserClass) && !UserClass.IsEmpty())
         {
             ClassFilter = UserClass;
         }
-        
+
         (*FilterObj)->TryGetStringField(TEXT("tag"), TagFilter);
         (*FilterObj)->TryGetStringField(TEXT("pathStartsWith"), PathStartsWith);
     }
@@ -56,11 +56,11 @@ bool UMcpAutomationBridgeSubsystem::HandleListBlueprints(const FString& RequestI
 
     FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
-    
+
     FARFilter Filter;
     Filter.bRecursivePaths = bRecursive;
     Filter.bRecursiveClasses = true;
-    
+
     if (!PathFilter.IsEmpty())
     {
         Filter.PackagePaths.Add(FName(*PathFilter));
@@ -88,7 +88,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListBlueprints(const FString& RequestI
         {
             UClass* FoundClass = FindObject<UClass>(nullptr, *ClassFilter);
             if (!FoundClass) FoundClass = FindObject<UClass>(nullptr, *(TEXT("/Script/Engine.") + ClassFilter));
-            
+
             if (FoundClass)
             {
                 Filter.ClassPaths.Add(FoundClass->GetClassPathName());
@@ -105,7 +105,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListBlueprints(const FString& RequestI
     {
         UClass* FoundClass = FindObject<UClass>(nullptr, *ClassFilter);
         if (!FoundClass) FoundClass = FindObject<UClass>(nullptr, *(TEXT("/Script/Engine.") + ClassFilter));
-        
+
         if (FoundClass)
         {
             Filter.ClassNames.Add(FoundClass->GetFName());
@@ -120,7 +120,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListBlueprints(const FString& RequestI
     // ...
 
     int32 TotalCount = AssetList.Num();
-    
+
     if (Offset > 0)
     {
         if (Offset < AssetList.Num())
@@ -152,7 +152,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListBlueprints(const FString& RequestI
         BpObj->SetStringField(TEXT("class"), Asset.AssetClass.ToString());
 #endif
         BpObj->SetStringField(TEXT("packagePath"), Asset.PackagePath.ToString());
-        
+
         FString ParentClass;
         if (Asset.GetTagValue(TEXT("ParentClass"), ParentClass))
         {
@@ -167,7 +167,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListBlueprints(const FString& RequestI
     Resp->SetArrayField(TEXT("blueprints"), BlueprintsArray);
     Resp->SetNumberField(TEXT("totalCount"), TotalCount);
     Resp->SetNumberField(TEXT("count"), BlueprintsArray.Num());
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blueprints listed"), Resp, FString());
     return true;
 #else

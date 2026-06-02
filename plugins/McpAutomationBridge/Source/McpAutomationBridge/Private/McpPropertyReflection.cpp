@@ -5,6 +5,7 @@
 // =============================================================================
 
 #include "McpPropertyReflection.h"
+#include "McpVersionCompatibility.h"
 #include "Runtime/Launch/Resources/Version.h"
 #include "UObject/TextProperty.h"
 
@@ -220,11 +221,7 @@ TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FPropert
             else
             {
                 FString ValueStr;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                ValueProp->ExportTextItem_Direct(ValueStr, ValuePtr, nullptr, nullptr, PPF_None);
-#else
-                ValueProp->ExportText_Direct(ValueStr, ValuePtr, nullptr, nullptr, PPF_None, nullptr);
-#endif
+                MCP_PROPERTY_EXPORT_TEXT(ValueProp, ValueStr, ValuePtr, nullptr, nullptr, PPF_None);
                 MapObj->SetStringField(KeyStr, ValueStr);
             }
         }
@@ -267,11 +264,7 @@ TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FPropert
             else
             {
                 FString ElemStr;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                ElemProp->ExportTextItem_Direct(ElemStr, ElemPtr, nullptr, nullptr, PPF_None);
-#else
-                ElemProp->ExportText_Direct(ElemStr, ElemPtr, nullptr, nullptr, PPF_None, nullptr);
-#endif
+                MCP_PROPERTY_EXPORT_TEXT(ElemProp, ElemStr, ElemPtr, nullptr, nullptr, PPF_None);
                 Out.Add(MakeShared<FJsonValueString>(ElemStr));
             }
         }
@@ -452,7 +445,7 @@ FString GetPropertyTypeName(FProperty* Property)
 bool IsPropertyTypeSupported(FProperty* Property)
 {
     if (!Property) return false;
-    
+
     return Property->IsA<FStrProperty>() ||
            Property->IsA<FNameProperty>() ||
            Property->IsA<FBoolProperty>() ||
@@ -476,11 +469,7 @@ FString GetPropertyValueAsString(UObject* Object, FProperty* Property)
     if (!Object || !Property) return FString();
 
     FString Result;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    Property->ExportTextItem_Direct(Result, Property->ContainerPtrToValuePtr<void>(Object), nullptr, nullptr, PPF_None);
-#else
-    Property->ExportText_Direct(Result, Property->ContainerPtrToValuePtr<void>(Object), nullptr, nullptr, PPF_None, nullptr);
-#endif
+    MCP_PROPERTY_EXPORT_TEXT(Property, Result, Property->ContainerPtrToValuePtr<void>(Object), nullptr, nullptr, PPF_None);
     return Result;
 }
 
@@ -616,11 +605,7 @@ TArray<TSharedPtr<FJsonValue>> ExportArrayToJson(void* Container, FArrayProperty
         else
         {
             FString ElemStr;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-            Inner->ExportTextItem_Direct(ElemStr, ElemPtr, nullptr, nullptr, PPF_None);
-#else
-            Inner->ExportText_Direct(ElemStr, ElemPtr, nullptr, nullptr, PPF_None, nullptr);
-#endif
+            MCP_PROPERTY_EXPORT_TEXT(Inner, ElemStr, ElemPtr, nullptr, nullptr, PPF_None);
             Out.Add(MakeShared<FJsonValueString>(ElemStr));
         }
     }
@@ -664,10 +649,8 @@ bool ImportJsonToArray(void* Container, FArrayProperty* ArrayProp, const TArray<
 
 bool ApplyJsonValueToProperty(void* TargetContainer, FProperty* Property, const TSharedPtr<FJsonValue>& ValueField, FString& OutError)
 {
-    // This delegates to the existing implementation in McpAutomationBridgeHelpers.h
-    // For now, we include a stub that calls through - full implementation would be moved here
-    // during complete refactoring
-    
+    // Standalone property importer used by reflection callers during the helper refactor.
+
     OutError.Empty();
     if (!TargetContainer || !Property || !ValueField.IsValid())
     {
@@ -767,7 +750,7 @@ bool ApplyJsonValueToProperty(void* TargetContainer, FProperty* Property, const 
 
     // Additional type handling would continue here...
     // For brevity, the full implementation is available in McpAutomationBridgeHelpers.h
-    
+
     OutError = FString::Printf(TEXT("Unsupported property type: %s"), *Property->GetClass()->GetName());
     return false;
 }

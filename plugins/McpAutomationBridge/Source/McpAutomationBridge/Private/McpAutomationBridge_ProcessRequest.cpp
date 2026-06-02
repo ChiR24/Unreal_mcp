@@ -11,7 +11,8 @@
 void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+    ERequestOrigin Origin) {
   // This large implementation was extracted from the original subsystem
   // translation unit to keep the core file smaller and focused. It
   // contains the main dispatcher that delegates to specialized handler
@@ -29,25 +30,13 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
          IsInGameThread() ? TEXT("GameThread") : TEXT("SocketThread"));
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT("ProcessAutomationRequest invoked (thread=%s) RequestId=%s "
-              "action=%s activeSockets=%d pendingQueue=%d"),
+              "action=%s activeSockets=%d"),
          IsInGameThread() ? TEXT("GameThread") : TEXT("SocketThread"),
          *RequestId, *Action,
          ConnectionManager.IsValid() ? ConnectionManager->GetActiveSocketCount()
-                                     : 0,
-         PendingAutomationRequests.Num());
+                                     : 0);
   if (!IsInGameThread()) {
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-           TEXT("Scheduling ProcessAutomationRequest on GameThread: "
-                "RequestId=%s action=%s"),
-           *RequestId, *Action);
-    AsyncTask(ENamedThreads::GameThread,
-              [WeakThis = TWeakObjectPtr<UMcpAutomationBridgeSubsystem>(this),
-               RequestId, Action, Payload, RequestingSocket]() {
-                if (UMcpAutomationBridgeSubsystem *Pinned = WeakThis.Get()) {
-                  Pinned->ProcessAutomationRequest(RequestId, Action, Payload,
-                                                   RequestingSocket);
-                }
-              });
+    QueueAutomationRequest(RequestId, Action, Payload, RequestingSocket, Origin);
     return;
   }
 
@@ -60,16 +49,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
                 "Serialization/GC/Loading: RequestId=%s Action=%s"),
            *RequestId, *Action);
 
-    FPendingAutomationRequest P;
-    P.RequestId = RequestId;
-    P.Action = Action;
-    P.Payload = Payload;
-    P.RequestingSocket = RequestingSocket;
-    {
-      FScopeLock Lock(&PendingAutomationRequestsMutex);
-      PendingAutomationRequests.Add(MoveTemp(P));
-      bPendingRequestsScheduled = true;
-    }
+    QueueAutomationRequest(RequestId, Action, Payload, RequestingSocket, Origin);
     return;
   }
 
@@ -87,16 +67,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
 
   // Reentrancy guard / enqueue
   if (bProcessingAutomationRequest) {
-    FPendingAutomationRequest P;
-    P.RequestId = RequestId;
-    P.Action = Action;
-    P.Payload = Payload;
-    P.RequestingSocket = RequestingSocket;
-    {
-      FScopeLock Lock(&PendingAutomationRequestsMutex);
-      PendingAutomationRequests.Add(MoveTemp(P));
-      bPendingRequestsScheduled = true;
-    }
+    QueueAutomationRequest(RequestId, Action, Payload, RequestingSocket, Origin);
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Enqueued automation request %s for action %s (processing in "
                 "progress)."),
@@ -105,7 +76,9 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
   }
 
   bProcessingAutomationRequest = true;
+  CurrentRequestOrigin = Origin;
   bool bDispatchHandled = false;
+  bool bErrorCaptureStarted = false;
   FString ConsumedHandlerLabel = TEXT("unknown-handler");
   const double DispatchStartSeconds = FPlatformTime::Seconds();
 
@@ -123,9 +96,14 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
       // =====================================================================
       // End Error Capture and check for captured errors
       // =====================================================================
-      TArray<FString> CapturedErrors = EndErrorCapture();
-      bool bHadEngineErrors = HasCapturedErrors();
-      
+      TArray<FString> CapturedErrors;
+      bool bHadEngineErrors = false;
+      if (bErrorCaptureStarted)
+      {
+        CapturedErrors = EndErrorCapture();
+        bHadEngineErrors = HasCapturedErrors();
+      }
+
       if (bHadEngineErrors && bDispatchHandled)
       {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
@@ -134,13 +112,15 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
                     "Errors: %s"),
                *RequestId, *Action,
                CapturedErrors.Num() > 0 ? *FString::Join(CapturedErrors, TEXT("; ")) : TEXT("unknown"));
-        
-        // The handler already sent a response, but we detected errors.
-        // Log a warning - the handler should have checked for errors.
-        // Future improvement: Send an error response if handler claimed success.
+
+        // The handler response path converts successful responses to
+        // ENGINE_ERROR failures when captured errors exist. Keep this warning as
+        // a secondary audit trail for handlers that returned after logging an
+        // engine error.
       }
-      
+
       bProcessingAutomationRequest = false;
+      CurrentRequestOrigin = ERequestOrigin::WebSocket;
       const double DispatchEndSeconds = FPlatformTime::Seconds();
       const double DurationMs =
           (DispatchEndSeconds - DispatchStartSeconds) * 1000.0;
@@ -156,24 +136,28 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
                     "RequestId=%s action='%s' (%.3f ms)"),
                *RequestId, *Action, DurationMs);
       }
-
-      if (bPendingRequestsScheduled) {
-        bPendingRequestsScheduled = false;
-        ProcessPendingAutomationRequests();
-      }
     };
 
     try {
+      if (LowerAction == TEXT("manage_logs")) {
+        if (HandleAndLog(TEXT("HandleLogAction (direct)"), [&]() {
+              return HandleLogAction(RequestId, Action, Payload,
+                                     RequestingSocket);
+            }))
+          return;
+      }
+
       // =========================================================================
       // Begin Error Capture for this request (inside try block)
       // =========================================================================
       // This captures engine-level errors (like ensure failures) that occur
-      // during handler execution. Captured errors are reported via warnings
-      // and logging; they do not override or force a failure response if a
-      // handler has already reported success.
+      // during handler execution. SendAutomationResponse checks the capture and
+      // turns otherwise successful responses into ENGINE_ERROR failures so tool
+      // responses stay aligned with the Unreal log.
       // Note: BeginErrorCapture is placed inside the try block to avoid
       // capturing our own catch-block error logging.
       BeginErrorCapture();
+      bErrorCaptureStarted = true;
 
       // Map this requestId to the requesting socket so responses can be
       // delivered reliably
@@ -578,6 +562,12 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
       if (HandleAndLog(TEXT("HandleManageSplinesAction"), [&]() {
             return HandleManageSplinesAction(RequestId, Action, Payload,
                                              RequestingSocket);
+          }))
+        return;
+
+      if (HandleAndLog(TEXT("HandleManagePCGAction"), [&]() {
+            return HandleManagePCGAction(RequestId, Action, Payload,
+                                         RequestingSocket);
           }))
         return;
 

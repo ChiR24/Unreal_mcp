@@ -2,15 +2,9 @@
 
 This document maps the TypeScript tool definitions to their corresponding C++ handlers in the Unreal Engine plugin.
 
-> **Note (Phase 53):** The following tools have been merged and are now deprecated:
-> - `manage_blueprint_graph` → merged into `manage_blueprint`
-> - `manage_audio_authoring` → merged into `manage_audio`
-> - `manage_niagara_authoring` → merged into `manage_effect`
-> - `manage_animation_authoring` → merged into `animation_physics`
->
-> The deprecated tools still work for backward compatibility but log deprecation warnings.
+> **Note:** The TypeScript bridge exposes 23 canonical MCP tools. Former child tool names are not exposed or accepted as direct MCP tool names; their actions live on the canonical parent tools shown below.
 
-## 1. Asset Manager (`manage_asset`)
+## Asset Manager (`manage_asset`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -42,7 +36,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `add_bt_node` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
 | `connect_bt_nodes` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
 
-## 2. Blueprint Manager (`manage_blueprint`)
+## Blueprint Manager (`manage_blueprint`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -59,7 +53,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `break_pin_links` | `McpAutomationBridge_BlueprintGraphHandlers.cpp` | `HandleBlueprintGraphAction` | |
 | `set_node_property` | `McpAutomationBridge_BlueprintGraphHandlers.cpp` | `HandleBlueprintGraphAction` | |
 
-## 17. Input Manager (`manage_input`)
+## Input Manager (`manage_networking`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -71,7 +65,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `add_function` | `McpAutomationBridge_BlueprintHandlers.cpp` | `HandleBlueprintAction` | |
 | `add_event` | `McpAutomationBridge_BlueprintHandlers.cpp` | `HandleBlueprintAction` | Supports custom & standard events |
 
-## 3. Actor Control (`control_actor`)
+## Actor Control (`control_actor`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -91,7 +85,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `attach` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
 | `detach` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
 
-## 4. Editor Control (`control_editor`)
+## Editor Control (`control_editor`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -103,19 +97,36 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `simulate_input` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | |
 | `create_bookmark` | `McpAutomationBridge_EditorFunctionHandlers.cpp` | `HandleControlEditorAction` | |
 
-## 5. Level Manager (`manage_level`)
+## Level Manager (`manage_level`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
-| `load` | `McpAutomationBridge_EditorFunctionHandlers.cpp` | `HandleLevelAction` | |
-| `save` | `McpAutomationBridge_EditorFunctionHandlers.cpp` | `HandleLevelAction` | |
-| `create_level` | `McpAutomationBridge_EditorFunctionHandlers.cpp` | `HandleLevelAction` | |
+| `load` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Alias for `load_level` |
+| `load_level` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Opens a map package |
+| `save` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Alias for `save_level` |
+| `save_level` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Saves the current level |
+| `save_as` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Alias for `save_level_as` |
+| `save_level_as` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Saves current level to a new path |
+| `stream` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Loads/updates a streaming level |
+| `unload` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Alias for `unload_level` |
+| `unload_level` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Forces streaming unload |
+| `create_level` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Creates and opens a new level |
+| `create_light` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Spawns a level light |
+| `build_lighting` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Starts editor lighting build |
+| `set_metadata` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Delegates to asset metadata handling |
 | `export_level` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | |
 | `import_level` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | |
-| `load_cells` | `McpAutomationBridge_WorldPartitionHandlers.cpp` | `HandleWorldPartitionAction` | |
-| `set_datalayer` | `McpAutomationBridge_WorldPartitionHandlers.cpp` | `HandleWorldPartitionAction` | |
+| `list_levels` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Lists current world levels and map assets |
+| `get_summary` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Maps to level info summary |
+| `delete` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Alias for `delete_level` |
+| `delete_level` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Deletes map file, built data, and external sidecars |
+| `validate_level` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Checks package/file existence |
+| `add_sublevel` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Adds a streaming sublevel |
+| `rename_level` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Copies destination then deletes source and sidecars |
+| `duplicate_level` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Copies map, built data, and external sidecars |
+| `get_current_level` | `McpAutomationBridge_LevelHandlers.cpp` | `HandleLevelAction` | Returns current editor level identity |
 
-## 6. Lighting Manager (`manage_lighting`)
+## Lighting Manager (`build_environment`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -132,7 +143,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `set_ambient_occlusion` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | |
 | `list_light_types` | `McpAutomationBridge_LightingHandlers.cpp` | `HandleLightingAction` | Discovery: Returns all `ALight` subclasses |
 
-## 7. Performance Manager (`manage_performance`)
+## Performance Manager (`system_control`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -150,7 +161,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `configure_nanite` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
 | `configure_lod` | `McpAutomationBridge_PerformanceHandlers.cpp` | `HandlePerformanceAction` | |
 
-## 8. Animation & Physics (`animation_physics`)
+## Animation & Physics (`animation_physics`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -159,7 +170,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `setup_ragdoll` | `McpAutomationBridge_AnimationHandlers.cpp` | `HandleSetupRagdoll` | |
 | `configure_vehicle` | `McpAutomationBridge_AnimationHandlers.cpp` | `HandleAnimationPhysicsAction` | Supports custom vehicle type passthrough |
 
-## 9. Effects Manager (`manage_effect`)
+## Effects Manager (`manage_effect`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -172,7 +183,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `list_debug_shapes` | `McpAutomationBridge_EffectHandlers.cpp` | `HandleEffectAction` | Discovery: Returns all debug shape types |
 | `clear_debug_shapes` | `McpAutomationBridge_EffectHandlers.cpp` | `HandleEffectAction` | Clears persistent debug shapes |
 
-## 10. Environment Builder (`build_environment`)
+## Environment Builder (`build_environment`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -184,13 +195,13 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `remove_foliage` | `McpAutomationBridge_FoliageHandlers.cpp` | `HandleRemoveFoliage` | |
 | `create_procedural_terrain` | `McpAutomationBridge_EnvironmentHandlers.cpp` | `HandleCreateProceduralTerrain` | |
 
-## 11. System Control (`system_control`)
+## System Control (`system_control`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
 | `execute_command` | `McpAutomationBridge_EditorFunctionHandlers.cpp` | `HandleExecuteEditorFunction` | |
 | `console_command` | `McpAutomationBridge_EditorFunctionHandlers.cpp` | `HandleConsoleCommandAction` | |
-| `run_ubt` | *None* | *None* | Handled in TypeScript (`child_process`) |
+| `run_ubt` | `McpAutomationBridge_PipelineHandlers.cpp` | `HandlePipelineAction` | TypeScript runs local UBT when discoverable, otherwise falls back to native `manage_pipeline` execution. |
 | `run_tests` | `McpAutomationBridge_TestHandlers.cpp` | `HandleTestAction` | |
 | `subscribe` | `McpAutomationBridge_LogHandlers.cpp` | `HandleLogAction` | |
 | `unsubscribe` | `McpAutomationBridge_LogHandlers.cpp` | `HandleLogAction` | |
@@ -198,13 +209,14 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `start_session` | `McpAutomationBridge_InsightsHandlers.cpp` | `HandleInsightsAction` | |
 | `lumen_update_scene` | `McpAutomationBridge_RenderHandlers.cpp` | `HandleRenderAction` | |
 | `set_project_setting` | `McpAutomationBridge_EnvironmentHandlers.cpp` | `HandleSystemControlAction` | |
+| `execute_python` | `McpAutomationBridge_SystemControlHandlers.cpp` | `HandleSystemControlAction` | Requires Python Editor Script Plugin. Max 1 MB code. Async timeout warning at 60s. |
 | `create_hud` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
 | `set_widget_text` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
 | `set_widget_image` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
 | `set_widget_visibility` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
 | `remove_widget_from_viewport` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
 
-## 12. Sequencer (`manage_sequence`)
+## Sequencer (`manage_sequence`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -216,7 +228,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `add_track` | `McpAutomationBridge_SequenceHandlers.cpp` | `HandleSequenceAction` | Dynamic track class resolution |
 | `list_track_types` | `McpAutomationBridge_SequenceHandlers.cpp` | `HandleSequenceAction` | Discovery: Returns all `UMovieSceneTrack` subclasses |
 
-## 13. Introspection (`inspect`)
+## Introspection (`inspect`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -228,15 +240,19 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `get_components` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
 | `list_objects` | `McpAutomationBridge_PropertyHandlers.cpp` | `HandleInspectAction` | |
 
-## 14. Audio Manager (`manage_audio`)
+## Audio Manager (`manage_audio`)
+
+`manage_audio` exposes 50 public actions. TypeScript and native MCP route the 30 graph/asset-authoring actions through the internal native `manage_audio_authoring` action while regular playback and runtime configuration continue through `HandleAudioAction`.
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
-| `create_sound_cue` | `McpAutomationBridge_AudioHandlers.cpp` | `HandleAudioAction` | |
-| `play_sound_at_location` | `McpAutomationBridge_AudioHandlers.cpp` | `HandleAudioAction` | |
-| `create_audio_component` | `McpAutomationBridge_AudioHandlers.cpp` | `HandleAudioAction` | |
+| `create_sound_cue`, `create_sound_class`, `create_sound_mix` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Creates base SoundCue/SoundClass/SoundMix assets without modal editor dialogs |
+| `play_sound_at_location`, `play_sound_2d`, `play_sound_attached`, `spawn_sound_at_location`, `create_ambient_sound`, `prime_sound` | `McpAutomationBridge_AudioHandlers.cpp` | `HandleAudioAction` | Playback, attachment, component spawning, and priming |
+| `create_audio_component`, `create_reverb_zone` | `McpAutomationBridge_AudioHandlers.cpp` | `HandleAudioAction` | Editor actor/component creation |
+| `push_sound_mix`, `pop_sound_mix`, `set_sound_mix_class_override`, `clear_sound_mix_class_override`, `set_base_sound_mix` | `McpAutomationBridge_AudioHandlers.cpp` | `HandleAudioAction` | Runtime SoundMix control |
+| `set_sound_attenuation`, `set_doppler_effect`, `set_audio_occlusion`, `enable_audio_analysis`, `fade_sound`, `fade_sound_in`, `fade_sound_out` | `McpAutomationBridge_AudioHandlers.cpp` | `HandleAudioAction` | Runtime/configuration actions |
 
-## 15. Behavior Tree Manager (`manage_behavior_tree`)
+## Behavior Tree Manager (`manage_ai`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -244,9 +260,11 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `connect_nodes` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
 | `remove_node` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
 | `break_connections` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
-| `set_node_properties` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | |
+| `set_node_properties` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | Handles `FBlackboardKeySelector` struct properties via `SelectedKeyName` + `ResolveSelectedKey` |
+| `add_subnode` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | Add decorator/service as subnode attached to a parent graph node (`"root"` sentinel for root-level decorators) |
+| `get_tree` | `McpAutomationBridge_BehaviorTreeHandlers.cpp` | `HandleBehaviorTreeAction` | Read-only. Returns the navigable BT hierarchy (recursive `rootNode`, per-edge `entryDecorators`/`entryDecoratorOpsRaw`, `services`, `rootDecorators`/`rootDecoratorOpsRaw`, per-node `keyProperties`). Runtime-only walk of `BT->RootNode`; no BehaviorTreeEditor module required. |
 
-## 16. Blueprint Graph Manager (`manage_blueprint_graph`)
+## Blueprint Graph Actions (`manage_blueprint`)
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -258,7 +276,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `list_node_types` | `McpAutomationBridge_BlueprintGraphHandlers.cpp` | `HandleBlueprintGraphAction` | Lists all UK2Node subclasses |
 | `set_pin_default_value` | `McpAutomationBridge_BlueprintGraphHandlers.cpp` | `HandleBlueprintGraphAction` | Sets default value on input pins |
 
-## 18. Geometry Manager (`manage_geometry`) - Phase 6
+## Geometry Manager (`manage_geometry`) - Phase 6
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -337,7 +355,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `set_lod_screen_sizes` | `McpAutomationBridge_GeometryHandlers.cpp` | `HandleGeometryAction` | Set screen size thresholds for all LODs |
 | `convert_to_nanite` | `McpAutomationBridge_GeometryHandlers.cpp` | `HandleGeometryAction` | Enable Nanite on static mesh (UE5+) |
 
-## 19. Skeleton Manager (`manage_skeleton`) - Phase 7
+## Skeleton Manager (`animation_physics`) - Phase 7
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -371,7 +389,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `copy_weights` | `McpAutomationBridge_SkeletonHandlers.cpp` | - | **Stub** - Use Skeletal Mesh Editor |
 | `mirror_weights` | `McpAutomationBridge_SkeletonHandlers.cpp` | - | **Stub** - Use Skeletal Mesh Editor |
 
-## 20. Material Authoring Manager (`manage_material_authoring`) - Phase 8
+## Material Authoring Manager (`manage_asset`) - Phase 8
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -415,7 +433,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `compile_material` | `McpAutomationBridge_MaterialAuthoringHandlers.cpp` | `HandleManageMaterialAuthoringAction` | Compiles material and reports errors |
 | `get_material_info` | `McpAutomationBridge_MaterialAuthoringHandlers.cpp` | `HandleManageMaterialAuthoringAction` | Returns material properties and node info |
 
-## 21. Texture Manager (`manage_texture`) - Phase 9
+## Texture Manager (`manage_asset`) - Phase 9
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -441,7 +459,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `set_streaming_priority` | `McpAutomationBridge_TextureHandlers.cpp` | `HandleManageTextureAction` | Sets streaming priority and NeverStream flag |
 | `get_texture_info` | `McpAutomationBridge_TextureHandlers.cpp` | `HandleManageTextureAction` | Returns texture dimensions, format, compression, mip count |
 
-## 22. Animation Authoring Manager (`manage_animation_authoring`) - Phase 10
+## Animation Authoring Manager (`animation_physics`) - Phase 10
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -498,12 +516,11 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_animation_info` | `McpAutomationBridge_AnimationAuthoringHandlers.cpp` | `HandleManageAnimationAuthoringAction` | Returns animation asset properties |
 
-## 23. Audio Authoring Manager (`manage_audio_authoring`) - Phase 11
+## Audio Authoring Manager (`manage_audio`) - Phase 11
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
 | **Sound Cues** | | | |
-| `create_sound_cue` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Creates USoundCue with optional wave player |
 | `add_cue_node` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Adds wave_player, mixer, random, modulator, looping, etc. |
 | `connect_cue_nodes` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Connects sound cue nodes as parent-child |
 | `set_cue_attenuation` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Sets attenuation settings on sound cue |
@@ -516,10 +533,8 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `add_metasound_output` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Adds output to MetaSound |
 | `set_metasound_default` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Sets default value for MetaSound input |
 | **Sound Classes & Mixes** | | | |
-| `create_sound_class` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Creates USoundClass asset |
 | `set_class_properties` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Sets volume, pitch, LPF, stereo bleed, etc. |
 | `set_class_parent` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Sets parent sound class for hierarchy |
-| `create_sound_mix` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Creates USoundMix asset |
 | `add_mix_modifier` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Adds FSoundClassAdjuster to sound mix |
 | `configure_mix_eq` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Configures EQ settings on sound mix |
 | **Attenuation & Spatialization** | | | |
@@ -540,7 +555,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_audio_info` | `McpAutomationBridge_AudioAuthoringHandlers.cpp` | `HandleManageAudioAuthoringAction` | Returns audio asset properties (type-specific) |
 
-## 24. Niagara Authoring Manager (`manage_niagara_authoring`) - Phase 12
+## Niagara Authoring Manager (`manage_effect`) - Phase 12
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -592,7 +607,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `get_niagara_info` | `McpAutomationBridge_NiagaraAuthoringHandlers.cpp` | `HandleManageNiagaraAuthoringAction` | Returns system/emitter info, parameters, renderers |
 | `validate_niagara_system` | `McpAutomationBridge_NiagaraAuthoringHandlers.cpp` | `HandleManageNiagaraAuthoringAction` | Validates system and returns errors/warnings |
 
-## 25. GAS Manager (`manage_gas`) - Phase 13
+## GAS Manager (`manage_gas`) - Phase 13
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -629,7 +644,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_gas_info` | `McpAutomationBridge_GASHandlers.cpp` | `HandleManageGASAction` | Returns GAS asset info and properties |
 
-## 26. Character Manager (`manage_character`) - Phase 14
+## Character Manager (`manage_character`) - Phase 14
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -658,7 +673,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_character_info` | `McpAutomationBridge_CharacterHandlers.cpp` | `HandleManageCharacterAction` | Returns character blueprint info |
 
-## 27. Combat Manager (`manage_combat`) - Phase 15
+## Combat Manager (`manage_combat`) - Phase 15
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -702,7 +717,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_combat_info` | `McpAutomationBridge_CombatHandlers.cpp` | `HandleManageCombatAction` | Returns weapon/combat component info |
 
-## 28. AI Manager (`manage_ai`) - Phase 16
+## AI Manager (`manage_ai`) - Phase 16
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -750,46 +765,53 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_ai_info` | `McpAutomationBridge_AIHandlers.cpp` | `HandleManageAIAction` | Returns AI asset info and configuration |
 
-## 29. Inventory Manager (`manage_inventory`) - Phase 17
+## Inventory Manager (`manage_inventory`) - Phase 17
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
 | **Data Assets** | | | |
-| `create_item_data_asset` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Creates UPrimaryDataAsset for item data |
-| `set_item_properties` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Sets name, description, icon, mesh, weight, rarity |
+| `create_item_data_asset` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Creates generic item data asset |
+| `set_item_properties` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Applies fields supplied in the `properties` object |
 | `create_item_category` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Creates category data asset |
 | `assign_item_category` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Assigns item to category |
 | **Inventory Component** | | | |
 | `create_inventory_component` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Adds UActorComponent for inventory |
-| `configure_inventory_slots` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Sets slot count, stack sizes |
+| `configure_inventory_slots` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Sets inventory slot count |
 | `add_inventory_functions` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Adds Add/Remove/Has item functions |
 | `configure_inventory_events` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Configures OnItemAdded/Removed events |
 | `set_inventory_replication` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Sets replication mode for multiplayer |
 | **Pickups** | | | |
 | `create_pickup_actor` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Creates pickup actor blueprint |
-| `configure_pickup_interaction` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Sets interaction radius, prompt |
+| `configure_pickup_interaction` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Sets interaction type and prompt |
 | `configure_pickup_respawn` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Configures respawn timing |
-| `configure_pickup_effects` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Sets pickup VFX, SFX |
+| `configure_pickup_effects` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Configures pickup bobbing, rotation, and glow flags |
 | **Equipment** | | | |
 | `create_equipment_component` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Adds equipment management component |
 | `define_equipment_slots` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Defines slot types (head, body, weapon, etc.) |
-| `configure_equipment_effects` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Sets stat modifiers on equip |
+| `configure_equipment_effects` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Toggles stat modifier, ability grant, and passive effect support |
 | `add_equipment_functions` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Adds Equip/Unequip functions |
 | `configure_equipment_visuals` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Sets mesh attachment on equip |
 | **Loot System** | | | |
 | `create_loot_table` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Creates loot table data asset |
 | `add_loot_entry` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Adds item to loot table with weight |
-| `configure_loot_drop` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Sets drop chance, quantity range |
-| `set_loot_quality_tiers` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Configures rarity tiers and colors |
+| `configure_loot_drop` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Sets drop count, radius, and drop-on-death flag |
+| `set_loot_quality_tiers` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Configures quality tier names and weights |
 | **Crafting** | | | |
 | `create_crafting_recipe` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Creates recipe data asset |
-| `configure_recipe_requirements` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Sets input items and quantities |
+| `configure_recipe_requirements` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Sets required level and station |
 | `create_crafting_station` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Creates crafting station actor |
 | `add_crafting_component` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Adds crafting functionality component |
+| **Additional Actions** | | | |
+| `configure_item_stacking` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Configures stackable, max stack size, and unique-item flags |
+| `set_item_icon` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Stores an item icon path |
+| `add_recipe_ingredient` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Adds an ingredient item path and quantity to a recipe |
+| `remove_loot_entry` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Removes an array-backed loot entry by index when supported |
+| `configure_inventory_weight` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Adds weight and encumberance support variables |
+| `configure_station_recipes` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Configures station recipe paths, type, and crafting speed |
 | **Utility** | | | |
 | `get_inventory_info` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Returns inventory/equipment info |
 
-## 30. Interaction Manager (`manage_interaction`) - Phase 18
+## Interaction Manager (`manage_interaction`) - Phase 18
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -821,7 +843,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_interaction_info` | `McpAutomationBridge_InteractionHandlers.cpp` | `HandleManageInteractionAction` | Returns interaction component/actor properties |
 
-## 31. Widget Authoring Manager (`manage_widget_authoring`) - Phase 19
+## Widget Authoring Manager (`manage_blueprint`) - Phase 19
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -899,7 +921,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `get_widget_info` | `McpAutomationBridge_WidgetAuthoringHandlers.cpp` | `HandleManageWidgetAuthoringAction` | Returns widget blueprint info |
 | `preview_widget` | `McpAutomationBridge_WidgetAuthoringHandlers.cpp` | `HandleManageWidgetAuthoringAction` | Opens widget in preview |
 
-## 32. Networking Manager (`manage_networking`) - Phase 20
+## Networking Manager (`manage_networking`) - Phase 20
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -939,7 +961,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_networking_info` | `McpAutomationBridge_NetworkingHandlers.cpp` | `HandleManageNetworkingAction` | Returns networking configuration |
 
-## 33. Game Framework Manager (`manage_game_framework`) - Phase 21
+## Game Framework Manager (`manage_networking`) - Phase 21
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -969,7 +991,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_game_framework_info` | `McpAutomationBridge_GameFrameworkHandlers.cpp` | `HandleManageGameFrameworkAction` | Queries GameMode class configuration |
 
-## 34. Sessions Manager (`manage_sessions`) - Phase 22
+## Sessions Manager (`manage_networking`) - Phase 22
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -995,7 +1017,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_sessions_info` | `McpAutomationBridge_SessionsHandlers.cpp` | `HandleManageSessionsAction` | Returns current session configuration info |
 
-## 35. Level Structure Manager (`manage_level_structure`) - Phase 23
+## Level Structure Manager (`manage_level_structure`) - Phase 23
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -1022,7 +1044,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_level_structure_info` | `McpAutomationBridge_LevelStructureHandlers.cpp` | `HandleManageLevelStructureAction` | Returns level structure information |
 
-## 36. Volumes Manager (`manage_volumes`) - Phase 24
+## Volumes Manager (`manage_level_structure`) - Phase 24
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -1053,7 +1075,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_volumes_info` | `McpAutomationBridge_VolumeHandlers.cpp` | `HandleManageVolumesAction` | Returns volume information |
 
-## 37. Navigation Manager (`manage_navigation`) - Phase 25
+## Navigation Manager (`manage_ai`) - Phase 25
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -1074,7 +1096,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | **Utility** | | | |
 | `get_navigation_info` | `McpAutomationBridge_NavigationHandlers.cpp` | `HandleManageNavigationAction` | Returns NavMesh stats, agent properties, link counts |
 
-## 38. Splines Manager (`manage_splines`) - Phase 26
+## Splines Manager (`build_environment`) - Phase 26
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
@@ -1105,3 +1127,44 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `create_pipe_spline` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Creates pipe with radius and segments |
 | **Utility** | | | |
 | `get_splines_info` | `McpAutomationBridge_SplineHandlers.cpp` | `HandleManageSplinesAction` | Returns spline info (points, length, closed) |
+
+## PCG Manager (`manage_pcg`) - Phase 27
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Graph Assets** | | | |
+| `create_pcg_graph` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Creates or reuses a PCG graph asset |
+| `create_pcg_subgraph` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Creates a PCG subgraph and can insert a subgraph node in a parent graph |
+| **Graph Editing** | | | |
+| `add_pcg_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds a PCG settings node by class name or alias |
+| `connect_pcg_pins` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Connects PCG node pins by label, defaulting to actual source output and target input pins (for graph I/O nodes: `In` -> `Out`) |
+| `set_pcg_node_settings` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Applies reflected PCG settings properties and node metadata |
+| **Input Nodes** | | | |
+| `add_landscape_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGGetLandscapeSettings` |
+| `add_spline_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGGetSplineSettings` |
+| `add_volume_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGGetVolumeSettings` |
+| `add_actor_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGDataFromActorSettings` |
+| `add_texture_data_node` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGTextureSamplerSettings`; `texturePath` maps to `Texture` |
+| **Point Operations** | | | |
+| `add_surface_sampler` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGSurfaceSamplerSettings` |
+| `add_mesh_sampler` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGPointFromMeshSettings`; `meshPath` maps to `Mesh` |
+| `add_spline_sampler` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGSplineSamplerSettings` |
+| `add_volume_sampler` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGVolumeSamplerSettings` |
+| `add_bounds_modifier` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGBoundsModifierSettings` |
+| `add_density_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGDensityFilterSettings` |
+| `add_height_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGAttributeFilteringRangeSettings` for reflected height-range configuration |
+| `add_slope_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGNormalToDensitySettings` |
+| `add_distance_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGDistanceSettings` |
+| `add_bounds_filter` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGCullPointsOutsideActorBoundsSettings` |
+| `add_self_pruning` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGSelfPruningSettings` |
+| `add_transform_points` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGTransformPointsSettings` |
+| `add_project_to_surface` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGProjectionSettings` |
+| `add_copy_points` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGCopyPointsSettings` |
+| `add_merge_points` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGMergeSettings` |
+| **Spawning** | | | |
+| `add_static_mesh_spawner` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGStaticMeshSpawnerSettings` |
+| `add_actor_spawner` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGSpawnActorSettings`; `actorClass`/`classPath` maps to `TemplateActorClass` |
+| `add_spline_spawner` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Adds `PCGSpawnSplineSettings` |
+| **Execution** | | | |
+| `execute_pcg_graph` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Assigns a graph to a resolved/created `UPCGComponent` and starts local generation |
+| `set_pcg_partition_grid_size` | `McpAutomationBridge_PCGHandlers.cpp` | `HandleManagePCGAction` | Updates world-scoped `APCGWorldActor::PartitionGridSize` or component-scoped generation grid size |

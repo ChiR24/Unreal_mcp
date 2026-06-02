@@ -132,7 +132,6 @@
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 
 // Core
-#include "UObject/SavePackage.h"
 #include "EditorAssetLibrary.h"
 
 // Landscape (UE 5.0+)
@@ -182,6 +181,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }
+  if (SubAction == TEXT("connect_material_pins")) {
+    SubAction = TEXT("connect_nodes");
+  } else if (SubAction == TEXT("break_material_connections")) {
+    SubAction = TEXT("disconnect_nodes");
+  } else if (SubAction == TEXT("rebuild_material")) {
+    SubAction = TEXT("compile_material");
+  }
 
   // ==========================================================================
   // 8.1 Material Creation Actions
@@ -197,7 +203,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     // Validate and sanitize the asset name
     FString OriginalName = Name;
     FString SanitizedName = SanitizeAssetName(Name);
-    
+
     // Check if sanitization significantly changed the name (indicates invalid characters)
     // If the sanitized name is different and doesn't just have underscores added/removed
     FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
@@ -244,7 +250,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     // Validate parent folder exists
     FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
     IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
-    
+
     FString ParentFolderPath = FPackageName::GetLongPackagePath(ValidatedPath);
     if (!AssetRegistry.PathExists(FName(*ParentFolderPath))) {
       SendAutomationError(Socket, RequestId,
@@ -1512,6 +1518,50 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       return true;
     }
 
+    int32 SourceOutputIndex = 0;
+    if (!SourcePin.IsEmpty()) {
+      if (SourcePin.IsNumeric()) {
+        SourceOutputIndex = FCString::Atoi(*SourcePin);
+      } else if (UMaterialExpressionMaterialFunctionCall* MFCallSource = Cast<UMaterialExpressionMaterialFunctionCall>(SourceExpr)) {
+        bool bResolvedOutputName = false;
+        for (int32 OutputIdx = 0; OutputIdx < MFCallSource->FunctionOutputs.Num(); ++OutputIdx) {
+          const FFunctionExpressionOutput& FunctionOutput = MFCallSource->FunctionOutputs[OutputIdx];
+          if (FunctionOutput.ExpressionOutput &&
+              FunctionOutput.ExpressionOutput->OutputName.ToString().Equals(SourcePin, ESearchCase::IgnoreCase)) {
+            SourceOutputIndex = OutputIdx;
+            bResolvedOutputName = true;
+            break;
+          }
+        }
+        if (!bResolvedOutputName) {
+          SendAutomationError(Socket, RequestId,
+                              FString::Printf(TEXT("Source output pin '%s' not found."), *SourcePin),
+                              TEXT("INVALID_PIN"));
+          return true;
+        }
+      } else if (UMaterialExpressionCustom* CustomSource = Cast<UMaterialExpressionCustom>(SourceExpr)) {
+        bool bResolvedOutputName = false;
+        for (int32 OutputIdx = 0; OutputIdx < CustomSource->AdditionalOutputs.Num(); ++OutputIdx) {
+          if (CustomSource->AdditionalOutputs[OutputIdx].OutputName.ToString().Equals(SourcePin, ESearchCase::IgnoreCase)) {
+            SourceOutputIndex = OutputIdx + 1;
+            bResolvedOutputName = true;
+            break;
+          }
+        }
+        if (!bResolvedOutputName) {
+          SendAutomationError(Socket, RequestId,
+                              FString::Printf(TEXT("Source output pin '%s' not found."), *SourcePin),
+                              TEXT("INVALID_PIN"));
+          return true;
+        }
+      } else {
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Source output pin '%s' is not numeric and source node has no named outputs."), *SourcePin),
+                            TEXT("INVALID_PIN"));
+        return true;
+      }
+    }
+
     // "Main" target: for UMaterial this means the material attributes inputs;
     // for UMaterialFunction this means a FunctionOutput node matched by name
     // (InputName) or, if InputName is empty, the first FunctionOutput.
@@ -1559,11 +1609,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
         if (bFound) {
           // Re-lookup the input to set OutputIndex (main inputs are FScalar/FColor/FVectorMaterialInput)
           auto SetMainInputOutputIndex = [&](FExpressionInput& Input) {
-            if (!SourcePin.IsEmpty()) {
-              Input.OutputIndex = FCString::Atoi(*SourcePin);
-            } else {
-              Input.OutputIndex = 0;
-            }
+            Input.OutputIndex = SourceOutputIndex;
           };
 #if WITH_EDITORONLY_DATA
           if (InputName == TEXT("BaseColor")) { SetMainInputOutputIndex(MCP_GET_MATERIAL_INPUT(Material, BaseColor)); }
@@ -1609,11 +1655,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
           return true;
         }
         TargetOutput->A.Expression = SourceExpr;
-        if (!SourcePin.IsEmpty()) {
-          TargetOutput->A.OutputIndex = FCString::Atoi(*SourcePin);
-        } else {
-          TargetOutput->A.OutputIndex = 0;
-        }
+        TargetOutput->A.OutputIndex = SourceOutputIndex;
         FINALIZE_HOST();
         SendAutomationResponse(Socket, RequestId, true,
                                TEXT("Connected to function output."));
@@ -1638,11 +1680,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
             StructProp->ContainerPtrToValuePtr<FExpressionInput>(TargetExpr);
         if (InputPtr) {
           InputPtr->Expression = SourceExpr;
-          if (!SourcePin.IsEmpty()) {
-            InputPtr->OutputIndex = FCString::Atoi(*SourcePin);
-          } else {
-            InputPtr->OutputIndex = 0;
-          }
+          InputPtr->OutputIndex = SourceOutputIndex;
           FINALIZE_HOST();
           SendAutomationResponse(Socket, RequestId, true,
                                  TEXT("Nodes connected."));
@@ -1656,9 +1694,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       for (FCustomInput& CustomInput : CustomExpr->Inputs) {
         if (CustomInput.InputName.ToString() == InputName) {
           CustomInput.Input.Expression = SourceExpr;
-          if (!SourcePin.IsEmpty()) {
-            CustomInput.Input.OutputIndex = FCString::Atoi(*SourcePin);
-          }
+          CustomInput.Input.OutputIndex = SourceOutputIndex;
           FINALIZE_HOST();
           SendAutomationResponse(Socket, RequestId, true, TEXT("Nodes connected."));
           return true;
@@ -1672,38 +1708,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
         if (FuncInput.ExpressionInput->InputName.ToString() == InputName ||
             FuncInput.Input.InputName.ToString() == InputName) {
           FuncInput.Input.Expression = SourceExpr;
-          if (!SourcePin.IsEmpty()) {
-            FuncInput.Input.OutputIndex = FCString::Atoi(*SourcePin);
-          }
+          FuncInput.Input.OutputIndex = SourceOutputIndex;
           FINALIZE_HOST();
           SendAutomationResponse(Socket, RequestId, true, TEXT("Nodes connected to MF call input."));
           return true;
-        }
-      }
-    }
-
-    // Fallback: check UMaterialExpressionMaterialFunctionCall as SOURCE (output pin matching)
-    if (UMaterialExpressionMaterialFunctionCall* MFCallSource = Cast<UMaterialExpressionMaterialFunctionCall>(SourceExpr)) {
-      // If sourcePin names an MF call output, resolve its index
-      if (!SourcePin.IsEmpty()) {
-        for (int32 i = 0; i < MFCallSource->FunctionOutputs.Num(); ++i) {
-          if (MFCallSource->FunctionOutputs[i].ExpressionOutput->OutputName.ToString() == SourcePin) {
-            // Found the output index — now connect to target using property reflection
-            FProperty *TargetProp = TargetExpr->GetClass()->FindPropertyByName(FName(*InputName));
-            if (TargetProp) {
-              if (FStructProperty *SP = CastField<FStructProperty>(TargetProp)) {
-                FExpressionInput *InPtr = SP->ContainerPtrToValuePtr<FExpressionInput>(TargetExpr);
-                if (InPtr) {
-                  InPtr->Expression = SourceExpr;
-                  InPtr->OutputIndex = i;
-                  FINALIZE_HOST();
-                  SendAutomationResponse(Socket, RequestId, true, TEXT("Nodes connected via MF call output."));
-                  return true;
-                }
-              }
-            }
-            break;
-          }
         }
       }
     }
@@ -1856,7 +1864,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     // Validate and sanitize the asset name (same as create_material)
     FString OriginalName = Name;
     FString SanitizedName = SanitizeAssetName(Name);
-    
+
     // Check if sanitization significantly changed the name (indicates invalid characters)
     FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
     FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
@@ -2191,7 +2199,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     // Validate and sanitize the asset name (same as create_material)
     FString OriginalName = Name;
     FString SanitizedName = SanitizeAssetName(Name);
-    
+
     FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
     FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
     if (NormalizedSanitized != NormalizedOriginal) {
@@ -2633,7 +2641,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       SendAutomationError(Socket, RequestId, TEXT("Missing 'layerName'."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    
+
     // Accept path via multiple parameter names (assetPath, materialPath, or path)
     FString Path;
     if (Payload->TryGetStringField(TEXT("assetPath"), Path) && !Path.IsEmpty()) {
@@ -2645,7 +2653,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     } else {
       Path = TEXT("/Game/Landscape/Layers");
     }
-    
+
     // Validate path security - reject traversal and invalid paths
     FString ValidatedPath = SanitizeProjectRelativePath(Path);
     if (ValidatedPath.IsEmpty()) {
@@ -2655,7 +2663,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       return true;
     }
     Path = ValidatedPath;
-    
+
     // Validate the full package path
     FString PackagePath = Path / LayerName;
     if (!FPackageName::IsValidLongPackageName(PackagePath)) {
@@ -2664,7 +2672,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
                           TEXT("INVALID_PATH"));
       return true;
     }
-    
+
     // Create the landscape layer info asset
     FString PackageName = PackagePath;
     UPackage* Package = CreatePackage(*PackageName);
@@ -2672,20 +2680,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       SendAutomationError(Socket, RequestId, TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
       return true;
     }
-    
+
     ULandscapeLayerInfoObject* LayerInfo = NewObject<ULandscapeLayerInfoObject>(
         Package, FName(*LayerName), RF_Public | RF_Standalone);
-    
+
     if (!LayerInfo) {
       SendAutomationError(Socket, RequestId, TEXT("Failed to create layer info."), TEXT("CREATION_ERROR"));
       return true;
     }
-    
+
     // Set layer name
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
     LayerInfo->LayerName = FName(*LayerName);
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
-    
+
     // Set optional properties
     double Hardness = 0.5;
     if (Payload->TryGetNumberField(TEXT("hardness"), Hardness)) {
@@ -2693,7 +2701,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
       LayerInfo->Hardness = static_cast<float>(Hardness);
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
-    
+
     // Set physical material if provided
     FString PhysMaterialPath;
     if (Payload->TryGetStringField(TEXT("physicalMaterialPath"), PhysMaterialPath) && !PhysMaterialPath.IsEmpty()) {
@@ -2714,7 +2722,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
       }
     }
-    
+
 #if WITH_EDITORONLY_DATA
     // Set blend method if specified (replaces bNoWeightBlend)
     bool bNoWeightBlend = false;
@@ -2728,7 +2736,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
     }
 #endif
-    
+
     // Save the asset
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
@@ -2738,14 +2746,14 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       if (DotIndex != INDEX_NONE) { AssetPathStr.LeftInline(DotIndex); }
       LayerInfo->MarkPackageDirty();
     }
-    
+
     // Notify asset registry
     FAssetRegistryModule::AssetCreated(LayerInfo);
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, LayerInfo);
     Result->SetStringField(TEXT("layerName"), LayerName);
-    
+
     SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Landscape layer '%s' created."), *LayerName),
                            Result);
@@ -2755,7 +2763,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     return true;
 #endif
   }
-  
+
   if (SubAction == TEXT("configure_layer_blend")) {
     // Configure layer blend by adding layer weight parameters and blend setup
     FString AssetPath;
@@ -2769,7 +2777,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    
+
     // SECURITY: Validate path BEFORE loading asset
     FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
     if (ValidatedPath.IsEmpty()) {
@@ -2779,14 +2787,14 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       return true;
     }
     AssetPath = ValidatedPath;
-    
+
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
       SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),
                           TEXT("ASSET_NOT_FOUND"));
       return true;
     }
-    
+
     // Parse layers array
     const TArray<TSharedPtr<FJsonValue>> *LayersArray;
     if (!Payload->TryGetArrayField(TEXT("layers"), LayersArray) ||
@@ -2795,66 +2803,66 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    
+
     TArray<FString> CreatedNodeIds;
     int32 BaseX = 0, BaseY = 0;
     Payload->TryGetNumberField(TEXT("x"), BaseX);
     Payload->TryGetNumberField(TEXT("y"), BaseY);
-    
+
     // For each layer, create a scalar parameter for layer weight
     for (int32 i = 0; i < LayersArray->Num(); ++i) {
       const TSharedPtr<FJsonObject> *LayerObj;
       if (!(*LayersArray)[i]->TryGetObject(LayerObj)) {
         continue;
       }
-      
+
       FString LayerName;
       if (!(*LayerObj)->TryGetStringField(TEXT("name"), LayerName) ||
           LayerName.IsEmpty()) {
         continue;
       }
-      
+
       FString BlendType;
       (*LayerObj)->TryGetStringField(TEXT("blendType"), BlendType);
-      
+
       // Create scalar parameter for layer weight
       UMaterialExpressionScalarParameter *WeightParam =
           NewObject<UMaterialExpressionScalarParameter>(
               Material, UMaterialExpressionScalarParameter::StaticClass(),
               NAME_None, RF_Transactional);
-      
+
       WeightParam->ParameterName = FName(*LayerName);
       WeightParam->DefaultValue = (i == 0) ? 1.0f : 0.0f; // First layer enabled by default
       WeightParam->MaterialExpressionEditorX = BaseX;
       WeightParam->MaterialExpressionEditorY = BaseY + (i * 150);
-      
+
 #if WITH_EDITORONLY_DATA
       MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(WeightParam);
 #endif
-      
+
       CreatedNodeIds.Add(MCP_NODE_ID(WeightParam));
     }
-    
+
     Material->PostEditChange();
     Material->MarkPackageDirty();
-    
+
     // Save if requested
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave) {
       SaveMaterialAsset(Material);
     }
-    
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), AssetPath);
     Result->SetNumberField(TEXT("layerCount"), CreatedNodeIds.Num());
-    
+
     TArray<TSharedPtr<FJsonValue>> NodeIdArray;
     for (const FString &NodeId : CreatedNodeIds) {
       NodeIdArray.Add(MakeShared<FJsonValueString>(NodeId));
     }
     Result->SetArrayField(TEXT("nodeIds"), NodeIdArray);
-    
+
     SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Layer blend configured with %d layers."),
                                           CreatedNodeIds.Num()),
@@ -4373,7 +4381,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       ExpressionClass = UMaterialExpressionMultiply::StaticClass();
     else if (NodeType == TEXT("Constant") || NodeType == TEXT("Float") || NodeType == TEXT("Scalar"))
       ExpressionClass = UMaterialExpressionConstant::StaticClass();
-    else if (NodeType == TEXT("Constant3Vector") || NodeType == TEXT("ConstantVector") || 
+    else if (NodeType == TEXT("Constant3Vector") || NodeType == TEXT("ConstantVector") ||
              NodeType == TEXT("Color") || NodeType == TEXT("Vector3"))
       ExpressionClass = UMaterialExpressionConstant3Vector::StaticClass();
     else if (NodeType == TEXT("Lerp") || NodeType == TEXT("LinearInterpolate"))
@@ -4587,14 +4595,9 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
     AssetPath = ValidatedAssetPath;
 
-    // This is a stub that routes to appropriate parameter handler
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("assetPath"), AssetPath);
-    Result->SetStringField(TEXT("parameterName"), ParameterName);
-    Result->SetBoolField(TEXT("parameterSet"), true);
-
-    SendAutomationResponse(Socket, RequestId, true,
-                           FString::Printf(TEXT("Parameter '%s' set."), *ParameterName), Result);
+    SendAutomationError(Socket, RequestId,
+                        TEXT("set_material_parameter is ambiguous. Use set_scalar_parameter_value, set_vector_parameter_value, or set_texture_parameter_value with a material instance path."),
+                        TEXT("AMBIGUOUS_ACTION"));
     return true;
   }
 
@@ -4721,16 +4724,9 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
     AssetPath = ValidatedAssetPath;
 
-    // Note: Cast shadows is typically a material property but may be on the component
-    // This is a stub that acknowledges the request
-    bool CastShadows = GetJsonBoolField(Payload, TEXT("castShadows"), true);
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("assetPath"), AssetPath);
-    Result->SetBoolField(TEXT("castShadows"), CastShadows);
-
-    SendAutomationResponse(Socket, RequestId, true,
-                           FString::Printf(TEXT("Cast shadows set to %s."), CastShadows ? TEXT("true") : TEXT("false")), Result);
+    SendAutomationError(Socket, RequestId,
+                        TEXT("set_cast_shadows cannot be applied to a material asset. Configure shadow casting on a mesh/light component instead."),
+                        TEXT("UNSUPPORTED_OPERATION"));
     return true;
   }
 
@@ -4789,6 +4785,14 @@ template<typename TExprArray>
 static UMaterialExpression *FindExpressionInArray(TExprArray &Expressions,
                                                    const FString &IdOrName) {
   const FString Needle = IdOrName.TrimStartAndEnd();
+  FString ShortNeedle = Needle;
+  int32 SeparatorIndex = INDEX_NONE;
+  if (ShortNeedle.FindLastChar(TEXT(':'), SeparatorIndex)) {
+    ShortNeedle = ShortNeedle.Mid(SeparatorIndex + 1);
+  }
+  if (ShortNeedle.FindLastChar(TEXT('.'), SeparatorIndex)) {
+    ShortNeedle = ShortNeedle.Mid(SeparatorIndex + 1);
+  }
 
   // 1. expr_N index-based lookup
   if (Needle.StartsWith(TEXT("expr_"))) {
@@ -4803,7 +4807,7 @@ static UMaterialExpression *FindExpressionInArray(TExprArray &Expressions,
   for (int32 i = 0; i < Expressions.Num(); ++i) {
     UMaterialExpression *Expr = static_cast<UMaterialExpression*>(Expressions[i]);
     if (!Expr) continue;
-    if (Expr->GetName() == Needle) return Expr;
+    if (Expr->GetName() == Needle || Expr->GetName() == ShortNeedle) return Expr;
   }
 
   // 3. GUID match (backwards compat) — detect collisions
@@ -4839,13 +4843,13 @@ static UMaterialExpression *FindExpressionInArray(TExprArray &Expressions,
     UMaterialExpression *Expr = static_cast<UMaterialExpression*>(Expressions[i]);
     if (!Expr) continue;
     if (UMaterialExpressionParameter *P = Cast<UMaterialExpressionParameter>(Expr)) {
-      if (P->ParameterName.ToString() == Needle) return Expr;
+      if (P->ParameterName.ToString() == Needle || P->ParameterName.ToString() == ShortNeedle) return Expr;
     }
     if (UMaterialExpressionFunctionInput *In = Cast<UMaterialExpressionFunctionInput>(Expr)) {
-      if (In->InputName.ToString() == Needle) return Expr;
+      if (In->InputName.ToString() == Needle || In->InputName.ToString() == ShortNeedle) return Expr;
     }
     if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
-      if (Out->OutputName.ToString() == Needle) return Expr;
+      if (Out->OutputName.ToString() == Needle || Out->OutputName.ToString() == ShortNeedle) return Expr;
     }
   }
 

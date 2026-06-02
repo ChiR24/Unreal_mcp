@@ -7,6 +7,8 @@ import {
     ABSOLUTE_MAX_TIMEOUT_MS
 } from '../constants.js';
 
+const READ_ONLY_ACTION_PREFIXES = ['list', 'get_', 'exists', 'search', 'find'];
+
 // Note: The two-phase event pattern was disabled because C++ handlers send a single response,
 // not request+event. All actions now use simple request-response. The PendingRequest interface
 // retains waitForEvent/eventTimeout fields for potential future use.
@@ -67,7 +69,7 @@ export class RequestTracker {
         const promise = new Promise<AutomationBridgeResponseMessage>((resolve, reject) => {
             const timeout = setTimeout(() => {
                 if (this.pendingRequests.has(requestId)) {
-                    this.pendingRequests.delete(requestId);
+                    this.cleanupRequest(requestId);
                     reject(new Error(`Request ${requestId} timed out after ${timeoutMs}ms`));
                 }
             }, timeoutMs);
@@ -75,7 +77,7 @@ export class RequestTracker {
             // Set up absolute timeout cap to prevent indefinite extension
             const absoluteTimeout = setTimeout(() => {
                 if (this.pendingRequests.has(requestId)) {
-                    this.pendingRequests.delete(requestId);
+                    this.cleanupRequest(requestId);
                     const totalMs = ABSOLUTE_MAX_TIMEOUT_MS;
                     reject(new Error(`Request ${requestId} exceeded absolute max timeout (${totalMs}ms)`));
                 }
@@ -110,7 +112,7 @@ export class RequestTracker {
      * 1. Max extensions limit (MAX_PROGRESS_EXTENSIONS)
      * 2. Stale detection (percent unchanged for PROGRESS_STALE_THRESHOLD updates)
      * 3. Absolute max timeout cap (ABSOLUTE_MAX_TIMEOUT_MS)
-     * 
+     *
      * @param requestId - The request ID to extend
      * @param percent - Current progress percent (0-100)
      * @param message - Optional progress message
@@ -148,10 +150,10 @@ export class RequestTracker {
 
         // Clear existing timeout and set new one
         clearTimeout(pending.timeout);
-        
+
         const newTimeout = setTimeout(() => {
             if (this.pendingRequests.has(requestId)) {
-                this.pendingRequests.delete(requestId);
+                this.cleanupRequest(requestId);
                 pending.reject(new Error(`Request ${requestId} timed out after extension`));
             }
         }, PROGRESS_EXTENSION_MS);
@@ -164,17 +166,22 @@ export class RequestTracker {
         return true;
     }
 
+    private clearRequestTimers(pending: PendingRequest): void {
+        clearTimeout(pending.timeout);
+        if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
+        if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
+    }
+
     /**
      * Clean up request timers and remove from map.
      */
-    private cleanupRequest(requestId: string): void {
+    private cleanupRequest(requestId: string): PendingRequest | undefined {
         const pending = this.pendingRequests.get(requestId);
         if (pending) {
-            clearTimeout(pending.timeout);
-            if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
-            if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
+            this.clearRequestTimers(pending);
             this.pendingRequests.delete(requestId);
         }
+        return pending;
     }
 
     public getPendingRequest(requestId: string): PendingRequest | undefined {
@@ -182,32 +189,22 @@ export class RequestTracker {
     }
 
     public resolveRequest(requestId: string, response: AutomationBridgeResponseMessage): void {
-        const pending = this.pendingRequests.get(requestId);
+        const pending = this.cleanupRequest(requestId);
         if (pending) {
-            clearTimeout(pending.timeout);
-            if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
-            if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
-            this.pendingRequests.delete(requestId);
             pending.resolve(response);
         }
     }
 
     public rejectRequest(requestId: string, error: Error): void {
-        const pending = this.pendingRequests.get(requestId);
+        const pending = this.cleanupRequest(requestId);
         if (pending) {
-            clearTimeout(pending.timeout);
-            if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
-            if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
-            this.pendingRequests.delete(requestId);
             pending.reject(error);
         }
     }
 
     public rejectAll(error: Error): void {
         for (const [, pending] of this.pendingRequests) {
-            clearTimeout(pending.timeout);
-            if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
-            if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
+            this.clearRequestTimers(pending);
             pending.reject(error);
         }
         this.pendingRequests.clear();
@@ -237,16 +234,31 @@ export class RequestTracker {
             if (this.coalescedRequests.get(key) === promise) {
                 this.coalescedRequests.delete(key);
             }
-        });
+        }).catch(() => undefined);
     }
 
     public createCoalesceKey(action: string, payload: Record<string, unknown>): string {
         // Only coalesce read-only operations
-        const readOnlyActions = ['list', 'get_', 'exists', 'search', 'find'];
-        if (!readOnlyActions.some(a => action.startsWith(a))) return '';
+        if (!READ_ONLY_ACTION_PREFIXES.some(a => action.startsWith(a))) return '';
 
         // Create a stable hash of the payload
-        const stablePayload = JSON.stringify(payload, Object.keys(payload).sort());
+        const stablePayload = JSON.stringify(stabilizeJsonValue(payload));
         return `${action}:${createHash('md5').update(stablePayload).digest('hex')}`;
     }
+}
+
+function stabilizeJsonValue(value: unknown): unknown {
+    if (Array.isArray(value)) {
+        return value.map(item => stabilizeJsonValue(item));
+    }
+
+    if (value && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value as Record<string, unknown>)
+                .sort(([left], [right]) => left.localeCompare(right))
+                .map(([key, child]) => [key, stabilizeJsonValue(child)])
+        );
+    }
+
+    return value;
 }

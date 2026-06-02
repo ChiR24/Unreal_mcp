@@ -2,13 +2,16 @@ import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { PipelineArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
-import { spawn, exec } from 'child_process';
-import path from 'path';
-import fs from 'fs';
-import util from 'util';
+import { spawn, exec } from 'node:child_process';
+import path from 'node:path';
+import fs from 'node:fs';
+import util from 'node:util';
 
 /** Promisified child_process.exec for async shell commands. */
 const execAsync = util.promisify(exec);
+const ALLOWED_UBT_PLATFORMS = new Set(['Win64', 'Mac', 'Linux', 'LinuxArm64', 'Android', 'IOS', 'TVOS', 'HoloLens', 'VisionOS']);
+const ALLOWED_UBT_CONFIGURATIONS = new Set(['Debug', 'DebugGame', 'Development', 'Shipping', 'Test']);
+const BLOCKED_UBT_OVERRIDE_OPTIONS = new Set(['project', 'projectfile', 'target', 'mode']);
 
 /** Reject UBT argument strings containing shell-dangerous characters. */
 function validateUbtArgumentsString(extraArgs: string): void {
@@ -16,13 +19,78 @@ function validateUbtArgumentsString(extraArgs: string): void {
     return;
   }
 
-  const forbiddenChars = ['\n', '\r', ';', '|', '`', '&&', '||', '>', '<'];
+  const forbiddenChars = ['\n', '\r', ';', '|', '`', '&&', '||', '>', '<', '"', "'"];
   for (const char of forbiddenChars) {
     if (extraArgs.includes(char)) {
       throw new Error(
         `UBT arguments contain forbidden character(s) and are blocked for safety. Blocked: ${JSON.stringify(char)}.`
       );
     }
+  }
+
+  for (const token of tokenizeArgs(extraArgs)) {
+    validateUbtExtraArgumentToken(token);
+  }
+}
+
+function validateUbtArgumentToken(token: string, context: string): void {
+  if (!token || token.trim().length === 0) {
+    throw new Error(`${context} must be a non-empty UBT token.`);
+  }
+
+  const trimmed = token.trim();
+  if (!/^[A-Za-z0-9_\-.=:/\\+]+$/.test(trimmed)) {
+    throw new Error(`${context} contains unsafe UBT argument characters.`);
+  }
+}
+
+function validateUbtPositionalToken(token: string, context: string): void {
+  validateUbtArgumentToken(token, context);
+  const trimmed = token.trim();
+  if (/^[-/@]/.test(trimmed) || trimmed.includes('=') || trimmed.includes(':') || trimmed.includes('/') || trimmed.includes('\\')) {
+    throw new Error(`${context} must be a positional UBT token and cannot be a switch or path.`);
+  }
+}
+
+function validateUbtTarget(target: string): void {
+  validateUbtPositionalToken(target, 'run_ubt.target');
+}
+
+function validateUbtPlatform(platform: string): void {
+  validateUbtPositionalToken(platform, 'run_ubt.platform');
+  if (!ALLOWED_UBT_PLATFORMS.has(platform)) {
+    throw new Error(`run_ubt.platform is not allowed: ${platform}`);
+  }
+}
+
+function validateUbtConfiguration(configuration: string): void {
+  validateUbtPositionalToken(configuration, 'run_ubt.configuration');
+  if (!ALLOWED_UBT_CONFIGURATIONS.has(configuration)) {
+    throw new Error(`run_ubt.configuration is not allowed: ${configuration}`);
+  }
+}
+
+function getUbtOptionName(token: string): string | undefined {
+  const trimmed = token.trim().toLowerCase();
+  if (!trimmed.startsWith('-') && !trimmed.startsWith('/')) {
+    return undefined;
+  }
+
+  const withoutPrefix = trimmed.replace(/^[-/]+/, '');
+  const separatorIndex = withoutPrefix.search(/[=:]/);
+  return separatorIndex >= 0 ? withoutPrefix.slice(0, separatorIndex) : withoutPrefix;
+}
+
+function validateUbtExtraArgumentToken(token: string): void {
+  const trimmed = token.trim();
+  if (trimmed.startsWith('@')) {
+    throw new Error('UBT response-file arguments are blocked for safety.');
+  }
+  validateUbtArgumentToken(token, 'run_ubt.arguments');
+
+  const optionName = getUbtOptionName(trimmed);
+  if (optionName && BLOCKED_UBT_OVERRIDE_OPTIONS.has(optionName)) {
+    throw new Error(`UBT argument ${optionName} cannot override the managed invocation.`);
   }
 }
 
@@ -73,6 +141,14 @@ function tokenizeArgs(extraArgs: string): string[] {
   return args;
 }
 
+/** Return true only when the final path segment is literally "Engine". */
+function isEngineDirectoryPath(enginePath: string): boolean {
+  const trimmed = enginePath.replace(/[\\/]+$/, '');
+  const segments = trimmed.split(/[\\/]/);
+  const lastSegment = segments[segments.length - 1];
+  return typeof lastSegment === 'string' && lastSegment.toLowerCase() === 'engine';
+}
+
 /**
  * Probe a concrete UBT file path for existence + executability.
  * Returns the path if valid, undefined otherwise.
@@ -108,7 +184,7 @@ async function findUbtExecutable(): Promise<string> {
     undefined;
 
   if (enginePath) {
-    const endsWithEngine = /Engine[\\/]*$/i.test(enginePath.replace(/\//g, '\\'));
+    const endsWithEngine = isEngineDirectoryPath(enginePath);
 
     const roots: string[] = endsWithEngine
       ? [enginePath]
@@ -239,7 +315,50 @@ async function findUbtExecutable(): Promise<string> {
   return '';
 }
 
-/** Dispatch pipeline actions (run_ubt, etc.) to local UBT or the C++ bridge. */
+/** Return Unreal's bundled .NET runtime folder for the current platform, if present. */
+async function findBundledDotNetRoot(ubtPath: string): Promise<string | undefined> {
+  const platformFolder = (() => {
+    if (process.platform === 'win32') {
+      return process.arch === 'arm64' ? 'win-arm64' : 'win-x64';
+    }
+    if (process.platform === 'darwin') {
+      return process.arch === 'arm64' ? 'mac-arm64' : 'mac-x64';
+    }
+    return process.arch === 'arm64' ? 'linux-arm64' : 'linux-x64';
+  })();
+
+  let candidateRoot = path.dirname(ubtPath);
+  for (let depth = 0; depth < 6; depth++) {
+    const dotNetBase = path.join(candidateRoot, 'Binaries', 'ThirdParty', 'DotNet');
+
+    try {
+      const entries = await fs.promises.readdir(dotNetBase, { withFileTypes: true });
+      const versionDirs = entries
+        .filter(entry => entry.isDirectory())
+        .map(entry => entry.name)
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+
+      for (const versionDir of versionDirs) {
+        const runtimeRoot = path.join(dotNetBase, versionDir, platformFolder);
+        const dotnetExecutable = path.join(runtimeRoot, process.platform === 'win32' ? 'dotnet.exe' : 'dotnet');
+        const hit = await tryUbtpath(dotnetExecutable);
+        if (hit) {
+          return runtimeRoot;
+        }
+      }
+    } catch { }
+
+    const parent = path.dirname(candidateRoot);
+    if (parent === candidateRoot) {
+      break;
+    }
+    candidateRoot = parent;
+  }
+
+  return undefined;
+}
+
+/** Dispatch system_control pipeline actions to local UBT or the C++ bridge. */
 export async function handlePipelineTools(action: string, args: PipelineArgs, tools: ITools) {
   switch (action) {
     case 'run_ubt': {
@@ -252,6 +371,9 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
         throw new Error('Target is required for run_ubt');
       }
 
+      validateUbtTarget(target);
+      validateUbtPlatform(platform);
+      validateUbtConfiguration(configuration);
       validateUbtArgumentsString(extraArgs);
 
       const discoveredUbtPath = await findUbtExecutable();
@@ -263,7 +385,7 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
           tools,
           'manage_pipeline',
           { ...args, subAction: action },
-          'Automation bridge not available for manage_pipeline'
+          'Automation bridge not available for run_ubt'
         );
         return cleanObject(res);
       }
@@ -290,7 +412,7 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
         }
       }
 
-      const projectArg = `-Project="${uprojectFile}"`;
+      const projectArg = `-Project=${uprojectFile}`;
       const extraTokens = tokenizeArgs(extraArgs);
 
       const cmdArgs = [
@@ -306,9 +428,18 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
       const isDll = discoveredUbtPath.endsWith('.dll');
       const executable = isDll ? 'dotnet' : discoveredUbtPath;
       const actualArgs = isDll ? [discoveredUbtPath, ...cmdArgs] : cmdArgs;
+      const bundledDotNetRoot = await findBundledDotNetRoot(discoveredUbtPath);
+      const childEnv = bundledDotNetRoot
+        ? {
+          ...process.env,
+          DOTNET_ROOT: bundledDotNetRoot,
+          DOTNET_MULTILEVEL_LOOKUP: '0',
+          PATH: `${bundledDotNetRoot}${path.delimiter}${process.env.PATH ?? ''}`,
+        }
+        : process.env;
 
       return new Promise((resolve) => {
-        const child = spawn(executable, actualArgs, { shell: false });
+        const child = spawn(executable, actualArgs, { shell: false, env: childEnv });
 
         const MAX_OUTPUT_SIZE = 20 * 1024; // 20KB cap
         let stdout = '';
@@ -372,13 +503,7 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
     }
 
     default: {
-      const res = await executeAutomationRequest(
-        tools,
-        'manage_pipeline',
-        { ...args, subAction: action },
-        'Automation bridge not available for manage_pipeline'
-      );
-      return cleanObject(res);
+      return cleanObject({ success: false, error: 'UNKNOWN_ACTION', message: `Unknown system_control pipeline action: ${action}` });
     }
   }
 }

@@ -176,7 +176,6 @@
 #include "EngineUtils.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
-#include "UObject/SavePackage.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -202,6 +201,8 @@
 #include "Factories/BlueprintFactory.h"
 #include "UObject/Interface.h"
 #include "EditorAssetLibrary.h"
+#include "EdGraph/EdGraph.h"
+#include "EdGraphSchema_K2.h"
 #endif // WITH_EDITOR
 
 // =============================================================================
@@ -518,11 +519,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     }
 
     // Define event dispatchers to add
-    TArray<FString> EventNames = { 
-      TEXT("OnInteractionStart"), 
-      TEXT("OnInteractionEnd"), 
-      TEXT("OnInteractableFound"), 
-      TEXT("OnInteractableLost") 
+    TArray<FString> EventNames = {
+      TEXT("OnInteractionStart"),
+      TEXT("OnInteractionEnd"),
+      TEXT("OnInteractableFound"),
+      TEXT("OnInteractableLost")
     };
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -592,8 +593,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
 #if WITH_EDITOR
     // Normalize the path
     FString PackagePath = Folder.IsEmpty() ? TEXT("/Game/Interfaces") : Folder;
-    if (!PackagePath.StartsWith(TEXT("/"))) { 
-      PackagePath = TEXT("/Game/") + PackagePath; 
+    if (!PackagePath.StartsWith(TEXT("/"))) {
+      PackagePath = TEXT("/Game/") + PackagePath;
     }
     FString PackageName = PackagePath / Name;
 
@@ -612,16 +613,31 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     Factory->ParentClass = UInterface::StaticClass();
 
     UBlueprint* InterfaceBP = Cast<UBlueprint>(
-        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, FName(*Name), 
+        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, FName(*Name),
                                   RF_Public | RF_Standalone, nullptr, GWarn));
 
     if (InterfaceBP) {
       // Mark as interface type
       InterfaceBP->BlueprintType = BPTYPE_Interface;
 
-      // Add standard interaction functions via function graphs
-      // Note: Blueprint function creation requires K2Node manipulation which is complex
-      // For now, create the interface and document the expected functions
+      TArray<TSharedPtr<FJsonValue>> FunctionsAdded;
+      const TArray<FString> FunctionNames = {
+        TEXT("Interact"),
+        TEXT("CanInteract"),
+        TEXT("GetInteractionPrompt")
+      };
+
+      for (const FString& FunctionName : FunctionNames) {
+        UEdGraph* NewGraph = FBlueprintEditorUtils::CreateNewGraph(
+            InterfaceBP,
+            FName(*FunctionName),
+            UEdGraph::StaticClass(),
+            UEdGraphSchema_K2::StaticClass());
+        if (NewGraph) {
+          FBlueprintEditorUtils::AddFunctionGraph<UFunction>(InterfaceBP, NewGraph, false, static_cast<UFunction*>(nullptr));
+          FunctionsAdded.Add(MakeShared<FJsonValueString>(FunctionName));
+        }
+      }
 
       FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InterfaceBP);
       FAssetRegistryModule::AssetCreated(InterfaceBP);
@@ -632,12 +648,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
       Result->SetStringField(TEXT("interfaceName"), Name);
       Result->SetBoolField(TEXT("created"), true);
 
-      TArray<TSharedPtr<FJsonValue>> FunctionsToAdd;
-      FunctionsToAdd.Add(MakeShared<FJsonValueString>(TEXT("Interact")));
-      FunctionsToAdd.Add(MakeShared<FJsonValueString>(TEXT("CanInteract")));
-      FunctionsToAdd.Add(MakeShared<FJsonValueString>(TEXT("GetInteractionPrompt")));
-      Result->SetArrayField(TEXT("recommendedFunctions"), FunctionsToAdd);
-      Result->SetStringField(TEXT("note"), TEXT("Interface created. Add Interact, CanInteract, and GetInteractionPrompt functions in the Blueprint Editor."));
+      Result->SetArrayField(TEXT("functionsAdded"), FunctionsAdded);
 
       SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Interactable interface created"), Result);
     } else {
@@ -689,20 +700,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
       return true;
     }
 
+    const FString SanitizedName = SanitizeAssetName(Name);
+    const FString ObjectPath = PackageName + TEXT(".") + SanitizedName;
+    if (UBlueprint* ExistingDoorBP = LoadObject<UBlueprint>(nullptr, *ObjectPath)) {
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetNumberField(TEXT("openAngle"), OpenAngle);
+      Result->SetNumberField(TEXT("openTime"), OpenTime);
+      Result->SetBoolField(TEXT("autoClose"), AutoClose);
+      Result->SetNumberField(TEXT("autoCloseDelay"), AutoCloseDelay);
+      Result->SetBoolField(TEXT("requiresKey"), RequiresKey);
+      Result->SetBoolField(TEXT("alreadyExisted"), true);
+      McpHandlerUtils::AddVerification(Result, ExistingDoorBP);
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Door actor already exists"), Result);
+      return true;
+    }
+
     UPackage* Package = CreatePackage(*PackageName);
     if (!Package) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));
       return true;
     }
 
+    if (FindObject<UBlueprint>(Package, *SanitizedName)) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Door blueprint already exists in package but could not be loaded"), TEXT("ASSET_ALREADY_EXISTS"));
+      return true;
+    }
+
     UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
     Factory->ParentClass = AActor::StaticClass();
-    FString SanitizedName = SanitizeAssetName(Name);
     UBlueprint* DoorBP = Cast<UBlueprint>(Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *SanitizedName, RF_Public | RF_Standalone, nullptr, GWarn));
 
     if (DoorBP) {
       USimpleConstructionScript* SCS = DoorBP->SimpleConstructionScript;
-      
+
       // Step 1: Create all nodes
       USCS_Node* RootNode = SCS->CreateNode(USceneComponent::StaticClass(), TEXT("Root"));
       USCS_Node* PivotNode = SCS->CreateNode(USceneComponent::StaticClass(), TEXT("DoorPivot"));
@@ -916,7 +946,7 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
     if (SwitchBP) {
       USimpleConstructionScript* SCS = SwitchBP->SimpleConstructionScript;
-      
+
       // Step 1: Create all nodes
       USCS_Node* RootNode = SCS->CreateNode(USceneComponent::StaticClass(), TEXT("Root"));
       USCS_Node* MeshNode = SCS->CreateNode(UStaticMeshComponent::StaticClass(), TEXT("SwitchMesh"));
@@ -1094,7 +1124,7 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
     if (ChestBP) {
       USimpleConstructionScript* SCS = ChestBP->SimpleConstructionScript;
-      
+
       // Step 1: Create all nodes
       USCS_Node* RootNode = SCS->CreateNode(USceneComponent::StaticClass(), TEXT("Root"));
       USCS_Node* BaseMeshNode = SCS->CreateNode(UStaticMeshComponent::StaticClass(), TEXT("ChestBase"));
@@ -1295,7 +1325,7 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
     if (LeverBP) {
       USimpleConstructionScript* SCS = LeverBP->SimpleConstructionScript;
-      
+
       // Step 1: Create all nodes
       USCS_Node* RootNode = SCS->CreateNode(USceneComponent::StaticClass(), TEXT("Root"));
       USCS_Node* BaseMeshNode = SCS->CreateNode(UStaticMeshComponent::StaticClass(), TEXT("LeverBase"));
@@ -1381,8 +1411,11 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TargetActor->Modify();
+    TargetActor->Tags.AddUnique(TEXT("MCP_DestructibleMeshConfigured"));
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetBoolField(TEXT("configured"), true);
+    Result->SetStringField(TEXT("tagAdded"), TEXT("MCP_DestructibleMeshConfigured"));
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Destructible mesh setup configured"), Result);
 #else
     SendAutomationError(RequestingSocket, RequestId, TEXT("setup_destructible_mesh is editor-only"), TEXT("EDITOR_ONLY"));
@@ -1621,8 +1654,35 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       return true;
     }
 
+    FEdGraphPinType DelegateType;
+    DelegateType.PinCategory = UEdGraphSchema_K2::PC_MCDelegate;
+
+    const TArray<FName> EventNames = {
+      TEXT("OnTriggerEntered"),
+      TEXT("OnTriggerExited"),
+      TEXT("OnTriggerActivated")
+    };
+
+    TArray<TSharedPtr<FJsonValue>> EventsAdded;
+    for (const FName& EventName : EventNames) {
+      bool bExists = false;
+      for (const FBPVariableDescription& Var : Blueprint->NewVariables) {
+        if (Var.VarName == EventName) {
+          bExists = true;
+          break;
+        }
+      }
+      if (!bExists) {
+        FBlueprintEditorUtils::AddMemberVariable(Blueprint, EventName, DelegateType);
+        EventsAdded.Add(MakeShared<FJsonValueString>(EventName.ToString()));
+      }
+    }
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("configured"), true);
+    Result->SetStringField(TEXT("triggerPath"), TriggerPath);
+    Result->SetArrayField(TEXT("eventsAdded"), EventsAdded);
+    Result->SetNumberField(TEXT("eventCount"), EventsAdded.Num());
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     McpSafeAssetSave(Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Trigger events configured"), Result);
@@ -1640,36 +1700,39 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 * Configures destruction levels on an actor.
 */
 if (SubAction == TEXT("configure_destruction_levels")) {
-	FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-	if (ActorName.IsEmpty()) {
-		SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: actorName"), TEXT("MISSING_PARAMETER"));
-		return true;
-	}
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    if (ActorName.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: actorName"), TEXT("MISSING_PARAMETER"));
+        return true;
+    }
 #if WITH_EDITOR
-	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-	if (!World) {
-		SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
-		return true;
-	}
-	AActor* TargetActor = nullptr;
-	for (TActorIterator<AActor> It(World); It; ++It) {
-		if (It->GetActorLabel() == ActorName || It->GetName() == ActorName) {
-			TargetActor = *It;
-			break;
-		}
-	}
-	if (!TargetActor) {
-		SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found: ") + ActorName, TEXT("ACTOR_NOT_FOUND"));
-		return true;
-	}
-	TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-	Result->SetStringField(TEXT("actorName"), ActorName);
-	Result->SetBoolField(TEXT("configured"), true);
-	SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Destruction levels configured"), Result);
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
+        return true;
+    }
+    AActor* TargetActor = nullptr;
+    for (TActorIterator<AActor> It(World); It; ++It) {
+        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName) {
+            TargetActor = *It;
+            break;
+        }
+    }
+    if (!TargetActor) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found: ") + ActorName, TEXT("ACTOR_NOT_FOUND"));
+        return true;
+    }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TargetActor->Modify();
+    TargetActor->Tags.AddUnique(TEXT("MCP_DestructionLevelsConfigured"));
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetBoolField(TEXT("configured"), true);
+    Result->SetStringField(TEXT("tagAdded"), TEXT("MCP_DestructionLevelsConfigured"));
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Destruction levels configured"), Result);
 #else
-	SendAutomationError(RequestingSocket, RequestId, TEXT("configure_destruction_levels is editor-only"), TEXT("EDITOR_ONLY"));
+    SendAutomationError(RequestingSocket, RequestId, TEXT("configure_destruction_levels is editor-only"), TEXT("EDITOR_ONLY"));
 #endif
-	return true;
+    return true;
 }
 
 /**
@@ -1678,36 +1741,39 @@ if (SubAction == TEXT("configure_destruction_levels")) {
 * Configures destruction effects on an actor.
 */
 if (SubAction == TEXT("configure_destruction_effects")) {
-	FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-	if (ActorName.IsEmpty()) {
-		SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: actorName"), TEXT("MISSING_PARAMETER"));
-		return true;
-	}
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    if (ActorName.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: actorName"), TEXT("MISSING_PARAMETER"));
+        return true;
+    }
 #if WITH_EDITOR
-	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-	if (!World) {
-		SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
-		return true;
-	}
-	AActor* TargetActor = nullptr;
-	for (TActorIterator<AActor> It(World); It; ++It) {
-		if (It->GetActorLabel() == ActorName || It->GetName() == ActorName) {
-			TargetActor = *It;
-			break;
-		}
-	}
-	if (!TargetActor) {
-		SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found: ") + ActorName, TEXT("ACTOR_NOT_FOUND"));
-		return true;
-	}
-	TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-	Result->SetStringField(TEXT("actorName"), ActorName);
-	Result->SetBoolField(TEXT("configured"), true);
-	SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Destruction effects configured"), Result);
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
+        return true;
+    }
+    AActor* TargetActor = nullptr;
+    for (TActorIterator<AActor> It(World); It; ++It) {
+        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName) {
+            TargetActor = *It;
+            break;
+        }
+    }
+    if (!TargetActor) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found: ") + ActorName, TEXT("ACTOR_NOT_FOUND"));
+        return true;
+    }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TargetActor->Modify();
+    TargetActor->Tags.AddUnique(TEXT("MCP_DestructionEffectsConfigured"));
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetBoolField(TEXT("configured"), true);
+    Result->SetStringField(TEXT("tagAdded"), TEXT("MCP_DestructionEffectsConfigured"));
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Destruction effects configured"), Result);
 #else
-	SendAutomationError(RequestingSocket, RequestId, TEXT("configure_destruction_effects is editor-only"), TEXT("EDITOR_ONLY"));
+    SendAutomationError(RequestingSocket, RequestId, TEXT("configure_destruction_effects is editor-only"), TEXT("EDITOR_ONLY"));
 #endif
-	return true;
+    return true;
 }
 
 /**
@@ -1716,36 +1782,39 @@ if (SubAction == TEXT("configure_destruction_effects")) {
 * Configures destruction damage on an actor.
 */
 if (SubAction == TEXT("configure_destruction_damage")) {
-	FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-	if (ActorName.IsEmpty()) {
-		SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: actorName"), TEXT("MISSING_PARAMETER"));
-		return true;
-	}
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    if (ActorName.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: actorName"), TEXT("MISSING_PARAMETER"));
+        return true;
+    }
 #if WITH_EDITOR
-	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-	if (!World) {
-		SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
-		return true;
-	}
-	AActor* TargetActor = nullptr;
-	for (TActorIterator<AActor> It(World); It; ++It) {
-		if (It->GetActorLabel() == ActorName || It->GetName() == ActorName) {
-			TargetActor = *It;
-			break;
-		}
-	}
-	if (!TargetActor) {
-		SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found: ") + ActorName, TEXT("ACTOR_NOT_FOUND"));
-		return true;
-	}
-	TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-	Result->SetStringField(TEXT("actorName"), ActorName);
-	Result->SetBoolField(TEXT("configured"), true);
-	SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Destruction damage configured"), Result);
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
+        return true;
+    }
+    AActor* TargetActor = nullptr;
+    for (TActorIterator<AActor> It(World); It; ++It) {
+        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName) {
+            TargetActor = *It;
+            break;
+        }
+    }
+    if (!TargetActor) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found: ") + ActorName, TEXT("ACTOR_NOT_FOUND"));
+        return true;
+    }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TargetActor->Modify();
+    TargetActor->Tags.AddUnique(TEXT("MCP_DestructionDamageConfigured"));
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetBoolField(TEXT("configured"), true);
+    Result->SetStringField(TEXT("tagAdded"), TEXT("MCP_DestructionDamageConfigured"));
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Destruction damage configured"), Result);
 #else
-	SendAutomationError(RequestingSocket, RequestId, TEXT("configure_destruction_damage is editor-only"), TEXT("EDITOR_ONLY"));
+    SendAutomationError(RequestingSocket, RequestId, TEXT("configure_destruction_damage is editor-only"), TEXT("EDITOR_ONLY"));
 #endif
-	return true;
+    return true;
 }
 
 /**
@@ -1754,28 +1823,52 @@ if (SubAction == TEXT("configure_destruction_damage")) {
 * Configures trigger filter on a Blueprint.
 */
 if (SubAction == TEXT("configure_trigger_filter")) {
-	FString TriggerPath = GetJsonStringField(Payload, TEXT("triggerPath"));
-	if (TriggerPath.IsEmpty()) {
-		SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: triggerPath"), TEXT("MISSING_PARAMETER"));
-		return true;
-	}
+    FString TriggerPath = GetJsonStringField(Payload, TEXT("triggerPath"));
+    if (TriggerPath.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: triggerPath"), TEXT("MISSING_PARAMETER"));
+        return true;
+    }
 #if WITH_EDITOR
-	FString ResolvedPath, LoadError;
-	UBlueprint* Blueprint = LoadBlueprintAsset(TriggerPath, ResolvedPath, LoadError);
-	if (!Blueprint) {
-		SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
-		return true;
-	}
-	TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-	Result->SetStringField(TEXT("triggerPath"), TriggerPath);
-	Result->SetBoolField(TEXT("configured"), true);
-	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-	McpSafeAssetSave(Blueprint);
-	SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Trigger filter configured"), Result);
+    FString ResolvedPath, LoadError;
+    UBlueprint* Blueprint = LoadBlueprintAsset(TriggerPath, ResolvedPath, LoadError);
+    if (!Blueprint) {
+        SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
+        return true;
+    }
+    FEdGraphPinType StringType;
+    StringType.PinCategory = UEdGraphSchema_K2::PC_String;
+    FEdGraphPinType BoolType;
+    BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+
+    TArray<TPair<FName, FEdGraphPinType>> FilterVars = {
+        TPair<FName, FEdGraphPinType>(TEXT("RequiredActorTag"), StringType),
+        TPair<FName, FEdGraphPinType>(TEXT("bFilterByActorTag"), BoolType)
+    };
+    TArray<TSharedPtr<FJsonValue>> VarsAdded;
+    for (const auto& VarPair : FilterVars) {
+        bool bExists = false;
+        for (const FBPVariableDescription& Var : Blueprint->NewVariables) {
+            if (Var.VarName == VarPair.Key) {
+                bExists = true;
+                break;
+            }
+        }
+        if (!bExists) {
+            FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarPair.Key, VarPair.Value);
+            VarsAdded.Add(MakeShared<FJsonValueString>(VarPair.Key.ToString()));
+        }
+    }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("triggerPath"), TriggerPath);
+    Result->SetBoolField(TEXT("configured"), true);
+    Result->SetArrayField(TEXT("variablesAdded"), VarsAdded);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    McpSafeAssetSave(Blueprint);
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Trigger filter configured"), Result);
 #else
-	SendAutomationError(RequestingSocket, RequestId, TEXT("configure_trigger_filter is editor-only"), TEXT("EDITOR_ONLY"));
+    SendAutomationError(RequestingSocket, RequestId, TEXT("configure_trigger_filter is editor-only"), TEXT("EDITOR_ONLY"));
 #endif
-	return true;
+    return true;
 }
 
 /**
@@ -1784,28 +1877,53 @@ if (SubAction == TEXT("configure_trigger_filter")) {
 * Configures trigger response on a Blueprint.
 */
 if (SubAction == TEXT("configure_trigger_response")) {
-	FString TriggerPath = GetJsonStringField(Payload, TEXT("triggerPath"));
-	if (TriggerPath.IsEmpty()) {
-		SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: triggerPath"), TEXT("MISSING_PARAMETER"));
-		return true;
-	}
+    FString TriggerPath = GetJsonStringField(Payload, TEXT("triggerPath"));
+    if (TriggerPath.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: triggerPath"), TEXT("MISSING_PARAMETER"));
+        return true;
+    }
 #if WITH_EDITOR
-	FString ResolvedPath, LoadError;
-	UBlueprint* Blueprint = LoadBlueprintAsset(TriggerPath, ResolvedPath, LoadError);
-	if (!Blueprint) {
-		SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
-		return true;
-	}
-	TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-	Result->SetStringField(TEXT("triggerPath"), TriggerPath);
-	Result->SetBoolField(TEXT("configured"), true);
-	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-	McpSafeAssetSave(Blueprint);
-	SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Trigger response configured"), Result);
+    FString ResolvedPath, LoadError;
+    UBlueprint* Blueprint = LoadBlueprintAsset(TriggerPath, ResolvedPath, LoadError);
+    if (!Blueprint) {
+        SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
+        return true;
+    }
+    FEdGraphPinType StringType;
+    StringType.PinCategory = UEdGraphSchema_K2::PC_String;
+    FEdGraphPinType FloatType;
+    FloatType.PinCategory = UEdGraphSchema_K2::PC_Real;
+    FloatType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
+
+    TArray<TPair<FName, FEdGraphPinType>> ResponseVars = {
+        TPair<FName, FEdGraphPinType>(TEXT("TriggerResponseType"), StringType),
+        TPair<FName, FEdGraphPinType>(TEXT("TriggerResponseDelay"), FloatType)
+    };
+    TArray<TSharedPtr<FJsonValue>> VarsAdded;
+    for (const auto& VarPair : ResponseVars) {
+        bool bExists = false;
+        for (const FBPVariableDescription& Var : Blueprint->NewVariables) {
+            if (Var.VarName == VarPair.Key) {
+                bExists = true;
+                break;
+            }
+        }
+        if (!bExists) {
+            FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarPair.Key, VarPair.Value);
+            VarsAdded.Add(MakeShared<FJsonValueString>(VarPair.Key.ToString()));
+        }
+    }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("triggerPath"), TriggerPath);
+    Result->SetBoolField(TEXT("configured"), true);
+    Result->SetArrayField(TEXT("variablesAdded"), VarsAdded);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    McpSafeAssetSave(Blueprint);
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Trigger response configured"), Result);
 #else
-	SendAutomationError(RequestingSocket, RequestId, TEXT("configure_trigger_response is editor-only"), TEXT("EDITOR_ONLY"));
+    SendAutomationError(RequestingSocket, RequestId, TEXT("configure_trigger_response is editor-only"), TEXT("EDITOR_ONLY"));
 #endif
-	return true;
+    return true;
 }
 
   // Section 5: Utility Handlers

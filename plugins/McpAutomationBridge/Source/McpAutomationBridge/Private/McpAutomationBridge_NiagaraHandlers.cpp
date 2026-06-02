@@ -70,6 +70,7 @@
 #include "NiagaraActor.h"
 #include "NiagaraComponent.h"
 #include "NiagaraEmitter.h"
+#include "NiagaraEmitterHandle.h"
 #include "NiagaraParameterCollection.h"
 #include "NiagaraSystem.h"
 
@@ -88,6 +89,20 @@
 // Niagara Stack Utilities (optional)
 #if __has_include("ViewModels/Stack/NiagaraStackGraphUtilities.h")
 #include "ViewModels/Stack/NiagaraStackGraphUtilities.h"
+#endif
+
+#if __has_include("NiagaraEmitterFactoryNew.h") && !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0)
+#include "NiagaraEmitterFactoryNew.h"
+#define MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW 1
+#else
+#define MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW 0
+#endif
+
+#if __has_include("NiagaraSystemFactoryNew.h") && !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0)
+#include "NiagaraSystemFactoryNew.h"
+#define MCP_HAS_NIAGARA_SYSTEM_FACTORY_NEW 1
+#else
+#define MCP_HAS_NIAGARA_SYSTEM_FACTORY_NEW 0
 #endif
 
 #endif // WITH_EDITOR
@@ -137,6 +152,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }
+  const bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
   // Check for Niagara plugin availability via module system
   // Previous check for asset existence failed even when Niagara was enabled
@@ -154,11 +170,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
   // Note: Factories are editor-internal and not exported for plugin use
   FString PackagePath = SavePath;
   FString AssetName = SystemName;
-  
+
   if (!PackagePath.EndsWith(TEXT("/"))) PackagePath += TEXT("/");
   FString FullPath = PackagePath + AssetName;
   FString ActualPackagePath = FPackageName::ObjectPathToPackageName(FullPath);
-  
+
   UPackage *Package = CreatePackage(*ActualPackagePath);
   if (!Package) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -166,45 +182,59 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
                         TEXT("PACKAGE_ERROR"));
     return true;
   }
-  
+
   // Create Niagara system with proper initialization
   UNiagaraSystem *NiagaraSystem = NewObject<UNiagaraSystem>(Package, FName(*AssetName), RF_Public | RF_Standalone | RF_Transactional);
   if (NiagaraSystem)
   {
+#if MCP_HAS_NIAGARA_SYSTEM_FACTORY_NEW
+    if (!FModuleManager::Get().IsModuleLoaded(TEXT("NiagaraEditor"))) {
+      FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
+    }
+    UNiagaraSystemFactoryNew::InitializeSystem(NiagaraSystem, true);
+#else
     // Initialize system scripts
     UNiagaraScript* SystemSpawnScript = NiagaraSystem->GetSystemSpawnScript();
     UNiagaraScript* SystemUpdateScript = NiagaraSystem->GetSystemUpdateScript();
-    
+
     // Create script source and graph for system
     UNiagaraScriptSource* SystemScriptSource = NewObject<UNiagaraScriptSource>(SystemSpawnScript, TEXT("SystemScriptSource"), RF_Transactional);
     if (SystemScriptSource)
     {
       UNiagaraGraph* SystemGraph = NewObject<UNiagaraGraph>(SystemScriptSource, TEXT("SystemScriptGraph"), RF_Transactional);
       SystemScriptSource->NodeGraph = SystemGraph;
-      
+
       // Set source on both system scripts
       SystemSpawnScript->SetLatestSource(SystemScriptSource);
       SystemUpdateScript->SetLatestSource(SystemScriptSource);
     }
-    
+#endif
+
     // Add default emitter with proper GraphSource initialization
     UNiagaraEmitter *NewEmitter = NewObject<UNiagaraEmitter>(NiagaraSystem, FName(TEXT("DefaultEmitter")), RF_Transactional);
     if (NewEmitter)
     {
+#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW
+      if (!FModuleManager::Get().IsModuleLoaded(TEXT("NiagaraEditor"))) {
+        FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
+      }
+      UNiagaraEmitterFactoryNew::InitializeEmitter(NewEmitter, true);
+      NewEmitter->SetUniqueEmitterName(TEXT("DefaultEmitter"));
+#else
       // Create script source and graph for emitter
       UNiagaraScriptSource* EmitterSource = NewObject<UNiagaraScriptSource>(NewEmitter, NAME_None, RF_Transactional);
       if (EmitterSource)
       {
         UNiagaraGraph* EmitterGraph = NewObject<UNiagaraGraph>(EmitterSource, NAME_None, RF_Transactional);
         EmitterSource->NodeGraph = EmitterGraph;
-        
+
         // Set GraphSource - API differs between engine versions
         // UE 5.0: GraphSource is directly on UNiagaraEmitter
         // UE 5.1+: GraphSource is on FVersionedNiagaraEmitterData, accessed via GetLatestEmitterData()
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
         // UE 5.0: Set GraphSource directly on emitter
         NewEmitter->GraphSource = EmitterSource;
-        
+
         // Set source on emitter scripts
         if (NewEmitter->SpawnScriptProps.Script)
           NewEmitter->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
@@ -222,7 +252,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
         if (EmitterData)
         {
           EmitterData->GraphSource = EmitterSource;
-          
+
           // Set source on emitter scripts
           if (EmitterData->SpawnScriptProps.Script)
             EmitterData->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
@@ -237,25 +267,40 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
         }
 #endif
       }
-      
+#endif
+
       // AddEmitterHandle: UE 5.0 uses 2 params, UE 5.1+ uses 3 params (with FGuid)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
       NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")));
 #else
-      NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")), FGuid::NewGuid());
+      NewEmitter->CheckVersionDataAvailable();
+      const FGuid EmitterVersion = NewEmitter->GetExposedVersion().VersionGuid;
+      FVersionedNiagaraEmitterData* EmitterData = NewEmitter->GetEmitterData(EmitterVersion);
+      if (!EmitterData || !EmitterData->GraphSource)
+      {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Failed to initialize default Niagara emitter graph source"),
+                            TEXT("NIAGARA_EMITTER_INIT_FAILED"));
+        return true;
+      }
+
+      FNiagaraEmitterHandle NewHandle(*NewEmitter, EmitterVersion);
+      NiagaraSystem->AddEmitterHandleDirect(NewHandle);
 #endif
     }
   }
-  
+
   if (!NiagaraSystem) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Failed to create Niagara system"),
                         TEXT("CREATE_FAILED"));
     return true;
   }
-  
+
   FAssetRegistryModule::AssetCreated(NiagaraSystem);
-  McpSafeAssetSave(NiagaraSystem);
+  if (bSave) {
+    McpSafeAssetSave(NiagaraSystem);
+  }
 
   if (!NiagaraSystem) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -324,6 +369,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }
+  const bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
   // Check for Niagara plugin availability via module system
   if (!FModuleManager::Get().IsModuleLoaded(TEXT("Niagara"))) {
@@ -338,11 +384,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
   // Note: Factories are editor-internal and not exported for plugin use
   FString PackagePath = SavePath;
   FString AssetName = EmitterName;
-  
+
   if (!PackagePath.EndsWith(TEXT("/"))) PackagePath += TEXT("/");
   FString FullPath = PackagePath + AssetName;
   FString ActualPackagePath = FPackageName::ObjectPathToPackageName(FullPath);
-  
+
   UPackage *Package = CreatePackage(*ActualPackagePath);
   if (!Package) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -350,32 +396,39 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
                         TEXT("PACKAGE_ERROR"));
     return true;
   }
-  
+
   UNiagaraEmitter *NiagaraEmitter = NewObject<UNiagaraEmitter>(Package, FName(*AssetName), RF_Public | RF_Standalone | RF_Transactional);
-  
+
   if (!NiagaraEmitter) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Failed to create Niagara emitter"),
                         TEXT("CREATE_FAILED"));
     return true;
   }
-  
+
   // Initialize emitter with GraphSource to prevent crashes
   {
+#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW
+    if (!FModuleManager::Get().IsModuleLoaded(TEXT("NiagaraEditor"))) {
+      FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
+    }
+    UNiagaraEmitterFactoryNew::InitializeEmitter(NiagaraEmitter, true);
+    NiagaraEmitter->SetUniqueEmitterName(EmitterName);
+#else
     // Create script source and graph
     UNiagaraScriptSource* EmitterSource = NewObject<UNiagaraScriptSource>(NiagaraEmitter, NAME_None, RF_Transactional);
     if (EmitterSource)
     {
       UNiagaraGraph* EmitterGraph = NewObject<UNiagaraGraph>(EmitterSource, NAME_None, RF_Transactional);
       EmitterSource->NodeGraph = EmitterGraph;
-      
+
       // Set GraphSource - API differs between engine versions
       // UE 5.0: GraphSource is directly on UNiagaraEmitter
       // UE 5.1+: GraphSource is on FVersionedNiagaraEmitterData, accessed via GetLatestEmitterData()
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
       // UE 5.0: Set GraphSource directly on emitter
       NiagaraEmitter->GraphSource = EmitterSource;
-      
+
       // Set source on emitter scripts
       if (NiagaraEmitter->SpawnScriptProps.Script)
         NiagaraEmitter->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
@@ -393,7 +446,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
       if (EmitterData)
       {
         EmitterData->GraphSource = EmitterSource;
-        
+
         // Set source on emitter scripts
         if (EmitterData->SpawnScriptProps.Script)
           EmitterData->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
@@ -408,10 +461,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
       }
 #endif
     }
+#endif
   }
-  
+
   FAssetRegistryModule::AssetCreated(NiagaraEmitter);
-  McpSafeAssetSave(NiagaraEmitter);
+  if (bSave) {
+    McpSafeAssetSave(NiagaraEmitter);
+  }
 
   if (!NiagaraEmitter) {
     SendAutomationError(RequestingSocket, RequestId,

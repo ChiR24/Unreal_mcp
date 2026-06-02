@@ -1,4 +1,5 @@
-import http from 'http';
+import http from 'node:http';
+import { timingSafeEqual } from 'node:crypto';
 import { HealthMonitor } from './health-monitor.js';
 import { AutomationBridge } from '../automation/index.js';
 import { Logger } from '../utils/logger.js';
@@ -7,6 +8,64 @@ interface MetricsServerOptions {
   healthMonitor: HealthMonitor;
   automationBridge: AutomationBridge;
   logger: Logger;
+}
+
+function parseMetricsPort(value: string | undefined): number {
+  if (!value || value.trim().length === 0) return 0;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return 0;
+  const port = Number(trimmed);
+  return Number.isInteger(port) && port > 0 && port <= 65535 ? port : 0;
+}
+
+function isLoopbackHost(host: string): boolean {
+  const normalized = host.trim().toLowerCase();
+  return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1' || normalized === '[::1]';
+}
+
+function parseMetricsHost(value: string | undefined, logger: Logger): string | null {
+  const host = value && value.trim().length > 0 ? value.trim() : '127.0.0.1';
+  if (isLoopbackHost(host)) {
+    if (host.toLowerCase() === 'localhost') return '127.0.0.1';
+    if (host === '[::1]') return '::1';
+    return host;
+  }
+
+  const allowNonLoopback = process.env.MCP_METRICS_ALLOW_NON_LOOPBACK?.toLowerCase() === 'true';
+  if (!allowNonLoopback) {
+    logger.warn(`Refusing to bind metrics server to non-loopback host '${host}'. Set MCP_METRICS_ALLOW_NON_LOOPBACK=true and MCP_METRICS_TOKEN to opt in.`);
+    return null;
+  }
+
+  if (!process.env.MCP_METRICS_TOKEN?.trim()) {
+    logger.warn('Refusing to expose metrics on a non-loopback host without MCP_METRICS_TOKEN.');
+    return null;
+  }
+
+  return host;
+}
+
+function headerValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function tokensMatch(candidate: string, expected: string): boolean {
+  const candidateBytes = Buffer.from(candidate);
+  const expectedBytes = Buffer.from(expected);
+  return candidateBytes.length === expectedBytes.length && timingSafeEqual(candidateBytes, expectedBytes);
+}
+
+function isAuthorized(req: http.IncomingMessage, token: string): boolean {
+  const explicitToken = headerValue(req.headers['x-mcp-metrics-token']);
+  if (explicitToken && tokensMatch(explicitToken, token)) return true;
+
+  const authHeader = headerValue(req.headers.authorization);
+  const bearerPrefix = 'Bearer ';
+  if (authHeader?.startsWith(bearerPrefix)) {
+    return tokensMatch(authHeader.slice(bearerPrefix.length).trim(), token);
+  }
+
+  return false;
 }
 
 function formatPrometheusMetrics(options: MetricsServerOptions): string {
@@ -64,14 +123,18 @@ export function startMetricsServer(options: MetricsServerOptions): http.Server |
   const { logger } = options;
 
   const portEnv = process.env.MCP_METRICS_PORT || process.env.PROMETHEUS_PORT;
-  const port = portEnv ? Number(portEnv) : 0;
+  const port = parseMetricsPort(portEnv);
 
   if (!port || !Number.isFinite(port) || port <= 0) {
     logger.debug('Metrics server disabled (set MCP_METRICS_PORT to enable Prometheus /metrics endpoint).');
     return null;
   }
 
-  const host = process.env.MCP_METRICS_HOST || '127.0.0.1';
+  const host = parseMetricsHost(process.env.MCP_METRICS_HOST, logger);
+  if (!host) {
+    return null;
+  }
+  const metricsToken = process.env.MCP_METRICS_TOKEN?.trim();
 
   // Simple rate limiting: max 60 requests per minute per IP
   const requestCounts = new Map<string, { count: number; resetTime: number }>();
@@ -100,6 +163,12 @@ export function startMetricsServer(options: MetricsServerOptions): http.Server |
       if (now > data.resetTime) {
         requestCounts.delete(ip);
       }
+    }
+
+    if (metricsToken && !isAuthorized(req, metricsToken)) {
+      res.writeHead(401, { 'Content-Type': 'text/plain' });
+      res.end('Unauthorized');
+      return;
     }
 
     if (req.url === '/metrics' && req.method === 'GET') {

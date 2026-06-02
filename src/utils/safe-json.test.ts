@@ -59,12 +59,40 @@ describe('cleanObject', () => {
         expect(() => cleanObject(deep, 10)).not.toThrow();
     });
 
+    it('uses the default depth limit for invalid maxDepth values', () => {
+        const input = { nested: { value: 'safe' } };
+
+        expect(cleanObject(input, -1)).toEqual(input);
+        expect(cleanObject(input, Number.NaN)).toEqual(input);
+    });
+
     it('handles circular reference prevention at max depth', () => {
         const obj: any = { a: 1 };
         obj.self = obj; // circular reference
 
         // Should not throw - depth limiting should prevent infinite recursion
         expect(() => cleanObject(obj, 5)).not.toThrow();
+    });
+
+    it('preserves repeated non-circular references as full values', () => {
+        const shared = { pinName: 'then_0', direction: 'Output' };
+        const input = { result: { pins: [shared] }, pins: [shared] };
+
+        const result = cleanObject(input);
+
+        expect(result).toEqual({
+            result: { pins: [{ pinName: 'then_0', direction: 'Output' }] },
+            pins: [{ pinName: 'then_0', direction: 'Output' }]
+        });
+    });
+
+    it('marks actual circular references', () => {
+        const input: Record<string, unknown> = { a: 1 };
+        input.self = input;
+
+        const result = cleanObject(input);
+
+        expect(result.self).toBe('[Circular Reference]');
     });
 
     it('handles Date objects (converts to empty object)', () => {

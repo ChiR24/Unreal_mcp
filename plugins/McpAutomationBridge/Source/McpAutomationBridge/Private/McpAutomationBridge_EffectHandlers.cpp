@@ -134,11 +134,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   const bool bIsNiagaraModule = Lower.StartsWith(TEXT("add_")) ||
                                  Lower.StartsWith(TEXT("set_parameter")) ||
                                  Lower.StartsWith(TEXT("bind_parameter")) ||
-                                 Lower.StartsWith(TEXT("enable_gpu")) ||
+                                 Lower.StartsWith(TEXT("enable_gpu_simulation")) ||
                                  Lower.StartsWith(TEXT("configure_event"));
   // Note: Only accept spawn_niagara explicitly, NOT spawn_sky_light (which goes to HandleLightingAction)
   const bool bIsSpawnNiagara = Lower.Equals(TEXT("spawn_niagara"));
   if (!bIsCreateEffect && !bIsNiagaraModule && !bIsSpawnNiagara &&
+      !Lower.Equals(TEXT("manage_effect")) &&
       !Lower.Equals(TEXT("set_niagara_parameter")) &&
       !Lower.Equals(TEXT("list_debug_shapes")) &&
       !Lower.Equals(TEXT("clear_debug_shapes")))
@@ -146,6 +147,104 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
   TSharedPtr<FJsonObject> LocalPayload =
       Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
+
+  auto NormalizeNativeManageEffectSubAction = [&]() -> FString {
+    FString SubAction;
+    LocalPayload->TryGetStringField(TEXT("subAction"), SubAction);
+    if (SubAction.IsEmpty()) {
+      LocalPayload->TryGetStringField(TEXT("action"), SubAction);
+    }
+    if (SubAction.IsEmpty() && !Lower.Equals(TEXT("manage_effect")) &&
+        !Lower.Equals(TEXT("create_effect"))) {
+      SubAction = Action;
+    }
+    SubAction = SubAction.ToLower();
+    SubAction.ReplaceInline(TEXT("-"), TEXT("_"));
+    SubAction.ReplaceInline(TEXT(" "), TEXT("_"));
+    if (!SubAction.IsEmpty()) {
+      LocalPayload->SetStringField(TEXT("subAction"), SubAction);
+    }
+    return SubAction;
+  };
+
+  auto IsNiagaraAuthoringSubAction = [](const FString &SubAction) {
+    static const TSet<FString> NiagaraAuthoringActions = {
+        TEXT("create_niagara_system"),
+        TEXT("create_niagara_emitter"),
+        TEXT("add_emitter_to_system"),
+        TEXT("set_emitter_properties"),
+        TEXT("add_spawn_rate_module"),
+        TEXT("add_spawn_burst_module"),
+        TEXT("add_spawn_per_unit_module"),
+        TEXT("add_initialize_particle_module"),
+        TEXT("add_particle_state_module"),
+        TEXT("add_force_module"),
+        TEXT("add_velocity_module"),
+        TEXT("add_acceleration_module"),
+        TEXT("add_size_module"),
+        TEXT("add_color_module"),
+        TEXT("add_sprite_renderer_module"),
+        TEXT("add_mesh_renderer_module"),
+        TEXT("add_ribbon_renderer_module"),
+        TEXT("add_light_renderer_module"),
+        TEXT("add_collision_module"),
+        TEXT("add_kill_particles_module"),
+        TEXT("add_camera_offset_module"),
+        TEXT("add_user_parameter"),
+        TEXT("set_parameter_value"),
+        TEXT("bind_parameter_to_source"),
+        TEXT("add_skeletal_mesh_data_interface"),
+        TEXT("add_static_mesh_data_interface"),
+        TEXT("add_spline_data_interface"),
+        TEXT("add_audio_spectrum_data_interface"),
+        TEXT("add_collision_query_data_interface"),
+        TEXT("add_event_generator"),
+        TEXT("add_event_receiver"),
+        TEXT("configure_event_payload"),
+        TEXT("enable_gpu_simulation"),
+        TEXT("add_simulation_stage"),
+        TEXT("get_niagara_info"),
+        TEXT("validate_niagara_system")};
+    return NiagaraAuthoringActions.Contains(SubAction);
+  };
+
+  auto IsNiagaraGraphSubAction = [](const FString &SubAction) {
+    return SubAction == TEXT("add_niagara_module") ||
+           SubAction == TEXT("connect_niagara_pins") ||
+           SubAction == TEXT("remove_niagara_node") ||
+           SubAction == TEXT("add_module") ||
+           SubAction == TEXT("connect_pins") ||
+           SubAction == TEXT("remove_node");
+  };
+
+  const FString NativeSubAction = NormalizeNativeManageEffectSubAction();
+  if (IsNiagaraAuthoringSubAction(NativeSubAction)) {
+    return HandleManageNiagaraAuthoringAction(
+        RequestId, TEXT("manage_niagara_authoring"), LocalPayload,
+        RequestingSocket);
+  }
+  if (IsNiagaraGraphSubAction(NativeSubAction)) {
+    if (NativeSubAction == TEXT("add_niagara_module")) {
+      LocalPayload->SetStringField(TEXT("subAction"), TEXT("add_module"));
+    } else if (NativeSubAction == TEXT("connect_niagara_pins")) {
+      LocalPayload->SetStringField(TEXT("subAction"), TEXT("connect_pins"));
+    } else if (NativeSubAction == TEXT("remove_niagara_node")) {
+      LocalPayload->SetStringField(TEXT("subAction"), TEXT("remove_node"));
+    }
+    return HandleNiagaraGraphAction(RequestId, TEXT("manage_niagara_graph"),
+                                    LocalPayload, RequestingSocket);
+  }
+  if (Lower.Equals(TEXT("manage_effect")) && !NativeSubAction.IsEmpty()) {
+    const FString RoutedAction =
+        (NativeSubAction == TEXT("list_debug_shapes") ||
+         NativeSubAction == TEXT("clear_debug_shapes") ||
+         NativeSubAction == TEXT("spawn_niagara") ||
+         NativeSubAction == TEXT("set_niagara_parameter"))
+            ? NativeSubAction
+            : TEXT("create_effect");
+    return HandleEffectAction(RequestId, RoutedAction, LocalPayload,
+                              RequestingSocket);
+  }
 
   auto SendResponse = [&](bool bOk, const FString &Msg,
                           const TSharedPtr<FJsonObject> &ResObj,
@@ -1347,6 +1446,9 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     FString SystemPath;
     LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
     if (SystemPath.IsEmpty()) {
+      LocalPayload->TryGetStringField(TEXT("system"), SystemPath);
+    }
+    if (SystemPath.IsEmpty()) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
@@ -1494,9 +1596,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           TEXT("Niagara_%lld"), FDateTime::Now().ToUnixTimestamp()));
     }
 
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("spawn_niagara: Spawned actor '%s' (ID: %u)"),
-           *Spawned->GetActorLabel(), Spawned->GetUniqueID());
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Resp, Spawned);
@@ -1747,7 +1846,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     // Create environment effect - requires a Niagara system asset
     FString SystemPath;
     LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
-    
+
     if (!SystemPath.IsEmpty()) {
       return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
                                  TEXT("create_environment_effect"), SystemPath);
@@ -1858,9 +1957,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     LocalPayload->TryGetNumberField(TEXT("spawnRate"), SpawnRate);
     // Note: Actual module addition requires NiagaraEditor view models
     // This handler validates inputs and reports success for the operation intent
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_spawn_rate_module: System=%s, Emitter=%s, Rate=%.2f"),
-           *ModuleSystemPath, *ModuleEmitterName, SpawnRate);
     SendNiagaraModuleResponse(true, TEXT("SpawnRate"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Spawn rate module configured with rate %.2f"), SpawnRate));
@@ -1887,12 +1983,9 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     double BurstInterval = 0.0;
     LocalPayload->TryGetNumberField(TEXT("burstCount"), BurstCount);
     LocalPayload->TryGetNumberField(TEXT("burstInterval"), BurstInterval);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_spawn_burst_module: System=%s, Count=%d, Interval=%.3f"),
-           *ModuleSystemPath, BurstCount, BurstInterval);
     SendNiagaraModuleResponse(true, TEXT("SpawnBurst"), ModuleSystemPath,
                               ModuleEmitterName,
-                              FString::Printf(TEXT("Spawn burst module configured: count=%d, interval=%.3f"), 
+                              FString::Printf(TEXT("Spawn burst module configured: count=%d, interval=%.3f"),
                                               BurstCount, BurstInterval));
     return true;
   }
@@ -1915,9 +2008,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     double SpawnPerUnit = 1.0;
     LocalPayload->TryGetNumberField(TEXT("spawnPerUnit"), SpawnPerUnit);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_spawn_per_unit_module: System=%s, SpawnPerUnit=%.2f"),
-           *ModuleSystemPath, SpawnPerUnit);
     SendNiagaraModuleResponse(true, TEXT("SpawnPerUnit"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Spawn per unit module configured: %.2f per unit"), SpawnPerUnit));
@@ -1944,9 +2034,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                                 TEXT("SYSTEM_NOT_FOUND"));
       return true;
     }
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_initialize_particle_module: System=%s, Emitter=%s"),
-           *ModuleSystemPath, *ModuleEmitterName);
     SendNiagaraModuleResponse(true, TEXT("InitializeParticle"), ModuleSystemPath,
                               ModuleEmitterName,
                               TEXT("Initialize particle module added"));
@@ -1971,9 +2058,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     bool bKillOnLifetime = true;
     LocalPayload->TryGetBoolField(TEXT("killOnLifetime"), bKillOnLifetime);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_particle_state_module: System=%s, KillOnLifetime=%d"),
-           *ModuleSystemPath, bKillOnLifetime ? 1 : 0);
     SendNiagaraModuleResponse(true, TEXT("ParticleState"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Particle state module added (killOnLifetime=%s)"),
@@ -2009,9 +2093,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         static_cast<float>((*ForceArr)[1]->AsNumber()),
         static_cast<float>((*ForceArr)[2]->AsNumber()));
     }
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_force_module: System=%s, Force=(%.2f, %.2f, %.2f)"),
-           *ModuleSystemPath, ForceValue.X, ForceValue.Y, ForceValue.Z);
     SendNiagaraModuleResponse(true, TEXT("Force"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Force module added: (%.2f, %.2f, %.2f)"),
@@ -2038,9 +2119,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     FString VelocityMode;
     LocalPayload->TryGetStringField(TEXT("velocityMode"), VelocityMode);
     if (VelocityMode.IsEmpty()) VelocityMode = TEXT("Linear");
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_velocity_module: System=%s, Mode=%s"),
-           *ModuleSystemPath, *VelocityMode);
     SendNiagaraModuleResponse(true, TEXT("Velocity"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Velocity module added (mode=%s)"), *VelocityMode));
@@ -2071,9 +2149,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         static_cast<float>((*AccelArr)[1]->AsNumber()),
         static_cast<float>((*AccelArr)[2]->AsNumber()));
     }
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_acceleration_module: System=%s, Accel=(%.2f, %.2f, %.2f)"),
-           *ModuleSystemPath, AccelValue.X, AccelValue.Y, AccelValue.Z);
     SendNiagaraModuleResponse(true, TEXT("Acceleration"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Acceleration module added: (%.2f, %.2f, %.2f)"),
@@ -2102,9 +2177,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     if (SizeMode.IsEmpty()) SizeMode = TEXT("Uniform");
     double SizeScale = 1.0;
     LocalPayload->TryGetNumberField(TEXT("sizeScale"), SizeScale);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_size_module: System=%s, Mode=%s, Scale=%.2f"),
-           *ModuleSystemPath, *SizeMode, SizeScale);
     SendNiagaraModuleResponse(true, TEXT("Size"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Size module added (mode=%s, scale=%.2f)"), *SizeMode, SizeScale));
@@ -2144,9 +2216,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         static_cast<float>((*ColorArr)[2]->AsNumber()),
         ColorArr->Num() > 3 ? static_cast<float>((*ColorArr)[3]->AsNumber()) : 0.0f);
     }
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_color_module: System=%s"),
-           *ModuleSystemPath);
     SendNiagaraModuleResponse(true, TEXT("Color"), ModuleSystemPath,
                               ModuleEmitterName,
                               TEXT("Color module added with gradient"));
@@ -2176,9 +2245,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     double Friction = 0.2;
     LocalPayload->TryGetNumberField(TEXT("restitution"), Restitution);
     LocalPayload->TryGetNumberField(TEXT("friction"), Friction);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_collision_module: System=%s, Mode=%s, Restitution=%.2f, Friction=%.2f"),
-           *ModuleSystemPath, *CollisionMode, Restitution, Friction);
     SendNiagaraModuleResponse(true, TEXT("Collision"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Collision module added (mode=%s, restitution=%.2f, friction=%.2f)"),
@@ -2205,9 +2271,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     FString KillCondition;
     LocalPayload->TryGetStringField(TEXT("killCondition"), KillCondition);
     if (KillCondition.IsEmpty()) KillCondition = TEXT("LifetimeExpired");
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_kill_particles_module: System=%s, Condition=%s"),
-           *ModuleSystemPath, *KillCondition);
     SendNiagaraModuleResponse(true, TEXT("KillParticles"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Kill particles module added (condition=%s)"), *KillCondition));
@@ -2232,9 +2295,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     double CameraOffset = 0.0;
     LocalPayload->TryGetNumberField(TEXT("offset"), CameraOffset);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_camera_offset_module: System=%s, Offset=%.2f"),
-           *ModuleSystemPath, CameraOffset);
     SendNiagaraModuleResponse(true, TEXT("CameraOffset"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Camera offset module added (offset=%.2f)"), CameraOffset));
@@ -2263,9 +2323,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FString MaterialPath;
     LocalPayload->TryGetStringField(TEXT("materialPath"), MaterialPath);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_sprite_renderer_module: System=%s, Material=%s"),
-           *ModuleSystemPath, *MaterialPath);
     SendNiagaraModuleResponse(true, TEXT("SpriteRenderer"), ModuleSystemPath,
                               ModuleEmitterName,
                               TEXT("Sprite renderer module added"));
@@ -2290,9 +2347,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FString MeshPath;
     LocalPayload->TryGetStringField(TEXT("meshPath"), MeshPath);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_mesh_renderer_module: System=%s, Mesh=%s"),
-           *ModuleSystemPath, *MeshPath);
     SendNiagaraModuleResponse(true, TEXT("MeshRenderer"), ModuleSystemPath,
                               ModuleEmitterName,
                               TEXT("Mesh renderer module added"));
@@ -2317,9 +2371,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     double RibbonWidth = 10.0;
     LocalPayload->TryGetNumberField(TEXT("ribbonWidth"), RibbonWidth);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_ribbon_renderer_module: System=%s, Width=%.2f"),
-           *ModuleSystemPath, RibbonWidth);
     SendNiagaraModuleResponse(true, TEXT("RibbonRenderer"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Ribbon renderer module added (width=%.2f)"), RibbonWidth));
@@ -2346,9 +2397,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     double LightIntensity = 1.0;
     LocalPayload->TryGetNumberField(TEXT("lightRadius"), LightRadius);
     LocalPayload->TryGetNumberField(TEXT("lightIntensity"), LightIntensity);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_light_renderer_module: System=%s, Radius=%.2f, Intensity=%.2f"),
-           *ModuleSystemPath, LightRadius, LightIntensity);
     SendNiagaraModuleResponse(true, TEXT("LightRenderer"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Light renderer module added (radius=%.2f, intensity=%.2f)"),
@@ -2378,9 +2426,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FString SkeletalMeshPath;
     LocalPayload->TryGetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_skeletal_mesh_data_interface: System=%s, Mesh=%s"),
-           *ModuleSystemPath, *SkeletalMeshPath);
     SendNiagaraModuleResponse(true, TEXT("SkeletalMeshDataInterface"), ModuleSystemPath,
                               ModuleEmitterName,
                               TEXT("Skeletal mesh data interface added"));
@@ -2405,9 +2450,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FString StaticMeshPath;
     LocalPayload->TryGetStringField(TEXT("staticMeshPath"), StaticMeshPath);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_static_mesh_data_interface: System=%s, Mesh=%s"),
-           *ModuleSystemPath, *StaticMeshPath);
     SendNiagaraModuleResponse(true, TEXT("StaticMeshDataInterface"), ModuleSystemPath,
                               ModuleEmitterName,
                               TEXT("Static mesh data interface added"));
@@ -2430,9 +2472,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                                 TEXT("SYSTEM_NOT_FOUND"));
       return true;
     }
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_spline_data_interface: System=%s"),
-           *ModuleSystemPath);
     SendNiagaraModuleResponse(true, TEXT("SplineDataInterface"), ModuleSystemPath,
                               ModuleEmitterName,
                               TEXT("Spline data interface added"));
@@ -2457,9 +2496,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     int32 NumBands = 32;
     LocalPayload->TryGetNumberField(TEXT("numBands"), NumBands);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_audio_spectrum_data_interface: System=%s, Bands=%d"),
-           *ModuleSystemPath, NumBands);
     SendNiagaraModuleResponse(true, TEXT("AudioSpectrumDataInterface"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Audio spectrum data interface added (bands=%d)"), NumBands));
@@ -2485,9 +2521,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     FString TraceChannel;
     LocalPayload->TryGetStringField(TEXT("traceChannel"), TraceChannel);
     if (TraceChannel.IsEmpty()) TraceChannel = TEXT("Visibility");
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_collision_query_data_interface: System=%s, Channel=%s"),
-           *ModuleSystemPath, *TraceChannel);
     SendNiagaraModuleResponse(true, TEXT("CollisionQueryDataInterface"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Collision query data interface added (channel=%s)"), *TraceChannel));
@@ -2519,9 +2552,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     if (EventName.IsEmpty()) EventName = TEXT("CustomEvent");
     int32 MaxEventsPerFrame = 64;
     LocalPayload->TryGetNumberField(TEXT("maxEventsPerFrame"), MaxEventsPerFrame);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_event_generator: System=%s, Event=%s, Max=%d"),
-           *ModuleSystemPath, *EventName, MaxEventsPerFrame);
     SendNiagaraModuleResponse(true, TEXT("EventGenerator"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Event generator added (name=%s, maxPerFrame=%d)"),
@@ -2549,9 +2579,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     FString SourceEmitterName;
     LocalPayload->TryGetStringField(TEXT("sourceEventName"), SourceEventName);
     LocalPayload->TryGetStringField(TEXT("sourceEmitterName"), SourceEmitterName);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_event_receiver: System=%s, SourceEvent=%s, SourceEmitter=%s"),
-           *ModuleSystemPath, *SourceEventName, *SourceEmitterName);
     SendNiagaraModuleResponse(true, TEXT("EventReceiver"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Event receiver added (source=%s from %s)"),
@@ -2582,9 +2609,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     if (LocalPayload->TryGetArrayField(TEXT("payloadVariables"), PayloadVars) && PayloadVars) {
       VarCount = PayloadVars->Num();
     }
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("configure_event_payload: System=%s, Event=%s, VarCount=%d"),
-           *ModuleSystemPath, *EventName, VarCount);
     SendNiagaraModuleResponse(true, TEXT("EventPayload"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Event payload configured (event=%s, variables=%d)"),
@@ -2623,9 +2647,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_user_parameter: System=%s, Name=%s, Type=%s"),
-           *ModuleSystemPath, *ParameterName, *ParameterType);
     SendNiagaraModuleResponse(true, TEXT("UserParameter"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("User parameter added (name=%s, type=%s)"),
@@ -2657,9 +2678,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("set_parameter_value: System=%s, Parameter=%s"),
-           *ModuleSystemPath, *ParameterName);
     SendNiagaraModuleResponse(true, TEXT("ParameterValue"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Parameter value set (name=%s)"), *ParameterName));
@@ -2694,9 +2712,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("bind_parameter_to_source: System=%s, Param=%s, Source=%s.%s"),
-           *ModuleSystemPath, *ParameterName, *SourceType, *SourceName);
     SendNiagaraModuleResponse(true, TEXT("ParameterBinding"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Parameter bound (name=%s to %s.%s)"),
@@ -2722,9 +2737,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     bool bEnableGPU = true;
     LocalPayload->TryGetBoolField(TEXT("enabled"), bEnableGPU);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("enable_gpu_simulation: System=%s, Emitter=%s, Enabled=%d"),
-           *ModuleSystemPath, *ModuleEmitterName, bEnableGPU ? 1 : 0);
     SendNiagaraModuleResponse(true, TEXT("GPUSimulation"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("GPU simulation %s"),
@@ -2753,9 +2765,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     if (StageName.IsEmpty()) StageName = TEXT("CustomStage");
     int32 NumIterations = 1;
     LocalPayload->TryGetNumberField(TEXT("numIterations"), NumIterations);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("add_simulation_stage: System=%s, Stage=%s, Iterations=%d"),
-           *ModuleSystemPath, *StageName, NumIterations);
     SendNiagaraModuleResponse(true, TEXT("SimulationStage"), ModuleSystemPath,
                               ModuleEmitterName,
                               FString::Printf(TEXT("Simulation stage added (name=%s, iterations=%d)"),

@@ -10,11 +10,12 @@ const log = new Logger('safe-json');
  * @returns Cleaned object safe for JSON serialization
  */
 export function cleanObject<T = unknown>(obj: T, maxDepth: number = 10): T {
-  const seen = new WeakSet<object>();
+  const activePath = new WeakSet<object>();
+  const depthLimit = Number.isInteger(maxDepth) && maxDepth >= 0 ? maxDepth : 10;
 
   function clean(value: unknown, depth: number, path: string = 'root'): unknown {
     // Prevent infinite recursion
-    if (depth > maxDepth) {
+    if (depth > depthLimit) {
       return '[Max depth reached]';
     }
 
@@ -33,37 +34,42 @@ export function cleanObject<T = unknown>(obj: T, maxDepth: number = 10): T {
       return value;
     }
 
-    // Check for circular reference - keep in set permanently for this call
-    // This prevents the same object from appearing in multiple branches
-    if (seen.has(value)) {
+    // Check only the active recursion path. The same object can validly appear
+    // in multiple response branches (for example result.pins and top-level
+    // pins); that is duplication, not a circular reference.
+    if (activePath.has(value)) {
       return '[Circular Reference]';
     }
 
-    seen.add(value);
+    activePath.add(value);
 
-    // Handle arrays
-    if (Array.isArray(value)) {
-      return value.map((item, index) => clean(item, depth + 1, `${path}[${index}]`));
-    }
-
-    // Handle objects
-    const cleaned: Record<string, unknown> = {};
-
-    // Use Object.keys to avoid prototype properties
-    const keys = Object.keys(value as object);
-    for (const key of keys) {
-      try {
-        const cleanedValue = clean((value as Record<string, unknown>)[key], depth + 1, `${path}.${key}`);
-        if (cleanedValue !== undefined) {
-          cleaned[key] = cleanedValue;
-        }
-      } catch (e) {
-        // Skip properties that throw errors when accessed
-        log.error(`Error cleaning property ${path}.${key}`, e);
+    try {
+      // Handle arrays
+      if (Array.isArray(value)) {
+        return value.map((item, index) => clean(item, depth + 1, `${path}[${index}]`));
       }
-    }
 
-    return cleaned;
+      // Handle objects
+      const cleaned: Record<string, unknown> = {};
+
+      // Use Object.keys to avoid prototype properties
+      const keys = Object.keys(value as object);
+      for (const key of keys) {
+        try {
+          const cleanedValue = clean((value as Record<string, unknown>)[key], depth + 1, `${path}.${key}`);
+          if (cleanedValue !== undefined) {
+            cleaned[key] = cleanedValue;
+          }
+        } catch (e) {
+          // Skip properties that throw errors when accessed
+          log.error(`Error cleaning property ${path}.${key}`, e);
+        }
+      }
+
+      return cleaned;
+    } finally {
+      activePath.delete(value);
+    }
   }
 
   return clean(obj, 0) as T;

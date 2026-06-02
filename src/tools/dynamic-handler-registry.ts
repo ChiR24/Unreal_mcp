@@ -8,29 +8,37 @@ type ToolHandler = (args: Record<string, unknown>, tools: ITools) => Promise<unk
 export class DynamicHandlerRegistry {
   private handlers = new Map<string, ToolHandler>();
 
-  register(toolName: string, handler: ToolHandler) {
-    if (this.handlers.has(toolName)) {
-      log.warn(`Handler for tool '${toolName}' is being overwritten.`);
+  register(toolName: string, handler: ToolHandler): void {
+    const normalizedToolName = this.normalizeToolName(toolName);
+    if (this.handlers.has(normalizedToolName)) {
+      log.warn(`Handler for tool '${normalizedToolName}' is being overwritten.`);
     }
-    this.handlers.set(toolName, handler);
+    this.handlers.set(normalizedToolName, handler);
   }
 
   getHandler(toolName: string): ToolHandler | undefined {
-    return this.handlers.get(toolName);
+    return this.handlers.get(this.normalizeToolName(toolName));
   }
 
   hasHandler(toolName: string): boolean {
-    return this.handlers.has(toolName);
+    return this.handlers.has(this.normalizeToolName(toolName));
   }
 
   removeHandler(toolName: string): boolean {
-    return this.handlers.delete(toolName);
+    return this.handlers.delete(this.normalizeToolName(toolName));
   }
 
   getAllRegisteredTools(): string[] {
-    return Array.from(this.handlers.keys());
+    return Array.from(this.handlers.keys()).sort();
+  }
+
+  private normalizeToolName(toolName: string): string {
+    const normalized = toolName.trim();
+    if (!normalized) {
+      throw new Error('toolName is required');
+    }
+    return normalized;
   }
 }
 
-// Global registry instance
 export const toolRegistry = new DynamicHandlerRegistry();

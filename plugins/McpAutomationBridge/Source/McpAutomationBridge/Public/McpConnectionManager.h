@@ -40,7 +40,7 @@ public:
     /**
      * Send a progress update message to extend request timeout during long operations.
      * Used for heartbeat/keepalive to prevent timeouts while UE is actively working.
-     * 
+     *
      * @param RequestId The request ID being tracked
      * @param Percent Optional progress percent (0-100)
      * @param Message Optional status message
@@ -92,14 +92,13 @@ private:
 	FString ActiveSessionId;
 	FString TlsCertificatePath;
 	FString TlsPrivateKeyPath;
-	
+
 	int32 ClientPort = 0;
 	float AutoReconnectDelaySeconds = 5.0f;
 	float HeartbeatTimeoutSeconds = 0.0f;
-	
+
 	bool bRequireCapabilityToken = false;
 	bool bEnableTls = false;
-	bool bEnvListenPortsSet = false;
 	bool bHeartbeatTrackingEnabled = false;
 
 	// State

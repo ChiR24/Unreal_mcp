@@ -39,7 +39,7 @@ namespace McpPropertyReflection
 
     /**
      * Convert a single Unreal property value from a container into a JSON value.
-     * 
+     *
      * Supported property types:
      * - Strings (FStrProperty)
      * - Names (FNameProperty)
@@ -58,7 +58,7 @@ namespace McpPropertyReflection
      * @return JSON value representing the property, or null for unsupported types
      */
     MCPAUTOMATIONBRIDGE_API TSharedPtr<FJsonValue> ExportPropertyToJsonValue(
-        void* TargetContainer, 
+        void* TargetContainer,
         FProperty* Property);
 
     /**
@@ -68,7 +68,7 @@ namespace McpPropertyReflection
      * @return JSON object with all property values
      */
     MCPAUTOMATIONBRIDGE_API TSharedPtr<FJsonObject> ExportObjectToJson(
-        UObject* Object, 
+        UObject* Object,
         bool bIncludeTransient = false);
 
     /**
@@ -87,7 +87,7 @@ namespace McpPropertyReflection
 
     /**
      * Apply a JSON value to a reflected property on a target container.
-     * 
+     *
      * Supports conversion from JSON to:
      * - Bool (from boolean, number, or "true"/"false" string)
      * - String/Name (from string)
@@ -160,13 +160,13 @@ namespace McpPropertyReflection
         {
             return nullptr;
         }
-        
+
         UClass* Class = Object->GetClass();
         if (!Class)
         {
             return nullptr;
         }
-        
+
         return Class->FindPropertyByName(PropertyName);
     }
 
@@ -248,7 +248,7 @@ namespace McpPropertyReflection
         {
             return false;
         }
-        
+
         OutVector.X = JsonArray[0]->AsNumber();
         OutVector.Y = JsonArray[1]->AsNumber();
         OutVector.Z = JsonArray[2]->AsNumber();
@@ -267,11 +267,21 @@ namespace McpPropertyReflection
         {
             return false;
         }
-        
+
         double X = 0.0, Y = 0.0, Z = 0.0;
-        JsonObject->TryGetNumberField(TEXT("x"), X);
-        JsonObject->TryGetNumberField(TEXT("y"), Y);
-        JsonObject->TryGetNumberField(TEXT("z"), Z);
+        if (!JsonObject->TryGetNumberField(TEXT("x"), X))
+        {
+            JsonObject->TryGetNumberField(TEXT("X"), X);
+        }
+        if (!JsonObject->TryGetNumberField(TEXT("y"), Y))
+        {
+            JsonObject->TryGetNumberField(TEXT("Y"), Y);
+        }
+        if (!JsonObject->TryGetNumberField(TEXT("z"), Z))
+        {
+            JsonObject->TryGetNumberField(TEXT("Z"), Z);
+        }
+
         OutVector = FVector(X, Y, Z);
         return true;
     }
@@ -309,7 +319,7 @@ namespace McpPropertyReflection
         {
             return false;
         }
-        
+
         OutRotator.Pitch = JsonArray[0]->AsNumber();
         OutRotator.Yaw = JsonArray[1]->AsNumber();
         OutRotator.Roll = JsonArray[2]->AsNumber();
@@ -328,11 +338,21 @@ namespace McpPropertyReflection
         {
             return false;
         }
-        
+
         double Pitch = 0.0, Yaw = 0.0, Roll = 0.0;
-        JsonObject->TryGetNumberField(TEXT("pitch"), Pitch);
-        JsonObject->TryGetNumberField(TEXT("yaw"), Yaw);
-        JsonObject->TryGetNumberField(TEXT("roll"), Roll);
+        if (!JsonObject->TryGetNumberField(TEXT("pitch"), Pitch))
+        {
+            JsonObject->TryGetNumberField(TEXT("Pitch"), Pitch);
+        }
+        if (!JsonObject->TryGetNumberField(TEXT("yaw"), Yaw))
+        {
+            JsonObject->TryGetNumberField(TEXT("Yaw"), Yaw);
+        }
+        if (!JsonObject->TryGetNumberField(TEXT("roll"), Roll))
+        {
+            JsonObject->TryGetNumberField(TEXT("Roll"), Roll);
+        }
+
         OutRotator = FRotator(Pitch, Yaw, Roll);
         return true;
     }
@@ -371,13 +391,13 @@ namespace McpPropertyReflection
         {
             return false;
         }
-        
+
         double R = 255.0, G = 255.0, B = 255.0, A = 255.0;
         Obj->TryGetNumberField(TEXT("r"), R);
         Obj->TryGetNumberField(TEXT("g"), G);
         Obj->TryGetNumberField(TEXT("b"), B);
         Obj->TryGetNumberField(TEXT("a"), A);
-        
+
         OutColor = FColor(
             static_cast<uint8>(FMath::Clamp(static_cast<int>(R), 0, 255)),
             static_cast<uint8>(FMath::Clamp(static_cast<int>(G), 0, 255)),
@@ -409,13 +429,13 @@ namespace McpPropertyReflection
         {
             return false;
         }
-        
+
         double R = 1.0, G = 1.0, B = 1.0, A = 1.0;
         Obj->TryGetNumberField(TEXT("r"), R);
         Obj->TryGetNumberField(TEXT("g"), G);
         Obj->TryGetNumberField(TEXT("b"), B);
         Obj->TryGetNumberField(TEXT("a"), A);
-        
+
         OutColor = FLinearColor(R, G, B, A);
         return true;
     }
@@ -476,107 +496,5 @@ namespace McpPropertyReflection
         FArrayProperty* ArrayProp,
         const TArray<TSharedPtr<FJsonValue>>& JsonArray,
         FString& OutError);
-
-    // =========================================================================
-    // Output Capture Utility
-    // =========================================================================
-
-    /**
-     * Captures log output written to GLog into an in-memory list of lines.
-     * Attach as an FOutputDevice to collect serialized log messages.
-     */
-    struct FMcpOutputCapture : public FOutputDevice
-    {
-        TArray<FString> Lines;
-
-        /**
-         * Capture a log line, trim trailing newlines, and append to Lines.
-         */
-        virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override
-        {
-            if (!V)
-            {
-                return;
-            }
-            
-            FString S(V);
-            while (S.EndsWith(TEXT("\n")))
-            {
-                S.RemoveAt(S.Len() - 1);
-            }
-            Lines.Add(S);
-        }
-
-        /**
-         * Get all captured lines and clear the internal buffer.
-         */
-        TArray<FString> Consume()
-        {
-            TArray<FString> Tmp = MoveTemp(Lines);
-            Lines.Empty();
-            return Tmp;
-        }
-    };
-
-    // =========================================================================
-    // JSON String Extraction Utility
-    // =========================================================================
-
-    /**
-     * Extract all top-level JSON objects from a string that may contain
-     * mixed text and JSON content.
-     *
-     * @param In The input string that may contain JSON objects
-     * @return Array of complete top-level JSON object strings
-     */
-    inline TArray<FString> ExtractTopLevelJsonObjects(const FString& In)
-    {
-        TArray<FString> Results;
-        int32 Depth = 0;
-        int32 Start = INDEX_NONE;
-        
-        for (int32 i = 0; i < In.Len(); ++i)
-        {
-            const TCHAR C = In[i];
-            if (C == '{')
-            {
-                if (Depth == 0)
-                {
-                    Start = i;
-                }
-                Depth++;
-            }
-            else if (C == '}')
-            {
-                Depth--;
-                if (Depth == 0 && Start != INDEX_NONE)
-                {
-                    Results.Add(In.Mid(Start, i - Start + 1));
-                    Start = INDEX_NONE;
-                }
-            }
-        }
-        
-        return Results;
-    }
-
-    /**
-     * Convert a string to its UTF-8 hexadecimal representation for debugging.
-     */
-    inline FString HexifyUtf8(const FString& In)
-    {
-        FTCHARToUTF8 Converter(*In);
-        const uint8* Bytes = reinterpret_cast<const uint8*>(Converter.Get());
-        int32 Len = Converter.Length();
-        
-        FString Hex;
-        Hex.Reserve(Len * 2);
-        for (int32 i = 0; i < Len; ++i)
-        {
-            Hex += FString::Printf(TEXT("%02x"), Bytes[i]);
-        }
-        
-        return Hex;
-    }
 
 } // namespace McpPropertyReflection

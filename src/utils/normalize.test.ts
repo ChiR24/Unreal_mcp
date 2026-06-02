@@ -23,6 +23,11 @@ describe('toVec3Object', () => {
         expect(result).toEqual({ x: 1, y: 2, z: 3 });
     });
 
+    it('parses numeric string tuple components', () => {
+        const result = toVec3Object(['1', '2.5', '-3']);
+        expect(result).toEqual({ x: 1, y: 2.5, z: -3 });
+    });
+
     it('returns null for invalid input', () => {
         expect(toVec3Object('invalid')).toBeNull();
         expect(toVec3Object(null)).toBeNull();
@@ -31,6 +36,11 @@ describe('toVec3Object', () => {
 
     it('returns null for incomplete object', () => {
         expect(toVec3Object({ x: 1, y: 2 })).toBeNull();
+    });
+
+    it('does not coerce null or boolean components to zero', () => {
+        expect(toVec3Object({ x: null, y: 0, z: 0 })).toBeNull();
+        expect(toVec3Object([false, 0, 0])).toBeNull();
     });
 
     it('handles zero values', () => {
@@ -48,6 +58,10 @@ describe('toRotObject', () => {
     it('converts array input to Rotator', () => {
         const result = toRotObject([10, 20, 30]);
         expect(result).toEqual({ pitch: 10, yaw: 20, roll: 30 });
+    });
+
+    it('rejects blank string rotation components', () => {
+        expect(toRotObject(['', 20, 30])).toBeNull();
     });
 
     it('returns null for invalid input', () => {

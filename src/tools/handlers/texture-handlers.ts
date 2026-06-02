@@ -57,7 +57,7 @@ export async function handleTextureTools(
 ): Promise<Record<string, unknown>> {
   // Normalize action name for test compatibility
   const normalizedAction = normalizeTextureAction(action);
-  
+
   try {
     switch (normalizedAction) {
       // ===== 9.1 Procedural Generation =====
@@ -329,6 +329,7 @@ export async function handleTextureTools(
         const path = extractOptionalString(params, 'path');
         const newWidth = extractOptionalNumber(params, 'newWidth') ?? 512;
         const newHeight = extractOptionalNumber(params, 'newHeight') ?? 512;
+        const filterMethod = extractOptionalString(params, 'filterMethod') ?? 'Bilinear';
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_TEXTURE, {
@@ -338,6 +339,7 @@ export async function handleTextureTools(
           path,
           newWidth,
           newHeight,
+          filterMethod,
           save,
         })) as AutomationResponse;
 
@@ -824,7 +826,7 @@ export async function handleTextureTools(
         return ResponseFactory.success(res, res.message ?? `Texture imported to '${destinationPath}'`);
       }
 
-      case 'set_filter': 
+      case 'set_filter':
       case 'set_texture_filter': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['texturePath'], required: true },
@@ -886,6 +888,7 @@ export async function handleTextureTools(
           const params = normalizeArgs(args, [
             { key: 'name', required: true },
             { key: 'path', aliases: ['texturePath', 'directory'], default: '/Game/Textures' },
+            { key: 'save', default: true },
           ]);
           name = extractString(params, 'name');
           path = extractOptionalString(params, 'path') ?? '/Game/Textures';
@@ -894,6 +897,7 @@ export async function handleTextureTools(
         const width = extractOptionalNumber(args, 'width') ?? 1024;
         const height = extractOptionalNumber(args, 'height') ?? 1024;
         const format = extractOptionalString(args, 'format') ?? 'RGBA8';
+        const save = extractOptionalBoolean(args, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_TEXTURE, {
           subAction: 'create_render_target',
@@ -902,6 +906,7 @@ export async function handleTextureTools(
           width,
           height,
           format,
+          save,
         })) as AutomationResponse;
 
         if (res.success === false) {
@@ -915,17 +920,20 @@ export async function handleTextureTools(
           { key: 'name', required: true },
           { key: 'path', aliases: ['texturePath', 'directory'], default: '/Game/Textures' },
           { key: 'size', default: 512 },
+          { key: 'save', default: true },
         ]);
 
         const name = extractString(params, 'name');
         const path = extractOptionalString(params, 'path') ?? '/Game/Textures';
         const size = extractOptionalNumber(params, 'size') ?? 512;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_TEXTURE, {
           subAction: 'create_cube_texture',
           name,
           path,
           size,
+          save,
         })) as AutomationResponse;
 
         if (res.success === false) {
@@ -941,6 +949,7 @@ export async function handleTextureTools(
           { key: 'width', default: 256 },
           { key: 'height', default: 256 },
           { key: 'depth', default: 256 },
+          { key: 'save', default: true },
         ]);
 
         const name = extractString(params, 'name');
@@ -948,6 +957,7 @@ export async function handleTextureTools(
         const width = extractOptionalNumber(params, 'width') ?? 256;
         const height = extractOptionalNumber(params, 'height') ?? 256;
         const depth = extractOptionalNumber(params, 'depth') ?? 256;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_TEXTURE, {
           subAction: 'create_volume_texture',
@@ -956,6 +966,7 @@ export async function handleTextureTools(
           width,
           height,
           depth,
+          save,
         })) as AutomationResponse;
 
         if (res.success === false) {
@@ -971,6 +982,7 @@ export async function handleTextureTools(
           { key: 'width', default: 512 },
           { key: 'height', default: 512 },
           { key: 'numSlices', default: 4 },
+          { key: 'save', default: true },
         ]);
 
         const name = extractString(params, 'name');
@@ -978,6 +990,7 @@ export async function handleTextureTools(
         const width = extractOptionalNumber(params, 'width') ?? 512;
         const height = extractOptionalNumber(params, 'height') ?? 512;
         const numSlices = extractOptionalNumber(params, 'numSlices') ?? 4;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_TEXTURE, {
           subAction: 'create_texture_array',
@@ -986,6 +999,7 @@ export async function handleTextureTools(
           width,
           height,
           numSlices,
+          save,
         })) as AutomationResponse;
 
         if (res.success === false) {

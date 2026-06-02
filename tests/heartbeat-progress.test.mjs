@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
  * Heartbeat/Progress Protocol Integration Tests
- * 
+ *
  * Tests the progress_update message protocol that keeps long-running
  * operations alive by extending their timeout on the server side.
- * 
+ *
  * Prerequisites:
  * - UE Editor must be running with the McpAutomationBridge plugin loaded
  * - MCP server must be built (npm run build:core)
- * 
+ *
  * Usage:
  *   node tests/heartbeat-progress.test.mjs
  */

@@ -262,7 +262,7 @@ static bool IsValidNavigationPath(const FString& Path)
  * HandleConfigureNavMeshSettings
  * -------------------------------
  * Configure NavMesh settings like tile size, cell size/height, and region parameters.
- * 
+ *
  * Version Compatibility:
  * - UE 5.0-5.1: Uses deprecated direct properties (CellSize, CellHeight)
  * - UE 5.2+: Uses NavMeshResolutionParams for cell size/height
@@ -634,7 +634,7 @@ static bool HandleRebuildNavigation(
  * HandleCreateNavModifierComponent
  * ----------------------------------
  * Create a NavModifierComponent on a Blueprint.
- * 
+ *
  * Uses SCS (Simple Construction Script) for proper component template ownership.
  */
 static bool HandleCreateNavModifierComponent(
@@ -1634,9 +1634,9 @@ static bool HandleGetNavigationInfo(
  * HandleManageNavigationAction
  * -----------------------------
  * Main dispatcher for all navigation-related actions.
- * 
+ *
  * Dispatches to appropriate handlers based on subAction field.
- * 
+ *
  * Supported subActions:
  *   - configure_nav_mesh_settings
  *   - set_nav_agent_properties

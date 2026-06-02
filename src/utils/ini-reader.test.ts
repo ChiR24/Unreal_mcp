@@ -1,9 +1,11 @@
 
+/// <reference types="node" />
+
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { getProjectSetting } from './ini-reader.js';
-import fs from 'fs/promises';
-import path from 'path';
-import os from 'os';
+import { getProjectSetting, readIniFile } from './ini-reader.js';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
 
 describe('getProjectSetting Security', () => {
     let tmpDir: string;
@@ -55,5 +57,19 @@ describe('getProjectSetting Security', () => {
     it('should reject categories with special characters', async () => {
         const result = await getProjectSetting(projectDir, 'Eng/ine', '');
         expect(result).toBeNull();
+    });
+
+    it('should parse prototype-like sections as plain data without inherited keys', async () => {
+        const protoFile = path.join(projectDir, 'Config', 'DefaultProto.ini');
+        await fs.writeFile(protoFile, '[__proto__]\nKey=SafeValue\n[constructor]\nprototype=Ignored');
+
+        const result = await readIniFile(protoFile);
+
+        expect(Object.getPrototypeOf(result)).toBeNull();
+        expect(Object.prototype.hasOwnProperty.call(result, '__proto__')).toBe(true);
+        expect(result['__proto__'].Key).toBe('SafeValue');
+        expect(Object.getPrototypeOf(result['__proto__'])).toBeNull();
+        expect(Object.prototype).not.toHaveProperty('Key');
+        expect(Object.prototype).not.toHaveProperty('prototype');
     });
 });

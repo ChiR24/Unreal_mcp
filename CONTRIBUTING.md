@@ -18,8 +18,8 @@ Please be respectful and constructive in all interactions. We're building someth
 
 ### Prerequisites
 
-- **Node.js** 18+ 
-- **Unreal Engine** 5.0-5.7 (for live testing)
+- **Node.js** 18+
+- **Unreal Engine** 5.0-5.8 Preview (for live testing)
 - **Git**
 
 ### Setup
@@ -91,7 +91,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/). PR titles m
 Examples:
 feat: add new animation blending tool
 fix: resolve WebSocket connection timeout
-docs: update installation instructions  
+docs: update installation instructions
 refactor: simplify blueprint graph handler
 ```
 
@@ -127,7 +127,7 @@ src/
 ├── utils/           # Shared utilities
 └── services/        # Background services
 
-Plugins/
+plugins/
 └── McpAutomationBridge/  # C++ Unreal plugin
 ```
 

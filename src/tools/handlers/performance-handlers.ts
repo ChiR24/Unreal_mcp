@@ -1,7 +1,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, PerformanceArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest, executeBatchConsoleCommands } from './common-handlers.js';
+import { executeAutomationRequest } from './common-handlers.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
 import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 
@@ -16,7 +16,7 @@ const MAX_SCALABILITY_LEVEL = 4;
 export async function handlePerformanceTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as PerformanceArgs;
   const argsRecord = args as Record<string, unknown>;
-  
+
   switch (action) {
     case 'start_profiling': {
       const profilingType = argsTyped.type ? String(argsTyped.type).toLowerCase() : 'all';
@@ -40,21 +40,12 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
       return cleanObject(res);
     }
     case 'run_benchmark': {
-      // Run benchmark using console commands with timing
       const duration = typeof argsTyped.duration === 'number' ? argsTyped.duration : 60;
-      
-      // Start recording
-      await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: 'stat startfile' });
-      await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: 'profilegpu' });
-      
-      // Wait for duration
-      await new Promise(resolve => setTimeout(resolve, duration * 1000));
-      
-      // Stop recording
-      await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: 'stat stopfile' });
-      await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: 'stat none' });
-      
-      return { success: true, message: `Benchmark completed for ${duration} seconds` };
+      const res = await executeAutomationRequest(tools, 'run_benchmark', {
+        duration,
+        type: typeof argsRecord.type === 'string' ? argsRecord.type : undefined
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'show_fps': {
       const res = await executeAutomationRequest(tools, TOOL_ACTIONS.SHOW_FPS, {
@@ -100,10 +91,10 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
       return cleanObject(res);
     }
     case 'enable_gpu_timing': {
-      // Console command only - no automation bridge action
       const enabled = argsTyped.enabled !== false;
-      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, {
-        command: `r.GPUStatsEnabled ${enabled ? 1 : 0}`
+      const res = await executeAutomationRequest(tools, 'manage_performance', {
+        subAction: 'enable_gpu_timing',
+        enabled
       }) as Record<string, unknown>;
       return cleanObject(res);
     }
@@ -125,15 +116,14 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
     case 'configure_lod': {
       const res = await executeAutomationRequest(tools, TOOL_ACTIONS.CONFIGURE_LOD, {
         forceLOD: argsRecord.forceLOD as number | undefined,
-        lodBias: argsRecord.lodBias as number | undefined,
-        distanceScale: argsRecord.distanceScale as number | undefined
+        lodBias: argsRecord.lodBias as number | undefined
       }) as Record<string, unknown>;
       return cleanObject(res);
     }
     case 'apply_baseline_settings': {
       // Delegate to C++ handler which uses IConsoleManager for reliable CVar setting
       const profile = typeof argsRecord.profile === 'string' ? argsRecord.profile : 'balanced';
-      
+
       const res = await executeAutomationRequest(tools, 'apply_baseline_settings', {
         profile
       }) as Record<string, unknown>;
@@ -143,13 +133,13 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
     case 'merge_actors': {
       // If action is merge_actors, force mergeActors param to true
       const mergeParams = action === 'merge_actors' ? { ...argsRecord, mergeActors: true } : argsRecord;
-      
+
       if (mergeParams.mergeActors) {
         // Use automation bridge for actor merging
         const actors = Array.isArray(mergeParams.actors)
           ? mergeParams.actors.filter((name): name is string => typeof name === 'string' && name.length > 0)
           : undefined;
-        
+
         if (!actors || actors.length < 2) {
         return {
           success: false,
@@ -157,62 +147,40 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
           error: 'Merge actors requires an "actors" array with at least 2 valid actor names.'
         };
         }
-        
+
         const res = await executeAutomationRequest(tools, TOOL_ACTIONS.MERGE_ACTORS, {
           enableInstancing: mergeParams.enableInstancing as boolean | undefined,
           mergeActors: true,
-          actors: actors
+          actors,
+          replaceSourceActors: mergeParams.replaceSourceActors as boolean | undefined,
+          packageName: typeof mergeParams.packageName === 'string' ? mergeParams.packageName : undefined,
+          outputPath: typeof mergeParams.outputPath === 'string' ? mergeParams.outputPath : undefined
         }) as Record<string, unknown>;
         return cleanObject(res);
       }
-      
-      // Non-merge draw call optimization - console commands only
-      const commands: string[] = [];
-      if (typeof mergeParams.enableInstancing === 'boolean') {
-        commands.push(`r.MeshDrawCommands.DynamicInstancing ${mergeParams.enableInstancing ? 1 : 0}`);
-      }
-      
-      // Use batch execution for all console commands - significantly faster than sequential
-      if (commands.length > 0) {
-        await executeBatchConsoleCommands(tools, commands);
-      }
-      
-      return { success: true, message: 'Draw call optimization configured' };
+
+      const res = await executeAutomationRequest(tools, 'optimize_draw_calls', {
+        enabled: typeof mergeParams.enabled === 'boolean'
+          ? mergeParams.enabled
+          : mergeParams.enableBatching as boolean | undefined,
+        instancing: mergeParams.enableInstancing as boolean | undefined
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'configure_occlusion_culling': {
-      // Console commands only
-      const enabled = argsTyped.enabled !== false;
-      const commands: string[] = [`r.HZBOcclusion ${enabled ? 1 : 0}`];
-      
-      if (typeof argsRecord.freezeRendering === 'boolean') {
-        commands.push(`FreezeRendering ${argsRecord.freezeRendering ? 1 : 0}`);
-      }
-      
-      // Use batch execution for all console commands - significantly faster than sequential
-      await executeBatchConsoleCommands(tools, commands);
-      
-      return { success: true, message: 'Occlusion culling configured' };
+      const res = await executeAutomationRequest(tools, 'configure_occlusion_culling', {
+        enabled: argsTyped.enabled !== false,
+        slop: argsRecord.slop as number | undefined,
+        minScreenRadius: argsRecord.minScreenRadius as number | undefined
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'optimize_shaders': {
-      // Console commands only
-      const commands: string[] = [];
-      
-      if (typeof argsRecord.compileOnDemand === 'boolean') {
-        commands.push(`r.ShaderDevelopmentMode ${argsRecord.compileOnDemand ? 1 : 0}`);
-      }
-      if (typeof argsRecord.cacheShaders === 'boolean') {
-        commands.push(`r.ShaderPipelineCache.Enabled ${argsRecord.cacheShaders ? 1 : 0}`);
-      }
-      if (argsRecord.reducePermutations === true) {
-        commands.push('RecompileShaders changed');
-      }
-      
-      // Use batch execution for all console commands - significantly faster than sequential
-      if (commands.length > 0) {
-        await executeBatchConsoleCommands(tools, commands);
-      }
-      
-      return { success: true, message: 'Shader optimization configured' };
+      const res = await executeAutomationRequest(tools, 'optimize_shaders', {
+        mode: typeof argsRecord.mode === 'string' ? argsRecord.mode : undefined,
+        forceRecompile: argsRecord.forceRecompile as boolean | undefined
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'configure_nanite': {
       const res = await executeAutomationRequest(tools, TOOL_ACTIONS.CONFIGURE_NANITE, {
@@ -227,7 +195,9 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
       const res = await executeAutomationRequest(tools, 'configure_world_partition', {
         enabled: argsTyped.enabled !== false,
         cellSize: argsRecord.cellSize as number | undefined,
-        loadingRange: argsRecord.loadingRange as number | undefined
+        loadingRange: typeof argsRecord.streamingDistance === 'number'
+          ? argsRecord.streamingDistance
+          : argsRecord.loadingRange as number | undefined
       }) as Record<string, unknown>;
       return cleanObject(res);
     }

@@ -1,38 +1,39 @@
 # src/tools
 
-MCP tool implementations: 36 consolidated tools with action-based dispatch to native C++ handlers.
-
-## OVERVIEW
-Consolidated tool architecture using action-based dispatch to native C++ handlers. Single 212KB schema file defines all tools.
+Canonical TypeScript MCP tool contracts and dispatch glue. This directory defines 23 parent tools and hundreds of action variants; Unreal execution still happens through handlers and the plugin bridge.
 
 ## STRUCTURE
 ```
 tools/
-├── consolidated-tool-definitions.ts  # All action enums + schemas (212KB)
-├── consolidated-tool-handlers.ts     # Tool routing via toolRegistry
-└── handlers/                         # Domain handlers (42 files)
+|-- consolidated-tool-definitions.ts  # parent tools, action enums, JSON schemas, output schemas
+|-- consolidated-tool-handlers.ts     # maps parent tool names to handler functions
+|-- dynamic-tool-manager.ts           # runtime enable/disable by tool/category
+|-- schemas/                          # shared schema fragments for core tools
+`-- handlers/                         # domain action handlers; see nested AGENTS
 ```
 
 ## WHERE TO LOOK
 | Task | File | Notes |
 |------|------|-------|
-| Add new tool | `consolidated-tool-definitions.ts` | Add JSON schema with action enum |
-| Add TS handler | `consolidated-tool-handlers.ts` | Register in `registerDefaultHandlers()` |
-| Implement logic | `handlers/*-handlers.ts` | 42 domain handler files |
-| Common utils | `handlers/common-handlers.ts` | `requireAction()`, `executeAutomationRequest()` |
+| Add or change tool schema | `consolidated-tool-definitions.ts` | Keep action enum, input schema, category, and output schema aligned |
+| Route parent tool | `consolidated-tool-handlers.ts` | Register only through `registerDefaultHandlers()` |
+| Enable/disable tool sets | `dynamic-tool-manager.ts` | Categories are `core`, `world`, `gameplay`, `utility`, `all` |
+| Implement action logic | `handlers/*-handlers.ts` | Validate/normalize, then use `executeAutomationRequest()` |
+| Shared handler helpers | `handlers/common-handlers.ts` | `requireAction()`, response parsing, error formatting |
 
 ## CONVENTIONS
-- **Consolidated Pattern**: Tools grouped by domain; switch on `args.action`.
-- **Registry Dispatch**: Use `toolRegistry.register()` in `consolidated-tool-handlers.ts`.
-- **C++ Requirement**: Every TS action must have corresponding C++ handler in plugin.
-- **Error Context**: Add tool/action names to all error messages.
+- Parent tools are canonical public names. Do not reintroduce former child tool names as exposed MCP tools.
+- Action strings must stay aligned across `consolidated-tool-definitions.ts`, handler switches, native WebSocket handler registration, native MCP tool schemas, and tests.
+- Output schemas should be registered and validated before responses leave the MCP server.
+- `manage_tools` and `inspect` are protected from disablement; keep dynamic-tool behavior consistent with native MCP.
+- Use `unknown` plus type guards/interfaces for untrusted tool arguments.
 
 ## ANTI-PATTERNS
-- **Bypassing Registry**: Never call domain handler functions directly.
-- **Manual WS Calls**: Use `executeAutomationRequest()` instead of raw WebSocket.
-- **Stubbed Actions**: No placeholders; 100% TS + C++ coverage required.
-- **Normalization**: Ensure paths are sanitized before sending to bridge.
+- Calling handler functions directly instead of going through the MCP registry and consolidated dispatch path.
+- Adding placeholder actions or schemas without TS handler, C++ handler, and test coverage.
+- Sending user paths or console commands to Unreal before applying the relevant `src/utils` guards.
+- Logging via `console.log` from runtime tool code; stdout must remain JSON-RPC clean.
 
 ## NOTES
-- **handlers/ subdirectory**: See `handlers/AGENTS.md` for detailed handler documentation.
-- **Non-standard layout**: Handlers nested 2 levels deep (`src/tools/handlers/`).
+- `src/server/AGENTS.md` owns MCP request/list/call registration behavior.
+- `handlers/AGENTS.md` owns domain handler implementation rules.

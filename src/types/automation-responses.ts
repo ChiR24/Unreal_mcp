@@ -3,6 +3,29 @@
  * Used to provide type safety for sendAutomationRequest calls
  */
 
+export interface AutomationErrorDetail {
+    message: string;
+    code?: string;
+    [key: string]: unknown;
+}
+
+export interface Vector3Response {
+    x: number;
+    y: number;
+    z: number;
+}
+
+export interface RotatorResponse {
+    pitch: number;
+    yaw: number;
+    roll: number;
+}
+
+export interface ResolutionResponse {
+    width: number;
+    height: number;
+}
+
 /**
  * Base response structure from the Automation Bridge
  * Most responses follow this pattern with optional additional fields
@@ -10,7 +33,7 @@
 export interface AutomationResponse {
     success: boolean;
     message?: string;
-    error?: string | { message: string; code?: string };
+    error?: string | AutomationErrorDetail;
     /** Optional error code for business logic errors (e.g., 'SECURITY_VIOLATION', 'NOT_FOUND') */
     errorCode?: string;
     result?: unknown;
@@ -53,9 +76,9 @@ export interface ActorResponse extends AutomationResponse {
     actorPath?: string;
     actors?: unknown[];
     components?: unknown[];
-    location?: { x: number; y: number; z: number };
-    rotation?: { pitch: number; yaw: number; roll: number };
-    scale?: { x: number; y: number; z: number };
+    location?: Vector3Response;
+    rotation?: RotatorResponse;
+    scale?: Vector3Response;
     transform?: unknown;
     tags?: string[];
     properties?: Record<string, unknown>;
@@ -83,11 +106,11 @@ export interface AssetResponse extends AutomationResponse {
 export interface EditorResponse extends AutomationResponse {
     viewMode?: string;
     fov?: number;
-    location?: { x: number; y: number; z: number };
-    rotation?: { pitch: number; yaw: number; roll: number };
+    location?: Vector3Response;
+    rotation?: RotatorResponse;
     cameraSettings?: unknown;
     camera?: { location?: unknown; rotation?: unknown };
-    resolution?: { width: number; height: number };
+    resolution?: ResolutionResponse;
     filename?: string;
     filePath?: string;
     isPlaying?: boolean;

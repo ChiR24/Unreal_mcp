@@ -2,9 +2,9 @@
 // McpAutomationBridge_SequencerHandlers.cpp
 // =============================================================================
 // MCP Automation Bridge - Sequencer & Cinematics Handlers
-// 
+//
 // UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-// 
+//
 // Handler Summary:
 // -----------------------------------------------------------------------------
 // Actions:
@@ -13,16 +13,16 @@
 //   - add_camera_track: Add camera cut track with section
 //   - add_animation_track: Add skeletal animation track
 //   - add_transform_track: Add 3D transform track
-// 
+//
 // Dependencies:
 //   - Core: McpAutomationBridgeSubsystem, McpAutomationBridgeHelpers
 //   - Engine: LevelSequence, MovieScene, MovieSceneTrack, MovieSceneSection
 //   - Tracks: FloatTrack, CameraCutTrack, 3DTransformTrack, SkeletalAnimationTrack
-// 
+//
 // Version Compatibility Notes:
 //   - UE 5.3+: GetChannel() returns mutable reference for MovieSceneFloatChannel
 //   - UE 5.0-5.2: GetChannel() returns const reference, requires const_cast
-// 
+//
 // Architecture:
 //   - LevelSequence contains UMovieScene
 //   - MovieScene has FMovieSceneBinding objects (GUID-based)
@@ -85,7 +85,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("add_sequencer_keyframe payload missing"), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -94,7 +94,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     FString SequencePath;
     if (!Payload->TryGetStringField(TEXT("sequencePath"), SequencePath) || SequencePath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("sequencePath required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -102,7 +102,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     FString BindingGuidStr;
     if (!Payload->TryGetStringField(TEXT("bindingGuid"), BindingGuidStr) || BindingGuidStr.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("bindingGuid required (existing object binding GUID)"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -110,7 +110,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     FString PropertyName;
     if (!Payload->TryGetStringField(TEXT("propertyName"), PropertyName) || PropertyName.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("propertyName required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -118,7 +118,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     double TimeSeconds = 0.0;
     if (!Payload->TryGetNumberField(TEXT("time"), TimeSeconds))
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("time (seconds) required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -126,7 +126,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     double Value = 0.0;
     if (!Payload->TryGetNumberField(TEXT("value"), Value))
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("value (number) required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -135,7 +135,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     ULevelSequence* LevelSequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
     if (!LevelSequence)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Failed to load LevelSequence"), TEXT("LOAD_FAILED"));
         return true;
     }
@@ -143,7 +143,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     UMovieScene* MovieScene = LevelSequence->GetMovieScene();
     if (!MovieScene)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Sequence has no MovieScene"), TEXT("INVALID_SEQUENCE"));
         return true;
     }
@@ -152,7 +152,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     FGuid BindingGuid;
     if (!FGuid::Parse(BindingGuidStr, BindingGuid))
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Invalid bindingGuid"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -160,7 +160,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     FMovieSceneBinding* Binding = MovieScene->FindBinding(BindingGuid);
     if (!Binding)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Binding not found in sequence"), TEXT("BINDING_NOT_FOUND"));
         return true;
     }
@@ -184,7 +184,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
         UMovieSceneFloatTrack* NewTrack = MovieScene->AddTrack<UMovieSceneFloatTrack>(BindingGuid);
         if (!NewTrack)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
+            SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Failed to create float track"), TEXT("CREATE_TRACK_FAILED"));
             return true;
         }
@@ -193,7 +193,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     }
 
     // Get or create section
-    UMovieSceneFloatTrack* FloatTrack = CastChecked<UMovieSceneFloatTrack>(Track);
+    UMovieSceneFloatTrack* FloatTrack = Cast<UMovieSceneFloatTrack>(Track);
+    if (!FloatTrack)
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            TEXT("Track is not a float track"), TEXT("INVALID_TRACK_TYPE"));
+        return true;
+    }
     UMovieSceneSection* Section = nullptr;
     const TArray<UMovieSceneSection*>& Sections = FloatTrack->GetAllSections();
     if (Sections.Num() > 0)
@@ -208,7 +214,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
 
     if (!Section)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Failed to create/find section"), TEXT("SECTION_FAILED"));
         return true;
     }
@@ -216,7 +222,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     UMovieSceneFloatSection* FloatSection = Cast<UMovieSceneFloatSection>(Section);
     if (!FloatSection)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Section is not a float section"), TEXT("SECTION_TYPE_MISMATCH"));
         return true;
     }
@@ -249,7 +255,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     return true;
 
 #else
-    SendAutomationResponse(RequestingSocket, RequestId, false, 
+    SendAutomationResponse(RequestingSocket, RequestId, false,
         TEXT("add_sequencer_keyframe requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
 #endif
@@ -275,7 +281,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSequencerTrack(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("manage_sequencer_track payload missing"), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -284,7 +290,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSequencerTrack(
     FString SequencePath;
     if (!Payload->TryGetStringField(TEXT("sequencePath"), SequencePath) || SequencePath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("sequencePath required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -292,7 +298,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSequencerTrack(
     FString BindingGuidStr;
     if (!Payload->TryGetStringField(TEXT("bindingGuid"), BindingGuidStr) || BindingGuidStr.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("bindingGuid required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -300,7 +306,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSequencerTrack(
     FString PropertyName;
     if (!Payload->TryGetStringField(TEXT("propertyName"), PropertyName) || PropertyName.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("propertyName required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -308,7 +314,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSequencerTrack(
     FString Op;
     if (!Payload->TryGetStringField(TEXT("op"), Op) || Op.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("op required (add/remove)"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -317,7 +323,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSequencerTrack(
     ULevelSequence* LevelSequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
     if (!LevelSequence)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Failed to load LevelSequence"), TEXT("LOAD_FAILED"));
         return true;
     }
@@ -325,7 +331,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSequencerTrack(
     UMovieScene* MovieScene = LevelSequence->GetMovieScene();
     if (!MovieScene)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Sequence has no MovieScene"), TEXT("INVALID_SEQUENCE"));
         return true;
     }
@@ -334,7 +340,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSequencerTrack(
     FGuid BindingGuid;
     if (!FGuid::Parse(BindingGuidStr, BindingGuid))
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Invalid bindingGuid"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -342,7 +348,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSequencerTrack(
     FMovieSceneBinding* Binding = MovieScene->FindBinding(BindingGuid);
     if (!Binding)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Binding not found in sequence"), TEXT("BINDING_NOT_FOUND"));
         return true;
     }
@@ -382,7 +388,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSequencerTrack(
     }
     else
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Unsupported op; use add/remove"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -394,13 +400,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSequencerTrack(
     Result->SetStringField(TEXT("propertyName"), PropertyName);
     Result->SetStringField(TEXT("op"), Op);
 
-    SendAutomationResponse(RequestingSocket, RequestId, bSuccess, 
-        bSuccess ? TEXT("Track operation complete") : TEXT("Track operation failed"), 
+    SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
+        bSuccess ? TEXT("Track operation complete") : TEXT("Track operation failed"),
         Result, bSuccess ? FString() : TEXT("TRACK_OP_FAILED"));
     return true;
 
 #else
-    SendAutomationResponse(RequestingSocket, RequestId, false, 
+    SendAutomationResponse(RequestingSocket, RequestId, false,
         TEXT("manage_sequencer_track requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
 #endif
@@ -426,7 +432,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddCameraTrack(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("add_camera_track payload missing"), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -434,7 +440,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddCameraTrack(
     FString SequencePath;
     if (!Payload->TryGetStringField(TEXT("sequencePath"), SequencePath) || SequencePath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("sequencePath required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -442,7 +448,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddCameraTrack(
     FString CameraActorPath;
     if (!Payload->TryGetStringField(TEXT("cameraActorPath"), CameraActorPath) || CameraActorPath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("cameraActorPath required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -457,7 +463,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddCameraTrack(
     ULevelSequence* LevelSequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
     if (!LevelSequence)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Failed to load LevelSequence"), TEXT("LOAD_FAILED"));
         return true;
     }
@@ -465,7 +471,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddCameraTrack(
     UMovieScene* MovieScene = LevelSequence->GetMovieScene();
     if (!MovieScene)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Sequence has no MovieScene"), TEXT("INVALID_SEQUENCE"));
         return true;
     }
@@ -474,14 +480,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAddCameraTrack(
     ACameraActor* CameraActor = LoadObject<ACameraActor>(nullptr, *CameraActorPath);
     if (!CameraActor)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Failed to load camera actor"), TEXT("CAMERA_LOAD_FAILED"));
         return true;
     }
 
     // Get or create camera cut track
     UMovieSceneTrack* CutBase = MovieScene->GetCameraCutTrack();
-    UMovieSceneCameraCutTrack* CameraCutTrack = CutBase ? 
+    UMovieSceneCameraCutTrack* CameraCutTrack = CutBase ?
         Cast<UMovieSceneCameraCutTrack>(CutBase) : nullptr;
 
     if (!CameraCutTrack)
@@ -498,7 +504,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddCameraTrack(
         FFrameNumber StartFrame = StartFrameTime.GetFrame();
         FFrameNumber EndFrame = EndFrameTime.GetFrame();
 
-        UMovieSceneCameraCutSection* CameraCutSection = 
+        UMovieSceneCameraCutSection* CameraCutSection =
             Cast<UMovieSceneCameraCutSection>(CameraCutTrack->CreateNewSection());
         if (CameraCutSection)
         {
@@ -510,7 +516,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddCameraTrack(
             for (int32 i = 0; i < MovieScene->GetPossessableCount(); ++i)
             {
                 FMovieScenePossessable& Possessable = MovieScene->GetPossessable(i);
-                if (Possessable.GetPossessedObjectClass() && 
+                if (Possessable.GetPossessedObjectClass() &&
                     Possessable.GetPossessedObjectClass()->IsChildOf(ACameraActor::StaticClass()))
                 {
                     CameraGuid = Possessable.GetGuid();
@@ -538,7 +544,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddCameraTrack(
     return true;
 
 #else
-    SendAutomationResponse(RequestingSocket, RequestId, false, 
+    SendAutomationResponse(RequestingSocket, RequestId, false,
         TEXT("add_camera_track requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
 #endif
@@ -564,7 +570,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddAnimationTrack(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("add_animation_track payload missing"), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -572,7 +578,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddAnimationTrack(
     FString SequencePath;
     if (!Payload->TryGetStringField(TEXT("sequencePath"), SequencePath) || SequencePath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("sequencePath required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -580,7 +586,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddAnimationTrack(
     FString BindingGuidStr;
     if (!Payload->TryGetStringField(TEXT("bindingGuid"), BindingGuidStr) || BindingGuidStr.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("bindingGuid required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -588,7 +594,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddAnimationTrack(
     FString AnimSequencePath;
     if (!Payload->TryGetStringField(TEXT("animSequencePath"), AnimSequencePath) || AnimSequencePath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("animSequencePath required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -600,7 +606,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddAnimationTrack(
     ULevelSequence* LevelSequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
     if (!LevelSequence)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Failed to load LevelSequence"), TEXT("LOAD_FAILED"));
         return true;
     }
@@ -608,7 +614,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddAnimationTrack(
     UMovieScene* MovieScene = LevelSequence->GetMovieScene();
     if (!MovieScene)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Sequence has no MovieScene"), TEXT("INVALID_SEQUENCE"));
         return true;
     }
@@ -617,7 +623,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddAnimationTrack(
     FGuid BindingGuid;
     if (!FGuid::Parse(BindingGuidStr, BindingGuid))
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Invalid bindingGuid"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -626,23 +632,23 @@ bool UMcpAutomationBridgeSubsystem::HandleAddAnimationTrack(
     UAnimSequence* AnimSequence = LoadObject<UAnimSequence>(nullptr, *AnimSequencePath);
     if (!AnimSequence)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Failed to load animation sequence"), TEXT("ANIM_LOAD_FAILED"));
         return true;
     }
 
     // Create animation track
-    UMovieSceneSkeletalAnimationTrack* AnimTrack = 
+    UMovieSceneSkeletalAnimationTrack* AnimTrack =
         MovieScene->AddTrack<UMovieSceneSkeletalAnimationTrack>(BindingGuid);
     if (!AnimTrack)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Failed to create animation track"), TEXT("TRACK_CREATION_FAILED"));
         return true;
     }
 
     UMovieSceneSection* NewSection = AnimTrack->CreateNewSection();
-    UMovieSceneSkeletalAnimationSection* AnimSection = 
+    UMovieSceneSkeletalAnimationSection* AnimSection =
         Cast<UMovieSceneSkeletalAnimationSection>(NewSection);
 
     if (AnimSection)
@@ -671,7 +677,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddAnimationTrack(
     return true;
 
 #else
-    SendAutomationResponse(RequestingSocket, RequestId, false, 
+    SendAutomationResponse(RequestingSocket, RequestId, false,
         TEXT("add_animation_track requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
 #endif
@@ -697,7 +703,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddTransformTrack(
     // Validate payload
     if (!Payload.IsValid())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("add_transform_track payload missing"), TEXT("INVALID_PAYLOAD"));
         return true;
     }
@@ -705,7 +711,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddTransformTrack(
     FString SequencePath;
     if (!Payload->TryGetStringField(TEXT("sequencePath"), SequencePath) || SequencePath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("sequencePath required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -713,7 +719,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddTransformTrack(
     FString BindingGuidStr;
     if (!Payload->TryGetStringField(TEXT("bindingGuid"), BindingGuidStr) || BindingGuidStr.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("bindingGuid required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -722,7 +728,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddTransformTrack(
     ULevelSequence* LevelSequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
     if (!LevelSequence)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Failed to load LevelSequence"), TEXT("LOAD_FAILED"));
         return true;
     }
@@ -730,7 +736,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddTransformTrack(
     UMovieScene* MovieScene = LevelSequence->GetMovieScene();
     if (!MovieScene)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Sequence has no MovieScene"), TEXT("INVALID_SEQUENCE"));
         return true;
     }
@@ -739,22 +745,22 @@ bool UMcpAutomationBridgeSubsystem::HandleAddTransformTrack(
     FGuid BindingGuid;
     if (!FGuid::Parse(BindingGuidStr, BindingGuid))
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Invalid bindingGuid"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
     // Create transform track
-    UMovieScene3DTransformTrack* TransformTrack = 
+    UMovieScene3DTransformTrack* TransformTrack =
         MovieScene->AddTrack<UMovieScene3DTransformTrack>(BindingGuid);
     if (!TransformTrack)
     {
-        SendAutomationError(RequestingSocket, RequestId, 
+        SendAutomationError(RequestingSocket, RequestId,
             TEXT("Failed to create transform track"), TEXT("TRACK_CREATION_FAILED"));
         return true;
     }
 
-    UMovieScene3DTransformSection* TransformSection = 
+    UMovieScene3DTransformSection* TransformSection =
         Cast<UMovieScene3DTransformSection>(TransformTrack->CreateNewSection());
     if (TransformSection)
     {
@@ -772,7 +778,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddTransformTrack(
     return true;
 
 #else
-    SendAutomationResponse(RequestingSocket, RequestId, false, 
+    SendAutomationResponse(RequestingSocket, RequestId, false,
         TEXT("add_transform_track requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
     return true;
 #endif

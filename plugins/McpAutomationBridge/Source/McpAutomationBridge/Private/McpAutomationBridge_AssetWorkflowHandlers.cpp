@@ -44,6 +44,7 @@
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformFileManager.h"
+#include "Misc/CommandLine.h"
 #include "Misc/Paths.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
@@ -145,7 +146,6 @@
 #include "ThumbnailRendering/ThumbnailManager.h"
 #include "UObject/ObjectRedirector.h"
 #include "UObject/Package.h"
-#include "UObject/SavePackage.h"
 
 // -----------------------------------------------------------------------------
 // Editor-only Includes (Graph/Blueprint)
@@ -241,15 +241,15 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // Dispatch to specific handlers
   // CRITICAL: These actions must match what TS sends as 'action' (not just 'subAction')
   // When TS calls executeAutomationRequest(tools, 'search_assets', {...}), Action='search_assets'
-  
+
   // Asset Operations
   if (Lower == TEXT("import"))
     return HandleImportAsset(RequestId, Payload, RequestingSocket);
-  if (Lower == TEXT("duplicate"))
+  if (Lower == TEXT("duplicate") || Lower == TEXT("duplicate_asset"))
     return HandleDuplicateAsset(RequestId, Payload, RequestingSocket);
-  if (Lower == TEXT("rename"))
+  if (Lower == TEXT("rename") || Lower == TEXT("rename_asset"))
     return HandleRenameAsset(RequestId, Payload, RequestingSocket);
-  if (Lower == TEXT("move"))
+  if (Lower == TEXT("move") || Lower == TEXT("move_asset"))
     return HandleMoveAsset(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("delete") || Lower == TEXT("delete_asset") || Lower == TEXT("delete_assets"))
     return HandleDeleteAssets(RequestId, Payload, RequestingSocket);
@@ -259,6 +259,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleCreateMaterial(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("create_material_instance"))
     return HandleCreateMaterialInstance(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("create_render_target"))
+    return HandleManageTextureAction(RequestId, TEXT("manage_texture"), Payload, RequestingSocket);
   if (Lower == TEXT("get_dependencies"))
     return HandleGetDependencies(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("get_asset_graph"))
@@ -276,7 +278,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   if (Lower == TEXT("generate_report"))
     return HandleGenerateReport(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("create_thumbnail") || Lower == TEXT("generate_thumbnail"))
-    return HandleGenerateThumbnail(RequestId, Action, Payload, RequestingSocket);
+    return HandleGenerateThumbnail(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("add_material_parameter"))
     return HandleAddMaterialParameter(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("list_instances"))
@@ -287,7 +289,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleDoesAssetExist(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("get_material_stats"))
     return HandleGetMaterialStats(RequestId, Payload, RequestingSocket);
-  
+
   // Search (CRITICAL: search_assets must be dispatched - was missing causing timeouts)
   if (Lower == TEXT("search_assets"))
     return HandleSearchAssets(RequestId, Action, Payload, RequestingSocket);
@@ -300,7 +302,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   if (Lower == TEXT("bulk_delete"))
     return HandleBulkDeleteAssets(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("generate_lods"))
-    return HandleGenerateLODs(RequestId, Action, Payload, RequestingSocket);
+    return HandleGenerateLODs(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("nanite_rebuild_mesh"))
     return HandleNaniteRebuildMesh(RequestId, Action, Payload, RequestingSocket);
 
@@ -364,7 +366,7 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
   // Get directory path - REQUIRED for proper error reporting
   FString DirectoryPath;
   Payload->TryGetStringField(TEXT("directoryPath"), DirectoryPath);
-  
+
   // Also check for "path" as alias
   if (DirectoryPath.IsEmpty()) {
     Payload->TryGetStringField(TEXT("path"), DirectoryPath);
@@ -396,13 +398,18 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
     NormalizedPath = FString::Printf(TEXT("/Game%s"), *NormalizedPath.RightChop(8));
   }
 
-  AsyncTask(ENamedThreads::GameThread, [this, RequestId, NormalizedPath,
+  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
+  AsyncTask(ENamedThreads::GameThread, [WeakThis, RequestId, NormalizedPath,
                                         bCheckoutFiles, RequestingSocket]() {
+    UMcpAutomationBridgeSubsystem *StrongThis = WeakThis.Get();
+    if (!StrongThis) {
+      return;
+    }
     // CRITICAL FIX: Use DoesAssetDirectoryExistOnDisk for strict validation
     // UEditorAssetLibrary::DoesDirectoryExist() uses AssetRegistry cache which may
     // contain stale entries. We need to check if the directory ACTUALLY exists on disk.
     if (!DoesAssetDirectoryExistOnDisk(NormalizedPath)) {
-      SendAutomationError(RequestingSocket, RequestId,
+      StrongThis->SendAutomationError(RequestingSocket, RequestId,
                           FString::Printf(TEXT("Directory not found: %s"), *NormalizedPath),
                           TEXT("PATH_NOT_FOUND"));
       return;
@@ -433,7 +440,7 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
       Result->SetBoolField(TEXT("success"), true);
       Result->SetNumberField(TEXT("redirectorsFound"), 0);
       Result->SetNumberField(TEXT("redirectorsFixed"), 0);
-      SendAutomationResponse(RequestingSocket, RequestId, true,
+      StrongThis->SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("No redirectors found"), Result, FString());
       return;
     }
@@ -446,8 +453,6 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
 
     // Checkout files if source control is enabled
     if (bCheckoutFiles && ISourceControlModule::Get().IsEnabled()) {
-      ISourceControlProvider &SourceControlProvider =
-          ISourceControlModule::Get().GetProvider();
       TArray<FString> PackageNames;
       for (const FAssetData &Asset : RedirectorAssets) {
         PackageNames.Add(Asset.PackageName.ToString());
@@ -491,7 +496,7 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
     Result->SetNumberField(TEXT("redirectorsFound"), RedirectorAssets.Num());
     Result->SetNumberField(TEXT("redirectorsFixed"), DeletedCount);
 
-    SendAutomationResponse(
+    StrongThis->SendAutomationResponse(
         RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Fixed %d redirectors"), DeletedCount), Result,
         FString());
@@ -563,15 +568,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
     return true;
   }
 
-  ISourceControlProvider &SourceControlProvider =
-      ISourceControlModule::Get().GetProvider();
-
   TArray<FString> PackageNames;
   TArray<FString> ValidPaths;
   for (const FString &Path : AssetPaths) {
-    if (UEditorAssetLibrary::DoesAssetExist(Path)) {
-      ValidPaths.Add(Path);
-      FString PackageName = FPackageName::ObjectPathToPackageName(Path);
+    const FString SafePath = SanitizeProjectRelativePath(Path);
+    if (!SafePath.IsEmpty() && UEditorAssetLibrary::DoesAssetExist(SafePath)) {
+      ValidPaths.Add(SafePath);
+      FString PackageName = FPackageName::ObjectPathToPackageName(SafePath);
       PackageNames.Add(PackageName);
     }
   }
@@ -680,8 +683,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
 
   TArray<FString> PackageNames;
   for (const FString &Path : AssetPaths) {
-    if (UEditorAssetLibrary::DoesAssetExist(Path)) {
-      FString PackageName = FPackageName::ObjectPathToPackageName(Path);
+    const FString SafePath = SanitizeProjectRelativePath(Path);
+    if (!SafePath.IsEmpty() && UEditorAssetLibrary::DoesAssetExist(SafePath)) {
+      FString PackageName = FPackageName::ObjectPathToPackageName(SafePath);
       PackageNames.Add(PackageName);
     }
   }
@@ -700,7 +704,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
   for (const FString &PackageName : PackageNames) {
     FString FilePath;
     if (FPackageName::TryConvertLongPackageNameToFilename(
-            PackageName, FilePath, FPackageName::GetAssetPackageExtension())) {
+            PackageName, FilePath, FPackageName::GetAssetPackageExtension()) ||
+        FPackageName::TryConvertLongPackageNameToFilename(
+            PackageName, FilePath, FPackageName::GetMapPackageExtension())) {
       FilePaths.Add(FilePath);
     }
   }
@@ -751,7 +757,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlEnable(
   }
 
   ISourceControlModule& SourceControlModule = ISourceControlModule::Get();
-  
+
   // Check if already enabled
   if (SourceControlModule.IsEnabled()) {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -767,12 +773,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlEnable(
   if (!Provider.IsEmpty() && !Provider.Equals(TEXT("None"), ESearchCase::IgnoreCase)) {
     SourceControlModule.SetProvider(FName(*Provider));
   }
-  
+
   bool bEnabled = SourceControlModule.IsEnabled();
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("success"), bEnabled);
   Result->SetStringField(TEXT("provider"), SourceControlModule.GetProvider().GetName().ToString());
-  
+
   if (bEnabled) {
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Source control enabled"), Result, FString());
@@ -844,23 +850,35 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
       if (NormalizedPath.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) {
         NormalizedPath = FString::Printf(TEXT("/Game%s"), *NormalizedPath.RightChop(8));
       }
-      
+
+      NormalizedPath = SanitizeProjectRelativePath(NormalizedPath);
+      if (NormalizedPath.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Invalid folderPath: %s"), *FolderPath),
+                            TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+
       // Get all assets in the folder
       FAssetRegistryModule &AssetRegistryModule =
           FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
       IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
-      
+
       FARFilter Filter;
       Filter.PackagePaths.Add(FName(*NormalizedPath));
       Filter.bRecursivePaths = true;
-      
+
+      // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+      // Asset listing uses cached AssetRegistry data exclusively.
+      // LIMITATION: Assets not yet indexed by the editor's background scanner
+      // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
       TArray<FAssetData> AssetDataList;
       AssetRegistry.GetAssets(Filter, AssetDataList);
-      
+
       for (const FAssetData &AssetData : AssetDataList) {
         AssetPaths.Add(AssetData.ToSoftObjectPath().ToString());
       }
-      
+
       if (AssetPaths.Num() == 0) {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("success"), true);
@@ -883,6 +901,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
     FString AssetPath = ResolveAssetPath(InputPath);
     if (AssetPath.IsEmpty()) {
       AssetPath = InputPath;
+    }
+
+    AssetPath = SanitizeProjectRelativePath(AssetPath);
+    if (AssetPath.IsEmpty()) {
+      continue;
     }
 
     if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
@@ -1015,26 +1038,38 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     Payload->TryGetStringField(TEXT("folderPath"), FolderPath);
     Payload->TryGetStringField(TEXT("path"), FolderPath);  // alias
     Payload->TryGetStringField(TEXT("pattern"), Pattern);
-    
+
     if (!FolderPath.IsEmpty()) {
       // Normalize path
       FString NormalizedPath = FolderPath;
       if (NormalizedPath.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) {
         NormalizedPath = FString::Printf(TEXT("/Game%s"), *NormalizedPath.RightChop(8));
       }
-      
+
+      NormalizedPath = SanitizeProjectRelativePath(NormalizedPath);
+      if (NormalizedPath.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Invalid folderPath: %s"), *FolderPath),
+                            TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+
       // Get all assets in the folder
       FAssetRegistryModule &AssetRegistryModule =
           FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
       IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
-      
+
       FARFilter Filter;
       Filter.PackagePaths.Add(FName(*NormalizedPath));
       Filter.bRecursivePaths = true;
-      
+
+      // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+      // Asset listing uses cached AssetRegistry data exclusively.
+      // LIMITATION: Assets not yet indexed by the editor's background scanner
+      // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
       TArray<FAssetData> AssetDataList;
       AssetRegistry.GetAssets(Filter, AssetDataList);
-      
+
       for (const FAssetData &AssetData : AssetDataList) {
         FString AssetPath = AssetData.ToSoftObjectPath().ToString();
         // If pattern is specified, filter by it
@@ -1046,7 +1081,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
         }
         AssetPaths.Add(AssetPath);
       }
-      
+
       if (AssetPaths.Num() == 0) {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("success"), true);
@@ -1067,10 +1102,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
   TArray<FString> ValidPaths;
 
   for (const FString &AssetPath : AssetPaths) {
-    if (UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
-      if (UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath)) {
+    const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
+    if (!SafeAssetPath.IsEmpty() && UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+      if (UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath)) {
         ObjectsToDelete.Add(Asset);
-        ValidPaths.Add(AssetPath);
+        ValidPaths.Add(SafeAssetPath);
       }
     }
   }
@@ -1221,6 +1257,24 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
     return true;
   }
 
+  if (FParse::Param(FCommandLine::Get(), TEXT("NullRHI"))) {
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("assetPath"), SafeAssetPath);
+    Result->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
+    Result->SetNumberField(TEXT("width"), Width);
+    Result->SetNumberField(TEXT("height"), Height);
+    Result->SetBoolField(TEXT("thumbnailRendered"), false);
+    Result->SetBoolField(TEXT("headlessSafe"), true);
+    if (!OutputPath.IsEmpty()) {
+      Result->SetStringField(TEXT("outputPath"), OutputPath);
+    }
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Asset verified; thumbnail rendering skipped under NullRHI"),
+                           Result, FString());
+    return true;
+  }
+
   // Send progress update before GPU operation
   SendProgressUpdate(RequestId, 50.0f,
       TEXT("Rendering thumbnail (GPU operation)..."), true);
@@ -1356,8 +1410,17 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
     return true;
   }
 
+  FString ResolvedSourcePath = SourcePath;
+  if (!FPaths::FileExists(ResolvedSourcePath) && FPaths::IsRelative(SourcePath)) {
+    const FString ProjectRelativeSourcePath = FPaths::ConvertRelativePathToFull(
+        FPaths::ProjectDir(), SourcePath);
+    if (FPaths::FileExists(ProjectRelativeSourcePath)) {
+      ResolvedSourcePath = ProjectRelativeSourcePath;
+    }
+  }
+
   // Verify source file exists
-  if (!FPaths::FileExists(SourcePath)) {
+  if (!FPaths::FileExists(ResolvedSourcePath)) {
     SendAutomationResponse(
         Socket, RequestId, false,
         FString::Printf(TEXT("Source file not found: %s"), *SourcePath),
@@ -1394,7 +1457,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
   if (GEditor) {
     TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
     GEditor->GetTimerManager()->SetTimerForNextTick(
-        [WeakThis, RequestId, SourcePath, DestPath, DestName, Socket]() {
+        [WeakThis, RequestId, ResolvedSourcePath, DestPath, DestName, Socket]() {
           UMcpAutomationBridgeSubsystem *StrongThis = WeakThis.Get();
           if (!StrongThis) {
             return;
@@ -1405,7 +1468,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
                   .Get();
 
           TArray<FString> Files;
-          Files.Add(SourcePath);
+          Files.Add(ResolvedSourcePath);
 
           UAutomatedAssetImportData *ImportData =
               NewObject<UAutomatedAssetImportData>();
@@ -1464,7 +1527,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
             StrongThis->SendAutomationResponse(
                 Socket, RequestId, false,
                 FString::Printf(TEXT("Failed to import asset from '%s'"),
-                                *SourcePath),
+                                 *ResolvedSourcePath),
                 nullptr, TEXT("IMPORT_FAILED"));
           }
         });
@@ -1509,7 +1572,17 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+  AssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (AssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid assetPath"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
+  const FString SafeAssetPath = AssetPath;
+
+  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
                            nullptr, TEXT("ASSET_NOT_FOUND"));
     return true;
@@ -1521,7 +1594,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     // Treat missing/empty metadata as a no-op success; nothing to write.
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("assetPath"), AssetPath);
+    Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
     Resp->SetNumberField(TEXT("updatedKeys"), 0);
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("No metadata provided; no-op"), Resp,
@@ -1529,7 +1602,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     return true;
   }
 
-  UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+  UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
   if (!Asset) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Failed to load asset"), nullptr,
@@ -1557,7 +1630,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
   int32 UpdatedCount = 0;
 
   for (const auto &Kvp : MetadataObj->Values) {
-    const FString &Key = Kvp.Key;
+    const FString Key(*Kvp.Key);
     const TSharedPtr<FJsonValue> &Val = Kvp.Value;
 
     FString ValueString;
@@ -1602,9 +1675,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetStringField(TEXT("assetPath"), AssetPath);
+  Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
   Resp->SetNumberField(TEXT("updatedKeys"), UpdatedCount);
-  
+
   // Add verification data
   McpHandlerUtils::AddVerification(Resp, Asset);
 
@@ -1650,10 +1723,15 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
       ParentDir = TEXT("/Game");
 
     DestinationPath = ParentDir / DestinationPath;
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-           TEXT("HandleDuplicateAsset: Auto-resolved simple name destination "
-                "to '%s'"),
-           *DestinationPath);
+  }
+
+  SourcePath = SanitizeProjectRelativePath(SourcePath);
+  DestinationPath = SanitizeProjectRelativePath(DestinationPath);
+  if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid sourcePath or destinationPath"),
+                           nullptr, TEXT("SECURITY_VIOLATION"));
+    return true;
   }
 
   // If the source path is a directory, perform a deep duplication of all
@@ -1671,6 +1749,10 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
     Filter.PackagePaths.Add(FName(*SourcePath));
     Filter.bRecursivePaths = true;
 
+    // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+    // Asset listing uses cached AssetRegistry data exclusively.
+    // LIMITATION: Assets not yet indexed by the editor's background scanner
+    // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
     TArray<FAssetData> Assets;
     AssetRegistryModule.Get().GetAssets(Filter, Assets);
 
@@ -1798,11 +1880,35 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
         *DestinationPath);
   }
 
+  if ((SourcePath.Contains(TEXT("/")) || SourcePath.StartsWith(TEXT("/"))) &&
+      SanitizeProjectRelativePath(SourcePath).IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid sourcePath"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
+  DestinationPath = SanitizeProjectRelativePath(DestinationPath);
+  if (DestinationPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid destinationPath"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
   // Resolve source path to ensure it matches a real asset
   FString ResolvedSourcePath = ResolveAssetPath(SourcePath);
   if (ResolvedSourcePath.IsEmpty()) {
     // If resolution failed, fall back to original for strict check
     ResolvedSourcePath = SourcePath;
+  }
+
+  ResolvedSourcePath = SanitizeProjectRelativePath(ResolvedSourcePath);
+  if (ResolvedSourcePath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid resolved sourcePath"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
+    return true;
   }
 
   if (!UEditorAssetLibrary::DoesAssetExist(ResolvedSourcePath)) {
@@ -1818,13 +1924,13 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPath);
-    
+
     // Add verification data
     UObject* RenamedAsset = UEditorAssetLibrary::LoadAsset(DestinationPath);
     if (RenamedAsset) {
       McpHandlerUtils::AddVerification(Resp, RenamedAsset);
     }
-    
+
     SendAutomationResponse(Socket, RequestId, true, TEXT("Asset renamed"), Resp,
                            FString());
   } else {
@@ -1887,53 +1993,54 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   int32 DeletedCount = 0;
   TArray<FString> NotFoundPaths;
   TArray<FString> FailedToDeletePaths;
-  
+
   for (const FString &Path : PathsToDelete) {
+    const FString SafePath = SanitizeProjectRelativePath(Path);
+    if (SafePath.IsEmpty()) {
+      FailedToDeletePaths.Add(Path);
+      continue;
+    }
+
     // Check if it's a directory first (folder path)
-    if (UEditorAssetLibrary::DoesDirectoryExist(Path)) {
+    if (UEditorAssetLibrary::DoesDirectoryExist(SafePath)) {
       // Directory exists - use safe folder deletion with proper cleanup
       // CRITICAL for UE 5.7+: Use McpSafeDeleteFolder instead of UEditorAssetLibrary::DeleteDirectory
       // to prevent crashes during UWorld::CleanupWorld when deleting folders containing
       // AnimBlueprints, IKRigs, IKRetargeters, etc.
-      if (McpSafeOperations::McpSafeDeleteFolder(Path, true))
+      if (McpSafeOperations::McpSafeDeleteFolder(SafePath, true))
       {
-        // Verify the directory was actually deleted
-        if (!UEditorAssetLibrary::DoesDirectoryExist(Path)) {
-          DeletedCount++;
-        } else {
-          // Delete returned true but directory still exists
-          FailedToDeletePaths.Add(Path);
-        }
+        // McpSafeDeleteFolder performs registry and filesystem verification itself.
+        DeletedCount++;
       } else {
-        FailedToDeletePaths.Add(Path);
+        FailedToDeletePaths.Add(SafePath);
       }
-    } else if (UEditorAssetLibrary::DoesAssetExist(Path)) {
+    } else if (UEditorAssetLibrary::DoesAssetExist(SafePath)) {
       // Asset exists - attempt to delete it
-      if (UEditorAssetLibrary::DeleteAsset(Path)) {
+      if (UEditorAssetLibrary::DeleteAsset(SafePath)) {
         // Verify the asset was actually deleted
-        if (!UEditorAssetLibrary::DoesAssetExist(Path)) {
+        if (!UEditorAssetLibrary::DoesAssetExist(SafePath)) {
           DeletedCount++;
         } else {
           // Delete returned true but asset still exists
-          FailedToDeletePaths.Add(Path);
+          FailedToDeletePaths.Add(SafePath);
         }
       } else {
-        FailedToDeletePaths.Add(Path);
+        FailedToDeletePaths.Add(SafePath);
       }
     } else {
       // Asset/directory does not exist
-      NotFoundPaths.Add(Path);
+      NotFoundPaths.Add(SafePath);
     }
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  
+
   // Return success only if at least one asset was deleted
   bool bSuccess = DeletedCount > 0;
   Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetNumberField(TEXT("deletedCount"), DeletedCount);
   Resp->SetBoolField(TEXT("existsAfter"), false);
-  
+
   if (NotFoundPaths.Num() > 0) {
     TArray<TSharedPtr<FJsonValue>> NotFoundArray;
     for (const FString& P : NotFoundPaths) {
@@ -1942,7 +2049,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     Resp->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
     Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
   }
-  
+
   if (FailedToDeletePaths.Num() > 0) {
     TArray<TSharedPtr<FJsonValue>> FailedArray;
     for (const FString& P : FailedToDeletePaths) {
@@ -1951,14 +2058,14 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     Resp->SetArrayField(TEXT("failedToDeletePaths"), FailedArray);
     Resp->SetNumberField(TEXT("failedCount"), FailedToDeletePaths.Num());
   }
-  
+
   if (bSuccess) {
     SendAutomationResponse(Socket, RequestId, true, TEXT("Assets deleted"), Resp, FString());
   } else {
     // Nothing was deleted - determine the reason
     FString ErrorMessage;
     FString ErrorCode;
-    
+
     if (NotFoundPaths.Num() > 0 && FailedToDeletePaths.Num() == 0) {
       // All paths were not found
       ErrorMessage = FString::Printf(TEXT("No assets deleted. %d path(s) not found."), NotFoundPaths.Num());
@@ -1969,11 +2076,11 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
       ErrorCode = TEXT("DELETE_FAILED");
     } else {
       // Mixed: some not found, some failed to delete
-      ErrorMessage = FString::Printf(TEXT("No assets deleted. %d path(s) not found, %d failed to delete."), 
+      ErrorMessage = FString::Printf(TEXT("No assets deleted. %d path(s) not found, %d failed to delete."),
                                       NotFoundPaths.Num(), FailedToDeletePaths.Num());
       ErrorCode = TEXT("DELETE_FAILED");
     }
-    
+
     SendAutomationResponse(Socket, RequestId, false, ErrorMessage, Resp, ErrorCode);
   }
   return true;
@@ -2057,17 +2164,17 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
     return true;
   }
 
-  // Validate path
-  if (!IsValidAssetPath(AssetPath)) {
+  const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (SafeAssetPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Invalid asset path"),
                            nullptr, TEXT("INVALID_PATH"));
     return true;
   }
 
   // Check if asset exists - return error for non-existent assets
-  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
-    SendAutomationError(Socket, RequestId, 
-                        FString::Printf(TEXT("Asset not found: %s"), *AssetPath),
+  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("Asset not found: %s"), *SafeAssetPath),
                         TEXT("ASSET_NOT_FOUND"));
     return true;
   }
@@ -2080,7 +2187,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
   TArray<FName> Dependencies;
   UE::AssetRegistry::EDependencyCategory Category =
       UE::AssetRegistry::EDependencyCategory::Package;
-  AssetRegistryModule.Get().GetDependencies(FName(*AssetPath), Dependencies);
+  AssetRegistryModule.Get().GetDependencies(FName(*SafeAssetPath), Dependencies);
 
   TArray<TSharedPtr<FJsonValue>> DepArray;
   for (const FName &Dep : Dependencies) {
@@ -2119,16 +2226,17 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
     return true;
   }
 
-  if (!IsValidAssetPath(AssetPath)) {
+  const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (SafeAssetPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Invalid asset path"),
                            nullptr, TEXT("INVALID_PATH"));
     return true;
   }
 
   // Check if asset exists - return error for non-existent assets
-  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
-    SendAutomationError(Socket, RequestId, 
-                        FString::Printf(TEXT("Asset not found: %s"), *AssetPath),
+  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("Asset not found: %s"), *SafeAssetPath),
                         TEXT("ASSET_NOT_FOUND"));
     return true;
   }
@@ -2143,13 +2251,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
   TSharedPtr<FJsonObject> GraphObj = McpHandlerUtils::CreateResultObject();
 
   TArray<FString> Queue;
-  Queue.Add(AssetPath);
+  Queue.Add(SafeAssetPath);
 
   TSet<FString> Visited;
-  Visited.Add(AssetPath);
+  Visited.Add(SafeAssetPath);
 
   TMap<FString, int32> Depths;
-  Depths.Add(AssetPath, 0);
+  Depths.Add(SafeAssetPath, 0);
 
   int32 Head = 0;
   while (Head < Queue.Num()) {
@@ -2229,29 +2337,42 @@ bool UMcpAutomationBridgeSubsystem::HandleSetTags(
     }
   }
 
-  AsyncTask(ENamedThreads::GameThread, [this, RequestId, Socket, AssetPath,
-                                        Tags]() {
+  const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (SafeAssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid assetPath"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
+  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
+  AsyncTask(ENamedThreads::GameThread, [WeakThis, RequestId, Socket, SafeAssetPath,
+                                         Tags]() {
+    UMcpAutomationBridgeSubsystem *StrongThis = WeakThis.Get();
+    if (!StrongThis) {
+      return;
+    }
     // Edge-case: empty or missing tags array should be treated as a no-op
     // success.
     if (Tags.Num() == 0) {
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), true);
-      Resp->SetStringField(TEXT("assetPath"), AssetPath);
+      Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
       Resp->SetNumberField(TEXT("appliedTags"), 0);
-      SendAutomationResponse(Socket, RequestId, true,
+      StrongThis->SendAutomationResponse(Socket, RequestId, true,
                              TEXT("No tags provided; no-op"), Resp, FString());
       return;
     }
 
-    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
-      SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
+    if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+      StrongThis->SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
                              nullptr, TEXT("ASSET_NOT_FOUND"));
       return;
     }
 
-    UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
     if (!Asset) {
-      SendAutomationResponse(Socket, RequestId, false,
+      StrongThis->SendAutomationResponse(Socket, RequestId, false,
                              TEXT("Failed to load asset"), nullptr,
                              TEXT("LOAD_FAILED"));
       return;
@@ -2270,9 +2391,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetTags(
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("markedDirty"), true);
-    Resp->SetStringField(TEXT("assetPath"), AssetPath);
+    Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
     Resp->SetNumberField(TEXT("appliedTags"), AppliedCount);
-    SendAutomationResponse(Socket, RequestId, true,
+    StrongThis->SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Tags applied as metadata"), Resp, FString());
   });
 
@@ -2310,16 +2431,29 @@ bool UMcpAutomationBridgeSubsystem::HandleValidateAsset(
     return true;
   }
 
-  AsyncTask(ENamedThreads::GameThread, [this, RequestId, Socket, AssetPath]() {
-    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
-      SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
+  const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (SafeAssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid assetPath"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
+  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
+  AsyncTask(ENamedThreads::GameThread, [WeakThis, RequestId, Socket, SafeAssetPath]() {
+    UMcpAutomationBridgeSubsystem *StrongThis = WeakThis.Get();
+    if (!StrongThis) {
+      return;
+    }
+    if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+      StrongThis->SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
                              nullptr, TEXT("ASSET_NOT_FOUND"));
       return;
     }
 
-    UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
     if (!Asset) {
-      SendAutomationResponse(Socket, RequestId, false,
+      StrongThis->SendAutomationResponse(Socket, RequestId, false,
                              TEXT("Failed to load asset"), nullptr,
                              TEXT("LOAD_FAILED"));
       return;
@@ -2328,10 +2462,10 @@ bool UMcpAutomationBridgeSubsystem::HandleValidateAsset(
     bool bIsValid = true;
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), bIsValid);
-    Resp->SetStringField(TEXT("assetPath"), AssetPath);
+    Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
     Resp->SetBoolField(TEXT("isValid"), bIsValid);
 
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset validated"),
+    StrongThis->SendAutomationResponse(Socket, RequestId, true, TEXT("Asset validated"),
                            Resp, FString());
   });
   return true;
@@ -2412,12 +2546,10 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     Filter.PackagePaths.Add(FName(TEXT("/Game")));
   }
 
-  // Ensure registry is up to date for the requested paths
-  TArray<FString> ScanPaths;
-  for (const FName &Path : Filter.PackagePaths) {
-    ScanPaths.Add(Path.ToString());
-  }
-  AssetRegistry.ScanPathsSynchronous(ScanPaths, true);
+  // Use cached AssetRegistry data — ScanPathsSynchronous() removed to prevent
+  // blocking the GameThread (causes SSE/HTTP transport timeouts).
+  // LIMITATION: Assets not yet indexed by the editor's background scanner
+  // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
 
   if (!ClassFilter.IsEmpty()) {
     // Support both short class names and full paths (best effort)
@@ -2438,6 +2570,10 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
   // key or value. Implementing a generic "HasTag" is ambiguous. We'll assume
   // TagFilter refers to a metadata key presence.
 
+  // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+  // Asset listing uses cached AssetRegistry data exclusively.
+  // LIMITATION: Assets not yet indexed by the editor's background scanner
+  // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
   TArray<FAssetData> AssetList;
   AssetRegistry.GetAssets(Filter, AssetList);
 
@@ -2622,13 +2758,21 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAsset(
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+  const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (SafeAssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid assetPath"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
+  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
                            nullptr, TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
-  FAssetData AssetData = UEditorAssetLibrary::FindAssetData(AssetPath);
+  FAssetData AssetData = UEditorAssetLibrary::FindAssetData(SafeAssetPath);
   if (!AssetData.IsValid()) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Failed to find asset data"), nullptr,
@@ -2700,8 +2844,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
   FString OutputPath;
   Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
 
-  AsyncTask(ENamedThreads::GameThread, [this, RequestId, Socket, Directory,
+  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
+  AsyncTask(ENamedThreads::GameThread, [WeakThis, RequestId, Socket, Directory,
                                         ReportType, OutputPath]() {
+    UMcpAutomationBridgeSubsystem *StrongThis = WeakThis.Get();
+    if (!StrongThis) {
+      return;
+    }
     FAssetRegistryModule &AssetRegistryModule =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
             TEXT("AssetRegistry"));
@@ -2711,6 +2860,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
       Filter.PackagePaths.Add(FName(*Directory));
     }
 
+    // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+    // Asset listing uses cached AssetRegistry data exclusively.
+    // LIMITATION: Assets not yet indexed by the editor's background scanner
+    // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
     TArray<FAssetData> AssetList;
     AssetRegistryModule.Get().GetAssets(Filter, AssetList);
 
@@ -2734,24 +2887,24 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
       // SECURITY: Sanitize and validate the output path to prevent path traversal
       FString SafeOutputPath = SanitizeProjectFilePath(OutputPath);
       if (SafeOutputPath.IsEmpty()) {
-        SendAutomationError(Socket, RequestId,
+        StrongThis->SendAutomationError(Socket, RequestId,
                             FString::Printf(TEXT("Invalid or unsafe output path: %s"), *OutputPath),
                             TEXT("SECURITY_VIOLATION"));
         return;
       }
-      
+
       FString AbsoluteOutput = FPaths::ProjectDir() / SafeOutputPath;
       AbsoluteOutput = FPaths::ConvertRelativePathToFull(AbsoluteOutput);
       FPaths::NormalizeFilename(AbsoluteOutput);
-      
+
       FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
       FPaths::NormalizeDirectoryName(NormalizedProjectDir);
       if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
         NormalizedProjectDir += TEXT("/");
       }
-      
+
       if (!AbsoluteOutput.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
-        SendAutomationError(Socket, RequestId,
+        StrongThis->SendAutomationError(Socket, RequestId,
                             FString::Printf(TEXT("Output path escapes project directory: %s"), *OutputPath),
                             TEXT("SECURITY_VIOLATION"));
         return;
@@ -2779,7 +2932,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
       Resp->SetBoolField(TEXT("fileWritten"), bFileWritten);
     }
 
-    SendAutomationResponse(Socket, RequestId, true,
+    StrongThis->SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Asset report generated"), Resp, FString());
   });
   return true;
@@ -2801,11 +2954,22 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterial(
   Payload->TryGetStringField(TEXT("name"), Name);
   FString Path;
   Payload->TryGetStringField(TEXT("path"), Path);
+  bool bSave = false;
+  Payload->TryGetBoolField(TEXT("save"), bSave);
 
   if (Name.IsEmpty() || Path.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("name and path required"), nullptr,
                            TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  Name = SanitizeAssetName(Name);
+  Path = SanitizeProjectRelativePath(Path);
+  if (Path.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid path"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
     return true;
   }
 
@@ -2838,9 +3002,20 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterial(
       AssetTools.CreateAsset(Name, Path, UMaterial::StaticClass(), Factory);
 
   if (NewAsset) {
+    bool bSaved = false;
+    if (bSave) {
+      bSaved = McpSafeAssetSave(NewAsset);
+      if (!bSaved) {
+        SendAutomationResponse(Socket, RequestId, false,
+                               TEXT("Material created but save failed"), nullptr,
+                               TEXT("SAVE_FAILED"));
+        return true;
+      }
+    }
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+    Resp->SetBoolField(TEXT("saved"), bSaved);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Material created"),
                            Resp, FString());
   } else {
@@ -2865,11 +3040,21 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(
   Payload->TryGetStringField(TEXT("path"), Path);
   FString ParentPath;
   Payload->TryGetStringField(TEXT("parentMaterial"), ParentPath);
+  bool bSave = false;
+  Payload->TryGetBoolField(TEXT("save"), bSave);
 
   if (Name.IsEmpty() || Path.IsEmpty() || ParentPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("name, path and parentMaterial required"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  Name = SanitizeAssetName(Name);
+  Path = SanitizeProjectRelativePath(Path);
+  if (Path.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid path"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
     return true;
   }
   UMaterialInterface *ParentMaterial = nullptr;
@@ -2880,6 +3065,14 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(
   if (ParentPath.Equals(TEXT("/Valid"), ESearchCase::IgnoreCase)) {
     ParentMaterial = UMaterial::GetDefaultMaterial(MD_Surface);
   } else {
+    ParentPath = SanitizeProjectRelativePath(ParentPath);
+    if (ParentPath.IsEmpty()) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             TEXT("Invalid parentMaterial"), nullptr,
+                             TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+
     if (!UEditorAssetLibrary::DoesAssetExist(ParentPath)) {
       SendAutomationResponse(
           Socket, RequestId, false,
@@ -2949,6 +3142,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(
         for (const auto &Kvp : (*Textures)->Values) {
           FString TexPath;
           if (Kvp.Value->TryGetString(TexPath) && !TexPath.IsEmpty()) {
+            TexPath = SanitizeProjectRelativePath(TexPath);
+            if (TexPath.IsEmpty()) {
+              continue;
+            }
             UTexture *Tex = LoadObject<UTexture>(nullptr, *TexPath);
             if (Tex) {
               MIC->SetTextureParameterValueEditorOnly(FName(*Kvp.Key), Tex);
@@ -2958,9 +3155,21 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(
       }
     }
 
+    bool bSaved = false;
+    if (bSave) {
+      bSaved = McpSafeAssetSave(NewAsset);
+      if (!bSaved) {
+        SendAutomationResponse(Socket, RequestId, false,
+                               TEXT("Material Instance created but save failed"), nullptr,
+                               TEXT("SAVE_FAILED"));
+        return true;
+      }
+    }
+
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+    Resp->SetBoolField(TEXT("saved"), bSaved);
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Material Instance created"), Resp, FString());
   } else {
@@ -2994,6 +3203,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("assetPath, name, and type required"), nullptr,
                            TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  AssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (AssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid assetPath"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
     return true;
   }
 
@@ -3076,6 +3293,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
       FString TexPath;
       if (Payload->TryGetStringField(TEXT("value"), TexPath) &&
           !TexPath.IsEmpty()) {
+        TexPath = SanitizeProjectRelativePath(TexPath);
+        if (TexPath.IsEmpty()) {
+          SendAutomationResponse(Socket, RequestId, false,
+                                 TEXT("Invalid texture path"), nullptr,
+                                 TEXT("SECURITY_VIOLATION"));
+          return true;
+        }
         UTexture *Tex = LoadObject<UTexture>(nullptr, *TexPath);
         if (Tex) {
           TexParam->Texture = Tex;
@@ -3140,6 +3364,14 @@ bool UMcpAutomationBridgeSubsystem::HandleListMaterialInstances(
     return true;
   }
 
+  AssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (AssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid assetPath"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
   FAssetRegistryModule &AssetRegistryModule =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
   IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
@@ -3159,6 +3391,10 @@ bool UMcpAutomationBridgeSubsystem::HandleListMaterialInstances(
 #endif
   Filter.bRecursiveClasses = true;
 
+  // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+  // Asset listing uses cached AssetRegistry data exclusively.
+  // LIMITATION: Assets not yet indexed by the editor's background scanner
+  // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
   TArray<FAssetData> AssetList;
   AssetRegistry.GetAssets(Filter, AssetList);
 
@@ -3166,8 +3402,6 @@ bool UMcpAutomationBridgeSubsystem::HandleListMaterialInstances(
 
   // We need to check the parent. Loading the asset is safest but slow.
   // Checking tags is faster. MICs usually have "Parent" tag.
-  FName ParentPathName(*AssetPath);
-
   for (const FAssetData &Asset : AssetList) {
     // Check tag first
     FString ParentTag;
@@ -3211,6 +3445,14 @@ bool UMcpAutomationBridgeSubsystem::HandleResetInstanceParameters(
   if (AssetPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  AssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (AssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid assetPath"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
     return true;
   }
 
@@ -3258,6 +3500,14 @@ bool UMcpAutomationBridgeSubsystem::HandleDoesAssetExist(
     return true;
   }
 
+  AssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (AssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid assetPath"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
   bool bExists = UEditorAssetLibrary::DoesAssetExist(AssetPath);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -3284,6 +3534,14 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
   if (AssetPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  AssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (AssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid assetPath"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
     return true;
   }
 
@@ -3390,13 +3648,15 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
   // Support both landscapePath (single) and assetPaths (array)
   FString LandscapePath;
   Payload->TryGetStringField(TEXT("landscapePath"), LandscapePath);
-  
+
   // Support both assetPath (single) and assetPaths (array)
   FString SingleAssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), SingleAssetPath);
-  
+
   const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
-  Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray);
+  if (!Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray)) {
+    Payload->TryGetArrayField(TEXT("assets"), AssetPathsArray);
+  }
 
   // Support both lodCount and numLODs
   int32 NumLODs = 4;
@@ -3406,7 +3666,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
 
   // Build list of paths to process
   TArray<FString> Paths;
-  
+
   // Add landscape path if provided
   if (!LandscapePath.IsEmpty()) {
     // Validate landscape path
@@ -3419,7 +3679,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     }
     Paths.Add(SafePath);
   }
-  
+
   // Add single asset path if provided
   if (!SingleAssetPath.IsEmpty()) {
     FString SafePath = SanitizeProjectRelativePath(SingleAssetPath);
@@ -3431,7 +3691,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     }
     Paths.Add(SafePath);
   }
-  
+
   // Add asset paths if provided
   if (AssetPathsArray) {
     for (const auto &Val : *AssetPathsArray) {
@@ -3448,6 +3708,70 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("landscapePath or assetPaths required"),
                         TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  if (FParse::Param(FCommandLine::Get(), TEXT("NullRHI"))) {
+    int32 VerifiedCount = 0;
+    TArray<FString> NotFoundPaths;
+    TArray<FString> NotMeshPaths;
+    TArray<TSharedPtr<FJsonValue>> MeshDetails;
+
+    for (const FString &Path : Paths) {
+      UObject *Obj = LoadObject<UObject>(nullptr, *Path);
+      if (!Obj) {
+        NotFoundPaths.Add(Path);
+        continue;
+      }
+
+      UStaticMesh *Mesh = Cast<UStaticMesh>(Obj);
+      if (!Mesh) {
+        NotMeshPaths.Add(Path);
+        continue;
+      }
+
+      TSharedPtr<FJsonObject> MeshInfo = MakeShared<FJsonObject>();
+      MeshInfo->SetStringField(TEXT("assetPath"), Path);
+      MeshInfo->SetStringField(TEXT("assetClass"), Mesh->GetClass()->GetName());
+      MeshInfo->SetNumberField(TEXT("currentLODCount"), Mesh->GetNumLODs());
+      MeshInfo->SetNumberField(TEXT("requestedLODCount"), NumLODs);
+      MeshDetails.Add(MakeShared<FJsonValueObject>(MeshInfo));
+      VerifiedCount++;
+    }
+
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    const bool bSuccess = VerifiedCount > 0;
+    Resp->SetBoolField(TEXT("success"), bSuccess);
+    Resp->SetBoolField(TEXT("headlessSafe"), true);
+    Resp->SetBoolField(TEXT("lodBuildSkipped"), true);
+    Resp->SetNumberField(TEXT("verified"), VerifiedCount);
+    Resp->SetNumberField(TEXT("requested"), Paths.Num());
+    Resp->SetNumberField(TEXT("lodCount"), NumLODs);
+    Resp->SetArrayField(TEXT("meshes"), MeshDetails);
+
+    if (NotFoundPaths.Num() > 0) {
+      TArray<TSharedPtr<FJsonValue>> NotFoundArray;
+      for (const FString &Path : NotFoundPaths) {
+        NotFoundArray.Add(MakeShared<FJsonValueString>(Path));
+      }
+      Resp->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
+      Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
+    }
+
+    if (NotMeshPaths.Num() > 0) {
+      TArray<TSharedPtr<FJsonValue>> NotMeshArray;
+      for (const FString &Path : NotMeshPaths) {
+        NotMeshArray.Add(MakeShared<FJsonValueString>(Path));
+      }
+      Resp->SetArrayField(TEXT("notMeshPaths"), NotMeshArray);
+      Resp->SetNumberField(TEXT("notMeshCount"), NotMeshPaths.Num());
+    }
+
+    const FString Message = bSuccess
+        ? FString::Printf(TEXT("Verified %d mesh(es); LOD build skipped under NullRHI"), VerifiedCount)
+        : TEXT("No static meshes verified for LOD generation under NullRHI");
+    const FString ErrorCode = bSuccess ? FString() : TEXT("LOD_GENERATION_FAILED");
+    SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Resp, ErrorCode);
     return true;
   }
 
@@ -3509,7 +3833,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    
+
     // CRITICAL FIX: Return proper success/failure based on actual results
     // Previously always returned success=true even when 0 meshes processed
     bool bSuccess = SuccessCount > 0;
@@ -3517,7 +3841,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     Resp->SetNumberField(TEXT("processed"), SuccessCount);
     Resp->SetNumberField(TEXT("requested"), Paths.Num());
     Resp->SetNumberField(TEXT("lodCount"), NumLODs);
-    
+
     // Add details about failures
     if (NotFoundPaths.Num() > 0) {
       TArray<TSharedPtr<FJsonValue>> NotFoundArray;
@@ -3527,7 +3851,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
       Resp->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
       Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
     }
-    
+
     if (NotMeshPaths.Num() > 0) {
       TArray<TSharedPtr<FJsonValue>> NotMeshArray;
       for (const FString& P : NotMeshPaths) {
@@ -3536,10 +3860,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
       Resp->SetArrayField(TEXT("notMeshPaths"), NotMeshArray);
       Resp->SetNumberField(TEXT("notMeshCount"), NotMeshPaths.Num());
     }
-    
+
     FString Message;
     FString ErrorCode;
-    
+
     if (bSuccess) {
       Message = FString::Printf(TEXT("Generated LODs for %d mesh(es)"), SuccessCount);
     } else if (NotFoundPaths.Num() > 0 && NotMeshPaths.Num() == 0) {
@@ -3549,11 +3873,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
       Message = FString::Printf(TEXT("No static meshes found. %d asset(s) are not meshes."), NotMeshPaths.Num());
       ErrorCode = TEXT("INVALID_ASSET_TYPE");
     } else {
-      Message = FString::Printf(TEXT("No LODs generated. %d not found, %d not meshes."), 
+      Message = FString::Printf(TEXT("No LODs generated. %d not found, %d not meshes."),
                                 NotFoundPaths.Num(), NotMeshPaths.Num());
       ErrorCode = TEXT("LOD_GENERATION_FAILED");
     }
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
                                       Message, Resp, ErrorCode);
 
@@ -3587,6 +3911,14 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
   if (AssetPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  AssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (AssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid assetPath"), nullptr,
+                           TEXT("SECURITY_VIOLATION"));
     return true;
   }
 
@@ -3654,11 +3986,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
 }
 
 // ============================================================================
-// 9. MATERIAL REBUILD - NOT IMPLEMENTED (placeholder for future implementation)
+// 9. NANITE/MESH WORKFLOW ACTIONS
 // ============================================================================
 
-// Stub implementations for functions declared in header but removed from implementation
-// These functions are referenced by the dispatcher but were removed due to API changes
+// Dispatcher-compatible mesh workflow handlers with explicit success/error responses.
 
 bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
     const FString &RequestId, const FString &Action,
@@ -3683,6 +4014,14 @@ bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
     SendAutomationError(Socket, RequestId,
                         TEXT("meshPath is required"),
                         TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  MeshPath = SanitizeProjectRelativePath(MeshPath);
+  if (MeshPath.IsEmpty()) {
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Invalid meshPath"),
+                        TEXT("SECURITY_VIOLATION"));
     return true;
   }
 
@@ -3717,7 +4056,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
   FMeshNaniteSettings Settings = StaticMesh->GetNaniteSettings();
   Settings.bEnabled = bEnableNanite;
   Settings.PositionPrecision = 8; // Default precision
-  
+
   // bPreserveArea replaced with ShapePreservation enum
   if (bPreserveArea) {
     Settings.ShapePreservation = ENaniteShapePreservation::PreserveArea;
@@ -3837,14 +4176,14 @@ bool UMcpAutomationBridgeSubsystem::HandleFindByTag(
           ResultObj->SetStringField(TEXT("label"), Actor->GetActorLabel());
           ResultObj->SetStringField(TEXT("path"), Actor->GetPathName());
           ResultObj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
-          
+
           const FVector Location = Actor->GetActorLocation();
           TSharedPtr<FJsonObject> LocObj = McpHandlerUtils::CreateResultObject();
           LocObj->SetNumberField(TEXT("x"), Location.X);
           LocObj->SetNumberField(TEXT("y"), Location.Y);
           LocObj->SetNumberField(TEXT("z"), Location.Z);
           ResultObj->SetObjectField(TEXT("location"), LocObj);
-          
+
           Results.Add(MakeShared<FJsonValueObject>(ResultObj));
         }
       }
@@ -3916,6 +4255,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
     SendAutomationError(Socket, RequestId,
                         TEXT("materialPath is required"),
                         TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  MaterialPath = SanitizeProjectRelativePath(MaterialPath);
+  if (MaterialPath.IsEmpty()) {
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Invalid materialPath"),
+                        TEXT("SECURITY_VIOLATION"));
     return true;
   }
 
@@ -4020,6 +4367,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
   } else if (UMaterialExpressionTextureSample *TexSample = Cast<UMaterialExpressionTextureSample>(NewExpression)) {
     FString TexturePath;
     if (Payload->TryGetStringField(TEXT("texturePath"), TexturePath) && !TexturePath.IsEmpty()) {
+      TexturePath = SanitizeProjectRelativePath(TexturePath);
+      if (TexturePath.IsEmpty()) {
+        SendAutomationError(Socket, RequestId,
+                            TEXT("Invalid texturePath"),
+                            TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
       UTexture *Texture = LoadObject<UTexture>(nullptr, *TexturePath);
       if (Texture) {
         TexSample->Texture = Texture;
@@ -4055,7 +4409,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
   Resp->SetStringField(TEXT("nodeType"), NodeType);
   Resp->SetNumberField(TEXT("expressionIndex"), ExpressionIndex);
   Resp->SetStringField(TEXT("expressionName"), NewExpression->GetName());
-  Resp->SetStringField(TEXT("nodeId"), NewExpression->GetName());
+  Resp->SetStringField(TEXT("nodeId"), NewExpression->MaterialExpressionGuid.ToString());
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Material node added successfully"), Resp, FString());
@@ -4099,6 +4453,14 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
     SendAutomationError(Socket, RequestId,
                         TEXT("assetPath cannot be empty"),
                         TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  MaterialPath = SanitizeProjectRelativePath(MaterialPath);
+  if (MaterialPath.IsEmpty()) {
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Invalid material path"),
+                        TEXT("SECURITY_VIOLATION"));
     return true;
   }
 
@@ -4313,6 +4675,14 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
     return true;
   }
 
+  MaterialPath = SanitizeProjectRelativePath(MaterialPath);
+  if (MaterialPath.IsEmpty()) {
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Invalid material path"),
+                        TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
   // Load the material or material function
   UMaterial *Material = nullptr;
   UMaterialFunction *Function = nullptr;
@@ -4460,6 +4830,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
     return true;
   }
 
+  MaterialPath = SanitizeProjectRelativePath(MaterialPath);
+  if (MaterialPath.IsEmpty()) {
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Invalid material path"),
+                        TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
   // Load the material or material function
   UMaterial *Material = nullptr;
   UMaterialFunction *Function = nullptr;
@@ -4573,7 +4951,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Resp, Material);
   else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
-  Resp->SetStringField(TEXT("nodeId"), TargetExpression->GetName());
+  Resp->SetStringField(TEXT("nodeId"), TargetExpression->MaterialExpressionGuid.ToString());
   Resp->SetNumberField(TEXT("brokenConnections"), BrokenConnections);
   if (bSpecificInput) Resp->SetStringField(TEXT("inputName"), InputName);
 
@@ -4621,6 +4999,14 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
     return true;
   }
 
+  MaterialPath = SanitizeProjectRelativePath(MaterialPath);
+  if (MaterialPath.IsEmpty()) {
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Invalid material path"),
+                        TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
   // Load the material or material function
   UMaterial *Material = nullptr;
   UMaterialFunction *Function = nullptr;
@@ -4655,9 +5041,9 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
     for (int32 i = 0; i < Expressions.Num(); ++i) {
       UMaterialExpression *Expr = Expressions[i];
       if (!Expr) continue;
-      
+
       TSharedPtr<FJsonObject> NodeInfo = McpHandlerUtils::CreateResultObject();
-      NodeInfo->SetStringField(TEXT("nodeId"), Expr->GetName());
+      NodeInfo->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
       NodeInfo->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
       NodeInfo->SetNumberField(TEXT("index"), i);
       NodeInfo->SetNumberField(TEXT("editorX"), Expr->MaterialExpressionEditorX);
@@ -4684,7 +5070,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
       }
       NodeList.Add(MakeShared<FJsonValueObject>(NodeInfo));
     }
-    
+
     Resp->SetArrayField(TEXT("nodes"), NodeList);
     Resp->SetNumberField(TEXT("nodeCount"), Expressions.Num());
 
@@ -4701,7 +5087,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Resp, Material);
   else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
-  Resp->SetStringField(TEXT("nodeId"), Expression->GetName());
+  Resp->SetStringField(TEXT("nodeId"), Expression->MaterialExpressionGuid.ToString());
   Resp->SetStringField(TEXT("name"), Expression->GetName());
   Resp->SetStringField(TEXT("class"), Expression->GetClass()->GetName());
   Resp->SetStringField(TEXT("classPath"), Expression->GetClass()->GetPathName());
@@ -4887,11 +5273,19 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
   TArray<TSharedPtr<FJsonValue>> StatesArray;
 
   for (const FString &AssetPath : AssetPaths) {
+    const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
     TSharedPtr<FJsonObject> StateObj = McpHandlerUtils::CreateResultObject();
-    StateObj->SetStringField(TEXT("assetPath"), AssetPath);
+    StateObj->SetStringField(TEXT("assetPath"), SafeAssetPath.IsEmpty() ? AssetPath : SafeAssetPath);
+
+    if (SafeAssetPath.IsEmpty()) {
+      StateObj->SetBoolField(TEXT("exists"), false);
+      StateObj->SetStringField(TEXT("state"), TEXT("invalid_path"));
+      StatesArray.Add(MakeShared<FJsonValueObject>(StateObj));
+      continue;
+    }
 
     // Check if asset exists
-    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+    if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
       StateObj->SetBoolField(TEXT("exists"), false);
       StateObj->SetStringField(TEXT("state"), TEXT("not_found"));
       StatesArray.Add(MakeShared<FJsonValueObject>(StateObj));
@@ -4901,10 +5295,12 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
     StateObj->SetBoolField(TEXT("exists"), true);
 
     // Convert asset path to file path
-    FString PackageName = FPackageName::ObjectPathToPackageName(AssetPath);
+    FString PackageName = FPackageName::ObjectPathToPackageName(SafeAssetPath);
     FString FilePath;
     if (!FPackageName::TryConvertLongPackageNameToFilename(
-            PackageName, FilePath, FPackageName::GetAssetPackageExtension())) {
+            PackageName, FilePath, FPackageName::GetAssetPackageExtension()) &&
+        !FPackageName::TryConvertLongPackageNameToFilename(
+            PackageName, FilePath, FPackageName::GetMapPackageExtension())) {
       StateObj->SetStringField(TEXT("state"), TEXT("path_conversion_failed"));
       StatesArray.Add(MakeShared<FJsonValueObject>(StateObj));
       continue;
@@ -5022,6 +5418,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
     SendAutomationError(Socket, RequestId,
                         TEXT("assetPath cannot be empty"),
                         TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  AssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (AssetPath.IsEmpty()) {
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Invalid assetPath"),
+                        TEXT("SECURITY_VIOLATION"));
     return true;
   }
 
@@ -5199,6 +5603,14 @@ bool UMcpAutomationBridgeSubsystem::HandleRebuildMaterial(
     return true;
   }
 
+  AssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (AssetPath.IsEmpty()) {
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Invalid assetPath"),
+                        TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
   // Load the material or material function
   UMaterial *Material = nullptr;
   UMaterialFunction *Function = nullptr;
@@ -5215,6 +5627,20 @@ bool UMcpAutomationBridgeSubsystem::HandleRebuildMaterial(
   Host->MarkPackageDirty();
   Host->PreEditChange(nullptr);
   Host->PostEditChange();
+
+  if (FParse::Param(FCommandLine::Get(), TEXT("NullRHI"))) {
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    if (Material) McpHandlerUtils::AddVerification(Result, Material);
+    else if (Function) McpHandlerUtils::AddVerification(Result, Function);
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetBoolField(TEXT("rebuilt"), true);
+    Result->SetBoolField(TEXT("headlessSafe"), true);
+    Result->SetBoolField(TEXT("saveSkipped"), true);
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Material rebuilt; save skipped under NullRHI"), Result, FString());
+    return true;
+  }
 
   if (!McpSafeAssetSave(Host)) {
     SendAutomationError(Socket, RequestId, TEXT("Failed to save rebuilt material"), TEXT("SAVE_FAILED"));

@@ -58,15 +58,18 @@
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Blueprint/WidgetTree.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Components/Image.h"
 #include "Components/PanelWidget.h"
 #include "Components/TextBlock.h"
+#include "GameFramework/PlayerController.h"
 #include "WidgetBlueprint.h"
 
 // Engine & Rendering
 #include "Engine/GameViewportClient.h"
 #include "Engine/Texture2D.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Slate/SceneViewport.h"
 #include "HAL/FileManager.h"
 #include "Misc/ConfigCacheIni.h"
 #include "IImageWrapper.h"
@@ -76,6 +79,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
+#include "RenderingThread.h"
 #include "UnrealClient.h"
 
 // Widget Factory (version-dependent header location)
@@ -91,6 +95,63 @@
 // =============================================================================
 // Handler Implementation
 // =============================================================================
+
+#if WITH_EDITOR
+namespace {
+constexpr int32 MaxScreenshotPngBytesForBase64ForMcp = 3 * 1024 * 1024;
+
+FString MakeSafeUiScreenshotFilenameForMcp(
+    const TSharedPtr<FJsonObject> &Payload) {
+  FString Filename;
+  if (Payload.IsValid()) {
+    Payload->TryGetStringField(TEXT("filename"), Filename);
+  }
+
+  if (Filename.IsEmpty()) {
+    Filename = FString::Printf(TEXT("Screenshot_%lld"),
+                               FDateTime::Now().ToUnixTimestamp());
+  }
+
+  Filename = FPaths::GetCleanFilename(Filename);
+  if (Filename.Contains(TEXT("..")) || Filename.Contains(TEXT("/")) ||
+      Filename.Contains(TEXT("\\"))) {
+    Filename = FString::Printf(TEXT("Screenshot_%lld"),
+                               FDateTime::Now().ToUnixTimestamp());
+  }
+
+  if (!Filename.EndsWith(TEXT(".png"))) {
+    Filename += TEXT(".png");
+  }
+
+  return Filename;
+}
+
+void AddScreenshotMetadataForUiMcp(const TSharedPtr<FJsonObject> &Resp,
+                                   const TSharedPtr<FJsonObject> &Payload) {
+  if (!Resp.IsValid() || !Payload.IsValid()) {
+    return;
+  }
+
+  bool bIncludeMetadata = false;
+  if (!Payload->TryGetBoolField(TEXT("includeMetadata"), bIncludeMetadata) ||
+      !bIncludeMetadata) {
+    return;
+  }
+
+  const TSharedPtr<FJsonObject> *Metadata = nullptr;
+  if (Payload->TryGetObjectField(TEXT("metadata"), Metadata) && Metadata &&
+      Metadata->IsValid()) {
+    Resp->SetObjectField(TEXT("metadata"), *Metadata);
+  }
+}
+
+FString MakeScreenshotTooLargeMessageForUiMcp(int32 SizeBytes) {
+  return FString::Printf(
+      TEXT("Screenshot PNG is too large to return as base64 (%d bytes, max %d bytes). Retry with returnBase64=false or a smaller viewport/window."),
+      SizeBytes, MaxScreenshotPngBytesForBase64ForMcp);
+}
+}
+#endif
 
 /**
  * @brief Handles UI widget operations and system control actions.
@@ -345,6 +406,23 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // SubAction: screenshot
   // ===========================================================================
   else if (LowerSub == TEXT("screenshot")) {
+    FString Mode;
+    Payload->TryGetStringField(TEXT("mode"), Mode);
+    Mode = Mode.TrimStartAndEnd().ToLower();
+    if (Mode.IsEmpty() && bIsSystemControl) {
+      return HandleControlEditorScreenshot(RequestId, Payload, RequestingSocket);
+    }
+    if (Mode == TEXT("full_editor_window") || Mode == TEXT("editor_viewport")) {
+      return HandleControlEditorScreenshot(RequestId, Payload, RequestingSocket);
+    }
+    if (!Mode.IsEmpty() && Mode != TEXT("game_viewport")) {
+      Message = TEXT("Invalid screenshot mode. Supported modes: editor_viewport, game_viewport, full_editor_window");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+      SendAutomationResponse(RequestingSocket, RequestId, false, Message, Resp, ErrorCode);
+      return true;
+    }
+
     // Take a screenshot of the viewport and return as base64
     FString RawScreenshotPath;
     Payload->TryGetStringField(TEXT("path"), RawScreenshotPath);
@@ -382,33 +460,32 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       }
     }
 
-    FString Filename;
-    Payload->TryGetStringField(TEXT("filename"), Filename);
-    
-    // SECURITY: Sanitize filename to prevent path traversal
-    // Strip directory components and validate against traversal patterns
-    Filename = FPaths::GetCleanFilename(Filename);
-    if (Filename.Contains(TEXT("..")) || Filename.Contains(TEXT("/")) || Filename.Contains(TEXT("\\"))) {
-      // Reject suspicious filename and use default
-      Filename = FString::Printf(TEXT("Screenshot_%lld"),
-                                 FDateTime::Now().ToUnixTimestamp());
-    }
-    
-    if (Filename.IsEmpty()) {
-      Filename = FString::Printf(TEXT("Screenshot_%lld"),
-                                 FDateTime::Now().ToUnixTimestamp());
-    }
+    const FString Filename = MakeSafeUiScreenshotFilenameForMcp(Payload);
 
     bool bReturnBase64 = true;
     Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
 
-    // Get viewport
-    if (!GEngine || !GEngine->GameViewport) {
+    // Get viewport. During PIE, prefer the viewport owned by the PIE world rather
+    // than GEngine->GameViewport, which can point at the editor viewport surface
+    // and capture editor overlays or a stale editor camera instead of the active
+    // game camera.
+    UGameViewportClient *ViewportClient = nullptr;
+    bool bUsingPieViewport = false;
+    if (GEditor && GEditor->PlayWorld) {
+      if (UWorld *PlayWorld = GEditor->PlayWorld.Get()) {
+        ViewportClient = PlayWorld->GetGameViewport();
+        bUsingPieViewport = ViewportClient != nullptr;
+      }
+    }
+    if (!ViewportClient && GEngine) {
+      ViewportClient = GEngine->GameViewport;
+    }
+
+    if (!ViewportClient) {
       Message = TEXT("No game viewport available");
       ErrorCode = TEXT("NO_VIEWPORT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      UGameViewportClient *ViewportClient = GEngine->GameViewport;
       FViewport *Viewport = ViewportClient->Viewport;
 
       if (!Viewport) {
@@ -416,6 +493,35 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         ErrorCode = TEXT("NO_VIEWPORT");
         Resp->SetStringField(TEXT("error"), Message);
       } else {
+        bool bForcedViewportDraw = false;
+        bool bHasPlayerCamera = false;
+        FString ActiveViewTargetPath;
+        FVector ActiveCameraLocation = FVector::ZeroVector;
+        FRotator ActiveCameraRotation = FRotator::ZeroRotator;
+        float ActiveCameraFov = 0.0f;
+
+        if (UWorld *ViewportWorld = ViewportClient->GetWorld()) {
+          if (APlayerController *PlayerController = ViewportWorld->GetFirstPlayerController()) {
+            if (AActor *ViewTarget = PlayerController->GetViewTarget()) {
+              ActiveViewTargetPath = ViewTarget->GetPathName();
+            }
+            if (APlayerCameraManager *CameraManager = PlayerController->PlayerCameraManager) {
+              CameraManager->UpdateCamera(0.0f);
+              const FMinimalViewInfo &CameraView = CameraManager->GetCameraCacheView();
+              ActiveCameraLocation = CameraView.Location;
+              ActiveCameraRotation = CameraView.Rotation;
+              ActiveCameraFov = CameraView.FOV;
+              bHasPlayerCamera = true;
+            }
+          }
+        }
+
+        if (bUsingPieViewport) {
+          Viewport->Draw(false);
+          FlushRenderingCommands();
+          bForcedViewportDraw = true;
+        }
+
         // Capture viewport pixels
         TArray<FColor> Bitmap;
         FIntVector Size(Viewport->GetSizeXY().X, Viewport->GetSizeXY().Y, 0);
@@ -431,44 +537,39 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
           const int32 Width = Size.X;
           const int32 Height = Size.Y;
 
-          // Compress to PNG
-          // Note: ThumbnailCompressImageArray was introduced in UE 5.1
           TArray<uint8> PngData;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-          FImageUtils::ThumbnailCompressImageArray(Width, Height, Bitmap,
-                                                   PngData);
-#else
-          // UE 5.0 fallback - use CompressImageArray
-          FImageUtils::CompressImageArray(Width, Height, Bitmap, PngData);
-#endif
+          IImageWrapperModule &ImageWrapperModule =
+              FModuleManager::LoadModuleChecked<IImageWrapperModule>(
+                  FName("ImageWrapper"));
+          TSharedPtr<IImageWrapper> ImageWrapper =
+              ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
 
-          if (PngData.Num() == 0) {
-            // Alternative: compress as PNG using IImageWrapper
-            IImageWrapperModule &ImageWrapperModule =
-                FModuleManager::LoadModuleChecked<IImageWrapperModule>(
-                    FName("ImageWrapper"));
-            TSharedPtr<IImageWrapper> ImageWrapper =
-                ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+          if (ImageWrapper.IsValid()) {
+            TArray<uint8> RawData;
+            RawData.SetNumUninitialized(Width * Height * 4);
+            for (int32 i = 0; i < Bitmap.Num(); ++i) {
+              RawData[i * 4 + 0] = Bitmap[i].R;
+              RawData[i * 4 + 1] = Bitmap[i].G;
+              RawData[i * 4 + 2] = Bitmap[i].B;
+              RawData[i * 4 + 3] = 255;
+            }
 
-            if (ImageWrapper.IsValid()) {
-              TArray<uint8> RawData;
-              RawData.SetNum(Width * Height * 4);
-              for (int32 i = 0; i < Bitmap.Num(); ++i) {
-                RawData[i * 4 + 0] = Bitmap[i].R;
-                RawData[i * 4 + 1] = Bitmap[i].G;
-                RawData[i * 4 + 2] = Bitmap[i].B;
-                RawData[i * 4 + 3] = Bitmap[i].A;
-              }
-
-              if (ImageWrapper->SetRaw(RawData.GetData(), RawData.Num(), Width,
-                                       Height, ERGBFormat::RGBA, 8)) {
-                PngData = ImageWrapper->GetCompressed(100);
-              }
+            if (ImageWrapper->SetRaw(RawData.GetData(), RawData.Num(), Width,
+                                     Height, ERGBFormat::RGBA, 8)) {
+              PngData = ImageWrapper->GetCompressed(100);
             }
           }
 
+          if (PngData.Num() == 0) {
+            Message = TEXT("Failed to encode viewport screenshot as PNG");
+            ErrorCode = TEXT("CAPTURE_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
+            SendAutomationResponse(RequestingSocket, RequestId, false, Message, Resp, ErrorCode);
+            return true;
+          }
+
           FString FullPath =
-              FPaths::Combine(ScreenshotPath, Filename + TEXT(".png"));
+              FPaths::Combine(ScreenshotPath, Filename);
           FPaths::MakeStandardFilename(FullPath);
 
           // Always save to disk
@@ -480,15 +581,53 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
                                     Height);
           Resp->SetStringField(TEXT("screenshotPath"), FullPath);
           Resp->SetStringField(TEXT("filename"), Filename);
+          Resp->SetStringField(TEXT("mode"), TEXT("game_viewport"));
+          Resp->SetBoolField(TEXT("usingPieViewport"), bUsingPieViewport);
+          Resp->SetBoolField(TEXT("forcedViewportDraw"), bForcedViewportDraw);
+          if (UWorld *ViewportWorld = ViewportClient->GetWorld()) {
+            Resp->SetStringField(TEXT("viewportWorld"), ViewportWorld->GetName());
+            Resp->SetNumberField(TEXT("viewportWorldType"), static_cast<int32>(ViewportWorld->WorldType));
+          }
+          if (!ActiveViewTargetPath.IsEmpty()) {
+            Resp->SetStringField(TEXT("activeViewTarget"), ActiveViewTargetPath);
+          }
+          if (bHasPlayerCamera) {
+            TSharedPtr<FJsonObject> CameraLocationObj = McpHandlerUtils::CreateResultObject();
+            CameraLocationObj->SetNumberField(TEXT("x"), ActiveCameraLocation.X);
+            CameraLocationObj->SetNumberField(TEXT("y"), ActiveCameraLocation.Y);
+            CameraLocationObj->SetNumberField(TEXT("z"), ActiveCameraLocation.Z);
+            Resp->SetObjectField(TEXT("activeCameraLocation"), CameraLocationObj);
+
+            TSharedPtr<FJsonObject> CameraRotationObj = McpHandlerUtils::CreateResultObject();
+            CameraRotationObj->SetNumberField(TEXT("pitch"), ActiveCameraRotation.Pitch);
+            CameraRotationObj->SetNumberField(TEXT("yaw"), ActiveCameraRotation.Yaw);
+            CameraRotationObj->SetNumberField(TEXT("roll"), ActiveCameraRotation.Roll);
+            Resp->SetObjectField(TEXT("activeCameraRotation"), CameraRotationObj);
+            Resp->SetNumberField(TEXT("activeCameraFov"), ActiveCameraFov);
+          }
+          Resp->SetBoolField(TEXT("saved"), bSaved);
           Resp->SetNumberField(TEXT("width"), Width);
           Resp->SetNumberField(TEXT("height"), Height);
           Resp->SetNumberField(TEXT("sizeBytes"), PngData.Num());
+          Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
+          AddScreenshotMetadataForUiMcp(Resp, Payload);
+
+          if (!bSaved && !bReturnBase64) {
+            bSuccess = false;
+            Message = TEXT("Screenshot captured but failed to save, and returnBase64=false leaves no image output.");
+            ErrorCode = TEXT("SAVE_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
+          } else if (bReturnBase64 && PngData.Num() > MaxScreenshotPngBytesForBase64ForMcp) {
+            bSuccess = false;
+            Message = MakeScreenshotTooLargeMessageForUiMcp(PngData.Num());
+            ErrorCode = TEXT("IMAGE_TOO_LARGE");
+            Resp->SetStringField(TEXT("error"), Message);
+          }
 
           // Return base64 encoded image if requested
-          if (bReturnBase64 && PngData.Num() > 0) {
+          if (bSuccess && bReturnBase64) {
             FString Base64Data = FBase64::Encode(PngData);
             Resp->SetStringField(TEXT("imageBase64"), Base64Data);
-            Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
           }
         }
       }
@@ -774,22 +913,22 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     FString Section;
     Payload->TryGetStringField(TEXT("section"), Section);
     Payload->TryGetStringField(TEXT("category"), Section);  // Accept both
-    
+
     TSharedPtr<FJsonObject> SettingsObj = MakeShared<FJsonObject>();
-    
+
     // Get common project settings
     if (GEngine) {
       // Engine settings
       SettingsObj->SetStringField(TEXT("engineVersion"), FString::Printf(TEXT("%d.%d"), ENGINE_MAJOR_VERSION, ENGINE_MINOR_VERSION));
-      
+
       // Project name
       FString ProjectName = FApp::GetProjectName();
       SettingsObj->SetStringField(TEXT("projectName"), ProjectName);
-      
+
       // Project directory
       FString ProjectDir = FPaths::ProjectDir();
       SettingsObj->SetStringField(TEXT("projectDir"), ProjectDir);
-      
+
       // Game engine settings via config
       FString ResolutionX, ResolutionY;
       GConfig->GetString(TEXT("/Script/Engine.GameUserSettings"), TEXT("ResolutionSizeX"), ResolutionX, GGameUserSettingsIni);
@@ -800,7 +939,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         ResObj->SetStringField(TEXT("height"), ResolutionY);
         SettingsObj->SetObjectField(TEXT("resolution"), ResObj);
       }
-      
+
       // Fullscreen mode
       FString FullscreenMode;
       GConfig->GetString(TEXT("/Script/Engine.GameUserSettings"), TEXT("LastConfirmedFullscreenMode"), FullscreenMode, GGameUserSettingsIni);
@@ -808,7 +947,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         SettingsObj->SetStringField(TEXT("fullscreenMode"), FullscreenMode);
       }
     }
-    
+
     Resp->SetObjectField(TEXT("settings"), SettingsObj);
     bSuccess = true;
     Message = TEXT("Project settings retrieved");
@@ -821,7 +960,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     Payload->TryGetStringField(TEXT("section"), Section);
     Payload->TryGetStringField(TEXT("key"), Key);
     Payload->TryGetStringField(TEXT("value"), Value);
-    
+
     if (Section.IsEmpty() || Key.IsEmpty()) {
       Message = TEXT("section and key are required for set_project_setting");
       ErrorCode = TEXT("INVALID_ARGUMENT");
@@ -833,15 +972,15 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       if (!NormalizedSection.StartsWith(TEXT("/")) && !NormalizedSection.StartsWith(TEXT("["))) {
         NormalizedSection = FString::Printf(TEXT("/Script/%s"), *Section);
       }
-      
+
       // Set the value in the appropriate config file
       // For project settings, use DefaultEngine.ini
       FString ConfigFile = FPaths::ProjectConfigDir() / TEXT("DefaultEngine.ini");
-      
+
       // Use GConfig to set the value
       GConfig->SetString(*NormalizedSection, *Key, *Value, ConfigFile);
       GConfig->Flush(false, ConfigFile);
-      
+
       Resp->SetStringField(TEXT("section"), NormalizedSection);
       Resp->SetStringField(TEXT("key"), Key);
       Resp->SetStringField(TEXT("value"), Value);

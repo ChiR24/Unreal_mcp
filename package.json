@@ -28,7 +28,7 @@
     "lint:cpp": "echo \"Running C/C++ lint (cpplint)\" && (python -m cpplint --recursive plugins || echo 'cpplint not found; skipping C/C++ lint')",
     "lint:c": "echo \"Running C lint (cpplint)\" && (python -m cpplint --recursive plugins || echo 'cpplint not found; skipping C lint')",
     "lint:csharp": "echo \"Running C# lint (dotnet format)\" && (dotnet tool run dotnet-format --verify-no-changes || echo 'dotnet-format not available or formatting required; skipping C# lint')",
-    "clean": "rimraf dist",
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
     "prepare": "node -e \"const fs=require('fs');(fs.existsSync('dist')&&fs.existsSync('dist/cli.js')&&fs.existsSync('dist/index.js'))||require('child_process').execSync('npm run build',{stdio:'inherit'})\"",
     "automation:sync": "node scripts/sync-mcp-plugin.js",
     "clean:tmp": "node scripts/clean-tmp.js",
@@ -38,6 +38,8 @@
     "test:unit:coverage": "vitest run --coverage",
     "test:all": "node tests/integration.mjs",
     "test:smoke": "node --loader ts-node/esm scripts/smoke-test.ts",
+    "test:native-parity": "node tests/native-mcp-parity-audit.mjs",
+    "test:params": "npm run test:native-parity && node tests/parameter-combination-audit.mjs --static --strict --optional-strict",
     "type-check": "tsc --noEmit"
   },
   "engines": {
@@ -56,13 +58,9 @@
   "author": "Unreal Engine MCP Team",
   "license": "MIT",
   "dependencies": {
-    "@graphql-tools/schema": "^10.0.30",
     "@modelcontextprotocol/sdk": "^1.25.0",
     "ajv": "^8.17.1",
-    "dataloader": "^2.2.3",
     "dotenv": "^17.2.3",
-    "graphql": "^16.12.0",
-    "graphql-yoga": "^5.18.0",
     "mcp-client-capabilities": "^0.0.14",
     "ws": "^8.18.3",
     "zod": "^4.2.1"

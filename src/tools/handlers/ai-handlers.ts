@@ -17,12 +17,8 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { requireNonEmptyString, executeAutomationRequest } from './common-handlers.js';
+import { createSubActionDispatcher, requireNonEmptyString } from './common-handlers.js';
 
-function getTimeoutMs(): number {
-  const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
-  return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
-}
 
 /**
  * Handles all AI-related actions for the manage_ai tool.
@@ -32,21 +28,20 @@ export async function handleAITools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  const argsRecord = args as Record<string, unknown>;
-  const timeoutMs = getTimeoutMs();
-
-  // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
-    const result = await executeAutomationRequest(
-      tools,
-      'manage_ai',
-      payload as HandlerArgs,
-      `Automation bridge not available for AI action: ${subAction}`,
-      { timeoutMs }
-    );
-    return cleanObject(result) as Record<string, unknown>;
-  };
+  const { argsRecord, sendRequest } = createSubActionDispatcher(tools, args, {
+    toolName: 'manage_ai',
+    domainName: 'AI',
+    pathFields: [
+      'controllerPath',
+      'behaviorTreePath',
+      'blackboardPath',
+      'queryPath',
+      'blueprintPath',
+      'stateTreePath',
+      'definitionPath',
+      'configPath'
+    ]
+  });
 
   switch (action) {
     // =========================================================================
@@ -65,7 +60,15 @@ export async function handleAITools(
     }
 
     case 'assign_blackboard': {
-      requireNonEmptyString(argsRecord.controllerPath, 'controllerPath', 'Missing required parameter: controllerPath');
+      const hasControllerPath = typeof argsRecord.controllerPath === 'string' && argsRecord.controllerPath.trim().length > 0;
+      const hasBehaviorTreePath = typeof argsRecord.behaviorTreePath === 'string' && argsRecord.behaviorTreePath.trim().length > 0;
+      if (!hasControllerPath && !hasBehaviorTreePath) {
+        return {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Missing required parameter: controllerPath or behaviorTreePath'
+        };
+      }
       requireNonEmptyString(argsRecord.blackboardPath, 'blackboardPath', 'Missing required parameter: blackboardPath');
       return sendRequest('assign_blackboard');
     }

@@ -1,9 +1,9 @@
 # Copilot instructions for Unreal MCP
 
 ## Architecture
-- This is a dual-process system: the TypeScript MCP server lives in `src/`, and the Unreal Editor bridge plugin lives in `Plugins/McpAutomationBridge/`.
+- This is a dual-process system: the TypeScript MCP server lives in `src/`, and the Unreal Editor bridge plugin lives in `plugins/McpAutomationBridge/`.
 - Typical flow is schema validation -> tool registry dispatch -> domain handler -> `executeAutomationRequest()` -> WebSocket bridge -> C++ subsystem -> game-thread handler.
-- Keep workspace-wide guidance here and rely on the closer `AGENTS.md` files for area-specific detail under `src/tools/`, `src/tools/handlers/`, `src/automation/`, `tests/`, and `Plugins/McpAutomationBridge/`.
+- Keep workspace-wide guidance here and rely on the closer `AGENTS.md` files for area-specific detail under `src/tools/`, `src/tools/handlers/`, `src/automation/`, `tests/`, and `plugins/McpAutomationBridge/`.
 
 ## Critical constraints
 - Keep stdout JSON-only. Runtime logs must go through the project logger; do not use `console.log` in runtime code. See `routeStdoutLogsToStderr()` in `src/index.ts`.
@@ -12,7 +12,7 @@
 - Preserve path normalization. Prefer `/Game/...` asset paths and do not add new code that depends on `/Content/...` input staying unnormalized.
 
 ## UE 5.7 safety
-- Do not use `UPackage::SavePackage()` in plugin code. Use the safe helper wrappers in `Plugins/McpAutomationBridge/Source/McpAutomationBridge/Public/McpAutomationBridgeHelpers.h`.
+- Do not use `UPackage::SavePackage()` in plugin code. Use the safe helper wrappers in `plugins/McpAutomationBridge/Source/McpAutomationBridge/Public/McpAutomationBridgeHelpers.h`.
 - For Blueprint component templates, let SCS own nodes and templates through `CreateNode()` and `AddNode()` patterns.
 - Do not introduce new `ANY_PACKAGE` usage; use modern lookup patterns such as `nullptr` where required by newer UE versions.
 
@@ -41,12 +41,12 @@
 - New MCP action flow:
 	1. Add the action enum and schemas in `src/tools/consolidated-tool-definitions.ts`.
 	2. Route the action in `src/tools/consolidated-tool-handlers.ts` or the relevant handler module under `src/tools/handlers/`.
-	3. Implement the Unreal side in the appropriate handler under `Plugins/McpAutomationBridge/Source/` and register it in `UMcpAutomationBridgeSubsystem::InitializeHandlers()`.
+	3. Implement the Unreal side in the appropriate handler under `plugins/McpAutomationBridge/Source/` and register it in `UMcpAutomationBridgeSubsystem::InitializeHandlers()`.
 	4. Add or update tests in `tests/integration.mjs`, `tests/mcp-tools/`, or colocated unit tests as appropriate.
 - Keep TypeScript strict. Avoid `as any` in runtime code.
-- If you change versions, update all version-bearing files together, including `package.json`, `server.json`, `src/index.ts`, and `Plugins/McpAutomationBridge/McpAutomationBridge.uplugin`.
+- If you change versions, update all version-bearing files together, including `package.json`, `server.json`, `src/index.ts`, and `plugins/McpAutomationBridge/McpAutomationBridge.uplugin`.
 
 ## Reference points
 - Use `src/tools/handlers/` for examples of handler structure and `executeAutomationRequest()` usage.
 - Use `tests/AGENTS.md` for integration test conventions, expected result strings, and timeout tiers.
-- Use `Plugins/McpAutomationBridge/AGENTS.md` for plugin-side patterns and Unreal-specific caveats.
+- Use `plugins/McpAutomationBridge/AGENTS.md` for plugin-side patterns and Unreal-specific caveats.

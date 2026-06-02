@@ -1216,11 +1216,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(
       // Note: dynamic_cast doesn't work with /GR- compiler flag in UE 5.7+
       if (ILevelSequenceEditorToolkit *LSEditor =
               static_cast<ILevelSequenceEditorToolkit *>(Editor)) {
-        if (LSEditor->GetSequencer().IsValid()) {
-          UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-                 TEXT("HandleSequenceSetPlaybackSpeed: Setting speed to %.2f"),
-                 Speed);
-          LSEditor->GetSequencer()->SetPlaybackSpeed(static_cast<float>(Speed));
+		if (LSEditor->GetSequencer().IsValid()) {
+				LSEditor->GetSequencer()->SetPlaybackSpeed(static_cast<float>(Speed));
           Subsystem->SendAutomationResponse(
               Socket, RequestIdArg, true,
               FString::Printf(TEXT("Playback speed set to %.2f"), Speed),
@@ -1621,6 +1618,29 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
     return true;
   }
 
+  auto NormalizeTransformPropertyAlias = [&](const TCHAR *Alias,
+                                             const TCHAR *TransformField) {
+    if (!PropertyName.Equals(Alias, ESearchCase::IgnoreCase)) {
+      return false;
+    }
+
+    const TSharedPtr<FJsonObject> *ValueObj = nullptr;
+    if (LocalPayload->TryGetObjectField(TEXT("value"), ValueObj) &&
+        ValueObj && ValueObj->IsValid()) {
+      TSharedPtr<FJsonObject> TransformValue = MakeShared<FJsonObject>();
+      TransformValue->SetObjectField(TransformField, *ValueObj);
+      LocalPayload->SetObjectField(TEXT("value"), TransformValue);
+    }
+
+    PropertyName = TEXT("Transform");
+    return true;
+  };
+
+  NormalizeTransformPropertyAlias(TEXT("Location"), TEXT("location")) ||
+      NormalizeTransformPropertyAlias(TEXT("Translation"), TEXT("location")) ||
+      NormalizeTransformPropertyAlias(TEXT("Rotation"), TEXT("rotation")) ||
+      NormalizeTransformPropertyAlias(TEXT("Scale"), TEXT("scale"));
+
 #if WITH_EDITOR
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
   if (!SeqObj) {
@@ -2002,7 +2022,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTickResolution(
   if (Sequence && Sequence->GetMovieScene()) {
     // Get current tick resolution as fallback
     FFrameRate TickResolution = Sequence->GetMovieScene()->GetTickResolution();
-    
+
     // Parse user-provided resolution string
     if (!ResolutionStr.IsEmpty()) {
       if (ResolutionStr.Contains(TEXT("24000")))
@@ -2213,23 +2233,35 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTrackSolo(
     return true;
   }
 
-  // If enabling solo, mute all other tracks; if disabling, unmute all
+  int32 AffectedTrackCount = 0;
+  int32 DisabledOtherTrackCount = 0;
+
+  // If enabling solo, disable evaluation on every other track; if disabling, re-enable all tracks.
   for (UMovieSceneTrack *Track : AllTracks) {
+    if (!Track) {
+      continue;
+    }
     if (bSolo) {
-      Track->SetEvalDisabled(Track != SoloTrack);
+      const bool bDisableTrack = Track != SoloTrack;
+      Track->SetEvalDisabled(bDisableTrack);
+      if (bDisableTrack) {
+        ++DisabledOtherTrackCount;
+      }
     } else {
       Track->SetEvalDisabled(false);
     }
+    ++AffectedTrackCount;
   }
   MovieScene->Modify();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("trackName"), SoloTrack->GetName());
   Resp->SetBoolField(TEXT("solo"), bSolo);
-  Resp->SetStringField(TEXT("note"), TEXT("Solo is simulated by muting all other tracks. Unreal Engine does not have native track solo support."));
+  Resp->SetNumberField(TEXT("affectedTrackCount"), AffectedTrackCount);
+  Resp->SetNumberField(TEXT("disabledOtherTrackCount"), DisabledOtherTrackCount);
   SendAutomationResponse(
       Socket, RequestId, true,
-      bSolo ? TEXT("Track solo enabled (simulated via muting other tracks)") : TEXT("Solo disabled (all tracks unmuted)"), Resp);
+      bSolo ? TEXT("Track solo enabled by disabling evaluation on other tracks") : TEXT("Solo disabled; all tracks evaluation-enabled"), Resp);
   return true;
 #else
   SendAutomationResponse(Socket, RequestId, false,

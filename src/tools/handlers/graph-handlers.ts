@@ -1,7 +1,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { GraphArgs, HandlerArgs, AutomationResponse } from '../../types/handler-types.js';
-import { executeAutomationRequest } from './common-handlers.js';
+import { executeAutomationRequest, normalizePathFields, promoteScalarResultFields } from './common-handlers.js';
 import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 
 // AutomationResponse imported from types/handler-types.js
@@ -74,14 +74,13 @@ const BT_NODE_ALIASES: Record<string, { class: string; type: string }> = {
 export async function handleGraphTools(toolName: string, action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
     // Common validation
     if (!args.assetPath && !args.blueprintPath && !args.systemPath) {
-        // Some actions might not need a path if they operate on "currently open" asset, 
+        // Some actions might not need a path if they operate on "currently open" asset,
         // but generally we want an asset path.
     }
 
     // Dispatch based on tool name
     switch (toolName) {
         case TOOL_ACTIONS.MANAGE_BLUEPRINT:
-        case 'manage_blueprint_graph': // Backward compat - callers still pass this
             return handleBlueprintGraph(action, args, tools);
         case 'manage_niagara_graph':
             return handleNiagaraGraph(action, args, tools);
@@ -96,6 +95,7 @@ export async function handleGraphTools(toolName: string, action: string, args: G
 
 async function handleBlueprintGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
     const processedArgs: ProcessedGraphArgs = { ...args, subAction: action };
+    const processedRecord = processedArgs as Record<string, unknown>;
 
     // Default graphName
     if (!processedArgs.graphName) {
@@ -118,7 +118,7 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
             if (!processedArgs.variableName) processedArgs.variableName = processedArgs.memberName;
         } else if (processedArgs.nodeType === 'Event' || processedArgs.nodeType === 'CustomEvent' || (processedArgs.nodeType && processedArgs.nodeType.startsWith('K2Node_Event'))) {
             if (!processedArgs.eventName) processedArgs.eventName = processedArgs.memberName;
-            // CustomEvent uses eventName (mapped to CustomFunctionName) or customEventName in some contexts, 
+            // CustomEvent uses eventName (mapped to CustomFunctionName) or customEventName in some contexts,
             // but C++ CustomEvent handler uses 'eventName' payload field.
         } else if (processedArgs.nodeType === 'CallFunction' || processedArgs.nodeType === 'K2Node_CallFunction') {
             // C++ uses 'memberName' for CallFunction, so this is fine.
@@ -131,8 +131,31 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
         if (!processedArgs.targetClass) processedArgs.targetClass = processedArgs.memberClass || processedArgs.componentClass;
     }
 
-    // Fix Issue 6: Support connect_pins parameter mapping
-    // Input: nodeId, pinName, linkedTo (TargetNode.Pin)
+    if (processedRecord.nodeGuid !== undefined && !processedArgs.nodeId) {
+        processedArgs.nodeId = processedRecord.nodeGuid as string;
+    }
+    if (processedRecord.sourceNode !== undefined && !processedArgs.fromNodeId) {
+        processedArgs.fromNodeId = processedRecord.sourceNode as string;
+    }
+    if (processedRecord.targetNode !== undefined && !processedArgs.toNodeId) {
+        processedArgs.toNodeId = processedRecord.targetNode as string;
+    }
+    if (processedRecord.sourcePin !== undefined && !processedArgs.fromPinName) {
+        processedArgs.fromPinName = processedRecord.sourcePin as string;
+    }
+    if (processedRecord.targetPin !== undefined && !processedArgs.toPinName) {
+        processedArgs.toPinName = processedRecord.targetPin as string;
+    }
+    if (processedRecord.defaultValue !== undefined && processedRecord.value === undefined) {
+        processedRecord.value = processedRecord.defaultValue;
+    }
+    if (processedRecord.x === undefined && typeof processedRecord.posX === 'number') {
+        processedRecord.x = processedRecord.posX;
+    }
+    if (processedRecord.y === undefined && typeof processedRecord.posY === 'number') {
+        processedRecord.y = processedRecord.posY;
+    }
+
     if (action === 'connect_pins') {
         // Map source
         if (!processedArgs.fromNodeId && processedArgs.nodeId) {
@@ -166,8 +189,8 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
         }
     }
 
-    const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
-    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
+    const res = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_BLUEPRINT, processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
+    return cleanObject(promoteScalarResultFields(res)) as Record<string, unknown>;
 }
 
 async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
@@ -183,7 +206,7 @@ async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools
         payload.assetPath = args.system as string;
     }
     const res = await executeAutomationRequest(tools, 'manage_niagara_graph', payload as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
-    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
+    return cleanObject(promoteScalarResultFields(res)) as Record<string, unknown>;
 }
 
 async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
@@ -194,27 +217,34 @@ async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITool
         if (payload.fromNodeId && !payload.sourceNodeId) {
             payload.sourceNodeId = payload.fromNodeId;
         }
-        
+
         if (payload.toNodeId && !payload.targetNodeId) {
             if (typeof payload.toNodeId === 'string') {
                 payload.targetNodeId = payload.toNodeId.toLowerCase() === 'root' ? 'Main' : payload.toNodeId;
             }
         }
-        
-        if (payload.toPin && !payload.inputName) {
-            if (typeof payload.toPin === 'string') {
-                payload.inputName = payload.toPin.replace(/\s+/g, '');
+
+        const targetInput = payload.toPin ?? payload.targetPin;
+        if (targetInput && !payload.inputName) {
+            if (typeof targetInput === 'string') {
+                payload.inputName = targetInput.replace(/\s+/g, '');
             }
         }
     }
 
     const res = await executeAutomationRequest(tools, 'manage_material_graph', payload as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
-    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
+    return cleanObject(promoteScalarResultFields(res)) as Record<string, unknown>;
 }
 
 async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
-    const processedArgs: ProcessedGraphArgs = { ...args, subAction: action };
-    
+    const processedArgs = normalizePathFields({ ...args, subAction: action }, [
+        'assetPath',
+        'behaviorTreePath',
+        'blackboardPath',
+        'savePath',
+        'path'
+    ]) as ProcessedGraphArgs;
+
     // Map human-friendly node type names to BT class names
     if (processedArgs.nodeType && BT_NODE_ALIASES[processedArgs.nodeType]) {
         const alias = BT_NODE_ALIASES[processedArgs.nodeType];
@@ -224,7 +254,13 @@ async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools
             processedArgs.nodeCategory = alias.type;
         }
     }
-    
+
+    // For add_subnode, alias nodeClass through the same map (callers pass short names like "Cooldown")
+    if (action === 'add_subnode' && typeof processedArgs.nodeClass === 'string' && BT_NODE_ALIASES[processedArgs.nodeClass]) {
+        const alias = BT_NODE_ALIASES[processedArgs.nodeClass];
+        processedArgs.nodeClass = alias.class;
+    }
+
     const res = await executeAutomationRequest(tools, 'manage_behavior_tree', processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
-    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
+    return cleanObject(promoteScalarResultFields(res)) as Record<string, unknown>;
 }
