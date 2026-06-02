@@ -1836,15 +1836,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("get_world_settings")))
         {
-            UWorld* World = nullptr;
-            if (GEditor)
-            {
-                World = GEditor->PlayWorld;
-                if (!World)
-                {
-                    World = GEditor->GetEditorWorldContext().World();
-                }
-            }
+            UWorld* World = McpGetRuntimeInspectionWorld();
 
             if (World)
             {
