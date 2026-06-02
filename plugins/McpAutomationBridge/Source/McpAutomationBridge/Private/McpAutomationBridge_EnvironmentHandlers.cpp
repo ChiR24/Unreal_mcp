@@ -113,6 +113,7 @@
 // =============================================================================
 #include "Developer/AssetTools/Public/AssetToolsModule.h"
 #include "EditorValidatorSubsystem.h"
+#include "DynamicRHI.h"
 #include "Engine/Blueprint.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/SkyLight.h"
@@ -1838,7 +1839,11 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
             UWorld* World = nullptr;
             if (GEditor)
             {
-                World = GEditor->PlayWorld ? GEditor->PlayWorld : GEditor->GetEditorWorldContext().World();
+                World = GEditor->PlayWorld;
+                if (!World)
+                {
+                    World = GEditor->GetEditorWorldContext().World();
+                }
             }
 
             if (World)
@@ -1960,7 +1965,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
             const double GameThreadMs = FPlatformTime::ToMilliseconds(GGameThreadTime);
             const double RenderThreadMs = FPlatformTime::ToMilliseconds(GRenderThreadTime);
             const double RHIThreadMs = FPlatformTime::ToMilliseconds(GRHIThreadTime);
-            const double GPUFrameMs = FPlatformTime::ToMilliseconds(GGPUFrameTime);
+            const double GPUFrameMs = FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles());
 
             int32 ActorCount = 0;
             if (GEditor && GEditor->GetEditorWorldContext().World())

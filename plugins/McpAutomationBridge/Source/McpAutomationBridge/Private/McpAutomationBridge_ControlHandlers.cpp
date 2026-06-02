@@ -2433,10 +2433,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
   if (ClassName.IsEmpty()) {
     Payload->TryGetStringField(TEXT("class"), ClassName);
   }
+  if (ClassName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("classPath"), ClassName);
+  }
 
   if (ClassName.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("className or class is required"), nullptr);
+                              TEXT("className, class, or classPath is required"), nullptr);
     return true;
   }
 
