@@ -78,11 +78,13 @@
 #include "Components/StaticMeshComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Engine/Blueprint.h"
+#include "Engine/InheritableComponentHandler.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Engine/SkeletalMesh.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphSchema.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "K2Node.h"
 #endif
 
@@ -95,7 +97,11 @@ namespace
     UActorComponent* FindCdoComponent(
         UBlueprint* Blueprint,
         UObject* CDO,
-        const FString& ComponentName);
+        const FString& ComponentName,
+        bool bCreateInheritedOverride,
+        UInheritableComponentHandler** OutCreatedInheritedOverrideHandler = nullptr,
+        FComponentKey* OutCreatedInheritedOverrideKey = nullptr,
+        bool* bOutFoundComponent = nullptr);
 #endif
 
     /**
@@ -342,15 +348,37 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
 
   FString EffectivePropertyName = PropertyName;
 #if WITH_EDITOR
+  UInheritableComponentHandler* CreatedInheritedOverrideHandler = nullptr;
+  FComponentKey CreatedInheritedOverrideKey;
+  bool bFoundCdoComponent = false;
+  auto RemoveCreatedInheritedOverride = [&]() {
+      if (CreatedInheritedOverrideHandler && CreatedInheritedOverrideKey.IsValid())
+      {
+          CreatedInheritedOverrideHandler->RemoveOverridenComponentTemplate(CreatedInheritedOverrideKey);
+          CreatedInheritedOverrideHandler = nullptr;
+          CreatedInheritedOverrideKey = FComponentKey();
+      }
+  };
+
   if (ResolvedBlueprint && PropertyName.Contains(TEXT(".")))
   {
       FString ComponentSegment, RemainingPath;
       PropertyName.Split(TEXT("."), &ComponentSegment, &RemainingPath);
-      if (UActorComponent* CompTemplate = FindCdoComponent(ResolvedBlueprint, RootObject, ComponentSegment))
+      if (UActorComponent* CompTemplate = FindCdoComponent(
+          ResolvedBlueprint, RootObject, ComponentSegment, true,
+          &CreatedInheritedOverrideHandler, &CreatedInheritedOverrideKey,
+          &bFoundCdoComponent))
       {
           RootObject = CompTemplate;
           EffectivePropertyName = RemainingPath;
           ObjectPath = CompTemplate->GetPathName();
+      }
+      else if (bFoundCdoComponent)
+      {
+          SendAutomationError(RequestingSocket, RequestId,
+              FString::Printf(TEXT("Unable to create inherited component override for '%s' on Blueprint '%s'."), *ComponentSegment, *BlueprintPath),
+              TEXT("COMPONENT_OVERRIDE_FAILED"));
+          return true;
       }
   }
 #endif
@@ -363,6 +391,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       FString ResolveError;
       Property = ResolveNestedPropertyPath(RootObject, EffectivePropertyName, TargetContainer, ResolveError);
       if (!Property || !TargetContainer) {
+#if WITH_EDITOR
+          RemoveCreatedInheritedOverride();
+#endif
           SendAutomationError(RequestingSocket, RequestId,
               FString::Printf(TEXT("Failed to resolve nested property path '%s': %s"), *PropertyName, *ResolveError),
               TEXT("PROPERTY_NOT_FOUND"));
@@ -375,6 +406,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       TargetContainer = RootObject;
       Property = RootObject->GetClass()->FindPropertyByName(*EffectivePropertyName);
       if (!Property) {
+#if WITH_EDITOR
+          RemoveCreatedInheritedOverride();
+#endif
           SendAutomationError(RequestingSocket, RequestId,
               FString::Printf(TEXT("Property '%s' not found on object '%s'."), *PropertyName, *ObjectPath),
               TEXT("PROPERTY_NOT_FOUND"));
@@ -390,6 +424,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   FString ConversionError;
   if (!ApplyJsonValueToProperty(TargetContainer, Property, ValueField, ConversionError))
   {
+#if WITH_EDITOR
+      RemoveCreatedInheritedOverride();
+#endif
       SendAutomationError(RequestingSocket, RequestId, ConversionError, TEXT("PROPERTY_CONVERSION_FAILED"));
       return true;
   }
@@ -403,6 +440,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
 
 #if WITH_EDITOR
   RootObject->PostEditChange();
+  if (ResolvedBlueprint)
+  {
+      FBlueprintEditorUtils::MarkBlueprintAsModified(ResolvedBlueprint);
+  }
 
   // Refresh stale node title cache for K2Node types whose displayed title is
   // computed from a UPROPERTY we just wrote — otherwise the editor keeps
@@ -640,7 +681,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
   {
       FString ComponentSegment, RemainingPath;
       PropertyName.Split(TEXT("."), &ComponentSegment, &RemainingPath);
-      if (UActorComponent* CompTemplate = FindCdoComponent(ResolvedBlueprint, RootObject, ComponentSegment))
+      if (UActorComponent* CompTemplate = FindCdoComponent(ResolvedBlueprint, RootObject, ComponentSegment, false))
       {
           RootObject = CompTemplate;
           EffectivePropertyName = RemainingPath;
@@ -3017,8 +3058,25 @@ TMap<FString, FString> BuildScsSourceMap(UBlueprint* Blueprint)
 UActorComponent* FindCdoComponent(
     UBlueprint* Blueprint,
     UObject* CDO,
-    const FString& ComponentName)
+    const FString& ComponentName,
+    bool bCreateInheritedOverride,
+    UInheritableComponentHandler** OutCreatedInheritedOverrideHandler,
+    FComponentKey* OutCreatedInheritedOverrideKey,
+    bool* bOutFoundComponent)
 {
+    if (OutCreatedInheritedOverrideHandler)
+    {
+        *OutCreatedInheritedOverrideHandler = nullptr;
+    }
+    if (OutCreatedInheritedOverrideKey)
+    {
+        *OutCreatedInheritedOverrideKey = FComponentKey();
+    }
+    if (bOutFoundComponent)
+    {
+        *bOutFoundComponent = false;
+    }
+
     // Search native CDO components first (effective overrides)
     if (AActor* DefaultActor = Cast<AActor>(CDO))
     {
@@ -3028,12 +3086,27 @@ UActorComponent* FindCdoComponent(
         {
             if (Comp && Comp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase))
             {
+                if (bOutFoundComponent)
+                {
+                    *bOutFoundComponent = true;
+                }
                 return Comp;
             }
         }
     }
 
-    // Search SCS node templates (BP-added components)
+    UBlueprintGeneratedClass* ActualBPGC = Blueprint
+        ? Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass)
+        : nullptr;
+    if (!ActualBPGC)
+    {
+        return nullptr;
+    }
+
+    // Search SCS node templates (BP-added components). Inherited BP-added
+    // components may have per-child override templates stored on the target
+    // generated class; never use the parent node's ComponentTemplate directly
+    // for the target Blueprint.
     for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
     {
         if (Bp->SimpleConstructionScript)
@@ -3043,7 +3116,46 @@ UActorComponent* FindCdoComponent(
                 if (Node && Node->ComponentTemplate &&
                     Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
                 {
-                    return Node->ComponentTemplate;
+                    if (bOutFoundComponent)
+                    {
+                        *bOutFoundComponent = true;
+                    }
+                    const bool bInheritedNode = Node->GetSCS() != ActualBPGC->SimpleConstructionScript;
+                    if (bCreateInheritedOverride && bInheritedNode)
+                    {
+                        FComponentKey Key(Node);
+                        const bool bBlueprintCanOverrideComponentFromKey = Key.IsValid()
+                            && Blueprint->ParentClass
+                            && Blueprint->ParentClass->IsChildOf(Key.GetComponentOwner());
+                        if (bBlueprintCanOverrideComponentFromKey)
+                        {
+                            if (UInheritableComponentHandler* InheritableComponentHandler = Blueprint->GetInheritableComponentHandler(true))
+                            {
+                                if (UActorComponent* OverrideTemplate = InheritableComponentHandler->GetOverridenComponentTemplate(Key))
+                                {
+                                    return OverrideTemplate;
+                                }
+                                Blueprint->Modify();
+                                InheritableComponentHandler->Modify();
+                                if (UActorComponent* OverrideTemplate = InheritableComponentHandler->CreateOverridenComponentTemplate(Key))
+                                {
+                                    if (OutCreatedInheritedOverrideHandler)
+                                    {
+                                        *OutCreatedInheritedOverrideHandler = InheritableComponentHandler;
+                                    }
+                                    if (OutCreatedInheritedOverrideKey)
+                                    {
+                                        *OutCreatedInheritedOverrideKey = Key;
+                                    }
+                                    return OverrideTemplate;
+                                }
+                            }
+                        }
+
+                        return nullptr;
+                    }
+
+                    return Node->GetActualComponentTemplate(ActualBPGC);
                 }
             }
         }
@@ -3153,7 +3265,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
     // --- Component filter mode: single component dump ---
     if (!ComponentNameFilter.IsEmpty())
     {
-        UActorComponent* FoundComp = FindCdoComponent(Blueprint, CDO, ComponentNameFilter);
+        UActorComponent* FoundComp = FindCdoComponent(Blueprint, CDO, ComponentNameFilter, false);
         if (!FoundComp)
         {
             SendAutomationError(RequestingSocket, RequestId,
