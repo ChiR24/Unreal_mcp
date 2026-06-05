@@ -1,5 +1,3 @@
-// McpTool_BuildEnvironment.cpp — build_environment tool definition (22 actions)
-
 #include "McpVersionCompatibility.h"
 #include "MCP/McpToolDefinition.h"
 #include "MCP/McpToolRegistry.h"
@@ -33,7 +31,9 @@ public:
 			.Number(TEXT("minY"), TEXT(""))
 			.Number(TEXT("maxX"), TEXT(""))
 			.Number(TEXT("maxY"), TEXT(""))
+			.FreeformObject(TEXT("region"), TEXT("Landscape region bounds."))
 			.Bool(TEXT("updateNormals"), TEXT(""))
+			.Bool(TEXT("skipFlush"), TEXT("Skip editor flush/update when supported."))
 			.Object(TEXT("location"), TEXT("3D location (x, y, z)."),
 				[](FMcpSchemaBuilder& S) {
 				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
@@ -55,8 +55,11 @@ public:
 			.Number(TEXT("radius"), TEXT(""))
 			.Number(TEXT("strength"), TEXT(""))
 			.Number(TEXT("falloff"), TEXT(""))
+			.String(TEXT("operation"), TEXT("Heightmap or terrain edit operation."))
 			.String(TEXT("layerName"), TEXT(""))
 			.String(TEXT("actorName"), TEXT("Name of the actor."))
+			.String(TEXT("targetActor"), TEXT("Target actor name."))
+			.String(TEXT("waterBodyName"), TEXT("Water body actor name."))
 			.String(TEXT("foliageType"), TEXT(""))
 			.String(TEXT("foliageTypePath"),
 				TEXT("Asset path (e.g., /Game/Path/Asset)."))
@@ -67,6 +70,7 @@ public:
 			.Number(TEXT("cullDistance"), TEXT(""))
 			.Bool(TEXT("alignToNormal"), TEXT(""))
 			.Bool(TEXT("randomYaw"), TEXT(""))
+			.Bool(TEXT("removeAll"), TEXT("Explicitly remove all foliage instances."))
 			.ArrayOfObjects(TEXT("locations"), TEXT(""))
 			.ArrayOfObjects(TEXT("transforms"), TEXT(""))
 			.Object(TEXT("position"), TEXT("3D location (x, y, z)."),
@@ -88,14 +92,38 @@ public:
 			.Number(TEXT("timeoutMs"), TEXT(""))
 			.String(TEXT("path"), TEXT("Path to a directory."))
 			.String(TEXT("filename"), TEXT(""))
+			.String(TEXT("heightmapPath"), TEXT("Filesystem path to a heightmap file."))
+			.String(TEXT("outputPath"), TEXT("Filesystem output path."))
+			.String(TEXT("landscapePath"), TEXT("Landscape actor/object path."))
+			.String(TEXT("landscapeActorPath"), TEXT("Landscape actor object path."))
+			.String(TEXT("layerInfoPath"), TEXT("Landscape layer info asset path."))
+			.String(TEXT("physicalMaterialPath"), TEXT("Physical material asset path."))
+			.Bool(TEXT("noWeightBlend"), TEXT("Create a non-weight-blended landscape layer info."))
+			.Number(TEXT("hardness"), TEXT("Landscape layer hardness."))
 			.Array(TEXT("assetPaths"), TEXT(""))
 			.Array(TEXT("names"), TEXT(""))
 			.Number(TEXT("time"), TEXT(""))
 			.Number(TEXT("spacing"), TEXT(""))
 			.Number(TEXT("heightScale"), TEXT(""))
 			.String(TEXT("material"), TEXT("Material asset path."))
+			.String(TEXT("particleSystemPath"), TEXT("Particle system asset path."))
+			.String(TEXT("curvePath"), TEXT("Curve asset path or directory."))
+			.FreeformObject(TEXT("settings"), TEXT("Properties to apply to created/configured environment objects."))
+			.Number(TEXT("waveHeight"), TEXT("Water wave height."))
+			.Number(TEXT("waveLength"), TEXT("Water wave length."))
+			.Number(TEXT("amplitude"), TEXT("Wave or effect amplitude."))
+			.Number(TEXT("speed"), TEXT("Speed value."))
+			.Object(TEXT("direction"), TEXT("Direction or rotation value."),
+				[](FMcpSchemaBuilder& S) {
+				S.Number(TEXT("pitch")).Number(TEXT("yaw")).Number(TEXT("roll"));
+			})
 			.Number(TEXT("hour"), TEXT(""))
 			.Number(TEXT("intensity"), TEXT(""))
+			.Number(TEXT("skyLightIntensity"), TEXT("Sky light intensity for time-of-day systems."))
+			.Number(TEXT("azimuth"), TEXT("Sun azimuth."))
+			.Number(TEXT("elevation"), TEXT("Sun elevation."))
+			.Bool(TEXT("collisionEnabled"), TEXT("Enable collision on configured environment actors."))
+			.Number(TEXT("materialIndex"), TEXT("Material slot index."))
 			.StringEnum(TEXT("lightType"), {
 				TEXT("Directional"),
 				TEXT("Point"),

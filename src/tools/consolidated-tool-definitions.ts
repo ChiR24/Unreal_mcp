@@ -74,6 +74,21 @@ export const SPLINE_ACTIONS = [
   'create_wall_spline', 'create_cable_spline', 'create_pipe_spline', 'get_splines_info'
 ] as const;
 
+export const PHASE_28_ENVIRONMENT_ACTIONS = [
+  'import_heightmap', 'export_heightmap', 'create_landscape_layer_info',
+  'configure_landscape_material', 'configure_landscape_splines', 'configure_landscape_lod',
+  'create_landscape_streaming_proxy', 'create_foliage_type', 'configure_foliage_mesh',
+  'configure_foliage_placement', 'configure_foliage_lod', 'configure_foliage_collision',
+  'configure_foliage_culling', 'paint_foliage_instances', 'remove_foliage_instances',
+  'configure_sky_atmosphere', 'configure_sky_light', 'configure_directional_light_atmosphere',
+  'configure_exponential_height_fog', 'configure_volumetric_cloud', 'create_weather_system',
+  'configure_rain_particles', 'configure_snow_particles', 'configure_wind', 'configure_lightning',
+  'create_time_of_day_system', 'configure_sun_position', 'configure_light_color_curve',
+  'configure_sky_color_curve', 'create_water_body_ocean', 'create_water_body_lake',
+  'create_water_body_river', 'create_water_body_custom', 'configure_water_waves',
+  'configure_water_material', 'configure_water_collision', 'create_buoyancy_component'
+] as const;
+
 export const PERFORMANCE_ACTIONS = [
   'start_profiling', 'stop_profiling', 'run_benchmark', 'show_stats', 'generate_memory_report',
   'set_scalability', 'set_resolution_scale', 'set_vsync', 'set_frame_rate_limit', 'enable_gpu_timing',
@@ -922,7 +937,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'generate_lods', 'bake_lightmap', 'export_snapshot', 'import_snapshot', 'delete',
             'create_sky_sphere', 'set_time_of_day', 'create_fog_volume'
           ,
-            ...LIGHTING_ACTIONS, ...SPLINE_ACTIONS],
+            ...PHASE_28_ENVIRONMENT_ACTIONS, ...LIGHTING_ACTIONS, ...SPLINE_ACTIONS],
           description: 'Action'
         },
         name: commonSchemas.name,
@@ -956,6 +971,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         cullDistance: commonSchemas.numberProp,
         alignToNormal: commonSchemas.booleanProp,
         randomYaw: commonSchemas.booleanProp,
+        removeAll: commonSchemas.booleanProp,
         locations: { type: 'array', items: commonSchemas.location },
         transforms: {
           type: 'array',
@@ -973,6 +989,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         volumeName: commonSchemas.stringProp,
         seed: commonSchemas.numberProp,
         foliageTypes: commonSchemas.arrayOfObjects,
+        points: commonSchemas.arrayOfObjects,
         // Additional handler-used params
         quadsPerSection: commonSchemas.numberProp,
         count: commonSchemas.numberProp,
@@ -986,6 +1003,28 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         path: commonSchemas.directoryPath,
         filename: commonSchemas.stringProp,
         assetPaths: commonSchemas.arrayOfStrings,
+        heightmapPath: commonSchemas.stringProp,
+        outputPath: commonSchemas.stringProp,
+        landscapePath: commonSchemas.assetPath,
+        landscapeActorPath: commonSchemas.stringProp,
+        actorPath: commonSchemas.stringProp,
+        layerInfoPath: commonSchemas.assetPath,
+        physicalMaterialPath: commonSchemas.assetPath,
+        noWeightBlend: commonSchemas.booleanProp,
+        hardness: commonSchemas.numberProp,
+        waterBodyName: commonSchemas.actorName,
+        targetActor: commonSchemas.actorName,
+        particleSystemPath: commonSchemas.assetPath,
+        curvePath: commonSchemas.assetPath,
+        settings: commonSchemas.objectProp,
+        waveHeight: commonSchemas.numberProp,
+        waveLength: commonSchemas.numberProp,
+        amplitude: commonSchemas.numberProp,
+        speed: commonSchemas.numberProp,
+        direction: commonSchemas.rotation,
+        azimuth: commonSchemas.numberProp,
+        elevation: commonSchemas.numberProp,
+        collisionEnabled: commonSchemas.booleanProp,
         // Additional params for C++ handler alignment (EnvironmentHandlers.cpp)
         names: commonSchemas.arrayOfStrings,
         time: commonSchemas.numberProp,
@@ -994,6 +1033,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         material: commonSchemas.materialPath,
         hour: commonSchemas.numberProp,
         intensity: commonSchemas.numberProp,
+        skyLightIntensity: commonSchemas.numberProp,
         alignToSpline: commonSchemas.booleanProp,
         arriveTangent: commonSchemas.location,
         bClosedLoop: commonSchemas.booleanProp,
@@ -2500,6 +2540,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           enum: ['Bool', 'Int', 'Float', 'Vector', 'Rotator', 'Object', 'Class', 'Enum', 'Name', 'String'],
           description: 'Blackboard key data type.'
         },
+        baseObjectClass: commonSchemas.stringProp,
         isInstanceSynced: { type: 'boolean', description: 'Sync key across instances.' },
         compositeType: {
           type: 'string',

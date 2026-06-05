@@ -49,16 +49,41 @@ const ENVIRONMENT_PATH_FIELDS_BY_ACTION: Record<string, readonly string[]> = {
   modify_heightmap: ['landscapePath'],
   sculpt: ['landscapePath'],
   sculpt_landscape: ['landscapePath'],
+  import_heightmap: ['landscapePath'],
+  export_heightmap: ['landscapePath'],
   add_foliage: ['foliageType', 'foliageTypePath', 'meshPath'],
+  create_foliage_type: ['foliageType', 'foliageTypePath', 'meshPath', 'staticMesh'],
+  configure_foliage_mesh: ['foliageType', 'foliageTypePath', 'meshPath', 'staticMesh'],
+  configure_foliage_placement: ['foliageType', 'foliageTypePath'],
+  configure_foliage_lod: ['foliageType', 'foliageTypePath'],
+  configure_foliage_collision: ['foliageType', 'foliageTypePath'],
+  configure_foliage_culling: ['foliageType', 'foliageTypePath'],
   paint_foliage: ['foliageType', 'foliageTypePath'],
+  paint_foliage_instances: ['foliageType', 'foliageTypePath'],
+  remove_foliage_instances: ['foliageType', 'foliageTypePath'],
   add_foliage_instances: ['foliageType', 'foliageTypePath', 'meshPath'],
   create_procedural_terrain: ['material', 'path'],
   create_procedural_foliage: ['path'],
   set_landscape_material: ['landscapePath', 'materialPath'],
+  configure_landscape_material: ['landscapePath', 'materialPath'],
+  create_landscape_layer_info: ['path', 'physicalMaterialPath'],
   create_landscape_grass_type: ['meshPath', 'path', 'staticMesh'],
   generate_lods: ['assetPath', 'landscapePath', 'path'],
+  configure_landscape_lod: ['assetPath', 'landscapePath', 'path'],
   create_sky_sphere: ['path'],
-  create_fog_volume: ['path']
+  create_fog_volume: ['path'],
+  create_weather_system: ['particleSystemPath'],
+  configure_rain_particles: ['particleSystemPath'],
+  configure_snow_particles: ['particleSystemPath'],
+  configure_lightning: ['particleSystemPath'],
+  configure_light_color_curve: ['curvePath'],
+  configure_sky_color_curve: ['curvePath'],
+  create_water_body_ocean: ['materialPath'],
+  create_water_body_lake: ['materialPath'],
+  create_water_body_river: ['materialPath'],
+  create_water_body_custom: ['materialPath'],
+  configure_water_material: ['materialPath'],
+  create_buoyancy_component: ['actorPath']
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -252,6 +277,21 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
       }
     }
 
+    case 'create_foliage_type': {
+      const meshPath = argsTyped.meshPath || (argsRecord.staticMesh as string) || '';
+      const defaultName = meshPath ? `${meshPath.split('/').pop()?.split('.')[0]}_Foliage_Type` : undefined;
+      return cleanObject(await executeAutomationRequest(tools, 'add_foliage_type', {
+        name: argsTyped.foliageType || argsTyped.name || defaultName || 'NewFoliageType',
+        meshPath,
+        density: argsTyped.density,
+        minScale: argsTyped.minScale,
+        maxScale: argsTyped.maxScale,
+        alignToNormal: argsTyped.alignToNormal,
+        randomYaw: argsTyped.randomYaw,
+        cullDistance: argsTyped.cullDistance
+      }) as Record<string, unknown>);
+    }
+
     case 'add_foliage_instances': {
       const locationsRaw = argsTyped.locations as LocationItem[] | undefined;
       // C++ accepts location as object {x, y, z} or array [x, y, z]
@@ -283,6 +323,16 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         eraseMode: argsRecord.eraseMode as boolean | undefined
       }) as Record<string, unknown>);
     }
+    case 'paint_foliage_instances':
+      return cleanObject(await executeAutomationRequest(tools, 'build_environment', {
+        ...argsRecord,
+        action: 'paint_foliage_instances'
+      }, 'Automation bridge not available for environment building operations')) as Record<string, unknown>;
+    case 'remove_foliage_instances':
+      return cleanObject(await executeAutomationRequest(tools, 'build_environment', {
+        ...argsRecord,
+        action: 'remove_foliage_instances'
+      }, 'Automation bridge not available for environment building operations')) as Record<string, unknown>;
     case 'create_procedural_terrain': {
       // Generate default name if not provided (C++ requires non-empty name)
       const defaultName = argsTyped.name || argsTyped.actorName || `ProceduralTerrain_${Date.now()}`;
@@ -344,6 +394,11 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         landscapeName: argsTyped.landscapeName || argsTyped.name || '',
         materialPath: argsTyped.materialPath ?? ''
       }) as Record<string, unknown>);
+    case 'configure_landscape_material':
+      return cleanObject(await executeAutomationRequest(tools, 'build_environment', {
+        ...argsRecord,
+        action: 'configure_landscape_material'
+      }, 'Automation bridge not available for environment building operations')) as Record<string, unknown>;
     case 'set_time_of_day': {
       const time = getNumber(argsRecord.time) ?? getNumber(argsRecord.hour) ?? getNumber(argsRecord.propertyValue) ?? 12;
       return cleanObject(await executeAutomationRequest(tools, 'build_environment', {
@@ -372,7 +427,7 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
       return cleanObject(res);
     }
     default: {
-      const res = await executeAutomationRequest(tools, 'build_environment', args, 'Automation bridge not available for environment building operations');
+      const res = await executeAutomationRequest(tools, 'build_environment', argsRecord, 'Automation bridge not available for environment building operations');
       return cleanObject(res) as Record<string, unknown>;
     }
   }
