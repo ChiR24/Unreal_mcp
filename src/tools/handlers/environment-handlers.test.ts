@@ -20,6 +20,36 @@ vi.mock('../../utils/environment-snapshot.js', () => ({
 }));
 
 import { handleEnvironmentTools } from './environment-handlers.js';
+import { consolidatedToolDefinitions } from '../consolidated-tool-definitions.js';
+
+const PHASE_28_ENVIRONMENT_ACTIONS = [
+  'create_landscape', 'import_heightmap', 'export_heightmap', 'sculpt_landscape',
+  'paint_landscape_layer', 'create_landscape_layer_info', 'configure_landscape_material',
+  'create_landscape_grass_type', 'configure_landscape_splines', 'configure_landscape_lod',
+  'create_landscape_streaming_proxy', 'create_foliage_type', 'configure_foliage_mesh',
+  'configure_foliage_placement', 'configure_foliage_lod', 'configure_foliage_collision',
+  'configure_foliage_culling', 'paint_foliage_instances', 'remove_foliage_instances',
+  'configure_sky_atmosphere', 'configure_sky_light', 'configure_directional_light_atmosphere',
+  'configure_exponential_height_fog', 'configure_volumetric_cloud', 'create_sky_sphere',
+  'create_weather_system', 'configure_rain_particles', 'configure_snow_particles',
+  'configure_wind', 'configure_lightning', 'create_time_of_day_system', 'configure_sun_position',
+  'configure_light_color_curve', 'configure_sky_color_curve', 'create_water_body_ocean',
+  'create_water_body_lake', 'create_water_body_river', 'create_water_body_custom',
+  'configure_water_waves', 'configure_water_material', 'configure_water_collision',
+  'create_buoyancy_component'
+] as const;
+
+function getBuildEnvironmentActionEnum(): readonly string[] {
+  const tool = consolidatedToolDefinitions.find(def => def.name === 'build_environment');
+  const inputSchema = tool?.inputSchema as { properties?: { action?: { enum?: string[] } } } | undefined;
+  return inputSchema?.properties?.action?.enum ?? [];
+}
+
+function getBuildEnvironmentProperties(): Record<string, unknown> {
+  const tool = consolidatedToolDefinitions.find(def => def.name === 'build_environment');
+  const inputSchema = tool?.inputSchema as { properties?: Record<string, unknown> } | undefined;
+  return inputSchema?.properties ?? {};
+}
 
 describe('handleEnvironmentTools path normalization', () => {
   beforeEach(() => {
@@ -90,6 +120,96 @@ describe('handleEnvironmentTools path normalization', () => {
         foliageTypes: [expect.objectContaining({ meshPath: '/Game/Foliage/SM_Bush' })],
         types: [expect.objectContaining({ meshPath: '/Game/Foliage/SM_Bush' })]
       })
+    );
+  });
+
+  it('exposes every Phase 28 roadmap action on the build_environment schema', () => {
+    expect(getBuildEnvironmentActionEnum()).toEqual(expect.arrayContaining([...PHASE_28_ENVIRONMENT_ACTIONS]));
+  });
+
+  it('routes the Phase 28 create_foliage_type alias to foliage type creation', async () => {
+    await handleEnvironmentTools('create_foliage_type', {
+      action: 'create_foliage_type',
+      name: 'Phase28FoliageType',
+      meshPath: 'Engine/BasicShapes/Cone',
+      density: 12
+    }, {} as never);
+
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      'add_foliage_type',
+      expect.objectContaining({
+        name: 'Phase28FoliageType',
+        meshPath: '/Engine/BasicShapes/Cone',
+        density: 12
+      })
+    );
+  });
+
+  it('preserves foliageTypePath for targeted remove_foliage_instances', async () => {
+    await handleEnvironmentTools('remove_foliage_instances', {
+      action: 'remove_foliage_instances',
+      foliageTypePath: 'Game/Foliage/Phase28FoliageType'
+    }, {} as never);
+
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      'build_environment',
+      expect.objectContaining({
+        action: 'remove_foliage_instances',
+        foliageTypePath: '/Game/Foliage/Phase28FoliageType'
+      }),
+      'Automation bridge not available for environment building operations'
+    );
+  });
+
+  it('exposes removeAll for explicit all-foliage removal', () => {
+    expect(getBuildEnvironmentProperties()).toHaveProperty('removeAll');
+  });
+
+  it.each([
+    ['create_weather_system', 'particleSystemPath', 'Content/Weather/P_Weather', '/Game/Weather/P_Weather'],
+    ['configure_rain_particles', 'particleSystemPath', 'Content/Weather/P_Rain', '/Game/Weather/P_Rain'],
+    ['configure_snow_particles', 'particleSystemPath', 'Content/Weather/P_Snow', '/Game/Weather/P_Snow'],
+    ['configure_lightning', 'particleSystemPath', 'Content/Weather/P_Lightning', '/Game/Weather/P_Lightning'],
+    ['configure_light_color_curve', 'curvePath', 'Content/Environment/Curves/C_Light', '/Game/Environment/Curves/C_Light'],
+    ['configure_sky_color_curve', 'curvePath', 'Content/Environment/Curves/C_Sky', '/Game/Environment/Curves/C_Sky']
+  ])('normalizes Phase 28 asset path field %s.%s before dispatch', async (action, fieldName, rawPath, normalizedPath) => {
+    await handleEnvironmentTools(action, {
+      action,
+      [fieldName]: rawPath
+    }, {} as never);
+
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      'build_environment',
+      expect.objectContaining({
+        action,
+        [fieldName]: normalizedPath
+      }),
+      'Automation bridge not available for environment building operations'
+    );
+  });
+
+  it.each([
+    'create_water_body_ocean',
+    'create_water_body_lake',
+    'create_water_body_river',
+    'create_water_body_custom'
+  ])('normalizes water body create material paths before dispatch for %s', async action => {
+    await handleEnvironmentTools(action, {
+      action,
+      materialPath: 'Engine/BasicShapes/BasicShapeMaterial'
+    }, {} as never);
+
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      'build_environment',
+      expect.objectContaining({
+        action,
+        materialPath: '/Engine/BasicShapes/BasicShapeMaterial'
+      }),
+      'Automation bridge not available for environment building operations'
     );
   });
 
