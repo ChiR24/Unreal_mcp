@@ -131,6 +131,21 @@ Special thanks to the contributors in this release window, with obvious author a
 
 </details>
 
+<details>
+<summary><b>📊 Release Statistics</b></summary>
+
+| Metric | Count |
+|--------|-------|
+| Release diff | `v0.5.21..0.5.30` |
+| Files changed | 406 |
+| Insertions | 61,393 |
+| Deletions | 30,957 |
+| TypeScript canonical tools | 23 |
+| Native canonical tools | 23 |
+| Native action parity mismatches | 0 |
+
+</details>
+
 ---
 
 ## 🏷️ [0.5.21] - 2026-04-03
