@@ -968,6 +968,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(WidgetBlueprint);
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBlueprint);
+        const bool bCompiled = McpSafeCompileBlueprint(WidgetBlueprint);
+        const bool bSaved = McpSafeAssetSave(WidgetBlueprint);
 
         // Return the full object path (Package.ObjectName format) for proper loading
         FString ObjectPath = WidgetBlueprint->GetPathName();
@@ -975,6 +977,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Created widget blueprint: %s"), *Name));
         ResultJson->SetStringField(TEXT("widgetPath"), ObjectPath);
+        ResultJson->SetBoolField(TEXT("compileSucceeded"), bCompiled);
+        ResultJson->SetBoolField(TEXT("saveSucceeded"), bSaved);
 
         McpHandlerUtils::AddVerification(ResultJson, WidgetBlueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true,

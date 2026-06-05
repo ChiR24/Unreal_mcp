@@ -1159,61 +1159,63 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 28: Environment Systems
+## Phase 28: Environment Systems (Complete)
 
 **Goal**: Complete environment (sky, weather, water).
 
-**Tool**: `manage_environment`
+**Tool**: `build_environment`
+
+**Status**: All 42 listed actions fully implemented in TypeScript and C++.
 
 ### 28.1 Landscape (Expanded)
-- [ ] `create_landscape`
-- [ ] `import_heightmap`, `export_heightmap`
-- [ ] `sculpt_landscape` (raise, lower, smooth, flatten, erosion)
-- [ ] `paint_landscape_layer`
-- [ ] `create_landscape_layer_info`
-- [ ] `configure_landscape_material`
-- [ ] `create_landscape_grass_type`
-- [ ] `configure_landscape_splines`
-- [ ] `configure_landscape_lod`
-- [ ] `create_landscape_streaming_proxy`
+- [x] `create_landscape`
+- [x] `import_heightmap`, `export_heightmap`
+- [x] `sculpt_landscape` (raise, lower, smooth, flatten, erosion)
+- [x] `paint_landscape_layer`
+- [x] `create_landscape_layer_info`
+- [x] `configure_landscape_material`
+- [x] `create_landscape_grass_type`
+- [x] `configure_landscape_splines`
+- [x] `configure_landscape_lod`
+- [x] `create_landscape_streaming_proxy`
 
 ### 28.2 Foliage (Expanded)
-- [ ] `create_foliage_type`
-- [ ] `configure_foliage_mesh`
-- [ ] `configure_foliage_placement` (density, scale, rotation, align)
-- [ ] `configure_foliage_lod`, `configure_foliage_collision`, `configure_foliage_culling`
-- [ ] `paint_foliage_instances`, `remove_foliage_instances`
+- [x] `create_foliage_type`
+- [x] `configure_foliage_mesh`
+- [x] `configure_foliage_placement` (density, scale, rotation, align)
+- [x] `configure_foliage_lod`, `configure_foliage_collision`, `configure_foliage_culling`
+- [x] `paint_foliage_instances`, `remove_foliage_instances`
 
 ### 28.3 Sky & Atmosphere
-- [ ] `configure_sky_atmosphere`
-- [ ] `configure_sky_light`
-- [ ] `configure_directional_light_atmosphere`
-- [ ] `configure_exponential_height_fog`
-- [ ] `configure_volumetric_cloud`
-- [ ] `create_sky_sphere`
+- [x] `configure_sky_atmosphere`
+- [x] `configure_sky_light`
+- [x] `configure_directional_light_atmosphere`
+- [x] `configure_exponential_height_fog`
+- [x] `configure_volumetric_cloud`
+- [x] `create_sky_sphere`
 
 ### 28.4 Weather
-- [ ] `create_weather_system`
-- [ ] `configure_rain_particles`
-- [ ] `configure_snow_particles`
-- [ ] `configure_wind`
-- [ ] `configure_lightning`
+- [x] `create_weather_system`
+- [x] `configure_rain_particles`
+- [x] `configure_snow_particles`
+- [x] `configure_wind`
+- [x] `configure_lightning`
 
 ### 28.5 Time of Day
-- [ ] `create_time_of_day_system`
-- [ ] `configure_sun_position`
-- [ ] `configure_light_color_curve`
-- [ ] `configure_sky_color_curve`
+- [x] `create_time_of_day_system`
+- [x] `configure_sun_position`
+- [x] `configure_light_color_curve`
+- [x] `configure_sky_color_curve`
 
 ### 28.6 Water (Water Plugin)
-- [ ] `create_water_body_ocean`
-- [ ] `create_water_body_lake`
-- [ ] `create_water_body_river`
-- [ ] `create_water_body_custom`
-- [ ] `configure_water_waves`
-- [ ] `configure_water_material`
-- [ ] `configure_water_collision`
-- [ ] `create_buoyancy_component`
+- [x] `create_water_body_ocean`
+- [x] `create_water_body_lake`
+- [x] `create_water_body_river`
+- [x] `create_water_body_custom`
+- [x] `configure_water_waves`
+- [x] `configure_water_material`
+- [x] `configure_water_collision`
+- [x] `create_buoyancy_component`
 
 ---
 

@@ -76,4 +76,19 @@ inline bool DecodeLandscapeMetadata(const AActor* Actor, FMcpLandscapeMetadata& 
       OutMetadata.ComponentsX > 0 && OutMetadata.ComponentsY > 0 &&
       OutMetadata.QuadsPerComponent > 0;
 }
+
+inline bool GetLandscapeMetadataExtent(const AActor* Actor, int32& OutMinX, int32& OutMinY, int32& OutMaxX, int32& OutMaxY)
+{
+  FMcpLandscapeMetadata Metadata;
+  if (!DecodeLandscapeMetadata(Actor, Metadata))
+  {
+    return false;
+  }
+
+  OutMinX = 0;
+  OutMinY = 0;
+  OutMaxX = Metadata.ComponentsX * Metadata.QuadsPerComponent;
+  OutMaxY = Metadata.ComponentsY * Metadata.QuadsPerComponent;
+  return true;
+}
 } // namespace McpLandscapeMetadataTags

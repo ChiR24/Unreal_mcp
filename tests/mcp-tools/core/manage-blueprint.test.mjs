@@ -17,6 +17,8 @@ const TEST_FOLDER = '/Game/MCPTest/AuthoringAssets';
 const ts = Date.now();
 const BP_NAME = `BP_Test_${ts}`;
 const BP_PATH = `${TEST_FOLDER}/${BP_NAME}`;
+const INPUT_ACTION_NAME = `IA_Blueprint_${ts}`;
+const INPUT_ACTION_PATH = `${TEST_FOLDER}/${INPUT_ACTION_NAME}`;
 const ENGINE_CUBE_MESH = '/Engine/BasicShapes/Cube.Cube';
 const ENGINE_BASIC_MATERIAL = '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial';
 const ENGINE_DEFAULT_TEXTURE = '/Engine/EngineResources/DefaultTexture.DefaultTexture';
@@ -25,6 +27,7 @@ const testCases = [
   // === SETUP ===
   { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: create test blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: BP_NAME, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.assetPath', equals: BP_PATH, label: 'create_blueprint path alias uses requested folder' }] },
+  { scenario: 'Setup: create input action asset', toolName: 'manage_networking', arguments: { action: 'create_input_action', name: INPUT_ACTION_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
 
   // === ACTION: create (requires name + path/blueprintPath) ===
   { scenario: 'ACTION: create', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_Create_${ts}`, savePath: TEST_FOLDER, blueprintType: 'Actor', properties: { bReplicates: true } }, expected: 'success|already exists' },
@@ -117,6 +120,9 @@ const testCases = [
   { scenario: 'CREATE: create_node call function metadata', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'CallFunction', memberName: 'PrintString', memberClass: 'KismetSystemLibrary', graphName: 'EventGraph', posX: -40, posY: 120 }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_node cast target class', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'Cast', targetClass: 'Actor', graphName: 'EventGraph', posX: 160, posY: 120 }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_node input axis event', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'InputAxisEvent', inputAxisName: 'MoveForward', graphName: 'EventGraph', posX: 360, posY: 120 }, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_node enhanced input actionPath', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'K2Node_EnhancedInputAction', actionPath: INPUT_ACTION_PATH, graphName: 'EventGraph', posX: 560, posY: 120 }, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_node enhanced input inputActionPath', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'K2Node_EnhancedInputAction', inputActionPath: INPUT_ACTION_PATH, graphName: 'EventGraph', posX: 760, posY: 120 }, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_node enhanced input inputActionAssetPath', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'K2Node_EnhancedInputAction', inputActionAssetPath: INPUT_ACTION_PATH, graphName: 'EventGraph', posX: 960, posY: 120 }, expected: 'success|already exists' },
 
   // === ADD: add_node (blueprintPath as assetPath + nodeType + nodeName) ===
   // Capture a real PrintString node for connect/default/delete operations.
@@ -190,10 +196,10 @@ const testCases = [
   const TEST_FOLDER = '/Game/MCPTest/AuthoringAssets';
   const ts = Date.now();
   const WIDGET_NAME = `WBP_WidgetAuthoring_${ts}`;
-  const WIDGET_PATH = `${TEST_FOLDER}/${WIDGET_NAME}.${WIDGET_NAME}`;
+  const CREATED_WIDGET_PATH = '${captured:widgetPath}';
   const ANIMATION_NAME = `IntroFade_${ts}`;
 
-  const widgetArgs = (action, extra = {}) => ({ action, widgetPath: WIDGET_PATH, ...extra });
+  const widgetArgs = (action, extra = {}) => ({ action, widgetPath: CREATED_WIDGET_PATH, ...extra });
   const createTemplateArgs = (action, name, extra = {}) => ({ action, name: `${name}_${ts}`, folder: TEST_FOLDER, ...extra });
 
   const addWidgetCases = [
@@ -280,7 +286,7 @@ const testCases = [
     // === SETUP ===
     { scenario: 'Setup: clear stale widget test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|ASSET_NOT_FOUND|not found' },
     { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
-    { scenario: 'Setup: create test widget blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_widget_blueprint', name: WIDGET_NAME, path: TEST_FOLDER, parentClass: 'UserWidget' }, expected: 'success|already exists' },
+    { scenario: 'Setup: create test widget blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_widget_blueprint', name: WIDGET_NAME, path: TEST_FOLDER, parentClass: 'UserWidget' }, expected: 'success', assertions: [{ path: 'structuredContent.result.compileSucceeded', equals: true, label: 'created widget blueprint compiles before reuse' }, { path: 'structuredContent.result.saveSucceeded', equals: true, label: 'created widget blueprint saves before reuse' }], captureResult: { key: 'widgetPath', fromField: 'result.widgetPath' } },
 
     // === CREATE ===
     { scenario: 'CREATE: create_widget_blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_widget_blueprint', name: `WBP_CreateWidget_${ts}`, path: TEST_FOLDER, parentClass: 'UserWidget' }, expected: 'success|already exists' },

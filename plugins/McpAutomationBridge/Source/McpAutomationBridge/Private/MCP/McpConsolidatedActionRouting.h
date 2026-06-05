@@ -209,7 +209,28 @@ inline const TArray<FString>& BuildEnvironmentCore()
 		TEXT("generate_lods"), TEXT("bake_lightmap"),
 		TEXT("export_snapshot"), TEXT("import_snapshot"), TEXT("delete"),
 		TEXT("create_sky_sphere"), TEXT("set_time_of_day"),
-		TEXT("create_fog_volume")
+		TEXT("create_fog_volume"),
+		TEXT("import_heightmap"), TEXT("export_heightmap"),
+		TEXT("create_landscape_layer_info"),
+		TEXT("configure_landscape_material"),
+		TEXT("configure_landscape_splines"), TEXT("configure_landscape_lod"),
+		TEXT("create_landscape_streaming_proxy"),
+		TEXT("create_foliage_type"), TEXT("configure_foliage_mesh"),
+		TEXT("configure_foliage_placement"), TEXT("configure_foliage_lod"),
+		TEXT("configure_foliage_collision"), TEXT("configure_foliage_culling"),
+		TEXT("paint_foliage_instances"), TEXT("remove_foliage_instances"),
+		TEXT("configure_sky_atmosphere"), TEXT("configure_sky_light"),
+		TEXT("configure_directional_light_atmosphere"),
+		TEXT("configure_exponential_height_fog"),
+		TEXT("configure_volumetric_cloud"), TEXT("create_weather_system"),
+		TEXT("configure_rain_particles"), TEXT("configure_snow_particles"),
+		TEXT("configure_wind"), TEXT("configure_lightning"),
+		TEXT("create_time_of_day_system"), TEXT("configure_sun_position"),
+		TEXT("configure_light_color_curve"), TEXT("configure_sky_color_curve"),
+		TEXT("create_water_body_ocean"), TEXT("create_water_body_lake"),
+		TEXT("create_water_body_river"), TEXT("create_water_body_custom"),
+		TEXT("configure_water_waves"), TEXT("configure_water_material"),
+		TEXT("configure_water_collision"), TEXT("create_buoyancy_component")
 	};
 	return Actions;
 }

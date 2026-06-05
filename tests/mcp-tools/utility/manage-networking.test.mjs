@@ -596,6 +596,8 @@ const testCases = [
   const ts = Date.now();
   const INPUT_ACTION = '/Game/MCPTest/Testinput_action';
   const INPUT_CONTEXT = '/Game/MCPTest/Testinput_mapping_context';
+  const LEGACY_ACTION_NAME = `MCP_LegacyAction_${ts}`;
+  const LEGACY_AXIS_NAME = `MCP_LegacyAxis_${ts}`;
 
   testCases.push(
     // === SETUP ===
@@ -619,6 +621,10 @@ const testCases = [
     { scenario: 'TOGGLE: disable_input_action', toolName: 'manage_networking', arguments: { action: 'disable_input_action', actionPath: INPUT_ACTION }, expected: 'success' },
     // === INFO ===
     { scenario: 'INFO: get_input_info', toolName: 'manage_networking', arguments: { action: 'get_input_info', assetPath: INPUT_CONTEXT }, expected: 'success' },
+    { scenario: 'ADD: add_legacy_action_mapping', toolName: 'manage_networking', arguments: { action: 'add_legacy_action_mapping', actionName: LEGACY_ACTION_NAME, key: 'F', shift: true, ctrl: false, alt: false, cmd: false }, expected: 'success' },
+    { scenario: 'DELETE: remove_legacy_action_mapping', toolName: 'manage_networking', arguments: { action: 'remove_legacy_action_mapping', actionName: LEGACY_ACTION_NAME, key: 'F', shift: true, ctrl: false, alt: false, cmd: false }, expected: 'success' },
+    { scenario: 'ADD: add_legacy_axis_mapping', toolName: 'manage_networking', arguments: { action: 'add_legacy_axis_mapping', axisName: LEGACY_AXIS_NAME, key: 'MouseX', scale: 1 }, expected: 'success' },
+    { scenario: 'DELETE: remove_legacy_axis_mapping', toolName: 'manage_networking', arguments: { action: 'remove_legacy_axis_mapping', axisName: LEGACY_AXIS_NAME, key: 'MouseX', scale: 1 }, expected: 'success' },
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete test blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: `${TEST_FOLDER}/BP_Test_${ts}`, force: true }, expected: 'success|not found' },
