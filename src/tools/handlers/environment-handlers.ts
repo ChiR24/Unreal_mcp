@@ -411,7 +411,7 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         action: 'generate_lods',
         assetPaths: (argsRecord.assetPaths as string[]) || (argsRecord.assets as string[]) || (argsRecord.path ? [argsRecord.path as string] : []),
         numLODs: argsRecord.numLODs as number | undefined
-      }, 'Bridge unavailable')) as Record<string, unknown>;
+      }, 'Automation bridge not available for environment building operations')) as Record<string, unknown>;
     case 'delete': {
       const names: string[] = Array.isArray(argsRecord.names)
         ? argsRecord.names as string[]

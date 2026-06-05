@@ -259,7 +259,7 @@ describe('handleEnvironmentTools path normalization', () => {
         action: 'generate_lods',
         assetPaths: ['/Engine/BasicShapes/Sphere', '/Game/MCPTest/SM_Rock']
       }),
-      'Bridge unavailable'
+      'Automation bridge not available for environment building operations'
     );
   });
 
