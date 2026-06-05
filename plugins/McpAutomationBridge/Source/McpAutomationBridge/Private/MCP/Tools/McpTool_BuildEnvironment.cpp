@@ -112,6 +112,7 @@ public:
 			.Number(TEXT("waveHeight"), TEXT("Water wave height."))
 			.Number(TEXT("waveLength"), TEXT("Water wave length."))
 			.Number(TEXT("amplitude"), TEXT("Wave or effect amplitude."))
+			.Number(TEXT("steepness"), TEXT("Water wave steepness, clamped from 0 to 1."))
 			.Number(TEXT("speed"), TEXT("Speed value."))
 			.Object(TEXT("direction"), TEXT("Direction or rotation value."),
 				[](FMcpSchemaBuilder& S) {

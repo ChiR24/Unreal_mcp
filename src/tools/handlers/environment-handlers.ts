@@ -49,10 +49,10 @@ const ENVIRONMENT_PATH_FIELDS_BY_ACTION: Record<string, readonly string[]> = {
   modify_heightmap: ['landscapePath'],
   sculpt: ['landscapePath'],
   sculpt_landscape: ['landscapePath'],
-  import_heightmap: ['landscapePath'],
-  export_heightmap: ['landscapePath'],
+  import_heightmap: ['landscapePath', 'landscapeActorPath'],
+  export_heightmap: ['landscapePath', 'landscapeActorPath'],
   add_foliage: ['foliageType', 'foliageTypePath', 'meshPath'],
-  create_foliage_type: ['foliageType', 'foliageTypePath', 'meshPath', 'staticMesh'],
+  create_foliage_type: ['foliageType', 'foliageTypePath', 'meshPath', 'staticMesh', 'path'],
   configure_foliage_mesh: ['foliageType', 'foliageTypePath', 'meshPath', 'staticMesh'],
   configure_foliage_placement: ['foliageType', 'foliageTypePath'],
   configure_foliage_lod: ['foliageType', 'foliageTypePath'],
@@ -65,12 +65,14 @@ const ENVIRONMENT_PATH_FIELDS_BY_ACTION: Record<string, readonly string[]> = {
   create_procedural_terrain: ['material', 'path'],
   create_procedural_foliage: ['path'],
   set_landscape_material: ['landscapePath', 'materialPath'],
-  configure_landscape_material: ['landscapePath', 'materialPath'],
+  configure_landscape_material: ['landscapePath', 'landscapeActorPath', 'materialPath'],
+  configure_landscape_splines: ['landscapePath', 'landscapeActorPath'],
   create_landscape_layer_info: ['path', 'physicalMaterialPath'],
   create_landscape_grass_type: ['meshPath', 'path', 'staticMesh'],
   generate_lods: ['assetPath', 'landscapePath', 'path'],
   configure_landscape_lod: ['assetPath', 'landscapePath', 'path'],
   create_sky_sphere: ['path'],
+  configure_sky_light: ['cubemapPath'],
   create_fog_volume: ['path'],
   create_weather_system: ['particleSystemPath'],
   configure_rain_particles: ['particleSystemPath'],
@@ -280,15 +282,12 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
     case 'create_foliage_type': {
       const meshPath = argsTyped.meshPath || (argsRecord.staticMesh as string) || '';
       const defaultName = meshPath ? `${meshPath.split('/').pop()?.split('.')[0]}_Foliage_Type` : undefined;
+      const forwarded = { ...argsRecord };
+      delete forwarded.action;
       return cleanObject(await executeAutomationRequest(tools, 'add_foliage_type', {
+        ...forwarded,
         name: argsTyped.foliageType || argsTyped.name || defaultName || 'NewFoliageType',
-        meshPath,
-        density: argsTyped.density,
-        minScale: argsTyped.minScale,
-        maxScale: argsTyped.maxScale,
-        alignToNormal: argsTyped.alignToNormal,
-        randomYaw: argsTyped.randomYaw,
-        cullDistance: argsTyped.cullDistance
+        meshPath
       }) as Record<string, unknown>);
     }
 

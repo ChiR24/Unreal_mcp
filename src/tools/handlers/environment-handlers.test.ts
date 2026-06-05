@@ -131,7 +131,9 @@ describe('handleEnvironmentTools path normalization', () => {
     await handleEnvironmentTools('create_foliage_type', {
       action: 'create_foliage_type',
       name: 'Phase28FoliageType',
+      foliageTypePath: 'Content/Foliage/Phase28FoliageType',
       meshPath: 'Engine/BasicShapes/Cone',
+      path: 'Content/Foliage',
       density: 12
     }, {} as never);
 
@@ -140,10 +142,17 @@ describe('handleEnvironmentTools path normalization', () => {
       'add_foliage_type',
       expect.objectContaining({
         name: 'Phase28FoliageType',
+        foliageTypePath: '/Game/Foliage/Phase28FoliageType',
         meshPath: '/Engine/BasicShapes/Cone',
+        path: '/Game/Foliage',
         density: 12
       })
     );
+  });
+
+  it('exposes water steepness and sky cubemap path on the build_environment schema', () => {
+    expect(getBuildEnvironmentProperties()).toHaveProperty('cubemapPath');
+    expect(getBuildEnvironmentProperties()).toHaveProperty('steepness');
   });
 
   it('preserves foliageTypePath for targeted remove_foliage_instances', async () => {
@@ -165,6 +174,29 @@ describe('handleEnvironmentTools path normalization', () => {
 
   it('exposes removeAll for explicit all-foliage removal', () => {
     expect(getBuildEnvironmentProperties()).toHaveProperty('removeAll');
+  });
+
+  it.each([
+    ['import_heightmap', 'landscapeActorPath', 'Content/MCPTest/Landscape.Landscape', '/Game/MCPTest/Landscape.Landscape'],
+    ['export_heightmap', 'landscapeActorPath', 'Content/MCPTest/Landscape.Landscape', '/Game/MCPTest/Landscape.Landscape'],
+    ['configure_landscape_material', 'landscapeActorPath', 'Content/MCPTest/Landscape.Landscape', '/Game/MCPTest/Landscape.Landscape'],
+    ['configure_landscape_splines', 'landscapeActorPath', 'Content/MCPTest/Landscape.Landscape', '/Game/MCPTest/Landscape.Landscape'],
+    ['configure_sky_light', 'cubemapPath', 'Content/HDRI/T_SkyCubemap', '/Game/HDRI/T_SkyCubemap']
+  ])('normalizes Phase 28 alias path field %s.%s before dispatch', async (action, fieldName, rawPath, normalizedPath) => {
+    await handleEnvironmentTools(action, {
+      action,
+      [fieldName]: rawPath
+    }, {} as never);
+
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      'build_environment',
+      expect.objectContaining({
+        action,
+        [fieldName]: normalizedPath
+      }),
+      'Automation bridge not available for environment building operations'
+    );
   });
 
   it.each([

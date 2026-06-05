@@ -1993,11 +1993,11 @@ static bool McpConfigureWaterWavesOnActor(AActor *WaterActor, const TSharedPtr<F
         McpApplyNumberProperty(Generator, {TEXT("MaxWavelength")}, Wavelength, TEXT("waveLength"), Resp, Applied);
     }
 
-    if (McpGetFirstNumberField(Payload, {TEXT("amplitude")}, NumberValue))
+    if (McpGetFirstNumberField(Payload, {TEXT("steepness")}, NumberValue))
     {
         const double Steepness = FMath::Clamp(NumberValue, 0.0, 1.0);
-        McpApplyNumberProperty(Generator, {TEXT("SmallWaveSteepness")}, Steepness, TEXT("amplitude"), Resp, Applied);
-        McpApplyNumberProperty(Generator, {TEXT("LargeWaveSteepness")}, Steepness, TEXT("amplitude"), Resp, Applied);
+        McpApplyNumberProperty(Generator, {TEXT("SmallWaveSteepness")}, Steepness, TEXT("steepness"), Resp, Applied);
+        McpApplyNumberProperty(Generator, {TEXT("LargeWaveSteepness")}, Steepness, TEXT("steepness"), Resp, Applied);
     }
 
     const TSharedPtr<FJsonObject> *DirectionObj = nullptr;

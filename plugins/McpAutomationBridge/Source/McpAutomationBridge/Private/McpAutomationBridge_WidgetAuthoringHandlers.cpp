@@ -970,19 +970,28 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBlueprint);
         const bool bCompiled = McpSafeCompileBlueprint(WidgetBlueprint);
         const bool bSaved = McpSafeAssetSave(WidgetBlueprint);
+        const bool bPostCreateSucceeded = bCompiled && bSaved;
 
         // Return the full object path (Package.ObjectName format) for proper loading
         FString ObjectPath = WidgetBlueprint->GetPathName();
 
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Created widget blueprint: %s"), *Name));
+        ResultJson->SetBoolField(TEXT("success"), bPostCreateSucceeded);
+        ResultJson->SetStringField(TEXT("message"), bPostCreateSucceeded
+            ? FString::Printf(TEXT("Created widget blueprint: %s"), *Name)
+            : FString::Printf(TEXT("Widget blueprint created but post-create steps failed: %s"), *Name));
         ResultJson->SetStringField(TEXT("widgetPath"), ObjectPath);
         ResultJson->SetBoolField(TEXT("compileSucceeded"), bCompiled);
         ResultJson->SetBoolField(TEXT("saveSucceeded"), bSaved);
 
         McpHandlerUtils::AddVerification(ResultJson, WidgetBlueprint);
-        SendAutomationResponse(RequestingSocket, RequestId, true,
-            FString::Printf(TEXT("Created widget blueprint: %s"), *Name), ResultJson);
+        SendAutomationResponse(RequestingSocket, RequestId, bPostCreateSucceeded,
+            bPostCreateSucceeded
+                ? FString::Printf(TEXT("Created widget blueprint: %s"), *Name)
+                : FString::Printf(TEXT("Widget blueprint created but post-create steps failed (compile=%s, save=%s)"),
+                    bCompiled ? TEXT("true") : TEXT("false"),
+                    bSaved ? TEXT("true") : TEXT("false")),
+            ResultJson,
+            bPostCreateSucceeded ? TEXT("") : TEXT("POST_CREATE_FAILED"));
         return true;
     }
 
