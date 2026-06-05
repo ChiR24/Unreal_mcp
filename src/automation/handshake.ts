@@ -18,7 +18,12 @@ export class HandshakeHandler extends EventEmitter {
         return new Promise((resolve, reject) => {
             let settled = false;
             let helloTimer: NodeJS.Timeout | undefined;
-            let timeout: NodeJS.Timeout;
+            const timeout = setTimeout(() => {
+                if (!settled) {
+                    this.log.warn('Automation bridge client handshake timed out');
+                    rejectHandshake(new Error('Handshake timeout'), 4002, 'Handshake timeout');
+                }
+            }, timeoutMs);
 
             const cleanup = () => {
                 clearTimeout(timeout);
@@ -47,13 +52,6 @@ export class HandshakeHandler extends EventEmitter {
                 cleanup();
                 resolve(metadata);
             };
-
-            timeout = setTimeout(() => {
-                if (!settled) {
-                    this.log.warn('Automation bridge client handshake timed out');
-                    rejectHandshake(new Error('Handshake timeout'), 4002, 'Handshake timeout');
-                }
-            }, timeoutMs);
 
             const onMessage = (data: Buffer | string) => {
                 let parsed: AutomationBridgeMessage;

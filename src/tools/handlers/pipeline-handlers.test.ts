@@ -78,10 +78,10 @@ describe('handlePipelineTools run_ubt validation', () => {
       await fs.writeFile(dotnetPath, [
         '#!/usr/bin/env node',
         "const fs = require('node:fs');",
-        "fs.writeFileSync(process.env.DOTNET_CAPTURE_PATH, JSON.stringify({",
-        "  argv: process.argv.slice(2),",
-        "  dotnetRoot: process.env.DOTNET_ROOT,",
-        "  path: process.env.PATH",
+        'fs.writeFileSync(process.env.DOTNET_CAPTURE_PATH, JSON.stringify({',
+        '  argv: process.argv.slice(2),',
+        '  dotnetRoot: process.env.DOTNET_ROOT,',
+        '  path: process.env.PATH',
         '}));'
       ].join('\n'));
       await fs.chmod(dotnetPath, 0o755);
