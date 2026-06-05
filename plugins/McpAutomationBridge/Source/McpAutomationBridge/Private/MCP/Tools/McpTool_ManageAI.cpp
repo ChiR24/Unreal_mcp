@@ -43,6 +43,7 @@ public:
 				TEXT("Name"),
 				TEXT("String")
             }, TEXT("Blackboard key data type."))
+            .String(TEXT("baseObjectClass"), TEXT("Base object class for Object blackboard keys."))
             .Bool(TEXT("isInstanceSynced"), TEXT("Sync key across instances."))
             .StringEnum(TEXT("compositeType"), {
 				TEXT("Selector"),

@@ -843,7 +843,8 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
 
     // Get full landscape extent first
     int32 FullMinX, FullMinY, FullMaxX, FullMaxY;
-    if (!LandscapeInfo->GetLandscapeExtent(FullMinX, FullMinY, FullMaxX, FullMaxY)) {
+    if (!LandscapeInfo->GetLandscapeExtent(FullMinX, FullMinY, FullMaxX, FullMaxY) &&
+        !McpLandscapeMetadataTags::GetLandscapeMetadataExtent(Landscape, FullMinX, FullMinY, FullMaxX, FullMaxY)) {
       Subsystem->SendAutomationError(RequestingSocket, RequestId,
                                      TEXT("Failed to get landscape extent"),
                                      TEXT("INVALID_LANDSCAPE"));
@@ -861,6 +862,15 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
     MinY = FMath::Clamp(MinY, FullMinY, FullMaxY);
     MaxX = FMath::Clamp(MaxX, FullMinX, FullMaxX);
     MaxY = FMath::Clamp(MaxY, FullMinY, FullMaxY);
+
+    if (MinX > MaxX || MinY > MaxY) {
+      Subsystem->SendAutomationError(
+          RequestingSocket, RequestId,
+          FString::Printf(TEXT("Invalid heightmap region: min (%d, %d) must not exceed max (%d, %d)"),
+                          MinX, MinY, MaxX, MaxY),
+          TEXT("INVALID_REGION"));
+      return;
+    }
 
     const int32 SizeX = (MaxX - MinX + 1);
     const int32 SizeY = (MaxY - MinY + 1);

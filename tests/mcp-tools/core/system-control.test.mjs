@@ -110,6 +110,8 @@ const testCases = [
   { scenario: 'INFO: get_project_settings', toolName: 'system_control', arguments: { action: 'get_project_settings', section: '/Script/Engine.Engine' }, expected: 'success' },
   // === ACTION ===
   { scenario: 'ACTION: validate_assets', toolName: 'system_control', arguments: { action: 'validate_assets', paths: [VALIDATION_MATERIAL] }, expected: 'success' },
+  { scenario: 'ACTION: validate_assets assetPath', toolName: 'system_control', arguments: { action: 'validate_assets', assetPath: VALIDATION_MATERIAL }, expected: 'success' },
+  { scenario: 'ACTION: validate_assets path recursive', toolName: 'system_control', arguments: { action: 'validate_assets', path: TEST_FOLDER, recursive: false }, expected: 'success' },
   // === CONFIG ===
   { scenario: 'CONFIG: set_project_setting', toolName: 'system_control', arguments: { action: 'set_project_setting', section: PROJECT_SETTING_SECTION, key: PROJECT_SETTING_KEY, value: '1' }, expected: 'success' },
   { scenario: 'ACTION: execute_python', toolName: 'system_control', arguments: { action: 'execute_python', code: 'print("system-control-ok")' }, expected: 'success' },
@@ -134,12 +136,16 @@ const testCases = [
 
   const ts = Date.now();
   const TEST_FOLDER = `/Game/MCPTest/UtilityAssets_${ts}`;
+  const MERGE_PARENT_ACTOR = `ParentActor_${ts}`;
+  const MERGE_CHILD_ACTOR = `ChildActor_${ts}`;
   const MERGED_ACTOR_ASSET = `${TEST_FOLDER}/SM_PerformanceMerged_${ts}`;
   const MERGED_ACTOR_PACKAGE_ASSET = `${TEST_FOLDER}/SM_PerformanceMergedPackage_${ts}`;
 
   testCases.push(
     // === SETUP ===
     { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
+    { scenario: 'Setup: spawn merge parent actor', toolName: 'control_actor', arguments: { action: 'spawn_actor', classPath: '/Script/Engine.StaticMeshActor', meshPath: '/Engine/BasicShapes/Cube.Cube', actorName: MERGE_PARENT_ACTOR, location: { x: 0, y: 300, z: 120 } }, expected: 'success|already exists' },
+    { scenario: 'Setup: spawn merge child actor', toolName: 'control_actor', arguments: { action: 'spawn_actor', classPath: '/Script/Engine.StaticMeshActor', meshPath: '/Engine/BasicShapes/Cube.Cube', actorName: MERGE_CHILD_ACTOR, location: { x: 160, y: 300, z: 120 } }, expected: 'success|already exists' },
 
     // === ACTION ===
     { scenario: 'ACTION: start_profiling', toolName: 'system_control', arguments: {"action": "start_profiling", "type": "CPU", "duration": 1}, expected: 'success' },
@@ -163,8 +169,8 @@ const testCases = [
     // === ACTION ===
     { scenario: 'ACTION: apply_baseline_settings', toolName: 'system_control', arguments: {"action": "apply_baseline_settings"}, expected: 'success' },
     { scenario: 'ACTION: optimize_draw_calls', toolName: 'system_control', arguments: {"action": "optimize_draw_calls", "enableInstancing": false, "enableBatching": true}, expected: 'success' },
-    { scenario: 'ACTION: merge_actors', toolName: 'system_control', arguments: {"action": "merge_actors", "actors": ["ParentActor", "ChildActor"], "replaceSourceActors": false, "mergeActors": true, "outputPath": MERGED_ACTOR_ASSET}, expected: 'success' },
-    { scenario: 'ACTION: merge_actors via packageName', toolName: 'system_control', arguments: {"action": "merge_actors", "actors": ["ParentActor", "ChildActor"], "replaceSourceActors": false, "packageName": MERGED_ACTOR_PACKAGE_ASSET}, expected: 'success' },
+    { scenario: 'ACTION: merge_actors', toolName: 'system_control', arguments: {"action": "merge_actors", "actors": [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], "replaceSourceActors": false, "mergeActors": true, "outputPath": MERGED_ACTOR_ASSET}, expected: 'success' },
+    { scenario: 'ACTION: merge_actors via packageName', toolName: 'system_control', arguments: {"action": "merge_actors", "actors": [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], "replaceSourceActors": false, "packageName": MERGED_ACTOR_PACKAGE_ASSET}, expected: 'success' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_occlusion_culling', toolName: 'system_control', arguments: {"action": "configure_occlusion_culling"}, expected: 'success' },
     // === ACTION ===
@@ -176,6 +182,7 @@ const testCases = [
     // === CLEANUP ===
     { scenario: 'Cleanup: delete merged mesh asset', toolName: 'manage_asset', arguments: { action: 'delete', path: MERGED_ACTOR_ASSET, force: true }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete packageName merged mesh asset', toolName: 'manage_asset', arguments: { action: 'delete', path: MERGED_ACTOR_PACKAGE_ASSET, force: true }, expected: 'success|not found' },
+    { scenario: 'Cleanup: delete merge actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR] }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   );
 }

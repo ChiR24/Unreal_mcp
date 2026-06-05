@@ -29,6 +29,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpHandlerUtils.h"
+#include "ProfilingDebugging/TraceAuxiliary.h"
 
 // -----------------------------------------------------------------------------
 // Engine Includes
@@ -94,6 +95,29 @@ bool UMcpAutomationBridgeSubsystem::HandleInsightsAction(
                     TEXT("INVALID_CHANNELS"));
                 return true;
             }
+        }
+
+        const FTraceAuxiliary::ETraceSystemStatus TraceStatus = FTraceAuxiliary::GetTraceSystemStatus();
+        const bool bTraceAlreadyActive = FTraceAuxiliary::IsConnected() ||
+            TraceStatus == FTraceAuxiliary::ETraceSystemStatus::TracingToServer ||
+            TraceStatus == FTraceAuxiliary::ETraceSystemStatus::TracingToFile ||
+            TraceStatus == FTraceAuxiliary::ETraceSystemStatus::TracingToCustomRelay;
+        if (bTraceAlreadyActive)
+        {
+            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+            Result->SetStringField(TEXT("action"), TEXT("manage_insights"));
+            Result->SetStringField(TEXT("subAction"), TEXT("start_session"));
+            Result->SetStringField(TEXT("traceAction"), TEXT("start_trace"));
+            Result->SetStringField(TEXT("status"), TEXT("already_started"));
+            Result->SetStringField(TEXT("destination"), FTraceAuxiliary::GetTraceDestinationString());
+            if (bHasChannels)
+            {
+                Result->SetStringField(TEXT("channels"), Channels);
+            }
+
+            SendAutomationResponse(RequestingSocket, RequestId, true,
+                TEXT("Trace session already active."), Result);
+            return true;
         }
 
         // Guard GEngine before Exec call

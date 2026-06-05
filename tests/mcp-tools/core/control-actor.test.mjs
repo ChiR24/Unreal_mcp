@@ -20,6 +20,7 @@ const BP_ACTOR = `MCP_BlueprintActor_${ts}`;
 const TAG = `MCPControlActorTag_${ts}`;
 const DELETE_TAG = `MCPDeleteTag_${ts}`;
 const COMPONENT_NAME = `MCPPointLight_${ts}`;
+const ENGINE_BASIC_MATERIAL = '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial';
 
 const cubeSpawn = (scenario, actorName, location) => ({
   scenario,
@@ -70,6 +71,9 @@ const testCases = [
   { scenario: 'CONFIG: set_visibility', toolName: 'control_actor', arguments: actorArgs('set_visibility', { visible: true }), expected: 'success' },
   { scenario: 'CONFIG: set_actor_visible', toolName: 'control_actor', arguments: actorArgs('set_actor_visible', { visible: true }), expected: 'success' },
   { scenario: 'ACTION: apply_force', toolName: 'control_actor', arguments: actorArgs('apply_force', { force: { x: 0, y: 0, z: 2500 } }), expected: 'success' },
+  { scenario: 'CONFIG: set_material', toolName: 'control_actor', arguments: actorArgs('set_material', { materialPath: ENGINE_BASIC_MATERIAL, materialSlot: 0 }), expected: 'success' },
+  { scenario: 'CONFIG: set_actor_material', toolName: 'control_actor', arguments: actorArgs('set_actor_material', { materialPath: ENGINE_BASIC_MATERIAL, materialIndex: 0 }), expected: 'success' },
+  { scenario: 'CONFIG: apply_material all components', toolName: 'control_actor', arguments: actorArgs('apply_material', { materialPath: ENGINE_BASIC_MATERIAL, materialSlot: 0, allComponents: true }), expected: 'success' },
 
   // === COMPONENTS ===
   { scenario: 'ADD: add_component', toolName: 'control_actor', arguments: actorArgs('add_component', { componentType: '/Script/Engine.PointLightComponent', componentName: COMPONENT_NAME, properties: { Intensity: 1250 } }), expected: 'success|already exists' },
