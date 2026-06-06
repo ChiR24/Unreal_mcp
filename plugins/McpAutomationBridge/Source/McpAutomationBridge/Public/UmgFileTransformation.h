@@ -7,6 +7,8 @@
 #include "UObject/Object.h"
 #include "UmgFileTransformation.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogUmgMcp, Log, All);
+
 class UWidget;
 class FJsonObject;
 

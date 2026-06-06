@@ -1,7 +1,8 @@
 // Copyright (c) 2025-2026 Winyunq. All rights reserved.
 #include "UmgFileTransformation.h"
-#include "UmgMcp.h"
 #include "PropertyNameMappings.h"
+
+DEFINE_LOG_CATEGORY(LogUmgMcp);
 
 #include "Blueprint/UserWidget.h"
 #include "WidgetBlueprint.h"
@@ -11,6 +12,8 @@
 #include "Components/TextBlock.h"
 #include "JsonObjectConverter.h"
 #include "Serialization/JsonWriter.h"
+#include "Serialization/JsonSerializer.h"
+#include "Policies/PrettyJsonPrintPolicy.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "UObject/UnrealType.h"

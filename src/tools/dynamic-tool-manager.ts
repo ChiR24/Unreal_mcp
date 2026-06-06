@@ -391,6 +391,35 @@ class DynamicToolManager {
       this.initialize();
     }
   }
+
+  /**
+   * Dynamically register a new tool after initialization
+   */
+  registerDynamicTool(def: ToolDefinition): void {
+    const category = (def.category as ToolCategory) || 'utility';
+    if (!this.toolStates.has(def.name)) {
+      this.toolStates.set(def.name, {
+        name: def.name,
+        category,
+        enabled: true,
+        description: def.description
+      });
+
+      let catState = this.categoryStates.get(category);
+      if (!catState) {
+        catState = {
+          name: category,
+          enabled: true,
+          toolCount: 0,
+          enabledCount: 0
+        };
+        this.categoryStates.set(category, catState);
+      }
+      catState.toolCount++;
+      catState.enabledCount++;
+      log.info(`Dynamically registered tool: ${def.name}`);
+    }
+  }
 }
 
 // Global instance

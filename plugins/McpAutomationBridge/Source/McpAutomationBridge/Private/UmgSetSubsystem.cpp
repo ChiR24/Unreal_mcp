@@ -9,6 +9,7 @@
 #include "JsonObjectConverter.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "FileHelpers.h"

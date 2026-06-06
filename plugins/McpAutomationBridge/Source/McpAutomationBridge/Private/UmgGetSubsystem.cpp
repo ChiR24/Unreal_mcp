@@ -1,7 +1,10 @@
 // Copyright (c) 2025-2026 Winyunq. All rights reserved.
 #include "UmgGetSubsystem.h"
-#include "FileManage/UmgAttentionSubsystem.h"
+#include "UmgAttentionSubsystem.h"
 #include "Editor.h"
+#include "Serialization/JsonWriter.h"
+#include "Serialization/JsonSerializer.h"
+#include "Policies/CondensedJsonPrintPolicy.h"
 
 // --- Necessary Includes ---
 #include "WidgetBlueprint.h"
