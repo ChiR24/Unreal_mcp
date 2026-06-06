@@ -32,6 +32,7 @@ public:
 			.Bool(TEXT("recursiveClasses"), TEXT(""))
 			.Number(TEXT("limit"), TEXT(""))
 			.Number(TEXT("offset"), TEXT(""))
+			.Number(TEXT("timeoutMs"), TEXT("Client request timeout in milliseconds."))
 			.String(TEXT("sourcePath"), TEXT("Source path for import/move/copy."))
 			.String(TEXT("destinationPath"), TEXT("Destination path for move/copy."))
 			.Array(TEXT("assetPaths"), TEXT(""))

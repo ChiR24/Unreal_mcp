@@ -130,23 +130,30 @@ public:
         const FString Message = FString(V);
         const FString CategoryString = Category.ToString();
 
-        // Build escaped JSON payload
-        const FString PayloadJson = FString::Printf(
-            TEXT("{\"event\":\"log\",\"category\":\"%s\",\"verbosity\":\"%s\",\"message\":\"%s\"}"),
-            *CategoryString,
-            *VerbosityString,
-            *Message.ReplaceCharWithEscapedChar()
-        );
+        TSharedRef<FJsonObject> Payload = MakeShared<FJsonObject>();
+        Payload->SetStringField(TEXT("category"), CategoryString);
+        Payload->SetStringField(TEXT("verbosity"), VerbosityString);
+        Payload->SetStringField(TEXT("message"), Message);
+
+        TSharedRef<FJsonObject> Event = MakeShared<FJsonObject>();
+        Event->SetStringField(TEXT("type"), TEXT("automation_event"));
+        Event->SetStringField(TEXT("event"), TEXT("log"));
+        Event->SetObjectField(TEXT("payload"), Payload);
+
+        FString SerializedEvent;
+        const TSharedRef<TJsonWriter<>> Writer =
+            TJsonWriterFactory<>::Create(&SerializedEvent);
+        FJsonSerializer::Serialize(Event, Writer);
 
         // Use weak pointer to prevent crash if subsystem destroyed during async
         TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(Subsystem);
 
         // Dispatch to game thread for safe socket access
-        AsyncTask(ENamedThreads::GameThread, [WeakSubsystem, PayloadJson]()
+        AsyncTask(ENamedThreads::GameThread, [WeakSubsystem, SerializedEvent]()
         {
             if (UMcpAutomationBridgeSubsystem* StrongSubsystem = WeakSubsystem.Get())
             {
-                StrongSubsystem->SendRawMessage(PayloadJson);
+                StrongSubsystem->SendRawMessage(SerializedEvent);
             }
         });
     }

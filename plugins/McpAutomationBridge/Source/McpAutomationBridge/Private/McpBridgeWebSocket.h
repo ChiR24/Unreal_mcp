@@ -87,6 +87,7 @@ public:
 private:
     uint32 RunClient();
     uint32 RunServer();
+    void HandleAcceptedClient(FSocket* ClientSocket);
     void TearDown(const FString& Reason, bool bWasClean, int32 StatusCode);
     bool PerformHandshake();
     bool PerformServerHandshake();
@@ -101,13 +102,13 @@ private:
     bool ReceiveExact(uint8* Buffer, SIZE_T Length);
     bool SendRaw(const uint8* Data, int32 Length, int32& OutBytesSent);
     bool RecvRaw(uint8* Data, int32 Length, int32& OutBytesRead);
-#if WITH_SSL
     bool InitializeTlsContext(bool bServer);
     bool EstablishTls(bool bServer);
-#endif
     void ShutdownTls();
     void CloseNativeSocket();
     FSocket* DetachSocket();
+    void CloseListenSocket();
+    void DestroyListenSocket();
 
     FString Url;
     FSocket* Socket;
@@ -128,6 +129,7 @@ private:
     FSocket* ListenSocket;
     FRunnableThread* Thread;
     FEvent* StopEvent;
+    FCriticalSection ListenSocketMutex;
     FCriticalSection ClientSocketsMutex;
     TArray<TSharedPtr<FMcpBridgeWebSocket>> ClientSockets;
 
@@ -139,6 +141,7 @@ private:
     bool bConnected;
     bool bListening;
     bool bStopping;
+    TAtomic<bool> bCloseStarted;
 
     // Handshake data
     FString HostHeader;

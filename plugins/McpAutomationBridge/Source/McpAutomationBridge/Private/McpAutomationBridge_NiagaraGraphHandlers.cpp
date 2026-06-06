@@ -38,6 +38,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpHandlerUtils.h"
+#include "McpAutomationBridge_NiagaraGraphHandlersPrivate.h"
 
 // -----------------------------------------------------------------------------
 // Engine Includes
@@ -54,6 +55,7 @@
 #include "NiagaraNodeFunctionCall.h"
 #include "NiagaraNodeInput.h"
 #include "NiagaraNodeOutput.h"
+#include "ViewModels/Stack/NiagaraStackGraphUtilities.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphSchema.h"
 #endif
@@ -103,8 +105,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
 
     // Extract subaction and optional emitter name
     const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
-    FString EmitterName;
-    Payload->TryGetStringField(TEXT("emitterName"), EmitterName);
+    FString EmitterName; Payload->TryGetStringField(TEXT("emitterName"), EmitterName);
 
     // -------------------------------------------------------------------------
     // Resolve target graph (System or Emitter)
@@ -212,9 +213,35 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
             return true;
         }
 
-        UNiagaraNodeFunctionCall* FuncNode = NewObject<UNiagaraNodeFunctionCall>(TargetGraph);
-        FuncNode->FunctionScript = ModuleScript;
-        TargetGraph->AddNode(FuncNode, true, false);
+        UNiagaraNodeOutput* OutputNode = nullptr;
+        for (UEdGraphNode* Node : TargetGraph->Nodes)
+        {
+            UNiagaraNodeOutput* Candidate = Cast<UNiagaraNodeOutput>(Node);
+            if (Candidate && Candidate->GetUsage() == TargetScript->GetUsage())
+            {
+                OutputNode = Candidate;
+                break;
+            }
+        }
+        if (!OutputNode)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Could not resolve the target Niagara stack output."),
+                TEXT("GRAPH_NOT_FOUND"));
+            return true;
+        }
+
+        UNiagaraNodeFunctionCall* FuncNode =
+            FNiagaraStackGraphUtilities::AddScriptModuleToStack(
+                ModuleScript, *OutputNode);
+        if (!FuncNode || !FuncNode->NodeGuid.IsValid())
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Failed to add module to the Niagara stack."),
+                TEXT("CREATE_FAILED"));
+            return true;
+        }
+        System->MarkPackageDirty();
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         McpHandlerUtils::AddVerification(Result, System);
@@ -231,165 +258,8 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
     // -------------------------------------------------------------------------
     if (SubAction == TEXT("connect_pins"))
     {
-        FString FromNodeId, FromPinName;
-        FString ToNodeId, ToPinName;
-        const bool bAutoConnect = GetJsonBoolField(Payload, TEXT("autoConnect"), false);
-
-        if (!Payload->TryGetStringField(TEXT("fromNode"), FromNodeId) ||
-            !Payload->TryGetStringField(TEXT("fromPin"), FromPinName) ||
-            !Payload->TryGetStringField(TEXT("toNode"), ToNodeId) ||
-            !Payload->TryGetStringField(TEXT("toPin"), ToPinName))
-        {
-            if (bAutoConnect)
-            {
-                TargetGraph->Modify();
-                for (UEdGraphNode* FromCandidate : TargetGraph->Nodes)
-                {
-                    if (!FromCandidate)
-                    {
-                        continue;
-                    }
-
-                    for (UEdGraphPin* FromCandidatePin : FromCandidate->Pins)
-                    {
-                        if (!FromCandidatePin || FromCandidatePin->Direction != EGPD_Output)
-                        {
-                            continue;
-                        }
-
-                        for (UEdGraphNode* ToCandidate : TargetGraph->Nodes)
-                        {
-                            if (!ToCandidate || ToCandidate == FromCandidate)
-                            {
-                                continue;
-                            }
-
-                            for (UEdGraphPin* ToCandidatePin : ToCandidate->Pins)
-                            {
-                                if (!ToCandidatePin || ToCandidatePin->Direction != EGPD_Input)
-                                {
-                                    continue;
-                                }
-
-                                if (TargetGraph->GetSchema()->TryCreateConnection(FromCandidatePin, ToCandidatePin))
-                                {
-                                    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-                                    McpHandlerUtils::AddVerification(Result, System);
-                                    Result->SetStringField(TEXT("fromNode"), FromCandidate->NodeGuid.ToString());
-                                    Result->SetStringField(TEXT("fromPin"), FromCandidatePin->PinName.ToString());
-                                    Result->SetStringField(TEXT("toNode"), ToCandidate->NodeGuid.ToString());
-                                    Result->SetStringField(TEXT("toPin"), ToCandidatePin->PinName.ToString());
-                                    Result->SetBoolField(TEXT("connected"), true);
-                                    Result->SetBoolField(TEXT("autoConnected"), true);
-
-                                    SendAutomationResponse(RequestingSocket, RequestId, true,
-                                        TEXT("Pins connected successfully."), Result);
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                SendAutomationError(RequestingSocket, RequestId,
-                    TEXT("Could not find a compatible Niagara graph pin pair to auto-connect."),
-                    TEXT("PIN_NOT_FOUND"));
-                return true;
-            }
-
-            SendAutomationError(RequestingSocket, RequestId,
-                TEXT("connect_pins requires fromNode, fromPin, toNode, toPin"),
-                TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        // Find nodes by ID, name, or title
-        UEdGraphNode* FromNode = nullptr;
-        UEdGraphNode* ToNode = nullptr;
-
-        for (UEdGraphNode* Node : TargetGraph->Nodes)
-        {
-            const FString NodeId = Node->NodeGuid.ToString();
-            const FString NodeName = Node->GetName();
-            const FString NodeTitle = Node->GetNodeTitle(ENodeTitleType::ListView).ToString();
-
-            if (NodeId == FromNodeId || NodeName == FromNodeId || NodeTitle == FromNodeId)
-            {
-                FromNode = Node;
-            }
-            if (NodeId == ToNodeId || NodeName == ToNodeId || NodeTitle == ToNodeId)
-            {
-                ToNode = Node;
-            }
-        }
-
-        if (!FromNode || !ToNode)
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Could not find source or destination node."), TEXT("NODE_NOT_FOUND"));
-            return true;
-        }
-
-        // Find pins (try exact match first, then lenient search)
-        UEdGraphPin* FromPin = FromNode->FindPin(FName(*FromPinName));
-        UEdGraphPin* ToPin = ToNode->FindPin(FName(*ToPinName));
-
-        // Lenient pin search
-        if (!FromPin)
-        {
-            for (UEdGraphPin* Pin : FromNode->Pins)
-            {
-                if (Pin->PinName.ToString() == FromPinName ||
-                    Pin->GetDisplayName().ToString() == FromPinName)
-                {
-                    FromPin = Pin;
-                    break;
-                }
-            }
-        }
-
-        if (!ToPin)
-        {
-            for (UEdGraphPin* Pin : ToNode->Pins)
-            {
-                if (Pin->PinName.ToString() == ToPinName ||
-                    Pin->GetDisplayName().ToString() == ToPinName)
-                {
-                    ToPin = Pin;
-                    break;
-                }
-            }
-        }
-
-        if (!FromPin || !ToPin)
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Could not find source or destination pin."), TEXT("PIN_NOT_FOUND"));
-            return true;
-        }
-
-        // Attempt connection
-        const bool bConnected = TargetGraph->GetSchema()->TryCreateConnection(FromPin, ToPin);
-        if (bConnected)
-        {
-            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-            McpHandlerUtils::AddVerification(Result, System);
-            Result->SetStringField(TEXT("fromNode"), FromNodeId);
-            Result->SetStringField(TEXT("fromPin"), FromPinName);
-            Result->SetStringField(TEXT("toNode"), ToNodeId);
-            Result->SetStringField(TEXT("toPin"), ToPinName);
-            Result->SetBoolField(TEXT("connected"), true);
-
-            SendAutomationResponse(RequestingSocket, RequestId, true,
-                TEXT("Pins connected successfully."), Result);
-        }
-        else
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Failed to connect pins (schema blocked connection)."),
-                TEXT("CONNECTION_FAILED"));
-        }
-        return true;
+        return McpNiagaraGraphHandlers::HandleConnectPins(
+            this, RequestId, Payload, RequestingSocket, System, TargetGraph);
     }
 
     // -------------------------------------------------------------------------
@@ -412,7 +282,16 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
 
         if (TargetNode)
         {
-            TargetGraph->RemoveNode(TargetNode);
+            FString RemovalError;
+            if (!McpNiagaraGraphHandlers::RemoveNiagaraGraphNodeSafely(
+                    TargetGraph, TargetNode, RemovalError))
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    RemovalError,
+                    TEXT("REMOVE_FAILED"));
+                return true;
+            }
+            System->MarkPackageDirty();
 
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
             McpHandlerUtils::AddVerification(Result, System);

@@ -35,21 +35,15 @@ public:
 			.Bool(TEXT("updateNormals"), TEXT(""))
 			.Bool(TEXT("skipFlush"), TEXT("Skip editor flush/update when supported."))
 			.Object(TEXT("location"), TEXT("3D location (x, y, z)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.Object(TEXT("rotation"), TEXT("3D rotation (pitch, yaw, roll)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("pitch")).Number(TEXT("yaw")).Number(TEXT("roll"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("pitch")).Number(TEXT("yaw")).Number(TEXT("roll")); })
 			.Number(TEXT("sizeX"), TEXT(""))
 			.Number(TEXT("sizeY"), TEXT(""))
 			.Number(TEXT("sectionSize"), TEXT(""))
 			.Number(TEXT("sectionsPerComponent"), TEXT(""))
 			.Object(TEXT("componentCount"), TEXT("2D vector."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")); })
 			.String(TEXT("materialPath"), TEXT("Material asset path."))
 			.String(TEXT("tool"), TEXT(""))
 			.Number(TEXT("radius"), TEXT(""))
@@ -74,9 +68,7 @@ public:
 			.ArrayOfObjects(TEXT("locations"), TEXT(""))
 			.ArrayOfObjects(TEXT("transforms"), TEXT(""))
 			.Object(TEXT("position"), TEXT("3D location (x, y, z)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.FreeformObject(TEXT("bounds"), TEXT(""))
 			.String(TEXT("volumeName"), TEXT(""))
 			.Number(TEXT("seed"), TEXT(""))
@@ -115,9 +107,7 @@ public:
 			.Number(TEXT("steepness"), TEXT("Water wave steepness, clamped from 0 to 1."))
 			.Number(TEXT("speed"), TEXT("Speed value."))
 			.Object(TEXT("direction"), TEXT("Direction or rotation value."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("pitch")).Number(TEXT("yaw")).Number(TEXT("roll"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("pitch")).Number(TEXT("yaw")).Number(TEXT("roll")); })
 			.Number(TEXT("hour"), TEXT(""))
 			.Number(TEXT("intensity"), TEXT(""))
 			.Number(TEXT("skyLightIntensity"), TEXT("Sky light intensity for time-of-day systems."))
@@ -180,38 +170,24 @@ public:
 			.Bool(TEXT("copyActors"), TEXT("Copy actors into a created lighting level."))
 			.Bool(TEXT("useTemplate"), TEXT("Use a template when creating a level."))
 			.Object(TEXT("size"), TEXT("3D scale (x, y, z)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.String(TEXT("actorPath"), TEXT("Path to actor."))
 			.String(TEXT("splineName"), TEXT("Name of spline component."))
 			.String(TEXT("componentName"), TEXT("Name of the component."))
 			.String(TEXT("blueprintPath"), TEXT("Blueprint asset path."))
 			.Object(TEXT("scale"), TEXT("3D scale (x, y, z)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.Number(TEXT("pointIndex"), TEXT("Index of spline point to modify."))
 			.Object(TEXT("arriveTangent"), TEXT("Arrive tangent for spline point."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.Object(TEXT("leaveTangent"), TEXT("Leave tangent for spline point."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.Object(TEXT("tangent"), TEXT("Unified spline tangent."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.Object(TEXT("pointRotation"), TEXT("Rotation at spline point."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("pitch")).Number(TEXT("yaw")).Number(TEXT("roll"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("pitch")).Number(TEXT("yaw")).Number(TEXT("roll")); })
 			.Object(TEXT("pointScale"), TEXT("Scale at spline point."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.StringEnum(TEXT("coordinateSpace"), {
 				TEXT("Local"),
 				TEXT("World")
@@ -231,29 +207,17 @@ public:
 				TEXT("Z")
 			}, TEXT("Forward axis for spline mesh deformation."))
 			.Object(TEXT("startPos"), TEXT("Start position for spline mesh segment."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.Object(TEXT("startTangent"), TEXT("Start tangent for spline mesh segment."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.Object(TEXT("endPos"), TEXT("End position for spline mesh segment."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.Object(TEXT("endTangent"), TEXT("End tangent for spline mesh segment."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.Object(TEXT("startScale"), TEXT("X/Y scale at spline mesh start."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")); })
 			.Object(TEXT("endScale"), TEXT("X/Y scale at spline mesh end."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")); })
 			.Number(TEXT("startRoll"), TEXT("Roll angle at spline mesh start."))
 			.Number(TEXT("endRoll"), TEXT("Roll angle at spline mesh end."))
 			.Bool(TEXT("bSmoothInterpRollScale"), TEXT("Use smooth interpolation for roll/scale."))
@@ -262,9 +226,7 @@ public:
 			.Bool(TEXT("bAlignToSpline"), TEXT("Align scattered meshes to spline direction."))
 			.Bool(TEXT("bRandomizeRotation"), TEXT("Apply random rotation to scattered meshes."))
 			.Object(TEXT("rotationRandomRange"), TEXT("Random rotation range (degrees)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("pitch")).Number(TEXT("yaw")).Number(TEXT("roll"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("pitch")).Number(TEXT("yaw")).Number(TEXT("roll")); })
 			.Bool(TEXT("bRandomizeScale"), TEXT("Apply random scale to scattered meshes."))
 			.Number(TEXT("scaleMin"), TEXT("Minimum random scale multiplier."))
 			.Number(TEXT("scaleMax"), TEXT("Maximum random scale multiplier."))

@@ -15,7 +15,7 @@ const SYSTEM_NAME = `Testniagara_system_${ts}`;
 const EMITTER_ASSET_NAME = `Testniagara_emitter_${ts}`;
 const SYSTEM_PATH = `${TEST_FOLDER}/${SYSTEM_NAME}.${SYSTEM_NAME}`;
 const EMITTER_PATH = `${TEST_FOLDER}/${EMITTER_ASSET_NAME}.${EMITTER_ASSET_NAME}`;
-const DEFAULT_EMITTER = 'DefaultEmitter';
+const DEFAULT_EMITTER = '${captured:niagaraEmitterName}';
 const USER_PARAM = `MCPUserParam_${ts}`;
 const BOUND_PARAM = `MCPBoundParam_${ts}`;
 const EVENT_NAME = `MCPEvent_${ts}`;
@@ -31,6 +31,7 @@ const testCases = [
   // === CREATE ===
   { scenario: 'CREATE: create_niagara_system', toolName: 'manage_effect', arguments: { action: 'create_niagara_system', name: SYSTEM_NAME, path: TEST_FOLDER, savePath: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_niagara_emitter', toolName: 'manage_effect', arguments: { action: 'create_niagara_emitter', name: EMITTER_ASSET_NAME, path: TEST_FOLDER, savePath: TEST_FOLDER, emitterName: EMITTER_ASSET_NAME }, expected: 'success|already exists' },
+  { scenario: 'ADD: add_emitter_to_system', toolName: 'manage_effect', arguments: { action: 'add_emitter_to_system', systemPath: SYSTEM_PATH, emitterPath: EMITTER_PATH, save: false }, expected: 'success|already exists', captureResult: { key: 'niagaraEmitterName', fromField: 'result.emitterName' } },
 
   // === ACTION ===
   { scenario: 'ACTION: particle with preset and debug options', toolName: 'manage_effect', arguments: { action: 'particle', preset: 'Default', location: { x: 0, y: 0, z: 100 }, shapeType: 'sphere', radius: 30, color: [255, 64, 32, 255], duration: 0.1, timeoutMs: 30000 }, expected: 'success', assertions: [{ path: 'structuredContent.result.shapeType', equals: 'sphere', label: 'particle preset path drew requested debug shape' }] },
@@ -52,9 +53,9 @@ const testCases = [
   { scenario: 'PLAYBACK: advance_simulation', toolName: 'manage_effect', arguments: { action: 'advance_simulation', actorName: EFFECT_ACTOR, deltaTime: 0.016, steps: 2 }, expected: 'success', assertions: [{ path: 'structuredContent.result.steps', equals: 2, label: 'native simulation step count applied' }] },
 
   // === GRAPH ===
-  { scenario: 'ADD: add_niagara_module', toolName: 'manage_effect', arguments: { action: 'add_niagara_module', assetPath: SYSTEM_PATH, systemPath: SYSTEM_PATH, modulePath: '/Niagara/Modules/Emitter/EmitterState.EmitterState', scriptType: 'Spawn', name: 'Testniagara_module' }, expected: 'success|already exists', captureResult: { key: 'niagaraModuleNodeId', fromField: 'result.nodeId' } },
-  { scenario: 'CONNECT: connect_niagara_pins', toolName: 'manage_effect', arguments: { action: 'connect_niagara_pins', assetPath: SYSTEM_PATH, autoConnect: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.connected', equals: true, label: 'real Niagara graph pins connected' }, { path: 'structuredContent.result.autoConnected', equals: true, label: 'native auto-connect path executed' }] },
-  { scenario: 'DELETE: remove_niagara_node', toolName: 'manage_effect', arguments: { action: 'remove_niagara_node', assetPath: SYSTEM_PATH, nodeId: '${captured:niagaraModuleNodeId}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.removed', equals: true, label: 'captured Niagara graph node removed' }] },
+  { scenario: 'ADD: add_niagara_module', toolName: 'manage_effect', arguments: { action: 'add_niagara_module', assetPath: SYSTEM_PATH, systemPath: SYSTEM_PATH, emitterName: DEFAULT_EMITTER, modulePath: '/Niagara/Modules/Emitter/EmitterState.EmitterState', scriptType: 'Update', name: 'Testniagara_module' }, expected: 'success|already exists', captureResult: { key: 'niagaraModuleNodeId', fromField: 'result.nodeId' } },
+  { scenario: 'CONNECT: connect_niagara_pins', toolName: 'manage_effect', arguments: { action: 'connect_niagara_pins', assetPath: SYSTEM_PATH, emitterName: DEFAULT_EMITTER, scriptType: 'Update', autoConnect: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.connected', equals: true, label: 'real Niagara graph pins connected' }, { path: 'structuredContent.result.autoConnected', equals: true, label: 'native auto-connect path executed' }] },
+  { scenario: 'DELETE: remove_niagara_node', toolName: 'manage_effect', arguments: { action: 'remove_niagara_node', assetPath: SYSTEM_PATH, emitterName: DEFAULT_EMITTER, scriptType: 'Update', nodeId: '${captured:niagaraModuleNodeId}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.removed', equals: true, label: 'captured Niagara graph node removed' }] },
 
   // === RUNTIME PARAMETER ===
   { scenario: 'CONFIG: set_niagara_parameter', toolName: 'manage_effect', arguments: { action: 'set_niagara_parameter', actorName: EFFECT_ACTOR, parameterName: 'MCPParameter', parameterType: 'Float', value: 1.25 }, expected: 'success', assertions: [{ path: 'structuredContent.result.applied', equals: true, label: 'runtime Niagara parameter value applied' }] },
@@ -63,7 +64,6 @@ const testCases = [
   { scenario: 'INFO: list_debug_shapes', toolName: 'manage_effect', arguments: { action: 'list_debug_shapes' }, expected: 'success' },
 
   // === NIAGARA AUTHORING ===
-  { scenario: 'ADD: add_emitter_to_system', toolName: 'manage_effect', arguments: { action: 'add_emitter_to_system', systemPath: SYSTEM_PATH, emitterPath: EMITTER_PATH, save: false }, expected: 'success|already exists' },
   { scenario: 'CONFIG: set_emitter_properties', toolName: 'manage_effect', arguments: { action: 'set_emitter_properties', systemPath: SYSTEM_PATH, emitterName: DEFAULT_EMITTER, emitterProperties: { enabled: true }, save: false }, expected: 'success' },
   { scenario: 'ADD: add_spawn_rate_module', toolName: 'manage_effect', arguments: { action: 'add_spawn_rate_module', systemPath: SYSTEM_PATH, emitter: DEFAULT_EMITTER, spawnRate: 123, save: false }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.spawnRate', equals: 123, label: 'spawnRate applied to native module' }] },
   { scenario: 'ADD: add_spawn_burst_module', toolName: 'manage_effect', arguments: { action: 'add_spawn_burst_module', systemPath: SYSTEM_PATH, emitterName: DEFAULT_EMITTER, burstCount: 7, burstTime: 0.25, save: false }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.burstCount', equals: 7, label: 'burstCount reached native module' }, { path: 'structuredContent.result.burstTime', equals: 0.25, label: 'burstTime reached native module' }] },

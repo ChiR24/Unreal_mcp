@@ -8,10 +8,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 
-const tsToolDefinitionsPath = path.join(repoRoot, 'src/tools/consolidated-tool-definitions.ts');
+const tsDefinitionsRoot = path.join(repoRoot, 'src/tools/definitions');
 const nativeMcpRoot = path.join(repoRoot, 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP');
 const nativeToolRegistryPath = path.join(nativeMcpRoot, 'McpToolRegistry.cpp');
-const nativeConsolidatedActionsPath = path.join(nativeMcpRoot, 'McpConsolidatedActionRouting.h');
 const nativeToolsRoot = path.join(nativeMcpRoot, 'Tools');
 
 function stringArrayFromEnumBody(enumBody, constants) {
@@ -35,22 +34,26 @@ function extractActionConstants(source) {
 }
 
 function extractTypeScriptTools() {
-  const source = fs.readFileSync(tsToolDefinitionsPath, 'utf8');
-  const constants = extractActionConstants(source);
+  const actionSource = fs.readFileSync(path.join(tsDefinitionsRoot, 'action-sets.ts'), 'utf8');
+  const constants = extractActionConstants(actionSource);
   const tools = [];
-  const toolStarts = [...source.matchAll(/\n\s*\{\s*\n\s*name:\s*'([^']+)'/g)];
+  const definitionFiles = fs.readdirSync(tsDefinitionsRoot)
+    .filter((entry) => entry.endsWith('.ts'))
+    .sort();
+  const toolFiles = definitionFiles.filter((entry) => entry.endsWith('-tool.ts'));
 
-  for (let index = 0; index < toolStarts.length; index += 1) {
-    const match = toolStarts[index];
-    const next = toolStarts[index + 1];
-    const blockEnd = next?.index ?? source.indexOf('\n];', match.index);
-    if (blockEnd < 0) {
-      throw new Error('Could not locate the end of consolidatedToolDefinitions');
-    }
-    const block = source.slice(match.index, blockEnd);
-    const actionEnum = block.match(/action:\s*\{[\s\S]*?enum:\s*\[([\s\S]*?)\]\s*,\s*description:/);
+  for (const fileName of toolFiles) {
+    const source = fs.readFileSync(path.join(tsDefinitionsRoot, fileName), 'utf8');
+    const name = source.match(/name:\s*'([^']+)'/)?.[1];
+    if (!name) continue;
+    const slug = fileName.replace(/-tool\.ts$/, '');
+    const relatedSource = definitionFiles
+      .filter((entry) => entry === fileName || (entry.startsWith(`${slug}-`) && !entry.endsWith('-tool.ts')))
+      .map((entry) => fs.readFileSync(path.join(tsDefinitionsRoot, entry), 'utf8'))
+      .join('\n');
+    const actionEnum = relatedSource.match(/action:\s*\{[\s\S]*?enum:\s*\[([\s\S]*?)\]\s*,\s*description:/);
     tools.push({
-      name: match[1],
+      name,
       actions: actionEnum ? stringArrayFromEnumBody(actionEnum[1], constants) : []
     });
   }
@@ -76,7 +79,11 @@ function nativeToolFiles() {
 }
 
 function buildNativeActionEvaluator() {
-  const source = fs.readFileSync(nativeConsolidatedActionsPath, 'utf8');
+  const source = fs.readdirSync(nativeMcpRoot)
+    .filter((entry) => /^McpConsolidatedActionRouting.*\.h$/.test(entry))
+    .sort()
+    .map((entry) => fs.readFileSync(path.join(nativeMcpRoot, entry), 'utf8'))
+    .join('\n');
   const functionBodies = new Map(
     [...source.matchAll(/inline\s+(?:const\s+)?TArray<FString>&?\s+(\w+)\s*\(\)\s*\{([\s\S]*?)\n\}/g)]
       .map((match) => [match[1], match[2]])

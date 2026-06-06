@@ -1,0 +1,108 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Dom/JsonObject.h"
+
+namespace McpAnimationHandlers {
+#if WITH_EDITOR
+struct FActionContext;
+bool HandleAnimationCleanupAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateAnimationBPAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateBlendSpaceAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateBlendTreeAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateProceduralAnimAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateStateMachineAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationSetupIKAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationConfigureVehicleAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateAnimationAssetAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationPlayMontageAliasAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddNotifyAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddNotifyLegacyAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateAnimationSequenceAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationSetSequenceLengthAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddBoneTrackAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationSetBoneKeyAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationSetCurveKeyAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateMontageAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddMontageSectionAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddMontageSlotAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationSetSectionTimingAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddMontageNotifyAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationSetBlendInAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationSetBlendOutAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationLinkSectionsAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateBlendSpace1dAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateBlendSpace2dAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddBlendSampleAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationSetAxisSettingsAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationSetInterpolationSettingsAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateAimOffsetAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddAimOffsetSampleAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateAnimBlueprintAliasAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddStateMachineAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddStateAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddTransitionAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationSetTransitionRulesAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddBlendNodeAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddCachedPoseAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddSlotNodeAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateControlRigAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddControlAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddRigUnitAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationConnectRigElementsAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreatePoseLibraryAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreateIKRigAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationAddIKChainAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
+#endif
+} // namespace McpAnimationHandlers

@@ -9,16 +9,13 @@
 #include "UObject/Class.h"
 
 #include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/BTNode.h"
 #include "BehaviorTree/BTCompositeNode.h"
 #include "BehaviorTree/BTTaskNode.h"
 #include "BehaviorTree/BTDecorator.h"
 #include "BehaviorTree/BTService.h"
 #include "BehaviorTree/BehaviorTreeTypes.h"          // FBlackboardKeySelector, FBTDecoratorLogic via BTCompositeNode
-#include "BehaviorTree/BlackboardData.h"
-#include "BehaviorTree/Blackboard/BlackboardKeyType_Object.h"
-#include "BehaviorTree/Blackboard/BlackboardKeyType_Class.h"
-#include "BehaviorTree/Blackboard/BlackboardKeyType_Enum.h"
 #include "BehaviorTree/Tasks/BTTask_RunBehavior.h"
 #include "BehaviorTree/Tasks/BTTask_RunBehaviorDynamic.h"
 
@@ -31,33 +28,6 @@ static const int32 GMaxTreeDepth = 64;
 // ---------------------------------------------------------------------------
 // SerializeDecoratorOpsRaw — UE postfix EBTDecoratorLogic -> [{op, number}]
 // ---------------------------------------------------------------------------
-TArray<TSharedPtr<FJsonValue>> SerializeDecoratorOpsRaw(const TArray<FBTDecoratorLogic>& Ops)
-{
-    TArray<TSharedPtr<FJsonValue>> Out;
-    Out.Reserve(Ops.Num());
-    for (const FBTDecoratorLogic& Op : Ops)
-    {
-        TSharedRef<FJsonObject> Entry = MakeShared<FJsonObject>();
-        FString OpName;
-        switch (Op.Operation.GetValue())
-        {
-            case EBTDecoratorLogic::Test: OpName = TEXT("Test"); break;
-            case EBTDecoratorLogic::And:  OpName = TEXT("And");  break;
-            case EBTDecoratorLogic::Or:   OpName = TEXT("Or");   break;
-            case EBTDecoratorLogic::Not:  OpName = TEXT("Not");  break;
-            default:                      OpName = TEXT("Invalid"); break;
-        }
-        Entry->SetStringField(TEXT("op"), OpName);
-        // Test.number indexes the SOURCE decorator array (Child.Decorators / RootDecorators),
-        // NOT the emitted decorators array — SerializeBTNode skips null decorator slots, so a
-        // consumer correlating ops to emitted decorators by position must account for dropped
-        // nulls (PR1b will parse these ops; this raw form preserves the engine's source indices).
-        Entry->SetNumberField(TEXT("number"), Op.Number);   // Test: decorator index; And/Or/Not: operand count
-        Out.Add(MakeShared<FJsonValueObject>(Entry));
-    }
-    return Out;
-}
-
 // ---------------------------------------------------------------------------
 // CollectBlackboardKeySelectors — enumerate ALL FBlackboardKeySelector props (R16)
 // Fix of dev's CreateBTNodeRuntimeInfo, which broke after the first selector.
@@ -113,106 +83,6 @@ static FString GetRunBehaviorDynamicInjectionTag(UBTTask_RunBehaviorDynamic* Dyn
 // then additive enrichment. `Source` is the BB that declared the key; `SelfBB`
 // is the asset being queried (for the inherited flag).
 // ---------------------------------------------------------------------------
-static TSharedRef<FJsonObject> SerializeBlackboardEntry(
-    const FBlackboardEntry& Entry, UBlackboardData* Source, UBlackboardData* SelfBB)
-{
-    TSharedRef<FJsonObject> KeyObj = MakeShared<FJsonObject>();
-
-    // --- PR0a-pinned (must stay bit-identical) ---
-    KeyObj->SetStringField(TEXT("name"), Entry.EntryName.ToString());
-    KeyObj->SetStringField(TEXT("type"),
-        Entry.KeyType ? Entry.KeyType->GetClass()->GetName() : TEXT("Unknown")); // BlackboardKeyType_*
-    KeyObj->SetBoolField(TEXT("instanceSynced"), Entry.bInstanceSynced != 0);
-
-    // --- additive enrichment (paths only set when non-null; otherwise omitted) ---
-    if (const UBlackboardKeyType_Object* ObjKey = Cast<UBlackboardKeyType_Object>(Entry.KeyType))
-    {
-        if (ObjKey->BaseClass) { KeyObj->SetStringField(TEXT("baseClass"), ObjKey->BaseClass->GetPathName()); }
-    }
-    else if (const UBlackboardKeyType_Class* ClassKey = Cast<UBlackboardKeyType_Class>(Entry.KeyType))
-    {
-        if (ClassKey->BaseClass) { KeyObj->SetStringField(TEXT("baseClass"), ClassKey->BaseClass->GetPathName()); }
-    }
-    else if (const UBlackboardKeyType_Enum* EnumKey = Cast<UBlackboardKeyType_Enum>(Entry.KeyType))
-    {
-        if (EnumKey->EnumType)        { KeyObj->SetStringField(TEXT("enumClass"), EnumKey->EnumType->GetPathName()); }
-        if (!EnumKey->EnumName.IsEmpty()) { KeyObj->SetStringField(TEXT("enumName"), EnumKey->EnumName); }
-    }
-
-#if WITH_EDITORONLY_DATA
-    if (!Entry.EntryCategory.IsNone())
-    {
-        KeyObj->SetStringField(TEXT("entryCategory"), Entry.EntryCategory.ToString());
-    }
-#endif
-
-    KeyObj->SetStringField(TEXT("sourceBlackboard"), Source ? Source->GetPathName() : FString());
-    KeyObj->SetBoolField(TEXT("inherited"), Source != SelfBB);
-    return KeyObj;
-}
-
-void SerializeBlackboardData(UBlackboardData* BB, const TSharedRef<FJsonObject>& Out)
-{
-    if (!BB)
-    {
-        Out->SetNumberField(TEXT("keyCount"), 0);
-        Out->SetArrayField(TEXT("blackboardKeys"), TArray<TSharedPtr<FJsonValue>>());
-        return;
-    }
-
-    // Walk the Parent chain (R4 cycle defense: max depth 32 + visited set).
-    // Chain ends up ordered parent-most ... self (self last), so inherited keys
-    // are emitted before own keys (spec 2.6).
-    TArray<UBlackboardData*> Chain;
-    {
-        TSet<const UBlackboardData*> Visited;
-        UBlackboardData* Cur = BB;
-        int32 Depth = 0;
-        while (Cur && Depth < 32 && !Visited.Contains(Cur))
-        {
-            Visited.Add(Cur);
-            Chain.Insert(Cur, 0);     // prepend
-            Cur = Cur->Parent;
-            ++Depth;
-        }
-    }
-
-    if (BB->Parent)
-    {
-        Out->SetStringField(TEXT("parentBlackboard"), BB->Parent->GetPathName());
-    }
-
-    // Override-aware emit: UE auto-adds `SelfActor` to EVERY Blackboard, and a child may
-    // redefine a parent key. A naive concat would double-count `SelfActor` and emit duplicate
-    // overridden keys (inflating keyCount). Mimic UBlackboardData::UpdateParentKeys: for each
-    // key NAME, the most-derived definer wins. Chain is ordered parent-most .. self, so the
-    // LAST occurrence of a name is the most-derived. Emit in parent-first order, skipping any
-    // key whose name is redefined by a more-derived blackboard.
-    TMap<FName, const UBlackboardData*> MostDerived;
-    for (UBlackboardData* Source : Chain)
-    {
-        for (const FBlackboardEntry& Entry : Source->Keys)
-        {
-            MostDerived.Add(Entry.EntryName, Source); // later (more-derived) overwrites earlier
-        }
-    }
-
-    TArray<TSharedPtr<FJsonValue>> Keys;
-    for (UBlackboardData* Source : Chain)
-    {
-        for (const FBlackboardEntry& Entry : Source->Keys)
-        {
-            if (MostDerived.FindRef(Entry.EntryName) != Source)
-            {
-                continue; // this name is overridden by a more-derived blackboard
-            }
-            Keys.Add(MakeShared<FJsonValueObject>(SerializeBlackboardEntry(Entry, Source, BB)));
-        }
-    }
-    Out->SetNumberField(TEXT("keyCount"), Keys.Num()); // == blackboardKeys.length (F7)
-    Out->SetArrayField(TEXT("blackboardKeys"), Keys);
-}
-
 // ---------------------------------------------------------------------------
 // Discriminate a UBTNode*. Composites & tasks are the execution nodes;
 // decorators & services are auxiliary (share UBTAuxiliaryNode base).

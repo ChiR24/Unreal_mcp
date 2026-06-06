@@ -49,26 +49,11 @@ public:
 			.Number(TEXT("x"), TEXT(""))
 			.Number(TEXT("y"), TEXT(""))
 			.Object(TEXT("location"), TEXT("3D location (x, y, z)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x"), TEXT("X coordinate."))
-				 .Number(TEXT("y"), TEXT("Y coordinate."))
-				 .Number(TEXT("z"), TEXT("Z coordinate."))
-				 .Required({TEXT("x"), TEXT("y"), TEXT("z")});
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x"), TEXT("X coordinate.")) .Number(TEXT("y"), TEXT("Y coordinate.")) .Number(TEXT("z"), TEXT("Z coordinate.")) .Required({TEXT("x"), TEXT("y"), TEXT("z")}); })
 			.Object(TEXT("rotation"), TEXT("3D rotation (pitch, yaw, roll)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("pitch"), TEXT("Pitch."))
-				 .Number(TEXT("yaw"), TEXT("Yaw."))
-				 .Number(TEXT("roll"), TEXT("Roll."))
-				 .Required({TEXT("pitch"), TEXT("yaw"), TEXT("roll")});
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("pitch"), TEXT("Pitch.")) .Number(TEXT("yaw"), TEXT("Yaw.")) .Number(TEXT("roll"), TEXT("Roll.")) .Required({TEXT("pitch"), TEXT("yaw"), TEXT("roll")}); })
 			.Object(TEXT("scale"), TEXT("3D scale (x, y, z)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x"), TEXT("X scale."))
-				 .Number(TEXT("y"), TEXT("Y scale."))
-				 .Number(TEXT("z"), TEXT("Z scale."))
-				 .Required({TEXT("x"), TEXT("y"), TEXT("z")});
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x"), TEXT("X scale.")) .Number(TEXT("y"), TEXT("Y scale.")) .Number(TEXT("z"), TEXT("Z scale.")) .Required({TEXT("x"), TEXT("y"), TEXT("z")}); })
 			.ArrayOfObjects(TEXT("operations"), TEXT(""))
 			.Bool(TEXT("compile"), TEXT("Compile the blueprint(s) after the operation."))
 			.Bool(TEXT("save"), TEXT("Save the asset(s) after the operation."))
@@ -110,34 +95,20 @@ public:
 			.String(TEXT("slotName"), TEXT("Name of the widget slot."))
 			.String(TEXT("parentSlot"), TEXT("Parent slot to add widget to."))
 			.Object(TEXT("anchorMin"), TEXT("Minimum anchor point (0-1)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")); })
 			.Object(TEXT("anchorMax"), TEXT("Maximum anchor point (0-1)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")); })
 			.Object(TEXT("alignment"), TEXT("Widget alignment (0-1)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")); })
 			.Object(TEXT("position"), TEXT("Widget position."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")); })
 			.Object(TEXT("size"), TEXT("Widget size."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")); })
 			.Number(TEXT("zOrder"), TEXT("Z-order for canvas slot."))
 			.Object(TEXT("translation"), TEXT("Render translation."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")); })
 			.Object(TEXT("shear"), TEXT("Render shear."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")); })
 			.Number(TEXT("angle"), TEXT("Angle in degrees."))
 			.StringEnum(TEXT("visibility"), {
 				TEXT("Visible"),
@@ -156,16 +127,11 @@ public:
 			.String(TEXT("text"), TEXT("Text content."))
 			.Number(TEXT("fontSize"), TEXT("Font size."))
 			.Object(TEXT("colorAndOpacity"), TEXT("Color and opacity (0-1 values)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("r")).Number(TEXT("g"))
-				 .Number(TEXT("b")).Number(TEXT("a"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("r")).Number(TEXT("g")) .Number(TEXT("b")).Number(TEXT("a")); })
 			.Bool(TEXT("autoWrap"), TEXT("Enable text auto-wrap."))
 			.String(TEXT("texturePath"), TEXT("Texture asset path."))
 			.Object(TEXT("brushSize"), TEXT("Brush/image size."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")); })
 			.Bool(TEXT("isEnabled"), TEXT("Widget enabled state."))
 			.Bool(TEXT("isChecked"), TEXT("Checkbox checked state."))
 			.Number(TEXT("minValue"), TEXT("Minimum value."))
@@ -174,10 +140,7 @@ public:
 			.Number(TEXT("delta"), TEXT("Spinbox increment."))
 			.Number(TEXT("percent"), TEXT("Progress bar percentage (0-1)."))
 			.Object(TEXT("fillColorAndOpacity"), TEXT("Fill color for progress bar."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("r")).Number(TEXT("g"))
-				 .Number(TEXT("b")).Number(TEXT("a"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("r")).Number(TEXT("g")) .Number(TEXT("b")).Number(TEXT("a")); })
 			.Bool(TEXT("isMarquee"), TEXT("Progress bar marquee mode."))
 			.StringEnum(TEXT("inputType"), {
 				TEXT("single"),

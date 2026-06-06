@@ -16,6 +16,7 @@ const REAL_GRAPH_PATH = `${REAL_TEST_FOLDER}/${REAL_GRAPH_NAME}`;
 const PATH_NAME_GRAPH = `${REAL_TEST_FOLDER}/PCG_RW_PathName_${ts}`;
 const ASSET_ALIAS_GRAPH = `${REAL_TEST_FOLDER}/PCG_RW_AssetAlias_${ts}`;
 const REAL_SUBGRAPH_PATH = `${REAL_TEST_FOLDER}/PCG_RW_Subgraph_${ts}`;
+const REAL_LEVEL_NAME = `PCG_RW_Level_${ts}`;
 const EXEC_ACTOR = `PCG_RW_Executor_${ts}`;
 const SECOND_ACTOR = `PCG_RW_SecondExecutor_${ts}`;
 const BOUNDSLESS_ACTOR = `PCG_RW_Boundsless_${ts}`;
@@ -437,10 +438,27 @@ const realWorldCoverageCases = [
     expected: 'success|not found'
   },
   {
-    scenario: 'ERROR: save world partition grid size on transient level reports save failure',
+    scenario: 'Setup: create saved level for world partition persistence',
+    toolName: 'manage_level',
+    arguments: {
+      action: 'create_level',
+      levelName: REAL_LEVEL_NAME,
+      levelPath: REAL_TEST_FOLDER,
+      template: '/Engine/Maps/Templates/OpenWorld',
+      useWorldPartition: false,
+      saveDirtyPackages: true
+    },
+    expected: 'success|already exists'
+  },
+  {
+    scenario: 'SAVE: world partition grid size persists on current saved level',
     toolName: 'manage_pcg',
     arguments: { action: 'set_pcg_partition_grid_size', scope: 'world', gridSize: 9600, save: true },
-    expected: { errorPattern: 'SAVE_FAILED' }
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.gridSize', equals: 9600, label: 'world partition grid size applied' },
+      { path: 'structuredContent.result.saved', equals: true, label: 'saved level persisted the grid size' }
+    ]
   },
   {
     scenario: 'Cleanup: delete real-world PCG folder',

@@ -113,8 +113,7 @@
     },
     {
       "Name": "GameplayAbilities",
-      "Enabled": true,
-      "Optional": true
+      "Enabled": true
     },
     {
       "Name": "StructUtils",
@@ -133,8 +132,7 @@
     },
     {
       "Name": "SmartObjects",
-      "Enabled": true,
-      "Optional": true
+      "Enabled": true
     },
     {
       "Name": "MassGameplay",
@@ -158,8 +156,7 @@
 	},
 	{
 		"Name": "PCG",
-		"Enabled": true,
-		"Optional": true
+		"Enabled": true
 	}
   ]
 }

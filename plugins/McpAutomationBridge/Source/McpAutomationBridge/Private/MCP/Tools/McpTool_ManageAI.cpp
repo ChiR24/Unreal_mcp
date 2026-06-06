@@ -128,15 +128,7 @@ public:
 				TEXT("Custom")
 			}, TEXT("EQS test type."))
 			.Object(TEXT("generatorSettings"), TEXT("Generator-specific settings."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("searchRadius"))
-				 .String(TEXT("searchCenter"), TEXT(""))
-				 .String(TEXT("actorClass"), TEXT(""))
-				 .Number(TEXT("gridSize"))
-				 .Number(TEXT("spacesBetween"))
-				 .Number(TEXT("innerRadius"))
-				 .Number(TEXT("outerRadius"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("searchRadius")) .String(TEXT("searchCenter"), TEXT("")) .String(TEXT("actorClass"), TEXT("")) .Number(TEXT("gridSize")) .Number(TEXT("spacesBetween")) .Number(TEXT("innerRadius")) .Number(TEXT("outerRadius")); })
 			.Object(TEXT("testSettings"), TEXT("Test scoring and filter settings."),
 				[](FMcpSchemaBuilder& S) {
 				S.StringEnum(TEXT("scoringEquation"), {
@@ -173,24 +165,13 @@ public:
 				});
 			})
 			.Object(TEXT("hearingConfig"), TEXT("AI hearing sense configuration."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("hearingRange"))
-				 .Number(TEXT("loSHearingRange"))
-				 .Bool(TEXT("detectFriendly"), TEXT(""))
-				 .Number(TEXT("maxAge"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("hearingRange")) .Number(TEXT("loSHearingRange")) .Bool(TEXT("detectFriendly"), TEXT("")) .Number(TEXT("maxAge")); })
 			.Object(TEXT("damageConfig"), TEXT("AI damage sense configuration."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("maxAge"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("maxAge")); })
 			.Number(TEXT("teamId"), TEXT("Team ID for perception affiliation (0=Neutral, 1=Player, 2=Enemy, etc.)."))
-			.StringEnum(TEXT("dominantSense"), {
-				TEXT("Sight"),
-				TEXT("Hearing"),
-				TEXT("Damage"),
-				TEXT("Touch"),
-				TEXT("None")
-			}, TEXT("Dominant sense for perception prioritization."))
+			.StringEnum(TEXT("dominantSense"),
+				{TEXT("Sight"), TEXT("Hearing"), TEXT("Damage"), TEXT("Touch"), TEXT("None")},
+				TEXT("Dominant sense for perception prioritization."))
 			.String(TEXT("stateTreePath"), TEXT("Path to State Tree asset."))
             .String(TEXT("stateName"), TEXT("Name of the state."))
             .String(TEXT("fromState"), TEXT("Source state name."))
@@ -212,18 +193,12 @@ public:
             .String(TEXT("componentName"), TEXT("Name of the component."))
             .String(TEXT("areaClass"), TEXT("Navigation area class path."))
             .Object(TEXT("failsafeExtent"), TEXT("Failsafe extent for nav modifier when actor has no collision."),
-                [](FMcpSchemaBuilder& S) {
-                S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-            })
+                [](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
             .Number(TEXT("areaCost"), TEXT("Pathfinding cost multiplier for area (1.0 = normal)."))
             .Object(TEXT("startPoint"), TEXT("Start point of navigation link (relative to actor)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.Object(TEXT("endPoint"), TEXT("End point of navigation link (relative to actor)."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.StringEnum(TEXT("direction"), {
 				TEXT("BothWays"),
 				TEXT("LeftToRight"),
@@ -231,32 +206,22 @@ public:
 			}, TEXT("Link traversal direction."))
 			.Number(TEXT("snapRadius"), TEXT("Snap radius for link endpoints (default: 30)."))
 			.Bool(TEXT("linkEnabled"), TEXT("Whether the link is enabled."))
-            .StringEnum(TEXT("linkType"), {
-                TEXT("simple"),
-                TEXT("smart")
-            }, TEXT("Type of navigation link."))
+            .StringEnum(TEXT("linkType"), {TEXT("simple"), TEXT("smart")},
+                TEXT("Type of navigation link."))
             .String(TEXT("enabledAreaClass"), TEXT("Area class when smart link is enabled."))
 			.String(TEXT("disabledAreaClass"), TEXT("Area class when smart link is disabled."))
 			.Number(TEXT("broadcastRadius"), TEXT("Radius for state change broadcast."))
 			.Number(TEXT("broadcastInterval"), TEXT("Interval for state change broadcast (0 = single)."))
 			.Bool(TEXT("bCreateBoxObstacle"), TEXT("Add box obstacle during nav generation."))
 			.Object(TEXT("obstacleOffset"), TEXT("Offset of simple box obstacle."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.Object(TEXT("obstacleExtent"), TEXT("Extent of simple box obstacle."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-            })
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
             .String(TEXT("obstacleAreaClass"), TEXT("Area class for box obstacle."))
             .Object(TEXT("location"), TEXT("World location for nav link proxy."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.Object(TEXT("rotation"), TEXT("Rotation for nav link proxy."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("pitch")).Number(TEXT("yaw")).Number(TEXT("roll"));
-            })
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("pitch")).Number(TEXT("yaw")).Number(TEXT("roll")); })
             .Bool(TEXT("save"), TEXT("Save the asset(s) after the operation."))
 			.String(TEXT("assetPath"), TEXT("Asset path (e.g., /Game/Path/Asset)."))
 			.String(TEXT("savePath"), TEXT("Path to save the asset."))
@@ -276,9 +241,7 @@ public:
 			.Number(TEXT("hearingRange"), TEXT("AI hearing range."))
 			.Number(TEXT("loseSightRadius"), TEXT("AI sight lose radius."))
 			.Object(TEXT("offset"), TEXT("Generic offset vector."),
-				[](FMcpSchemaBuilder& S) {
-				S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z"));
-			})
+				[](FMcpSchemaBuilder& S) { S.Number(TEXT("x")).Number(TEXT("y")).Number(TEXT("z")); })
 			.String(TEXT("parentStateName"), TEXT("Parent state name."))
 			.Number(TEXT("peripheralVisionAngle"), TEXT("Sight peripheral vision angle."))
 			.Number(TEXT("sightRadius"), TEXT("AI sight radius."))

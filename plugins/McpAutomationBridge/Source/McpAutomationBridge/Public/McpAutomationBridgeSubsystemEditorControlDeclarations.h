@@ -1,0 +1,35 @@
+#define MCP_SUBSYSTEM_EDITOR_CONTROL_DECLARATIONS \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorPlay); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorStop); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorEject); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorPossess); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetViewTarget); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorFocusActor); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetCamera); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetViewMode); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetCameraFov); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetGameSpeed); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorOpenAsset); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorScreenshot); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorPause); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorResume); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorConsoleCommand); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorStepFrame); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorStartRecording); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorStopRecording); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorCreateBookmark); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorJumpToBookmark); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetPreferences); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetViewportRealtime); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSimulateInput); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorCloseAsset); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSaveAll); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorUndo); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorRedo); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetEditorMode); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorShowStats); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorHideStats); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetGameView); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetImmersiveMode); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetFixedDeltaTime); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorOpenLevel);

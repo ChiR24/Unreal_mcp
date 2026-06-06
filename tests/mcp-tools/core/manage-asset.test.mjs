@@ -6,7 +6,12 @@ import { runToolTests } from '../../test-runner.mjs';
 
 const TEST_FOLDER = '/Game/MCPTest/CoreAssets';
 const ts = Date.now();
-const projectImportSource = path.join('/data/Game/MCPtest/Saved', `mcp-manage-asset-${ts}.obj`);
+const projectPath = process.env.UE_PROJECT_PATH ?? '/data/Game/MCPtest/MCPtest.uproject';
+const projectImportSource = path.join(
+  path.dirname(projectPath),
+  'Saved',
+  `mcp-manage-asset-${ts}.obj`,
+);
 const relativeImportSource = `Saved/mcp-manage-asset-${ts}.obj`;
 
 fs.mkdirSync(path.dirname(projectImportSource), { recursive: true });
@@ -74,6 +79,8 @@ const testCases = [
   // === CORE ASSET ACTIONS ===
   { scenario: 'ACTION: list', toolName: 'manage_asset', arguments: { action: 'list', path: TEST_FOLDER, recursive: true }, expected: 'success' },
   { scenario: 'ACTION: import', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: relativeImportSource, destinationPath: IMPORTED_MESH, overwrite: true, save: true }, expected: 'success' },
+  { scenario: 'SECURITY: import rejects absolute host path', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: '/etc/passwd', destinationPath: asset(`T_AbsoluteImport_${ts}`) }, expected: 'security violation' },
+  { scenario: 'SECURITY: import rejects project traversal', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: '../outside.obj', destinationPath: asset(`T_TraversalImport_${ts}`) }, expected: 'security violation' },
   { scenario: 'ACTION: duplicate', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: DUPLICATE_SOURCE, destinationPath: DUPLICATE_DEST }, expected: 'success' },
   { scenario: 'ACTION: duplicate_asset', toolName: 'manage_asset', arguments: { action: 'duplicate_asset', sourcePath: DUPLICATE_ALIAS_SOURCE, destinationPath: DUPLICATE_ALIAS_DEST }, expected: 'success' },
   { scenario: 'ACTION: rename', toolName: 'manage_asset', arguments: { action: 'rename', sourcePath: RENAME_SOURCE, newName: RENAME_DEST_NAME }, expected: 'success' },

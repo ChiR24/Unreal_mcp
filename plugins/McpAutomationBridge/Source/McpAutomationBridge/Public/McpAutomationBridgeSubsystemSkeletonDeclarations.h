@@ -1,0 +1,33 @@
+#define MCP_SUBSYSTEM_SKELETON_DECLARATIONS \
+MCP_DECLARE_ACTION_HANDLER(HandleManageSkeleton); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleGetSkeletonInfo); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleListBones); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleListSockets); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateSocket); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleConfigureSocket); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateVirtualBone); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleCreatePhysicsAsset); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleListPhysicsBodies); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleAddPhysicsBody); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleConfigurePhysicsBody); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleAddPhysicsConstraint); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleConfigureConstraintLimits); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleRenameBone); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleSetBoneTransform); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateMorphTarget); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleSetMorphTargetDeltas); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleImportMorphTargets); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleNormalizeWeights); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandlePruneWeights); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleBindClothToSkeletalMesh); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleAssignClothAssetToMesh); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleSetPhysicsAsset); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleRemovePhysicsBody); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleSetMorphTargetValue); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleListMorphTargets); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleDeleteMorphTarget); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleDeleteSocket); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleGetBoneTransform); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleListVirtualBones); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleDeleteVirtualBone); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleGetPhysicsAssetInfo);
