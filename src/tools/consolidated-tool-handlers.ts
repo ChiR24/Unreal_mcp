@@ -222,6 +222,7 @@ function registerDefaultHandlers() {
   toolRegistry.register('control_actor', async (args, tools) => await handleActorTools(getToolAction(args), args, tools));
   toolRegistry.register('control_editor', async (args, tools) => await handleEditorTools(getToolAction(args), args, tools));
   toolRegistry.register('manage_level', async (args, tools) => await handleLevelTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_widget_authoring', async (args, tools) => await handleWidgetAuthoringTools(getToolAction(args), args, tools));
 
 
   toolRegistry.register('animation_physics', async (args, tools) => {

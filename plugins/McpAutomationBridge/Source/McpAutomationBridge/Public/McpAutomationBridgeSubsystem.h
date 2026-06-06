@@ -75,6 +75,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMcpAutomationMessageReceived,
                                             const FMcpAutomationMessage &,
                                             Message);
 
+class UMcpAutomationBridgeSubsystem;
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnRegisterMcpHandlers, UMcpAutomationBridgeSubsystem*);
+
 class FMcpBridgeWebSocket;
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpAutomationBridgeSubsystem, Log, All);
 
@@ -104,6 +107,12 @@ public:
 
   UPROPERTY(BlueprintAssignable, Category = "MCP Automation")
   FMcpAutomationMessageReceived OnMessageReceived;
+
+  /** 
+   * Broadcasted when the core handlers have been registered. 
+   * Other C++ plugins can bind to this delegate to register their own handlers.
+   */
+  FOnRegisterMcpHandlers OnRegisterCustomHandlers;
 
   // Public helpers for sending automation responses/errors. These need to be
   // callable from out-of-line helper functions and translation-unit-level
@@ -276,6 +285,7 @@ public:
 private:
   TMap<FString, FAutomationHandler> AutomationHandlers;
   void InitializeHandlers();
+  void LoadDynamicHandlersFromJson();
 
   /**
    * Handle lightweight, well-known editor function invocations sent from the

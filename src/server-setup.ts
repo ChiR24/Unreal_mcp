@@ -7,6 +7,7 @@ import { ActorResources } from './resources/actors.js';
 import { LevelResources } from './resources/levels.js';
 import { ResourceRegistry } from './server/resource-registry.js';
 import { ToolRegistry } from './server/tool-registry.js';
+import { loadDynamicHandlersFromJson } from './tools/dynamic-handler-loader.js';
 import fs from 'node:fs';
 
 type McpServer = ConstructorParameters<typeof ToolRegistry>[0];
@@ -70,6 +71,10 @@ export class ServerSetup {
       this.levelResources,
       ensureConnected
     );
+    
+    // Load dynamic tools from McpHandlers.json
+    loadDynamicHandlersFromJson();
+    
     toolRegistry.register();
   }
 

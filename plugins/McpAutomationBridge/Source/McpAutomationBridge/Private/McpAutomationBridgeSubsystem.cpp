@@ -1819,6 +1819,140 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return true;
 #endif
                   });
+
+  // Broadcast to other plugins that they can register custom handlers
+  OnRegisterCustomHandlers.Broadcast(this);
+
+  // Load custom handlers from JSON configuration
+  LoadDynamicHandlersFromJson();
+}
+
+void UMcpAutomationBridgeSubsystem::LoadDynamicHandlersFromJson() {
+  // Try to load McpHandlers.json from the project Config directory
+  FString HandlersFilePath = FPaths::Combine(FPaths::ProjectConfigDir(), TEXT("McpHandlers.json"));
+  
+  if (!FPaths::FileExists(HandlersFilePath)) {
+    // If it doesn't exist, we just quietly return
+    return;
+  }
+  
+  FString JsonContent;
+  if (!FFileHelper::LoadFileToString(JsonContent, *HandlersFilePath)) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Found McpHandlers.json but failed to read it."));
+    return;
+  }
+  
+  TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonContent);
+  TSharedPtr<FJsonObject> RootObject;
+  
+  if (!FJsonSerializer::Deserialize(Reader, RootObject) || !RootObject.IsValid()) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Failed to parse McpHandlers.json. Ensure it is valid JSON."));
+    return;
+  }
+  
+  const TArray<TSharedPtr<FJsonValue>>* HandlersArray;
+  if (!RootObject->TryGetArrayField(TEXT("handlers"), HandlersArray)) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("McpHandlers.json is missing the 'handlers' array field."));
+    return;
+  }
+  
+  int32 RegisteredCount = 0;
+  
+  for (const TSharedPtr<FJsonValue>& HandlerValue : *HandlersArray) {
+    TSharedPtr<FJsonObject> HandlerObj = HandlerValue->AsObject();
+    if (!HandlerObj.IsValid()) {
+      continue;
+    }
+    
+    FString ActionName;
+    FString HandlerType;
+    FString Target;
+    
+    if (!HandlerObj->TryGetStringField(TEXT("action"), ActionName) ||
+        !HandlerObj->TryGetStringField(TEXT("type"), HandlerType) ||
+        !HandlerObj->TryGetStringField(TEXT("target"), Target)) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("A handler entry in McpHandlers.json is missing required fields (action, type, target)."));
+      continue;
+    }
+    
+    // Register the dynamic handler based on type
+    RegisterHandler(ActionName, [this, ActionName, HandlerType, Target](const FString &R, const FString &A,
+                           const TSharedPtr<FJsonObject> &P,
+                           TSharedPtr<FMcpBridgeWebSocket> S) -> bool {
+      
+      // ConsoleCommand
+      if (HandlerType.Equals(TEXT("ConsoleCommand"), ESearchCase::IgnoreCase)) {
+        FString CmdToExecute = Target;
+        // Optionally parse payload properties to replace {param} in the command?
+        // Simple implementation: just run it.
+#if WITH_EDITOR
+        FString OutError;
+        TArray<FString> Cmds;
+        Cmds.Add(CmdToExecute);
+        bool bSuccess = ExecuteEditorCommands(Cmds, OutError);
+        if (bSuccess) {
+          SendAutomationResponse(S, R, true, FString::Printf(TEXT("Executed console command: %s"), *CmdToExecute));
+        } else {
+          SendAutomationError(S, R, FString::Printf(TEXT("Console command failed: %s"), *OutError), TEXT("CMD_FAILED"));
+        }
+#else
+        SendAutomationError(S, R, TEXT("Console commands require editor build"), TEXT("NOT_AVAILABLE"));
+#endif
+        return true;
+      }
+      // UFunction (Blueprint / C++ Callable)
+      else if (HandlerType.Equals(TEXT("UFunction"), ESearchCase::IgnoreCase)) {
+        // Find the function and execute it
+        // Format of Target should be "Package.Object:FunctionName" or "ObjectPath:FunctionName"
+        // Since calling arbitrary UFunctions with reflection safely with parameters is complex,
+        // we'll implement a basic execution via CallFunctionByNameWithArguments or similar
+        
+        // As a robust approach without writing a huge reflection parser:
+        // Expose a standard Blueprint interface or use a specific format?
+        // Actually, Python is easier for this.
+        SendAutomationError(S, R, TEXT("UFunction dynamic dispatch is not fully implemented yet. Please use PythonScript or ConsoleCommand."), TEXT("NOT_IMPLEMENTED"));
+        return true;
+      }
+      // PythonScript
+      else if (HandlerType.Equals(TEXT("PythonScript"), ESearchCase::IgnoreCase)) {
+        // Execute the python script
+        // Typically Target is a script path like "Scripts/MyScript.py"
+#if WITH_EDITOR
+        FString PyCmd = FString::Printf(TEXT("py \"%s\""), *Target);
+        // We could serialize Payload back to JSON and pass it as an argument!
+        FString PayloadStr;
+        TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&PayloadStr);
+        FJsonSerializer::Serialize(P.ToSharedRef(), Writer);
+        // Escape quotes
+        PayloadStr = PayloadStr.Replace(TEXT("\""), TEXT("\\\""));
+        PyCmd += FString::Printf(TEXT(" \"%s\""), *PayloadStr);
+
+        FString OutError;
+        TArray<FString> Cmds;
+        Cmds.Add(PyCmd);
+        bool bSuccess = ExecuteEditorCommands(Cmds, OutError);
+        
+        if (bSuccess) {
+          SendAutomationResponse(S, R, true, TEXT("Python script executed successfully"));
+        } else {
+          SendAutomationError(S, R, FString::Printf(TEXT("Python script failed: %s"), *OutError), TEXT("PYTHON_FAILED"));
+        }
+#else
+        SendAutomationError(S, R, TEXT("Python requires editor build"), TEXT("NOT_AVAILABLE"));
+#endif
+        return true;
+      }
+      
+      SendAutomationError(S, R, FString::Printf(TEXT("Unknown dynamic handler type: %s"), *HandlerType), TEXT("INVALID_TYPE"));
+      return true;
+    });
+    
+    RegisteredCount++;
+  }
+  
+  if (RegisteredCount > 0) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Registered %d dynamic handlers from McpHandlers.json"), RegisteredCount);
+  }
 }
 
 // Drain and process any automation requests that were enqueued while the
