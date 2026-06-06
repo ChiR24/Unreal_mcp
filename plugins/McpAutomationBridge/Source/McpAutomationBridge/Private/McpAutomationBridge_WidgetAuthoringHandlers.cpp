@@ -139,9 +139,9 @@
 #include "Internationalization/StringTableCore.h"
 #include "Internationalization/StringTableRegistry.h"
 #include "UmgFileTransformation.h"
+#include "UmgAttentionSubsystem.h"
 #include "UmgGetSubsystem.h"
 #include "UmgSetSubsystem.h"
-#include "UmgAttentionSubsystem.h"
 
 // =============================================================================
 // Widget Authoring Helper Functions
@@ -6132,47 +6132,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("newName"), NewName);
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Renamed widget"), ResultJson);
-        return true;
-    }
-
-    
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP || !WidgetBP->WidgetTree)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* TargetWidget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
-        if (!TargetWidget)
-        {
-            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UPanelWidget* NewParentWidget = Cast<UPanelWidget>(WidgetBP->WidgetTree->FindWidget(FName(*NewParent)));
-        if (!NewParentWidget)
-        {
-            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("New parent '%s' not found or not a panel"), *NewParent), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        // Remove from current parent and add to new parent
-        if (UPanelWidget* OldParent = TargetWidget->GetParent())
-        {
-            OldParent->RemoveChild(TargetWidget);
-        }
-        NewParentWidget->AddChild(TargetWidget);
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
-        ResultJson->SetStringField(TEXT("widget"), SlotName);
-        ResultJson->SetStringField(TEXT("newParent"), NewParent);
-
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Reparented widget"), ResultJson);
         return true;
     }
 

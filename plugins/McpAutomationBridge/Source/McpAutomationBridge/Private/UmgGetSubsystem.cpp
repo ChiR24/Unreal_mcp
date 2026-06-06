@@ -1,5 +1,5 @@
 // Copyright (c) 2025-2026 Winyunq. All rights reserved.
-#include "Widget/UmgGetSubsystem.h"
+#include "UmgGetSubsystem.h"
 #include "FileManage/UmgAttentionSubsystem.h"
 #include "Editor.h"
 
@@ -9,7 +9,7 @@
 #include "Components/PanelWidget.h"
 #include "Components/PanelSlot.h"
 #include "Components/CanvasPanelSlot.h"
-#include "FileManage/UmgFileTransformation.h"
+#include "UmgFileTransformation.h"
 #include "JsonObjectConverter.h"
 #include "Serialization/JsonWriter.h"
 #include "Dom/JsonObject.h"

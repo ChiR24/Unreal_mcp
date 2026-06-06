@@ -1,7 +1,7 @@
 // Copyright (c) 2025-2026 Winyunq. All rights reserved.
 
 #include "UmgSetSubsystem.h"
-#include "FileManage/UmgAttentionSubsystem.h"
+#include "UmgAttentionSubsystem.h"
 #include "Editor.h"
 #include "WidgetBlueprint.h"
 #include "Blueprint/WidgetTree.h"
@@ -12,7 +12,7 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "FileHelpers.h"
-#include "FileManage/UmgFileTransformation.h"
+#include "UmgFileTransformation.h"
 #include "Components/CanvasPanelSlot.h"
 #include "McpAutomationBridgeHelpers.h"
 

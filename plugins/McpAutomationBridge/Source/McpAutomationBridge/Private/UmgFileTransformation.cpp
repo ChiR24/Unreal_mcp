@@ -1,5 +1,5 @@
 // Copyright (c) 2025-2026 Winyunq. All rights reserved.
-#include "FileManage/UmgFileTransformation.h"
+#include "UmgFileTransformation.h"
 #include "UmgMcp.h"
 #include "PropertyNameMappings.h"
 
@@ -281,17 +281,19 @@ FString UUmgFileTransformation::ExportUmgAssetToJsonString(const FString& AssetP
 
 bool UUmgFileTransformation::ApplyJsonStringToUmgAsset(const FString& AssetPath, const FString& JsonData, const FString& TargetWidgetName)
 {
-    // Dispatch the task to the game thread asynchronously ("fire and forget").
-    // The original implementation used a blocking wait which could cause the editor to freeze or deadlock.
-    // We capture parameters by value to ensure they are valid when the task eventually executes.
-    FFunctionGraphTask::CreateAndDispatchWhenReady([AssetPath, JsonData, TargetWidgetName]()
+    if (IsInGameThread())
     {
-        ApplyJsonToUmgAsset_GameThread(AssetPath, JsonData, TargetWidgetName);
-    }, TStatId(), nullptr, ENamedThreads::GameThread);
+        return ApplyJsonToUmgAsset_GameThread(AssetPath, JsonData, TargetWidgetName);
+    }
 
-    // Return true to indicate the task was successfully dispatched.
-    // The operation itself runs in the background and the result will be visible in the editor.
-    return true;
+    TFuture<bool> Future = Async(EAsyncExecution::TaskGraphMainThread, [AssetPath, JsonData, TargetWidgetName]()
+    {
+        return ApplyJsonToUmgAsset_GameThread(AssetPath, JsonData, TargetWidgetName);
+    });
+
+    // Wait for the result and return it
+    Future.Wait();
+    return Future.Get();
 }
 
 
