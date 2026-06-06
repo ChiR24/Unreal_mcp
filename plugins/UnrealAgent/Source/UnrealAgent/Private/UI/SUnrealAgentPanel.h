@@ -141,6 +141,11 @@ private:
 
     TSharedRef<SWidget> MakeSidebar();
     TSharedRef<SWidget> MakeCockpit();
+    TSharedRef<SWidget> MakeMainLayout();
+    TSharedRef<SWidget> MakeHeaderBar();
+    TSharedRef<SWidget> MakeConversationArea();
+    TSharedRef<SWidget> MakeEmptyPromptArea();
+    TSharedRef<SWidget> MakePermissionBar();
     TSharedRef<SWidget> MakeExpandedSidebar();
     TSharedRef<SWidget> MakeCollapsedSidebar();
     TSharedRef<SWidget> MakeChatHistoryRow(const FChatHistoryEntry& Entry);
@@ -150,6 +155,17 @@ private:
         TSharedPtr<SComboButton>& OutThinkingComboButton,
         TSharedPtr<SComboButton>& OutAgentComboButton,
         const FName& ComposerTag);
+    TSharedRef<SWidget> MakeComposerInputFrame(TSharedPtr<SMultiLineEditableTextBox>& OutPromptTextBox);
+    TSharedRef<SWidget> MakeComposerActionRow(
+        TSharedPtr<SComboButton>& OutModelComboButton,
+        TSharedPtr<SComboButton>& OutThinkingComboButton,
+        TSharedPtr<SComboButton>& OutAgentComboButton);
+    TSharedRef<SWidget> MakeComposerModelControls(
+        TSharedPtr<SComboButton>& OutModelComboButton,
+        TSharedPtr<SComboButton>& OutThinkingComboButton,
+        TSharedPtr<SComboButton>& OutAgentComboButton);
+    TSharedRef<SWidget> MakeComposerContextWindowStatus();
+    TSharedRef<SWidget> MakeComposerHelperRow();
     TSharedRef<SWidget> MakeModelMenuContent();
     TSharedRef<SWidget> MakeModelMenuEntry(TSharedPtr<FOpenCodeAcpModelOption> ModelOption);
     TSharedRef<SWidget> MakeThinkingMenuContent();
