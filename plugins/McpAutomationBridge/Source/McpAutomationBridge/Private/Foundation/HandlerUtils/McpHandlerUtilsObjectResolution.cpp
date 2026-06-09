@@ -116,11 +116,17 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
             const FString DottedPath = Path + TEXT(".") + FPackageName::GetShortName(Path);
             if (UObject* DottedObj = LoadObject<UObject>(nullptr, *DottedPath))
             {
-                if (OutResolvedPath)
+                // Mirror the DirectObj guard above: the dotted path can also resolve to a
+                // UPackage (the exact case this fix avoids) — don't return it, fall through
+                // to the package path below so genuine package callers still work.
+                if (!DottedObj->IsA<UPackage>())
                 {
-                    *OutResolvedPath = DottedObj->GetPathName();
+                    if (OutResolvedPath)
+                    {
+                        *OutResolvedPath = DottedObj->GetPathName();
+                    }
+                    return DottedObj;
                 }
-                return DottedObj;
             }
         }
         FString PackagePath = Path;
