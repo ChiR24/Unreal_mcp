@@ -10,6 +10,8 @@
 #include "Components/SpinBox.h"
 #include "Components/Widget.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/KismetEditorUtilities.h"
+#include "K2Node_ComponentBoundEvent.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
@@ -61,17 +63,69 @@ bool HandleWidgetAuthoringEventBindings(
             return true;
         }
 
-        // Note: UButton::OnClicked is a multicast delegate that requires binding through Blueprint
-        // We create metadata for the binding - the function needs to exist in the widget BP
+        // Create a real UK2Node_ComponentBoundEvent bound to the button's OnClicked
+        // multicast delegate — the exact node the Designer's "+ OnClicked" adds.
+        if (!ButtonWidget->bIsVariable)
+        {
+            ButtonWidget->bIsVariable = true;
+        }
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+
+        FMulticastDelegateProperty* DelegateProp =
+            FindFProperty<FMulticastDelegateProperty>(UButton::StaticClass(), FName(TEXT("OnClicked")));
+        if (!DelegateProp)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("OnClicked delegate not found on UButton"), TEXT("DELEGATE_NOT_FOUND"));
+            return true;
+        }
+
+        FObjectProperty* CompProp =
+            FindFProperty<FObjectProperty>(WidgetBP->SkeletonGeneratedClass, FName(*SlotName));
+        if (!CompProp)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Component variable '%s' not found on widget skeleton class"), *SlotName),
+                TEXT("COMPONENT_PROPERTY_NOT_FOUND"));
+            return true;
+        }
+
+        UEdGraph* EventGraph = FBlueprintEditorUtils::FindEventGraph(WidgetBP);
+        if (!EventGraph)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Event graph not found on widget blueprint"), TEXT("EVENT_GRAPH_NOT_FOUND"));
+            return true;
+        }
+
+        // Idempotent: reuse an existing bound event for this delegate+component.
+        const UK2Node_ComponentBoundEvent* Existing =
+            FKismetEditorUtilities::FindBoundEventForComponent(WidgetBP, DelegateProp->GetFName(), CompProp->GetFName());
+
+        UK2Node_ComponentBoundEvent* BoundNode = const_cast<UK2Node_ComponentBoundEvent*>(Existing);
+        bool bCreatedNew = false;
+        if (!BoundNode)
+        {
+            EventGraph->Modify();
+            FGraphNodeCreator<UK2Node_ComponentBoundEvent> Creator(*EventGraph);
+            BoundNode = Creator.CreateNode(false);
+            BoundNode->InitializeComponentBoundEventParams(CompProp, DelegateProp);
+            Creator.Finalize();
+            bCreatedNew = true;
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsModified(WidgetBP);
+        const bool bCompiled = McpSafeCompileBlueprint(WidgetBP);
+
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
         ResultJson->SetStringField(TEXT("eventType"), TEXT("OnClicked"));
         ResultJson->SetStringField(TEXT("functionName"), FunctionName);
-        ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create an event handler function named '%s' and bind it to %s's OnClicked event in the Designer."), *FunctionName, *SlotName));
+        ResultJson->SetBoolField(TEXT("bound"), true);
+        ResultJson->SetBoolField(TEXT("createdNew"), bCreatedNew);
+        ResultJson->SetBoolField(TEXT("compileSucceeded"), bCompiled);
+        ResultJson->SetStringField(TEXT("nodeId"), BoundNode->NodeGuid.ToString());
+        ResultJson->SetStringField(TEXT("eventFunctionName"), BoundNode->CustomFunctionName.ToString());
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("OnClicked binding info provided"), ResultJson);
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("OnClicked event bound"), ResultJson);
         return true;
     }
 
