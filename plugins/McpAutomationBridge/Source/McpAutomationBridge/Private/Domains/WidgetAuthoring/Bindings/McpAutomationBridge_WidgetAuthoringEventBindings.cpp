@@ -65,11 +65,16 @@ bool HandleWidgetAuthoringEventBindings(
 
         // Create a real UK2Node_ComponentBoundEvent bound to the button's OnClicked
         // multicast delegate — the exact node the Designer's "+ OnClicked" adds.
+        // Track whether we actually mutate the blueprint so the reuse path stays
+        // side-effect free (no dirty / recompile when nothing changed).
+        bool bBlueprintChanged = false;
         if (!ButtonWidget->bIsVariable)
         {
+            ButtonWidget->Modify();
             ButtonWidget->bIsVariable = true;
+            FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+            bBlueprintChanged = true;
         }
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
 
         FMulticastDelegateProperty* DelegateProp =
             FindFProperty<FMulticastDelegateProperty>(UButton::StaticClass(), FName(TEXT("OnClicked")));
@@ -110,10 +115,17 @@ bool HandleWidgetAuthoringEventBindings(
             BoundNode->InitializeComponentBoundEventParams(CompProp, DelegateProp);
             Creator.Finalize();
             bCreatedNew = true;
+            bBlueprintChanged = true;
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsModified(WidgetBP);
-        const bool bCompiled = McpSafeCompileBlueprint(WidgetBP);
+        // Only dirty + recompile when something actually changed — a repeat
+        // bind_on_clicked that reuses the existing node leaves the asset untouched.
+        bool bCompiled = true;
+        if (bBlueprintChanged)
+        {
+            FBlueprintEditorUtils::MarkBlueprintAsModified(WidgetBP);
+            bCompiled = McpSafeCompileBlueprint(WidgetBP);
+        }
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
