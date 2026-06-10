@@ -130,6 +130,9 @@ bool HandleWidgetAuthoringEventBindings(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
         ResultJson->SetStringField(TEXT("eventType"), TEXT("OnClicked"));
+        // Response contract: functionName echoes the request input (default "OnButtonClicked").
+        // The real handler is engine-generated -- returned as eventFunctionName
+        // (UK2Node_ComponentBoundEvent::CustomFunctionName). Reference the handler via that.
         ResultJson->SetStringField(TEXT("functionName"), FunctionName);
         ResultJson->SetBoolField(TEXT("bound"), true);
         ResultJson->SetBoolField(TEXT("createdNew"), bCreatedNew);
