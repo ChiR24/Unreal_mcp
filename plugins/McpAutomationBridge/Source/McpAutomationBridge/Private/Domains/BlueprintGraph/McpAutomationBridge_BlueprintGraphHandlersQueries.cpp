@@ -107,6 +107,15 @@ static bool GetGraphDetails(FActionContext& Context)
         return false;
     }
 
+    // Opt-in: include each node's pins (with their linkedTo connections) so a
+    // graph's exec/data flow can be read in one call instead of a per-node
+    // get_node_details loop. Default output is unchanged.
+    bool bIncludePins = false;
+    if (Context.Payload.IsValid())
+    {
+        Context.Payload->TryGetBoolField(TEXT("includePins"), bIncludePins);
+    }
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(
         TEXT("graphName"),
@@ -118,6 +127,11 @@ static bool GetGraphDetails(FActionContext& Context)
     TArray<TSharedPtr<FJsonValue>> Nodes;
     for (UEdGraphNode* Node : Context.TargetGraph->Nodes)
     {
+        if (!Node)
+        {
+            continue;
+        }
+
         TSharedPtr<FJsonObject> NodeObject =
             McpHandlerUtils::CreateResultObject();
         NodeObject->SetStringField(
@@ -127,6 +141,21 @@ static bool GetGraphDetails(FActionContext& Context)
         NodeObject->SetStringField(
             TEXT("nodeTitle"),
             Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+
+        if (bIncludePins)
+        {
+            TArray<TSharedPtr<FJsonValue>> Pins;
+            for (UEdGraphPin* Pin : Node->Pins)
+            {
+                if (Pin)
+                {
+                    Pins.Add(
+                        MakeShared<FJsonValueObject>(MakePinSummary(Pin)));
+                }
+            }
+            NodeObject->SetArrayField(TEXT("pins"), Pins);
+        }
+
         Nodes.Add(MakeShared<FJsonValueObject>(NodeObject));
     }
     Result->SetArrayField(TEXT("nodes"), Nodes);
