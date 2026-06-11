@@ -2,11 +2,38 @@
 
 #if WITH_EDITOR
 #include "K2Node_CustomEvent.h"
+#include "K2Node_FunctionEntry.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "UObject/UnrealType.h"
 
 namespace McpBlueprintGraphHandlers
 {
+// Pre-compile health gate: a function graph whose entry node is missing or unnamed
+// makes the compiler's conform pass call ReplaceFunctionReferences with NAME_None,
+// which is a check() -> fatal editor crash (BlueprintEditorUtils.cpp:5914 in 5.8).
+// That state is reachable through pure automation calls (delete_node on a function
+// entry, then add_node FunctionEntry), but this also protects against blueprints
+// corrupted by any other means. Returns false with the offending graph's name.
+static bool ValidateFunctionGraphRoots(UBlueprint* Blueprint, FString& OutBadGraph)
+{
+    for (UEdGraph* Graph : Blueprint->FunctionGraphs)
+    {
+        if (!Graph)
+        {
+            continue;
+        }
+        TArray<UK2Node_FunctionEntry*> Entries;
+        Graph->GetNodesOfClass<UK2Node_FunctionEntry>(Entries);
+        if (Entries.Num() != 1 || !Entries[0] ||
+            Entries[0]->FunctionReference.GetMemberName().IsNone())
+        {
+            OutBadGraph = Graph->GetName();
+            return false;
+        }
+    }
+    return true;
+}
+
 static void RemoveExistingCustomEvents(
     UBlueprint* Blueprint,
     const FString& EventName)
@@ -118,6 +145,21 @@ bool TryCreateCustomEventNode(
             NodeCreator.CreateNode(false);
         EventNode->CustomFunctionName = FName(*EventName);
         Context.FinalizeNode(NodeCreator, EventNode, X, Y);
+        return true;
+    }
+
+    // This path compiles synchronously below; refuse loudly (instead of crashing
+    // the editor) if any function graph is in the orphaned/unnamed-entry state.
+    FString BadGraph;
+    if (!ValidateFunctionGraphRoots(Context.Blueprint, BadGraph))
+    {
+        Context.SendError(
+            FString::Printf(
+                TEXT("Function graph '%s' has no valid named entry node; compiling now "
+                     "would crash the editor (engine check in ReplaceFunctionReferences). "
+                     "Recreate the function via add_function, then retry."),
+                *BadGraph),
+            TEXT("BLUEPRINT_INVALID_STATE"));
         return true;
     }
 

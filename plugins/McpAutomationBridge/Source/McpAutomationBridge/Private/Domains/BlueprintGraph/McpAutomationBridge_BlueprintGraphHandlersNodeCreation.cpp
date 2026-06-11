@@ -1,6 +1,7 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
 #if WITH_EDITOR
+#include "K2Node_FunctionEntry.h"
 #include "ScopedTransaction.h"
 
 namespace McpBlueprintGraphHandlers
@@ -51,6 +52,21 @@ void CreateDynamicNode(
                 TEXT("Node type '%s' not found. Use list_node_types to see available types."),
                 *NodeType),
             TEXT("NODE_TYPE_NOT_FOUND"));
+        return;
+    }
+
+    // Function entry nodes cannot be created standalone: a generically spawned
+    // entry has a NAME_None signature, and the next blueprint compile crashes
+    // the editor on an engine check() while conforming/renaming that function
+    // (ReplaceFunctionReferences). Entries are created as part of add_function.
+    if (NodeClass->IsChildOf(UK2Node_FunctionEntry::StaticClass()))
+    {
+        Context.SendError(
+            TEXT("K2Node_FunctionEntry cannot be spawned directly — function entry "
+                 "nodes are created (and named) by add_function. Spawning one here "
+                 "would leave an unnamed function graph that crashes the editor on "
+                 "the next compile."),
+            TEXT("NODE_TYPE_NOT_SUPPORTED"));
         return;
     }
 
