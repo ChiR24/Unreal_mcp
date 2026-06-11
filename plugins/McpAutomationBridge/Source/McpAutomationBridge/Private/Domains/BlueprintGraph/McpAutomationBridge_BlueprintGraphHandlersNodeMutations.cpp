@@ -13,11 +13,6 @@ static bool DeleteNode(FActionContext& Context)
         return false;
     }
 
-    const FScopedTransaction Transaction(
-        FText::FromString(TEXT("Delete Blueprint Node")));
-    Context.Blueprint->Modify();
-    Context.TargetGraph->Modify();
-
     FString NodeId;
     Context.Payload->TryGetStringField(TEXT("nodeId"), NodeId);
     UEdGraphNode* TargetNode = Context.FindNode(NodeId);
@@ -42,6 +37,10 @@ static bool DeleteNode(FActionContext& Context)
         return true;
     }
 
+    const FScopedTransaction Transaction(
+        FText::FromString(TEXT("Delete Blueprint Node")));
+    Context.Blueprint->Modify();
+    Context.TargetGraph->Modify();
     FBlueprintEditorUtils::RemoveNode(
         Context.Blueprint,
         TargetNode,
