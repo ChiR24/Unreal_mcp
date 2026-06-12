@@ -1,7 +1,5 @@
 #include "McpAutomationBridge_DataHandlers.h"
 #include "McpAutomationBridgeSubsystem.h"
-#include "Safety/McpPathSecurity.h"
-#include "Safety/McpSafeOperations.h"
 #include "Engine/DataTable.h"
 #include "Engine/CurveTable.h"
 #include "Engine/DataAsset.h"
