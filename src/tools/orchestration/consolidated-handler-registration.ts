@@ -65,6 +65,7 @@ import { handleTextureTools } from '../handlers/texture/texture-handlers.js';
 import { handleVolumeTools } from '../handlers/volume/volume-handlers.js';
 import { handleWidgetAuthoringTools } from '../handlers/widget/widget-authoring-handlers.js';
 import { handleDataTools } from '../handlers/data/data-handlers.js';
+import { handleProjectSettingsTools } from '../handlers/core/project-settings-handlers.js';
 
 function mergeAutomationResponse(
   response: unknown,
@@ -117,6 +118,7 @@ export function registerDefaultHandlers() {
 
   toolRegistry.register('control_actor', async (args, tools) => await handleActorTools(getToolAction(args), args, tools));
   toolRegistry.register('control_editor', async (args, tools) => await handleEditorTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_project_settings', async (args, tools) => await handleProjectSettingsTools(getToolAction(args), args, tools));
   toolRegistry.register('manage_level', async (args, tools) => await handleLevelTools(getToolAction(args), args, tools));
 
   toolRegistry.register('animation_physics', async (args, tools) => {

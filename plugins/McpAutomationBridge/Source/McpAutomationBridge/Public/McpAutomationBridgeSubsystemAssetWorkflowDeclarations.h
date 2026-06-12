@@ -20,5 +20,12 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleAddMaterialParameter); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleListMaterialInstances); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleResetInstanceParameters); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleDoesAssetExist); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleGetMaterialStats); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleRebuildMaterial);
+MCP_DECLARE_ACTION_HANDLER(HandleGetMaterialNodeDetails); \
+MCP_DECLARE_ACTION_HANDLER(HandleRebuildMaterial); \
+MCP_DECLARE_ACTION_HANDLER(HandleNavigateToPath); \
+MCP_DECLARE_ACTION_HANDLER(HandleSyncToAsset); \
+MCP_DECLARE_ACTION_HANDLER(HandleCreateCollection); \
+MCP_DECLARE_ACTION_HANDLER(HandleAddToCollection); \
+MCP_DECLARE_ACTION_HANDLER(HandleSetAssetColor); \
+MCP_DECLARE_ACTION_HANDLER(HandleShowInExplorer); \
+MCP_DECLARE_ACTION_HANDLER(HandleRunAssetActionUtility);

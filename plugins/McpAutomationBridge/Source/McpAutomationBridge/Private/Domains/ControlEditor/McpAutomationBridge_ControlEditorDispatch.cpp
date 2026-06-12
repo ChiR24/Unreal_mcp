@@ -100,6 +100,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     return HandleControlEditorSetFixedDeltaTime(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("open_level"))
     return HandleControlEditorOpenLevel(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_grid_settings"))
+    return HandleControlEditorSetGridSettings(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_snap_settings"))
+    return HandleControlEditorSetSnapSettings(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("manage_editor_layouts"))
+    return HandleControlEditorManageLayouts(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("create_custom_editor_mode"))
+    return HandleControlEditorCreateCustomMode(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("spawn_editor_utility_widget"))
+    return HandleControlEditorSpawnUtilityWidget(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("run_editor_utility_task"))
+    return HandleControlEditorRunUtilityTask(RequestId, Payload, RequestingSocket);
 
   SendStandardErrorResponse(
       this, RequestingSocket, RequestId, TEXT("UNKNOWN_ACTION"),

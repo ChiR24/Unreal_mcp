@@ -3,6 +3,7 @@ import { manageAssetToolDefinition } from '../core/manage-asset-tool.js';
 import { manageBlueprintToolDefinition } from '../core/blueprint/manage-blueprint-tool.js';
 import { controlActorToolDefinition } from '../core/control-actor-tool.js';
 import { controlEditorToolDefinition } from '../core/control-editor-tool.js';
+import { manageProjectSettingsToolDefinition } from '../core/manage-project-settings-tool.js';
 import { manageLevelToolDefinition } from '../world/manage-level-tool.js';
 import { buildEnvironmentToolDefinition } from '../world/build-environment-tool.js';
 import { animationPhysicsToolDefinition } from '../gameplay/animation-physics-tool.js';
@@ -30,6 +31,7 @@ export const allToolDefinitions: ToolDefinition[] = [
   manageBlueprintToolDefinition,
   controlActorToolDefinition,
   controlEditorToolDefinition,
+  manageProjectSettingsToolDefinition,
   manageLevelToolDefinition,
   buildEnvironmentToolDefinition,
   animationPhysicsToolDefinition,

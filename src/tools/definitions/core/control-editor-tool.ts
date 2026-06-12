@@ -25,6 +25,8 @@ export const controlEditorToolDefinition: ToolDefinition = {
             'open_level', 'focus_actor',
             'show_stats', 'hide_stats',
             'set_editor_mode', 'set_immersive_mode', 'set_game_view',
+            'set_grid_settings', 'set_snap_settings', 'manage_editor_layouts', 'create_custom_editor_mode',
+            'spawn_editor_utility_widget', 'run_editor_utility_task',
             'undo', 'redo', 'save_all'
           ],
           description: 'Editor action'
@@ -62,6 +64,12 @@ export const controlEditorToolDefinition: ToolDefinition = {
         category: commonSchemas.stringProp,
         preferences: commonSchemas.objectProp,
         key: commonSchemas.stringProp,
+        // Editor Utility parameters
+        gridSize: commonSchemas.numberProp,
+        snapEnabled: commonSchemas.booleanProp,
+        layoutName: commonSchemas.stringProp,
+        widgetPath: commonSchemas.assetPath,
+        taskPath: commonSchemas.assetPath,
         // simulate_input parameters
         type: commonSchemas.stringProp,
         inputType: commonSchemas.stringProp,
