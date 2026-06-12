@@ -9,6 +9,7 @@ DEFINE_LOG_CATEGORY(LogUmgMcp);
 #include "Blueprint/WidgetTree.h"
 #include "Components/PanelWidget.h"
 #include "Components/PanelSlot.h"
+#include "Components/ContentWidget.h"
 #include "Components/TextBlock.h"
 #include "JsonObjectConverter.h"
 #include "Serialization/JsonWriter.h"
@@ -525,6 +526,51 @@ static void ApplyPropertiesToExistingWidget(const TSharedPtr<FJsonObject>& Widge
     if (WidgetProps->Values.Num() > 0)
     {
         TargetWidget->Modify();
+
+        // 1. Resolve Brush.ResourceObject
+        if (WidgetProps->HasField(TEXT("Brush")))
+        {
+            TSharedPtr<FJsonObject> BrushObj = WidgetProps->GetObjectField(TEXT("Brush"));
+            if (BrushObj->HasField(TEXT("ResourceObject")))
+            {
+                FString Path = BrushObj->GetStringField(TEXT("ResourceObject"));
+                if (UObject* MatAsset = LoadObject<UObject>(nullptr, *Path))
+                {
+                    if (FProperty* BrushProp = TargetWidget->GetClass()->FindPropertyByName(TEXT("Brush")))
+                    {
+                        void* BrushPtr = BrushProp->ContainerPtrToValuePtr<void>(TargetWidget);
+                        if (UScriptStruct* BrushStruct = CastField<FStructProperty>(BrushProp)->Struct)
+                        {
+                            if (FProperty* ResProp = BrushStruct->FindPropertyByName(TEXT("ResourceObject")))
+                            {
+                                CastField<FObjectProperty>(ResProp)->SetObjectPropertyValue(ResProp->ContainerPtrToValuePtr<void>(BrushPtr), MatAsset);
+                                BrushObj->RemoveField(TEXT("ResourceObject"));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Auto-resolve specific Object Pointers from paths
+        for (const auto& Pair : WidgetProps->Values)
+        {
+            if (FProperty* Prop = TargetWidget->GetClass()->FindPropertyByName(FName(*Pair.Key)))
+            {
+                if (FObjectProperty* ObjProp = CastField<FObjectProperty>(Prop))
+                {
+                    if (Pair.Value->Type == EJson::String)
+                    {
+                        FString ObjectPath = Pair.Value->AsString();
+                        if (UObject* ResolvedObj = LoadObject<UObject>(nullptr, *ObjectPath))
+                        {
+                            ObjProp->SetObjectPropertyValue(ObjProp->ContainerPtrToValuePtr<void>(TargetWidget), ResolvedObj);
+                        }
+                    }
+                }
+            }
+        }
+
         if (!FJsonObjectConverter::JsonObjectToUStruct(WidgetProps.ToSharedRef(), TargetWidget->GetClass(), TargetWidget, 0, 0))
         {
             UE_LOG(LogUmgMcp, Warning, TEXT("ApplyPropertiesToExistingWidget: Failed to apply properties to '%s'."), *TargetWidget->GetName());
@@ -675,9 +721,18 @@ static UWidget* CreateWidgetFromJson(const TSharedPtr<FJsonObject>& WidgetJson, 
                 UE_LOG(LogUmgMcp, Warning, TEXT("CreateWidgetFromJson: AddChild returned null slot for '%s' in '%s'."), *WidgetName, *ParentName);
             }
         }
+        else if (UContentWidget* ParentContent = Cast<UContentWidget>(ParentWidget))
+        {
+            ParentContent->SetContent(NewWidget);
+            NewSlot = Cast<UPanelSlot>(NewWidget->Slot);
+            if (!NewSlot)
+            {
+                UE_LOG(LogUmgMcp, Warning, TEXT("CreateWidgetFromJson: SetContent returned null slot for '%s' in '%s'."), *WidgetName, *ParentName);
+            }
+        }
         else
         {
-            UE_LOG(LogUmgMcp, Warning, TEXT("CreateWidgetFromJson: Parent '%s' is not a UPanelWidget, cannot add child '%s'."), *ParentName, *WidgetName);
+            UE_LOG(LogUmgMcp, Warning, TEXT("CreateWidgetFromJson: Parent '%s' is not a UPanelWidget or UContentWidget, cannot add child '%s'."), *ParentName, *WidgetName);
         }
     }
 

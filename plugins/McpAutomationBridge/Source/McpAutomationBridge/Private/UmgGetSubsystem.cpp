@@ -369,6 +369,12 @@ FString UUmgGetSubsystem::GetLayoutData(UWidgetBlueprint* WidgetBlueprint, int32
 
     TArray<TSharedPtr<FJsonValue>> LayoutDataArray;
 
+    float Scale = 1.0f;
+    if (ResolutionHeight > 0)
+    {
+        Scale = (float)ResolutionHeight / 1080.0f;
+    }
+
     for (UWidget* Widget : AllWidgets)
     {
         if (Widget && Widget->GetCachedWidget().IsValid())
@@ -378,10 +384,10 @@ FString UUmgGetSubsystem::GetLayoutData(UWidgetBlueprint* WidgetBlueprint, int32
 
             TSharedPtr<FJsonObject> WidgetLayoutJson = MakeShared<FJsonObject>();
             WidgetLayoutJson->SetStringField(TEXT("widget_id"), Widget->GetPathName());
-            WidgetLayoutJson->SetNumberField(TEXT("left"), BoundingBox.Left);
-            WidgetLayoutJson->SetNumberField(TEXT("top"), BoundingBox.Top);
-            WidgetLayoutJson->SetNumberField(TEXT("right"), BoundingBox.Right);
-            WidgetLayoutJson->SetNumberField(TEXT("bottom"), BoundingBox.Bottom);
+            WidgetLayoutJson->SetNumberField(TEXT("left"), BoundingBox.Left * Scale);
+            WidgetLayoutJson->SetNumberField(TEXT("top"), BoundingBox.Top * Scale);
+            WidgetLayoutJson->SetNumberField(TEXT("right"), BoundingBox.Right * Scale);
+            WidgetLayoutJson->SetNumberField(TEXT("bottom"), BoundingBox.Bottom * Scale);
 
             LayoutDataArray.Add(MakeShared<FJsonValueObject>(WidgetLayoutJson));
         }
@@ -411,16 +417,13 @@ bool UUmgGetSubsystem::CheckWidgetOverlap(UWidgetBlueprint* WidgetBlueprint, con
     TArray<UWidget*> AllWidgets;
     WidgetBlueprint->WidgetTree->GetAllWidgets(AllWidgets);
 
-    TArray<FSlateRect> BoundingBoxes;
+    struct FWidgetRect { FSlateRect Rect; FString Name; };
+    TArray<FWidgetRect> BoundingBoxes;
     for (UWidget* Widget : AllWidgets)
     {
         if (Widget && Widget->GetCachedWidget().IsValid())
         {
-            if (WidgetIds.Num() > 0 && !WidgetIds.Contains(Widget->GetName()))
-            {
-                continue;
-            }
-            BoundingBoxes.Add(Widget->GetCachedWidget()->GetTickSpaceGeometry().GetLayoutBoundingRect());
+            BoundingBoxes.Add({Widget->GetCachedWidget()->GetTickSpaceGeometry().GetLayoutBoundingRect(), Widget->GetName()});
         }
     }
 
@@ -428,9 +431,14 @@ bool UUmgGetSubsystem::CheckWidgetOverlap(UWidgetBlueprint* WidgetBlueprint, con
     {
         for (int32 j = i + 1; j < BoundingBoxes.Num(); ++j)
         {
-            if (FSlateRect::DoRectanglesIntersect(BoundingBoxes[i], BoundingBoxes[j]))
+            if (WidgetIds.Num() > 0 && !WidgetIds.Contains(BoundingBoxes[i].Name) && !WidgetIds.Contains(BoundingBoxes[j].Name))
             {
-                UE_LOG(LogUmgGet, Warning, TEXT("CheckWidgetOverlap: Overlap detected in %s."), *WidgetBlueprint->GetPathName());
+                continue;
+            }
+
+            if (FSlateRect::DoRectanglesIntersect(BoundingBoxes[i].Rect, BoundingBoxes[j].Rect))
+            {
+                UE_LOG(LogUmgGet, Warning, TEXT("CheckWidgetOverlap: Overlap detected between %s and %s in %s."), *BoundingBoxes[i].Name, *BoundingBoxes[j].Name, *WidgetBlueprint->GetPathName());
                 return true; // Found an overlap
             }
         }

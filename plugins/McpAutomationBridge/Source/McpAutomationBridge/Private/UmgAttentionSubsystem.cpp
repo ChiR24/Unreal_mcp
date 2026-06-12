@@ -116,41 +116,13 @@ bool UUmgAttentionSubsystem::SetTargetUmgAsset(const FString& AssetPath)
         TargetBP = LoadObject<UWidgetBlueprint>(nullptr, *AssetPath, nullptr, LOAD_NoWarn);
     }
 
-    // 3. Conditional Creation
-    // Only create if it looks like a valid path but just missing
+    // 3. Conditional Creation (Removed to avoid unintended mutations)
     if (!TargetBP)
     {
-        // Basic sanity check before creating: does it look like a valid package path?
-        if (FPackageName::IsValidPath(AssetPath))
-        {
-            UE_LOG(LogUmgAttention, Log, TEXT("SetTargetUmgAsset: Asset '%s' not found. Creating new WidgetBlueprint..."), *AssetPath);
-            
-            FString PackageName = AssetPath;
-            FString AssetName = FPaths::GetBaseFilename(AssetPath);
-            FString PackagePath = FPaths::GetPath(AssetPath);
-
-            // Ensure AssetTools module is loaded
-            IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
-            
-            // Create a factory for WidgetBlueprint
-            UWidgetBlueprintFactory* Factory = NewObject<UWidgetBlueprintFactory>();
-            
-            UObject* NewAsset = AssetTools.CreateAsset(AssetName, PackagePath, UWidgetBlueprint::StaticClass(), Factory);
-            TargetBP = Cast<UWidgetBlueprint>(NewAsset);
-            
-            if (TargetBP)
-            {
-                 UE_LOG(LogUmgAttention, Log, TEXT("SetTargetUmgAsset: Successfully created new asset '%s'."), *AssetPath);
-            }
-            else
-            {
-                 UE_LOG(LogUmgAttention, Error, TEXT("SetTargetUmgAsset: Failed to create asset '%s'."), *AssetPath);
-            }
-        }
-        else
-        {
-             UE_LOG(LogUmgAttention, Warning, TEXT("SetTargetUmgAsset: Path '%s' is not a valid package path. Skipping creation."), *AssetPath);
-        }
+        UE_LOG(LogUmgAttention, Warning, TEXT("SetTargetUmgAsset: Asset '%s' was not found."), *AssetPath);
+        AttentionTargetAssetPath.Empty();
+        CachedTargetWidgetBlueprint = nullptr;
+        return false;
     }
 
     if (TargetBP)
@@ -160,6 +132,10 @@ bool UUmgAttentionSubsystem::SetTargetUmgAsset(const FString& AssetPath)
         AttentionTargetAssetPath = AssetPath;
         CachedTargetWidgetBlueprint = TargetBP;
         CurrentWidgetName.Empty(); // Clear stale widget scope when switching assets unless explicitly set later.
+        CurrentAnimationName.Empty();
+        CurrentGraphName.Empty();
+        LastEditedNodeId.Empty();
+        CurrentNodePosition = FVector2D::ZeroVector;
 
         // Also treat setting a target as an 'edit' action to update the history, ensuring consistency.
         UmgAssetHistory.Remove(AssetPath);

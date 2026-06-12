@@ -257,7 +257,7 @@ static bool HandleConfigureSessionInterface(
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(TEXT("Invalid session interface type: %s. Valid types: Default, LAN, Null"), *InterfaceType), nullptr);
-        return false;
+        return true;
     }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
@@ -951,7 +951,7 @@ static bool HandleMutePlayer(
                 {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 7
                     // UE 5.0-5.6: CreateUniquePlayerId was available on some platforms
-                    FUniqueNetIdPtr NetId = IdentityInterface->CreateUniquePlayerId(TargetPlayerId);
+                    FUniqueNetIdPtr NetId = IdentityInterface->CreateUniquePlayerId(TargetIdentifier);
                     if (NetId.IsValid())
                     {
                         if (bMuted)

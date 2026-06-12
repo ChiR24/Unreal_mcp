@@ -12,6 +12,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Components/ContentWidget.h"
 #include "FileHelpers.h"
 #include "UmgFileTransformation.h"
 #include "Components/CanvasPanelSlot.h"
@@ -425,9 +426,17 @@ FString UUmgSetSubsystem::CreateWidget(UWidgetBlueprint* WidgetBlueprint, const 
     }
     else
     {
-        // Add as child to parent
-        ParentWidget->AddChild(NewWidget);
-        UE_LOG(LogUmgSet, Log, TEXT("CreateWidget: Successfully created '%s' as child of '%s'."), *WidgetName, *ActualParentName);
+        if (UContentWidget* ContentParent = Cast<UContentWidget>(ParentWidget))
+        {
+            ContentParent->SetContent(NewWidget);
+            UE_LOG(LogUmgSet, Log, TEXT("CreateWidget: Successfully set '%s' as content of '%s'."), *WidgetName, *ActualParentName);
+        }
+        else
+        {
+            // Add as child to parent
+            ParentWidget->AddChild(NewWidget);
+            UE_LOG(LogUmgSet, Log, TEXT("CreateWidget: Successfully created '%s' as child of '%s'."), *WidgetName, *ActualParentName);
+        }
     }
 
     // CRITICAL FIX: Register the new widget with a GUID in the Blueprint
