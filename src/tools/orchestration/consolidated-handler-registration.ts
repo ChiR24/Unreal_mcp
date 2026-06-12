@@ -21,7 +21,8 @@ import {
   splineActionSet,
   textureActionSet,
   volumeActionSet,
-  widgetAuthoringActionSet
+  widgetAuthoringActionSet,
+  dataActionSet
 } from './consolidated-routing.js';
 import { executeAutomationRequest } from '../handlers/foundation/dispatch/common-handlers.js';
 import { handleAITools } from '../handlers/ai/ai-handlers.js';
@@ -63,6 +64,7 @@ import { handleSystemTools, handleConsoleCommand } from '../handlers/system/syst
 import { handleTextureTools } from '../handlers/texture/texture-handlers.js';
 import { handleVolumeTools } from '../handlers/volume/volume-handlers.js';
 import { handleWidgetAuthoringTools } from '../handlers/widget/widget-authoring-handlers.js';
+import { handleDataTools } from '../handlers/data/data-handlers.js';
 
 function mergeAutomationResponse(
   response: unknown,
@@ -212,5 +214,10 @@ export function registerDefaultHandlers() {
     const action = getToolAction(args);
     if (volumeActionSet.has(action)) return await handleVolumeTools(action, args, tools);
     return await handleLevelStructureTools(action, args, tools);
+  });
+  toolRegistry.register('manage_data', async (args, tools) => {
+    const action = getToolAction(args);
+    if (dataActionSet.has(action)) return await handleDataTools(action, args, tools);
+    return await handleDataTools(action, args, tools);
   });
 }
