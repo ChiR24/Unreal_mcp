@@ -29,6 +29,23 @@ inline const TArray<FString>& ManageAICore()
 		TEXT("create_nav_link_proxy"), TEXT("set_focus"), TEXT("clear_focus"),
 		TEXT("set_blackboard_value"), TEXT("get_blackboard_value"),
 		TEXT("run_behavior_tree"), TEXT("stop_behavior_tree"),
+		// Phase 42: NPC Plugins — Dialogue
+		TEXT("create_npc_dialogue_tree"), TEXT("add_dialogue_node"),
+		TEXT("link_dialogue_nodes"), TEXT("set_dialogue_speaker"),
+		TEXT("set_dialogue_condition"), TEXT("trigger_dialogue"),
+		// Phase 42: NPC Plugins — Behavior Modes
+		TEXT("setup_patrol_mode"), TEXT("setup_alert_mode"),
+		TEXT("setup_combat_mode"), TEXT("setup_idle_mode"),
+		TEXT("configure_mode_transitions"), TEXT("add_patrol_waypoint"),
+		// Phase 42: NPC Plugins — Director
+		TEXT("create_npc_spawner"), TEXT("configure_spawn_limits"),
+		TEXT("set_spawn_conditions"), TEXT("create_npc_group"),
+		TEXT("configure_group_tactics"), TEXT("get_npc_state"),
+		// Phase 42: NPC Plugins — Memory & Personality
+		TEXT("create_npc_memory"), TEXT("add_memory_record"),
+		TEXT("query_npc_memory"), TEXT("set_npc_personality"),
+		TEXT("configure_reputation_system"), TEXT("get_npc_info"),
+		// BT graph + navigation (appended dynamically)
 		TEXT("create"), TEXT("add_node"), TEXT("connect_nodes"),
 		TEXT("remove_node"), TEXT("break_connections"),
 		TEXT("set_node_properties"), TEXT("configure_nav_mesh_settings"),

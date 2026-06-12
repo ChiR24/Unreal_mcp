@@ -74,5 +74,31 @@ MCP_AI_HANDLER_DECL(HandleSetBlackboardValue);
 MCP_AI_HANDLER_DECL(HandleGetBlackboardValue);
 MCP_AI_HANDLER_DECL(HandleRunBehaviorTree);
 MCP_AI_HANDLER_DECL(HandleStopBehaviorTree);
+// Phase 42: NPC Plugins
+MCP_AI_HANDLER_DECL(HandleCreateNPCDialogueTree);
+MCP_AI_HANDLER_DECL(HandleAddDialogueNode);
+MCP_AI_HANDLER_DECL(HandleLinkDialogueNodes);
+MCP_AI_HANDLER_DECL(HandleSetDialogueSpeaker);
+MCP_AI_HANDLER_DECL(HandleSetDialogueCondition);
+MCP_AI_HANDLER_DECL(HandleTriggerDialogue);
+MCP_AI_HANDLER_DECL(HandleSetupPatrolMode);
+MCP_AI_HANDLER_DECL(HandleSetupAlertMode);
+MCP_AI_HANDLER_DECL(HandleSetupCombatMode);
+MCP_AI_HANDLER_DECL(HandleSetupIdleMode);
+MCP_AI_HANDLER_DECL(HandleConfigureModeTransitions);
+MCP_AI_HANDLER_DECL(HandleAddPatrolWaypoint);
+MCP_AI_HANDLER_DECL(HandleCreateNPCSpawner);
+MCP_AI_HANDLER_DECL(HandleConfigureSpawnLimits);
+MCP_AI_HANDLER_DECL(HandleSetSpawnConditions);
+MCP_AI_HANDLER_DECL(HandleCreateNPCGroup);
+MCP_AI_HANDLER_DECL(HandleConfigureGroupTactics);
+MCP_AI_HANDLER_DECL(HandleGetNPCState);
+MCP_AI_HANDLER_DECL(HandleCreateNPCMemory);
+MCP_AI_HANDLER_DECL(HandleAddMemoryRecord);
+MCP_AI_HANDLER_DECL(HandleQueryNPCMemory);
+MCP_AI_HANDLER_DECL(HandleSetNPCPersonality);
+MCP_AI_HANDLER_DECL(HandleConfigureReputationSystem);
+MCP_AI_HANDLER_DECL(HandleGetNPCInfo);
 #undef MCP_AI_HANDLER_DECL
 }
+

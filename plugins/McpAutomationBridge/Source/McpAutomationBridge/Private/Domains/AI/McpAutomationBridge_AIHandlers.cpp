@@ -279,9 +279,134 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         return McpAIHandlers::HandleStopBehaviorTree(this, RequestId, Payload, RequestingSocket);
     }
 
+    // Phase 42: NPC Plugins — Dialogue
+    if (SubAction == TEXT("create_npc_dialogue_tree"))
+    {
+        return McpAIHandlers::HandleCreateNPCDialogueTree(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("add_dialogue_node"))
+    {
+        return McpAIHandlers::HandleAddDialogueNode(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("link_dialogue_nodes"))
+    {
+        return McpAIHandlers::HandleLinkDialogueNodes(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("set_dialogue_speaker"))
+    {
+        return McpAIHandlers::HandleSetDialogueSpeaker(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("set_dialogue_condition"))
+    {
+        return McpAIHandlers::HandleSetDialogueCondition(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("trigger_dialogue"))
+    {
+        return McpAIHandlers::HandleTriggerDialogue(this, RequestId, Payload, RequestingSocket);
+    }
+
+    // Phase 42: NPC Plugins — Behavior Modes
+    if (SubAction == TEXT("setup_patrol_mode"))
+    {
+        return McpAIHandlers::HandleSetupPatrolMode(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("setup_alert_mode"))
+    {
+        return McpAIHandlers::HandleSetupAlertMode(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("setup_combat_mode"))
+    {
+        return McpAIHandlers::HandleSetupCombatMode(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("setup_idle_mode"))
+    {
+        return McpAIHandlers::HandleSetupIdleMode(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("configure_mode_transitions"))
+    {
+        return McpAIHandlers::HandleConfigureModeTransitions(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("add_patrol_waypoint"))
+    {
+        return McpAIHandlers::HandleAddPatrolWaypoint(this, RequestId, Payload, RequestingSocket);
+    }
+
+    // Phase 42: NPC Plugins — NPC Director
+    if (SubAction == TEXT("create_npc_spawner"))
+    {
+        return McpAIHandlers::HandleCreateNPCSpawner(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("configure_spawn_limits"))
+    {
+        return McpAIHandlers::HandleConfigureSpawnLimits(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("set_spawn_conditions"))
+    {
+        return McpAIHandlers::HandleSetSpawnConditions(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("create_npc_group"))
+    {
+        return McpAIHandlers::HandleCreateNPCGroup(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("configure_group_tactics"))
+    {
+        return McpAIHandlers::HandleConfigureGroupTactics(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("get_npc_state"))
+    {
+        return McpAIHandlers::HandleGetNPCState(this, RequestId, Payload, RequestingSocket);
+    }
+
+    // Phase 42: NPC Plugins — Memory & Personality
+    if (SubAction == TEXT("create_npc_memory"))
+    {
+        return McpAIHandlers::HandleCreateNPCMemory(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("add_memory_record"))
+    {
+        return McpAIHandlers::HandleAddMemoryRecord(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("query_npc_memory"))
+    {
+        return McpAIHandlers::HandleQueryNPCMemory(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("set_npc_personality"))
+    {
+        return McpAIHandlers::HandleSetNPCPersonality(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("configure_reputation_system"))
+    {
+        return McpAIHandlers::HandleConfigureReputationSystem(this, RequestId, Payload, RequestingSocket);
+    }
+
+    if (SubAction == TEXT("get_npc_info"))
+    {
+        return McpAIHandlers::HandleGetNPCInfo(this, RequestId, Payload, RequestingSocket);
+    }
+
     SendAutomationError(RequestingSocket, RequestId,
                         FString::Printf(TEXT("Unknown AI action: %s"), *SubAction),
                         TEXT("UNKNOWN_ACTION"));
     return true;
 #endif
 }
+
