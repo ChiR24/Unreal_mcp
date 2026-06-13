@@ -211,6 +211,32 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
                                              EGPD_Input);
     }
 
+    // A freshly created function graph contains only the entry node; the result
+    // node (which owns the function's return-value pins) is created lazily when
+    // an output is first added. Without it the loop below fell back to the entry
+    // node and added the outputs there as EGPD_Output pins — which an entry node
+    // exposes as additional *input* parameters, so declared outputs showed up as
+    // inputs at the call site. Create the result node so outputs land on it.
+    if (Outputs.Num() > 0 && !ResultNode) {
+      FGraphNodeCreator<UK2Node_FunctionResult> ResultCreator(*NewGraph);
+      ResultNode = ResultCreator.CreateNode(/*bSelectNewNode=*/false);
+      if (EntryNode) {
+        ResultNode->NodePosX = EntryNode->NodePosX + 480;
+        ResultNode->NodePosY = EntryNode->NodePosY;
+      }
+      ResultCreator.Finalize();
+    }
+
+    // Outputs were declared but the result node could not be created: fail loudly
+    // instead of silently dropping the outputs (no silent no-op).
+    if (Outputs.Num() > 0 && !ResultNode) {
+      Bridge.SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("Failed to create function result node for declared outputs."),
+          nullptr, TEXT("GRAPH_UNAVAILABLE"));
+      return true;
+    }
+
     for (const TSharedPtr<FJsonValue> &Value : Outputs) {
       if (!Value.IsValid() || Value->Type != EJson::Object)
         continue;
@@ -221,10 +247,13 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
       Obj->TryGetStringField(TEXT("name"), ParamName);
       FString ParamType;
       Obj->TryGetStringField(TEXT("type"), ParamType);
-      FMcpAutomationBridge_AddUserDefinedPin(
-          ResultNode ? static_cast<UK2Node *>(ResultNode)
-                     : static_cast<UK2Node *>(EntryNode),
-          ParamName, ParamType, EGPD_Output);
+      // Function outputs are the *input* pins of the result node — data flows
+      // into the return node. Adding them to the entry node, or with EGPD_Output,
+      // is what turned declared outputs into extra inputs.
+      if (ResultNode) {
+        FMcpAutomationBridge_AddUserDefinedPin(ResultNode, ParamName, ParamType,
+                                               EGPD_Input);
+      }
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
