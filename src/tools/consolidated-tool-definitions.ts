@@ -108,7 +108,9 @@ export const WIDGET_AUTHORING_ACTIONS = [
   'create_loading_screen', 'create_hud_widget', 'add_health_bar', 'add_ammo_counter', 'add_minimap',
   'add_crosshair', 'add_compass', 'add_interaction_prompt', 'add_objective_tracker',
   'add_damage_indicator', 'create_inventory_ui', 'create_dialog_widget', 'create_radial_menu',
-  'get_widget_info', 'preview_widget'
+  'get_widget_info', 'preview_widget', 'export_widget_tree', 'apply_widget_tree', 
+  'query_widget_properties', 'set_widget_properties', 'get_layout_data', 'reparent_widget',
+  'delete_widget', 'get_widget_schema'
 ] as const;
 
 export const SESSION_ACTIONS = [

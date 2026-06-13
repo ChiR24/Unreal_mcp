@@ -1868,6 +1868,12 @@ void UMcpAutomationBridgeSubsystem::LoadDynamicHandlersFromJson() {
       continue;
     }
     
+    // Prevent overwriting built-in authoritative handlers
+    if (ActionHandlers.Contains(ActionName)) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Action '%s' is already registered. Skipping dynamic handler to preserve security boundaries."), *ActionName);
+      continue;
+    }
+
     // Register the dynamic handler based on type
     RegisterHandler(ActionName, [this, ActionName, HandlerType, Target](const FString &R, const FString &A,
                            const TSharedPtr<FJsonObject> &P,
@@ -1912,13 +1918,14 @@ void UMcpAutomationBridgeSubsystem::LoadDynamicHandlersFromJson() {
         // Typically Target is a script path like "Scripts/MyScript.py"
 #if WITH_EDITOR
         FString PyCmd = FString::Printf(TEXT("py \"%s\""), *Target);
-        // We could serialize Payload back to JSON and pass it as an argument!
-        FString PayloadStr;
-        TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&PayloadStr);
-        FJsonSerializer::Serialize(P.ToSharedRef(), Writer);
-        // Escape quotes
-        PayloadStr = PayloadStr.Replace(TEXT("\""), TEXT("\\\""));
-        PyCmd += FString::Printf(TEXT(" \"%s\""), *PayloadStr);
+        if (P.IsValid()) {
+          FString PayloadStr;
+          TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&PayloadStr);
+          FJsonSerializer::Serialize(P.ToSharedRef(), Writer);
+          // Escape quotes
+          PayloadStr = PayloadStr.Replace(TEXT("\""), TEXT("\\\""));
+          PyCmd += FString::Printf(TEXT(" \"%s\""), *PayloadStr);
+        }
 
         FString OutError;
         TArray<FString> Cmds;

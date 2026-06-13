@@ -107,6 +107,12 @@ public:
 			.String(TEXT("path"), TEXT("Path to a directory or asset."))
 			.String(TEXT("folder"), TEXT("Path to a directory."))
 			.String(TEXT("widgetPath"), TEXT("Widget blueprint path."))
+			.String(TEXT("widgetName"), TEXT("Name of the widget to modify."))
+			.String(TEXT("targetWidgetName"), TEXT("Target widget name."))
+			.String(TEXT("newParentName"), TEXT("New parent widget name."))
+			.String(TEXT("widgetType"), TEXT("Type of widget."))
+			.String(TEXT("widgetTreeJson"), TEXT("JSON payload representing a widget tree."))
+			.String(TEXT("propertiesJson"), TEXT("JSON payload of properties."))
 			.String(TEXT("slotName"), TEXT("Name of the widget slot."))
 			.String(TEXT("parentSlot"), TEXT("Parent slot to add widget to."))
 			.Object(TEXT("anchorMin"), TEXT("Minimum anchor point (0-1)."),

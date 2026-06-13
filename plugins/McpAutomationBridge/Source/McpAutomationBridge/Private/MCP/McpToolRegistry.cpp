@@ -30,7 +30,8 @@ bool IsCanonicalMcpToolName(const FString& Name)
 		TEXT("manage_inventory"),
 		TEXT("manage_interaction"),
 		TEXT("manage_networking"),
-		TEXT("manage_level_structure")
+		TEXT("manage_level_structure"),
+		TEXT("manage_widget_authoring")
 	};
 
 	return CanonicalToolNames.Contains(Name);

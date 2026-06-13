@@ -3,6 +3,7 @@ import path from 'node:path';
 import { Logger } from '../utils/logger.js';
 import { config } from '../config.js';
 import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
+import { createOutputSchema } from './tool-definition-utils.js';
 import { toolRegistry } from './dynamic-handler-registry.js';
 import { dynamicToolManager } from './dynamic-tool-manager.js';
 import { executeAutomationRequest } from './handlers/common-handlers.js';
@@ -10,18 +11,16 @@ import { executeAutomationRequest } from './handlers/common-handlers.js';
 const log = new Logger('DynamicHandlerLoader');
 
 export function loadDynamicHandlersFromJson() {
-  let configDir = '';
-  
-  if (config.UE_PROJECT_PATH) {
-    let p = config.UE_PROJECT_PATH;
-    if (p.toLowerCase().endsWith('.uproject')) {
-      p = path.dirname(p);
-    }
-    configDir = path.join(p, 'Config');
-  } else {
-    // Fallback if not provided
-    configDir = path.join(process.cwd(), 'Config');
+  if (!config.UE_PROJECT_PATH) {
+    log.warn('config.UE_PROJECT_PATH is not set. Skipping dynamic handler loading.');
+    return;
   }
+
+  let p = config.UE_PROJECT_PATH;
+  if (p.toLowerCase().endsWith('.uproject')) {
+    p = path.dirname(p);
+  }
+  const configDir = path.join(p, 'Config');
 
   const jsonPath = path.join(configDir, 'McpHandlers.json');
   
@@ -45,12 +44,19 @@ export function loadDynamicHandlersFromJson() {
             const def = {
               name: actionName,
               description: handler.description || `Dynamic ${handler.type} handler: ${handler.target}`,
-              category: 'utility',
+              category: 'utility' as const,
               inputSchema: handler.parameters || {
                 type: 'object',
                 properties: {},
                 required: []
-              }
+              },
+              outputSchema: createOutputSchema({
+                responseData: {
+                  type: 'object',
+                  description: 'Dynamic response payload',
+                  additionalProperties: true
+                }
+              })
             };
             consolidatedToolDefinitions.push(def);
             dynamicToolManager.registerDynamicTool(def);

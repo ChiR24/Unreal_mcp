@@ -183,7 +183,11 @@ inline const TArray<FString>& WidgetAuthoring()
 		TEXT("add_interaction_prompt"), TEXT("add_objective_tracker"),
 		TEXT("add_damage_indicator"), TEXT("create_inventory_ui"),
 		TEXT("create_dialog_widget"), TEXT("create_radial_menu"),
-		TEXT("get_widget_info"), TEXT("preview_widget")
+		TEXT("get_widget_info"), TEXT("preview_widget"),
+		TEXT("export_widget_tree"), TEXT("apply_widget_tree"),
+		TEXT("query_widget_properties"), TEXT("set_widget_properties"),
+		TEXT("get_layout_data"), TEXT("reparent_widget"),
+		TEXT("delete_widget"), TEXT("get_widget_schema")
 	};
 	return Actions;
 }
