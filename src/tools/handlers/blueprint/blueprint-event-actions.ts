@@ -19,6 +19,12 @@ export const blueprintEventHandlers: Readonly<Record<string, BlueprintActionHand
     ...commonTimingPayload(context)
   }),
   add_function: async (context) => await handleAddFunction(context),
+  remove_function: async (context) => await executeBlueprintRequest(context, 'blueprint_remove_function', {
+    blueprintCandidates: blueprintCandidates(context),
+    requestedPath: blueprintTarget(context),
+    functionName: optionalString(context.argsRecord.functionName) ?? optionalString(context.argsTyped.memberName) ?? '',
+    ...commonTimingPayload(context)
+  }),
   add_construction_script: async (context) => await executeBlueprintRequest(context, 'blueprint_add_construction_script', {
     blueprintCandidates: blueprintCandidates(context),
     requestedPath: blueprintTarget(context),
