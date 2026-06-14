@@ -105,7 +105,11 @@ void FMcpAutomationBridge_DataHandlers::RegisterHandlers(UMcpAutomationBridgeSub
         {
             FString SlotName;
             double UserIndex = 0;
-            Payload->TryGetStringField(TEXT("slotName"), SlotName);
+            if (!Payload->TryGetStringField(TEXT("slotName"), SlotName) || SlotName.IsEmpty())
+            {
+                Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing or empty required parameter (slotName)."), TEXT("MISSING_PARAMETER"));
+                return true;
+            }
             Payload->TryGetNumberField(TEXT("userIndex"), UserIndex);
 
             bool bExists = UGameplayStatics::DoesSaveGameExist(SlotName, (int32)UserIndex);
@@ -117,7 +121,11 @@ void FMcpAutomationBridge_DataHandlers::RegisterHandlers(UMcpAutomationBridgeSub
         {
             FString SlotName;
             double UserIndex = 0;
-            Payload->TryGetStringField(TEXT("slotName"), SlotName);
+            if (!Payload->TryGetStringField(TEXT("slotName"), SlotName) || SlotName.IsEmpty())
+            {
+                Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing or empty required parameter (slotName)."), TEXT("MISSING_PARAMETER"));
+                return true;
+            }
             Payload->TryGetNumberField(TEXT("userIndex"), UserIndex);
 
             bool bDeleted = UGameplayStatics::DeleteGameInSlot(SlotName, (int32)UserIndex);
