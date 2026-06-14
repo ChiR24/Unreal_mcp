@@ -3,7 +3,7 @@ import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import { executeAutomationRequest, requireNonEmptyString } from '../foundation/dispatch/common-handlers.js';
 
-export async function handleDataTools(action: string, args: HandlerArgs, tools: ITools): Promise<any> {
+export async function handleDataTools(action: string, args: HandlerArgs, tools: ITools): Promise<unknown> {
   const payload = {
     ...args,
     subAction: action

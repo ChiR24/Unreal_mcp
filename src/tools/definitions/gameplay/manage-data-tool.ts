@@ -35,7 +35,7 @@ export const manageDataToolDefinition: ToolDefinition = {
             configFilename: { 
                 type: 'string', 
                 description: 'Name of the config file (e.g. DefaultGame.ini).',
-                enum: ['Game', 'Engine', 'Input', 'GameUserSettings', 'EditorPerProjectUserSettings', 'Editor', 'DefaultGame.ini', 'DefaultEngine.ini', 'DefaultInput.ini', 'DefaultEditor.ini']
+                enum: ['Game', 'Engine', 'Input', 'GameUserSettings', 'EditorPerProjectUserSettings', 'Editor']
             },
             blueprintPath: commonSchemas.blueprintPath
         },
