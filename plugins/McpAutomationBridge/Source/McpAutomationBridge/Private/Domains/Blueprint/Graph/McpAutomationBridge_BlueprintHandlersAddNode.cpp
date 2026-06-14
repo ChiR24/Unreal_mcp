@@ -51,6 +51,8 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     LocalPayload->TryGetStringField(TEXT("variableName"), VariableName);
     FString NodeName;
     LocalPayload->TryGetStringField(TEXT("nodeName"), NodeName);
+    FString TargetClass;
+    LocalPayload->TryGetStringField(TEXT("targetClass"), TargetClass);
     float PosX = 0.0f, PosY = 0.0f;
     LocalPayload->TryGetNumberField(TEXT("posX"), PosX);
     LocalPayload->TryGetNumberField(TEXT("posY"), PosY);
@@ -115,8 +117,9 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     TSharedPtr<FJsonObject> NodeErrorResult;
     UEdGraphNode *NewNode =
         CreateBlueprintGraphNode(TargetGraph, BP, NodeType, FunctionName,
-                                 VariableName, NodeName, NodeErrorMessage,
-                                 NodeErrorCode, NodeErrorResult);
+                                 VariableName, NodeName, TargetClass,
+                                 NodeErrorMessage, NodeErrorCode,
+                                 NodeErrorResult);
 
     if (!NewNode) {
       if (!NodeErrorCode.IsEmpty()) {

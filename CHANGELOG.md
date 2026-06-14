@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+<<<<<<< Updated upstream
+=======
+## 🏷️ [Unreleased]
+
+<details>
+<summary><b>🐛 Fixed</b></summary>
+
+- **`create_node` / `add_node` now sets the target class on DynamicCast nodes** — creating a `K2Node_DynamicCast` ("Cast To ...") over MCP fell through to a generic node-instantiation path that never assigned `TargetType`, producing an unusable "Bad cast node" with only a wildcard `Object` pin and no typed `As <Class>` output. Added a dedicated cast branch that reads a `targetClass` parameter (Blueprint asset path such as `/Game/Blueprints/BP_Cole`, or a native class name), resolves it via `ResolveClassByName`, and assigns `UK2Node_DynamicCast::TargetType`. Returns a clear `INVALID_ARGUMENT`/`CLASS_NOT_FOUND` error when the target is missing or unresolvable.
+- **`add_variable` now applies `defaultValue`** — the handler read the `defaultValue` payload field but never assigned it to the new variable, so every Blueprint variable was created with a zero/empty default regardless of the value supplied (e.g. a float requested as `0.35` stayed `0`). The parsed JSON default is now written to `FBPVariableDescription::DefaultValue` with type-aware formatting: booleans as lowercase `true`/`false`, integer/byte categories as whole numbers, floats/doubles via `SanitizeFloat`, and strings/struct literals passed through. UE parses the stored string back into the typed default on compile.
+
+</details>
+
+---
+
+>>>>>>> Stashed changes
 ## 🏷️ [0.5.30] - 2026-06-05
 
 > [!IMPORTANT]
