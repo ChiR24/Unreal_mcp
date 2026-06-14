@@ -1,6 +1,5 @@
 import re
 import os
-import sys
 
 file_path = os.path.join("src", "tools", "handlers", "widget", "widget-authoring-handlers.ts")
 
@@ -59,10 +58,10 @@ if os.path.exists(file_path):
 
         pattern = rf"(case '{action}': {{\s*requireNonEmptyString\(argsRecord\.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath'\);(.*?)\s*return sendRequest\('{action}'\);\s*}})"
         
-        def repl(m):
+        def repl(m, action_str=action):
             inner = m.group(2)
             new_inner = inner + "\n      argsRecord.widgetPath = sanitizePath(argsRecord.widgetPath as string);\n"
-            return f"case '{action}': {{\n      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');{new_inner}      return sendRequest('{action}');\n    }}"
+            return f"case '{action_str}': {{\n      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');{new_inner}      return sendRequest('{action_str}');\n    }}"
         
         new_content = re.sub(pattern, repl, content, flags=re.DOTALL)
         if new_content != content:
@@ -75,4 +74,4 @@ if os.path.exists(file_path):
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(content)
 
-print("TS Patching complete.")
+    print("TS Patching complete.")
