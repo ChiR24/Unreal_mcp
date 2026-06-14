@@ -53,6 +53,19 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     LocalPayload->TryGetStringField(TEXT("nodeName"), NodeName);
     FString TargetClass;
     LocalPayload->TryGetStringField(TEXT("targetClass"), TargetClass);
+    // Backfill from legacy/alternate payload fields so cast nodes created by
+    // existing callers (which send memberClass/nodeClass, or encode the class
+    // in a "CastTo<Class>" nodeType) still resolve a target.
+    if (TargetClass.IsEmpty()) {
+      LocalPayload->TryGetStringField(TEXT("memberClass"), TargetClass);
+    }
+    if (TargetClass.IsEmpty()) {
+      LocalPayload->TryGetStringField(TEXT("nodeClass"), TargetClass);
+    }
+    if (TargetClass.IsEmpty() &&
+        NodeType.StartsWith(TEXT("CastTo"), ESearchCase::IgnoreCase)) {
+      TargetClass = NodeType.Mid(6);
+    }
     float PosX = 0.0f, PosY = 0.0f;
     LocalPayload->TryGetNumberField(TEXT("posX"), PosX);
     LocalPayload->TryGetNumberField(TEXT("posY"), PosY);
