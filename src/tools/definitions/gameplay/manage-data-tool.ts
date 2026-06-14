@@ -11,16 +11,8 @@ export const manageDataToolDefinition: ToolDefinition = {
             action: {
                 type: 'string',
                 enum: [
-                    'create_data_asset', 'create_primary_data_asset',
-                    'create_data_table', 'add_data_table_row', 'modify_data_table_row', 'delete_data_table_row',
-                    'import_data_table_csv', 'export_data_table_csv',
-                    'create_curve_table', 'create_curve_float', 'create_curve_linear_color',
-                    'create_save_game_class', 'add_save_variable', 'save_game_to_slot', 'load_game_from_slot',
-                    'delete_save_slot', 'check_save_slot_exists', 'get_save_slot_names', 'configure_async_save_load',
-                    'create_gameplay_tag', 'create_tag_container', 'add_tag_to_container', 'remove_tag_from_container',
-                    'check_tag_match', 'register_native_tag', 'create_tag_table',
-                    'read_config_value', 'write_config_value', 'get_section', 'create_config_section',
-                    'flush_config', 'reload_config', 'get_config_hierarchy'
+                    'read_config_value', 'write_config_value', 'flush_config',
+                    'check_save_slot_exists', 'delete_save_slot', 'create_gameplay_tag'
                 ],
                 description: 'Data action to perform.'
             },
@@ -40,7 +32,11 @@ export const manageDataToolDefinition: ToolDefinition = {
             configSection: { type: 'string', description: 'Section in the config file.' },
             configKey: { type: 'string', description: 'Key in the config file.' },
             configValue: { type: 'string', description: 'Value to write to config file.' },
-            configFilename: { type: 'string', description: 'Name of the config file (e.g. DefaultGame.ini).' },
+            configFilename: { 
+                type: 'string', 
+                description: 'Name of the config file (e.g. DefaultGame.ini).',
+                enum: ['Game', 'Engine', 'Input', 'GameUserSettings', 'EditorPerProjectUserSettings', 'Editor', 'DefaultGame.ini', 'DefaultEngine.ini', 'DefaultInput.ini', 'DefaultEditor.ini']
+            },
             blueprintPath: commonSchemas.blueprintPath
         },
         required: ['action']

@@ -100,16 +100,16 @@ void FMcpAutomationBridge_DataHandlers::RegisterHandlers(UMcpAutomationBridgeSub
             Payload->TryGetStringField(TEXT("tagName"), TagName);
             Payload->TryGetStringField(TEXT("tagComment"), TagComment);
 
-            UGameplayTagsManager::Get().AddNativeGameplayTag(FName(*TagName), TagComment);
-            ResultJson->SetStringField(TEXT("tagName"), TagName);
-            Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Gameplay tag created successfully."), ResultJson);
+            ResultJson->SetStringField(TEXT("message"), TEXT("Persistence for gameplay tags is not yet implemented."));
+            Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("NOT_IMPLEMENTED"), ResultJson);
             return true;
         }
 
-        // DATA ASSETS (Placeholder for full implementaton)
+        // DATA ASSETS (Placeholder for full implementation)
         else if (SubAction.StartsWith(TEXT("create_data_")) || SubAction.StartsWith(TEXT("create_curve_")))
         {
-            Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Data asset action mocked."), ResultJson);
+            ResultJson->SetStringField(TEXT("message"), TEXT("Data asset creation is not yet implemented."));
+            Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("NOT_IMPLEMENTED"), ResultJson);
             return true;
         }
 

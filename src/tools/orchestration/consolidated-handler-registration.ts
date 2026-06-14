@@ -218,6 +218,6 @@ export function registerDefaultHandlers() {
   toolRegistry.register('manage_data', async (args, tools) => {
     const action = getToolAction(args);
     if (dataActionSet.has(action)) return await handleDataTools(action, args, tools);
-    return await handleDataTools(action, args, tools);
+    return { success: false, error: 'UNKNOWN_ACTION', message: `Unknown manage_data action: ${action}` };
   });
 }

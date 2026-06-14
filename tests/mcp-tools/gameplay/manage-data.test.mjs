@@ -45,24 +45,15 @@ const testCases = [
     scenario: 'SAVE: delete_save_slot (not found)',
     toolName: 'manage_data',
     arguments: { action: 'delete_save_slot', slotName: SLOT_NAME, userIndex: 0 },
-    expected: 'success|error', // Can return error if not found depending on implementation
+    expected: 'error'
   },
 
   // === GAMEPLAY TAGS ===
   {
-    scenario: 'TAGS: create_gameplay_tag',
+    scenario: 'TAGS: create_gameplay_tag (not implemented)',
     toolName: 'manage_data',
     arguments: { action: 'create_gameplay_tag', tagName: `Test.Tag.${ts}`, tagComment: 'Created by MCP test' },
-    expected: 'success',
-    assertions: [{ path: 'structuredContent.result.tagName', equals: `Test.Tag.${ts}`, label: 'tag created successfully' }]
-  },
-
-  // === DATA ASSETS (Mock) ===
-  {
-    scenario: 'DATA: create_data_asset',
-    toolName: 'manage_data',
-    arguments: { action: 'create_data_asset', name: `DA_Test_${ts}`, path: '/Game/MCPTest' },
-    expected: 'success'
+    expected: 'error'
   }
 ];
 
