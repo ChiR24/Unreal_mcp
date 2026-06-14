@@ -7,8 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-<<<<<<< Updated upstream
-=======
+ Updated upstream
+
 ## 🏷️ [Unreleased]
 
 <details>
@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
->>>>>>> Stashed changes
+Stashed changes
 ## 🏷️ [0.5.30] - 2026-06-05
 
 > [!IMPORTANT]
