@@ -96,6 +96,21 @@ static bool ConnectPins(FActionContext& Context)
         return true;
     }
 
+    // Snapshot node GUIDs so we can detect an auto-inserted conversion node.
+    // When the pin types differ but an autocast exists, the schema silently
+    // spawns a conversion node (e.g. real->int Truncate) inside
+    // TryCreateConnection and still returns true. Surfacing it stops the caller
+    // from unknowingly accepting a precision/semantic change.
+    TSet<FGuid> NodeGuidsBefore;
+    NodeGuidsBefore.Reserve(Context.TargetGraph->Nodes.Num());
+    for (UEdGraphNode* ExistingNode : Context.TargetGraph->Nodes)
+    {
+        if (ExistingNode)
+        {
+            NodeGuidsBefore.Add(ExistingNode->NodeGuid);
+        }
+    }
+
     if (!Context.TargetGraph->GetSchema()->TryCreateConnection(
             FromPin,
             ToPin))
@@ -106,11 +121,38 @@ static bool ConnectPins(FActionContext& Context)
         return true;
     }
 
+    // A node present now but not before == the auto-inserted conversion node.
+    UEdGraphNode* ConversionNode = nullptr;
+    for (UEdGraphNode* MaybeNew : Context.TargetGraph->Nodes)
+    {
+        if (MaybeNew && !NodeGuidsBefore.Contains(MaybeNew->NodeGuid))
+        {
+            ConversionNode = MaybeNew;
+            break;
+        }
+    }
+
     FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
     SaveLoadedAssetThrottled(Context.Blueprint);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    if (ConversionNode)
+    {
+        Result->SetBoolField(TEXT("conversionInserted"), true);
+        Result->SetStringField(
+            TEXT("conversionNodeId"), ConversionNode->NodeGuid.ToString());
+        Result->SetStringField(
+            TEXT("conversionNodeTitle"),
+            ConversionNode->GetNodeTitle(ENodeTitleType::ListView).ToString());
+        Result->SetStringField(
+            TEXT("note"),
+            TEXT("Pin types differed; an automatic conversion node was inserted "
+                 "between the pins (possible precision/semantic change)."));
+    }
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
-    Context.SendResponse(TEXT("Pins connected."), Result);
+    Context.SendResponse(
+        ConversionNode ? TEXT("Pins connected (conversion node inserted).")
+                       : TEXT("Pins connected."),
+        Result);
     return true;
 }
 
