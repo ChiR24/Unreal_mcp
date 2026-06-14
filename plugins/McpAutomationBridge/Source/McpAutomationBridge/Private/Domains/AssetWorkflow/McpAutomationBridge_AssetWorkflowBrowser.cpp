@@ -5,69 +5,48 @@
 bool UMcpAutomationBridgeSubsystem::HandleNavigateToPath(
     const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  Result->SetBoolField(TEXT("success"), true);
-  Result->SetStringField(TEXT("message"), TEXT("Navigated to path in Content Browser."));
-  SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Navigated"), Result);
+  SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("Navigate to path handler not yet implemented."), nullptr);
   return true;
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSyncToAsset(
     const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  Result->SetBoolField(TEXT("success"), true);
-  Result->SetStringField(TEXT("message"), TEXT("Synced to asset in Content Browser."));
-  SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Synced"), Result);
+  SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("Sync to asset handler not yet implemented."), nullptr);
   return true;
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleCreateCollection(
     const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  Result->SetBoolField(TEXT("success"), true);
-  Result->SetStringField(TEXT("message"), TEXT("Created collection."));
-  SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Collection created"), Result);
+  SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("Create collection handler not yet implemented."), nullptr);
   return true;
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleAddToCollection(
     const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  Result->SetBoolField(TEXT("success"), true);
-  Result->SetStringField(TEXT("message"), TEXT("Added to collection."));
-  SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added to collection"), Result);
+  SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("Add to collection handler not yet implemented."), nullptr);
   return true;
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSetAssetColor(
     const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  Result->SetBoolField(TEXT("success"), true);
-  Result->SetStringField(TEXT("message"), TEXT("Set asset/folder color."));
-  SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Color set"), Result);
+  SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("Set asset color handler not yet implemented."), nullptr);
   return true;
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleShowInExplorer(
     const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  Result->SetBoolField(TEXT("success"), true);
-  Result->SetStringField(TEXT("message"), TEXT("Shown in explorer."));
-  SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Opened Explorer"), Result);
+  SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("Show in explorer handler not yet implemented."), nullptr);
   return true;
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleRunAssetActionUtility(
     const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  Result->SetBoolField(TEXT("success"), true);
-  Result->SetStringField(TEXT("message"), TEXT("Asset Action Utility ran."));
-  SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Utility Executed"), Result);
+  SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("NOT_IMPLEMENTED"), TEXT("Run asset action utility handler not yet implemented."), nullptr);
   return true;
 }
