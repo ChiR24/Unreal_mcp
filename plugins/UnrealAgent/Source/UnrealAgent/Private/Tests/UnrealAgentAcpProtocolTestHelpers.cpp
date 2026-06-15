@@ -3,9 +3,12 @@
 #include "Tests/UnrealAgentAcpProtocolTestHelpers.h"
 
 #include "Acp/Client/McpOpenCodeAcpClient.h"
+#include "HAL/FileManager.h"
+#include "HAL/PlatformMisc.h"
 #include "HAL/PlatformProcess.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Misc/Paths.h"
 
 #if PLATFORM_LINUX
 #include <signal.h>
@@ -51,13 +54,15 @@ namespace UnrealAgent::AutomationTests
         bHadNativeMcpEnabled = GConfig->GetBool(TestAutomationBridgeSettingsSection, TEXT("bEnableNativeMCP"), bPreviousNativeMcpEnabled, GGameIni);
         bHadNativeMcpPort = GConfig->GetInt(TestAutomationBridgeSettingsSection, TEXT("NativeMCPPort"), PreviousNativeMcpPort, GGameIni);
         bHadListenHost = GConfig->GetString(TestAutomationBridgeSettingsSection, TEXT("ListenHost"), PreviousListenHost, GGameIni);
+        bHadAllowNonLoopback = GConfig->GetBool(TestAutomationBridgeSettingsSection, TEXT("bAllowNonLoopback"), bPreviousAllowNonLoopback, GGameIni);
         bHadRequireCapabilityToken = GConfig->GetBool(TestAutomationBridgeSettingsSection, TEXT("bRequireCapabilityToken"), bPreviousRequireCapabilityToken, GGameIni);
         bHadCapabilityToken = GConfig->GetString(TestAutomationBridgeSettingsSection, TEXT("CapabilityToken"), PreviousCapabilityToken, GGameIni);
         GConfig->SetBool(TestAutomationBridgeSettingsSection, TEXT("bEnableNativeMCP"), true, GGameIni);
         GConfig->SetInt(TestAutomationBridgeSettingsSection, TEXT("NativeMCPPort"), 43123, GGameIni);
-        GConfig->SetString(TestAutomationBridgeSettingsSection, TEXT("ListenHost"), TEXT("0.0.0.0"), GGameIni);
+        GConfig->SetString(TestAutomationBridgeSettingsSection, TEXT("ListenHost"), TEXT("attacker.invalid"), GGameIni);
+        GConfig->SetBool(TestAutomationBridgeSettingsSection, TEXT("bAllowNonLoopback"), false, GGameIni);
         GConfig->SetBool(TestAutomationBridgeSettingsSection, TEXT("bRequireCapabilityToken"), true, GGameIni);
-        GConfig->SetString(TestAutomationBridgeSettingsSection, TEXT("CapabilityToken"), TEXT("fake-capability-token"), GGameIni);
+        GConfig->SetString(TestAutomationBridgeSettingsSection, TEXT("CapabilityToken"), TEXT("test-capability-token"), GGameIni);
     }
 
     FScopedAutomationBridgeSettingsOverride::~FScopedAutomationBridgeSettingsOverride()
@@ -90,6 +95,14 @@ namespace UnrealAgent::AutomationTests
         {
             GConfig->RemoveKey(TestAutomationBridgeSettingsSection, TEXT("ListenHost"), GGameIni);
         }
+        if (bHadAllowNonLoopback)
+        {
+            GConfig->SetBool(TestAutomationBridgeSettingsSection, TEXT("bAllowNonLoopback"), bPreviousAllowNonLoopback, GGameIni);
+        }
+        else
+        {
+            GConfig->RemoveKey(TestAutomationBridgeSettingsSection, TEXT("bAllowNonLoopback"), GGameIni);
+        }
         if (bHadRequireCapabilityToken)
         {
             GConfig->SetBool(TestAutomationBridgeSettingsSection, TEXT("bRequireCapabilityToken"), bPreviousRequireCapabilityToken, GGameIni);
@@ -106,6 +119,51 @@ namespace UnrealAgent::AutomationTests
         {
             GConfig->RemoveKey(TestAutomationBridgeSettingsSection, TEXT("CapabilityToken"), GGameIni);
         }
+    }
+
+    FScopedOpenCodeConfigEnvironment::FScopedOpenCodeConfigEnvironment(
+        const FString& RootDirectory)
+        : PreviousConfigDirectory(FPlatformMisc::GetEnvironmentVariable(TEXT("OPENCODE_CONFIG_DIR")))
+        , PreviousConfig(FPlatformMisc::GetEnvironmentVariable(TEXT("OPENCODE_CONFIG")))
+        , PreviousInlineConfig(FPlatformMisc::GetEnvironmentVariable(TEXT("OPENCODE_CONFIG_CONTENT")))
+        , PreviousHome(FPlatformMisc::GetEnvironmentVariable(TEXT("HOME")))
+        , PreviousXdgConfigHome(FPlatformMisc::GetEnvironmentVariable(TEXT("XDG_CONFIG_HOME")))
+        , PreviousPermission(FPlatformMisc::GetEnvironmentVariable(TEXT("OPENCODE_PERMISSION")))
+        , PreviousDisableProjectConfig(FPlatformMisc::GetEnvironmentVariable(TEXT("OPENCODE_DISABLE_PROJECT_CONFIG")))
+        , PreviousPure(FPlatformMisc::GetEnvironmentVariable(TEXT("OPENCODE_PURE")))
+        , PreviousAppData(FPlatformMisc::GetEnvironmentVariable(TEXT("APPDATA")))
+        , PreviousLocalAppData(FPlatformMisc::GetEnvironmentVariable(TEXT("LOCALAPPDATA")))
+    {
+        const FString ConfigDirectory = FPaths::Combine(RootDirectory, TEXT("GlobalConfig"));
+        const FString HomeDirectory = FPaths::Combine(RootDirectory, TEXT("Home"));
+        const FString XdgDirectory = FPaths::Combine(RootDirectory, TEXT("XdgConfig"));
+        IFileManager::Get().MakeDirectory(*ConfigDirectory, true);
+        IFileManager::Get().MakeDirectory(*HomeDirectory, true);
+        IFileManager::Get().MakeDirectory(*XdgDirectory, true);
+        FPlatformMisc::SetEnvironmentVar(TEXT("OPENCODE_CONFIG_DIR"), *ConfigDirectory);
+        FPlatformMisc::SetEnvironmentVar(TEXT("OPENCODE_CONFIG"), TEXT(""));
+        FPlatformMisc::SetEnvironmentVar(TEXT("OPENCODE_CONFIG_CONTENT"), TEXT(""));
+        FPlatformMisc::SetEnvironmentVar(TEXT("HOME"), *HomeDirectory);
+        FPlatformMisc::SetEnvironmentVar(TEXT("XDG_CONFIG_HOME"), *XdgDirectory);
+        FPlatformMisc::SetEnvironmentVar(TEXT("OPENCODE_PERMISSION"), TEXT(""));
+        FPlatformMisc::SetEnvironmentVar(TEXT("OPENCODE_DISABLE_PROJECT_CONFIG"), TEXT(""));
+        FPlatformMisc::SetEnvironmentVar(TEXT("OPENCODE_PURE"), TEXT(""));
+        FPlatformMisc::SetEnvironmentVar(TEXT("APPDATA"), TEXT(""));
+        FPlatformMisc::SetEnvironmentVar(TEXT("LOCALAPPDATA"), TEXT(""));
+    }
+
+    FScopedOpenCodeConfigEnvironment::~FScopedOpenCodeConfigEnvironment()
+    {
+        FPlatformMisc::SetEnvironmentVar(TEXT("OPENCODE_CONFIG_DIR"), *PreviousConfigDirectory);
+        FPlatformMisc::SetEnvironmentVar(TEXT("OPENCODE_CONFIG"), *PreviousConfig);
+        FPlatformMisc::SetEnvironmentVar(TEXT("OPENCODE_CONFIG_CONTENT"), *PreviousInlineConfig);
+        FPlatformMisc::SetEnvironmentVar(TEXT("HOME"), *PreviousHome);
+        FPlatformMisc::SetEnvironmentVar(TEXT("XDG_CONFIG_HOME"), *PreviousXdgConfigHome);
+        FPlatformMisc::SetEnvironmentVar(TEXT("OPENCODE_PERMISSION"), *PreviousPermission);
+        FPlatformMisc::SetEnvironmentVar(TEXT("OPENCODE_DISABLE_PROJECT_CONFIG"), *PreviousDisableProjectConfig);
+        FPlatformMisc::SetEnvironmentVar(TEXT("OPENCODE_PURE"), *PreviousPure);
+        FPlatformMisc::SetEnvironmentVar(TEXT("APPDATA"), *PreviousAppData);
+        FPlatformMisc::SetEnvironmentVar(TEXT("LOCALAPPDATA"), *PreviousLocalAppData);
     }
 
     bool PumpClientUntil(FOpenCodeAcpClient& Client, TFunctionRef<bool()> Predicate, double TimeoutSeconds)
