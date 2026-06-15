@@ -129,6 +129,40 @@ describe('test runner response evaluation', () => {
     expect(result.reason).toContain('plugin reported failure');
   });
 
+  it('honors an explicit not-implemented alternative when a success-primary expectation receives a placeholder failure', () => {
+    const result = evaluateExpectation(
+      { expected: 'success|not implemented' },
+      {
+        isError: true,
+        structuredContent: {
+          success: false,
+          error: 'NOT_IMPLEMENTED',
+          message: 'Render action not implemented yet'
+        }
+      }
+    );
+
+    expect(result.passed).toBe(true);
+    expect(result.reason).toContain('not implemented');
+  });
+
+  it('honors an underscore variant of the not-implemented alternative', () => {
+    const result = evaluateExpectation(
+      { expected: 'success|not_implemented' },
+      {
+        isError: true,
+        structuredContent: {
+          success: false,
+          error: 'NOT_IMPLEMENTED',
+          message: 'Render action not implemented yet'
+        }
+      }
+    );
+
+    expect(result.passed).toBe(true);
+    expect(result.reason).toContain('not_implemented');
+  });
+
   it('rejects unrelated failures when a success-primary expectation allows a specific editor-state fallback', () => {
     const expectedNotInPie = { expected: 'success|NOT_IN_PIE' };
 

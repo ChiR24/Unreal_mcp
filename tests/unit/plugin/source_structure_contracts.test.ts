@@ -1,6 +1,6 @@
 import {
-  readFileSync,
   readdirSync,
+  readFileSync,
 } from 'node:fs';
 import {
   basename,
@@ -16,6 +16,14 @@ import {
 const pluginSourceRoot = resolve(
   process.cwd(),
   'plugins/McpAutomationBridge/Source/McpAutomationBridge',
+);
+const unrealAgentSourceRoot = resolve(
+  process.cwd(),
+  'plugins/UnrealAgent/Source/UnrealAgent',
+);
+const unrealAgentGuardrailTestRoot = resolve(
+  process.cwd(),
+  'tests/unreal-agent-guardrails',
 );
 const sourceExtensionPattern = /\.(?:cpp|cs|h)$/u;
 const splitArtifactPattern =
@@ -74,6 +82,63 @@ describe('plugin source structure contracts', () => {
 
     // Then
     expect(splitArtifacts).toEqual([]);
+  });
+
+  it('keeps UnrealAgent source within 250 pure lines', () => {
+    // Given
+    const sourceFiles = listFiles(unrealAgentSourceRoot).filter((file) =>
+      sourceExtensionPattern.test(file),
+    );
+
+    // When
+    const oversizedFiles = sourceFiles
+      .map((file) => {
+        const relativeFile = file
+          .slice(unrealAgentSourceRoot.length + 1)
+          .replaceAll('\\', '/');
+        return {
+          file: relativeFile,
+          pureLines: countPureLines(readFileSync(file, 'utf8')),
+        };
+      })
+      .filter(({ pureLines }) => pureLines > 250)
+      .map(({ file, pureLines }) => `${pureLines} ${file}`);
+
+    // Then
+    expect(oversizedFiles).toEqual([]);
+  });
+
+  it('rejects UnrealAgent catch-all and mechanical split artifacts', () => {
+    // Given
+    const sourceFiles = listFiles(unrealAgentSourceRoot);
+
+    // When
+    const splitArtifacts = sourceFiles
+      .filter((file) => splitArtifactPattern.test(basename(file)))
+      .map((file) => basename(file))
+      .sort();
+
+    // Then
+    expect(splitArtifacts).toEqual([]);
+  });
+
+  it('keeps UnrealAgent guardrail runtime modules within 250 pure lines', () => {
+    // Given
+    const runtimeModules = listFiles(unrealAgentGuardrailTestRoot).filter(
+      (file) => file.endsWith('.mjs'),
+    );
+
+    // When
+    const oversizedFiles = runtimeModules
+      .map((file) => ({
+        file: basename(file),
+        pureLines: countPureLines(readFileSync(file, 'utf8')),
+      }))
+      .filter(({ pureLines }) => pureLines > 250)
+      .map(({ file, pureLines }) => `${pureLines} ${file}`);
+
+    // Then
+    expect(oversizedFiles).toEqual([]);
   });
 
   it('resolves every local Mcp include to a source file', () => {

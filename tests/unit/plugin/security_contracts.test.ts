@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 const privateSource = (...parts: string[]): string =>
   readFileSync(
@@ -76,6 +77,28 @@ describe('plugin security contracts', () => {
     expect(renderTargetSource).toContain('MaxAllocationBytes = 512ll * 1024ll * 1024ll');
     expect(renderTargetSource).toContain('WidthValue > 8192.0');
     expect(renderTargetSource).not.toContain('Width > 16384');
+  });
+
+  it('keeps native MCP fallback identity aligned with the bridge release', () => {
+    const transportHeader = privateSource(
+      'MCP',
+      'Transport',
+      'McpNativeTransport.h',
+    );
+    const pluginDescriptor = readFileSync(
+      resolve(
+        process.cwd(),
+        'plugins/McpAutomationBridge/McpAutomationBridge.uplugin',
+      ),
+      'utf8',
+    );
+    const versionName = z
+      .object({ VersionName: z.string() })
+      .parse(JSON.parse(pluginDescriptor)).VersionName;
+
+    expect(transportHeader).toContain(
+      `FString ServerVersion = TEXT("${versionName}")`,
+    );
   });
 
 });

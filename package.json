@@ -38,6 +38,7 @@
     "test:unit:coverage": "vitest run --coverage",
     "test:all": "node tests/integration.mjs",
     "test:smoke": "node --loader ts-node/esm scripts/smoke-test.ts",
+    "test:unreal-agent-guardrails": "node tests/unreal-agent-guardrails-runtime.mjs",
     "test:native-parity": "node tests/native-mcp-parity-audit.mjs",
     "test:params": "npm run test:native-parity && node tests/parameter-combination-audit.mjs --static --strict --optional-strict",
     "type-check": "tsc --noEmit"
@@ -67,6 +68,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@opencode-ai/plugin": "1.15.13",
     "@types/node": "^25.0.2",
     "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.50.0",

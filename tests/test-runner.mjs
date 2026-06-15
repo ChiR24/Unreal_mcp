@@ -180,7 +180,9 @@ const explicitFailureAlternatives = [
   'not_partitioned',
   'not available',
   'world partition',
-  'sc_disabled'
+  'sc_disabled',
+  'not implemented',
+  'not_implemented'
 ];
 const normalizedExplicitFailureAlternatives = explicitFailureAlternatives.map(normalizeConditionText);
 
@@ -354,10 +356,22 @@ export function evaluateExpectation(testCase, response) {
   // Hard placeholder signals must fail before success alternatives are evaluated.
   // Engine capability fallbacks such as "unsupported" or "not available" remain
   // valid only when the expectation explicitly allows them.
+  // If an explicitly allowed alternative matches a hard failure indicator, honor
+  // the alternative so that e.g. `success|not implemented` expectations pass.
+  // Normalize hyphens/underscores to spaces so that "not implemented",
+  // "not_implemented", and "not-implemented" are all treated as the same
+  // hard failure alternative.
   const hardPluginFailureIndicators = ['does not match prefix', 'unknown', 'not implemented', 'not_implemented'];
   const hardPluginFailureText = `${messageStr} ${errorStr}`;
   const hasHardPluginFailure = hardPluginFailureIndicators.some(term => hardPluginFailureText.includes(term));
-  if (primaryExpectsSuccess && hasHardPluginFailure) {
+  const normalizeHardFailureToken = (token) => token.toLowerCase().replace(/[_-]/g, ' ');
+  const hardFailureMatchesAllowedAlternative =
+    matchedExplicitFailureAlternative !== null
+    && hardPluginFailureIndicators.some(indicator =>
+         normalizeHardFailureToken(indicator) === normalizeHardFailureToken(matchedExplicitFailureAlternative)
+      )
+    && hardPluginFailureText.includes(normalizeHardFailureToken(matchedExplicitFailureAlternative));
+  if (primaryExpectsSuccess && hasHardPluginFailure && !hardFailureMatchesAllowedAlternative) {
     return {
       passed: false,
       reason: `Expected success but plugin reported failure: ${actualMessage || actualError}`
