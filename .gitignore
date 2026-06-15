@@ -63,6 +63,10 @@ plugins/*/Saved/
 .cache/
 .eslintcache
 
+# Debug/session capture artifacts (tmux logs, journals, traces)
+.debug*
+plans/
+
 # Publishing/registry tokens (secrets)
 .mcpregistry_registry_token
 .mcpregistry_github_token
