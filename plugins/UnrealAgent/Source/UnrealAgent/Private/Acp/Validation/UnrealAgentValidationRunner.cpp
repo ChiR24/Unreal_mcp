@@ -2,9 +2,8 @@
 
 #include "Acp/Context/UnrealAgentEditorContext.h"
 #include "Acp/Evidence/UnrealAgentEvidenceLedger.h"
-#include "Acp/StudioKit/UnrealAgentStudioKit.h"
+#include "Acp/Validation/UnrealAgentStudioKitValidationChecks.h"
 
-#include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 
 namespace
@@ -14,22 +13,6 @@ namespace
         FString Normalized = FPaths::ConvertRelativePathToFull(ProjectDirectory.IsEmpty() ? FPaths::ProjectDir() : ProjectDirectory);
         FPaths::NormalizeDirectoryName(Normalized);
         return Normalized;
-    }
-
-    void AddFileCheck(FUnrealAgentValidationResult& Result, const FString& Label, const FString& Path, const FString& RequiredText = FString())
-    {
-        FString FileText;
-        const bool bExists = FPaths::FileExists(Path);
-        const bool bLoaded = RequiredText.IsEmpty() || (bExists && FFileHelper::LoadFileToString(FileText, *Path));
-        const bool bContainsRequiredText = RequiredText.IsEmpty() || (bLoaded && FileText.Contains(RequiredText));
-        if (bExists && bContainsRequiredText)
-        {
-            Result.Checks.Add(FString::Printf(TEXT("OK %s: %s"), *Label, *Path));
-            return;
-        }
-
-        Result.bPassed = false;
-        Result.Errors.Add(FString::Printf(TEXT("Missing or unmanaged %s: %s"), *Label, *Path));
     }
 
     FString JoinLines(const TArray<FString>& Lines)
@@ -59,12 +42,7 @@ FUnrealAgentValidationResult FUnrealAgentValidationRunner::RunFastValidation(con
 
     Result.Checks.Add(FString::Printf(TEXT("OK project directory: %s"), *NormalizedProjectDirectory));
 
-    const FString Marker = FUnrealAgentStudioKit::GetStudioKitVersionMarker();
-    AddFileCheck(Result, TEXT("primary agent"), FPaths::Combine(NormalizedProjectDirectory, TEXT(".opencode/agents/unreal-agent.md")), FUnrealAgentStudioKit::GetPromptVersionMarker());
-    AddFileCheck(Result, TEXT("tool playbook skill"), FPaths::Combine(NormalizedProjectDirectory, TEXT(".opencode/skills/unreal-mcp-tool-playbook/SKILL.md")), Marker);
-    AddFileCheck(Result, TEXT("validation skill"), FPaths::Combine(NormalizedProjectDirectory, TEXT(".opencode/skills/unreal-validation-loop/SKILL.md")), Marker);
-    AddFileCheck(Result, TEXT("guardrails plugin"), FPaths::Combine(NormalizedProjectDirectory, TEXT(".opencode/plugins/unreal-agent-guardrails.ts")), Marker);
-    AddFileCheck(Result, TEXT("validate command"), FPaths::Combine(NormalizedProjectDirectory, TEXT(".opencode/commands/unreal-validate.md")), Marker);
+    UnrealAgent::Validation::AddStudioKitValidationChecks(Result, NormalizedProjectDirectory);
 
     FUnrealAgentEvidenceSummary EvidenceSummary;
     if (FUnrealAgentEvidenceLedger::EnsureLedger(NormalizedProjectDirectory, &EvidenceSummary))
