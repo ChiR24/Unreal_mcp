@@ -220,11 +220,13 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
     if (Outputs.Num() > 0 && !ResultNode) {
       FGraphNodeCreator<UK2Node_FunctionResult> ResultCreator(*NewGraph);
       ResultNode = ResultCreator.CreateNode(/*bSelectNewNode=*/false);
-      if (EntryNode) {
+      if (ResultNode && EntryNode) {
         ResultNode->NodePosX = EntryNode->NodePosX + 480;
         ResultNode->NodePosY = EntryNode->NodePosY;
       }
-      ResultCreator.Finalize();
+      if (ResultNode) {
+        ResultCreator.Finalize();
+      }
     }
 
     // Outputs were declared but the result node could not be created: fail loudly
