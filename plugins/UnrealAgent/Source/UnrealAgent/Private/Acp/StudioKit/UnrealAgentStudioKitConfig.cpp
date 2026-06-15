@@ -2,61 +2,63 @@
 
 namespace UnrealAgentStudioKit
 {
-    FString MakeGuardrailsPlugin()
-    {
-        return FString()
-            + TEXT("// unreal_agent_studio_kit_version: 1\n")
-            + TEXT("import type { Plugin } from \"@opencode-ai/plugin\"\n\n")
-            + TEXT("const SECRET_PATTERNS = [\n")
-            + TEXT("  /x-mcp-capability-token/iu,\n")
-            + TEXT("  /authorization\\s*:/iu,\n")
-            + TEXT("  /bearer\\s+[a-z0-9._\\-]+/iu,\n")
-            + TEXT("  /api[_-]?key/iu,\n")
-            + TEXT("  /access[_-]?token/iu,\n")
-            + TEXT("  /refresh[_-]?token/iu,\n")
-            + TEXT("  /password/iu,\n")
-            + TEXT("  /secret/iu,\n")
-            + TEXT("]\n\n")
-            + TEXT("function redact(value: unknown): unknown {\n")
-            + TEXT("  if (typeof value === \"string\") {\n")
-            + TEXT("    if (SECRET_PATTERNS.some((pattern) => pattern.test(value))) return \"[REDACTED]\"\n")
-            + TEXT("    return value\n")
-            + TEXT("  }\n")
-            + TEXT("  if (Array.isArray(value)) return value.map(redact)\n")
-            + TEXT("  if (value && typeof value === \"object\") {\n")
-            + TEXT("    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => {\n")
-            + TEXT("      if (SECRET_PATTERNS.some((pattern) => pattern.test(key))) return [key, \"[REDACTED]\"]\n")
-            + TEXT("      return [key, redact(item)]\n")
-            + TEXT("    }))\n")
-            + TEXT("  }\n")
-            + TEXT("  return value\n")
-            + TEXT("}\n\n")
-            + TEXT("export const UnrealAgentGuardrails: Plugin = async () => ({\n")
-            + TEXT("  \"tool.execute.before\": async (_input, output) => {\n")
-            + TEXT("    if (output && typeof output === \"object\" && \"args\" in output) {\n")
-            + TEXT("      ;(output as { args?: unknown }).args = redact((output as { args?: unknown }).args)\n")
-            + TEXT("    }\n")
-            + TEXT("  },\n")
-            + TEXT("  \"tool.execute.after\": async (_input, output) => {\n")
-            + TEXT("    const redacted = redact(output)\n")
-            + TEXT("    if (output && typeof output === \"object\" && redacted && typeof redacted === \"object\") {\n")
-            + TEXT("      Object.assign(output as Record<string, unknown>, redacted as Record<string, unknown>)\n")
-            + TEXT("    }\n")
-            + TEXT("  },\n")
-            + TEXT("  \"experimental.session.compacting\": async (_input, output) => {\n")
-            + TEXT("    const reminder = \"Unreal Agent reminder: inspect before live editor claims, prefer reversible changes, validate with evidence, and do not expose capability tokens or secrets.\"\n")
-            + TEXT("    if (output && typeof output === \"object\" && Array.isArray((output as { context?: unknown }).context)) {\n")
-            + TEXT("      ;((output as { context: string[] }).context).push(reminder)\n")
-            + TEXT("    }\n")
-            + TEXT("  },\n")
-            + TEXT("})\n\n")
-            + TEXT("export default UnrealAgentGuardrails\n");
-    }
-
     FString MakeOpenCodeConfig()
     {
         return FString()
             + TEXT("// unreal_agent_studio_kit_version: 1\n")
+            + TEXT("{\n")
+            + TEXT("  \"$schema\": \"https://opencode.ai/config.json\",\n")
+            + TEXT("  \"permission\": {\n")
+            + TEXT("    \"*\": \"ask\",\n")
+            + TEXT("    \"read\": \"ask\",\n")
+            + TEXT("    \"glob\": \"ask\",\n")
+            + TEXT("    \"grep\": \"ask\",\n")
+            + TEXT("    \"list\": \"ask\",\n")
+            + TEXT("    \"edit\": \"ask\",\n")
+            + TEXT("    \"write\": \"ask\",\n")
+            + TEXT("    \"patch\": \"ask\",\n")
+            + TEXT("    \"apply_patch\": \"ask\",\n")
+            + TEXT("    \"bash\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_tools\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_asset\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_blueprint\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_control_actor\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_control_editor\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_level\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_build_environment\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_animation_physics\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_system_control\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_sequence\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_inspect\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_audio\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_geometry\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_pcg\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_effect\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_gas\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_character\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_combat\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_ai\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_inventory\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_interaction\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_networking\": \"ask\",\n")
+            + TEXT("    \"unreal-engine_manage_level_structure\": \"ask\",\n")
+            + TEXT("    \"skill\": {\n")
+            + TEXT("      \"unreal-*\": \"allow\"\n")
+            + TEXT("    }\n")
+            + TEXT("  }\n")
+            + TEXT("}\n");
+    }
+
+    FString MakeLegacyOpenCodeConfig()
+    {
+        // Returns the true pre-tightening legacy OpenCode config shape
+        // (read/glob/grep/list = "allow"). This is what users had on disk
+        // before the policy tightening in MakeOpenCodeConfig() switched
+        // those four operations to "ask" and added the explicit
+        // `unreal-engine_*` allowlist. Must stay byte-identical to the
+        // LegacyConfig constant in LooksLikeLegacyOpenCodeConfig() so the
+        // upgrade path recognizes the prior shape.
+        return FString()
             + TEXT("{\n")
             + TEXT("  \"$schema\": \"https://opencode.ai/config.json\",\n")
             + TEXT("  \"permission\": {\n")
@@ -73,11 +75,24 @@ namespace UnrealAgentStudioKit
             + TEXT("}\n");
     }
 
-    FString MakeLegacyOpenCodeConfig()
+    bool LooksLikeLegacyOpenCodeConfig(const FString& ExistingText)
     {
-        FString Config = MakeOpenCodeConfig();
-        Config.RemoveFromStart(TEXT("// unreal_agent_studio_kit_version: 1\n"));
-        return Config;
+        const FString LegacyConfig = FString()
+            + TEXT("{\n")
+            + TEXT("  \"$schema\": \"https://opencode.ai/config.json\",\n")
+            + TEXT("  \"permission\": {\n")
+            + TEXT("    \"read\": \"allow\",\n")
+            + TEXT("    \"glob\": \"allow\",\n")
+            + TEXT("    \"grep\": \"allow\",\n")
+            + TEXT("    \"list\": \"allow\",\n")
+            + TEXT("    \"edit\": \"ask\",\n")
+            + TEXT("    \"bash\": \"ask\",\n")
+            + TEXT("    \"skill\": {\n")
+            + TEXT("      \"unreal-*\": \"allow\"\n")
+            + TEXT("    }\n")
+            + TEXT("  }\n")
+            + TEXT("}\n");
+        return ExistingText == LegacyConfig || ExistingText == MakeLegacyOpenCodeConfig();
     }
 
     FString MakeEvidenceReadme()

@@ -1,0 +1,47 @@
+#include "Acp/StudioKit/UnrealAgentStudioKitPrivate.h"
+
+namespace UnrealAgentStudioKit
+{
+FString MakeGuardrailsPlugin()
+{
+    return FString()
+        + TEXT("// unreal_agent_studio_kit_version: 1\n")
+        + TEXT("import type { Plugin } from \"@opencode-ai/plugin\"\n\n")
+        + TEXT("import { existsSync, lstatSync, realpathSync } from \"node:fs\"\n")
+        + TEXT("import { basename as basenamePath, dirname as dirnamePath, isAbsolute as isAbsolutePath, relative as relativePath, resolve as resolvePath, sep as pathSeparator } from \"node:path\"\n\n")
+        + MakeGuardrailsCoreSection()
+        + MakeGuardrailsLocalToolSection()
+        + TEXT("export const UnrealAgentGuardrails: Plugin = async ({ directory }) => {\n")
+        + TEXT("  setGuardrailProjectDirectory(directory)\n")
+        + TEXT("  return {\n")
+        + TEXT("  \"event\": async ({ event }) => {\n")
+        + TEXT("    recordRouteCardFromEvent(event)\n")
+        + TEXT("  },\n")
+        + TEXT("  \"tool.execute.before\": async (input, output) => {\n")
+        + TEXT("    rejectDirectUnrealBinaryAssetAccess(input, output)\n")
+        + TEXT("    rejectDirectUnrealProjectStateWrite(input, output)\n")
+        + TEXT("    rejectDirectUnrealContentMutation(input, output)\n")
+        + TEXT("    rejectLinkedLocalMutationTarget(input, output)\n")
+        + TEXT("    rejectDirectUnrealEditorStateMutation(input, output)\n")
+        + TEXT("    rejectDestructiveLocalShellAccess(input, output)\n")
+        + TEXT("    enforceMcpMutationPreflight(input, output)\n")
+        + TEXT("  },\n")
+        + TEXT("  \"tool.execute.after\": async (input, output) => {\n")
+        + TEXT("    recordMcpPreflightSuccess(input, output)\n")
+        + TEXT("    recordMcpMutationResult(input, output)\n")
+        + TEXT("    const redacted = redact(output)\n")
+        + TEXT("    if (output && typeof output === \"object\" && redacted && typeof redacted === \"object\") {\n")
+        + TEXT("      Object.assign(output as Record<string, unknown>, redacted as Record<string, unknown>)\n")
+        + TEXT("    }\n")
+        + TEXT("  },\n")
+        + TEXT("  \"experimental.session.compacting\": async (_input, output) => {\n")
+        + TEXT("    const reminder = \"Unreal Agent reminder: inspect before live editor claims, write MCP route cards before mutations, validate with evidence, and do not expose capability tokens or secrets.\"\n")
+        + TEXT("    if (output && typeof output === \"object\" && Array.isArray((output as { context?: unknown }).context)) {\n")
+        + TEXT("      ;((output as { context: string[] }).context).push(reminder)\n")
+        + TEXT("    }\n")
+        + TEXT("  },\n")
+        + TEXT("  }\n")
+        + TEXT("}\n\n")
+        + TEXT("export default UnrealAgentGuardrails\n");
+}
+}

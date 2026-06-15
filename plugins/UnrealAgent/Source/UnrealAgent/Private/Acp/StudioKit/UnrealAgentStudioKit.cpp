@@ -12,6 +12,11 @@ FString FUnrealAgentStudioKit::GetPromptVersionMarker()
     return UnrealAgentStudioKit::PromptVersionMarker;
 }
 
+FString FUnrealAgentStudioKit::MakeGuardrailsPluginSource()
+{
+    return UnrealAgentStudioKit::MakeGuardrailsPlugin();
+}
+
 FString FUnrealAgentStudioKit::BuildStatusSummary(const FUnrealAgentStudioKitResult& Result)
 {
     return FString::Printf(

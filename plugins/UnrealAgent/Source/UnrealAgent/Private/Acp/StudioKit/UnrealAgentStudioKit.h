@@ -18,14 +18,24 @@ struct FUnrealAgentStudioKitResult
     }
 };
 
+struct FUnrealAgentRedactionState
+{
+    FString PendingSensitiveMarkerPrefix;
+    bool bRedactIncompleteValue = false;
+    bool bRedactMultilineScalar = false;
+};
+
 class FUnrealAgentStudioKit
 {
 public:
     static FString GetStudioKitVersionMarker();
     static FString GetPromptVersionMarker();
     static FString MakePrimaryAgentMarkdown();
+    static FString MakeGuardrailsPluginSource();
     static FUnrealAgentStudioKitResult EnsureForProject(const FString& ProjectDirectory);
+    static FString RedactPromptSensitiveText(const FString& Text);
     static FString RedactSensitiveText(const FString& Text);
+    static FString RedactSensitiveText(const FString& Text, FUnrealAgentRedactionState& State);
     static bool IsManagedFileText(const FString& Text);
     static FString BuildStatusSummary(const FUnrealAgentStudioKitResult& Result);
 };
