@@ -11,6 +11,8 @@
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "EdGraphSchema_K2.h"
+#include "EdGraph/EdGraphPin.h"
 #endif
 
 namespace McpBlueprintHandlers {
@@ -255,6 +257,36 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
       if (ResultNode) {
         FMcpAutomationBridge_AddUserDefinedPin(ResultNode, ParamName, ParamType,
                                                EGPD_Input);
+      }
+    }
+
+    // Wire the entry node's exec output to the result node's exec input so the
+    // function actually executes through the return node. The editor makes this
+    // connection by default when a function declares outputs; without it the
+    // return node is never reached, so declared outputs come back as their
+    // defaults at runtime even though the Blueprint compiles.
+    if (EntryNode && ResultNode) {
+      UEdGraphPin *EntryThenPin = nullptr;
+      for (UEdGraphPin *Pin : EntryNode->Pins) {
+        if (Pin && Pin->Direction == EGPD_Output &&
+            Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec) {
+          EntryThenPin = Pin;
+          break;
+        }
+      }
+      UEdGraphPin *ResultExecPin = nullptr;
+      for (UEdGraphPin *Pin : ResultNode->Pins) {
+        if (Pin && Pin->Direction == EGPD_Input &&
+            Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec) {
+          ResultExecPin = Pin;
+          break;
+        }
+      }
+      if (EntryThenPin && ResultExecPin && EntryThenPin->LinkedTo.Num() == 0) {
+        const UEdGraphSchema_K2 *K2Schema = GetDefault<UEdGraphSchema_K2>();
+        if (K2Schema) {
+          K2Schema->TryCreateConnection(EntryThenPin, ResultExecPin);
+        }
       }
     }
 
