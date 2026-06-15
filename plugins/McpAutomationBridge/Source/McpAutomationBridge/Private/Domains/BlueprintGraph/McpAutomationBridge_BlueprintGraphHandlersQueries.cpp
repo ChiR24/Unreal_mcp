@@ -120,9 +120,6 @@ static bool GetGraphDetails(FActionContext& Context)
     Result->SetStringField(
         TEXT("graphName"),
         Context.TargetGraph->GetName());
-    Result->SetNumberField(
-        TEXT("nodeCount"),
-        Context.TargetGraph->Nodes.Num());
 
     TArray<TSharedPtr<FJsonValue>> Nodes;
     for (UEdGraphNode* Node : Context.TargetGraph->Nodes)
@@ -158,6 +155,9 @@ static bool GetGraphDetails(FActionContext& Context)
 
         Nodes.Add(MakeShared<FJsonValueObject>(NodeObject));
     }
+    // nodeCount reflects the nodes actually emitted in "nodes" (null graph slots
+    // are skipped in the loop above), so the count and the array always agree.
+    Result->SetNumberField(TEXT("nodeCount"), Nodes.Num());
     Result->SetArrayField(TEXT("nodes"), Nodes);
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(TEXT("Graph details retrieved."), Result);
