@@ -32,12 +32,18 @@ namespace UnrealAgent::OpenCodeAcp
     bool IsAgentConfigOption(const TSharedPtr<FJsonObject>& Option);
     bool IsModelConfigOption(const TSharedPtr<FJsonObject>& Option);
     bool IsThinkingConfigOption(const TSharedPtr<FJsonObject>& Option);
-    FString NormalizeMcpHostForUrl(FString Host);
+    FString NormalizeMcpHostForUrl(FString Host, bool bAllowNonLoopback);
+    bool CanInjectMcpServerForAcp(
+        const FString& ListenHost,
+        bool bAllowNonLoopback,
+        bool bRequireCapabilityToken,
+        const FString& CapabilityToken);
     FString GetModelProviderField(const TSharedPtr<FJsonObject>& Object);
     int32 GetModelContextWindowTokens(const TSharedPtr<FJsonObject>& Object);
 
     bool IsSafeProcessArgumentValue(const FString& Value);
     bool IsAbsoluteExistingExecutable(const FString& Path);
+    bool IsExecutableOutsideDirectory(const FString& Path, const FString& Directory);
     FString NormalizeExecutablePath(const FString& Path);
     void TerminateAndCloseProcess(FProcHandle& ProcessHandle);
 

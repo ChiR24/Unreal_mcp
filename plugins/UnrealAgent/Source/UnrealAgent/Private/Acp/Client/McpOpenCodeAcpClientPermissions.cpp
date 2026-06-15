@@ -1,24 +1,14 @@
 #include "Acp/Client/McpOpenCodeAcpClient.h"
+#include "Acp/Client/McpOpenCodeAcpClientPermissionBinaryAccess.h"
+#include "Acp/Client/McpOpenCodeAcpClientPermissionClassification.h"
+#include "Acp/Client/McpOpenCodeAcpClientPermissionMutation.h"
+#include "Acp/Client/McpOpenCodeAcpClientPermissionPaths.h"
+#include "Acp/Client/McpOpenCodeAcpClientPermissionSafety.h"
 #include "Acp/Client/McpOpenCodeAcpClientPrivate.h"
 
 #include "Acp/Context/UnrealAgentEditorContext.h"
-#include "Acp/StudioKit/UnrealAgentStudioKit.h"
-#include "Acp/Validation/UnrealAgentValidationRunner.h"
-
-#include "Containers/StringConv.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
-#include "HAL/FileManager.h"
-#include "HAL/PlatformMisc.h"
-#include "HAL/PlatformProcess.h"
-#include "HAL/PlatformTime.h"
-#include "Misc/ConfigCacheIni.h"
-#include "Misc/FileHelper.h"
-#include "Misc/Paths.h"
-#include "Policies/CondensedJsonPrintPolicy.h"
-#include "Serialization/JsonReader.h"
-#include "Serialization/JsonSerializer.h"
-#include "Serialization/JsonWriter.h"
 
 using namespace UnrealAgent::OpenCodeAcp;
 
@@ -73,145 +63,166 @@ void FOpenCodeAcpClient::HandlePermissionRequest(const TSharedPtr<FJsonObject>& 
         return;
     }
 
-    PendingPermissionId = RequestId;
-    PendingPermissionOptions = MoveTemp(ParsedOptions);
-
-    const FString Description = DescribePermissionRequest(Params);
-    AppendTranscript(TEXT("Permission"), Description);
-    OnPermission.ExecuteIfBound(Description);
-    SetStatus(TEXT("OpenCode is waiting for tool permission."));
-}
-
-FString FOpenCodeAcpClient::DescribePermissionRequest(const TSharedPtr<FJsonObject>& Params) const
-{
-    const TSharedPtr<FJsonObject>* ToolCall = nullptr;
-    if (Params->TryGetObjectField(TEXT("toolCall"), ToolCall) && ToolCall && ToolCall->IsValid())
+    TSet<FString> NormalizedOptionIds;
+    for (const FOpenCodeAcpPermissionOption& Option : ParsedOptions)
     {
-        const FString Title = GetStringFieldOrEmpty(*ToolCall, TEXT("title"));
-        const FString Kind = GetStringFieldOrEmpty(*ToolCall, TEXT("kind"));
-        const FString RawInput = TruncateForDisplay(JsonValueToString((*ToolCall)->TryGetField(TEXT("rawInput"))), MaxPermissionDescriptionChars);
-        return FString::Printf(TEXT("%s %s wants permission. %s"), *Kind, *Title, *RawInput).TrimStartAndEnd();
-    }
-
-    return TEXT("OpenCode requested permission for a tool call.");
-}
-
-FString FOpenCodeAcpClient::GetModelDisplayName(const FString& ModelId) const
-{
-    const FOpenCodeAcpModelOption* Option = ModelOptions.FindByPredicate([&ModelId](const FOpenCodeAcpModelOption& Candidate)
-    {
-        return Candidate.Id == ModelId;
-    });
-
-    return Option != nullptr ? Option->GetDisplayName() : ModelId;
-}
-
-FString FOpenCodeAcpClient::GetThinkingDisplayName(const FString& ThinkingId) const
-{
-    const FOpenCodeAcpThinkingOption* ThinkingOption = ThinkingOptions.FindByPredicate([&ThinkingId](const FOpenCodeAcpThinkingOption& Option)
-    {
-        return Option.Id == ThinkingId;
-    });
-    return ThinkingOption == nullptr ? ThinkingId : ThinkingOption->GetDisplayName();
-}
-
-FString FOpenCodeAcpClient::GetAgentDisplayName(const FString& AgentId) const
-{
-    const FOpenCodeAcpAgentOption* Option = AgentOptions.FindByPredicate([&AgentId](const FOpenCodeAcpAgentOption& Candidate)
-    {
-        return Candidate.Id == AgentId;
-    });
-
-    if (AgentId == UnrealAgentId)
-    {
-        return TEXT("Unreal - Creator");
-    }
-    return Option != nullptr ? Option->GetDisplayName() : AgentId;
-}
-
-FString FOpenCodeAcpClient::FindPendingPermissionOption(const TArray<FString>& PreferredOptionIds, const TArray<FString>& PreferredKinds) const
-{
-    for (const FString& PreferredKind : PreferredKinds)
-    {
-        const FOpenCodeAcpPermissionOption* Match = PendingPermissionOptions.FindByPredicate([&PreferredKind](const FOpenCodeAcpPermissionOption& Option)
+        const FString NormalizedId = Option.Id.ToLower();
+        if (NormalizedOptionIds.Contains(NormalizedId))
         {
-            return Option.Kind == PreferredKind;
-        });
-        if (Match != nullptr)
-        {
-            return Match->Id;
+            const FString ErrorText =
+                TEXT("Permission option ids must be unique.");
+            if (!SendError(RequestId, -32602, ErrorText))
+            {
+                StopWithError(
+                    TEXT("Failed to reject duplicate OpenCode ACP permission option."));
+                return;
+            }
+            SetStatus(ErrorText);
+            AppendTranscript(TEXT("Error"), ErrorText);
+            return;
         }
+        NormalizedOptionIds.Add(NormalizedId);
     }
 
-    for (const FString& PreferredOptionId : PreferredOptionIds)
+    if (ParsedOptions.ContainsByPredicate([](const FOpenCodeAcpPermissionOption& Option)
+        {
+            return HasConflictingPermissionOptionSemantics(Option);
+        }))
     {
-        const FOpenCodeAcpPermissionOption* Match = PendingPermissionOptions.FindByPredicate([&PreferredOptionId](const FOpenCodeAcpPermissionOption& Option)
+        const FString ErrorText = TEXT("Permission option id conflicts with kind.");
+        if (!SendError(RequestId, -32602, ErrorText))
         {
-            return Option.Id == PreferredOptionId && Option.Kind.IsEmpty();
-        });
-        if (Match != nullptr)
-        {
-            return Match->Id;
+            StopWithError(TEXT("Failed to reject contradictory OpenCode ACP permission option."));
+            return;
         }
-    }
-
-    return FString();
-}
-
-bool FOpenCodeAcpClient::SendCancelledPermissionResponse()
-{
-    if (!PendingPermissionId.IsValid())
-    {
-        return true;
-    }
-
-    auto Outcome = MakeObject();
-    Outcome->SetStringField(TEXT("outcome"), TEXT("cancelled"));
-
-    auto Result = MakeObject();
-    Result->SetObjectField(TEXT("outcome"), Outcome);
-
-    if (!SendResponse(PendingPermissionId, Result))
-    {
-        return false;
-    }
-
-    AppendTranscript(TEXT("Permission"), TEXT("Cancelled permission request."));
-    PendingPermissionId.Reset();
-    PendingPermissionOptions.Reset();
-    return true;
-}
-
-void FOpenCodeAcpClient::ResolvePendingPermission(const FString& PreferredOptionId)
-{
-    if (!PendingPermissionId.IsValid())
-    {
-        return;
-    }
-
-    if (PreferredOptionId.IsEmpty())
-    {
-        const FString ErrorText = TEXT("OpenCode ACP permission option is unavailable.");
         SetStatus(ErrorText);
         AppendTranscript(TEXT("Error"), ErrorText);
         return;
     }
 
-    auto Outcome = MakeObject();
-    Outcome->SetStringField(TEXT("outcome"), TEXT("selected"));
-    Outcome->SetStringField(TEXT("optionId"), PreferredOptionId);
-
-    auto Result = MakeObject();
-    Result->SetObjectField(TEXT("outcome"), Outcome);
-
-    if (!SendResponse(PendingPermissionId, Result))
+    const FString Description = DescribePermissionRequest(Params);
+    TSharedPtr<FJsonValue> RawInputValue;
+    FString ToolTitle;
+    FString ToolKind;
+    const TSharedPtr<FJsonObject>* ToolCall = nullptr;
+    if (Params->TryGetObjectField(TEXT("toolCall"), ToolCall) && ToolCall && ToolCall->IsValid())
     {
-        StopWithError(TEXT("Failed to send OpenCode ACP permission response."));
+        ToolTitle = GetStringFieldOrEmpty(*ToolCall, TEXT("title"));
+        ToolKind = GetStringFieldOrEmpty(*ToolCall, TEXT("kind"));
+        RawInputValue = (*ToolCall)->TryGetField(TEXT("rawInput"));
+    }
+
+    const bool bDirectBinaryAssetFileAccess = LooksLikeDirectUnrealBinaryAssetFileAccess(
+        ToolTitle,
+        ToolKind,
+        RawInputValue,
+        WorkingDirectory);
+    const bool bDirectProjectStateFileWrite =
+        LooksLikeDirectUnrealProjectStateFileWrite(
+            ToolTitle,
+            ToolKind,
+            RawInputValue,
+            WorkingDirectory);
+    const bool bDirectContentMutation = LooksLikeDirectUnrealContentMutation(
+        ToolTitle,
+        ToolKind,
+        RawInputValue,
+        WorkingDirectory);
+    const bool bDirectEditorStateMutation = LooksLikeDirectUnrealEditorStateMutation(ToolTitle, ToolKind, RawInputValue);
+    const bool bDestructiveLocalCommand =
+        LooksLikeDestructiveLocalCommand(
+            ToolTitle,
+            ToolKind,
+            RawInputValue,
+            WorkingDirectory);
+    const bool bLinkedLocalMutation =
+        LooksLikeLocalMutation(ToolTitle, ToolKind, RawInputValue)
+        && JsonReferencesLinkedPath(
+            RawInputValue,
+            WorkingDirectory,
+            !GetLocalCommandText(RawInputValue).IsEmpty()
+                || ShouldTreatAllLocalStringsAsMutationPaths(
+                    ToolTitle,
+                    ToolKind,
+                    RawInputValue));
+    const bool bUnsafeDirectFileAccess = bDirectBinaryAssetFileAccess
+        || bDirectProjectStateFileWrite
+        || bDirectContentMutation
+        || bDirectEditorStateMutation
+        || bDestructiveLocalCommand
+        || bLinkedLocalMutation;
+    if (bUnsafeDirectFileAccess)
+    {
+        const FString RejectOptionId = FindRejectOptionId(ParsedOptions);
+        const FString ErrorText = bDirectBinaryAssetFileAccess
+            ? TEXT("Blocked direct Unreal binary asset filesystem access. Use unreal-engine MCP manage_asset, manage_level, or inspect instead of direct .uasset/.umap files.")
+            : bDirectProjectStateFileWrite
+                ? TEXT("Blocked direct Unreal project-state file write. Use unreal-engine MCP system_control plus inspect read-back instead of direct .uproject or Config/*.ini edits.")
+                : bDirectContentMutation
+                    ? TEXT("Blocked direct Unreal content/package mutation. Use unreal-engine MCP Content Browser, manage_asset, manage_level, or control_editor routes with /Game package paths.")
+                    : bDestructiveLocalCommand
+                        ? TEXT("Blocked destructive local shell command. Use an explicit source-control or recovery workflow instead.")
+                        : bDirectEditorStateMutation
+                            ? TEXT("Blocked direct local Unreal editor-state access. Use the matching unreal-engine MCP inspect, actor, component, level, map, asset, or editor-control action.")
+                            : TEXT("Blocked direct local mutation through a symbolic link. Use a real source path or the matching unreal-engine MCP route.");
+        if (RejectOptionId.IsEmpty())
+        {
+            if (!SendError(RequestId, -32602, ErrorText))
+            {
+                StopWithError(TEXT("Failed to reject unsafe OpenCode ACP file permission request."));
+                return;
+            }
+        }
+        else
+        {
+            auto Outcome = MakeObject();
+            Outcome->SetStringField(TEXT("outcome"), TEXT("selected"));
+            Outcome->SetStringField(TEXT("optionId"), RejectOptionId);
+
+            auto Result = MakeObject();
+            Result->SetObjectField(TEXT("outcome"), Outcome);
+            if (!SendResponse(RequestId, Result))
+            {
+                StopWithError(TEXT("Failed to reject unsafe OpenCode ACP file permission request."));
+                return;
+            }
+        }
+
+        AppendTranscript(TEXT("Permission"), ErrorText);
+        SetStatus(TEXT("OpenCode is working..."));
         return;
     }
 
-    AppendTranscript(TEXT("Permission"), FString::Printf(TEXT("Responded: %s"), *PreferredOptionId));
-    PendingPermissionId.Reset();
-    PendingPermissionOptions.Reset();
-    SetStatus(TEXT("OpenCode is working..."));
+    const bool bUnrealEditorPermission = LooksLikeUnrealEditorPermission(Description);
+    if (bUnrealEditorPermission)
+    {
+        ParsedOptions.RemoveAll([](const FOpenCodeAcpPermissionOption& Option)
+        {
+            return IsAllowAlwaysOption(Option);
+        });
+    }
+
+    if (ParsedOptions.IsEmpty())
+    {
+        if (!SendError(RequestId, -32602, TEXT("Permission request has no one-shot selectable option.")))
+        {
+            StopWithError(TEXT("Failed to reject unsafe OpenCode ACP permission request."));
+            return;
+        }
+
+        const FString ErrorText = TEXT("OpenCode ACP permission request only offered persistent approval for an Unreal/editor operation.");
+        SetStatus(ErrorText);
+        AppendTranscript(TEXT("Error"), ErrorText);
+        return;
+    }
+
+    PendingPermissionId = RequestId;
+    PendingPermissionOptions = MoveTemp(ParsedOptions);
+
+    const FString PanelDescription = bUnrealEditorPermission
+        ? FString::Printf(TEXT("Unreal/editor request: persistent approval disabled. %s"), *Description)
+        : Description;
+    AppendTranscript(TEXT("Permission"), PanelDescription);
+    OnPermission.ExecuteIfBound(PanelDescription);
+    SetStatus(TEXT("OpenCode is waiting for tool permission."));
 }

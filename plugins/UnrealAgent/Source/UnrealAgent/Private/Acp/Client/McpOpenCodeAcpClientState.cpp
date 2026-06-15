@@ -39,12 +39,23 @@ void FOpenCodeAcpClient::StopWithError(const FString& ErrorText)
 
 void FOpenCodeAcpClient::SetStatus(const FString& NewStatus)
 {
-    OnStatus.ExecuteIfBound(NewStatus);
+    OnStatus.ExecuteIfBound(FUnrealAgentStudioKit::RedactSensitiveText(NewStatus));
 }
 
 void FOpenCodeAcpClient::AppendTranscript(const FString& Role, const FString& Text)
 {
-    OnTranscript.ExecuteIfBound(Role, Text);
+    OnTranscript.ExecuteIfBound(
+        Role,
+        FUnrealAgentStudioKit::RedactSensitiveText(Text));
+}
+
+void FOpenCodeAcpClient::AppendTranscriptChunk(const FString& Role, const FString& Text)
+{
+    FUnrealAgentRedactionState& RedactionState =
+        TranscriptRedactionStateByRole.FindOrAdd(Role);
+    OnTranscript.ExecuteIfBound(
+        Role,
+        FUnrealAgentStudioKit::RedactSensitiveText(Text, RedactionState));
 }
 
 void FOpenCodeAcpClient::ResetState()
@@ -68,6 +79,8 @@ void FOpenCodeAcpClient::ResetState()
     PendingPermissionOptions.Reset();
     ActiveToolTitlesById.Reset();
     ActiveToolDetailsById.Reset();
+    TranscriptRedactionStateByRole.Reset();
+    ErrorRedactionState = FUnrealAgentRedactionState();
     ContextWindowUsedTokens = 0;
     ContextWindowSizeTokens = 0;
     NextRequestId = 1;
@@ -87,6 +100,7 @@ void FOpenCodeAcpClient::ResetState()
     bReady = false;
     bPromptInFlight = false;
     bCancelRequested = false;
+    bUnrealMcpConfiguredForSession = false;
 }
 
 FString FOpenCodeAcpClient::JsonToString(const TSharedPtr<FJsonObject>& Object)

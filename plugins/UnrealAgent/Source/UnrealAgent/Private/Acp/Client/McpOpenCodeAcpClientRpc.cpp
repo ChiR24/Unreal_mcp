@@ -3,6 +3,7 @@
 
 #include "Acp/Context/UnrealAgentEditorContext.h"
 #include "Acp/StudioKit/UnrealAgentStudioKit.h"
+#include "Acp/Validation/UnrealAgentStudioKitValidationChecks.h"
 #include "Acp/Validation/UnrealAgentValidationRunner.h"
 
 #include "Containers/StringConv.h"
@@ -54,7 +55,7 @@ bool FOpenCodeAcpClient::SendInitialize()
 bool FOpenCodeAcpClient::SendNewSession()
 {
     TArray<TSharedPtr<FJsonValue>> McpServers;
-    AddConfiguredMcpServers(McpServers);
+    bUnrealMcpConfiguredForSession = AddConfiguredMcpServers(McpServers);
 
     auto Params = MakeObject();
     Params->SetStringField(TEXT("cwd"), WorkingDirectory);
@@ -74,15 +75,27 @@ bool FOpenCodeAcpClient::EnsureProjectUnrealAgentConfig()
 {
     const FUnrealAgentStudioKitResult Result = FUnrealAgentStudioKit::EnsureForProject(WorkingDirectory);
     LastStudioKitSummary = Result.Summary;
-    return Result.WasSuccessful();
+    if (!Result.WasSuccessful())
+    {
+        return false;
+    }
+
+    TArray<FString> PermissionErrors;
+    if (!UnrealAgent::Validation::ValidateOpenCodePermissionSafety(WorkingDirectory, PermissionErrors))
+    {
+        LastStudioKitSummary += TEXT("\nOpenCode permission safety failed:\n");
+        LastStudioKitSummary += FString::Join(PermissionErrors, TEXT("\n"));
+        return false;
+    }
+    return true;
 }
 
-void FOpenCodeAcpClient::AddConfiguredMcpServers(TArray<TSharedPtr<FJsonValue>>& McpServers) const
+bool FOpenCodeAcpClient::AddConfiguredMcpServers(TArray<TSharedPtr<FJsonValue>>& McpServers) const
 {
     bool bEnableNativeMcp = false;
     if (GConfig == nullptr || !GConfig->GetBool(AutomationBridgeSettingsSection, TEXT("bEnableNativeMCP"), bEnableNativeMcp, GGameIni) || !bEnableNativeMcp)
     {
-        return;
+        return false;
     }
 
     int32 NativeMcpPort = 3000;
@@ -94,7 +107,38 @@ void FOpenCodeAcpClient::AddConfiguredMcpServers(TArray<TSharedPtr<FJsonValue>>&
 
     FString ListenHost = TEXT("127.0.0.1");
     GConfig->GetString(AutomationBridgeSettingsSection, TEXT("ListenHost"), ListenHost, GGameIni);
-    const FString Url = FString::Printf(TEXT("http://%s:%d/mcp"), *NormalizeMcpHostForUrl(ListenHost), NativeMcpPort);
+    bool bAllowNonLoopback = false;
+    GConfig->GetBool(
+        AutomationBridgeSettingsSection,
+        TEXT("bAllowNonLoopback"),
+        bAllowNonLoopback,
+        GGameIni);
+
+    bool bRequireCapabilityToken = false;
+    FString CapabilityToken;
+    GConfig->GetBool(
+        AutomationBridgeSettingsSection,
+        TEXT("bRequireCapabilityToken"),
+        bRequireCapabilityToken,
+        GGameIni);
+    GConfig->GetString(
+        AutomationBridgeSettingsSection,
+        TEXT("CapabilityToken"),
+        CapabilityToken,
+        GGameIni);
+    if (!CanInjectMcpServerForAcp(
+            ListenHost,
+            bAllowNonLoopback,
+            bRequireCapabilityToken,
+            CapabilityToken))
+    {
+        return false;
+    }
+
+    const FString Url = FString::Printf(
+        TEXT("http://%s:%d/mcp"),
+        *NormalizeMcpHostForUrl(ListenHost, false),
+        NativeMcpPort);
 
     auto Server = MakeObject();
     Server->SetStringField(TEXT("type"), TEXT("http"));
@@ -102,20 +146,14 @@ void FOpenCodeAcpClient::AddConfiguredMcpServers(TArray<TSharedPtr<FJsonValue>>&
     Server->SetStringField(TEXT("url"), Url);
 
     TArray<TSharedPtr<FJsonValue>> Headers;
-    bool bRequireCapabilityToken = false;
-    FString CapabilityToken;
-    GConfig->GetBool(AutomationBridgeSettingsSection, TEXT("bRequireCapabilityToken"), bRequireCapabilityToken, GGameIni);
-    GConfig->GetString(AutomationBridgeSettingsSection, TEXT("CapabilityToken"), CapabilityToken, GGameIni);
-    if (bRequireCapabilityToken && !CapabilityToken.IsEmpty())
-    {
-        auto Header = MakeObject();
-        Header->SetStringField(TEXT("name"), TEXT("X-MCP-Capability-Token"));
-        Header->SetStringField(TEXT("value"), CapabilityToken);
-        Headers.Add(MakeShared<FJsonValueObject>(Header));
-    }
+    auto Header = MakeObject();
+    Header->SetStringField(TEXT("name"), TEXT("X-MCP-Capability-Token"));
+    Header->SetStringField(TEXT("value"), CapabilityToken);
+    Headers.Add(MakeShared<FJsonValueObject>(Header));
     Server->SetArrayField(TEXT("headers"), Headers);
 
     McpServers.Add(MakeShared<FJsonValueObject>(Server));
+    return true;
 }
 
 int32 FOpenCodeAcpClient::SendRequest(const FString& Method, const TSharedPtr<FJsonObject>& Params)

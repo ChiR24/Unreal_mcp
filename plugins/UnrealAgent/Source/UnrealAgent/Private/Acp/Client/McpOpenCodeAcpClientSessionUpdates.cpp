@@ -80,7 +80,7 @@ void FOpenCodeAcpClient::HandleSessionUpdate(const TSharedPtr<FJsonObject>& Para
             if ((*Content)->TryGetStringField(TEXT("text"), Text) && !Text.IsEmpty())
             {
                 const FString Role = UpdateType == TEXT("agent_thought_chunk") ? TEXT("Thought") : UpdateType == TEXT("user_message_chunk") ? TEXT("User") : TEXT("OpenCode");
-                AppendTranscript(Role, Text);
+                AppendTranscriptChunk(Role, Text);
             }
         }
         return;

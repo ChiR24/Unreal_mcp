@@ -125,10 +125,24 @@ bool IsThinkingConfigOption(const TSharedPtr<FJsonObject>& Option)
             || Name == TEXT("thinking effort");
     }
 
-FString NormalizeMcpHostForUrl(FString Host)
+FString NormalizeMcpHostForUrl(FString Host, const bool bAllowNonLoopback)
     {
         Host = Host.TrimStartAndEnd();
-        if (Host.IsEmpty() || Host == TEXT("0.0.0.0") || Host == TEXT("::") || Host == TEXT("[::]") || Host == TEXT("*"))
+        if (Host.IsEmpty()
+            || Host == TEXT("0.0.0.0")
+            || Host == TEXT("::")
+            || Host == TEXT("[::]")
+            || Host == TEXT("*")
+            || Host.Equals(TEXT("localhost"), ESearchCase::IgnoreCase))
+        {
+            return TEXT("127.0.0.1");
+        }
+        if (Host == TEXT("::1") || Host == TEXT("[::1]"))
+        {
+            return TEXT("[::1]");
+        }
+        const bool bIsLoopback = Host == TEXT("127.0.0.1");
+        if (!bIsLoopback && !bAllowNonLoopback)
         {
             return TEXT("127.0.0.1");
         }
@@ -138,6 +152,24 @@ FString NormalizeMcpHostForUrl(FString Host)
             return FString::Printf(TEXT("[%s]"), *Host);
         }
         return Host;
+    }
+
+bool CanInjectMcpServerForAcp(
+    const FString& ListenHost,
+    const bool bAllowNonLoopback,
+    const bool bRequireCapabilityToken,
+    const FString& CapabilityToken)
+    {
+        if (!bRequireCapabilityToken || CapabilityToken.TrimStartAndEnd().IsEmpty())
+        {
+            return false;
+        }
+
+        const FString LoopbackHost =
+            NormalizeMcpHostForUrl(ListenHost, false);
+        const FString ConfiguredHost =
+            NormalizeMcpHostForUrl(ListenHost, bAllowNonLoopback);
+        return ConfiguredHost == LoopbackHost;
     }
 
 FString GetModelProviderField(const TSharedPtr<FJsonObject>& Object)

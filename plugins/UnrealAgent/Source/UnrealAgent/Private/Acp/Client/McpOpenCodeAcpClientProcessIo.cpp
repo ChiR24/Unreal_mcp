@@ -53,7 +53,9 @@ void FOpenCodeAcpClient::DrainProcessErrorOutput()
 
 void FOpenCodeAcpClient::AppendRecentErrorOutput(const FString& Text)
 {
-    RecentErrorOutput += Text;
+    RecentErrorOutput += FUnrealAgentStudioKit::RedactSensitiveText(
+        Text,
+        ErrorRedactionState);
     if (RecentErrorOutput.Len() > MaxRecentErrorOutputChars)
     {
         RecentErrorOutput = RecentErrorOutput.Right(MaxRecentErrorOutputChars);
@@ -119,10 +121,11 @@ void FOpenCodeAcpClient::CheckClientOwnedRequestTimeouts()
 
 FString FOpenCodeAcpClient::FormatProcessErrorText(const FString& ErrorText) const
 {
+    const FString SafeErrorText = FUnrealAgentStudioKit::RedactSensitiveText(ErrorText);
     const FString ErrorOutput = RecentErrorOutput.TrimStartAndEnd();
     return ErrorOutput.IsEmpty()
-        ? ErrorText
-        : FString::Printf(TEXT("%s\nOpenCode stderr:\n%s"), *ErrorText, *ErrorOutput);
+        ? SafeErrorText
+        : FString::Printf(TEXT("%s\nOpenCode stderr:\n%s"), *SafeErrorText, *ErrorOutput);
 }
 
 FString FOpenCodeAcpClient::ResolveOpenCodeExecutable(FString& OutError) const
@@ -143,7 +146,7 @@ FString FOpenCodeAcpClient::ResolveOpenCodeExecutable(FString& OutError) const
     if (!Home.IsEmpty())
     {
         const FString UserInstall = NormalizeExecutablePath(FPaths::Combine(Home, TEXT(".opencode/bin/opencode")));
-        if (IsAbsoluteExistingExecutable(UserInstall))
+        if (IsExecutableOutsideDirectory(UserInstall, WorkingDirectory))
         {
             return UserInstall;
         }
@@ -154,7 +157,7 @@ FString FOpenCodeAcpClient::ResolveOpenCodeExecutable(FString& OutError) const
     if (!UserProfile.IsEmpty())
     {
         const FString UserInstall = NormalizeExecutablePath(FPaths::Combine(UserProfile, TEXT(".opencode/bin/opencode.exe")));
-        if (IsAbsoluteExistingExecutable(UserInstall))
+        if (IsExecutableOutsideDirectory(UserInstall, WorkingDirectory))
         {
             return UserInstall;
         }
@@ -175,7 +178,7 @@ FString FOpenCodeAcpClient::ResolveOpenCodeExecutable(FString& OutError) const
         }
 
         const FString Candidate = NormalizeExecutablePath(FPaths::Combine(PathEntry, ExecutableName));
-        if (IsAbsoluteExistingExecutable(Candidate))
+        if (IsExecutableOutsideDirectory(Candidate, WorkingDirectory))
         {
             return Candidate;
         }

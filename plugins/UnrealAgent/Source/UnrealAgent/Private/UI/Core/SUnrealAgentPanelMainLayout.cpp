@@ -174,6 +174,7 @@ TSharedRef<SWidget> SUnrealAgentPanel::MakeConversationArea()
             [
                 StaticCastSharedRef<SWidget>(SAssignNew(TranscriptScrollBox, SScrollBox)
                     .Tag(FName(TEXT("UnrealAgent.Transcript.Scroll")))
+                )
             ]
         ];
 }

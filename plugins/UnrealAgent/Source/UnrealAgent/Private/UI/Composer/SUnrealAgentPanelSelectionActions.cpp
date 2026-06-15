@@ -120,8 +120,6 @@ void SUnrealAgentPanel::OnAgentSelected(TSharedPtr<FOpenCodeAcpAgentOption> Sele
     AcpClient->SetAgent(SelectedAgent->Id);
 }
 
-#if WITH_DEV_AUTOMATION_TESTS
-
 void SUnrealAgentPanel::OnModelMenuOpened()
 {
     ModelSearchText.Reset();

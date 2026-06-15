@@ -7,6 +7,7 @@ struct FUnrealAgentEditorContextOptions
     int32 MaxSelectedActors = 12;
     int32 MaxSelectedObjects = 12;
     int32 MaxCharacters = 12000;
+    bool bUnrealMcpConfiguredForSession = false;
 };
 
 struct FUnrealAgentEditorContextSnapshot

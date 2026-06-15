@@ -103,6 +103,5 @@ void SUnrealAgentPanel::ResetChatHistoryForAutomation()
     RebuildChatHistoryList();
 }
 #endif
-#endif
 
 #undef LOCTEXT_NAMESPACE

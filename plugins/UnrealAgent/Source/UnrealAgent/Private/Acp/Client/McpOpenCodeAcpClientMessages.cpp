@@ -25,18 +25,23 @@ using namespace UnrealAgent::OpenCodeAcp;
 void FOpenCodeAcpClient::ProcessOutputBytes(const TArray<uint8>& Bytes)
 {
     OutputBuffer.Append(Bytes);
-    if (OutputBuffer.Num() > MaxOutputBufferBytes)
-    {
-        OutputBuffer.Reset();
-        return;
-    }
 
     while (true)
     {
         const int32 LineEndIndex = OutputBuffer.IndexOfByKey(static_cast<uint8>('\n'));
         if (LineEndIndex == INDEX_NONE)
         {
-            return;
+            break;
+        }
+        if (LineEndIndex > MaxOutputBufferBytes)
+        {
+            OutputBuffer.RemoveAt(
+                0,
+                LineEndIndex + 1,
+                EAllowShrinking::No);
+            AppendRecentErrorOutput(
+                TEXT("Discarded oversized ACP stdout frame."));
+            continue;
         }
 
         TArray<uint8> LineBytes;
@@ -80,6 +85,13 @@ void FOpenCodeAcpClient::ProcessOutputBytes(const TArray<uint8>& Bytes)
         }
 
         HandleMessage(Message);
+    }
+
+    if (OutputBuffer.Num() > MaxOutputBufferBytes)
+    {
+        AppendRecentErrorOutput(
+            TEXT("Discarded oversized incomplete ACP stdout frame."));
+        OutputBuffer.Reset();
     }
 }
 
@@ -161,16 +173,35 @@ void FOpenCodeAcpClient::HandleNotificationOrRequest(const TSharedPtr<FJsonObjec
 {
     const TSharedPtr<FJsonObject>* Params = nullptr;
     Message->TryGetObjectField(TEXT("params"), Params);
+    const FString MessageSessionId =
+        Params && Params->IsValid()
+            ? GetStringFieldOrEmpty(*Params, TEXT("sessionId"))
+            : FString();
+    const bool bMatchesActiveSession =
+        !SessionId.IsEmpty() && MessageSessionId == SessionId;
 
     if (Method == TEXT("session/update") && Params && Params->IsValid())
     {
-        HandleSessionUpdate(*Params);
+        if (bMatchesActiveSession)
+        {
+            HandleSessionUpdate(*Params);
+        }
         return;
     }
 
     if (Method == TEXT("session/request_permission") && Params && Params->IsValid())
     {
-        HandlePermissionRequest(Message, *Params);
+        if (bMatchesActiveSession)
+        {
+            HandlePermissionRequest(Message, *Params);
+        }
+        else if (Message->HasField(TEXT("id")) && !SendError(
+            CloneJsonId(Message),
+            -32602,
+            TEXT("Permission request session does not match the active ACP session.")))
+        {
+            StopWithError(TEXT("Failed to reject a foreign-session OpenCode ACP permission request."));
+        }
         return;
     }
 

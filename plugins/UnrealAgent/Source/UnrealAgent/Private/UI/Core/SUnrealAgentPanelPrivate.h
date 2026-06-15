@@ -5,7 +5,7 @@
 #include "Templates/SharedPointer.h"
 #include "Widgets/Layout/SScrollBar.h"
 
-class FComboButtonStyle;
+struct FComboButtonStyle;
 class SScrollBar;
 struct FSlateBrush;
 

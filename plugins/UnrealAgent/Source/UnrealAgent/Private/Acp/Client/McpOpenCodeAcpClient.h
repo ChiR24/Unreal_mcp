@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Acp/StudioKit/UnrealAgentStudioKit.h"
 #include "Containers/Queue.h"
 #include "CoreMinimal.h"
 #include "Delegates/Delegate.h"
@@ -151,7 +152,7 @@ private:
     bool SendInitialize();
     bool SendNewSession();
     bool EnsureProjectUnrealAgentConfig();
-    void AddConfiguredMcpServers(TArray<TSharedPtr<FJsonValue>>& McpServers) const;
+    bool AddConfiguredMcpServers(TArray<TSharedPtr<FJsonValue>>& McpServers) const;
     int32 SendRequest(const FString& Method, const TSharedPtr<FJsonObject>& Params);
     bool SendNotification(const FString& Method, const TSharedPtr<FJsonObject>& Params);
     bool SendResponse(const TSharedPtr<FJsonValue>& Id, const TSharedPtr<FJsonObject>& Result);
@@ -192,6 +193,7 @@ private:
     void StopWithError(const FString& ErrorText);
     void SetStatus(const FString& NewStatus);
     void AppendTranscript(const FString& Role, const FString& Text);
+    void AppendTranscriptChunk(const FString& Role, const FString& Text);
     void ResetState();
 
     FString FormatProcessErrorText(const FString& ErrorText) const;
@@ -237,6 +239,8 @@ private:
     TArray<FOpenCodeAcpPermissionOption> PendingPermissionOptions;
     TMap<FString, FString> ActiveToolTitlesById;
     TMap<FString, FString> ActiveToolDetailsById;
+    TMap<FString, FUnrealAgentRedactionState> TranscriptRedactionStateByRole;
+    FUnrealAgentRedactionState ErrorRedactionState;
 
     int32 NextRequestId = 1;
     int32 InitializeRequestId = INDEX_NONE;
@@ -260,4 +264,5 @@ private:
     bool bPromptInFlight = false;
     bool bCancelRequested = false;
     bool bAttachEditorContext = true;
+    bool bUnrealMcpConfiguredForSession = false;
 };

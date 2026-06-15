@@ -1,5 +1,7 @@
 #include "Acp/Client/McpOpenCodeAcpClientPrivate.h"
 
+#include "Acp/StudioKit/UnrealAgentStudioKit.h"
+
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "HAL/FileManager.h"
@@ -21,7 +23,7 @@ FString TruncateForDisplay(const FString& Text, int32 MaxChars)
 
 void AddToolActivityDetail(TArray<FString>& Details, const FString& Detail)
     {
-        FString NormalizedDetail = Detail.TrimStartAndEnd();
+        FString NormalizedDetail = FUnrealAgentStudioKit::RedactSensitiveText(Detail).TrimStartAndEnd();
         NormalizedDetail.ReplaceInline(TEXT("\r"), TEXT(" "));
         NormalizedDetail.ReplaceInline(TEXT("\n"), TEXT(" "));
         if (!NormalizedDetail.IsEmpty() && !Details.Contains(NormalizedDetail))

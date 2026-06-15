@@ -145,6 +145,13 @@ FUnrealAgentEditorContextSnapshot FUnrealAgentEditorContext::Capture(const FStri
     AppendLine(Envelope, FString::Printf(TEXT("currentMap: %s"), *MapName));
     AppendLine(Envelope, FString::Printf(TEXT("pieActive: %s"), Snapshot.bPieActive ? TEXT("true") : TEXT("false")));
     AppendLine(Envelope, FString::Printf(TEXT("dirtyPackages: %d"), Snapshot.DirtyPackageCount));
+    AppendLine(Envelope, FString::Printf(TEXT("unrealMcpConfiguredForSession: %s"), Options.bUnrealMcpConfiguredForSession ? TEXT("true") : TEXT("false")));
+    AppendLine(Envelope, Options.bUnrealMcpConfiguredForSession
+        ? TEXT("mcpStatus: unreal-engine MCP was configured for this ACP session; availability still requires a successful tool response.")
+        : TEXT("mcpStatus: unreal-engine MCP was not configured for this ACP session; live editor availability still requires a successful tool response."));
+    AppendLine(Envelope, TEXT("mcpPreflight: For broad production work run /unreal-tool-inventory, then use manage_tools and inspect including get_content_browser_state when selected assets or folders matter."));
+    AppendLine(Envelope, TEXT("productionPreflight: Confirm project template/settings, source-control or dirty-package risk, current map/PIE state, C++/Blueprint ownership, and smallest playable next milestone before broad changes."));
+    AppendLine(Envelope, TEXT("validationRoute: Choose the strongest available Unreal evidence before reporting success: MCP inspect, Blueprint compile, PIE/editor check, automation test, screenshot, log scan, profiling, or build/package output."));
     AppendLine(Envelope, FString::Printf(TEXT("selectedActors: %d"), TotalSelectedActors));
     for (const FString& SelectedActor : SelectedActors)
     {

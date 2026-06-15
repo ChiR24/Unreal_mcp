@@ -120,14 +120,6 @@ FString FormatActivityTranscriptText(const FString& Role, const FString& Text)
             : FString::Printf(TEXT("%s\n%s"), *Label, *DisplayText);
     }
 
-    struct FToolActivityDisplay
-    {
-        bool bShouldShow = false;
-        FString Key;
-        FString Title;
-        FString Detail;
-    };
-
 bool IsToolStatusToken(const FString& Token)
     {
         FString NormalizedToken = Token.TrimStartAndEnd().ToLower();

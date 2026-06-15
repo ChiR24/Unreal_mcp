@@ -29,7 +29,9 @@ bool FOpenCodeAcpClient::SendPrompt(const FString& PromptText)
         return false;
     }
 
-    FString PromptForAcp = PromptText;
+    TranscriptRedactionStateByRole.Reset();
+    FString PromptForAcp =
+        FUnrealAgentStudioKit::RedactPromptSensitiveText(PromptText);
     if (bAttachEditorContext)
     {
         const FString ContextEnvelope = RefreshEditorContext();
@@ -69,7 +71,9 @@ bool FOpenCodeAcpClient::SendPrompt(const FString& PromptText)
 FString FOpenCodeAcpClient::RefreshEditorContext()
 {
     const FString ContextProjectDirectory = WorkingDirectory.IsEmpty() ? FPaths::ProjectDir() : WorkingDirectory;
-    const FUnrealAgentEditorContextSnapshot Snapshot = FUnrealAgentEditorContext::Capture(ContextProjectDirectory);
+    FUnrealAgentEditorContextOptions ContextOptions;
+    ContextOptions.bUnrealMcpConfiguredForSession = bUnrealMcpConfiguredForSession;
+    const FUnrealAgentEditorContextSnapshot Snapshot = FUnrealAgentEditorContext::Capture(ContextProjectDirectory, ContextOptions);
     LastEditorContextSummary = Snapshot.Summary;
     LastEditorContextEnvelope = Snapshot.Envelope;
     return LastEditorContextEnvelope;
