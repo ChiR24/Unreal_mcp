@@ -22,7 +22,7 @@ export const blueprintEventHandlers: Readonly<Record<string, BlueprintActionHand
   remove_function: async (context) => await executeBlueprintRequest(context, 'blueprint_remove_function', {
     blueprintCandidates: blueprintCandidates(context),
     requestedPath: blueprintTarget(context),
-    functionName: optionalString(context.argsRecord.functionName) ?? optionalString(context.argsTyped.memberName) ?? '',
+    functionName: optionalString(context.argsRecord.functionName) ?? optionalString(context.argsTyped.name) ?? optionalString(context.argsTyped.memberName) ?? '',
     ...commonTimingPayload(context)
   }),
   add_construction_script: async (context) => await executeBlueprintRequest(context, 'blueprint_add_construction_script', {
