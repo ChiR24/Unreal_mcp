@@ -250,6 +250,11 @@ bool HandleInspectSettingsAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> Resp);
+bool HandleInspectContentBrowserAction(
+    UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
+    const FString &SubAction, const FString &LowerSubAction,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+    TSharedPtr<FJsonObject> Resp);
 bool HandleInspectRuntimeReportAction(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
     const FString &LowerSubAction, const TSharedPtr<FJsonObject> &Payload,

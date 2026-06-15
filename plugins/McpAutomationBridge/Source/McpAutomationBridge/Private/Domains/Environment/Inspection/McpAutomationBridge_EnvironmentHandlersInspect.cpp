@@ -31,6 +31,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         LowerSubAction.Equals(TEXT("get_editor_settings")) ||
         LowerSubAction.Equals(TEXT("get_world_settings")) ||
         LowerSubAction.Equals(TEXT("get_viewport_info")) ||
+        LowerSubAction.Equals(TEXT("get_content_browser_state")) ||
         LowerSubAction.Equals(TEXT("get_selected_actors")) ||
         LowerSubAction.Equals(TEXT("get_scene_stats")) ||
         LowerSubAction.Equals(TEXT("get_performance_stats")) ||

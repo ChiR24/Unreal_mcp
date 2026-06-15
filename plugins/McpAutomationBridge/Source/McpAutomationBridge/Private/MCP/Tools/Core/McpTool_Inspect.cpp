@@ -1,5 +1,3 @@
-// McpTool_Inspect.cpp — inspect tool definition (32 actions)
-
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "MCP/Registry/McpToolDefinition.h"
 #include "MCP/Registry/McpToolRegistry.h"
@@ -62,7 +60,8 @@ public:
 				TEXT("get_scene_stats"),
 				TEXT("get_performance_stats"),
 				TEXT("get_memory_stats"),
-				TEXT("get_editor_settings")
+				TEXT("get_editor_settings"),
+				TEXT("get_content_browser_state")
 			}, TEXT("Action"))
 			.String(TEXT("objectPath"), TEXT("Asset path (e.g., /Game/Path/Asset)."))
 			.String(TEXT("propertyName"), TEXT("Name of the property."))

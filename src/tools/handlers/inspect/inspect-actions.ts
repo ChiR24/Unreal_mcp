@@ -34,6 +34,7 @@ const INSPECT_ACTION_ALIASES: Record<string, string> = {
   get_memory_stats: 'get_memory_stats',
   get_scene_stats: 'get_scene_stats',
   get_viewport_info: 'get_viewport_info',
+  get_content_browser_state: 'get_content_browser_state',
   get_selected_actors: 'get_selected_actors',
   pie_report: 'runtime_report'
 };

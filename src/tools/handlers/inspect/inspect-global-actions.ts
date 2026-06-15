@@ -10,6 +10,7 @@ const GLOBAL_INSPECT_ACTIONS = new Set([
   'get_memory_stats',
   'get_scene_stats',
   'get_viewport_info',
+  'get_content_browser_state',
   'get_selected_actors'
 ]);
 

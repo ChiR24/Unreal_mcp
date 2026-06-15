@@ -13,6 +13,8 @@ bool HandleInspectGlobalAction(
 
     if (HandleInspectSettingsAction(Bridge, RequestId, SubAction, LowerSubAction,
                                     Payload, RequestingSocket, Resp) ||
+        HandleInspectContentBrowserAction(Bridge, RequestId, SubAction, LowerSubAction,
+                                          RequestingSocket, Resp) ||
         HandleInspectRuntimeReportAction(Bridge, RequestId, LowerSubAction,
                                          Payload, RequestingSocket) ||
         HandleInspectSearchAction(Bridge, RequestId, SubAction, LowerSubAction,

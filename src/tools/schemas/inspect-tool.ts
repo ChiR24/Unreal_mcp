@@ -18,7 +18,7 @@ export const inspectToolDefinition: ToolDefinition = {
           'inspect_class', 'inspect_cdo', 'runtime_report', 'pie_report', 'list_objects',
           'get_metadata', 'add_tag', 'find_by_tag',
           'create_snapshot', 'restore_snapshot', 'export', 'delete_object', 'find_by_class', 'get_bounding_box',
-          'get_project_settings', 'get_world_settings', 'get_viewport_info', 'get_selected_actors',
+          'get_project_settings', 'get_world_settings', 'get_viewport_info', 'get_content_browser_state', 'get_selected_actors',
           'get_scene_stats', 'get_performance_stats', 'get_memory_stats', 'get_editor_settings'
         ],
         description: 'Action'
@@ -59,7 +59,12 @@ export const inspectToolDefinition: ToolDefinition = {
       componentClass: commonSchemas.stringProp,
       count: commonSchemas.numberProp,
       objects: commonSchemas.arrayOfObjects,
-      actors: commonSchemas.arrayOfObjects
+      actors: commonSchemas.arrayOfObjects,
+      currentPath: commonSchemas.stringProp,
+      selectedFolders: commonSchemas.arrayOfStrings,
+      selectedFolderCount: commonSchemas.numberProp,
+      selectedAssets: commonSchemas.arrayOfObjects,
+      selectedAssetCount: commonSchemas.numberProp
     }
   }
 };
