@@ -163,9 +163,40 @@ void UMcpAutomationBridgeSubsystem::StartNativeTransport()
         PluginDir = Plugin->GetBaseDir();
     }
 
+    // Allow an environment-variable override of the native MCP port, mirroring the
+    // plugin's existing MCP_MAX_* env overrides. This lets a project select a per-
+    // instance port (e.g. to run several editors at once on distinct ports) without
+    // editing committed ini — set MCP_NATIVE_PORT in the editor's environment. Falls
+    // back to the NativeMCPPort project setting when the var is unset or invalid.
+    int32 NativePort = Settings->NativeMCPPort;
+    const FString EnvNativePort = FPlatformMisc::GetEnvironmentVariable(TEXT("MCP_NATIVE_PORT"));
+    if (!EnvNativePort.IsEmpty())
+    {
+        int32 ParsedNativePort = 0;
+        if (LexTryParseString(ParsedNativePort, *EnvNativePort) && ParsedNativePort > 0 && ParsedNativePort <= 65535)
+        {
+            NativePort = ParsedNativePort;
+            UE_LOG(
+                LogMcpAutomationBridgeSubsystem,
+                Log,
+                TEXT("Native MCP port overridden by env MCP_NATIVE_PORT=%d (project setting NativeMCPPort=%d)"),
+                NativePort,
+                Settings->NativeMCPPort);
+        }
+        else
+        {
+            UE_LOG(
+                LogMcpAutomationBridgeSubsystem,
+                Warning,
+                TEXT("Ignoring invalid MCP_NATIVE_PORT='%s' (expected an integer 1-65535); using NativeMCPPort=%d"),
+                *EnvNativePort,
+                Settings->NativeMCPPort);
+        }
+    }
+
     NativeTransport = MakeShared<FMcpNativeTransport>(this);
     if (NativeTransport->Start(
-            Settings->NativeMCPPort,
+            NativePort,
             PluginDir,
             Settings->bLoadAllToolsOnStart,
             Settings->NativeMCPInstructions,
@@ -179,6 +210,6 @@ void UMcpAutomationBridgeSubsystem::StartNativeTransport()
         LogMcpAutomationBridgeSubsystem,
         Error,
         TEXT("Failed to start Native MCP server on port %d"),
-        Settings->NativeMCPPort);
+        NativePort);
     NativeTransport.Reset();
 }
