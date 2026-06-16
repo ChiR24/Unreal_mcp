@@ -55,6 +55,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     }
   }
 
+  // If the caller explicitly asked for a mesh but it could not be resolved to a
+  // static/skeletal mesh, fail BEFORE spawning anything. Otherwise we'd create an
+  // actor we can't configure as requested and report it as a (misleading) success.
+  if (!MeshPath.IsEmpty() && !ResolvedStaticMesh && !ResolvedSkeletalMesh) {
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("MESH_NOT_FOUND"),
+        FString::Printf(TEXT("Requested mesh could not be loaded as a static or "
+                             "skeletal mesh: %s"),
+                        *MeshPath));
+    return true;
+  }
+
   // Force StaticMeshActor if we have a resolved mesh, regardless of class input
   // (unless it's a specific subclass)
   bool bSpawnStaticMeshActor = (ResolvedStaticMesh != nullptr);
@@ -123,40 +135,67 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   Spawned = TargetWorld->SpawnActor(ClassToSpawn, &Location, &Rotation,
                                     SpawnParams);
 
-  if (Spawned) {
-    Spawned->Modify();
-    Spawned->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
-                                         ETeleportType::TeleportPhysics);
-    if (bSpawnStaticMeshActor) {
-      if (AStaticMeshActor *StaticMeshActor = Cast<AStaticMeshActor>(Spawned)) {
-        if (UStaticMeshComponent *MeshComponent =
-                StaticMeshActor->GetStaticMeshComponent()) {
-          if (ResolvedStaticMesh) {
-            MeshComponent->SetStaticMesh(ResolvedStaticMesh);
-          }
-          MeshComponent->SetMobility(EComponentMobility::Movable);
-          MeshComponent->MarkRenderStateDirty();
-        }
-      }
-    } else if (bSpawnSkeletalMeshActor) {
-      if (ASkeletalMeshActor *SkelActor = Cast<ASkeletalMeshActor>(Spawned)) {
-        if (USkeletalMeshComponent *SkelComp =
-                SkelActor->GetSkeletalMeshComponent()) {
-          if (ResolvedSkeletalMesh) {
-            SkelComp->SetSkeletalMesh(ResolvedSkeletalMesh);
-          }
-          SkelComp->SetMobility(EComponentMobility::Movable);
-          SkelComp->MarkRenderStateDirty();
-        }
-      }
-    }
-  }
-
-  if (!Spawned) {
+  if (!IsValid(Spawned)) {
+    // SpawnActor returned null / an invalid object — nothing was added to the
+    // world, so there is nothing to roll back.
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SPAWN_FAILED"),
                               TEXT("Failed to spawn actor"));
-
     return true;
+  }
+
+  // Transactional rollback: if a required post-spawn step fails, destroy the actor
+  // we just created so a failed request leaves the world unchanged rather than
+  // leaking a half-configured actor into the level (mirrors the spline handlers,
+  // which Destroy() the new actor when component setup fails).
+  auto RollbackSpawn = [&Spawned]() {
+    if (IsValid(Spawned)) {
+      Spawned->Destroy();
+    }
+    Spawned = nullptr;
+  };
+
+  Spawned->Modify();
+  Spawned->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
+                                       ETeleportType::TeleportPhysics);
+  if (bSpawnStaticMeshActor) {
+    AStaticMeshActor *StaticMeshActor = Cast<AStaticMeshActor>(Spawned);
+    UStaticMeshComponent *MeshComponent =
+        StaticMeshActor ? StaticMeshActor->GetStaticMeshComponent() : nullptr;
+    if (ResolvedStaticMesh && !MeshComponent) {
+      // A mesh was explicitly resolved but the spawned actor can't hold it.
+      RollbackSpawn();
+      SendStandardErrorResponse(
+          this, Socket, RequestId, TEXT("MESH_APPLY_FAILED"),
+          TEXT("Could not apply the requested static mesh: the spawned actor has "
+               "no static mesh component."));
+      return true;
+    }
+    if (MeshComponent) {
+      if (ResolvedStaticMesh) {
+        MeshComponent->SetStaticMesh(ResolvedStaticMesh);
+      }
+      MeshComponent->SetMobility(EComponentMobility::Movable);
+      MeshComponent->MarkRenderStateDirty();
+    }
+  } else if (bSpawnSkeletalMeshActor) {
+    ASkeletalMeshActor *SkelActor = Cast<ASkeletalMeshActor>(Spawned);
+    USkeletalMeshComponent *SkelComp =
+        SkelActor ? SkelActor->GetSkeletalMeshComponent() : nullptr;
+    if (ResolvedSkeletalMesh && !SkelComp) {
+      RollbackSpawn();
+      SendStandardErrorResponse(
+          this, Socket, RequestId, TEXT("MESH_APPLY_FAILED"),
+          TEXT("Could not apply the requested skeletal mesh: the spawned actor "
+               "has no skeletal mesh component."));
+      return true;
+    }
+    if (SkelComp) {
+      if (ResolvedSkeletalMesh) {
+        SkelComp->SetSkeletalMesh(ResolvedSkeletalMesh);
+      }
+      SkelComp->SetMobility(EComponentMobility::Movable);
+      SkelComp->MarkRenderStateDirty();
+    }
   }
 
   if (bHasScale) {
