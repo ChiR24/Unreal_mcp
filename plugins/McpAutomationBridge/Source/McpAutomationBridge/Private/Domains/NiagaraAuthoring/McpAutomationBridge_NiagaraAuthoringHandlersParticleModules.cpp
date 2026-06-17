@@ -15,7 +15,15 @@ static bool AddModuleAndVerify(
     {
         return false;
     }
-    Context.Result->SetBoolField(TEXT("moduleAdded"), AddModuleToEmitterStack(Handle, ModulePath, Usage, SuggestedName) != nullptr);
+    const bool bModuleAdded = (AddModuleToEmitterStack(Handle, ModulePath, Usage, SuggestedName) != nullptr);
+    Context.Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
+    if (!bModuleAdded)
+    {
+        // Don't report success when the stack insertion failed (e.g. missing module script or
+        // no matching output node) — surface it so callers don't act on a module that isn't there.
+        Context.SendError(TEXT("Failed to add Niagara module to emitter stack."), TEXT("CREATE_FAILED"));
+        return false;
+    }
     MarkDirtyAndVerify(Context, System);
     return true;
 }
@@ -73,85 +81,65 @@ static bool AddVelocityModule(FActionContext& Context)
 
 static bool AddAccelerationModule(FActionContext& Context)
 {
-    if (Context.SystemPath.IsEmpty() || Context.EmitterName.IsEmpty())
-    {
-        Context.SendError(TEXT("Missing 'systemPath' or 'emitterName'."), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
     const TSharedPtr<FJsonObject>* AccelObj;
     FVector Acceleration = FVector(0, 0, -980);
     if (Context.Payload->TryGetObjectField(TEXT("acceleration"), AccelObj))
     {
         Acceleration = GetVectorFromJson(*AccelObj);
     }
-    UNiagaraSystem* System = LoadSystemOrError(Context);
-    if (!System)
+    UNiagaraSystem* System = nullptr;
+    if (!AddModuleAndVerify(Context, TEXT("/Niagara/Modules/Update/Forces/AccelerationForce.AccelerationForce"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("Acceleration Force"), System))
     {
         return true;
     }
-    const bool bParameterAdded = AddOrSetVectorUserParameter(System, TEXT("MCP_Acceleration"), Acceleration);
-    MarkDirtyAndVerify(Context, System);
     Context.Result->SetStringField(TEXT("moduleName"), TEXT("Acceleration"));
-    Context.Result->SetBoolField(TEXT("parameterAdded"), bParameterAdded);
-    Context.Result->SetStringField(TEXT("parameterName"), TEXT("MCP_Acceleration"));
-    Context.Result->SetStringField(TEXT("message"), TEXT("Configured acceleration module."));
-    Context.SendSuccess(true, TEXT("Acceleration module configured."));
+    Context.Result->SetNumberField(TEXT("accelerationX"), Acceleration.X);
+    Context.Result->SetNumberField(TEXT("accelerationY"), Acceleration.Y);
+    Context.Result->SetNumberField(TEXT("accelerationZ"), Acceleration.Z);
+    Context.Result->SetStringField(TEXT("message"), TEXT("Added acceleration force module."));
+    Context.SendSuccess(true, TEXT("Acceleration module added."));
     return true;
 }
 
 static bool AddSizeModule(FActionContext& Context)
 {
-    if (Context.SystemPath.IsEmpty() || Context.EmitterName.IsEmpty())
-    {
-        Context.SendError(TEXT("Missing 'systemPath' or 'emitterName'."), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-    UNiagaraSystem* System = LoadSystemOrError(Context);
-    if (!System)
-    {
-        return true;
-    }
     const FString SizeMode = GetJsonStringField(Context.Payload, TEXT("sizeMode"), TEXT("Uniform"));
     const double UniformSize = GetJsonNumberField(Context.Payload, TEXT("uniformSize"), 10.0);
-    const bool bParameterAdded = AddOrSetFloatUserParameter(System, TEXT("MCP_UniformSize"), static_cast<float>(UniformSize));
-    MarkDirtyAndVerify(Context, System);
+    UNiagaraSystem* System = nullptr;
+    if (!AddModuleAndVerify(Context, TEXT("/Niagara/Modules/Update/Size/ScaleSpriteSize.ScaleSpriteSize"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("Scale Sprite Size"), System))
+    {
+        return true;
+    }
     Context.Result->SetStringField(TEXT("moduleName"), TEXT("Size"));
     Context.Result->SetStringField(TEXT("sizeMode"), SizeMode);
     Context.Result->SetNumberField(TEXT("uniformSize"), UniformSize);
-    Context.Result->SetBoolField(TEXT("parameterAdded"), bParameterAdded);
-    Context.Result->SetStringField(TEXT("parameterName"), TEXT("MCP_UniformSize"));
-    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured size module: mode=%s, size=%.1f"), *SizeMode, UniformSize));
-    Context.SendSuccess(true, TEXT("Size module configured."));
+    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added scale sprite size module: mode=%s, size=%.1f"), *SizeMode, UniformSize));
+    Context.SendSuccess(true, TEXT("Size module added."));
     return true;
 }
 
 static bool AddColorModule(FActionContext& Context)
 {
-    if (Context.SystemPath.IsEmpty() || Context.EmitterName.IsEmpty())
-    {
-        Context.SendError(TEXT("Missing 'systemPath' or 'emitterName'."), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
     const TSharedPtr<FJsonObject>* ColorObj;
     FLinearColor Color = FLinearColor::White;
     if (Context.Payload->TryGetObjectField(TEXT("color"), ColorObj))
     {
         Color = GetColorFromJson(*ColorObj);
     }
-    UNiagaraSystem* System = LoadSystemOrError(Context);
-    if (!System)
+    const FString ColorMode = GetJsonStringField(Context.Payload, TEXT("colorMode"), TEXT("Direct"));
+    UNiagaraSystem* System = nullptr;
+    if (!AddModuleAndVerify(Context, TEXT("/Niagara/Modules/Update/Color/Color.Color"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("Color"), System))
     {
         return true;
     }
-    const FString ColorMode = GetJsonStringField(Context.Payload, TEXT("colorMode"), TEXT("Direct"));
-    const bool bParameterAdded = AddOrSetColorUserParameter(System, TEXT("MCP_Color"), Color);
-    MarkDirtyAndVerify(Context, System);
     Context.Result->SetStringField(TEXT("moduleName"), TEXT("Color"));
     Context.Result->SetStringField(TEXT("colorMode"), ColorMode);
-    Context.Result->SetBoolField(TEXT("parameterAdded"), bParameterAdded);
-    Context.Result->SetStringField(TEXT("parameterName"), TEXT("MCP_Color"));
-    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured color module: mode=%s"), *ColorMode));
-    Context.SendSuccess(true, TEXT("Color module configured."));
+    Context.Result->SetNumberField(TEXT("colorR"), Color.R);
+    Context.Result->SetNumberField(TEXT("colorG"), Color.G);
+    Context.Result->SetNumberField(TEXT("colorB"), Color.B);
+    Context.Result->SetNumberField(TEXT("colorA"), Color.A);
+    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added color module: mode=%s"), *ColorMode));
+    Context.SendSuccess(true, TEXT("Color module added."));
     return true;
 }
 

@@ -125,13 +125,21 @@ static bool AddEmitterToSystem(FActionContext& Context)
         Context.SendError(TEXT("Failed to add emitter to Niagara system."), TEXT("CREATE_FAILED"));
         return true;
     }
+    // Honor a caller-supplied 'emitterName' for the handle. Upstream derives the handle name
+    // from the source emitter asset, silently ignoring the requested name; renaming here also
+    // keeps the handle name consistent with the 'emitterName' that module actions resolve
+    // against (the dispatch layer sends the same default for both add-emitter and modules).
+    if (!Context.EmitterName.IsEmpty())
+    {
+        AddedHandle->SetName(FName(*Context.EmitterName), *System);
+    }
     AddedEmitterName = AddedHandle->GetName().ToString();
 #else
-    AddedEmitterName = System->AddEmitterHandle(*Emitter, FName(*Emitter->GetName())).GetName().ToString();
+    AddedEmitterName = System->AddEmitterHandle(*Emitter, Context.EmitterName.IsEmpty() ? FName(*Emitter->GetName()) : FName(*Context.EmitterName)).GetName().ToString();
 #endif
     MarkDirtyAndVerify(Context, System);
     Context.Result->SetStringField(TEXT("emitterName"), AddedEmitterName);
-    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added emitter '%s' to system."), *Emitter->GetName()));
+    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added emitter '%s' to system."), *AddedEmitterName));
     Context.SendSuccess(true, TEXT("Emitter added to system."));
     return true;
 }
