@@ -3,8 +3,38 @@
 #if WITH_EDITOR
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_MacroInstance.h"
+// K2Node_DynamicCast is not always reachable through a single include path
+// across UE versions / module layouts; fall back across the known locations.
+#if defined(__has_include)
+#if __has_include("BlueprintGraph/K2Node_DynamicCast.h")
+#include "BlueprintGraph/K2Node_DynamicCast.h"
+#elif __has_include("BlueprintGraph/Classes/K2Node_DynamicCast.h")
+#include "BlueprintGraph/Classes/K2Node_DynamicCast.h"
+#elif __has_include("K2Node_DynamicCast.h")
 #include "K2Node_DynamicCast.h"
+#endif
+#else
+#include "K2Node_DynamicCast.h"
+#endif
+// K2Node_CreateWidget lives in the UMGEditor module under Classes/Nodes/ in
+// stock UE 5.x; the public include path is not always exposed, so fall back
+// across the known locations.
+#if defined(__has_include)
+#if __has_include("Nodes/K2Node_CreateWidget.h")
+#include "Nodes/K2Node_CreateWidget.h"
+#elif __has_include("K2Node_CreateWidget.h")
 #include "K2Node_CreateWidget.h"
+#elif __has_include("UMGEditor/Classes/Nodes/K2Node_CreateWidget.h")
+#include "UMGEditor/Classes/Nodes/K2Node_CreateWidget.h"
+#else
+#define MCP_HAS_K2NODE_CREATEWIDGET 0
+#endif
+#else
+#include "K2Node_CreateWidget.h"
+#endif
+#ifndef MCP_HAS_K2NODE_CREATEWIDGET
+#define MCP_HAS_K2NODE_CREATEWIDGET 1
+#endif
 #include "ScopedTransaction.h"
 
 namespace McpBlueprintGraphHandlers
@@ -31,6 +61,11 @@ static UClass* ResolveTargetClassFromString(const FString& InClassString)
             int32 DotIdx;
             if (ClassPath.FindChar('.', DotIdx))
             {
+                // Both parts must be peeled from the same string — keeping
+                // PackageName as the full path here produced doubled-up paths
+                // like "/Game/X/Y.Y.Y_C" when callers passed an already-fully-
+                // qualified object path.
+                PackageName = ClassPath.Left(DotIdx);
                 ObjectName = ClassPath.RightChop(DotIdx + 1);
             }
             else
@@ -253,7 +288,13 @@ void CreateDynamicNode(
         FGraphNodeCreator<UK2Node_DynamicCast> CastCreator(*Context.TargetGraph);
         UK2Node_DynamicCast* CastNode = CastCreator.CreateNode(false);
         CastNode->TargetType = ResolvedTarget;
-        CastNode->SetPurity(false);
+        // Cast purity is configurable via the payload; defaults to impure
+        // (the conventional exec-driven Cast To... node). Setting pure=true
+        // gives a pure data-only cast with no exec pins, useful inside
+        // binding/pure functions.
+        bool bPureCast = false;
+        Context.Payload->TryGetBoolField(TEXT("pure"), bPureCast);
+        CastNode->SetPurity(bPureCast);
         Context.FinalizeNode(CastCreator, CastNode, X, Y);
         return;
     }
@@ -264,6 +305,7 @@ void CreateDynamicNode(
     // it to anything specific (e.g. an Add to Viewport on the typed widget,
     // or its bindings). Resolve the requested class and assign it, then let
     // ReconstructNode rebuild pins with the correct typed Return Value.
+#if MCP_HAS_K2NODE_CREATEWIDGET
     if (NodeClass->IsChildOf(UK2Node_CreateWidget::StaticClass()))
     {
         const FString TargetClass = ReadTargetClassPayload(Context, NodeType);
@@ -302,6 +344,7 @@ void CreateDynamicNode(
         Context.FinalizeNode(WidgetCreator, WidgetNode, X, Y);
         return;
     }
+#endif
 
     UEdGraphNode* NewNode =
         NewObject<UEdGraphNode>(Context.TargetGraph, NodeClass);
