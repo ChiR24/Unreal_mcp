@@ -9,6 +9,8 @@
 
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"
+#include "Engine/SCS_Node.h"
+#include "Engine/SimpleConstructionScript.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 // K2Node_ComponentBoundEvent is needed to wire a per-component delegate
 // (e.g. NearMissZone.OnComponentBeginOverlap) to an event node. The header's
@@ -192,9 +194,9 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
       // Locate the SCS node by display name so we know which component the
       // delegate lives on, and to wire the bound event's ComponentPropertyName.
       USCS_Node* MatchedScsNode = nullptr;
-      if (BP->SimpleConstructionScript) {
-        for (USCS_Node* ScsNode :
-             BP->SimpleConstructionScript->GetAllNodes()) {
+      USimpleConstructionScript* SCS = BP->SimpleConstructionScript.Get();
+      if (SCS) {
+        for (USCS_Node* ScsNode : SCS->GetAllNodes()) {
           if (!ScsNode) {
             continue;
           }
@@ -272,8 +274,25 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
         EventGraph->Modify();
         FGraphNodeCreator<UK2Node_ComponentBoundEvent> NodeCreator(*EventGraph);
         BoundEventNode = NodeCreator.CreateNode();
-        BoundEventNode->InitializeComponentBoundEventParams(DelegateProp,
-                                                            DelegateProp);
+        // InitializeComponentBoundEventParams expects the FObjectProperty that
+        // represents the component variable on the owning Blueprint, and the
+        // multicast delegate property on the component class. Find the
+        // FObjectProperty for the component by name on the BP's generated class.
+        FObjectProperty* ComponentObjProp = nullptr;
+        if (BP->GeneratedClass) {
+          for (TFieldIterator<FObjectProperty> PropIt(BP->GeneratedClass);
+               PropIt; ++PropIt) {
+            if (PropIt->GetName().Equals(ComponentName,
+                                         ESearchCase::IgnoreCase)) {
+              ComponentObjProp = *PropIt;
+              break;
+            }
+          }
+        }
+        if (ComponentObjProp) {
+          BoundEventNode->InitializeComponentBoundEventParams(
+              ComponentObjProp, DelegateProp);
+        }
         BoundEventNode->ComponentPropertyName = MatchedScsNode->GetVariableName();
         BoundEventNode->DelegatePropertyName = DelegateProp->GetFName();
         BoundEventNode->DelegateOwnerClass = ComponentClass;
