@@ -4,10 +4,88 @@
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_MacroInstance.h"
 #include "K2Node_DynamicCast.h"
+#include "K2Node_CreateWidget.h"
 #include "ScopedTransaction.h"
 
 namespace McpBlueprintGraphHandlers
 {
+// Shared helper: resolve a class string (Blueprint asset path, generated-class
+// path, or native class name) to a UClass. Used by every node branch that has
+// a class pin (DynamicCast TargetType, CreateWidget WidgetType, etc.) so all
+// callers accept the same input formats consistently.
+static UClass* ResolveTargetClassFromString(const FString& InClassString)
+{
+    if (InClassString.IsEmpty())
+    {
+        return nullptr;
+    }
+
+    UClass* Resolved = nullptr;
+    if (InClassString.StartsWith(TEXT("/")))
+    {
+        FString ClassPath = InClassString;
+        if (!ClassPath.EndsWith(TEXT("_C")))
+        {
+            FString PackageName = ClassPath;
+            FString ObjectName = ClassPath;
+            int32 DotIdx;
+            if (ClassPath.FindChar('.', DotIdx))
+            {
+                ObjectName = ClassPath.RightChop(DotIdx + 1);
+            }
+            else
+            {
+                int32 SlashIdx;
+                if (ClassPath.FindLastChar('/', SlashIdx))
+                {
+                    ObjectName = ClassPath.RightChop(SlashIdx + 1);
+                }
+            }
+            ClassPath = PackageName + TEXT(".") + ObjectName + TEXT("_C");
+        }
+        Resolved = LoadObject<UClass>(nullptr, *ClassPath);
+    }
+    if (!Resolved)
+    {
+        Resolved = FindNodeClassByName(InClassString);
+    }
+    if (!Resolved)
+    {
+        Resolved = UClass::TryFindTypeSlow<UClass>(InClassString);
+    }
+    return Resolved;
+}
+
+// Read the requested target class for a node with a class pin. Checks
+// targetClass first, then the legacy memberClass / nodeClass / widgetType
+// fields, then peels a "CastTo<Class>" prefix from the nodeType as a final
+// fallback. Returns empty string if nothing was supplied.
+static FString ReadTargetClassPayload(
+    const FActionContext& Context,
+    const FString& NodeType)
+{
+    FString TargetClass;
+    Context.Payload->TryGetStringField(TEXT("targetClass"), TargetClass);
+    if (TargetClass.IsEmpty())
+    {
+        Context.Payload->TryGetStringField(TEXT("memberClass"), TargetClass);
+    }
+    if (TargetClass.IsEmpty())
+    {
+        Context.Payload->TryGetStringField(TEXT("nodeClass"), TargetClass);
+    }
+    if (TargetClass.IsEmpty())
+    {
+        Context.Payload->TryGetStringField(TEXT("widgetType"), TargetClass);
+    }
+    if (TargetClass.IsEmpty() &&
+        NodeType.StartsWith(TEXT("CastTo"), ESearchCase::IgnoreCase))
+    {
+        TargetClass = NodeType.Mid(6);
+    }
+    return TargetClass;
+}
+
 // ForLoop / WhileLoop / ForEachLoop and friends are NOT UK2Node_* classes — they
 // are Blueprint macros in the engine StandardMacros library, instantiated via
 // K2Node_MacroInstance. The old name aliases pointed either at a nonexistent class
@@ -149,24 +227,10 @@ void CreateDynamicNode(
 
     // DynamicCast nodes must have TargetType set, or they render as an
     // unusable "Bad cast node" (wildcard Object pin, no typed "As <Class>"
-    // output). Read targetClass (with legacy fallbacks) and resolve it.
+    // output). Read the requested class (with legacy fallbacks) and resolve it.
     if (NodeClass->IsChildOf(UK2Node_DynamicCast::StaticClass()))
     {
-        FString TargetClass;
-        Context.Payload->TryGetStringField(TEXT("targetClass"), TargetClass);
-        if (TargetClass.IsEmpty())
-        {
-            Context.Payload->TryGetStringField(TEXT("memberClass"), TargetClass);
-        }
-        if (TargetClass.IsEmpty())
-        {
-            Context.Payload->TryGetStringField(TEXT("nodeClass"), TargetClass);
-        }
-        if (TargetClass.IsEmpty() &&
-            NodeType.StartsWith(TEXT("CastTo"), ESearchCase::IgnoreCase))
-        {
-            TargetClass = NodeType.Mid(6);
-        }
+        const FString TargetClass = ReadTargetClassPayload(Context, NodeType);
         if (TargetClass.IsEmpty())
         {
             Context.SendError(
@@ -175,42 +239,7 @@ void CreateDynamicNode(
                 TEXT("INVALID_ARGUMENT"));
             return;
         }
-
-        // Resolve to a UClass. Accept a generated-class path, a Blueprint asset
-        // path (append _C), or a bare/native class name.
-        UClass* ResolvedTarget = nullptr;
-        if (TargetClass.StartsWith(TEXT("/")))
-        {
-            FString ClassPath = TargetClass;
-            if (!ClassPath.EndsWith(TEXT("_C")))
-            {
-                FString PackageName = ClassPath;
-                FString ObjectName = ClassPath;
-                int32 DotIdx;
-                if (ClassPath.FindChar('.', DotIdx))
-                {
-                    ObjectName = ClassPath.RightChop(DotIdx + 1);
-                }
-                else
-                {
-                    int32 SlashIdx;
-                    if (ClassPath.FindLastChar('/', SlashIdx))
-                    {
-                        ObjectName = ClassPath.RightChop(SlashIdx + 1);
-                    }
-                }
-                ClassPath = PackageName + TEXT(".") + ObjectName + TEXT("_C");
-            }
-            ResolvedTarget = LoadObject<UClass>(nullptr, *ClassPath);
-        }
-        if (!ResolvedTarget)
-        {
-            ResolvedTarget = FindNodeClassByName(TargetClass);
-        }
-        if (!ResolvedTarget)
-        {
-            ResolvedTarget = UClass::TryFindTypeSlow<UClass>(TargetClass);
-        }
+        UClass* ResolvedTarget = ResolveTargetClassFromString(TargetClass);
         if (!ResolvedTarget)
         {
             Context.SendError(
@@ -226,6 +255,51 @@ void CreateDynamicNode(
         CastNode->TargetType = ResolvedTarget;
         CastNode->SetPurity(false);
         Context.FinalizeNode(CastCreator, CastNode, X, Y);
+        return;
+    }
+
+    // CreateWidget nodes carry the widget class as a property on the node
+    // (UK2Node_CreateWidget::WidgetType). Without it the node spawns with a
+    // generic UUserWidget Class pin and Return Value, so callers can't wire
+    // it to anything specific (e.g. an Add to Viewport on the typed widget,
+    // or its bindings). Resolve the requested class and assign it, then let
+    // ReconstructNode rebuild pins with the correct typed Return Value.
+    if (NodeClass->IsChildOf(UK2Node_CreateWidget::StaticClass()))
+    {
+        const FString TargetClass = ReadTargetClassPayload(Context, NodeType);
+        if (TargetClass.IsEmpty())
+        {
+            Context.SendError(
+                TEXT("CreateWidget node requires a 'targetClass' (Widget Blueprint "
+                     "asset path like /Game/Widgets/WBP_HUD, or a class name)."),
+                TEXT("INVALID_ARGUMENT"));
+            return;
+        }
+        UClass* ResolvedWidget = ResolveTargetClassFromString(TargetClass);
+        if (!ResolvedWidget)
+        {
+            Context.SendError(
+                FString::Printf(
+                    TEXT("Could not resolve targetClass '%s' for CreateWidget."),
+                    *TargetClass),
+                TEXT("CLASS_NOT_FOUND"));
+            return;
+        }
+
+        FGraphNodeCreator<UK2Node_CreateWidget> WidgetCreator(*Context.TargetGraph);
+        UK2Node_CreateWidget* WidgetNode = WidgetCreator.CreateNode(false);
+        // Bind the widget class on the underlying property so the node knows
+        // its concrete type before pin allocation.
+        if (FProperty* ClassProp = WidgetNode->GetClass()->FindPropertyByName(
+                TEXT("WidgetType")))
+        {
+            if (FClassProperty* TypedProp = CastField<FClassProperty>(ClassProp))
+            {
+                TypedProp->SetObjectPropertyValue_InContainer(
+                    WidgetNode, ResolvedWidget);
+            }
+        }
+        Context.FinalizeNode(WidgetCreator, WidgetNode, X, Y);
         return;
     }
 
