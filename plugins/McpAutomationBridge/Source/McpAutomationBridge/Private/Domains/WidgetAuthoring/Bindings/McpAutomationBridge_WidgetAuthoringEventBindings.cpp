@@ -22,6 +22,99 @@ namespace WidgetAuthoringHandlers
 {
 using namespace WidgetAuthoringHelpers;
 
+// Create a real UK2Node_ComponentBoundEvent for an arbitrary multicast delegate on a
+// widget component — the same path the Designer's "+ <Event>" button uses. Mirrors the
+// bind_on_clicked implementation so OnHovered / OnValueChanged author genuine nodes
+// (nodeId + compileSucceeded) instead of returning an instruction string. Sends the
+// response itself and always returns true (request handled).
+static bool BindComponentDelegateEvent(
+    UMcpAutomationBridgeSubsystem& Subsystem,
+    const FString& RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+    TSharedPtr<FJsonObject> ResultJson,
+    UWidgetBlueprint* WidgetBP,
+    UWidget* TargetWidget,
+    const FString& SlotName,
+    UClass* DelegateOwnerClass,
+    const FName DelegateName,
+    const FString& EventTypeLabel,
+    const FString& FunctionName)
+{
+    bool bBlueprintChanged = false;
+    if (!TargetWidget->bIsVariable)
+    {
+        TargetWidget->Modify();
+        TargetWidget->bIsVariable = true;
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        bBlueprintChanged = true;
+    }
+
+    FMulticastDelegateProperty* DelegateProp =
+        FindFProperty<FMulticastDelegateProperty>(DelegateOwnerClass, DelegateName);
+    if (!DelegateProp)
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("%s delegate not found on %s"), *DelegateName.ToString(), *DelegateOwnerClass->GetName()),
+            TEXT("DELEGATE_NOT_FOUND"));
+        return true;
+    }
+
+    FObjectProperty* CompProp =
+        FindFProperty<FObjectProperty>(WidgetBP->SkeletonGeneratedClass, FName(*SlotName));
+    if (!CompProp)
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Component variable '%s' not found on widget skeleton class"), *SlotName),
+            TEXT("COMPONENT_PROPERTY_NOT_FOUND"));
+        return true;
+    }
+
+    UEdGraph* EventGraph = FBlueprintEditorUtils::FindEventGraph(WidgetBP);
+    if (!EventGraph)
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Event graph not found on widget blueprint"), TEXT("EVENT_GRAPH_NOT_FOUND"));
+        return true;
+    }
+
+    // Idempotent: reuse an existing bound event for this delegate+component.
+    const UK2Node_ComponentBoundEvent* Existing =
+        FKismetEditorUtilities::FindBoundEventForComponent(WidgetBP, DelegateProp->GetFName(), CompProp->GetFName());
+
+    UK2Node_ComponentBoundEvent* BoundNode = const_cast<UK2Node_ComponentBoundEvent*>(Existing);
+    bool bCreatedNew = false;
+    if (!BoundNode)
+    {
+        EventGraph->Modify();
+        FGraphNodeCreator<UK2Node_ComponentBoundEvent> Creator(*EventGraph);
+        BoundNode = Creator.CreateNode(false);
+        BoundNode->InitializeComponentBoundEventParams(CompProp, DelegateProp);
+        Creator.Finalize();
+        bCreatedNew = true;
+        bBlueprintChanged = true;
+    }
+
+    bool bCompiled = true;
+    if (bBlueprintChanged)
+    {
+        FBlueprintEditorUtils::MarkBlueprintAsModified(WidgetBP);
+        bCompiled = McpSafeCompileBlueprint(WidgetBP);
+    }
+
+    ResultJson->SetBoolField(TEXT("success"), true);
+    ResultJson->SetStringField(TEXT("slotName"), SlotName);
+    ResultJson->SetStringField(TEXT("eventType"), EventTypeLabel);
+    ResultJson->SetStringField(TEXT("functionName"), FunctionName);
+    ResultJson->SetBoolField(TEXT("bound"), true);
+    ResultJson->SetBoolField(TEXT("createdNew"), bCreatedNew);
+    ResultJson->SetBoolField(TEXT("compileSucceeded"), bCompiled);
+    ResultJson->SetStringField(TEXT("nodeId"), BoundNode->NodeGuid.ToString());
+    ResultJson->SetStringField(TEXT("eventFunctionName"), BoundNode->CustomFunctionName.ToString());
+
+    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
+        FString::Printf(TEXT("%s event bound"), *EventTypeLabel), ResultJson);
+    return true;
+}
+
 bool HandleWidgetAuthoringEventBindings(
     UMcpAutomationBridgeSubsystem& Subsystem,
     const FString& RequestId,
@@ -177,16 +270,9 @@ bool HandleWidgetAuthoringEventBindings(
             return true;
         }
 
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("slotName"), SlotName);
-        ResultJson->SetStringField(TEXT("eventType"), TEXT("OnHovered"));
-        ResultJson->SetStringField(TEXT("functionName"), FunctionName);
-        ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Bind '%s' to %s's OnHovered event."), *FunctionName, *SlotName));
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("OnHovered binding info provided"), ResultJson);
-        return true;
+        return BindComponentDelegateEvent(Subsystem, RequestId, RequestingSocket, ResultJson,
+            WidgetBP, ButtonWidget, SlotName, UButton::StaticClass(), FName(TEXT("OnHovered")),
+            TEXT("OnHovered"), FunctionName);
     }
 
     if (SubAction.Equals(TEXT("bind_on_value_changed"), ESearchCase::IgnoreCase))
@@ -222,26 +308,25 @@ bool HandleWidgetAuthoringEventBindings(
             return true;
         }
 
-        // Determine widget type for appropriate binding info
-        FString WidgetType = TargetWidget->GetClass()->GetName();
-        FString EventName = TEXT("OnValueChanged");
+        // Resolve the value-changed multicast delegate per widget type.
+        const FString WidgetType = TargetWidget->GetClass()->GetName();
+        FName DelegateName = NAME_None;
+        if (Cast<USlider>(TargetWidget) || Cast<USpinBox>(TargetWidget)) DelegateName = FName(TEXT("OnValueChanged"));
+        else if (Cast<UCheckBox>(TargetWidget)) DelegateName = FName(TEXT("OnCheckStateChanged"));
+        else if (Cast<UComboBoxString>(TargetWidget)) DelegateName = FName(TEXT("OnSelectionChanged"));
 
-        if (Cast<USlider>(TargetWidget)) EventName = TEXT("OnValueChanged (float)");
-        else if (Cast<UCheckBox>(TargetWidget)) EventName = TEXT("OnCheckStateChanged (bool)");
-        else if (Cast<USpinBox>(TargetWidget)) EventName = TEXT("OnValueChanged (float)");
-        else if (Cast<UComboBoxString>(TargetWidget)) EventName = TEXT("OnSelectionChanged (FString)");
+        if (DelegateName.IsNone())
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Widget '%s' (%s) has no supported value-changed delegate. Supported: Slider, SpinBox, CheckBox, ComboBoxString."), *SlotName, *WidgetType),
+                TEXT("UNSUPPORTED_WIDGET"));
+            return true;
+        }
 
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("slotName"), SlotName);
         ResultJson->SetStringField(TEXT("widgetType"), WidgetType);
-        ResultJson->SetStringField(TEXT("eventType"), EventName);
-        ResultJson->SetStringField(TEXT("functionName"), FunctionName);
-        ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Bind '%s' to %s's %s event."), *FunctionName, *SlotName, *EventName));
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("OnValueChanged binding info provided"), ResultJson);
-        return true;
+        return BindComponentDelegateEvent(Subsystem, RequestId, RequestingSocket, ResultJson,
+            WidgetBP, TargetWidget, SlotName, TargetWidget->GetClass(), DelegateName,
+            DelegateName.ToString(), FunctionName);
     }
 
     if (SubAction.Equals(TEXT("create_property_binding"), ESearchCase::IgnoreCase))
