@@ -166,7 +166,9 @@ bool HandleAddNode(UMcpAutomationBridgeSubsystem* Subsystem,
   NewNode->NodePosY = Y;
   GraphContext.Graph->AddNode(NewNode, true, false);
   NewNode->PostPlacedNewNode();
-  NewNode->AllocateDefaultPins();
+  // Guard against duplicate pins: some node types already allocate in
+  // PostPlacedNewNode(), so only allocate when the node has no pins yet.
+  if (NewNode->Pins.Num() == 0) { NewNode->AllocateDefaultPins(); }
 
   if (NodeInstanceClass && !NewNode->NodeInstance) {
     GraphContext.Graph->RemoveNode(NewNode);

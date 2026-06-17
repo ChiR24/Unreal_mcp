@@ -15,6 +15,7 @@ inline const TArray<FString>& ManageBlueprintCore()
 		TEXT("set_scs_transform"), TEXT("set_scs_property"),
 		TEXT("ensure_exists"), TEXT("probe_handle"), TEXT("add_variable"),
 		TEXT("remove_variable"), TEXT("rename_variable"), TEXT("add_function"),
+		TEXT("remove_function"),
 		TEXT("add_event"), TEXT("remove_event"),
 		TEXT("add_construction_script"), TEXT("set_variable_metadata"),
 		TEXT("set_metadata"), TEXT("create_node"), TEXT("add_node"),

@@ -100,17 +100,34 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
       return true;
     }
 
-    // Extract parameters from payload
-    int32 EventPosX = 0;
-    int32 EventPosY = 0;
-    if (const TSharedPtr<FJsonObject> *LocObj = nullptr;
-        Payload->TryGetObjectField(TEXT("location"), LocObj)) {
-      EventPosX = (*LocObj)->GetIntegerField(TEXT("x"));
-      EventPosY = (*LocObj)->GetIntegerField(TEXT("y"));
-    } else {
-      EventPosX = Payload->GetIntegerField(TEXT("x"));
-      EventPosY = Payload->GetIntegerField(TEXT("y"));
+    // Read node position. posX/posY are the canonical schema params; fall back
+    // to location.{x,y} then top-level x/y for raw/legacy callers. The old
+    // GetIntegerField path returned 0 on absent keys, so every event piled at
+    // (0,0). posX/posY take precedence.
+    double PX = 0.0;
+    double PY = 0.0;
+    bool bHasX = Payload->TryGetNumberField(TEXT("posX"), PX);
+    bool bHasY = Payload->TryGetNumberField(TEXT("posY"), PY);
+    if (!bHasX || !bHasY) {
+      const TSharedPtr<FJsonObject> *LocObj = nullptr;
+      if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj &&
+          LocObj->IsValid()) {
+        if (!bHasX) {
+          bHasX = (*LocObj)->TryGetNumberField(TEXT("x"), PX);
+        }
+        if (!bHasY) {
+          bHasY = (*LocObj)->TryGetNumberField(TEXT("y"), PY);
+        }
+      }
     }
+    if (!bHasX) {
+      Payload->TryGetNumberField(TEXT("x"), PX);
+    }
+    if (!bHasY) {
+      Payload->TryGetNumberField(TEXT("y"), PY);
+    }
+    const int32 EventPosX = static_cast<int32>(PX);
+    const int32 EventPosY = static_cast<int32>(PY);
 
     const FString FinalType = EventType.IsEmpty() ? TEXT("custom") : EventType;
     const bool bIsCustomEvent =
@@ -143,8 +160,11 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
         CustomEventNode->CustomFunctionName = EventName;
         CustomEventNode->NodePosX = EventPosX;
         CustomEventNode->NodePosY = EventPosY;
+        // FGraphNodeCreator::Finalize() already allocates the node's default pins
+        // (OutputDelegate + then). Calling AllocateDefaultPins() again duplicated
+        // them — the custom event ended up with two OutputDelegate/then pins.
+        // Finalize is enough.
         NodeCreator.Finalize();
-        CustomEventNode->AllocateDefaultPins();
       } else {
         CustomEventNode->NodePosX = EventPosX;
         CustomEventNode->NodePosY = EventPosY;

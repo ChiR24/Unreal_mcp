@@ -316,7 +316,16 @@ void CreateDynamicNode(
     Context.TargetGraph->AddNode(NewNode, false, false);
     NewNode->CreateNewGuid();
     NewNode->PostPlacedNewNode();
-    NewNode->AllocateDefaultPins();
+    // Some K2 nodes (e.g. UK2Node_FunctionResult) already allocate their default
+    // pins inside PostPlacedNewNode(); calling AllocateDefaultPins() again then
+    // duplicates them — a FunctionResult ends up with two 'execute' input pins,
+    // one of which stays unconnected and trips a compiler warning. Mirror the
+    // engine's own FGraphNodeCreator::Finalize guard and only allocate when the
+    // node has no pins yet.
+    if (NewNode->Pins.Num() == 0)
+    {
+        NewNode->AllocateDefaultPins();
+    }
     NewNode->NodePosX = X;
     NewNode->NodePosY = Y;
     FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);

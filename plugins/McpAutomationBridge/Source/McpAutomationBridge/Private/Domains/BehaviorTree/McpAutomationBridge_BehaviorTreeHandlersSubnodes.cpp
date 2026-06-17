@@ -220,7 +220,9 @@ bool HandleAddSubnode(UMcpAutomationBridgeSubsystem* Subsystem,
   NewSubnode->NodeInstance = NewObject<UBTNode>(NewSubnode, NodeInstanceClass);
   NewSubnode->CreateNewGuid();
   NewSubnode->PostPlacedNewNode();
-  NewSubnode->AllocateDefaultPins();
+  // Guard against duplicate pins: some node types already allocate in
+  // PostPlacedNewNode(), so only allocate when the node has no pins yet.
+  if (NewSubnode->Pins.Num() == 0) { NewSubnode->AllocateDefaultPins(); }
   ParentNode->AddSubNode(NewSubnode, GraphContext.Graph);
   UpdateBehaviorTreeAsset(GraphContext);
 

@@ -175,6 +175,40 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
       NewVar.PropertyFlags |= CPF_Net;
     }
 
+    // Apply the requested default value. FBPVariableDescription stores the
+    // default as a string (the same form the editor's "Default Value" field
+    // serializes to); UE parses it back into the typed default on compile.
+    // Previously the payload's defaultValue was read but never applied, so
+    // every variable was created with a zero/empty default regardless of the
+    // value supplied (e.g. a float HealPct requested as 0.35 stayed 0).
+    if (DefaultVal.IsValid() && DefaultVal->Type != EJson::Null) {
+      FString DefaultStr;
+      switch (DefaultVal->Type) {
+      case EJson::Boolean:
+        DefaultStr = DefaultVal->AsBool() ? TEXT("true") : TEXT("false");
+        break;
+      case EJson::Number: {
+        const double Num = DefaultVal->AsNumber();
+        const bool bIsIntLike =
+            PinType.PinCategory == MCP_PC_Int ||
+            PinType.PinCategory == UEdGraphSchema_K2::PC_Byte;
+        if (bIsIntLike && FMath::Frac(Num) == 0.0) {
+          DefaultStr = FString::Printf(TEXT("%lld"), static_cast<int64>(Num));
+        } else {
+          DefaultStr = FString::SanitizeFloat(Num);
+        }
+        break;
+      }
+      case EJson::String:
+        DefaultStr = DefaultVal->AsString();
+        break;
+      default:
+        DefaultVal->TryGetString(DefaultStr);
+        break;
+      }
+      NewVar.DefaultValue = DefaultStr;
+    }
+
     Blueprint->NewVariables.Add(NewVar);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     McpSafeCompileBlueprint(Blueprint);
