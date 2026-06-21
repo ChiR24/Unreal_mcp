@@ -4,6 +4,7 @@
 #include "HAL/Runnable.h"
 #include "Dom/JsonValue.h"
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
+#include "Async/Future.h"
 #include <atomic>
 
 class UMcpAutomationBridgeSubsystem;
@@ -75,6 +76,10 @@ public:
 	/** Clean up requests that have exceeded the timeout. Called from Tick. */
 	void CleanupStaleRequests();
 
+	// Dedicated-thread keepalive (immune to GameThread stalls).
+	void RunKeepaliveLoop();
+	void SweepNotificationKeepalives();
+
 	// FRunnable interface
 	virtual bool Init() override { return true; }
 	virtual uint32 Run() override;
@@ -113,6 +118,9 @@ private:
 		FString SessionId;
 		FString StreamId;
 		double StartTime = 0.0;
+		// Non-atomic: written once in HandleGetMcp before the stream is published into
+		// NotificationStreams (that publish establishes the happens-before), then
+		// read/written only by the keepalive thread (RunKeepaliveLoop).
 		double LastKeepaliveTime = 0.0;
 		FCriticalSection WriteMutex;
 		std::atomic<bool> bMarkedForRemoval{false};
@@ -187,6 +195,7 @@ private:
 	// Socket infrastructure
 	FSocket* ListenSocket = nullptr;
 	FRunnableThread* Thread = nullptr;
+	TFuture<void> KeepaliveLoopFuture;  // background keepalive thread (joined in Shutdown)
 	FEvent* StopEvent = nullptr;
 	FEvent* BindCompleteEvent = nullptr;
 	std::atomic<bool> bStopping{false};

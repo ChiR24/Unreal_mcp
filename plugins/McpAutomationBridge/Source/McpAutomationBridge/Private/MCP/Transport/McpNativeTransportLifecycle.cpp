@@ -128,6 +128,11 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 		return false;
 	}
 
+	// Launch the keepalive loop on its own thread so it survives long GameThread
+	// stalls (recompile, PIE, modal, blocking import) instead of starving with the
+	// subsystem ticker that drives CleanupStaleRequests.
+	KeepaliveLoopFuture = Async(EAsyncExecution::Thread, [this]() { RunKeepaliveLoop(); });
+
 	UE_LOG(LogMcpNativeTransport, Log,
 		TEXT("Native MCP server started on http://%s:%d/mcp"), *ListenHost, Port);
 	return true;
@@ -158,6 +163,15 @@ void FMcpNativeTransport::Shutdown()
 		Thread->Kill(true);  // Calls Stop() again (no-op — already signaled)
 		delete Thread;
 		Thread = nullptr;
+	}
+
+	// Join the keepalive loop before StopEvent is returned to the pool (it waits on
+	// it) and before notification streams are closed (it writes to their sockets).
+	// Stop() already signaled bStopping + StopEvent, so the loop is on its way out.
+	if (KeepaliveLoopFuture.IsValid())
+	{
+		KeepaliveLoopFuture.Wait();
+		KeepaliveLoopFuture = TFuture<void>();
 	}
 
 	// Wait for in-flight connection handlers and async writes to finish.
