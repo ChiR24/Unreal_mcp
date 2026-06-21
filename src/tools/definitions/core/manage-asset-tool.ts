@@ -16,8 +16,12 @@ export const manageAssetToolDefinition: ToolDefinition = {
             'get_dependencies', 'get_source_control_state', 'analyze_graph', 'get_asset_graph', 'create_thumbnail', 'set_tags', 'get_metadata', 'set_metadata', 'validate', 'fixup_redirectors', 'find_by_tag', 'generate_report',
             'create_render_target', 'generate_lods', 'add_material_parameter', 'list_instances', 'reset_instance_parameters', 'exists', 'get_material_stats',
             'nanite_rebuild_mesh', 'bulk_rename', 'bulk_delete', 'source_control_checkout', 'source_control_submit',
-            ...MATERIAL_AUTHORING_ACTIONS, ...TEXTURE_ACTIONS],
-          description: 'Action to perform'
+            ...MATERIAL_AUTHORING_ACTIONS, ...TEXTURE_ACTIONS,
+            'replace', 'replace_references',
+            'navigate_to_path', 'sync_to_asset', 'create_collection', 'add_to_collection',
+            'set_asset_color', 'show_in_explorer', 'run_asset_action_utility'
+          ],
+          description: 'Asset management action'
         },
         assetPath: commonSchemas.assetPath,
         directory: commonSchemas.directoryPath,
@@ -83,6 +87,11 @@ export const manageAssetToolDefinition: ToolDefinition = {
         force: commonSchemas.booleanProp,
         recursive: commonSchemas.booleanProp,
         reportType: commonSchemas.stringProp,
+        filter: commonSchemas.stringProp,
+        // Content browser utilities
+        collectionName: commonSchemas.stringProp,
+        color: commonSchemas.objectProp, // hex or rgb
+        utilityPath: commonSchemas.assetPath,
         pattern: commonSchemas.stringProp,
         replacement: commonSchemas.stringProp,
         materialDomain: commonSchemas.stringProp,

@@ -121,6 +121,22 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   if (Lower == TEXT("rebuild_material"))
     return HandleRebuildMaterial(RequestId, Action, Payload, RequestingSocket);
 
+  // Content Browser and Asset Utilities (Phase 34)
+  if (Lower == TEXT("navigate_to_path"))
+    return HandleNavigateToPath(RequestId, Action, Payload, RequestingSocket);
+  if (Lower == TEXT("sync_to_asset"))
+    return HandleSyncToAsset(RequestId, Action, Payload, RequestingSocket);
+  if (Lower == TEXT("create_collection"))
+    return HandleCreateCollection(RequestId, Action, Payload, RequestingSocket);
+  if (Lower == TEXT("add_to_collection"))
+    return HandleAddToCollection(RequestId, Action, Payload, RequestingSocket);
+  if (Lower == TEXT("set_asset_color"))
+    return HandleSetAssetColor(RequestId, Action, Payload, RequestingSocket);
+  if (Lower == TEXT("show_in_explorer"))
+    return HandleShowInExplorer(RequestId, Action, Payload, RequestingSocket);
+  if (Lower == TEXT("run_asset_action_utility"))
+    return HandleRunAssetActionUtility(RequestId, Action, Payload, RequestingSocket);
+
   return false;
 }
 

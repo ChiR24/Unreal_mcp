@@ -29,7 +29,7 @@ tools/
 | Implement an action | `handlers/<domain>/` | Follow `handlers/AGENTS.md` |
 
 ## CANONICAL SURFACE
-- Core: `manage_tools`, `manage_asset`, `manage_blueprint`, `control_actor`, `control_editor`, `manage_level`, `system_control`, `inspect`.
+- Core: `manage_tools`, `manage_asset`, `manage_blueprint`, `control_actor`, `control_editor`, `manage_project_settings`, `manage_level`, `system_control`, `inspect`.
 - World: `build_environment`, `manage_geometry`, `manage_pcg`, `manage_level_structure`.
 - Gameplay: `animation_physics`, `manage_effect`, `manage_gas`, `manage_character`, `manage_combat`, `manage_ai`, `manage_inventory`, `manage_interaction`.
 - Utility: `manage_sequence`, `manage_audio`, `manage_networking`.

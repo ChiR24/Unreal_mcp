@@ -38,9 +38,20 @@
 #include "EditorActorSubsystem.h"
 #endif
 
-UMaterialInterface *LoadMaterialForMcp(const FString &MaterialPath,
-                                       FString &OutResolvedPath,
-                                       FString &OutError);
+bool HandleControlActorCallFunction(const FString &RequestId,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
+// Selection & Grouping (Phase 34)
+bool HandleControlActorSelect(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleControlActorSelectByClass(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleControlActorSelectByTag(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleControlActorSelectInVolume(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleControlActorDeselectAll(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleControlActorGetSelected(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleControlActorGroup(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleControlActorUngroup(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleControlActorRunUtility(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 AActor *FindActorByNameInWorldForMcp(UWorld *World, const FString &Target,
                                      bool bExactMatchOnly);
 #endif

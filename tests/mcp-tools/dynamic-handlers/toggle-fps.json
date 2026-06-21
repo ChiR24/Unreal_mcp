@@ -1,0 +1,10 @@
+{
+  "name": "Dynamic Handlers - Toggle FPS",
+  "requests": [
+    {
+      "tool": "toggle_fps",
+      "args": {},
+      "expected": "success"
+    }
+  ]
+}

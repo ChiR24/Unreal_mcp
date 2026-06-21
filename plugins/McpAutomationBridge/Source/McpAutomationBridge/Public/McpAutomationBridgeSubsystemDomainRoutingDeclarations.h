@@ -20,4 +20,5 @@ MCP_DECLARE_ACTION_HANDLER(HandleTestAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleLogAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleDebugAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleAssetQueryAction); \
-MCP_DECLARE_ACTION_HANDLER(HandleInsightsAction);
+MCP_DECLARE_ACTION_HANDLER(HandleInsightsAction); \
+MCP_DECLARE_ACTION_HANDLER(HandleProjectSettingsAction);

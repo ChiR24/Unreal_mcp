@@ -17,6 +17,7 @@ void UMcpAutomationBridgeSubsystem::RegisterSystemAndEditorHandlers()
     MCP_REGISTER_DIRECT("control_actor", HandleControlActorAction);
     MCP_REGISTER_DIRECT("manage_level", HandleLevelAction);
     MCP_REGISTER_DIRECT("manage_sequence", HandleSequenceAction);
+    MCP_REGISTER_DIRECT("manage_project_settings", HandleProjectSettingsAction);
 
     RegisterHandler(
         TEXT("system_control"),

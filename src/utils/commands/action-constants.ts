@@ -24,6 +24,7 @@ export const TOOL_ACTIONS = {
   SYSTEM_CONTROL: 'system_control',
   INSPECT: 'inspect',
   MANAGE_TOOLS: 'manage_tools',
+  MANAGE_PROJECT_SETTINGS: 'manage_project_settings',
 
   // ==================== WORLD TOOLS ====================
   BUILD_ENVIRONMENT: 'build_environment',

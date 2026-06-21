@@ -92,6 +92,17 @@ AActor *FindActorByNameInWorldForMcp(UWorld *World, const FString &Target,
                                      bool bExactMatchOnly);
 FString NormalizeSimulatedInputTypeForMcp(
     const TSharedPtr<FJsonObject> &Payload);
+bool HandleControlEditorOpenLevel(const FString &RequestId,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
+  // Editor Utilities (Phase 34)
+  bool HandleControlEditorSetGridSettings(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleControlEditorSetSnapSettings(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleControlEditorManageLayouts(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleControlEditorCreateCustomMode(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleControlEditorSpawnUtilityWidget(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleControlEditorRunUtilityTask(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
                                const TSharedPtr<FJsonObject> &Payload,
                                bool &bSuccess, bool &bRoutedToPIE,
