@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🐛 Fixed</b></summary>
 
 - **`add_variable` now applies `defaultValue`** — the handler read the `defaultValue` payload field but never assigned it to the new variable, so every Blueprint variable was created with a zero/empty default regardless of the value supplied (e.g. a float requested as `0.35` stayed `0`). The parsed JSON default is now written to `FBPVariableDescription::DefaultValue` with type-aware formatting: booleans as lowercase `true`/`false`, integer/byte categories as whole numbers, floats/doubles via `SanitizeFloat`, and strings/struct literals passed through. UE parses the stored string back into the typed default on compile.
+- **Plugin failed to compile on UE older than 5.4/5.5** — three newer-UE APIs were used without the version guards used elsewhere in the plugin: the `EAllowShrinking::No` overload of `FString::RightChopInline`/`LeftInline` (UE 5.4+), the standalone `PhysicsEngine/SkeletalBodySetup.h` include (UE 5.5+), and a redundant `UObject/StrProperty.h` include. Added the same `#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= N` guards and dropped the redundant include (`FStrProperty` comes from the already-included `UObject/UnrealType.h`). Verified building on UE 5.3.2.
 
 </details>
 
