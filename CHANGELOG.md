@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🐛 Fixed</b></summary>
 
 - **`add_variable` now applies `defaultValue`** — the handler read the `defaultValue` payload field but never assigned it to the new variable, so every Blueprint variable was created with a zero/empty default regardless of the value supplied (e.g. a float requested as `0.35` stayed `0`). The parsed JSON default is now written to `FBPVariableDescription::DefaultValue` with type-aware formatting: booleans as lowercase `true`/`false`, integer/byte categories as whole numbers, floats/doubles via `SanitizeFloat`, and strings/struct literals passed through. UE parses the stored string back into the typed default on compile.
+- **`get_niagara_info` / `validate_niagara_system` no longer query an auto-created default system** — these read-only Niagara queries share `handleEffectAuthoringAction` with the authoring actions, which injects `ensureDefaultNiagaraAuthoringAssets()` defaults into `systemPath`/`assetPath` when a field is unset. Because the native `GetNiagaraInfo` handler prefers `assetPath`, a caller passing only `systemPath` had its empty `assetPath` overwritten with the throwaway default system, so the query reported `emitterCount: 0` with an empty emitter list for a perfectly valid asset. Read-only query actions now bypass default-asset injection and simply mirror whichever path the caller supplied across `assetPath`/`systemPath`.
 
 </details>
 

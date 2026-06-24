@@ -38,6 +38,10 @@ const EFFECT_AUTHORING_ACTIONS = new Set<string>([
   'get_niagara_info', 'validate_niagara_system'
 ]);
 
+const NIAGARA_READONLY_QUERY_ACTIONS = new Set<string>([
+  'get_niagara_info', 'validate_niagara_system'
+]);
+
 export async function handleEffectGraphAction(
   action: string,
   mutableArgs: Record<string, unknown>,
@@ -68,6 +72,15 @@ export async function handleEffectAuthoringAction(
   tools: ITools
 ): Promise<Record<string, unknown> | undefined> {
   if (!EFFECT_AUTHORING_ACTIONS.has(action)) return undefined;
+
+  if (NIAGARA_READONLY_QUERY_ACTIONS.has(action)) {
+    const queryPath = (mutableArgs.assetPath ?? mutableArgs.systemPath) as string | undefined;
+    if (queryPath) {
+      mutableArgs.assetPath = queryPath;
+      mutableArgs.systemPath = queryPath;
+    }
+    return executeAutomationRequest(tools, 'manage_niagara_authoring', mutableArgs) as Promise<Record<string, unknown>>;
+  }
 
   const usesImplicitSystem = !mutableArgs.systemPath;
   const defaultAssets = await ensureDefaultNiagaraAuthoringAssets(tools);
