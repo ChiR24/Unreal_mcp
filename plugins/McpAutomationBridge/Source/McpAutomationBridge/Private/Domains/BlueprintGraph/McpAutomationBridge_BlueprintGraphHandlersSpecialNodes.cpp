@@ -3,6 +3,7 @@
 #if WITH_EDITOR
 #include "EdGraph/EdGraphSchema.h"
 #include "InputAction.h"
+#include "K2Node_ConstructObjectFromClass.h"
 #include "K2Node_DynamicCast.h"
 #include "K2Node_InputAxisEvent.h"
 #include "Misc/PackageName.h"
@@ -209,6 +210,95 @@ bool TryCreateEnhancedInputNode(
     Result->SetStringField(TEXT("inputActionPath"), CleanActionPath);
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(TEXT("Enhanced Input node created."), Result);
+    return true;
+}
+
+bool TryCreateConstructObjectNode(
+    FActionContext& Context,
+    UClass* NodeClass,
+    float X,
+    float Y)
+{
+    // Covers the whole UK2Node_ConstructObjectFromClass family:
+    // SpawnActorFromClass, ConstructObjectFromClass, CreateWidget,
+    // AddComponentByClass, ... — every one of which crashes on the generic path.
+    if (!NodeClass->IsChildOf(UK2Node_ConstructObjectFromClass::StaticClass()))
+    {
+        return false;
+    }
+
+    UEdGraphNode* NewNode =
+        NewObject<UEdGraphNode>(Context.TargetGraph, NodeClass);
+    if (!NewNode)
+    {
+        Context.SendError(
+            TEXT("Failed to instantiate node."),
+            TEXT("CREATE_FAILED"));
+        return true;
+    }
+
+    Context.TargetGraph->AddNode(NewNode, false, false);
+    NewNode->Modify();
+    NewNode->CreateNewGuid();
+
+    // ROOT-CAUSE FIX: allocate pins BEFORE PostPlacedNewNode(). Nodes in this
+    // family read checked pins inside PostPlacedNewNode() — e.g.
+    // UK2Node_SpawnActorFromClass::GetScaleMethodPin() => FindPinChecked() — which
+    // check()-crashes the editor when the pin doesn't exist yet. The editor's
+    // palette spawn survives because the cached template node already carries pins;
+    // the generic create_node path (PostPlacedNewNode then AllocateDefaultPins)
+    // does not, so it asserts. Allocating first makes the checked accessor safe.
+    NewNode->AllocateDefaultPins();
+    NewNode->PostPlacedNewNode();
+
+    // Optional: apply a construct/spawn class so the expose-on-spawn pins are
+    // generated. Prefer `targetClass` (the spelling the rest of create_node
+    // uses) and fall back to the legacy spawnClass/actorClass/class spellings
+    // for backward compatibility. A classless node is still valid (and no
+    // longer crashes), so silently skip when absent or unresolved.
+    FString SpawnClassName;
+    if (Context.Payload->TryGetStringField(TEXT("targetClass"), SpawnClassName) ||
+        Context.Payload->TryGetStringField(TEXT("spawnClass"), SpawnClassName) ||
+        Context.Payload->TryGetStringField(TEXT("actorClass"), SpawnClassName) ||
+        Context.Payload->TryGetStringField(TEXT("class"), SpawnClassName))
+    {
+        // Resolve via the shared resolver so /Game/... Blueprint asset paths
+        // load correctly (ResolveUClass only handles native/name lookups and
+        // returns CLASS_NOT_FOUND for /Game/ paths).
+        if (UClass* DesiredClass = ResolveTargetClassFromString(SpawnClassName))
+        {
+            if (UK2Node_ConstructObjectFromClass* ConstructNode =
+                    Cast<UK2Node_ConstructObjectFromClass>(NewNode))
+            {
+                if (UEdGraphPin* ClassPin = ConstructNode->GetClassPin())
+                {
+                    // Mirror how the engine itself seeds the class (ExpandNode):
+                    // set DefaultObject, clear the textual default, then rebuild
+                    // pins. Pins already exist here, so ReconstructNode is safe.
+                    ClassPin->DefaultObject = DesiredClass;
+                    ClassPin->DefaultValue.Reset();
+                    NewNode->ReconstructNode();
+                }
+            }
+        }
+    }
+
+    NewNode->NodePosX = X;
+    NewNode->NodePosY = Y;
+    if (const UEdGraphSchema* Schema = Context.TargetGraph->GetSchema())
+    {
+        Schema->ForceVisualizationCacheClear();
+    }
+    Context.TargetGraph->NotifyGraphChanged();
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
+    SaveLoadedAssetThrottled(Context.Blueprint);
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
+    Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
+    Result->SetStringField(TEXT("nodeClass"), NodeClass->GetName());
+    McpHandlerUtils::AddVerification(Result, Context.Blueprint);
+    Context.SendResponse(TEXT("Node created."), Result);
     return true;
 }
 }
