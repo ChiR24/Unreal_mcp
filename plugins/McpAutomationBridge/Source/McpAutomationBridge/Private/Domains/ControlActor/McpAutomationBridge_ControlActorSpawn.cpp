@@ -183,6 +183,28 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     Spawned->SetActorLabel(BaseName);
   }
 
+  // Apply optional UPROPERTYs supplied at spawn time so callers can set
+  // properties atomically instead of issuing a follow-up set call.
+  const TSharedPtr<FJsonObject> *SpawnPropsPtr = nullptr;
+  if (Payload->TryGetObjectField(TEXT("properties"), SpawnPropsPtr) &&
+      SpawnPropsPtr && SpawnPropsPtr->IsValid()) {
+    UClass *SpawnedClass = Spawned->GetClass();
+    for (const auto &Pair : (*SpawnPropsPtr)->Values) {
+      FProperty *Property = SpawnedClass->FindPropertyByName(*Pair.Key);
+      if (!Property) {
+        continue;
+      }
+      FString ApplyError;
+      if (!ApplyJsonValueToProperty(Spawned, Property, Pair.Value, ApplyError)) {
+        UE_LOG(LogTemp, Warning,
+               TEXT("[control_actor spawn] Failed to set property '%s': %s"),
+               *Pair.Key, *ApplyError);
+      }
+    }
+    Spawned->MarkComponentsRenderStateDirty();
+    Spawned->MarkPackageDirty();
+  }
+
   // Build response matching the outputWithActor schema:
   // { actor: { id, name, path }, actorPath, classPath?, meshPath? }
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
