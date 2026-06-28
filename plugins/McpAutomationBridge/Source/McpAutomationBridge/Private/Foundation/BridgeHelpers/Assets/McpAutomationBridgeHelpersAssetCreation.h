@@ -115,3 +115,15 @@ static inline bool ValidateAssetCreationPath(
 
   return true;
 }
+
+// Validate a folder/name pair and create the destination UPackage, or return
+// nullptr (with OutError populated) when the path is invalid.
+static inline UPackage *CreateValidatedAssetPackage(const FString &FolderPath,
+                                                    const FString &AssetName,
+                                                    FString &OutError) {
+  FString FullPackagePath;
+  if (!ValidateAssetCreationPath(FolderPath, AssetName, FullPackagePath, OutError)) {
+    return nullptr;
+  }
+  return CreatePackage(*FullPackagePath);
+}
