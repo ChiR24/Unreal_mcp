@@ -10,6 +10,7 @@ void UMcpAutomationBridgeSubsystem::RegisterCustomToolingHandlers()
     MCP_REGISTER_DIRECT("manage_gameplay_tags", HandleGameplayTags);
     MCP_REGISTER_DIRECT("manage_data_asset", HandleManageDataAssetAction);
     MCP_REGISTER_DIRECT("manage_layers", HandleManageLayersAction);
+    MCP_REGISTER_DIRECT("manage_string_table", HandleManageStringTableAction);
 }
 
 #undef MCP_REGISTER_DIRECT

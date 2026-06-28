@@ -63,6 +63,7 @@ export const TOOL_ACTIONS = {
   MANAGE_GAMEPLAY_TAGS: 'manage_gameplay_tags',
   MANAGE_DATA_ASSET: 'manage_data_asset',
   MANAGE_LAYERS: 'manage_layers',
+  MANAGE_STRING_TABLE: 'manage_string_table',
 
   // ==================== UTILITY TOOLS ====================
   MANAGE_PERFORMANCE: 'manage_performance',
