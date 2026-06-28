@@ -8,6 +8,7 @@ void UMcpAutomationBridgeSubsystem::RegisterCustomToolingHandlers()
 {
     MCP_REGISTER_DIRECT("manage_data_table", HandleManageDataTableAction);
     MCP_REGISTER_DIRECT("manage_gameplay_tags", HandleGameplayTags);
+    MCP_REGISTER_DIRECT("manage_data_asset", HandleManageDataAssetAction);
 }
 
 #undef MCP_REGISTER_DIRECT

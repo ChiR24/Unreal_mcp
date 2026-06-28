@@ -24,6 +24,7 @@ import { manageLevelStructureToolDefinition } from '../world/manage-level-struct
 // Custom authoring tools (ported)
 import { manageDataTableToolDefinition } from '../core/manage-data-table-tool.js';
 import { manageGameplayTagsToolDefinition } from '../core/manage-gameplay-tags-tool.js';
+import { manageDataAssetToolDefinition } from '../core/manage-data-asset-tool.js';
 import type { ToolDefinition } from './tool-definition.js';
 
 export const allToolDefinitions: ToolDefinition[] = [
@@ -51,5 +52,6 @@ export const allToolDefinitions: ToolDefinition[] = [
   manageNetworkingToolDefinition,
   manageLevelStructureToolDefinition,
   manageDataTableToolDefinition,
-  manageGameplayTagsToolDefinition
+  manageGameplayTagsToolDefinition,
+  manageDataAssetToolDefinition
 ];
