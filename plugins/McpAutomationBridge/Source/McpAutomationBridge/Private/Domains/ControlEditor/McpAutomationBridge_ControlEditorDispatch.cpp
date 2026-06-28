@@ -51,6 +51,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     return HandleControlEditorSetGameSpeed(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("open_asset"))
     return HandleControlEditorOpenAsset(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("browse_to") ||
+      LowerSub == TEXT("navigate_content_browser"))
+    return HandleControlEditorBrowseTo(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("screenshot") || LowerSub == TEXT("take_screenshot"))
     return HandleControlEditorScreenshot(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("pause"))

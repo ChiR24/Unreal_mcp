@@ -22,6 +22,7 @@ export const controlEditorToolDefinition: ToolDefinition = {
             'create_bookmark', 'jump_to_bookmark',
             'set_preferences', 'set_viewport_realtime',
             'open_asset', 'close_asset', 'simulate_input',
+            'browse_to', 'navigate_content_browser',
             'open_level', 'focus_actor',
             'show_stats', 'hide_stats',
             'set_editor_mode', 'set_immersive_mode', 'set_game_view',

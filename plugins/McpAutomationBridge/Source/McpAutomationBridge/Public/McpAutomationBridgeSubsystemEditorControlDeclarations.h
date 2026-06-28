@@ -32,4 +32,5 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorHideStats); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetGameView); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetImmersiveMode); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetFixedDeltaTime); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorOpenLevel);
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorOpenLevel); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorBrowseTo);

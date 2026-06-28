@@ -1,5 +1,13 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
+#if WITH_EDITOR
+#include "ContentBrowserModule.h"
+#include "IContentBrowserSingleton.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Misc/PackageName.h"
+#include "Modules/ModuleManager.h"
+#endif
+
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -244,6 +252,65 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
                                                TotalDirty - SkippedCount),
                               Resp);
   }
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorBrowseTo(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  FString Path;
+  if (!Payload->TryGetStringField(TEXT("path"), Path) &&
+      !Payload->TryGetStringField(TEXT("assetPath"), Path)) {
+    Payload->TryGetStringField(TEXT("directoryPath"), Path);
+  }
+  if (Path.IsEmpty()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("path, assetPath, or directoryPath required"),
+                              nullptr);
+    return true;
+  }
+
+  Path = SanitizeProjectRelativePath(Path);
+  if (Path.IsEmpty()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SECURITY_VIOLATION"),
+                              TEXT("Invalid path"), nullptr);
+    return true;
+  }
+
+  FContentBrowserModule &CBModule =
+      FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+  IContentBrowserSingleton &CB = CBModule.Get();
+
+  // Prefer syncing to a concrete asset; fall back to treating it as a folder.
+  if (UEditorAssetLibrary::DoesAssetExist(Path)) {
+    FAssetRegistryModule &ARModule =
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    TArray<FAssetData> Assets;
+    ARModule.Get().GetAssetsByPackageName(
+        *FPackageName::ObjectPathToPackageName(Path), Assets);
+    if (Assets.Num() > 0) {
+      CB.SyncBrowserToAssets(Assets);
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      Resp->SetStringField(TEXT("path"), Path);
+      Resp->SetStringField(TEXT("type"), TEXT("asset"));
+      SendAutomationResponse(Socket, RequestId, true,
+                             TEXT("Navigated to asset"), Resp, FString());
+      return true;
+    }
+  }
+
+  TArray<FString> Folders;
+  Folders.Add(Path);
+  CB.SyncBrowserToFolders(Folders);
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetStringField(TEXT("path"), Path);
+  Resp->SetStringField(TEXT("type"), TEXT("folder"));
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Navigated to folder"),
+                         Resp, FString());
   return true;
 #else
   return false;
