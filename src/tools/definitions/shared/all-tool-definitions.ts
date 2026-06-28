@@ -23,6 +23,7 @@ import { manageNetworkingToolDefinition } from '../utility/networking/manage-net
 import { manageLevelStructureToolDefinition } from '../world/manage-level-structure-tool.js';
 // Custom authoring tools (ported)
 import { manageDataTableToolDefinition } from '../core/manage-data-table-tool.js';
+import { manageGameplayTagsToolDefinition } from '../core/manage-gameplay-tags-tool.js';
 import type { ToolDefinition } from './tool-definition.js';
 
 export const allToolDefinitions: ToolDefinition[] = [
@@ -49,5 +50,6 @@ export const allToolDefinitions: ToolDefinition[] = [
   manageInteractionToolDefinition,
   manageNetworkingToolDefinition,
   manageLevelStructureToolDefinition,
-  manageDataTableToolDefinition
+  manageDataTableToolDefinition,
+  manageGameplayTagsToolDefinition
 ];

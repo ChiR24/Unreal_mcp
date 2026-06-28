@@ -66,6 +66,7 @@ import { handleVolumeTools } from '../handlers/volume/volume-handlers.js';
 import { handleWidgetAuthoringTools } from '../handlers/widget/widget-authoring-handlers.js';
 // Custom authoring tools (ported)
 import { handleDataTableTools } from '../handlers/data-table/data-table-handlers.js';
+import { handleGameplayTagTools } from '../handlers/gameplay-tags/gameplay-tags-handlers.js';
 
 function mergeAutomationResponse(
   response: unknown,
@@ -227,4 +228,5 @@ export function registerDefaultHandlers() {
 
   // Custom authoring tools (ported)
   toolRegistry.register('manage_data_table', async (args, tools) => await handleDataTableTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_gameplay_tags', async (args, tools) => await handleGameplayTagTools(getToolAction(args), args, tools));
 }

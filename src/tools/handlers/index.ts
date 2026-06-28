@@ -78,3 +78,4 @@ export { handleVolumeTools } from './volume/volume-handlers.js';
 export { handleWidgetAuthoringTools } from './widget/widget-authoring-handlers.js';
 // Custom authoring tools (ported)
 export { handleDataTableTools } from './data-table/data-table-handlers.js';
+export { handleGameplayTagTools } from './gameplay-tags/gameplay-tags-handlers.js';

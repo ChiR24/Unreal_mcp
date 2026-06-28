@@ -9,4 +9,5 @@ MCP_DECLARE_ACTION_HANDLER(HandleEffectAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleBlueprintAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleSequenceAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleInputAction); \
-MCP_DECLARE_ACTION_HANDLER(HandleManageDataTableAction);
+MCP_DECLARE_ACTION_HANDLER(HandleManageDataTableAction); \
+MCP_DECLARE_ACTION_HANDLER(HandleGameplayTags);

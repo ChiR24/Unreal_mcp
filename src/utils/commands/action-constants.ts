@@ -60,6 +60,7 @@ export const TOOL_ACTIONS = {
 
   // ==================== CUSTOM AUTHORING TOOLS (ported) ====================
   MANAGE_DATA_TABLE: 'manage_data_table',
+  MANAGE_GAMEPLAY_TAGS: 'manage_gameplay_tags',
 
   // ==================== UTILITY TOOLS ====================
   MANAGE_PERFORMANCE: 'manage_performance',
