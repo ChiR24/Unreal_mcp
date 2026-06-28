@@ -28,6 +28,7 @@ import { manageDataAssetToolDefinition } from '../core/manage-data-asset-tool.js
 import { manageLayersToolDefinition } from '../core/manage-layers-tool.js';
 import { manageStringTableToolDefinition } from '../core/manage-string-table-tool.js';
 import { manageAnimNotifyToolDefinition } from '../gameplay/manage-anim-notify-tool.js';
+import { manageBlueprintInterfaceToolDefinition } from '../core/manage-blueprint-interface-tool.js';
 import type { ToolDefinition } from './tool-definition.js';
 
 export const allToolDefinitions: ToolDefinition[] = [
@@ -59,5 +60,6 @@ export const allToolDefinitions: ToolDefinition[] = [
   manageDataAssetToolDefinition,
   manageLayersToolDefinition,
   manageStringTableToolDefinition,
-  manageAnimNotifyToolDefinition
+  manageAnimNotifyToolDefinition,
+  manageBlueprintInterfaceToolDefinition
 ];

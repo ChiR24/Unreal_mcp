@@ -65,6 +65,7 @@ export const TOOL_ACTIONS = {
   MANAGE_LAYERS: 'manage_layers',
   MANAGE_STRING_TABLE: 'manage_string_table',
   MANAGE_ANIM_NOTIFY: 'manage_anim_notify',
+  MANAGE_BLUEPRINT_INTERFACE: 'manage_blueprint_interface',
 
   // ==================== UTILITY TOOLS ====================
   MANAGE_PERFORMANCE: 'manage_performance',

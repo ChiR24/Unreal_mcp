@@ -83,3 +83,4 @@ export { handleDataAssetTools } from './data-asset/data-asset-handlers.js';
 export { handleLayerTools } from './layer/layer-handlers.js';
 export { handleStringTableTools } from './string-table/string-table-handlers.js';
 export { handleAnimNotifyTools } from './anim-notify/anim-notify-handlers.js';
+export { handleBlueprintInterfaceTools } from './blueprint-interface/blueprint-interface-handlers.js';
