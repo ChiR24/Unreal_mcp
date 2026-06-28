@@ -15,4 +15,5 @@ MCP_DECLARE_ACTION_HANDLER(HandleManageDataAssetAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleManageLayersAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleManageStringTableAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleManageAnimNotifyAction); \
-MCP_DECLARE_ACTION_HANDLER(HandleManageBlueprintInterfaceAction);
+MCP_DECLARE_ACTION_HANDLER(HandleManageBlueprintInterfaceAction); \
+MCP_DECLARE_ACTION_HANDLER(HandleManagePhysicsMaterialAction);

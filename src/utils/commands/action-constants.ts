@@ -66,6 +66,7 @@ export const TOOL_ACTIONS = {
   MANAGE_STRING_TABLE: 'manage_string_table',
   MANAGE_ANIM_NOTIFY: 'manage_anim_notify',
   MANAGE_BLUEPRINT_INTERFACE: 'manage_blueprint_interface',
+  MANAGE_PHYSICS_MATERIAL: 'manage_physics_material',
 
   // ==================== UTILITY TOOLS ====================
   MANAGE_PERFORMANCE: 'manage_performance',

@@ -13,6 +13,7 @@ void UMcpAutomationBridgeSubsystem::RegisterCustomToolingHandlers()
     MCP_REGISTER_DIRECT("manage_string_table", HandleManageStringTableAction);
     MCP_REGISTER_DIRECT("manage_anim_notify", HandleManageAnimNotifyAction);
     MCP_REGISTER_DIRECT("manage_blueprint_interface", HandleManageBlueprintInterfaceAction);
+    MCP_REGISTER_DIRECT("manage_physics_material", HandleManagePhysicsMaterialAction);
 }
 
 #undef MCP_REGISTER_DIRECT

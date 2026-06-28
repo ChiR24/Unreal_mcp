@@ -72,6 +72,7 @@ import { handleLayerTools } from '../handlers/layer/layer-handlers.js';
 import { handleStringTableTools } from '../handlers/string-table/string-table-handlers.js';
 import { handleAnimNotifyTools } from '../handlers/anim-notify/anim-notify-handlers.js';
 import { handleBlueprintInterfaceTools } from '../handlers/blueprint-interface/blueprint-interface-handlers.js';
+import { handlePhysicsMaterialTools } from '../handlers/physics-material/physics-material-handlers.js';
 
 function mergeAutomationResponse(
   response: unknown,
@@ -239,4 +240,5 @@ export function registerDefaultHandlers() {
   toolRegistry.register('manage_string_table', async (args, tools) => await handleStringTableTools(getToolAction(args), args, tools));
   toolRegistry.register('manage_anim_notify', async (args, tools) => await handleAnimNotifyTools(getToolAction(args), args, tools));
   toolRegistry.register('manage_blueprint_interface', async (args, tools) => await handleBlueprintInterfaceTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_physics_material', async (args, tools) => await handlePhysicsMaterialTools(getToolAction(args), args, tools));
 }
