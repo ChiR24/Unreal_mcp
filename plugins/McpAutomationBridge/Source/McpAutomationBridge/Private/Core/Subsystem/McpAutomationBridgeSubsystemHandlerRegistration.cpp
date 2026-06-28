@@ -9,5 +9,6 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers()
     RegisterBlueprintAndDomainHandlers();
     RegisterAudioAnimationHandlers();
     RegisterWorldAndMiscHandlers();
+    RegisterCustomToolingHandlers();
     LoadConfiguredHandlerAliases();
 }

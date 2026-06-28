@@ -76,3 +76,5 @@ export { handleSystemTools } from './system/system-handlers.js';
 export { handleTextureTools } from './texture/texture-handlers.js';
 export { handleVolumeTools } from './volume/volume-handlers.js';
 export { handleWidgetAuthoringTools } from './widget/widget-authoring-handlers.js';
+// Custom authoring tools (ported)
+export { handleDataTableTools } from './data-table/data-table-handlers.js';

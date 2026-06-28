@@ -265,6 +265,7 @@ private:
   void RegisterBlueprintAndDomainHandlers();
   void RegisterAudioAnimationHandlers();
   void RegisterWorldAndMiscHandlers();
+  void RegisterCustomToolingHandlers();
 
   MCP_SUBSYSTEM_PROPERTY_COLLECTION_DECLARATIONS
   MCP_SUBSYSTEM_ACTION_ROUTING_DECLARATIONS

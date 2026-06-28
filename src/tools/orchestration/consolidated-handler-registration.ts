@@ -64,6 +64,8 @@ import { handleSystemTools, handleConsoleCommand } from '../handlers/system/syst
 import { handleTextureTools } from '../handlers/texture/texture-handlers.js';
 import { handleVolumeTools } from '../handlers/volume/volume-handlers.js';
 import { handleWidgetAuthoringTools } from '../handlers/widget/widget-authoring-handlers.js';
+// Custom authoring tools (ported)
+import { handleDataTableTools } from '../handlers/data-table/data-table-handlers.js';
 
 function mergeAutomationResponse(
   response: unknown,
@@ -222,4 +224,7 @@ export function registerDefaultHandlers() {
     if (volumeActionSet.has(action)) return await handleVolumeTools(action, args, tools);
     return await handleLevelStructureTools(action, args, tools);
   });
+
+  // Custom authoring tools (ported)
+  toolRegistry.register('manage_data_table', async (args, tools) => await handleDataTableTools(getToolAction(args), args, tools));
 }

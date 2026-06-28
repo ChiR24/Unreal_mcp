@@ -58,6 +58,9 @@ export const TOOL_ACTIONS = {
   MANAGE_GAME_FRAMEWORK: 'manage_game_framework',
   MANAGE_SESSIONS: 'manage_sessions',
 
+  // ==================== CUSTOM AUTHORING TOOLS (ported) ====================
+  MANAGE_DATA_TABLE: 'manage_data_table',
+
   // ==================== UTILITY TOOLS ====================
   MANAGE_PERFORMANCE: 'manage_performance',
 
