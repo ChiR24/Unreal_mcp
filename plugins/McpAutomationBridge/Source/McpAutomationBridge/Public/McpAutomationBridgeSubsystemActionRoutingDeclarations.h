@@ -11,4 +11,5 @@ MCP_DECLARE_ACTION_HANDLER(HandleSequenceAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleInputAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleManageDataTableAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleGameplayTags); \
-MCP_DECLARE_ACTION_HANDLER(HandleManageDataAssetAction);
+MCP_DECLARE_ACTION_HANDLER(HandleManageDataAssetAction); \
+MCP_DECLARE_ACTION_HANDLER(HandleManageLayersAction);

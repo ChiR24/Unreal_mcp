@@ -25,6 +25,7 @@ import { manageLevelStructureToolDefinition } from '../world/manage-level-struct
 import { manageDataTableToolDefinition } from '../core/manage-data-table-tool.js';
 import { manageGameplayTagsToolDefinition } from '../core/manage-gameplay-tags-tool.js';
 import { manageDataAssetToolDefinition } from '../core/manage-data-asset-tool.js';
+import { manageLayersToolDefinition } from '../core/manage-layers-tool.js';
 import type { ToolDefinition } from './tool-definition.js';
 
 export const allToolDefinitions: ToolDefinition[] = [
@@ -53,5 +54,6 @@ export const allToolDefinitions: ToolDefinition[] = [
   manageLevelStructureToolDefinition,
   manageDataTableToolDefinition,
   manageGameplayTagsToolDefinition,
-  manageDataAssetToolDefinition
+  manageDataAssetToolDefinition,
+  manageLayersToolDefinition
 ];

@@ -80,3 +80,4 @@ export { handleWidgetAuthoringTools } from './widget/widget-authoring-handlers.j
 export { handleDataTableTools } from './data-table/data-table-handlers.js';
 export { handleGameplayTagTools } from './gameplay-tags/gameplay-tags-handlers.js';
 export { handleDataAssetTools } from './data-asset/data-asset-handlers.js';
+export { handleLayerTools } from './layer/layer-handlers.js';

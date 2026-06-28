@@ -68,6 +68,7 @@ import { handleWidgetAuthoringTools } from '../handlers/widget/widget-authoring-
 import { handleDataTableTools } from '../handlers/data-table/data-table-handlers.js';
 import { handleGameplayTagTools } from '../handlers/gameplay-tags/gameplay-tags-handlers.js';
 import { handleDataAssetTools } from '../handlers/data-asset/data-asset-handlers.js';
+import { handleLayerTools } from '../handlers/layer/layer-handlers.js';
 
 function mergeAutomationResponse(
   response: unknown,
@@ -231,4 +232,5 @@ export function registerDefaultHandlers() {
   toolRegistry.register('manage_data_table', async (args, tools) => await handleDataTableTools(getToolAction(args), args, tools));
   toolRegistry.register('manage_gameplay_tags', async (args, tools) => await handleGameplayTagTools(getToolAction(args), args, tools));
   toolRegistry.register('manage_data_asset', async (args, tools) => await handleDataAssetTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_layers', async (args, tools) => await handleLayerTools(getToolAction(args), args, tools));
 }
