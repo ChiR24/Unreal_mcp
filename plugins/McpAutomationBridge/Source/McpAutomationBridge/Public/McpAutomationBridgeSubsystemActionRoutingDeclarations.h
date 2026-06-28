@@ -13,4 +13,5 @@ MCP_DECLARE_ACTION_HANDLER(HandleManageDataTableAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleGameplayTags); \
 MCP_DECLARE_ACTION_HANDLER(HandleManageDataAssetAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleManageLayersAction); \
-MCP_DECLARE_ACTION_HANDLER(HandleManageStringTableAction);
+MCP_DECLARE_ACTION_HANDLER(HandleManageStringTableAction); \
+MCP_DECLARE_ACTION_HANDLER(HandleManageAnimNotifyAction);

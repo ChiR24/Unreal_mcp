@@ -27,6 +27,7 @@ import { manageGameplayTagsToolDefinition } from '../core/manage-gameplay-tags-t
 import { manageDataAssetToolDefinition } from '../core/manage-data-asset-tool.js';
 import { manageLayersToolDefinition } from '../core/manage-layers-tool.js';
 import { manageStringTableToolDefinition } from '../core/manage-string-table-tool.js';
+import { manageAnimNotifyToolDefinition } from '../gameplay/manage-anim-notify-tool.js';
 import type { ToolDefinition } from './tool-definition.js';
 
 export const allToolDefinitions: ToolDefinition[] = [
@@ -57,5 +58,6 @@ export const allToolDefinitions: ToolDefinition[] = [
   manageGameplayTagsToolDefinition,
   manageDataAssetToolDefinition,
   manageLayersToolDefinition,
-  manageStringTableToolDefinition
+  manageStringTableToolDefinition,
+  manageAnimNotifyToolDefinition
 ];
