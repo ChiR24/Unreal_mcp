@@ -174,14 +174,30 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
     LocalPayload->TryGetStringField(TEXT("nodeType"), NodeTypeHint);
     const FString NodeTypeLower = NodeTypeHint.ToLower();
     const FString EventTypeLower = FinalType.ToLower();
+    // An explicit hint (nodeType / eventType naming ComponentBoundEvent) signals
+    // intent on its own; otherwise infer the request from a componentName paired
+    // with a delegate eventName. Detecting the explicit hint independently means a
+    // caller who names ComponentBoundEvent but omits componentName/eventName is
+    // still routed here and gets a clear validation error, rather than silently
+    // falling through to the custom-event branch and producing a dead
+    // Event_<guid>.
+    const bool bExplicitComponentBoundHint =
+        NodeTypeLower.Contains(TEXT("componentboundevent")) ||
+        EventTypeLower.Contains(TEXT("componentboundevent"));
     const bool bIsComponentBoundRequest =
-        !ComponentName.IsEmpty() &&
-        (!DelegateEventName.IsEmpty() ||
-         NodeTypeLower.Contains(TEXT("componentboundevent")) ||
-         EventTypeLower.Contains(TEXT("componentboundevent")));
+        bExplicitComponentBoundHint ||
+        (!ComponentName.IsEmpty() && !DelegateEventName.IsEmpty());
 
 #if MCP_HAS_K2NODE_COMPONENTBOUNDEVENT
     if (bIsComponentBoundRequest) {
+      if (ComponentName.IsEmpty()) {
+        Bridge.SendAutomationError(
+            RequestingSocket, RequestId,
+            TEXT("Component-bound event requires a 'componentName' (the SCS "
+                 "component whose delegate fires, e.g. 'NearMissZone')."),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
       if (DelegateEventName.IsEmpty()) {
         Bridge.SendAutomationError(
             RequestingSocket, RequestId,
@@ -313,6 +329,20 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
       SendBlueprintAddEventResult(Bridge, RequestId, RequestingSocket, BP,
                                   RegistryKey, EventName, FinalType, Params,
                                   bSaved);
+      return true;
+    }
+#else
+    // Editor build, but K2Node_ComponentBoundEvent's header was not reachable on
+    // this engine layout (MCP_HAS_K2NODE_COMPONENTBOUNDEVENT == 0). Don't let a
+    // component-bound request silently fall through to the custom-event branch —
+    // tell the caller the feature is not compiled in.
+    if (bIsComponentBoundRequest) {
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
+          TEXT("Component-bound events are not available in this build "
+               "(K2Node_ComponentBoundEvent header was not found at compile "
+               "time)."),
+          TEXT("NOT_AVAILABLE"));
       return true;
     }
 #endif // MCP_HAS_K2NODE_COMPONENTBOUNDEVENT
