@@ -6,6 +6,9 @@
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+// FClassProperty / SetObjectPropertyValue_InContainer for the reflection-based
+// CreateWidget WidgetType assignment below (no UMGEditor header required).
+#include "UObject/UnrealType.h"
 // K2Node_DynamicCast is not pulled in by the shared graph-compatibility
 // header; include it here (with the same path fallbacks) so the cast-node
 // branch in CreateBlueprintGraphNode can set TargetType.
@@ -116,6 +119,70 @@ UEdGraphNode *CreateBlueprintGraphNode(
     CastNode->TargetType = ResolvedTarget;
     return CastNode;
   }
+
+  // CreateWidget nodes carry the chosen widget class on the node's WidgetType
+  // UClass property. Without it the node falls through to the generic
+  // instantiation path below and spawns with a generic UUserWidget Class pin
+  // and an untyped Return Value, so callers can't wire it to anything specific.
+  // Resolve the requested class and assign WidgetType via reflection (no
+  // UMGEditor header needed) before HandleBlueprintAddNode allocates the
+  // default pins, so the typed Return Value is built. Mirrors the create_node
+  // CreateWidget handling.
+  if (NodeTypeLower.Contains(TEXT("createwidget"))) {
+    if (TargetClass.IsEmpty()) {
+      OutErrorResult = McpHandlerUtils::CreateResultObject();
+      OutErrorResult->SetStringField(
+          TEXT("error"),
+          TEXT("CreateWidget node requires a 'targetClass' (Widget Blueprint "
+               "asset path like /Game/Widgets/WBP_HUD, or a class name)."));
+      OutErrorMessage = TEXT("targetClass required for CreateWidget node");
+      OutErrorCode = TEXT("INVALID_ARGUMENT");
+      return nullptr;
+    }
+    UClass *ResolvedWidget = ResolveClassByName(TargetClass);
+    if (!ResolvedWidget) {
+      OutErrorResult = McpHandlerUtils::CreateResultObject();
+      OutErrorResult->SetStringField(
+          TEXT("error"),
+          FString::Printf(
+              TEXT("Could not resolve targetClass '%s' for CreateWidget"),
+              *TargetClass));
+      OutErrorMessage = TEXT("Unresolved CreateWidget target class");
+      OutErrorCode = TEXT("CLASS_NOT_FOUND");
+      return nullptr;
+    }
+    UClass *WidgetNodeClass = ResolveClassByName(NodeType);
+    if (!WidgetNodeClass ||
+        !WidgetNodeClass->IsChildOf(UEdGraphNode::StaticClass())) {
+      OutErrorResult = McpHandlerUtils::CreateResultObject();
+      OutErrorResult->SetStringField(
+          TEXT("error"),
+          FString::Printf(
+              TEXT("Could not resolve CreateWidget node class from nodeType "
+                   "'%s'"),
+              *NodeType));
+      OutErrorMessage = TEXT("Unresolved CreateWidget node class");
+      OutErrorCode = TEXT("UNSUPPORTED_NODE");
+      return nullptr;
+    }
+    UEdGraphNode *WidgetNode =
+        NewObject<UEdGraphNode>(TargetGraph, WidgetNodeClass);
+    if (!WidgetNode) {
+      OutErrorResult = McpHandlerUtils::CreateResultObject();
+      OutErrorMessage = TEXT("Failed to instantiate CreateWidget node");
+      OutErrorCode = TEXT("NODE_CREATION_FAILED");
+      return nullptr;
+    }
+    if (FProperty *ClassProp =
+            WidgetNode->GetClass()->FindPropertyByName(TEXT("WidgetType"))) {
+      if (FClassProperty *TypedProp = CastField<FClassProperty>(ClassProp)) {
+        TypedProp->SetObjectPropertyValue_InContainer(WidgetNode,
+                                                      ResolvedWidget);
+      }
+    }
+    return WidgetNode;
+  }
+
   if (NodeTypeLower.Contains(TEXT("callfunction")) ||
       NodeTypeLower.Contains(TEXT("function"))) {
     UK2Node_CallFunction *FuncNode = NewObject<UK2Node_CallFunction>(TargetGraph);
