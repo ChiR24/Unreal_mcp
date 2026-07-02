@@ -10,6 +10,26 @@
 #include "Misc/ScopeLock.h"
 #include "Framework/Application/SlateApplication.h" // active-modal pre-flight (Slate is an editor dep)
 
+// Publish the currently-executing automation action so external tooling (e.g. an off-thread watchdog) can attribute
+// a game-thread stall to the tool that was in flight. The lock is held ONLY for the brief set/get — never during
+// the handler — so a reader can observe the action off-thread even while a handler blocks the game thread. The
+// getter is exported so another module can link it.
+namespace McpAutomationBridge
+{
+    static FCriticalSection GInFlightActionCS;
+    static FString GInFlightAction;
+    static void SetInFlightAction(const FString& InAction)
+    {
+        FScopeLock Lock(&GInFlightActionCS);
+        GInFlightAction = InAction;
+    }
+    MCPAUTOMATIONBRIDGE_API FString GetInFlightAction()
+    {
+        FScopeLock Lock(&GInFlightActionCS);
+        return GInFlightAction;
+    }
+}
+
 void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -98,6 +118,9 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
   // (the witnessed force-kill / data-loss class). RAII-restored on every function-scope exit (incl. the early
   // returns and the exception paths below). Non-differential stability fix.
   TGuardValue<bool> UnattendedScriptGuard(GIsRunningUnattendedScript, true);
+  // B11/K2b: record which action is now executing (cleared in the ON_SCOPE_EXIT below) so the off-thread watchdog
+  // can name it if this handler freezes the game thread.
+  McpAutomationBridge::SetInFlightAction(Action);
   bool bDispatchHandled = false;
   bool bErrorCaptureStarted = false;
   FString ConsumedHandlerLabel = TEXT("unknown-handler");
@@ -141,6 +164,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
       }
 
       bProcessingAutomationRequest = false;
+      McpAutomationBridge::SetInFlightAction(FString()); // clear the in-flight action on every exit path
       CurrentRequestOrigin = ERequestOrigin::WebSocket;
       const double DispatchEndSeconds = FPlatformTime::Seconds();
       const double DurationMs =
