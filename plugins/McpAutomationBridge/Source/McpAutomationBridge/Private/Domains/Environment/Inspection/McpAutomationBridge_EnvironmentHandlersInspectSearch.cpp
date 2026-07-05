@@ -122,6 +122,26 @@ bool HandleInspectSearchAction(
                     // Try with /Script/Engine prefix for common classes
                     TargetClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), *ClassName));
                 }
+                if (!TargetClass && !ClassName.Contains(TEXT(".")) && !ClassName.Contains(TEXT("/")))
+                {
+                    // Bare short name: UE5 removed the ANY_PACKAGE lookup, so FindObject with a null outer
+                    // resolves only full /Script/ paths, and the /Script/Engine fallback above only covers
+                    // engine classes — every game-module class (e.g. "TDMCharacter") came back
+                    // CLASS_NOT_FOUND. Scan all loaded classes by object name instead, and tolerate the
+                    // conventional A/U code prefix (reflected class object names carry no prefix:
+                    // ATDMCharacter's UClass is named "TDMCharacter"). If two loaded classes share the
+                    // short name, first-found wins (best-effort read-only fallback; the full
+                    // /Script/<Module>.<Class> path stays the deterministic route).
+                    TargetClass = FindFirstObject<UClass>(*ClassName, EFindFirstObjectOptions::None);
+                    if (!TargetClass && ClassName.Len() >= 2)
+                    {
+                        const TCHAR Prefix = ClassName[0];
+                        if ((Prefix == TEXT('A') || Prefix == TEXT('U')) && FChar::IsUpper(ClassName[1]))
+                        {
+                            TargetClass = FindFirstObject<UClass>(*ClassName.Mid(1), EFindFirstObjectOptions::None);
+                        }
+                    }
+                }
                 if (TargetClass)
                 {
                     Resp->SetStringField(TEXT("className"), TargetClass->GetName());
