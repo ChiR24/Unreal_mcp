@@ -45,6 +45,23 @@ describe('automation event stream contracts', () => {
     expect(bypasses).toEqual([]);
   });
 
+  it('sanitizes streamed log messages before broadcasting them', () => {
+    const logHandlers = privateSource(
+      'Domains',
+      'Log',
+      'McpAutomationBridge_LogHandlers.cpp',
+    );
+    const discovery = privateSource(
+      'MCP',
+      'Transport',
+      'McpNativeTransportToolDiscovery.cpp',
+    );
+
+    expect(logHandlers).toContain('SanitizeEngineErrorForResponse(FString(V))');
+    expect(logHandlers).toContain('.Left(2048)');
+    expect(discovery).not.toContain('client: %s %s');
+  });
+
   it('routes native system-control log subscriptions to the log handler', () => {
     const source = privateSource(
       'Domains',
@@ -83,9 +100,9 @@ describe('automation event stream contracts', () => {
 
     expect(sessions).toContain('LogEventSubscribedSessions.Remove(SessionId)');
     expect(connection).toContain(
-      'LogEventSubscribedSessions.Remove(HttpReq.SessionId)',
+      'CloseSessionConnections(HttpReq.SessionId)',
     );
-    expect(cleanup).toContain('LogEventSubscribedSessions.Remove(SessionId)');
+    expect(cleanup).toContain('CloseSessionConnections(SessionId)');
     expect(lifecycle).toContain('LogEventSubscribedSessions.Empty()');
   });
 
@@ -187,9 +204,9 @@ describe('automation event stream contracts', () => {
     expect(lifecycle).toContain('NativeTransport->CleanupStaleRequests();');
     expect(lifecycle).toContain('ReconcileLogCaptureDevice();');
     expect(nativeConnection).toContain(
-      'LogEventSubscribedSessions.Remove(HttpReq.SessionId)',
+      'CloseSessionConnections(HttpReq.SessionId)',
     );
-    expect(nativeCleanup).toContain('LogEventSubscribedSessions.Remove(SessionId)');
+    expect(nativeCleanup).toContain('CloseSessionConnections(SessionId)');
     expect(socketEvents).toContain('LogSubscriberSockets.Remove(Socket.Get())');
   });
 });

@@ -1,7 +1,9 @@
 import {
   readdirSync,
+  readFileSync,
 } from 'node:fs';
 import {
+  relative,
   resolve,
 } from 'node:path';
 
@@ -30,6 +32,42 @@ const sourceRoots = [
   },
 ] as const;
 
+const repositoryRoot = resolve(process.cwd());
+const activeCodeRoots = [
+  resolve(repositoryRoot, 'src'),
+  resolve(repositoryRoot, 'plugins/McpAutomationBridge/Source'),
+  resolve(repositoryRoot, 'scripts'),
+  resolve(repositoryRoot, 'tests'),
+] as const;
+const ignoredDirectoryNames = new Set([
+  'Binaries',
+  'Intermediate',
+  'node_modules',
+  'reports',
+]);
+const activeCodeExtensions = new Set([
+  '.c',
+  '.cc',
+  '.cpp',
+  '.cs',
+  '.cjs',
+  '.h',
+  '.hpp',
+  '.js',
+  '.json',
+  '.mjs',
+  '.sh',
+  '.ts',
+  '.tsx',
+  '.yaml',
+  '.yml',
+]);
+const forbiddenNumberedPrefix = String.fromCharCode(112, 104, 97, 115, 101);
+const forbiddenNumberedIdentifier = new RegExp(
+  `(?:is)?${forbiddenNumberedPrefix}[ _-]*\\d+`,
+  'i',
+);
+
 const listDirectories = (directory: string): readonly string[] =>
   readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     if (!entry.isDirectory()) {
@@ -38,6 +76,25 @@ const listDirectories = (directory: string): readonly string[] =>
 
     const entryPath = resolve(directory, entry.name);
     return [entryPath, ...listDirectories(entryPath)];
+  });
+
+const fileExtension = (fileName: string): string => {
+  const extensionIndex = fileName.lastIndexOf('.');
+  return extensionIndex >= 0 ? fileName.slice(extensionIndex) : '';
+};
+
+const listActiveCodeFiles = (directory: string): readonly string[] =>
+  readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      return ignoredDirectoryNames.has(entry.name)
+        ? []
+        : listActiveCodeFiles(entryPath);
+    }
+
+    return activeCodeExtensions.has(fileExtension(entry.name))
+      ? [entryPath]
+      : [];
   });
 
 describe('TypeScript source structure', () => {
@@ -75,5 +132,25 @@ describe('TypeScript source structure', () => {
     );
 
     expect(overloadedDirectories).toEqual([]);
+  });
+
+  it('keeps numbered roadmap identifiers out of active code and filenames', () => {
+    const activeFiles = activeCodeRoots.flatMap(listActiveCodeFiles);
+    const invalidPaths = activeFiles
+      .map((filePath) => relative(repositoryRoot, filePath))
+      .filter((filePath) => forbiddenNumberedIdentifier.test(filePath));
+    const invalidContents = activeFiles
+      .filter((filePath) =>
+        forbiddenNumberedIdentifier.test(readFileSync(filePath, 'utf8')),
+      )
+      .map((filePath) => relative(repositoryRoot, filePath));
+
+    expect({
+      invalidContents,
+      invalidPaths,
+    }).toEqual({
+      invalidContents: [],
+      invalidPaths: [],
+    });
   });
 });

@@ -4,6 +4,7 @@ import {
   maskTypeScriptComments,
   maskTypeScriptLiteralsAndComments
 } from './native-mcp-source-parser.mjs';
+import { extractTypeScriptSchemaMap } from './audits/typescript-schema-parser.mjs';
 
 function recursiveFiles(root, predicate) {
   return fs.readdirSync(root, { withFileTypes: true })
@@ -78,6 +79,7 @@ function activeToolName(source) {
 }
 
 export function extractTypeScriptTools(paths) {
+  const schemas = extractTypeScriptSchemaMap(paths.tsDefinitionsRoot);
   const actionSource = fs.readFileSync(
     path.join(paths.tsDefinitionsRoot, 'shared', 'action-sets.ts'),
     'utf8'
@@ -113,7 +115,8 @@ export function extractTypeScriptTools(paths) {
       actions: selectUnambiguousActions(
         name,
         toolCandidates.length > 0 ? toolCandidates : siblingCandidates
-      )
+      ),
+      schema: schemas.get(name) ?? { type: 'object', properties: {}, required: [] }
     });
   }
 

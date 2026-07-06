@@ -65,8 +65,8 @@ describe('plugin manifest contracts', () => {
     // Then
     expect(version).toEqual({
       FileVersion: 3,
-      Version: 530,
-      VersionName: '0.5.30',
+      Version: 531,
+      VersionName: '0.5.31',
     });
   });
 
@@ -124,6 +124,7 @@ describe('plugin manifest contracts', () => {
       'OnlineSubsystemUtils',
       'Synthesis',
       'PCG',
+      'ElectraPlayer',
     ] as const;
 
     // When
