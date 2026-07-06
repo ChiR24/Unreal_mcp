@@ -121,6 +121,7 @@ UEdGraphNode *CreateBlueprintGraphNode(UEdGraph *TargetGraph,
                                        const FString &FunctionName,
                                        const FString &VariableName,
                                        const FString &NodeName,
+                                       const FString &TargetClass,
                                        FString &OutErrorMessage,
                                        FString &OutErrorCode,
                                        TSharedPtr<FJsonObject> &OutErrorResult);
