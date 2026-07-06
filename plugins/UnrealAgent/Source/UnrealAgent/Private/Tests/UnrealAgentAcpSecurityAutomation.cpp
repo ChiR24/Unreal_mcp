@@ -34,6 +34,17 @@ bool FUnrealAgentAcpSecurityTest::RunTest(const FString& Parameters)
 
     const FString TestDirectory = FPaths::ConvertRelativePathToFull(
         FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("UnrealAgentAcpSecurityHarness")));
+    int32 InitialLinkReturnCode = 0;
+    FString InitialLinkOutput;
+    FPlatformProcess::ExecProcess(
+        TEXT("/bin/rm"),
+        *FString::Printf(
+            TEXT("-f \"%s\" \"%s\""),
+            *FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("UnrealAgentAcpSecurityHarness/Docs/cache.bin")),
+            *FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("UnrealAgentAcpSecurityHarness/Docs/safe-link.md"))),
+        &InitialLinkReturnCode,
+        &InitialLinkOutput,
+        &InitialLinkOutput);
     IFileManager::Get().DeleteDirectory(*TestDirectory, false, true);
     IFileManager::Get().MakeDirectory(*TestDirectory, true);
     FScopedOpenCodeConfigEnvironment ConfigEnvironment(TestDirectory);
@@ -52,6 +63,8 @@ bool FUnrealAgentAcpSecurityTest::RunTest(const FString& Parameters)
     const FString BinaryAliasPath = FPaths::Combine(TestDirectory, TEXT("Docs/cache.bin"));
     const FString SafeAliasPath = FPaths::Combine(TestDirectory, TEXT("Docs/safe-link.md"));
     const FString SafeTargetPath = FPaths::Combine(TestDirectory, TEXT("Docs/Notes.md"));
+    IFileManager::Get().Delete(*BinaryAliasPath, false, true, true);
+    IFileManager::Get().Delete(*SafeAliasPath, false, true, true);
     FPlatformProcess::ExecProcess(
         TEXT("/bin/ln"),
         *FString::Printf(TEXT("-s \"%s\" \"%s\""), *BinaryTargetPath, *BinaryAliasPath),
@@ -235,6 +248,12 @@ bool FUnrealAgentAcpSecurityTest::RunTest(const FString& Parameters)
     Client.Stop();
     FPlatformMisc::SetEnvironmentVar(TEXT("OPENCODE_ACP_COMMAND"), *PreviousCommand);
     IFileManager::Get().DeleteDirectory(*SymlinkBinDirectory, false, true);
+    FPlatformProcess::ExecProcess(
+        TEXT("/bin/rm"),
+        *FString::Printf(TEXT("-f \"%s\" \"%s\""), *BinaryAliasPath, *SafeAliasPath),
+        &LinkReturnCode,
+        &LinkOutput,
+        &LinkOutput);
     IFileManager::Get().DeleteDirectory(*TestDirectory, false, true);
     return bPassed;
 #endif
