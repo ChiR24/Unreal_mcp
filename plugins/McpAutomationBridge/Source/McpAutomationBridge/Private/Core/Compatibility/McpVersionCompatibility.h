@@ -23,6 +23,96 @@
 // Default Feature Detection
 // =============================================================================
 
+#ifndef MCP_HAS_CINEMATIC_CAMERA
+#define MCP_HAS_CINEMATIC_CAMERA 0
+#endif
+
+#ifndef MCP_HAS_MEDIA_ASSETS
+#define MCP_HAS_MEDIA_ASSETS 0
+#endif
+
+#ifndef MCP_HAS_MOVIE_RENDER_PIPELINE
+#define MCP_HAS_MOVIE_RENDER_PIPELINE 0
+#endif
+
+#ifndef MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS
+#define MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS 0
+#endif
+
+#ifndef MCP_HAS_MOVIE_PIPELINE_PASS_METADATA
+#define MCP_HAS_MOVIE_PIPELINE_PASS_METADATA 0
+#endif
+
+#ifndef MCP_HAS_SMAA
+#define MCP_HAS_SMAA 0
+#endif
+
+#ifndef MCP_HAS_TAKE_RECORDER
+#define MCP_HAS_TAKE_RECORDER 0
+#endif
+
+#ifndef MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER
+#define MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER 0
+#endif
+
+#ifndef MCP_HAS_REPLAY_API
+#define MCP_HAS_REPLAY_API 0
+#endif
+
+#ifndef MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME
+#define MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME 0
+#endif
+
+// MCP_DISALLOW_SHRINKING is passed as the bAllowShrinking argument to
+// TArray::RemoveAt. On UE 5.6+ it is the EAllowShrinking enum
+// (EAllowShrinking::No on the modern path). On older UE it falls back to
+// `false`, which maps to the legacy `bool bAllowShrinking` parameter that
+// existed before the enum was introduced. Both paths mean "do not shrink";
+// the fallback value is intentionally the legacy bool, not the modern enum.
+#if __has_include("Containers/AllowShrinking.h")
+#include "Containers/AllowShrinking.h"
+#define MCP_DISALLOW_SHRINKING EAllowShrinking::No
+#else
+#define MCP_DISALLOW_SHRINKING false
+#endif
+
+// These macros are only defined when Movie Render Pipeline is actually enabled
+// (MCP_HAS_MOVIE_RENDER_PIPELINE=1). When MRP is disabled, callers gate the
+// related #include with the same flag, so the macros being undefined is safe.
+// When MRP is enabled, the standard MRP config header must be present so the
+// macros resolve to a real include path; otherwise we #error with a clear
+// message instead of letting the broken #include produce a confusing error.
+#if MCP_HAS_MOVIE_RENDER_PIPELINE
+#if __has_include("MoviePipelinePrimaryConfig.h")
+#define MCP_MOVIE_PIPELINE_CONFIG_HEADER "MoviePipelinePrimaryConfig.h"
+#define MCP_MOVIE_PIPELINE_CONFIG_CLASS UMoviePipelinePrimaryConfig
+#elif __has_include("MoviePipelineMasterConfig.h")
+#define MCP_MOVIE_PIPELINE_CONFIG_HEADER "MoviePipelineMasterConfig.h"
+#define MCP_MOVIE_PIPELINE_CONFIG_CLASS UMoviePipelineMasterConfig
+#else
+#error "MCP_HAS_MOVIE_RENDER_PIPELINE=1 but neither MoviePipelinePrimaryConfig.h nor MoviePipelineMasterConfig.h is present on the include path. Check that the Movie Render Pipeline module/plugin is installed."
+#endif
+#endif
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+#define MCP_GET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue) (Queue)->IsDirty()
+#define MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, bDirty) \
+  (Queue)->SetIsDirty(bDirty)
+#else
+#define MCP_GET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue) false
+#define MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, bDirty) \
+  do {                                                   \
+    (void)(Queue);                                       \
+    (void)(bDirty);                                      \
+  } while (false)
+#endif
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+#define MCP_HAS_MOVIE_SCENE_SHOT_METADATA 1
+#else
+#define MCP_HAS_MOVIE_SCENE_SHOT_METADATA 0
+#endif
+
 // ControlRigBlueprintFactory availability
 // Available in all UE 5.x versions, but header location varies
 #ifndef MCP_HAS_CONTROLRIG_FACTORY

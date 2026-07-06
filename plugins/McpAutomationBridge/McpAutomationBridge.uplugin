@@ -172,6 +172,26 @@
       "Name": "PCG",
       "Enabled": true,
       "Optional": true
+    },
+    {
+      "Name": "MovieRenderPipeline",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "MoviePipelineMaskRenderPass",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Takes",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "ElectraPlayer",
+      "Enabled": true,
+      "Optional": true
     }
   ]
 }
