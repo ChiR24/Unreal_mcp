@@ -277,7 +277,7 @@ function createRenderingHappyCases(ctx) {
       actorName: ctx.sphereCapture,
       captureOffset: { x: 25, y: 0, z: 10 }
     }, { timeoutMs: 60000 }),
-    createNamedActionCase('Reflections: configure capture resolution', 'configure_capture_resolution', {
+    createNamedActionCase('Reflections: configure capture resolution', 'configure_reflection_capture_resolution', {
       actorName: ctx.sphereCapture,
       resolution: 256
     }, {
@@ -632,7 +632,7 @@ function createRenderingAdversarialCases(ctx) {
       actorName: ctx.sceneCapture2d,
       captureSource: 'DefinitelyNotACaptureSource'
     }, { expected: errorExpected('invalid') }),
-    createNamedActionCase('Adversarial: reject oversized reflection capture resolution', 'configure_capture_resolution', {
+    createNamedActionCase('Adversarial: reject oversized reflection capture resolution', 'configure_reflection_capture_resolution', {
       actorName: ctx.sphereCapture,
       resolution: 100000
     }, { expected: errorExpected('invalid') }),
@@ -661,7 +661,31 @@ function createRenderingAdversarialCases(ctx) {
     }, { expected: errorExpected('not found', 'invalid') }),
     createNamedActionCase('Adversarial: reject missing capture actor', 'capture_scene', {
       actorName: ctx.missingActor
-    }, { expected: errorExpected('not found') })
+    }, { expected: errorExpected('not found') }),
+    // Path-traversal adversarial cases for the new render string fields.
+    // The C++ side uses LoadObject / EditorAssetLibrary which restricts to
+    // project content roots; the new public surface should reject paths
+    // outside /Game (or surface a controlled error). Any test that lets
+    // `..` or absolute host paths reach engine code would catch a
+    // regression of the asset-path security boundary.
+    createNamedActionCase('Adversarial: reject parent-segment in render target packagePath', 'create_render_target', {
+      name: 'EvilRT',
+      width: 64,
+      height: 64,
+      packagePath: '/Game/../../../etc/Evil'
+    }, { expected: errorExpected('not found', 'invalid', 'unsupported') }),
+    createNamedActionCase('Adversarial: reject parent-segment in LUT asset path', 'set_pp_lut', {
+      actorName: ctx.postProcessVolume,
+      lutPath: '/Game/../../Engine/Content/EngineMaterials/Default'
+    }, { expected: errorExpected('not found', 'invalid', 'unsupported') }),
+    createNamedActionCase('Adversarial: reject absolute host path in render target', 'assign_render_target', {
+      actorName: ctx.sceneCapture2d,
+      renderTargetPath: '/etc/passwd'
+    }, { expected: errorExpected('not found', 'invalid', 'unsupported') }),
+    createNamedActionCase('Adversarial: reject Windows absolute path in render target', 'assign_render_target', {
+      actorName: ctx.sceneCapture2d,
+      renderTargetPath: 'C:\\Windows\\System32\\drivers\\etc\\hosts'
+    }, { expected: errorExpected('not found', 'invalid', 'unsupported') })
   ];
 }
 
