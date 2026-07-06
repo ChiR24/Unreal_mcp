@@ -3,8 +3,15 @@
 
 FString McpSequence::ResolvePath(const TSharedPtr<FJsonObject> &Payload) {
   FString Path;
-  if (Payload.IsValid() && Payload->TryGetStringField(TEXT("path"), Path) &&
-      !Path.IsEmpty()) {
+  if (Payload.IsValid()) {
+    for (const TCHAR *Field :
+         {TEXT("path"), TEXT("sequencePath"), TEXT("assetPath")}) {
+      if (Payload->TryGetStringField(Field, Path) && !Path.IsEmpty())
+        break;
+      Path.Reset();
+    }
+  }
+  if (!Path.IsEmpty()) {
 #if WITH_EDITOR
     if (UEditorAssetLibrary::DoesAssetExist(Path)) {
       UObject *Obj = UEditorAssetLibrary::LoadAsset(Path);

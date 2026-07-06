@@ -1,5 +1,10 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
+#include "Domains/Sequence/Validation/McpAutomationBridge_SequenceIntegerValidation.h"
+#include "Domains/Sequence/Cinematics/McpAutomationBridge_SequenceCinematics.h"
+#include "Domains/Sequence/Media/McpAutomationBridge_SequenceMedia.h"
+#include "Domains/Sequence/MovieRender/McpAutomationBridge_SequenceMovieRender.h"
+#include "Domains/Sequence/RecordReplay/McpAutomationBridge_SequenceRecordReplay.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
     const FString &RequestId, const FString &Action,
@@ -24,6 +29,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
       else if (!EffectiveAction.StartsWith(TEXT("sequence_")))
         EffectiveAction = TEXT("sequence_") + EffectiveAction;
     }
+  }
+
+  FString IntegerError;
+  if (!McpSequenceIntegerValidation::ValidateSequenceIntegerFields(
+          LocalPayload, IntegerError)) {
+    SendAutomationResponse(RequestingSocket, RequestId, false, IntegerError,
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
   }
 
   if (EffectiveAction == TEXT("sequence_create"))
@@ -105,6 +118,34 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
   if (EffectiveAction == TEXT("sequence_set_work_range"))
     return McpSequenceRanges::HandleSetWorkRange(this, RequestId, LocalPayload,
                                                  RequestingSocket);
+
+  TSharedPtr<FJsonObject> CinematicsResult;
+  if (McpSequenceCinematics::TryHandleCinematics(
+          this, EffectiveAction, LocalPayload, CinematicsResult)) {
+    bool bSuccess = false;
+    FString Message;
+    FString ErrorCode;
+    if (CinematicsResult.IsValid()) {
+      CinematicsResult->TryGetBoolField(TEXT("success"), bSuccess);
+      if (!CinematicsResult->TryGetStringField(TEXT("message"), Message)) {
+        CinematicsResult->TryGetStringField(TEXT("error"), Message);
+      }
+      CinematicsResult->TryGetStringField(TEXT("errorCode"), ErrorCode);
+    }
+    SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message,
+                           CinematicsResult, ErrorCode);
+    return true;
+  }
+
+  if (McpSequenceMovieRender::TryHandle(this, RequestId, EffectiveAction,
+                                        LocalPayload, RequestingSocket))
+    return true;
+  if (McpSequenceMedia::TryHandleMediaAction(this, RequestId, EffectiveAction,
+                                             LocalPayload, RequestingSocket))
+    return true;
+  if (McpSequenceRecordReplay::TryHandle(this, RequestId, EffectiveAction,
+                                         LocalPayload, RequestingSocket))
+    return true;
 
   SendAutomationResponse(
       RequestingSocket, RequestId, false,
