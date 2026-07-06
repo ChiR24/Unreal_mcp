@@ -35,6 +35,7 @@
 #include "McpConnectionManager.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -44,6 +45,8 @@
 #include "Dom/JsonObject.h"
 #include "Misc/OutputDevice.h"
 #include "Async/Async.h"
+
+using namespace McpAutomationBridgeSubsystemResponse;
 
 // =============================================================================
 // FMcpLogOutputDevice - Custom Log Capture Device
@@ -124,7 +127,8 @@ public:
             default:                         VerbosityString = TEXT("Log");         break;
         }
 
-        const FString Message = FString(V);
+        const FString Message =
+            SanitizeEngineErrorForResponse(FString(V)).Left(2048);
         TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(Subsystem);
 
         AsyncTask(ENamedThreads::GameThread,
