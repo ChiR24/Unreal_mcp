@@ -32,45 +32,18 @@ FString ResolveOpenCodePath(
 TArray<FString> GetOpenCodeConfigDirectories(const FString& ProjectDirectory)
 {
     TArray<FString> Directories;
+    // Only the explicit OPENCODE_CONFIG_DIR env var is treated as a scanned source.
+    // XDG, HOME/.config/opencode, APPDATA, and LOCALAPPDATA are deferred to the
+    // developer's own OpenCode setup: the Unreal Agent panel does not enforce the
+    // permission safety policy on user-level OpenCode config files because users
+    // intentionally install MCP servers and plugins there. Project-level safety is
+    // preserved via the project-local, ancestor, managed, and OPENCODE_CONFIG_DIR
+    // checks; the explicit OPENCODE_CONFIG_DIR is honored because it is the user's
+    // intentional override of the project context.
     AddUniqueDirectory(
         Directories,
         ProjectDirectory,
         FPlatformMisc::GetEnvironmentVariable(TEXT("OPENCODE_CONFIG_DIR")));
-    const FString XdgConfigHome =
-        FPlatformMisc::GetEnvironmentVariable(TEXT("XDG_CONFIG_HOME"));
-    if (!XdgConfigHome.IsEmpty())
-    {
-        AddUniqueDirectory(
-            Directories,
-            ProjectDirectory,
-            FPaths::Combine(XdgConfigHome, TEXT("opencode")));
-    }
-    const FString Home = FPlatformMisc::GetEnvironmentVariable(TEXT("HOME"));
-    if (!Home.IsEmpty())
-    {
-        AddUniqueDirectory(
-            Directories,
-            ProjectDirectory,
-            FPaths::Combine(Home, TEXT(".config/opencode")));
-    }
-    const FString AppData =
-        FPlatformMisc::GetEnvironmentVariable(TEXT("APPDATA"));
-    if (!AppData.IsEmpty())
-    {
-        AddUniqueDirectory(
-            Directories,
-            ProjectDirectory,
-            FPaths::Combine(AppData, TEXT("opencode")));
-    }
-    const FString LocalAppData =
-        FPlatformMisc::GetEnvironmentVariable(TEXT("LOCALAPPDATA"));
-    if (!LocalAppData.IsEmpty())
-    {
-        AddUniqueDirectory(
-            Directories,
-            ProjectDirectory,
-            FPaths::Combine(LocalAppData, TEXT("opencode")));
-    }
     return Directories;
 }
 

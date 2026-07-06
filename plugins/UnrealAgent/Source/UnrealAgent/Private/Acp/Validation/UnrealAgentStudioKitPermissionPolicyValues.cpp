@@ -32,6 +32,16 @@ bool PermissionValueContainsAllow(const TSharedPtr<FJsonValue>& Value)
     }
     for (const TPair<FString, TSharedPtr<FJsonValue>>& Field : Value->AsObject()->Values)
     {
+        // OpenCode's "skill" and "task" keys are skill/task routing configuration,
+        // not tool permissions. Allowing an entire skill (e.g. "unreal-*": "allow")
+        // is the documented Studio Kit behavior and should not be conflated with
+        // a global tool-permission allow. Inverse of IsProtectedOpenCodePermissionPattern.
+        const FString TrimmedFieldKey = Field.Key.TrimStartAndEnd();
+        if (TrimmedFieldKey.Equals(TEXT("skill"), ESearchCase::IgnoreCase)
+            || TrimmedFieldKey.Equals(TEXT("task"), ESearchCase::IgnoreCase))
+        {
+            continue;
+        }
         if (PermissionValueContainsAllow(Field.Value))
         {
             return true;

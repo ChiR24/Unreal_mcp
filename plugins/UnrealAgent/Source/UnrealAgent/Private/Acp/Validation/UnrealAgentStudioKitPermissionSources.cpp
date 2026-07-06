@@ -69,9 +69,23 @@ void AddAncestorProjectChecks(
         AddOptionalAgentDirectoryChecks(
             Result,
             FPaths::Combine(Current, TEXT(".opencode/agent")));
-        AddOpenCodePluginDirectoryChecks(
-            Result,
-            FPaths::Combine(Current, TEXT(".opencode/plugins")));
+        const FString AncestorPluginsDirectory =
+            FPaths::Combine(Current, TEXT(".opencode/plugins"));
+        const FString AncestorGuardrailsPath = FPaths::Combine(
+            AncestorPluginsDirectory,
+            TEXT("unreal-agent-guardrails.ts"));
+        if (FPaths::FileExists(AncestorGuardrailsPath))
+        {
+            AddOpenCodePluginDirectoryChecks(
+                Result,
+                AncestorPluginsDirectory,
+                AncestorGuardrailsPath,
+                FUnrealAgentStudioKit::MakeGuardrailsPluginSource());
+        }
+        else
+        {
+            AddOpenCodePluginDirectoryChecks(Result, AncestorPluginsDirectory);
+        }
         AddOpenCodePluginDirectoryChecks(
             Result,
             FPaths::Combine(Current, TEXT(".opencode/plugin")));
@@ -214,26 +228,6 @@ bool ValidateOpenCodePermissionSafety(
         AddOpenCodePluginDirectoryChecks(
             Result,
             FPaths::Combine(ConfigDirectory, TEXT("plugin")));
-    }
-
-    const FString Home = FPlatformMisc::GetEnvironmentVariable(TEXT("HOME"));
-    if (!Home.IsEmpty())
-    {
-        const FString HomeOpenCodeDirectory =
-            FPaths::Combine(Home, TEXT(".opencode"));
-        AddOptionalConfigFiles(Result, HomeOpenCodeDirectory);
-        AddOptionalAgentDirectoryChecks(
-            Result,
-            FPaths::Combine(HomeOpenCodeDirectory, TEXT("agents")));
-        AddOptionalAgentDirectoryChecks(
-            Result,
-            FPaths::Combine(HomeOpenCodeDirectory, TEXT("agent")));
-        AddOpenCodePluginDirectoryChecks(
-            Result,
-            FPaths::Combine(HomeOpenCodeDirectory, TEXT("plugins")));
-        AddOpenCodePluginDirectoryChecks(
-            Result,
-            FPaths::Combine(HomeOpenCodeDirectory, TEXT("plugin")));
     }
 
     OutErrors = MoveTemp(Result.Errors);

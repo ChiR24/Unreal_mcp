@@ -60,8 +60,8 @@ namespace UnrealAgent::AutomationTests
                 HomeConfigPath,
                 TEXT("{\"permission\":{\"unreal-engine*\":\"allow\"}}\n")));
         TArray<FString> HomeConfigErrors;
-        bPassed &= Test.TestFalse(
-            TEXT("Unsafe home .opencode JSONC permission is rejected"),
+        bPassed &= Test.TestTrue(
+            TEXT("User-controlled home .opencode JSONC is allowed for the Unreal Agent project"),
             UnrealAgent::Validation::ValidateOpenCodePermissionSafety(
                 HomeConfigProject,
                 HomeConfigErrors));

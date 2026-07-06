@@ -201,11 +201,44 @@ bool FUnrealAgentPermissionSourcesTest::RunTest(const FString& Parameters)
         SaveText(
             FPaths::Combine(AppDataDirectory, TEXT("opencode/opencode.json")),
             TEXT("{\"permission\":{\"unreal-engine*\":\"allow\"}}\n")));
-    bPassed &= TestFalse(
-        TEXT("Unsafe APPDATA OpenCode config is rejected"),
+    bPassed &= TestTrue(
+        TEXT("User-controlled APPDATA OpenCode config does not block the Unreal Agent project"),
         IsPermissionSafe(ProjectDirectory));
     IFileManager::Get().DeleteDirectory(*AppDataDirectory, false, true);
     FPlatformMisc::SetEnvironmentVar(TEXT("APPDATA"), TEXT(""));
+
+    // The validator only enforces safety on project-local, ancestor, managed, and
+    // OPENCODE_CONFIG/CONTENT sources. User-level OpenCode config under the XDG base
+    // directory and HOME/.config/opencode is the developer's own dev setup, and the
+    // panel defers to the user's chosen OpenCode configuration rather than blocking
+    // Connect when those files reference MCP servers or plugins the user has installed.
+    const FString XdgConfigDirectory =
+        FPaths::Combine(RootDirectory, TEXT("XdgConfig"));
+    FPlatformMisc::SetEnvironmentVar(TEXT("XDG_CONFIG_HOME"), *XdgConfigDirectory);
+    bPassed &= TestTrue(
+        TEXT("Unsafe XDG_CONFIG_HOME config is seeded"),
+        SaveText(
+            FPaths::Combine(XdgConfigDirectory, TEXT("opencode/opencode.json")),
+            TEXT("{\"permission\":{\"unreal-engine*\":\"allow\"}}\n")));
+    bPassed &= TestTrue(
+        TEXT("User-controlled XDG_CONFIG_HOME OpenCode config does not block the Unreal Agent project"),
+        IsPermissionSafe(ProjectDirectory));
+    IFileManager::Get().DeleteDirectory(*XdgConfigDirectory, false, true);
+    FPlatformMisc::SetEnvironmentVar(TEXT("XDG_CONFIG_HOME"), TEXT(""));
+
+    const FString HomeXdgDirectory =
+        FPaths::Combine(RootDirectory, TEXT("HomeXdg"));
+    FPlatformMisc::SetEnvironmentVar(TEXT("HOME"), *HomeXdgDirectory);
+    bPassed &= TestTrue(
+        TEXT("Unsafe HOME .config/opencode config is seeded"),
+        SaveText(
+            FPaths::Combine(HomeXdgDirectory, TEXT(".config/opencode/opencode.json")),
+            TEXT("{\"permission\":{\"unreal-engine*\":\"allow\"}}\n")));
+    bPassed &= TestTrue(
+        TEXT("User-controlled HOME/.config/opencode does not block the Unreal Agent project"),
+        IsPermissionSafe(ProjectDirectory));
+    IFileManager::Get().DeleteDirectory(*HomeXdgDirectory, false, true);
+    FPlatformMisc::SetEnvironmentVar(TEXT("HOME"), *HomeDirectory);
 
     const FString RelativeConfigDirectory =
         FPaths::Combine(ProjectDirectory, TEXT("RelativeConfig"));
