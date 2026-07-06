@@ -60,12 +60,136 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Security")
     bool bRequireCapabilityToken;
 
-    /** SECURITY WARNING: When enabled, allows binding to non-loopback addresses (e.g., 0.0.0.0, 192.168.x.x).
-     * This exposes the automation bridge to your local network. Only enable if you need LAN access
-     * and understand the security implications. Default: false (loopback-only).
+    /** SECURITY WARNING: When enabled, allows the WebSocket and native MCP
+     * transports to bind to non-loopback addresses. This exposes editor
+     * automation to the local network. Default: false.
      */
     UPROPERTY(config, EditAnywhere, Category = "Security")
     bool bAllowNonLoopback;
+
+    /** Deprecated compatibility field. Network media URLs are always disabled
+     * because the media backend cannot pin redirect destinations. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Media")
+    bool bAllowLoopbackMediaUrls;
+
+    /** Deprecated compatibility field. This prefix is ignored. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Media",
+        meta = (EditCondition = "bAllowLoopbackMediaUrls"))
+    FString AllowedLoopbackMediaUrlPrefix;
+
+    /** Maximum output width or height accepted by Movie Render Queue. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1", ClampMax = "16384"))
+    int32 MaxMovieRenderResolutionDimension;
+
+    /** Maximum per-session MCP requests per minute (HTTP/SSE only). Counts
+     *  every request method, not just tool calls. 0 disables the cap. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Native MCP Rate Limit",
+        meta = (ClampMin = "0"))
+    int32 MaxClientRequestsPerMinute = 600;
+
+    /** Maximum per-session MCP tool calls per minute (HTTP/SSE only). 0
+     *  disables the cap. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Native MCP Rate Limit",
+        meta = (ClampMin = "0"))
+    int32 MaxClientToolCallsPerMinute = 120;
+
+    /** Maximum width multiplied by height accepted by Movie Render Queue. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int64 MaxMovieRenderPixelCount;
+
+    /** Maximum effective output frames accepted per MRQ job, including handles. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderFrameCount;
+
+    /** Maximum effective output frame rate accepted by Movie Render Queue. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1", ClampMax = "240"))
+    int32 MaxMovieRenderEffectiveFrameRate = 240;
+
+    /** Maximum handle frames accepted on either side of an MRQ shot. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "0"))
+    int32 MaxMovieRenderHandleFrameCount;
+
+    /** Maximum spatial or temporal anti-aliasing sample count. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderSampleCount;
+
+    /** Maximum spatial x temporal anti-aliasing sample product. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderCombinedSampleCount;
+
+    /** Maximum console variables accepted in one MRQ configuration request. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "0"))
+    int32 MaxMovieRenderConsoleVariables;
+
+    /** Exact MRQ console-variable names that automation may set. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue")
+    TArray<FString> MovieRenderConsoleVariableAllowlist;
+
+    /** Maximum absolute value accepted for an allowlisted MRQ console variable. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "0.0"))
+    float MaxMovieRenderConsoleVariableMagnitude;
+
+    /** Executor classes that callers may select explicitly. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue")
+    TArray<FString> MovieRenderExecutorClassAllowlist;
+
+    /** Burn-in widget classes that callers may select explicitly. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue")
+    TArray<FString> MovieRenderBurnInClassAllowlist;
+
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderEnabledJobs;
+
+    /** Maximum total jobs retained in the Movie Render Queue. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderQueueJobs;
+
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int64 MaxMovieRenderAggregateWork;
+
+    /** Maximum frame-number zero padding accepted in output settings. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderZeroPadFrameNumbers;
+
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderOutputScanFiles;
+
+    UPROPERTY(config, EditAnywhere, Category = "Security|Take Recorder")
+    TArray<FString> TakeRecorderSourceClassAllowlist;
+
+    /** Maximum number of actor or class entries accepted by one Take Recorder request. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Take Recorder",
+        meta = (ClampMin = "1"))
+    int32 MaxTakeRecorderSourceItems;
+
+    /** Maximum length accepted for Take Recorder actor names and class paths. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Take Recorder",
+        meta = (ClampMin = "1"))
+    int32 MaxTakeRecorderStringLength;
+
+    /** Maximum server-side MRQ wait deadline in milliseconds. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderTimeoutMs;
+
+    /** Maximum time to wait for a timed-out executor to settle after cancellation. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1", ClampMax = "30000"))
+    int32 MaxMovieRenderCancellationWaitMs;
 
     /** Enable TLS for the automation bridge WebSocket server. */
     UPROPERTY(config, EditAnywhere, Category = "Security")

@@ -23,6 +23,51 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
     bMultiListen = true;
     bRequireCapabilityToken = false;
     bAllowNonLoopback = false; // Security: default to loopback-only binding
+    bAllowLoopbackMediaUrls = false;
+    AllowedLoopbackMediaUrlPrefix = TEXT("");
+    MaxMovieRenderResolutionDimension = 8192;
+    MaxMovieRenderPixelCount = 33554432;
+    MaxMovieRenderFrameCount = 10000;
+    MaxMovieRenderEffectiveFrameRate = 240;
+    MaxMovieRenderHandleFrameCount = 1000;
+    MaxMovieRenderSampleCount = 64;
+    MaxMovieRenderCombinedSampleCount = 256;
+    MaxMovieRenderConsoleVariables = 32;
+    MovieRenderConsoleVariableAllowlist = {
+        TEXT("r.MotionBlurQuality"),
+        TEXT("r.DepthOfFieldQuality")
+    };
+    MaxMovieRenderConsoleVariableMagnitude = 1000.0f;
+    // C7: The class allowlists below ship with safe default entries, not
+    // empty. The audit flagged this as "empty by default" but inspection
+    // shows the defaults are populated with editor-provided safe classes
+    // (PIE/in-process executors, default burn-in, take recorder sources).
+    // These defaults are applied unless the project's config overrides
+    // them. Do NOT clear these defaults in code — projects that rely on
+    // them would silently get an empty allowlist and a different policy
+    // (the validators use ContainsByPredicate which returns false on an
+    // empty list, blocking all values). Empty arrays here are an explicit
+    // deny-all configuration, not a default.
+    MovieRenderExecutorClassAllowlist = {
+        TEXT("/Script/MovieRenderPipelineEditor.MoviePipelinePIEExecutor"),
+        TEXT("/Script/MovieRenderPipelineCore.MoviePipelineInProcessExecutor")
+    };
+    MovieRenderBurnInClassAllowlist = {
+        TEXT("/MovieRenderPipeline/Blueprints/DefaultBurnIn.DefaultBurnIn_C")
+    };
+    MaxMovieRenderEnabledJobs = 8;
+    MaxMovieRenderQueueJobs = 32;
+    MaxMovieRenderAggregateWork = 4000000000000LL;
+    MaxMovieRenderZeroPadFrameNumbers = 12;
+    MaxMovieRenderOutputScanFiles = 10000;
+    TakeRecorderSourceClassAllowlist = {
+        TEXT("/Script/TakeRecorderSources.TakeRecorderCameraCutSource"),
+        TEXT("/Script/TakeRecorderSources.TakeRecorderLevelVisibilitySource")
+    };
+    MaxTakeRecorderSourceItems = 64;
+    MaxTakeRecorderStringLength = 1024;
+    MaxMovieRenderTimeoutMs = 3600000;
+    MaxMovieRenderCancellationWaitMs = 30000;
     // CRITICAL: Default to 0 (disabled) for development/testing - prevents rate limit disconnects during rapid API calls
     // For production deployments, set to a reasonable limit (e.g., 600) via Project Settings or environment variables
     MaxMessagesPerMinute = 0;
