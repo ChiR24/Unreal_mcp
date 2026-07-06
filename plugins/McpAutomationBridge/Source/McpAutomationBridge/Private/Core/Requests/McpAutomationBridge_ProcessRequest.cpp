@@ -28,7 +28,11 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
          ConnectionManager.IsValid() ? ConnectionManager->GetActiveSocketCount()
                                      : 0);
   if (!IsInGameThread()) {
-    QueueAutomationRequest(RequestId, Action, Payload, RequestingSocket, Origin);
+    const EAutomationQueueRejection Reason = QueueAutomationRequest(
+        RequestId, Action, Payload, RequestingSocket, Origin);
+    if (Reason != EAutomationQueueRejection::None) {
+      SendAutomationRejection(RequestingSocket, RequestId, Reason);
+    }
     return;
   }
 
@@ -41,7 +45,11 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
                 "Serialization/GC/Loading: RequestId=%s Action=%s"),
            *RequestId, *Action);
 
-    QueueAutomationRequest(RequestId, Action, Payload, RequestingSocket, Origin);
+    const EAutomationQueueRejection Reason = QueueAutomationRequest(
+        RequestId, Action, Payload, RequestingSocket, Origin);
+    if (Reason != EAutomationQueueRejection::None) {
+      SendAutomationRejection(RequestingSocket, RequestId, Reason);
+    }
     return;
   }
 
@@ -59,11 +67,11 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
 
   // Reentrancy guard / enqueue
   if (bProcessingAutomationRequest) {
-    QueueAutomationRequest(RequestId, Action, Payload, RequestingSocket, Origin);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-           TEXT("Enqueued automation request %s for action %s (processing in "
-                "progress)."),
-           *RequestId, *Action);
+    const EAutomationQueueRejection Reason = QueueAutomationRequest(
+        RequestId, Action, Payload, RequestingSocket, Origin);
+    if (Reason != EAutomationQueueRejection::None) {
+      SendAutomationRejection(RequestingSocket, RequestId, Reason);
+    }
     return;
   }
 

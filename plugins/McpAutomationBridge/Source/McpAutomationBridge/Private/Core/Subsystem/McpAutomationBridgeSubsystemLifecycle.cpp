@@ -26,6 +26,12 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
         Log,
         TEXT("McpAutomationBridgeSubsystem initializing."));
 
+    // StartAcceptingAutomationRequests() is called explicitly even though the
+    // default value of bAcceptingAutomationRequests is true. The explicit call
+    // preserves start/stop symmetry (every Deinitialize calls Stop), and it makes
+    // the lifecycle intent obvious to readers — any future change to the
+    // default (e.g. a deferred-start mode) does not silently flip this code.
+    StartAcceptingAutomationRequests();
     ConnectionManager = MakeShared<FMcpConnectionManager>();
     ConnectionManager->Initialize(GetDefault<UMcpAutomationBridgeSettings>());
     ConnectionManager->SetOnMessageReceived(
@@ -37,7 +43,13 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
                 const TSharedPtr<FJsonObject>& Payload,
                 TSharedPtr<FMcpBridgeWebSocket> Socket)
             {
-                QueueAutomationRequest(RequestId, Action, Payload, Socket);
+                const EAutomationQueueRejection Reason =
+                    QueueAutomationRequest(
+                        RequestId, Action, Payload, Socket);
+                if (Reason != EAutomationQueueRejection::None)
+                {
+                    SendAutomationRejection(Socket, RequestId, Reason);
+                }
             }));
 
     InitializeHandlers();
@@ -56,6 +68,8 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
 
 void UMcpAutomationBridgeSubsystem::Deinitialize()
 {
+    StopAcceptingAutomationRequests();
+
     if (TickHandle.IsValid())
     {
         FTSTicker::GetCoreTicker().RemoveTicker(TickHandle);
@@ -70,17 +84,19 @@ void UMcpAutomationBridgeSubsystem::Deinitialize()
             TEXT("McpAutomationBridgeSubsystem deinitializing."));
     }
 
+    if (ConnectionManager.IsValid())
+    {
+        ConnectionManager->Stop();
+        ConnectionManager.Reset();
+    }
+
     if (NativeTransport)
     {
         NativeTransport->Shutdown();
         NativeTransport.Reset();
     }
 
-    if (ConnectionManager.IsValid())
-    {
-        ConnectionManager->Stop();
-        ConnectionManager.Reset();
-    }
+    CancelAllAutomationRequests();
 
     if (LogCaptureDevice.IsValid())
     {
