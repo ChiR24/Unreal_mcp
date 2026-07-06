@@ -36,12 +36,17 @@ describe('handleLevelTools path normalization', () => {
   it('validates normalized /Content level paths before dispatch', async () => {
     const { tools, sendAutomationRequest } = createTools();
 
-    await handleLevelTools('load', { action: 'load', levelPath: '/Content/Maps/Demo' }, tools);
+    await handleLevelTools('load', {
+      action: 'load',
+      levelPath: '/Content/Maps/Demo',
+      saveDirtyPackages: true
+    }, tools);
 
     expect(sendAutomationRequest).toHaveBeenCalledWith('manage_level', {
       action: 'load',
       levelPath: '/Game/Maps/Demo',
-      streaming: false
+      streaming: false,
+      saveDirtyPackages: true
     }, {});
   });
 

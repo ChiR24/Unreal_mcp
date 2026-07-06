@@ -122,7 +122,8 @@ async function handleLoadLevel(argsTyped: LevelArgs, tools: ITools): Promise<Rec
   const res = await executeAutomationRequest(tools, 'manage_level', {
     action: 'load',
     levelPath,
-    streaming: !!argsTyped.streaming
+    streaming: !!argsTyped.streaming,
+    saveDirtyPackages: !!argsTyped.saveDirtyPackages
   }) as Record<string, unknown>;
   return cleanObject(res);
 }

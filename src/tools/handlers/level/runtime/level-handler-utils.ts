@@ -88,6 +88,8 @@ export function normalizeLevelArgs(args: LevelArgs): LevelArgs {
     'parentLevel',
     'parentPath',
     'sourcePath',
+    'levelPaths',
+    'level_paths',
     'packagePath',
     'exportPath',
     'path'
