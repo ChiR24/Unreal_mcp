@@ -70,6 +70,7 @@ void FOpenCodeAcpClient::ResetState()
     ModelOptions.Reset();
     ThinkingOptions.Reset();
     AgentOptions.Reset();
+    AvailableCommands.Reset();
     PendingModel.Reset();
     PendingThinking.Reset();
     PendingAgent.Reset();

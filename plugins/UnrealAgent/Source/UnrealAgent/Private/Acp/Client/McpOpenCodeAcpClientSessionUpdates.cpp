@@ -71,6 +71,12 @@ void FOpenCodeAcpClient::HandleSessionUpdate(const TSharedPtr<FJsonObject>& Para
         return;
     }
 
+    if (UpdateType == TEXT("available_commands_update"))
+    {
+        HandleAvailableCommandsUpdate(*Update);
+        return;
+    }
+
     if (UpdateType == TEXT("agent_message_chunk") || UpdateType == TEXT("agent_thought_chunk") || UpdateType == TEXT("user_message_chunk"))
     {
         const TSharedPtr<FJsonObject>* Content = nullptr;

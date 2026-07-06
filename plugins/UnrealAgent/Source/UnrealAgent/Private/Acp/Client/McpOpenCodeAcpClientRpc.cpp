@@ -87,6 +87,7 @@ bool FOpenCodeAcpClient::EnsureProjectUnrealAgentConfig()
         LastStudioKitSummary += FString::Join(PermissionErrors, TEXT("\n"));
         return false;
     }
+    LoadStudioKitCommandSummariesFromDisk();
     return true;
 }
 

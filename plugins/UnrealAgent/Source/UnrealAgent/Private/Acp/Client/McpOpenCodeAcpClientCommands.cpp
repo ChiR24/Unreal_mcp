@@ -22,9 +22,79 @@
 
 using namespace UnrealAgent::OpenCodeAcp;
 
+namespace
+{
+    FString MakeFileUri(const FString& AbsolutePath)
+    {
+        FString Normalized = FPaths::ConvertRelativePathToFull(AbsolutePath);
+        FPaths::NormalizeFilename(Normalized);
+        // RFC 8089 requires forward slashes in `file://` URIs. On Windows,
+        // NormalizeFilename emits backslashes, which the receiving end will
+        // misinterpret. Convert unconditionally so the wire format is portable.
+        Normalized.ReplaceInline(TEXT("\\"), TEXT("/"));
+        // Percent-encode the characters that are reserved in a `file://` URI component
+        // (`#`, `?`, `%`, space) so paths containing them round-trip cleanly to the
+        // ACP `resource_link` block. `%` must be replaced first.
+        Normalized.ReplaceInline(TEXT("%"), TEXT("%25"));
+        Normalized.ReplaceInline(TEXT("#"), TEXT("%23"));
+        Normalized.ReplaceInline(TEXT("?"), TEXT("%3F"));
+        Normalized.ReplaceInline(TEXT(" "), TEXT("%20"));
+        // On Windows, an absolute path is `C:/Users/...`; RFC 8089 requires a
+        // leading extra slash so the URI is `file:///C:/Users/...`.
+        if (Normalized.Len() >= 2 && FChar::IsAlpha(Normalized[0]) && Normalized[1] == TEXT(':'))
+        {
+            return FString::Printf(TEXT("file:///%s"), *Normalized);
+        }
+        return FString::Printf(TEXT("file://%s"), *Normalized);
+    }
+
+    TSharedPtr<FJsonObject> MakePromptTextBlock(const FString& Text)
+    {
+        auto TextBlock = MakeObject();
+        TextBlock->SetStringField(TEXT("type"), TEXT("text"));
+        TextBlock->SetStringField(TEXT("text"), Text);
+        return TextBlock;
+    }
+
+    TSharedPtr<FJsonObject> MakePromptResourceLinkBlock(const FString& AttachmentPath)
+    {
+        const FString AbsolutePath = FPaths::ConvertRelativePathToFull(AttachmentPath);
+        auto ResourceBlock = MakeObject();
+        ResourceBlock->SetStringField(TEXT("type"), TEXT("resource_link"));
+        ResourceBlock->SetStringField(TEXT("uri"), MakeFileUri(AbsolutePath));
+        ResourceBlock->SetStringField(TEXT("name"), FPaths::GetCleanFilename(AbsolutePath));
+        ResourceBlock->SetStringField(TEXT("mimeType"), TEXT("text/plain"));
+        return ResourceBlock;
+    }
+
+    FString FormatPromptTranscriptWithAttachments(const FString& PromptText, const TArray<FString>& AttachmentPaths)
+    {
+        if (AttachmentPaths.Num() == 0)
+        {
+            return PromptText;
+        }
+
+        FString TranscriptText = PromptText.TrimStartAndEnd().IsEmpty()
+            ? FString(TEXT("Attached files"))
+            : PromptText;
+        TranscriptText += TEXT("\n\nAttached files:");
+        for (const FString& AttachmentPath : AttachmentPaths)
+        {
+            TranscriptText += FString::Printf(TEXT("\n- %s"), *FPaths::GetCleanFilename(AttachmentPath));
+        }
+        return TranscriptText;
+    }
+}
+
 bool FOpenCodeAcpClient::SendPrompt(const FString& PromptText)
 {
-    if (!bReady || bPromptInFlight || PromptText.TrimStartAndEnd().IsEmpty())
+    static const TArray<FString> NoAttachments;
+    return SendPrompt(PromptText, NoAttachments);
+}
+
+bool FOpenCodeAcpClient::SendPrompt(const FString& PromptText, const TArray<FString>& AttachmentPaths)
+{
+    if (!bReady || bPromptInFlight || (PromptText.TrimStartAndEnd().IsEmpty() && AttachmentPaths.Num() == 0))
     {
         return false;
     }
@@ -42,12 +112,18 @@ bool FOpenCodeAcpClient::SendPrompt(const FString& PromptText)
         }
     }
 
-    auto TextBlock = MakeObject();
-    TextBlock->SetStringField(TEXT("type"), TEXT("text"));
-    TextBlock->SetStringField(TEXT("text"), PromptForAcp);
-
     TArray<TSharedPtr<FJsonValue>> Prompt;
-    Prompt.Add(MakeShared<FJsonValueObject>(TextBlock));
+    if (!PromptForAcp.TrimStartAndEnd().IsEmpty())
+    {
+        Prompt.Add(MakeShared<FJsonValueObject>(MakePromptTextBlock(PromptForAcp)));
+    }
+    for (const FString& AttachmentPath : AttachmentPaths)
+    {
+        if (!AttachmentPath.TrimStartAndEnd().IsEmpty())
+        {
+            Prompt.Add(MakeShared<FJsonValueObject>(MakePromptResourceLinkBlock(AttachmentPath)));
+        }
+    }
 
     auto Params = MakeObject();
     Params->SetStringField(TEXT("sessionId"), SessionId);
@@ -60,7 +136,7 @@ bool FOpenCodeAcpClient::SendPrompt(const FString& PromptText)
         return false;
     }
 
-    AppendTranscript(TEXT("You"), PromptText);
+    AppendTranscript(TEXT("You"), FormatPromptTranscriptWithAttachments(PromptText, AttachmentPaths));
     ActivePromptRequestId = RequestId;
     bPromptInFlight = true;
     bCancelRequested = false;

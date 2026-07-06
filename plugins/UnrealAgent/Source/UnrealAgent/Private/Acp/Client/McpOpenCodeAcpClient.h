@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Acp/StudioKit/UnrealAgentStudioKit.h"
-#include "Containers/Queue.h"
 #include "CoreMinimal.h"
 #include "Delegates/Delegate.h"
 #include "Dom/JsonObject.h"
@@ -80,6 +79,13 @@ struct FOpenCodeAcpPermissionOption
     FString Kind;
 };
 
+struct FOpenCodeAcpCommandOption
+{
+    FString Name;
+    FString Description;
+    FString InputHint;
+};
+
 DECLARE_DELEGATE_OneParam(FOnOpenCodeAcpStatus, const FString&);
 DECLARE_DELEGATE_TwoParams(FOnOpenCodeAcpTranscript, const FString&, const FString&);
 DECLARE_DELEGATE_OneParam(FOnOpenCodeAcpPermission, const FString&);
@@ -100,6 +106,7 @@ public:
     bool IsRunning() const { return bRunning; }
     bool IsPromptInFlight() const { return bPromptInFlight; }
     bool IsCancelRequested() const { return bCancelRequested; }
+    bool IsUnrealMcpConfiguredForSession() const { return bUnrealMcpConfiguredForSession; }
     bool HasPendingPermission() const { return PendingPermissionId.IsValid(); }
     bool CanSelectModel() const { return bReady && !bPromptInFlight && SetModelRequestId == INDEX_NONE && !ModelConfigId.IsEmpty() && ModelOptions.Num() > 0; }
     bool CanSelectThinking() const { return bReady && !bPromptInFlight && SetThinkingRequestId == INDEX_NONE && !ThinkingConfigId.IsEmpty() && ThinkingOptions.Num() > 0; }
@@ -113,6 +120,7 @@ public:
     const TArray<FOpenCodeAcpModelOption>& GetModelOptions() const { return ModelOptions; }
     const TArray<FOpenCodeAcpThinkingOption>& GetThinkingOptions() const { return ThinkingOptions; }
     const TArray<FOpenCodeAcpAgentOption>& GetAgentOptions() const { return AgentOptions; }
+    const TArray<FOpenCodeAcpCommandOption>& GetAvailableCommands() const { return AvailableCommands; }
     bool HasContextWindowUsage() const { return ContextWindowSizeTokens > 0; }
     int32 GetContextWindowUsedTokens() const { return ContextWindowUsedTokens; }
     int32 GetContextWindowSizeTokens() const { return ContextWindowSizeTokens; }
@@ -123,6 +131,7 @@ public:
     bool ShouldAttachEditorContext() const { return bAttachEditorContext; }
 
     bool SendPrompt(const FString& PromptText);
+    bool SendPrompt(const FString& PromptText, const TArray<FString>& AttachmentPaths);
     FString RefreshEditorContext();
     bool RunProjectValidation();
     void SetAttachEditorContext(bool bEnabled) { bAttachEditorContext = bEnabled; }
@@ -180,6 +189,7 @@ private:
     void HandleThinkingUpdate(const TSharedPtr<FJsonObject>& Update);
     void HandleAgentUpdate(const TSharedPtr<FJsonObject>& Update);
     void HandleUsageUpdate(const TSharedPtr<FJsonObject>& Update);
+    void HandleAvailableCommandsUpdate(const TSharedPtr<FJsonObject>& Update);
     void SetCurrentModel(const FString& NewModel);
     FString FormatToolActivityTranscriptText(const TSharedPtr<FJsonObject>& Update, bool bStarted);
 
@@ -195,6 +205,8 @@ private:
     void AppendTranscript(const FString& Role, const FString& Text);
     void AppendTranscriptChunk(const FString& Role, const FString& Text);
     void ResetState();
+    void AddAvailableCommand(const FString& Name, const FString& Description, const FString& InputHint = FString());
+    void LoadStudioKitCommandSummariesFromDisk();
 
     FString FormatProcessErrorText(const FString& ErrorText) const;
 
@@ -230,6 +242,7 @@ private:
     TArray<FOpenCodeAcpModelOption> ModelOptions;
     TArray<FOpenCodeAcpThinkingOption> ThinkingOptions;
     TArray<FOpenCodeAcpAgentOption> AgentOptions;
+    TArray<FOpenCodeAcpCommandOption> AvailableCommands;
     FString PendingModel;
     FString PendingThinking;
     FString PendingAgent;
