@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import net from 'node:net';
 import { expectedCondition as conditionFromExpectation, splitExpectedConditions } from './expectation-utils.mjs';
-import { evaluateAssertions, selectCaptureValue } from './test-runner-response-utils.mjs';
+import { evaluateAssertions, selectCaptureValues, withServerTimeout } from './test-runner-response-utils.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,7 +34,7 @@ const infrastructureErrorCodes = [
   'texture_error', 'invalid_texture', 'source_invalid', 'lock_failed', 'node_not_found',
   'physics_failed', 'function_not_found'
 ];
-const baseCrashIndicators = ['1006', 'econnreset', 'socket hang up', 'connection lost', 'bridge disconnected', 'ue_not_connected', 'automation bridge not connected'];
+const baseCrashIndicators = ['econnreset', 'socket hang up', 'connection lost', 'bridge disconnected', 'ue_not_connected', 'automation bridge not connected'];
 const crashIndicatorsWithDisconnect = [...baseCrashIndicators, 'disconnect'];
 // Defaults for spawning the MCP server.
 let serverCommand = process.env.UNREAL_MCP_SERVER_CMD ?? 'node';
@@ -111,6 +111,34 @@ function collectResponseText(value) {
     return Object.values(value).map((entry) => collectResponseText(entry)).join(' ');
   }
   return '';
+}
+
+function hasCrashConnectionSignal({
+  errorText = '',
+  messageText = '',
+  contentText = '',
+  includeDisconnect = false
+}) {
+  const error = String(errorText).toLowerCase();
+  const message = String(messageText).toLowerCase();
+  const content = String(contentText).toLowerCase();
+  const combined = `${error} ${message} ${content}`;
+  const indicators = includeDisconnect
+    ? crashIndicatorsWithDisconnect
+    : baseCrashIndicators;
+  const hasNamedIndicator = indicators.some(
+    (indicator) => combined.includes(indicator)
+  );
+  const hasStandalone1006 =
+    error.trim() === '1006' || message.trim() === '1006';
+  const hasExplicitCloseCode1006 =
+    /\b(?:websocket|socket|connection)?\s*clos(?:e|ed)\b[^.\n]{0,40}\b(?:code\s*)?1006\b/i
+      .test(combined) ||
+    /\bclose\s+code\s*[:=]?\s*1006\b/i.test(combined);
+  const hasNotConnected = /\bnot connected\b/i.test(combined);
+
+  return hasNamedIndicator || hasStandalone1006 ||
+    hasExplicitCloseCode1006 || hasNotConnected;
 }
 
 function isRecord(value) {
@@ -347,14 +375,24 @@ export function evaluateExpectation(testCase, response) {
   const { actualError, actualMessage, messageStr, errorStr, contentStr, combined } = responseTextContext(response, responseOutcome);
   const isObjectExpectation = typeof expectation === 'object' && expectation !== null;
   const serializedResponse = JSON.stringify(response).toLowerCase();
+  const hasSpecificFailureAlternative = expectedConditions.some(
+    (condition, index) =>
+      index > 0 &&
+      condition !== 'error' &&
+      !successKeywords.some((keyword) => condition.includes(keyword))
+  );
   const matchedExplicitFailureAlternative = !actualSuccess && primaryExpectsSuccess
     ? findMatchedExplicitFailureAlternative(expectedConditions, combined)
     : null;
 
   // Hard placeholder signals must fail before success alternatives are evaluated.
   // Engine capability fallbacks such as "unsupported" or "not available" remain
-  // valid only when the expectation explicitly allows them.
-  const hardPluginFailureIndicators = ['does not match prefix', 'unknown', 'not implemented', 'not_implemented'];
+  // valid only when the expectation explicitly allows them. Restrict the hard
+  // list to placeholder-shaped indicators that are uniquely tied to
+  // not-yet-implemented actions, not the bare token "unknown" (which would
+  // also match legitimate "Unknown subAction." dispatcher errors and other
+  // surface messages).
+  const hardPluginFailureIndicators = ['does not match prefix', 'not implemented', 'not_implemented'];
   const hardPluginFailureText = `${messageStr} ${errorStr}`;
   const hasHardPluginFailure = hardPluginFailureIndicators.some(term => hardPluginFailureText.includes(term));
   if (primaryExpectsSuccess && hasHardPluginFailure) {
@@ -421,22 +459,16 @@ export function evaluateExpectation(testCase, response) {
   // FIX: Only check for crash indicators if response is NOT a success (success: true)
   // This prevents false positives where "Node disconnection partial" (a valid success message)
   // incorrectly matches "disconnect" as a substring.
-  // Word-boundary checks for ambiguous terms
-  const hasDisconnect = /\bdisconnect(ed)?\b/i.test(errorStr) || /\bdisconnect(ed)?\b/i.test(messageStr);
-  const hasConnectionLost = /\bconnection lost\b/i.test(errorStr) || /\bconnection lost\b/i.test(messageStr);
-  const hasNotConnected = /\bnot connected\b/i.test(errorStr) || /\bnot connected\b/i.test(messageStr);
+  const hasCrashIndicator = hasCrashConnectionSignal({
+    errorText: errorStr,
+    messageText: messageStr,
+    contentText: contentStr,
+    includeDisconnect: !actualSuccess
+  });
 
-  // Only include 'disconnect' as crash indicator when response indicates FAILURE
-  // This fixes false positives for disconnect_nodes action that returns "Disconnect operation completed."
-  const crashIndicators = actualSuccess ? baseCrashIndicators : crashIndicatorsWithDisconnect;
-  const hasCrashIndicator = (crashIndicators.some(ind =>
-    errorStr.includes(ind) || messageStr.includes(ind) || combined.includes(ind)
-  )) || hasDisconnect || hasConnectionLost || hasNotConnected;
-
-  // Only fail on crash indicators if response is NOT successful
-  // "Node disconnection partial" is a SUCCESS message, not a crash indicator
-  const responseSuccess = structuredSuccess === true;
-  const isActuallyCrash = hasCrashIndicator && !responseSuccess;
+  // Only fail on crash indicators if response is NOT successful.
+  // "Node disconnection partial" is a SUCCESS message, not a crash indicator.
+  const isActuallyCrash = hasCrashIndicator && !actualSuccess;
 
   const explicitlyExpectsCrash = lowerExpected.includes('disconnect') ||
     lowerExpected.includes('crash') ||
@@ -519,8 +551,15 @@ export function evaluateExpectation(testCase, response) {
       // CRITICAL FIX: If condition is "error" and response.isError is true, match it
       // This handles cases where the error message doesn't contain the word "error" but
       // isError: true clearly indicates an error state.
-      if (condition === 'error' && (response.isError === true || response.structuredContent?.isError === true)) {
+      if (
+        condition === 'error' &&
+        !hasSpecificFailureAlternative &&
+        (response.isError === true || response.structuredContent?.isError === true)
+      ) {
         return { passed: true, reason: `Expected condition met: isError=true` };
+      }
+      if (condition === 'error' && hasSpecificFailureAlternative) {
+        continue;
       }
 
       // Only allow substring match if:
@@ -548,6 +587,9 @@ export function evaluateExpectation(testCase, response) {
 
   // Also flag common automation/plugin failure phrases.
   // Placeholder/not-implemented responses must never satisfy success tests.
+  // Keep "unknown" in the broader list because it appears in legitimate
+  // dispatcher messages (e.g. "Unknown subAction."), but the hard short-circuit
+  // above intentionally excludes it so capability fallbacks are not over-rejected.
   const pluginFailureIndicators = ['does not match prefix', 'unknown', 'unavailable', 'unsupported', 'not implemented', 'not_implemented'];
   const pluginFailureText = `${messageStr} ${errorStr}`;
   const hasPluginFailure = pluginFailureIndicators.some(term => pluginFailureText.includes(term));
@@ -671,7 +713,7 @@ function createToolCaller(client, { useProgressTimeouts = false } = {}) {
 
     try {
       console.log(`[CALL] ${callOptions.name} (${timeoutLabel})`);
-      const outgoing = Object.assign({}, callOptions, { arguments: { ...(callOptions.arguments || {}), timeoutMs: serverTimeoutMs } });
+      const outgoing = withServerTimeout(callOptions, serverTimeoutMs);
       let callPromise;
       try {
         callPromise = client.callTool(outgoing, undefined, { timeout: clientTimeoutMs });
@@ -938,11 +980,10 @@ export async function runToolTests(toolName, testCases) {
     function captureResultValues(testCase, response) {
       if (!testCase.captureResult || !response?.structuredContent) return;
 
-      const { key, fromField } = testCase.captureResult;
-      if (!key || !fromField) return;
-
-      const value = selectCaptureValue(response.structuredContent, testCase.captureResult);
-      if (value !== undefined) {
+      for (const { key, value } of selectCaptureValues(
+        response.structuredContent,
+        testCase.captureResult
+      )) {
         capturedValues[key] = value;
         console.log(`📦 Captured: ${key} = ${value}`);
       }
@@ -1448,9 +1489,17 @@ export async function runToolTests(toolName, testCases) {
 
       try {
         // Resolve captured values in arguments before executing
-        const resolvedArgs = resolveCapturedValues(testCase.arguments, capturedValues, (captureKey) => {
-          console.warn(`⚠️  Captured value '${captureKey}' not found, using placeholder`);
-        });
+        const missingCaptures = [];
+        const resolvedArgs = resolveCapturedValues(
+          testCase.arguments,
+          capturedValues,
+          captureKey => missingCaptures.push(captureKey)
+        );
+        if (missingCaptures.length > 0) {
+          throw new Error(
+            `Missing captured test values: ${Array.from(new Set(missingCaptures)).join(', ')}`
+          );
+        }
         const response = await callToolOnce({ name: testCase.toolName, arguments: resolvedArgs }, testCaseTimeoutMs);
 
         const endTime = performance.now();
@@ -1542,8 +1591,10 @@ export async function runToolTests(toolName, testCases) {
         // unless the test explicitly expects disconnection. This prevents false positives
         // where tests like "error|not found" pass on crash/connection loss because
         // "error" matches any error message.
-        const crashIndicators = ['disconnect', '1006', 'econnreset', 'socket hang up', 'connection lost', 'bridge disconnected'];
-        const isCrashError = crashIndicators.some(ind => lowerError.includes(ind));
+        const isCrashError = hasCrashConnectionSignal({
+          errorText: lowerError,
+          includeDisconnect: true
+        });
         const explicitlyExpectsCrash = lowerExpected.includes('disconnect') ||
           lowerExpected.includes('crash') ||
           lowerExpected.includes('connection lost') ||
@@ -1657,7 +1708,12 @@ export async function runToolTests(toolName, testCases) {
 
   } catch (error) {
     console.error('Test runner failed:', error);
-    process.exit(1);
+    // Set exit code but rethrow so wrappers can catch failures via Promise.all
+    // or similar. The old behavior (process.exit(1)) skipped the rethrow and
+    // terminated the process immediately; this is the supported propagation
+    // shape for callers that wrap runToolTests in try/catch.
+    process.exitCode = 1;
+    throw error;
   } finally {
     if (client) {
       try {
@@ -1779,7 +1835,8 @@ export class TestRunner {
       process.exitCode = hasFailures ? 1 : 0;
     } catch (error) {
       console.error('Step-based test runner failed:', error);
-      process.exit(1);
+      process.exitCode = 1;
+      throw error;
     } finally {
       if (client) {
         try {

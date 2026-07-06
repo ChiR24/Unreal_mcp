@@ -98,6 +98,10 @@ export function evaluateAssertions(testCase, response) {
       return { passed: false, reason: `${label}: expected array length ${assertion.length}, got ${Array.isArray(actual) ? actual.length : typeof actual}` };
     }
 
+    if (Object.prototype.hasOwnProperty.call(assertion, 'minLength') && (!Array.isArray(actual) || actual.length < assertion.minLength)) {
+      return { passed: false, reason: `${label}: expected array length at least ${assertion.minLength}, got ${Array.isArray(actual) ? actual.length : typeof actual}` };
+    }
+
     if (assertion.includesObject) {
       if (!Array.isArray(actual) || !actual.some((entry) => matchesObjectSubset(entry, assertion.includesObject))) {
         return { passed: false, reason: `${label}: no array item matched ${JSON.stringify(assertion.includesObject)}` };
@@ -129,4 +133,30 @@ export function selectCaptureValue(structuredContent, captureResult) {
   }
 
   return selectField ? getValueAtPath(value, selectField) : value;
+}
+
+export function selectCaptureValues(structuredContent, captureResult) {
+  const captures = Array.isArray(captureResult)
+    ? captureResult
+    : [captureResult];
+  const values = [];
+
+  for (const capture of captures) {
+    const { key, fromField } = capture ?? {};
+    if (!key || !fromField) continue;
+    const value = selectCaptureValue(structuredContent, capture);
+    if (value !== undefined) {
+      values.push({ key, value });
+    }
+  }
+
+  return values;
+}
+
+export function withServerTimeout(callOptions, serverTimeoutMs) {
+  const args = { ...(callOptions.arguments ?? {}) };
+  if (!Object.prototype.hasOwnProperty.call(args, 'timeoutMs')) {
+    args.timeoutMs = serverTimeoutMs;
+  }
+  return { ...callOptions, arguments: args };
 }
