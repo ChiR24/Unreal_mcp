@@ -23,10 +23,13 @@ namespace WidgetAuthoringHandlers
 using namespace WidgetAuthoringHelpers;
 
 // Create a real UK2Node_ComponentBoundEvent for an arbitrary multicast delegate on a
-// widget component — the same path the Designer's "+ <Event>" button uses. Mirrors the
-// bind_on_clicked implementation so OnHovered / OnValueChanged author genuine nodes
-// (nodeId + compileSucceeded) instead of returning an instruction string. Sends the
-// response itself and always returns true (request handled).
+// widget component — the same path the Designer's "+ <Event>" button uses. Shared by
+// bind_on_clicked / bind_on_hovered / bind_on_value_changed so all three author genuine
+// nodes (nodeId + compileSucceeded) through one code path. Idempotent: a repeat call
+// reuses the existing bound event and leaves the asset untouched (no dirty / recompile).
+// Response contract: functionName echoes the request input; the real handler is
+// engine-generated and returned as eventFunctionName (CustomFunctionName).
+// Sends the response itself and always returns true (request handled).
 static bool BindComponentDelegateEvent(
     UMcpAutomationBridgeSubsystem& Subsystem,
     const FString& RequestId,
@@ -89,6 +92,9 @@ static bool BindComponentDelegateEvent(
         BoundNode = Creator.CreateNode(false);
         BoundNode->InitializeComponentBoundEventParams(CompProp, DelegateProp);
         Creator.Finalize();
+        // Adding a bound-event node is a structural change (new function entry on the class) — same call the
+        // Designer's FKismetEditorUtilities::CreateNewBoundEventForComponent path makes after node creation.
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
         bCreatedNew = true;
         bBlueprintChanged = true;
     }
@@ -156,85 +162,9 @@ bool HandleWidgetAuthoringEventBindings(
             return true;
         }
 
-        // Create a real UK2Node_ComponentBoundEvent bound to the button's OnClicked
-        // multicast delegate — the exact node the Designer's "+ OnClicked" adds.
-        // Track whether we actually mutate the blueprint so the reuse path stays
-        // side-effect free (no dirty / recompile when nothing changed).
-        bool bBlueprintChanged = false;
-        if (!ButtonWidget->bIsVariable)
-        {
-            ButtonWidget->Modify();
-            ButtonWidget->bIsVariable = true;
-            FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-            bBlueprintChanged = true;
-        }
-
-        FMulticastDelegateProperty* DelegateProp =
-            FindFProperty<FMulticastDelegateProperty>(UButton::StaticClass(), FName(TEXT("OnClicked")));
-        if (!DelegateProp)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("OnClicked delegate not found on UButton"), TEXT("DELEGATE_NOT_FOUND"));
-            return true;
-        }
-
-        FObjectProperty* CompProp =
-            FindFProperty<FObjectProperty>(WidgetBP->SkeletonGeneratedClass, FName(*SlotName));
-        if (!CompProp)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Component variable '%s' not found on widget skeleton class"), *SlotName),
-                TEXT("COMPONENT_PROPERTY_NOT_FOUND"));
-            return true;
-        }
-
-        UEdGraph* EventGraph = FBlueprintEditorUtils::FindEventGraph(WidgetBP);
-        if (!EventGraph)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Event graph not found on widget blueprint"), TEXT("EVENT_GRAPH_NOT_FOUND"));
-            return true;
-        }
-
-        // Idempotent: reuse an existing bound event for this delegate+component.
-        const UK2Node_ComponentBoundEvent* Existing =
-            FKismetEditorUtilities::FindBoundEventForComponent(WidgetBP, DelegateProp->GetFName(), CompProp->GetFName());
-
-        UK2Node_ComponentBoundEvent* BoundNode = const_cast<UK2Node_ComponentBoundEvent*>(Existing);
-        bool bCreatedNew = false;
-        if (!BoundNode)
-        {
-            EventGraph->Modify();
-            FGraphNodeCreator<UK2Node_ComponentBoundEvent> Creator(*EventGraph);
-            BoundNode = Creator.CreateNode(false);
-            BoundNode->InitializeComponentBoundEventParams(CompProp, DelegateProp);
-            Creator.Finalize();
-            bCreatedNew = true;
-            bBlueprintChanged = true;
-        }
-
-        // Only dirty + recompile when something actually changed — a repeat
-        // bind_on_clicked that reuses the existing node leaves the asset untouched.
-        bool bCompiled = true;
-        if (bBlueprintChanged)
-        {
-            FBlueprintEditorUtils::MarkBlueprintAsModified(WidgetBP);
-            bCompiled = McpSafeCompileBlueprint(WidgetBP);
-        }
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("slotName"), SlotName);
-        ResultJson->SetStringField(TEXT("eventType"), TEXT("OnClicked"));
-        // Response contract: functionName echoes the request input (default "OnButtonClicked").
-        // The real handler is engine-generated -- returned as eventFunctionName
-        // (UK2Node_ComponentBoundEvent::CustomFunctionName). Reference the handler via that.
-        ResultJson->SetStringField(TEXT("functionName"), FunctionName);
-        ResultJson->SetBoolField(TEXT("bound"), true);
-        ResultJson->SetBoolField(TEXT("createdNew"), bCreatedNew);
-        ResultJson->SetBoolField(TEXT("compileSucceeded"), bCompiled);
-        ResultJson->SetStringField(TEXT("nodeId"), BoundNode->NodeGuid.ToString());
-        ResultJson->SetStringField(TEXT("eventFunctionName"), BoundNode->CustomFunctionName.ToString());
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("OnClicked event bound"), ResultJson);
-        return true;
+        return BindComponentDelegateEvent(Subsystem, RequestId, RequestingSocket, ResultJson,
+            WidgetBP, ButtonWidget, SlotName, UButton::StaticClass(), FName(TEXT("OnClicked")),
+            TEXT("OnClicked"), FunctionName);
     }
 
     if (SubAction.Equals(TEXT("bind_on_hovered"), ESearchCase::IgnoreCase))
