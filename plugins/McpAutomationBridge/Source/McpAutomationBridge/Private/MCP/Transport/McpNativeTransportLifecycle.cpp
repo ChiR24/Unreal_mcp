@@ -16,7 +16,8 @@ FMcpNativeTransport::~FMcpNativeTransport()
 }
 
 bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoadAllTools,
-	const FString& InUserInstructions, const FString& InListenHost, bool bInAllowNonLoopback)
+	const FString& InUserInstructions, const FString& InListenHost,
+	bool bInAllowNonLoopback)
 {
 	if (Port <= 0 || Port > 65535)
 	{
@@ -29,7 +30,6 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 	UserInstructions = InUserInstructions;
 	bAllowNonLoopback = bInAllowNonLoopback;
 
-	// Validate listen host against loopback policy
 	ListenHost = InListenHost.IsEmpty() ? TEXT("127.0.0.1") : InListenHost;
 	if (ListenHost.Equals(TEXT("localhost"), ESearchCase::IgnoreCase))
 	{
@@ -40,19 +40,19 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 		ListenHost = TEXT("::1");
 	}
 
-	bool bIsLoopback = ListenHost == TEXT("127.0.0.1") || ListenHost == TEXT("::1");
+	const bool bIsLoopback =
+		ListenHost == TEXT("127.0.0.1") || ListenHost == TEXT("::1");
 	if (!bIsLoopback && !bAllowNonLoopback)
 	{
 		UE_LOG(LogMcpNativeTransport, Warning,
-			TEXT("ListenHost '%s' is not loopback and AllowNonLoopback is false — falling back to 127.0.0.1"),
+			TEXT("ListenHost '%s' is not loopback and AllowNonLoopback is false; falling back to 127.0.0.1"),
 			*ListenHost);
 		ListenHost = TEXT("127.0.0.1");
 	}
 	else if (!bIsLoopback)
 	{
 		UE_LOG(LogMcpNativeTransport, Warning,
-			TEXT("SECURITY: Binding to non-loopback address '%s'. Native MCP is exposed to your local network."),
-			*ListenHost);
+			TEXT("SECURITY: Native MCP is binding to an explicitly allowed non-loopback address"));
 	}
 
 	// Load server identity & instructions from server-info.json
@@ -141,7 +141,10 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 void FMcpNativeTransport::Stop()
 {
 	// FRunnable::Stop() — lightweight signal, called by Thread->Kill()
-	bStopping.store(true);
+	{
+		FScopeLock SessionLock(&SessionMutex);
+		bStopping.store(true);
+	}
 	if (StopEvent)
 	{
 		StopEvent->Trigger();
@@ -202,6 +205,11 @@ void FMcpNativeTransport::Shutdown()
 		}
 	}
 
+	if (Subsystem)
+	{
+		Subsystem->CancelAllAutomationRequests();
+	}
+
 	if (StopEvent)
 	{
 		FPlatformProcess::ReturnSynchEventToPool(StopEvent);
@@ -213,6 +221,18 @@ void FMcpNativeTransport::Shutdown()
 	{
 		ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 		FScopeLock Lock(&SSEConnectionsMutex);
+		// First pass: mark every conn for removal under SSEConnectionsMutex so
+		// any SendSSEProgressUpdate / CompletePendingRequest async task that
+		// has not yet acquired the lock bails out at its bMarkedForRemoval
+		// check. WriteMutex then serializes with any writer that already
+		// passed the check.
+		for (auto& [RequestId, Conn] : SSEConnections)
+		{
+			if (Conn.IsValid())
+			{
+				Conn->bMarkedForRemoval.store(true);
+			}
+		}
 		for (auto& [RequestId, Conn] : SSEConnections)
 		{
 			if (Conn.IsValid())
@@ -258,6 +278,8 @@ void FMcpNativeTransport::Shutdown()
 	{
 		FScopeLock Lock(&SessionMutex);
 		ActiveSessions.Empty();
+		SessionRateStates.Empty();
+		ClientRateStates.Empty();
 	}
 	{
 		FScopeLock Lock(&LogEventSubscriptionsMutex);

@@ -26,7 +26,8 @@ int32 FMcpNativeTransport::BroadcastNotification(
 		StreamSnapshot.Reserve(NotificationStreams.Num());
 		for (auto& [StreamId, Stream] : NotificationStreams)
 		{
-			if (Stream.IsValid() && !Stream->bMarkedForRemoval.load())
+			if (Stream.IsValid() && Stream->bReady.load() &&
+				!Stream->bMarkedForRemoval.load())
 			{
 				StreamSnapshot.Add(Stream);
 			}
@@ -93,7 +94,7 @@ int32 FMcpNativeTransport::BroadcastLogEventNotification(
 		FScopeLock Lock(&NotificationStreamsMutex);
 		for (auto& [StreamId, Stream] : NotificationStreams)
 		{
-			if (Stream.IsValid() &&
+			if (Stream.IsValid() && Stream->bReady.load() &&
 				!Stream->bMarkedForRemoval.load() &&
 				SubscribedSessions.Contains(Stream->SessionId))
 			{
@@ -110,54 +111,6 @@ void FMcpNativeTransport::HandleGetMcp(FSocket* ClientSocket, const FString& Ses
 {
 	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 
-	// Check per-session stream limit
-	{
-		FScopeLock Lock(&NotificationStreamsMutex);
-		int32 SessionStreamCount = 0;
-		int32 ActiveStreamCount = 0;
-		for (const auto& [Id, Stream] : NotificationStreams)
-		{
-			if (!Stream.IsValid() || Stream->bMarkedForRemoval.load())
-			{
-				continue;
-			}
-			++ActiveStreamCount;
-			if (Stream->SessionId == SessionId)
-			{
-				++SessionStreamCount;
-			}
-		}
-		if (ActiveStreamCount >= MaxTotalNotificationStreams)
-		{
-			Lock.Unlock();
-			SendHttpResponse(ClientSocket, 429, TEXT("text/plain"),
-				FString::Printf(TEXT("Too Many Requests: max %d notification streams"),
-					MaxTotalNotificationStreams), {}, CorsOrigin);
-			ClientSocket->Close();
-			SocketSub->DestroySocket(ClientSocket);
-			return;
-		}
-		if (SessionStreamCount >= MaxNotificationStreamsPerSession)
-		{
-			Lock.Unlock();
-			SendHttpResponse(ClientSocket, 429, TEXT("text/plain"),
-				FString::Printf(TEXT("Too Many Requests: max %d notification streams per session"),
-					MaxNotificationStreamsPerSession), {}, CorsOrigin);
-			ClientSocket->Close();
-			SocketSub->DestroySocket(ClientSocket);
-			return;
-		}
-	}
-
-	// Send SSE headers
-	if (!SendSSEHeaders(ClientSocket, SessionId, CorsOrigin))
-	{
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
-		return;
-	}
-
-	// Park socket as notification stream
 	const double Now = FPlatformTime::Seconds();
 	TSharedPtr<FNotificationStream> Stream = MakeShared<FNotificationStream>();
 	Stream->Socket = ClientSocket;
@@ -166,15 +119,122 @@ void FMcpNativeTransport::HandleGetMcp(FSocket* ClientSocket, const FString& Ses
 	Stream->StartTime = Now;
 	Stream->LastKeepaliveTime = Now;
 
+	bool bStreamLimitReached = false;
+	bool bSessionStreamLimitReached = false;
+	bool bSessionInvalid = false;
 	{
-		FScopeLock Lock(&NotificationStreamsMutex);
-		NotificationStreams.Add(Stream->StreamId, Stream);
+		// Session validity is checked under SessionMutex; the lock is released
+		// before acquiring NotificationStreamsMutex to keep the global lock
+		// order documented in McpNativeTransport.h (no nested Session→Stream
+		// critical sections). The TOCTOU window (session expiring between
+		// check and add) is bounded: CloseSessionConnections removes the
+		// stream entry on session timeout.
+		FScopeLock SessionLock(&SessionMutex);
+		if (!ActiveSessions.Contains(SessionId))
+		{
+			bSessionInvalid = true;
+		}
 	}
+	if (!bSessionInvalid)
+	{
+		FScopeLock StreamLock(&NotificationStreamsMutex);
+		int32 SessionStreamCount = 0;
+		int32 ActiveStreamCount = 0;
+		for (const auto& [Id, ExistingStream] : NotificationStreams)
+		{
+			if (!ExistingStream.IsValid() ||
+				ExistingStream->bMarkedForRemoval.load())
+			{
+				continue;
+			}
+			++ActiveStreamCount;
+			if (ExistingStream->SessionId == SessionId)
+			{
+				++SessionStreamCount;
+			}
+		}
+		if (ActiveStreamCount >= MaxTotalNotificationStreams)
+		{
+			bStreamLimitReached = true;
+		}
+		else if (SessionStreamCount >=
+			MaxNotificationStreamsPerSession)
+		{
+			bSessionStreamLimitReached = true;
+		}
+		else
+		{
+			NotificationStreams.Add(Stream->StreamId, Stream);
+		}
+	}
+	// Re-check session validity after the add to close the TOCTOU window;
+	// if the session was closed between the initial check and the stream
+	// add, the new stream is stale and must be removed before headers
+	// are sent. Cleanup uses the captured shared pointer for the socket,
+	// so removal from the map is safe.
+	if (!bSessionInvalid && !bStreamLimitReached && !bSessionStreamLimitReached)
+	{
+		bool bClosed;
+		{ FScopeLock L(&SessionMutex); bClosed = !ActiveSessions.Contains(SessionId); }
+		if (bClosed) {
+			FScopeLock L(&NotificationStreamsMutex);
+			NotificationStreams.Remove(Stream->StreamId);
+			bSessionInvalid = true;
+		}
+	}
+	if (bSessionInvalid)
+	{
+		SendHttpResponse(ClientSocket, 404, TEXT("text/plain"),
+			TEXT("Invalid or expired session ID"), {}, CorsOrigin);
+		ClientSocket->Close();
+		SocketSub->DestroySocket(ClientSocket);
+		return;
+	}
+	if (bStreamLimitReached || bSessionStreamLimitReached)
+	{
+		const FString LimitMessage = bStreamLimitReached
+			? FString::Printf(
+				TEXT("Too Many Requests: max %d notification streams"),
+				MaxTotalNotificationStreams)
+			: FString::Printf(
+				TEXT("Too Many Requests: max %d notification streams per session"),
+				MaxNotificationStreamsPerSession);
+		SendHttpResponse(ClientSocket, 429, TEXT("text/plain"),
+			LimitMessage, {}, CorsOrigin);
+		ClientSocket->Close();
+		SocketSub->DestroySocket(ClientSocket);
+		return;
+	}
+
+	bool bHeadersSent = false;
+	{
+		FScopeLock WriteLock(&Stream->WriteMutex);
+		if (Stream->Socket)
+		{
+			bHeadersSent = SendSSEHeaders(
+				Stream->Socket, SessionId, CorsOrigin);
+			if (!bHeadersSent)
+			{
+				Stream->Socket->Close();
+				SocketSub->DestroySocket(Stream->Socket);
+				Stream->Socket = nullptr;
+			}
+		}
+	}
+	if (!bHeadersSent)
+	{
+		{
+			FScopeLock Lock(&NotificationStreamsMutex);
+			NotificationStreams.Remove(Stream->StreamId);
+		}
+		return;
+	}
+	Stream->bReady.store(true);
 	TouchSession(SessionId);
 
 	UE_LOG(LogMcpNativeTransport, Log,
-		TEXT("GET /mcp: notification stream %s opened for session %s"),
-		*Stream->StreamId, *SessionId);
+		TEXT("GET /mcp: notification stream %s opened"),
+		*Stream->StreamId);
 	// Socket is parked — do NOT close it. Thread pool slot is released.
 }
 
@@ -222,5 +282,3 @@ void FMcpNativeTransport::CloseNotificationStream(TSharedPtr<FNotificationStream
 		Stream->Socket = nullptr;
 	}
 }
-
-// ─── Initialize ─────────────────────────────────────────────────────────────

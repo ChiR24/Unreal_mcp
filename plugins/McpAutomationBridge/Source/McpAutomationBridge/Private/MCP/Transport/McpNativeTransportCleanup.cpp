@@ -5,25 +5,29 @@ void FMcpNativeTransport::CleanupStaleRequests()
 	const double Now = FPlatformTime::Seconds();
 
 	// Clean up timed-out SSE connections
-	TArray<FString> Expired;
+	TMap<FString, double> Expired;
 	{
 		FScopeLock Lock(&SSEConnectionsMutex);
 		for (const auto& [RequestId, Conn] : SSEConnections)
 		{
-			if (Conn.IsValid() && (Now - Conn->StartTime > RequestTimeoutSeconds
-				|| Conn->bMarkedForRemoval.load()))
+				if (Conn.IsValid() && (Now - Conn->StartTime > Conn->TimeoutSeconds
+					|| Conn->bMarkedForRemoval.load()))
 			{
-				Expired.Add(RequestId);
+				Expired.Add(RequestId, Conn->TimeoutSeconds);
 			}
 		}
 	}
 
-	for (const FString& RequestId : Expired)
+	for (const TPair<FString, double>& Entry : Expired)
 	{
 		UE_LOG(LogMcpNativeTransport, Warning,
 			TEXT("SSE request %s timed out after %.0f seconds"),
-			*RequestId, RequestTimeoutSeconds);
-		CompletePendingRequest(RequestId, false, TEXT("Request timed out"),
+				*Entry.Key, Entry.Value);
+		if (Subsystem)
+		{
+			Subsystem->CancelAutomationRequest(Entry.Key);
+		}
+		CompletePendingRequest(Entry.Key, false, TEXT("Request timed out"),
 			nullptr, TEXT("TIMEOUT"));
 	}
 
@@ -41,17 +45,25 @@ void FMcpNativeTransport::CleanupStaleRequests()
 		for (const FString& SessionId : ExpiredSessions)
 		{
 			ActiveSessions.Remove(SessionId);
+			SessionRateStates.Remove(SessionId);
 			UE_LOG(LogMcpNativeTransport, Log,
-				TEXT("Session %s expired after %.0f min inactivity (remaining: %d)"),
-				*SessionId, SessionTimeoutSeconds / 60.0, ActiveSessions.Num());
+				TEXT("Session expired after %.0f min inactivity (remaining: %d)"),
+				SessionTimeoutSeconds / 60.0, ActiveSessions.Num());
+		}
+		for (auto It = ClientRateStates.CreateIterator(); It; ++It)
+		{
+			if (Now - It.Value().LastActivity >
+				SessionRateWindowSeconds * 2.0)
+			{
+				It.RemoveCurrent();
+			}
 		}
 	}
 	if (ExpiredSessions.Num() > 0)
 	{
-		FScopeLock Lock(&LogEventSubscriptionsMutex);
 		for (const FString& SessionId : ExpiredSessions)
 		{
-			LogEventSubscribedSessions.Remove(SessionId);
+			CloseSessionConnections(SessionId);
 		}
 	}
 
@@ -104,8 +116,7 @@ void FMcpNativeTransport::CleanupStaleRequests()
 			{
 				CloseNotificationStream(Stream);
 				UE_LOG(LogMcpNativeTransport, Log,
-					TEXT("Notification stream %s closed (session=%s)"),
-					*StreamId, *Stream->SessionId);
+					TEXT("Notification stream %s closed"), *StreamId);
 			}
 		}
 
@@ -159,7 +170,8 @@ void FMcpNativeTransport::SweepNotificationKeepalives()
 		for (auto& [StreamId, Stream] : NotificationStreams)
 		{
 			if (Stream.IsValid() && !Stream->bMarkedForRemoval.load()
-				&& Now - Stream->LastKeepaliveTime >= KeepaliveIntervalSeconds)
+				&& Now - Stream->LastKeepaliveTime >= KeepaliveIntervalSeconds
+				&& Stream->bReady.load())
 			{
 				AliveSnapshot.Add(Stream);
 			}

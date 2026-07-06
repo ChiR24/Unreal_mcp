@@ -86,39 +86,13 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 				FScopeLock Lock(&SessionMutex);
 				if (ActiveSessions.Remove(HttpReq.SessionId) > 0)
 				{
+					SessionRateStates.Remove(HttpReq.SessionId);
 					UE_LOG(LogMcpNativeTransport, Log,
-						TEXT("Session %s terminated by client (remaining: %d)"),
-						*HttpReq.SessionId, ActiveSessions.Num());
+						TEXT("Session terminated by client (remaining: %d)"),
+						ActiveSessions.Num());
 				}
 			}
-			{
-				FScopeLock Lock(&LogEventSubscriptionsMutex);
-				LogEventSubscribedSessions.Remove(HttpReq.SessionId);
-			}
-
-			// Close notification streams belonging to this session
-			TArray<FString> StreamsToClose;
-			{
-				FScopeLock Lock(&NotificationStreamsMutex);
-				for (const auto& [StreamId, Stream] : NotificationStreams)
-				{
-					if (Stream.IsValid() && Stream->SessionId == HttpReq.SessionId)
-					{
-						StreamsToClose.Add(StreamId);
-					}
-				}
-			}
-			for (const FString& StreamId : StreamsToClose)
-			{
-				TSharedPtr<FNotificationStream> Stream;
-				{
-					FScopeLock Lock(&NotificationStreamsMutex);
-					NotificationStreams.RemoveAndCopyValue(StreamId, Stream);
-				}
-				CloseNotificationStream(Stream);
-				UE_LOG(LogMcpNativeTransport, Log,
-					TEXT("Closed notification stream %s (session terminated)"), *StreamId);
-			}
+			CloseSessionConnections(HttpReq.SessionId);
 		}
 		SendHttpResponse(ClientSocket, 200, TEXT("text/plain"), FString(), {}, HttpReq.Origin);
 		ClientSocket->Close();
@@ -205,6 +179,20 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 			SocketSub->DestroySocket(ClientSocket);
 			return;
 		}
+		FString RateLimitError;
+		if (!ConsumeSessionRequestBudget(
+				HttpReq.SessionId, Rpc.Method == TEXT("tools/call"),
+				RateLimitError))
+		{
+			const FString ErrorBody = FMcpJsonRpc::BuildError(
+				Rpc.Id, FMcpJsonRpc::ErrorRateLimited, RateLimitError);
+			SendHttpResponse(
+				ClientSocket, 429, TEXT("application/json"), ErrorBody, {},
+				HttpReq.Origin);
+			ClientSocket->Close();
+			SocketSub->DestroySocket(ClientSocket);
+			return;
+		}
 	}
 
 	// Notifications (no id) — 202 Accepted after session validation.
@@ -223,10 +211,49 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 	if (Rpc.Method == TEXT("initialize"))
 	{
 		FString NewSessionId;
-		FString ResponseBody = HandleInitialize(Rpc.Params, Rpc.Id, NewSessionId);
+		// Extract the remote IP:port for the rate-limit key. ClientSocket
+		// may be null in test harnesses; fall back to an empty string so the
+		// build key degrades to a clientInfo-only hash (less precise, but
+		// never weaker than the prior behavior).
+		FString ConnectionRemoteAddr;
+		if (ClientSocket)
+		{
+			TSharedRef<FInternetAddr> RemoteAddr =
+				ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
+			if (ClientSocket->GetAddress(*RemoteAddr))
+			{
+				ConnectionRemoteAddr = RemoteAddr->ToString(true);
+			}
+		}
+		FString ResponseBody = HandleInitialize(
+			Rpc.Params, Rpc.Id, NewSessionId, ConnectionRemoteAddr);
+		if (NewSessionId.IsEmpty())
+		{
+			SendHttpResponse(
+				ClientSocket, 429, TEXT("application/json"), ResponseBody, {},
+				HttpReq.Origin);
+			ClientSocket->Close();
+			SocketSub->DestroySocket(ClientSocket);
+			return;
+		}
 		TMap<FString, FString> Headers;
 		Headers.Add(TEXT("Mcp-Session-Id"), NewSessionId);
-		SendHttpResponse(ClientSocket, 200, TEXT("application/json"), ResponseBody, Headers, HttpReq.Origin);
+		const bool bResponseSent = SendHttpResponse(
+			ClientSocket, 200, TEXT("application/json"), ResponseBody, Headers,
+			HttpReq.Origin);
+		if (bResponseSent)
+		{
+			MarkSessionInitializationComplete(NewSessionId);
+		}
+		else
+		{
+			{
+				FScopeLock Lock(&SessionMutex);
+				ActiveSessions.Remove(NewSessionId);
+				SessionRateStates.Remove(NewSessionId);
+			}
+			CloseSessionConnections(NewSessionId);
+		}
 		ClientSocket->Close();
 		SocketSub->DestroySocket(ClientSocket);
 		return;
