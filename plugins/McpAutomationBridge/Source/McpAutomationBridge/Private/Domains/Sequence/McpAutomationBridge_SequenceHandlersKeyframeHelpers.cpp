@@ -29,7 +29,7 @@ FGuid ResolveBindingGuid(UMovieScene *MovieScene, const FString &BindingIdStr,
 }
 
 bool AddPropertyKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
-                         const FString &PropertyName, double Frame,
+                         const FString &PropertyName, FFrameNumber TickFrame,
                          const TSharedPtr<FJsonObject> &LocalPayload,
                          FString &OutMessage) {
   const TSharedPtr<FJsonValue> Val = LocalPayload->TryGetField(TEXT("value"));
@@ -47,14 +47,6 @@ bool AddPropertyKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
       UMovieSceneFloatSection *Section = Cast<UMovieSceneFloatSection>(
           Track->FindOrAddSection(0, bSectionAdded));
       if (Section) {
-        FFrameRate TickResolution = MovieScene->GetTickResolution();
-        FFrameRate DisplayRate = MovieScene->GetDisplayRate();
-        FFrameNumber FrameNum = FFrameNumber(static_cast<int32>(Frame));
-        FFrameNumber TickFrame =
-            FFrameRate::TransformTime(FFrameTime(FrameNum), DisplayRate,
-                                      TickResolution)
-                .GetFrame();
-
         FMovieSceneFloatChannel *Channel =
             Section->GetChannelProxy().GetChannel<FMovieSceneFloatChannel>(0);
         if (Channel) {
@@ -80,14 +72,6 @@ bool AddPropertyKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
       UMovieSceneBoolSection *Section = Cast<UMovieSceneBoolSection>(
           Track->FindOrAddSection(0, bSectionAdded));
       if (Section) {
-        FFrameRate TickResolution = MovieScene->GetTickResolution();
-        FFrameRate DisplayRate = MovieScene->GetDisplayRate();
-        FFrameNumber FrameNum = FFrameNumber(static_cast<int32>(Frame));
-        FFrameNumber TickFrame =
-            FFrameRate::TransformTime(FFrameTime(FrameNum), DisplayRate,
-                                      TickResolution)
-                .GetFrame();
-
         FMovieSceneBoolChannel *Channel =
             Section->GetChannelProxy().GetChannel<FMovieSceneBoolChannel>(0);
         if (Channel) {

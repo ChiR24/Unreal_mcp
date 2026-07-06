@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
+#include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
 
 namespace {
 bool NormalizeSequenceTransformAlias(const TSharedPtr<FJsonObject> &Payload,
@@ -85,6 +86,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
   if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
     UMovieScene *MovieScene = LevelSeq->GetMovieScene();
     if (MovieScene) {
+      FFrameNumber TickFrame;
+      FString FrameError;
+      if (!McpSequenceFrameMath::TryTransformFrameFloor(
+              Frame, MovieScene->GetDisplayRate(),
+              MovieScene->GetTickResolution(), TickFrame, FrameError)) {
+        SendAutomationResponse(Socket, RequestId, false, FrameError, nullptr,
+                               TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
       FGuid BindingGuid =
           McpSequenceKeyframes::ResolveBindingGuid(MovieScene, BindingIdStr,
                                                    ActorName);
@@ -109,7 +119,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
 
       if (PropertyName.Equals(TEXT("Transform"), ESearchCase::IgnoreCase)) {
         if (McpSequenceKeyframes::AddTransformKeyframe(
-                MovieScene, BindingGuid, Frame, LocalPayload)) {
+                MovieScene, BindingGuid, TickFrame, LocalPayload)) {
           SendAutomationResponse(Socket, RequestId, true,
                                  TEXT("Keyframe added"), nullptr, FString());
           return true;
@@ -117,7 +127,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
       } else {
         FString SuccessMessage;
         if (McpSequenceKeyframes::AddPropertyKeyframe(
-                MovieScene, BindingGuid, PropertyName, Frame, LocalPayload,
+                MovieScene, BindingGuid, PropertyName, TickFrame, LocalPayload,
                 SuccessMessage)) {
           SendAutomationResponse(Socket, RequestId, true, SuccessMessage,
                                  nullptr);
