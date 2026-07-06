@@ -1,6 +1,7 @@
 #include "Domains/Render/McpAutomationBridge_RenderHandlersPrivate.h"
 #include "Domains/Render/McpAutomationBridge_RenderLightingChannels.h"
 #include "Domains/Render/McpAutomationBridge_RenderSupport.h"
+#include "Domains/Render/McpAutomationBridge_RenderSupportSettings.h"
 
 #include "Domains/Lighting/McpAutomationBridge_LightingHandlersPrivate.h"
 #include "McpAutomationBridgeSubsystem.h"

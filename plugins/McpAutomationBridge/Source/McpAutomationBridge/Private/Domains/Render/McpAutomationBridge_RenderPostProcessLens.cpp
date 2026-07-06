@@ -1,5 +1,7 @@
 #include "Domains/Render/McpAutomationBridge_RenderHandlersPrivate.h"
 #include "Domains/Render/McpAutomationBridge_RenderSupport.h"
+#include "Domains/Render/McpAutomationBridge_RenderSupportEnums.h"
+#include "Domains/Render/McpAutomationBridge_RenderSupportSettings.h"
 
 #include "McpAutomationBridgeSubsystem.h"
 
@@ -11,22 +13,6 @@ namespace McpRenderHandlers
 {
 namespace
 {
-APostProcessVolume* RequirePostVolume(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
-{
-    FString Reference;
-    ReadActorReference(Payload, Reference);
-    APostProcessVolume* Volume = Cast<APostProcessVolume>(FindRenderActor(Reference));
-    if (!Volume)
-    {
-        Subsystem->SendAutomationError(Socket, RequestId, TEXT("PostProcessVolume not found."), TEXT("ACTOR_NOT_FOUND"));
-    }
-    return Volume;
-}
-
 bool ApplyLensPostSettings(
     APostProcessVolume* Volume,
     const TSharedPtr<FJsonObject>& Settings,
@@ -117,7 +103,7 @@ bool HandleRenderPostProcessLensAction(
         return false;
     }
 
-    APostProcessVolume* Volume = RequirePostVolume(Subsystem, RequestId, Payload, RequestingSocket);
+    APostProcessVolume* Volume = RequirePostProcessVolume(Subsystem, RequestId, Payload, RequestingSocket);
     if (!Volume)
     {
         return true;
@@ -149,9 +135,12 @@ bool HandleRenderPostProcessLensAction(
     else if (SubAction == TEXT("set_dof_method"))
     {
         const FString Method = GetJsonStringField(Payload, TEXT("method"));
-        const FString Value = Method.Equals(TEXT("CinematicDOF"), ESearchCase::IgnoreCase)
-            ? TEXT("DOFM_CircleDOF")
-            : Method;
+        FString Value;
+        if (!ResolveEnumAlias(DepthOfFieldMethodMap(), Method, Value, Error))
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
+            return true;
+        }
         ApplyLensPostEnum(Volume, TEXT("DepthOfFieldMethod"), Value, Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("set_focal_distance"))
@@ -181,9 +170,12 @@ bool HandleRenderPostProcessLensAction(
     else if (SubAction == TEXT("set_exposure_method"))
     {
         const FString Method = GetJsonStringField(Payload, TEXT("method"));
-        const FString Value = Method.Equals(TEXT("Manual"), ESearchCase::IgnoreCase)
-            ? TEXT("AEM_Manual")
-            : Method;
+        FString Value;
+        if (!ResolveEnumAlias(AutoExposureMethodMap(), Method, Value, Error))
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
+            return true;
+        }
         ApplyLensPostEnum(Volume, TEXT("AutoExposureMethod"), Value, Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("set_exposure_compensation"))
