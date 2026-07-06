@@ -81,6 +81,7 @@ export interface ConsolidatedToolParams {
     streaming?: boolean;
     shouldBeLoaded?: boolean;
     shouldBeVisible?: boolean;
+    saveDirtyPackages?: boolean;
     lightType?: 'Directional' | 'Point' | 'Spot' | 'Rect';
     name?: string;
     location?: Vector3D;

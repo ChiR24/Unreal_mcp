@@ -1,11 +1,11 @@
-import { Logger } from '../utils/logging/logger.js';
+import { AutomationLogger } from './log-redaction.js';
+import type { RequestTracker } from './request-tracker.js';
 import type {
     AutomationBridgeAutomationEvent,
     AutomationBridgeMessage,
     AutomationBridgeResponseMessage,
     ProgressUpdateMessage
 } from './types.js';
-import { RequestTracker } from './request-tracker.js';
 
 function FStringSafe(val: unknown): string {
     try {
@@ -45,13 +45,14 @@ const CONSOLIDATED_TOOL_ACTIONS = new Set([
     'animation_physics',
     'create_effect',
     'build_environment',
+    'manage_sequence',
     'system_control',
     'manage_ui',
     'inspect'
 ]);
 
 export class MessageHandler {
-    private log = new Logger('MessageHandler');
+    private log = new AutomationLogger('MessageHandler');
 
     constructor(
         private requestTracker: RequestTracker,
@@ -252,6 +253,21 @@ export class MessageHandler {
                 const got = echoed.toLowerCase();
 
                 if (CONSOLIDATED_TOOL_ACTIONS.has(expected) && got !== expected) {
+                    // For consolidated tools, only accept sub-actions that look
+                    // like snake_case identifiers. This rejects arbitrary response
+                    // action values (e.g. "manage_sequence/../private",
+                    // "delete everything", "manage_sequence\delete") that would
+                    // otherwise pass the prefix check. The format check is
+                    // intentionally permissive: it accepts any lowercase
+                    // snake_case string, so legitimate sub-actions added in the
+                    // future still pass without updating an allow-list.
+                    if (!/^[a-z][a-z0-9_]*$/u.test(got)) {
+                        const mutated: ResponseWithAction = { ...response };
+                        mutated.success = false;
+                        if (!mutated.error) mutated.error = 'ACTION_NOT_A_SUBACTION';
+                        mutated.message = `Response action '${got}' is not a valid sub-action of consolidated tool '${expected}'`;
+                        return mutated as AutomationBridgeResponseMessage;
+                    }
                     return response;
                 }
 
@@ -261,7 +277,7 @@ export class MessageHandler {
                     const mutated: ResponseWithAction = { ...response };
                     mutated.success = false;
                     if (!mutated.error) mutated.error = 'ACTION_PREFIX_MISMATCH';
-                    const msgBase = typeof mutated.message === 'string' ? mutated.message + ' ' : '';
+                    const msgBase = typeof mutated.message === 'string' ? `${mutated.message} ` : '';
                     mutated.message = `${msgBase}Response action mismatch (expected~='${expected}', got='${echoed}')`;
                     return mutated as AutomationBridgeResponseMessage;
                 }

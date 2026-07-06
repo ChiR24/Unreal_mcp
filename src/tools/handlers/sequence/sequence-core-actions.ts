@@ -4,7 +4,6 @@ import { executeAutomationRequest, requireNonEmptyString } from '../foundation/d
 import {
   getErrorString,
   getMessageString,
-  markSequenceCreated,
   type SequenceActionResponse
 } from './sequence-handler-state.js';
 
@@ -32,10 +31,6 @@ export async function handleSequenceCoreAction(
         const p = args.path.trim().replace(/\/$/, '');
         sequencePath = `${p}/${name}`;
       }
-      if (sequencePath && res && res.success !== false) {
-        markSequenceCreated(sequencePath);
-      }
-
       const errorCode = getErrorString(res).toUpperCase();
       const msgLower = getMessageString(res).toLowerCase();
       if (res && res.success === false && (errorCode === 'FACTORY_NOT_AVAILABLE' || msgLower.includes('ulevelsequencefactorynew not available'))) {
