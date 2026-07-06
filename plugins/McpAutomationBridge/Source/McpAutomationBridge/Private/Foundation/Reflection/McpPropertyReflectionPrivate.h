@@ -4,6 +4,9 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Internationalization/Text.h"
 #include "Runtime/Launch/Resources/Version.h"
+#if __has_include("UObject/StrProperty.h")
+#include "UObject/StrProperty.h"
+#endif
 #include "UObject/TextProperty.h"
 #include "UObject/UnrealType.h"
 

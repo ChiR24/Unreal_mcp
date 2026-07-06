@@ -1,3 +1,5 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
 #include "Domains/Environment/McpAutomationBridge_EnvironmentSnapshotPaths.h"
 
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
@@ -16,11 +18,10 @@ bool NormalizeSnapshotRelativePath(FString &Path)
 {
     Path = Path.TrimStartAndEnd();
     Path.ReplaceInline(TEXT("\\"), TEXT("/"));
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-    while (Path.StartsWith(TEXT("./"))) Path.RightChopInline(2, EAllowShrinking::No);
-#else
-    while (Path.StartsWith(TEXT("./"))) Path.RightChopInline(2, false);
-#endif
+    while (Path.StartsWith(TEXT("./")))
+    {
+        Path.RightChopInline(2, MCP_DISALLOW_SHRINKING);
+    }
     if (Path.Equals(TEXT("/Temp"), ESearchCase::IgnoreCase))
     {
         Path = TEXT("temp");
@@ -54,11 +55,7 @@ bool IsWindowsReservedFilename(const FString &Filename)
     int32 ExtensionIndex = INDEX_NONE;
     if (Basename.FindChar(TEXT('.'), ExtensionIndex))
     {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-        Basename.LeftInline(ExtensionIndex, EAllowShrinking::No);
-#else
-        Basename.LeftInline(ExtensionIndex, false);
-#endif
+        Basename.LeftInline(ExtensionIndex, MCP_DISALLOW_SHRINKING);
     }
     Basename.TrimEndInline();
     while (Basename.RemoveFromEnd(TEXT("."))) Basename.TrimEndInline();

@@ -123,7 +123,7 @@ inline bool McpSafeAssetSave(UObject* Asset)
         !bPromptSaveSucceeded && UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, false);
     const bool bExistsOnDisk = PackageExistsOnDisk();
 
-    if (bPromptSaveSucceeded || bEditorSaveSucceeded || bExistsOnDisk)
+    if ((bPromptSaveSucceeded || bEditorSaveSucceeded) && bExistsOnDisk)
     {
         ScanSavedPackage();
         return true;
