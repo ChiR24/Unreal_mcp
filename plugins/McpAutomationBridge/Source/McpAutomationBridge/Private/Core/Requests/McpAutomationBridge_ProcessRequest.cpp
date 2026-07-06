@@ -13,7 +13,7 @@
 // Publish the currently-executing automation action so external tooling (e.g. an off-thread watchdog) can attribute
 // a game-thread stall to the tool that was in flight. The lock is held ONLY for the brief set/get — never during
 // the handler — so a reader can observe the action off-thread even while a handler blocks the game thread. The
-// getter is exported so another module can link it.
+// getter is declared in the public McpAutomationBridgeSubsystem.h so other modules can call it.
 namespace McpAutomationBridge
 {
     static FCriticalSection GInFlightActionCS;
