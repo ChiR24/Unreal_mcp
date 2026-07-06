@@ -61,6 +61,9 @@ public:
 	/** Build the final inputSchema JSON object. */
 	TSharedPtr<FJsonObject> Build() const;
 
+	/** Direct read-only access to the accumulated properties JSON. */
+	const TSharedPtr<FJsonObject> &GetProperties() const { return Properties; }
+
 private:
 	TSharedPtr<FJsonObject> Properties;
 	TArray<FString> RequiredFields;

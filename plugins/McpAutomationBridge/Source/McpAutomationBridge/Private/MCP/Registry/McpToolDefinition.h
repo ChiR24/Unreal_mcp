@@ -51,6 +51,8 @@ public:
 	 */
 	virtual FString GetActionFieldName() const { return TEXT("action"); }
 
+	virtual bool EnforceStrictArguments() const { return false; }
+
 	/** True if this tool uses tool-name dispatch (Pattern A). */
 	bool UsesToolNameDispatch() const { return !GetDispatchAction().IsEmpty(); }
 };

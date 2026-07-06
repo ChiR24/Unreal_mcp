@@ -17,6 +17,8 @@ public:
 
 	FString GetCategory() const override { return TEXT("world"); }
 
+	bool EnforceStrictArguments() const override { return true; }
+
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		return FMcpSchemaBuilder()
