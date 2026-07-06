@@ -28,8 +28,8 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `generate_report` | `McpAutomationBridge_AssetWorkflowHandlers.cpp` | `HandleAssetAction` | |
 | `create_material` | `McpAutomationBridge_AssetWorkflowHandlers.cpp` | `HandleAssetAction` | |
 | `create_material_instance` | `McpAutomationBridge_AssetWorkflowHandlers.cpp` | `HandleAssetAction` | |
-| `create_render_target` | `McpAutomationBridge_RenderHandlers.cpp` | `HandleRenderAction` | |
-| `nanite_rebuild_mesh` | `McpAutomationBridge_RenderHandlers.cpp` | `HandleRenderAction` | |
+| `create_render_target` | `Render/McpAutomationBridge_RenderTargets.cpp` | `HandleCreateRenderTarget` | |
+| `nanite_rebuild_mesh` | `Render/McpAutomationBridge_RenderNanite.cpp` | `HandleNaniteRebuildMesh` | |
 | `add_material_node` | `McpAutomationBridge_MaterialGraphHandlers.cpp` | `HandleAddMaterialExpression` | |
 | `connect_material_pins` | `McpAutomationBridge_MaterialGraphHandlers.cpp` | `HandleCreateMaterialNodes` | |
 | `remove_material_node` | `McpAutomationBridge_MaterialGraphHandlers.cpp` | `HandleCreateMaterialNodes` | |
@@ -69,21 +69,21 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
-| `spawn` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `spawn_blueprint` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `delete` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `delete_by_tag` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `duplicate` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `apply_force` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `set_transform` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `get_transform` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `set_visibility` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `add_component` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | Runtime component addition |
-| `add_tag` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `find_by_tag` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `list` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `attach` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `detach` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
+| `spawn` | `ControlActor/McpAutomationBridge_ControlActorSpawn.cpp` | `HandleControlActorSpawn` | |
+| `spawn_blueprint` | `ControlActor/McpAutomationBridge_ControlActorBlueprintSpawn.cpp` | `HandleControlActorSpawnBlueprint` | |
+| `delete` | `ControlActor/McpAutomationBridge_ControlActorLifecycle.cpp` | `HandleControlActorDelete` | |
+| `delete_by_tag` | `ControlActor/McpAutomationBridge_ControlActorLifecycle.cpp` | `HandleControlActorDeleteByTag` | |
+| `duplicate` | `ControlActor/McpAutomationBridge_ControlActorLifecycle.cpp` | `HandleControlActorDuplicate` | |
+| `apply_force` | `ControlActor/McpAutomationBridge_ControlActorPhysics.cpp` | `HandleControlActorApplyForce` | |
+| `set_transform` | `ControlActor/McpAutomationBridge_ControlActorTransform.cpp` | `HandleControlActorSetTransform` | |
+| `get_transform` | `ControlActor/McpAutomationBridge_ControlActorTransform.cpp` | `HandleControlActorGetTransform` | |
+| `set_visibility` | `ControlActor/McpAutomationBridge_ControlActorTransform.cpp` | `HandleControlActorSetVisibility` | |
+| `add_component` | `ControlActor/McpAutomationBridge_ControlActorComponents.cpp` | `HandleControlActorAddComponent` | Runtime component addition |
+| `add_tag` | `ControlActor/McpAutomationBridge_ControlActorTags.cpp` | `HandleControlActorAddTag` | |
+| `find_by_tag` | `ControlActor/McpAutomationBridge_ControlActorTags.cpp` | `HandleControlActorFindByTag` | |
+| `list` | `ControlActor/McpAutomationBridge_ControlActorLookup.cpp` | `HandleControlActorList` | |
+| `attach` | `ControlActor/McpAutomationBridge_ControlActorAttachment.cpp` | `HandleControlActorAttach` | |
+| `detach` | `ControlActor/McpAutomationBridge_ControlActorAttachment.cpp` | `HandleControlActorDetach` | |
 
 ## Editor Control (`control_editor`)
 
@@ -195,6 +195,69 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `remove_foliage` | `McpAutomationBridge_FoliageHandlers.cpp` | `HandleRemoveFoliage` | |
 | `create_procedural_terrain` | `McpAutomationBridge_EnvironmentHandlers.cpp` | `HandleCreateProceduralTerrain` | |
 
+## Rendering Manager (`build_environment`)
+
+Routed through the internal `manage_render` bridge action. The C++ action set is
+declared in `McpConsolidatedActionRoutingEnvironment.h::Rendering()` and the
+TypeScript mirror is `RENDER_ACTIONS` in `src/tools/definitions/shared/action-sets.ts`.
+Per-concern handlers live under `Render/McpAutomationBridge_Render*.cpp`.
+
+| Action | C++ Handler File | C++ Function |
+| :--- | :--- | :--- |
+| `configure_ray_traced_shadows` | `Render/McpAutomationBridge_RenderConsole.cpp` | `HandleRenderConsoleAction` |
+| `configure_ray_traced_gi` | `Render/McpAutomationBridge_RenderConsole.cpp` | `HandleRenderConsoleAction` |
+| `configure_ray_traced_reflections` | `Render/McpAutomationBridge_RenderConsole.cpp` | `HandleRenderConsoleAction` |
+| `configure_ray_traced_ao` | `Render/McpAutomationBridge_RenderConsole.cpp` | `HandleRenderConsoleAction` |
+| `configure_path_tracing` | `Render/McpAutomationBridge_RenderConsole.cpp` | `HandleRenderConsoleAction` |
+| `set_light_channel` | `Render/McpAutomationBridge_RenderLighting.cpp` | `HandleRenderLightingAction` |
+| `set_actor_light_channel` | `Render/McpAutomationBridge_RenderLighting.cpp` | `HandleRenderLightingAction` |
+| `configure_lightmass_settings` | `Render/McpAutomationBridge_RenderLighting.cpp` | `HandleRenderLightingAction` |
+| `build_lighting_quality` | `Render/McpAutomationBridge_RenderLighting.cpp` | `HandleRenderLightingAction` |
+| `configure_indirect_lighting_cache` | `Render/McpAutomationBridge_RenderLighting.cpp` | `HandleRenderLightingAction` |
+| `create_sphere_reflection_capture` | `Render/McpAutomationBridge_RenderReflections.cpp` | `HandleRenderReflectionAction` |
+| `create_box_reflection_capture` | `Render/McpAutomationBridge_RenderReflections.cpp` | `HandleRenderReflectionAction` |
+| `configure_reflection_capture_resolution` | `Render/McpAutomationBridge_RenderReflections.cpp` | `HandleRenderReflectionAction` |
+| `configure_capture_offset` | `Render/McpAutomationBridge_RenderReflections.cpp` | `HandleRenderReflectionAction` |
+| `recapture_scene` | `Render/McpAutomationBridge_RenderReflections.cpp` | `HandleRenderReflectionAction` |
+| `create_planar_reflection` | `Render/McpAutomationBridge_RenderReflections.cpp` | `HandleRenderReflectionAction` |
+| `configure_planar_reflection` | `Render/McpAutomationBridge_RenderReflections.cpp` | `HandleRenderReflectionAction` |
+| `configure_ssr_settings` | `Render/McpAutomationBridge_RenderReflections.cpp` | `HandleRenderReflectionAction` |
+| `configure_lumen_reflection_settings` | `Render/McpAutomationBridge_RenderReflections.cpp` | `HandleRenderReflectionAction` |
+| `configure_pp_blend` | `Render/McpAutomationBridge_RenderPostProcessColor.cpp` | `HandleRenderPostProcessColorAction` |
+| `set_pp_white_balance` | `Render/McpAutomationBridge_RenderPostProcessColor.cpp` | `HandleRenderPostProcessColorAction` |
+| `set_pp_color_grading` | `Render/McpAutomationBridge_RenderPostProcessColor.cpp` | `HandleRenderPostProcessColorAction` |
+| `set_pp_lut` | `Render/McpAutomationBridge_RenderPostProcessColor.cpp` | `HandleRenderPostProcessColorAction` |
+| `configure_tonemapper` | `Render/McpAutomationBridge_RenderPostProcessColor.cpp` | `HandleRenderPostProcessColorAction` |
+| `set_tonemapper_type` | `Render/McpAutomationBridge_RenderPostProcessColor.cpp` | `HandleRenderPostProcessColorAction` |
+| `configure_bloom` | `Render/McpAutomationBridge_RenderPostProcessColor.cpp` | `HandleRenderPostProcessColorAction` |
+| `set_bloom_intensity` | `Render/McpAutomationBridge_RenderPostProcessColor.cpp` | `HandleRenderPostProcessColorAction` |
+| `set_bloom_threshold` | `Render/McpAutomationBridge_RenderPostProcessColor.cpp` | `HandleRenderPostProcessColorAction` |
+| `configure_lens_flare` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `configure_dof` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `set_dof_method` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `set_focal_distance` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `set_aperture` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `configure_bokeh` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `configure_motion_blur` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `set_motion_blur_amount` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `set_motion_blur_max` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `configure_exposure` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `set_exposure_method` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `set_exposure_compensation` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `set_exposure_min_max` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `configure_ssao` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `configure_gtao` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `configure_vignette` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `configure_chromatic_aberration` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `configure_grain` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `configure_screen_percentage` | `Render/McpAutomationBridge_RenderPostProcessLens.cpp` | `HandleRenderPostProcessLensAction` |
+| `create_scene_capture_2d` | `Render/McpAutomationBridge_RenderSceneCapture.cpp` | `HandleRenderSceneCaptureAction` |
+| `create_scene_capture_cube` | `Render/McpAutomationBridge_RenderSceneCapture.cpp` | `HandleRenderSceneCaptureAction` |
+| `configure_capture_resolution` | `Render/McpAutomationBridge_RenderSceneCapture.cpp` | `HandleRenderSceneCaptureAction` |
+| `configure_capture_source` | `Render/McpAutomationBridge_RenderSceneCapture.cpp` | `HandleRenderSceneCaptureAction` |
+| `assign_render_target` | `Render/McpAutomationBridge_RenderSceneCapture.cpp` | `HandleRenderSceneCaptureAction` |
+| `capture_scene` | `Render/McpAutomationBridge_RenderSceneCapture.cpp` | `HandleRenderSceneCaptureAction` |
+
 ## System Control (`system_control`)
 
 | Action | C++ Handler File | C++ Function | Notes |
@@ -207,7 +270,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | `unsubscribe` | `McpAutomationBridge_LogHandlers.cpp` | `HandleLogAction` | |
 | `spawn_category` | `McpAutomationBridge_DebugHandlers.cpp` | `HandleDebugAction` | |
 | `start_session` | `McpAutomationBridge_InsightsHandlers.cpp` | `HandleInsightsAction` | |
-| `lumen_update_scene` | `McpAutomationBridge_RenderHandlers.cpp` | `HandleRenderAction` | |
+| `lumen_update_scene` | `Render/McpAutomationBridge_RenderLumen.cpp` | `HandleLumenUpdateScene` | |
 | `set_project_setting` | `McpAutomationBridge_EnvironmentHandlers.cpp` | `HandleSystemControlAction` | |
 | `execute_python` | `McpAutomationBridge_SystemControlHandlers.cpp` | `HandleSystemControlAction` | Requires Python Editor Script Plugin. Max 1 MB code. Async timeout warning at 60s. |
 | `create_hud` | `McpAutomationBridge_UiHandlers.cpp` | `HandleUiAction` | Sub-action of `system_control` |
@@ -220,13 +283,87 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
-| `create` | `McpAutomationBridge_SequenceHandlers.cpp` | `HandleSequenceAction` | |
-| `add_actor` | `McpAutomationBridge_SequenceHandlers.cpp` | `HandleSequenceAction` | |
-| `play` | `McpAutomationBridge_SequenceHandlers.cpp` | `HandleSequenceAction` | |
-| `add_keyframe` | `McpAutomationBridge_SequencerHandlers.cpp` | `HandleAddSequencerKeyframe` | |
-| `add_camera` | `McpAutomationBridge_SequenceHandlers.cpp` | `HandleAddCameraTrack` | |
-| `add_track` | `McpAutomationBridge_SequenceHandlers.cpp` | `HandleSequenceAction` | Dynamic track class resolution |
-| `list_track_types` | `McpAutomationBridge_SequenceHandlers.cpp` | `HandleSequenceAction` | Discovery: Returns all `UMovieSceneTrack` subclasses |
+| `create` | `McpAutomationBridge_SequenceHandlersAssetCreation.cpp` | `HandleSequenceCreate` | |
+| `open` | `McpAutomationBridge_SequenceHandlersAssetCreation.cpp` | `HandleSequenceOpen` | |
+| `add_camera` | `McpAutomationBridge_SequenceHandlersBindings.cpp` | `HandleSequenceAddCamera` | |
+| `add_actor` | `McpAutomationBridge_SequenceHandlersBindings.cpp` | `HandleSequenceAddActor` | |
+| `add_actors` | `McpAutomationBridge_SequenceHandlersBindings.cpp` | `HandleSequenceAddActors` | |
+| `remove_actors` | `McpAutomationBridge_SequenceHandlersBindingRemoval.cpp` | `HandleSequenceRemoveActors` | |
+| `get_bindings` | `McpAutomationBridge_SequenceHandlersSpawnables.cpp` | `HandleSequenceGetBindings` | |
+| `play` | `McpAutomationBridge_SequenceHandlersPlayback.cpp` | `HandleSequencePlay` | |
+| `pause` | `McpAutomationBridge_SequenceHandlersPlayback.cpp` | `HandleSequencePause` | |
+| `stop` | `McpAutomationBridge_SequenceHandlersPlayback.cpp` | `HandleSequenceStop` | |
+| `set_playback_speed` | `McpAutomationBridge_SequenceHandlersPlayback.cpp` | `HandleSequenceSetPlaybackSpeed` | |
+| `add_keyframe` | `McpAutomationBridge_SequenceHandlersKeyframes.cpp` | `HandleSequenceAddKeyframe` | |
+| `get_properties` | `McpAutomationBridge_SequenceHandlersProperties.cpp` | `HandleSequenceGetProperties` | |
+| `set_properties` | `McpAutomationBridge_SequenceHandlersProperties.cpp` | `HandleSequenceSetProperties` | |
+| `duplicate` | `McpAutomationBridge_SequenceHandlersAssetLibrary.cpp` | `HandleSequenceDuplicate` | |
+| `rename` | `McpAutomationBridge_SequenceHandlersAssetLibrary.cpp` | `HandleSequenceRename` | |
+| `delete` | `McpAutomationBridge_SequenceHandlersAssetLibrary.cpp` | `HandleSequenceDelete` | |
+| `list` | `McpAutomationBridge_SequenceHandlersAssetLibrary.cpp` | `HandleSequenceList` | |
+| `get_metadata` | `McpAutomationBridge_SequenceHandlersAssetLibrary.cpp` | `HandleSequenceGetMetadata` | |
+| `set_metadata` | `AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowMetadata.cpp` | `HandleSetMetadata` | TypeScript delegates to the shared asset metadata handler |
+| `add_spawnable_from_class` | `McpAutomationBridge_SequenceHandlersSpawnables.cpp` | `HandleSequenceAddSpawnable` | |
+| `add_track` | `McpAutomationBridge_SequenceHandlersTrackCreation.cpp` | `McpSequenceTracks::HandleAddTrack` | Dynamic track class resolution |
+| `add_section` | `McpAutomationBridge_SequenceHandlersSections.cpp` | `HandleSequenceAddSection` | |
+| `set_display_rate` | `McpAutomationBridge_SequenceHandlersFrameRate.cpp` | `HandleSequenceSetDisplayRate` | |
+| `set_tick_resolution` | `McpAutomationBridge_SequenceHandlersFrameRate.cpp` | `HandleSequenceSetTickResolution` | |
+| `set_work_range` | `McpAutomationBridge_SequenceHandlersRanges.cpp` | `McpSequenceRanges::HandleSetWorkRange` | |
+| `set_view_range` | `McpAutomationBridge_SequenceHandlersRanges.cpp` | `HandleSequenceSetViewRange` | |
+| `set_track_muted` | `McpAutomationBridge_SequenceHandlersTrackState.cpp` | `HandleSequenceSetTrackMuted` | |
+| `set_track_solo` | `McpAutomationBridge_SequenceHandlersTrackState.cpp` | `HandleSequenceSetTrackSolo` | |
+| `set_track_locked` | `McpAutomationBridge_SequenceHandlersTrackState.cpp` | `HandleSequenceSetTrackLocked` | |
+| `list_tracks` | `McpAutomationBridge_SequenceHandlersTrackDiscovery.cpp` | `McpSequenceTracks::HandleListTracks` | |
+| `remove_track` | `McpAutomationBridge_SequenceHandlersTrackRemoval.cpp` | `HandleSequenceRemoveTrack` | |
+| `list_track_types` | `McpAutomationBridge_SequenceHandlersTrackDiscovery.cpp` | `McpSequenceTracks::HandleListTrackTypes` | Returns all `UMovieSceneTrack` subclasses |
+| `create_master_sequence` | `Cinematics/McpAutomationBridge_SequenceCinematicsAssets.cpp` | `HandleCreateMasterSequence` | Master Level Sequence |
+| `add_subsequence` | `Cinematics/McpAutomationBridge_SequenceCinematicsAssets.cpp` | `HandleAddSubsequence` | Adds Level Sequence section |
+| `add_shot_track` | `Cinematics/McpAutomationBridge_SequenceCinematicsAssets.cpp` | `HandleAddShotTrack` | Adds cinematic shot track |
+| `configure_shot_settings` | `Cinematics/McpAutomationBridge_SequenceCinematicsShotSettings.cpp` | `HandleConfigureShotSettings` | Sets shot display/range metadata |
+| `create_cine_camera_actor` | `Cinematics/McpAutomationBridge_SequenceCinematicsCameras.cpp` | `HandleCreateCineCameraActor` | Spawns and binds CineCameraActor |
+| `configure_camera_settings` | `Cinematics/McpAutomationBridge_SequenceCinematicsCameras.cpp` | `HandleConfigureCameraSettings` | Filmback, lens, focus |
+| `add_camera_cut_track` | `Cinematics/McpAutomationBridge_SequenceCinematicsCameraTracks.cpp` | `HandleAddCameraCutTrack` | Camera cut sections |
+| `add_camera_shake_track` | `Cinematics/McpAutomationBridge_SequenceCinematicsCameraTracks.cpp` | `HandleAddCameraShakeTrack` | Camera shake sections |
+| `configure_camera_rig_rail` | `Cinematics/McpAutomationBridge_SequenceCinematicsCameraRigs.cpp` | `HandleConfigureCameraRigRail` | Creates or updates rail actor |
+| `configure_camera_rig_crane` | `Cinematics/McpAutomationBridge_SequenceCinematicsCameraRigs.cpp` | `HandleConfigureCameraRigCrane` | Creates or updates crane actor |
+| `add_fade_track` | `Cinematics/McpAutomationBridge_SequenceCinematicsTracks.cpp` | `HandleAddFadeTrack` | Fade sections |
+| `add_level_visibility_track` | `Cinematics/McpAutomationBridge_SequenceCinematicsTracks.cpp` | `HandleAddLevelVisibilityTrack` | Level visibility sections |
+| `add_material_parameter_track` | `Cinematics/McpAutomationBridge_SequenceCinematicsMaterialTrack.cpp` | `HandleAddMaterialParameterTrack` | Scalar/color material params |
+| `add_particle_track` | `Cinematics/McpAutomationBridge_SequenceCinematicsTracks.cpp` | `HandleAddParticleTrack` | Particle trigger sections |
+| `add_skeletal_animation_track` | `Cinematics/McpAutomationBridge_SequenceCinematicsBindingTracks.cpp` | `HandleAddSkeletalAnimationTrack` | Skeletal animation sections |
+| `add_transform_track` | `Cinematics/McpAutomationBridge_SequenceCinematicsBindingTracks.cpp` | `HandleAddTransformTrack` | Transform channels |
+| `add_event_track` | `Cinematics/McpAutomationBridge_SequenceCinematicsBindingTracks.cpp` | `HandleAddEventTrack` | Event trigger sections |
+| `add_property_track` | `Cinematics/McpAutomationBridge_SequenceCinematicsPropertyTrack.cpp` | `HandleAddPropertyTrack` | Generic property sections |
+| `create_render_job` | `MovieRender/McpAutomationBridge_SequenceMovieRenderJobCreation.cpp` | `HandleCreateRenderJob` | Movie Render Queue job |
+| `configure_output_settings` | `MovieRender/McpAutomationBridge_SequenceMovieRenderOutput.cpp` | `HandleConfigureOutputSettings` | Output path, format, resolution |
+| `add_render_pass` | `MovieRender/McpAutomationBridge_SequenceMovieRenderPasses.cpp` | `HandleAddRenderPass` | Beauty/depth/normal/motion/object/custom passes |
+| `configure_anti_aliasing` | `MovieRender/McpAutomationBridge_SequenceMovieRenderSettings.cpp` | `HandleConfigureAntiAliasing` | Spatial/temporal samples |
+| `configure_console_variables` | `MovieRender/McpAutomationBridge_SequenceMovieRenderSettings.cpp` | `HandleConfigureConsoleVariables` | MRQ console variable settings |
+| `configure_burn_ins` | `MovieRender/McpAutomationBridge_SequenceMovieRenderBurnIns.cpp` | `HandleConfigureBurnIns` | Burn-in configuration |
+| `queue_render` | `MovieRender/McpAutomationBridge_SequenceMovieRenderExecution.cpp` | `HandleQueueRender` | Queue validation |
+| `start_render` | `MovieRender/McpAutomationBridge_SequenceMovieRenderExecution.cpp` | `HandleStartRender` | Executor start guard |
+| `create_media_player` | `Media/McpAutomationBridge_SequenceMediaAssets.cpp` | `HandleCreateMediaPlayer` | MediaPlayer asset |
+| `create_media_source` | `Media/McpAutomationBridge_SequenceMediaSources.cpp` | `HandleCreateMediaSource` | File/stream/platform sources |
+| `create_media_texture` | `Media/McpAutomationBridge_SequenceMediaAssets.cpp` | `HandleCreateMediaTexture` | MediaTexture asset |
+| `create_media_sound_component` | `Media/McpAutomationBridge_SequenceMediaComponents.cpp` | `HandleCreateMediaSoundComponent` | Adds media sound to actor |
+| `create_media_playlist` | `Media/McpAutomationBridge_SequenceMediaPlaylist.cpp` | `HandleCreateMediaPlaylist` | MediaPlaylist asset |
+| `play_media` | `Media/McpAutomationBridge_SequenceMediaPlayback.cpp` | `HandlePlayMedia` | Opens source and starts playback |
+| `pause_media` | `Media/McpAutomationBridge_SequenceMediaPlaybackControls.cpp` | `HandlePauseMedia` | Pauses playback |
+| `seek_media` | `Media/McpAutomationBridge_SequenceMediaPlaybackControls.cpp` | `HandleSeekMedia` | Seeks playback time |
+| `create_take_recorder_panel` | `RecordReplay/McpAutomationBridge_SequenceTakeRecorderRecording.cpp` | `HandleCreateTakeRecorderPanel` | Take Recorder panel setup |
+| `configure_take_sources` | `RecordReplay/McpAutomationBridge_SequenceTakeRecorderSourceHandler.cpp` | `HandleConfigureTakeSources` | Actor take sources |
+| `start_recording` | `RecordReplay/McpAutomationBridge_SequenceTakeRecorderRecording.cpp` | `HandleStartTakeRecording` | Take Recorder start |
+| `stop_recording` | `RecordReplay/McpAutomationBridge_SequenceTakeRecorderRecording.cpp` | `HandleStopTakeRecording` | Take Recorder stop |
+| `configure_recorded_tracks` | `RecordReplay/McpAutomationBridge_SequenceTakeRecorderTracks.cpp` | `HandleConfigureRecordedTracks` | Source track flags |
+| `configure_demo_settings` | `RecordReplay/McpAutomationBridge_SequenceReplayRecording.cpp` | `HandleReplayRecordingAction` | Replay subsystem settings |
+| `start_demo_recording` | `RecordReplay/McpAutomationBridge_SequenceReplayRecording.cpp` | `HandleReplayRecordingAction` | Runtime demo recording |
+| `stop_demo_recording` | `RecordReplay/McpAutomationBridge_SequenceReplayRecording.cpp` | `HandleReplayRecordingAction` | Runtime demo stop |
+| `play_demo` | `RecordReplay/McpAutomationBridge_SequenceReplayPlayback.cpp` | `HandleReplayPlaybackAction` | Runtime demo playback |
+| `pause_demo` | `RecordReplay/McpAutomationBridge_SequenceReplayPlayback.cpp` | `HandleReplayPlaybackAction` | Runtime demo pause/resume |
+| `seek_demo` | `RecordReplay/McpAutomationBridge_SequenceReplayPlayback.cpp` | `HandleReplayPlaybackAction` | Runtime demo seek |
+| `set_demo_playback_speed` | `RecordReplay/McpAutomationBridge_SequenceReplayPlayback.cpp` | `HandleReplayPlaybackAction` | Demo playback speed |
+| `configure_killcam_duration` | `RecordReplay/McpAutomationBridge_SequenceReplayPlayback.cpp` | `HandleConfigureKillcamDuration` | Killcam duration setting |
+| `start_killcam` | `RecordReplay/McpAutomationBridge_SequenceReplayPlayback.cpp` | `HandleReplayPlaybackAction` | Runtime killcam seek/play |
 
 ## Introspection (`inspect`)
 

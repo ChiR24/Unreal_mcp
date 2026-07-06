@@ -18,18 +18,17 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 | **Level Management** | Load/save levels, streaming, lighting |
 | **Animation & Physics** | Animation BPs, state machines, ragdolls, vehicles, constraints |
 | **Visual Effects** | Niagara particles, GPU simulations, procedural effects |
-| **Sequencer** | Cinematics, timeline control, camera animations |
+| **Sequencer** | Cinematics, timeline control, Movie Render Queue, media, Take Recorder, replay |
 | **Graph Editing** | Blueprint, Niagara, Material, Behavior Tree graphs |
 | **Audio** | Sound cues, audio components, MetaSounds |
 | **System** | Console commands, UBT, tests, logs, project settings, Python execution |
-
-Automation coverage spans the plugin's consolidated MCP tool surface.
 
 ---
 
 ## Requirements
 
-- **Unreal Engine**: 5.0 - 5.8 (5.8 preview validated)
+- **Unreal Engine**: 5.0 - 5.8 source-compatibility target. The current
+  complete live acceptance record covers UE 5.7.4 only.
 - **Platforms**: Win64, Mac, Linux
 - **Node.js**: 18+ (only for TypeScript bridge transport — not needed for Native MCP)
 
@@ -68,6 +67,10 @@ Automation coverage spans the plugin's consolidated MCP tool surface.
 <summary><b>Optional Plugins (Auto-enabled)</b></summary>
 
    - ✅ Level Sequence Editor (for `manage_sequence`)
+   - ✅ Movie Render Pipeline (for `manage_sequence` Movie Render Queue)
+   - ✅ Movie Pipeline Mask Render Pass (for the object-ID render pass)
+   - ✅ Takes (for `manage_sequence` Take Recorder)
+   - ✅ Electra Player (for `manage_sequence` file-backed media playback)
    - ✅ Control Rig (for `animation_physics`)
    - ✅ RigVM (for Control Rig and graph authoring support)
    - ✅ GeometryScripting (for `manage_geometry`)
@@ -106,6 +109,7 @@ Automation coverage spans the plugin's consolidated MCP tool surface.
 ### Option A: Native MCP Transport (no Node.js needed)
 
 The plugin includes a built-in MCP Streamable HTTP server. AI clients connect directly — no TypeScript bridge required.
+**Note:** the `bAllowNonLoopback` setting applies to **both** the WebSocket bridge and the native MCP transport. Enabling it binds both surfaces to non-loopback addresses. When `bAllowNonLoopback` is enabled, **always also enable `bRequireCapabilityToken`** — the default-allow loopback posture means any LAN client can otherwise call any tool without authentication.
 
 1. Enable in **Edit → Project Settings → Plugins → MCP Automation Bridge**:
    - Check **Enable Native MCP**
@@ -185,7 +189,7 @@ Tools & Plugins
 - **Supported Target Build Platforms:** Editor-only plugin for Win64, Mac, and Linux editor targets. It is not intended to be included in packaged game runtime builds.
 - **Documentation Link:** https://github.com/ChiR24/Unreal_mcp/tree/main/plugins/McpAutomationBridge#readme
 - **Example Project:** Not included. The plugin can be enabled in any Unreal Engine C++ project; see the documentation link for setup steps.
-- **Important/Additional Notes:** Requires Unreal Engine 5.0-5.8. Required engine plugins are `PythonScriptPlugin`, `EditorScriptingUtilities`, `Niagara`, `GameplayAbilities`, and `SmartObjects`. Other integration references are enabled but marked optional so compatible installed engine plugins can support their matching features without becoming hard distribution dependencies. These integrations include `LevelSequenceEditor`, `NiagaraEditor`, `BehaviorTreeEditor`, `EnvironmentQueryEditor`, `ControlRig`, `RigVM`, `IKRig`, `ChaosVehiclesPlugin`, `AnimationData`, `ProceduralMeshComponent`, `Interchange`, `InterchangeOpenUSD`, `DataValidation`, `EnhancedInput`, `GeometryScripting`, `GeometryProcessing`, `ChaosCloth`, `StructUtils`, `Metasound`, `StateTree`, `MassGameplay`, `OnlineSubsystem`, `OnlineSubsystemUtils`, `Synthesis`, and `PCG`. Native MCP transport does not require Node.js. The optional TypeScript bridge transport uses the separately distributed `unreal-engine-mcp-server` Node.js package.
+- **Important/Additional Notes:** Requires Unreal Engine 5.0-5.8. The current complete live cinematics and media acceptance run targets Unreal Engine 5.7. Required engine plugins are `PythonScriptPlugin`, `EditorScriptingUtilities`, `Niagara`, `GameplayAbilities`, and `SmartObjects`. Other integration references are enabled but marked optional so compatible installed engine plugins can support their matching features without becoming hard distribution dependencies. These integrations include `LevelSequenceEditor`, `MovieRenderPipeline`, `MoviePipelineMaskRenderPass`, `Takes`, `ElectraPlayer`, `NiagaraEditor`, `BehaviorTreeEditor`, `EnvironmentQueryEditor`, `ControlRig`, `RigVM`, `IKRig`, `ChaosVehiclesPlugin`, `AnimationData`, `ProceduralMeshComponent`, `Interchange`, `InterchangeOpenUSD`, `DataValidation`, `EnhancedInput`, `GeometryScripting`, `GeometryProcessing`, `ChaosCloth`, `StructUtils`, `Metasound`, `StateTree`, `MassGameplay`, `OnlineSubsystem`, `OnlineSubsystemUtils`, `Synthesis`, and `PCG`. Native MCP transport does not require Node.js. The optional TypeScript bridge transport uses the separately distributed `unreal-engine-mcp-server` Node.js package.
 
 ---
 
@@ -207,7 +211,7 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 
 - **Listen Ports**: WebSocket ports (default: 8090, 8091)
 - **Enable TLS**: Enable secure WebSocket connections
-- **Allow Non-Loopback**: Enable LAN access (security consideration)
+- **Allow Non-Loopback**: Enable LAN access for the WebSocket bridge only
 - **Enable Native MCP**: Enable built-in HTTP/SSE MCP server (default: off)
 - **Native MCP Port**: HTTP port for native MCP transport (default: 3000; override at startup with the `MCP_NATIVE_PORT` environment variable)
 - **Listen Host**: Bind address (default: 127.0.0.1)
@@ -219,14 +223,21 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 
 ## Security
 
-- **Loopback-only binding** by default (127.0.0.1)
+- **Native MCP loopback-only binding** (`127.0.0.1`, not configurable)
+- **WebSocket loopback-only by default**; LAN binding requires explicit opt-in
 - **Capability token authentication** — enforce token on both WebSocket and Native MCP transports (enable in Project Settings)
-- **TLS/SSL support** for secure connections
+- **TLS/SSL support** for the WebSocket transport
 - **Rate limiting** support (disabled by default; configurable via Project Settings)
 - **Handshake required** before automation requests
 - **Command validation** blocks dangerous console commands
 - **Path sanitization** — blocks directory traversal in file operations
 - **Python execution security** — 1 MB code limit, symlink resolution, temp file scope guard cleanup
+
+Local filesystem paths are checked for traversal and symbolic-link components
+when accepted and again immediately before media open or render start. The
+trusted boundary is the editor's operating-system user: a process that can
+mutate that user's project files concurrently is already able to alter editor
+inputs and is outside the transport's remote-client threat model.
 
 ---
 

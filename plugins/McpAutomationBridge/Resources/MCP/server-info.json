@@ -1,0 +1,5 @@
+{
+  "name": "unreal-mcp",
+  "version": "0.5.30",
+  "instructions": "Use canonical Unreal MCP tools and their action fields. Prefer project-relative Unreal asset paths and inspect tool schemas before invoking unfamiliar actions."
+}

@@ -22,7 +22,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 </details>
 
+<details>
+<summary><b>🧪 Test runner changes</b></summary>
+
+- **`hardPluginFailureIndicators` no longer matches "unknown"** — the substring match was over-firing on legitimate dispatcher messages like `"Unknown subAction."`. Real plugin errors are already caught by `isError: true` / `structuredContent.success: false`, so dropping the keyword is safe. Test cases that depended on the word "unknown" appearing alone in a success-primary expectation should be reviewed.
+- **Test runner now propagates failures via throw, not `process.exit(1)`** — the runner still sets `process.exitCode = 1`, but the error is rethrown so wrappers that catch via `try/catch` or `Promise.all` see the underlying failure. Consumers that previously relied on the runner terminating the process from a `catch` block should switch to the rethrow contract.
+
+</details>
+
 ---
+
+## [Unreleased]
+
+### Added
+- Complete native and WebSocket cinematics, Movie Render Queue, media, Take Recorder, and replay automation coverage with live UE 5.7 verification harnesses.
+
+### Security
+- Hardened local render/media paths against symlink replacement, disabled network-backed media URLs because redirect destinations cannot be pinned, retained client rate limits across native MCP session rotation, and sanitized streamed log payloads.
+
+### Fixed
+- Made replay seek and killcam responses wait for measured completion, preserved Movie Render Queue ownership through cancellation, restored Take Recorder state after asynchronous start failures, validated render limits before mutation, and made render output proof token-aware.
+
+### Verification
+- Source compatibility remains guarded across the supported UE 5.x range; the release build and interactive live acceptance matrix are executed against Unreal Engine 5.7.4.
+
+### Migration
+- The internal `manage_post_process` C++ action has been folded into the expanded `manage_render` action (the `Render/McpAutomationBridge_RenderPostProcess*.cpp` files now dispatch through `manage_render`). Any client that called `manage_post_process` directly will now fail with `does not match prefix` — switch to `manage_render` and pass the desired sub-action via `subAction`. The reflection-capture resolution setter was renamed from `configure_capture_resolution` to `configure_reflection_capture_resolution`; the scene-capture path keeps the original `configure_capture_resolution` name. The `McpAutomationBridge_RenderHandlers.cpp` monolith is now a 74-line dispatcher; per-concern handlers live under `Render/McpAutomationBridge_Render*.cpp`.
 
 ## 🏷️ [0.5.30] - 2026-06-05
 

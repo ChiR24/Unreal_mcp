@@ -36,7 +36,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 | **Level Management** | Load/save levels, streaming, lighting |
 | **Animation & Physics** | Animation BPs, state machines, ragdolls, vehicles, constraints |
 | **Visual Effects** | Niagara particles, GPU simulations, procedural effects, debug shapes |
-| **Sequencer** | Cinematics, timeline control, camera animations, keyframes |
+| **Sequencer** | Cinematics, timeline control, Movie Render Queue, media, Take Recorder, replay |
 | **Graph Editing** | Blueprint, Niagara, Material, and Behavior Tree graph manipulation |
 | **Audio** | Sound cues, audio components, sound mixes, ambient sounds |
 | **System** | Console commands, UBT, tests, logs, project settings, CVars |
@@ -60,7 +60,8 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 ### Prerequisites
 
-- **Unreal Engine** 5.0–5.8 (5.8 preview validated)
+- **Unreal Engine** 5.0–5.8 source-compatibility target. The current complete
+  live acceptance record covers UE 5.7.4 only.
 
 Choose your transport:
 - **Option A: Native MCP** (recommended) — no additional dependencies
@@ -128,7 +129,7 @@ Build the plugin once, then distribute the compiled binaries — no IDE or compi
 scripts\package-plugin.bat C:\Path\To\UE_5.6
 ```
 
-This produces a zip like `McpAutomationBridge-v0.5.30-UE5.6-Mac.zip`.
+This produces a zip like `McpAutomationBridge-v0.5.30-UE5.7-Linux.zip`.
 
 **2. Install:** unzip into `YourProject/Plugins/` and open the project. That's it — no compilation step.
 
@@ -158,6 +159,10 @@ Enable via **Edit → Plugins**, then restart the editor.
 | Plugin | Required For |
 |--------|--------------|
 | **Level Sequence Editor** | `manage_sequence` operations |
+| **Movie Render Pipeline** | `manage_sequence` Movie Render Queue operations |
+| **Movie Pipeline Mask Render Pass** | Object-ID render pass |
+| **Takes** | `manage_sequence` Take Recorder operations |
+| **Electra Player** | `manage_sequence` file-backed media playback |
 | **Control Rig** | `animation_physics` operations |
 | **GeometryScripting** | `manage_geometry` operations |
 | **Behavior Tree Editor** | `manage_ai` Behavior Tree operations |
@@ -184,6 +189,7 @@ Enable via **Edit → Plugins**, then restart the editor.
 #### Option A: Native MCP Transport (Direct HTTP — no bridge needed)
 
 The plugin includes a built-in MCP Streamable HTTP server. AI clients connect directly to the plugin over HTTP — no TypeScript bridge, no Node.js, no npm.
+**Note:** the `bAllowNonLoopback` setting now applies to **both** the WebSocket bridge and the native MCP transport. Enabling it binds both surfaces to non-loopback addresses. If you only need LAN access for the WebSocket bridge, do not enable `bAllowNonLoopback` and instead expose the bridge via a reverse proxy. When `bAllowNonLoopback` is enabled, **always also enable `bRequireCapabilityToken`** — the default-allow loopback posture means any LAN client can otherwise call any tool without authentication.
 
 **Enable in Unreal:**
 1. **Edit > Project Settings > Plugins > MCP Automation Bridge**
@@ -390,7 +396,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 | Tool | Description |
 |------|-------------|
 | `manage_audio` | Audio Assets, Components, Sound Cues, MetaSounds, Attenuation |
-| `manage_sequence` | Sequencer, cinematics, bindings, tracks, playback, keyframes |
+| `manage_sequence` | Sequencer, cinematics, Movie Render Queue, media playback, Take Recorder, and replay controls |
 | `manage_networking` | Replication, RPCs, network prediction, sessions, split-screen, LAN/voice, game framework, input mappings |
 
 </details>

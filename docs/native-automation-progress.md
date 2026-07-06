@@ -24,7 +24,20 @@ This document tracks ongoing work to replace stubbed or registry-based fallbacks
 | `sequence_get_bindings` | Lists bindings from MovieScene. | ✅ Done |
 | `sequence_get_properties` | Returns frame rate + playback range. | ✅ Done |
 | `sequence_set_playback_speed` | Sets playback speed via Sequencer. | ✅ Done |
-| `sequence_cleanup` | Removes actors by prefix. | ✅ Done |
+
+## Cinematics & Media Automation
+
+| Area | Current State | Validation |
+| --- | --- | --- |
+| Expanded Sequencer | Implemented through `manage_sequence` for master/sub/shot sequences, cine cameras, camera cuts/shakes, rails/cranes, visibility, material, particle, skeletal animation, transform, event, and property tracks. | Headless live editor happy/adversarial suites cover creation, mutation, invalid inputs, and cleanup. |
+| Movie Render Queue | Implemented for job creation, output settings, render passes, anti-aliasing, console variables, burn-ins, queueing, asynchronous start validation, completion reporting, and output-file verification. A `start_render` timeout returns `MRQ_RENDER_TIMEOUT`, requests cancellation for all active jobs, and retains request ownership until the executor settles. | Real one-frame renders completed through both the WebSocket bridge and native `/mcp`; each reported the original request ID, successful executor completion, and generated image files. The native timeout regression verifies truthful cancellation fields, executor settlement, queue recovery, and a successful subsequent render. |
+| Media Framework | Implemented for media player/source/texture/sound/playlist creation plus play, pause, and seek. Network-backed media URLs are disabled because the backend cannot pin redirect destinations. | Live WebM fixture playback verified against a headless Unreal editor with file-backed media. |
+| Take Recorder | Implemented for panel setup, sources, recording start/stop, and recorded-track configuration. Start/stop responses include object and package-form sequence paths plus the generated subscene folder path. | Live Take Recorder start/stop verified against the real MCPtest project; the harness captures both generated package paths, deletes them, and reads both back as absent. |
+| Demo/Replay | Implemented for demo settings, recording, playback, pause/resume, seek, playback speed, killcam duration, and killcam start. | Direct stdio MCP client validated PIE recording/playback/killcam in the live headless editor. |
+| Native MCP Metadata | `manage_sequence` native `/mcp` tool definition covers all cinematics and media actions and their action-specific fields. Native MCP defaults to loopback; non-loopback binding requires explicit opt-in. | Direct native `/mcp` JSON-RPC validates session lifecycle, strict unknown-argument rejection, `manage_sequence` schema parity, path and URL rejection, media playback ownership, binding reuse, sequence mutation, a real one-frame MRQ render, deletion races, and cleanup over SSE. The native scenario creates and removes its own deterministic media fixture instead of depending on another suite's leftover file. |
+
+The complete June 11, 2026 acceptance evidence covers live headless Unreal validation
+of the native `/mcp` surface and the WebSocket bridge surface, summarized inline above.
 
 ## Graph Actions (Consolidated)
 
@@ -427,5 +440,5 @@ All `blueprint_*` authoring commands now require editor support and execute nati
 ## Next Steps
 
 1. Expand profiling/validation coverage beyond the completed Insights trace workflow and existing `validate_assets` coverage.
-2. Continue cinematic/media expansion now that the rendering surface is complete.
+2. Keep cinematics/media behavior covered as Unreal Engine APIs evolve.
 3. Infrastructure, multiplayer/session, world-building, PCG, and advanced lighting/rendering surfaces are complete. ✅ Done
