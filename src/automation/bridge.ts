@@ -1,12 +1,12 @@
 import { EventEmitter } from 'node:events';
-import { Logger } from '../utils/logging/logger.js';
 import { AutomationBridgeClient } from './bridge-client.js';
-import { resolveAutomationBridgeConfig, type AutomationBridgeResolvedConfig } from './bridge-config.js';
+import { type AutomationBridgeResolvedConfig, resolveAutomationBridgeConfig } from './bridge-config.js';
 import { AutomationRequestDispatcher } from './bridge-request-dispatcher.js';
 import type { AutomationBridgeRuntimeState } from './bridge-state.js';
 import { buildAutomationBridgeStatus } from './bridge-status.js';
 import { ConnectionManager } from './connection-manager.js';
 import { HandshakeHandler } from './handshake.js';
+import { AutomationLogger } from './log-redaction.js';
 import { MessageHandler } from './message-handler.js';
 import { RequestTracker } from './request-tracker.js';
 import type {
@@ -26,7 +26,7 @@ export class AutomationBridge extends EventEmitter {
     private readonly messageHandler: MessageHandler;
     private readonly client: AutomationBridgeClient;
     private readonly requestDispatcher: AutomationRequestDispatcher;
-    private readonly log = new Logger('AutomationBridge');
+    private readonly log = new AutomationLogger('AutomationBridge');
 
     constructor(options: AutomationBridgeOptions = {}) {
         super();

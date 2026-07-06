@@ -1,14 +1,14 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { createRequire } from 'node:module';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 
 import { AutomationBridge } from '../automation/index.js';
+import { AutomationLogger } from '../automation/log-redaction.js';
 import { config } from '../config.js';
 import { ServerSetup } from '../server-setup.js';
 import { HealthMonitor } from '../services/health-monitor.js';
 import { startMetricsServer } from '../services/metrics-server.js';
 import { consolidatedToolDefinitions } from '../tools/catalog/consolidated-tool-definitions.js';
 import { UnrealBridge } from '../unreal-bridge.js';
-import { Logger } from '../utils/logging/logger.js';
 import { responseValidator } from '../utils/responses/response-validator.js';
 
 const require = createRequire(import.meta.url);
@@ -16,7 +16,7 @@ const packageInfo: { name?: string; version?: string } = (() => {
   try {
     return require('../../package.json');
   } catch (error) {
-    const logger = new Logger('UE-MCP');
+    const logger = new AutomationLogger('UE-MCP');
     logger.debug(
       'Unable to read package.json for server metadata',
       error instanceof Error ? error : String(error),
@@ -35,7 +35,7 @@ const SERVER_VERSION =
     : '0.5.30';
 const AUTOMATION_HEARTBEAT_MS = 15_000;
 
-export const log = new Logger('UE-MCP');
+export const log = new AutomationLogger('UE-MCP');
 
 export function routeStdoutLogsToStderr(): void {
   if (!config.MCP_ROUTE_STDOUT_LOGS) {
