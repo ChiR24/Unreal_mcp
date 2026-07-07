@@ -2,6 +2,7 @@
 
 #include "Acp/Client/McpOpenCodeAcpClient.h"
 
+#include "Containers/Ticker.h"
 #include "CoreMinimal.h"
 #include "Templates/UniquePtr.h"
 #include "Widgets/SCompoundWidget.h"
@@ -72,6 +73,12 @@ private:
         bool bHasCustomTitle = false;
     };
 
+    struct FComposerFileAttachment
+    {
+        FString AbsolutePath;
+        FString DisplayName;
+    };
+
     FReply OnConnectClicked();
     FReply OnSendClicked();
     FReply OnClearChatClicked();
@@ -92,7 +99,11 @@ private:
     FReply OnModelOptionClicked(TSharedPtr<FOpenCodeAcpModelOption> SelectedModel);
     FReply OnThinkingOptionClicked(TSharedPtr<FOpenCodeAcpThinkingOption> SelectedThinking);
     FReply OnAgentOptionClicked(TSharedPtr<FOpenCodeAcpAgentOption> SelectedAgent);
+    FReply OnComposerCommandSuggestionClicked(FString CommandName);
+    FReply OnComposerFileSuggestionClicked(FString FilePath);
+    FReply OnComposerAttachmentRemoveClicked(FString FilePath);
     FReply OnPromptKeyDown(const FGeometry& MyGeometry, const FKeyEvent& KeyEvent);
+    void OnPromptTextChanged(const FText& NewText);
     void OnChatHistoryRenameTextChanged(const FText& NewText, int32 EntryId);
     void OnModelSelected(TSharedPtr<FOpenCodeAcpModelOption> SelectedModel);
     void OnThinkingSelected(TSharedPtr<FOpenCodeAcpThinkingOption> SelectedThinking);
@@ -130,6 +141,8 @@ private:
     FText GetStudioKitStatusText() const;
     FText GetEditorContextStatusText() const;
     FText GetValidationStatusText() const;
+    FText GetMcpStatusText() const;
+    FSlateColor GetMcpStatusColor() const;
     ECheckBoxState GetAttachContextCheckState() const;
     EVisibility GetContextWindowVisibility() const;
     EVisibility GetExpandedSidebarVisibility() const;
@@ -156,6 +169,12 @@ private:
         TSharedPtr<SComboButton>& OutAgentComboButton,
         const FName& ComposerTag);
     TSharedRef<SWidget> MakeComposerInputFrame(TSharedPtr<SMultiLineEditableTextBox>& OutPromptTextBox);
+    void RebuildComposerAffordanceLists();
+    void ScheduleComposerAffordanceRebuild();
+    void PopulateComposerAffordanceList(TSharedRef<SVerticalBox> AffordanceList);
+    void PopulateComposerAttachmentRows(TSharedRef<SVerticalBox> AffordanceList);
+    void PopulateComposerCommandRows(TSharedRef<SVerticalBox> AffordanceList, const FString& Prefix);
+    void PopulateComposerFileRows(TSharedRef<SVerticalBox> AffordanceList, const FString& Prefix);
     TSharedRef<SWidget> MakeComposerActionRow(
         TSharedPtr<SComboButton>& OutModelComboButton,
         TSharedPtr<SComboButton>& OutThinkingComboButton,
@@ -218,9 +237,13 @@ private:
     TSharedPtr<SSearchBox> ModelSearchBox;
     TSharedPtr<SVerticalBox> ModelMenuList;
     TSharedPtr<SVerticalBox> ChatHistoryList;
+    TArray<TWeakPtr<SVerticalBox>> ComposerAffordanceLists;
+    TArray<FString> ComposerMentionFileCache;
+    bool bComposerMentionFileCacheValid = false;
     TArray<TSharedPtr<FOpenCodeAcpModelOption>> ModelOptions;
     TArray<TSharedPtr<FOpenCodeAcpModelOption>> FilteredModelOptions;
     TArray<FChatHistoryEntry> ChatHistoryEntries;
+    TArray<FComposerFileAttachment> ComposerFileAttachments;
     TSharedPtr<FOpenCodeAcpModelOption> SelectedModelOption;
     TSharedPtr<FOpenCodeAcpThinkingOption> SelectedThinkingOption;
     TSharedPtr<FOpenCodeAcpAgentOption> SelectedAgentOption;
@@ -253,4 +276,7 @@ private:
     bool bHasPendingPermission = false;
     bool bRestoringChatHistory = false;
     bool bAttachEditorContext = true;
+
+private:
+    FTSTicker::FDelegateHandle ComposerAffordanceDebounceHandle;
 };

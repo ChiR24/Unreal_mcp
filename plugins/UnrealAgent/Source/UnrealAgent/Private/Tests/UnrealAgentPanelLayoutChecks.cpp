@@ -64,6 +64,7 @@ namespace UnrealAgent::AutomationTests
             { TEXT("Cockpit validate button is tagged"), TEXT("UnrealAgent.Cockpit.ValidateButton") },
             { TEXT("Cockpit evidence status is tagged"), TEXT("UnrealAgent.Cockpit.EvidenceStatus") },
             { TEXT("Cockpit Studio Kit status is tagged"), TEXT("UnrealAgent.Cockpit.StudioKitStatus") },
+            { TEXT("Cockpit MCP status is tagged"), TEXT("UnrealAgent.Cockpit.McpStatus") },
             { TEXT("Initial composer is tagged"), TEXT("UnrealAgent.Composer.Center") },
             { TEXT("Composer footer is tagged"), TEXT("UnrealAgent.Composer.Footer") },
             { TEXT("Model controls row is tagged"), TEXT("UnrealAgent.Composer.ModelControls") },

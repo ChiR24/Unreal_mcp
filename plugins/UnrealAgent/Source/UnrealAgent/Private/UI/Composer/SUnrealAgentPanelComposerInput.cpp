@@ -39,55 +39,72 @@ using namespace UnrealAgent::Panel;
 
 TSharedRef<SWidget> SUnrealAgentPanel::MakeComposerInputFrame(TSharedPtr<SMultiLineEditableTextBox>& OutPromptTextBox)
 {
-    return SNew(SBox)
-        .HeightOverride(84.0f)
+    TSharedPtr<SVerticalBox> AffordanceList;
+    TSharedRef<SWidget> InputFrame = SNew(SVerticalBox)
+        + SVerticalBox::Slot()
+        .AutoHeight()
         [
-            SNew(SOverlay)
-            .Tag(FName(TEXT("UnrealAgent.Composer.InputFrame")))
-            + SOverlay::Slot()
+            SNew(SBox)
+            .HeightOverride(84.0f)
             [
-                SAssignNew(OutPromptTextBox, SMultiLineEditableTextBox)
-                .Tag(FName(TEXT("UnrealAgent.Composer.Input")))
-                .HintText(LOCTEXT("PromptHint", "Ask anything... \"Help me build an editor tool\""))
-                .AutoWrapText(true)
-                .WrappingPolicy(ETextWrappingPolicy::AllowPerCharacterWrapping)
-                .AllowMultiLine(true)
-                .ClearKeyboardFocusOnCommit(false)
-                .Padding(FMargin(7.0f, 6.0f, 38.0f, 8.0f))
-                .HScrollBar(MakeHiddenScrollBar(Orient_Horizontal))
-                .VScrollBar(MakeHiddenScrollBar(Orient_Vertical))
-                .HScrollBarPadding(FMargin(0.0f))
-                .VScrollBarPadding(FMargin(0.0f))
-                .OnKeyDownHandler(this, &SUnrealAgentPanel::OnPromptKeyDown)
-            ]
-            + SOverlay::Slot()
-            .HAlign(HAlign_Right)
-            .VAlign(VAlign_Bottom)
-            .Padding(FMargin(0.0f, 0.0f, 6.0f, 6.0f))
-            [
-                SNew(SBox)
-                .WidthOverride(36.0f)
-                .HeightOverride(28.0f)
+                SNew(SOverlay)
+                .Tag(FName(TEXT("UnrealAgent.Composer.InputFrame")))
+                + SOverlay::Slot()
                 [
-                    SNew(SButton)
-                    .Tag(FName(TEXT("UnrealAgent.Composer.SendButton")))
-                    .ToolTipText(this, &SUnrealAgentPanel::GetComposerHelperText)
-                    .HAlign(HAlign_Center)
-                    .VAlign(VAlign_Center)
-                    .IsEnabled_Lambda([this]()
-                    {
-                        return (AcpClient.IsValid() && AcpClient->IsPromptInFlight() && !AcpClient->IsCancelRequested()) || CanSendPrompt();
-                    })
-                    .OnClicked(this, &SUnrealAgentPanel::OnSendClicked)
+                    SAssignNew(OutPromptTextBox, SMultiLineEditableTextBox)
+                    .Tag(FName(TEXT("UnrealAgent.Composer.Input")))
+                    .HintText(LOCTEXT("PromptHint", "Ask anything... type / for commands or @ to attach a file"))
+                    .AutoWrapText(true)
+                    .WrappingPolicy(ETextWrappingPolicy::AllowPerCharacterWrapping)
+                    .AllowMultiLine(true)
+                    .ClearKeyboardFocusOnCommit(false)
+                    .Padding(FMargin(7.0f, 6.0f, 38.0f, 8.0f))
+                    .HScrollBar(MakeHiddenScrollBar(Orient_Horizontal))
+                    .VScrollBar(MakeHiddenScrollBar(Orient_Vertical))
+                    .HScrollBarPadding(FMargin(0.0f))
+                    .VScrollBarPadding(FMargin(0.0f))
+                    .OnTextChanged(this, &SUnrealAgentPanel::OnPromptTextChanged)
+                    .OnKeyDownHandler(this, &SUnrealAgentPanel::OnPromptKeyDown)
+                ]
+                + SOverlay::Slot()
+                .HAlign(HAlign_Right)
+                .VAlign(VAlign_Bottom)
+                .Padding(FMargin(0.0f, 0.0f, 6.0f, 6.0f))
+                [
+                    SNew(SBox)
+                    .WidthOverride(36.0f)
+                    .HeightOverride(28.0f)
                     [
-                        SNew(SImage)
-                        .Image(this, &SUnrealAgentPanel::GetSendButtonIconBrush)
-                        .ColorAndOpacity(this, &SUnrealAgentPanel::GetSendButtonIconColor)
-                        .DesiredSizeOverride(FVector2D(14.0f, 14.0f))
+                        SNew(SButton)
+                        .Tag(FName(TEXT("UnrealAgent.Composer.SendButton")))
+                        .ToolTipText(this, &SUnrealAgentPanel::GetComposerHelperText)
+                        .HAlign(HAlign_Center)
+                        .VAlign(VAlign_Center)
+                        .IsEnabled_Lambda([this]()
+                        {
+                            return (AcpClient.IsValid() && AcpClient->IsPromptInFlight() && !AcpClient->IsCancelRequested()) || CanSendPrompt();
+                        })
+                        .OnClicked(this, &SUnrealAgentPanel::OnSendClicked)
+                        [
+                            SNew(SImage)
+                            .Image(this, &SUnrealAgentPanel::GetSendButtonIconBrush)
+                            .ColorAndOpacity(this, &SUnrealAgentPanel::GetSendButtonIconColor)
+                            .DesiredSizeOverride(FVector2D(16.0f, 16.0f))
+                        ]
                     ]
                 ]
             ]
+        ]
+        + SVerticalBox::Slot()
+        .AutoHeight()
+        .Padding(FMargin(0.0f, 5.0f, 0.0f, 0.0f))
+        [
+            SAssignNew(AffordanceList, SVerticalBox)
+            .Tag(FName(TEXT("UnrealAgent.Composer.AffordanceList")))
         ];
+
+    ComposerAffordanceLists.Add(AffordanceList);
+    return InputFrame;
 }
 
 #undef LOCTEXT_NAMESPACE

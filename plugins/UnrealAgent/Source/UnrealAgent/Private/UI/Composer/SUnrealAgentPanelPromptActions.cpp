@@ -51,6 +51,11 @@ FReply SUnrealAgentPanel::OnConnectClicked()
         return FReply::Handled();
     }
 
+    // The file-list cache is keyed on the project root; if the editor was opened
+    // against a different project than the one active when the cache was built,
+    // force a rebuild.
+    bComposerMentionFileCacheValid = false;
+
     const FString WorkingDirectory = FPaths::ProjectDir();
     if (AcpClient->Start(WorkingDirectory))
     {
@@ -84,12 +89,20 @@ FReply SUnrealAgentPanel::OnSendClicked()
     }
 
     const FString Prompt = ActivePromptTextBox->GetText().ToString().TrimStartAndEnd();
+    TArray<FString> AttachmentPaths;
+    for (const FComposerFileAttachment& Attachment : ComposerFileAttachments)
+    {
+        AttachmentPaths.Add(Attachment.AbsolutePath);
+    }
     AcpClient->SetAttachEditorContext(bAttachEditorContext);
-    if (AcpClient->SendPrompt(Prompt))
+    if (AcpClient->SendPrompt(Prompt, AttachmentPaths))
     {
         EnsureActiveChatEntry(Prompt, true);
         bHasConversationContent = true;
         LastUserPrompt = Prompt;
+        ComposerFileAttachments.Reset();
+        // ClearPromptTextBoxes() will fire OnTextChanged -> OnPromptTextChanged ->
+        // ScheduleComposerAffordanceRebuild, so no explicit rebuild is needed here.
         ClearPromptTextBoxes();
     }
     else
@@ -210,6 +223,11 @@ void SUnrealAgentPanel::OnAttachContextCheckStateChanged(ECheckBoxState NewState
     {
         AcpClient->SetAttachEditorContext(bAttachEditorContext);
     }
+}
+
+void SUnrealAgentPanel::OnPromptTextChanged(const FText& NewText)
+{
+    ScheduleComposerAffordanceRebuild();
 }
 
 FReply SUnrealAgentPanel::OnPromptKeyDown(const FGeometry& MyGeometry, const FKeyEvent& KeyEvent)

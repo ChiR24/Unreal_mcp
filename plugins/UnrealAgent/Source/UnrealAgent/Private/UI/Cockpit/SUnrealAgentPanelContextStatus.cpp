@@ -168,4 +168,24 @@ FText SUnrealAgentPanel::GetValidationStatusText() const
     return FText::FromString(Summary.Left(120));
 }
 
+FText SUnrealAgentPanel::GetMcpStatusText() const
+{
+    if (!AcpClient.IsValid() || !AcpClient->IsRunning())
+    {
+        return LOCTEXT("McpStatusDisconnected", "MCP: connect OpenCode first");
+    }
+    return AcpClient->IsUnrealMcpConfiguredForSession()
+        ? LOCTEXT("McpStatusConfigured", "MCP: unreal-engine enabled")
+        : LOCTEXT("McpStatusMissing", "MCP: enable Native MCP + token");
+}
+
+FSlateColor SUnrealAgentPanel::GetMcpStatusColor() const
+{
+    if (AcpClient.IsValid() && AcpClient->IsUnrealMcpConfiguredForSession())
+    {
+        return FStyleColors::Success;
+    }
+    return FStyleColors::Warning;
+}
+
 #undef LOCTEXT_NAMESPACE

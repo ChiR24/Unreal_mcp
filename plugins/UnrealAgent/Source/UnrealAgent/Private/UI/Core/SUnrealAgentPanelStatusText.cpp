@@ -194,7 +194,7 @@ FText SUnrealAgentPanel::GetChatHistoryEmptyText() const
 
 const FSlateBrush* SUnrealAgentPanel::GetSendButtonIconBrush() const
 {
-    return FAppStyle::Get().GetBrush(AcpClient.IsValid() && AcpClient->IsPromptInFlight() ? TEXT("Icons.X") : TEXT("Icons.ArrowRight"));
+    return FAppStyle::Get().GetBrush(AcpClient.IsValid() && AcpClient->IsPromptInFlight() ? TEXT("Icons.Toolbar.Stop") : TEXT("Icons.ArrowUp"));
 }
 
 FSlateColor SUnrealAgentPanel::GetSendButtonIconColor() const

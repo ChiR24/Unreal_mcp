@@ -44,7 +44,7 @@ bool SUnrealAgentPanel::CanSendPrompt() const
         return false;
     }
 
-    return !ActivePromptTextBox->GetText().ToString().TrimStartAndEnd().IsEmpty();
+    return !ActivePromptTextBox->GetText().ToString().TrimStartAndEnd().IsEmpty() || ComposerFileAttachments.Num() > 0;
 }
 
 bool SUnrealAgentPanel::CanRetryLastPrompt() const

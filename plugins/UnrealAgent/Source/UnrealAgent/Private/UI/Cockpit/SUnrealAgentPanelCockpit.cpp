@@ -76,6 +76,17 @@ TSharedRef<SWidget> SUnrealAgentPanel::MakeCockpit()
             .Padding(FMargin(8.0f, 0.0f, 0.0f, 0.0f))
             [
                 SNew(STextBlock)
+                .Tag(FName(TEXT("UnrealAgent.Cockpit.McpStatus")))
+                .Text(this, &SUnrealAgentPanel::GetMcpStatusText)
+                .ColorAndOpacity(this, &SUnrealAgentPanel::GetMcpStatusColor)
+                .OverflowPolicy(ETextOverflowPolicy::Ellipsis)
+            ]
+            + SHorizontalBox::Slot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            .Padding(FMargin(8.0f, 0.0f, 0.0f, 0.0f))
+            [
+                SNew(STextBlock)
                 .Tag(FName(TEXT("UnrealAgent.Cockpit.StudioKitStatus")))
                 .Text(this, &SUnrealAgentPanel::GetStudioKitStatusText)
                 .ColorAndOpacity(FSlateColor::UseSubduedForeground())
