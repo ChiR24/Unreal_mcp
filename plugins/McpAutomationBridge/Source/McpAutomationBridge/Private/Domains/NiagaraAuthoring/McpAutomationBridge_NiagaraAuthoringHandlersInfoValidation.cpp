@@ -32,6 +32,39 @@ static void AddSystemInfo(TSharedPtr<FJsonObject>& InfoObj, UNiagaraSystem* Syst
             EmitterObj->SetStringField(TEXT("simulationTarget"), bGpuEmitter ? TEXT("GPU") : TEXT("CPU"));
             bHasGPU = bHasGPU || bGpuEmitter;
         }
+#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
+        // Enumerate the real stack modules per emitter. Without this, get_niagara_info reports
+        // only emitters + user parameters, so callers cannot tell a genuine stack module from a
+        // user-parameter shim — the readback that proves modules were actually authored. Walk the
+        // script graph's function-call nodes and keep those whose called usage is Module (excludes
+        // dynamic-input function calls). NOTE: FNiagaraStackGraphUtilities::GetOrderedModuleNodes is
+        // declared but NOT DLL-exported, so it cannot be linked from another module — hence the
+        // direct graph walk using the exported UNiagaraNodeFunctionCall::GetCalledUsage().
+        if (UNiagaraScriptSource* ScriptSource = GetEmitterScriptSource(const_cast<FNiagaraEmitterHandle*>(&Handle)))
+        {
+            if (ScriptSource->NodeGraph)
+            {
+                TArray<TSharedPtr<FJsonValue>> ModulesArray;
+                for (UEdGraphNode* GraphNode : ScriptSource->NodeGraph->Nodes)
+                {
+                    UNiagaraNodeFunctionCall* FuncNode = Cast<UNiagaraNodeFunctionCall>(GraphNode);
+                    if (!FuncNode || FuncNode->FunctionScript == nullptr)
+                    {
+                        continue;
+                    }
+                    if (FuncNode->GetCalledUsage() != ENiagaraScriptUsage::Module)
+                    {
+                        continue;
+                    }
+                    TSharedPtr<FJsonObject> ModuleObj = McpHandlerUtils::CreateResultObject();
+                    ModuleObj->SetStringField(TEXT("name"), FuncNode->GetFunctionName());
+                    ModulesArray.Add(MakeShared<FJsonValueObject>(ModuleObj));
+                }
+                EmitterObj->SetNumberField(TEXT("moduleCount"), ModulesArray.Num());
+                EmitterObj->SetArrayField(TEXT("modules"), ModulesArray);
+            }
+        }
+#endif
         EmittersArray.Add(MakeShared<FJsonValueObject>(EmitterObj));
     }
     InfoObj->SetArrayField(TEXT("emitters"), EmittersArray);
