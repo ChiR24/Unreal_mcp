@@ -8,6 +8,7 @@
 
 #if WITH_EDITOR
 #include "EditorAssetLibrary.h"
+#include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetDirectories.h"
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
@@ -40,8 +41,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("path"), SafePath);
-    // Add verification data
-    VerifyAssetExists(Resp, SafePath);
+    // A folder is a directory, not an asset object — VerifyAssetExists looks for a .uasset
+    // and so always reported existsAfter:false for a freshly created folder. Report the
+    // actual directory existence via the on-disk check (asset-registry directory entries can
+    // be stale; this mirrors the codebase's DoesAssetDirectoryExistOnDisk convention). Empty
+    // folders may still not persist across an editor restart until an asset is added, but the
+    // in-session readback is now truthful.
+    Resp->SetBoolField(TEXT("existsAfter"), DoesAssetDirectoryExistOnDisk(SafePath));
     SendAutomationResponse(Socket, RequestId, true, TEXT("Folder created"),
                            Resp, FString());
   } else {

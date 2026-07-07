@@ -4,8 +4,9 @@ import type { AutomationResponse } from '../../../types/automation/automation-re
 import { executeAutomationRequest } from '../foundation/dispatch/common-handlers.js';
 import { ResponseFactory } from '../../../utils/responses/response-factory.js';
 import { TOOL_ACTIONS } from '../../../utils/commands/action-constants.js';
-import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber, extractOptionalBoolean, extractOptionalObject } from '../foundation/arguments/argument-helper.js';
+import { normalizeArgs, extractString, extractOptionalString, extractOptionalBoolean, extractOptionalObject } from '../foundation/arguments/argument-helper.js';
 import { normalizeAssetPath, parseMaterialPath } from './material-authoring-common.js';
+import { toFiniteNumber } from '../../../utils/validation/normalize.js';
 
 export async function handleMaterialInstanceAction(
   action: string,
@@ -80,7 +81,18 @@ export async function handleMaterialInstanceAction(
 
         const assetPath = extractString(params, 'assetPath');
         const parameterName = extractString(params, 'parameterName');
-        const value = extractOptionalNumber(params, 'value') ?? 0;
+        // 'value' can arrive as a numeric string (the MCP boundary stringifies scalars);
+        // extractOptionalNumber rejected non-number types, so the old `?? 0` silently zeroed
+        // every value (0.3 -> 0). Use the codebase's toFiniteNumber, which accepts a number or
+        // a numeric string and rejects blank/boolean/array/non-parseable inputs (Number() would
+        // coerce '', false, [] to 0). A bad value surfaces as an error, not a silent 0.
+        const rawValue = (params as Record<string, unknown>)['value'];
+        const value = toFiniteNumber(rawValue);
+        if (value === undefined) {
+          return ResponseFactory.error(
+            `manage_material_authoring.set_scalar_parameter_value: 'value' must be a finite number, got ${JSON.stringify(rawValue)}`,
+            'INVALID_ARGUMENT');
+        }
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {

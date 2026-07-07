@@ -1,6 +1,13 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 
 #if WITH_EDITOR
+#include "ViewModels/NiagaraSystemViewModel.h"
+#include "ViewModels/NiagaraEmitterHandleViewModel.h"
+#include "ViewModels/Stack/NiagaraStackViewModel.h"
+#include "ViewModels/Stack/NiagaraStackEntry.h"
+#endif
+
+#if WITH_EDITOR
 namespace McpNiagaraAuthoringHandlers
 {
 static void AddSystemInfo(TSharedPtr<FJsonObject>& InfoObj, UNiagaraSystem* System)
@@ -25,6 +32,39 @@ static void AddSystemInfo(TSharedPtr<FJsonObject>& InfoObj, UNiagaraSystem* Syst
             EmitterObj->SetStringField(TEXT("simulationTarget"), bGpuEmitter ? TEXT("GPU") : TEXT("CPU"));
             bHasGPU = bHasGPU || bGpuEmitter;
         }
+#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
+        // Enumerate the real stack modules per emitter. Without this, get_niagara_info reports
+        // only emitters + user parameters, so callers cannot tell a genuine stack module from a
+        // user-parameter shim — the readback that proves modules were actually authored. Walk the
+        // script graph's function-call nodes and keep those whose called usage is Module (excludes
+        // dynamic-input function calls). NOTE: FNiagaraStackGraphUtilities::GetOrderedModuleNodes is
+        // declared but NOT DLL-exported, so it cannot be linked from another module — hence the
+        // direct graph walk using the exported UNiagaraNodeFunctionCall::GetCalledUsage().
+        if (UNiagaraScriptSource* ScriptSource = GetEmitterScriptSource(const_cast<FNiagaraEmitterHandle*>(&Handle)))
+        {
+            if (ScriptSource->NodeGraph)
+            {
+                TArray<TSharedPtr<FJsonValue>> ModulesArray;
+                for (UEdGraphNode* GraphNode : ScriptSource->NodeGraph->Nodes)
+                {
+                    UNiagaraNodeFunctionCall* FuncNode = Cast<UNiagaraNodeFunctionCall>(GraphNode);
+                    if (!FuncNode || FuncNode->FunctionScript == nullptr)
+                    {
+                        continue;
+                    }
+                    if (FuncNode->GetCalledUsage() != ENiagaraScriptUsage::Module)
+                    {
+                        continue;
+                    }
+                    TSharedPtr<FJsonObject> ModuleObj = McpHandlerUtils::CreateResultObject();
+                    ModuleObj->SetStringField(TEXT("name"), FuncNode->GetFunctionName());
+                    ModulesArray.Add(MakeShared<FJsonValueObject>(ModuleObj));
+                }
+                EmitterObj->SetNumberField(TEXT("moduleCount"), ModulesArray.Num());
+                EmitterObj->SetArrayField(TEXT("modules"), ModulesArray);
+            }
+        }
+#endif
         EmittersArray.Add(MakeShared<FJsonValueObject>(EmitterObj));
     }
     InfoObj->SetArrayField(TEXT("emitters"), EmittersArray);
@@ -83,6 +123,35 @@ static bool GetNiagaraInfo(FActionContext& Context)
     return true;
 }
 
+// Recursively collect Error/Warning issues from a Niagara stack-entry tree. These are the same
+// issues the Niagara editor surfaces in the stack panel (unmet module dependencies, deprecated
+// modules, compile failures), so harvesting them is the authoritative "is this system broken?".
+static void CollectStackIssues(UNiagaraStackEntry* Entry, TArray<TSharedPtr<FJsonValue>>& Errors, TArray<TSharedPtr<FJsonValue>>& Warnings)
+{
+    if (!Entry)
+    {
+        return;
+    }
+    for (const UNiagaraStackEntry::FStackIssue& Issue : Entry->GetIssues())
+    {
+        const FString Message = Issue.GetShortDescription().ToString();
+        if (Issue.GetSeverity() == EStackIssueSeverity::Error)
+        {
+            Errors.Add(MakeShared<FJsonValueString>(Message));
+        }
+        else if (Issue.GetSeverity() == EStackIssueSeverity::Warning)
+        {
+            Warnings.Add(MakeShared<FJsonValueString>(Message));
+        }
+    }
+    TArray<UNiagaraStackEntry*> Children;
+    Entry->GetUnfilteredChildren(Children);
+    for (UNiagaraStackEntry* Child : Children)
+    {
+        CollectStackIssues(Child, Errors, Warnings);
+    }
+}
+
 static bool ValidateNiagaraSystem(FActionContext& Context)
 {
     if (Context.SystemPath.IsEmpty())
@@ -100,9 +169,12 @@ static bool ValidateNiagaraSystem(FActionContext& Context)
     {
         return true;
     }
+
     TSharedPtr<FJsonObject> ValidationResult = McpHandlerUtils::CreateResultObject();
     TArray<TSharedPtr<FJsonValue>> ErrorsArray;
     TArray<TSharedPtr<FJsonValue>> WarningsArray;
+
+    // Cheap structural warnings, independent of the stack.
     if (System->GetEmitterHandles().Num() == 0)
     {
         WarningsArray.Add(MakeShared<FJsonValueString>(TEXT("System has no emitters.")));
@@ -113,21 +185,71 @@ static bool ValidateNiagaraSystem(FActionContext& Context)
         {
             WarningsArray.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("Emitter '%s' is disabled."), *Handle.GetName().ToString())));
         }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle.GetEmitterData();
-#else
-        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle.GetInstance();
-#endif
-        if (EmitterData && EmitterData->GetRenderers().Num() == 0)
-        {
-            WarningsArray.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("Emitter '%s' has no renderers."), *Handle.GetName().ToString())));
-        }
     }
-    ValidationResult->SetBoolField(TEXT("isValid"), true);
+
+    // The real validation: harvest the stack issues that the Niagara editor itself computes.
+    // The previous implementation hard-coded isValid=true; an earlier attempt that inspected each
+    // script's ENiagaraScriptCompileStatus missed the common failures ("unmet dependencies",
+    // deprecated modules) because those are *stack issues*, not VM compile-status errors.
+    //
+    // We build a throwaway view model in FULL (non-data-processing) mode and let it refresh the
+    // system + emitter stacks, then collect every Error/Warning stack issue. Full mode is REQUIRED:
+    // UNiagaraStackModuleItem::RefreshIssues() early-outs to an empty issue list whenever the owning
+    // system view model GetIsForDataProcessingOnly() is true (NiagaraStackModuleItem.cpp ~L967), so a
+    // data-processing-only VM can never surface per-module errors — including the dependency check
+    // that produces "The module has unmet dependencies." We keep the heavy bits off: bCanSimulate is
+    // false (so SetupPreviewComponentAndInstance() creates no preview UNiagaraComponent) and
+    // bCanAutoCompile/bCompileForEdit are false. SetupSequencer() still runs but only builds a
+    // detached transient Sequencer (the same construction the Niagara asset editor performs).
+    //
+    // We can't reuse an already-open editor's view model: TNiagaraViewModelManager's lookup
+    // references a static member not exported to other modules, and FNiagaraSystemToolkit lives in
+    // NiagaraEditor/Private. So we always spin our own VM. We deliberately do NOT call the unexported
+    // Cleanup(); letting the shared pointer drop runs ~FNiagaraSystemViewModel -> Cleanup() for us.
+    TSharedRef<FNiagaraSystemViewModel> SystemViewModel = MakeShared<FNiagaraSystemViewModel>();
+    {
+        FNiagaraSystemViewModelOptions Options;
+        Options.bCanAutoCompile = false;
+        Options.bCanModifyEmittersFromTimeline = false;
+        Options.bCanSimulate = false;
+        Options.bCompileForEdit = false;
+        Options.bIsForDataProcessingOnly = false;
+        Options.EditMode = ENiagaraSystemViewModelEditMode::SystemAsset;
+        // Initialize() -> RefreshAll() subscribes to the Niagara message manager keyed by this GUID;
+        // it asserts on an empty key (NiagaraMessageManager.cpp: "Tried to subscribe to an asset
+        // without a set asset key"). A throwaway unique key is fine — we never route messages, and the
+        // view model's destructor (~FNiagaraSystemViewModel -> Cleanup()) tears the subscription down.
+        Options.MessageLogGuid = FGuid::NewGuid();
+        SystemViewModel->Initialize(*System, Options);
+    }
+
+    // Initialize() already RefreshAll()'d the stacks, but harvest defensively by refreshing each
+    // root's children before walking it, so the per-module issues (the dependency check included)
+    // are guaranteed current.
+    auto RefreshAndCollect = [&ErrorsArray, &WarningsArray](UNiagaraStackViewModel* Stack)
+    {
+        if (!Stack)
+        {
+            return;
+        }
+        if (UNiagaraStackEntry* Root = Stack->GetRootEntry())
+        {
+            Root->RefreshChildren();
+            CollectStackIssues(Root, ErrorsArray, WarningsArray);
+        }
+    };
+    RefreshAndCollect(SystemViewModel->GetSystemStackViewModel());
+    for (const TSharedRef<FNiagaraEmitterHandleViewModel>& EmitterHandleViewModel : SystemViewModel->GetEmitterHandleViewModels())
+    {
+        RefreshAndCollect(EmitterHandleViewModel->GetEmitterStackViewModel());
+    }
+
+    const bool bIsValid = ErrorsArray.Num() == 0;
+    ValidationResult->SetBoolField(TEXT("isValid"), bIsValid);
     ValidationResult->SetArrayField(TEXT("errors"), ErrorsArray);
     ValidationResult->SetArrayField(TEXT("warnings"), WarningsArray);
     Context.Result->SetObjectField(TEXT("validationResult"), ValidationResult);
-    Context.Result->SetStringField(TEXT("message"), TEXT("System is valid."));
+    Context.Result->SetStringField(TEXT("message"), bIsValid ? TEXT("System is valid.") : TEXT("System has errors."));
     Context.SendSuccess(true, TEXT("Validation complete."));
     return true;
 }

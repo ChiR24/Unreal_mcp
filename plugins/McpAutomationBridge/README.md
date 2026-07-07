@@ -198,6 +198,7 @@ Tools & Plugins
 | `UE_PROJECT_PATH` | - | Path to your `.uproject` file |
 | `MCP_AUTOMATION_HOST` | `127.0.0.1` | Bridge host address |
 | `MCP_AUTOMATION_PORT` | `8091` | Bridge WebSocket port |
+| `MCP_NATIVE_PORT` | (`Native MCP Port` setting) | Overrides the native MCP HTTP/SSE port at startup without editing ini — pick a per-editor port (e.g. to run several editors at once). Falls back to the project setting when unset/invalid. |
 | `LOG_LEVEL` | `info` | Logging level (debug/info/warn/error) |
 
 ### Plugin Settings
@@ -208,7 +209,7 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 - **Enable TLS**: Enable secure WebSocket connections
 - **Allow Non-Loopback**: Enable LAN access (security consideration)
 - **Enable Native MCP**: Enable built-in HTTP/SSE MCP server (default: off)
-- **Native MCP Port**: HTTP port for native MCP transport (default: 3000)
+- **Native MCP Port**: HTTP port for native MCP transport (default: 3000; override at startup with the `MCP_NATIVE_PORT` environment variable)
 - **Listen Host**: Bind address (default: 127.0.0.1)
 - **Load All Tools on Start**: Load all 23 canonical tools at startup (default: on)
 - **Native MCP Instructions**: Custom instructions for AI clients
