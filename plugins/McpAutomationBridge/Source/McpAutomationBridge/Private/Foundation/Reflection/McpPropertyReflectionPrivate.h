@@ -4,7 +4,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Internationalization/Text.h"
 #include "Runtime/Launch/Resources/Version.h"
-#include "UObject/StrProperty.h"
 #include "UObject/TextProperty.h"
 #include "UObject/UnrealType.h"
 

@@ -16,7 +16,11 @@ bool NormalizeSnapshotRelativePath(FString &Path)
 {
     Path = Path.TrimStartAndEnd();
     Path.ReplaceInline(TEXT("\\"), TEXT("/"));
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     while (Path.StartsWith(TEXT("./"))) Path.RightChopInline(2, EAllowShrinking::No);
+#else
+    while (Path.StartsWith(TEXT("./"))) Path.RightChopInline(2, false);
+#endif
     if (Path.Equals(TEXT("/Temp"), ESearchCase::IgnoreCase))
     {
         Path = TEXT("temp");
@@ -50,7 +54,11 @@ bool IsWindowsReservedFilename(const FString &Filename)
     int32 ExtensionIndex = INDEX_NONE;
     if (Basename.FindChar(TEXT('.'), ExtensionIndex))
     {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
         Basename.LeftInline(ExtensionIndex, EAllowShrinking::No);
+#else
+        Basename.LeftInline(ExtensionIndex, false);
+#endif
     }
     Basename.TrimEndInline();
     while (Basename.RemoveFromEnd(TEXT("."))) Basename.TrimEndInline();
