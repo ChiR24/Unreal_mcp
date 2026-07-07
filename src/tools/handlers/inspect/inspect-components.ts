@@ -101,7 +101,29 @@ export async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tool
 
 export async function handleGetComponents(context: InspectHandlerContext): Promise<Record<string, unknown>> {
   const actorName = await resolveObjectPath(context.args, context.tools, { pathKeys: [], actorKeys: ['actorName', 'name', 'objectPath'] });
-  if (!actorName) throw new Error('Invalid actorName');
+  if (!actorName) {
+    // Blueprint/CDO shape (mirrors handleGetComponentDetails): callers with a Blueprint but no spawned actor
+    // pass a blueprintPath here. Instead of failing, list the Blueprint's DEFAULT components via inspect_cdo
+    // (no actor spawn). Closes the get_components TOOL_EXECUTION_FAILED for Blueprint targets.
+    const blueprintPath = context.inspectArgs.blueprintPath
+      || (typeof context.normalizedArgs.blueprintPath === 'string' ? context.normalizedArgs.blueprintPath : '')
+      || (typeof context.normalizedArgs.assetPath === 'string' ? context.normalizedArgs.assetPath : '');
+    if (blueprintPath) {
+      const cdoResult = await executeAutomationRequest(context.tools, 'inspect', {
+        ...context.normalizedArgs,
+        action: 'inspect_cdo',
+        blueprintPath
+      }) as Record<string, unknown>;
+      return cleanObject({
+        ...cdoResult,
+        note: 'get_components inspects world actors; the blueprintPath argument was routed to inspect_cdo (Blueprint default/CDO components).'
+      }) as Record<string, unknown>;
+    }
+    throw new Error(
+      'Invalid actorName: get_components inspects WORLD actors (pass actorName). ' +
+      'For a Blueprint\'s default components, pass blueprintPath (routed to inspect_cdo).'
+    );
+  }
 
   return cleanObject(await executeAutomationRequest(
     context.tools,
