@@ -127,6 +127,25 @@ export async function ensureDefaultNiagaraAuthoringAssets(tools: ITools): Promis
         ? emitterPayload.emitterPath
         : makeGameObjectPath(DEFAULT_EFFECT_SAVE_PATH, DEFAULT_NIAGARA_AUTHORING_EMITTER_ASSET_NAME);
 
+      // BUG-6b79a9 / BUG-f59b2c: the emitter asset above is created STANDALONE and was never added to the
+      // system, so the implicit default authoring system had 0 emitter handles → every add_*_module /
+      // add_*_renderer call failed EMITTER_NOT_FOUND ("The system has 0 emitter(s)"). Add the emitter to the
+      // system under the well-known handle name (DEFAULT_NIAGARA_EMITTER_NAME = 'DefaultEmitter'), which is
+      // exactly the name the authoring actions default to, so the module/renderer handlers resolve it.
+      const addEmitterResult = await executeAutomationRequest(tools, 'manage_niagara_authoring', {
+        // Direct dispatch bypasses effect-argument-normalization (which copies action→subAction), so the C++
+        // handler's required `subAction` must be set explicitly here.
+        action: 'add_emitter_to_system',
+        subAction: 'add_emitter_to_system',
+        systemPath,
+        emitterPath,
+        emitterName: DEFAULT_NIAGARA_EMITTER_NAME,
+        save: false,
+      }) as Record<string, unknown>;
+      if (addEmitterResult.success === false) {
+        throw new Error(`Failed to add default emitter to authoring system: ${String(addEmitterResult.message || addEmitterResult.error || 'unknown error')}`);
+      }
+
       return {
         systemPath,
         emitterPath,
