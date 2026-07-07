@@ -31,6 +31,43 @@ void FMcpConnectionManager::Initialize(
       TlsCertificatePath = Settings->TlsCertificatePath;
     if (!Settings->TlsPrivateKeyPath.IsEmpty())
       TlsPrivateKeyPath = Settings->TlsPrivateKeyPath;
+
+    // ListenPorts is a single comma-separated FString, so a partial ini override
+    // (e.g. ListenPorts=9000) REPLACES the "8090,8091" default wholesale rather than
+    // adding to it (UE config semantics). When multi-listen is on, that can silently
+    // drop a default bridge port the TypeScript bridge / external MCP clients expect
+    // to connect on. We keep the user's ports authoritative (no surprise extra binds)
+    // but warn loudly so an accidental drop is visible instead of a mystery no-connect.
+    if (Settings->bMultiListen && !Settings->ListenPorts.IsEmpty()) {
+      TArray<FString> ConfiguredTokens;
+      Settings->ListenPorts.ParseIntoArray(ConfiguredTokens, TEXT(","), true);
+      TSet<int32> ConfiguredPorts;
+      for (const FString &Token : ConfiguredTokens) {
+        int32 ParsedPort = 0;
+        if (LexTryParseString(ParsedPort, *Token.TrimStartAndEnd()) &&
+            ParsedPort > 0 && ParsedPort <= 65535)
+          ConfiguredPorts.Add(ParsedPort);
+      }
+      // Mirrors the ListenPorts default in UMcpAutomationBridgeSettings' constructor.
+      static const int32 DefaultBridgePorts[] = {8090, 8091};
+      FString MissingDefaults;
+      for (int32 DefaultPort : DefaultBridgePorts) {
+        if (!ConfiguredPorts.Contains(DefaultPort)) {
+          if (!MissingDefaults.IsEmpty())
+            MissingDefaults += TEXT(",");
+          MissingDefaults += FString::FromInt(DefaultPort);
+        }
+      }
+      if (ConfiguredPorts.Num() > 0 && !MissingDefaults.IsEmpty()) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+               TEXT("ListenPorts=\"%s\" does not include the default bridge port(s) "
+                    "%s. A partial ListenPorts override replaces the \"8090,8091\" "
+                    "default entirely, so MCP clients or the TypeScript bridge "
+                    "expecting %s will not be able to connect. Add them to "
+                    "ListenPorts if this was unintended."),
+               *Settings->ListenPorts, *MissingDefaults, *MissingDefaults);
+      }
+    }
   }
 
   // Allow environment variable overrides for rate limiting (useful for tests)

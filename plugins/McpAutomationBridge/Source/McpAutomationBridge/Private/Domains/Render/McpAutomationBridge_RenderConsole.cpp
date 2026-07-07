@@ -40,7 +40,9 @@ bool ReadBoundedNumberSetting(
 {
     OutSetting.bPresent = false;
     OutSetting.Value = 0.0;
-    if (!Settings.IsValid() || !Settings->Values.Contains(Field))
+    // UE 5.8 changed FJsonObject::Values' key type to UE::TSharedString<TCHAR>, so an FString no
+    // longer implicitly converts in Contains(); use the public HasField() accessor instead.
+    if (!Settings.IsValid() || !Settings->HasField(Field))
     {
         return true;
     }
