@@ -21,6 +21,7 @@ import { manageInventoryToolDefinition } from '../gameplay/manage-inventory-tool
 import { manageInteractionToolDefinition } from '../gameplay/manage-interaction-tool.js';
 import { manageNetworkingToolDefinition } from '../utility/networking/manage-networking-tool.js';
 import { manageLevelStructureToolDefinition } from '../world/manage-level-structure-tool.js';
+import { manageDataToolDefinition } from '../gameplay/manage-data-tool.js';
 import type { ToolDefinition } from './tool-definition.js';
 
 export const allToolDefinitions: ToolDefinition[] = [
@@ -46,5 +47,6 @@ export const allToolDefinitions: ToolDefinition[] = [
   manageInventoryToolDefinition,
   manageInteractionToolDefinition,
   manageNetworkingToolDefinition,
-  manageLevelStructureToolDefinition
+  manageLevelStructureToolDefinition,
+  manageDataToolDefinition
 ];
