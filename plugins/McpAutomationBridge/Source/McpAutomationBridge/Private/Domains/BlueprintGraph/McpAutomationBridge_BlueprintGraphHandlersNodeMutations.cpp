@@ -170,6 +170,32 @@ static bool SetNodeProperty(FActionContext& Context)
         TargetNode->bCommentBubblePinned = Value.ToBool();
         bHandled = true;
     }
+    else if (
+        PropertyName.Equals(TEXT("EnabledState"), ESearchCase::IgnoreCase) ||
+        PropertyName.Equals(TEXT("bDisabled"), ESearchCase::IgnoreCase))
+    {
+        // Enable/disable a node (BUG-d870cf: the set was previously comment/position-only). "bDisabled" takes a
+        // bool; "EnabledState" also accepts the enum names Enabled / Disabled / DevelopmentOnly.
+        ENodeEnabledState NewState = ENodeEnabledState::Enabled;
+        if (PropertyName.Equals(TEXT("bDisabled"), ESearchCase::IgnoreCase))
+        {
+            NewState = Value.ToBool()
+                           ? ENodeEnabledState::Disabled
+                           : ENodeEnabledState::Enabled;
+        }
+        else if (Value.Equals(TEXT("Disabled"), ESearchCase::IgnoreCase))
+        {
+            NewState = ENodeEnabledState::Disabled;
+        }
+        else if (Value.Equals(
+                     TEXT("DevelopmentOnly"),
+                     ESearchCase::IgnoreCase))
+        {
+            NewState = ENodeEnabledState::DevelopmentOnly;
+        }
+        TargetNode->SetEnabledState(NewState);
+        bHandled = true;
+    }
 
     if (!bHandled)
     {
