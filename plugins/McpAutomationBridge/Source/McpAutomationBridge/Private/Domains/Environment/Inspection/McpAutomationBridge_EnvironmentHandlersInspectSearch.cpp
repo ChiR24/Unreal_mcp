@@ -132,13 +132,23 @@ bool HandleInspectSearchAction(
                     // ATDMCharacter's UClass is named "TDMCharacter"). If two loaded classes share the
                     // short name, first-found wins (best-effort read-only fallback; the full
                     // /Script/<Module>.<Class> path stays the deterministic route).
+                    // FindFirstObject is UE 5.1+; pre-5.1 falls back to ResolveClassByName
+                    // (ANY_PACKAGE-era lookup) — same guard as MontageNotifyBlend.cpp.
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
                     TargetClass = FindFirstObject<UClass>(*ClassName, EFindFirstObjectOptions::None);
+#else
+                    TargetClass = ResolveClassByName(ClassName);
+#endif
                     if (!TargetClass && ClassName.Len() >= 2)
                     {
                         const TCHAR Prefix = ClassName[0];
                         if ((Prefix == TEXT('A') || Prefix == TEXT('U')) && FChar::IsUpper(ClassName[1]))
                         {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
                             TargetClass = FindFirstObject<UClass>(*ClassName.Mid(1), EFindFirstObjectOptions::None);
+#else
+                            TargetClass = ResolveClassByName(ClassName.Mid(1));
+#endif
                         }
                     }
                 }
