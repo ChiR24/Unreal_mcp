@@ -14,8 +14,12 @@ export async function handleEnvironmentLandscapeAction(
       const componentCount = argsTyped.componentCount;
       const componentsX = typeof componentCount === 'object' ? componentCount.x : undefined;
       const componentsY = typeof componentCount === 'object' ? componentCount.y : undefined;
+      // Default a plain actor name when omitted (mirrors the procedural handler): the C++ requires a non-empty,
+      // path-char-free name and otherwise fails INVALID_ARGUMENT — an empty `name` was the common failure.
+      const rawName = typeof argsTyped.name === 'string' ? argsTyped.name.trim() : '';
+      const landscapeName = rawName || `Landscape_${Date.now()}`;
       return cleanObject(await executeAutomationRequest(tools, 'create_landscape', {
-        name: argsTyped.name ?? '',
+        name: landscapeName,
         location: vec3ToArray(argsTyped.location),
         sizeX: argsRecord.sizeX as number | undefined,
         sizeY: argsRecord.sizeY as number | undefined,
