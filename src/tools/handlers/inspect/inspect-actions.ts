@@ -27,7 +27,9 @@ const INSPECT_ACTION_ALIASES: Record<string, string> = {
   get_texture_details: 'inspect_object',
   get_mesh_details: 'inspect_object',
   get_blueprint_details: 'inspect_object',
-  get_level_details: 'inspect_object',
+  // A level/world has no `objectPath`, so aliasing to inspect_object failed 'Invalid objectPath'. Route to
+  // get_world_settings, which returns the level summary (worldName/levelName/packageName/gravity/killZ/time).
+  get_level_details: 'get_world_settings',
   get_project_settings: 'get_project_settings',
   get_editor_settings: 'get_editor_settings',
   get_performance_stats: 'get_performance_stats',
