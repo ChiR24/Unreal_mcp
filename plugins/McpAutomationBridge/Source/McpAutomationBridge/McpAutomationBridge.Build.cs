@@ -47,6 +47,24 @@ public class McpAutomationBridge : ModuleRules
             PrivateDependencyModuleNames.AddRange(new string[] { "LandscapeEditor", "LandscapeEditorUtilities", "Foliage", "FoliageEdit", "AnimGraph", "AnimationBlueprintLibrary", "Persona", "ToolMenus", "EditorWidgets", "PropertyEditor", "LevelEditor", "RigVM", "RigVMDeveloper", "UMG", "UMGEditor", "MergeActors", "RenderCore", "RHI", "ImageWrapper", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIGraph", "MeshUtilities", "MeshMergeUtilities", "MaterialUtilities", "PhysicsCore", "ClothingSystemRuntimeCommon", "GeometryCore", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription", "NavigationSystem" });
 
             string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
+
+            // UE 5.7+ relocated FContentBrowserItemPath (and its GetVirtualPathString accessor) into the
+            // ContentBrowserData module. UBT treats ContentBrowser/ContentBrowserData as runtime-loaded editor
+            // modules and does not add their .so to the link line, so concrete symbol references fail to link
+            // under --unresolved-symbols=ignore-in-shared-libs. Force-link the prebuilt module binary when present
+            // so those symbols resolve. No-op on engines/platforms where the module or its binary does not exist.
+            if (Target.Platform == UnrealTargetPlatform.Win64 || Target.Platform == UnrealTargetPlatform.Linux || Target.Platform == UnrealTargetPlatform.Mac)
+            {
+                string CbdLibName = Target.Platform == UnrealTargetPlatform.Win64 ? "UnrealEditor-ContentBrowserData.lib" : "libUnrealEditor-ContentBrowserData.so";
+                string CbdLibDir = Target.Platform == UnrealTargetPlatform.Win64 ? "Win64" : (Target.Platform == UnrealTargetPlatform.Mac ? "Mac" : "Linux");
+                string CbdLib = Path.Combine(EngineDir, "Binaries", CbdLibDir, CbdLibName);
+                if (File.Exists(CbdLib))
+                {
+                    PublicAdditionalLibraries.Add(CbdLib);
+                    Console.WriteLine("McpAutomationBridge: force-linking " + CbdLib);
+                }
+            }
+
             AddOptionalModules(Target, EngineDir, new string[] { "D|GameplayAbilities|GameplayAbilities", "D|MetasoundEngine|MetasoundEngine", "C|MetasoundFrontend|MetasoundFrontend", "D|MetasoundEditor|MetasoundEditor", "D|StateTreeModule|StateTreeModule", "D|StateTreeEditorModule|StateTreeEditorModule", "D|SmartObjectsModule|SmartObjectsModule", "D|SmartObjectsEditorModule|SmartObjectsEditorModule", "C|StructUtils|StructUtils", "D|MassEntity|MassEntity", "D|MassSpawner|MassSpawner", "D|MassActors|MassActors", "D|OnlineSubsystem|OnlineSubsystem", "D|OnlineSubsystemUtils|OnlineSubsystemUtils", "D|ControlRig|ControlRig", "D|ControlRigDeveloper|ControlRigDeveloper", "D|ControlRigEditor|ControlRigEditor", "D|ProceduralMeshComponent|ProceduralMeshComponent", "D|EnvironmentQueryEditor|EnvironmentQueryEditor", "D|GeometryScriptingCore|GeometryScriptingCore", "D|GeometryScriptingEditor|GeometryScriptingEditor" });
 
             ProjectDescriptor Project = Target.ProjectFile == null ? null : ProjectDescriptor.FromFile(Target.ProjectFile);
