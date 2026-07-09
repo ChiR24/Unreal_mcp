@@ -183,6 +183,10 @@ static bool SetNodeProperty(FActionContext& Context)
                            ? ENodeEnabledState::Disabled
                            : ENodeEnabledState::Enabled;
         }
+        else if (Value.Equals(TEXT("Enabled"), ESearchCase::IgnoreCase))
+        {
+            NewState = ENodeEnabledState::Enabled;
+        }
         else if (Value.Equals(TEXT("Disabled"), ESearchCase::IgnoreCase))
         {
             NewState = ENodeEnabledState::Disabled;
@@ -192,6 +196,17 @@ static bool SetNodeProperty(FActionContext& Context)
                      ESearchCase::IgnoreCase))
         {
             NewState = ENodeEnabledState::DevelopmentOnly;
+        }
+        else
+        {
+            // Reject an unrecognized EnabledState string instead of silently treating it as Enabled, so a typo
+            // (e.g. "Disable") is reported rather than leaving the node in the wrong state under a success reply.
+            Context.SendError(
+                FString::Printf(
+                    TEXT("Invalid EnabledState '%s' (expected Enabled, Disabled, or DevelopmentOnly)"),
+                    *Value),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
         }
         TargetNode->SetEnabledState(NewState);
         bHandled = true;
