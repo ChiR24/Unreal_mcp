@@ -80,6 +80,16 @@ TSharedRef<SWidget> SUnrealAgentPanel::MakeEmptyPromptArea()
                     ]
                     + SVerticalBox::Slot()
                     .AutoHeight()
+                    .Padding(FMargin(0.0f, 0.0f, 0.0f, 6.0f))
+                    [
+                        SNew(STextBlock)
+                        .Tag(FName(TEXT("UnrealAgent.EmptyState.EmptyHint")))
+                        .Text(LOCTEXT("EmptyStateMentionHint", "Tip: select assets in the Content Browser or actors in the Outliner, then type @ in the prompt to mention them."))
+                        .ColorAndOpacity(FSlateColor::UseSubduedForeground())
+                        .AutoWrapText(true)
+                    ]
+                    + SVerticalBox::Slot()
+                    .AutoHeight()
                     .HAlign(HAlign_Fill)
                     [
                         SNew(SVerticalBox)

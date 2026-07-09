@@ -73,10 +73,18 @@ private:
         bool bHasCustomTitle = false;
     };
 
+    enum class EComposerAttachmentKind : uint8
+    {
+        File,
+        ActorRef
+    };
+
     struct FComposerFileAttachment
     {
         FString AbsolutePath;
         FString DisplayName;
+        EComposerAttachmentKind Kind = EComposerAttachmentKind::File;
+        FString ReferenceText;
     };
 
     FReply OnConnectClicked();
@@ -238,8 +246,6 @@ private:
     TSharedPtr<SVerticalBox> ModelMenuList;
     TSharedPtr<SVerticalBox> ChatHistoryList;
     TArray<TWeakPtr<SVerticalBox>> ComposerAffordanceLists;
-    TArray<FString> ComposerMentionFileCache;
-    bool bComposerMentionFileCacheValid = false;
     TArray<TSharedPtr<FOpenCodeAcpModelOption>> ModelOptions;
     TArray<TSharedPtr<FOpenCodeAcpModelOption>> FilteredModelOptions;
     TArray<FChatHistoryEntry> ChatHistoryEntries;

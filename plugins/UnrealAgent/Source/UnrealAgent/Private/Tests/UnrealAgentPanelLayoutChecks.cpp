@@ -103,6 +103,26 @@ namespace UnrealAgent::AutomationTests
             return false;
         }
 
+
+        const TSharedPtr<SWidget> ComposerQuickPromptGrid = Find(TEXT("UnrealAgent.EmptyState.QuickPromptGrid"));
+        bPassed &= Test.TestTrue(TEXT("Quick prompt grid contains suggestions"), ComposerQuickPromptGrid.IsValid());
+
+        const TSharedPtr<SWidget> EmptyStateHint = Find(TEXT("UnrealAgent.EmptyState.EmptyHint"));
+        bPassed &= Test.TestTrue(TEXT("Empty-state mention hint is visible"), EmptyStateHint.IsValid());
+
+        TArray<FName> SuggestionTags = {
+            FName(TEXT("UnrealAgent.EmptyState.QuickPrompt.ArchitectureReview")),
+            FName(TEXT("UnrealAgent.EmptyState.QuickPrompt.GameplayPlan")),
+            FName(TEXT("UnrealAgent.EmptyState.QuickPrompt.QARiskPass")),
+            FName(TEXT("UnrealAgent.EmptyState.QuickPrompt.EditorTooling"))
+        };
+        
+        for (const FName& SuggestionTag : SuggestionTags)
+        {
+            const TSharedPtr<SWidget> SuggestionWidget = FindWidgetByTag(ComposerQuickPromptGrid.ToSharedRef(), SuggestionTag);
+            bPassed &= Test.TestTrue(TEXT("Quick prompt suggestion present"), SuggestionWidget.IsValid());
+        }
+
         const TSharedPtr<SWidget> Layout = Find(TEXT("UnrealAgent.Layout"));
         const TSharedPtr<SWidget> MainColumn = Find(TEXT("UnrealAgent.MainColumn"));
         const TSharedPtr<SWidget> Header = Find(TEXT("UnrealAgent.Header"));

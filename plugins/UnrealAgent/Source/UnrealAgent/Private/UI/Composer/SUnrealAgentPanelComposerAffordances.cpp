@@ -2,9 +2,19 @@
 #include "UI/Core/SUnrealAgentPanelPrivate.h"
 
 #include "Acp/Client/McpOpenCodeAcpClient.h"
+#include "AssetRegistry/AssetData.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "ContentBrowserModule.h"
 #include "Containers/Ticker.h"
+#include "Editor.h"
+#include "Engine/Selection.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "GameFramework/Actor.h"
 #include "HAL/FileManager.h"
+#include "IContentBrowserSingleton.h"
+#include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
@@ -23,34 +33,6 @@ using namespace UnrealAgent::Panel;
 namespace
 {
     constexpr int32 MaxComposerSuggestionRows = 6;
-
-    // Single source of truth for the file extensions the composer will offer as
-    // `@`-mentions. `.ini`/`.uproject`/`.uplugin` are intentionally excluded:
-    // `Config/*.ini` routinely holds capability tokens / API keys, and project
-    // / plugin descriptors expose layout metadata. Both would be sent verbatim
-    // as `resource_link` text blocks. If a maintainer adds an entry here, both
-    // the per-keystroke walk and the click-time accept check pick it up.
-    const TArray<FString>& GetAttachableExtensions()
-    {
-        static const TArray<FString> Extensions = {
-            TEXT("cpp"), TEXT("h"), TEXT("hpp"), TEXT("cs"), TEXT("ts"), TEXT("js"),
-            TEXT("json"), TEXT("jsonc"), TEXT("md"), TEXT("txt"), TEXT("py"), TEXT("sh")
-        };
-        return Extensions;
-    }
-
-    bool IsAttachableProjectFile(const FString& FilePath)
-    {
-        const FString Extension = FPaths::GetExtension(FilePath).ToLower();
-        for (const FString& Allowed : GetAttachableExtensions())
-        {
-            if (Allowed == Extension)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
 
     FString GetComposerText(const TSharedPtr<SMultiLineEditableTextBox>& PromptTextBox)
     {
@@ -115,9 +97,167 @@ namespace
             || Normalized.Contains(TEXT("/.opencode/"));
     }
 
-    // Project roots scanned for `@`-mention candidates. Restricted to text/code paths
-    // to keep the per-keystroke walk bounded and to avoid suggesting binary assets or
-    // build outputs the model cannot usefully read as text.
+    const FString ActorReferenceScheme = TEXT("actor:");
+
+    bool IsActorReference(const FString& Token)
+    {
+        return Token.StartsWith(ActorReferenceScheme, ESearchCase::IgnoreCase);
+    }
+
+    FString MakeActorReference(const FString& ActorLabel)
+    {
+        return ActorReferenceScheme + ActorLabel;
+    }
+
+    TArray<FString> GetSelectedAssetPaths()
+    {
+        TArray<FString> AssetPaths;
+        FContentBrowserModule* ContentBrowserModule =
+            FModuleManager::LoadModulePtr<FContentBrowserModule>(TEXT("ContentBrowser"));
+        if (ContentBrowserModule == nullptr)
+        {
+            return AssetPaths;
+        }
+        TArray<FAssetData> SelectedAssets;
+        ContentBrowserModule->Get().GetSelectedAssets(SelectedAssets);
+        for (const FAssetData& AssetData : SelectedAssets)
+        {
+            const FString PackageName = AssetData.PackageName.ToString();
+            if (!PackageName.IsEmpty())
+            {
+                AssetPaths.Add(PackageName);
+            }
+        }
+        return AssetPaths;
+    }
+
+    // Bounded asset-registry search used as a fallback when there is no live
+    // Content Browser selection. Returns editor-scoped PackageNames (e.g.
+    // /Game/Characters/Hero) directly — no filesystem conversion, so project-root
+    // path validation can never reject a valid asset. Enumerate is capped so a
+    // per-keystroke call cannot scan the whole /Game tree.
+    TArray<FString> GetAssetPathsByPrefix(const FString& Prefix)
+    {
+        TArray<FString> AssetPaths;
+        FAssetRegistryModule* AssetRegistryModule =
+            FModuleManager::GetModulePtr<FAssetRegistryModule>(TEXT("AssetRegistry"));
+        if (AssetRegistryModule == nullptr)
+        {
+            return AssetPaths;
+        }
+        // Strip a leading slash (e.g. "@/Foo") so the query filters by name/path,
+        // not by a literal "/Game/..." prefix the user rarely types in full.
+        FString SearchPrefix = Prefix;
+        while (SearchPrefix.StartsWith(TEXT("/")))
+        {
+            SearchPrefix.RemoveFromStart(TEXT("/"));
+        }
+        const bool bBrowseAll = SearchPrefix.IsEmpty();
+        IAssetRegistry& Registry = AssetRegistryModule->Get();
+        FARFilter Filter;
+        Filter.PackagePaths.Add(TEXT("/Game"));
+        Filter.bRecursivePaths = true;
+        int32 Inspected = 0;
+        Registry.EnumerateAssets(Filter, [&AssetPaths, &Inspected, &SearchPrefix, bBrowseAll](const FAssetData& Asset)
+        {
+            if (++Inspected > 5000)
+            {
+                return false;
+            }
+            if (!bBrowseAll)
+            {
+                const FString Name = Asset.AssetName.ToString();
+                const FString Package = Asset.PackageName.ToString();
+                const bool bMatch = Name.Contains(SearchPrefix, ESearchCase::IgnoreCase)
+                    || Package.Contains(SearchPrefix, ESearchCase::IgnoreCase);
+                if (!bMatch)
+                {
+                    return true;
+                }
+            }
+            AssetPaths.Add(Asset.PackageName.ToString());
+            return AssetPaths.Num() < MaxComposerSuggestionRows;
+        });
+        return AssetPaths;
+    }
+
+    // Returns selected actors as (Label, ObjectPath) pairs. The object path is
+    // globally unique and is what references are keyed on, so two actors that
+    // share a display label (e.g. two "Cube" actors) remain distinguishable.
+    TArray<TPair<FString, FString>> GetSelectedActors()
+    {
+        TArray<TPair<FString, FString>> Actors;
+        if (GEditor == nullptr)
+        {
+            return Actors;
+        }
+        USelection* SelectedActors = GEditor->GetSelectedActors();
+        if (SelectedActors == nullptr)
+        {
+            return Actors;
+        }
+        TArray<AActor*> Selected;
+        SelectedActors->GetSelectedObjects<AActor>(Selected);
+        for (AActor* Actor : Selected)
+        {
+            if (Actor != nullptr)
+            {
+                Actors.Emplace(Actor->GetActorNameOrLabel(), Actor->GetPathName());
+            }
+        }
+        return Actors;
+    }
+
+    // Resolves an actor object path back to its display label for UI text. Falls
+    // back to the path itself when the actor is no longer in the world.
+    FString GetActorLabelByPath(const FString& ActorPath)
+    {
+        if (GEditor == nullptr)
+        {
+            return ActorPath;
+        }
+        UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
+        if (World == nullptr)
+        {
+            return ActorPath;
+        }
+        for (TActorIterator<AActor> It(World); It; ++It)
+        {
+            if (It->GetPathName().Equals(ActorPath, ESearchCase::IgnoreCase))
+            {
+                return It->GetActorNameOrLabel();
+            }
+        }
+        return ActorPath;
+    }
+
+    // Single source of truth for the file extensions offered as `@`-mentions.
+    // `.ini`/`.uproject`/`.uplugin` are intentionally excluded: Config/*.ini
+    // routinely holds capability tokens / API keys, and project/plugin descriptors
+    // expose layout metadata. Both would be sent verbatim as resource_link text.
+    const TArray<FString>& GetAttachableExtensions()
+    {
+        static const TArray<FString> Extensions = {
+            TEXT("cpp"), TEXT("h"), TEXT("hpp"), TEXT("cs"), TEXT("ts"), TEXT("js"),
+            TEXT("json"), TEXT("jsonc"), TEXT("md"), TEXT("txt"), TEXT("py"), TEXT("sh")
+        };
+        return Extensions;
+    }
+
+    bool IsAttachableProjectFile(const FString& FilePath)
+    {
+        const FString Extension = FPaths::GetExtension(FilePath).ToLower();
+        for (const FString& Allowed : GetAttachableExtensions())
+        {
+            if (Allowed == Extension)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Project roots scanned for `@`-mention file candidates.
     TArray<FString> GetAttachableSearchRoots()
     {
         return {
@@ -125,6 +265,87 @@ namespace
             FPaths::Combine(FPaths::ProjectDir(), TEXT("Config")),
             FPaths::Combine(FPaths::ProjectDir(), TEXT("Plugins"))
         };
+    }
+
+    // Bounded filesystem walk for `@`-mention file candidates. Restricted to the
+    // attachable roots and extension allow-list, prunes build/output/source-control
+    // directories, and stops after a sane number of files are visited so a
+    // per-keystroke call cannot scan the whole project tree. Only runs when a
+    // non-empty query is present, which bounds cost further.
+    TArray<FString> GetFilePathsByPrefix(const FString& Prefix)
+    {
+        TArray<FString> FilePaths;
+        FString Query = Prefix;
+        while (Query.StartsWith(TEXT("/")))
+        {
+            Query.RemoveFromStart(TEXT("/"));
+        }
+        if (Query.IsEmpty())
+        {
+            return FilePaths;
+        }
+        const TArray<FString>& Extensions = GetAttachableExtensions();
+        const TArray<FString> Roots = GetAttachableSearchRoots();
+
+        int32 Found = 0;
+        int32 Visited = 0;
+        constexpr int32 MaxResults = MaxComposerSuggestionRows;
+        constexpr int32 MaxVisited = 4000;
+
+        TFunction<void(const FString&)> Walk;
+        Walk = [&Walk, &FilePaths, &Query, &Found, &Visited](const FString& Dir)
+        {
+            if (Found >= MaxResults || Visited >= MaxVisited)
+            {
+                return;
+            }
+            TArray<FString> Entries;
+            IFileManager::Get().FindFiles(Entries, *FPaths::Combine(Dir, TEXT("*")), true, true);
+            for (const FString& Entry : Entries)
+            {
+                if (Found >= MaxResults || Visited >= MaxVisited)
+                {
+                    return;
+                }
+                const FString Full = FPaths::Combine(Dir, Entry);
+                if (IFileManager::Get().DirectoryExists(*Full))
+                {
+                    // Skip build outputs, derived caches, and source-control dirs.
+                    if (IsSkippedProjectPath(Full))
+                    {
+                        continue;
+                    }
+                    Walk(Full);
+                }
+                else
+                {
+                    ++Visited;
+                    if (!IsAttachableProjectFile(Full))
+                    {
+                        continue;
+                    }
+                    const FString Name = FPaths::GetCleanFilename(Full);
+                    if (Name.Contains(Query, ESearchCase::IgnoreCase))
+                    {
+                        FilePaths.Add(Full);
+                        ++Found;
+                    }
+                }
+            }
+        };
+
+        for (const FString& Root : Roots)
+        {
+            if (Found >= MaxResults)
+            {
+                break;
+            }
+            if (IFileManager::Get().DirectoryExists(*Root))
+            {
+                Walk(Root);
+            }
+        }
+        return FilePaths;
     }
 }
 
@@ -178,6 +399,13 @@ void SUnrealAgentPanel::PopulateComposerAttachmentRows(TSharedRef<SVerticalBox> 
 
     for (const FComposerFileAttachment& Attachment : ComposerFileAttachments)
     {
+        const FString ChipKey = Attachment.Kind == EComposerAttachmentKind::ActorRef
+            ? MakeActorReference(Attachment.ReferenceText)
+            : Attachment.AbsolutePath;
+        const FString ChipTooltip = Attachment.Kind == EComposerAttachmentKind::ActorRef
+            ? Attachment.ReferenceText
+            : Attachment.AbsolutePath;
+
         AffordanceList->AddSlot()
         .AutoHeight()
         .Padding(FMargin(2.0f, 1.0f))
@@ -185,8 +413,8 @@ void SUnrealAgentPanel::PopulateComposerAttachmentRows(TSharedRef<SVerticalBox> 
             SNew(SButton)
             .Tag(FName(TEXT("UnrealAgent.Composer.AttachmentChip")))
             .ButtonStyle(&FAppStyle::Get().GetWidgetStyle<FButtonStyle>("SimpleButton"))
-            .ToolTipText(FText::FromString(Attachment.AbsolutePath))
-            .OnClicked(this, &SUnrealAgentPanel::OnComposerAttachmentRemoveClicked, Attachment.AbsolutePath)
+            .ToolTipText(FText::FromString(ChipTooltip))
+            .OnClicked(this, &SUnrealAgentPanel::OnComposerAttachmentRemoveClicked, ChipKey)
             [
                 SNew(STextBlock)
                 .Text(FText::FromString(FString::Printf(TEXT("@ %s  ×"), *Attachment.DisplayName)))
@@ -246,58 +474,83 @@ void SUnrealAgentPanel::PopulateComposerCommandRows(TSharedRef<SVerticalBox> Aff
 
 void SUnrealAgentPanel::PopulateComposerFileRows(TSharedRef<SVerticalBox> AffordanceList, const FString& Prefix)
 {
-    // Walk the roots (excluded by design: Content/, Intermediate/, Binaries/,
-    // DerivedDataCache/) and filter in-memory by the allow-list. Walking
-    // once per root instead of once per extension avoids 36 recursive scans
-    // (12 extensions × 3 roots) on a large project.
-    if (!bComposerMentionFileCacheValid)
+    const TArray<FString> SelectedAssetPaths = GetSelectedAssetPaths();
+    const TArray<TPair<FString, FString>> SelectedActors = GetSelectedActors();
+    // Filesystem file mentions are only offered when the user has typed a query,
+    // which bounds the per-keystroke walk to relevant candidates.
+    const TArray<FString> FilePaths = GetFilePathsByPrefix(Prefix);
+
+    // When there is no live editor selection, fall back to a bounded asset-registry
+    // search. With an empty prefix this browses a few assets; with a prefix it
+    // filters by name. PackageNames are editor-scoped, so no filesystem validation.
+    TArray<FString> AssetPaths = SelectedAssetPaths;
+    if (AssetPaths.Num() == 0)
     {
-        ComposerMentionFileCache.Reset();
-        TSet<FString> AllowSet;
-        for (const FString& Extension : GetAttachableExtensions())
+        AssetPaths = GetAssetPathsByPrefix(Prefix);
+    }
+    else
+    {
+        // A live Content Browser selection was used instead of the registry
+        // search, so the typed prefix was not applied. Filter the selected
+        // assets the same way GetAssetPathsByPrefix does (substring on the asset
+        // name or package path) so selection and registry results behave
+        // identically and the "no match" hint stays accurate.
+        FString P = Prefix;
+        while (P.StartsWith(TEXT("/")))
         {
-            AllowSet.Add(Extension);
+            P.RemoveFromStart(TEXT("/"));
         }
-        for (const FString& Root : GetAttachableSearchRoots())
+        if (!P.IsEmpty())
         {
-            if (!IFileManager::Get().DirectoryExists(*Root))
+            AssetPaths.RemoveAll([&P](const FString& PackageName)
             {
-                continue;
-            }
-            TArray<FString> RootFiles;
-            IFileManager::Get().FindFilesRecursive(RootFiles, *Root, TEXT("*.*"), true, false);
-            for (const FString& FilePath : RootFiles)
-            {
-                if (AllowSet.Contains(FPaths::GetExtension(FilePath).ToLower()))
-                {
-                    ComposerMentionFileCache.Add(MoveTemp(const_cast<FString&>(FilePath)));
-                }
-            }
+                const FString AssetName = FPaths::GetCleanFilename(PackageName);
+                return !AssetName.Contains(P, ESearchCase::IgnoreCase)
+                    && !PackageName.Contains(P, ESearchCase::IgnoreCase);
+            });
         }
-        ComposerMentionFileCache.Sort();
-        bComposerMentionFileCacheValid = true;
     }
 
-    const TArray<FString>& Files = ComposerMentionFileCache;
-    const FString ProjectRoot = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+    const bool bNoResults = AssetPaths.Num() == 0 && SelectedActors.Num() == 0 && FilePaths.Num() == 0;
+    if (bNoResults)
+    {
+        FText HintText = Prefix.IsEmpty()
+            ? LOCTEXT("ComposerMentionEmptyHint",
+                "No assets in /Game yet. Select assets in the Content Browser or actors in the Outliner to mention them.")
+            : FText::Format(LOCTEXT("ComposerMentionNoMatchHint",
+                "No assets or actors match \"{0}\". Select them in the editor, or type more to search."),
+                FText::FromString(Prefix));
+        AffordanceList->AddSlot()
+            .AutoHeight()
+            .Padding(FMargin(2.0f, 4.0f))
+        [
+            SNew(STextBlock)
+            .Tag(FName(TEXT("UnrealAgent.Composer.MentionEmptyHint")))
+            .Text(HintText)
+            .ColorAndOpacity(FSlateColor::UseSubduedForeground())
+            .AutoWrapText(true)
+        ];
+        return;
+    }
+
     int32 AddedRows = 0;
-    for (const FString& FilePath : Files)
+    const auto MatchesQuery = [&Prefix](const FString& Candidate)
+    {
+        FString P = Prefix;
+        while (P.StartsWith(TEXT("/")))
+        {
+            P.RemoveFromStart(TEXT("/"));
+        }
+        return P.IsEmpty() || Candidate.Contains(P, ESearchCase::IgnoreCase);
+    };
+
+    // AssetPaths are already filtered (registry search, or the selection filter
+    // above); no second gate needed.
+    for (const FString& PackageName : AssetPaths)
     {
         if (AddedRows >= MaxComposerSuggestionRows)
         {
             break;
-        }
-        if (!IsPathInsideProject(FilePath) || !IsAttachableProjectFile(FilePath) || IsSkippedProjectPath(FilePath))
-        {
-            continue;
-        }
-
-        const FString CleanName = FPaths::GetCleanFilename(FilePath);
-        const FString AbsolutePath = FPaths::ConvertRelativePathToFull(FilePath);
-        const FString RelativePath = AbsolutePath.Replace(*ProjectRoot, TEXT(""), ESearchCase::IgnoreCase);
-        if (!Prefix.IsEmpty() && !CleanName.StartsWith(Prefix, ESearchCase::IgnoreCase) && !RelativePath.Contains(Prefix, ESearchCase::IgnoreCase))
-        {
-            continue;
         }
 
         AffordanceList->AddSlot()
@@ -307,11 +560,71 @@ void SUnrealAgentPanel::PopulateComposerFileRows(TSharedRef<SVerticalBox> Afford
             SNew(SButton)
             .Tag(FName(TEXT("UnrealAgent.Composer.FileSuggestion")))
             .ButtonStyle(&FAppStyle::Get().GetWidgetStyle<FButtonStyle>("SimpleButton"))
-            .ToolTipText(FText::FromString(AbsolutePath))
-            .OnClicked(this, &SUnrealAgentPanel::OnComposerFileSuggestionClicked, AbsolutePath)
+            .ToolTipText(FText::FromString(PackageName))
+            .OnClicked(this, &SUnrealAgentPanel::OnComposerFileSuggestionClicked, PackageName)
             [
                 SNew(STextBlock)
-                .Text(FText::FromString(FString::Printf(TEXT("@ %s"), *RelativePath)))
+                .Text(FText::FromString(FString::Printf(TEXT("@ %s"), *PackageName)))
+                .ColorAndOpacity(FSlateColor::UseForeground())
+                .OverflowPolicy(ETextOverflowPolicy::Ellipsis)
+            ]
+        ];
+        ++AddedRows;
+    }
+
+    for (const TPair<FString, FString>& Actor : SelectedActors)
+    {
+        if (AddedRows >= MaxComposerSuggestionRows)
+        {
+            break;
+        }
+        const FString& ActorLabel = Actor.Key;
+        const FString& ActorPath = Actor.Value;
+        if (!MatchesQuery(ActorLabel))
+        {
+            continue;
+        }
+
+        // Key the reference on the unique object path so two actors with the same
+        // display label stay distinguishable downstream.
+        const FString ActorReference = MakeActorReference(ActorPath);
+        AffordanceList->AddSlot()
+        .AutoHeight()
+        .Padding(FMargin(2.0f, 1.0f))
+        [
+            SNew(SButton)
+            .Tag(FName(TEXT("UnrealAgent.Composer.ActorSuggestion")))
+            .ButtonStyle(&FAppStyle::Get().GetWidgetStyle<FButtonStyle>("SimpleButton"))
+            .ToolTipText(FText::FromString(ActorLabel))
+            .OnClicked(this, &SUnrealAgentPanel::OnComposerFileSuggestionClicked, ActorReference)
+            [
+                SNew(STextBlock)
+                .Text(FText::FromString(FString::Printf(TEXT("@ actor %s"), *ActorLabel)))
+                .ColorAndOpacity(FSlateColor::UseForeground())
+                .OverflowPolicy(ETextOverflowPolicy::Ellipsis)
+            ]
+        ];
+        ++AddedRows;
+    }
+
+    for (const FString& FilePath : FilePaths)
+    {
+        if (AddedRows >= MaxComposerSuggestionRows)
+        {
+            break;
+        }
+        AffordanceList->AddSlot()
+        .AutoHeight()
+        .Padding(FMargin(2.0f, 1.0f))
+        [
+            SNew(SButton)
+            .Tag(FName(TEXT("UnrealAgent.Composer.FileSuggestion")))
+            .ButtonStyle(&FAppStyle::Get().GetWidgetStyle<FButtonStyle>("SimpleButton"))
+            .ToolTipText(FText::FromString(FilePath))
+            .OnClicked(this, &SUnrealAgentPanel::OnComposerFileSuggestionClicked, FilePath)
+            [
+                SNew(STextBlock)
+                .Text(FText::FromString(FString::Printf(TEXT("@ %s"), *FPaths::GetCleanFilename(FilePath))))
                 .ColorAndOpacity(FSlateColor::UseForeground())
                 .OverflowPolicy(ETextOverflowPolicy::Ellipsis)
             ]
@@ -337,26 +650,56 @@ FReply SUnrealAgentPanel::OnComposerCommandSuggestionClicked(FString CommandName
     return FReply::Handled();
 }
 
-FReply SUnrealAgentPanel::OnComposerFileSuggestionClicked(FString FilePath)
+FReply SUnrealAgentPanel::OnComposerFileSuggestionClicked(FString Payload)
 {
-    const FString AbsolutePath = FPaths::ConvertRelativePathToFull(FilePath);
-    // Defense in depth: even if the affordance list was bypassed, refuse to attach a
-    // path that escapes the project root or points inside an excluded directory.
-    if (!IsPathInsideProject(AbsolutePath)
-        || !IsAttachableProjectFile(AbsolutePath)
-        || IsSkippedProjectPath(AbsolutePath))
+    const bool bIsActor = IsActorReference(Payload);
+
+    if (bIsActor)
     {
-        return FReply::Handled();
-    }
-    if (!ComposerFileAttachments.ContainsByPredicate([&AbsolutePath](const FComposerFileAttachment& Attachment)
-    {
-        return Attachment.AbsolutePath == AbsolutePath;
-    }))
-    {
+        // Payload is the actor's unique object path ("actor:<Path>"). Key and dedup
+        // on the path so two actors that share a display label stay distinct.
+        const FString ActorPath = Payload.Mid(ActorReferenceScheme.Len());
+        if (ComposerFileAttachments.ContainsByPredicate([&ActorPath](const FComposerFileAttachment& Attachment)
+        {
+            return Attachment.Kind == EComposerAttachmentKind::ActorRef
+                && Attachment.ReferenceText == ActorPath;
+        }))
+        {
+            return FReply::Handled();
+        }
         FComposerFileAttachment Attachment;
-        Attachment.AbsolutePath = AbsolutePath;
-        Attachment.DisplayName = FPaths::GetCleanFilename(AbsolutePath);
-        ComposerFileAttachments.Add(Attachment);
+        Attachment.Kind = EComposerAttachmentKind::ActorRef;
+        Attachment.ReferenceText = ActorPath;
+        Attachment.DisplayName = GetActorLabelByPath(ActorPath);
+        ComposerFileAttachments.Add(MoveTemp(Attachment));
+    }
+    else
+    {
+        // Trust any valid registered package name as an asset reference. This
+        // covers /Game plus custom content mounts (e.g. MCP_ADDITIONAL_PATH_PREFIXES,
+        // registered plugin mounts), because IsValidLongPackageName consults the
+        // actual mount table. A "/"-prefixed string that is not a real package
+        // (e.g. /home/user/secret.cpp) is therefore not trusted. Anything else
+        // goes through project-root validation as a filesystem path.
+        const bool bIsValidPackage = FPackageName::IsValidLongPackageName(Payload);
+        const FString AbsolutePath = bIsValidPackage ? Payload : FPaths::ConvertRelativePathToFull(Payload);
+        if (!bIsValidPackage)
+        {
+            if (!IsPathInsideProject(AbsolutePath) || IsSkippedProjectPath(AbsolutePath))
+            {
+                return FReply::Handled();
+            }
+        }
+        if (!ComposerFileAttachments.ContainsByPredicate([&AbsolutePath](const FComposerFileAttachment& Attachment)
+        {
+            return Attachment.Kind == EComposerAttachmentKind::File && Attachment.AbsolutePath == AbsolutePath;
+        }))
+        {
+            FComposerFileAttachment Attachment;
+            Attachment.AbsolutePath = AbsolutePath;
+            Attachment.DisplayName = FPaths::GetCleanFilename(AbsolutePath);
+            ComposerFileAttachments.Add(MoveTemp(Attachment));
+        }
     }
 
     const TSharedPtr<SMultiLineEditableTextBox> PromptTextBox = GetActivePromptTextBox();
@@ -378,11 +721,15 @@ FReply SUnrealAgentPanel::OnComposerFileSuggestionClicked(FString FilePath)
     return FReply::Handled();
 }
 
-FReply SUnrealAgentPanel::OnComposerAttachmentRemoveClicked(FString FilePath)
+FReply SUnrealAgentPanel::OnComposerAttachmentRemoveClicked(FString Key)
 {
-    ComposerFileAttachments.RemoveAll([&FilePath](const FComposerFileAttachment& Attachment)
+    ComposerFileAttachments.RemoveAll([&Key](const FComposerFileAttachment& Attachment)
     {
-        return Attachment.AbsolutePath == FilePath;
+        if (Attachment.Kind == EComposerAttachmentKind::ActorRef)
+        {
+            return MakeActorReference(Attachment.ReferenceText) == Key;
+        }
+        return Attachment.AbsolutePath == Key;
     });
     ScheduleComposerAffordanceRebuild();
     return FReply::Handled();

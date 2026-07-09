@@ -25,7 +25,9 @@ public class UnrealAgent : ModuleRules
             "InputCore",
             "UnrealEd",
             "LevelEditor",
-            "ToolMenus"
+            "ToolMenus",
+            "ContentBrowser",
+            "AssetRegistry"
         });
     }
 }

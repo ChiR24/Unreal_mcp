@@ -15,6 +15,11 @@
 #include "Misc/ConfigCacheIni.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Editor.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "GameFramework/Actor.h"
+#include "Misc/PackageName.h"
 #include "Policies/CondensedJsonPrintPolicy.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -67,6 +72,52 @@ namespace
         return ResourceBlock;
     }
 
+    // Defined below; forward-declared so it can be used by the prompt/transcript
+    // builders above its definition.
+    FString ResolveActorLabelFromPath(const FString& ActorPath);
+
+    TSharedPtr<FJsonObject> MakePromptActorReferenceBlock(const FString& ActorPath)
+    {
+        const FString ActorLabel = ResolveActorLabelFromPath(ActorPath);
+        auto TextBlock = MakeObject();
+        TextBlock->SetStringField(TEXT("type"), TEXT("text"));
+        TextBlock->SetStringField(TEXT("text"),
+            FString::Printf(TEXT("Selected actor reference: %s"), *ActorLabel));
+        return TextBlock;
+    }
+
+    TSharedPtr<FJsonObject> MakePromptAssetReferenceBlock(const FString& PackageName)
+    {
+        auto TextBlock = MakeObject();
+        TextBlock->SetStringField(TEXT("type"), TEXT("text"));
+        TextBlock->SetStringField(TEXT("text"),
+            FString::Printf(TEXT("Selected asset reference: %s"), *PackageName));
+        return TextBlock;
+    }
+
+    // Resolves an actor object path back to its display label for the prompt and
+    // transcript. Falls back to the path itself when the actor is gone.
+    FString ResolveActorLabelFromPath(const FString& ActorPath)
+    {
+        if (GEditor == nullptr)
+        {
+            return ActorPath;
+        }
+        UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
+        if (World == nullptr)
+        {
+            return ActorPath;
+        }
+        for (TActorIterator<AActor> It(World); It; ++It)
+        {
+            if (It->GetPathName().Equals(ActorPath, ESearchCase::IgnoreCase))
+            {
+                return It->GetActorNameOrLabel();
+            }
+        }
+        return ActorPath;
+    }
+
     FString FormatPromptTranscriptWithAttachments(const FString& PromptText, const TArray<FString>& AttachmentPaths)
     {
         if (AttachmentPaths.Num() == 0)
@@ -75,12 +126,30 @@ namespace
         }
 
         FString TranscriptText = PromptText.TrimStartAndEnd().IsEmpty()
-            ? FString(TEXT("Attached files"))
+            ? FString(TEXT("Attached items"))
             : PromptText;
-        TranscriptText += TEXT("\n\nAttached files:");
+        FString FileList;
+        FString ActorList;
         for (const FString& AttachmentPath : AttachmentPaths)
         {
-            TranscriptText += FString::Printf(TEXT("\n- %s"), *FPaths::GetCleanFilename(AttachmentPath));
+            if (AttachmentPath.StartsWith(TEXT("actor:")))
+            {
+                ActorList += FString::Printf(TEXT("\n- %s"), *ResolveActorLabelFromPath(AttachmentPath.Mid(6)));
+            }
+            else
+            {
+                FileList += FString::Printf(TEXT("\n- %s"), *FPaths::GetCleanFilename(AttachmentPath));
+            }
+        }
+        if (!FileList.IsEmpty())
+        {
+            TranscriptText += TEXT("\n\nAttached files:");
+            TranscriptText += FileList;
+        }
+        if (!ActorList.IsEmpty())
+        {
+            TranscriptText += TEXT("\n\nAttached actors:");
+            TranscriptText += ActorList;
         }
         return TranscriptText;
     }
@@ -119,7 +188,27 @@ bool FOpenCodeAcpClient::SendPrompt(const FString& PromptText, const TArray<FStr
     }
     for (const FString& AttachmentPath : AttachmentPaths)
     {
-        if (!AttachmentPath.TrimStartAndEnd().IsEmpty())
+        if (AttachmentPath.TrimStartAndEnd().IsEmpty())
+        {
+            continue;
+        }
+        if (AttachmentPath.StartsWith(TEXT("actor:")))
+        {
+            Prompt.Add(MakeShared<FJsonValueObject>(
+                MakePromptActorReferenceBlock(AttachmentPath.Mid(6))));
+        }
+        else if (FPackageName::IsValidLongPackageName(AttachmentPath))
+        {
+            // Editor-scoped asset PackageName (e.g. /Game/Characters/Hero). Emitted
+            // as a reference handle, not a file:// URI — the TS server has no
+            // per-asset resource endpoint, and the asset is resolved in-editor.
+            // Classified by package-name validity (not a leading slash) so absolute
+            // filesystem paths are not mistaken for assets and correctly become
+            // file:// resource links below.
+            Prompt.Add(MakeShared<FJsonValueObject>(
+                MakePromptAssetReferenceBlock(AttachmentPath)));
+        }
+        else
         {
             Prompt.Add(MakeShared<FJsonValueObject>(MakePromptResourceLinkBlock(AttachmentPath)));
         }

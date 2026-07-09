@@ -40,6 +40,13 @@ using namespace UnrealAgent::Panel;
 TSharedRef<SWidget> SUnrealAgentPanel::MakeComposerInputFrame(TSharedPtr<SMultiLineEditableTextBox>& OutPromptTextBox)
 {
     TSharedPtr<SVerticalBox> AffordanceList;
+    TSharedRef<SScrollBox> AffordanceScrollBox = SNew(SScrollBox)
+        .ScrollBarThickness(FVector2D(4.0f, 4.0f));
+    AffordanceScrollBox->AddSlot()
+    [
+        SAssignNew(AffordanceList, SVerticalBox)
+        .Tag(FName(TEXT("UnrealAgent.Composer.AffordanceList")))
+    ];
     TSharedRef<SWidget> InputFrame = SNew(SVerticalBox)
         + SVerticalBox::Slot()
         .AutoHeight()
@@ -97,10 +104,10 @@ TSharedRef<SWidget> SUnrealAgentPanel::MakeComposerInputFrame(TSharedPtr<SMultiL
         ]
         + SVerticalBox::Slot()
         .AutoHeight()
+        .MaxHeight(180.0f)
         .Padding(FMargin(0.0f, 5.0f, 0.0f, 0.0f))
         [
-            SAssignNew(AffordanceList, SVerticalBox)
-            .Tag(FName(TEXT("UnrealAgent.Composer.AffordanceList")))
+            AffordanceScrollBox
         ];
 
     ComposerAffordanceLists.Add(AffordanceList);

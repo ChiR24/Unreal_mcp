@@ -51,11 +51,6 @@ FReply SUnrealAgentPanel::OnConnectClicked()
         return FReply::Handled();
     }
 
-    // The file-list cache is keyed on the project root; if the editor was opened
-    // against a different project than the one active when the cache was built,
-    // force a rebuild.
-    bComposerMentionFileCacheValid = false;
-
     const FString WorkingDirectory = FPaths::ProjectDir();
     if (AcpClient->Start(WorkingDirectory))
     {
@@ -92,7 +87,14 @@ FReply SUnrealAgentPanel::OnSendClicked()
     TArray<FString> AttachmentPaths;
     for (const FComposerFileAttachment& Attachment : ComposerFileAttachments)
     {
-        AttachmentPaths.Add(Attachment.AbsolutePath);
+        if (Attachment.Kind == EComposerAttachmentKind::ActorRef)
+        {
+            AttachmentPaths.Add(TEXT("actor:") + Attachment.ReferenceText);
+        }
+        else
+        {
+            AttachmentPaths.Add(Attachment.AbsolutePath);
+        }
     }
     AcpClient->SetAttachEditorContext(bAttachEditorContext);
     if (AcpClient->SendPrompt(Prompt, AttachmentPaths))
