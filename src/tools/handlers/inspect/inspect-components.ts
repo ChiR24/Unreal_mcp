@@ -105,9 +105,10 @@ export async function handleGetComponents(context: InspectHandlerContext): Promi
     // Blueprint/CDO shape (mirrors handleGetComponentDetails): callers with a Blueprint but no spawned actor
     // pass a blueprintPath here. Instead of failing, list the Blueprint's DEFAULT components via inspect_cdo
     // (no actor spawn). Closes the get_components TOOL_EXECUTION_FAILED for Blueprint targets.
+    // Only a Blueprint path routes to inspect_cdo (which is Blueprint-only); a generic assetPath is NOT accepted
+    // here so non-Blueprint assets stay out of the CDO path.
     const blueprintPath = context.inspectArgs.blueprintPath
-      || (typeof context.normalizedArgs.blueprintPath === 'string' ? context.normalizedArgs.blueprintPath : '')
-      || (typeof context.normalizedArgs.assetPath === 'string' ? context.normalizedArgs.assetPath : '');
+      || (typeof context.normalizedArgs.blueprintPath === 'string' ? context.normalizedArgs.blueprintPath : '');
     if (blueprintPath) {
       const cdoResult = await executeAutomationRequest(context.tools, 'inspect', {
         ...context.normalizedArgs,
