@@ -1,5 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/Sequence/McpAutomationBridge_SequenceFrameRate.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
+#include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -30,13 +32,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
   if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
     if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {
       bool bModified = false;
-      double FrameRateValue = 0.0;
       double LengthInFramesValue = 0.0;
       double PlaybackStartValue = 0.0;
       double PlaybackEndValue = 0.0;
 
-      const bool bHasFrameRate =
-          LocalPayload->TryGetNumberField(TEXT("frameRate"), FrameRateValue);
+      const bool bHasFrameRate = LocalPayload->HasField(TEXT("frameRate"));
       const bool bHasLengthInFrames = LocalPayload->TryGetNumberField(
           TEXT("lengthInFrames"), LengthInFramesValue);
       const bool bHasPlaybackStart = LocalPayload->TryGetNumberField(
@@ -44,41 +44,73 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
       const bool bHasPlaybackEnd = LocalPayload->TryGetNumberField(
           TEXT("playbackEnd"), PlaybackEndValue);
 
+      FFrameRate NewRate = MovieScene->GetDisplayRate();
       if (bHasFrameRate) {
-        if (FrameRateValue <= 0.0) {
+        FString FrameRateError;
+        if (!McpSequenceFrameRate::TryParse(
+                LocalPayload, TEXT("frameRate"), NewRate, FrameRateError)) {
           Subsystem->SendAutomationResponse(Socket, RequestIdArg, false,
-                                            TEXT("frameRate must be > 0"),
+                                            FrameRateError,
                                             nullptr, TEXT("INVALID_ARGUMENT"));
           return true;
         }
-        const int32 Rounded =
-            FMath::Clamp<int32>(FMath::RoundToInt(FrameRateValue), 1, 960);
-        FFrameRate CurrentRate = MovieScene->GetDisplayRate();
-        FFrameRate NewRate(Rounded, 1);
-        if (NewRate != CurrentRate) {
-          MovieScene->SetDisplayRate(NewRate);
-          bModified = true;
-        }
       }
 
+      TRange<FFrameNumber> NewRange = MovieScene->GetPlaybackRange();
+      bool bRangeChanged = false;
       if (bHasPlaybackStart || bHasPlaybackEnd || bHasLengthInFrames) {
-        TRange<FFrameNumber> ExistingRange = MovieScene->GetPlaybackRange();
-        FFrameNumber StartFrame = ExistingRange.GetLowerBoundValue();
-        FFrameNumber EndFrame = ExistingRange.GetUpperBoundValue();
+        FFrameNumber StartFrame = NewRange.GetLowerBoundValue();
+        FFrameNumber EndFrame = NewRange.GetUpperBoundValue();
 
-        if (bHasPlaybackStart)
-          StartFrame = FFrameNumber(static_cast<int32>(PlaybackStartValue));
-        if (bHasPlaybackEnd)
-          EndFrame = FFrameNumber(static_cast<int32>(PlaybackEndValue));
-        else if (bHasLengthInFrames)
-          EndFrame =
-              StartFrame +
-              FMath::Max<int32>(0, static_cast<int32>(LengthInFramesValue));
+        FString FrameError;
+        if (bHasPlaybackStart &&
+            !McpSequenceFrameMath::TryFrameNumber(
+                PlaybackStartValue, StartFrame, FrameError)) {
+          Subsystem->SendAutomationResponse(
+              Socket, RequestIdArg, false, FrameError, nullptr,
+              TEXT("INVALID_ARGUMENT"));
+          return true;
+        }
+        if (bHasPlaybackEnd) {
+          if (!McpSequenceFrameMath::TryFrameNumber(
+                  PlaybackEndValue, EndFrame, FrameError)) {
+            Subsystem->SendAutomationResponse(
+                Socket, RequestIdArg, false, FrameError, nullptr,
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+          }
+        } else if (bHasLengthInFrames) {
+          FFrameNumber Length;
+          if (!McpSequenceFrameMath::TryFrameNumber(
+                  LengthInFramesValue, Length, FrameError)) {
+            Subsystem->SendAutomationResponse(
+                Socket, RequestIdArg, false, FrameError, nullptr,
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+          }
+          if (!McpSequenceFrameMath::TryAddFrames(
+                  StartFrame,
+                  FMath::Max(0, Length.Value),
+                  EndFrame, FrameError)) {
+            Subsystem->SendAutomationResponse(
+                Socket, RequestIdArg, false, FrameError, nullptr,
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+          }
+        }
 
         if (EndFrame < StartFrame)
           EndFrame = StartFrame;
-        MovieScene->SetPlaybackRange(
-            TRange<FFrameNumber>(StartFrame, EndFrame));
+        NewRange = TRange<FFrameNumber>(StartFrame, EndFrame);
+        bRangeChanged = true;
+      }
+
+      if (NewRate != MovieScene->GetDisplayRate()) {
+        MovieScene->SetDisplayRate(NewRate);
+        bModified = true;
+      }
+      if (bRangeChanged) {
+        MovieScene->SetPlaybackRange(NewRange);
         bModified = true;
       }
 

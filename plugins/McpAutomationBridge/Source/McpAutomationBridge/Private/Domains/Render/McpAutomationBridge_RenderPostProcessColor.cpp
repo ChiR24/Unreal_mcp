@@ -1,5 +1,6 @@
 #include "Domains/Render/McpAutomationBridge_RenderHandlersPrivate.h"
 #include "Domains/Render/McpAutomationBridge_RenderSupport.h"
+#include "Domains/Render/McpAutomationBridge_RenderSupportSettings.h"
 
 #include "McpAutomationBridgeSubsystem.h"
 
@@ -12,22 +13,6 @@ namespace McpRenderHandlers
 {
 namespace
 {
-APostProcessVolume* FindPostProcessVolume(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
-{
-    FString Reference;
-    ReadActorReference(Payload, Reference);
-    APostProcessVolume* Volume = Cast<APostProcessVolume>(FindRenderActor(Reference));
-    if (!Volume)
-    {
-        Subsystem->SendAutomationError(Socket, RequestId, TEXT("PostProcessVolume not found."), TEXT("ACTOR_NOT_FOUND"));
-    }
-    return Volume;
-}
-
 bool ApplyColorPostSettings(
     APostProcessVolume* Volume,
     const TSharedPtr<FJsonObject>& Settings,
@@ -79,7 +64,7 @@ bool HandleRenderPostProcessColorAction(
     }
 
     APostProcessVolume* Volume =
-        FindPostProcessVolume(Subsystem, RequestId, Payload, RequestingSocket);
+        RequirePostProcessVolume(Subsystem, RequestId, Payload, RequestingSocket);
     if (!Volume)
     {
         return true;

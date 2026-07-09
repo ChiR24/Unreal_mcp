@@ -1,88 +1,6 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
-
-FString FMcpNativeTransport::HandleInitialize(
-	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
-	FString& OutSessionId)
-{
-	// Extract client info for logging
-	FString ClientName = TEXT("unknown");
-	FString ClientVersion = TEXT("unknown");
-	if (Params.IsValid())
-	{
-		const TSharedPtr<FJsonObject>* ClientInfoObj = nullptr;
-		if (Params->TryGetObjectField(TEXT("clientInfo"), ClientInfoObj) && ClientInfoObj)
-		{
-			(*ClientInfoObj)->TryGetStringField(TEXT("name"), ClientName);
-			(*ClientInfoObj)->TryGetStringField(TEXT("version"), ClientVersion);
-		}
-	}
-
-	OutSessionId = FGuid::NewGuid().ToString();
-	int32 CurrentSessionCount;
-	{
-		FScopeLock Lock(&SessionMutex);
-		ActiveSessions.Add(OutSessionId, FPlatformTime::Seconds());
-		CurrentSessionCount = ActiveSessions.Num();
-	}
-
-	auto Result = MakeShared<FJsonObject>();
-	Result->SetStringField(TEXT("protocolVersion"), TEXT("2025-03-26"));
-
-	auto Capabilities = MakeShared<FJsonObject>();
-	auto ToolsCap = MakeShared<FJsonObject>();
-	ToolsCap->SetBoolField(TEXT("listChanged"), true);
-	Capabilities->SetObjectField(TEXT("tools"), ToolsCap);
-	Result->SetObjectField(TEXT("capabilities"), Capabilities);
-
-	auto ServerInfo = MakeShared<FJsonObject>();
-	ServerInfo->SetStringField(TEXT("name"), ServerName);
-	ServerInfo->SetStringField(TEXT("version"), ServerVersion);
-	Result->SetObjectField(TEXT("serverInfo"), ServerInfo);
-
-	// Combine base instructions (from server-info.json) + user instructions (from settings)
-	FString CombinedInstructions = BaseInstructions;
-	if (!UserInstructions.IsEmpty())
-	{
-		if (!CombinedInstructions.IsEmpty())
-		{
-			CombinedInstructions += TEXT("\n\n");
-		}
-		CombinedInstructions += UserInstructions;
-	}
-	if (!CombinedInstructions.IsEmpty())
-	{
-		Result->SetStringField(TEXT("instructions"), CombinedInstructions);
-	}
-
-	UE_LOG(LogMcpNativeTransport, Log,
-		TEXT("MCP session initialized: %s (client: %s %s, active sessions: %d)"),
-		*OutSessionId, *ClientName, *ClientVersion, CurrentSessionCount);
-
-	return FMcpJsonRpc::BuildResponse(Id, Result);
-}
-
-// ─── Tools List ─────────────────────────────────────────────────────────────
-
-FString FMcpNativeTransport::HandleToolsList(const TSharedPtr<FJsonValue>& Id)
-{
-	TSet<FString> EnabledTools = ToolManager.GetEnabledToolNames();
-	TSharedPtr<FJsonObject> ToolsList = FMcpToolRegistry::Get().GetFilteredToolsResponse(EnabledTools);
-
-	if (ToolsList.IsValid())
-	{
-		return FMcpJsonRpc::BuildResponse(Id, ToolsList);
-	}
-
-	auto EmptyResult = MakeShared<FJsonObject>();
-	TArray<TSharedPtr<FJsonValue>> EmptyArray;
-	EmptyResult->SetArrayField(TEXT("tools"), EmptyArray);
-	return FMcpJsonRpc::BuildResponse(Id, EmptyResult);
-}
-
-int32 FMcpNativeTransport::GetTotalToolCount() const
-{
-	return FMcpToolRegistry::Get().GetToolCount();
-}
+#include "MCP/Transport/McpNativeTransportArgumentValidation.h"
+#include "MCP/Transport/McpNativeTransportTimeoutPolicy.h"
 
 // ─── Tools Call (SSE streaming) ─────────────────────────────────────────────
 
@@ -136,28 +54,6 @@ void FMcpNativeTransport::HandleToolsCall(
 		Arguments = MakeShared<FJsonObject>();
 	}
 
-	// Intercept manage_tools — handle locally (one-shot, no SSE)
-	if (ToolName == TEXT("manage_tools"))
-	{
-		FString Action;
-		Arguments->TryGetStringField(TEXT("action"), Action);
-		TSharedPtr<FJsonObject> Result = ToolManager.HandleAction(Action, Arguments);
-		bool bActionSuccess = false;
-		if (Result.IsValid()) { Result->TryGetBoolField(TEXT("success"), bActionSuccess); }
-		FString ActionMessage = TEXT("OK");
-		if (!bActionSuccess && Result.IsValid())
-		{
-			Result->TryGetStringField(TEXT("error"), ActionMessage);
-		}
-		TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
-			bActionSuccess, ActionMessage, Result);
-		FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
-		SendHttpResponse(ClientSocket, 200, TEXT("application/json"), Body, {}, CorsOrigin);
-		ClientSocket->Close();
-		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
-		return;
-	}
-
 	// Enforce tool enabled check — tools/list filters, tools/call must also enforce
 	if (!ToolManager.IsToolEnabled(ToolName))
 	{
@@ -172,28 +68,140 @@ void FMcpNativeTransport::HandleToolsCall(
 		return;
 	}
 
-	// Send SSE headers — begins the streaming response
-	if (!SendSSEHeaders(ClientSocket, SessionId, CorsOrigin))
+	if (TryHandleLocalToolCall(
+			ToolName, Arguments, Id, ClientSocket, SessionId, CorsOrigin))
 	{
-		UE_LOG(LogMcpNativeTransport, Warning,
-			TEXT("Failed to send SSE headers for tool %s"), *ToolName);
+		return;
+	}
+
+	FMcpToolDefinition* ToolDef = FMcpToolRegistry::Get().FindTool(ToolName);
+	FString ArgumentPath, ArgumentErrorCode, ArgumentErrorMessage;
+	if (!McpNativeArgumentValidation::ValidateToolArguments(
+			ToolDef, Arguments, ArgumentPath, ArgumentErrorCode,
+			ArgumentErrorMessage))
+	{
+		const FString Message = ArgumentErrorMessage.IsEmpty()
+			? FString::Printf(
+				TEXT("Tool '%s' could not validate its arguments"), *ToolName)
+			: ArgumentErrorMessage;
+		TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
+			false, Message, nullptr,
+			ArgumentErrorCode.IsEmpty()
+				? TEXT("INVALID_TOOL_ARGUMENT")
+				: ArgumentErrorCode);
+		const FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
+		SendHttpResponse(
+			ClientSocket, 200, TEXT("application/json"), Body, {}, CorsOrigin);
 		ClientSocket->Close();
 		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
 		return;
 	}
 
-	// Generate request ID and park the connection
 	const FString RequestId = FGuid::NewGuid().ToString();
-
+	TSharedPtr<FSSEConnection> Conn = MakeShared<FSSEConnection>();
+	Conn->Socket = ClientSocket;
+	Conn->JsonRpcId = Id;
+	Conn->StartTime = FPlatformTime::Seconds();
+	const UMcpAutomationBridgeSettings* Settings =
+		GetDefault<UMcpAutomationBridgeSettings>();
+	Conn->TimeoutSeconds =
+		McpNativeTransportTimeoutPolicy::ResolveToolCallTimeoutSeconds(
+			ToolName, Arguments,
+			Settings ? Settings->MaxMovieRenderTimeoutMs : 3600000,
+			Settings ? Settings->MaxMovieRenderCancellationWaitMs : 30000);
+	Conn->ToolName = ToolName;
+	Conn->SessionId = SessionId;
+	bool bPendingLimitReached = false;
+	bool bSessionInvalid = false;
 	{
-		FScopeLock Lock(&SSEConnectionsMutex);
-		TSharedPtr<FSSEConnection> Conn = MakeShared<FSSEConnection>();
-		Conn->Socket = ClientSocket;
-		Conn->JsonRpcId = Id;
-		Conn->StartTime = FPlatformTime::Seconds();
-		Conn->ToolName = ToolName;
-		Conn->SessionId = SessionId;
-		SSEConnections.Add(RequestId, Conn);
+		// Session validity is checked under SessionMutex; the lock is released
+		// before acquiring SSEConnectionsMutex to keep the global lock order
+		// documented in McpNativeTransport.h (no nested Session→SSE critical
+		// sections). The TOCTOU window (session expiring between check and add)
+		// is bounded: CloseSessionConnections cleans up the dangling SSE entry
+		// on session timeout.
+		FScopeLock SessionLock(&SessionMutex);
+		if (!ActiveSessions.Contains(SessionId))
+		{
+			bSessionInvalid = true;
+		}
+	}
+	if (!bSessionInvalid)
+	{
+		FScopeLock ConnectionLock(&SSEConnectionsMutex);
+		int32 SessionPendingCount = 0;
+		for (const TPair<FString, TSharedPtr<FSSEConnection>>& Entry :
+			 SSEConnections)
+		{
+			if (Entry.Value.IsValid() &&
+				Entry.Value->SessionId == SessionId)
+			{
+				++SessionPendingCount;
+			}
+		}
+		if (SSEConnections.Num() >= MaxPendingToolCalls ||
+			SessionPendingCount >= MaxPendingToolCallsPerSession)
+		{
+			bPendingLimitReached = true;
+		}
+		else
+		{
+			SSEConnections.Add(RequestId, Conn);
+		}
+	}
+	if (bSessionInvalid)
+	{
+		const FString Body = FMcpJsonRpc::BuildError(
+			Id, FMcpJsonRpc::ErrorInvalidRequest,
+			TEXT("Invalid or expired session ID"));
+		SendHttpResponse(
+			ClientSocket, 404, TEXT("application/json"), Body, {}, CorsOrigin);
+		ClientSocket->Close();
+		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+		return;
+	}
+	if (bPendingLimitReached)
+	{
+		TSharedPtr<FJsonObject> ToolResult =
+			FMcpJsonRpc::BuildToolResult(
+				false, TEXT("Native MCP pending tool-call limit reached"),
+				nullptr, TEXT("TOO_MANY_PENDING_TOOL_CALLS"));
+		const FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
+		SendHttpResponse(
+			ClientSocket, 429, TEXT("application/json"), Body, {}, CorsOrigin);
+		ClientSocket->Close();
+		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+		return;
+	}
+
+	bool bHeadersSent = false;
+	{
+		FScopeLock WriteLock(&Conn->WriteMutex);
+		if (Conn->Socket)
+		{
+			bHeadersSent = SendSSEHeaders(
+				Conn->Socket, SessionId, CorsOrigin);
+			if (!bHeadersSent)
+			{
+				Conn->Socket->Close();
+				if (SocketSub) SocketSub->DestroySocket(Conn->Socket);
+				Conn->Socket = nullptr;
+			}
+		}
+	}
+	if (!bHeadersSent)
+	{
+		{
+			FScopeLock Lock(&SSEConnectionsMutex);
+			SSEConnections.Remove(RequestId);
+		}
+		UE_LOG(LogMcpNativeTransport, Warning,
+			TEXT("Failed to send SSE headers for tool %s"), *ToolName);
+		// Note: DiscardCanceledAutomationRequest would be a no-op here because
+		// the request has not been queued with the subsystem yet (queueing
+		// happens after this early-return path). The SSE-headers-failed path
+		// only needs the SSEConnections cleanup above.
+		return;
 	}
 
 	UE_LOG(LogMcpNativeTransport, Log,
@@ -204,7 +212,6 @@ void FMcpNativeTransport::HandleToolsCall(
 	// Pattern A: pass tool name as Action (handler checks Action == "tool_name")
 	// Pattern B: extract sub-action from arguments (handler checks Action.StartsWith("sub_action"))
 	FString DispatchAction = ToolName;
-	FMcpToolDefinition* ToolDef = FMcpToolRegistry::Get().FindTool(ToolName);
 	if (ToolDef && !ToolDef->UsesToolNameDispatch())
 	{
 		// Pattern B: extract action from arguments
@@ -212,6 +219,16 @@ void FMcpNativeTransport::HandleToolsCall(
 		FString Extracted;
 		if (Arguments->TryGetStringField(ActionField, Extracted) && !Extracted.IsEmpty())
 		{
+			if (!IsValidSnakeCaseAction(Extracted))
+			{
+				CompletePendingRequest(
+					RequestId, false,
+					FString::Printf(
+						TEXT("Invalid '%s' value for tool '%s': must be a snake_case identifier"),
+						*ActionField, *ToolName),
+					nullptr, TEXT("INVALID_PARAMS"));
+				return;
+			}
 			DispatchAction = Extracted;
 		}
 		else
@@ -241,11 +258,33 @@ void FMcpNativeTransport::HandleToolsCall(
 	FString CapturedDispatchAction = DispatchAction;
 	TSharedPtr<FJsonObject> CapturedArguments = Arguments;
 
-	if (UMcpAutomationBridgeSubsystem* Sub = WeakSubsystem.Get())
+	if (WeakSubsystem.IsValid())
 	{
-		Sub->QueueAutomationRequest(
-			CapturedRequestId, CapturedDispatchAction, CapturedArguments, nullptr,
-			ERequestOrigin::NativeHTTP);
+		bool bSessionActive = false;
+		const bool bQueued = QueueAutomationRequestForSession(
+			SessionId, CapturedRequestId, CapturedDispatchAction,
+			CapturedArguments, bSessionActive);
+		if (!bSessionActive)
+		{
+			CompletePendingRequest(
+				CapturedRequestId, false,
+				TEXT("Invalid or expired session ID"), nullptr,
+				TEXT("INVALID_SESSION"));
+		}
+		else if (!bQueued)
+		{
+			CompletePendingRequest(
+				CapturedRequestId, false,
+				TEXT("Automation request queue is full"), nullptr,
+				TEXT("AUTOMATION_QUEUE_FULL"));
+		}
+	}
+	else
+	{
+		CompletePendingRequest(
+			CapturedRequestId, false,
+			TEXT("Automation subsystem is unavailable"), nullptr,
+			TEXT("NOT_AVAILABLE"));
 	}
 }
 

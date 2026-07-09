@@ -11,6 +11,8 @@
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "EdGraphSchema_K2.h"
+#include "EdGraph/EdGraphPin.h"
 #endif
 
 namespace McpBlueprintHandlers {
@@ -211,6 +213,34 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
                                              EGPD_Input);
     }
 
+    // A freshly created function graph contains only the entry node; the result
+    // node (which owns the function's return-value pins) is created lazily when
+    // an output is first added. Without it the loop below fell back to the entry
+    // node and added the outputs there as EGPD_Output pins — which an entry node
+    // exposes as additional *input* parameters, so declared outputs showed up as
+    // inputs at the call site. Create the result node so outputs land on it.
+    if (Outputs.Num() > 0 && !ResultNode) {
+      FGraphNodeCreator<UK2Node_FunctionResult> ResultCreator(*NewGraph);
+      ResultNode = ResultCreator.CreateNode(/*bSelectNewNode=*/false);
+      if (ResultNode && EntryNode) {
+        ResultNode->NodePosX = EntryNode->NodePosX + 480;
+        ResultNode->NodePosY = EntryNode->NodePosY;
+      }
+      if (ResultNode) {
+        ResultCreator.Finalize();
+      }
+    }
+
+    // Outputs were declared but the result node could not be created: fail loudly
+    // instead of silently dropping the outputs (no silent no-op).
+    if (Outputs.Num() > 0 && !ResultNode) {
+      Bridge.SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("Failed to create function result node for declared outputs."),
+          nullptr, TEXT("GRAPH_UNAVAILABLE"));
+      return true;
+    }
+
     for (const TSharedPtr<FJsonValue> &Value : Outputs) {
       if (!Value.IsValid() || Value->Type != EJson::Object)
         continue;
@@ -221,10 +251,43 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
       Obj->TryGetStringField(TEXT("name"), ParamName);
       FString ParamType;
       Obj->TryGetStringField(TEXT("type"), ParamType);
-      FMcpAutomationBridge_AddUserDefinedPin(
-          ResultNode ? static_cast<UK2Node *>(ResultNode)
-                     : static_cast<UK2Node *>(EntryNode),
-          ParamName, ParamType, EGPD_Output);
+      // Function outputs are the *input* pins of the result node — data flows
+      // into the return node. Adding them to the entry node, or with EGPD_Output,
+      // is what turned declared outputs into extra inputs.
+      if (ResultNode) {
+        FMcpAutomationBridge_AddUserDefinedPin(ResultNode, ParamName, ParamType,
+                                               EGPD_Input);
+      }
+    }
+
+    // Wire the entry node's exec output to the result node's exec input so the
+    // function actually executes through the return node. The editor makes this
+    // connection by default when a function declares outputs; without it the
+    // return node is never reached, so declared outputs come back as their
+    // defaults at runtime even though the Blueprint compiles.
+    if (EntryNode && ResultNode) {
+      UEdGraphPin *EntryThenPin = nullptr;
+      for (UEdGraphPin *Pin : EntryNode->Pins) {
+        if (Pin && Pin->Direction == EGPD_Output &&
+            Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec) {
+          EntryThenPin = Pin;
+          break;
+        }
+      }
+      UEdGraphPin *ResultExecPin = nullptr;
+      for (UEdGraphPin *Pin : ResultNode->Pins) {
+        if (Pin && Pin->Direction == EGPD_Input &&
+            Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec) {
+          ResultExecPin = Pin;
+          break;
+        }
+      }
+      if (EntryThenPin && ResultExecPin && EntryThenPin->LinkedTo.Num() == 0) {
+        const UEdGraphSchema_K2 *K2Schema = GetDefault<UEdGraphSchema_K2>();
+        if (K2Schema) {
+          K2Schema->TryCreateConnection(EntryThenPin, ResultExecPin);
+        }
+      }
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);

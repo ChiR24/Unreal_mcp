@@ -73,6 +73,8 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     const FString& ErrorCode,
     ERequestOrigin Origin)
 {
+    ClearAutomationRequestCancellation(RequestId);
+
     bool bEffectiveSuccess = bSuccess;
     FString EffectiveMessage = Message;
     FString EffectiveErrorCode = ErrorCode;
@@ -142,11 +144,14 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
 
     ERequestOrigin EffectiveOrigin =
         Origin == ERequestOrigin::WebSocket ? CurrentRequestOrigin : Origin;
-    if (Origin == ERequestOrigin::WebSocket && NativeTransport &&
-        NativeTransport->HasPendingRequest(RequestId))
-    {
-        EffectiveOrigin = ERequestOrigin::NativeHTTP;
-    }
+    // F3 fix: removed the response-stealing override that redirected a
+    // WebSocket-originated response to the Native HTTP transport when the
+    // RequestId matched a Native pending request. RequestIds are
+    // server-generated GUIDs, so the match should never happen in practice,
+    // but if a collision ever occurred, the response would leak to the
+    // wrong transport. The response now goes to the originator (Origin
+    // parameter, possibly resolved via the CurrentRequestOrigin global
+    // for WebSocket-originated calls).
     if (EffectiveOrigin == ERequestOrigin::NativeHTTP && NativeTransport)
     {
         if (!NativeTransport->CompletePendingRequest(
@@ -191,6 +196,33 @@ void UMcpAutomationBridgeSubsystem::SendAutomationError(
         *ResolvedError,
         *SanitizeForLog(Message));
     SendAutomationResponse(TargetSocket, RequestId, false, Message, nullptr, ResolvedError);
+}
+
+void UMcpAutomationBridgeSubsystem::SendAutomationRejection(
+    TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
+    const FString& RequestId,
+    EAutomationQueueRejection Reason)
+{
+    const TCHAR* Code = TEXT("AUTOMATION_REQUEST_REJECTED");
+    FString Message = TEXT("Automation request rejected");
+    switch (Reason)
+    {
+        case EAutomationQueueRejection::NotAccepting:
+            Code = TEXT("AUTOMATION_NOT_ACCEPTING");
+            Message = TEXT("Automation request rejected: subsystem is not accepting requests");
+            break;
+        case EAutomationQueueRejection::AlreadyCanceled:
+            Code = TEXT("AUTOMATION_ALREADY_CANCELED");
+            Message = TEXT("Automation request rejected: request was already canceled");
+            break;
+        case EAutomationQueueRejection::QueueFull:
+            Code = TEXT("AUTOMATION_QUEUE_FULL");
+            Message = TEXT("Automation request rejected: queue is full");
+            break;
+        default:
+            break;
+    }
+    SendAutomationError(TargetSocket, RequestId, Message, Code);
 }
 
 void UMcpAutomationBridgeSubsystem::SendProgressUpdate(

@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/Sequence/McpAutomationBridge_SequenceFrameRate.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceSetDisplayRate(
@@ -25,36 +26,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetDisplayRate(
 
   if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
     if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {
-      FString FrameRateStr;
-      double FrameRateVal = 0.0;
       FFrameRate NewRate;
-      bool bRateFound = false;
-
-      if (LocalPayload->TryGetStringField(TEXT("frameRate"), FrameRateStr)) {
-        if (FrameRateStr.EndsWith(TEXT("fps"))) {
-          FrameRateStr.RemoveFromEnd(TEXT("fps"));
-          NewRate = FFrameRate(FCString::Atoi(*FrameRateStr), 1);
-          bRateFound = true;
-        } else if (FrameRateStr.Contains(TEXT("/"))) {
-          FString NumStr, DenomStr;
-          if (FrameRateStr.Split(TEXT("/"), &NumStr, &DenomStr)) {
-            NewRate =
-                FFrameRate(FCString::Atoi(*NumStr), FCString::Atoi(*DenomStr));
-            bRateFound = true;
-          }
-        } else {
-          if (FrameRateStr.IsNumeric()) {
-            NewRate = FFrameRate(FCString::Atoi(*FrameRateStr), 1);
-            bRateFound = true;
-          }
-        }
-      } else if (LocalPayload->TryGetNumberField(TEXT("frameRate"),
-                                                 FrameRateVal)) {
-        NewRate = FFrameRate(FMath::RoundToInt(FrameRateVal), 1);
-        bRateFound = true;
-      }
-
-      if (bRateFound) {
+      FString FrameRateError;
+      if (McpSequenceFrameRate::TryParse(
+              LocalPayload, TEXT("frameRate"), NewRate, FrameRateError)) {
         MovieScene->SetDisplayRate(NewRate);
         MovieScene->Modify();
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -67,7 +42,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetDisplayRate(
       }
 
       SendAutomationResponse(Socket, RequestId, false,
-                             TEXT("Invalid frameRate format"), nullptr,
+                             FrameRateError, nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }

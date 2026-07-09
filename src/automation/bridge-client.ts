@@ -2,11 +2,16 @@ import { WebSocket } from 'ws';
 import { MAX_WS_MESSAGE_SIZE_BYTES } from '../constants.js';
 import { redactImagePayloadTextForLog } from '../utils/logging/log-redaction.js';
 import type { Logger } from '../utils/logging/logger.js';
-import { formatHostForUrl, type AutomationBridgeResolvedConfig } from './bridge-config.js';
+import { type AutomationBridgeResolvedConfig, formatHostForUrl } from './bridge-config.js';
 import { getRawDataByteLength, rawDataToUtf8String } from './bridge-frame.js';
 import type { AutomationBridgeRuntimeState } from './bridge-state.js';
 import type { ConnectionManager } from './connection-manager.js';
 import type { HandshakeHandler } from './handshake.js';
+import {
+    REDACTED_AUTOMATION_CREDENTIAL,
+    redactAutomationLogRecord,
+    redactKnownAutomationCredentials
+} from './log-redaction.js';
 import type { MessageHandler } from './message-handler.js';
 import { automationMessageSchema } from './message-schema.js';
 import type { AutomationBridgeEvents, AutomationBridgeMessage } from './types.js';
@@ -64,7 +69,7 @@ export class AutomationBridgeClient {
             this.pendingConnectionSocket = socket;
             this.handleClientConnection(socket);
         } catch (error) {
-            const errorObj = error instanceof Error ? error : new Error(String(error));
+            const errorObj = this.redactPeerError(error);
             this.deps.state.lastError = { message: errorObj.message, at: new Date() };
             this.deps.log.error('Failed to create WebSocket client connection', errorObj);
             this.deps.emit('error', Object.assign(errorObj, { port: this.deps.config.clientPort }));
@@ -137,7 +142,7 @@ export class AutomationBridgeClient {
                 this.installMessageHandler(socket);
             } catch (error) {
                 this.clearPendingConnection(socket);
-                const err = error instanceof Error ? error : new Error(String(error));
+                const err = this.redactPeerError(error);
                 this.deps.state.lastHandshakeFailure = { reason: err.message, at: new Date() };
                 this.deps.emit('handshakeFailed', { reason: err.message, port: this.deps.config.clientPort });
             }
@@ -150,7 +155,7 @@ export class AutomationBridgeClient {
                 return;
             }
 
-            const errorObj = error instanceof Error ? error : new Error(String(error));
+            const errorObj = this.redactPeerError(error);
             this.deps.log.error('Automation bridge client socket error', errorObj);
             this.deps.state.lastError = { message: errorObj.message, at: new Date() };
             this.deps.emit('error', Object.assign(errorObj, { port: this.deps.config.clientPort }));
@@ -159,7 +164,7 @@ export class AutomationBridgeClient {
         socket.on('close', (code, reasonBuffer) => {
             this.clearPendingConnection(socket);
             this.abortedConnectionSockets.delete(socket);
-            const reason = reasonBuffer.toString('utf8');
+            const reason = this.redactPeerText(reasonBuffer.toString('utf8'));
             const socketInfo = this.deps.connectionManager.removeSocket(socket);
 
             if (!socketInfo) {
@@ -202,7 +207,7 @@ export class AutomationBridgeClient {
 
         this.deps.emit('connected', {
             socket,
-            metadata,
+            metadata: redactAutomationLogRecord(metadata),
             port: this.deps.config.clientPort,
             protocol: socket.protocol || null
         });
@@ -245,5 +250,22 @@ export class AutomationBridgeClient {
         if (this.pendingConnectionSocket === socket) {
             this.pendingConnectionSocket = undefined;
         }
+    }
+
+    private redactPeerText(value: string): string {
+        const knownCredentials = this.deps.config.capabilityToken
+            ? [this.deps.config.capabilityToken]
+            : [];
+        const redacted = redactKnownAutomationCredentials(value, knownCredentials);
+        return typeof redacted === 'string'
+            ? redacted
+            : REDACTED_AUTOMATION_CREDENTIAL;
+    }
+
+    private redactPeerError(value: unknown): Error {
+        const source = value instanceof Error ? value : new Error(String(value));
+        const redacted = new Error(this.redactPeerText(source.message));
+        redacted.name = source.name;
+        return redacted;
     }
 }

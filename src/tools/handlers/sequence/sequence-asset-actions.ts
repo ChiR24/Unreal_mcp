@@ -4,7 +4,6 @@ import { executeAutomationRequest, requireNonEmptyString } from '../foundation/d
 import {
   getErrorString,
   getMessageString,
-  markSequenceDeleted,
   type SequenceActionResponse
 } from './sequence-handler-state.js';
 
@@ -61,9 +60,6 @@ export async function handleSequenceAssetAction(
         subAction: 'delete'
       }) as SequenceActionResponse;
 
-      if (res && res.success !== false) {
-        markSequenceDeleted(path);
-      }
       return cleanObject(res);
     }
     case 'get_metadata': {

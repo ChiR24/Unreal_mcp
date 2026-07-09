@@ -35,6 +35,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddCamera(
           FGuid BindingGuid = MovieScene->AddPossessable(
               Spawned->GetActorLabel(), Spawned->GetClass());
           if (MovieScene->FindPossessable(BindingGuid)) {
+            LevelSeq->BindPossessableObject(
+                BindingGuid, *Spawned, Spawned->GetWorld());
+            LevelSeq->MarkPackageDirty();
             MovieScene->Modify();
             Resp->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
           }
@@ -163,12 +166,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(
         if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
           UMovieScene *MovieScene = LevelSeq->GetMovieScene();
           if (MovieScene) {
+            LevelSeq->Modify();
+            MovieScene->Modify();
             FGuid BindingGuid = MovieScene->AddPossessable(
                 Found->GetActorLabel(), Found->GetClass());
             if (MovieScene->FindPossessable(BindingGuid)) {
+              LevelSeq->BindPossessableObject(BindingGuid, *Found,
+                                              Found->GetWorld());
+              LevelSeq->MarkPackageDirty();
               Item->SetBoolField(TEXT("success"), true);
               Item->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
-              MovieScene->Modify();
             } else {
               Item->SetBoolField(TEXT("success"), false);
               Item->SetStringField(

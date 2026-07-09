@@ -1,3 +1,5 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 #include "Transport/WebSocket/McpBridgeWebSocketPrivate.h"
@@ -177,10 +179,8 @@ bool FMcpBridgeWebSocket::ReceiveExact(uint8 *Buffer, SIZE_T Length) {
     if (Existing > 0) {
       FMemory::Memcpy(Buffer, PendingReceived.GetData(), Existing);
       PendingReceived.RemoveAt(0, Existing
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-      , EAllowShrinking::No
-#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-      , false
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+      , MCP_DISALLOW_SHRINKING
 #endif
       );
       Collected += Existing;

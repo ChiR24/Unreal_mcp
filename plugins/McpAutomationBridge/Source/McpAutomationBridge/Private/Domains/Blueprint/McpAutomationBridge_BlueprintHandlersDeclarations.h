@@ -121,6 +121,7 @@ UEdGraphNode *CreateBlueprintGraphNode(UEdGraph *TargetGraph,
                                        const FString &FunctionName,
                                        const FString &VariableName,
                                        const FString &NodeName,
+                                       const FString &TargetClass,
                                        FString &OutErrorMessage,
                                        FString &OutErrorCode,
                                        TSharedPtr<FJsonObject> &OutErrorResult);
@@ -156,6 +157,7 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
 bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context);
 bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context);
 bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context);
+bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context);
 bool HandleBlueprintSetDefaultObject(const FBlueprintActionContext &Context);
 bool HandleBlueprintCompile(const FBlueprintActionContext &Context);
 bool HandleBlueprintProbeCreateExists(const FBlueprintActionContext &Context);

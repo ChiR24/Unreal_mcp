@@ -1,5 +1,6 @@
 #include "Domains/Render/McpAutomationBridge_RenderHandlersPrivate.h"
 #include "Domains/Render/McpAutomationBridge_RenderSupport.h"
+#include "Domains/Render/McpAutomationBridge_RenderSupportSettings.h"
 
 #include "McpAutomationBridgeSubsystem.h"
 
@@ -207,11 +208,24 @@ bool HandleRenderSceneCaptureAction(
         CaptureCube->MarkRenderStateDirty();
     }
     TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+    Result->SetBoolField(TEXT("captured"), false);
     if (SubAction == TEXT("configure_capture_resolution"))
     {
         Result->SetNumberField(TEXT("resolution"), GetJsonIntField(Payload, TEXT("resolution"), 512));
     }
-    Result->SetBoolField(TEXT("captured"), SubAction == TEXT("capture_scene"));
+    if (SubAction == TEXT("capture_scene"))
+    {
+        const bool bHasRenderTarget = (Capture2D && Capture2D->TextureTarget) || (CaptureCube && CaptureCube->TextureTarget);
+        if (!bHasRenderTarget)
+        {
+            Subsystem->SendAutomationError(
+                RequestingSocket, RequestId,
+                TEXT("Cannot capture scene: assign a render target to the capture component first."),
+                TEXT("RENDER_TARGET_NOT_ASSIGNED"));
+            return true;
+        }
+        Result->SetBoolField(TEXT("captured"), true);
+    }
     Result->SetStringField(TEXT("renderTargetPath"), Capture2D && Capture2D->TextureTarget
         ? Capture2D->TextureTarget->GetPathName()
         : TEXT(""));

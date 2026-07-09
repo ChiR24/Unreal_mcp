@@ -19,6 +19,8 @@ public:
 
 	FString GetCategory() const override { return TEXT("core"); }
 
+	bool EnforceStrictArguments() const override { return true; }
+
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		return FMcpSchemaBuilder()

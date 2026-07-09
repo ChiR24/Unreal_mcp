@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
+#include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -26,6 +27,17 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
   if (!Sequence || !Sequence->GetMovieScene()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
                            nullptr, TEXT("SEQUENCE_NOT_FOUND"));
+    return true;
+  }
+  FFrameNumber Start;
+  FFrameNumber End;
+  FString FrameError;
+  if (!McpSequenceFrameMath::TryFrameNumber(
+          StartFrame, Start, FrameError) ||
+      !McpSequenceFrameMath::TryFrameNumber(
+          EndFrame, End, FrameError)) {
+    SendAutomationResponse(Socket, RequestId, false, FrameError, nullptr,
+                           TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -76,8 +88,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
 
   UMovieSceneSection *NewSection = Track->CreateNewSection();
   if (NewSection) {
-    FFrameNumber Start((int32)FMath::RoundToInt(StartFrame));
-    FFrameNumber End((int32)FMath::RoundToInt(EndFrame));
     NewSection->SetRange(TRange<FFrameNumber>(Start, End));
     Track->AddSection(*NewSection);
     MovieScene->Modify();

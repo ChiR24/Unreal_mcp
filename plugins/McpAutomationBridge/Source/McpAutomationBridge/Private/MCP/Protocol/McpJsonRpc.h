@@ -39,6 +39,11 @@ public:
 	static constexpr int32 ErrorInvalidParams = -32602;
 	static constexpr int32 ErrorInternalError = -32603;
 
+	// JSON-RPC 2.0 server-defined error range (-32000..-32099). Used by the
+	// native MCP transport to surface transport-level conditions that the
+	// standard codes do not cover.
+	static constexpr int32 ErrorRateLimited = -32000;
+
 	/** Parse a JSON-RPC 2.0 request from raw body string. */
 	static FMcpJsonRpcRequest ParseRequest(const FString& Body);
 

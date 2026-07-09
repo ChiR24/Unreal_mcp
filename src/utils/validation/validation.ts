@@ -185,7 +185,12 @@ export function normalizeAndSanitizeAssetPath(path: string): string {
     if (ROOTS.has(segment)) {
       return segment;
     }
-    return sanitizeAssetName(segment);
+    // A leading underscore is valid in UE package/folder paths (e.g. /Game/_Scratch).
+    // sanitizeAssetName strips leading underscores — correct for a bare asset NAME,
+    // but for a path SEGMENT it silently relocated assets to the wrong folder
+    // (/Game/_Scratch -> /Game/Scratch), diverging from manage_blueprint. Preserve it.
+    const cleaned = sanitizeAssetName(segment);
+    return /^_/.test(segment) && !cleaned.startsWith('_') ? `_${cleaned}` : cleaned;
   });
 
   // Reconstruct path

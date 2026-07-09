@@ -1,5 +1,6 @@
 #include "Domains/Render/McpAutomationBridge_RenderHandlersPrivate.h"
 #include "Domains/Render/McpAutomationBridge_RenderSupport.h"
+#include "Domains/Render/McpAutomationBridge_RenderSupportSettings.h"
 
 #include "McpAutomationBridgeSubsystem.h"
 
@@ -192,7 +193,7 @@ bool HandleRenderReflectionAction(
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Planar reflection configured."), Result);
         return true;
     }
-    if (SubAction == TEXT("configure_capture_resolution"))
+    if (SubAction == TEXT("configure_reflection_capture_resolution"))
     {
         UReflectionCaptureComponent* Capture = Actor->FindComponentByClass<UReflectionCaptureComponent>();
         if (!Capture)

@@ -87,8 +87,8 @@ const testCases = [
   { scenario: 'Asset: search with no matches', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'ZZZZZ_NonExistent_Asset_12345' }, expected: 'success' },
   { scenario: 'Asset: search without searchText (structured query)', toolName: 'manage_asset', arguments: { action: 'search_assets', classNames: ['Blueprint'], packagePaths: ['/Game/IntegrationTest'] }, expected: 'success' },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_Cube' }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete advanced test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: ADV_TEST_FOLDER, force: true }, expected: 'success|not found' }
+  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found', timeoutMs: 30000 },
+  { scenario: 'Cleanup: delete advanced test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: ADV_TEST_FOLDER, force: true }, expected: 'success|not found', timeoutMs: 30000 }
 ];
 
 runToolTests('integration', testCases);

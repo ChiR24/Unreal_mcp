@@ -94,6 +94,7 @@ inline const TArray<FString>& Rendering()
 		TEXT("configure_indirect_lighting_cache"),
 		TEXT("create_sphere_reflection_capture"),
 		TEXT("create_box_reflection_capture"),
+		TEXT("configure_reflection_capture_resolution"),
 		TEXT("configure_capture_resolution"),
 		TEXT("configure_capture_offset"),
 		TEXT("recapture_scene"),

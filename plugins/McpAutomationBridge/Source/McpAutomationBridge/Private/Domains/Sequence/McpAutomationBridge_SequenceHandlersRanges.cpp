@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
+#include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceSetViewRange(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -69,10 +70,18 @@ bool HandleSetWorkRange(UMcpAutomationBridgeSubsystem *Subsystem,
   LocalPayload->TryGetNumberField(TEXT("end"), End);
 
   FFrameRate TickResolution = MovieScene->GetTickResolution();
-  FFrameNumber StartFrame(
-      (int32)FMath::RoundToInt(Start * TickResolution.AsDecimal()));
-  FFrameNumber EndFrame(
-      (int32)FMath::RoundToInt(End * TickResolution.AsDecimal()));
+  FFrameNumber StartFrame;
+  FFrameNumber EndFrame;
+  FString FrameError;
+  if (!McpSequenceFrameMath::TrySecondsToFrame(
+          Start, TickResolution, StartFrame, FrameError) ||
+      !McpSequenceFrameMath::TrySecondsToFrame(
+          End, TickResolution, EndFrame, FrameError)) {
+    Subsystem->SendAutomationResponse(
+        RequestingSocket, RequestId, false, FrameError, nullptr,
+        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
 
   MovieScene->SetWorkingRange(Start, End);
   MovieScene->Modify();

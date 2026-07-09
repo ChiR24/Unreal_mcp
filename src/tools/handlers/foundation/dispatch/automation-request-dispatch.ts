@@ -58,7 +58,10 @@ export async function executeAutomationRequest(
   toolName: string,
   args: HandlerArgs,
   errorMessage: string = 'Automation bridge not available',
-  options: { timeoutMs?: number } = {}
+  options: {
+    timeoutMs?: number;
+    forwardTimeoutMsToUnreal?: boolean;
+  } = {}
 ): Promise<unknown> {
   validateArgsSecurity(args);
   validateConsoleCommandPayload(toolName, args);
@@ -74,7 +77,22 @@ export async function executeAutomationRequest(
 
   const timeoutMs = options.timeoutMs ?? (typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined);
   const cleanedArgs = { ...args };
-  delete cleanedArgs.timeoutMs;
+  // forwardTimeoutMsToUnreal is an MRQ-specific escape hatch: start_render
+  // sends its timeoutMs to Unreal so the native transport can apply per-job
+  // deadlines. For all other actions, timeoutMs is a TS-side concern and
+  // must be stripped before forwarding to avoid leaking it into the bridge.
+  if (options.forwardTimeoutMsToUnreal) {
+    const action = typeof cleanedArgs.action === 'string' ? cleanedArgs.action : undefined;
+    if (toolName !== 'manage_sequence' || action !== 'start_render') {
+      throw new Error(
+        `forwardTimeoutMsToUnreal is only valid for manage_sequence/start_render (got ${toolName}${
+          action ? `/${action}` : ''
+        }).`,
+      );
+    }
+  } else {
+    delete cleanedArgs.timeoutMs;
+  }
 
   return await automationBridge.sendAutomationRequest(toolName, cleanedArgs, timeoutMs ? { timeoutMs } : {});
 }

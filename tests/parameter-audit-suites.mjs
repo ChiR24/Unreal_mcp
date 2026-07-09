@@ -74,17 +74,31 @@ export async function captureTestSuites() {
       /import \{ runToolTests \} from ['"](?:\.\.\/\.\.\/test-runner|\.\/test-runner)\.mjs['"];?/g,
       'const runToolTests = (name, cases) => { __captured.push({ name, cases }); };'
     );
+    code = code.replace(
+      /const \{\s*runToolTests\s*\}\s*=\s*await import\(['"](?:\.\.\/\.\.\/test-runner|\.\/test-runner)\.mjs['"]\);?/g,
+      'const runToolTests = (name, cases) => { __captured.push({ name, cases }); };'
+    );
     code = code.replace(/import fs from ['"]node:fs['"];?/g, "const fs = require('node:fs');");
     code = code.replace(/import path from ['"]node:path['"];?/g, "const path = require('node:path');");
 
     const captured = [];
-    await AsyncFunction('require', '__captured', 'process', 'console', 'Date', code)(
-      auditRequire,
-      captured,
-      process,
-      { log() {}, warn() {}, error() {} },
-      Date
-    );
+    const previousAuditMode = process.env.UNREAL_MCP_PARAMETER_AUDIT;
+    process.env.UNREAL_MCP_PARAMETER_AUDIT = '1';
+    try {
+      await AsyncFunction('require', '__captured', 'process', 'console', 'Date', code)(
+        auditRequire,
+        captured,
+        process,
+        { log() {}, warn() {}, error() {} },
+        Date
+      );
+    } finally {
+      if (previousAuditMode === undefined) {
+        delete process.env.UNREAL_MCP_PARAMETER_AUDIT;
+      } else {
+        process.env.UNREAL_MCP_PARAMETER_AUDIT = previousAuditMode;
+      }
+    }
 
     for (const suite of captured) {
       suites.push({ filePath: path.relative(repoRoot, filePath), name: suite.name, cases: suite.cases ?? [] });

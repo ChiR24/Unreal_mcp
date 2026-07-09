@@ -22,10 +22,11 @@ const BLUEPRINT_NODE_ALIASES: Record<string, string> = {
     'IfThenElse': 'K2Node_IfThenElse',
     'Sequence': 'K2Node_ExecutionSequence',
     'ExecutionSequence': 'K2Node_ExecutionSequence',
-    'ForEachLoop': 'K2Node_ForEachElementInEnum',
-    'ForLoop': 'K2Node_ForLoop',  // Basic ForLoop - use ForLoopWithBreak for break support
-    'ForLoopWithBreak': 'K2Node_ForLoopWithBreak',
-    'WhileLoop': 'K2Node_WhileLoop',
+    // ForLoop / ForLoopWithBreak / WhileLoop / ForEachLoop are StandardMacros library
+    // macros (no UK2Node_* class). Do NOT alias them: the bare name must reach the bridge
+    // so TryCreateMacroNode spawns a K2Node_MacroInstance. Aliasing ForEachLoop
+    // to K2Node_ForEachElementInEnum was wrong (the enum iterator). MUST stay in sync with
+    // NODE_ALIASES in blueprint-graph-actions.ts — create_node routes here, add_node there.
     'Switch': 'K2Node_SwitchInteger',
     'SwitchOnInt': 'K2Node_SwitchInteger',
     'SwitchOnString': 'K2Node_SwitchString',

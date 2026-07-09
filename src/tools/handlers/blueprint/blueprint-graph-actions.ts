@@ -23,10 +23,12 @@ const NODE_ALIASES: Readonly<Record<string, string>> = {
   ForEach: 'K2Node_ForEachElementInEnum',
   Sequence: 'K2Node_ExecutionSequence',
   ExecutionSequence: 'K2Node_ExecutionSequence',
-  ForEachLoop: 'K2Node_ForEachElementInEnum',
-  ForLoop: 'K2Node_ForLoop',
-  ForLoopWithBreak: 'K2Node_ForLoopWithBreak',
-  WhileLoop: 'K2Node_WhileLoop',
+  // ForLoop / ForLoopWithBreak / WhileLoop / ForEachLoop are StandardMacros library
+  // macros (no UK2Node_* class). Do NOT alias them here: the bare name must reach the
+  // bridge so TryCreateMacroNode can spawn a K2Node_MacroInstance. Aliasing ForEachLoop
+  // to K2Node_ForEachElementInEnum was wrong — that is the enum iterator, and the
+  // ForLoop/WhileLoop aliases pointed at nonexistent classes. ('ForEach' above
+  // stays — that one genuinely is the enum-ForEach node.)
   Gate: 'K2Node_Gate',
   DoOnce: 'K2Node_DoOnce',
   FlipFlop: 'K2Node_FlipFlop',

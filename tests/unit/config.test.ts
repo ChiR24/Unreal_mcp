@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { EnvSchema } from '../../src/config.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import { getRequiredComponent, resolveClassAlias } from '../../src/config/class-aliases.js';
+import { EnvSchema } from '../../src/config.js';
 import { loadEnv } from '../../src/types/config/env.js';
 
 describe('EnvSchema env var defaults (Zod v4 compatibility)', () => {
@@ -136,6 +137,7 @@ describe('EnvSchema env var defaults (Zod v4 compatibility)', () => {
         process.env = originalEnv;
         vi.resetModules();
     });
+
 });
 
 describe('class aliases', () => {

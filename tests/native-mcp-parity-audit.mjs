@@ -8,6 +8,9 @@ import {
   maskCppLiteralsAndComments
 } from './native-mcp-source-parser.mjs';
 import { extractTypeScriptTools } from './native-mcp-typescript-parity-parser.mjs';
+import { extractNativeToolSchema } from './audits/native-schema-parser.mjs';
+import { compareToolSchemas } from './audits/schema-contract.mjs';
+import { runParityCli } from './audits/native-parity-cli.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -146,7 +149,13 @@ function extractNativeToolDefinitions(paths) {
       const toolSource = enclosingClassSource(source, match.index ?? 0);
       tools.push({
         name: match[1],
-        actions: extractActionEnumFromNativeTool(toolSource, evaluateActions)
+        actions: extractActionEnumFromNativeTool(toolSource, evaluateActions),
+        schema: extractNativeToolSchema({
+          filePath,
+          toolSource,
+          nativeMcpRoot: paths.nativeMcpRoot,
+          nativeToolsRoot: paths.nativeToolsRoot
+        })
       });
     }
   }
@@ -176,6 +185,7 @@ function duplicateValues(values) {
 
 export function auditNativeMcpParity(config = {}) {
   const paths = auditPaths(config);
+  const schemaParityTools = new Set(config.schemaParityTools ?? ['manage_sequence']);
   const typeScriptTools = extractTypeScriptTools(paths);
   const nativeRegistry = extractNativeCanonicalRegistry(paths);
   const nativeTools = extractNativeToolDefinitions(paths);
@@ -202,6 +212,7 @@ export function auditNativeMcpParity(config = {}) {
     )
   };
   const actionGaps = [];
+  const schemaPropertyGaps = [];
 
   for (const tool of typeScriptTools) {
     const nativeActions = nativeToolsByName.get(tool.name)?.actions ?? [];
@@ -209,6 +220,15 @@ export function auditNativeMcpParity(config = {}) {
     const extraNativeActions = difference(nativeActions, tool.actions);
     if (missingNativeActions.length > 0 || extraNativeActions.length > 0) {
       actionGaps.push({ tool: tool.name, missingNativeActions, extraNativeActions });
+    }
+
+    if (schemaParityTools.has(tool.name)) {
+      const gap = compareToolSchemas(
+        tool.name,
+        tool.schema,
+        nativeToolsByName.get(tool.name)?.schema
+      );
+      if (gap) schemaPropertyGaps.push(gap);
     }
   }
 
@@ -218,41 +238,28 @@ export function auditNativeMcpParity(config = {}) {
     nativeRegistryEntries: nativeRegistry.length,
     uniqueNativeRegistryNames: uniqueNativeRegistryNames.length,
     nativeDefinitions: nativeCanonicalTools.length,
-    uniqueNativeDefinitionNames: uniqueNativeCanonicalDefinitionNames.length
+    uniqueNativeDefinitionNames: uniqueNativeCanonicalDefinitionNames.length,
+    toolsWithSchemaPropertyParity: schemaParityTools.size
   };
   const hasMismatches = Object.values(duplicateNames).some((values) => values.length > 0)
     || Object.values(toolNameGaps).some((values) => values.length > 0)
-    || actionGaps.length > 0;
+    || actionGaps.length > 0
+    || schemaPropertyGaps.length > 0;
 
   return {
     paths,
     counts,
+    schemaParityTools: [...schemaParityTools].sort(),
     duplicateNames,
     toolNameGaps,
     actionGaps,
+    schemaPropertyGaps,
     hasMismatches
   };
 }
 
 export function runNativeMcpParityCli(config = {}) {
-  const result = auditNativeMcpParity(config);
-  console.log('Native MCP Action Parity Audit');
-  console.log(`TypeScript tools: ${result.counts.typeScriptDefinitions}`);
-  console.log(`Native canonical tools: ${result.counts.nativeRegistryEntries}`);
-  console.log(`Native canonical definitions: ${result.counts.nativeDefinitions}`);
-  console.log(`Tools with action mismatches: ${result.actionGaps.length}`);
-
-  if (result.hasMismatches) {
-    console.error(JSON.stringify({
-      counts: result.counts,
-      duplicateNames: result.duplicateNames,
-      toolNameGaps: result.toolNameGaps,
-      actionGaps: result.actionGaps
-    }, null, 2));
-    process.exitCode = 1;
-  }
-
-  return result;
+  return runParityCli(auditNativeMcpParity, config);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {

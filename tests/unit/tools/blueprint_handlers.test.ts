@@ -6,6 +6,8 @@ vi.mock('../../../src/tools/handlers/foundation/dispatch/common-handlers.js', ()
 }));
 
 import { handleBlueprintGet } from '../../../src/tools/handlers/blueprint/blueprint-handlers.js';
+import { blueprintEventHandlers } from '../../../src/tools/handlers/blueprint/blueprint-event-actions.js';
+import type { BlueprintActionContext } from '../../../src/tools/handlers/blueprint/blueprint-action-context.js';
 import { executeAutomationRequest } from '../../../src/tools/handlers/foundation/dispatch/common-handlers.js';
 
 describe('Blueprint Handlers', () => {
@@ -93,5 +95,28 @@ describe('Blueprint Handlers', () => {
         ]
       }
     });
+  });
+
+  it('remove_function with { blueprintPath, name } targets the blueprint, not the function name', async () => {
+    mockExecuteAutomationRequest.mockResolvedValue({ success: true, message: 'Function removed' });
+
+    const args = { blueprintPath: '/Game/Test/BP_Thing', name: 'MyFunction' };
+    const context = { argsTyped: args, argsRecord: args, tools: mockTools } as unknown as BlueprintActionContext;
+
+    await blueprintEventHandlers.remove_function(context);
+
+    // Regression: blueprintTarget() resolves name-first, so without disambiguation the
+    // function name "MyFunction" would be sent as the Blueprint path. The path must
+    // resolve to blueprintPath, and `name` must be used as the function name instead.
+    expect(mockExecuteAutomationRequest).toHaveBeenCalledWith(
+      mockTools,
+      'blueprint_remove_function',
+      expect.objectContaining({
+        requestedPath: '/Game/Test/BP_Thing',
+        blueprintCandidates: ['/Game/Test/BP_Thing'],
+        functionName: 'MyFunction'
+      }),
+      undefined
+    );
   });
 });

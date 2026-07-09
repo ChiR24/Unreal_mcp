@@ -123,8 +123,10 @@ describe('native MCP parity audit', () => {
       nativeRegistryEntries: 23,
       uniqueNativeRegistryNames: 23,
       nativeDefinitions: 23,
-      uniqueNativeDefinitionNames: 23
+      uniqueNativeDefinitionNames: 23,
+      toolsWithSchemaPropertyParity: 1
     });
+    expect(result.schemaParityTools).toEqual(['manage_sequence']);
     expect(result.duplicateNames.typeScriptTools).toEqual(['tool_23']);
     expect(result.hasMismatches).toBe(true);
   });

@@ -50,10 +50,14 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
       const globalResult = await handleGlobalInspectAction(normalizedAction, context);
       if (globalResult) return globalResult;
 
+      // Forward the NORMALIZED action so an alias survives to the C++ layer (BUG-67fa5c: get_level_details is
+      // aliased to get_world_settings, which is handled C++-side; passing raw `args` kept action=
+      // get_level_details → the object-required path fired 'objectPath, actorName, or name required'). For every
+      // non-aliased action normalizedAction === args.action, so this is a no-op there.
       return cleanObject(await executeAutomationRequest(
         tools,
         'inspect',
-        args,
+        { ...args, action: normalizedAction },
         'Automation bridge not available for inspect operations'
       )) as Record<string, unknown>;
     }

@@ -107,17 +107,28 @@ static bool GetGraphDetails(FActionContext& Context)
         return false;
     }
 
+    // Opt-in: include each node's pins (with their linkedTo connections) so a
+    // graph's exec/data flow can be read in one call instead of a per-node
+    // get_node_details loop. Default output is unchanged.
+    bool bIncludePins = false;
+    if (Context.Payload.IsValid())
+    {
+        Context.Payload->TryGetBoolField(TEXT("includePins"), bIncludePins);
+    }
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(
         TEXT("graphName"),
         Context.TargetGraph->GetName());
-    Result->SetNumberField(
-        TEXT("nodeCount"),
-        Context.TargetGraph->Nodes.Num());
 
     TArray<TSharedPtr<FJsonValue>> Nodes;
     for (UEdGraphNode* Node : Context.TargetGraph->Nodes)
     {
+        if (!Node)
+        {
+            continue;
+        }
+
         TSharedPtr<FJsonObject> NodeObject =
             McpHandlerUtils::CreateResultObject();
         NodeObject->SetStringField(
@@ -127,8 +138,26 @@ static bool GetGraphDetails(FActionContext& Context)
         NodeObject->SetStringField(
             TEXT("nodeTitle"),
             Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+
+        if (bIncludePins)
+        {
+            TArray<TSharedPtr<FJsonValue>> Pins;
+            for (UEdGraphPin* Pin : Node->Pins)
+            {
+                if (Pin)
+                {
+                    Pins.Add(
+                        MakeShared<FJsonValueObject>(MakePinSummary(Pin)));
+                }
+            }
+            NodeObject->SetArrayField(TEXT("pins"), Pins);
+        }
+
         Nodes.Add(MakeShared<FJsonValueObject>(NodeObject));
     }
+    // nodeCount reflects the nodes actually emitted in "nodes" (null graph slots
+    // are skipped in the loop above), so the count and the array always agree.
+    Result->SetNumberField(TEXT("nodeCount"), Nodes.Num());
     Result->SetArrayField(TEXT("nodes"), Nodes);
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(TEXT("Graph details retrieved."), Result);

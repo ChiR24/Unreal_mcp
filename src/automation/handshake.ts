@@ -1,12 +1,16 @@
-import { WebSocket } from 'ws';
-import { Logger } from '../utils/logging/logger.js';
-import { AutomationBridgeMessage } from './types.js';
-import { bridgeAckSchema } from './message-schema.js';
 import { EventEmitter } from 'node:events';
+import { WebSocket } from 'ws';
 import type { AutomationSocket } from './connection-manager.js';
+import {
+    AutomationLogger,
+    REDACTED_AUTOMATION_CREDENTIAL,
+    redactKnownAutomationCredentials
+} from './log-redaction.js';
+import { bridgeAckSchema } from './message-schema.js';
+import type { AutomationBridgeMessage } from './types.js';
 
 export class HandshakeHandler extends EventEmitter {
-    private log = new Logger('HandshakeHandler');
+    private log = new AutomationLogger('HandshakeHandler');
     private readonly DEFAULT_HANDSHAKE_TIMEOUT_MS = 5000;
 
     constructor(
@@ -108,8 +112,18 @@ export class HandshakeHandler extends EventEmitter {
     private sanitizeHandshakeMetadata(payload: Record<string, unknown>): Record<string, unknown> {
         const sanitized: Record<string, unknown> = { ...payload };
         delete sanitized.type;
+        const capabilityToken = typeof sanitized.capabilityToken === 'string'
+            ? sanitized.capabilityToken
+            : undefined;
         if ('capabilityToken' in sanitized) {
-            sanitized.capabilityToken = 'REDACTED';
+            sanitized.capabilityToken = REDACTED_AUTOMATION_CREDENTIAL;
+        }
+        if (capabilityToken) {
+            for (const [key, value] of Object.entries(sanitized)) {
+                if (key !== 'capabilityToken') {
+                    sanitized[key] = redactKnownAutomationCredentials(value, [capabilityToken]);
+                }
+            }
         }
         return sanitized;
     }

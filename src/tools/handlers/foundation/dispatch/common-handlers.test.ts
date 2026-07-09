@@ -123,6 +123,14 @@ describe('normalizePathFields', () => {
   });
 
   it.each([
+    '/tmp/mcp-sequence-render',
+    '/TMP/mcp-sequence-render'
+  ])('allows local temporary output paths for filesystem outputs %s', path => {
+    expect(validateSecurityPatterns({ outputDirectory: path })).toBeUndefined();
+    expect(validateSecurityPatterns({ filePath: `${path}/source.webm` })).toBeUndefined();
+  });
+
+  it.each([
     '/Saved/unreal-mcp/snapshot.json',
     '/saved/unreal-mcp/snapshot.json'
   ])('allows snapshot-only Saved path alias %s', path => {
@@ -158,6 +166,57 @@ describe('normalizePathFields', () => {
     '/Saved/../escape.json'
   ])('continues to reject host or traversing path %s', path => {
     expect(validateSecurityPatterns({ outputPath: path })).toContain('Security violation');
+  });
+
+  it('rejects unauthorized render output directories before Unreal dispatch', () => {
+    expect(validateSecurityPatterns({
+      action: 'configure_output_settings',
+      outputDirectory: '/home/user/.ssh'
+    })).toContain('Security violation');
+  });
+
+  it('validates local media path arrays before Unreal dispatch', () => {
+    expect(validateSecurityPatterns({
+      action: 'create_media_playlist',
+      filePaths: ['/tmp/mcp-sequence/source.webm']
+    })).toBeUndefined();
+    expect(validateSecurityPatterns({
+      action: 'create_media_playlist',
+      filePaths: ['/tmp/mcp-sequence/../escape.webm']
+    })).toContain('Path traversal is not allowed');
+  });
+
+  it('rejects network media URLs at the TypeScript boundary', () => {
+    expect(validateSecurityPatterns({
+      action: 'create_media_source',
+      streamUrl: 'https://example.invalid/cinematics.m3u8'
+    })).toContain('network media URLs are disabled');
+    expect(validateSecurityPatterns({
+      action: 'create_media_source',
+      streamUrl: 'https://other.invalid/cinematics.m3u8'
+    })).toContain('network media URLs are disabled');
+    expect(validateSecurityPatterns({
+      action: 'create_media_source',
+      url: 'file:///tmp/cinematics.webm'
+    })).toContain('file URL');
+    expect(validateSecurityPatterns({
+      action: 'create_media_source',
+      urls: ['ftp://example.invalid/cinematics.webm']
+    })).toContain('network media URLs are disabled');
+  });
+
+  it.each([
+    'http://127.0.0.1:3000/mcp',
+    'http://localhost:8090/private',
+    'http://10.0.0.8/media.webm',
+    'http://169.254.169.254/latest/meta-data',
+    'http://[::1]/media.webm',
+    'https://service.internal/media.webm'
+  ])('rejects network media URL %s before Unreal dispatch', url => {
+    expect(validateSecurityPatterns({
+      action: 'create_media_source',
+      streamUrl: url
+    })).toContain('network media URLs are disabled');
   });
 });
 
@@ -199,6 +258,24 @@ describe('executeAutomationRequest console command validation', () => {
     await executeAutomationRequest(tools, 'console_command', { command: 'stat fps' });
 
     expect(sendAutomationRequest).toHaveBeenCalledWith('console_command', { command: 'stat fps' }, {});
+  });
+
+  it('forwards timeoutMs to Unreal only when explicitly requested', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools();
+
+    await executeAutomationRequest(
+      tools,
+      'manage_sequence',
+      { action: 'start_render', timeoutMs: 60000 },
+      undefined,
+      { timeoutMs: 65000, forwardTimeoutMsToUnreal: true }
+    );
+
+    expect(sendAutomationRequest).toHaveBeenCalledWith(
+      'manage_sequence',
+      { action: 'start_render', timeoutMs: 60000 },
+      { timeoutMs: 65000 }
+    );
   });
 });
 

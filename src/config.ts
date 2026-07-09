@@ -1,15 +1,17 @@
+import dotenv from 'dotenv';
 import { z } from 'zod';
+
 import { Logger } from './utils/logging/logger.js';
 import { isRecord } from './utils/validation/type-guards.js';
-import dotenv from 'dotenv';
 
 // Suppress dotenv output to avoid corrupting MCP stdout stream.
 // Unit tests assert schema defaults and must not inherit developer-local .env values.
 const shouldLoadDotenv = process.env.NODE_ENV !== 'test' && process.env.VITEST !== 'true' && process.env.VITEST_WORKER_ID === undefined;
 if (shouldLoadDotenv) {
   const originalWrite = process.stdout.write;
+  const quietWrite: typeof process.stdout.write = () => true;
 
-  process.stdout.write = function () { return true; } as typeof process.stdout.write;
+  process.stdout.write = quietWrite;
   try {
     dotenv.config();
   } finally {
@@ -83,7 +85,6 @@ const EnvSchemaShape = z.object({
   MCP_AUTOMATION_PORT: z.preprocess((v) => stringToPositiveInteger(v, 8091), z.number()).default(8091),
   MCP_AUTOMATION_HOST: z.string().default('127.0.0.1'),
   MCP_AUTOMATION_CLIENT_MODE: z.preprocess(stringToBoolean, z.boolean()).default(false),
-
   // Timeouts
   MCP_CONNECTION_TIMEOUT_MS: z.preprocess((v) => stringToPositiveInteger(v, 5000), z.number()).default(5000),
   MCP_REQUEST_TIMEOUT_MS: z.preprocess((v) => stringToPositiveInteger(v, 30000), z.number()).default(30000),

@@ -1,8 +1,8 @@
-import { WebSocket } from 'ws';
-import { Logger } from '../utils/logging/logger.js';
 import { randomUUID } from 'node:crypto';
-import { SocketInfo } from './types.js';
 import { EventEmitter } from 'node:events';
+import { WebSocket } from 'ws';
+import { AutomationLogger } from './log-redaction.js';
+import type { SocketInfo } from './types.js';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 
@@ -28,7 +28,7 @@ export class ConnectionManager extends EventEmitter {
     private primarySocket?: AutomationSocket;
     private heartbeatTimer?: NodeJS.Timeout;
     private lastMessageAt?: Date;
-    private log = new Logger('ConnectionManager');
+    private log = new AutomationLogger('ConnectionManager');
     private rateLimitState = new Map<AutomationSocket, { windowStartMs: number; messageCount: number; automationCount: number }>();
 
     constructor(

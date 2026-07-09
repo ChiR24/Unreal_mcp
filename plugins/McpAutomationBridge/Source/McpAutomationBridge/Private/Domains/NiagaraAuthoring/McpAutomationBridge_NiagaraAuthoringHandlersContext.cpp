@@ -173,7 +173,25 @@ bool LoadSystemAndEmitter(FActionContext& Context, UNiagaraSystem*& System, FNia
     Handle = FindEmitterHandle(System, Context.EmitterName);
     if (!Handle)
     {
-        Context.SendError(FString::Printf(TEXT("Emitter '%s' not found."), *Context.EmitterName), TEXT("EMITTER_NOT_FOUND"));
+        // Single-emitter fallback: the dispatch layer defaults 'emitterName' (e.g. to
+        // "DefaultEmitter") when the caller omits it, but the actual handle is named after
+        // the source emitter asset. Rather than fail on a brittle exact-name mismatch,
+        // resolve to the system's sole emitter and surface how it was resolved.
+        const TArray<FNiagaraEmitterHandle>& Handles = System->GetEmitterHandles();
+        if (Handles.Num() == 1)
+        {
+            Handle = const_cast<FNiagaraEmitterHandle*>(&Handles[0]);
+            Context.Result->SetStringField(TEXT("emitterResolvedBy"), TEXT("single-emitter-fallback"));
+            Context.Result->SetStringField(TEXT("requestedEmitterName"), Context.EmitterName);
+            Context.Result->SetStringField(TEXT("resolvedEmitterName"), Handle->GetName().ToString());
+        }
+    }
+    if (!Handle)
+    {
+        Context.SendError(
+            FString::Printf(TEXT("Emitter '%s' not found. The system has %d emitter(s); pass a matching 'emitterName'."),
+                *Context.EmitterName, System->GetEmitterHandles().Num()),
+            TEXT("EMITTER_NOT_FOUND"));
         return false;
     }
     return true;

@@ -4,7 +4,7 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 
 **Target**: ~2,825 actions covering all Unreal Engine subsystems and major plugin integrations.
 
-**Current sync (2026-06-08)**: Phases 1-29 are implemented and tracked through the consolidated 23-tool TypeScript/native canonical surface. Phase 30+ remains the planned expansion area, with a few seeded actions already available through existing canonical tools.
+**Current sync (2026-06-11)**: Phases 1-30 are implemented and tracked through the consolidated 23-tool TypeScript/native canonical surface. Phase 31+ remains the planned expansion area, with a few seeded actions already available through existing canonical tools.
 
 ---
 
@@ -38,7 +38,7 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 - [x] **Metrics Dashboard**: `ue://health` view backed by bridge/server metrics.
 - [x] **UE 5.7 Support**: Full compatibility with Unreal Engine 5.7 (Control Rig, Subobject Data).
 
-## Phase 5: Infrastructure Improvements (Completed)
+## Infrastructure Improvements (Completed)
 
 - [x] **Native MCP Streaming Transport**: Optional native `/mcp` HTTP/SSE transport supports SSE sessions and streamed `tools/call` responses.
 - [x] **Baseline Observability Routes**: `system_control` dispatches `run_tests`, log `subscribe`/`unsubscribe`, and Unreal Insights `start_session`.
@@ -1165,7 +1165,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 28: Environment Systems (Complete)
+## Environment Systems (Complete)
 
 **Goal**: Complete environment (sky, weather, water).
 
@@ -1225,13 +1225,13 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 29: Advanced Lighting & Rendering (Complete)
+## Advanced Lighting & Rendering
 
 **Goal**: Complete lighting and post-processing.
 
-**Tool**: `build_environment` exposes the Phase 29 rendering actions, with seeded `manage_asset` and `manage_level_structure` support for render targets and volumes. The native bridge routes the public `build_environment` actions through the internal `manage_render` domain.
+**Tool**: `build_environment` exposes the rendering actions, with seeded `manage_asset` and `manage_level_structure` support for render targets and volumes. The native bridge routes the public `build_environment` actions through the internal `manage_render` domain.
 
-**Status**: Complete and live-tested against a headless Unreal Editor project, including happy-path, adversarial, native MCP, and combined interactive scenarios.
+**Status**: Implementation complete in TypeScript and C++ (the `manage_render` C++ dispatch is split into per-concern files under `Render/McpAutomationBridge_Render*.cpp`). Native parity audit (`test:params`) reports 0 schema mismatches and 1286/1286 actions covered. The live-acceptance verification record is **pending** — headless Editor run and sha256 evidence archive are not yet captured. Until that record is published, treat this section as "Code complete; verification record pending" rather than "live-tested".
 
 ### 29.1 Ray Tracing
 - [x] `configure_ray_traced_shadows`
@@ -1254,7 +1254,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 ### 29.4 Reflections
 - [x] `create_sphere_reflection_capture`
 - [x] `create_box_reflection_capture`
-- [x] `configure_capture_resolution`, `configure_capture_offset`
+- [x] `configure_reflection_capture_resolution`, `configure_capture_offset`
 - [x] `recapture_scene`
 - [x] `create_planar_reflection`
 - [x] `configure_planar_reflection` (resolution, clip_plane)
@@ -1287,49 +1287,49 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 **Goal**: Complete sequencer and media capabilities.
 
-**Tool**: `manage_sequence` expanded with planned movie-render and media actions.
+**Tool**: `manage_sequence` expanded with movie-render and media actions.
 
-**Status**: Baseline Level Sequence create/open/play/binding actions are complete in Phase 3. This phase tracks the expanded cinematic, Movie Render Queue, media, take-recorder, and replay surface.
+**Status**: Complete. The expanded cinematic, Movie Render Queue, media, take-recorder, and replay surface is implemented through `manage_sequence`, including TypeScript schemas, native C++ handlers, native `/mcp` metadata, and live headless Unreal validation. Acceptance includes real one-frame MRQ output over both WebSocket and native `/mcp`, file-backed media playback, Take Recorder, and direct stdio PIE replay recording/playback/killcam. The historical UE 5.7 run also exercised allowlisted loopback HTTP media before network-backed media was disabled because redirect destinations cannot be pinned by the Unreal media backend. MRQ timeouts request deferred editor-safe cancellation, wait for executor settlement within a bounded cancellation window, and report whether rendering is still active without using unsafe same-stack PIE teardown. The live harness captures package-form Take Recorder outputs, deletes the sequence and subscene folder with read-back receipts, and independently removes its render output, replay, and owned media fixture. The recorded live acceptance run covers UE 5.7.4 only; UE 5.0-5.8 remain source-compatibility targets until separately compiled and tested.
 
 ### 30.1 Sequencer (Expanded)
-- [ ] `create_master_sequence`
-- [ ] `add_subsequence`
-- [ ] `add_shot_track`, `configure_shot_settings`
-- [ ] `create_cine_camera_actor`
-- [ ] `configure_camera_settings` (filmback, lens, focus)
-- [ ] `add_camera_cut_track`, `add_camera_shake_track`
-- [ ] `configure_camera_rig_rail`, `configure_camera_rig_crane`
-- [ ] Additional tracks: `add_fade_track`, `add_level_visibility_track`, `add_material_parameter_track`, `add_particle_track`, `add_skeletal_animation_track`, `add_transform_track`, `add_event_track`, `add_property_track`
+- [x] `create_master_sequence`
+- [x] `add_subsequence`
+- [x] `add_shot_track`, `configure_shot_settings`
+- [x] `create_cine_camera_actor`
+- [x] `configure_camera_settings` (filmback, lens, focus)
+- [x] `add_camera_cut_track`, `add_camera_shake_track`
+- [x] `configure_camera_rig_rail`, `configure_camera_rig_crane`
+- [x] Additional tracks: `add_fade_track`, `add_level_visibility_track`, `add_material_parameter_track`, `add_particle_track`, `add_skeletal_animation_track`, `add_transform_track`, `add_event_track`, `add_property_track`
 
 ### 30.2 Movie Render Queue
-- [ ] `create_render_job`
-- [ ] `configure_output_settings`
-- [ ] `add_render_pass` (beauty, depth, normal, motion_vector, object_id, custom_stencil)
-- [ ] `configure_anti_aliasing` (spatial, temporal)
-- [ ] `configure_console_variables`
-- [ ] `configure_burn_ins`
-- [ ] `queue_render`, `start_render`
+- [x] `create_render_job`
+- [x] `configure_output_settings`
+- [x] `add_render_pass` (beauty, depth, normal, motion_vector, object_id, custom_stencil)
+- [x] `configure_anti_aliasing` (spatial, temporal)
+- [x] `configure_console_variables`
+- [x] `configure_burn_ins`
+- [x] `queue_render`, `start_render`
 
 ### 30.3 Media Framework
-- [ ] `create_media_player`
-- [ ] `create_media_source` (file, stream, platform)
-- [ ] `create_media_texture`
-- [ ] `create_media_sound_component`
-- [ ] `create_media_playlist`
-- [ ] `play_media`, `pause_media`, `seek_media`
+- [x] `create_media_player`
+- [x] `create_media_source` (file, stream, platform)
+- [x] `create_media_texture`
+- [x] `create_media_sound_component`
+- [x] `create_media_playlist`
+- [x] `play_media`, `pause_media`, `seek_media`
 
 ### 30.4 Take Recorder
-- [ ] `create_take_recorder_panel`
-- [ ] `configure_take_sources`
-- [ ] `start_recording`, `stop_recording`
-- [ ] `configure_recorded_tracks`
+- [x] `create_take_recorder_panel`
+- [x] `configure_take_sources`
+- [x] `start_recording`, `stop_recording`
+- [x] `configure_recorded_tracks`
 
 ### 30.5 Demo/Replay System
-- [ ] `start_demo_recording`, `stop_demo_recording`
-- [ ] `configure_demo_settings`
-- [ ] `play_demo`, `pause_demo`, `seek_demo`
-- [ ] `set_demo_playback_speed`
-- [ ] `configure_killcam_duration`, `start_killcam`
+- [x] `start_demo_recording`, `stop_demo_recording`
+- [x] `configure_demo_settings`
+- [x] `play_demo`, `pause_demo`, `seek_demo`
+- [x] `set_demo_playback_speed`
+- [x] `configure_killcam_duration`, `start_killcam`
 
 ---
 
@@ -1425,7 +1425,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 **Tools**: `system_control` for current baseline testing/profiling/validation; expanded test/profiling/validation actions are planned.
 
-**Status**: `run_tests`, `validate_assets`, and the Phase 5 Unreal Insights trace workflow are implemented on `system_control`. The checklist below tracks the broader named action surface still planned unless marked complete.
+**Status**: `run_tests`, `validate_assets`, and the Unreal Insights trace workflow are implemented on `system_control`. The checklist below tracks the broader named action surface still planned unless marked complete.
 
 ### 33.1 Automation Testing
 - [x] `run_tests`
@@ -2231,7 +2231,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 | Modding & UGC (48) | 1 | ~25 |
 | **TOTAL** | **48** | **~2,825** |
 
-Current implementation is complete through Phase 29. Phases 31-33, 35, and 45 have seeded actions on existing canonical tools, but their expanded roadmap surfaces remain planned.
+Current implementation is complete through Phase 30. Phases 31-33, 35, and 45 have seeded actions on existing canonical tools, but their expanded roadmap surfaces remain planned.
 
 ## What This Enables
 

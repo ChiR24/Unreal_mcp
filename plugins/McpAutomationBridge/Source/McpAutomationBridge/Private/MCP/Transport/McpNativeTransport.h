@@ -4,6 +4,7 @@
 #include "HAL/Runnable.h"
 #include "Dom/JsonValue.h"
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
+#include "Async/Future.h"
 #include <atomic>
 
 class UMcpAutomationBridgeSubsystem;
@@ -75,6 +76,10 @@ public:
 	/** Clean up requests that have exceeded the timeout. Called from Tick. */
 	void CleanupStaleRequests();
 
+	// Dedicated-thread keepalive (immune to GameThread stalls).
+	void RunKeepaliveLoop();
+	void SweepNotificationKeepalives();
+
 	// FRunnable interface
 	virtual bool Init() override { return true; }
 	virtual uint32 Run() override;
@@ -100,10 +105,12 @@ private:
 		FSocket* Socket = nullptr;
 		TSharedPtr<FJsonValue> JsonRpcId;
 		double StartTime = 0.0;
+		double TimeoutSeconds = 300.0;
 		FString ToolName;
 		FString SessionId;  // for touching ActiveSessions during long-running calls
 		FCriticalSection WriteMutex;  // protects socket writes from GameThread
 		std::atomic<bool> bMarkedForRemoval{false};  // set by failed writes, checked by CleanupStaleRequests
+		std::atomic<bool> bProgressWritePending{false};
 	};
 
 	/** Persistent SSE notification stream (GET /mcp). */
@@ -113,8 +120,12 @@ private:
 		FString SessionId;
 		FString StreamId;
 		double StartTime = 0.0;
+		// Non-atomic: written once in HandleGetMcp before the stream is published into
+		// NotificationStreams (that publish establishes the happens-before), then
+		// read/written only by the keepalive thread (RunKeepaliveLoop).
 		double LastKeepaliveTime = 0.0;
 		FCriticalSection WriteMutex;
+		std::atomic<bool> bReady{false};
 		std::atomic<bool> bMarkedForRemoval{false};
 	};
 
@@ -146,9 +157,14 @@ private:
 
 	// JSON-RPC method handlers (return response body string)
 	FString HandleInitialize(const TSharedPtr<FJsonObject>& Params,
-		const TSharedPtr<FJsonValue>& Id, FString& OutSessionId);
+		const TSharedPtr<FJsonValue>& Id, FString& OutSessionId,
+		const FString& ConnectionRemoteAddr);
 	FString HandleToolsList(const TSharedPtr<FJsonValue>& Id);
 	void HandleToolsCall(const TSharedPtr<FJsonObject>& Params,
+		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
+		const FString& SessionId, const FString& CorsOrigin);
+	bool TryHandleLocalToolCall(
+		const FString& ToolName, const TSharedPtr<FJsonObject>& Arguments,
 		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
 		const FString& SessionId, const FString& CorsOrigin);
 
@@ -156,6 +172,17 @@ private:
 	ESessionValidationResult ValidateSession(const FString& SessionId, FString& OutError);
 	static int32 GetSessionValidationStatusCode(ESessionValidationResult Result);
 	void TouchSession(const FString& SessionId);
+	void MarkSessionInitializationComplete(const FString& SessionId);
+	bool ConsumeSessionRequestBudget(
+		const FString& SessionId, bool bToolCall, FString& OutError);
+	bool ConsumeClientRequestBudgetLocked(
+		const FString& ClientRateKey, bool bToolCall, FString& OutError);
+	bool QueueAutomationRequestForSession(
+		const FString& SessionId, const FString& RequestId,
+		const FString& DispatchAction,
+		const TSharedPtr<FJsonObject>& Arguments,
+		bool& bOutSessionActive);
+	void CloseSessionConnections(const FString& SessionId);
 
 	void OnToolsListChanged();
 	void BroadcastToolsListChanged();
@@ -187,31 +214,77 @@ private:
 	// Socket infrastructure
 	FSocket* ListenSocket = nullptr;
 	FRunnableThread* Thread = nullptr;
+	TFuture<void> KeepaliveLoopFuture;  // background keepalive thread (joined in Shutdown)
 	FEvent* StopEvent = nullptr;
 	FEvent* BindCompleteEvent = nullptr;
 	std::atomic<bool> bStopping{false};
 	std::atomic<bool> bBindSuccess{false};
 	std::atomic<int32> ActiveConnectionCount{0};
 	std::atomic<int32> PendingAsyncWrites{0};  // tracks in-flight SSE progress/complete writes
-	static constexpr int32 MaxConcurrentConnections = 16;
+	static constexpr int32 MaxConcurrentConnections = 32;
+	static constexpr int32 MaxActiveSessions = 16;
+	static constexpr int32 MaxPendingToolCalls = 16;
+	static constexpr int32 MaxPendingToolCallsPerSession = 4;
 
 	// Session state (multi-session, with activity tracking)
 	TMap<FString, double> ActiveSessions;  // SessionId → LastActivityTime
+	struct FSessionRateState
+	{
+		double InitializationCompletedAt = 0.0;
+		bool bHasClientActivity = false;
+		FString ClientRateKey;
+	};
+	struct FClientRateState
+	{
+		double WindowStart = 0.0;
+		double LastActivity = 0.0;
+		int32 RequestCount = 0;
+		int32 ToolCallCount = 0;
+	};
+	TMap<FString, FSessionRateState> SessionRateStates;
+	TMap<FString, FClientRateState> ClientRateStates;
 	mutable FCriticalSection SessionMutex;
 
 	static constexpr double SessionTimeoutSeconds = 3600.0;  // 1 hour
+	static constexpr double AbandonedSessionGraceSeconds = 5.0;
+	static constexpr double SessionRateWindowSeconds = 60.0;
+	static constexpr int32 MaxClientRequestsPerMinute = 600;
+	static constexpr int32 MaxClientToolCallsPerMinute = 120;
 
 	// Active SSE streaming connections (RequestId → connection)
 	TMap<FString, TSharedPtr<FSSEConnection>> SSEConnections;
 	mutable FCriticalSection SSEConnectionsMutex;
-
-	static constexpr double RequestTimeoutSeconds = 300.0;  // 5 minutes
 
 	// Persistent notification streams (GET /mcp — StreamId → stream)
 	TMap<FString, TSharedPtr<FNotificationStream>> NotificationStreams;
 	mutable FCriticalSection NotificationStreamsMutex;
 	TSet<FString> LogEventSubscribedSessions;
 	mutable FCriticalSection LogEventSubscriptionsMutex;
+
+	// ─── Lock-order convention (audit before adding nested critical sections) ───
+	//
+	// The transport's global mutexes form a partial order. Nested acquisition is
+	// only safe when it follows the documented order; violating it can deadlock
+	// against concurrent paths that take the same locks in the opposite order.
+	//
+	//   1. LogEventSubscriptionsMutex
+	//   2. SSEConnectionsMutex
+	//   3. NotificationStreamsMutex
+	//   4. SessionMutex
+	//
+	// Rules:
+	//   * Never nest SessionMutex INSIDE SSEConnectionsMutex, NotificationStreamsMutex,
+	//     or LogEventSubscriptionsMutex. Take SessionMutex first, then release it
+	//     before acquiring the other lock (see HandleToolsCall / HandleGetMcp).
+	//   * Per-connection WriteMutex (FSSEConnection::WriteMutex and
+	//     FNotificationStream::WriteMutex) is taken ONLY after the corresponding
+	//     collection mutex is held; it is never acquired before or instead of the
+	//     collection mutex. See WriteSSEEvent, WriteNotificationEvent,
+	//     WriteNotificationKeepalive.
+	//   * CloseSessionConnections is the only function that takes multiple
+	//     collection mutexes (Log → Notification → SSE). It does not take
+	//     SessionMutex and is safe because it operates after the session has
+	//     already been removed from ActiveSessions by the caller.
 
 	static constexpr int32 MaxNotificationStreamsPerSession = 4;
 	static constexpr int32 MaxTotalNotificationStreams = 16;

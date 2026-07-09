@@ -12,6 +12,61 @@ type AutomationEventFixture = {
 };
 
 describe('MessageHandler automation events', () => {
+    it('allows manage_sequence responses to echo their native sub-action', async () => {
+        const tracker = new RequestTracker(10);
+        const handler = new MessageHandler(tracker);
+        const { requestId, promise } = tracker.createRequest('manage_sequence', {
+            action: 'create_master_sequence',
+            subAction: 'create_master_sequence'
+        }, 10000);
+
+        handler.handleMessage({
+            type: 'automation_response',
+            requestId,
+            success: true,
+            message: 'Master sequence created',
+            result: {
+                success: true,
+                action: 'create_master_sequence',
+                sequencePath: '/Game/MCPTest/Cinematics/SEQ_Master'
+            }
+        });
+
+        const response = await promise;
+        expect(response).toMatchObject({
+            success: true,
+            result: {
+                action: 'create_master_sequence',
+                sequencePath: '/Game/MCPTest/Cinematics/SEQ_Master'
+            }
+        });
+        expect(response.error).toBeUndefined();
+    });
+
+    it('still flags unrelated response action mismatches', async () => {
+        const tracker = new RequestTracker(10);
+        const handler = new MessageHandler(tracker);
+        const { requestId, promise } = tracker.createRequest('control_actor', {
+            action: 'spawn'
+        }, 10000);
+
+        handler.handleMessage({
+            type: 'automation_response',
+            requestId,
+            success: true,
+            message: 'Unexpected success',
+            result: {
+                success: true,
+                action: 'create_master_sequence'
+            }
+        });
+
+        await expect(promise).resolves.toMatchObject({
+            success: false,
+            error: 'ACTION_PREFIX_MISMATCH'
+        });
+    });
+
     it('emits normalized automation events when no pending request exists', () => {
         // Given
         const events: AutomationEventFixture[] = [];

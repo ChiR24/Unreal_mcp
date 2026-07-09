@@ -4,6 +4,31 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ---
 
+## [Unreleased]
+
+### Added
+- **`MCP_NATIVE_PORT` environment variable** — overrides the native MCP HTTP/SSE port (`NativeMCPPort`) at startup without editing committed ini, so a project can run several editors at once on distinct ports. Mirrors the existing `MCP_MAX_*` env overrides; falls back to the `Native MCP Port` project setting when unset or invalid.
+- Native cinematics, Movie Render Queue, media, Take Recorder, and replay automation with direct `/mcp`, WebSocket, and live-editor verification coverage.
+
+### Security
+- Added continuous local output-path validation, disabled network-backed media URLs because redirect destinations cannot be pinned, added client-scoped native rate limits, enforced strict native `manage_tools` argument validation, and sanitized streamed log payloads.
+
+### Fixed
+- **UE 5.8 build** — use `FJsonObject::HasField()` instead of `Values.Contains(FString)` in the render console handler (`FJsonObject::Values`' key type changed to `UE::TSharedString<TCHAR>` in 5.8).
+- **`validate_niagara_system` now reports real errors** — previously hard-coded `isValid=true`; it now builds a full Niagara system view model and harvests stack issues (e.g. "The module has unmet dependencies.") across the system and emitter stacks. A data-processing-only view model can't be used because `UNiagaraStackModuleItem::RefreshIssues()` emits no per-module issues in that mode.
+- **`ListenPorts` drop warning** — when multi-listen is on and a partial `ListenPorts` override omits a default bridge port (8090/8091), a warning is logged instead of the drop being silent (the user's ports stay authoritative).
+- Wait for actual replay seek completion, keep render ownership until executor settlement, roll back Take Recorder panel/source state after asynchronous failures, reject invalid render limits before queue mutation, and verify tokenized render filenames.
+
+### Changed
+- **`control_actor` spawn is now transactional** — a requested `meshPath` that can't be applied no longer leaves a misconfigured actor in the level: it fails `MESH_NOT_FOUND` before spawning if the mesh can't load, or rolls back (`Destroy()` + `MESH_APPLY_FAILED`) if a resolved mesh can't be applied to the spawned actor.
+  - **Potentially breaking:** a request that passed a `meshPath` which failed to resolve previously still produced a spawned actor and a success response; it now returns a `MESH_NOT_FOUND` error and spawns nothing.
+
+### Verification
+- Packaged and live-tested with Unreal Engine 5.7.4. Other supported UE 5.x versions are source-compatibility targets and are not claimed as compiled by this verification record.
+
+### Migration
+- The internal `manage_post_process` C++ action has been folded into the expanded `manage_render` action (the `Render/McpAutomationBridge_RenderPostProcess*.cpp` files now dispatch through `manage_render`). Any client that called `manage_post_process` directly will now fail with `does not match prefix` — switch to `manage_render` and pass the desired sub-action via `subAction`. The reflection-capture resolution setter was renamed from `configure_capture_resolution` to `configure_reflection_capture_resolution`; the scene-capture path keeps the original `configure_capture_resolution` name. The `McpAutomationBridge_RenderHandlers.cpp` monolith is now a 74-line dispatcher; per-concern handlers live under `Render/McpAutomationBridge_Render*.cpp`.
+
 ## [0.5.30] - 2026-06-05
 
 ### Security

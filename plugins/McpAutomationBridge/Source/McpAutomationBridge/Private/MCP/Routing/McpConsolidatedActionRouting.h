@@ -45,7 +45,23 @@ inline TSharedPtr<FJsonObject> WithPayloadSubAction(const TSharedPtr<FJsonObject
 
 inline bool ContainsAction(const TArray<FString>& Actions, const FString& Action)
 {
-	return Actions.Contains(Action);
+	if (Actions.Contains(Action))
+	{
+		return true;
+	}
+	const FString Lowercased = Action.ToLower();
+	if (Lowercased == Action)
+	{
+		return false;
+	}
+	for (const FString& Candidate : Actions)
+	{
+		if (Candidate.Equals(Lowercased, ESearchCase::CaseSensitive))
+		{
+			return true;
+		}
+	}
+	return false;
 }
 }
 

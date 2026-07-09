@@ -168,10 +168,11 @@ UClass* FindNodeClassByName(const FString& NodeType)
         {TEXT("FlipFlop"), TEXT("K2Node_FlipFlop")},
         {TEXT("Gate"), TEXT("K2Node_Gate")},
         {TEXT("MultiGate"), TEXT("K2Node_MultiGate")},
-        {TEXT("ForLoop"), TEXT("K2Node_ForLoop")},
-        {TEXT("ForLoopWithBreak"), TEXT("K2Node_ForLoopWithBreak")},
-        {TEXT("ForEachLoop"), TEXT("K2Node_ForEachElementInEnum")},
-        {TEXT("WhileLoop"), TEXT("K2Node_WhileLoop")},
+        // ForLoop / ForLoopWithBreak / WhileLoop / ForEachLoop are StandardMacros
+        // library macros (no UK2Node_* class), resolved earlier by
+        // TryCreateMacroNode via K2Node_MacroInstance. Listing them here mis-resolved
+        // them (nonexistent class -> NODE_TYPE_NOT_FOUND; ForEachLoop -> the wrong
+        // enum iterator). Kept out on purpose.
         {TEXT("MakeArray"), TEXT("K2Node_MakeArray")},
         {TEXT("MakeStruct"), TEXT("K2Node_MakeStruct")},
         {TEXT("BreakStruct"), TEXT("K2Node_BreakStruct")},

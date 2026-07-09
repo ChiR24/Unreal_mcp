@@ -5,25 +5,29 @@ void FMcpNativeTransport::CleanupStaleRequests()
 	const double Now = FPlatformTime::Seconds();
 
 	// Clean up timed-out SSE connections
-	TArray<FString> Expired;
+	TMap<FString, double> Expired;
 	{
 		FScopeLock Lock(&SSEConnectionsMutex);
 		for (const auto& [RequestId, Conn] : SSEConnections)
 		{
-			if (Conn.IsValid() && (Now - Conn->StartTime > RequestTimeoutSeconds
-				|| Conn->bMarkedForRemoval.load()))
+				if (Conn.IsValid() && (Now - Conn->StartTime > Conn->TimeoutSeconds
+					|| Conn->bMarkedForRemoval.load()))
 			{
-				Expired.Add(RequestId);
+				Expired.Add(RequestId, Conn->TimeoutSeconds);
 			}
 		}
 	}
 
-	for (const FString& RequestId : Expired)
+	for (const TPair<FString, double>& Entry : Expired)
 	{
 		UE_LOG(LogMcpNativeTransport, Warning,
 			TEXT("SSE request %s timed out after %.0f seconds"),
-			*RequestId, RequestTimeoutSeconds);
-		CompletePendingRequest(RequestId, false, TEXT("Request timed out"),
+				*Entry.Key, Entry.Value);
+		if (Subsystem)
+		{
+			Subsystem->CancelAutomationRequest(Entry.Key);
+		}
+		CompletePendingRequest(Entry.Key, false, TEXT("Request timed out"),
 			nullptr, TEXT("TIMEOUT"));
 	}
 
@@ -41,17 +45,25 @@ void FMcpNativeTransport::CleanupStaleRequests()
 		for (const FString& SessionId : ExpiredSessions)
 		{
 			ActiveSessions.Remove(SessionId);
+			SessionRateStates.Remove(SessionId);
 			UE_LOG(LogMcpNativeTransport, Log,
-				TEXT("Session %s expired after %.0f min inactivity (remaining: %d)"),
-				*SessionId, SessionTimeoutSeconds / 60.0, ActiveSessions.Num());
+				TEXT("Session expired after %.0f min inactivity (remaining: %d)"),
+				SessionTimeoutSeconds / 60.0, ActiveSessions.Num());
+		}
+		for (auto It = ClientRateStates.CreateIterator(); It; ++It)
+		{
+			if (Now - It.Value().LastActivity >
+				SessionRateWindowSeconds * 2.0)
+			{
+				It.RemoveCurrent();
+			}
 		}
 	}
 	if (ExpiredSessions.Num() > 0)
 	{
-		FScopeLock Lock(&LogEventSubscriptionsMutex);
 		for (const FString& SessionId : ExpiredSessions)
 		{
-			LogEventSubscribedSessions.Remove(SessionId);
+			CloseSessionConnections(SessionId);
 		}
 	}
 
@@ -104,35 +116,78 @@ void FMcpNativeTransport::CleanupStaleRequests()
 			{
 				CloseNotificationStream(Stream);
 				UE_LOG(LogMcpNativeTransport, Log,
-					TEXT("Notification stream %s closed (session=%s)"),
-					*StreamId, *Stream->SessionId);
+					TEXT("Notification stream %s closed"), *StreamId);
 			}
 		}
 
-		// 4. Keepalive for living streams
-		TArray<TSharedPtr<FNotificationStream>> AliveSnapshot;
+		// Notification-stream keepalive is handled by the dedicated keepalive thread
+		// (RunKeepaliveLoop / SweepNotificationKeepalives) so it keeps firing during
+		// long GameThread stalls (recompile, PIE, modal dialog, blocking import).
+		// This GameThread sweep now only reaps. See Start()/Shutdown().
+	}
+}
+
+// ─── Keepalive Loop (dedicated thread) ──────────────────────────────────────
+//
+// The SSE notification-stream keepalive used to run from this GameThread cleanup
+// pass (driven by the subsystem ticker). When the GameThread stalls longer than
+// the keepalive interval, no keepalive is sent, the client's stream idles out,
+// and the MCP session is re-initialized. Running the sweep on its own thread
+// keeps keepalives flowing through GameThread stalls.
+
+void FMcpNativeTransport::RunKeepaliveLoop()
+{
+	// Tick faster than the keepalive interval so a stream is never more than one
+	// tick late. StopEvent is triggered by Stop(), waking us immediately on shutdown.
+	static constexpr uint32 TickMs = 5000;
+	while (!bStopping.load())
+	{
+		if (StopEvent)
 		{
-			FScopeLock Lock(&NotificationStreamsMutex);
-			for (auto& [StreamId, Stream] : NotificationStreams)
+			StopEvent->Wait(TickMs);
+		}
+		else
+		{
+			FPlatformProcess::Sleep(TickMs / 1000.0f);
+		}
+		if (bStopping.load())
+		{
+			break;
+		}
+		SweepNotificationKeepalives();
+	}
+}
+
+void FMcpNativeTransport::SweepNotificationKeepalives()
+{
+	const double Now = FPlatformTime::Seconds();
+
+	// Snapshot living streams under the map lock, then write outside it — the socket
+	// write takes each stream's WriteMutex, so the two locks are never nested.
+	TArray<TSharedPtr<FNotificationStream>> AliveSnapshot;
+	{
+		FScopeLock Lock(&NotificationStreamsMutex);
+		for (auto& [StreamId, Stream] : NotificationStreams)
+		{
+			if (Stream.IsValid() && !Stream->bMarkedForRemoval.load()
+				&& Now - Stream->LastKeepaliveTime >= KeepaliveIntervalSeconds
+				&& Stream->bReady.load())
 			{
-				if (Stream.IsValid() && !Stream->bMarkedForRemoval.load()
-					&& Now - Stream->LastKeepaliveTime >= KeepaliveIntervalSeconds)
-				{
-					AliveSnapshot.Add(Stream);
-				}
+				AliveSnapshot.Add(Stream);
 			}
 		}
-		for (const auto& Stream : AliveSnapshot)
+	}
+
+	for (const auto& Stream : AliveSnapshot)
+	{
+		if (!WriteNotificationKeepalive(*Stream))
 		{
-			if (!WriteNotificationKeepalive(*Stream))
-			{
-				Stream->bMarkedForRemoval.store(true);
-			}
-			else
-			{
-				Stream->LastKeepaliveTime = Now;
-				TouchSession(Stream->SessionId);
-			}
+			Stream->bMarkedForRemoval.store(true);
+		}
+		else
+		{
+			Stream->LastKeepaliveTime = Now;
+			TouchSession(Stream->SessionId);
 		}
 	}
 }

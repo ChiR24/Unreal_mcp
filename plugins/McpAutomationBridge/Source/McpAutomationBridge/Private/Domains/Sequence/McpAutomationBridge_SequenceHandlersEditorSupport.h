@@ -109,10 +109,10 @@ namespace McpSequenceKeyframes {
 FGuid ResolveBindingGuid(UMovieScene *MovieScene, const FString &BindingIdStr,
                          const FString &ActorName);
 bool AddTransformKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
-                          double Frame,
+                          FFrameNumber TickFrame,
                           const TSharedPtr<FJsonObject> &LocalPayload);
 bool AddPropertyKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
-                         const FString &PropertyName, double Frame,
+                         const FString &PropertyName, FFrameNumber TickFrame,
                          const TSharedPtr<FJsonObject> &LocalPayload,
                          FString &OutMessage);
 }

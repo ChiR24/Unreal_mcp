@@ -130,7 +130,9 @@ bool HandleAddLevelBlueprintNode(
             }
             NewNode->CreateNewGuid();
             NewNode->PostPlacedNewNode();
-            NewNode->AllocateDefaultPins();
+            // Guard against duplicate pins: some node types already allocate in
+            // PostPlacedNewNode(), so only allocate when the node has no pins yet.
+            if (NewNode->Pins.Num() == 0) { NewNode->AllocateDefaultPins(); }
             NewNode->NodePosX = PosX;
             NewNode->NodePosY = PosY;
             EventGraph->AddNode(NewNode, true, false);

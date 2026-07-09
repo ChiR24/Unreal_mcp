@@ -51,6 +51,25 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     LocalPayload->TryGetStringField(TEXT("variableName"), VariableName);
     FString NodeName;
     LocalPayload->TryGetStringField(TEXT("nodeName"), NodeName);
+    FString TargetClass;
+    LocalPayload->TryGetStringField(TEXT("targetClass"), TargetClass);
+    // Backfill from legacy/alternate payload fields so cast and CreateWidget
+    // nodes created by existing callers (which send memberClass/nodeClass/
+    // widgetType, or encode the class in a "CastTo<Class>" nodeType) still
+    // resolve a target. Mirrors ReadTargetClassPayload on the create_node path.
+    if (TargetClass.IsEmpty()) {
+      LocalPayload->TryGetStringField(TEXT("memberClass"), TargetClass);
+    }
+    if (TargetClass.IsEmpty()) {
+      LocalPayload->TryGetStringField(TEXT("nodeClass"), TargetClass);
+    }
+    if (TargetClass.IsEmpty()) {
+      LocalPayload->TryGetStringField(TEXT("widgetType"), TargetClass);
+    }
+    if (TargetClass.IsEmpty() &&
+        NodeType.StartsWith(TEXT("CastTo"), ESearchCase::IgnoreCase)) {
+      TargetClass = NodeType.Mid(6);
+    }
     float PosX = 0.0f, PosY = 0.0f;
     LocalPayload->TryGetNumberField(TEXT("posX"), PosX);
     LocalPayload->TryGetNumberField(TEXT("posY"), PosY);
@@ -115,8 +134,9 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     TSharedPtr<FJsonObject> NodeErrorResult;
     UEdGraphNode *NewNode =
         CreateBlueprintGraphNode(TargetGraph, BP, NodeType, FunctionName,
-                                 VariableName, NodeName, NodeErrorMessage,
-                                 NodeErrorCode, NodeErrorResult);
+                                 VariableName, NodeName, TargetClass,
+                                 NodeErrorMessage, NodeErrorCode,
+                                 NodeErrorResult);
 
     if (!NewNode) {
       if (!NodeErrorCode.IsEmpty()) {

@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [Unreleased]
+
+<details>
+<summary><b>✨ Added</b></summary>
+
+- **`add_event` now supports component-bound events** — callers can wire a component's multicast delegate (e.g. `NearMissZone.OnComponentBeginOverlap`) to an event node by passing `componentName` plus `eventName` (the delegate name). Previously such requests fell through to the custom-event branch and produced an unbound `Event_<guid>` that never fired. The new branch finds the SCS component by name, locates the multicast delegate property on its class (accepts both the bare name and the `__DelegateSignature` suffix), and creates a properly initialized `UK2Node_ComponentBoundEvent` with `ComponentPropertyName`, `DelegatePropertyName`, and `DelegateOwnerClass` set. Idempotent on repeat calls. Returns `INVALID_ARGUMENT` / `COMPONENT_NOT_FOUND` / `COMPONENT_CLASS_UNRESOLVED` / `DELEGATE_NOT_FOUND` with clear messages when inputs are missing or unresolvable. Guarded by `MCP_HAS_K2NODE_COMPONENTBOUNDEVENT` so the file still compiles cleanly on engine layouts where the header isn't reachable through any of the tried include paths.
+- **`create_node` / `add_node` now sets the widget class on CreateWidget nodes** — creating a `K2Node_CreateWidget` over MCP fell through to the generic instantiation path that never assigned `WidgetType`, producing a node with a generic `UUserWidget` `Class` pin and an untyped `Return Value`, so callers couldn't wire it to anything specific (e.g. `Add to Viewport` on the typed widget, or its bindings). Added a dedicated CreateWidget branch that reads a `targetClass` parameter (Widget Blueprint asset path such as `/Game/Widgets/WBP_HUD`, or a class name), resolves it through the shared class resolver, and assigns `WidgetType` before pin allocation so `ReconstructNode` builds the correct typed `Return Value`. Returns `INVALID_ARGUMENT` / `CLASS_NOT_FOUND` when missing or unresolvable.
+- Factored the class-resolution and payload-reading logic shared by DynamicCast and CreateWidget into two small helpers (`ResolveTargetClassFromString`, `ReadTargetClassPayload`) so every node branch with a class pin accepts the same input forms (Blueprint asset path, generated-class path, or native class name) and the same legacy field fallbacks (`memberClass` / `nodeClass` / `widgetType`, plus a `CastTo<Class>` prefix peel from `nodeType`).
+- **`create_node` / `add_node` now sets the target class on DynamicCast nodes** — creating a `K2Node_DynamicCast` ("Cast To ...") over MCP fell through to a generic node-instantiation path that never assigned `TargetType`, producing an unusable "Bad cast node" with only a wildcard `Object` pin and no typed `As <Class>` output. Added a dedicated cast branch that reads a `targetClass` parameter (Blueprint asset path such as `/Game/Blueprints/BP_Cole`, or a native class name), resolves it via `ResolveClassByName`, and assigns `UK2Node_DynamicCast::TargetType`. Returns a clear `INVALID_ARGUMENT`/`CLASS_NOT_FOUND` error when the target is missing or unresolvable.
+
+- **`add_variable` now applies `defaultValue`** — the handler read the `defaultValue` payload field but never assigned it to the new variable, so every Blueprint variable was created with a zero/empty default regardless of the value supplied (e.g. a float requested as `0.35` stayed `0`). The parsed JSON default is now written to `FBPVariableDescription::DefaultValue` with type-aware formatting: booleans as lowercase `true`/`false`, integer/byte categories as whole numbers, floats/doubles via `SanitizeFloat`, and strings/struct literals passed through. UE parses the stored string back into the typed default on compile.
+- **Plugin failed to compile on UE older than 5.4/5.5** — three newer-UE APIs were used without the version guards used elsewhere in the plugin: the `EAllowShrinking::No` overload of `FString::RightChopInline`/`LeftInline` (UE 5.4+), the standalone `PhysicsEngine/SkeletalBodySetup.h` include (UE 5.5+), and a redundant `UObject/StrProperty.h` include. Added the same `#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= N` guards and dropped the redundant include (`FStrProperty` comes from the already-included `UObject/UnrealType.h`). Verified building on UE 5.3.2.
+
+</details>
+
+<details>
+<summary><b>🧪 Test runner changes</b></summary>
+
+- **`hardPluginFailureIndicators` no longer matches "unknown"** — the substring match was over-firing on legitimate dispatcher messages like `"Unknown subAction."`. Real plugin errors are already caught by `isError: true` / `structuredContent.success: false`, so dropping the keyword is safe. Test cases that depended on the word "unknown" appearing alone in a success-primary expectation should be reviewed.
+- **Test runner now propagates failures via throw, not `process.exit(1)`** — the runner still sets `process.exitCode = 1`, but the error is rethrown so wrappers that catch via `try/catch` or `Promise.all` see the underlying failure. Consumers that previously relied on the runner terminating the process from a `catch` block should switch to the rethrow contract.
+
+</details>
+
+---
+
+## [Unreleased]
+
+### Added
+- Complete native and WebSocket cinematics, Movie Render Queue, media, Take Recorder, and replay automation coverage with live UE 5.7 verification harnesses.
+
+### Security
+- Hardened local render/media paths against symlink replacement, disabled network-backed media URLs because redirect destinations cannot be pinned, retained client rate limits across native MCP session rotation, and sanitized streamed log payloads.
+
+### Fixed
+- Made replay seek and killcam responses wait for measured completion, preserved Movie Render Queue ownership through cancellation, restored Take Recorder state after asynchronous start failures, validated render limits before mutation, and made render output proof token-aware.
+
+### Verification
+- Source compatibility remains guarded across the supported UE 5.x range; the release build and interactive live acceptance matrix are executed against Unreal Engine 5.7.4.
+
+### Migration
+- The internal `manage_post_process` C++ action has been folded into the expanded `manage_render` action (the `Render/McpAutomationBridge_RenderPostProcess*.cpp` files now dispatch through `manage_render`). Any client that called `manage_post_process` directly will now fail with `does not match prefix` — switch to `manage_render` and pass the desired sub-action via `subAction`. The reflection-capture resolution setter was renamed from `configure_capture_resolution` to `configure_reflection_capture_resolution`; the scene-capture path keeps the original `configure_capture_resolution` name. The `McpAutomationBridge_RenderHandlers.cpp` monolith is now a 74-line dispatcher; per-concern handlers live under `Render/McpAutomationBridge_Render*.cpp`.
+
 ## 🏷️ [0.5.30] - 2026-06-05
 
 > [!IMPORTANT]
@@ -119,6 +161,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Special thanks to the contributors in this release window, with obvious author aliases collapsed.
 
+- **Native MCP Streamable HTTP endpoint:** Thanks @Fl0p for the native HTTP/SSE transport work.
 - **GitHub Actions command-injection hardening:** @google-labs-jules[bot]
 - **Dependency and workflow version updates:** @dependabot[bot]
 - **Editor/runtime behavior fixes:** @xqdd for native `get_current_level` routing, spawn scale, create-plane height, lighting routing, Blueprint SCS verification, PIE runtime reporting, active camera state, per-key input mapping edits, and prompt-save return handling.

@@ -57,6 +57,30 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
                               TEXT("INVALID_PIN"));
           return true;
         }
+      } else if (SourceExpr->IsA<UMaterialExpressionTextureSample>()) {
+        // TextureSample / TextureSampleParameter2D expose named output pins but only numeric
+        // indices were accepted before. Map names to the engine's fixed output order (see
+        // UMaterialExpressionTextureSample output construction): RGB=0, R=1, G=2, B=3, A=4, RGBA=5.
+        // NOTE: RGB (index 0) is the 3-channel color (alpha bit off); RGBA (index 5) carries the
+        // full 4 channels — they are NOT the same pin, so RGBA must map to 5, not 0.
+        if (SourcePin.Equals(TEXT("RGB"), ESearchCase::IgnoreCase)) {
+          SourceOutputIndex = 0;
+        } else if (SourcePin.Equals(TEXT("R"), ESearchCase::IgnoreCase)) {
+          SourceOutputIndex = 1;
+        } else if (SourcePin.Equals(TEXT("G"), ESearchCase::IgnoreCase)) {
+          SourceOutputIndex = 2;
+        } else if (SourcePin.Equals(TEXT("B"), ESearchCase::IgnoreCase)) {
+          SourceOutputIndex = 3;
+        } else if (SourcePin.Equals(TEXT("A"), ESearchCase::IgnoreCase)) {
+          SourceOutputIndex = 4;
+        } else if (SourcePin.Equals(TEXT("RGBA"), ESearchCase::IgnoreCase)) {
+          SourceOutputIndex = 5;
+        } else {
+          Bridge->SendAutomationError(Socket, RequestId,
+                              FString::Printf(TEXT("Invalid TextureSample output pin '%s'. Valid: RGB, R, G, B, A, RGBA."), *SourcePin),
+                              TEXT("INVALID_PIN"));
+          return true;
+        }
       } else {
         Bridge->SendAutomationError(Socket, RequestId,
                             FString::Printf(TEXT("Source output pin '%s' is not numeric and source node has no named outputs."), *SourcePin),

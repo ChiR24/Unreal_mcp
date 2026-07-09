@@ -31,6 +31,14 @@ bool DispatchFallbackAutomationRequest(
     FString& OutConsumedHandlerLabel);
 }
 
+namespace McpAutomationBridge
+{
+// Returns the automation action currently executing on the bridge (empty when idle). Thread-safe; readable
+// off-thread even while a handler blocks the game thread, so external tooling (e.g. a watchdog) can attribute
+// a stall to the tool in flight. Publisher lives in Core/Requests/McpAutomationBridge_ProcessRequest.cpp.
+MCPAUTOMATIONBRIDGE_API FString GetInFlightAction();
+}
+
 #define MCP_DECLARE_ACTION_HANDLER(Name) bool Name(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 #define MCP_DECLARE_PAYLOAD_HANDLER(Name) bool Name(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 #include "McpAutomationBridgeSubsystemActionRoutingDeclarations.h"
@@ -103,6 +111,11 @@ enum class ERequestOrigin : uint8
   NativeHTTP
 };
 
+enum class EAutomationQueueRejection : uint8
+{
+    None, NotAccepting, AlreadyCanceled, QueueFull
+};
+
 UCLASS()
 class MCPAUTOMATIONBRIDGE_API UMcpAutomationBridgeSubsystem : public UEditorSubsystem
 {
@@ -139,8 +152,10 @@ public:
   void SendAutomationError(
       TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
       const FString& RequestId,
-      const FString& Message,
-      const FString& ErrorCode);
+      const FString& Message, const FString& ErrorCode);
+  void SendAutomationRejection(
+      TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
+      const FString& RequestId, EAutomationQueueRejection Reason);
   void SendProgressUpdate(
       const FString& RequestId,
       float Percent = -1.0f,
@@ -209,12 +224,36 @@ private:
 
 public:
   bool Tick(float DeltaTime);
-  void QueueAutomationRequest(
+  EAutomationQueueRejection QueueAutomationRequest(
       const FString& RequestId,
       const FString& Action,
       const TSharedPtr<FJsonObject>& Payload,
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
       ERequestOrigin Origin = ERequestOrigin::WebSocket);
+  // Cancel API contract: best-effort, advisory bool return. The function is
+  // idempotent and only operates on QUEUED requests — a request that is
+  // already executing inside ProcessAutomationRequest cannot be interrupted
+  // by this API. The bool is true when the call did any meaningful work
+  // (removed a queued request, or invoked a registered cancellation
+  // callback). It is false when the request id was already gone. Callers
+  // should not branch on the return value to decide whether to retry.
+  //
+  // For long-running handlers that need cooperative cancellation, the
+  // request id can be polled via HasPendingRequest() or via a registered
+  // callback (RegisterAutomationRequestCancellation) that fires AFTER the
+  // in-flight work has finished. The callback is for "your slot is now
+  // free, please release external resources" — not for "abort the work."
+  // Returning a richer enum (Cancelled / WasAlreadyDone / NotFound) was
+  // considered but rejected to keep the public API surface minimal — none
+  // of the current callers branch on the return value.
+  bool CancelAutomationRequest(const FString& RequestId);
+  bool CancelAutomationRequests(const TArray<FString>& RequestIds);
+  bool CancelAllAutomationRequests();
+  bool RegisterAutomationRequestCancellation(
+      const FString& RequestId,
+      TFunction<void()> Callback);
+  void ClearAutomationRequestCancellation(const FString& RequestId);
+  void DiscardCanceledAutomationRequest(const FString& RequestId);
 
   TSharedPtr<class FMcpConnectionManager> ConnectionManager;
   TSharedPtr<FMcpNativeTransport> NativeTransport;
@@ -232,7 +271,20 @@ public:
     ERequestOrigin Origin = ERequestOrigin::WebSocket;
   };
   TArray<FPendingAutomationRequest> PendingAutomationRequests;
+  TSet<FString> CanceledAutomationRequestIds;
+  TSet<FString> InFlightAutomationRequestIds;
+  TSet<FString> ActiveAutomationRequestIds;
+  TMap<FString, TFunction<void()>> AutomationRequestCancellationCallbacks;
   FCriticalSection PendingAutomationRequestsMutex;
+  FCriticalSection AutomationRequestExecutionMutex;
+  // Queue-time gate only. StopAcceptingAutomationRequests() prevents new
+  // requests from entering the queue but does NOT interrupt requests that are
+  // already executing inside ProcessAutomationRequest. To wait for in-flight
+  // work to drain, callers should follow stop with CancelAllAutomationRequests()
+  // and poll ActiveAutomationRequestIds.IsEmpty() under the request mutex.
+  bool bAcceptingAutomationRequests = true;
+  static constexpr int32 MaxPendingAutomationRequests = 64;
+  static constexpr int32 MaxAutomationRequestsPerTick = 16;
   void ProcessPendingAutomationRequests();
 
   ERequestOrigin CurrentRequestOrigin = ERequestOrigin::WebSocket;
@@ -251,6 +303,8 @@ private:
   TMap<FString, FString> PendingAutomationActionAliases;
   void InitializeHandlers();
   void LoadConfiguredHandlerAliases();
+  void StartAcceptingAutomationRequests();
+  void StopAcceptingAutomationRequests();
   bool RegisterActionAliasInternal(
       const FString& AliasAction,
       const FString& TargetAction,
@@ -293,6 +347,7 @@ private:
   friend struct FMcpEditorFunctionHandlerAccess;
   friend class FMcpNativeTransport;
   friend class FMcpCustomHandlerAliasDispatchTest;
+  friend class FMcpAutomationShutdownCancellationTest;
   friend bool McpProcessRequestDispatch::DispatchFallbackAutomationRequest(
       UMcpAutomationBridgeSubsystem* Bridge,
       const FString& RequestId,

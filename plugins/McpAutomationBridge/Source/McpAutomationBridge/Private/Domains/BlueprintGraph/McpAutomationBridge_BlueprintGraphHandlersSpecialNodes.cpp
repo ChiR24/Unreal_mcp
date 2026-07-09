@@ -184,7 +184,9 @@ bool TryCreateEnhancedInputNode(
         InputAction);
     NewNode->CreateNewGuid();
     NewNode->PostPlacedNewNode();
-    NewNode->AllocateDefaultPins();
+    // Guard against duplicate pins: some node types already allocate in
+    // PostPlacedNewNode(), so only allocate when the node has no pins yet.
+    if (NewNode->Pins.Num() == 0) { NewNode->AllocateDefaultPins(); }
     if (UK2Node* K2Node = Cast<UK2Node>(NewNode))
     {
         K2Node->ReconstructNode();

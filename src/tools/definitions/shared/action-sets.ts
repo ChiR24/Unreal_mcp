@@ -1,3 +1,32 @@
+export const CINEMATICS_ACTIONS = [
+  'create_master_sequence', 'add_subsequence', 'add_shot_track', 'configure_shot_settings',
+  'create_cine_camera_actor', 'configure_camera_settings', 'add_camera_cut_track',
+  'add_camera_shake_track', 'configure_camera_rig_rail', 'configure_camera_rig_crane',
+  'add_fade_track', 'add_level_visibility_track', 'add_material_parameter_track',
+  'add_particle_track', 'add_skeletal_animation_track', 'add_transform_track',
+  'add_event_track', 'add_property_track'
+] as const;
+
+export const MOVIE_RENDER_ACTIONS = [
+  'create_render_job', 'configure_output_settings', 'add_render_pass',
+  'configure_anti_aliasing', 'configure_console_variables', 'configure_burn_ins',
+  'queue_render', 'start_render'
+] as const;
+
+export const MEDIA_ACTIONS = [
+  'create_media_player', 'create_media_source', 'create_media_texture',
+  'create_media_sound_component', 'create_media_playlist', 'play_media',
+  'pause_media', 'seek_media'
+] as const;
+
+export const RECORD_REPLAY_ACTIONS = [
+  'create_take_recorder_panel', 'configure_take_sources', 'start_recording',
+  'stop_recording', 'configure_recorded_tracks', 'start_demo_recording',
+  'stop_demo_recording', 'configure_demo_settings', 'play_demo', 'pause_demo',
+  'seek_demo', 'set_demo_playback_speed', 'configure_killcam_duration',
+  'start_killcam'
+] as const;
+
 export const MATERIAL_AUTHORING_ACTIONS = [
   'create_material', 'set_blend_mode', 'set_shading_model', 'set_material_domain',
   'add_texture_sample', 'add_texture_coordinate', 'add_scalar_parameter', 'add_vector_parameter',
@@ -71,11 +100,20 @@ export const ENVIRONMENT_ACTIONS = [
   'configure_water_material', 'configure_water_collision', 'create_buoyancy_component'
 ] as const;
 
+// RENDER_ACTIONS routes the public `build_environment` actions through the
+// internal `manage_render` bridge action. It also includes a small set of
+// lighting-quality actions (set_light_channel, set_actor_light_channel,
+// configure_lightmass_settings, build_lighting_quality,
+// configure_indirect_lighting_cache) because the C++ handlers for those
+// actions live in `McpAutomationBridge_RenderLighting.cpp`; moving them to
+// LIGHTING_ACTIONS would require relocating the C++ side as well. The two
+// action sets are intentionally disjoint, so a given action only ever has
+// one routing path through `build_environment`.
 export const RENDER_ACTIONS = [
   'configure_ray_traced_shadows', 'configure_ray_traced_gi', 'configure_ray_traced_reflections',
   'configure_ray_traced_ao', 'configure_path_tracing', 'set_light_channel', 'set_actor_light_channel',
   'configure_lightmass_settings', 'build_lighting_quality', 'configure_indirect_lighting_cache',
-  'create_sphere_reflection_capture', 'create_box_reflection_capture', 'configure_capture_resolution',
+  'create_sphere_reflection_capture', 'create_box_reflection_capture', 'configure_reflection_capture_resolution', 'configure_capture_resolution',
   'configure_capture_offset', 'recapture_scene', 'create_planar_reflection', 'configure_planar_reflection',
   'configure_ssr_settings', 'configure_lumen_reflection_settings', 'configure_pp_blend',
   'set_pp_white_balance', 'set_pp_color_grading', 'set_pp_lut', 'configure_tonemapper',

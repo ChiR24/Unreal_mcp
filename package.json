@@ -69,7 +69,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@opencode-ai/plugin": "1.15.13",
-    "@types/node": "^25.0.2",
+    "@types/node": "^26.0.1",
     "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.50.0",
     "@typescript-eslint/parser": "^8.49.0",

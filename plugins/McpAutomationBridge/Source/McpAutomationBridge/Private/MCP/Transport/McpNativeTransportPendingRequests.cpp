@@ -14,6 +14,15 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		}
 		Conn = *Found;
 		SSEConnections.Remove(RequestId);
+		// Defensive reset: the async SendSSEProgressUpdate writer normally
+		// clears this flag at the end of its lambda, but if the lambda is
+		// never executed (e.g. Async() dispatch failure on a hot path) the
+		// flag would otherwise block every subsequent progress write for
+		// this RequestId.
+		if (Conn.IsValid())
+		{
+			Conn->bProgressWritePending.store(false);
+		}
 	}
 
 	if (!Conn.IsValid())
@@ -112,6 +121,12 @@ void FMcpNativeTransport::SendSSEProgressUpdate(
 		}
 		Conn = *Found;
 		CapturedSessionId = Conn->SessionId;
+		bool bExpected = false;
+		if (!Conn->bProgressWritePending.compare_exchange_strong(
+				bExpected, true))
+		{
+			return;
+		}
 	}
 
 	// Build progress JSON before offloading (cheap, no I/O)
@@ -128,6 +143,7 @@ void FMcpNativeTransport::SendSSEProgressUpdate(
 		// Guard: if transport is shutting down, bail out
 		if (bStopping.load())
 		{
+			Conn->bProgressWritePending.store(false);
 			PendingAsyncWrites.fetch_sub(1);
 			return;
 		}
@@ -158,6 +174,7 @@ void FMcpNativeTransport::SendSSEProgressUpdate(
 			Conn->bMarkedForRemoval.store(true);
 		}
 
+		Conn->bProgressWritePending.store(false);
 		PendingAsyncWrites.fetch_sub(1);
 	});
 }

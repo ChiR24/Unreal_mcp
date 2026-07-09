@@ -3,7 +3,7 @@
 
 namespace McpSequenceKeyframes {
 bool AddTransformKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
-                          double Frame,
+                          FFrameNumber TickFrame,
                           const TSharedPtr<FJsonObject> &LocalPayload) {
   UMovieScene3DTransformTrack *Track =
       MovieScene->FindTrack<UMovieScene3DTransformTrack>(BindingGuid,
@@ -18,14 +18,6 @@ bool AddTransformKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
         Cast<UMovieScene3DTransformSection>(
             Track->FindOrAddSection(0, bSectionAdded));
     if (Section) {
-      FFrameRate TickResolution = MovieScene->GetTickResolution();
-      FFrameRate DisplayRate = MovieScene->GetDisplayRate();
-      FFrameNumber FrameNum = FFrameNumber(static_cast<int32>(Frame));
-      FFrameNumber TickFrame =
-          FFrameRate::TransformTime(FFrameTime(FrameNum), DisplayRate,
-                                    TickResolution)
-              .FloorToFrame();
-
       bool bModified = false;
       const TSharedPtr<FJsonObject> *ValueObj = nullptr;
       FMovieSceneChannelProxy &Proxy = Section->GetChannelProxy();

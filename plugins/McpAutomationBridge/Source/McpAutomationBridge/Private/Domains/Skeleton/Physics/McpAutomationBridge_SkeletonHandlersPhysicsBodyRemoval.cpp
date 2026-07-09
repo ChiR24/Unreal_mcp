@@ -6,7 +6,9 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysicsEngine/PhysicsConstraintTemplate.h"
+#if __has_include("PhysicsEngine/SkeletalBodySetup.h")
 #include "PhysicsEngine/SkeletalBodySetup.h"
+#endif
 
 #if WITH_EDITOR
 using namespace McpSkeletonHandlers;
