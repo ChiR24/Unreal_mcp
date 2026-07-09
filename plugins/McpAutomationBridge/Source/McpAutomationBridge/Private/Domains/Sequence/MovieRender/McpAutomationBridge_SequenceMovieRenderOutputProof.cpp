@@ -140,8 +140,10 @@ bool CaptureRenderOutputSnapshot(UMoviePipelineExecutorJob *Job,
       if (UMoviePipelineOutputSetting *Output =
               Cast<UMoviePipelineOutputSetting>(Config->FindSettingByClass(
                   UMoviePipelineOutputSetting::StaticClass(), true)))
+      {
         State->ExpectedFileNameFormat = Output->FileNameFormat;
         State->ExpectedOutputDirectory = GetOutputDirectory(Job);
+      }
     }
   }
   TArray<FString> Files;
@@ -164,7 +166,7 @@ void CaptureRenderOutputData(const FMoviePipelineOutputData &OutputData,
     for (const TPair<FMoviePipelinePassIdentifier,
                      FMoviePipelineRenderPassOutputData> &Pass :
          Shot.RenderPassData) {
-      State->ReportedRenderPasses.Add(Pass.Key.Name.ToString());
+      State->ReportedRenderPasses.Add(Pass.Key.Name);
       for (const FString &File : Pass.Value.FilePaths)
         State->ReportedOutputFiles.Add(File);
     }

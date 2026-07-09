@@ -2,6 +2,7 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "CoreMinimal.h"
+#include "Templates/SubclassOf.h"
 #include "Dom/JsonObject.h"
 
 #if MCP_HAS_MOVIE_RENDER_PIPELINE

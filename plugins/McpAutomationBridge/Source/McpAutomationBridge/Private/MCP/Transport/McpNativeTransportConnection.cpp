@@ -220,7 +220,8 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		{
 			TSharedRef<FInternetAddr> RemoteAddr =
 				ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
-			if (ClientSocket->GetAddress(*RemoteAddr))
+			ClientSocket->GetAddress(*RemoteAddr);
+			if (RemoteAddr->IsValid())
 			{
 				ConnectionRemoteAddr = RemoteAddr->ToString(true);
 			}
