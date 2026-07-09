@@ -12,7 +12,14 @@ const VALID_ASSET_ACTIONS = new Set([
   'add_material_node', 'remove_material_node', 'rebuild_material',
   'connect_material_pins', 'break_material_connections', 'get_material_node_details',
   'source_control_checkout', 'source_control_submit', 'source_control_enable', 'get_source_control_state',
-  'analyze_graph', 'get_asset_graph'
+  'analyze_graph', 'get_asset_graph',
+  // Struct authoring (first-class Blueprint Struct support, issue #510)
+  'create_struct', 'get_struct', 'read_struct', 'list_struct_members',
+  'add_struct_member', 'remove_struct_member', 'rename_struct_member',
+  'set_struct_member_type', 'reorder_struct_members', 'set_struct_member_default',
+  'set_struct_member_metadata', 'compare_structs', 'search_struct_usage', 'recompile_struct',
+  'rename_struct', 'duplicate_struct', 'delete_struct', 'refresh_struct_dependencies',
+  'list_structs', 'export_struct', 'import_struct'
 ]);
 
 const TRAVERSAL_PATTERNS = [

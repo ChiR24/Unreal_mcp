@@ -121,6 +121,19 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   if (Lower == TEXT("rebuild_material"))
     return HandleRebuildMaterial(RequestId, Action, Payload, RequestingSocket);
 
+  // Struct Authoring (first-class Blueprint Struct support, issue #510)
+  if (Lower == TEXT("create_struct") || Lower == TEXT("get_struct") ||
+      Lower == TEXT("read_struct") || Lower == TEXT("list_struct_members") ||
+      Lower == TEXT("add_struct_member") || Lower == TEXT("remove_struct_member") ||
+      Lower == TEXT("rename_struct_member") || Lower == TEXT("set_struct_member_type") ||
+      Lower == TEXT("reorder_struct_members") || Lower == TEXT("set_struct_member_default") ||
+      Lower == TEXT("set_struct_member_metadata") || Lower == TEXT("compare_structs") ||
+      Lower == TEXT("search_struct_usage") || Lower == TEXT("recompile_struct") ||
+      Lower == TEXT("rename_struct") || Lower == TEXT("duplicate_struct") ||
+      Lower == TEXT("delete_struct") || Lower == TEXT("refresh_struct_dependencies") ||
+      Lower == TEXT("list_structs") || Lower == TEXT("export_struct") || Lower == TEXT("import_struct"))
+    return HandleStructAction(RequestId, Lower, Payload, RequestingSocket);
+
   return false;
 }
 

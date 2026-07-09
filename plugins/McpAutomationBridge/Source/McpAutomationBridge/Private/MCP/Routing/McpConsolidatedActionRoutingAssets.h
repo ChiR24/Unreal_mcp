@@ -79,11 +79,33 @@ inline const TArray<FString>& Texture()
 	return Actions;
 }
 
+inline const TArray<FString>& StructAuthoring();
+
 inline TArray<FString> ManageAsset()
 {
 	TArray<FString> Actions = ManageAssetCore();
 	AppendUniqueActions(Actions, MaterialAuthoring());
 	AppendUniqueActions(Actions, Texture());
+	// Struct authoring (first-class Blueprint Struct support, issue #510)
+	AppendUniqueActions(Actions, StructAuthoring());
 	return Actions;
 }
+
+inline const TArray<FString>& StructAuthoring()
+{
+	static const TArray<FString> Actions = {
+		TEXT("create_struct"), TEXT("get_struct"), TEXT("read_struct"),
+		TEXT("list_struct_members"), TEXT("add_struct_member"),
+		TEXT("remove_struct_member"), TEXT("rename_struct_member"),
+		TEXT("set_struct_member_type"), TEXT("reorder_struct_members"),
+		TEXT("set_struct_member_default"), TEXT("set_struct_member_metadata"),
+		TEXT("compare_structs"), TEXT("search_struct_usage"),
+		TEXT("recompile_struct"),
+		TEXT("rename_struct"), TEXT("duplicate_struct"),
+		TEXT("delete_struct"), TEXT("refresh_struct_dependencies"),
+		TEXT("list_structs"), TEXT("export_struct"), TEXT("import_struct")
+		};
+	return Actions;
 }
+
+} // namespace McpConsolidatedActions

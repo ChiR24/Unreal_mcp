@@ -948,6 +948,39 @@ Per-concern handlers live under `Render/McpAutomationBridge_Render*.cpp`.
 | **Utility** | | | |
 | `get_inventory_info` | `McpAutomationBridge_InventoryHandlers.cpp` | `HandleManageInventoryAction` | Returns inventory/equipment info |
 
+## Struct Authoring (under `manage_asset`)
+
+Struct (UserDefinedStruct) authoring is exposed as `manage_asset` sub-actions dispatched to `HandleStructAction` (implemented in `Private/Domains/AssetWorkflow/Structs/`).
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| **Struct Asset** | | | |
+| `create_struct` | `McpAutomationBridge_AssetWorkflowStructsLifecycle.cpp` | `HandleStructAction` | Creates a Blueprint Struct (UserDefinedStruct) asset |
+| `rename_struct` | `McpAutomationBridge_AssetWorkflowStructsLifecycle.cpp` | `HandleStructAction` | Renames a struct asset |
+| `duplicate_struct` | `McpAutomationBridge_AssetWorkflowStructsAssetOps.cpp` | `HandleStructAction` | Duplicates a struct from a source asset |
+| `delete_struct` | `McpAutomationBridge_AssetWorkflowStructsAssetOps.cpp` | `HandleStructAction` | Deletes a struct asset |
+| `read_struct` | `McpAutomationBridge_AssetWorkflowStructsAnalysis.cpp` | `HandleStructAction` | Reads struct layout, members, and metadata |
+| **Members** | | | |
+| `add_struct_member` | `McpAutomationBridge_AssetWorkflowStructsMembersAddRemove.cpp` | `HandleStructAction` | Adds a member (variable) with name and type |
+| `remove_struct_member` | `McpAutomationBridge_AssetWorkflowStructsMembersAddRemove.cpp` | `HandleStructAction` | Removes a member by GUID or name |
+| `rename_struct_member` | `McpAutomationBridge_AssetWorkflowStructsMembersAddRemove.cpp` | `HandleStructAction` | Renames a member |
+| `set_struct_member_type` | `McpAutomationBridge_AssetWorkflowStructsMembersAddRemove.cpp` | `HandleStructAction` | Sets the member property type (Bool, Int, Float, Struct, Array, Map, etc.) |
+| `reorder_struct_members` | `McpAutomationBridge_AssetWorkflowStructsMembersEdit.cpp` | `HandleStructAction` | Reorders members relative to an anchor |
+| `set_struct_member_default` | `McpAutomationBridge_AssetWorkflowStructsMembersEdit.cpp` | `HandleStructAction` | Sets a member default value as Unreal export text |
+| `set_struct_member_metadata` | `McpAutomationBridge_AssetWorkflowStructsMembersEdit.cpp` | `HandleStructAction` | Sets member tooltip and metadata object |
+| `list_struct_members` | `McpAutomationBridge_AssetWorkflowStructsAnalysis.cpp` | `HandleStructAction` | Lists members with names, GUIDs, and types |
+| **Comparison & Usage** | | | |
+| `compare_structs` | `McpAutomationBridge_AssetWorkflowStructsAnalysis.cpp` | `HandleStructAction` | Compares two structs and returns a member diff |
+| `search_struct_usage` | `McpAutomationBridge_AssetWorkflowStructsAnalysis.cpp` | `HandleStructAction` | Searches Blueprint usage of a struct |
+| **Serialization** | | | |
+| `list_structs` | `McpAutomationBridge_AssetWorkflowStructsSerialization.cpp` | `HandleStructAction` | Enumerates all UserDefinedStruct assets |
+| `export_struct` | `McpAutomationBridge_AssetWorkflowStructsSerialization.cpp` | `HandleStructAction` | Serializes a struct definition to JSON |
+| `import_struct` | `McpAutomationBridge_AssetWorkflowStructsImport.cpp` | `HandleStructAction` | Creates/updates a struct from a JSON definition |
+| **Compilation & Nodes** | | | |
+| `recompile_struct` | `McpAutomationBridge_AssetWorkflowStructsLifecycle.cpp` | `HandleStructAction` | Recompiles the struct asset |
+| `refresh_struct_dependencies` | `McpAutomationBridge_AssetWorkflowStructsAssetOps.cpp` | `HandleStructAction` | Refreshes referencing Blueprints |
+| `create_struct_make_break_nodes` | `McpAutomationBridge_BlueprintHandlersStructMakeBreak.cpp` | `HandleBlueprintStructMakeBreakNodes` | Spawns Make/Break Struct nodes in a Blueprint graph |
+
 ## Interaction Manager (`manage_interaction`)
 
 | Action | C++ Handler File | C++ Function | Notes |

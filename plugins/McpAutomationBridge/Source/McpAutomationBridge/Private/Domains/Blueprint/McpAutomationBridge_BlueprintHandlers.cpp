@@ -49,6 +49,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       McpBlueprintHandlers::HandleBlueprintConnectPins,
       McpBlueprintHandlers::HandleBlueprintEnsureProbe,
       McpBlueprintHandlers::HandleBlueprintSetMetadata,
+      McpBlueprintHandlers::HandleBlueprintStructMakeBreakNodes,
   };
 
   for (FBlueprintRoute Route : Routes) {

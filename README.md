@@ -351,7 +351,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 | Tool | Description |
 |------|-------------|
-| `manage_asset` | Assets, Materials, Render Targets, Behavior Trees |
+| `manage_asset` | Assets, Materials, Render Targets, Behavior Trees, Blueprint Struct (UserDefinedStruct) authoring |
 | `manage_blueprint` | Blueprints, SCS components, graph editing, UMG widgets, layout, bindings, animations |
 | `control_actor` | Spawn, delete, transform, physics, tags |
 | `control_editor` | PIE, Camera, viewport, screenshots |

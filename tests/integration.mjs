@@ -26,6 +26,13 @@ const testCases = [
   { scenario: 'Actor: spawn StaticMeshActor (cube)', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: 'IT_Cube', location: { x: 0, y: 0, z: 200 } }, expected: 'success' },
   { scenario: 'Actor: set transform', toolName: 'control_actor', arguments: { action: 'set_transform', actorName: 'IT_Cube', location: { x: 100, y: 100, z: 300 } }, expected: 'success|not found' },
   { scenario: 'Blueprint: create Actor blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: 'BP_IntegrationTest', path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
+  // Struct
+  { scenario: 'Struct: Create test struct', toolName: 'manage_asset', arguments: { action: 'create_struct', name: 'S_IntegrationTest', path: TEST_FOLDER, save: true }, expected: 'success|already exists' },
+  { scenario: 'Struct: Add struct member', toolName: 'manage_asset', arguments: { action: 'add_struct_member', structPath: `${TEST_FOLDER}/S_IntegrationTest`, memberName: 'Weight', memberType: 'Float', defaultValue: '1.0' }, expected: 'success' },
+  { scenario: 'Struct: List struct members', toolName: 'manage_asset', arguments: { action: 'list_struct_members', structPath: `${TEST_FOLDER}/S_IntegrationTest` }, expected: 'success' },
+  { scenario: 'Struct: Read struct', toolName: 'manage_asset', arguments: { action: 'read_struct', structPath: `${TEST_FOLDER}/S_IntegrationTest` }, expected: 'success' },
+  { scenario: 'Struct: Recompile struct', toolName: 'manage_asset', arguments: { action: 'recompile_struct', structPath: `${TEST_FOLDER}/S_IntegrationTest`, save: true }, expected: 'success' },
+  { scenario: 'Struct: Delete test struct', toolName: 'manage_asset', arguments: { action: 'delete_struct', structPath: `${TEST_FOLDER}/S_IntegrationTest` }, expected: 'success|not found' },
   { scenario: 'Geometry: Create box primitive', toolName: 'manage_geometry', arguments: { action: 'create_box', actorName: 'GeoTest_Box', dimensions: [100, 100, 100], location: { x: 0, y: 0, z: 100 } }, expected: 'success|already exists' },
   { scenario: 'Skeleton: Get skeleton info', toolName: 'animation_physics', arguments: { action: 'get_skeleton_info', skeletonPath: '/Engine/EngineMeshes/SkeletalCube_Skeleton' }, expected: 'success|not found' },
   { scenario: 'Asset: create advanced test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: ADV_TEST_FOLDER }, expected: 'success|already exists' },
