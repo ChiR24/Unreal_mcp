@@ -205,6 +205,7 @@ export const manageAssetToolDefinition: ToolDefinition = {
       values: commonSchemas.arrayOfStrings,
       propertyName: commonSchemas.propertyName,
       structType: { type: 'string', description: 'Asset path of the inner UScriptStruct for an FInstancedStruct property (set_instanced_struct_property).' },
+      structValues: { type: 'object', additionalProperties: true, description: 'Field-name to value map applied to the inner UScriptStruct when setting an FInstancedStruct property (set_instanced_struct_property).' },
       bSave: commonSchemas.booleanProp,
       },
       required: ['action']

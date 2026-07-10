@@ -157,7 +157,7 @@ bool HandleStructPropertyAction(
         FString StructType;
         Params->TryGetStringField(TEXT("structType"), StructType);
         StructType.TrimStartAndEndInline();
-        TSharedPtr<FJsonValue> Values = Params->TryGetField(TEXT("values"));
+        TSharedPtr<FJsonValue> Values = Params->TryGetField(TEXT("structValues"));
 
         if (StructType.IsEmpty())
         {
