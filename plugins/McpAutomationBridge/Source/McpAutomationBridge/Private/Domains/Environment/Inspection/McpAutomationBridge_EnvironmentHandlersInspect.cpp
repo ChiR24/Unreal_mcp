@@ -1,5 +1,11 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
+// Struct ecosystem (issue #struct-ecosystem) — inspect_struct handler shard forward declaration.
+namespace McpInspectStruct
+{
+    bool HandleInspectStructAction(FString Action, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject>& OutResult);
+}
+
 using namespace McpEnvironmentHandlers;
 
 bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
@@ -99,6 +105,18 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     if (LowerSubAction.Equals(TEXT("inspect_cdo")))
     {
         return HandleInspectCdoAction(RequestId, Payload, RequestingSocket);
+    }
+
+    // Struct ecosystem — read-only struct layout introspection (issue #struct-ecosystem)
+    if (LowerSubAction.Equals(TEXT("inspect_struct")))
+    {
+        TSharedPtr<FJsonObject> Result;
+        if (McpInspectStruct::HandleInspectStructAction(LowerSubAction, Payload, Result))
+        {
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Struct inspected"), Result);
+            return true;
+        }
+        return false;
     }
 
     if (bIsGlobalAction)

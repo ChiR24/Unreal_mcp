@@ -46,4 +46,18 @@ describe('inspect_struct read-only reflection contracts (struct ecosystem)', () 
     expect(inspectStruct).toContain('MISSING_PARAMETER');
     expect(inspectStruct).toContain('ASSET_NOT_FOUND');
   });
+
+  it('exposes the inspect_struct action name and HandleInspectStructAction entry point', () => {
+    // Given / When: the shard must register the exact action-name string
+    // literal and a single public entry point with the expected signature.
+    // Then
+    expect(inspectStruct).toContain('inspect_struct');
+    expect(inspectStruct).toContain('HandleInspectStructAction');
+  });
+
+  it('never uses the forbidden UPackage::SavePackage', () => {
+    // Given / When: read-only reflection must not persist anything.
+    // Then
+    expect(inspectStruct).not.toContain('UPackage::SavePackage');
+  });
 });
