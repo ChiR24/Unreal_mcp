@@ -100,8 +100,12 @@ bool HandleStructImportActions(UMcpAutomationBridgeSubsystem& Bridge, const FStr
             {
                 continue;
             }
-            const FString MemberName = (*MemberObj)->GetStringField(TEXT("name"));
-            const FString MemberType = (*MemberObj)->GetStringField(TEXT("type"));
+            FString MemberName, MemberType;
+            if (!(*MemberObj)->TryGetStringField(TEXT("name"), MemberName) ||
+                !(*MemberObj)->TryGetStringField(TEXT("type"), MemberType))
+            {
+                continue;
+            }
             if (MemberName.IsEmpty() || MemberType.IsEmpty())
             {
                 continue;
