@@ -128,6 +128,14 @@ bool HandleEnumValueActions(
             if (!bMatched) { SetEnumResultFields(OutResult, true, TEXT("reorder no-op: requested value not present")); return true; }
         }
 
+        // Guard: a reorder must name the FULL current value set. Otherwise
+        // SetEnums() below would silently drop the omitted values.
+        if (NewNames.Num() != Current.Num())
+        {
+            SetEnumResultFields(OutResult, false, TEXT("reorder_enum_values must list every current value; partial lists are rejected to avoid dropping values"));
+            return true;
+        }
+
         // No-op guard: requested order already matches the current order.
         if (NewNames.Num() == Current.Num() && NewNames == Current)
         {
@@ -213,6 +221,8 @@ bool HandleEnumValueActions(
         Result->SetStringField(TEXT("enumName"), SanitizedName);
         Result->SetNumberField(TEXT("valueCount"), Subset.Num());
         Result->SetStringField(TEXT("sourceEnumPath"), GetPayloadString(Params, TEXT("enumPath")));
+        Result->SetBoolField(TEXT("sourceEnumModified"), false);
+        Result->SetStringField(TEXT("message"), TEXT("split_enum copies the listed values into a new enum; the source enum is left unchanged"));
         OutResult = Result;
         return true;
     }
