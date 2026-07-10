@@ -103,7 +103,18 @@ inline const TArray<FString>& StructAuthoring()
 		TEXT("recompile_struct"),
 		TEXT("rename_struct"), TEXT("duplicate_struct"),
 		TEXT("delete_struct"), TEXT("refresh_struct_dependencies"),
-		TEXT("list_structs"), TEXT("export_struct"), TEXT("import_struct")
+		TEXT("list_structs"), TEXT("export_struct"), TEXT("import_struct"),
+		// Struct ecosystem — DataTable (issue #struct-ecosystem)
+		TEXT("create_data_table"), TEXT("set_data_table_row_struct"), TEXT("create_row_struct"),
+		TEXT("get_row_struct"), TEXT("set_struct_as_row_struct"), TEXT("add_data_table_row"),
+		TEXT("get_data_table_row"), TEXT("update_data_table_row"), TEXT("delete_data_table_row"),
+		TEXT("list_data_table_rows"), TEXT("import_data_table_rows"), TEXT("clear_data_table_rows"),
+		// Struct ecosystem — Enum
+		TEXT("create_enum"), TEXT("delete_enum"), TEXT("get_enum"), TEXT("add_enum_value"),
+		TEXT("remove_enum_value"), TEXT("rename_enum_value"), TEXT("reorder_enum_values"),
+		TEXT("set_enum_value_metadata"), TEXT("split_enum"),
+		// Struct ecosystem — FInstancedStruct
+		TEXT("get_instanced_struct_property"), TEXT("set_instanced_struct_property")
 		};
 	return Actions;
 }

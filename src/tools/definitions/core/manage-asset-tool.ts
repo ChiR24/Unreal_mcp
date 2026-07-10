@@ -23,6 +23,16 @@ export const manageAssetToolDefinition: ToolDefinition = {
             'set_struct_member_metadata', 'compare_structs', 'search_struct_usage', 'recompile_struct',
             'rename_struct', 'duplicate_struct', 'delete_struct', 'refresh_struct_dependencies',
             'list_structs', 'export_struct', 'import_struct',
+            // Struct ecosystem — DataTable (issue #struct-ecosystem)
+            'create_data_table', 'set_data_table_row_struct', 'create_row_struct', 'get_row_struct',
+            'set_struct_as_row_struct', 'add_data_table_row', 'get_data_table_row',
+            'update_data_table_row', 'delete_data_table_row', 'list_data_table_rows',
+            'import_data_table_rows', 'clear_data_table_rows',
+            // Struct ecosystem — Enum
+            'create_enum', 'delete_enum', 'get_enum', 'add_enum_value', 'remove_enum_value',
+            'rename_enum_value', 'reorder_enum_values', 'set_enum_value_metadata', 'split_enum',
+            // Struct ecosystem — FInstancedStruct
+            'get_instanced_struct_property', 'set_instanced_struct_property',
             ...MATERIAL_AUTHORING_ACTIONS, ...TEXTURE_ACTIONS],
           description: 'Action to perform'
         },
@@ -177,7 +187,25 @@ export const manageAssetToolDefinition: ToolDefinition = {
             },
             required: ['name', 'type']
           }
-        }
+        },
+      // Struct ecosystem — DataTable / Enum / FInstancedStruct (issue #struct-ecosystem)
+      dataTablePath: { type: 'string', description: 'Asset path of the DataTable (e.g. /Game/DataTables/DT_MyTable).' },
+      rowStructPath: { type: 'string', description: 'Asset path of the row UScriptStruct bound to a DataTable.' },
+      rowName: { type: 'string', description: 'Name of the row to add/get/update/delete in a DataTable.' },
+      rowData: commonSchemas.objectProp,
+      rows: commonSchemas.arrayOfObjects,
+      clearExisting: commonSchemas.booleanProp,
+      enumPath: { type: 'string', description: 'Asset path of the UserDefinedEnum (e.g. /Game/Enums/E_MyEnum).' },
+      valueName: { type: 'string', description: 'Enum value (entry) name.' },
+      newValueName: { type: 'string', description: 'New enum value name (rename_enum_value).' },
+      newEnumName: { type: 'string', description: 'Name for the new enum produced by split_enum.' },
+      order: commonSchemas.arrayOfStrings,
+      index: commonSchemas.numberProp,
+      key: { type: 'string', description: 'Metadata key for set_enum_value_metadata.' },
+      values: commonSchemas.arrayOfStrings,
+      propertyName: commonSchemas.propertyName,
+      structType: { type: 'string', description: 'Asset path of the inner UScriptStruct for an FInstancedStruct property (set_instanced_struct_property).' },
+      bSave: commonSchemas.booleanProp,
       },
       required: ['action']
     },
