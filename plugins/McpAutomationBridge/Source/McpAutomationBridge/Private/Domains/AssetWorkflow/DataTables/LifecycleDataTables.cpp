@@ -169,6 +169,7 @@ bool HandleDataTableAction(
         OutResult->SetBoolField(TEXT("set"), true);
         OutResult->SetStringField(TEXT("assetPath"), StructPath);
         OutResult->SetBoolField(TEXT("usableAsRowStruct"), true);
+        OutResult->SetStringField(TEXT("message"), TEXT("set_struct_as_row_struct validates and compiles the struct for row-struct use; it does not bind it to a data table. Use set_data_table_row_struct or create_data_table to bind a row struct to a table."));
         OutResult->SetStringField(TEXT("status"), UserDefinedStructureStatusToString(S->Status));
         OutResult->SetBoolField(TEXT("saved"), bSave);
         McpHandlerUtils::AddVerification(OutResult, S);
