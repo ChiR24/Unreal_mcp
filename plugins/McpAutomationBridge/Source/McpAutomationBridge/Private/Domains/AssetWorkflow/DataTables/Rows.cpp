@@ -66,7 +66,7 @@ bool HandleDataTableRowActions(
         FString RowName = GetPayloadString(Params, TEXT("rowName"));
         if (RowName.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
 
-        const void* Row = Table->FindRow<FTableRowBase>(FName(*RowName), TEXT(""), false);
+        const void* Row = Table->FindRowUnchecked(FName(*RowName));
         OutResult = McpHandlerUtils::CreateResultObject();
         if (Row && Table->RowStruct)
         {
@@ -168,7 +168,8 @@ bool HandleDataTableRowActions(
         {
             TSharedPtr<FJsonObject> RowObj = RowVal->AsObject();
             if (!RowObj.IsValid()) { continue; }
-            FString RowName = RowObj->GetStringField(TEXT("rowName"));
+            FString RowName;
+            if (!RowObj->TryGetStringField(TEXT("rowName"), RowName)) { continue; }
             const TSharedPtr<FJsonObject>* RowDataPtr = nullptr;
             RowObj->TryGetObjectField(TEXT("rowData"), RowDataPtr);
             TSharedPtr<FJsonObject> RowData = RowDataPtr ? *RowDataPtr : nullptr;
