@@ -11,10 +11,13 @@ const pluginEnumsDir = resolve(
 const read = (file: string): string => readFileSync(file, 'utf8');
 
 const lifecycle = read(
-  `${pluginEnumsDir}/McpAutomationBridge_AssetWorkflowEnumLifecycle.cpp`,
+  `${pluginEnumsDir}/LifecycleEnums.cpp`,
 );
 const values = read(
-  `${pluginEnumsDir}/McpAutomationBridge_AssetWorkflowEnumValues.cpp`,
+  `${pluginEnumsDir}/Values.cpp`,
+);
+const shared = read(
+  `${pluginEnumsDir}/Shared.h`,
 );
 
 describe('UserDefinedEnum authoring contracts (struct ecosystem)', () => {
@@ -34,6 +37,7 @@ describe('UserDefinedEnum authoring contracts (struct ecosystem)', () => {
     expect(lifecycle).toContain('SetEnums');
     expect(lifecycle).toContain('PostEditChange');
     expect(values).toContain('SetEnums');
+    expect(shared).toContain('PostEditChange');
   });
 
   it('persists enums through McpSafeAssetSave only', () => {
@@ -41,9 +45,11 @@ describe('UserDefinedEnum authoring contracts (struct ecosystem)', () => {
     // The direct UPackage::SavePackage path must never appear.
     // Then
     expect(lifecycle).toContain('McpSafeAssetSave');
-    expect(values).toContain('McpSafeAssetSave');
+    expect(values).toContain('SetEnums');
+    expect(shared).toContain('McpSafeAssetSave');
     expect(lifecycle).not.toContain('UPackage::SavePackage');
     expect(values).not.toContain('UPackage::SavePackage');
+    expect(shared).not.toContain('UPackage::SavePackage');
   });
 
   it('dispatching enum actions through a single HandleEnumAction entry', () => {
