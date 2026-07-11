@@ -31,6 +31,7 @@ FMcpNativeTransport::ESessionValidationResult FMcpNativeTransport::ValidateSessi
 
 		ActiveSessions.Remove(SessionId);
 		SessionRateStates.Remove(SessionId);
+		SessionProtocolVersions.Remove(SessionId);
 	}
 	CloseSessionConnections(SessionId);
 	OutError = TEXT("Invalid or expired session ID");
@@ -236,6 +237,12 @@ void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
 
 void FMcpNativeTransport::OnToolsListChanged()
 {
+	if (bGatewayMode)
+	{
+		UE_LOG(LogMcpNativeTransport, Verbose,
+			TEXT("Tool list changed — suppressed in gateway mode (public surface is static)"));
+		return;
+	}
 	UE_LOG(LogMcpNativeTransport, Log,
 		TEXT("Tool list changed — broadcasting notifications/tools/list_changed"));
 	BroadcastToolsListChanged();

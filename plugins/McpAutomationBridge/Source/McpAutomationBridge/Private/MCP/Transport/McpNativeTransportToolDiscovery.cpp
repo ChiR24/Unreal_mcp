@@ -1,4 +1,5 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "MCP/Gateway/McpNativeGatewayDefinition.h"
 #include "Misc/SecureHash.h"
 
 namespace
@@ -25,6 +26,35 @@ FString FMcpNativeTransport::HandleInitialize(
 	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
 	FString& OutSessionId, const FString& ConnectionRemoteAddr)
 {
+	// Negotiate the protocol version before allocating any session state.
+	// Echo a supported version; for any well-formed (non-empty string) request
+	// version, negotiate down to the latest supported one instead of erroring.
+	// Missing/non-string/empty -> JSON-RPC -32602 with supported/requested data.
+	FString NegotiatedVersion;
+	FString NegotiationError;
+	if (!NegotiateInitializeProtocolVersion(Params, NegotiatedVersion, NegotiationError))
+	{
+		auto Data = MakeShared<FJsonObject>();
+		TArray<TSharedPtr<FJsonValue>> Supported;
+		for (const FString& V : McpSupportedProtocolVersions())
+		{
+			Supported.Add(MakeShared<FJsonValueString>(V));
+		}
+		Data->SetArrayField(TEXT("supported"), Supported);
+		FString Requested;
+		if (Params.IsValid() && Params->TryGetStringField(TEXT("protocolVersion"), Requested))
+		{
+			Data->SetStringField(TEXT("requested"), Requested);
+		}
+		else
+		{
+			Data->SetField(TEXT("requested"), MakeShared<FJsonValueNull>());
+		}
+		OutSessionId.Reset();
+		return FMcpJsonRpc::BuildError(
+			Id, FMcpJsonRpc::ErrorInvalidParams, NegotiationError, Data);
+	}
+
 	FString ClientName = TEXT("unknown");
 	FString ClientVersion = TEXT("unknown");
 	if (Params.IsValid())
@@ -85,11 +115,13 @@ FString FMcpNativeTransport::HandleInitialize(
 					Id, FMcpJsonRpc::ErrorInvalidRequest,
 					TEXT("Native MCP session limit reached"));
 			}
-			ActiveSessions.Remove(EvictedSessionId);
-			SessionRateStates.Remove(EvictedSessionId);
+		ActiveSessions.Remove(EvictedSessionId);
+		SessionRateStates.Remove(EvictedSessionId);
+		SessionProtocolVersions.Remove(EvictedSessionId);
 		}
 		OutSessionId = FGuid::NewGuid().ToString();
 		ActiveSessions.Add(OutSessionId, Now);
+		SessionProtocolVersions.Add(OutSessionId, NegotiatedVersion);
 		FSessionRateState RateState;
 		RateState.ClientRateKey = ClientRateKey;
 		SessionRateStates.Add(OutSessionId, RateState);
@@ -103,7 +135,7 @@ FString FMcpNativeTransport::HandleInitialize(
 	}
 
 	auto Result = MakeShared<FJsonObject>();
-	Result->SetStringField(TEXT("protocolVersion"), TEXT("2025-03-26"));
+	Result->SetStringField(TEXT("protocolVersion"), NegotiatedVersion);
 
 	auto Capabilities = MakeShared<FJsonObject>();
 	auto ToolsCap = MakeShared<FJsonObject>();
@@ -140,6 +172,16 @@ FString FMcpNativeTransport::HandleInitialize(
 FString FMcpNativeTransport::HandleToolsList(
 	const TSharedPtr<FJsonValue>& Id)
 {
+	// In gateway mode expose only the static 'unreal' tool; canonical tools stay reachable through it.
+	if (bGatewayMode)
+	{
+		auto Result = MakeShared<FJsonObject>();
+		TArray<TSharedPtr<FJsonValue>> Tools;
+		Tools.Add(MakeShared<FJsonValueObject>(BuildUnrealGatewayToolDefinition()));
+		Result->SetArrayField(TEXT("tools"), Tools);
+		return FMcpJsonRpc::BuildResponse(Id, Result);
+	}
+
 	TSet<FString> EnabledTools = ToolManager.GetEnabledToolNames();
 	TSharedPtr<FJsonObject> ToolsList =
 		FMcpToolRegistry::Get().GetFilteredToolsResponse(EnabledTools);

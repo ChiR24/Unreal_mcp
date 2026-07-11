@@ -147,6 +147,25 @@ FString FMcpJsonRpc::BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code, co
 	return JsonToString(Root);
 }
 
+FString FMcpJsonRpc::BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code,
+	const FString& Message, const TSharedPtr<FJsonObject>& Data)
+{
+	auto ErrorObj = MakeShared<FJsonObject>();
+	ErrorObj->SetNumberField(TEXT("code"), Code);
+	ErrorObj->SetStringField(TEXT("message"), Message);
+	if (Data.IsValid())
+	{
+		ErrorObj->SetObjectField(TEXT("data"), Data);
+	}
+
+	auto Root = MakeShared<FJsonObject>();
+	Root->SetStringField(TEXT("jsonrpc"), TEXT("2.0"));
+	Root->SetField(TEXT("id"), Id.IsValid() ? Id : MakeShared<FJsonValueNull>());
+	Root->SetObjectField(TEXT("error"), ErrorObj);
+
+	return JsonToString(Root);
+}
+
 TSharedPtr<FJsonObject> FMcpJsonRpc::BuildToolResult(
 	bool bSuccess, const FString& Message,
 	const TSharedPtr<FJsonObject>& Data, const FString& ErrorCode)

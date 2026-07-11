@@ -53,6 +53,9 @@ public:
 	/** Build a JSON-RPC 2.0 error response string. */
 	static FString BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code, const FString& Message);
 
+	/** Build a JSON-RPC 2.0 error response string with an optional data object. */
+	static FString BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code, const FString& Message, const TSharedPtr<FJsonObject>& Data);
+
 	/** Build an MCP tool result object (content array + isError). */
 	static TSharedPtr<FJsonObject> BuildToolResult(
 		bool bSuccess, const FString& Message,

@@ -15,7 +15,9 @@ class ISocketSubsystem;
 
 /**
  * Native MCP Streamable HTTP transport with SSE streaming.
- * Raw socket HTTP server speaking JSON-RPC 2.0 (MCP protocol 2025-03-26).
+ * Raw socket HTTP server speaking JSON-RPC 2.0 (MCP protocol 2025-11-25;
+ * negotiates 2025-06-18 / 2025-03-26). Validates the MCP-Protocol-Version
+ * header on every post-initialize request.
  * SSE streaming for tools/call — progress notifications + final result.
  * Runs alongside existing WebSocket transport — opt-in via bEnableNativeMCP setting.
  */
@@ -29,7 +31,8 @@ public:
 	bool Start(int32 Port, const FString& PluginDir, bool bLoadAllTools = false,
 		const FString& InUserInstructions = TEXT(""),
 		const FString& InListenHost = TEXT("127.0.0.1"),
-		bool bInAllowNonLoopback = false);
+		bool bInAllowNonLoopback = false,
+		bool bInEnableGateway = false);
 
 	/** Shut down HTTP server, stop accept thread, close all SSE connections. */
 	void Shutdown();
@@ -96,6 +99,7 @@ private:
 		FString Accept;      // from Accept header
 		FString CapabilityToken;  // from X-MCP-Capability-Token header
 		FString Origin;      // from Origin header for browser CORS validation
+		FString ProtocolVersion;  // from MCP-Protocol-Version header (post-initialize)
 		int32 ContentLength = 0;
 	};
 
@@ -168,6 +172,25 @@ private:
 		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
 		const FString& SessionId, const FString& CorsOrigin);
 
+	// Route a tools/call whose name is the 'unreal' gateway tool.
+	void HandleGatewayCall(
+		const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
+		FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin);
+
+	// Gateway mode pre-dispatch: route 'unreal' or reject a direct canonical call.
+	// Returns true when it handled (or rejected) the call so the caller returns.
+	bool HandleGatewayModePreDispatch(
+		const FString& ToolName, const TSharedPtr<FJsonObject>& Arguments,
+		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
+		const FString& SessionId, const FString& CorsOrigin);
+
+	// Shared SSE streaming + subsystem queue path used by both canonical and
+	// gateway execute calls. DispatchAction + Arguments are already resolved.
+	void StreamToolCall(
+		const FString& ToolName, const FString& DispatchAction,
+		const TSharedPtr<FJsonObject>& Arguments, const TSharedPtr<FJsonValue>& Id,
+		FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin);
+
 	// Session validation
 	ESessionValidationResult ValidateSession(const FString& SessionId, FString& OutError);
 	static int32 GetSessionValidationStatusCode(ESessionValidationResult Result);
@@ -183,6 +206,28 @@ private:
 		const TSharedPtr<FJsonObject>& Arguments,
 		bool& bOutSessionActive);
 	void CloseSessionConnections(const FString& SessionId);
+
+	// ─── MCP protocol-version negotiation (spec 2025-11-25 lifecycle) ───
+	// Negotiate the initialize protocolVersion: echo a supported version, or
+	// fall back to the latest supported version for any well-formed (non-empty
+	// string) request version. Returns false (with OutError set) when the
+	// field is missing, non-string, or empty -> caller emits JSON-RPC -32602.
+	bool NegotiateInitializeProtocolVersion(
+		const TSharedPtr<FJsonObject>& Params, FString& OutNegotiated,
+		FString& OutError);
+	// Resolve the MCP-Protocol-Version header for a post-initialize request.
+	// Returns false when the header value is present but unsupported/invalid
+	// (caller responds HTTP 400). When absent, derives from the negotiated
+	// session version or McpDefaultProtocolVersion().
+	bool ResolveRequestProtocolVersion(
+		const FString& HeaderValue, const FString& SessionId,
+		FString& OutVersion, FString& OutError);
+	// Validate the protocol-version header for a POST/GET request; on failure
+	// send HTTP 400 and close the socket. Returns false when the request was
+	// rejected (caller must return). bJsonBody selects the 400 body format.
+	bool GuardProtocolVersionHeader(
+		FSocket* ClientSocket, const FParsedHttpRequest& Req,
+		const TSharedPtr<FJsonValue>& Id, bool bJsonBody);
 
 	void OnToolsListChanged();
 	void BroadcastToolsListChanged();
@@ -211,6 +256,9 @@ private:
 	FString ListenHost = TEXT("127.0.0.1");
 	bool bAllowNonLoopback = false;
 
+	// Gateway mode: tools/list advertises only 'unreal', and direct canonical calls are rejected.
+	bool bGatewayMode = false;
+
 	// Socket infrastructure
 	FSocket* ListenSocket = nullptr;
 	FRunnableThread* Thread = nullptr;
@@ -228,6 +276,7 @@ private:
 
 	// Session state (multi-session, with activity tracking)
 	TMap<FString, double> ActiveSessions;  // SessionId → LastActivityTime
+	TMap<FString, FString> SessionProtocolVersions;  // SessionId → negotiated MCP-Protocol-Version
 	struct FSessionRateState
 	{
 		double InitializationCompletedAt = 0.0;

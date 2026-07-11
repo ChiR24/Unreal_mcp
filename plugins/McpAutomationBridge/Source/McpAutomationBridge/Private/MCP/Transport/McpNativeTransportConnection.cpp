@@ -55,10 +55,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 			if (HttpReq.CapabilityToken.IsEmpty() || HttpReq.CapabilityToken != Settings->CapabilityToken)
 			{
 				UE_LOG(LogMcpNativeTransport, Warning, TEXT("Capability token mismatch - rejecting connection"));
-				FString ErrorBody = FMcpJsonRpc::BuildError(
-					MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest,
-					TEXT("Invalid capability token"));
-				SendHttpResponse(ClientSocket, 401, TEXT("application/json"), ErrorBody, {}, HttpReq.Origin);
+				SendHttpResponse(ClientSocket, 401, TEXT("application/json"), FMcpJsonRpc::BuildError(MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest, TEXT("Invalid capability token")), {}, HttpReq.Origin);
 				ClientSocket->Close();
 				SocketSub->DestroySocket(ClientSocket);
 				return;
@@ -87,6 +84,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 				if (ActiveSessions.Remove(HttpReq.SessionId) > 0)
 				{
 					SessionRateStates.Remove(HttpReq.SessionId);
+					SessionProtocolVersions.Remove(HttpReq.SessionId);
 					UE_LOG(LogMcpNativeTransport, Log,
 						TEXT("Session terminated by client (remaining: %d)"),
 						ActiveSessions.Num());
@@ -121,6 +119,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 			SocketSub->DestroySocket(ClientSocket);
 			return;
 		}
+		if (!GuardProtocolVersionHeader(ClientSocket, HttpReq, nullptr, false)) return;
 		HandleGetMcp(ClientSocket, HttpReq.SessionId, HttpReq.Origin);
 		return;  // Socket parked — no close here
 	}
@@ -155,10 +154,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 
 	if (Rpc.bIsNotification && Rpc.Method == TEXT("initialize"))
 	{
-		FString ErrorBody = FMcpJsonRpc::BuildError(
-			MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest,
-			TEXT("initialize must include an id"));
-		SendHttpResponse(ClientSocket, 400, TEXT("application/json"), ErrorBody, {}, HttpReq.Origin);
+		SendHttpResponse(ClientSocket, 400, TEXT("application/json"), FMcpJsonRpc::BuildError(MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest, TEXT("initialize must include an id")), {}, HttpReq.Origin);
 		ClientSocket->Close();
 		SocketSub->DestroySocket(ClientSocket);
 		return;
@@ -194,6 +190,9 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 			return;
 		}
 	}
+
+	// MCP-Protocol-Version is required post-initialize; initialize is exempt.
+	if (Rpc.Method != TEXT("initialize") && !GuardProtocolVersionHeader(ClientSocket, HttpReq, Rpc.Id, true)) return;
 
 	// Notifications (no id) — 202 Accepted after session validation.
 	if (Rpc.bIsNotification)
@@ -255,6 +254,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 				FScopeLock Lock(&SessionMutex);
 				ActiveSessions.Remove(NewSessionId);
 				SessionRateStates.Remove(NewSessionId);
+				SessionProtocolVersions.Remove(NewSessionId);
 			}
 			CloseSessionConnections(NewSessionId);
 		}

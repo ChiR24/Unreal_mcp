@@ -17,7 +17,7 @@ FMcpNativeTransport::~FMcpNativeTransport()
 
 bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoadAllTools,
 	const FString& InUserInstructions, const FString& InListenHost,
-	bool bInAllowNonLoopback)
+	bool bInAllowNonLoopback, bool bInEnableGateway)
 {
 	if (Port <= 0 || Port > 65535)
 	{
@@ -29,6 +29,7 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 	ListenPort = Port;
 	UserInstructions = InUserInstructions;
 	bAllowNonLoopback = bInAllowNonLoopback;
+	bGatewayMode = bInEnableGateway;
 
 	ListenHost = InListenHost.IsEmpty() ? TEXT("127.0.0.1") : InListenHost;
 	if (ListenHost.Equals(TEXT("localhost"), ESearchCase::IgnoreCase))
@@ -279,6 +280,7 @@ void FMcpNativeTransport::Shutdown()
 		FScopeLock Lock(&SessionMutex);
 		ActiveSessions.Empty();
 		SessionRateStates.Empty();
+		SessionProtocolVersions.Empty();
 		ClientRateStates.Empty();
 	}
 	{

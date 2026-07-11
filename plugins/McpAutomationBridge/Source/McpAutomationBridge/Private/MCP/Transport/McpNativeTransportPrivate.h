@@ -31,3 +31,34 @@ inline bool IsValidSnakeCaseAction(const FString& S)
         if (!FChar::IsAlnum(S[i]) && S[i] != TEXT('_')) return false;
     return true;
 }
+
+// Native MCP protocol-version set. 2026-07-28 (a later RC) is intentionally not supported.
+inline const TArray<FString>& McpSupportedProtocolVersions()
+{
+    static const TArray<FString> Versions =
+    {
+        TEXT("2025-11-25"),
+        TEXT("2025-06-18"),
+        TEXT("2025-03-26")
+    };
+    return Versions;
+}
+
+// Latest supported version; the server negotiates down to this for unknown request versions.
+inline const FString& McpLatestProtocolVersion()
+{
+    static const FString Version(TEXT("2025-11-25"));
+    return Version;
+}
+
+// Used when a post-initialize request omits MCP-Protocol-Version and no session version is known.
+inline const FString& McpDefaultProtocolVersion()
+{
+    static const FString Version(TEXT("2025-03-26"));
+    return Version;
+}
+
+inline bool McpIsSupportedProtocolVersion(const FString& Version)
+{
+    return McpSupportedProtocolVersions().Contains(Version);
+}
