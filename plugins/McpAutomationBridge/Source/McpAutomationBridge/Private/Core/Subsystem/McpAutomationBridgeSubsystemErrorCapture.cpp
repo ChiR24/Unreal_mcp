@@ -98,6 +98,20 @@ UMcpAutomationBridgeSubsystem::GetCurrentErrorCapture()
     return CurrentErrorCapture;
 }
 
+void UMcpAutomationBridgeSubsystem::FRequestErrorCapture::Reset()
+{
+    ErrorMessages.Empty();
+    WarningMessages.Empty();
+    ErrorCount = 0;
+    WarningCount = 0;
+    bErrorMessagesTruncated = false;
+    bWarningMessagesTruncated = false;
+    bHasErrors = false;
+    bHasWarnings = false;
+    CapturingThreadId = 0;
+    bActive = false;
+}
+
 void UMcpAutomationBridgeSubsystem::BeginErrorCapture()
 {
     if (!RequestErrorDevice.IsValid())

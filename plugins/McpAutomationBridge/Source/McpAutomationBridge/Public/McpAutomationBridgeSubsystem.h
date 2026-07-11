@@ -194,19 +194,7 @@ public:
     uint32 CapturingThreadId = 0;
     bool bActive = false;
 
-    void Reset()
-    {
-      ErrorMessages.Empty();
-      WarningMessages.Empty();
-      ErrorCount = 0;
-      WarningCount = 0;
-      bErrorMessagesTruncated = false;
-      bWarningMessagesTruncated = false;
-      bHasErrors = false;
-      bHasWarnings = false;
-      CapturingThreadId = 0;
-      bActive = false;
-    }
+    void Reset();
   };
 
   FRequestErrorCapture& GetCurrentErrorCapture();
