@@ -65,11 +65,22 @@ bool HandleCreateMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
     IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
     FString ParentFolderPath = FPackageName::GetLongPackagePath(ValidatedPath);
+    bool bParentFolderCreated = false;
     if (!AssetRegistry.PathExists(FName(*ParentFolderPath))) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Parent folder does not exist: %s. Create the folder first or use an existing path."), *ParentFolderPath),
-                          TEXT("PARENT_FOLDER_NOT_FOUND"));
-      return true;
+      // Auto-create the parent chain instead of failing: the path already passed sanitization and
+      // IsValidLongPackageName above, and create_folder creates parents recursively — creating an
+      // asset in a fresh folder should not require a separate call. The old error remains the
+      // fallback for when directory creation itself fails.
+      // PathExists (asset registry) can lag a folder that already exists on disk; check the
+      // directory itself so parentFolderCreated stays truthful (MakeDirectory is idempotent).
+      const bool bAlreadyOnDisk = UEditorAssetLibrary::DoesDirectoryExist(ParentFolderPath);
+      if (!UEditorAssetLibrary::MakeDirectory(ParentFolderPath)) {
+        Bridge->SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Parent folder does not exist: %s. Create the folder first or use an existing path."), *ParentFolderPath),
+                            TEXT("PARENT_FOLDER_NOT_FOUND"));
+        return true;
+      }
+      bParentFolderCreated = !bAlreadyOnDisk;
     }
 
     // Check for existing asset collision to prevent UE crash
@@ -238,6 +249,9 @@ bool HandleCreateMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, NewMaterial);
+    if (bParentFolderCreated) {
+      Result->SetBoolField(TEXT("parentFolderCreated"), true);
+    }
     Bridge->SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Material '%s' created."), *Name),
                            Result);
