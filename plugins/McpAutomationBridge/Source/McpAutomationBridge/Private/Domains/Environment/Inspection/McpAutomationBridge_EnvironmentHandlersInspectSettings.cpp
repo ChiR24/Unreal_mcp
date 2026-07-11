@@ -182,7 +182,28 @@ bool HandleInspectSettingsAction(
         // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("get_performance_stats")))
         {
-            const double DeltaSeconds = FApp::GetDeltaTime();
+            // BUG-e85282: when a PIE/play session is active, measure THAT world (actor count + frame delta), not
+            // the editor world. GEditor->PlayWorld is the active PIE world (nullptr outside PIE). The thread
+            // timers below are process-global (they reflect whatever the engine is ticking) — flagged as such.
+            double DeltaSeconds = FApp::GetDeltaTime();
+            UWorld* StatWorld = nullptr;
+            FString WorldType = TEXT("None");
+            if (GEditor && GEditor->PlayWorld)
+            {
+                StatWorld = GEditor->PlayWorld;
+                WorldType = TEXT("PIE");
+                const double PieDelta = StatWorld->GetDeltaSeconds();
+                if (PieDelta > 0.0)
+                {
+                    DeltaSeconds = PieDelta;
+                }
+            }
+            else if (GEditor && GEditor->GetEditorWorldContext().World())
+            {
+                StatWorld = GEditor->GetEditorWorldContext().World();
+                WorldType = TEXT("Editor");
+            }
+
             const double FrameTimeMs = DeltaSeconds > 0.0 ? DeltaSeconds * 1000.0 : 0.0;
             const double EstimatedFps = DeltaSeconds > 0.0 ? 1.0 / DeltaSeconds : 0.0;
             const double GameThreadMs = FPlatformTime::ToMilliseconds(GGameThreadTime);
@@ -191,16 +212,17 @@ bool HandleInspectSettingsAction(
             const double GPUFrameMs = FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles());
 
             int32 ActorCount = 0;
-            if (GEditor && GEditor->GetEditorWorldContext().World())
+            if (StatWorld)
             {
-                UWorld* World = GEditor->GetEditorWorldContext().World();
-                for (TActorIterator<AActor> It(World); It; ++It)
+                for (TActorIterator<AActor> It(StatWorld); It; ++It)
                 {
                     ActorCount++;
                 }
             }
 
             Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetStringField(TEXT("worldType"), WorldType);
+            Resp->SetBoolField(TEXT("threadTimersAreProcessGlobal"), true);
             Resp->SetNumberField(TEXT("deltaSeconds"), DeltaSeconds);
             Resp->SetNumberField(TEXT("frameTimeMs"), FrameTimeMs);
             Resp->SetNumberField(TEXT("estimatedFps"), EstimatedFps);

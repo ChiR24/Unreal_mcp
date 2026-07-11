@@ -31,6 +31,14 @@ bool DispatchFallbackAutomationRequest(
     FString& OutConsumedHandlerLabel);
 }
 
+namespace McpAutomationBridge
+{
+// Returns the automation action currently executing on the bridge (empty when idle). Thread-safe; readable
+// off-thread even while a handler blocks the game thread, so external tooling (e.g. a watchdog) can attribute
+// a stall to the tool in flight. Publisher lives in Core/Requests/McpAutomationBridge_ProcessRequest.cpp.
+MCPAUTOMATIONBRIDGE_API FString GetInFlightAction();
+}
+
 #define MCP_DECLARE_ACTION_HANDLER(Name) bool Name(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 #define MCP_DECLARE_PAYLOAD_HANDLER(Name) bool Name(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 #include "McpAutomationBridgeSubsystemActionRoutingDeclarations.h"

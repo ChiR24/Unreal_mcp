@@ -5,7 +5,7 @@ import { executeAutomationRequest } from '../foundation/dispatch/common-handlers
 import type { AssetValidationResult, OperationResponse } from './system-handler-types.js';
 
 function hasMessage(value: unknown): value is { readonly message: unknown } {
-  return typeof value === 'object' && value !== null && 'message' in value;
+  return value !== null && typeof value === 'object' && 'message' in value;
 }
 
 function errorToString(error: unknown): string | null {
