@@ -144,16 +144,22 @@ jobs:
           jq --arg v "$VERSION" '.version = $v | .packages[] |= if .registryType == "npm" then .version = $v else . end' server.json > tmp && mv tmp server.json
           echo "✅ Updated server.json to $VERSION"
 
-      - name: Update src/index.ts
+      - name: Update McpAutomationBridge.uplugin
         env:
           FINAL_VERSION: ${{ steps.final_version.outputs.version }}
         run: |
           VERSION="$FINAL_VERSION"
+          jq --arg v "$VERSION" '.VersionName = $v' plugins/McpAutomationBridge/McpAutomationBridge.uplugin > tmp && mv tmp plugins/McpAutomationBridge/McpAutomationBridge.uplugin
+          echo "✅ Updated McpAutomationBridge.uplugin VersionName to $VERSION"
 
-          # Update only the DEFAULT_SERVER_VERSION fallback string (targeted replacement)
-          perl -0777 -i -pe "s/(const DEFAULT_SERVER_VERSION[\\s\\S]*?:\\s*)'[^']+';/\${1}'$VERSION';/" src/index.ts
-
-          echo "✅ Updated src/index.ts DEFAULT_SERVER_VERSION fallback to $VERSION"
+      - name: Update server-factory.ts fallback
+        env:
+          FINAL_VERSION: ${{ steps.final_version.outputs.version }}
+        run: |
+          VERSION="$FINAL_VERSION"
+          # Update only the SERVER_VERSION hardcoded fallback string (targeted replacement)
+          perl -0777 -i -pe "s/(const SERVER_VERSION[\\s\\S]*?:\s*)'[0-9]+\.[0-9]+\.[0-9]+';/\${1}'$VERSION';/" src/server/server-factory.ts
+          echo "✅ Updated src/server/server-factory.ts SERVER_VERSION fallback to $VERSION"
 
       - name: Verify no hardcoded npm versions remain
         env:
@@ -264,7 +270,7 @@ jobs:
             COMMIT_MESSAGE="chore: bump version to v$VERSION"
           fi
 
-          git add package.json package-lock.json server.json src/index.ts
+          git add package.json package-lock.json server.json plugins/McpAutomationBridge/McpAutomationBridge.uplugin src/server/server-factory.ts
 
           if [ "$CREATE_CHANGELOG" == "true" ]; then
             git add CHANGELOG.md
@@ -299,7 +305,8 @@ jobs:
           echo "### 📦 Files Updated:" >> $GITHUB_STEP_SUMMARY
           echo "- \`package.json\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`server.json\` (2 occurrences)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`src/index.ts\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`plugins/McpAutomationBridge/McpAutomationBridge.uplugin\` (VersionName)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`src/server/server-factory.ts\` (SERVER_VERSION fallback)" >> $GITHUB_STEP_SUMMARY
 
           if [ "$CREATE_CHANGELOG" == "true" ]; then
             echo "- \`CHANGELOG.md\`" >> $GITHUB_STEP_SUMMARY

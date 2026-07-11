@@ -40,7 +40,9 @@
     "test:smoke": "node --loader ts-node/esm scripts/smoke-test.ts",
     "test:native-parity": "node tests/native-mcp-parity-audit.mjs",
     "test:params": "npm run test:native-parity && node tests/parameter-combination-audit.mjs --static --strict --optional-strict",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "manifest:check": "node --loader ts-node/esm scripts/generate-gateway-manifest.ts --check",
+    "version:check": "vitest run tests/unit/version-consistency.test.ts"
   },
   "engines": {
     "node": ">=20.19.0"

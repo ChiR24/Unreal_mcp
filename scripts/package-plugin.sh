@@ -195,7 +195,11 @@ zip -r "$ZIP_PATH" McpAutomationBridge/ \
     -x "*.sym" \
     -x "*.dSYM/" \
     -x "*.dSYM/*" \
-    -x "McpAutomationBridge/Intermediate/*"
+    -x "McpAutomationBridge/Intermediate/*" \
+    -x "McpAutomationBridge/Binaries/*" \
+    -x "McpAutomationBridge/Saved/*" \
+    -x "McpAutomationBridge/.cache/*" \
+    -x "McpAutomationBridge/DerivedDataCache/*"
 python3 -c "
 import sys
 import zipfile

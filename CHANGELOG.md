@@ -46,6 +46,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Verification
 - Source compatibility remains guarded across the supported UE 5.x range; the release build and interactive live acceptance matrix are executed against Unreal Engine 5.7.4.
 
+### Changed
+- **Static `unreal` gateway tool replaces 23-tool public surface.** The TypeScript stdio transport and native MCP transport now expose a single `unreal` tool by default. The 23 canonical parent tools (`manage_asset`, `control_actor`, etc.) are internal and reachable only through the gateway's `search`, `describe`, `execute`, and `configure` operations. This reduces client context pressure and eliminates hallucinated tool/action calls.
+
+### Migration
+- **Breaking change for existing clients:** any client calling canonical tool names directly (`tools/call` with `name: "manage_asset"`, `name: "control_actor"`, etc.) will now receive an error. Update call sites to use the `unreal` gateway: call `search` to find capabilities, `describe` to get the exact action/parameter contract, then `execute` with `tool`, `action`, and `params`. To restore the legacy 23-tool surface temporarily, set `MCP_GATEWAY_MODE=false` in the TypeScript server environment. On the native MCP transport, disable **Enable Native Gateway** in Project Settings (Edit > Project Settings > Plugins > MCP Automation Bridge).
+
+### Documentation & CI
+- **Gateway migration and protocol docs** — documented default-on gateway mode for both the TypeScript stdio and native MCP transports, the `MCP_GATEWAY_MODE=false|0|no` TypeScript opt-out and the native **Enable Native Gateway** setting, the 2025-11-25 protocol negotiation plus `MCP-Protocol-Version` header guard (HTTP 400 on unsupported/missing), and the manifest generate/`--check` workflow. CI now uses ESLint 9 (`npx eslint . --max-warnings=0`) and adds `manifest:check`, native parity, parameter audit, and dependency audit gates; the `bump-version` workflow now updates `package.json`, `server.json`, `McpAutomationBridge.uplugin`, and the `server-factory.ts` fallback (the previously referenced `src/index.ts` constant no longer exists). Release and plugin archiving exclude `Binaries/`, `Intermediate/`, and `Saved/`.
+
+### Unclaimed evidence
+- **Live-editor acceptance is not claimed for this build.** Gateway behavior, 2025-11-25 negotiation, manifest generation, and parity/parameter audits are verified through source-contract tests and the build, not against a running Unreal Editor. The integration suite (`npm test`) requires a live editor plus the bridge plugin and is excluded from CI. Do not treat any unexecuted live-editor proof as verified.
+
 ### Migration
 - The internal `manage_post_process` C++ action has been folded into the expanded `manage_render` action (the `Render/McpAutomationBridge_RenderPostProcess*.cpp` files now dispatch through `manage_render`). Any client that called `manage_post_process` directly will now fail with `does not match prefix` — switch to `manage_render` and pass the desired sub-action via `subAction`. The reflection-capture resolution setter was renamed from `configure_capture_resolution` to `configure_reflection_capture_resolution`; the scene-capture path keeps the original `configure_capture_resolution` name. The `McpAutomationBridge_RenderHandlers.cpp` monolith is now a 74-line dispatcher; per-concern handlers live under `Render/McpAutomationBridge_Render*.cpp`.
 

@@ -115,16 +115,46 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           if [ -d "plugins/McpAutomationBridge" ]; then
+            # Exclude generated/editor build dirs so local paths and object
+            # files never leak into the distributed plugin archive.
             tar -czvf release-artifacts/McpAutomationBridge-plugin-${VERSION}.tar.gz \
+              --exclude='plugins/McpAutomationBridge/Binaries' \
+              --exclude='plugins/McpAutomationBridge/Intermediate' \
+              --exclude='plugins/McpAutomationBridge/Saved' \
+              --exclude='plugins/McpAutomationBridge/.cache' \
+              --exclude='plugins/McpAutomationBridge/DerivedDataCache' \
               plugins/McpAutomationBridge/
 
             zip -r release-artifacts/McpAutomationBridge-plugin-${VERSION}.zip \
-              plugins/McpAutomationBridge/
+              plugins/McpAutomationBridge/ \
+              -x '*/Binaries/*' \
+              -x '*/Intermediate/*' \
+              -x '*/Saved/*' \
+              -x '*/.cache/*' \
+              -x '*/DerivedDataCache/*'
 
             echo "Plugin archive created"
           else
             echo "Plugin directory not found, skipping plugin archive"
           fi
+
+      - name: Verify no generated build dirs in plugin archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -e
+          if [ ! -f "release-artifacts/McpAutomationBridge-plugin-${VERSION}.tar.gz" ]; then
+            echo "No plugin archive produced; skipping verification"
+            exit 0
+          fi
+          FORBIDDEN=$(tar -tzvf "release-artifacts/McpAutomationBridge-plugin-${VERSION}.tar.gz" \
+            | awk '{print $NF}' | grep -E '(^|/)(Binaries|Intermediate|Saved|\.cache|DerivedDataCache)(/|$)' || true)
+          if [ -n "$FORBIDDEN" ]; then
+            echo "❌ Plugin archive contains generated build dirs:"
+            echo "$FORBIDDEN"
+            exit 1
+          fi
+          echo "✅ Plugin archive excludes Binaries/Intermediate/Saved/.cache/DerivedDataCache"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1

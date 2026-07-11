@@ -320,6 +320,11 @@ ASSET_LIST_TTL_MS=10000
 # Custom content mount points (comma-separated)
 # Plugins with CanContainContent register mount points beyond /Game/.
 # MCP_ADDITIONAL_PATH_PREFIXES=/ProjectObject/,/ProjectAnimation/
+
+# Gateway mode (default: true)
+# MCP_GATEWAY_MODE=true exposes the single 'unreal' gateway tool.
+# Set to false to restore legacy 23-tool direct-listing mode.
+# MCP_GATEWAY_MODE=true
 ```
 
 ### LAN Access Configuration
@@ -344,7 +349,69 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 ## Available Tools
 
-**23 exposed MCP tools** in broad all-tools mode. Related actions live directly on their parent tools so clients load less context without losing capabilities.
+The MCP server exposes a single **`unreal`** gateway tool. The 23 canonical parent tools are internal and reachable exclusively through the gateway's four operations: `search`, `describe`, `execute`, and `configure`.
+
+### Gateway Workflow
+
+1. **`search`** — discover available tools by keyword, category, or action name
+2. **`describe`** — get the exact contract (actions, parameters, schema) for a specific tool
+3. **`execute`** — run one validated action on a canonical tool
+4. **`configure`** — manage internal tool enable/disable state (wraps `manage_tools`)
+
+Example call:
+
+```json
+{
+  "operation": "search",
+  "query": "asset"
+}
+```
+
+Then:
+
+```json
+{
+  "operation": "describe",
+  "tool": "manage_asset",
+  "action": "import_asset"
+}
+```
+
+Then:
+
+```json
+{
+  "operation": "execute",
+  "tool": "manage_asset",
+  "action": "import_asset",
+  "params": { "sourcePath": "/path/to/asset.fbx", "destinationPath": "/Game/Imported/asset" }
+}
+```
+
+### Opting Out (Legacy 23-Tool Mode)
+
+To restore the legacy surface where all 23 tools are directly addressable, set `MCP_GATEWAY_MODE=false`:
+
+```env
+MCP_GATEWAY_MODE=false
+```
+
+This affects the TypeScript stdio transport only. The native MCP transport honours the **Enable Native Gateway** project setting in Unreal Editor (Edit > Project Settings > Plugins > MCP Automation Bridge).
+
+### Gateway Protocol & Transport
+
+Both transports expose the same `unreal` gateway contract, but they are separate lifecycles. Do not route around their boundaries.
+
+- **TypeScript stdio transport** — `node dist/cli.js` talks to the Unreal plugin over a WebSocket bridge. Gateway mode is controlled by the `MCP_GATEWAY_MODE` environment variable (process-level, set at server start).
+- **Native MCP transport** — the plugin's built-in Streamable HTTP/SSE server at `/mcp` (no Node.js, no bridge). Gateway mode is controlled by the **Enable Native Gateway** project setting; toggling it requires an editor restart.
+
+Both surfaces negotiate the MCP protocol version at `initialize` and support `2025-11-25`, `2025-06-18`, and `2025-03-26`, negotiating down to the highest mutually supported version (`2025-11-25` is the latest). After `initialize`, every request must carry a valid `MCP-Protocol-Version` header; an unsupported or missing header returns HTTP 400. Cancellation (`notifications/cancelled`) is mapped to the queued operation and late responses are suppressed. Client `_meta.progressToken` values are preserved and echoed verbatim. `execution.taskSupport` is not advertised until task support is implemented. See [docs/protocol.md](docs/protocol.md) for the full contract.
+
+> ⚠️ **Live-editor evidence is not claimed for this build.** The gateway, protocol negotiation, manifest generation, and parity/parameter audits are verified through source-contract tests and the build, not against a running Unreal Editor. Integration tests (`npm test`) require a live editor plus the bridge plugin and are not part of CI. Do not assume live-editor coverage that was not executed.
+
+### Internal Canonical Tools (23)
+
+The gateway hides these 23 canonical parent tools. They are listed here for reference:
 
 <details>
 <summary><b>Core Tools</b></summary>
@@ -430,11 +497,30 @@ docker run -it --rm -e UE_PROJECT_PATH=/project unreal-mcp
 ## Development
 
 ```bash
-npm run build       # Build TypeScript
-npm run lint        # Run ESLint
-npm run test:unit   # Run unit tests
-npm run test:all    # Run all tests
+npm run build         # Clean + compile TypeScript to dist/
+npm run lint          # Run ESLint 9 (fail on any warning)
+npm run type-check    # tsc --noEmit
+npm run test:unit     # Vitest unit tests (no Unreal required)
+npm run test:smoke    # Offline mock in-memory MCP check (needs built dist/)
+npm run manifest:check   # Fail if generated gateway manifest artifacts drift
+npm run test:native-parity # TS vs native canonical tool/action equality
+npm run test:params      # Parity + strict parameter audit
+npm run version:check    # Assert all version sources agree
+npm test                 # Integration suite (needs a live Unreal Editor + bridge)
 ```
+
+### Gateway manifest generation
+
+The neutral gateway manifest is generated from `src/tools/catalog/consolidated-tool-definitions.ts` into three artifacts (runtime `.ts`/`.json` plus the native `.h`). Never hand-edit the generated files.
+
+```bash
+node --loader ts-node/esm scripts/generate-gateway-manifest.ts          # regenerate
+node --loader ts-node/esm scripts/generate-gateway-manifest.ts --check  # CI gate: fail on drift
+```
+
+### CI gates
+
+CI runs, in order: ESLint 9 (`npx eslint . --max-warnings=0`), TypeScript type-check, unit tests, `manifest:check`, native parity, parameter audit, and `npm audit --audit-level=moderate`. A plugin packaging job runs `scripts/package-plugin.sh` only when an Unreal Engine source root secret is provided (opt-in), because CI runners do not ship an engine. Release archives exclude `Binaries/`, `Intermediate/`, and `Saved/` so generated build dirs never leak.
 
 ---
 
