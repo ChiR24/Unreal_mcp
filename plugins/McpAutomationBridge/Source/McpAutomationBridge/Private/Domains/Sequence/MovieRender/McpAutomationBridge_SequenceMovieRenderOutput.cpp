@@ -5,6 +5,7 @@
 #include "Domains/Sequence/McpAutomationBridge_SequencePathSecurity.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceFrameRate.h"
 #include "Domains/Sequence/MovieRender/McpAutomationBridge_SequenceMovieRenderInternal.h"
+#include "Domains/Sequence/MovieRender/McpAutomationBridge_SequenceMovieRenderResourceLimits.h"
 
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"

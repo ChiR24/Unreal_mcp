@@ -164,7 +164,7 @@ void CaptureRenderOutputData(const FMoviePipelineOutputData &OutputData,
     for (const TPair<FMoviePipelinePassIdentifier,
                      FMoviePipelineRenderPassOutputData> &Pass :
          Shot.RenderPassData) {
-      State->ReportedRenderPasses.Add(Pass.Key.Name.ToString());
+      State->ReportedRenderPasses.Add(Pass.Key.Name);
       for (const FString &File : Pass.Value.FilePaths)
         State->ReportedOutputFiles.Add(File);
     }

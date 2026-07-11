@@ -220,7 +220,11 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		{
 			TSharedRef<FInternetAddr> RemoteAddr =
 				ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
-			if (ClientSocket->GetAddress(*RemoteAddr))
+			// FSocket::GetAddress is void as of UE 5.8 (was bool in earlier
+			// versions); it populates RemoteAddr unconditionally, so there is
+			// no success check to branch on anymore.
+			ClientSocket->GetAddress(*RemoteAddr);
+			if (RemoteAddr->IsValid())
 			{
 				ConnectionRemoteAddr = RemoteAddr->ToString(true);
 			}
