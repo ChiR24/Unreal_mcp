@@ -140,6 +140,20 @@ void SendBlueprintAddEventResult(
     const FString &RegistryKey, const FName &EventName,
     const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params,
     bool bSaved);
+bool McpBlueprintAddEventComponentBound(
+    const FBlueprintActionContext &Context, UBlueprint *BP, UEdGraph *EventGraph,
+    int32 EventPosX, int32 EventPosY, const FString &RegistryKey,
+    const FString &ComponentName, const FString &DelegateEventName,
+    const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params);
+bool McpBlueprintAddEventCustom(
+    const FBlueprintActionContext &Context, UBlueprint *BP, UEdGraph *EventGraph,
+    int32 EventPosX, int32 EventPosY, const FString &RegistryKey,
+    const FString &FinalType, const FString &CustomName,
+    const TArray<TSharedPtr<FJsonValue>> &Params);
+bool McpBlueprintAddEventStandard(
+    const FBlueprintActionContext &Context, UBlueprint *BP, UEdGraph *EventGraph,
+    int32 EventPosX, int32 EventPosY, const FString &RegistryKey,
+    const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params);
 void SendBlueprintAddFunctionResult(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UBlueprint *Blueprint,
