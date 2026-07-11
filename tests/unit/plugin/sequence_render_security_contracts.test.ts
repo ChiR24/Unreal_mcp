@@ -319,6 +319,32 @@ describe('sequence render and native security contracts', () => {
     expect(outputProof).toContain('TEXT("renderPasses")');
   });
 
+  it('exposes Movie Render Queue allowlisted executor contract from case aggregation', () => {
+    const happyCases = readFileSync(
+      resolve(
+        process.cwd(),
+        'tests',
+        'mcp-tools',
+        'utility',
+        'cinematics-cases',
+        'movie-render.cjs',
+      ),
+      'utf8',
+    );
+    const executor = privateSource(
+      'Domains',
+      'Sequence',
+      'MovieRender',
+      'McpAutomationBridge_SequenceMovieRenderExecutor.cpp',
+    );
+
+    expect(happyCases).toContain('MoviePipelineInProcessExecutor');
+    expect(happyCases).toContain(
+      '/MovieRenderPipeline/Blueprints/DefaultBurnIn.DefaultBurnIn_C',
+    );
+    expect(executor).toContain('MovieRenderExecutorClassAllowlist');
+  });
+
   it('rejects non-post-process materials before adding custom render passes', () => {
     const passes = privateSource(
       'Domains',
