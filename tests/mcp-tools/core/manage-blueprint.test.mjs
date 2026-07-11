@@ -100,6 +100,10 @@ const testCases = [
   // === ADD: add_function (blueprintPath + functionName) ===
   { scenario: 'ADD: add_function', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: BP_PATH, memberName: 'TestFunction', inputs: [{ name: 'InputValue', type: 'Float' }], outputs: [{ name: 'ReturnValue', type: 'Float' }], isPublic: true }, expected: 'success|already exists' },
 
+  // === DELETE: remove_function (blueprintPath + functionName) ===
+  // Removes the function added directly above; safe because no later case reuses TestFunction.
+  { scenario: 'DELETE: remove_function', toolName: 'manage_blueprint', arguments: { action: 'remove_function', blueprintPath: BP_PATH, functionName: 'TestFunction' }, expected: 'success|not found' },
+
   // === ADD: add_event (blueprintPath + eventType) ===
   { scenario: 'ADD: add_event', toolName: 'manage_blueprint', arguments: { action: 'add_event', blueprintPath: BP_PATH, eventType: 'Custom', customEventName: 'TestEvent', parameters: [{ name: 'Payload', type: 'String' }] }, expected: 'success|already exists' },
 
@@ -167,6 +171,10 @@ const testCases = [
 
   // === INFO: get_graph_details (blueprintPath + graphName) ===
   { scenario: 'INFO: get_graph_details', toolName: 'manage_blueprint', arguments: { action: 'get_graph_details', blueprintPath: BP_PATH, graphName: 'EventGraph' }, expected: 'success' },
+
+  // === INFO: get_graph_details with includePins (blueprintPath + graphName + includePins) ===
+  // Exercises the optional includePins flag so each node also carries pin/linkedTo flow in one call.
+  { scenario: 'INFO: get_graph_details with includePins', toolName: 'manage_blueprint', arguments: { action: 'get_graph_details', blueprintPath: BP_PATH, graphName: 'EventGraph', includePins: true }, expected: 'success' },
 
   // === INFO: get_pin_details (blueprintPath + nodeGuid + graphName) ===
   // Uses the real nodeId captured from the first Sequence node.
