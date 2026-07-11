@@ -43,7 +43,7 @@
     "type-check": "tsc --noEmit"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20.19.0"
   },
   "keywords": [
     "mcp",
@@ -58,7 +58,7 @@
   "author": "Unreal Engine MCP Team",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.25.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
     "ajv": "^8.17.1",
     "dotenv": "^17.2.3",
     "mcp-client-capabilities": "^0.0.14",
@@ -66,39 +66,16 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@eslint/js": "9.39.5",
     "@types/node": "^26.0.1",
     "@types/ws": "^8.18.1",
-    "@typescript-eslint/eslint-plugin": "^8.50.0",
-    "@typescript-eslint/parser": "^8.49.0",
+    "@typescript-eslint/eslint-plugin": "8.63.0",
+    "@typescript-eslint/parser": "8.63.0",
     "@vitest/coverage-v8": "^4.0.16",
-    "eslint": "^10.0.2",
+    "eslint": "9.39.5",
     "rimraf": "^6.1.2",
     "ts-node": "^10.9.2",
-    "typescript": "^7.0.2",
+    "typescript": "5.9.3",
     "vitest": "^4.0.16"
-  },
-  "overrides": {
-    "@typescript-eslint/eslint-plugin": {
-      "typescript": "^6.0.2"
-    },
-    "@typescript-eslint/parser": {
-      "typescript": "^6.0.2"
-    },
-    "@typescript-eslint/project-service": {
-      "typescript": "^6.0.2"
-    },
-    "@typescript-eslint/tsconfig-utils": {
-      "typescript": "^6.0.2"
-    },
-    "@typescript-eslint/type-utils": {
-      "typescript": "^6.0.2"
-    },
-    "@typescript-eslint/typescript-estree": {
-      "typescript": "^6.0.2"
-    },
-    "@typescript-eslint/utils": {
-      "typescript": "^6.0.2"
-    }
   }
 }
