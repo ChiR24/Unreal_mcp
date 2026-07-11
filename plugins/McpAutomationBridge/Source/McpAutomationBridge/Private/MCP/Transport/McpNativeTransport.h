@@ -79,6 +79,12 @@ public:
 	/** Clean up requests that have exceeded the timeout. Called from Tick. */
 	void CleanupStaleRequests();
 
+	// ─── Cancellation (notifications/cancelled) ─────────────────────────────
+	// Correlates the client's requestId to the inflight SSE connection, marks it
+	// cancelled (so the late response is suppressed) and cancels the underlying
+	// automation request. Safe to call for unknown/already-completed ids.
+	void HandleCancelledNotification(const TSharedPtr<FJsonObject>& Params);
+
 	// Dedicated-thread keepalive (immune to GameThread stalls).
 	void RunKeepaliveLoop();
 	void SweepNotificationKeepalives();
@@ -114,7 +120,22 @@ private:
 		FString SessionId;  // for touching ActiveSessions during long-running calls
 		FCriticalSection WriteMutex;  // protects socket writes from GameThread
 		std::atomic<bool> bMarkedForRemoval{false};  // set by failed writes, checked by CleanupStaleRequests
+		// Set by HandleCancelledNotification UNDER SSEConnectionsMutex when the
+		// client cancels this in-flight request via notifications/cancelled. Read
+		// by CompletePendingRequest (under/after SSEConnectionsMutex) to suppress
+		// the late response race-safely: because both paths serialize on
+		// SSEConnectionsMutex, the flag is the happens-before boundary, closing
+		// the window where the completion could check CancelledInternalRequestIds
+		// before HandleCancelledNotification populated it.
+		std::atomic<bool> bCancelled{false};
 		std::atomic<bool> bProgressWritePending{false};
+		// Client-supplied _meta.progressToken, echoed verbatim (type-preserving)
+		// in notifications/progress so the client can correlate streamed progress.
+		TSharedPtr<FJsonValue> ProgressToken;
+		bool bHasProgressToken = false;
+		// Canonical key of JsonRpcId (the client's tools/call id) used to
+		// correlate notifications/cancelled requestId -> this inflight request.
+		FString ClientRequestIdKey;
 	};
 
 	/** Persistent SSE notification stream (GET /mcp). */
@@ -155,6 +176,10 @@ private:
 		const FString& ContentType, const FString& Body,
 		const TMap<FString, FString>& ExtraHeaders = {},
 		const FString& CorsOrigin = FString());
+	// Send a prebuilt JSON-RPC body and tear down the client socket. Shared by
+	// the early-return error paths in HandleToolsCall so each stays a one-liner.
+	void SendBodyAndClose(FSocket* ClientSocket, const FString& Body,
+		int32 Status, const FString& CorsOrigin);
 	bool SendSSEHeaders(FSocket* Socket, const FString& SessionId,
 		const FString& CorsOrigin = FString());
 	static bool WriteSSEEvent(FSSEConnection& Conn, const FString& EventData);
@@ -175,21 +200,24 @@ private:
 	// Route a tools/call whose name is the 'unreal' gateway tool.
 	void HandleGatewayCall(
 		const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
-		FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin);
+		FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
+		const TSharedPtr<FJsonValue>& ProgressToken = nullptr);
 
 	// Gateway mode pre-dispatch: route 'unreal' or reject a direct canonical call.
 	// Returns true when it handled (or rejected) the call so the caller returns.
 	bool HandleGatewayModePreDispatch(
 		const FString& ToolName, const TSharedPtr<FJsonObject>& Arguments,
 		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
-		const FString& SessionId, const FString& CorsOrigin);
+		const FString& SessionId, const FString& CorsOrigin,
+		const TSharedPtr<FJsonValue>& ProgressToken = nullptr);
 
 	// Shared SSE streaming + subsystem queue path used by both canonical and
 	// gateway execute calls. DispatchAction + Arguments are already resolved.
 	void StreamToolCall(
 		const FString& ToolName, const FString& DispatchAction,
 		const TSharedPtr<FJsonObject>& Arguments, const TSharedPtr<FJsonValue>& Id,
-		FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin);
+		FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
+		const TSharedPtr<FJsonValue>& ProgressToken = nullptr);
 
 	// Session validation
 	ESessionValidationResult ValidateSession(const FString& SessionId, FString& OutError);
@@ -304,6 +332,14 @@ private:
 	TMap<FString, TSharedPtr<FSSEConnection>> SSEConnections;
 	mutable FCriticalSection SSEConnectionsMutex;
 
+	// Cancellation (notifications/cancelled): maps the client's JSON-RPC id key
+	// to the internal SSE/automation request id, and tracks which internal ids
+	// were cancelled so the late completion response is suppressed (not written
+	// to the client). Guarded by CancelledRequestsMutex.
+	TMap<FString, FString> CancelledClientIdToInternal;  // client id key -> internal request id
+	TSet<FString> CancelledInternalRequestIds;            // internal ids to suppress
+	mutable FCriticalSection CancelledRequestsMutex;
+
 	// Persistent notification streams (GET /mcp — StreamId → stream)
 	TMap<FString, TSharedPtr<FNotificationStream>> NotificationStreams;
 	mutable FCriticalSection NotificationStreamsMutex;
@@ -330,6 +366,11 @@ private:
 	//     collection mutex is held; it is never acquired before or instead of the
 	//     collection mutex. See WriteSSEEvent, WriteNotificationEvent,
 	//     WriteNotificationKeepalive.
+	//   * CancelledRequestsMutex is taken ONLY after SSEConnectionsMutex and only
+	//     ever before a per-connection WriteMutex. It guards the cancellation
+	//     sets and is never held while acquiring SSEConnectionsMutex,
+	//     NotificationStreamsMutex, or SessionMutex — so it cannot participate in
+	//     a lock-order cycle. See HandleCancelledNotification / CompletePendingRequest.
 	//   * CloseSessionConnections is the only function that takes multiple
 	//     collection mutexes (Log → Notification → SSE). It does not take
 	//     SessionMutex and is safe because it operates after the session has

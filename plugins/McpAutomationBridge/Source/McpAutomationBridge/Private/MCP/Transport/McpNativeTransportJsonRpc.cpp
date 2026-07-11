@@ -2,32 +2,37 @@
 #include "MCP/Transport/McpNativeTransportArgumentValidation.h"
 #include "MCP/Transport/McpNativeTransportTimeoutPolicy.h"
 
+// Send a prebuilt JSON-RPC body and tear down the client socket. Shared by the
+// early-return error paths in HandleToolsCall so each stays a one-liner.
+void FMcpNativeTransport::SendBodyAndClose(FSocket* ClientSocket,
+	const FString& Body, int32 Status, const FString& CorsOrigin)
+{
+	SendHttpResponse(ClientSocket, Status, TEXT("application/json"), Body, {}, CorsOrigin);
+	ClientSocket->Close();
+	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+	if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+}
+
 // ─── Tools Call (SSE streaming) ─────────────────────────────────────────────
 
 void FMcpNativeTransport::HandleToolsCall(
 	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
 	FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin)
 {
-	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-
 	if (!Params.IsValid())
 	{
-		FString ErrorBody = FMcpJsonRpc::BuildError(
-			Id, FMcpJsonRpc::ErrorInvalidParams, TEXT("Missing params"));
-		SendHttpResponse(ClientSocket, 200, TEXT("application/json"), ErrorBody, {}, CorsOrigin);
-		ClientSocket->Close();
-		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+		SendBodyAndClose(ClientSocket,
+			FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidParams, TEXT("Missing params")),
+			200, CorsOrigin);
 		return;
 	}
 
 	FString ToolName;
 	if (!Params->TryGetStringField(TEXT("name"), ToolName))
 	{
-		FString ErrorBody = FMcpJsonRpc::BuildError(
-			Id, FMcpJsonRpc::ErrorInvalidParams, TEXT("Missing tool name"));
-		SendHttpResponse(ClientSocket, 200, TEXT("application/json"), ErrorBody, {}, CorsOrigin);
-		ClientSocket->Close();
-		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+		SendBodyAndClose(ClientSocket,
+			FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidParams, TEXT("Missing tool name")),
+			200, CorsOrigin);
 		return;
 	}
 
@@ -38,33 +43,40 @@ void FMcpNativeTransport::HandleToolsCall(
 	{
 		if (ArgsValue->Type != EJson::Object)
 		{
-			FString ErrorBody = FMcpJsonRpc::BuildError(
-				Id, FMcpJsonRpc::ErrorInvalidParams,
-				TEXT("'arguments' must be an object if provided"));
-			SendHttpResponse(ClientSocket, 200, TEXT("application/json"), ErrorBody, {}, CorsOrigin);
-			ClientSocket->Close();
-			if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+			SendBodyAndClose(ClientSocket,
+				FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidParams,
+					TEXT("'arguments' must be an object if provided")),
+				200, CorsOrigin);
 			return;
 		}
 		Arguments = ArgsValue->AsObject();
 	}
 
-	if (!Arguments.IsValid())
+	if (!Arguments.IsValid()) Arguments = MakeShared<FJsonObject>();
+
+	// Gateway mode: route 'unreal' via the gateway; reject direct canonical calls.
+	// Capture the client's _meta.progressToken (if any) and thread it through the
+	// gateway so streamed notifications/progress echo the client's own token.
+	TSharedPtr<FJsonValue> ProgressToken;
+	const TSharedPtr<FJsonObject>* ProgressMeta = nullptr;
+	if (Params.IsValid() && Params->TryGetObjectField(TEXT("_meta"), ProgressMeta) && ProgressMeta)
 	{
-		Arguments = MakeShared<FJsonObject>();
+		const TSharedPtr<FJsonValue>* TokenValue = (*ProgressMeta)->Values.Find(TEXT("progressToken"));
+		if (TokenValue && TokenValue->IsValid())
+		{
+			ProgressToken = *TokenValue;
+		}
 	}
+	if (bGatewayMode && HandleGatewayModePreDispatch(ToolName, Arguments, Id, ClientSocket, SessionId, CorsOrigin, ProgressToken)) return;
 
 	// Enforce tool enabled check — tools/list filters, tools/call must also enforce
 	if (!ToolManager.IsToolEnabled(ToolName))
 	{
-		TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
-			false,
-			FString::Printf(TEXT("Tool '%s' is not enabled"), *ToolName),
-			nullptr, TEXT("TOOL_DISABLED"));
-		FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
-		SendHttpResponse(ClientSocket, 200, TEXT("application/json"), Body, {}, CorsOrigin);
-		ClientSocket->Close();
-		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+		SendBodyAndClose(ClientSocket,
+			FMcpJsonRpc::BuildResponse(Id, FMcpJsonRpc::BuildToolResult(false,
+				FString::Printf(TEXT("Tool '%s' is not enabled"), *ToolName),
+				nullptr, TEXT("TOOL_DISABLED"))),
+			200, CorsOrigin);
 		return;
 	}
 
@@ -84,16 +96,11 @@ void FMcpNativeTransport::HandleToolsCall(
 			? FString::Printf(
 				TEXT("Tool '%s' could not validate its arguments"), *ToolName)
 			: ArgumentErrorMessage;
-		TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
-			false, Message, nullptr,
-			ArgumentErrorCode.IsEmpty()
-				? TEXT("INVALID_TOOL_ARGUMENT")
-				: ArgumentErrorCode);
-		const FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
-		SendHttpResponse(
-			ClientSocket, 200, TEXT("application/json"), Body, {}, CorsOrigin);
-		ClientSocket->Close();
-		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+		SendBodyAndClose(ClientSocket,
+			FMcpJsonRpc::BuildResponse(Id, FMcpJsonRpc::BuildToolResult(false, Message,
+				nullptr, ArgumentErrorCode.IsEmpty()
+					? TEXT("INVALID_TOOL_ARGUMENT") : ArgumentErrorCode)),
+			200, CorsOrigin);
 		return;
 	}
 
@@ -101,6 +108,7 @@ void FMcpNativeTransport::HandleToolsCall(
 	TSharedPtr<FSSEConnection> Conn = MakeShared<FSSEConnection>();
 	Conn->Socket = ClientSocket;
 	Conn->JsonRpcId = Id;
+	Conn->ClientRequestIdKey = McpJsonRpcIdKey(Id);
 	Conn->StartTime = FPlatformTime::Seconds();
 	const UMcpAutomationBridgeSettings* Settings =
 		GetDefault<UMcpAutomationBridgeSettings>();
@@ -151,26 +159,19 @@ void FMcpNativeTransport::HandleToolsCall(
 	}
 	if (bSessionInvalid)
 	{
-		const FString Body = FMcpJsonRpc::BuildError(
-			Id, FMcpJsonRpc::ErrorInvalidRequest,
-			TEXT("Invalid or expired session ID"));
-		SendHttpResponse(
-			ClientSocket, 404, TEXT("application/json"), Body, {}, CorsOrigin);
-		ClientSocket->Close();
-		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+		SendBodyAndClose(ClientSocket,
+			FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidRequest,
+				TEXT("Invalid or expired session ID")),
+			404, CorsOrigin);
 		return;
 	}
 	if (bPendingLimitReached)
 	{
-		TSharedPtr<FJsonObject> ToolResult =
-			FMcpJsonRpc::BuildToolResult(
-				false, TEXT("Native MCP pending tool-call limit reached"),
-				nullptr, TEXT("TOO_MANY_PENDING_TOOL_CALLS"));
-		const FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
-		SendHttpResponse(
-			ClientSocket, 429, TEXT("application/json"), Body, {}, CorsOrigin);
-		ClientSocket->Close();
-		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+		SendBodyAndClose(ClientSocket,
+			FMcpJsonRpc::BuildResponse(Id, FMcpJsonRpc::BuildToolResult(false,
+				TEXT("Native MCP pending tool-call limit reached"),
+				nullptr, TEXT("TOO_MANY_PENDING_TOOL_CALLS"))),
+			429, CorsOrigin);
 		return;
 	}
 
@@ -184,6 +185,7 @@ void FMcpNativeTransport::HandleToolsCall(
 			if (!bHeadersSent)
 			{
 				Conn->Socket->Close();
+				ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 				if (SocketSub) SocketSub->DestroySocket(Conn->Socket);
 				Conn->Socket = nullptr;
 			}

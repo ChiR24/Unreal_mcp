@@ -199,6 +199,8 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 	{
 		UE_LOG(LogMcpNativeTransport, Log,
 			TEXT("Received notification: %s"), *Rpc.Method);
+		// Cancellation: route notifications/cancelled to the correlation handler.
+		if (Rpc.Method == TEXT("notifications/cancelled")) HandleCancelledNotification(Rpc.Params);
 		SendHttpResponse(ClientSocket, 202, TEXT("text/plain"), FString(), {}, HttpReq.Origin);
 		ClientSocket->Close();
 		SocketSub->DestroySocket(ClientSocket);

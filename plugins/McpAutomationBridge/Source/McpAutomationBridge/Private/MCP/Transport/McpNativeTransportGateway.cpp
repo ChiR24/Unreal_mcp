@@ -8,7 +8,8 @@
 
 void FMcpNativeTransport::HandleGatewayCall(
 	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
-	FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin)
+	FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
+	const TSharedPtr<FJsonValue>& ProgressToken)
 {
 	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 
@@ -189,7 +190,7 @@ void FMcpNativeTransport::HandleGatewayCall(
 		}
 
 		// Reuse the existing dispatch action resolution + subsystem queue path.
-		StreamToolCall(Tool, DispatchAction, ResolvedArgs, Id, ClientSocket, SessionId, CorsOrigin);
+		StreamToolCall(Tool, DispatchAction, ResolvedArgs, Id, ClientSocket, SessionId, CorsOrigin, ProgressToken);
 		return;
 	}
 
@@ -201,14 +202,15 @@ void FMcpNativeTransport::HandleGatewayCall(
 bool FMcpNativeTransport::HandleGatewayModePreDispatch(
 	const FString& ToolName, const TSharedPtr<FJsonObject>& Arguments,
 	const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
-	const FString& SessionId, const FString& CorsOrigin)
+	const FString& SessionId, const FString& CorsOrigin,
+	const TSharedPtr<FJsonValue>& ProgressToken)
 {
 	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 
 	// Only the static 'unreal' tool is exposed in gateway mode.
 	if (ToolName == TEXT("unreal"))
 	{
-		HandleGatewayCall(Arguments, Id, ClientSocket, SessionId, CorsOrigin);
+		HandleGatewayCall(Arguments, Id, ClientSocket, SessionId, CorsOrigin, ProgressToken);
 		return true;
 	}
 

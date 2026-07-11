@@ -30,9 +30,43 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		return true;  // Already cleaned up
 	}
 
-	// Signal any snapshot holders (e.g. BroadcastToolsListChanged) that
-	// this connection is being torn down — prevents them from attempting writes.
+	// Late-response suppression: if this request was cancelled via
+	// notifications/cancelled, do not deliver a result to the client. Close the
+	// SSE socket so the stream ends cleanly; the subsystem's eventual completion
+	// is intentionally dropped (the client already abandoned the request).
+	// bCancelled is the race-safe primary signal: it is set by
+	// HandleCancelledNotification under SSEConnectionsMutex (the lock we just
+	// released after removing this conn), so whichever thread took that mutex
+	// first wins deterministically. CancelledInternalRequestIds is consulted as
+	// a secondary safeguard and cleared for accounting.
+	bool bCancelled = Conn->bCancelled.load();
+	if (!bCancelled)
+	{
+		FScopeLock Lock(&CancelledRequestsMutex);
+		if (CancelledInternalRequestIds.Contains(RequestId))
+		{
+			CancelledInternalRequestIds.Remove(RequestId);
+			CancelledClientIdToInternal.Remove(Conn->ClientRequestIdKey);
+			bCancelled = true;
+		}
+	}
 	Conn->bMarkedForRemoval.store(true);
+
+	if (bCancelled)
+	{
+		FScopeLock WriteLock(&Conn->WriteMutex);
+		if (Conn->Socket)
+		{
+			Conn->Socket->Close();
+			ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+			if (SocketSub)
+			{
+				SocketSub->DestroySocket(Conn->Socket);
+			}
+			Conn->Socket = nullptr;
+		}
+		return true;
+	}
 
 	// Build final JSON-RPC result (cheap, no I/O)
 	TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
@@ -129,9 +163,15 @@ void FMcpNativeTransport::SendSSEProgressUpdate(
 		}
 	}
 
-	// Build progress JSON before offloading (cheap, no I/O)
+	// Build progress JSON before offloading (cheap, no I/O). Echo the client's
+	// own progressToken when present so it can correlate the notification to its
+	// request; otherwise fall back to the internal request id (preserves the
+	// prior behavior for token-less clients).
+	TSharedPtr<FJsonValue> Token = (Conn->bHasProgressToken && Conn->ProgressToken.IsValid())
+		? Conn->ProgressToken
+		: MakeShared<FJsonValueString>(RequestId);
 	FString ProgressJson = FMcpJsonRpc::BuildProgressNotification(
-		RequestId, Percent, 100.0f, Message);
+		Token, Percent, 100.0f, Message);
 
 	FString CapturedRequestId = RequestId;
 	PendingAsyncWrites.fetch_add(1);

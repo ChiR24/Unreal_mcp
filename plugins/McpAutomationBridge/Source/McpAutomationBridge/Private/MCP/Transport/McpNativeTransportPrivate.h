@@ -32,6 +32,24 @@ inline bool IsValidSnakeCaseAction(const FString& S)
     return true;
 }
 
+// Canonical key for a JSON-RPC request id (string or number) so an incoming
+// notifications/cancelled requestId correlates to the inflight SSE connection
+// whose JsonRpcId matches. Number ids are keyed by exact value (LexToString);
+// null/object/array/bool ids are unsupported and key empty.
+inline FString McpJsonRpcIdKey(const TSharedPtr<FJsonValue>& Id)
+{
+	if (!Id.IsValid()) return FString();
+	if (Id->Type == EJson::String)
+	{
+		FString S; Id->TryGetString(S); return S;
+	}
+	if (Id->Type == EJson::Number)
+	{
+		return LexToString(Id->AsNumber());
+	}
+	return FString();
+}
+
 // Native MCP protocol-version set. 2026-07-28 (a later RC) is intentionally not supported.
 inline const TArray<FString>& McpSupportedProtocolVersions()
 {

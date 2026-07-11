@@ -260,8 +260,15 @@ void FMcpNativeTransport::Shutdown()
 				}
 			}
 		}
-		SSEConnections.Empty();
-	}
+			SSEConnections.Empty();
+		}
+		// Drop any cancellation markers; the connections they referenced are gone,
+		// so leaving them would only be harmless-but-stale state across a restart.
+		{
+			FScopeLock Lock(&CancelledRequestsMutex);
+			CancelledInternalRequestIds.Empty();
+			CancelledClientIdToInternal.Empty();
+		}
 
 	// Close all persistent notification streams
 	{

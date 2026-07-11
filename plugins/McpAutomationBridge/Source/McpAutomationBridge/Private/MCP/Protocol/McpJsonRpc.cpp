@@ -212,10 +212,17 @@ TSharedPtr<FJsonObject> FMcpJsonRpc::BuildToolResult(
 }
 
 FString FMcpJsonRpc::BuildProgressNotification(
-	const FString& ProgressToken, float Progress, float Total, const FString& Message)
+	const TSharedPtr<FJsonValue>& ProgressToken, float Progress, float Total, const FString& Message)
 {
 	auto Params = MakeShared<FJsonObject>();
-	Params->SetStringField(TEXT("progressToken"), ProgressToken);
+	if (ProgressToken.IsValid())
+	{
+		Params->SetField(TEXT("progressToken"), ProgressToken);
+	}
+	else
+	{
+		Params->SetStringField(TEXT("progressToken"), FString());
+	}
 	Params->SetNumberField(TEXT("progress"), static_cast<double>(Progress));
 	Params->SetNumberField(TEXT("total"), static_cast<double>(Total));
 	if (!Message.IsEmpty())

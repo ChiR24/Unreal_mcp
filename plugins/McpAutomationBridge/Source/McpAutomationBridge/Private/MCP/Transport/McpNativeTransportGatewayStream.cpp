@@ -6,7 +6,8 @@
 void FMcpNativeTransport::StreamToolCall(
 	const FString& ToolName, const FString& DispatchAction,
 	const TSharedPtr<FJsonObject>& Arguments, const TSharedPtr<FJsonValue>& Id,
-	FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin)
+	FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
+	const TSharedPtr<FJsonValue>& ProgressToken)
 {
 	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 
@@ -14,6 +15,9 @@ void FMcpNativeTransport::StreamToolCall(
 	TSharedPtr<FSSEConnection> Conn = MakeShared<FSSEConnection>();
 	Conn->Socket = ClientSocket;
 	Conn->JsonRpcId = Id;
+	Conn->ClientRequestIdKey = McpJsonRpcIdKey(Id);
+	Conn->ProgressToken = ProgressToken;
+	Conn->bHasProgressToken = ProgressToken.IsValid();
 	Conn->StartTime = FPlatformTime::Seconds();
 	const UMcpAutomationBridgeSettings* Settings =
 		GetDefault<UMcpAutomationBridgeSettings>();
