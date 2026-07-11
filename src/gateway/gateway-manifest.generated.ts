@@ -202,6 +202,7 @@ export const gatewayManifest = {
         "constA",
         "constB",
         "coordinateIndex",
+        "cursor",
         "curvePoints",
         "defaultValue",
         "depth",
@@ -225,6 +226,7 @@ export const gatewayManifest = {
         "height",
         "inBlack",
         "inWhite",
+        "includeTags",
         "inputName",
         "inputType",
         "inputs",
@@ -256,6 +258,7 @@ export const gatewayManifest = {
         "outputType",
         "overwrite",
         "packagePaths",
+        "pagination",
         "parameterName",
         "parameterType",
         "parentMaterial",
@@ -461,6 +464,28 @@ export const gatewayManifest = {
           },
           "offset": {
             "type": "number"
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque pagination cursor returned by a previous list response. Forward verbatim to resume listing from the next page."
+          },
+          "includeTags": {
+            "type": "boolean",
+            "description": "When true, include asset tags in the listing response. Default false."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Optional nested pagination control. limit/offset may also be supplied at the top level.",
+            "properties": {
+              "limit": {
+                "type": "number",
+                "description": "Maximum number of items to return per page."
+              },
+              "offset": {
+                "type": "number",
+                "description": "Zero-based offset into the full result set."
+              }
+            }
           },
           "sourcePath": {
             "type": "string",

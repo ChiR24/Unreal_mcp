@@ -4,7 +4,7 @@ import { AutomationBridge } from '../automation/index.js';
 import { UnrealBridge } from '../unreal-bridge.js';
 
 function createAssetResources(assets: Array<Record<string, unknown>> = []) {
-  const sendAutomationRequest = vi.fn(async () => ({
+  const sendAutomationRequest = vi.fn(async (_action: string, _payload?: Record<string, unknown>) => ({
     success: true,
     result: {
       folders_list: [],
@@ -74,5 +74,24 @@ describe('AssetResources cache TTL parsing', () => {
     const result = await resources.listPaged('/Game', 1.8, 200.5);
 
     expect(result).toMatchObject({ page: 1, pageSize: 50, count: 10, totalCount: 60, hasMore: false });
+  });
+});
+
+describe('AssetResources list automation request', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('sends the canonical path field (not directory) so the assets resource lists the requested directory', async () => {
+    const assets = [{ n: 'A', p: '/Game/MyFolder/A', c: 'Object' }];
+    const { resources, sendAutomationRequest } = createAssetResources(assets);
+
+    await resources.list('/Game/MyFolder', false, 25);
+
+    expect(sendAutomationRequest).toHaveBeenCalledTimes(1);
+    const [action, payload] = sendAutomationRequest.mock.calls[0] as [string, Record<string, unknown>];
+    expect(action).toBe('list');
+    expect(payload).toMatchObject({ path: '/Game/MyFolder', limit: 25, recursive: false });
+    expect(payload).not.toHaveProperty('directory');
   });
 });
