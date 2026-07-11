@@ -24,6 +24,22 @@ const FOLDER_DELETE_TEST_FOLDER = `${TEST_FOLDER}/LevelSequenceFolderDelete_${ts
 const FOLDER_DELETE_SEQUENCE_NAME = `SEQ_FolderDelete_${ts}`;
 const FOLDER_DELETE_SEQUENCE_PATH = `${FOLDER_DELETE_TEST_FOLDER}/${FOLDER_DELETE_SEQUENCE_NAME}`;
 
+// === CINEMATICS (L1) CASE STATE ===
+const MASTER_NAME = `SEQ_Master_${ts}`;
+const MASTER_NAME_2 = `SEQ_MasterB_${ts}`;
+const MASTER_PATH = `${TEST_FOLDER}/${MASTER_NAME}`;
+const MASTER_PATH_2 = `${TEST_FOLDER}/${MASTER_NAME_2}`;
+const SUB_PATH = `${SEQUENCE_PATH}_Sub_${ts}`;
+const SUB_PATH_2 = `${SEQUENCE_PATH}_SubB_${ts}`;
+const CINE_CAM = `CineCam_${ts}`;
+const CINE_CAM_2 = `CineCamB_${ts}`;
+const RIG_NAME = `CameraRig_${ts}`;
+const CRANE_NAME = `CameraCrane_${ts}`;
+const SHAKE_PATH = '/Engine/Sequencer/DefaultCameraShake.DefaultCameraShake';
+const MAT_PATH = '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial';
+const ANIM_PATH = '/Game/Animations/SequenceAnim.Default';
+const SKEL_PATH = '/Game/Characters/SequenceSkeleton.Default';
+
 const testCases = [
   // === SETUP ===
   { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
@@ -71,6 +87,70 @@ const testCases = [
   { scenario: 'INFO: list_tracks', toolName: 'manage_sequence', arguments: { action: 'list_tracks', path: SEQUENCE_PATH }, expected: 'success' },
   { scenario: 'DELETE: remove_track', toolName: 'manage_sequence', arguments: { action: 'remove_track', path: SEQUENCE_PATH, trackName: TRACK_NAME }, expected: 'success|not found' },
   { scenario: 'INFO: list_track_types', toolName: 'manage_sequence', arguments: { action: 'list_track_types' }, expected: 'success' },
+
+  // === CINEMATICS TRACKS / RIG (L1) — close parameter-combination coverage gaps ===
+  // create_master_sequence
+  { scenario: 'CINEMATICS: create_master_sequence', toolName: 'manage_sequence', arguments: { action: 'create_master_sequence', name: MASTER_NAME, path: TEST_FOLDER_ALIAS }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: create_master_sequence optional', toolName: 'manage_sequence', arguments: { action: 'create_master_sequence', name: MASTER_NAME_2, path: TEST_FOLDER_ALIAS, assetPath: MASTER_PATH_2, displayName: 'MasterSequenceB', save: true }, expected: 'success|already exists' },
+  // add_subsequence
+  { scenario: 'CINEMATICS: add_subsequence', toolName: 'manage_sequence', arguments: { action: 'add_subsequence', sequencePath: SEQUENCE_PATH, subsequencePath: SUB_PATH }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_subsequence optional', toolName: 'manage_sequence', arguments: { action: 'add_subsequence', sequencePath: SEQUENCE_PATH, subsequencePath: SUB_PATH_2, masterSequencePath: MASTER_PATH, displayName: 'SubSequenceB', bindingGuid: '00000000-0000-0000-0000-000000000000' }, expected: 'success|already exists' },
+  // add_shot_track
+  { scenario: 'CINEMATICS: add_shot_track', toolName: 'manage_sequence', arguments: { action: 'add_shot_track', sequencePath: SEQUENCE_PATH, shotName: 'Shot_01' }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_shot_track optional', toolName: 'manage_sequence', arguments: { action: 'add_shot_track', sequencePath: SEQUENCE_PATH, shotSequencePath: `${SEQUENCE_PATH}_Shot`, displayName: 'ShotOne', durationFrames: 100 }, expected: 'success|already exists' },
+  // configure_shot_settings
+  { scenario: 'CINEMATICS: configure_shot_settings', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', sequencePath: SEQUENCE_PATH, shotName: 'Shot_01', durationFrames: 120 }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_shot_settings optional', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', sequencePath: SEQUENCE_PATH, shotName: 'Shot_01', displayName: 'ShotOne', properties: { takeNumber: 1 } }, expected: 'success' },
+  // create_cine_camera_actor
+  { scenario: 'CINEMATICS: create_cine_camera_actor', toolName: 'manage_sequence', arguments: { action: 'create_cine_camera_actor', sequencePath: SEQUENCE_PATH, cameraName: CINE_CAM }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: create_cine_camera_actor optional', toolName: 'manage_sequence', arguments: { action: 'create_cine_camera_actor', sequencePath: SEQUENCE_PATH, cameraActorName: CINE_CAM_2, label: 'CineCameraB', location: { x: 0, y: 0, z: 200 }, rotation: { pitch: 0, yaw: 0, roll: 0 }, save: true }, expected: 'success|already exists' },
+  // configure_camera_settings
+  { scenario: 'CINEMATICS: configure_camera_settings', toolName: 'manage_sequence', arguments: { action: 'configure_camera_settings', sequencePath: SEQUENCE_PATH, cameraName: CINE_CAM, currentAperture: 2.8 }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_camera_settings optional', toolName: 'manage_sequence', arguments: { action: 'configure_camera_settings', sequencePath: SEQUENCE_PATH, cameraName: CINE_CAM, actorName: CINE_CAM, aperture: 4.0, currentFocalLength: 35, focalLength: 50, focusDistance: 1000, focus: 500, manualFocusDistance: 750, filmback: '35mm', lens: 'Anamorphic', sensorHeight: 24, sensorWidth: 36 }, expected: 'success' },
+  // add_camera_cut_track
+  { scenario: 'CINEMATICS: add_camera_cut_track', toolName: 'manage_sequence', arguments: { action: 'add_camera_cut_track', sequencePath: SEQUENCE_PATH, cameraName: CINE_CAM }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_camera_cut_track optional', toolName: 'manage_sequence', arguments: { action: 'add_camera_cut_track', sequencePath: SEQUENCE_PATH, cameraActorName: CINE_CAM, sectionName: 'CameraCut', sectionIndex: 0, label: 'CameraCutTrack' }, expected: 'success|already exists' },
+  // add_camera_shake_track
+  { scenario: 'CINEMATICS: add_camera_shake_track', toolName: 'manage_sequence', arguments: { action: 'add_camera_shake_track', sequencePath: SEQUENCE_PATH, cameraShakePath: SHAKE_PATH }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_camera_shake_track optional', toolName: 'manage_sequence', arguments: { action: 'add_camera_shake_track', sequencePath: SEQUENCE_PATH, cameraShakeClass: '/Script/Engine.CameraShakeBase', cameraName: CINE_CAM, label: 'CameraShakeTrack' }, expected: 'success|already exists' },
+  // configure_camera_rig_rail
+  { scenario: 'CINEMATICS: configure_camera_rig_rail', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_rail', sequencePath: SEQUENCE_PATH, positionOnRail: 50 }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_camera_rig_rail optional', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_rail', sequencePath: SEQUENCE_PATH, actorName: RIG_NAME, label: 'RailRig', save: true }, expected: 'success' },
+  // configure_camera_rig_crane
+  { scenario: 'CINEMATICS: configure_camera_rig_crane', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_crane', sequencePath: SEQUENCE_PATH, craneArmLength: 300 }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_camera_rig_crane optional', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_crane', sequencePath: SEQUENCE_PATH, actorName: CRANE_NAME, cranePitch: 10, craneYaw: 45, label: 'CraneRig', save: true }, expected: 'success' },
+  // add_fade_track
+  { scenario: 'CINEMATICS: add_fade_track', toolName: 'manage_sequence', arguments: { action: 'add_fade_track', sequencePath: SEQUENCE_PATH }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_fade_track optional', toolName: 'manage_sequence', arguments: { action: 'add_fade_track', sequencePath: SEQUENCE_PATH, from: 0, to: 1, durationFrames: 60, sectionName: 'FadeSection', sectionIndex: 0, label: 'FadeTrack', rowIndex: 1 }, expected: 'success|already exists' },
+  // add_level_visibility_track
+  { scenario: 'CINEMATICS: add_level_visibility_track', toolName: 'manage_sequence', arguments: { action: 'add_level_visibility_track', sequencePath: SEQUENCE_PATH, levelNames: ['/Game/Levels/Level01'] }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_level_visibility_track optional', toolName: 'manage_sequence', arguments: { action: 'add_level_visibility_track', sequencePath: SEQUENCE_PATH, levelNames: ['/Game/Levels/Level01'], visibility: 'Visible', activate: true, from: 0, to: 100, durationFrames: 90, label: 'LevelVisibility' }, expected: 'success|already exists' },
+  // add_material_parameter_track
+  { scenario: 'CINEMATICS: add_material_parameter_track', toolName: 'manage_sequence', arguments: { action: 'add_material_parameter_track', sequencePath: SEQUENCE_PATH, materialPath: MAT_PATH, parameterName: 'Color' }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_material_parameter_track optional', toolName: 'manage_sequence', arguments: { action: 'add_material_parameter_track', sequencePath: SEQUENCE_PATH, componentName: 'MeshComp', materialPath: MAT_PATH, materialIndex: 0, parameterName: 'Color', label: 'MaterialParameter' }, expected: 'success|already exists' },
+  // add_particle_track
+  { scenario: 'CINEMATICS: add_particle_track', toolName: 'manage_sequence', arguments: { action: 'add_particle_track', sequencePath: SEQUENCE_PATH }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_particle_track optional', toolName: 'manage_sequence', arguments: { action: 'add_particle_track', sequencePath: SEQUENCE_PATH, from: 0, to: 100, durationFrames: 120, visibility: 'Visible', label: 'ParticleTrack', rowIndex: 2 }, expected: 'success|already exists' },
+  // add_skeletal_animation_track
+  { scenario: 'CINEMATICS: add_skeletal_animation_track', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', sequencePath: SEQUENCE_PATH, animationSequencePath: ANIM_PATH }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_skeletal_animation_track optional', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', sequencePath: SEQUENCE_PATH, animationPath: ANIM_PATH, skeletalMeshPath: SKEL_PATH, actorName: ACTOR_A, actors: [ACTOR_A], sourceActors: [ACTOR_A], sourceClasses: ['SkeletalMeshActor'], prioritizeActors: true, label: 'SkeletalAnim' }, expected: 'success|already exists' },
+  // add_transform_track
+  { scenario: 'CINEMATICS: add_transform_track', toolName: 'manage_sequence', arguments: { action: 'add_transform_track', sequencePath: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_transform_track optional', toolName: 'manage_sequence', arguments: { action: 'add_transform_track', sequencePath: SEQUENCE_PATH, actorName: ACTOR_A, location: { x: 10, y: 20, z: 30 }, rotation: { pitch: 0, yaw: 90, roll: 0 }, tracks: ['Transform'], trackNames: ['Transform'], label: 'TransformTrack' }, expected: 'success|already exists' },
+  // add_event_track
+  { scenario: 'CINEMATICS: add_event_track', toolName: 'manage_sequence', arguments: { action: 'add_event_track', sequencePath: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_event_track optional', toolName: 'manage_sequence', arguments: { action: 'add_event_track', sequencePath: SEQUENCE_PATH, actorName: ACTOR_A, propertyName: 'bHidden', sectionName: 'EventSection', sectionIndex: 0, label: 'EventTrack' }, expected: 'success|already exists' },
+  // add_property_track
+  { scenario: 'CINEMATICS: add_property_track', toolName: 'manage_sequence', arguments: { action: 'add_property_track', sequencePath: SEQUENCE_PATH, actorName: ACTOR_A, propertyName: 'bHidden' }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_property_track optional', toolName: 'manage_sequence', arguments: { action: 'add_property_track', sequencePath: SEQUENCE_PATH, actorName: ACTOR_A, componentName: 'RootComp', propertyName: 'RelativeLocation', propertyPath: 'RelativeLocation', propertyType: 'vector', label: 'PropertyTrack' }, expected: 'success|already exists' },
+
+  // === CINEMATICS (L1) CLEANUP ===
+  { scenario: 'Cleanup: delete master sequence B', toolName: 'manage_asset', arguments: { action: 'delete', path: MASTER_PATH_2, force: true }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete master sequence', toolName: 'manage_asset', arguments: { action: 'delete', path: MASTER_PATH, force: true }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete cine camera actors', toolName: 'control_actor', arguments: { action: 'delete', actorName: CINE_CAM }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete cine camera actor B', toolName: 'control_actor', arguments: { action: 'delete', actorName: CINE_CAM_2 }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete camera rig actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: RIG_NAME }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete camera crane actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: CRANE_NAME }, expected: 'success|not found' },
 
   // === DUPLICATE / RENAME / DELETE ===
   { scenario: 'ACTION: duplicate', toolName: 'manage_sequence', arguments: { action: 'duplicate', path: SEQUENCE_PATH, destinationPath: TEST_FOLDER_ALIAS, newName: DUPLICATE_NAME }, expected: 'success' },
