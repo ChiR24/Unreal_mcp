@@ -10,6 +10,18 @@ async function cleanControlActorAction(
   return cleanObject(await executeAutomationRequest(context.tools, 'control_actor', payload) as Record<string, unknown>);
 }
 
+function assetPathGuidance(actorName: string | undefined): string | undefined {
+  // delete_object deletes WORLD actors by name; a content path (/Game/..., /Engine/...) is an ASSET
+  // reference and will never match an actor. Point the caller at the right tool instead of leaving an
+  // ambiguous NOT_FOUND (no silent cross-routing: deletion is destructive, the caller must re-target).
+  // The ':' subobject delimiter marks a world OBJECT path (/Game/Map.Map:PersistentLevel.Actor_1) —
+  // a legitimate actor reference, not an asset — so it must not get the asset hint.
+  if (actorName && /^\/(Game|Engine)\//i.test(actorName) && !actorName.includes(':')) {
+    return 'delete_object deletes WORLD actors by name; this looks like an ASSET path. To delete an asset, use manage_asset with action:delete.';
+  }
+  return undefined;
+}
+
 function handledNotFoundResponse(res: InspectResponse, actorName: string): Record<string, unknown> | undefined {
   if (res.success !== false) return undefined;
   const message = String(res.message || res.error || '');
@@ -21,7 +33,8 @@ function handledNotFoundResponse(res: InspectResponse, actorName: string): Recor
       handled: true,
       message,
       deleted: actorName,
-      notFound: true
+      notFound: true,
+      hint: assetPathGuidance(actorName)
     });
   }
   return cleanObject({ ...res, handled: true, notFound: lower.includes('not found') });
@@ -46,7 +59,8 @@ async function handleDeleteObject(context: InspectHandlerContext): Promise<Recor
         handled: true,
         message,
         deleted: actorName,
-        notFound: true
+        notFound: true,
+        hint: assetPathGuidance(actorName)
       });
     }
     throw error;
