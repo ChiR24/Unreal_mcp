@@ -32,13 +32,27 @@ bool HandleEnumLifecycleActions(
 {
     if (Action == TEXT("create_enum"))
     {
+        FString EnumPath = GetPayloadString(Params, TEXT("enumPath"));
         FString Name = GetPayloadString(Params, TEXT("name"));
         FString Path = GetPayloadString(Params, TEXT("path"), TEXT("/Game/Enums"));
         bool bSave = GetPayloadBool(Params, TEXT("save"), false);
 
+        if (Name.IsEmpty() && !EnumPath.IsEmpty())
+        {
+            if (LoadObject<UUserDefinedEnum>(nullptr, *EnumPath))
+            {
+                SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum already exists: %s"), *EnumPath));
+                return true;
+            }
+            int32 Slash = INDEX_NONE;
+            EnumPath.FindLastChar('/', Slash);
+            Name = EnumPath.Mid(Slash + 1);
+            if (Slash != INDEX_NONE) { Path = EnumPath.Left(Slash); }
+        }
+
         if (Name.IsEmpty())
         {
-            SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: name"));
+            SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: name or enumPath"));
             return true;
         }
 
@@ -66,20 +80,9 @@ bool HandleEnumLifecycleActions(
             return true;
         }
 
-        // Seed an empty display-name map and refresh editor state so the enum is
-        // in a valid, reinstanced state. The engine re-seeds the implicit
-        // MAX/COUNT entries on the next compile/save, mirroring the struct
-        // lifecycle which strips the engine-seeded default member first.
-        TArray<TPair<FName, int64>> EmptyNames;
-        Enum->SetEnums(EmptyNames, UEnum::ECppForm::Namespaced);
-        Enum->PostEditChange();
-
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(Enum);
-        if (bSave)
-        {
-            McpSafeAssetSave(Enum);
-        }
+        FinalizeEnum(Enum, bSave);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("enumPath"), PackageName + TEXT(".") + SanitizedName);

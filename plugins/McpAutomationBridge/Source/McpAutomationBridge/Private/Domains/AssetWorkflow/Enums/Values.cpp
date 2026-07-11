@@ -3,9 +3,6 @@
 
 #if WITH_EDITOR
 
-// Replicates the removed UUserDefinedEnum::GetDisplayNameMap(): returns the
-// (name, value) pairs for user entries, skipping the auto-generated MAX/COUNT
-// sentinel that UE 5.7 always appends to a UEnum.
 static TArray<TPair<FName, int64>> GetEnumDisplayNamePairs(UUserDefinedEnum* Enum)
 {
     TArray<TPair<FName, int64>> Result;
@@ -13,11 +10,25 @@ static TArray<TPair<FName, int64>> GetEnumDisplayNamePairs(UUserDefinedEnum* Enu
     const int32 Num = Enum->NumEnums();
     for (int32 i = 0; i < Num; ++i)
     {
-        const FString EntryName = Enum->GetNameStringByIndex(i);
-        if (EntryName.EndsWith(TEXT("_MAX"))) { continue; }
-        Result.Add(TPair<FName, int64>(FName(*EntryName), Enum->GetValueByIndex(i)));
+        if (Enum->GetNameStringByIndex(i).EndsWith(TEXT("_MAX"))) { continue; }
+        Result.Add(TPair<FName, int64>(Enum->GetNameByIndex(i), Enum->GetValueByIndex(i)));
     }
     return Result;
+}
+
+static bool MatchesEnumShortName(const FName& StoredName, const FString& RequestedName)
+{
+    FString Str = StoredName.ToString();
+    if (Str == RequestedName) return true;
+    int32 Pos = Str.Find(TEXT("::"), ESearchCase::CaseSensitive);
+    return (Pos != INDEX_NONE && Str.Mid(Pos + 2) == RequestedName);
+}
+
+static FString ExtractEnumShortName(const FName& EnumFName)
+{
+    FString Str = EnumFName.ToString();
+    int32 Pos = Str.Find(TEXT("::"), ESearchCase::CaseSensitive);
+    return (Pos != INDEX_NONE) ? Str.Mid(Pos + 2) : Str;
 }
 
 bool HandleEnumValueActions(
@@ -34,10 +45,12 @@ bool HandleEnumValueActions(
         FString ValueName = GetPayloadString(Params, TEXT("valueName"));
         if (ValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName")); return true; }
 
+        Enum->Modify();
         TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
-        const int64 NextValue = Names.Num() > 0 ? Names.Last().Value + 1 : 0;
-        Names.Add(TPair<FName, int64>(FName(*ValueName), NextValue));
-        Enum->SetEnums(Names, UEnum::ECppForm::Namespaced);
+        const FString FullNameStr = Enum->GenerateFullEnumName(*ValueName);
+        Names.Emplace(*FullNameStr, 0);
+        for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
+        Enum->SetEnums(Names, Enum->GetCppForm());
         FinalizeEnum(Enum, GetPayloadBool(Params, TEXT("save"), false));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -57,14 +70,19 @@ bool HandleEnumValueActions(
         FString ValueName = GetPayloadString(Params, TEXT("valueName"));
         if (ValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName")); return true; }
 
+        Enum->Modify();
         TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
         const int32 Removed = Names.RemoveAll([&ValueName](const TPair<FName, int64>& Pair)
         {
-            return Pair.Key.ToString() == ValueName;
+            return MatchesEnumShortName(Pair.Key, ValueName);
         });
-        if (Removed == 0) { SetEnumResultFields(OutResult, false, TEXT("Enum value not found")); return true; }
-
-        Enum->SetEnums(Names, UEnum::ECppForm::Namespaced);
+        if (Removed == 0)
+        {
+            SetEnumResultFields(OutResult, false, TEXT("Enum value not found"));
+            return true;
+        }
+        for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
+        Enum->SetEnums(Names, Enum->GetCppForm());
         FinalizeEnum(Enum, GetPayloadBool(Params, TEXT("save"), false));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -85,15 +103,26 @@ bool HandleEnumValueActions(
         FString NewValueName = GetPayloadString(Params, TEXT("newValueName"));
         if (ValueName.IsEmpty() || NewValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName or newValueName")); return true; }
 
+        Enum->Modify();
         TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
+        const FString NewFullName = Enum->GenerateFullEnumName(*NewValueName);
         bool bFound = false;
         for (TPair<FName, int64>& Pair : Names)
         {
-            if (Pair.Key.ToString() == ValueName) { Pair.Key = FName(*NewValueName); bFound = true; break; }
+            if (MatchesEnumShortName(Pair.Key, ValueName))
+            {
+                Pair.Key = *NewFullName;
+                bFound = true;
+                break;
+            }
         }
-        if (!bFound) { SetEnumResultFields(OutResult, false, TEXT("Enum value not found")); return true; }
-
-        Enum->SetEnums(Names, UEnum::ECppForm::Namespaced);
+        if (!bFound)
+        {
+            SetEnumResultFields(OutResult, false, TEXT("Enum value not found"));
+            return true;
+        }
+        for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
+        Enum->SetEnums(Names, Enum->GetCppForm());
         FinalizeEnum(Enum, GetPayloadBool(Params, TEXT("save"), false));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -114,30 +143,37 @@ bool HandleEnumValueActions(
         TArray<FString> RequestedOrder;
         for (const TSharedPtr<FJsonValue>& V : *OrderArr) { RequestedOrder.Add(V->AsString()); }
 
-        TArray<TPair<FName, int64>> Current = GetEnumDisplayNamePairs(Enum);
+        Enum->Modify();
+        TArray<TPair<FName, int64>> OldNames = GetEnumDisplayNamePairs(Enum);
+        TArray<TPair<FName, int64>> Current = OldNames;
 
-        // Build the reordered map; a missing requested name is invalid -> no-op.
         TArray<TPair<FName, int64>> NewNames;
         for (const FString& Req : RequestedOrder)
         {
             bool bMatched = false;
             for (const TPair<FName, int64>& Pair : Current)
             {
-                if (Pair.Key.ToString() == Req) { NewNames.Add(Pair); bMatched = true; break; }
+                if (MatchesEnumShortName(Pair.Key, Req)) { NewNames.Add(Pair); bMatched = true; break; }
             }
-            if (!bMatched) { SetEnumResultFields(OutResult, true, TEXT("reorder no-op: requested value not present")); return true; }
+            if (!bMatched)
+            {
+                SetEnumResultFields(OutResult, true, TEXT("reorder no-op: requested value not present"));
+                return true;
+            }
         }
 
-        // Guard: a reorder must name the FULL current value set. Otherwise
-        // SetEnums() below would silently drop the omitted values.
         if (NewNames.Num() != Current.Num())
         {
             SetEnumResultFields(OutResult, false, TEXT("reorder_enum_values must list every current value; partial lists are rejected to avoid dropping values"));
             return true;
         }
 
-        // No-op guard: requested order already matches the current order.
-        if (NewNames.Num() == Current.Num() && NewNames == Current)
+        bool bSameOrder = true;
+        for (int32 i = 0; i < NewNames.Num(); ++i)
+        {
+            if (NewNames[i].Key != Current[i].Key) { bSameOrder = false; break; }
+        }
+        if (bSameOrder)
         {
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
             Result->SetBoolField(TEXT("reordered"), false);
@@ -146,7 +182,8 @@ bool HandleEnumValueActions(
             return true;
         }
 
-        Enum->SetEnums(NewNames, UEnum::ECppForm::Namespaced);
+        for (int32 i = 0; i < NewNames.Num(); ++i) { NewNames[i].Value = i; }
+        Enum->SetEnums(NewNames, Enum->GetCppForm());
         FinalizeEnum(Enum, GetPayloadBool(Params, TEXT("save"), false));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -192,13 +229,14 @@ bool HandleEnumValueActions(
         TArray<FString> KeepNames;
         for (const TSharedPtr<FJsonValue>& V : *ValuesArr) { KeepNames.Add(V->AsString()); }
 
-        const TArray<TPair<FName, int64>>& Current = GetEnumDisplayNamePairs(Enum);
-        TArray<TPair<FName, int64>> Subset;
+        TArray<TPair<FName, int64>> Current = GetEnumDisplayNamePairs(Enum);
+        TArray<FString> KeepShortNames;
         for (const TPair<FName, int64>& Pair : Current)
         {
-            if (KeepNames.Contains(Pair.Key.ToString())) { Subset.Add(Pair); }
+            FString Short = ExtractEnumShortName(Pair.Key);
+            if (KeepNames.Contains(Short)) { KeepShortNames.Add(Short); }
         }
-        if (Subset.Num() == 0) { SetEnumResultFields(OutResult, false, TEXT("No matching values to split")); return true; }
+        if (KeepShortNames.Num() == 0) { SetEnumResultFields(OutResult, false, TEXT("No matching values to split")); return true; }
 
         FString Path = GetPayloadString(Params, TEXT("path"), TEXT("/Game/Enums"));
         FString PathError;
@@ -212,14 +250,19 @@ bool HandleEnumValueActions(
         UUserDefinedEnum* NewEnum = Cast<UUserDefinedEnum>(FEnumEditorUtils::CreateUserDefinedEnum(Package, FName(*SanitizedName), RF_Public | RF_Standalone));
         if (!NewEnum) { SetEnumResultFields(OutResult, false, TEXT("Failed to create split enum")); return true; }
 
-        NewEnum->SetEnums(Subset, UEnum::ECppForm::Namespaced);
+        TArray<TPair<FName, int64>> NewNames;
+        for (int32 i = 0; i < KeepShortNames.Num(); ++i)
+        {
+            NewNames.Emplace(*NewEnum->GenerateFullEnumName(*KeepShortNames[i]), static_cast<int64>(i));
+        }
+        NewEnum->SetEnums(NewNames, NewEnum->GetCppForm());
         FinalizeEnum(NewEnum, GetPayloadBool(Params, TEXT("save"), false));
         FAssetRegistryModule::AssetCreated(NewEnum);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("enumPath"), PackageName + TEXT(".") + SanitizedName);
         Result->SetStringField(TEXT("enumName"), SanitizedName);
-        Result->SetNumberField(TEXT("valueCount"), Subset.Num());
+        Result->SetNumberField(TEXT("valueCount"), KeepShortNames.Num());
         Result->SetStringField(TEXT("sourceEnumPath"), GetPayloadString(Params, TEXT("enumPath")));
         Result->SetBoolField(TEXT("sourceEnumModified"), false);
         Result->SetStringField(TEXT("message"), TEXT("split_enum copies the listed values into a new enum; the source enum is left unchanged"));

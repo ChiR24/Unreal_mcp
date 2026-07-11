@@ -93,40 +93,48 @@ bool HandleStructImportActions(UMcpAutomationBridgeSubsystem& Bridge, const FStr
         }
 
         int32 Imported = 0;
+        TArray<FString> Failures;
         for (const TSharedPtr<FJsonValue>& MemberVal : *MembersArr)
         {
             const TSharedPtr<FJsonObject>* MemberObj = nullptr;
             if (!MemberVal->TryGetObject(MemberObj) || !MemberObj || !MemberObj->IsValid())
             {
+                Failures.Add(TEXT("member entry is not a JSON object"));
                 continue;
             }
             FString MemberName, MemberType;
             if (!(*MemberObj)->TryGetStringField(TEXT("name"), MemberName) ||
                 !(*MemberObj)->TryGetStringField(TEXT("type"), MemberType))
             {
+                Failures.Add(TEXT("member missing required 'name' or 'type' field"));
                 continue;
             }
             if (MemberName.IsEmpty() || MemberType.IsEmpty())
             {
+                Failures.Add(FString::Printf(TEXT("member has empty 'name' or 'type' (name=%s)"), *MemberName));
                 continue;
             }
 
             const FEdGraphPinType PinType = ParseMemberType(MemberType);
 
-            // Skip malformed members: self-reference (a struct cannot contain
-            // itself by value) and unresolved Enum:/Struct: refs.
+            // Reject malformed members explicitly instead of silently skipping:
+            // a struct cannot contain itself by value, and Enum:/Struct: refs
+            // must resolve to a real asset.
             UObject* Sub = PinType.PinSubCategoryObject.Get();
             if (Sub == static_cast<UObject*>(S))
             {
+                Failures.Add(FString::Printf(TEXT("member '%s' is a self-reference (a struct cannot contain itself by value)"), *MemberName));
                 continue;
             }
             if ((MemberType.StartsWith(TEXT("Enum:")) || MemberType.StartsWith(TEXT("Struct:"))) && !Sub)
             {
+                Failures.Add(FString::Printf(TEXT("member '%s' references unresolved type '%s'"), *MemberName, *MemberType));
                 continue;
             }
 
             if (!FStructureEditorUtils::AddVariable(S, PinType))
             {
+                Failures.Add(FString::Printf(TEXT("member '%s' could not be added (invalid or unsupported type '%s')"), *MemberName, *MemberType));
                 continue;
             }
             const FGuid G = FStructureEditorUtils::GetVarDesc(S).Last().VarGuid;
@@ -169,10 +177,26 @@ bool HandleStructImportActions(UMcpAutomationBridgeSubsystem& Bridge, const FStr
         Result->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + FinalName);
         Result->SetStringField(TEXT("structName"), FinalName);
         Result->SetNumberField(TEXT("imported"), Imported);
+        Result->SetNumberField(TEXT("failed"), Failures.Num());
         Result->SetStringField(TEXT("status"), UserDefinedStructureStatusToString(S->Status));
         McpHandlerUtils::AddVerification(Result, S);
-        Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-            TEXT("Struct imported"), Result);
+        if (Failures.Num() > 0)
+        {
+            TArray<TSharedPtr<FJsonValue>> FailureArr;
+            FailureArr.Reserve(Failures.Num());
+            for (const FString& Failure : Failures)
+            {
+                FailureArr.Add(MakeShared<FJsonValueString>(Failure));
+            }
+            Result->SetArrayField(TEXT("failures"), FailureArr);
+            Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                FString::Printf(TEXT("Struct imported %d member(s) but %d failed"), Imported, Failures.Num()), Result);
+        }
+        else
+        {
+            Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+                TEXT("Struct imported"), Result);
+        }
         return true;
     }
 

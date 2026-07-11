@@ -36,10 +36,23 @@ bool HandleDataTableAction(
     // === create_data_table ===
     if (Lower == TEXT("create_data_table"))
     {
+        FString DataTablePath = GetPayloadString(Params, TEXT("dataTablePath"));
         FString Name = GetPayloadString(Params, TEXT("name"));
         FString Path = GetPayloadString(Params, TEXT("path"), TEXT("/Game/DataTables"));
         FString RowStructPath = GetPayloadString(Params, TEXT("rowStructPath"));
         bool bSave = GetPayloadBool(Params, TEXT("save"), false);
+        if (Name.IsEmpty() && !DataTablePath.IsEmpty())
+        {
+            if (LoadObject<UDataTable>(nullptr, *DataTablePath))
+            {
+                OutResult = McpDataTableMakeError(TEXT("ASSET_ALREADY_EXISTS"), nullptr);
+                return true;
+            }
+            int32 Slash = INDEX_NONE;
+            DataTablePath.FindLastChar('/', Slash);
+            Name = DataTablePath.Mid(Slash + 1);
+            if (Slash != INDEX_NONE) { Path = DataTablePath.Left(Slash); }
+        }
         if (Name.IsEmpty() || RowStructPath.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
 
         FString PathError, PackageName, SanitizedName = SanitizeAssetName(Name);
@@ -72,9 +85,22 @@ bool HandleDataTableAction(
     // === create_row_struct ===
     if (Lower == TEXT("create_row_struct"))
     {
+        FString RowStructPath = GetPayloadString(Params, TEXT("rowStructPath"));
         FString Name = GetPayloadString(Params, TEXT("name"));
         FString Path = GetPayloadString(Params, TEXT("path"), TEXT("/Game/Structs"));
         bool bSave = GetPayloadBool(Params, TEXT("save"), false);
+        if (Name.IsEmpty() && !RowStructPath.IsEmpty())
+        {
+            if (LoadObject<UUserDefinedStruct>(nullptr, *RowStructPath))
+            {
+                OutResult = McpDataTableMakeError(TEXT("ASSET_ALREADY_EXISTS"), nullptr);
+                return true;
+            }
+            int32 Slash = INDEX_NONE;
+            RowStructPath.FindLastChar('/', Slash);
+            Name = RowStructPath.Mid(Slash + 1);
+            if (Slash != INDEX_NONE) { Path = RowStructPath.Left(Slash); }
+        }
         if (Name.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
 
         FString PathError, PackageName, SanitizedName = SanitizeAssetName(Name);

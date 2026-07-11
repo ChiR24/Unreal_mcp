@@ -9,14 +9,31 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
 
     if (Lower == TEXT("create_struct"))
     {
+        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
         FString Name = GetPayloadString(Payload, TEXT("name"));
         FString Path = GetPayloadString(Payload, TEXT("path"), TEXT("/Game/Structs"));
         bool bSave = GetPayloadBool(Payload, TEXT("save"), false);
 
+        // Accept the documented structPath (used by every other struct action)
+        // and derive name + parent path from it when name is not given.
+        if (Name.IsEmpty() && !StructPath.IsEmpty())
+        {
+            if (LoadObject<UUserDefinedStruct>(nullptr, *StructPath))
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Struct already exists: %s"), *StructPath), TEXT("ASSET_ALREADY_EXISTS"));
+                return true;
+            }
+            int32 Slash = INDEX_NONE;
+            StructPath.FindLastChar('/', Slash);
+            Name = StructPath.Mid(Slash + 1);
+            if (Slash != INDEX_NONE) { Path = StructPath.Left(Slash); }
+        }
+
         if (Name.IsEmpty())
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Missing required parameter: name"), TEXT("MISSING_PARAMETER"));
+                TEXT("Missing required parameter: name or structPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
