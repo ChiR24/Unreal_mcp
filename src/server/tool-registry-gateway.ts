@@ -1,5 +1,6 @@
 import type { ITools } from '../types/tools/tool-interfaces.js';
-import { consolidatedToolDefinitions, type ToolDefinition } from '../tools/catalog/consolidated-tool-definitions.js';
+import type { ToolDefinition } from '../tools/definitions/shared/tool-definition.js';
+import { getManifestToolDefinitions } from '../gateway/gateway-manifest.js';
 import { dynamicToolManager } from '../tools/dynamic/dynamic-tool-manager.js';
 import { handleConsolidatedToolCall } from '../tools/orchestration/consolidated-tool-handlers.js';
 import { cleanObject } from '../utils/serialization/safe-json.js';
@@ -79,7 +80,7 @@ function nextGatewayCorrelationId(): string {
 }
 
 function findTool(name: string | undefined): ToolDefinition | undefined {
-  return name === undefined ? undefined : consolidatedToolDefinitions.find((tool) => tool.name === name);
+  return name === undefined ? undefined : getManifestToolDefinitions().find((tool) => tool.name === name);
 }
 
 function rejectInvalidParams(tool: ToolDefinition, params: Record<string, unknown>): Record<string, unknown> | undefined {
@@ -102,7 +103,7 @@ export function searchGatewayCatalog(args: Record<string, unknown>): Record<stri
   const query = (getString(args, 'query') ?? '').toLowerCase();
   const limit = getBoundedInteger(args.limit, DEFAULT_SEARCH_LIMIT, 1, MAX_SEARCH_LIMIT);
   const offset = getBoundedInteger(args.offset, 0, 0, Number.MAX_SAFE_INTEGER);
-  const matches = consolidatedToolDefinitions
+  const matches = getManifestToolDefinitions()
     .map(getDescriptor)
     .filter((tool) => {
       if (query.length === 0) return true;

@@ -1,6 +1,7 @@
 // McpNativeGatewayCatalog.cpp — search & describe operations for the unreal gateway
 
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
+#include "MCP/Gateway/McpNativeGatewayManifest.h"
 #include "MCP/Registry/McpToolRegistry.h"
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
 #include "MCP/Registry/McpToolDefinition.h"
@@ -80,6 +81,12 @@ TSharedPtr<FJsonObject> SearchGatewayCatalog(
 	const FString& Query, int32 Limit, int32 Offset,
 	const FMcpToolRegistry& Registry, const FMcpDynamicToolManager& ToolManager)
 {
+	// Prefer the neutral generated manifest (single source of truth with the TS gateway).
+	if (TSharedPtr<FJsonObject> ManifestResult = GatewaySearchFromManifest(Query, Limit, Offset, ToolManager))
+	{
+		return ManifestResult;
+	}
+
 	const FString Q = Query.ToLower();
 
 	TArray<TSharedPtr<FJsonObject>> Matches;
@@ -132,6 +139,12 @@ TSharedPtr<FJsonObject> DescribeGatewayCapability(
 	const FString& ToolName, const FString& Action,
 	const FMcpToolRegistry& Registry, const FMcpDynamicToolManager& ToolManager)
 {
+	// Prefer the neutral generated manifest (single source of truth with the TS gateway).
+	if (TSharedPtr<FJsonObject> ManifestResult = GatewayDescribeFromManifest(ToolName, Action, ToolManager))
+	{
+		return ManifestResult;
+	}
+
 	FMcpToolDefinition* Tool = Registry.FindTool(ToolName);
 	if (!Tool)
 	{
