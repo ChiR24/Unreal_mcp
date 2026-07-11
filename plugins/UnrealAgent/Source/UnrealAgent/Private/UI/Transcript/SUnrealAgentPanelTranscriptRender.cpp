@@ -32,9 +32,89 @@
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
 
+#include "Fonts/CompositeFont.h"
+#include "Fonts/SlateFontInfo.h"
+#include "Interfaces/IPluginManager.h"
+
 #define LOCTEXT_NAMESPACE "SUnrealAgentPanel"
 
 using namespace UnrealAgent::Panel;
+
+namespace
+{
+	// The default Slate font (DroidSansFallback) cannot render the colored-circle
+	// emoji (U+1F7E0/1F7E1/1F7E2) and other Supplemental-Plane glyphs that
+	// assistant messages sometimes contain, spamming "Could not find Glyph Index"
+	// warnings when a chat history is opened. We clone the editor's normal text
+	// composite font and add a bundled monochrome symbol/emoji font as a per-range
+	// fallback so those codepoints resolve instead of falling through to last-resort.
+
+	FString ResolveBundledEmojiFontPath()
+	{
+		FString FontPath;
+		IPluginManager& PluginMgr = IPluginManager::Get();
+		if (const TSharedPtr<IPlugin> Plugin = PluginMgr.FindPlugin(TEXT("UnrealAgent")))
+		{
+			FontPath = Plugin->GetBaseDir() / TEXT("Resources/Fonts/NotoSansSymbols2-Regular.ttf");
+		}
+		if (!FPaths::FileExists(FontPath))
+		{
+			// Editor-only safety net if the bundled asset is missing for any reason.
+			FontPath = FPaths::EngineContentDir() / TEXT("Slate/Fonts/NotoSansSymbols2-Regular.ttf");
+		}
+		return FontPath;
+	}
+
+	FSlateFontInfo MakeEmojiCapableBodyFont()
+	{
+		static FSlateFontInfo CachedFont;
+		static bool bInitialized = false;
+		if (bInitialized)
+		{
+			return CachedFont;
+		}
+		bInitialized = true;
+
+		// Preserve the exact size/appearance of the default transcript text font.
+		FSlateFontInfo BaseInfo = FAppStyle::Get().GetFontStyle(TEXT("NormalFont"));
+		const FCompositeFont* BaseComposite = BaseInfo.GetCompositeFont();
+		if (!BaseComposite)
+		{
+			BaseInfo = FAppStyle::Get().GetFontStyle(TEXT("SmallFont"));
+			BaseComposite = BaseInfo.GetCompositeFont();
+		}
+
+		TSharedPtr<FCompositeFont> EmojiComposite = MakeShared<FStandaloneCompositeFont>();
+		if (BaseComposite)
+		{
+			EmojiComposite->DefaultTypeface = BaseComposite->DefaultTypeface;
+			EmojiComposite->FallbackTypeface = BaseComposite->FallbackTypeface;
+		}
+		else
+		{
+			const FString Roboto = FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Regular.ttf");
+			EmojiComposite->DefaultTypeface.AppendFont(FName(TEXT("Regular")), Roboto, EFontHinting::Default, EFontLoadingPolicy::LazyLoad);
+		}
+
+		const FString EmojiFontPath = ResolveBundledEmojiFontPath();
+		if (!EmojiFontPath.IsEmpty() && FPaths::FileExists(EmojiFontPath))
+		{
+			FCompositeSubFont EmojiSubFont;
+			EmojiSubFont.Typeface.AppendFont(FName(TEXT("Regular")), EmojiFontPath, EFontHinting::Default, EFontLoadingPolicy::LazyLoad);
+			// Ranges DroidSansFallback lacks: emoji plane, misc symbols/dingbats, misc symbols and arrows.
+			EmojiSubFont.CharacterRanges.Add(FInt32Range(0x1F000, 0x1FAFF));
+			EmojiSubFont.CharacterRanges.Add(FInt32Range(0x2600, 0x27BF));
+			EmojiSubFont.CharacterRanges.Add(FInt32Range(0x2B00, 0x2BFF));
+			EmojiSubFont.ScalingFactor = 1.0f;
+			EmojiComposite->SubTypefaces.Add(MoveTemp(EmojiSubFont));
+		}
+
+		CachedFont = BaseInfo;
+		CachedFont.FontObject = nullptr;
+		CachedFont.CompositeFont = EmojiComposite;
+		return CachedFont;
+	}
+}
 
 void SUnrealAgentPanel::AddTranscriptEntryImmediately(const FString& Role, const FString& Text)
 {
@@ -216,6 +296,7 @@ void SUnrealAgentPanel::AddTranscriptEntryImmediately(const FString& Role, const
                         SAssignNew(EntryTextBlock, STextBlock)
                         .Tag(EntryTextTag)
                         .Text(FText::FromString(DisplayText))
+                        .Font(MakeEmojiCapableBodyFont())
                         .ColorAndOpacity(FSlateColor::UseForeground())
                         .AutoWrapText(true)
                         .WrappingPolicy(ETextWrappingPolicy::AllowPerCharacterWrapping)

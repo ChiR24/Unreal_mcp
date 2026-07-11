@@ -84,7 +84,7 @@ TSharedRef<SWidget> SUnrealAgentPanel::MakeEmptyPromptArea()
                     [
                         SNew(STextBlock)
                         .Tag(FName(TEXT("UnrealAgent.EmptyState.EmptyHint")))
-                        .Text(LOCTEXT("EmptyStateMentionHint", "Tip: select assets in the Content Browser or actors in the Outliner, then type @ in the prompt to mention them."))
+                        .Text(LOCTEXT("EmptyStateMentionHint", "Tip: select assets in the Content Browser or actors in the Outliner, then type @ to mention them. With no selection, @ also finds world actors by name (Landscape, Lighting, …)."))
                         .ColorAndOpacity(FSlateColor::UseSubduedForeground())
                         .AutoWrapText(true)
                     ]

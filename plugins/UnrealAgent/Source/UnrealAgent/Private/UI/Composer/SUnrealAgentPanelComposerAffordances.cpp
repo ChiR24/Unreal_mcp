@@ -164,6 +164,13 @@ namespace
             {
                 return false;
             }
+            // Skip World Partition external-actor packages (auto-generated
+            // _ExternalActors_ save artifacts under /Game). They are not
+            // mentional assets and only pollute the @-mention list.
+            if (Asset.PackageName.ToString().Contains(TEXT("_ExternalActors_")))
+            {
+                return true;
+            }
             if (!bBrowseAll)
             {
                 const FString Name = Asset.AssetName.ToString();
@@ -204,6 +211,54 @@ namespace
             {
                 Actors.Emplace(Actor->GetActorNameOrLabel(), Actor->GetPathName());
             }
+        }
+        return Actors;
+    }
+
+    // Browses world actors (the items you see in the World Outliner: Landscape,
+    // Lighting, DirectionalLight, etc.) as `@`-mention candidates. This is the
+    // fallback used when there is no live Outliner selection, so typing "@" with
+    // no selection still surfaces editor actors the way it surfaces Content Browser
+    // assets. Filters by the actor's display label OR its class name (so "@light"
+    // matches both a "Lighting" actor and a "DirectionalLight" class), and is
+    // capped at the suggestion-row limit so the suggestion list stays bounded;
+    // when the query matches few actors the iterator may still walk the whole
+    // world per keystroke (same as GetActorLabelByPath). Mirrors
+    // GetAssetPathsByPrefix but for placed actors rather
+    // than /Game package names.
+    TArray<TPair<FString, FString>> GetWorldActorRefsByPrefix(const FString& Prefix)
+    {
+        TArray<TPair<FString, FString>> Actors;
+        if (GEditor == nullptr)
+        {
+            return Actors;
+        }
+        UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
+        if (World == nullptr)
+        {
+            return Actors;
+        }
+        FString Query = Prefix;
+        while (Query.StartsWith(TEXT("/")))
+        {
+            Query.RemoveFromStart(TEXT("/"));
+        }
+        const bool bBrowseAll = Query.IsEmpty();
+        for (TActorIterator<AActor> It(World); It && Actors.Num() < MaxComposerSuggestionRows; ++It)
+        {
+            AActor* Actor = *It;
+            if (!bBrowseAll)
+            {
+                const FString Label = Actor->GetActorNameOrLabel();
+                const FString ClassName = Actor->GetClass()->GetName();
+                const bool bMatch = Label.Contains(Query, ESearchCase::IgnoreCase)
+                    || ClassName.Contains(Query, ESearchCase::IgnoreCase);
+                if (!bMatch)
+                {
+                    continue;
+                }
+            }
+            Actors.Emplace(Actor->GetActorNameOrLabel(), Actor->GetPathName());
         }
         return Actors;
     }
@@ -475,7 +530,18 @@ void SUnrealAgentPanel::PopulateComposerCommandRows(TSharedRef<SVerticalBox> Aff
 void SUnrealAgentPanel::PopulateComposerFileRows(TSharedRef<SVerticalBox> AffordanceList, const FString& Prefix)
 {
     const TArray<FString> SelectedAssetPaths = GetSelectedAssetPaths();
-    const TArray<TPair<FString, FString>> SelectedActors = GetSelectedActors();
+    TArray<TPair<FString, FString>> SelectedActors = GetSelectedActors();
+    // A live Outliner selection is query-independent, so the display loop below
+    // narrows it by label. With no selection we fall back to a prefix-filtered
+    // browse of world actors (Landscape, Lighting, etc.) so "@" still surfaces
+    // the editor items you see in the Outliner without selecting them first.
+    // Those fallback results are already matched by label OR class name, so they
+    // must NOT be re-filtered by label only (that would drop class matches).
+    const bool bHadSelection = SelectedActors.Num() > 0;
+    if (!bHadSelection)
+    {
+        SelectedActors = GetWorldActorRefsByPrefix(Prefix);
+    }
     // Filesystem file mentions are only offered when the user has typed a query,
     // which bounds the per-keystroke walk to relevant candidates.
     const TArray<FString> FilePaths = GetFilePathsByPrefix(Prefix);
@@ -516,7 +582,7 @@ void SUnrealAgentPanel::PopulateComposerFileRows(TSharedRef<SVerticalBox> Afford
     {
         FText HintText = Prefix.IsEmpty()
             ? LOCTEXT("ComposerMentionEmptyHint",
-                "No assets in /Game yet. Select assets in the Content Browser or actors in the Outliner to mention them.")
+                "No assets or actors yet. Select them in the Content Browser or Outliner, or type @ to search world actors (Landscape, Lighting, …).")
             : FText::Format(LOCTEXT("ComposerMentionNoMatchHint",
                 "No assets or actors match \"{0}\". Select them in the editor, or type more to search."),
                 FText::FromString(Prefix));
@@ -580,7 +646,9 @@ void SUnrealAgentPanel::PopulateComposerFileRows(TSharedRef<SVerticalBox> Afford
         }
         const FString& ActorLabel = Actor.Key;
         const FString& ActorPath = Actor.Value;
-        if (!MatchesQuery(ActorLabel))
+        // Only the live-selection path needs a label re-filter; the fallback
+        // path is already matched by label OR class name in GetWorldActorRefsByPrefix.
+        if (bHadSelection && !MatchesQuery(ActorLabel))
         {
             continue;
         }

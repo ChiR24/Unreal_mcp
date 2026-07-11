@@ -89,6 +89,10 @@ FReply SUnrealAgentPanel::OnSendClicked()
     {
         if (Attachment.Kind == EComposerAttachmentKind::ActorRef)
         {
+            // Emit the exact "actor:<path>" token. The downstream parser in
+            // McpOpenCodeAcpClientCommands routes on the "actor:" prefix and
+            // extracts the path via Mid(6), then re-resolves the display label
+            // from the path itself, so nothing may be appended here.
             AttachmentPaths.Add(TEXT("actor:") + Attachment.ReferenceText);
         }
         else

@@ -19,6 +19,7 @@ public class UnrealAgent : ModuleRules
         PrivateDependencyModuleNames.AddRange(new string[]
         {
             "ApplicationCore",
+            "Projects",
             "Slate",
             "SlateCore",
             "Json",
