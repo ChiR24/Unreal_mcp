@@ -1,5 +1,6 @@
 import { dynamicToolManager } from '../tools/dynamic/dynamic-tool-manager.js';
 import type { ToolDefinition } from '../tools/catalog/consolidated-tool-definitions.js';
+import { unrealGatewayToolDefinition } from '../tools/catalog/unreal-gateway-definition.js';
 import { isRecord } from '../utils/validation/type-guards.js';
 
 export function buildSanitizedToolList(effectiveCategories: string[]) {
@@ -64,5 +65,18 @@ function sanitizeToolDefinition(tool: ToolDefinition) {
             required,
             additionalProperties: tool.inputSchema.additionalProperties ?? true
         }
+    };
+}
+
+// The single public MCP tool. `unreal` is the only addressable entry point; the
+// canonical 23 parent tools stay internal. configure may change internal
+// enable/disable state but must never alter this advertised list.
+export function buildGatewayToolDefinition(): ToolDefinition {
+    return {
+        name: unrealGatewayToolDefinition.name,
+        description: unrealGatewayToolDefinition.description,
+        category: 'core',
+        inputSchema: unrealGatewayToolDefinition.inputSchema,
+        outputSchema: unrealGatewayToolDefinition.outputSchema
     };
 }

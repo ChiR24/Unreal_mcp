@@ -8,6 +8,7 @@ import { ServerSetup } from '../server-setup.js';
 import { HealthMonitor } from '../services/health-monitor.js';
 import { startMetricsServer } from '../services/metrics-server.js';
 import { consolidatedToolDefinitions } from '../tools/catalog/consolidated-tool-definitions.js';
+import { unrealGatewayToolDefinition } from '../tools/catalog/unreal-gateway-definition.js';
 import { UnrealBridge } from '../unreal-bridge.js';
 import { responseValidator } from '../utils/responses/response-validator.js';
 
@@ -105,6 +106,9 @@ export function createServer() {
     if (tool.outputSchema) {
       responseValidator.registerSchema(tool.name, tool.outputSchema);
     }
+  }
+  if (unrealGatewayToolDefinition.outputSchema) {
+    responseValidator.registerSchema(unrealGatewayToolDefinition.name, unrealGatewayToolDefinition.outputSchema);
   }
   log.debug(
     `Registered ${responseValidator.getStats().totalSchemas} output schemas for validation`,

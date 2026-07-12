@@ -65,8 +65,8 @@ describe('plugin manifest contracts', () => {
     // Then
     expect(version).toEqual({
       FileVersion: 3,
-      Version: 531,
-      VersionName: '0.5.31',
+      Version: 530,
+      VersionName: '0.5.30',
     });
   });
 

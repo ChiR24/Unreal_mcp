@@ -919,8 +919,8 @@ describe('sequence render and native security contracts', () => {
     expect(connection).not.toContain('*HttpReq.SessionId');
     expect(cleanup).not.toContain('*Stream->SessionId');
     expect(notifications).not.toContain('*SessionId');
-    expect(transport).toContain('ServerVersion = TEXT("0.5.31")');
-    expect(JSON.parse(serverInfo).version).toBe('0.5.31');
+    expect(transport).toContain('ServerVersion = TEXT("0.5.30")');
+    expect(JSON.parse(serverInfo).version).toBe('0.5.30');
   });
 
   it('bounds render filename zero padding', () => {

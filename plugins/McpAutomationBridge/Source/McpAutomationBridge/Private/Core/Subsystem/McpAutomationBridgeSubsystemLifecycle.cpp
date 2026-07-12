@@ -217,7 +217,8 @@ void UMcpAutomationBridgeSubsystem::StartNativeTransport()
             Settings->bLoadAllToolsOnStart,
             Settings->NativeMCPInstructions,
             Settings->ListenHost,
-            Settings->bAllowNonLoopback))
+            Settings->bAllowNonLoopback,
+            Settings->bEnableNativeGateway))
     {
         return;
     }
