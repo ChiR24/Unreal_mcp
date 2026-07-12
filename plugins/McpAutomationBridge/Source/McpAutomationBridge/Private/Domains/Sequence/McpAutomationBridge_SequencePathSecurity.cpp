@@ -1,5 +1,6 @@
 #include "Domains/Sequence/McpAutomationBridge_SequencePathSecurity.h"
 
+#include "GenericPlatform/GenericPlatformFile.h"
 #include "HAL/PlatformFileManager.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"

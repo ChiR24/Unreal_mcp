@@ -140,7 +140,60 @@ export async function handleGetComponentProperty(context: InspectHandlerContext)
     { key: 'componentName', required: true },
     { key: 'propertyName', aliases: ['propertyPath'], required: true }
   ]);
-  if (!actorName) throw new Error('Invalid actorName: required to resolve componentName');
+  if (!actorName) {
+    // Blueprint/CDO shape (mirrors handleGetComponents): callers with a Blueprint but no spawned actor
+    // pass a blueprintPath here. Route to inspect_cdo and pick the requested property off the CDO
+    // component template instead of failing. Only a Blueprint path routes to inspect_cdo.
+    const blueprintPath = context.inspectArgs.blueprintPath
+      || (typeof context.normalizedArgs.blueprintPath === 'string' ? context.normalizedArgs.blueprintPath : '');
+    if (blueprintPath) {
+      const componentName = extractString(params, 'componentName');
+      const propertyName = extractString(params, 'propertyName');
+      const note = 'get_component_property inspects world actors; the blueprintPath argument was routed to inspect_cdo (CDO component template property).';
+      const cdoResult = await executeAutomationRequest(context.tools, 'inspect', {
+        ...context.normalizedArgs,
+        action: 'inspect_cdo',
+        blueprintPath,
+        componentName
+      }) as Record<string, unknown>;
+      const resultData = cdoResult.result as Record<string, unknown> | undefined;
+      const rawProperties = (resultData && resultData.properties) ?? cdoResult.properties;
+      const properties = (typeof rawProperties === 'object' && rawProperties !== null)
+        ? rawProperties as Record<string, unknown>
+        : undefined;
+      if (!properties) {
+        // No property map (e.g. BLUEPRINT_NOT_FOUND / COMPONENT_NOT_FOUND) — surface the CDO result as-is.
+        return cleanObject({ ...cdoResult, note }) as Record<string, unknown>;
+      }
+      // Intentional shape divergence from the world-actor path below: the CDO branch returns a
+      // normalized {success, blueprintPath, componentName, propertyName, value, note} envelope,
+      // while the actor path forwards the raw control_actor response (best-effort, sibling-handler style).
+      const matchedKey = Object.keys(properties).find(k => k.toLowerCase() === propertyName.toLowerCase());
+      if (matchedKey === undefined) {
+        return cleanObject({
+          success: false,
+          error: 'PROPERTY_NOT_FOUND',
+          message: `Property not found on CDO component template: ${propertyName}`,
+          blueprintPath,
+          componentName,
+          availableProperties: Object.keys(properties),
+          note
+        }) as Record<string, unknown>;
+      }
+      return cleanObject({
+        success: true,
+        blueprintPath,
+        componentName,
+        propertyName: matchedKey,
+        value: properties[matchedKey],
+        note
+      }) as Record<string, unknown>;
+    }
+    throw new Error(
+      'Invalid actorName: get_component_property inspects WORLD actors (pass actorName). ' +
+      'For a Blueprint component default, pass blueprintPath (routed to inspect_cdo).'
+    );
+  }
 
   return cleanObject(await executeAutomationRequest(context.tools, 'control_actor', {
     action: 'get_component_property',

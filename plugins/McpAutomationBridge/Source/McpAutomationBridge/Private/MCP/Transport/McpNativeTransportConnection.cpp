@@ -221,9 +221,10 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		{
 			TSharedRef<FInternetAddr> RemoteAddr =
 				ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
-			// UE 5.7: FSocket::GetAddress returns void and populates OutAddr in place.
-			// A default-created address is invalid until populated, so IsValid()
-			// preserves the original "set remote addr only on success" behavior.
+			// FSocket::GetAddress returns void as of UE 5.8 (was bool in earlier
+			// versions) and populates RemoteAddr unconditionally. A default-created
+			// address is invalid until populated, so IsValid() preserves the
+			// original "set remote addr only on success" behavior.
 			ClientSocket->GetAddress(*RemoteAddr);
 			if (RemoteAddr->IsValid())
 			{
