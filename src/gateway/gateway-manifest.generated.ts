@@ -5444,9 +5444,7 @@ export const gatewayManifest = {
         "maxRecordTimeSeconds",
         "mediaPath",
         "mediaPlayerPath",
-        "mediaPlaylistPath",
         "mediaSourcePath",
-        "mediaTexturePath",
         "metadata",
         "method",
         "muted",
@@ -5515,7 +5513,6 @@ export const gatewayManifest = {
         "takePresetPath",
         "takeSequencePath",
         "targetActor",
-        "targetActorName",
         "temporalSampleCount",
         "time",
         "timeSeconds",
@@ -5662,14 +5659,6 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Asset path (e.g., /Game/Path/Asset)."
           },
-          "mediaTexturePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "mediaPlaylistPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
           "playlistPath": {
             "type": "string",
             "description": "Asset path (e.g., /Game/Path/Asset)."
@@ -5757,10 +5746,6 @@ export const gatewayManifest = {
             "description": "Name of the actor."
           },
           "cameraName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "targetActorName": {
             "type": "string",
             "description": "Name of the actor."
           },

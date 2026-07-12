@@ -35,8 +35,6 @@ export async function handleSequenceTools(action: string, args: Record<string, u
     'mapPath',
     'mediaPlayerPath',
     'mediaSourcePath',
-    'mediaTexturePath',
-    'mediaPlaylistPath',
     'playlistPath',
     'playerPath',
     'sourcePath',

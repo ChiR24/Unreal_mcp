@@ -5441,9 +5441,7 @@
         "maxRecordTimeSeconds",
         "mediaPath",
         "mediaPlayerPath",
-        "mediaPlaylistPath",
         "mediaSourcePath",
-        "mediaTexturePath",
         "metadata",
         "method",
         "muted",
@@ -5512,7 +5510,6 @@
         "takePresetPath",
         "takeSequencePath",
         "targetActor",
-        "targetActorName",
         "temporalSampleCount",
         "time",
         "timeSeconds",
@@ -5659,14 +5656,6 @@
             "type": "string",
             "description": "Asset path (e.g., /Game/Path/Asset)."
           },
-          "mediaTexturePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "mediaPlaylistPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
           "playlistPath": {
             "type": "string",
             "description": "Asset path (e.g., /Game/Path/Asset)."
@@ -5754,10 +5743,6 @@
             "description": "Name of the actor."
           },
           "cameraName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "targetActorName": {
             "type": "string",
             "description": "Name of the actor."
           },
