@@ -175,13 +175,16 @@ export const manageAssetToolDefinition: ToolDefinition = {
         searchScope: { type: 'string', description: 'Optional path scope for search_struct_usage.' },
         destinationName: { type: 'string', description: 'New asset name for duplicate_struct (without path).' },
         members: {
-          type: 'array', description: 'Member definitions for import_struct. Each: { name, type, default?, tooltip?, metadata? }. type uses the same grammar as memberType (Struct:<Path> for nested structs).',
+          type: 'array', description: 'Member definitions for import_struct / create_struct. Each entry accepts either the short form { name, type, default?, tooltip?, metadata? } or the add_struct_member form { memberName, memberType, defaultValue?, tooltip?, metadata? }. type/memberType use the same grammar as memberType (Struct:<Path> for nested structs, Array:/Set:/Map: containers). Invalid members cause the whole request to be rejected before any change is made.',
           items: {
             type: 'object',
             properties: {
-              name: { type: 'string', description: 'Member name.' },
-              type: { type: 'string', description: 'Unreal property type (same grammar as memberType, including Struct:<Path> for nested structs).' },
-              defaultValue: { type: 'string', description: 'Optional default value as a string (same format as add_struct_member defaultValue).' },
+              name: { type: 'string', description: 'Member name (short form). Alias: memberName.' },
+              memberName: { type: 'string', description: 'Member name (add_struct_member form). Alias: name.' },
+              type: { type: 'string', description: 'Unreal property type (same grammar as memberType, including Struct:<Path> for nested structs). Alias: memberType.' },
+              memberType: { type: 'string', description: 'Unreal property type (add_struct_member form). Alias: type.' },
+              defaultValue: { type: 'string', description: 'Optional default value as a string (same format as add_struct_member defaultValue). Alias: default.' },
+              default: { type: 'string', description: 'Optional default value as a string (short form). Alias: defaultValue.' },
               tooltip: { type: 'string', description: 'Optional member tooltip.' },
               metadata: { type: 'object', description: 'Optional metadata key/value pairs.' }
             },

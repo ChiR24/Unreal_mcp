@@ -46,6 +46,27 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
             return true;
         }
 
+        const TArray<TSharedPtr<FJsonValue>>* MembersArr = nullptr;
+        const bool bHasMembers = Payload->TryGetArrayField(TEXT("members"), MembersArr) && MembersArr;
+        TArray<FParsedMember> ParsedMembers;
+        if (bHasMembers)
+        {
+            const FName SelfPath = FName(*FString::Printf(TEXT("%s.%s"), *PackageName, *SanitizedName));
+            TArray<FString> ValidationFailures;
+            if (!ValidateStructMembers(*MembersArr, SelfPath, ParsedMembers, ValidationFailures))
+            {
+                TArray<TSharedPtr<FJsonValue>> FailureArr;
+                for (const FString& F : ValidationFailures) FailureArr.Add(MakeShared<FJsonValueString>(F));
+                TSharedPtr<FJsonObject> ValidationResult = McpHandlerUtils::CreateResultObject();
+                ValidationResult->SetNumberField(TEXT("failed"), ValidationFailures.Num());
+                ValidationResult->SetArrayField(TEXT("failures"), FailureArr);
+                Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                    FString::Printf(TEXT("Struct creation rejected: %d member(s) failed validation"), ValidationFailures.Num()),
+                    ValidationResult);
+                return true;
+            }
+        }
+
         UPackage* Package = CreatePackage(*PackageName);
         if (!Package)
         {
@@ -79,6 +100,25 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
             FStructureEditorUtils::RemoveVariable(S, G);
         }
 
+        if (bHasMembers)
+        {
+            TArray<FString> ApplyFailures;
+            int32 Applied = ApplyParsedStructMembers(S, ParsedMembers, ApplyFailures);
+            if (ApplyFailures.Num() > 0)
+            {
+                TArray<TSharedPtr<FJsonValue>> FailureArr;
+                for (const FString& F : ApplyFailures) FailureArr.Add(MakeShared<FJsonValueString>(F));
+                TSharedPtr<FJsonObject> ApplyResult = McpHandlerUtils::CreateResultObject();
+                ApplyResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + SanitizedName);
+                ApplyResult->SetNumberField(TEXT("imported"), Applied);
+                ApplyResult->SetNumberField(TEXT("failed"), ApplyFailures.Num());
+                ApplyResult->SetArrayField(TEXT("failures"), FailureArr);
+                Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                    FString::Printf(TEXT("Struct created but %d member(s) failed to apply"), ApplyFailures.Num()),
+                    ApplyResult);
+            }
+        }
+
         // Compile so the struct is in a valid, consistent (UpToDate) state.
         FStructureEditorUtils::CompileStructure(S);
         Package->MarkPackageDirty();
@@ -93,6 +133,10 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
         Result->SetStringField(TEXT("structName"), SanitizedName);
         Result->SetStringField(TEXT("status"), TEXT("UpToDate"));
         Result->SetBoolField(TEXT("saved"), bSave);
+        if (bHasMembers)
+        {
+            Result->SetNumberField(TEXT("memberCount"), FStructureEditorUtils::GetVarDesc(S).Num());
+        }
         McpHandlerUtils::AddVerification(Result, S);
         Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("User defined struct created"), Result);

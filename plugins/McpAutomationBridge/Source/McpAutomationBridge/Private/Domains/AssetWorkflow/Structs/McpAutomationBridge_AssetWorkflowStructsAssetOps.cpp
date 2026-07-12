@@ -200,6 +200,38 @@ bool HandleStructAssetActions(UMcpAutomationBridgeSubsystem& Bridge, const FStri
             return true;
         }
 
+        // Safety gate: refuse to delete a struct that is still referenced by
+        // other assets unless force:true is given. Deleting a referenced struct
+        // orphans those references and can corrupt dependent Blueprints, data
+        // assets, or other structs. GetReferencers is a synchronous AssetRegistry
+        // query (safe on the native request thread — only the async SCAN and
+        // ObjectTools::DeleteObjects are known to deadlock it).
+        const bool bForce = GetPayloadBool(Payload, TEXT("force"), false);
+        if (!bForce)
+        {
+            IAssetRegistry& AR = FAssetRegistryModule::GetRegistry();
+            TArray<FAssetIdentifier> Refs;
+            AR.GetReferencers(FAssetIdentifier(S->GetOutermost()->GetFName()), Refs);
+            if (Refs.Num() > 0)
+            {
+                TArray<TSharedPtr<FJsonValue>> RefArr;
+                for (const FAssetIdentifier& Ref : Refs)
+                {
+                    RefArr.Add(MakeShared<FJsonValueString>(Ref.ToString()));
+                }
+                TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+                Result->SetStringField(TEXT("structPath"), StructPath);
+                Result->SetNumberField(TEXT("referencerCount"), Refs.Num());
+                Result->SetArrayField(TEXT("referencers"), RefArr);
+                Result->SetBoolField(TEXT("deleted"), false);
+                Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                    FString::Printf(TEXT("Struct '%s' is referenced by %d asset(s); pass force:true to delete anyway"),
+                        *StructPath, Refs.Num()),
+                    Result);
+                return true;
+            }
+        }
+
         // Non-blocking delete: unload the package from memory and remove the
         // asset file. ObjectTools::DeleteObjects deadlocks the synchronous
         // native request thread (it waits on a save that needs the game thread),

@@ -68,7 +68,6 @@ bool HandleStructImportActions(UMcpAutomationBridgeSubsystem& Bridge, const FStr
                     TEXT("Failed to create user defined struct"), TEXT("ASSET_CREATE_FAILED"));
                 return true;
             }
-            // Strip the engine-seeded default variable; import defines members explicitly.
             TArray<FGuid> SeededGuids;
             for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
             {
@@ -81,7 +80,31 @@ bool HandleStructImportActions(UMcpAutomationBridgeSubsystem& Bridge, const FStr
             FinalName = SanitizedName;
         }
 
-        // Remove existing members so import is idempotent (replace semantics).
+        const FName SelfPath = StructPath.IsEmpty()
+            ? FName(*FString::Printf(TEXT("%s.%s"), *PackageName, *FinalName))
+            : FName(*StructPath);
+        TArray<FParsedMember> ParsedMembers;
+        TArray<FString> Failures;
+        if (!ValidateStructMembers(*MembersArr, SelfPath, ParsedMembers, Failures))
+        {
+            TArray<TSharedPtr<FJsonValue>> FailureArr;
+            FailureArr.Reserve(Failures.Num());
+            for (const FString& Failure : Failures)
+            {
+                FailureArr.Add(MakeShared<FJsonValueString>(Failure));
+            }
+            TSharedPtr<FJsonObject> ValidationResult = McpHandlerUtils::CreateResultObject();
+            ValidationResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + FinalName);
+            ValidationResult->SetStringField(TEXT("structName"), FinalName);
+            ValidationResult->SetNumberField(TEXT("imported"), 0);
+            ValidationResult->SetNumberField(TEXT("failed"), Failures.Num());
+            ValidationResult->SetArrayField(TEXT("failures"), FailureArr);
+            Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                FString::Printf(TEXT("Struct import validation failed: %d member(s) rejected"), Failures.Num()),
+                ValidationResult);
+            return true;
+        }
+
         TArray<FGuid> Existing;
         for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
         {
@@ -92,78 +115,8 @@ bool HandleStructImportActions(UMcpAutomationBridgeSubsystem& Bridge, const FStr
             FStructureEditorUtils::RemoveVariable(S, G);
         }
 
-        int32 Imported = 0;
-        TArray<FString> Failures;
-        for (const TSharedPtr<FJsonValue>& MemberVal : *MembersArr)
-        {
-            const TSharedPtr<FJsonObject>* MemberObj = nullptr;
-            if (!MemberVal->TryGetObject(MemberObj) || !MemberObj || !MemberObj->IsValid())
-            {
-                Failures.Add(TEXT("member entry is not a JSON object"));
-                continue;
-            }
-            FString MemberName, MemberType;
-            if (!(*MemberObj)->TryGetStringField(TEXT("name"), MemberName) ||
-                !(*MemberObj)->TryGetStringField(TEXT("type"), MemberType))
-            {
-                Failures.Add(TEXT("member missing required 'name' or 'type' field"));
-                continue;
-            }
-            if (MemberName.IsEmpty() || MemberType.IsEmpty())
-            {
-                Failures.Add(FString::Printf(TEXT("member has empty 'name' or 'type' (name=%s)"), *MemberName));
-                continue;
-            }
-
-            const FEdGraphPinType PinType = ParseMemberType(MemberType);
-
-            // Reject malformed members explicitly instead of silently skipping:
-            // a struct cannot contain itself by value, and Enum:/Struct: refs
-            // must resolve to a real asset.
-            UObject* Sub = PinType.PinSubCategoryObject.Get();
-            if (Sub == static_cast<UObject*>(S))
-            {
-                Failures.Add(FString::Printf(TEXT("member '%s' is a self-reference (a struct cannot contain itself by value)"), *MemberName));
-                continue;
-            }
-            if ((MemberType.StartsWith(TEXT("Enum:")) || MemberType.StartsWith(TEXT("Struct:"))) && !Sub)
-            {
-                Failures.Add(FString::Printf(TEXT("member '%s' references unresolved type '%s'"), *MemberName, *MemberType));
-                continue;
-            }
-
-            if (!FStructureEditorUtils::AddVariable(S, PinType))
-            {
-                Failures.Add(FString::Printf(TEXT("member '%s' could not be added (invalid or unsupported type '%s')"), *MemberName, *MemberType));
-                continue;
-            }
-            const FGuid G = FStructureEditorUtils::GetVarDesc(S).Last().VarGuid;
-            FStructureEditorUtils::RenameVariable(S, G, MemberName);
-
-            FStructVariableDescription* NewVar = FStructureEditorUtils::GetVarDescByGuid(S, G);
-            if (NewVar)
-            {
-                FString Def;
-                if ((*MemberObj)->TryGetStringField(TEXT("default"), Def))
-                {
-                    FStructureEditorUtils::ChangeVariableDefaultValue(S, G, Def);
-                }
-                FString Tip;
-                if ((*MemberObj)->TryGetStringField(TEXT("tooltip"), Tip))
-                {
-                    FStructureEditorUtils::ChangeVariableTooltip(S, G, Tip);
-                }
-                const TSharedPtr<FJsonObject>* Meta = nullptr;
-                if ((*MemberObj)->TryGetObjectField(TEXT("metadata"), Meta) && Meta && (*Meta).IsValid())
-                {
-                    for (const auto& Pair : (*Meta)->Values)
-                    {
-                        FStructureEditorUtils::SetMetaData(S, G, *Pair.Key, Pair.Value->AsString());
-                    }
-                }
-            }
-            ++Imported;
-        }
+        TArray<FString> ApplyFailures;
+        int32 Applied = ApplyParsedStructMembers(S, ParsedMembers, ApplyFailures);
 
         FStructureEditorUtils::CompileStructure(S);
         S->GetOutermost()->MarkPackageDirty();
@@ -176,21 +129,21 @@ bool HandleStructImportActions(UMcpAutomationBridgeSubsystem& Bridge, const FStr
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + FinalName);
         Result->SetStringField(TEXT("structName"), FinalName);
-        Result->SetNumberField(TEXT("imported"), Imported);
-        Result->SetNumberField(TEXT("failed"), Failures.Num());
+        Result->SetNumberField(TEXT("imported"), Applied);
+        Result->SetNumberField(TEXT("failed"), ApplyFailures.Num());
         Result->SetStringField(TEXT("status"), UserDefinedStructureStatusToString(S->Status));
         McpHandlerUtils::AddVerification(Result, S);
-        if (Failures.Num() > 0)
+        if (ApplyFailures.Num() > 0)
         {
             TArray<TSharedPtr<FJsonValue>> FailureArr;
-            FailureArr.Reserve(Failures.Num());
-            for (const FString& Failure : Failures)
+            FailureArr.Reserve(ApplyFailures.Num());
+            for (const FString& Failure : ApplyFailures)
             {
                 FailureArr.Add(MakeShared<FJsonValueString>(Failure));
             }
             Result->SetArrayField(TEXT("failures"), FailureArr);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                FString::Printf(TEXT("Struct imported %d member(s) but %d failed"), Imported, Failures.Num()), Result);
+                FString::Printf(TEXT("Struct imported %d member(s) but %d failed"), Applied, ApplyFailures.Num()), Result);
         }
         else
         {

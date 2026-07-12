@@ -30,23 +30,23 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
             return true;
         }
 
-        const FEdGraphPinType PinType = ParseMemberType(MemberType);
+        const FName SelfStructPath(*StructPath);
+        const McpBlueprintUtils::FTypeResolutionResult Resolved =
+            McpBlueprintUtils::ResolvePinType(MemberType, SelfStructPath);
+        if (!Resolved.bSuccess)
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Type '%s' rejected: %s"), *MemberType, *Resolved.OutError),
+                TEXT("TYPE_RESOLUTION_FAILED"));
+            return true;
+        }
+        const FEdGraphPinType PinType = Resolved.PinType;
 
-        // Reject self-reference (a struct cannot contain itself by value) and
-        // unresolved Enum:/Struct: refs so a malformed member never reaches the
-        // compiler. The self-ref check precedes the null-subcategory check
-        // because a self-ref resolves to S (not null).
         UObject* Sub = PinType.PinSubCategoryObject.Get();
         if (Sub == static_cast<UObject*>(S))
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Struct cannot reference itself as a member type"), TEXT("SELF_REFERENCE"));
-            return true;
-        }
-        if ((MemberType.StartsWith(TEXT("Enum:")) || MemberType.StartsWith(TEXT("Struct:"))) && !Sub)
-        {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Type not found: %s"), *MemberType), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
@@ -211,7 +211,17 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
             return true;
         }
 
-        const FEdGraphPinType PinType = ParseMemberType(MemberType);
+        const FName SelfStructPath(*StructPath);
+        const McpBlueprintUtils::FTypeResolutionResult Resolved =
+            McpBlueprintUtils::ResolvePinType(MemberType, SelfStructPath);
+        if (!Resolved.bSuccess)
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Type '%s' rejected: %s"), *MemberType, *Resolved.OutError),
+                TEXT("TYPE_RESOLUTION_FAILED"));
+            return true;
+        }
+        const FEdGraphPinType PinType = Resolved.PinType;
 
         UObject* Sub = PinType.PinSubCategoryObject.Get();
         if (Sub == static_cast<UObject*>(S))
