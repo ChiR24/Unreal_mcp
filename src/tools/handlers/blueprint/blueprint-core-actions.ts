@@ -24,7 +24,11 @@ export const blueprintCoreHandlers: Readonly<Record<string, BlueprintActionHandl
   set_default: async (context) => await executeBlueprintRequest(context, 'blueprint_set_default', {
     blueprintCandidates: blueprintCandidates(context),
     requestedPath: blueprintTarget(context),
-    propertyName: context.argsTyped.propertyName ?? '',
+    // set_default targets a Blueprint VARIABLE's default, so callers naturally say variableName —
+    // alias it instead of failing the C++ "propertyName required" check on a naming difference.
+    propertyName: context.argsTyped.propertyName
+      ?? optionalString(context.argsRecord.variableName)
+      ?? '',
     value: context.argsTyped.value !== undefined ? context.argsTyped.value : context.argsRecord.propertyValue
   }),
   compile: async (context) => await executeBlueprintRequest(context, 'blueprint_compile', {
