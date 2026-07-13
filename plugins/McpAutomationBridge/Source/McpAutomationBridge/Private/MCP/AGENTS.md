@@ -49,9 +49,27 @@ manage_ai, manage_inventory, manage_interaction, manage_networking, manage_level
 
 ## SECURITY
 - Empty/`localhost` listen hosts normalize to loopback. A disallowed non-loopback host falls back to `127.0.0.1`.
+- **Fail-closed LAN coupling**: the native transport refuses to bind non-loopback unless `bRequireCapabilityToken` is also enabled (`SECURITY: refusing to bind native MCP to non-loopback` in `Transport/McpNativeTransportLifecycle.cpp`). A LAN-exposed surface can never start without auth.
 - When capability auth is enabled, require `X-MCP-Capability-Token` before method dispatch.
+- **Constant-time token checks**: `McpConstantTimeTokenEquals` (`Private/Foundation/McpSecureTokenCompare.h`) compares the token with no data-dependent early exit, so timing never leaks how much of a token matched.
+- **Session-scoped bounded cancellation**: `notifications/cancelled` correlates only to the caller's in-flight request, keyed by the client JSON-RPC id and the owning session id, so one session cannot cancel another. The cancel-marker maps (`CancelledInternalRequestIds` + `CancelledMarkerOrder`) are capped by `MaxCancelledMarkers` with oldest-first eviction, and a late response for a cancelled request is suppressed (the SSE socket closes without a result). See `Transport/McpNativeTransportCancellation.cpp` and the C4 contract test.
 - Browser Origin/CORS access is allowed only under capability-token protection; preserve origin rejection and preflight behavior.
 - Keep request-size limits, session expiry, method/path checks, write serialization, and socket ownership accounting intact.
+
+## PROTOCOL VERSION NEGOTIATION (intentional legacy asymmetry)
+The native transport supports **exactly the three modern MCP versions**:
+`2025-11-25` (latest), `2025-06-18`, and `2025-03-26` (see `McpSupportedProtocolVersions` in `Transport/McpNativeTransportPrivate.h`). At `initialize` it echoes the highest mutually supported version, or the latest for an unknown well-formed request; `McpDefaultProtocolVersion()` (`2025-03-26`) backs post-initialize requests that omit the `MCP-Protocol-Version` header.
+
+- **The native surface deliberately does NOT implement the later `2026-07-28` release-candidate version.** That RC is fictional for this codebase and is explicitly excluded from `McpSupportedProtocolVersions`; the contract test asserts it never appears as a listed/implemented version.
+- **Asymmetry with the TS SDK**: the TypeScript stdio server negotiates through the MCP SDK's `SUPPORTED_PROTOCOL_VERSIONS`, which also accepts two older legacy versions (`2024-11-05` and `2024-10-07`). The native `/mcp` transport is intentionally stricter (modern versions only), so a client pinned to a legacy version will negotiate with the TS surface but not the native surface.
+
+## GATEWAY DISCOVERY
+When gateway mode is on (`bEnableNativeGateway`, default `true`), the native surface exposes the single `unreal` tool and mirrors the TypeScript gateway's progressive discovery. `describe` drills down in three levels and never dumps a full `inputSchema`:
+1. `describe { tool }` -> tool summary + paginated/filterable action list.
+2. `describe { tool, action }` -> paginated/filterable parameter catalog (the **tool-union**, not action-specific).
+3. `describe { tool, action, param }` -> exactly one parameter's full schema.
+
+`perActionSchemas` is **always `false`**: parameters are the union catalog across all actions of the parent tool, and a parameter is passed only when relevant to the selected action. Invalid tool/action/param calls return closest-match `suggestions` and an executable `nextCall` payload (guided errors). The generated manifest `McpNativeGatewayManifest.h` is the single source of truth shared with the TS gateway; `McpNativeGatewayDescribe.cpp` is only a registry-fallback when that manifest fails to load.
 
 ## VALIDATION
 ```bash

@@ -67,15 +67,16 @@ NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-
 
 ## CONVENTIONS
 ### Transport Surfaces
-1. **TypeScript stdio MCP**: `src/index.ts` exposes the public API; `src/server/` owns construction/lifecycle; `src/automation/` connects to Unreal.
+1. **TypeScript stdio MCP**: `src/index.ts` exposes the public API; `src/server/` owns construction/lifecycle; `src/automation/` connects to Unreal. Defaults to **gateway mode** (single `unreal` tool); set `MCP_GATEWAY_MODE=false` to restore the legacy 23-tool direct listing (validated boolean in `src/config.ts` EnvSchema, default `true`).
 2. **WebSocket bridge**: plugin listen sockets default to loopback `8090,8091`; TS sends automation requests through the negotiated bridge. `MCP_AUTOMATION_CLIENT_MODE=true` flips TS to server mode.
-3. **Native MCP**: optional plugin HTTP/SSE under `Private/MCP/`; `GET /mcp` opens SSE, `POST /mcp` handles JSON-RPC, `DELETE /mcp` tears down sessions. Default port `3000` (override with `MCP_NATIVE_PORT`).
+3. **Native MCP**: optional plugin HTTP/SSE under `Private/MCP/`; `GET /mcp` opens SSE, `POST /mcp` handles JSON-RPC, `DELETE /mcp` tears down sessions. Default port `3000` (override with `MCP_NATIVE_PORT`). Defaults to gateway mode via `bEnableNativeGateway` (default `true`); disable in Project Settings to restore the 23-tool native listing.
 4. **UnrealAgent ACP**: optional editor panel starts `opencode acp`; injects the configured native `unreal-engine` MCP endpoint but exposes no MCP tools itself.
 
 ### Security Boundaries
-- Loopback-only by default. Non-loopback requires `MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true` (TS) or `bAllowNonLoopback` (plugin). When enabled, **also enable `bRequireCapabilityToken`** — loopback default-allow means any LAN client can call any tool unauthenticated.
-- Capability-token auth: `X-MCP-Capability-Token` (native MCP) and `bridge_hello.capabilityToken` (WebSocket) when enabled.
-- Metrics are separate: non-loopback metrics require both `MCP_METRICS_ALLOW_NON_LOOPBACK=true` and `MCP_METRICS_TOKEN`.
+- Loopback-only by default. Non-loopback requires `MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true` (TS) or `bAllowNonLoopback` (plugin). The two flags are independent surfaces (the TS bridge is a WebSocket *client* to the plugin socket, not a second server).
+- **Fail-closed LAN coupling**: the native MCP transport refuses to bind non-loopback unless `bRequireCapabilityToken` is also enabled, so a LAN-exposed surface can never start without auth. The TS stdio bridge has no server socket of its own, so its non-loopback opt-in is the Node.js `MCP_AUTOMATION_ALLOW_NON_LOOPBACK`/`MCP_AUTOMATION_HOST=0.0.0.0` pair, which must be paired with capability-token planning on the plugin side. Loopback default-allow means any LAN client can call any tool unauthenticated once exposed.
+- Capability-token auth: `X-MCP-Capability-Token` (native MCP) and `bridge_hello.capabilityToken` (WebSocket) when enabled. Tokens are compared in **constant time** (`McpConstantTimeTokenEquals` in `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Foundation/McpSecureTokenCompare.h`) on both transports, so comparison time never leaks how much of a token matched.
+- Metrics are separate: non-loopback metrics requires both `MCP_METRICS_ALLOW_NON_LOOPBACK=true` and `MCP_METRICS_TOKEN`.
 - Paths limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara`, plus sanitized `MCP_ADDITIONAL_PATH_PREFIXES`. Preserve `/Game/...` normalization; do not add code depending on unnormalized `/Content/...`.
 
 ### UE Safety
@@ -112,6 +113,8 @@ NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-
 - Dynamic tool management exists in both TS and native MCP; `manage_tools` and `inspect` are protected (cannot be disabled; `core` category is fixed).
 - The native plugin has self-describing MCP tool definitions in C++ separate from TS JSON schemas; `MCP_REGISTER_TOOL` only attempts static registration and non-canonical names are silently filtered.
 - The bridge plugin is responsibility-split: `Core` routes, `Domains` implement, `Foundation` shares primitives, `Safety` wraps hazardous editor ops, `Transport` owns sockets.
+- Both transports default to a single `unreal` gateway tool (`search`/`describe`/`execute`/`configure`). Discovery is **progressive and never dumps full schemas**: `describe` drills down `tool` summary -> `tool+action` parameter catalog -> `tool+action+param` single schema, and `perActionSchemas` is always `false` (the parameter catalog is the tool-union). Invalid calls return guided errors with `suggestions` plus an executable `nextCall`. Opt out of gateway mode per-surface (`MCP_GATEWAY_MODE=false` for TS; `Enable Native Gateway` off for native).
+- Protocol version negotiation is **intentionally asymmetric**: the native `/mcp` transport supports exactly the three modern MCP versions (`2025-11-25`, `2025-06-18`, `2025-03-26`) and deliberately does not implement the later `2026-07-28` RC. The TypeScript SDK also accepts two older legacy versions (`2024-11-05`, `2024-10-07`) from its `SUPPORTED_PROTOCOL_VERSIONS` set, so the native surface is intentionally stricter than the TS surface.
 - Source-contract tests in `tests/unit/plugin/*contracts.test.ts` read C++/C# files and assert required/forbidden patterns (incl. a 250 pure-line ceiling per file).
 
 ## COMMANDS
@@ -135,7 +138,7 @@ npm run test:unit:coverage
 ```
 
 ## NOTES
-- **Version sources**: the server version is read from `package.json` at runtime (`SERVER_VERSION` in `src/server/server-factory.ts`, with a hardcoded `'0.5.30'` last-resort fallback). `server.json` versions the npm package distribution. Bridge/UnrealAgent versions live in their `.uplugin` files. When bumping, update `package.json` (+`package-lock.json`), `server.json`, and the `.uplugin` together. The `bump-version.yml` workflow still edits a `DEFAULT_SERVER_VERSION` constant in `src/index.ts` that **no longer exists** — do not rely on it; bump manually and verify with `grep -rn "0.5.30" package.json server.json plugins/*/*.uplugin`.
+- **Version sources**: `package.json` (`version`) is the canonical source. `npm version` rewrites it together with `package-lock.json`, so both stay in lockstep. `server.json` versions the npm package distribution (top-level `version` plus the npm package `version`). Bridge/UnrealAgent versions live in their `.uplugin` `VersionName`. The native HTTP/SSE transport advertises `server-info.json` (`version`) and the `McpNativeTransport.h` `ServerVersion` `TEXT` fallback; the TS server advertises the `SERVER_VERSION` fallback in `src/server/server-factory.ts` when `package.json` cannot be read. Coordinated release bumps must resync all of: `package.json` (+`package-lock.json`), `server.json`, both `.uplugin` files, `server-info.json`, `src/server/server-factory.ts`, and `McpNativeTransport.h`. The `bump-version.yml` workflow already rewrites every one of these (via `npm version`, `jq`, and `perl`), so a coordinated bump is a single workflow run. Verify with `npm run version:check` (`tests/unit/version-consistency.test.ts`), which asserts agreement across all eight sources. For a manual audit, grep the canonical version across `package.json server.json plugins/*/*.uplugin plugins/*/Resources/MCP/server-info.json` rather than a hardcoded literal.
 - **Engine reference path**: `/data/UnrealEngine/Engine/`.
 - **External GitHub Actions** are pinned to full commit SHAs.
 - **`GEMINI.md` is stale and not authoritative** — it references `src/unreal-bridge.ts` (now split into `src/unreal-bridge*.ts`), uppercase `Plugins/`, non-existent Rust modules, and `npm run test:control_actor`. Prefer this file and the nested AGENTS.

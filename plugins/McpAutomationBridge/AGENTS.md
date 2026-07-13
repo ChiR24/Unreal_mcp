@@ -31,7 +31,10 @@ Editor-only UE 5.0-5.8 Preview plugin. It owns the WebSocket automation bridge a
 - `McpAutomationBridge.uplugin` owns bridge version fields; coordinated releases must also follow the repo-wide server version workflow.
 - Defaults are `127.0.0.1`, ports `8090,8091`, multi-listen enabled, and non-loopback disabled.
 - LAN binding requires explicit `bAllowNonLoopback`; never introduce an implicit `0.0.0.0` fallback.
+- **Fail-closed LAN coupling**: the native `/mcp` transport refuses to bind non-loopback unless `bRequireCapabilityToken` is also enabled, so a LAN-exposed surface can never start without auth. The plugin's non-loopback setting governs both server-side listeners it owns (WebSocket bridge listen socket and native MCP HTTP/SSE transport).
 - `bRequireCapabilityToken` protects both transports. WebSocket uses the bridge hello token; native MCP uses `X-MCP-Capability-Token`.
+- **Constant-time token checks**: both transports compare capability tokens with `McpConstantTimeTokenEquals` (`Private/Foundation/McpSecureTokenCompare.h`), XOR-accumulating over the full UTF-8 byte span with no data-dependent early exit, so timing never leaks how much of a token matched.
+- **Session-scoped bounded cancellation**: native `notifications/cancelled` correlates only to the caller's in-flight request (scoped by session id and client JSON-RPC id key), and the cancel-marker maps are capped with oldest-first eviction; a late response for a cancelled request is suppressed. See the nested MCP `AGENTS.md` for lifecycle detail.
 - TLS settings belong to the WebSocket transport. Preserve certificate/key validation, rate limits, heartbeat handling, and response sanitization.
 
 ## PACKAGING

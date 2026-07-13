@@ -219,7 +219,7 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 
 - **Listen Ports**: WebSocket ports (default: 8090, 8091)
 - **Enable TLS**: Enable secure WebSocket connections
-- **Allow Non-Loopback**: Enable LAN access for the WebSocket bridge only
+- **Allow Non-Loopback**: Enable LAN access for both the WebSocket bridge listen socket and the native MCP HTTP/SSE transport (requires `Require Capability Token`)
 - **Enable Native MCP**: Enable built-in HTTP/SSE MCP server (default: off)
 - **Native MCP Port**: HTTP port for native MCP transport (default: 3000; override at startup with the `MCP_NATIVE_PORT` environment variable)
 - **Listen Host**: Bind address (default: 127.0.0.1)
@@ -232,9 +232,9 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 
 ## Security
 
-- **Native MCP loopback-only binding** (`127.0.0.1`, not configurable)
-- **WebSocket loopback-only by default**; LAN binding requires explicit opt-in
-- **Capability token authentication** — enforce token on both WebSocket and Native MCP transports (enable in Project Settings)
+- **Fail-closed listener binding** — both plugin-owned server-side listeners (the WebSocket bridge listen socket and the native MCP HTTP/SSE transport) bind loopback-first by default. Non-loopback requires explicit `bAllowNonLoopback`; the native transport additionally refuses to bind non-loopback unless `bRequireCapabilityToken` is enabled, so a LAN-exposed surface can never start without auth.
+- **WebSocket loopback-only by default**; LAN binding on either surface requires explicit opt-in
+- **Capability token authentication** — enforce token on both WebSocket and Native MCP transports (enable `Require Capability Token` in Project Settings)
 - **TLS/SSL support** for the WebSocket transport
 - **Rate limiting** support (disabled by default; configurable via Project Settings)
 - **Handshake required** before automation requests

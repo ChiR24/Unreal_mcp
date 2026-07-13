@@ -37,10 +37,33 @@ When the gateway is on, `tools/list` returns only `{ "unreal" }`. A
 `tools/call` whose name is not `unreal` returns an `UNKNOWN_TOOL` error that
 directs the client to `search` / `describe` / `execute`.
 
-## Protocol version negotiation (2025-11-25)
+## Progressive gateway discovery
+
+Both transports expose the same progressive `unreal` gateway. Discovery is
+**never a full schema dump**; `describe` drills down in three levels, and
+`perActionSchemas` is **always `false`**:
+
+1. `describe { tool }` -> tool summary + a paginated/filterable action list
+   (no `inputSchema` body).
+2. `describe { tool, action }` -> a paginated/filterable parameter catalog for
+   the action. The catalog is the **tool-union**: parameters are shared across
+   all actions of the parent tool, not action-specific, so per-action schema
+   mappings do not exist.
+3. `describe { tool, action, param }` -> exactly one parameter's full schema.
+
+`search` returns compact matches (name, category, description, actions) without
+`inputSchema` or `parameterNames` bodies. Every invalid `describe` call
+(tool/action/param) returns a structured, **guided error**: closest-match
+`suggestions` plus an executable `nextCall` payload that drills one level
+deeper. The generated native manifest (`McpNativeGatewayManifest.h`) is the
+single source of truth shared with the TS gateway; the native
+`McpNativeGatewayDescribe.cpp` is only a registry fallback when that manifest
+fails to load.
+
+## Protocol version negotiation
 
 The native transport implements full negotiation. Supported versions, in
-`Private/MCP/Transport/McpNativeTransportPrivate.h`:
+`Private/MCP/Transport/McpNativeTransportPrivate.h` (`McpSupportedProtocolVersions`):
 
 - `2025-11-25` (latest)
 - `2025-06-18`
@@ -48,7 +71,8 @@ The native transport implements full negotiation. Supported versions, in
 
 Behavior:
 
-- At `initialize`, the server picks the highest version mutually supported.
+- At `initialize`, the server picks the highest version mutually supported, or
+  the latest for an unknown well-formed request.
 - `McpLatestProtocolVersion()` returns `2025-11-25`.
 - `McpDefaultProtocolVersion()` returns `2025-03-26`, used when a
   post-initialize request omits `MCP-Protocol-Version` and no session version
@@ -57,11 +81,57 @@ Behavior:
   `MCP-Protocol-Version` header on every post-initialize request and returns
   HTTP 400 on an unsupported or invalid value.
 
+### Intentional native/TS asymmetry
+
+The native `/mcp` transport is **intentionally stricter than the TypeScript
+surface**. It supports only the three modern versions listed above. The
+TypeScript stdio server negotiates through the MCP SDK's
+`SUPPORTED_PROTOCOL_VERSIONS`, which also accepts two older legacy versions:
+
+- `2024-11-05`
+- `2024-10-07`
+
+A client pinned to a legacy version therefore negotiates with the TS surface
+but not the native surface. The native transport **deliberately does not
+implement the later `2026-07-28` release-candidate version**; that RC is not
+part of this codebase and is excluded from `McpSupportedProtocolVersions`.
+State "latest" as `2025-11-25` only; do not claim support for any later RC.
+
 ## Cancellation
 
-`notifications/cancelled` maps to the queued operation; once cancelled, a late
-response for that operation is suppressed. Covered by
-`tests/unit/plugin/native_cancellation_contracts.test.ts`.
+### Native MCP transport (implemented)
+
+`notifications/cancelled` is implemented on the native `/mcp` transport. It
+maps to the queued operation and, once cancelled, a late response for that
+operation is suppressed (the SSE socket closes without a result). The behavior
+is **session-scoped and bounded**:
+
+- Cancellation correlates only to the caller's in-flight request, keyed by the
+  client JSON-RPC id and the owning session id, so one session cannot cancel
+  another.
+- The cancel-marker maps are capped (`MaxCancelledMarkers`) with oldest-first
+  eviction, so they cannot grow without limit.
+- A client-supplied `_meta.progressToken` is captured and echoed verbatim
+  (type-preserving) in `notifications/progress`.
+
+Covered by `tests/unit/plugin/native_cancellation_contracts.test.ts`.
+
+### TypeScript stdio transport (implemented)
+
+Forwarding of inbound `notifications/cancelled` from the TS stdio server to the
+automation bridge **is implemented**. `server-factory.ts` registers
+`CancelledNotificationSchema` and calls `AutomationBridge.cancelMcpRequest`,
+which rejects the matching queued or inflight automation request (keyed by the
+canonicalized JSON-RPC id) and sends a targeted `cancel_request` frame to
+Unreal. Both the explicit notification and the SDK `AbortSignal` converge on the
+same idempotent primitive, and a late `automation_response` for a cancelled
+request is harmless because the tracker entry was already removed. Gateway and
+legacy tool modes both capture `extra.requestId` / `extra.signal` via an
+async-local request context so handlers can be cancelled without changing their
+signatures.
+
+Covered by `tests/unit/plugin/bridge_cancellation_contracts.test.ts` and the
+dispatcher/request-context unit tests.
 
 ## Progress tokens
 
@@ -95,13 +165,20 @@ generated artifacts.
 
 ## Version sources
 
-All version sources must agree (currently `0.5.30`):
+All version sources must agree (currently `0.5.30`). The canonical source is
+`package.json` (`version`); `npm version` rewrites it together with
+`package-lock.json`, so both stay in lockstep. Every other coordinated
+source is compared against `package.json` by `npm run version:check`
+(`tests/unit/version-consistency.test.ts`):
 
-- `package.json` (`version`)
+- `package.json` (`version`) and `package-lock.json` (`version`, rewritten by `npm version`)
 - `server.json` (`version` and the npm package `version`)
 - `plugins/McpAutomationBridge/McpAutomationBridge.uplugin` (`VersionName`)
+- `plugins/UnrealAgent/UnrealAgent.uplugin` (`VersionName`)
+- `plugins/McpAutomationBridge/Resources/MCP/server-info.json` (`version`)
 - `src/server/server-factory.ts` (`SERVER_VERSION` fallback when
   `package.json` cannot be read)
+- `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h`
+  (`ServerVersion` `TEXT` fallback)
 
-`npm run version:check` asserts agreement via
-`tests/unit/version-consistency.test.ts`.
+`npm run version:check` asserts agreement across all eight sources.
