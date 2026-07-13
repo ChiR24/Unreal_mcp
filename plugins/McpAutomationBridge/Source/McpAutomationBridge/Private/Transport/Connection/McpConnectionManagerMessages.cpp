@@ -163,7 +163,8 @@ void FMcpConnectionManager::HandleMessage(
     FString ReceivedToken;
     RootObj->TryGetStringField(TEXT("capabilityToken"), ReceivedToken);
     if (bRequireCapabilityToken &&
-        (ReceivedToken.IsEmpty() || ReceivedToken != CapabilityToken)) {
+        (ReceivedToken.IsEmpty() ||
+         !McpConstantTimeTokenEquals(ReceivedToken, CapabilityToken))) {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("Capability token mismatch."));
       if (SocketPtr) {

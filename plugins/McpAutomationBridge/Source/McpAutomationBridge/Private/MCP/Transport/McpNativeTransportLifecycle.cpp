@@ -52,8 +52,24 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 	}
 	else if (!bIsLoopback)
 	{
+		// Fail-closed LAN/token coupling. A non-loopback bind exposes the native
+		// MCP surface to the network. The default-allow loopback posture means a
+		// LAN bind without capability-token auth would let any network client
+		// call any tool unauthenticated, so refuse to start unless the token is
+		// required. The disallowed-host loopback fallback above is preserved: a
+		// host that is NOT explicitly allowed still degrades to 127.0.0.1.
+		const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
+		if (!Settings || !Settings->bRequireCapabilityToken)
+		{
+			UE_LOG(LogMcpNativeTransport, Error,
+				TEXT("SECURITY: refusing to bind native MCP to non-loopback %s without RequireCapabilityToken; "
+					"enable the capability token or keep the host loopback"),
+				*ListenHost);
+			return false;
+		}
 		UE_LOG(LogMcpNativeTransport, Warning,
-			TEXT("SECURITY: Native MCP is binding to an explicitly allowed non-loopback address"));
+			TEXT("SECURITY: native MCP binding to non-loopback %s requires capability token"),
+			*ListenHost);
 	}
 
 	// Load server identity & instructions from server-info.json

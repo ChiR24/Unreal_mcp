@@ -89,8 +89,25 @@ uint32 FMcpBridgeWebSocket::RunServer() {
       bResolvedHost = bFallbackIsValidIp;
     }
   } else if (bAllowNonLoopback) {
+    // Fail-closed LAN/token coupling, mirroring the native MCP transport. A
+    // non-loopback WebSocket bind exposes the bridge to the local network. The
+    // default-allow loopback posture means a LAN bind without capability-token
+    // auth would let any network client call any tool unauthenticated, so refuse
+    // to start the listener unless the token is required. There is NO
+    // unauthenticated loopback fallback for this path: the operator must enable
+    // Require Capability Token (or keep the host loopback).
+    if (!Settings || !Settings->bRequireCapabilityToken) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
+             TEXT("SECURITY: refusing to bind WebSocket bridge to non-loopback '%s' without Require Capability Token; enable the capability token or keep the host loopback"),
+             *HostToBind);
+      // Fail-closed: tear down the listen socket before returning; it is
+      // idempotent, so the ON_SCOPE_EXIT guard stays a safe backstop.
+      DestroyListenSocket();
+      return 0;
+    }
+
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-           TEXT("SECURITY: Binding to non-loopback address '%s'. The automation bridge is exposed to your local network."),
+           TEXT("SECURITY: Binding to non-loopback address '%s' requires capability token. The automation bridge is exposed to your local network."),
            *HostToBind);
 
     bool bIsValidIp = false;

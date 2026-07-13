@@ -2,6 +2,7 @@
 
 #include "MCP/Transport/McpNativeTransport.h"
 #include "MCP/Protocol/McpJsonRpc.h"
+#include "Foundation/McpSecureTokenCompare.h"
 #include "MCP/Registry/McpToolRegistry.h"
 #include "MCP/Registry/McpToolDefinition.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -52,7 +53,17 @@ inline FString McpJsonRpcIdKey(const TSharedPtr<FJsonValue>& Id)
 	return FString();
 }
 
-// Native MCP protocol-version set. 2026-07-28 (a later RC) is intentionally not supported.
+// Native MCP protocol-version set.
+//
+// Intentional legacy asymmetry: the native C++ transport deliberately supports
+// ONLY the three modern protocol versions (2025-11-25, 2025-06-18, 2025-03-26).
+// The TypeScript SDK's negotiation table additionally carries OLDER legacy
+// versions for backward compatibility with long-lived client installs; the
+// native surface does NOT, because every native client negotiates fresh at
+// initialize and we refuse to maintain compatibility shims for protocol
+// versions the supported engine targets never shipped against. Do NOT add
+// unsupported (future or legacy) versions here — the latest three are the
+// supported set.
 inline const TArray<FString>& McpSupportedProtocolVersions()
 {
     static const TArray<FString> Versions =

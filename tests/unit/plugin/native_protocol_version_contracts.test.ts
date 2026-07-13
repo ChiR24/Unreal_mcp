@@ -120,4 +120,34 @@ describe('C3: MCP protocol version negotiation + header handling', () => {
     expect(discovery).not.toContain('"2026-07-28"');
     expect(connection).not.toContain('"2026-07-28"');
   });
+
+  it('locks the native set to exactly the three modern versions (no TS legacy, no fictional RC)', () => {
+    // The native transport is intentionally stricter than the TypeScript SDK,
+    // which also negotiates two older legacy versions. The native surface must
+    // NOT implement the TS legacy versions (2024-11-05, 2024-10-07) nor the
+    // fictional later RC (2026-07-28). The supported set is exactly:
+    // 2025-11-25 (latest), 2025-06-18, 2025-03-26.
+    expect(privateH).toContain('"2025-11-25"');
+    expect(privateH).toContain('"2025-06-18"');
+    expect(privateH).toContain('"2025-03-26"');
+
+    // TS legacy versions must never appear as a listed/implemented native version.
+    expect(privateH).not.toContain('"2024-11-05"');
+    expect(privateH).not.toContain('"2024-10-07"');
+
+    // Fictional later RC excluded (redundant with the prior test; locked here
+    // alongside the legacy exclusions so the asymmetry contract is one assertion
+    // group).
+    expect(privateH).not.toContain('"2026-07-28"');
+
+    // Exactly three supported versions are enumerated in McpSupportedProtocolVersions.
+    const versionsBlock = privateH.slice(
+      privateH.indexOf('inline const TArray<FString>& McpSupportedProtocolVersions'),
+      privateH.indexOf('inline const FString& McpLatestProtocolVersion'),
+    );
+    const listed = (versionsBlock.match(/"20\d\d(?:-\d\d){2}"/gmu) ?? []).map(
+      (v) => v.replace(/"/gmu, ''),
+    );
+    expect(listed).toEqual(['2025-11-25', '2025-06-18', '2025-03-26']);
+  });
 });

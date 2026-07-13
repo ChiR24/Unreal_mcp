@@ -2,22 +2,17 @@
 
 void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 {
-	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 	FParsedHttpRequest HttpReq;
 	if (!ReadHttpRequest(ClientSocket, HttpReq))
 	{
-		SendHttpResponse(ClientSocket, 400, TEXT("text/plain"), TEXT("Bad Request"));
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
+		SendAndClose(ClientSocket, 400, TEXT("text/plain"), TEXT("Bad Request"));
 		return;
 	}
 
 	// Only accept /mcp path
 	if (HttpReq.Path != TEXT("/mcp"))
 	{
-		SendHttpResponse(ClientSocket, 404, TEXT("text/plain"), TEXT("Not Found"));
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
+		SendAndClose(ClientSocket, 404, TEXT("text/plain"), TEXT("Not Found"));
 		return;
 	}
 
@@ -27,23 +22,19 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 	{
 		if (IsAllowedCorsOrigin(HttpReq.Origin))
 		{
-			SendHttpResponse(ClientSocket, 204, TEXT("text/plain"), FString(), {}, HttpReq.Origin);
+			SendAndClose(ClientSocket, 204, TEXT("text/plain"), FString(), {}, HttpReq.Origin);
 		}
 		else
 		{
-			SendHttpResponse(ClientSocket, 403, TEXT("text/plain"),
-				TEXT("CORS preflight requires capability-token protection"));
+			SendAndClose(ClientSocket, 403, TEXT("text/plain"),
+				TEXT("CORS preflight requires capability-token protection"), {}, HttpReq.Origin);
 		}
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
 		return;
 	}
 
 	if (!HttpReq.Origin.IsEmpty() && !IsAllowedCorsOrigin(HttpReq.Origin))
 	{
-		SendHttpResponse(ClientSocket, 403, TEXT("text/plain"), TEXT("Invalid Origin"));
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
+		SendAndClose(ClientSocket, 403, TEXT("text/plain"), TEXT("Invalid Origin"), {}, HttpReq.Origin);
 		return;
 	}
 
@@ -52,12 +43,14 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
 		if (Settings && Settings->bRequireCapabilityToken)
 		{
-			if (HttpReq.CapabilityToken.IsEmpty() || HttpReq.CapabilityToken != Settings->CapabilityToken)
+			// Empty client token is rejected outright; the remaining comparison
+			// is constant-time so a timing oracle cannot leak how much of the
+			// token matched.
+			if (HttpReq.CapabilityToken.IsEmpty()
+				|| !McpConstantTimeTokenEquals(HttpReq.CapabilityToken, Settings->CapabilityToken))
 			{
 				UE_LOG(LogMcpNativeTransport, Warning, TEXT("Capability token mismatch - rejecting connection"));
-				SendHttpResponse(ClientSocket, 401, TEXT("application/json"), FMcpJsonRpc::BuildError(MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest, TEXT("Invalid capability token")), {}, HttpReq.Origin);
-				ClientSocket->Close();
-				SocketSub->DestroySocket(ClientSocket);
+				SendAndClose(ClientSocket, 401, TEXT("application/json"), FMcpJsonRpc::BuildError(MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest, TEXT("Invalid capability token")), {}, HttpReq.Origin);
 				return;
 			}
 		}
@@ -70,10 +63,8 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		ESessionValidationResult SessionStatus = ValidateSession(HttpReq.SessionId, SessionError);
 		if (SessionStatus != ESessionValidationResult::Valid)
 		{
-			SendHttpResponse(ClientSocket, GetSessionValidationStatusCode(SessionStatus),
+			SendAndClose(ClientSocket, GetSessionValidationStatusCode(SessionStatus),
 				TEXT("text/plain"), SessionError, {}, HttpReq.Origin);
-			ClientSocket->Close();
-			SocketSub->DestroySocket(ClientSocket);
 			return;
 		}
 
@@ -92,9 +83,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 			}
 			CloseSessionConnections(HttpReq.SessionId);
 		}
-		SendHttpResponse(ClientSocket, 200, TEXT("text/plain"), FString(), {}, HttpReq.Origin);
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
+		SendAndClose(ClientSocket, 200, TEXT("text/plain"), FString(), {}, HttpReq.Origin);
 		return;
 	}
 
@@ -103,20 +92,16 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 	{
 		if (!HttpReq.Accept.Contains(TEXT("text/event-stream")))
 		{
-			SendHttpResponse(ClientSocket, 406, TEXT("text/plain"),
+			SendAndClose(ClientSocket, 406, TEXT("text/plain"),
 				TEXT("Not Acceptable: requires Accept: text/event-stream"), {}, HttpReq.Origin);
-			ClientSocket->Close();
-			SocketSub->DestroySocket(ClientSocket);
 			return;
 		}
 		FString SessionError;
 		ESessionValidationResult SessionStatus = ValidateSession(HttpReq.SessionId, SessionError);
 		if (SessionStatus != ESessionValidationResult::Valid)
 		{
-			SendHttpResponse(ClientSocket, GetSessionValidationStatusCode(SessionStatus),
+			SendAndClose(ClientSocket, GetSessionValidationStatusCode(SessionStatus),
 				TEXT("text/plain"), SessionError, {}, HttpReq.Origin);
-			ClientSocket->Close();
-			SocketSub->DestroySocket(ClientSocket);
 			return;
 		}
 		if (!GuardProtocolVersionHeader(ClientSocket, HttpReq, nullptr, false)) return;
@@ -127,9 +112,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 	// ── POST /mcp — JSON-RPC ──
 	if (HttpReq.Method != TEXT("POST"))
 	{
-		SendHttpResponse(ClientSocket, 405, TEXT("text/plain"), TEXT("Method Not Allowed"), {}, HttpReq.Origin);
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
+		SendAndClose(ClientSocket, 405, TEXT("text/plain"), TEXT("Method Not Allowed"), {}, HttpReq.Origin);
 		return;
 	}
 
@@ -146,17 +129,13 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		FString ErrorBody = FMcpJsonRpc::BuildError(ErrorId, ErrorCode,
 			(Rpc.ErrorType == EMcpJsonRpcError::ParseError)
 				? TEXT("Parse error") : TEXT("Invalid Request"));
-		SendHttpResponse(ClientSocket, 400, TEXT("application/json"), ErrorBody, {}, HttpReq.Origin);
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
+		SendAndClose(ClientSocket, 400, TEXT("application/json"), ErrorBody, {}, HttpReq.Origin);
 		return;
 	}
 
 	if (Rpc.bIsNotification && Rpc.Method == TEXT("initialize"))
 	{
-		SendHttpResponse(ClientSocket, 400, TEXT("application/json"), FMcpJsonRpc::BuildError(MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest, TEXT("initialize must include an id")), {}, HttpReq.Origin);
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
+		SendAndClose(ClientSocket, 400, TEXT("application/json"), FMcpJsonRpc::BuildError(MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest, TEXT("initialize must include an id")), {}, HttpReq.Origin);
 		return;
 	}
 
@@ -167,12 +146,10 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		ESessionValidationResult SessionStatus = ValidateSession(HttpReq.SessionId, SessionError);
 		if (SessionStatus != ESessionValidationResult::Valid)
 		{
-			FString ErrorBody = FMcpJsonRpc::BuildError(
+			const FString ErrorBody = FMcpJsonRpc::BuildError(
 				Rpc.Id, FMcpJsonRpc::ErrorInvalidRequest, SessionError);
-			SendHttpResponse(ClientSocket, GetSessionValidationStatusCode(SessionStatus),
+			SendAndClose(ClientSocket, GetSessionValidationStatusCode(SessionStatus),
 				TEXT("application/json"), ErrorBody, {}, HttpReq.Origin);
-			ClientSocket->Close();
-			SocketSub->DestroySocket(ClientSocket);
 			return;
 		}
 		FString RateLimitError;
@@ -182,11 +159,8 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		{
 			const FString ErrorBody = FMcpJsonRpc::BuildError(
 				Rpc.Id, FMcpJsonRpc::ErrorRateLimited, RateLimitError);
-			SendHttpResponse(
-				ClientSocket, 429, TEXT("application/json"), ErrorBody, {},
+			SendAndClose(ClientSocket, 429, TEXT("application/json"), ErrorBody, {},
 				HttpReq.Origin);
-			ClientSocket->Close();
-			SocketSub->DestroySocket(ClientSocket);
 			return;
 		}
 	}
@@ -201,9 +175,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 			TEXT("Received notification: %s"), *Rpc.Method);
 		// Cancellation: route notifications/cancelled to the correlation handler.
 		if (Rpc.Method == TEXT("notifications/cancelled")) HandleCancelledNotification(Rpc.Params, HttpReq.SessionId);
-		SendHttpResponse(ClientSocket, 202, TEXT("text/plain"), FString(), {}, HttpReq.Origin);
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
+		SendAndClose(ClientSocket, 202, TEXT("text/plain"), FString(), {}, HttpReq.Origin);
 		return;
 	}
 
@@ -235,16 +207,13 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 			Rpc.Params, Rpc.Id, NewSessionId, ConnectionRemoteAddr);
 		if (NewSessionId.IsEmpty())
 		{
-			SendHttpResponse(
-				ClientSocket, 429, TEXT("application/json"), ResponseBody, {},
+			SendAndClose(ClientSocket, 429, TEXT("application/json"), ResponseBody, {},
 				HttpReq.Origin);
-			ClientSocket->Close();
-			SocketSub->DestroySocket(ClientSocket);
 			return;
 		}
 		TMap<FString, FString> Headers;
 		Headers.Add(TEXT("Mcp-Session-Id"), NewSessionId);
-		const bool bResponseSent = SendHttpResponse(
+		const bool bResponseSent = SendAndClose(
 			ClientSocket, 200, TEXT("application/json"), ResponseBody, Headers,
 			HttpReq.Origin);
 		if (bResponseSent)
@@ -261,17 +230,13 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 			}
 			CloseSessionConnections(NewSessionId);
 		}
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
 		return;
 	}
 
 	if (Rpc.Method == TEXT("tools/list"))
 	{
 		FString ResponseBody = HandleToolsList(Rpc.Id);
-		SendHttpResponse(ClientSocket, 200, TEXT("application/json"), ResponseBody, {}, HttpReq.Origin);
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
+		SendAndClose(ClientSocket, 200, TEXT("application/json"), ResponseBody, {}, HttpReq.Origin);
 		return;
 	}
 
@@ -286,9 +251,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 	FString ErrorBody = FMcpJsonRpc::BuildError(
 		Rpc.Id, FMcpJsonRpc::ErrorMethodNotFound,
 		FString::Printf(TEXT("Unknown method: %s"), *Rpc.Method));
-	SendHttpResponse(ClientSocket, 200, TEXT("application/json"), ErrorBody, {}, HttpReq.Origin);
-	ClientSocket->Close();
-	SocketSub->DestroySocket(ClientSocket);
+	SendAndClose(ClientSocket, 200, TEXT("application/json"), ErrorBody, {}, HttpReq.Origin);
 }
 
 // ─── HTTP Parsing ───────────────────────────────────────────────────────────

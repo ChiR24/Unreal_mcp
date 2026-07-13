@@ -57,6 +57,17 @@ bool FMcpNativeTransport::SendHttpResponse(FSocket* Socket, int32 StatusCode,
 	return true;
 }
 
+bool FMcpNativeTransport::SendAndClose(FSocket* ClientSocket, int32 StatusCode,
+	const FString& ContentType, const FString& Body,
+	const TMap<FString, FString>& ExtraHeaders, const FString& CorsOrigin)
+{
+	const bool bSent = SendHttpResponse(ClientSocket, StatusCode, ContentType, Body, ExtraHeaders, CorsOrigin);
+	ClientSocket->Close();
+	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+	if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+	return bSent;
+}
+
 bool FMcpNativeTransport::SendSSEHeaders(FSocket* Socket, const FString& SessionId,
 	const FString& CorsOrigin)
 {

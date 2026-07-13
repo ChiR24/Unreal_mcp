@@ -178,6 +178,8 @@ private:
 		const FString& ContentType, const FString& Body,
 		const TMap<FString, FString>& ExtraHeaders = {},
 		const FString& CorsOrigin = FString());
+	// Send a response then tear down the client socket (close + destroy). Returns SendHttpResponse result so callers branch on send success.
+	bool SendAndClose(FSocket* ClientSocket, int32 StatusCode, const FString& ContentType, const FString& Body, const TMap<FString, FString>& ExtraHeaders = {}, const FString& CorsOrigin = FString());
 	// Send a prebuilt JSON-RPC body and tear down the client socket. Shared by
 	// the early-return error paths in HandleToolsCall so each stays a one-liner.
 	void SendBodyAndClose(FSocket* ClientSocket, const FString& Body,

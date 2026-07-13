@@ -8,6 +8,13 @@ import {
   publicSource,
 } from './sequence_contract_test_utils.js';
 
+// Canonical version source: package.json. Hardcoding the literal here would
+// silently desync when the release is bumped; derive it instead so the server
+// version metadata assertion stays meaningful across releases.
+const CANONICAL_VERSION = JSON.parse(
+  readFileSync(resolve(process.cwd(), 'package.json'), 'utf8'),
+).version as string;
+
 const nativeSchemaScenario = (): string => readFileSync(
   resolve(process.cwd(), 'scripts', 'sequence-native-direct-schema.mjs'),
   'utf8',
@@ -499,7 +506,10 @@ describe('sequence render and native security contracts', () => {
     expect(lifecycle).toContain('bInAllowNonLoopback');
     expect(lifecycle).toContain('!bIsLoopback && !bAllowNonLoopback');
     expect(lifecycle).toContain('falling back to 127.0.0.1');
-    expect(lifecycle).toContain('explicitly allowed non-loopback address');
+    // Fail-closed LAN/token coupling: a non-loopback bind is refused unless the
+    // capability token is required, so a LAN-exposed surface is never unauthenticated.
+    expect(lifecycle).toContain('refusing to bind native MCP to non-loopback');
+    expect(lifecycle).toContain('bRequireCapabilityToken');
     expect(jsonRpc).toContain('FScopeLock SessionLock(&SessionMutex)');
     expect(jsonRpc).toContain('ActiveSessions.Contains(SessionId)');
     expect(jsonRpc.indexOf('ActiveSessions.Contains(SessionId)')).toBeLessThan(
@@ -919,8 +929,8 @@ describe('sequence render and native security contracts', () => {
     expect(connection).not.toContain('*HttpReq.SessionId');
     expect(cleanup).not.toContain('*Stream->SessionId');
     expect(notifications).not.toContain('*SessionId');
-    expect(transport).toContain('ServerVersion = TEXT("0.5.30")');
-    expect(JSON.parse(serverInfo).version).toBe('0.5.30');
+    expect(transport).toContain(`ServerVersion = TEXT("${CANONICAL_VERSION}")`);
+    expect(JSON.parse(serverInfo).version).toBe(CANONICAL_VERSION);
   });
 
   it('bounds render filename zero padding', () => {
