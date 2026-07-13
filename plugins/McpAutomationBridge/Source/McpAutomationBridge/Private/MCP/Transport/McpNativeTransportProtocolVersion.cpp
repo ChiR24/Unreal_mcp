@@ -47,8 +47,9 @@ bool FMcpNativeTransport::ResolveRequestProtocolVersion(
 			TEXT("Unsupported or invalid MCP-Protocol-Version: %s"), *HeaderValue);
 		return false;
 	}
-	// Absent header: derive from the negotiated session version if known,
-	// otherwise assume the default version.
+	// Absent header: do NOT reject the request (no HTTP 400). Instead derive
+	// the version from the negotiated session version if known, otherwise
+	// assume the default version. Only a PRESENT-but-unsupported header fails.
 	FScopeLock Lock(&SessionMutex);
 	if (const FString* Negotiated = SessionProtocolVersions.Find(SessionId))
 	{
@@ -71,10 +72,9 @@ bool FMcpNativeTransport::GuardProtocolVersionHeader(
 	{
 		return true;
 	}
-	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 	if (bJsonBody)
 	{
-		SendHttpResponse(ClientSocket, 400, TEXT("application/json"),
+		SendAndClose(ClientSocket, 400, TEXT("application/json"),
 			FMcpJsonRpc::BuildError(
 				Id.IsValid() ? Id : MakeShared<FJsonValueNull>(),
 				FMcpJsonRpc::ErrorInvalidRequest, Error),
@@ -82,9 +82,7 @@ bool FMcpNativeTransport::GuardProtocolVersionHeader(
 	}
 	else
 	{
-		SendHttpResponse(ClientSocket, 400, TEXT("text/plain"), Error, {}, Req.Origin);
+		SendAndClose(ClientSocket, 400, TEXT("text/plain"), Error, {}, Req.Origin);
 	}
-	ClientSocket->Close();
-	if (SocketSub) SocketSub->DestroySocket(ClientSocket);
 	return false;
 }

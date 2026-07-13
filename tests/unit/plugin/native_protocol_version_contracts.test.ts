@@ -151,3 +151,129 @@ describe('C3: MCP protocol version negotiation + header handling', () => {
     expect(listed).toEqual(['2025-11-25', '2025-06-18', '2025-03-26']);
   });
 });
+
+// ─── C3b: protocol-version fallback boundary (absent vs present-invalid) ───────
+// Focused, TDD-pinned boundary for Todo 4: an ABSENT MCP-Protocol-Version header
+// must NEVER yield HTTP 400 (it resolves to the negotiated session version or the
+// default), while a PRESENT but unsupported/malformed header MUST yield HTTP 400.
+// These assertions are the genuine native gate for the fallback contract; a live
+// editor HTTP harness is not required (and is not used — no PID 114496 / external
+// editor is contacted). RED = GuardProtocolVersionHeader used the raw
+// SendHttpResponse+Close instead of the canonical SendAndClose(...400...) wrapper;
+// GREEN = both 400 branches route through SendAndClose and the docs state the
+// absent-header boundary explicitly.
+
+describe('C3b: protocol-version fallback boundary (absent vs present-invalid)', () => {
+  it('routes a PRESENT unsupported/invalid header to SendAndClose(ClientSocket, 400, ...) (json + text)', () => {
+    // POST (json body) path.
+    expect(protocolVersion).toContain(
+      'SendAndClose(ClientSocket, 400, TEXT("application/json")',
+    );
+    // GET/SSE (text/plain) path.
+    expect(protocolVersion).toContain(
+      'SendAndClose(ClientSocket, 400, TEXT("text/plain")',
+    );
+  });
+
+  it('never emits a 400 on the ABSENT-header branch of ResolveRequestProtocolVersion', () => {
+    // Slice the absent-header branch (from the "// Absent header" comment to its
+    // return true) and prove it is derivation-only: it resolves the version and
+    // returns true, and contains no send/close/error-return that would emit a 400.
+    // (We match code tokens, not the literal "400", because the branch's own
+    // comment legitimately says "no HTTP 400".)
+    const start = protocolVersion.indexOf('// Absent header:');
+    const end = protocolVersion.indexOf('return true;', start);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    const absentBranch = protocolVersion.slice(start, end);
+    // Positive: the branch derives the version (fallback path).
+    expect(absentBranch).toContain('SessionProtocolVersions.Find');
+    expect(absentBranch).toContain('McpDefaultProtocolVersion()');
+    // Negative: no code that would emit a 400 / reject the request.
+    expect(absentBranch).not.toContain('SendHttpResponse');
+    expect(absentBranch).not.toContain('SendAndClose');
+    expect(absentBranch).not.toContain('ClientSocket->Close');
+    expect(absentBranch).not.toContain('return false');
+    expect(absentBranch).not.toContain(', 400,');
+  });
+
+  it('rejects a PRESENT unsupported/invalid header with the 400 error and false return', () => {
+    expect(protocolVersion).toContain(
+      '"Unsupported or invalid MCP-Protocol-Version: %s"',
+    );
+    expect(protocolVersion).toContain('return false;');
+  });
+
+  it('matches supported versions by exact equality (no normalization beyond header trim)', () => {
+    expect(privateH).toContain('McpSupportedProtocolVersions().Contains(Version)');
+  });
+
+  it('trims the header value in the HTTP parser so whitespace-padded valid versions are accepted', () => {
+    // McpNativeTransportHttpParsing.cpp trims Key/Value before storing the
+    // protocol version; a value like " 2025-11-25 " is therefore accepted, while
+    // a genuinely unsupported (post-trim) value still fails.
+    expect(httpParsing).toContain('Value.TrimStartAndEndInline()');
+  });
+
+  it('falls back to McpDefaultProtocolVersion() when the session is absent/stale', () => {
+    const start = protocolVersion.indexOf('// Absent header:');
+    const end = protocolVersion.indexOf('return true;', start);
+    const absentBranch = protocolVersion.slice(start, end);
+    expect(absentBranch).toContain('McpDefaultProtocolVersion()');
+  });
+
+  it('keeps the native set locked to exactly the three modern versions', () => {
+    const versionsBlock = privateH.slice(
+      privateH.indexOf('inline const TArray<FString>& McpSupportedProtocolVersions'),
+      privateH.indexOf('inline const FString& McpLatestProtocolVersion'),
+    );
+    const listed = (versionsBlock.match(/"20\d\d(?:-\d\d){2}"/gmu) ?? []).map(
+      (v) => v.replace(/"/gmu, ''),
+    );
+    expect(listed).toEqual(['2025-11-25', '2025-06-18', '2025-03-26']);
+    expect(privateH).not.toContain('"2024-11-05"');
+    expect(privateH).not.toContain('"2024-10-07"');
+    expect(privateH).not.toContain('"2026-07-28"');
+  });
+
+  it('rejects adversarial/malformed present versions (no live socket needed): 2099-01-01, 2025-13-99, junk, comma-list', () => {
+    // Structural proxy for the live QA "MCP-Protocol-Version: 2099-01-01 -> 400":
+    // none of these appear as a listed supported version, and membership is an
+    // exact Contains, so each hits the present-invalid 400 branch.
+    const versionsBlock = privateH.slice(
+      privateH.indexOf('inline const TArray<FString>& McpSupportedProtocolVersions'),
+      privateH.indexOf('inline const FString& McpLatestProtocolVersion'),
+    );
+    for (const bad of [
+      '2099-01-01',
+      '2025-13-99',
+      'not-a-version',
+      '2025-11-25, 2024-11-05',
+    ]) {
+      expect(versionsBlock).not.toContain(`"${bad}"`);
+    }
+  });
+});
+
+// ─── C3c: protocol docs assert advisory fallback/cancellation ─────────────────
+// The docs are part of the contract for Todo 4: they must state the absent-header
+// boundary (no 400) and that in-flight cancellation is advisory only.
+
+describe('C3c: protocol docs assert advisory fallback/cancellation', () => {
+  const protocolDoc = readFileSync(
+    resolve(process.cwd(), 'docs/protocol.md'),
+    'utf8',
+  );
+
+  it('documents that an absent header is NOT rejected and only a present-but-unsupported header returns 400', () => {
+    expect(protocolDoc).toContain('MCP-Protocol-Version');
+    expect(protocolDoc).toContain('HTTP 400');
+    expect(protocolDoc).toContain('NOT rejected');
+    expect(protocolDoc).toContain('present but unsupported');
+  });
+
+  it('documents that in-flight cancellation is advisory (queued dropped, running editor op completes, late response suppressed)', () => {
+    expect(protocolDoc).toContain('advisory');
+    expect(protocolDoc).toContain('runs to completion');
+  });
+});

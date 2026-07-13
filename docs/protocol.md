@@ -78,8 +78,12 @@ Behavior:
   post-initialize request omits `MCP-Protocol-Version` and no session version
   is known.
 - `FMcpNativeTransport::GuardProtocolVersionHeader()` validates the
-  `MCP-Protocol-Version` header on every post-initialize request and returns
-  HTTP 400 on an unsupported or invalid value.
+  `MCP-Protocol-Version` header on every post-initialize request. A request
+  that **omits** the header is **NOT rejected** — it resolves to the negotiated
+  session version if known, otherwise `McpDefaultProtocolVersion()`
+  (`2025-03-26`); **no HTTP 400 is returned for an absent header**. Only a
+  **present but unsupported** (or malformed) header returns HTTP 400; the
+  response is sent through `SendAndClose(ClientSocket, 400, ...)`.
 
 ### Intentional native/TS asymmetry
 
@@ -103,8 +107,11 @@ State "latest" as `2025-11-25` only; do not claim support for any later RC.
 
 `notifications/cancelled` is implemented on the native `/mcp` transport. It
 maps to the queued operation and, once cancelled, a late response for that
-operation is suppressed (the SSE socket closes without a result). The behavior
-is **session-scoped and bounded**:
+operation is suppressed (the SSE socket closes without a result). This is
+**advisory for already-dispatched work**: a queued request is dropped before it
+runs, but an in-flight (already-executing) editor operation cannot be
+interrupted — it runs to completion, and only its late response is suppressed.
+The behavior is **session-scoped and bounded**:
 
 - Cancellation correlates only to the caller's in-flight request, keyed by the
   client JSON-RPC id and the owning session id, so one session cannot cancel
