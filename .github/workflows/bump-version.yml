@@ -161,6 +161,32 @@ jobs:
           perl -0777 -i -pe "s/(const SERVER_VERSION[\\s\\S]*?:\s*)'[0-9]+\.[0-9]+\.[0-9]+';/\${1}'$VERSION';/" src/server/server-factory.ts
           echo "✅ Updated src/server/server-factory.ts SERVER_VERSION fallback to $VERSION"
 
+      - name: Update native server-info.json
+        env:
+          FINAL_VERSION: ${{ steps.final_version.outputs.version }}
+        run: |
+          VERSION="$FINAL_VERSION"
+          jq --arg v "$VERSION" '.version = $v' plugins/McpAutomationBridge/Resources/MCP/server-info.json > tmp && mv tmp plugins/McpAutomationBridge/Resources/MCP/server-info.json
+          echo "✅ Updated plugins/McpAutomationBridge/Resources/MCP/server-info.json version to $VERSION"
+
+      - name: Update native McpNativeTransport.h ServerVersion TEXT fallback
+        env:
+          FINAL_VERSION: ${{ steps.final_version.outputs.version }}
+        run: |
+          VERSION="$FINAL_VERSION"
+          # Update only the ServerVersion TEXT(...) fallback literal (targeted replacement)
+          perl -0777 -i -pe "s/(ServerVersion\s*=\s*TEXT\(\s*\")[0-9]+\.[0-9]+\.[0-9]+(\"\s*\))/\${1}$VERSION\${2}/" plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h
+          echo "✅ Updated plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h ServerVersion fallback to $VERSION"
+
+      - name: Update UnrealAgent.uplugin
+        env:
+          FINAL_VERSION: ${{ steps.final_version.outputs.version }}
+        run: |
+          VERSION="$FINAL_VERSION"
+          # Bump VersionName only; preserve the integer Version field per release policy.
+          jq --arg v "$VERSION" '.VersionName = $v' plugins/UnrealAgent/UnrealAgent.uplugin > tmp && mv tmp plugins/UnrealAgent/UnrealAgent.uplugin
+          echo "✅ Updated plugins/UnrealAgent/UnrealAgent.uplugin VersionName to $VERSION"
+
       - name: Verify no hardcoded npm versions remain
         env:
           OLD_VERSION: ${{ steps.current_version.outputs.version }}
@@ -257,6 +283,12 @@ jobs:
           echo "### Detailed Changes:"
           git diff
 
+      - name: Verify version sources agree
+        run: |
+          npm ci
+          npm run version:check
+          echo "✅ All version sources agree after the bump"
+
       - name: Commit changes
         env:
           FINAL_VERSION: ${{ steps.final_version.outputs.version }}
@@ -270,7 +302,12 @@ jobs:
             COMMIT_MESSAGE="chore: bump version to v$VERSION"
           fi
 
-          git add package.json package-lock.json server.json plugins/McpAutomationBridge/McpAutomationBridge.uplugin src/server/server-factory.ts
+          git add package.json package-lock.json server.json \
+            plugins/McpAutomationBridge/McpAutomationBridge.uplugin \
+            src/server/server-factory.ts \
+            plugins/McpAutomationBridge/Resources/MCP/server-info.json \
+            plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h \
+            plugins/UnrealAgent/UnrealAgent.uplugin
 
           if [ "$CREATE_CHANGELOG" == "true" ]; then
             git add CHANGELOG.md
@@ -307,6 +344,9 @@ jobs:
           echo "- \`server.json\` (2 occurrences)" >> $GITHUB_STEP_SUMMARY
           echo "- \`plugins/McpAutomationBridge/McpAutomationBridge.uplugin\` (VersionName)" >> $GITHUB_STEP_SUMMARY
           echo "- \`src/server/server-factory.ts\` (SERVER_VERSION fallback)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`plugins/McpAutomationBridge/Resources/MCP/server-info.json\` (version)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h\` (ServerVersion TEXT fallback)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`plugins/UnrealAgent/UnrealAgent.uplugin\` (VersionName)" >> $GITHUB_STEP_SUMMARY
 
           if [ "$CREATE_CHANGELOG" == "true" ]; then
             echo "- \`CHANGELOG.md\`" >> $GITHUB_STEP_SUMMARY

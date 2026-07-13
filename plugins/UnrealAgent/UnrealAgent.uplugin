@@ -1,7 +1,7 @@
 {
   "FileVersion": 3,
   "Version": 1,
-  "VersionName": "0.1.0",
+  "VersionName": "0.5.30",
   "FriendlyName": "Unreal Agent",
   "Description": "In-editor OpenCode ACP agent panel for Unreal Editor.",
   "Category": "Editor|AI",

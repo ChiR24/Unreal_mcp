@@ -45,20 +45,66 @@ describe('version source consistency', () => {
     expect(match?.[1]).toBe(CANONICAL);
   });
 
-  it('agrees across all four version sources (derived from package.json)', () => {
+  it('keeps the native server-info.json version in sync', () => {
+    const info = readJson<{ version: string }>(
+      'plugins/McpAutomationBridge/Resources/MCP/server-info.json',
+    );
+    expect(info.version).toBe(CANONICAL);
+  });
+
+  it('keeps the native McpNativeTransport.h ServerVersion TEXT fallback in sync', () => {
+    const source = readText(
+      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h',
+    );
+    const match = source.match(
+      /ServerVersion\s*=\s*TEXT\(\s*"([0-9]+\.[0-9]+\.[0-9]+)"\s*\)/,
+    );
+    expect(match, 'ServerVersion TEXT fallback literal not found').not.toBeNull();
+    expect(match?.[1]).toBe(CANONICAL);
+  });
+
+  it('keeps the UnrealAgent.uplugin VersionName in sync', () => {
+    const uplugin = readJson<{ VersionName: string }>(
+      'plugins/UnrealAgent/UnrealAgent.uplugin',
+    );
+    expect(uplugin.VersionName).toBe(CANONICAL);
+  });
+
+  it('agrees across all version sources (derived from package.json)', () => {
     const pkg = readJson<{ version: string }>('package.json').version;
     const server = readJson<{ version: string; packages: Array<{ version: string }> }>(
       'server.json',
     );
-    const uplugin = readJson<{ VersionName: string }>(
+    const bridgeUplugin = readJson<{ VersionName: string }>(
       'plugins/McpAutomationBridge/McpAutomationBridge.uplugin',
     ).VersionName;
+    const agentUplugin = readJson<{ VersionName: string }>(
+      'plugins/UnrealAgent/UnrealAgent.uplugin',
+    ).VersionName;
+    const serverInfo = readJson<{ version: string }>(
+      'plugins/McpAutomationBridge/Resources/MCP/server-info.json',
+    ).version;
     const source = readText('src/server/server-factory.ts');
     const factory = source.match(
       /const SERVER_VERSION =[\s\S]*?:\s*'([0-9]+\.[0-9]+\.[0-9]+)';/,
     )?.[1];
+    const nativeSource = readText(
+      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h',
+    );
+    const native = nativeSource.match(
+      /ServerVersion\s*=\s*TEXT\(\s*"([0-9]+\.[0-9]+\.[0-9]+)"\s*\)/,
+    )?.[1];
 
-    const all = [pkg, server.version, server.packages[0].version, uplugin, factory];
+    const all = [
+      pkg,
+      server.version,
+      server.packages[0].version,
+      bridgeUplugin,
+      agentUplugin,
+      serverInfo,
+      factory,
+      native,
+    ];
     for (const v of all) {
       expect(v).toBe(CANONICAL);
     }
