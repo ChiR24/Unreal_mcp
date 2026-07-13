@@ -35,6 +35,15 @@ describe('asset list pagination contracts (T4)', () => {
         expect(listing).toMatch(/INVALID_CURSOR/);
     });
 
+    it('rejects an explicit path that conflicts with the continuation cursor (CURSOR_CONTEXT_MISMATCH)', () => {
+        expect(listing).toMatch(/CURSOR_CONTEXT_MISMATCH/);
+        expect(listing).toMatch(/bHasExplicitPath/);
+    });
+
+    it('rejects a cursor that embeds an invalid listing path (INVALID_CURSOR)', () => {
+        expect(listing).toMatch(/Cursor embeds an invalid listing path/);
+    });
+
     it('applies validated bounded limits (hard max 500, min 1, non-negative offset)', () => {
         expect(listing).toMatch(/FMath::Clamp\s*\(\s*Limit\s*,\s*1\s*,\s*MaxLimit\s*\)/);
         expect(listing).not.toMatch(/int32\s+Limit\s*=\s*-1/);

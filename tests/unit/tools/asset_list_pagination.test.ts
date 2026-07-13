@@ -144,4 +144,61 @@ describe('Asset list pagination (T4)', () => {
         await handleAssetTools('list', { includeTags: true }, mockTools);
         expect(lastPayload().includeTags).toBe(true);
     });
+
+
+    it('T6-A surfaces a CURSOR_CONTEXT_MISMATCH error when an explicit path clashes with the cursor', async () => {
+        sendAutomationRequest.mockResolvedValueOnce({
+            success: false,
+            error: 'CURSOR_CONTEXT_MISMATCH',
+            message: "Explicit path '/Game/Bar' conflicts with continuation cursor path '/Game/Foo'"
+        });
+        const result = await handleAssetTools('list', { path: '/Game/Bar', cursor: 'cursor-for-Game-Foo' }, mockTools);
+        expect(result).toMatchObject({ success: false, error: 'CURSOR_CONTEXT_MISMATCH' });
+        expect(sendAutomationRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it('T6-B continues from a cursor-only request with equal context to path+offset (page two)', async () => {
+        const pageTwoByCursor = pageResponse({ offset: 2, nextOffset: 4, cursor: 'cur2', nextCursor: 'cur4', hasMore: true });
+        const pageTwoByOffset = pageResponse({ offset: 2, nextOffset: 4, cursor: 'cur2', nextCursor: 'cur4', hasMore: true });
+        sendAutomationRequest.mockResolvedValueOnce(pageTwoByCursor);
+        const byCursor = (await handleAssetTools('list', { cursor: 'cursor-page2' }, mockTools)) as Record<string, unknown>;
+        sendAutomationRequest.mockResolvedValueOnce(pageTwoByOffset);
+        const byOffset = (await handleAssetTools('list', { path: '/Game/Foo', offset: 2 }, mockTools)) as Record<string, unknown>;
+
+        const a = byCursor.data as Record<string, unknown>;
+        const b = byOffset.data as Record<string, unknown>;
+        expect(a.assets).toEqual(b.assets);
+        expect(a.offset).toBe(b.offset);
+        expect(a.count).toBe(b.count);
+        expect(a.hasMore).toBe(b.hasMore);
+        expect(a.nextCursor).toBe(b.nextCursor);
+    });
+
+    it('propagates an INVALID_CURSOR error from the bridge for a malformed cursor', async () => {
+        sendAutomationRequest.mockResolvedValueOnce({ success: false, error: 'INVALID_CURSOR', message: 'Invalid pagination cursor' });
+        const result = await handleAssetTools('list', { cursor: 'not-a-valid-cursor' }, mockTools);
+        expect(result).toMatchObject({ success: false, error: 'INVALID_CURSOR' });
+    });
+
+    it('propagates a STALE_CURSOR error from the bridge (revision mismatch)', async () => {
+        sendAutomationRequest.mockResolvedValueOnce({ success: false, error: 'STALE_CURSOR', message: 'cursor is stale' });
+        const result = await handleAssetTools('list', { cursor: 'stale-cursor' }, mockTools);
+        expect(result).toMatchObject({ success: false, error: 'STALE_CURSOR' });
+    });
+
+    it('keeps a dirty/misleading cursor (valid envelope, wrong shape) from returning assets', async () => {
+        sendAutomationRequest.mockResolvedValueOnce({ success: false, error: 'INVALID_CURSOR', message: 'Cursor embeds an invalid listing path' });
+        const result = await handleAssetTools('list', { cursor: 'eyJ9' }, mockTools);
+        expect(result).toMatchObject({ success: false, error: 'INVALID_CURSOR' });
+    });
+
+    it('does not treat a repeated identical cursor as a flaky/conflicting request', async () => {
+        sendAutomationRequest.mockResolvedValue(pageResponse({ offset: 0, nextOffset: 2, hasMore: true }));
+        const first = (await handleAssetTools('list', { cursor: 'repeat-cursor' }, mockTools)) as Record<string, unknown>;
+        const second = (await handleAssetTools('list', { cursor: 'repeat-cursor' }, mockTools)) as Record<string, unknown>;
+        expect((first.data as Record<string, unknown>).offset).toBe((second.data as Record<string, unknown>).offset);
+        expect(sendAutomationRequest).toHaveBeenCalledTimes(2);
+        expect(first.success).toBe(true);
+        expect(second.success).toBe(true);
+    });
 });

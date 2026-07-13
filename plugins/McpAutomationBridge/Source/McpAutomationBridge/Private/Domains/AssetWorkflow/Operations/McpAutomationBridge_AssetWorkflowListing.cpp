@@ -22,15 +22,20 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
   FString TagFilter;
   FString PathStartsWith;
 
+  bool bHasExplicitPath = false;
   const TSharedPtr<FJsonObject> *FilterObj;
   if (Payload->TryGetObjectField(TEXT("filter"), FilterObj) && FilterObj) {
-    (*FilterObj)->TryGetStringField(TEXT("path"), PathFilter);
+    if ((*FilterObj)->TryGetStringField(TEXT("path"), PathFilter)) {
+      bHasExplicitPath = true;
+    }
     (*FilterObj)->TryGetStringField(TEXT("class"), ClassFilter);
     (*FilterObj)->TryGetStringField(TEXT("tag"), TagFilter);
     (*FilterObj)->TryGetStringField(TEXT("pathStartsWith"), PathStartsWith);
   } else {
     // Legacy support for direct path/recursive fields
-    Payload->TryGetStringField(TEXT("path"), PathFilter);
+    if (Payload->TryGetStringField(TEXT("path"), PathFilter)) {
+      bHasExplicitPath = true;
+    }
   }
 
   // Canonicalize + validate the listing path. Blocks traversal and invalid
@@ -42,6 +47,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     return true;
   }
   PathFilter = NormPath.Path;
+  const FString ExplicitListingPath = PathFilter;
 
   if (!PathStartsWith.IsEmpty()) {
     FNormalizedAssetPath NormStart = NormalizeAssetPath(PathStartsWith);
@@ -64,8 +70,11 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
   Payload->TryGetNumberField(TEXT("limit"), Limit);
   Payload->TryGetNumberField(TEXT("offset"), Offset);
 
-  // Opaque cursor overrides offset and is validated for path containment
-  // (TOCTOU) and the per-session catalog revision (stale / cross-session).
+  // Opaque cursor overrides offset and the filtering path (its embedded path
+  // is adopted for filtering) and is validated for the per-session catalog
+  // revision (stale / cross-session). When the caller also supplies an explicit
+  // listing path, the two must agree: the cursor is the single source of truth
+  // for continuation, so a mismatched explicit path is a typed conflict.
   FString CursorStr;
   Payload->TryGetStringField(TEXT("cursor"), CursorStr);
   if (!CursorStr.IsEmpty()) {
@@ -78,10 +87,23 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
       SendAutomationError(Socket, RequestId, TEXT("Pagination cursor is stale (catalog revision changed). Restart the listing."), TEXT("STALE_CURSOR"));
       return true;
     }
-    if (Cursor.Path != PathFilter) {
-      SendAutomationError(Socket, RequestId, TEXT("Pagination cursor path does not match the requested path."), TEXT("STALE_CURSOR"));
+    FNormalizedAssetPath NormCursorPath = NormalizeAssetPath(Cursor.Path);
+    if (!NormCursorPath.bIsValid) {
+      SendAutomationError(Socket, RequestId, TEXT("Cursor embeds an invalid listing path"), TEXT("INVALID_CURSOR"));
       return true;
     }
+    // A caller that paginates with only the cursor (no explicit path) keeps the
+    // cursor's embedded path so page 2+ stays consistent. A caller that also
+    // passes an explicit path must keep it identical to the cursor path.
+    if (bHasExplicitPath && ExplicitListingPath != NormCursorPath.Path) {
+      SendAutomationError(
+        Socket, RequestId,
+        FString::Printf(TEXT("Explicit path '%s' conflicts with continuation cursor path '%s'"),
+          *ExplicitListingPath, *NormCursorPath.Path),
+        TEXT("CURSOR_CONTEXT_MISMATCH"));
+      return true;
+    }
+    PathFilter = NormCursorPath.Path;
     Offset = Cursor.Offset;
   }
 
