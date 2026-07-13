@@ -16,6 +16,10 @@ import { LevelResources } from '../resources/levels.js';
 import { getProjectSetting } from '../utils/config/ini-reader.js';
 import { config } from '../config.js';
 import type { ITools } from '../types/tools/tool-interfaces.js';
+import {
+    canonicalizeMcpRequestId,
+    runWithMcpRequestContext
+} from '../automation/request-context.js';
 import { handleUnrealGatewayCall, type GatewayContext } from './tool-registry-gateway.js';
 import { buildGatewayToolDefinition } from './tool-registry-listing.js';
 import { buildLegacyToolList, handleLegacyToolCall, type LegacyContext } from './tool-registry-legacy.js';
@@ -122,10 +126,29 @@ export class ToolRegistry {
             return { tools: buildLegacyToolList(this.server, this.logger) };
         });
 
-        this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+        this.server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
             const { name } = request.params;
             const args: Record<string, unknown> = (request.params.arguments || {}) as Record<string, unknown>;
             const startTime = Date.now();
+
+            const mcpRequestId = extra.requestId !== undefined
+                ? canonicalizeMcpRequestId(extra.requestId)
+                : undefined;
+
+            // Both SDK AbortSignal cancellation and explicit notifications/cancelled
+            // converge on AutomationBridge.cancelMcpRequest via the canonical id.
+            if (mcpRequestId && extra.signal) {
+                extra.signal.addEventListener(
+                    'abort',
+                    () => this.automationBridge.cancelMcpRequest(mcpRequestId, 'Client aborted request'),
+                    { once: true }
+                );
+            }
+
+            const withRequestContext = <T>(fn: () => T): T =>
+                mcpRequestId
+                    ? runWithMcpRequestContext({ requestId: mcpRequestId, signal: extra.signal }, fn)
+                    : fn();
 
             if (gateway && name !== 'unreal') {
                 this.healthMonitor.trackPerformance(startTime, false);
@@ -139,7 +162,7 @@ export class ToolRegistry {
             if (gateway) {
                 try {
                     const context: GatewayContext = { tools, logger: this.logger, elicitationTimeoutMs: this.defaultElicitationTimeoutMs, ensureConnected: this.ensureConnected };
-                    const gatewayResult = cleanObject(await handleUnrealGatewayCall(args, context));
+                    const gatewayResult = cleanObject(await withRequestContext(() => handleUnrealGatewayCall(args, context)));
                     const wrapped = await responseValidator.wrapResponse('unreal', gatewayResult);
 
                     const resultObj = gatewayResult as Record<string, unknown> | null;
@@ -177,7 +200,7 @@ export class ToolRegistry {
                 server: this.server, tools, logger: this.logger, healthMonitor: this.healthMonitor,
                 elicitationTimeoutMs: this.defaultElicitationTimeoutMs, ensureConnected: this.ensureConnected
             };
-            return handleLegacyToolCall(name, args, startTime, legacyContext);
+            return withRequestContext(() => handleLegacyToolCall(name, args, startTime, legacyContext));
         });
     }
 }

@@ -40,6 +40,19 @@ export interface AutomationBridgeAutomationEvent {
     message?: string;
 }
 
+/**
+ * Targeted cancellation frame sent from the TS bridge to Unreal when an MCP
+ * request is cancelled. Carries an already-generated automation request id so
+ * the plugin can cancel the exact correlated operation.
+ */
+export interface CancelRequestMessage extends AutomationBridgeMessage {
+    type: 'cancel_request';
+    /** The automation request id previously allocated by the bridge. */
+    requestId: string;
+    /** Optional human-readable cancellation reason. */
+    reason?: string;
+}
+
 export interface AutomationBridgeResponseMessage extends AutomationBridgeMessage {
     requestId: string;
     success?: boolean;
@@ -141,6 +154,8 @@ export interface QueuedRequestItem {
     action: string;
     payload: Record<string, unknown>;
     options: Record<string, unknown>;
+    /** Canonicalized MCP request id that owns this queued item, if any. */
+    mcpRequestId?: string;
 }
 
 export interface SocketInfo {

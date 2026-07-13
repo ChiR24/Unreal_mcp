@@ -16,6 +16,12 @@ class UMcpAutomationBridgeSettings;
 DECLARE_DELEGATE_FourParams(FMcpMessageReceivedCallback, const FString&, const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FMcpBridgeWebSocket>);
 
 /**
+ * Delegate for handling inbound cancel_request frames from the TS bridge.
+ * Params: RequestId (the automation request id to cancel)
+ */
+DECLARE_DELEGATE_OneParam(FMcpRequestCancelledCallback, const FString&);
+
+/**
  * Manages WebSocket connections for the MCP Automation Bridge.
  * Handles listening, connecting, reconnecting, heartbeats, and message dispatching.
  */
@@ -53,6 +59,7 @@ public:
     void SendProgressUpdate(const FString& RequestId, float Percent = -1.0f, const FString& Message = TEXT(""), bool bStillWorking = true);
 
 	void SetOnMessageReceived(FMcpMessageReceivedCallback InCallback);
+	void SetOnAutomationRequestCancelled(FMcpRequestCancelledCallback InCallback);
 
 	// Request tracking helpers
 	int32 GetActiveSocketCount() const;
@@ -76,6 +83,7 @@ private:
 	void HandleServerConnectionError(const FString& Error);
 	void HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket, int32 StatusCode, const FString& Reason, bool bWasClean);
 	void HandleMessage(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Message);
+	void HandleCancelRequest(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId);
 	void HandleHeartbeat(TSharedPtr<FMcpBridgeWebSocket> Socket);
 
 	void EmitAutomationTelemetrySummaryIfNeeded(double NowSeconds);
@@ -88,6 +96,7 @@ private:
 	TSet<FMcpBridgeWebSocket*> LogSubscriberSockets;
 	FTSTicker::FDelegateHandle TickerHandle;
 	FMcpMessageReceivedCallback OnMessageReceived;
+	FMcpRequestCancelledCallback OnAutomationRequestCancelled;
 
 	// Configuration
 	FString EnvListenHost;

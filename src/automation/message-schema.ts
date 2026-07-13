@@ -67,6 +67,14 @@ export const progressUpdateSchema = z.looseObject({
     stillWorking: z.boolean().optional()  // True if operation is still in progress
 });
 
+// Targeted cancellation frame sent by the TS bridge to Unreal when an MCP
+// request is cancelled. Carries the previously-allocated automation request id.
+export const cancelRequestSchema = z.looseObject({
+    type: z.literal('cancel_request'),
+    requestId: z.string().min(1),
+    reason: z.string().optional()
+});
+
 export const automationMessageSchema = z.discriminatedUnion('type', [
     automationResponseSchema,
     automationEventSchema,
@@ -75,7 +83,8 @@ export const automationMessageSchema = z.discriminatedUnion('type', [
     bridgePingSchema,
     bridgePongSchema,
     bridgeGoodbyeSchema,
-    progressUpdateSchema
+    progressUpdateSchema,
+    cancelRequestSchema
 ]);
 
 export type AutomationMessageSchema = z.infer<typeof automationMessageSchema>;

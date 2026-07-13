@@ -48,16 +48,16 @@ const jsonRpcDispatch = read('MCP/Transport/McpNativeTransportJsonRpc.cpp');
 describe('C4: notifications/cancelled cancellation + late-response suppression', () => {
   it('declares and implements HandleCancelledNotification', () => {
     expect(header).toContain(
-      'void HandleCancelledNotification(const TSharedPtr<FJsonObject>& Params);',
+      'void HandleCancelledNotification(const TSharedPtr<FJsonObject>& Params, const FString& CallerSessionId);',
     );
     expect(cancellation).toContain(
       'void FMcpNativeTransport::HandleCancelledNotification(',
     );
   });
 
-  it('routes notifications/cancelled from the POST dispatch to the handler', () => {
+  it('routes notifications/cancelled from the POST dispatch to the handler with caller session', () => {
     expect(connection).toContain('Rpc.Method == TEXT("notifications/cancelled")');
-    expect(connection).toContain('HandleCancelledNotification(Rpc.Params);');
+    expect(connection).toContain('HandleCancelledNotification(Rpc.Params, HttpReq.SessionId);');
   });
 
   it('correlates the client requestId to the inflight SSE connection', () => {
@@ -71,6 +71,34 @@ describe('C4: notifications/cancelled cancellation + late-response suppression',
     expect(privateH).toContain('inline FString McpJsonRpcIdKey(');
   });
 
+  it('namespaces string and number JSON-RPC ids so "1" and 1 cannot collide', () => {
+    // McpJsonRpcIdKey must key by JSON type, not by value: a string request id
+    // "1" and a numeric request id 1 would otherwise collapse to the same key
+    // and a notifications/cancelled for one could cancel the other's in-flight
+    // SSE connection. The helper prefixes each type so they remain distinct.
+    const idKeyFn = privateH.slice(
+      privateH.indexOf('inline FString McpJsonRpcIdKey('),
+      privateH.indexOf('inline const TArray<FString>& McpSupportedProtocolVersions'),
+    );
+    // Distinct type tags: a string id becomes "s:<value>", a number "n:<value>".
+    expect(idKeyFn).toContain('TEXT("s:")');
+    expect(idKeyFn).toContain('TEXT("n:")');
+    expect(idKeyFn.indexOf('TEXT("s:")')).not.toBe(idKeyFn.indexOf('TEXT("n:")'));
+    // Both the string and number branches are present in the helper.
+    expect(idKeyFn).toContain('Id->Type == EJson::String');
+    expect(idKeyFn).toContain('Id->Type == EJson::Number');
+  });
+
+  it('scopes cancellation to the caller session so one session cannot cancel another', () => {
+    // The SSE connection records the owning session.
+    expect(header).toContain('FString SessionId;  // for touching ActiveSessions during long-running calls');
+    // The handler receives the caller session id and matches it.
+    expect(cancellation).toContain('const FString& CallerSessionId');
+    expect(cancellation).toContain('Conn->SessionId == CallerSessionId');
+    // The POST dispatch passes the validated session id into the handler.
+    expect(connection).toContain('HandleCancelledNotification(Rpc.Params, HttpReq.SessionId);');
+  });
+
   it('marks the inflight request cancelled and cancels the automation request', () => {
     expect(header).toContain('TSet<FString> CancelledInternalRequestIds;');
     expect(header).toContain('mutable FCriticalSection CancelledRequestsMutex;');
@@ -78,6 +106,18 @@ describe('C4: notifications/cancelled cancellation + late-response suppression',
     expect(cancellation).toContain('Subsystem->CancelAutomationRequest(InternalRequestId);');
     // Stops further progress writes immediately.
     expect(cancellation).toContain('bMarkedForRemoval.store(true);');
+  });
+
+  it('bounds the cancellation marker maps so they cannot grow without limit', () => {
+    // A hard cap constant bounds both maps together.
+    expect(cancellation).toContain('constexpr int32 MaxCancelledMarkers');
+    // Insertion-order tracking enables deterministic oldest-first eviction.
+    expect(header).toContain('TArray<FString> CancelledMarkerOrder;');
+    // The handler adds to the order and evicts excess under CancelledRequestsMutex.
+    expect(cancellation).toContain('CancelledMarkerOrder.Add(ClientIdKey);');
+    expect(cancellation).toContain('while (CancelledMarkerOrder.Num() > MaxCancelledMarkers)');
+    // Completion also drops the order entry (preserving the documented lock order).
+    expect(pending).toContain('CancelledMarkerOrder.Remove(Conn->ClientRequestIdKey);');
   });
 
   it('suppresses the late response when the request was cancelled', () => {
@@ -92,6 +132,15 @@ describe('C4: notifications/cancelled cancellation + late-response suppression',
 
   it('documents the CancelledRequestsMutex lock order (no cycle)', () => {
     expect(header).toContain('CancelledRequestsMutex is taken ONLY after SSEConnectionsMutex');
+  });
+
+  it('tears down all three cancellation markers on the primary bCancelled path (not only the secondary set lookup)', () => {
+    // Gating marker removal on `!bCancelled` would leak the marker maps on the
+    // atomic-flag (primary) cancellation path until Shutdown/eviction.
+    expect(pending).not.toContain('if (!bCancelled)');
+    expect(pending).toContain('CancelledInternalRequestIds.Remove(RequestId);');
+    expect(pending).toContain('CancelledClientIdToInternal.Remove(Conn->ClientRequestIdKey);');
+    expect(pending).toContain('CancelledMarkerOrder.Remove(Conn->ClientRequestIdKey);');
   });
 });
 

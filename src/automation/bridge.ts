@@ -140,9 +140,18 @@ export class AutomationBridge extends EventEmitter {
     async sendAutomationRequest<T = AutomationBridgeResponseMessage>(
         action: string,
         payload: Record<string, unknown> = {},
-        options: { timeoutMs?: number } = {}
+        options: { timeoutMs?: number; mcpRequestId?: string } = {}
     ): Promise<T> {
         return this.requestDispatcher.sendAutomationRequest<T>(action, payload, options);
+    }
+
+    /**
+     * Cancel every automation request correlated to a canonicalized MCP request
+     * id. Convergence point for both SDK AbortSignal cancellation and explicit
+     * `notifications/cancelled` handling. Idempotent.
+     */
+    cancelMcpRequest(requestId: string, reason: string): void {
+        this.requestDispatcher.cancelMcpRequest(requestId, reason);
     }
 
     send(payload: AutomationBridgeMessage): boolean {

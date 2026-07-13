@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { CancelledNotificationSchema } from '@modelcontextprotocol/sdk/types.js';
 
 import { AutomationBridge } from '../automation/index.js';
 import { AutomationLogger } from '../automation/log-redaction.js';
@@ -10,6 +11,7 @@ import { startMetricsServer } from '../services/metrics-server.js';
 import { consolidatedToolDefinitions } from '../tools/catalog/consolidated-tool-definitions.js';
 import { unrealGatewayToolDefinition } from '../tools/catalog/unreal-gateway-definition.js';
 import { UnrealBridge } from '../unreal-bridge.js';
+import { canonicalizeMcpRequestId } from '../automation/request-context.js';
 import { responseValidator } from '../utils/responses/response-validator.js';
 
 const require = createRequire(import.meta.url);
@@ -151,6 +153,17 @@ export function createServer() {
     healthMonitor,
   );
   serverSetup.setup();
+
+  // Forward inbound notifications/cancelled to the automation bridge so the
+  // matching queued or inflight Unreal work is cancelled. This is the TS stdio
+  // counterpart to the native /mcp transport's cancellation and converges on
+  // the same idempotent cancellation primitive as SDK AbortSignal cancellation.
+  server.setNotificationHandler(CancelledNotificationSchema, (notification) => {
+    const rawId = (notification.params as { requestId?: string | number }).requestId;
+    if (rawId === undefined) return;
+    const requestId = canonicalizeMcpRequestId(rawId);
+    automationBridge.cancelMcpRequest(requestId, 'Client cancelled request');
+  });
 
   return {
     server,

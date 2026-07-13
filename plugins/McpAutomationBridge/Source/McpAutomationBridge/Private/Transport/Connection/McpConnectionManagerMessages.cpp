@@ -152,6 +152,13 @@ void FMcpConnectionManager::HandleMessage(
     return;
   }
 
+  if (Type.Equals(TEXT("cancel_request"), ESearchCase::IgnoreCase)) {
+    FString RequestId;
+    RootObj->TryGetStringField(TEXT("requestId"), RequestId);
+    HandleCancelRequest(Socket, RequestId);
+    return;
+  }
+
   if (Type.Equals(TEXT("bridge_hello"), ESearchCase::IgnoreCase)) {
     FString ReceivedToken;
     RootObj->TryGetStringField(TEXT("capabilityToken"), ReceivedToken);

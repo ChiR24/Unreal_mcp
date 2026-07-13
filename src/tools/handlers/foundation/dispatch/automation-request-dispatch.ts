@@ -3,6 +3,7 @@ import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import { CommandValidator } from '../../../../utils/commands/command-validator.js';
 import { cleanObject } from '../../../../utils/serialization/safe-json.js';
 import { validateArgsSecurity } from '../arguments/handler-argument-validation.js';
+import { getMcpRequestContext } from '../../../../automation/request-context.js';
 import { getTimeoutMs } from './handler-timeout.js';
 import { normalizePathFields } from '../normalization/ue-path-normalization.js';
 
@@ -61,6 +62,7 @@ export async function executeAutomationRequest(
   options: {
     timeoutMs?: number;
     forwardTimeoutMsToUnreal?: boolean;
+    mcpRequestId?: string;
   } = {}
 ): Promise<unknown> {
   validateArgsSecurity(args);
@@ -94,7 +96,16 @@ export async function executeAutomationRequest(
     delete cleanedArgs.timeoutMs;
   }
 
-  return await automationBridge.sendAutomationRequest(toolName, cleanedArgs, timeoutMs ? { timeoutMs } : {});
+  // Correlate this automation work to the active MCP request (if any) so the
+  // bridge can cancel it on notifications/cancelled. An explicit option wins;
+  // otherwise the async-local request context set by the tool registry is used.
+  const mcpRequestId = options.mcpRequestId ?? getMcpRequestContext()?.requestId;
+
+  const sendOptions: { timeoutMs?: number; mcpRequestId?: string } = {};
+  if (timeoutMs !== undefined) sendOptions.timeoutMs = timeoutMs;
+  if (mcpRequestId !== undefined) sendOptions.mcpRequestId = mcpRequestId;
+
+  return await automationBridge.sendAutomationRequest(toolName, cleanedArgs, sendOptions);
 }
 
 export function createSubActionDispatcher(

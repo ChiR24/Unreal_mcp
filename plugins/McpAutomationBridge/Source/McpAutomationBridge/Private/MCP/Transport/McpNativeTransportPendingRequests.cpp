@@ -38,15 +38,18 @@ bool FMcpNativeTransport::CompletePendingRequest(
 	// HandleCancelledNotification under SSEConnectionsMutex (the lock we just
 	// released after removing this conn), so whichever thread took that mutex
 	// first wins deterministically. CancelledInternalRequestIds is consulted as
-	// a secondary safeguard and cleared for accounting.
+	// a secondary safeguard. The three marker structures are torn down here so
+	// they never outlive the completed/cancelled request.
 	bool bCancelled = Conn->bCancelled.load();
-	if (!bCancelled)
 	{
 		FScopeLock Lock(&CancelledRequestsMutex);
+		// SSEConnectionsMutex is already released, so taking CancelledRequestsMutex
+		// here preserves the documented lock order and avoids any double-free.
 		if (CancelledInternalRequestIds.Contains(RequestId))
 		{
 			CancelledInternalRequestIds.Remove(RequestId);
 			CancelledClientIdToInternal.Remove(Conn->ClientRequestIdKey);
+			CancelledMarkerOrder.Remove(Conn->ClientRequestIdKey);
 			bCancelled = true;
 		}
 	}

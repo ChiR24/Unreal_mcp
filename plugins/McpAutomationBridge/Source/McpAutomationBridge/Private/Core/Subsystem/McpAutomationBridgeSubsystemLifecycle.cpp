@@ -51,6 +51,13 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
                     SendAutomationRejection(Socket, RequestId, Reason);
                 }
             }));
+    ConnectionManager->SetOnAutomationRequestCancelled(
+        FMcpRequestCancelledCallback::CreateWeakLambda(
+            this,
+            [this](const FString& RequestId)
+            {
+                CancelAutomationRequest(RequestId);
+            }));
 
     InitializeHandlers();
     ConnectionManager->Start();

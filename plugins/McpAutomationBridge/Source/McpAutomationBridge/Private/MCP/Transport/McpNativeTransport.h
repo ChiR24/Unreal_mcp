@@ -82,8 +82,10 @@ public:
 	// ─── Cancellation (notifications/cancelled) ─────────────────────────────
 	// Correlates the client's requestId to the inflight SSE connection, marks it
 	// cancelled (so the late response is suppressed) and cancels the underlying
-	// automation request. Safe to call for unknown/already-completed ids.
-	void HandleCancelledNotification(const TSharedPtr<FJsonObject>& Params);
+	// automation request. Safe to call for unknown/already-completed ids. The
+	// CallerSessionId scopes the cancellation so one session cannot cancel
+	// another session's in-flight request.
+	void HandleCancelledNotification(const TSharedPtr<FJsonObject>& Params, const FString& CallerSessionId);
 
 	// Dedicated-thread keepalive (immune to GameThread stalls).
 	void RunKeepaliveLoop();
@@ -338,6 +340,10 @@ private:
 	// to the client). Guarded by CancelledRequestsMutex.
 	TMap<FString, FString> CancelledClientIdToInternal;  // client id key -> internal request id
 	TSet<FString> CancelledInternalRequestIds;            // internal ids to suppress
+	// Insertion-order of client-id keys, bounded by a cap constant in
+	// McpNativeTransportCancellation.cpp, so the two maps above can be evicted
+	// oldest-first and never grow without limit.
+	TArray<FString> CancelledMarkerOrder;
 	mutable FCriticalSection CancelledRequestsMutex;
 
 	// Persistent notification streams (GET /mcp — StreamId → stream)
