@@ -166,7 +166,14 @@ FString ResolveBlueprintRequestedPath(const TSharedPtr<FJsonObject> &LocalPayloa
     return FString();
   }
   FString Req;
-  const TCHAR *Keys[] = {TEXT("requestedPath"), TEXT("name"), TEXT("blueprintPath")};
+  // Order matters: `blueprintPath` must win over `name`. Several actions
+  // (e.g. add_event) carry a `name` field that is NOT the blueprint path
+  // (it is the event/function name), so resolving `name` first would misload
+  // the blueprint. `requestedPath` is still preferred when explicitly given
+  // (the TS handler forwards it), with `blueprintPath` next and `name` only
+  // as a last-resort fallback — matching the documented contract in
+  // blueprint-event-actions.ts (resolve blueprintPath-first).
+  const TCHAR *Keys[] = {TEXT("requestedPath"), TEXT("blueprintPath"), TEXT("name")};
   for (const TCHAR *Key : Keys) {
     if (LocalPayload->TryGetStringField(Key, Req) && !Req.TrimStartAndEnd().IsEmpty()) {
       FString Norm;
