@@ -34,6 +34,15 @@ inline TArray<TSharedPtr<FJsonValue>> GatewayStringArray(const TArray<FString>& 
 	return Arr;
 }
 
+/** Edit-distance for closest-match suggestions. */
+int32 GatewayLevenshtein(const FString& A, const FString& B);
+
+/** Ranked closest candidates to Target by substring boost + edit distance. */
+TArray<FString> GatewayClosestMatches(const FString& Target, const TArray<FString>& Candidates, int32 Limit = 3);
+
+/** Build a directly-invokable gateway request payload (omitted parts stay absent). */
+TSharedPtr<FJsonObject> GatewayBuildNextCall(const FString& Operation, const FString& Tool, const FString& Action, const FString& Param);
+
 /** Exact action enum for a canonical tool, read from its input schema 'action' field. */
 TArray<FString> GatewayGetActionValues(FMcpToolDefinition* Tool);
 
@@ -45,7 +54,9 @@ TSharedPtr<FJsonObject> SearchGatewayCatalog(
 	const FString& Query, int32 Limit, int32 Offset,
 	const FMcpToolRegistry& Registry, const FMcpDynamicToolManager& ToolManager);
 
-/** Exact contract for one canonical tool (actions, parameter names, schema, per-action note). */
+/** Progressive contract for one canonical tool: tool summary, action parameter catalog, or a single parameter schema. */
 TSharedPtr<FJsonObject> DescribeGatewayCapability(
 	const FString& ToolName, const FString& Action,
-	const FMcpToolRegistry& Registry, const FMcpDynamicToolManager& ToolManager);
+	const FMcpToolRegistry& Registry, const FMcpDynamicToolManager& ToolManager,
+	const FString& Param = FString(), const FString& Query = FString(),
+	int32 Limit = 20, int32 Offset = 0);

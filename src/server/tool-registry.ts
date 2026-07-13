@@ -14,15 +14,14 @@ import { AssetResources } from '../resources/assets.js';
 import { ActorResources } from '../resources/actors.js';
 import { LevelResources } from '../resources/levels.js';
 import { getProjectSetting } from '../utils/config/ini-reader.js';
+import { config } from '../config.js';
 import type { ITools } from '../types/tools/tool-interfaces.js';
 import { handleUnrealGatewayCall, type GatewayContext } from './tool-registry-gateway.js';
 import { buildGatewayToolDefinition } from './tool-registry-listing.js';
 import { buildLegacyToolList, handleLegacyToolCall, type LegacyContext } from './tool-registry-legacy.js';
 
 function isGatewayMode(): boolean {
-    const val = process.env.MCP_GATEWAY_MODE;
-    if (val === undefined || val === '') return true;
-    return val !== 'false' && val !== '0' && val !== 'no';
+    return config.MCP_GATEWAY_MODE;
 }
 
 export class ToolRegistry {

@@ -205,3 +205,50 @@ describe('config module load (regression: src/config.ts must not throw on empty 
         expect(mod.config.MCP_REQUEST_TIMEOUT_MS).toBe(30000);
     });
 });
+
+describe('MCP_GATEWAY_MODE schema (validated gateway mode)', () => {
+    it('defaults to true when the env var is absent', () => {
+        const result = EnvSchema.parse({});
+        expect(result.MCP_GATEWAY_MODE).toBe(true);
+    });
+
+    it('accepts the true aliases already handled by stringToBoolean', () => {
+        for (const value of ['true', '1', 'on', 'TRUE', 'On', ' true ']) {
+            const result = EnvSchema.parse({ MCP_GATEWAY_MODE: value });
+            expect(result.MCP_GATEWAY_MODE, `value=${JSON.stringify(value)}`).toBe(true);
+        }
+    });
+
+    it('accepts the legacy false aliases (false|0|no) and other false forms', () => {
+        for (const value of ['false', '0', 'no', 'FALSE', 'No', 'off', 'OFF', ' false ']) {
+            const result = EnvSchema.parse({ MCP_GATEWAY_MODE: value });
+            expect(result.MCP_GATEWAY_MODE, `value=${JSON.stringify(value)}`).toBe(false);
+        }
+    });
+
+    it('treats non-boolean strings as false via stringToBoolean (no accidental gateway enable)', () => {
+        const result = EnvSchema.parse({ MCP_GATEWAY_MODE: 'garbage' });
+        expect(result.MCP_GATEWAY_MODE).toBe(false);
+    });
+
+    it('module-level config defaults MCP_GATEWAY_MODE to true', async () => {
+        const originalEnv = process.env;
+        process.env = { ...originalEnv };
+        delete process.env.MCP_GATEWAY_MODE;
+        vi.resetModules();
+        const mod = await import('../../src/config.js');
+        expect(mod.config.MCP_GATEWAY_MODE).toBe(true);
+        process.env = originalEnv;
+        vi.resetModules();
+    });
+
+    it('module-level config honors MCP_GATEWAY_MODE=false', async () => {
+        const originalEnv = process.env;
+        process.env = { ...originalEnv, MCP_GATEWAY_MODE: 'false' };
+        vi.resetModules();
+        const mod = await import('../../src/config.js');
+        expect(mod.config.MCP_GATEWAY_MODE).toBe(false);
+        process.env = originalEnv;
+        vi.resetModules();
+    });
+});

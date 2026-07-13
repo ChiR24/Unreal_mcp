@@ -9,6 +9,9 @@ import { consolidatedToolDefinitions } from '../../src/tools/catalog/consolidate
 import { prettyManifest } from '../../scripts/generate-gateway-manifest.js';
 import { getGatewayManifestTools, getManifestToolDefinitions } from '../../src/gateway/gateway-manifest.js';
 import { describeGatewayCapability, searchGatewayCatalog } from '../../src/server/tool-registry-gateway.js';
+import { unrealGatewayToolDefinition } from '../../src/tools/catalog/unreal-gateway-definition.js';
+
+const nativeGatewayDefinitionPath = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayDefinition.cpp');
 
 const manifestPath = resolve(process.cwd(), 'src/gateway/gateway-manifest.generated.json');
 const nativeHeaderPath = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayManifest.h');
@@ -71,5 +74,17 @@ describe('gateway manifest', () => {
     expect(/\bGatewayManifestJson\s*=\s*TEXT\(R"MCPGWMANIFEST\(/.test(h)).toBe(true);
     // Regression guard: a bare narrow raw string assigned to TCHAR* is the bug.
     expect(/\bGatewayManifestJson\s*=\s*R"MCPGWMANIFEST\(/.test(h)).toBe(false);
+  });
+
+  it('native gateway tool definition mirrors the TS param selector schema', () => {
+    const props = (unrealGatewayToolDefinition.inputSchema.properties ?? {}) as Record<string, { description?: string }>;
+    expect(props.param).toBeDefined();
+    const tsDescription = props.param?.description ?? '';
+    expect(tsDescription.length).toBeGreaterThan(0);
+
+    const cpp = readFileSync(nativeGatewayDefinitionPath, 'utf8');
+    const match = cpp.match(/\.String\(\s*TEXT\("param"\),\s*TEXT\("([^"]*)"\)/);
+    expect(match, 'native gateway definition must declare a param field').not.toBeNull();
+    expect(match?.[1]).toBe(tsDescription);
   });
 });

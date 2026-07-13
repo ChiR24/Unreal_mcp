@@ -82,7 +82,23 @@ void FMcpNativeTransport::HandleGatewayCall(
 		Params->TryGetStringField(TEXT("tool"), Tool);
 		FString Action;
 		Params->TryGetStringField(TEXT("action"), Action);
-		TSharedPtr<FJsonObject> Result = DescribeGatewayCapability(Tool, Action, Registry, ToolManager);
+		FString Param;
+		Params->TryGetStringField(TEXT("param"), Param);
+		FString Query;
+		Params->TryGetStringField(TEXT("query"), Query);
+		int32 Limit = 20;
+		if (Params->HasField(TEXT("limit")))
+		{
+			int32 L = 0;
+			if (Params->TryGetNumberField(TEXT("limit"), L)) Limit = FMath::Clamp(L, 1, 50);
+		}
+		int32 Offset = 0;
+		if (Params->HasField(TEXT("offset")))
+		{
+			int32 O = 0;
+			if (Params->TryGetNumberField(TEXT("offset"), O)) Offset = FMath::Max(0, O);
+		}
+		TSharedPtr<FJsonObject> Result = DescribeGatewayCapability(Tool, Action, Registry, ToolManager, Param, Query, Limit, Offset);
 		bool bOk = false;
 		if (Result.IsValid()) Result->TryGetBoolField(TEXT("success"), bOk);
 		const FString Msg = bOk ? TEXT("ok")
