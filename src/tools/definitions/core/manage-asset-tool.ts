@@ -188,7 +188,7 @@ export const manageAssetToolDefinition: ToolDefinition = {
               tooltip: { type: 'string', description: 'Optional member tooltip.' },
               metadata: { type: 'object', description: 'Optional metadata key/value pairs.' }
             },
-            required: ['name', 'type']
+            required: []
           }
         },
       // Struct ecosystem — DataTable / Enum / FInstancedStruct (issue #struct-ecosystem)
@@ -209,7 +209,6 @@ export const manageAssetToolDefinition: ToolDefinition = {
       propertyName: commonSchemas.propertyName,
       structType: { type: 'string', description: 'Asset path of the inner UScriptStruct for an FInstancedStruct property (set_instanced_struct_property).' },
       structValues: { type: 'object', additionalProperties: true, description: 'Field-name to value map applied to the inner UScriptStruct when setting an FInstancedStruct property (set_instanced_struct_property).' },
-      bSave: commonSchemas.booleanProp,
       },
       required: ['action']
     },

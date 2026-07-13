@@ -4,26 +4,19 @@
 
 namespace
 {
-    uint8* BuildRow(const UScriptStruct* RowStruct, const TSharedPtr<FJsonObject>& RowData)
+    TSharedPtr<FJsonObject> MakeInvalidEntry(const FString& RowName, const FString& Reason)
     {
-        uint8* RowMem = static_cast<uint8*>(FMemory::Malloc(RowStruct->GetStructureSize()));
-        RowStruct->InitializeStruct(RowMem);
-        FJsonObjectConverter::JsonObjectToUStruct(RowData.ToSharedRef(), RowStruct, RowMem, 0, 0);
-        return RowMem;
+        TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+        Entry->SetStringField(TEXT("rowName"), RowName);
+        Entry->SetStringField(TEXT("reason"), Reason);
+        return Entry;
     }
 
-    TSharedPtr<FJsonObject> ExportRow(const UScriptStruct* RowStruct, const void* RowMem)
+    struct FPendingRow
     {
-        TSharedPtr<FJsonObject> Json = MakeShared<FJsonObject>();
-        FJsonObjectConverter::UStructToJsonObject(RowStruct, RowMem, Json.ToSharedRef(), 0, 0);
-        return Json;
-    }
-
-    void FreeRow(const UScriptStruct* RowStruct, uint8* RowMem)
-    {
-        RowStruct->DestroyStruct(RowMem);
-        FMemory::Free(RowMem);
-    }
+        FName Name;
+        TSharedPtr<FJsonObject> Data;
+    };
 }
 
 bool HandleDataTableRowActions(
@@ -45,9 +38,15 @@ bool HandleDataTableRowActions(
         if (RowName.IsEmpty() || !RowData.IsValid()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
         if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), nullptr); return true; }
 
-        uint8* RowMem = BuildRow(Table->RowStruct, RowData);
+        uint8* RowMem = nullptr;
+        FString Err;
+        if (!McpBuildDataTableRow(Table->RowStruct, RowData, RowMem, Err))
+        {
+            OutResult = McpDataTableMakeError(TEXT("INVALID_ROW_DATA"), *Err);
+            return true;
+        }
         Table->AddRow(FName(*RowName), RowMem, Table->RowStruct);
-        FreeRow(Table->RowStruct, RowMem);
+        McpFreeDataTableRow(Table->RowStruct, RowMem);
         if (bSave) { McpSafeAssetSave(Table); }
 
         OutResult = McpHandlerUtils::CreateResultObject();
@@ -72,7 +71,7 @@ bool HandleDataTableRowActions(
         {
             OutResult->SetBoolField(TEXT("found"), true);
             OutResult->SetStringField(TEXT("rowName"), RowName);
-            OutResult->SetObjectField(TEXT("rowData"), ExportRow(Table->RowStruct, Row));
+            OutResult->SetObjectField(TEXT("rowData"), McpExportDataTableRow(Table->RowStruct, Row));
         }
         else
         {
@@ -83,6 +82,8 @@ bool HandleDataTableRowActions(
     }
 
     // === update_data_table_row ===
+    // Build + validate the replacement BEFORE touching the existing row so a
+    // conversion failure never destroys the original data.
     if (Action == TEXT("update_data_table_row"))
     {
         TSharedPtr<FJsonObject> R;
@@ -96,10 +97,16 @@ bool HandleDataTableRowActions(
         if (RowName.IsEmpty() || !RowData.IsValid()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
         if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), nullptr); return true; }
 
+        uint8* RowMem = nullptr;
+        FString Err;
+        if (!McpBuildDataTableRow(Table->RowStruct, RowData, RowMem, Err))
+        {
+            OutResult = McpDataTableMakeError(TEXT("INVALID_ROW_DATA"), *Err);
+            return true;
+        }
         Table->RemoveRow(FName(*RowName));
-        uint8* RowMem = BuildRow(Table->RowStruct, RowData);
         Table->AddRow(FName(*RowName), RowMem, Table->RowStruct);
-        FreeRow(Table->RowStruct, RowMem);
+        McpFreeDataTableRow(Table->RowStruct, RowMem);
         if (bSave) { McpSafeAssetSave(Table); }
 
         OutResult = McpHandlerUtils::CreateResultObject();
@@ -147,6 +154,9 @@ bool HandleDataTableRowActions(
     }
 
     // === import_data_table_rows ===
+    // Validate EVERY row (build + check) before mutating the table. Existing
+    // rows are only cleared after all inputs are proven valid, and invalid
+    // entries are reported explicitly instead of dropped silently.
     if (Action == TEXT("import_data_table_rows"))
     {
         TSharedPtr<FJsonObject> R;
@@ -161,29 +171,71 @@ bool HandleDataTableRowActions(
         if (RowsArr.Num() == 0) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
         if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), nullptr); return true; }
 
-        if (bClearExisting) { for (const FName& N : Table->GetRowNames()) { Table->RemoveRow(N); } }
-
-        int32 Imported = 0;
+        TArray<FPendingRow> Pending;
+        TArray<TSharedPtr<FJsonValue>> InvalidRows;
         for (const TSharedPtr<FJsonValue>& RowVal : RowsArr)
         {
             TSharedPtr<FJsonObject> RowObj = RowVal->AsObject();
-            if (!RowObj.IsValid()) { continue; }
+            if (!RowObj.IsValid())
+            {
+                InvalidRows.Add(MakeShared<FJsonValueObject>(MakeInvalidEntry(TEXT(""), TEXT("Row entry is not a JSON object"))));
+                continue;
+            }
             FString RowName;
-            if (!RowObj->TryGetStringField(TEXT("rowName"), RowName)) { continue; }
+            if (!RowObj->TryGetStringField(TEXT("rowName"), RowName))
+            {
+                InvalidRows.Add(MakeShared<FJsonValueObject>(MakeInvalidEntry(TEXT(""), TEXT("Missing 'rowName' field"))));
+                continue;
+            }
             const TSharedPtr<FJsonObject>* RowDataPtr = nullptr;
             RowObj->TryGetObjectField(TEXT("rowData"), RowDataPtr);
             TSharedPtr<FJsonObject> RowData = RowDataPtr ? *RowDataPtr : nullptr;
-            if (RowName.IsEmpty() || !RowData.IsValid()) { continue; }
-            Table->RemoveRow(FName(*RowName));
-            uint8* RowMem = BuildRow(Table->RowStruct, RowData);
-            Table->AddRow(FName(*RowName), RowMem, Table->RowStruct);
-            FreeRow(Table->RowStruct, RowMem);
-            ++Imported;
+            if (RowName.IsEmpty() || !RowData.IsValid())
+            {
+                InvalidRows.Add(MakeShared<FJsonValueObject>(MakeInvalidEntry(RowName, TEXT("Missing or invalid 'rowData' field"))));
+                continue;
+            }
+
+            uint8* RowMem = nullptr;
+            FString Err;
+            if (!McpBuildDataTableRow(Table->RowStruct, RowData, RowMem, Err))
+            {
+                InvalidRows.Add(MakeShared<FJsonValueObject>(MakeInvalidEntry(RowName, Err)));
+                continue;
+            }
+            Pending.Add({ FName(*RowName), RowData });
+            McpFreeDataTableRow(Table->RowStruct, RowMem);
+        }
+
+        // Only mutate after every input is validated.
+        if (bClearExisting)
+        {
+            for (const FName& N : Table->GetRowNames()) { Table->RemoveRow(N); }
+        }
+
+        int32 Imported = 0;
+        for (const FPendingRow& P : Pending)
+        {
+            uint8* RowMem = nullptr;
+            FString Err;
+            if (McpBuildDataTableRow(Table->RowStruct, P.Data, RowMem, Err))
+            {
+                Table->RemoveRow(P.Name);
+                Table->AddRow(P.Name, RowMem, Table->RowStruct);
+                McpFreeDataTableRow(Table->RowStruct, RowMem);
+                ++Imported;
+            }
+            else
+            {
+                InvalidRows.Add(MakeShared<FJsonValueObject>(MakeInvalidEntry(P.Name.ToString(), Err)));
+            }
         }
         if (bSave) { McpSafeAssetSave(Table); }
 
         OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetNumberField(TEXT("imported"), Imported);
+        OutResult->SetNumberField(TEXT("skipped"), InvalidRows.Num());
+        OutResult->SetArrayField(TEXT("invalidRows"), InvalidRows);
         McpHandlerUtils::AddVerification(OutResult, Table);
         return true;
     }

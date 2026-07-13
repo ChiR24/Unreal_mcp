@@ -3,6 +3,8 @@
 #include "Engine/DataTable.h"
 #include "StructUtils/UserDefinedStruct.h"
 #include "UObject/UnrealType.h"
+#include "Kismet2/StructureEditorUtils.h"
+#include "UserDefinedStructure/UserDefinedStructEditorData.h"
 
 // =============================================================================
 // inspect_struct handler shard (struct ecosystem, issue #struct-ecosystem)
@@ -132,6 +134,19 @@ bool HandleInspectStructAction(
         DefaultInstance = OwnedDefaultMemory.GetData();
     }
     TArray<TSharedPtr<FJsonValue>> Members;
+
+    // For UUserDefinedStruct, build a name→VarDesc lookup so we can attach
+    // the stable GUID and the full metadata map per member (reflection-only
+    // FProperty lacks both).
+    TMap<FName, const FStructVariableDescription*> UDSVarMap;
+    if (Struct->IsA<UUserDefinedStruct>())
+    {
+        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(Cast<UUserDefinedStruct>(Struct)))
+        {
+            UDSVarMap.Add(FName(*Var.FriendlyName), &Var);
+        }
+    }
+
     for (TFieldIterator<FProperty> It(Struct); It; ++It)
     {
         FProperty* Prop = *It;
@@ -149,6 +164,24 @@ bool HandleInspectStructAction(
         FString Category = Prop->GetMetaData(TEXT("Category"));
         Member->SetStringField(TEXT("tooltip"), Tooltip);
         Member->SetStringField(TEXT("category"), Category);
+
+        // Attach GUID and metadata from UDS VarDesc when available.
+        if (const FStructVariableDescription** FoundVar = UDSVarMap.Find(FName(*Prop->GetName())))
+        {
+            const FStructVariableDescription& VarDesc = **FoundVar;
+            Member->SetStringField(TEXT("guid"), VarDesc.VarGuid.ToString());
+            TSharedPtr<FJsonObject> MetaObj = MakeShared<FJsonObject>();
+            for (const TPair<FName, FString>& Meta : VarDesc.MetaData)
+            {
+                MetaObj->SetStringField(Meta.Key.ToString(), Meta.Value);
+            }
+            Member->SetObjectField(TEXT("metadata"), MetaObj);
+        }
+        else
+        {
+            Member->SetStringField(TEXT("guid"), FString());
+            Member->SetObjectField(TEXT("metadata"), MakeShared<FJsonObject>());
+        }
 
         // Nested struct member detection.
         FString InnerStructName;

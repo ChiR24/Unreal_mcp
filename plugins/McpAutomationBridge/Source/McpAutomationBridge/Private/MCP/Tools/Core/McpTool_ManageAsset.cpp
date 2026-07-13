@@ -197,8 +197,7 @@ public:
 		.Array(TEXT("values"), TEXT("Enum value names."))
 		.String(TEXT("propertyName"), TEXT("Name of the FInstancedStruct property."))
 		.String(TEXT("structType"), TEXT("Asset path of the inner UScriptStruct for an FInstancedStruct property."))
-		.Bool(TEXT("bSave"), TEXT("Persist the asset after the operation."))
-			.Required({TEXT("action")})
+		.Required({TEXT("action")})
 			.Build();
 	}
 };

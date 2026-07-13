@@ -11,6 +11,7 @@
 #include "Engine/Blueprint.h"
 #include "K2Node_VariableGet.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Math/Vector2D.h"
 #endif
 
 #if WITH_EDITOR
@@ -105,5 +106,32 @@ MCPAUTOMATIONBRIDGE_API TArray<TSharedPtr<FJsonValue>> CollectBlueprintVariables
 MCPAUTOMATIONBRIDGE_API TArray<TSharedPtr<FJsonValue>> CollectBlueprintFunctions(UBlueprint* Blueprint);
 MCPAUTOMATIONBRIDGE_API FProperty* FindBlueprintProperty(UBlueprint* Blueprint, const FString& PropertyName);
 MCPAUTOMATIONBRIDGE_API UFunction* FindBlueprintFunction(UBlueprint* Blueprint, const FString& FunctionName);
+
+/**
+ * Create a Make (bMake=true) or Break (bMake=false) Struct node for Struct on
+ * Graph inside BP, position it at Pos, compile the Blueprint and populate
+ * OutResult with structured diagnostics.
+ *
+ * OutResult fields (legacy fields kept for backward compatibility):
+ *   nodeGuid      (string)  guid of the created node
+ *   nodeType      (NOT set here; the caller supplies it)
+ *   structPath    (string)  object path of the resolved struct
+ *   pinNames      (array)   pin display names (legacy)
+ *   pinTypes      (array)   per-pin objects: { name, direction, type, category, subCategory }
+ *   diagnostics   (array)   compile messages: { severity, message }
+ *   compilerStatus(string)  BS_* status of BP after compile
+ *   compiled      (bool)    true when the BP is up-to-date (warnings allowed)
+ *
+ * Deadlock-safe: never saves the package and never touches ObjectTools. The
+ * caller owns any save.  Returns early (with an "error" field and
+ * compiled=false) when BP/Graph/Struct are null or Struct is not a UScriptStruct.
+ */
+MCPAUTOMATIONBRIDGE_API void McpBuildStructMakeBreakNodes(
+    UBlueprint* BP,
+    UStruct* Struct,
+    UEdGraph* Graph,
+    const FVector2f& Pos,
+    bool bMake,
+    TSharedPtr<FJsonObject>& OutResult);
 }
 #endif

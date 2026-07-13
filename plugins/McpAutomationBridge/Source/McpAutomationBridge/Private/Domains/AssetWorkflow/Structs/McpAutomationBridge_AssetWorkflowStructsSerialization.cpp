@@ -58,27 +58,40 @@ bool HandleStructSerializationActions(UMcpAutomationBridgeSubsystem& Bridge, con
     {
         FString PathFilter = GetPayloadString(Payload, TEXT("path"), TEXT("/Game/Structs"));
 
-        // Enumerate in-memory UserDefinedStruct objects. This avoids the
-        // AssetRegistry async scan, which deadlocks the synchronous native
-        // request thread. The editor already has these loaded.
+        // Enumerate ALL UserDefinedStruct assets (including unloaded ones) via
+        // the Asset Registry. The synchronous GetAssetsByClass scan is safe on
+        // the game thread; only an async LOAD would risk the sync request
+        // thread, and we resolve each discovered asset with a synchronous
+        // LoadObject below precisely so unloaded structs are discovered.
+        FAssetRegistryModule& ARM = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+        IAssetRegistry& AR = ARM.GetRegistry();
+
+        TArray<FAssetData> StructAssets;
+        AR.GetAssetsByClass(UUserDefinedStruct::StaticClass()->GetClassPathName(),
+            StructAssets, /*bSearchSubClasses=*/true);
+
         TArray<TSharedPtr<FJsonValue>> Arr;
-        ForEachObjectOfClass(UUserDefinedStruct::StaticClass(), [&](UObject* Obj)
+        for (const FAssetData& AssetData : StructAssets)
         {
-            UUserDefinedStruct* S = Cast<UUserDefinedStruct>(Obj);
-            if (!S)
-            {
-                return;
-            }
-            const FString AssetPath = S->GetPathName();
+            const FString AssetPath = MCP_ASSET_DATA_GET_OBJECT_PATH(AssetData);
             if (!PathFilter.IsEmpty() && !AssetPath.StartsWith(PathFilter))
             {
-                return;
+                continue;
             }
+
+            // Materialize the struct to report its canonical path/name, so
+            // structs not yet loaded into memory are still discovered.
+            UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *AssetPath);
+            if (!S)
+            {
+                continue;
+            }
+
             TSharedPtr<FJsonObject> O = MakeShared<FJsonObject>();
-            O->SetStringField(TEXT("assetPath"), AssetPath);
+            O->SetStringField(TEXT("assetPath"), S->GetPathName());
             O->SetStringField(TEXT("name"), S->GetName());
             Arr.Add(MakeShared<FJsonValueObject>(O));
-        });
+        }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("path"), PathFilter);

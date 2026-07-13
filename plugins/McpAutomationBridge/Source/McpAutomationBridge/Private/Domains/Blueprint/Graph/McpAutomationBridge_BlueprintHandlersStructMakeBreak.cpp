@@ -1,14 +1,63 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 
-#include "K2Node_MakeStruct.h"
-#include "K2Node_BreakStruct.h"
-#include "StructUtils/UserDefinedStruct.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+
+#include "Engine/Blueprint.h"
+#include "K2Node_BreakStruct.h"
+#include "K2Node_MakeStruct.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "StructUtils/UserDefinedStruct.h"
 
 #if WITH_EDITOR
 
 namespace McpBlueprintHandlers
 {
+
+// Resolve structPath to a UScriptStruct (UUserDefinedStruct or native
+// UScriptStruct), supporting both raw object paths and "Struct:" resolver
+// tokens (which are handed to the shared type-string resolver).
+static UStruct* McpResolveStructTarget(const FString& StructPath)
+{
+    if (StructPath.StartsWith(TEXT("Struct:")))
+    {
+        const McpBlueprintUtils::FTypeResolutionResult Res = McpBlueprintUtils::ResolvePinType(StructPath);
+        if (Res.bSuccess && Res.PinType.PinSubCategoryObject.IsValid())
+        {
+            return Cast<UStruct>(Res.PinType.PinSubCategoryObject.Get());
+        }
+        return nullptr;
+    }
+    if (UUserDefinedStruct* UD = LoadObject<UUserDefinedStruct>(nullptr, *StructPath))
+    {
+        return UD;
+    }
+    if (UScriptStruct* NS = LoadObject<UScriptStruct>(nullptr, *StructPath))
+    {
+        return NS;
+    }
+    return nullptr;
+}
+
+// Locate a graph by name across the Blueprint's graph collections.
+static UEdGraph* McpFindGraphByName(UBlueprint* BP, const FString& GraphName)
+{
+    auto Match = [&](const TArray<TObjectPtr<UEdGraph>>& Graphs) -> UEdGraph*
+    {
+        for (UEdGraph* G : Graphs)
+        {
+            if (G && G->GetName() == GraphName)
+            {
+                return G;
+            }
+        }
+        return nullptr;
+    };
+    if (UEdGraph* G = Match(BP->UbergraphPages)) return G;
+    if (UEdGraph* G = Match(BP->FunctionGraphs)) return G;
+    if (UEdGraph* G = Match(BP->MacroGraphs)) return G;
+    return nullptr;
+}
 
 bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context)
 {
@@ -19,9 +68,12 @@ bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context)
         return false;
     }
 
-    FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    FString NodeType = GetJsonStringField(Payload, TEXT("nodeType"));
+    const FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+    const FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    const FString NodeType = GetJsonStringField(Payload, TEXT("nodeType"));
+    const FString GraphName = GetJsonStringField(Payload, TEXT("graphName"));
+    const double PosX = GetJsonNumberField(Payload, TEXT("posX"), TNumericLimits<double>::Lowest());
+    const double PosY = GetJsonNumberField(Payload, TEXT("posY"), TNumericLimits<double>::Lowest());
 
     if (StructPath.IsEmpty() || BlueprintPath.IsEmpty() || NodeType.IsEmpty())
     {
@@ -29,9 +81,15 @@ bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context)
             TEXT("Missing required parameter: structPath, blueprintPath or nodeType"), TEXT("MISSING_PARAMETER"));
         return true;
     }
+    if (NodeType != TEXT("make") && NodeType != TEXT("break"))
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            TEXT("nodeType must be 'make' or 'break'"), TEXT("INVALID_OPERATION"));
+        return true;
+    }
 
-    UUserDefinedStruct *S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
-    if (!S)
+    UStruct* Struct = McpResolveStructTarget(StructPath);
+    if (!Struct)
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,
             FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
@@ -47,13 +105,27 @@ bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context)
     }
 
     UEdGraph *Graph = nullptr;
-    if (BP->UbergraphPages.Num() > 0)
+    if (!GraphName.IsEmpty())
+    {
+        Graph = McpFindGraphByName(BP, GraphName);
+        if (!Graph)
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Graph not found: %s"), *GraphName), TEXT("INVALID_OPERATION"));
+            return true;
+        }
+    }
+    else if (BP->UbergraphPages.Num() > 0)
     {
         Graph = BP->UbergraphPages[0];
     }
     else if (BP->FunctionGraphs.Num() > 0)
     {
         Graph = BP->FunctionGraphs[0];
+    }
+    else if (BP->MacroGraphs.Num() > 0)
+    {
+        Graph = BP->MacroGraphs[0];
     }
 
     if (!Graph)
@@ -63,61 +135,37 @@ bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context)
         return true;
     }
 
-    UEdGraphNode *Node = nullptr;
-    if (NodeType == TEXT("make"))
+    // Position: honor explicit posX/posY; else staggered default so repeated
+    // create_struct_make_break_nodes calls don't stack nodes at (0,0).
+    FVector2f Pos;
+    if (PosX > TNumericLimits<double>::Lowest() && PosY > TNumericLimits<double>::Lowest())
     {
-        UK2Node_MakeStruct *MakeNode = NewObject<UK2Node_MakeStruct>(Graph);
-        MakeNode->StructType = S;
-        MakeNode->CreateNewGuid();
-        Graph->AddNode(MakeNode);
-        MakeNode->ReconstructNode();
-        Node = MakeNode;
-    }
-    else if (NodeType == TEXT("break"))
-    {
-        UK2Node_BreakStruct *BreakNode = NewObject<UK2Node_BreakStruct>(Graph);
-        BreakNode->StructType = S;
-        BreakNode->CreateNewGuid();
-        Graph->AddNode(BreakNode);
-        BreakNode->ReconstructNode();
-        Node = BreakNode;
-    }
-    if (Node)
-    {
-        // Offset new nodes so repeated create_struct_make_break_nodes calls
-        // don't stack every node at (0,0) and overlap existing ones.
-        const int32 Stagger = Graph->Nodes.Num();
-        Node->NodePosX = (Stagger % 8) * 240;
-        Node->NodePosY = (Stagger / 8) * 240;
+        Pos = FVector2f(static_cast<float>(PosX), static_cast<float>(PosY));
     }
     else
     {
+        const int32 Stagger = Graph->Nodes.Num();
+        Pos = FVector2f(static_cast<float>((Stagger % 8) * 240),
+                        static_cast<float>((Stagger / 8) * 240));
+    }
+
+    TSharedPtr<FJsonObject> Result;
+    McpBlueprintUtils::McpBuildStructMakeBreakNodes(BP, Struct, Graph, Pos,
+        NodeType == TEXT("make"), Result);
+
+    if (Result->HasField(TEXT("error")))
+    {
         Bridge.SendAutomationError(RequestingSocket, RequestId,
-            TEXT("nodeType must be 'make' or 'break'"), TEXT("INVALID_OPERATION"));
+            Result->GetStringField(TEXT("error")), TEXT("INVALID_OPERATION"));
         return true;
     }
+
+    // Backward-compatible field the build function does not set.
+    Result->SetStringField(TEXT("nodeType"), NodeType);
 
     BP->MarkPackageDirty();
     McpSafeAssetSave(BP);
 
-    TArray<TSharedPtr<FJsonValue>> PinNames;
-    if (Node)
-    {
-        for (UEdGraphPin *Pin : Node->Pins)
-        {
-            if (Pin && !Pin->PinName.IsNone())
-            {
-                PinNames.Add(MakeShared<FJsonValueString>(Pin->PinName.ToString()));
-            }
-        }
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("nodeGuid"), Node ? Node->NodeGuid.ToString() : FString());
-    Result->SetStringField(TEXT("nodeType"), NodeType);
-    Result->SetStringField(TEXT("structPath"), StructPath);
-    Result->SetArrayField(TEXT("pinNames"), PinNames);
-    McpHandlerUtils::AddVerification(Result, Node);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
         TEXT("Make/Break node created"), Result);
     return true;

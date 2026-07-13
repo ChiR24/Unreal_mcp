@@ -109,7 +109,8 @@ static FTypeResolutionResult ResolvePinTypeRecursive(
                                 KC == UEdGraphSchema_K2::PC_Int ||
                                 KC == UEdGraphSchema_K2::PC_Int64 ||
                                 KC == UEdGraphSchema_K2::PC_Name ||
-                                KC == UEdGraphSchema_K2::PC_String);
+                                KC == UEdGraphSchema_K2::PC_String ||
+                                KC == UEdGraphSchema_K2::PC_Enum);
         if (!bValidKey)
         {
             Result.OutError = FString::Printf(

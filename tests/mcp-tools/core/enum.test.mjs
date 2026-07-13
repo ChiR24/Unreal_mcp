@@ -38,19 +38,6 @@ const testCases = [
       { path: 'structuredContent.result.valueCount', equals: 0, label: 'fresh enum has no values' },
     ],
   },
-  {
-    scenario: 'ENUM: delete_enum',
-    toolName: 'manage_asset',
-    arguments: {
-      action: 'delete_enum',
-      enumPath: '${captured:enumPath}',
-    },
-    expected: 'success',
-    assertions: [
-      { path: 'structuredContent.result.deleted', equals: true, label: 'enum deleted flag' },
-    ],
-  },
-
   // === ENUM VALUES ===
   {
     scenario: 'ENUM: add_enum_value (Red)',
@@ -168,6 +155,20 @@ const testCases = [
     expected: 'success',
     assertions: [
       { path: 'structuredContent.result.valueCount', equals: 2, label: 'split enum has two values' },
+    ],
+  },
+
+  // === ENUM LIFECYCLE DELETE (after edits complete) ===
+  {
+    scenario: 'ENUM: delete_enum',
+    toolName: 'manage_asset',
+    arguments: {
+      action: 'delete_enum',
+      enumPath: '${captured:enumPath}',
+    },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.deleted', equals: true, label: 'enum deleted flag' },
     ],
   },
 

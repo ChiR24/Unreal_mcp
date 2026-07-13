@@ -235,8 +235,10 @@ FString BuildDefaultExportText(UUserDefinedStruct* S, FProperty* Prop, const TSh
     return TEXT("");
 }
 
-void ForEachReferencingBlueprint(UUserDefinedStruct* S, TFunction<void(UBlueprint*)> Callback)
+void ForEachReferencingAsset(UUserDefinedStruct* S, TFunction<void(UObject*)> Callback)
 {
+    if (!S || !Callback) return;
+
     IAssetRegistry& AR = FAssetRegistryModule::GetRegistry();
 
     TArray<FAssetIdentifier> Refs;
@@ -256,15 +258,23 @@ void ForEachReferencingBlueprint(UUserDefinedStruct* S, TFunction<void(UBlueprin
         if (AssetData.IsValid())
         {
             UObject* Asset = AssetData.GetAsset();
-            if (Asset && Asset->IsA<UBlueprint>())
+            if (Asset)
             {
-                if (UBlueprint* BP = Cast<UBlueprint>(Asset))
-                {
-                    Callback(BP);
-                }
+                Callback(Asset);
             }
         }
     }
+}
+
+void ForEachReferencingBlueprint(UUserDefinedStruct* S, TFunction<void(UBlueprint*)> Callback)
+{
+    ForEachReferencingAsset(S, [Callback](UObject* Asset)
+    {
+        if (UBlueprint* BP = Cast<UBlueprint>(Asset))
+        {
+            Callback(BP);
+        }
+    });
 }
 
 #endif // WITH_EDITOR

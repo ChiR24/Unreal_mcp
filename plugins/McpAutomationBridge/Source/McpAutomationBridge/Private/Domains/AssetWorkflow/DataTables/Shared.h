@@ -62,3 +62,37 @@ inline UDataTable* ResolveDataTable(const TSharedPtr<FJsonObject>& Params, TShar
     if (!Table) { OutResult = McpDataTableMakeError(TEXT("ASSET_NOT_FOUND"), nullptr); return nullptr; }
     return Table;
 }
+
+// Build a row from JSON against RowStruct. Returns false (and sets OutError)
+// when conversion fails so callers short-circuit instead of writing a partial
+// row. OutRowMem is only valid on success; on failure it is left null.
+inline bool McpBuildDataTableRow(const UScriptStruct* RowStruct, const TSharedPtr<FJsonObject>& RowData, uint8*& OutRowMem, FString& OutError)
+{
+    OutRowMem = nullptr;
+    OutError.Empty();
+    uint8* RowMem = static_cast<uint8*>(FMemory::Malloc(RowStruct->GetStructureSize()));
+    RowStruct->InitializeStruct(RowMem);
+    const bool bOk = FJsonObjectConverter::JsonObjectToUStruct(RowData.ToSharedRef(), RowStruct, RowMem, 0, 0);
+    if (!bOk)
+    {
+        RowStruct->DestroyStruct(RowMem);
+        FMemory::Free(RowMem);
+        OutError = TEXT("Row data failed validation against the assigned row struct");
+        return false;
+    }
+    OutRowMem = RowMem;
+    return true;
+}
+
+inline TSharedPtr<FJsonObject> McpExportDataTableRow(const UScriptStruct* RowStruct, const void* RowMem)
+{
+    TSharedPtr<FJsonObject> Json = MakeShared<FJsonObject>();
+    FJsonObjectConverter::UStructToJsonObject(RowStruct, RowMem, Json.ToSharedRef(), 0, 0);
+    return Json;
+}
+
+inline void McpFreeDataTableRow(const UScriptStruct* RowStruct, uint8* RowMem)
+{
+    RowStruct->DestroyStruct(RowMem);
+    FMemory::Free(RowMem);
+}

@@ -133,18 +133,68 @@ bool HandleDataTableAction(
         if (!Table) { OutResult = R; return true; }
         FString RowStructPath = GetPayloadString(Params, TEXT("rowStructPath"));
         bool bSave = GetPayloadBool(Params, TEXT("save"), false);
+        bool bMigrateExistingRows = GetPayloadBool(Params, TEXT("migrateExistingRows"), true);
+        bool bClearExisting = GetPayloadBool(Params, TEXT("clearExisting"), false);
         if (RowStructPath.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
         UScriptStruct* RowStruct = ResolveRowStruct(RowStructPath, OutResult);
         if (!RowStruct) { return true; }
 
+        // Existing rows were allocated under the current RowStruct layout;
+        // reassigning RowStruct invalidates that memory, so snapshot first to
+        // migrate compatible rows and report incompatible ones.
+        const bool bMigrate = bMigrateExistingRows && !bClearExisting && Table->RowStruct;
+        TArray<TPair<FName, TSharedPtr<FJsonObject>>> Snapshots;
+        TArray<FName> ExistingNames = Table->GetRowNames();
+        if (bMigrate)
+        {
+            for (const FName& N : ExistingNames)
+            {
+                const uint8* RowMem = Table->FindRowUnchecked(N);
+                if (RowMem) { Snapshots.Add(TPair<FName, TSharedPtr<FJsonObject>>(N, McpExportDataTableRow(Table->RowStruct, RowMem))); }
+            }
+        }
+
+        // Drop old-layout rows before reassigning the struct: their memory is
+        // sized for the previous layout and would be corrupt under the new one.
+        for (const FName& N : ExistingNames) { Table->RemoveRow(N); }
+
         Table->RowStruct = RowStruct;
         Table->OnDataTableChanged();
+
+        // Re-import snapshot rows; failures go to invalidRows (never silent loss).
+        int32 MigratedCount = 0;
+        TArray<TSharedPtr<FJsonValue>> InvalidRows;
+        if (bMigrate)
+        {
+            for (const TPair<FName, TSharedPtr<FJsonObject>>& Snap : Snapshots)
+            {
+                uint8* RowMem = nullptr;
+                FString Err;
+                if (McpBuildDataTableRow(RowStruct, Snap.Value, RowMem, Err))
+                {
+                    Table->AddRow(Snap.Key, RowMem, RowStruct);
+                    McpFreeDataTableRow(RowStruct, RowMem);
+                    ++MigratedCount;
+                }
+                else
+                {
+                    TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+                    Entry->SetStringField(TEXT("rowName"), Snap.Key.ToString());
+                    Entry->SetStringField(TEXT("reason"), Err);
+                    InvalidRows.Add(MakeShared<FJsonValueObject>(Entry));
+                }
+            }
+        }
         if (bSave) { McpSafeAssetSave(Table); }
 
         OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetBoolField(TEXT("updated"), true);
         OutResult->SetStringField(TEXT("rowStructPath"), RowStructPath);
         OutResult->SetBoolField(TEXT("hasRowStruct"), true);
+        OutResult->SetBoolField(TEXT("migratedExistingRows"), bMigrate);
+        OutResult->SetNumberField(TEXT("migratedCount"), MigratedCount);
+        OutResult->SetNumberField(TEXT("skipped"), InvalidRows.Num());
+        OutResult->SetArrayField(TEXT("invalidRows"), InvalidRows);
         OutResult->SetBoolField(TEXT("saved"), bSave);
         McpHandlerUtils::AddVerification(OutResult, Table);
         return true;

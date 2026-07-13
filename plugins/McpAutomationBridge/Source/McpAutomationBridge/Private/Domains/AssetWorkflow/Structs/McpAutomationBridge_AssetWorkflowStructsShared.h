@@ -26,12 +26,39 @@
 #define GetPayloadNumber GetJsonNumberField
 
 FGuid ResolveMemberGuid(UUserDefinedStruct* S, const FString& VarGuidStr, const FString& MemberName);
-FEdGraphPinType ParseMemberType(const FString& TypeStr);
 FString PinTypeToSummary(const FEdGraphPinType& Pin);
 FString UserDefinedStructureStatusToString(EUserDefinedStructureStatus Status);
 TSharedPtr<FJsonObject> VariableDescriptionToJson(const FStructVariableDescription& Var);
 FString BuildDefaultExportText(UUserDefinedStruct* S, FProperty* Prop, const TSharedPtr<FJsonValue>& JsonValue);
 void ForEachReferencingBlueprint(UUserDefinedStruct* S, TFunction<void(UBlueprint*)> Callback);
+
+/**
+ * Enumerate every asset that references struct S — Blueprints, other
+ * UserDefinedStructs (nested struct members), DataAssets, and any other
+ * referencer type. Callback receives the raw UObject; caller Casts<> as
+ * needed. This is the generalised form of ForEachReferencingBlueprint (which
+ * is now a thin wrapper that filters for UBlueprint only).
+ */
+void ForEachReferencingAsset(UUserDefinedStruct* S, TFunction<void(UObject*)> Callback);
+
+/**
+ * Recompile a UserDefinedStruct and every asset that references it, then
+ * notify any DataTables whose RowStruct points at it (so their rows stay
+ * consistent). Nested UserDefinedStruct referencers are recompiled before
+ * Blueprints so downstream BPs rebuild against the updated nested layout.
+ * DataAsset referencers are reported (notification only — no recompile needed).
+ * Enum-typed members are reported for coverage only (no recompile needed).
+ * All out-params are optional; pass nullptr when only the side effect
+ * (recompile + notify) is desired. This is the shared implementation behind
+ * refresh_struct_dependencies and the auto-trigger that fires after every
+ * struct mutation (import, add/remove member, rename, duplicate, ...).
+ */
+void McpRefreshStructDependents(UUserDefinedStruct* S,
+    TArray<FString>* OutBlueprints = nullptr,
+    TArray<FString>* OutDataTables = nullptr,
+    TArray<FString>* OutEnums = nullptr,
+    TArray<FString>* OutStructs = nullptr,
+    TArray<FString>* OutDataAssets = nullptr);
 
 /**
  * Validate-then-apply a `members[]` array to a UserDefinedStruct.

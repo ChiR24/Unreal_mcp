@@ -73,6 +73,9 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
             McpSafeAssetSave(S);
         }
 
+        // Auto-trigger dependent refresh after the member-add mutation (issue #510).
+        McpRefreshStructDependents(S);
+
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("varGuid"), G.ToString());
         Result->SetStringField(TEXT("memberName"), MemberName);
@@ -120,6 +123,9 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
         {
             McpSafeAssetSave(S);
         }
+
+        // Auto-trigger dependent refresh after the member-remove mutation (issue #510).
+        McpRefreshStructDependents(S);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("varGuid"), G.ToString());
@@ -169,6 +175,9 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
         {
             McpSafeAssetSave(S);
         }
+
+        // Auto-trigger dependent refresh after the member-rename mutation (issue #510).
+        McpRefreshStructDependents(S);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("varGuid"), G.ToString());
@@ -238,6 +247,9 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
         {
             McpSafeAssetSave(S);
         }
+
+        // Auto-trigger dependent refresh after the member-type mutation (issue #510).
+        McpRefreshStructDependents(S);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("varGuid"), G.ToString());

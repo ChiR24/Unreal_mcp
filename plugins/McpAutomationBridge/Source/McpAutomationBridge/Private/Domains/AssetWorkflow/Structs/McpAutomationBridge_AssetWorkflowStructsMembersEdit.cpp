@@ -80,6 +80,7 @@ bool HandleStructMemberEditActions(UMcpAutomationBridgeSubsystem& Bridge, const 
 
         FStructureEditorUtils::MoveVariable(S, G, TargetGuid, MovePos);
         FStructureEditorUtils::CompileStructure(S);
+        McpRefreshStructDependents(S);
         S->GetOutermost()->MarkPackageDirty();
         if (bSave) { McpSafeAssetSave(S); }
 
@@ -114,6 +115,7 @@ bool HandleStructMemberEditActions(UMcpAutomationBridgeSubsystem& Bridge, const 
         const FString ExportText = BuildDefaultExportText(S, Prop, *DefaultVal);
         FStructureEditorUtils::ChangeVariableDefaultValue(S, G, ExportText);
         FStructureEditorUtils::CompileStructure(S);
+        McpRefreshStructDependents(S);
         S->GetOutermost()->MarkPackageDirty();
         if (bSave) { McpSafeAssetSave(S); }
 
@@ -155,6 +157,7 @@ bool HandleStructMemberEditActions(UMcpAutomationBridgeSubsystem& Bridge, const 
         if (!Tooltip.IsEmpty()) { FStructureEditorUtils::ChangeVariableTooltip(S, G, Tooltip); }
 
         FStructureEditorUtils::CompileStructure(S);
+        McpRefreshStructDependents(S);
         S->GetOutermost()->MarkPackageDirty();
         if (bSave) { McpSafeAssetSave(S); }
 
