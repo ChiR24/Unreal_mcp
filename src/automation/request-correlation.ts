@@ -109,7 +109,11 @@ export class RequestCorrelation {
     public settle(autoId: string): void {
         const ids = this.byAuto.get(autoId);
         if (!ids) {
-            this.coalesceKeyByAuto.delete(autoId);
+            const key = this.coalesceKeyByAuto.get(autoId);
+            if (key) {
+                this.coalesceKeyByAuto.delete(autoId);
+                this.autoByCoalesceKey.delete(key);
+            }
             return;
         }
         for (const id of ids) {
@@ -142,42 +146,42 @@ export class RequestCorrelation {
         reason: string,
         delivery: CancelDelivery
     ): void {
-        try {
-            const ids = this.byMcp.get(mcpRequestId);
-            if (!ids || ids.size === 0) return;
+        const ids = this.byMcp.get(mcpRequestId);
+        if (!ids || ids.size === 0) return;
 
-            for (const id of [...ids]) {
-                const sub = this.subscribers.get(id);
-                if (!sub) continue;
+        for (const id of [...ids]) {
+            const sub = this.subscribers.get(id);
+            if (!sub) continue;
 
-                const autoSet = this.byAuto.get(sub.autoId);
-                autoSet?.delete(id);
-                const isLastForAuto = !autoSet || autoSet.size === 0;
+            const autoSet = this.byAuto.get(sub.autoId);
+            autoSet?.delete(id);
+            const isLastForAuto = !autoSet || autoSet.size === 0;
 
-                this.subscribers.delete(id);
-                this.byMcp.get(sub.mcpRequestId)?.delete(id);
+            this.subscribers.delete(id);
+            this.byMcp.get(sub.mcpRequestId)?.delete(id);
+            try {
                 sub.reject(new McpRequestCancelledError(`MCP request cancelled: ${reason}`, reason));
-
-                if (!isLastForAuto) continue;
-
-                this.byAuto.delete(sub.autoId);
-                const key = this.coalesceKeyByAuto.get(sub.autoId);
-                if (key) {
-                    this.coalesceKeyByAuto.delete(sub.autoId);
-                    this.autoByCoalesceKey.delete(key);
-                }
-                this.deliverCancelFrame(sub.autoId, delivery);
-                try {
-                    delivery.rejectUnderlying(sub.autoId);
-                } catch {
-                    // Underlying tracker rejection is best-effort.
-                }
+            } catch {
+                // A throwing subscriber reject is a programming error that must
+                // not break cancellation of the remaining subscribers.
             }
-            this.byMcp.delete(mcpRequestId);
-        } catch {
-            // Cancellation must never propagate into SDK AbortSignal or
-            // notifications/cancelled handlers.
+
+            if (!isLastForAuto) continue;
+
+            this.byAuto.delete(sub.autoId);
+            const key = this.coalesceKeyByAuto.get(sub.autoId);
+            if (key) {
+                this.coalesceKeyByAuto.delete(sub.autoId);
+                this.autoByCoalesceKey.delete(key);
+            }
+            this.deliverCancelFrame(sub.autoId, delivery);
+            try {
+                delivery.rejectUnderlying(sub.autoId);
+            } catch {
+                // Underlying tracker rejection is best-effort.
+            }
         }
+        this.byMcp.delete(mcpRequestId);
     }
 
     private deliverCancelFrame(
