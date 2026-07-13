@@ -5,6 +5,18 @@ void FMcpConnectionManager::SetOnAutomationRequestCancelled(
   OnAutomationRequestCancelled = MoveTemp(InCallback);
 }
 
+bool FMcpConnectionManager::IsCancelAllowedForSocket(
+    TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId) const {
+  FScopeLock Lock(&PendingRequestsMutex);
+  if (const TSharedPtr<FMcpBridgeWebSocket>* Owner =
+          PendingRequestsToSockets.Find(RequestId)) {
+    // Tracked request: only the owning socket may cancel it.
+    return Owner->Get() == Socket.Get();
+  }
+  // Untracked (legacy/untracked) request: forward for backward compatibility.
+  return true;
+}
+
 void FMcpConnectionManager::HandleCancelRequest(
     TSharedPtr<FMcpBridgeWebSocket> Socket,
     const FString& RequestId) {
@@ -21,10 +33,29 @@ void FMcpConnectionManager::HandleCancelRequest(
     return;
   }
 
-  if (!Socket.IsValid() ||
-      !AuthenticatedSockets.Contains(Socket.Get())) {
+  bool bIsAuthenticated = false;
+  if (Socket.IsValid()) {
+    FScopeLock Lock(&AuthSocketsMutex);
+    bIsAuthenticated = AuthenticatedSockets.Contains(Socket.Get());
+  }
+  if (!bIsAuthenticated) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("cancel_request received before bridge_hello handshake."));
+    return;
+  }
+
+  // Scope cancellation to the requesting socket. PendingRequestsToSockets maps
+  // each in-flight request to the socket that dispatched it (recorded in
+  // McpConnectionManagerMessages.cpp and removed when the response is sent in
+  // McpConnectionManagerResponses.cpp), so the entry is absent for a request
+  // that already completed. Reject cancels from a socket that does not own the
+  // request to stop one authenticated client cancelling another's request.
+  if (!IsCancelAllowedForSocket(Socket, RequestId)) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+           TEXT("cancel_request rejected: RequestId=%s is owned by a "
+                "different authenticated socket; cancelling another client's "
+                "request is not permitted."),
+           *RequestId);
     return;
   }
 

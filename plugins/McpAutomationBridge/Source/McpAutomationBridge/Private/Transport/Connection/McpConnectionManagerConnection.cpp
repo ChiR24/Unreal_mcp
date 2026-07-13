@@ -158,7 +158,10 @@ void FMcpConnectionManager::ForceReconnect(const FString &Reason,
     }
   }
   ActiveSockets.Empty();
-  AuthenticatedSockets.Empty();
+  {
+    FScopeLock Lock(&AuthSocketsMutex);
+    AuthenticatedSockets.Empty();
+  }
   {
     FScopeLock Lock(&LogSubscribersMutex);
     LogSubscriberSockets.Empty();

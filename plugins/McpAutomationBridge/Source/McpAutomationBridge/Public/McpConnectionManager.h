@@ -64,6 +64,16 @@ public:
 	// Request tracking helpers
 	int32 GetActiveSocketCount() const;
 	void RegisterRequestSocket(const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+	/**
+	 * Returns whether the requesting socket is permitted to cancel RequestId.
+	 * True when the request is NOT tracked (legacy/untracked path — forwarded
+	 * for backward compatibility) or when it IS tracked AND owned by Socket.
+	 * False when the request is tracked and owned by a DIFFERENT socket, which
+	 * prevents one authenticated client from cancelling another client's
+	 * in-flight request. Reads PendingRequestsToSockets under PendingRequestsMutex.
+	 */
+	bool IsCancelAllowedForSocket(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId) const;
 	void SetLogSubscription(TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSubscribed);
 	bool HasLogSubscribers() const;
 
@@ -74,6 +84,9 @@ public:
 	bool Tick(float DeltaTime);
 
 private:
+	// Allowed access for the focused cancel-scoping automation test.
+	friend class FMcpCancelScopeTest;
+
 	void AttemptConnection();
 	void ForceReconnect(const FString& Reason, float ReconnectDelayOverride = -1.0f);
 
@@ -155,7 +168,12 @@ private:
 	double TelemetrySummaryIntervalSeconds = 120.0;
 	double LastTelemetrySummaryLogSeconds = 0.0;
 
-	mutable FCriticalSection PendingRequestsMutex;
-	mutable FCriticalSection RateLimitMutex;
-	mutable FCriticalSection LogSubscribersMutex;
+  mutable FCriticalSection PendingRequestsMutex;
+  mutable FCriticalSection RateLimitMutex;
+  mutable FCriticalSection LogSubscribersMutex;
+
+  // Guards every runtime AuthenticatedSockets access. AuthSocketsMutex is taken
+  // alone and released before PendingRequestsMutex, RateLimitMutex,
+  // LogSubscribersMutex, Socket->Close(), or delegate callbacks.
+  mutable FCriticalSection AuthSocketsMutex;
 };

@@ -144,7 +144,10 @@ void FMcpConnectionManager::Stop() {
     }
   }
   ActiveSockets.Empty();
-  AuthenticatedSockets.Empty();
+  {
+    FScopeLock Lock(&AuthSocketsMutex);
+    AuthenticatedSockets.Empty();
+  }
   {
     FScopeLock Lock(&LogSubscribersMutex);
     LogSubscriberSockets.Empty();

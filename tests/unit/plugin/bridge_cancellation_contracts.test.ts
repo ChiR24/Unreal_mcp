@@ -28,6 +28,9 @@ const connManagerH = read('plugins/McpAutomationBridge/Source/McpAutomationBridg
 const messagesCpp = read('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Transport/Connection/McpConnectionManagerMessages.cpp');
 const cancellationCpp = read('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Transport/Connection/McpConnectionManagerCancellation.cpp');
 const lifecycleCpp = read('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Core/Subsystem/McpAutomationBridgeSubsystemLifecycle.cpp');
+const socketEventsCpp = read('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Transport/Connection/McpConnectionManagerSocketEvents.cpp');
+const connectionCpp = read('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Transport/Connection/McpConnectionManagerConnection.cpp');
+const managerCpp = read('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Transport/Connection/McpConnectionManager.cpp');
 const subsystemH = read('plugins/McpAutomationBridge/Source/McpAutomationBridge/Public/McpAutomationBridgeSubsystem.h');
 
 const pureLoc = (source: string): number =>
@@ -37,6 +40,22 @@ const pureLoc = (source: string): number =>
             const trimmed = line.trim();
             return trimmed.length > 0 && !trimmed.startsWith('//') && !trimmed.startsWith('*');
         }).length;
+
+// Scope a required pattern to the function that must contain it (e.g. the purge must live inside HandleClosed).
+const splitFunctions = (source: string): Map<string, string> => {
+    const map = new Map<string, string>();
+    const re = /FMcpConnectionManager::(\w+)\s*\(/g;
+    const matches = [...source.matchAll(re)];
+    for (let i = 0; i < matches.length; i++) {
+        const name = matches[i][1];
+        const start = matches[i].index ?? 0;
+        const end = i + 1 < matches.length ? (matches[i + 1].index ?? source.length) : source.length;
+        map.set(name, source.slice(start, end));
+    }
+    return map;
+};
+
+const authSocketsAccessPattern = /AuthenticatedSockets\.(?:Add|Remove|Contains|Empty)/g;
 
 describe('TS stdio notifications/cancelled forwarding', () => {
     it('registers CancelledNotificationSchema and forwards to the bridge cancel primitive', () => {
@@ -110,5 +129,84 @@ describe('Plugin WebSocket cancel_request routing', () => {
 
     it('keeps the new cancellation file within the 250 pure-LOC ceiling', () => {
         expect(pureLoc(cancellationCpp)).toBeLessThanOrEqual(250);
+    });
+});
+
+describe('Plugin WebSocket cancellation synchronization + ownership', () => {
+    it('declares a dedicated AuthSocketsMutex guarding AuthenticatedSockets', () => {
+        expect(connManagerH).toContain('AuthSocketsMutex');
+    });
+
+    it('guards AuthenticatedSockets teardown with AuthSocketsMutex in ForceReconnect and Stop', () => {
+        const connectionFns = splitFunctions(connectionCpp);
+        const managerFns = splitFunctions(managerCpp);
+        const forceReconnect = connectionFns.get('ForceReconnect') ?? '';
+        const stop = managerFns.get('Stop') ?? '';
+        expect(forceReconnect).toContain('AuthenticatedSockets');
+        expect(forceReconnect).toContain('AuthSocketsMutex');
+        expect(forceReconnect).toContain('FScopeLock');
+        expect(stop).toContain('AuthenticatedSockets');
+        expect(stop).toContain('AuthSocketsMutex');
+        expect(stop).toContain('FScopeLock');
+    });
+
+    it('guards the cancellation callback authentication lookup in a short AuthSocketsMutex scope', () => {
+        const cancellationFns = splitFunctions(cancellationCpp);
+        const handleCancel = cancellationFns.get('HandleCancelRequest') ?? '';
+        expect(handleCancel.match(authSocketsAccessPattern)).toHaveLength(1);
+        expect(handleCancel).toMatch(
+            /\{\s*FScopeLock Lock\(&AuthSocketsMutex\);\s*bIsAuthenticated = AuthenticatedSockets\.Contains\(Socket\.Get\(\)\);\s*\}/,
+        );
+    });
+
+    it('guards all three message callback authentication accesses in short AuthSocketsMutex scopes', () => {
+        const messageFns = splitFunctions(messagesCpp);
+        const handleMessage = messageFns.get('HandleMessage') ?? '';
+        expect(handleMessage.match(authSocketsAccessPattern)).toHaveLength(3);
+        expect(handleMessage).toMatch(
+            /\{\s*FScopeLock Lock\(&AuthSocketsMutex\);\s*bIsAuthenticated = AuthenticatedSockets\.Contains\(SocketPtr\);\s*\}/,
+        );
+        expect(handleMessage).toMatch(
+            /\{\s*FScopeLock Lock\(&AuthSocketsMutex\);\s*AuthenticatedSockets\.Remove\(SocketPtr\);\s*\}/,
+        );
+        expect(handleMessage).toMatch(
+            /\{\s*FScopeLock Lock\(&AuthSocketsMutex\);\s*AuthenticatedSockets\.Add\(SocketPtr\);\s*\}/,
+        );
+    });
+
+    it('guards each socket-event callback authentication removal in a short AuthSocketsMutex scope', () => {
+        const socketFns = splitFunctions(socketEventsCpp);
+        const handleClientConnected = socketFns.get('HandleClientConnected') ?? '';
+        const handleConnError = socketFns.get('HandleConnectionError') ?? '';
+        const handleClosed = socketFns.get('HandleClosed') ?? '';
+        expect(handleClientConnected.match(authSocketsAccessPattern)).toHaveLength(1);
+        expect(handleConnError.match(authSocketsAccessPattern)).toHaveLength(1);
+        expect(handleClosed.match(authSocketsAccessPattern)).toHaveLength(1);
+        expect(handleClientConnected).toMatch(
+            /\{\s*FScopeLock Lock\(&AuthSocketsMutex\);\s*AuthenticatedSockets\.Remove\(ClientSocket\.Get\(\)\);\s*\}/,
+        );
+        expect(handleConnError).toMatch(
+            /\{\s*FScopeLock Lock\(&AuthSocketsMutex\);\s*AuthenticatedSockets\.Remove\(Socket\.Get\(\)\);\s*\}/,
+        );
+        expect(handleClosed).toMatch(
+            /\{\s*FScopeLock Lock\(&AuthSocketsMutex\);\s*AuthenticatedSockets\.Remove\(Socket\.Get\(\)\);\s*\}/,
+        );
+    });
+
+    it('purges the closing socket pending-request mappings in HandleClosed and HandleConnectionError', () => {
+        const socketFns = splitFunctions(socketEventsCpp);
+        const handleClosed = socketFns.get('HandleClosed') ?? '';
+        const handleConnError = socketFns.get('HandleConnectionError') ?? '';
+        expect(handleClosed).toContain('PendingRequestsToSockets');
+        expect(handleClosed).toContain('PendingRequestsMutex');
+        expect(handleConnError).toContain('PendingRequestsToSockets');
+        expect(handleConnError).toContain('PendingRequestsMutex');
+    });
+
+    it('keeps every Connection shard within the 250 pure-LOC ceiling', () => {
+        expect(pureLoc(socketEventsCpp)).toBeLessThanOrEqual(250);
+        expect(pureLoc(connectionCpp)).toBeLessThanOrEqual(250);
+        expect(pureLoc(managerCpp)).toBeLessThanOrEqual(250);
+        expect(pureLoc(messagesCpp)).toBeLessThanOrEqual(250);
     });
 });

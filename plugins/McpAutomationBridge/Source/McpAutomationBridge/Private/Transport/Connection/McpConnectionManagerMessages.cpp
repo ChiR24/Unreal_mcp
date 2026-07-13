@@ -90,7 +90,12 @@ void FMcpConnectionManager::HandleMessage(
       return;
     }
 
-    if (!SocketPtr || !AuthenticatedSockets.Contains(SocketPtr)) {
+    bool bIsAuthenticated = false;
+    if (SocketPtr) {
+      FScopeLock Lock(&AuthSocketsMutex);
+      bIsAuthenticated = AuthenticatedSockets.Contains(SocketPtr);
+    }
+    if (!bIsAuthenticated) {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("Automation request received before bridge_hello handshake."));
       TSharedRef<FJsonObject> Err = MakeShared<FJsonObject>();
@@ -168,6 +173,7 @@ void FMcpConnectionManager::HandleMessage(
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("Capability token mismatch."));
       if (SocketPtr) {
+        FScopeLock Lock(&AuthSocketsMutex);
         AuthenticatedSockets.Remove(SocketPtr);
       }
       TSharedRef<FJsonObject> Err = MakeShared<FJsonObject>();
@@ -185,6 +191,7 @@ void FMcpConnectionManager::HandleMessage(
     }
 
     if (SocketPtr) {
+      FScopeLock Lock(&AuthSocketsMutex);
       AuthenticatedSockets.Add(SocketPtr);
     }
 
