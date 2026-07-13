@@ -1,6 +1,26 @@
-import { describe, expect, it } from 'vitest';
-import { describeGatewayCapability, searchGatewayCatalog } from '../../../src/server/tool-registry-gateway.js';
+import { afterEach, describe, expect, it } from 'vitest';
+import { describeGatewayCapability, searchGatewayCatalog, handleUnrealGatewayCall } from '../../../src/server/tool-registry-gateway.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
+import { Logger } from '../../../src/utils/logging/logger.js';
+import type { ITools } from '../../../src/types/tools/tool-interfaces.js';
+import { consolidatedToolDefinitions } from '../../../src/tools/catalog/consolidated-tool-definitions.js';
+import { dynamicToolManager } from '../../../src/tools/dynamic/dynamic-tool-manager.js';
+
+function makeExecuteContext(): { tools: ITools; logger: Logger; elicitationTimeoutMs: number; ensureConnected: () => Promise<boolean> } {
+  const tools = {
+    systemTools: {
+      executeConsoleCommand: async () => ({}) as never,
+      getProjectSettings: async () => ({}) as never
+    },
+    assetResources: {}
+  } as unknown as ITools;
+  return {
+    tools,
+    logger: new Logger('test-gateway-execute'),
+    elicitationTimeoutMs: 0,
+    ensureConnected: async () => true
+  };
+}
 
 // Progressive, searchable gateway discovery + guided self-correction.
 // These cases lock the NEW contract: compact search, paginated/filterable
@@ -181,5 +201,130 @@ describe('guided self-correction on invalid discovery calls', () => {
     expect(next.operation).toBe('describe');
     expect(next.tool).toBe('manage_tools');
     expect(next.action).toBe('get_status');
+  });
+});
+
+describe('execute gateway errors carry guided self-correction', () => {
+  const context = makeExecuteContext();
+
+  it('UNKNOWN_TOOL returns closest-match suggestions and a callable nextCall', async () => {
+    const result = (await handleUnrealGatewayCall({ operation: 'execute', tool: 'manage_asts' }, context)) as Record<string, unknown>;
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('UNKNOWN_TOOL');
+    expect(Array.isArray(result.suggestions)).toBe(true);
+    expect((result.suggestions as string[]).includes('manage_asset')).toBe(true);
+    expect(isRecord(result.nextCall)).toBe(true);
+    const next = result.nextCall as Record<string, unknown>;
+    expect(next.operation).toBe('describe');
+    expect(typeof next.tool).toBe('string');
+  });
+
+  it('UNKNOWN_ACTION returns suggestions and a nextCall drilling into a valid action', async () => {
+    const result = (await handleUnrealGatewayCall(
+      { operation: 'execute', tool: 'manage_tools', action: 'get_stat' },
+      context
+    )) as Record<string, unknown>;
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('UNKNOWN_ACTION');
+    expect(Array.isArray(result.availableActions)).toBe(true);
+    expect(Array.isArray(result.suggestions)).toBe(true);
+    expect((result.suggestions as string[]).includes('get_status')).toBe(true);
+    expect(isRecord(result.nextCall)).toBe(true);
+    const next = result.nextCall as Record<string, unknown>;
+    expect(next.operation).toBe('describe');
+    expect(next.tool).toBe('manage_tools');
+    expect(next.action).toBe('get_status');
+  });
+
+  it('INVALID_PARAMS (non-object params) returns suggestions and a describe nextCall', async () => {
+    const result = (await handleUnrealGatewayCall(
+      { operation: 'execute', tool: 'manage_tools', action: 'get_status', params: 'not-an-object' },
+      context
+    )) as Record<string, unknown>;
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('INVALID_PARAMS');
+    expect(Array.isArray(result.suggestions)).toBe(true);
+    expect((result.suggestions as string[]).length).toBeGreaterThan(0);
+    expect(isRecord(result.nextCall)).toBe(true);
+    const next = result.nextCall as Record<string, unknown>;
+    expect(next.operation).toBe('describe');
+    expect(next.tool).toBe('manage_tools');
+  });
+});
+
+describe('execute guided errors cover the remaining named branches', () => {
+  const context = makeExecuteContext();
+
+  afterEach(() => {
+    dynamicToolManager.reset();
+  });
+
+  function firstAction(toolName: string): string {
+    const def = consolidatedToolDefinitions.find((tool) => tool.name === toolName);
+    const props = isRecord(def?.inputSchema) && isRecord(def.inputSchema.properties) ? def.inputSchema.properties : undefined;
+    const action = isRecord(props) ? props.action : undefined;
+    const enumArr = isRecord(action) && Array.isArray(action.enum) ? action.enum : [];
+    const first = enumArr.find((value) => typeof value === 'string');
+    return typeof first === 'string' ? first : 'x';
+  }
+
+  it('TOOL_DISABLED returns tool + suggestions + a configure nextCall', async () => {
+    dynamicToolManager.disableTools(['manage_asset']);
+    const result = (await handleUnrealGatewayCall(
+      { operation: 'execute', tool: 'manage_asset', action: firstAction('manage_asset') },
+      context
+    )) as Record<string, unknown>;
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('TOOL_DISABLED');
+    expect(result.tool).toBe('manage_asset');
+    expect(Array.isArray(result.suggestions)).toBe(true);
+    expect(isRecord(result.nextCall)).toBe(true);
+    const next = result.nextCall as Record<string, unknown>;
+    expect(next.operation).toBe('configure');
+    expect(next.tool).toBe('manage_asset');
+  });
+
+  it('UNDECLARED_PARAMETER returns allowedParameters + suggestions + a describe nextCall', async () => {
+    const result = (await handleUnrealGatewayCall(
+      { operation: 'execute', tool: 'manage_tools', action: 'get_status', params: { bogus: 1 } },
+      context
+    )) as Record<string, unknown>;
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('UNDECLARED_PARAMETER');
+    expect(Array.isArray(result.allowedParameters)).toBe(true);
+    expect(Array.isArray(result.suggestions)).toBe(true);
+    expect(isRecord(result.nextCall)).toBe(true);
+    const next = result.nextCall as Record<string, unknown>;
+    expect(next.operation).toBe('describe');
+    expect(next.tool).toBe('manage_tools');
+    expect(next.action).toBe('get_status');
+  });
+
+  it('INVALID_PARAMS (action override) returns no suggestions/nextCall', async () => {
+    const result = (await handleUnrealGatewayCall(
+      { operation: 'execute', tool: 'manage_tools', action: 'get_status', params: { action: 'hack' } },
+      context
+    )) as Record<string, unknown>;
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('INVALID_PARAMS');
+    expect(result.suggestions).toBeUndefined();
+    expect(result.nextCall).toBeUndefined();
+  });
+
+  it('NOT_CONNECTED (TS-local) returns a search nextCall', async () => {
+    const disconnected = {
+      tools: context.tools,
+      logger: context.logger,
+      elicitationTimeoutMs: context.elicitationTimeoutMs,
+      ensureConnected: async () => false
+    };
+    const result = (await handleUnrealGatewayCall(
+      { operation: 'execute', tool: 'manage_tools', action: 'get_status', params: {} },
+      disconnected
+    )) as Record<string, unknown>;
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('NOT_CONNECTED');
+    expect(isRecord(result.nextCall)).toBe(true);
+    expect((result.nextCall as Record<string, unknown>).operation).toBe('search');
   });
 });

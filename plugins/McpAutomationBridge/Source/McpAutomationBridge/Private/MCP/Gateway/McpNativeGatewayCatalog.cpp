@@ -162,7 +162,13 @@ TArray<FString> GatewayClosestMatches(const FString& Target, const TArray<FStrin
 {
 	if (Limit <= 0) return {};
 	const FString T = Target.TrimStartAndEnd().ToLower();
-	if (T.IsEmpty()) return Candidates;
+	if (T.IsEmpty())
+	{
+		TArray<FString> Out;
+		const int32 Count = FMath::Min(Candidates.Num(), Limit);
+		for (int32 i = 0; i < Count; ++i) Out.Add(Candidates[i]);
+		return Out;
+	}
 	struct FScored { FString Name; int32 Score; };
 	TArray<FScored> Scored;
 	Scored.Reserve(Candidates.Num());

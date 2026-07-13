@@ -15,8 +15,14 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	FMcpToolDefinition* Tool = Registry.FindTool(ToolName);
 	if (!Tool)
 	{
-		return GatewayError(TEXT("execute"), TEXT("UNKNOWN_TOOL"),
+		TArray<FString> Suggestions = GatewayClosestMatches(ToolName, Registry.GetToolNames().Array(), 3);
+		TSharedPtr<FJsonObject> Err = GatewayError(TEXT("execute"), TEXT("UNKNOWN_TOOL"),
 			TEXT("Unknown tool. Call search before execute."));
+		Err->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
+		Err->SetObjectField(TEXT("nextCall"), Suggestions.Num() > 0
+			? GatewayBuildNextCall(TEXT("describe"), Suggestions[0], FString(), FString())
+			: GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString()));
+		return Err;
 	}
 
 	const TArray<FString> Actions = GatewayGetActionValues(Tool);
@@ -26,19 +32,33 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 			FString::Printf(TEXT("Unknown action for %s. Call describe before execute."), *ToolName));
 		Err->SetStringField(TEXT("tool"), ToolName);
 		Err->SetArrayField(TEXT("availableActions"), GatewayStringArray(Actions));
+		TArray<FString> Suggestions = GatewayClosestMatches(Action, Actions, 3);
+		Err->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
+		Err->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), ToolName, Suggestions.Num() > 0 ? Suggestions[0] : FString(), FString()));
 		return Err;
 	}
 
 	if (!ToolManager.IsToolEnabled(ToolName))
 	{
-		return GatewayError(TEXT("execute"), TEXT("TOOL_DISABLED"),
+		TArray<FString> Suggestions = GatewayClosestMatches(ToolName, Registry.GetToolNames().Array(), 3);
+		TSharedPtr<FJsonObject> Err = GatewayError(TEXT("execute"), TEXT("TOOL_DISABLED"),
 			FString::Printf(TEXT("Tool '%s' is disabled or unavailable."), *ToolName));
+		Err->SetStringField(TEXT("tool"), ToolName);
+		Err->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
+		Err->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("configure"), ToolName, FString(), FString()));
+		return Err;
 	}
 
 	if (!RawParams.IsValid())
 	{
-		return GatewayError(TEXT("execute"), TEXT("INVALID_PARAMS"),
+		TArray<FString> Suggestions = GatewayClosestMatches(FString(), GatewayGetParameterNames(Tool), 3);
+		TSharedPtr<FJsonObject> Err = GatewayError(TEXT("execute"), TEXT("INVALID_PARAMS"),
 			TEXT("params must be an object."));
+		Err->SetStringField(TEXT("tool"), ToolName);
+		Err->SetStringField(TEXT("action"), Action);
+		Err->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
+		Err->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), ToolName, Action, FString()));
+		return Err;
 	}
 
 	// The gateway owns action/subAction; reject any attempt to override them.
@@ -60,10 +80,13 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	}
 	if (Unknown.Num() > 0)
 	{
+		TArray<FString> Suggestions = GatewayClosestMatches(Unknown[0], Allowed, 3);
 		TSharedPtr<FJsonObject> Err = GatewayError(TEXT("execute"), TEXT("UNDECLARED_PARAMETER"),
 			FString::Printf(TEXT("Unknown parameter(s) for %s: %s. Call describe before execution."),
 				*ToolName, *FString::Join(Unknown, TEXT(", "))));
 		Err->SetArrayField(TEXT("allowedParameters"), GatewayStringArray(Allowed));
+		Err->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
+		Err->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), ToolName, Action, Suggestions.Num() > 0 ? Suggestions[0] : FString()));
 		return Err;
 	}
 
