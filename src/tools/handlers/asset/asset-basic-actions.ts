@@ -83,7 +83,7 @@ export async function handleListAssets(context: AssetHandlerContext): Promise<Re
     includeTags
   }) as AssetListResponse;
 
-  if (res && res.success === false) {
+  if (!res || res.success === false) {
     return ResponseFactory.errorWithCode(
       typeof res.error === 'string' ? res.error : 'LIST_FAILED',
       typeof res.message === 'string' ? res.message : 'Asset listing failed',

@@ -29,7 +29,7 @@ server/
 | Change `tools/list` sanitization | `tool-registry-listing.ts` | Preserve action enum, required fields, and schema flags from canonical definitions |
 | Change `manage_tools` | `tool-registry-manage-tools.ts` | Local state only; protected tools stay enabled |
 | Change argument elicitation | `tool-registry-elicitation.ts` | Only missing required primitive fields are elicited |
-| Handle inbound `notifications/cancelled` (implemented) | `server-factory.ts` | Registers `CancelledNotificationSchema` and forwards to `AutomationBridge.cancelMcpRequest`, which correlates and cancels the matching queued/inflight automation work |
+| Handle inbound `notifications/cancelled` (implemented) | `server-factory.ts` | Registers `CancelledNotificationSchema` and forwards to `AutomationBridge.cancelMcpRequest`, which drops the matching queued work and, for in-flight work, sends a best-effort `cancel_request` frame to Unreal and suppresses the late response; it cannot interrupt an already-dispatched editor operation (advisory only) |
 | Change MCP resources | `resource-registry.ts` | Resource handlers stay separate from tool calls |
 
 ## REQUEST FLOW
@@ -37,7 +37,7 @@ server/
 2. `manage_tools`: execute locally -> emit `notifications/tools/list_changed` only for mutating actions.
 3. Other calls: merge action params -> check enabled/connection -> elicit -> consolidated handler -> clean -> validate.
 4. `system_control:get_project_settings` may fall back to project INI data without a live bridge.
-5. Cancellation forwarding is **implemented** on this surface. `server-factory.ts` registers `CancelledNotificationSchema` and forwards it to `AutomationBridge.cancelMcpRequest`, which rejects the matching queued or inflight automation request by canonicalized JSON-RPC id and sends a targeted `cancel_request` frame to Unreal. SDK AbortSignal cancellation converges on the same primitive.
+5. Cancellation forwarding is **implemented** on this surface. `server-factory.ts` registers `CancelledNotificationSchema` and forwards it to `AutomationBridge.cancelMcpRequest`, which drops the matching queued work and sends a best-effort `cancel_request` frame to Unreal for in-flight work; it cannot interrupt an already-executing editor operation (advisory only). SDK AbortSignal cancellation converges on the same primitive.
 
 ## CONVENTIONS
 - Keep `tool-registry.ts` as orchestration; put isolated listing, capability, control, or elicitation logic in its matching helper.
