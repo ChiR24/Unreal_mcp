@@ -1,4 +1,5 @@
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
+#include "UObject/UObjectIterator.h"
 
 #if WITH_EDITOR
 
@@ -153,35 +154,94 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
             return true;
         }
 
-        UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
-        if (!S)
+        UStruct* Resolved = LoadObject<UStruct>(nullptr, *StructPath);
+        if (!Resolved)
+        {
+            // Native (C++) script structs such as /Script/Engine.Vector are not
+            // backed by a package on disk, so LoadObject cannot resolve them.
+            // Fall back to an in-memory lookup to handle native USTRUCTs.
+            Resolved = FindObject<UStruct>(nullptr, *StructPath);
+        }
+        if (!Resolved && StructPath.Contains(TEXT("/Script/")))
+        {
+            // Native (C++) script structs have no on-disk asset; they live in a
+            // /Script/<Module> package (e.g. /Script/Engine.Vector). Resolve the
+            // module package, then the struct by its trailing name within it.
+            const int32 DotIdx = StructPath.Find(TEXT("."), ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+            const FString PkgPath = (DotIdx > 0) ? StructPath.Left(DotIdx) : StructPath;
+            const FString StructName = (DotIdx > 0) ? StructPath.Mid(DotIdx + 1) : FPaths::GetCleanFilename(StructPath);
+            if (UPackage* Pkg = FindPackage(nullptr, *PkgPath))
+            {
+                Resolved = FindObject<UScriptStruct>(Pkg, *StructName);
+            }
+            if (!Resolved)
+            {
+                // Fallback: scan loaded script structs for a name match (covers
+                // modules that are loaded but not yet resolvable by package).
+                for (TObjectIterator<UScriptStruct> It; It; ++It)
+                {
+                    if (It->GetName() == StructName)
+                    {
+                        Resolved = *It;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!Resolved)
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        TArray<TSharedPtr<FJsonValue>> MembersArr;
-        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
+        if (UUserDefinedStruct* S = Cast<UUserDefinedStruct>(Resolved))
         {
-            MembersArr.Add(MakeShared<FJsonValueObject>(VariableDescriptionToJson(Var)));
+            TArray<TSharedPtr<FJsonValue>> MembersArr;
+            for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
+            {
+                MembersArr.Add(MakeShared<FJsonValueObject>(VariableDescriptionToJson(Var)));
+            }
+
+            FString ValidityMsg;
+            const bool bValid = FStructureEditorUtils::IsStructureValid(S, nullptr, &ValidityMsg);
+
+            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+            Result->SetStringField(TEXT("assetPath"), StructPath);
+            Result->SetArrayField(TEXT("members"), MembersArr);
+            Result->SetStringField(TEXT("status"), UserDefinedStructureStatusToString(S->Status));
+            Result->SetBoolField(TEXT("isValid"), bValid);
+            if (!bValid)
+            {
+                Result->SetStringField(TEXT("validityMessage"), ValidityMsg);
+            }
+            McpHandlerUtils::AddVerification(Result, S);
+            Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+                TEXT("User defined struct read"), Result);
+            return true;
         }
 
-        FString ValidityMsg;
-        const bool bValid = FStructureEditorUtils::IsStructureValid(S, nullptr, &ValidityMsg);
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("assetPath"), StructPath);
-        Result->SetArrayField(TEXT("members"), MembersArr);
-        Result->SetStringField(TEXT("status"), UserDefinedStructureStatusToString(S->Status));
-        Result->SetBoolField(TEXT("isValid"), bValid);
-        if (!bValid)
+        if (UScriptStruct* SS = Cast<UScriptStruct>(Resolved))
         {
-            Result->SetStringField(TEXT("validityMessage"), ValidityMsg);
+            TArray<TSharedPtr<FJsonValue>> MembersArr;
+            for (TFieldIterator<FProperty> It(SS); It; ++It)
+            {
+                MembersArr.Add(MakeShared<FJsonValueObject>(NativePropertyToMemberJson(*It)));
+            }
+
+            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+            Result->SetStringField(TEXT("assetPath"), StructPath);
+            Result->SetArrayField(TEXT("members"), MembersArr);
+            Result->SetStringField(TEXT("status"), TEXT("Native"));
+            Result->SetBoolField(TEXT("isValid"), true);
+            McpHandlerUtils::AddVerification(Result, SS);
+            Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+                TEXT("Native struct read"), Result);
+            return true;
         }
-        McpHandlerUtils::AddVerification(Result, S);
-        Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-            TEXT("User defined struct read"), Result);
+
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Not a struct: %s"), *StructPath), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 

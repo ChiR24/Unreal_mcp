@@ -1,6 +1,5 @@
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
 
-#include "EdGraphSchema_K2.h"
 #include "EditorAssetLibrary.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 
@@ -248,19 +247,19 @@ void ForEachReferencingAsset(UUserDefinedStruct* S, TFunction<void(UObject*)> Ca
 
     for (const FAssetIdentifier& Ref : Refs)
     {
-        // UE 5.1+ returns FAssetData by value from GetAssetByObjectPath(FSoftObjectPath(...));
-        // UE 5.0 takes an FName. Guard for the 5.0-5.8 source-compatibility target.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        const FAssetData AssetData = AR.GetAssetByObjectPath(FSoftObjectPath(Ref.ToString()));
-#else
-        const FAssetData AssetData = AR.GetAssetByObjectPath(FName(*Ref.ToString()));
-#endif
-        if (AssetData.IsValid())
+        // Referencers are recorded at the package level (e.g. "/Game/DataTables/DTdep"),
+        // but the asset object path needs the asset name (e.g. "/Game/DataTables/DTdep.DTdep").
+        // Resolving the package to its contained asset(s) keeps search_struct_usage correct.
+        TArray<FAssetData> PackageAssets;
+        AR.GetAssetsByPackageName(Ref.PackageName, PackageAssets);
+        for (const FAssetData& AssetData : PackageAssets)
         {
-            UObject* Asset = AssetData.GetAsset();
-            if (Asset)
+            if (AssetData.IsValid())
             {
-                Callback(Asset);
+                if (UObject* Asset = AssetData.GetAsset())
+                {
+                    Callback(Asset);
+                }
             }
         }
     }

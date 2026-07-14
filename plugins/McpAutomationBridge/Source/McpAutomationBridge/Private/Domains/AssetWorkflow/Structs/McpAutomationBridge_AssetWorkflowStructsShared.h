@@ -29,6 +29,8 @@ FGuid ResolveMemberGuid(UUserDefinedStruct* S, const FString& VarGuidStr, const 
 FString PinTypeToSummary(const FEdGraphPinType& Pin);
 FString UserDefinedStructureStatusToString(EUserDefinedStructureStatus Status);
 TSharedPtr<FJsonObject> VariableDescriptionToJson(const FStructVariableDescription& Var);
+// Native-USTRUCT counterpart to VariableDescriptionToJson: must keep the same member JSON shape.
+TSharedPtr<FJsonObject> NativePropertyToMemberJson(FProperty* Prop);
 FString BuildDefaultExportText(UUserDefinedStruct* S, FProperty* Prop, const TSharedPtr<FJsonValue>& JsonValue);
 void ForEachReferencingBlueprint(UUserDefinedStruct* S, TFunction<void(UBlueprint*)> Callback);
 
