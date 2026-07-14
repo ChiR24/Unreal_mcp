@@ -124,6 +124,26 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("call_function") || LowerSub == TEXT("call_actor_function"))
     return HandleControlActorCallFunction(RequestId, Payload, RequestingSocket);
 
+  // Selection & Grouping (Phase 34)
+  if (LowerSub == TEXT("select_actor"))
+    return HandleControlActorSelect(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("select_actors_by_class"))
+    return HandleControlActorSelectByClass(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("select_actors_by_tag"))
+    return HandleControlActorSelectByTag(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("select_actors_in_volume"))
+    return HandleControlActorSelectInVolume(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("deselect_all"))
+    return HandleControlActorDeselectAll(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("get_selected_actors"))
+    return HandleControlActorGetSelected(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("group_actors"))
+    return HandleControlActorGroup(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("ungroup_actors"))
+    return HandleControlActorUngroup(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("run_actor_action_utility"))
+    return HandleControlActorRunUtility(RequestId, Payload, RequestingSocket);
+
   SendStandardErrorResponse(
       this, RequestingSocket, RequestId, TEXT("UNKNOWN_ACTION"),
       FString::Printf(TEXT("Unknown actor control action: %s"), *LowerSub), nullptr);

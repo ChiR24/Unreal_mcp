@@ -17,7 +17,16 @@ action: {
             'create_blackboard', 'setup_perception',
             'set_focus', 'clear_focus',
             'set_blackboard_value', 'get_blackboard_value',
-            'run_behavior_tree', 'stop_behavior_tree'
+            'run_behavior_tree', 'stop_behavior_tree',
+            // Phase 42: NPC Plugins
+            'create_npc_dialogue_tree', 'add_dialogue_node', 'link_dialogue_nodes',
+            'set_dialogue_speaker', 'set_dialogue_condition', 'trigger_dialogue',
+            'setup_patrol_mode', 'setup_alert_mode', 'setup_combat_mode', 'setup_idle_mode',
+            'configure_mode_transitions', 'add_patrol_waypoint',
+            'create_npc_spawner', 'configure_spawn_limits', 'set_spawn_conditions',
+            'create_npc_group', 'configure_group_tactics', 'get_npc_state',
+            'create_npc_memory', 'add_memory_record', 'query_npc_memory',
+            'set_npc_personality', 'configure_reputation_system', 'get_npc_info'
           ,
             ...BEHAVIOR_TREE_ACTIONS, ...NAVIGATION_ACTIONS],
           description: 'AI action to perform'

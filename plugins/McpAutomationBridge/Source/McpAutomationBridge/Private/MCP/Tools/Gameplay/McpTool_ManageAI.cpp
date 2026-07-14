@@ -1,4 +1,4 @@
-// McpTool_ManageAI.cpp — manage_ai tool definition (60 actions)
+// McpTool_ManageAI.cpp — manage_ai tool definition (82 actions)
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "MCP/Registry/McpToolDefinition.h"
@@ -249,6 +249,54 @@ public:
 			.String(TEXT("stateType"), TEXT("State Tree state type."))
 			.String(TEXT("triggerType"), TEXT("State Tree transition trigger type."))
 			.FreeformObject(TEXT("value"), TEXT("Generic value (any type)."))
+			// Phase 42: NPC Plugins
+			.String(TEXT("dialoguePath"), TEXT("Asset path for NPC dialogue tree."))
+			.StringEnum(TEXT("dialogueNodeType"), {
+				TEXT("line"), TEXT("choice"), TEXT("condition"), TEXT("event"), TEXT("end")
+			}, TEXT("Type of dialogue node."))
+			.String(TEXT("speakerName"), TEXT("Speaker name for a dialogue node."))
+			.String(TEXT("dialogueText"), TEXT("Text content of the dialogue line."))
+			.String(TEXT("dialogueCondition"), TEXT("Condition expression for a dialogue branch."))
+			.String(TEXT("fromNodeId"), TEXT("Source node ID."))
+			.String(TEXT("toNodeId"), TEXT("Target node ID."))
+			.StringEnum(TEXT("behaviorMode"), {
+				TEXT("patrol"), TEXT("alert"), TEXT("combat"), TEXT("idle")
+			}, TEXT("NPC behavior mode."))
+			.Number(TEXT("detectionRadius"), TEXT("Alert detection radius in world units."))
+			.StringEnum(TEXT("combatStrategy"), {
+				TEXT("aggressive"), TEXT("defensive"), TEXT("flanking"), TEXT("ranged"), TEXT("retreat")
+			}, TEXT("NPC combat strategy."))
+			.StringEnum(TEXT("fromMode"), {
+				TEXT("patrol"), TEXT("alert"), TEXT("combat"), TEXT("idle")
+			}, TEXT("Source behavior mode."))
+			.StringEnum(TEXT("toMode"), {
+				TEXT("patrol"), TEXT("alert"), TEXT("combat"), TEXT("idle")
+			}, TEXT("Target behavior mode."))
+			.String(TEXT("transitionCondition"), TEXT("Condition that triggers mode transition."))
+			.String(TEXT("spawnerName"), TEXT("NPC spawner configuration name."))
+			.String(TEXT("npcClass"), TEXT("NPC character Blueprint class path."))
+			.Number(TEXT("maxCount"), TEXT("Maximum NPC instances in the pool."))
+			.Number(TEXT("spawnRadius"), TEXT("Spawn radius around spawner origin."))
+			.String(TEXT("groupName"), TEXT("NPC group name."))
+			.String(TEXT("leaderName"), TEXT("Actor name of the group leader NPC."))
+			.StringEnum(TEXT("groupTactic"), {
+				TEXT("flank"), TEXT("surround"), TEXT("retreat"),
+				TEXT("hold_position"), TEXT("follow_leader")
+			}, TEXT("Group-level tactical behavior."))
+			.StringEnum(TEXT("memoryEventType"), {
+				TEXT("attacked_by"), TEXT("saw_enemy"), TEXT("heard_noise"),
+				TEXT("found_item"), TEXT("custom")
+			}, TEXT("Type of memory event to record."))
+			.String(TEXT("memorySubject"), TEXT("Actor name that is the subject of the memory."))
+			.Object(TEXT("personalityTraits"), TEXT("NPC personality trait values (0.0-1.0)."),
+				[](FMcpSchemaBuilder& S) {
+				S.Number(TEXT("aggression"))
+				 .Number(TEXT("curiosity"))
+				 .Number(TEXT("cowardice"))
+				 .Number(TEXT("loyalty"));
+			})
+			.String(TEXT("factionName"), TEXT("Faction name for reputation system."))
+			.Number(TEXT("reputationScore"), TEXT("Initial reputation score (-100 to 100)."))
 			.Required({TEXT("action")})
 			.Build();
 	}

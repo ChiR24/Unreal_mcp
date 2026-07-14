@@ -22,7 +22,8 @@ import {
   splineActionSet,
   textureActionSet,
   volumeActionSet,
-  widgetAuthoringActionSet
+  widgetAuthoringActionSet,
+  dataActionSet
 } from './consolidated-routing.js';
 import { executeAutomationRequest } from '../handlers/foundation/dispatch/common-handlers.js';
 import { handleAITools } from '../handlers/ai/ai-handlers.js';
@@ -64,6 +65,8 @@ import { handleSystemTools, handleConsoleCommand } from '../handlers/system/syst
 import { handleTextureTools } from '../handlers/texture/texture-handlers.js';
 import { handleVolumeTools } from '../handlers/volume/volume-handlers.js';
 import { handleWidgetAuthoringTools } from '../handlers/widget/widget-authoring-handlers.js';
+import { handleDataTools } from '../handlers/data/data-handlers.js';
+import { handleProjectSettingsTools } from '../handlers/core/project-settings-handlers.js';
 
 function mergeAutomationResponse(
   response: unknown,
@@ -116,6 +119,7 @@ export function registerDefaultHandlers() {
 
   toolRegistry.register('control_actor', async (args, tools) => await handleActorTools(getToolAction(args), args, tools));
   toolRegistry.register('control_editor', async (args, tools) => await handleEditorTools(getToolAction(args), args, tools));
+  toolRegistry.register('manage_project_settings', async (args, tools) => await handleProjectSettingsTools(getToolAction(args), args, tools));
   toolRegistry.register('manage_level', async (args, tools) => await handleLevelTools(getToolAction(args), args, tools));
 
   toolRegistry.register('animation_physics', async (args, tools) => {
@@ -221,5 +225,10 @@ export function registerDefaultHandlers() {
     const action = getToolAction(args);
     if (volumeActionSet.has(action)) return await handleVolumeTools(action, args, tools);
     return await handleLevelStructureTools(action, args, tools);
+  });
+  toolRegistry.register('manage_data', async (args, tools) => {
+    const action = getToolAction(args);
+    if (dataActionSet.has(action)) return await handleDataTools(action, args, tools);
+    return await handleDataTools(action, args, tools);
   });
 }

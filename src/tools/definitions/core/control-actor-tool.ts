@@ -30,7 +30,9 @@ export const controlActorToolDefinition: ToolDefinition = {
             'create_snapshot',
             'attach', 'attach_actor',
             'detach', 'detach_actor',
-            'set_actor_collision', 'call_actor_function'
+            'set_actor_collision', 'call_actor_function',
+            'select_actor', 'select_actors_by_class', 'select_actors_by_tag', 'select_actors_in_volume',
+            'deselect_all', 'get_selected_actors', 'group_actors', 'ungroup_actors', 'run_actor_action_utility'
           ],
           description: 'Action'
         },
@@ -67,7 +69,11 @@ export const controlActorToolDefinition: ToolDefinition = {
         name: commonSchemas.name,
         offset: commonSchemas.location,
         propertyName: commonSchemas.propertyName,
-        value: commonSchemas.value
+        value: commonSchemas.value,
+        // Selection/Group utilities
+        volumeName: commonSchemas.actorName,
+        groupName: commonSchemas.stringProp,
+        utilityPath: commonSchemas.assetPath
       },
       required: ['action']
     },

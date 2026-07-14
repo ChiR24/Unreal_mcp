@@ -1,4 +1,5 @@
 #include "McpAutomationBridgeSubsystem.h"
+#include "Domains/Data/McpAutomationBridge_DataHandlers.h"
 
 void UMcpAutomationBridgeSubsystem::InitializeHandlers()
 {
@@ -9,5 +10,6 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers()
     RegisterBlueprintAndDomainHandlers();
     RegisterAudioAnimationHandlers();
     RegisterWorldAndMiscHandlers();
+    FMcpAutomationBridge_DataHandlers::RegisterHandlers(this);
     LoadConfiguredHandlerAliases();
 }
