@@ -60,6 +60,12 @@ if not exist "%RUN_UAT%" (
     exit /b 1
 )
 
+where node >nul 2>nul
+if errorlevel 1 (
+    echo ERROR: Node.js is required to generate the package manifest.
+    exit /b 1
+)
+
 REM ─── Extract version info ──────────────────────────────────────────────────
 
 set "UE_VER=unknown"
@@ -73,6 +79,7 @@ for /f "delims=" %%V in ('powershell -NoProfile -Command "$d = Get-Content -Lite
 
 set "ZIP_NAME=McpAutomationBridge-v%PLUGIN_VER%-UE%UE_VER%-Win64.zip"
 set "ZIP_PATH=%OUTPUT_DIR%\%ZIP_NAME%"
+set "MANIFEST_PATH=%ZIP_PATH:.zip=.manifest.json%"
 set "STAGING_DIR=%TEMP%\McpAutomationBridge-package-%RANDOM%%RANDOM%"
 set "PACKAGE_DIR=%STAGING_DIR%\McpAutomationBridge"
 set "SOURCE_PLUGIN_DIR=%STAGING_DIR%\source\McpAutomationBridge"
@@ -156,6 +163,7 @@ REM ─── Zip ────────────────────�
 
 echo Creating archive: %ZIP_NAME%
 if exist "%ZIP_PATH%" del "%ZIP_PATH%"
+if exist "%MANIFEST_PATH%" del "%MANIFEST_PATH%"
 if exist "%OUTPUT_PLUGIN_DIR%\Intermediate" rmdir /s /q "%OUTPUT_PLUGIN_DIR%\Intermediate"
 powershell -NoProfile -Command "try { $ErrorActionPreference='Stop'; $pluginDir=$args[0]; $zipPath=$args[1]; Get-ChildItem -LiteralPath $pluginDir -Recurse -Directory -Filter '*.dSYM' | Sort-Object FullName -Descending | Remove-Item -Recurse -Force; Get-ChildItem -LiteralPath $pluginDir -Recurse -File | Where-Object { $_.Extension -in '.pdb', '.debug', '.sym' } | Remove-Item -Force; Push-Location (Split-Path -Parent $pluginDir); Compress-Archive -LiteralPath 'McpAutomationBridge' -DestinationPath $zipPath -Force; Pop-Location } catch { Write-Error $_; exit 1 }" "%OUTPUT_PLUGIN_DIR%" "%ZIP_PATH%"
 if errorlevel 1 (
@@ -170,12 +178,21 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM Node crypto keeps SHA-256 generation identical on every supported host.
+node "%SCRIPT_DIR%lib\package-manifest.mjs" "%MANIFEST_PATH%" "McpAutomationBridge" "%PLUGIN_VER%" "UE%UE_VER%-Win64" "%ENGINE_DIR%" "%ZIP_PATH%"
+if errorlevel 1 (
+    echo ERROR: Failed to generate package manifest.
+    if exist "%STAGING_DIR%" rmdir /s /q "%STAGING_DIR%"
+    exit /b 1
+)
+
 if exist "%STAGING_DIR%" rmdir /s /q "%STAGING_DIR%"
 
 echo.
 echo ============================================
 echo   Done!
 echo   Archive: %ZIP_PATH%
+echo   Manifest: %MANIFEST_PATH%
 echo ============================================
 echo.
 echo To install: unzip into YourProject\Plugins\

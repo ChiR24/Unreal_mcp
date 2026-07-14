@@ -12,6 +12,7 @@
 #   1. Build the plugin via RunUAT
 #   2. Set "Installed": true in the output .uplugin
 #   3. Create a zip archive ready for distribution
+#   4. Emit a SHA-256 package manifest beside the archive
 #
 
 set -euo pipefail
@@ -84,6 +85,11 @@ if ! command -v python3 &>/dev/null; then
     exit 1
 fi
 
+if ! command -v node &>/dev/null; then
+    echo "ERROR: Node.js is required to generate the package manifest."
+    exit 1
+fi
+
 # ─── Extract version info ───────────────────────────────────────────────────
 
 # Get UE version from the engine (paths passed via argv to avoid quoting issues)
@@ -100,6 +106,7 @@ PLUGIN_VER=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['Ve
 
 ZIP_NAME="McpAutomationBridge-v${PLUGIN_VER}-UE${UE_VER}-${PLATFORM}.zip"
 ZIP_PATH="$OUTPUT_DIR/$ZIP_NAME"
+MANIFEST_PATH="${ZIP_PATH%.zip}.manifest.json"
 STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/McpAutomationBridge-package.XXXXXX")"
 PACKAGE_DIR="$STAGING_DIR/McpAutomationBridge"
 SOURCE_PLUGIN_DIR="$STAGING_DIR/source/McpAutomationBridge"
@@ -125,6 +132,7 @@ echo ""
 
 echo "Building plugin..."
 rm -f "$ZIP_PATH"
+rm -f "$MANIFEST_PATH"
 mkdir -p "$(dirname "$SOURCE_PLUGIN_DIR")"
 cp -R "$REPO_ROOT/plugins/McpAutomationBridge" "$SOURCE_PLUGIN_DIR"
 
@@ -224,12 +232,22 @@ if forbidden_entries:
     )
     sys.exit(1)
 " "$ZIP_PATH"
+
+# Node crypto keeps SHA-256 generation identical on every supported host.
+node "$SCRIPT_DIR/lib/package-manifest.mjs" \
+    "$MANIFEST_PATH" \
+    "McpAutomationBridge" \
+    "$PLUGIN_VER" \
+    "UE${UE_VER}-${PLATFORM}" \
+    "$ENGINE_DIR" \
+    "$ZIP_PATH"
 echo ""
 
 FINAL_SIZE=$(du -sh "$ZIP_PATH" | cut -f1)
 echo "============================================"
 echo "  Done!"
 echo "  Archive: $ZIP_PATH ($FINAL_SIZE)"
+echo "  Manifest: $MANIFEST_PATH"
 echo "============================================"
 echo ""
 echo "To install: unzip into YourProject/Plugins/"
