@@ -145,6 +145,6 @@
     "url": "https://github.com/ChiR24/Unreal_mcp/issues"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20.19.0"
   }
 }

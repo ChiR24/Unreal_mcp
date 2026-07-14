@@ -75,6 +75,8 @@
     "@typescript-eslint/parser": "8.63.0",
     "@vitest/coverage-v8": "^4.0.16",
     "eslint": "9.39.5",
+    "eslint-plugin-n": "^18.2.2",
+    "js-yaml": "^5.2.1",
     "rimraf": "^6.1.2",
     "ts-node": "^10.9.2",
     "typescript": "5.9.3",
