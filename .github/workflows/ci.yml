@@ -57,7 +57,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: lint
-    if: ${{ secrets.UNREAL_ENGINE_ROOT != '' }}
+    # Opt-in gate: only runs when the UNREAL_ENGINE_ROOT repository variable is set.
+    # Hosted CI stays green without it (job is skipped, not failed). The engine
+    # root secret is supplied via job/step env (see below), never in `if`.
+    if: ${{ vars.UNREAL_ENGINE_ROOT != '' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
