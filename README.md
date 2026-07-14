@@ -60,12 +60,23 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 ### Prerequisites
 
-- **Unreal Engine** 5.0–5.8 source-compatibility target. The current complete
-  live acceptance record covers UE 5.7.4 only.
+- **Unreal Engine 5.0–5.8 (Preview) compatibility target.** The MCP Automation
+  Bridge plugin is scoped to build and run across UE 5.0 through 5.8 Preview.
+
+### Unreal Engine Certification
+
+- **Scope:** Unreal Engine **5.0–5.8 Preview**.
+- **Certification status — incomplete / ongoing.** The native C++ plugin compile
+  has **not yet** been run across the full 5.0–5.8 matrix for this release (it is
+  deferred). Engine roots currently available for verification are 5.0.3, 5.3.2,
+  5.5.4, 5.7.4, and 5.8-P1. The 5.1, 5.2, 5.4, and 5.6 roots are still
+  missing, so the full-matrix verification is **pending** and remains **in
+  progress**. The current live acceptance record covers UE 5.7.4 only. Do not
+  assume the entire 5.0–5.8 range has been compile-verified.
 
 Choose your transport:
 - **Option A: Native MCP** (recommended) — no additional dependencies
-- **Option B: TypeScript Bridge** — requires **Node.js** 18+
+- **Option B: TypeScript Bridge** — requires **Node.js** 20.19.0 or later
 
 ### Step 1: Install MCP Server (Option B only — skip for Native MCP)
 
@@ -405,7 +416,7 @@ Both transports expose the same `unreal` gateway contract, but they are separate
 - **TypeScript stdio transport** — `node dist/cli.js` talks to the Unreal plugin over a WebSocket bridge. Gateway mode is controlled by the `MCP_GATEWAY_MODE` environment variable (process-level, set at server start).
 - **Native MCP transport** — the plugin's built-in Streamable HTTP/SSE server at `/mcp` (no Node.js, no bridge). Gateway mode is controlled by the **Enable Native Gateway** project setting; toggling it requires an editor restart.
 
-Both surfaces negotiate the MCP protocol version at `initialize`, but the supported set is intentionally asymmetric. The native `/mcp` transport supports exactly the three modern versions `2025-11-25`, `2025-06-18`, and `2025-03-26`, and deliberately does not implement the later `2026-07-28` RC. The TypeScript stdio server negotiates through the MCP SDK and also accepts the two older legacy versions `2024-11-05` and `2024-10-07`, so the native surface is intentionally stricter than the TS surface. Both negotiate down to the highest mutually supported version (`2025-11-25` is the latest). After `initialize`, every request must carry a valid `MCP-Protocol-Version` header; an unsupported or missing header returns HTTP 400. Cancellation (`notifications/cancelled`) is mapped to the queued operation and late responses are suppressed. Client `_meta.progressToken` values are preserved and echoed verbatim. `execution.taskSupport` is not advertised until task support is implemented. See [docs/protocol.md](docs/protocol.md) for the full contract.
+Both surfaces negotiate the MCP protocol version at `initialize`, but the supported set is intentionally asymmetric. The native `/mcp` transport supports exactly the three modern versions `2025-11-25`, `2025-06-18`, and `2025-03-26`, and deliberately does not implement the later `2026-07-28` RC. The TypeScript stdio server negotiates through the MCP SDK and also accepts the two older legacy versions `2024-11-05` and `2024-10-07`, so the native surface is intentionally stricter than the TS surface. Both negotiate down to the highest mutually supported version (`2025-11-25` is the latest). After `initialize`, every request must carry a valid `MCP-Protocol-Version` header; an unsupported or invalid header returns HTTP 400, while a missing header falls back to the negotiated session version (or default). Cancellation (`notifications/cancelled`) is supported for queued requests and suppresses the late response for in-flight requests, but cannot interrupt an already-executing editor operation (advisory only). Client `_meta.progressToken` values are preserved and echoed verbatim. `execution.taskSupport` is not advertised until task support is implemented. See [docs/protocol.md](docs/protocol.md) for the full contract.
 
 > ⚠️ **Live-editor evidence is not claimed for this build.** The gateway, protocol negotiation, manifest generation, and parity/parameter audits are verified through source-contract tests and the build, not against a running Unreal Editor. Integration tests (`npm test`) require a live editor plus the bridge plugin and are not part of CI. Do not assume live-editor coverage that was not executed.
 

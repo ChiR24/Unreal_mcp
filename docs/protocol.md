@@ -12,7 +12,7 @@ tool is exposed on each. It is the source of truth for the contract tests in
 | Path | `node dist/cli.js` → WebSocket bridge → C++ subsystem | Plugin Streamable HTTP/SSE, no Node.js |
 | Gateway control | `MCP_GATEWAY_MODE` env (set at server start) | `bEnableNativeGateway` project setting (needs editor restart) |
 | Capability token | `bridge_hello.capabilityToken` | `X-MCP-Capability-Token` header |
-| Requires | Node.js 18+, `unreal-engine-mcp-server` | UE 5.0–5.8, no Node.js |
+| Requires | Node.js 20.19.0+, `unreal-engine-mcp-server` | UE 5.0–5.8, no Node.js |
 
 Both surfaces bind loopback-first by default. The plugin's `bAllowNonLoopback`
 project setting governs **both** server-side listeners it owns — the WebSocket
