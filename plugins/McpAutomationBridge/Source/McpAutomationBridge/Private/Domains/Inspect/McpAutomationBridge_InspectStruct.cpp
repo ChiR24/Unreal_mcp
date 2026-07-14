@@ -52,7 +52,7 @@ bool HandleInspectStructAction(
         OutResult->SetStringField(TEXT("error"), TEXT("UNKNOWN_ACTION"));
         OutResult->SetStringField(TEXT("message"),
             FString::Printf(TEXT("Unsupported action: %s"), *Action));
-        return false;
+        return true;
     }
 
     if (!Params.IsValid())
@@ -60,7 +60,7 @@ bool HandleInspectStructAction(
         OutResult->SetBoolField(TEXT("success"), false);
         OutResult->SetStringField(TEXT("error"), TEXT("INVALID_PAYLOAD"));
         OutResult->SetStringField(TEXT("message"), TEXT("inspect_struct payload missing"));
-        return false;
+        return true;
     }
 
     // Accept structPath / structName / struct aliases for the target identifier.
@@ -83,7 +83,7 @@ bool HandleInspectStructAction(
         OutResult->SetBoolField(TEXT("success"), false);
         OutResult->SetStringField(TEXT("error"), TEXT("MISSING_PARAMETER"));
         OutResult->SetStringField(TEXT("message"), TEXT("inspect_struct requires structPath"));
-        return false;
+        return true;
     }
 
     UScriptStruct* Struct = ResolveStruct(StructPath);
@@ -93,7 +93,7 @@ bool HandleInspectStructAction(
         OutResult->SetStringField(TEXT("error"), TEXT("ASSET_NOT_FOUND"));
         OutResult->SetStringField(TEXT("message"),
             FString::Printf(TEXT("Struct not found: %s"), *StructPath));
-        return false;
+        return true;
     }
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
@@ -221,8 +221,8 @@ bool HandleInspectStructAction(
 #else
     OutResult->SetBoolField(TEXT("success"), false);
     OutResult->SetStringField(TEXT("error"), TEXT("NOT_IMPLEMENTED"));
-    OutResult->SetStringField(TEXT("message"), TEXT("inspect_struct requires editor build"));
-    return false;
+        OutResult->SetStringField(TEXT("message"), TEXT("inspect_struct requires editor build"));
+        return true;
 #endif
 }
 

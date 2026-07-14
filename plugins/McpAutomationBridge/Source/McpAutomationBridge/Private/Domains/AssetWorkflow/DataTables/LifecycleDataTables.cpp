@@ -139,12 +139,25 @@ bool HandleDataTableAction(
         UScriptStruct* RowStruct = ResolveRowStruct(RowStructPath, OutResult);
         if (!RowStruct) { return true; }
 
+        // A populated table whose rows are neither migrated nor cleared would
+        // lose every row when the RowStruct is reassigned: their memory is sized
+        // for the old layout and is invalid under the new one. Reject that up
+        // front so the caller must opt into a destructive change via
+        // migrateExistingRows or clearExisting before any rows are removed.
+        TArray<FName> ExistingNames = Table->GetRowNames();
+        if (ExistingNames.Num() > 0 && !bMigrateExistingRows && !bClearExisting)
+        {
+            OutResult = McpDataTableMakeError(
+                TEXT("INVALID_OPERATION"),
+                TEXT("Cannot change the row struct of a populated data table unless migrateExistingRows=true or clearExisting=true; doing so would erase all existing rows."));
+            return true;
+        }
+
         // Existing rows were allocated under the current RowStruct layout;
         // reassigning RowStruct invalidates that memory, so snapshot first to
         // migrate compatible rows and report incompatible ones.
         const bool bMigrate = bMigrateExistingRows && !bClearExisting && Table->RowStruct;
         TArray<TPair<FName, TSharedPtr<FJsonObject>>> Snapshots;
-        TArray<FName> ExistingNames = Table->GetRowNames();
         if (bMigrate)
         {
             for (const FName& N : ExistingNames)

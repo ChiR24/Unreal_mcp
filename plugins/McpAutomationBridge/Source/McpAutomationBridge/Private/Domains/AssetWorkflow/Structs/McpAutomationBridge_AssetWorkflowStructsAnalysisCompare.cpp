@@ -30,17 +30,35 @@ bool HandleStructAnalysisCompare(UMcpAutomationBridgeSubsystem& Bridge, const FS
         return true;
     }
 
+    // Pair members by their stable VarGuid so renamed fields stay matched as
+    // modifications instead of being reported as removed+added. Members without
+    // a valid GUID are excluded here and resolved later by FriendlyName fallback.
     auto BuildMap = [](UUserDefinedStruct* S)
     {
-        TMap<FString, const FStructVariableDescription*> Map;
+        TMap<FGuid, const FStructVariableDescription*> Map;
         for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
         {
-            Map.Add(Var.FriendlyName, &Var);
+            if (Var.VarGuid.IsValid())
+            {
+                Map.Add(Var.VarGuid, &Var);
+            }
         }
         return Map;
     };
 
-    auto BuildOrder = [](UUserDefinedStruct* S)
+    // Stable ordering key (GUID) for sequence comparison.
+    auto BuildGuidOrder = [](UUserDefinedStruct* S)
+    {
+        TArray<FGuid> Order;
+        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
+        {
+            Order.Add(Var.VarGuid);
+        }
+        return Order;
+    };
+
+    // User-facing ordering (FriendlyName) used only for diff output.
+    auto BuildNameOrder = [](UUserDefinedStruct* S)
     {
         TArray<FString> Order;
         for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
@@ -50,13 +68,14 @@ bool HandleStructAnalysisCompare(UMcpAutomationBridgeSubsystem& Bridge, const FS
         return Order;
     };
 
-    const TMap<FString, const FStructVariableDescription*> MapA = BuildMap(SA);
-    const TMap<FString, const FStructVariableDescription*> MapB = BuildMap(SB);
-    const TArray<FString> OrderA = BuildOrder(SA);
-    const TArray<FString> OrderB = BuildOrder(SB);
+    const TMap<FGuid, const FStructVariableDescription*> MapA = BuildMap(SA);
+    const TMap<FGuid, const FStructVariableDescription*> MapB = BuildMap(SB);
+    const TArray<FGuid> GuidOrderA = BuildGuidOrder(SA);
+    const TArray<FGuid> GuidOrderB = BuildGuidOrder(SB);
+    const TArray<FString> NameOrderA = BuildNameOrder(SA);
+    const TArray<FString> NameOrderB = BuildNameOrder(SB);
 
     TArray<TSharedPtr<FJsonValue>> DiffArr;
-    TSet<FString> Visited;
 
     // Standard add/remove/changed diff entry. A paired member that is fully
     // identical (type + default) is intentionally suppressed so that an
@@ -65,16 +84,25 @@ bool HandleStructAnalysisCompare(UMcpAutomationBridgeSubsystem& Bridge, const FS
     {
         if (A && B)
         {
-            const bool bSame = PinTypeToSummary(A->ToPinType()) == PinTypeToSummary(B->ToPinType()) &&
-                A->DefaultValue == B->DefaultValue;
-            if (bSame)
+            // A rename (same type/default, different FriendlyName) is a
+            // modification, not an identical match, so it must not be suppressed.
+            const bool bSameType = PinTypeToSummary(A->ToPinType()) == PinTypeToSummary(B->ToPinType());
+            const bool bSameDefault = A->DefaultValue == B->DefaultValue;
+            const bool bSameName = A->FriendlyName == B->FriendlyName;
+            if (bSameType && bSameDefault && bSameName)
             {
                 return;
             }
         }
 
         TSharedPtr<FJsonObject> Diff = MakeShared<FJsonObject>();
-        Diff->SetStringField(TEXT("field"), Name);
+        Diff->SetStringField(TEXT("field"), B ? B->FriendlyName : (A ? A->FriendlyName : Name));
+
+        if (A && B && A->FriendlyName != B->FriendlyName)
+        {
+            Diff->SetStringField(TEXT("renamedFrom"), A->FriendlyName);
+            Diff->SetStringField(TEXT("renamedTo"), B->FriendlyName);
+        }
 
         if (A)
         {
@@ -150,43 +178,81 @@ bool HandleStructAnalysisCompare(UMcpAutomationBridgeSubsystem& Bridge, const FS
         }
     };
 
+    TSet<FGuid> VisitedB;
+
+    // Pass 1: pair members by stable VarGuid (handles renames as modifications).
     for (const auto& Pair : MapA)
     {
-        Visited.Add(Pair.Key);
         const FStructVariableDescription* B = MapB.FindRef(Pair.Key);
-        AddDiff(Pair.Key, Pair.Value, B);
         if (B)
         {
-            AddAttributeDiffs(Pair.Key, *Pair.Value, *B);
-        }
-    }
-    for (const auto& Pair : MapB)
-    {
-        if (!Visited.Contains(Pair.Key))
-        {
-            AddDiff(Pair.Key, nullptr, Pair.Value);
+            VisitedB.Add(Pair.Key);
+            AddDiff(Pair.Value->FriendlyName, Pair.Value, B);
+            AddAttributeDiffs(Pair.Value->FriendlyName, *Pair.Value, *B);
         }
     }
 
-    // Order comparison: identical member SET but a different sequence.
+    // Pass 2: fallback — match unpaired members by FriendlyName so members that
+    // lost their GUID pairing are still treated as modifications, not remove/add.
+    for (const auto& Pair : MapA)
+    {
+        if (MapB.Contains(Pair.Key))
+        {
+            continue;
+        }
+        const FStructVariableDescription* B = nullptr;
+        for (const auto& PairB : MapB)
+        {
+            if (VisitedB.Contains(PairB.Key))
+            {
+                continue;
+            }
+            if (PairB.Value->FriendlyName == Pair.Value->FriendlyName)
+            {
+                B = PairB.Value;
+                VisitedB.Add(PairB.Key);
+                break;
+            }
+        }
+        if (B)
+        {
+            AddDiff(Pair.Value->FriendlyName, Pair.Value, B);
+            AddAttributeDiffs(Pair.Value->FriendlyName, *Pair.Value, *B);
+        }
+        else
+        {
+            AddDiff(Pair.Value->FriendlyName, Pair.Value, nullptr);
+        }
+    }
+
+    // Remaining B members with no A counterpart are additions.
+    for (const auto& Pair : MapB)
+    {
+        if (!VisitedB.Contains(Pair.Key))
+        {
+            AddDiff(Pair.Value->FriendlyName, nullptr, Pair.Value);
+        }
+    }
+
+    // Order comparison: identical member SET (by GUID) but a different sequence.
     if (MapA.Num() == MapB.Num())
     {
         bool bSameSet = true;
-        for (const auto& Pair : MapA)
+        for (const FGuid& G : GuidOrderA)
         {
-            if (!MapB.Contains(Pair.Key))
+            if (!MapB.Contains(G))
             {
                 bSameSet = false;
                 break;
             }
         }
-        if (bSameSet && OrderA != OrderB)
+        if (bSameSet && GuidOrderA != GuidOrderB)
         {
             TSharedPtr<FJsonObject> Diff = MakeShared<FJsonObject>();
             Diff->SetStringField(TEXT("type"), TEXT("order_mismatch"));
             TArray<TSharedPtr<FJsonValue>> ArrA, ArrB;
-            for (const FString& N : OrderA) ArrA.Add(MakeShared<FJsonValueString>(N));
-            for (const FString& N : OrderB) ArrB.Add(MakeShared<FJsonValueString>(N));
+            for (const FString& N : NameOrderA) ArrA.Add(MakeShared<FJsonValueString>(N));
+            for (const FString& N : NameOrderB) ArrB.Add(MakeShared<FJsonValueString>(N));
             Diff->SetArrayField(TEXT("orderA"), ArrA);
             Diff->SetArrayField(TEXT("orderB"), ArrB);
             DiffArr.Add(MakeShared<FJsonValueObject>(Diff));

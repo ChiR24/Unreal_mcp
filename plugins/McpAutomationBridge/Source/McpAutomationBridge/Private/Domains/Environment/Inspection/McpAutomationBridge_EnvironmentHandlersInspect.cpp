@@ -111,9 +111,22 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     if (LowerSubAction.Equals(TEXT("inspect_struct")))
     {
         TSharedPtr<FJsonObject> Result;
-        if (McpInspectStruct::HandleInspectStructAction(LowerSubAction, Payload, Result))
+        if (McpInspectStruct::HandleInspectStructAction(LowerSubAction, Payload, Result) && Result.IsValid())
         {
-            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Struct inspected"), Result);
+            if (Result->GetBoolField(TEXT("success")))
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Struct inspected"), Result);
+            }
+            else
+            {
+                // Handled failure (e.g. MISSING_PARAMETER / ASSET_NOT_FOUND): forward the
+                // shard's specific diagnostic instead of falling through to UNKNOWN_ACTION.
+                FString ErrorCode = TEXT("INTERNAL_ERROR");
+                FString Message = TEXT("inspect_struct failed");
+                Result->TryGetStringField(TEXT("error"), ErrorCode);
+                Result->TryGetStringField(TEXT("message"), Message);
+                SendAutomationError(RequestingSocket, RequestId, Message, ErrorCode);
+            }
             return true;
         }
         return false;

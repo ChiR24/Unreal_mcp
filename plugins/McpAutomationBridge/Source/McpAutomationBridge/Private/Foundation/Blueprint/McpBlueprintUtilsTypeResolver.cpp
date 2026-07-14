@@ -86,9 +86,11 @@ static FTypeResolutionResult ResolvePinTypeRecursive(
         }
         if (!bHasComma)
         {
-            Result.OutError = FString::Printf(
-                TEXT("Map type '%s' is missing the key/value comma (expected 'Map:<Key>,<Value>')"), *Clean);
-            return Result;
+            // No key/value comma: treat the single token as the map VALUE and
+            // default the KEY to Int. This keeps round-trips forgiving for the
+            // common single-type Map shorthand (e.g. "Map:Float" => Map<Int,Float>).
+            KeyStr = TEXT("Int");
+            ValueStr = MapInner;
         }
         KeyStr.TrimStartAndEndInline();
         ValueStr.TrimStartAndEndInline();

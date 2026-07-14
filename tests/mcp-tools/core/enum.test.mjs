@@ -158,20 +158,6 @@ const testCases = [
     ],
   },
 
-  // === ENUM LIFECYCLE DELETE (after edits complete) ===
-  {
-    scenario: 'ENUM: delete_enum',
-    toolName: 'manage_asset',
-    arguments: {
-      action: 'delete_enum',
-      enumPath: '${captured:enumPath}',
-    },
-    expected: 'success',
-    assertions: [
-      { path: 'structuredContent.result.deleted', equals: true, label: 'enum deleted flag' },
-    ],
-  },
-
   // === ENUM ERROR PATHS ===
   {
     scenario: 'ENUM ERROR: create_enum missing name',
@@ -207,6 +193,20 @@ const testCases = [
     expected: 'error',
     assertions: [
       { path: 'structuredContent.error', includes: 'Enum not found', label: 'missing enum reported' },
+    ],
+  },
+
+  // === ENUM LIFECYCLE DELETE (after all edits and error paths complete) ===
+  {
+    scenario: 'ENUM: delete_enum',
+    toolName: 'manage_asset',
+    arguments: {
+      action: 'delete_enum',
+      enumPath: '${captured:enumPath}',
+    },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.deleted', equals: true, label: 'enum deleted flag' },
     ],
   },
 

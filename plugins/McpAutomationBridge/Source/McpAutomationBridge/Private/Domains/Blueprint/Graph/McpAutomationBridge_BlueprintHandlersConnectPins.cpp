@@ -62,13 +62,19 @@ bool HandleBlueprintConnectPins(const FBlueprintActionContext &Context) {
                        TEXT("toPinName"), TEXT("toPin"), TEXT("inputPin")});
 
     // linkedTo alias form: "TargetNodeId.TargetPinName"
+    // Treat linkedTo as a FALLBACK only: populate the target node/pin from it
+    // solely when the explicitly-provided target fields were left empty, so a
+    // valid targetNodeId/targetPinName (or toNodeId/toPinName) is never
+    // clobbered by linkedTo (issue #struct-ecosystem [21]).
     FString LinkedTo;
     if (LocalPayload->TryGetStringField(TEXT("linkedTo"), LinkedTo) &&
         !LinkedTo.IsEmpty()) {
       FString LinkedNode, LinkedPin;
       if (LinkedTo.Split(TEXT("."), &LinkedNode, &LinkedPin)) {
-        TargetNodeGuid = LinkedNode.TrimStartAndEnd();
-        if (!LinkedPin.IsEmpty()) {
+        if (TargetNodeGuid.IsEmpty()) {
+          TargetNodeGuid = LinkedNode.TrimStartAndEnd();
+        }
+        if (TargetPinName.IsEmpty() && !LinkedPin.IsEmpty()) {
           TargetPinName = LinkedPin.TrimStartAndEnd();
         }
       }

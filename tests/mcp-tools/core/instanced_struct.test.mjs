@@ -9,6 +9,68 @@ const ts = Date.now();
 // plugin. They validate the FInstancedStruct property access surface that the
 // C++ handler exposes under manage_asset.
 const testCases = [
+  // === SETUP: required assets (issue #struct-ecosystem) ===
+  {
+    scenario: 'SETUP: create inner struct S_MyInner',
+    toolName: 'manage_asset',
+    arguments: {
+      action: 'create_struct',
+      name: `S_MyInner_${ts}`,
+      path: TEST_FOLDER,
+      save: true,
+    },
+    expected: 'success',
+    captureResult: { key: 'innerStructPath', fromField: 'result.assetPath' },
+  },
+  {
+    scenario: 'SETUP: add Score member to S_MyInner',
+    toolName: 'manage_asset',
+    arguments: {
+      action: 'add_struct_member',
+      structPath: '${captured:innerStructPath}',
+      memberName: 'Score',
+      memberType: 'Int',
+      save: false,
+    },
+    expected: 'success',
+  },
+  {
+    scenario: 'SETUP: add Label member to S_MyInner',
+    toolName: 'manage_asset',
+    arguments: {
+      action: 'add_struct_member',
+      structPath: '${captured:innerStructPath}',
+      memberName: 'Label',
+      memberType: 'String',
+      save: true,
+    },
+    expected: 'success',
+  },
+  {
+    scenario: 'SETUP: create holder blueprint BP_InstancedHolder',
+    toolName: 'manage_blueprint',
+    arguments: {
+      action: 'create_blueprint',
+      name: `BP_InstancedHolder_${ts}`,
+      path: TEST_FOLDER,
+      parentClass: 'Actor',
+    },
+    expected: 'success|already exists',
+  },
+  {
+    scenario: 'SETUP: add instanced-struct property Payload to holder',
+    toolName: 'manage_blueprint',
+    arguments: {
+      action: 'add_variable',
+      blueprintPath: `${TEST_FOLDER}/BP_InstancedHolder_${ts}`,
+      variableName: 'Payload',
+      variableType: `Struct:/Game/MCPTest/StructProperty/S_MyInner_${ts}`,
+      category: 'MCP',
+      isPublic: true,
+    },
+    expected: 'success|already exists',
+  },
+
   // === GET on a known instanced-struct property ===
   {
     scenario: 'INSTANCED STRUCT: get_instanced_struct_property (initialized)',

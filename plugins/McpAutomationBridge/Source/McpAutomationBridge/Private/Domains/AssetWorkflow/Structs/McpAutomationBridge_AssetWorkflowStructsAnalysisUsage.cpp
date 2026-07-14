@@ -84,10 +84,6 @@ bool HandleStructAnalysisRecompile(UMcpAutomationBridgeSubsystem& Bridge, const 
     FStructureEditorUtils::CompileStructure(S);
     S->GetOutermost()->MarkPackageDirty();
     bool bSave = GetPayloadBool(Payload, TEXT("save"), false);
-    if (bSave)
-    {
-        McpSafeAssetSave(S);
-    }
 
     TArray<TSharedPtr<FJsonValue>> IssuesArr;
     int32 ErrorCount = 0;
@@ -126,6 +122,24 @@ bool HandleStructAnalysisRecompile(UMcpAutomationBridgeSubsystem& Bridge, const 
             IssuesArr.Add(MakeShared<FJsonValueObject>(Issue));
         }
     });
+
+    if (bSave)
+    {
+        // Persist the main struct and every dependent package modified by the
+        // recompilation loops so their dirty changes are not lost on editor exit.
+        McpSafeAssetSave(S);
+        ForEachReferencingAsset(S, [](UObject* Asset)
+        {
+            if (UUserDefinedStruct* Nested = Cast<UUserDefinedStruct>(Asset))
+            {
+                McpSafeAssetSave(Nested);
+            }
+        });
+        ForEachReferencingBlueprint(S, [](UBlueprint* BP)
+        {
+            McpSafeAssetSave(BP);
+        });
+    }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), StructPath);

@@ -153,7 +153,19 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     TSharedPtr<FJsonObject> Result;
     if (HandleDataTableAction(Lower, Payload, Result))
     {
-      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("DataTable action completed"), Result);
+      // A DataTable action that fails validation still returns true (it fills
+      // Result with an error object via McpDataTableMakeError). Propagate that
+      // failure to the caller instead of claiming success (issue
+      // #struct-ecosystem [22]). An error result only carries the "error" /
+      // "errorCode" fields and never a populated success payload, so keying the
+      // success flag off the presence of an "error" field is reliable.
+      FString Err;
+      const bool bOk = !(Result.IsValid() &&
+                         Result->TryGetStringField(TEXT("error"), Err) &&
+                         !Err.IsEmpty());
+      SendAutomationResponse(RequestingSocket, RequestId, bOk,
+          bOk ? TEXT("DataTable action completed") : TEXT("DataTable action failed"),
+          Result);
       return true;
     }
     return false;

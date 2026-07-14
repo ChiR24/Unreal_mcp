@@ -3,6 +3,7 @@
 #include "UObject/UnrealType.h"
 #include "StructUtils/InstancedStruct.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
+#include "JsonObjectConverter.h"
 #include "Safety/McpSafeOperationsAssetSave.h"
 
 // =============================================================================
@@ -191,24 +192,47 @@ bool HandleStructPropertyAction(
         FStructProperty* StructProp = CastField<FStructProperty>(Prop);
         FInstancedStruct* Inst = StructProp->ContainerPtrToValuePtr<FInstancedStruct>(Asset);
 
-        // (Re)initialize the instance with the requested inner struct type.
-        Inst->InitializeAs(TargetStruct);
-
         if (Values.IsValid())
         {
-            uint8* Memory = Inst->GetMutableMemory();
-            FStructProperty* InnerProp = MakeInnerStructProperty(TargetStruct);
-            FString ApplyError;
-            if (!McpPropertyReflection::ApplyJsonValueToProperty(Memory, InnerProp, Values, ApplyError))
+            // Validate against a throwaway instance BEFORE touching the live
+            // FInstancedStruct (issue #struct-ecosystem [23]). The generic
+            // reflection layer has no FStructProperty branch, so apply the JSON
+            // object with the struct-aware converter directly; doing it on a
+            // scratch instance means a malformed structValues payload never
+            // mutates the in-memory asset. Only after validation succeeds do
+            // we commit the instance.
+            const TSharedPtr<FJsonObject>* ValuesObj = nullptr;
+            if (!Values->TryGetObject(ValuesObj) || !*ValuesObj)
             {
-                delete InnerProp;
+                OutResult->SetBoolField(TEXT("success"), false);
+                OutResult->SetStringField(TEXT("error"), TEXT("INVALID_OPERATION"));
+                OutResult->SetStringField(TEXT("message"),
+                    TEXT("structValues must be a JSON object of fieldName -> value"));
+                return true;
+            }
+
+            FInstancedStruct Scratch;
+            Scratch.InitializeAs(TargetStruct);
+            if (!FJsonObjectConverter::JsonObjectToUStruct(
+                    (*ValuesObj).ToSharedRef(), TargetStruct,
+                    Scratch.GetMutableMemory(), 0, 0))
+            {
                 OutResult->SetBoolField(TEXT("success"), false);
                 OutResult->SetStringField(TEXT("error"), TEXT("OPERATION_FAILED"));
                 OutResult->SetStringField(TEXT("message"),
-                    FString::Printf(TEXT("Failed to apply values: %s"), *ApplyError));
+                    TEXT("Failed to apply structValues to the requested struct type"));
                 return true;
             }
-            delete InnerProp;
+
+            // Validation passed: commit the validated instance into the live
+            // property. MoveTemp transfers ownership without re-applying JSON, so
+            // the asset is left unchanged when validation above fails.
+            *Inst = MoveTemp(Scratch);
+        }
+        else
+        {
+            // No values supplied: just (re)initialize the instance type.
+            Inst->InitializeAs(TargetStruct);
         }
 
         // Persist only through the safe wrapper; never the raw package save API.

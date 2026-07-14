@@ -63,14 +63,24 @@ void McpRefreshStructDependents(UUserDefinedStruct* S,
         }
     }
 
-    // 4) Notify DataTables whose RowStruct points at this struct (rows may need re-validation).
+    // 4) Notify DataTables whose RowStruct points at this struct (or at any nested
+    //    struct compiled above) so rows using nested types are re-validated too.
     IAssetRegistry& AR = FAssetRegistryModule::GetRegistry();
     TArray<FAssetData> DataTableAssets;
     AR.GetAssetsByClass(UDataTable::StaticClass()->GetClassPathName(), DataTableAssets, true);
+
+    // Candidate row structs: the primary struct plus every nested struct compiled above.
+    TArray<UScriptStruct*> CandidateRowStructs;
+    CandidateRowStructs.Add(Cast<UScriptStruct>(S));
+    for (UUserDefinedStruct* Nested : NestedStructs)
+    {
+        CandidateRowStructs.Add(Cast<UScriptStruct>(Nested));
+    }
+
     for (const FAssetData& AD : DataTableAssets)
     {
         UDataTable* DT = Cast<UDataTable>(AD.GetAsset());
-        if (DT && DT->GetRowStruct() == Cast<UScriptStruct>(S))
+        if (DT && CandidateRowStructs.Contains(DT->GetRowStruct()))
         {
             DT->HandleDataTableChanged();
             if (OutDataTables)

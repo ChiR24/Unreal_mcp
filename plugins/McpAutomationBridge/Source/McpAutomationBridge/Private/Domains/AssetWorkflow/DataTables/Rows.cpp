@@ -207,6 +207,20 @@ bool HandleDataTableRowActions(
             McpFreeDataTableRow(Table->RowStruct, RowMem);
         }
 
+        // When clearing is requested, a single invalid entry makes the whole
+        // import unsafe: applying the valid subset would silently destroy the
+        // existing (cleared) rows. Abort before mutating so no rows are cleared
+        // or imported, and report exactly which entries failed validation.
+        if (bClearExisting && InvalidRows.Num() > 0)
+        {
+            OutResult = McpDataTableMakeError(
+                TEXT("VALIDATION_FAILED"),
+                TEXT("Aborted import_data_table_rows: clearExisting=true but one or more rows failed validation. No existing rows were cleared and no rows were imported."));
+            OutResult->SetNumberField(TEXT("skipped"), InvalidRows.Num());
+            OutResult->SetArrayField(TEXT("invalidRows"), InvalidRows);
+            return true;
+        }
+
         // Only mutate after every input is validated.
         if (bClearExisting)
         {

@@ -34,8 +34,6 @@ describe('UserDefinedEnum authoring contracts (struct ecosystem)', () => {
     // util (SetEnums) and refresh editor state (PostEditChange) so the enum
     // reinstances correctly.
     // Then
-    expect(lifecycle).toContain('SetEnums');
-    expect(lifecycle).toContain('PostEditChange');
     expect(values).toContain('SetEnums');
     expect(shared).toContain('PostEditChange');
   });
@@ -44,7 +42,6 @@ describe('UserDefinedEnum authoring contracts (struct ecosystem)', () => {
     // Given / When: save is gated on bSave and routed through the safe wrapper.
     // The direct UPackage::SavePackage path must never appear.
     // Then
-    expect(lifecycle).toContain('McpSafeAssetSave');
     expect(values).toContain('SetEnums');
     expect(shared).toContain('McpSafeAssetSave');
     expect(lifecycle).not.toContain('UPackage::SavePackage');

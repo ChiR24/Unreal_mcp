@@ -85,23 +85,36 @@ static bool HandleStructAssetAction_Delete(UMcpAutomationBridgeSubsystem& Bridge
         // Detect the game-thread case and call ObjectTools directly instead.
         TArray<UObject*> ObjectsToDelete = { S };
 
-        auto DoDelete = [&ObjectsToDelete, &PreDeleteReferencers]()
-        {
-            ObjectTools::DeleteObjects(ObjectsToDelete, /*bShowConfirmation=*/false);
+        // ObjectTools::DeleteObjects returns the number of objects actually removed.
+        // A cancelled or failed delete returns 0; we must NOT claim success or
+        // recompile referencers in that case.
+        int32 DeletedCount = 0;
 
+        auto DoDelete = [&ObjectsToDelete, &PreDeleteReferencers, &DeletedCount]()
+        {
+            DeletedCount = ObjectTools::DeleteObjects(ObjectsToDelete, /*bShowConfirmation=*/false);
+            if (DeletedCount == 0)
+            {
+                return;
+            }
+
+            // Recompile referencers snapshotted before the delete so dependent
+            // Blueprints rebuild against the now-removed struct. Resolve by package
+            // name: Ref.ToString() may be a package path (e.g. /Game/Foo), not an
+            // object path (e.g. /Game/Foo.Foo) that GetAssetByObjectPath expects.
             IAssetRegistry& AR = FAssetRegistryModule::GetRegistry();
             for (const FAssetIdentifier& Ref : PreDeleteReferencers)
             {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                const FAssetData AssetData = AR.GetAssetByObjectPath(FSoftObjectPath(Ref.ToString()));
-#else
-                const FAssetData AssetData = AR.GetAssetByObjectPath(FName(*Ref.ToString()));
-#endif
-                if (AssetData.IsValid() && AssetData.IsAssetLoaded())
+                TArray<FAssetData> PackageAssets;
+                AR.GetAssetsByPackageName(Ref.PackageName, PackageAssets);
+                for (const FAssetData& AssetData : PackageAssets)
                 {
-                    if (UBlueprint* BP = Cast<UBlueprint>(AssetData.GetAsset()))
+                    if (AssetData.IsValid() && AssetData.IsAssetLoaded())
                     {
-                        FKismetEditorUtilities::CompileBlueprint(BP, EBlueprintCompileOptions::None);
+                        if (UBlueprint* BP = Cast<UBlueprint>(AssetData.GetAsset()))
+                        {
+                            FKismetEditorUtilities::CompileBlueprint(BP, EBlueprintCompileOptions::None);
+                        }
                     }
                 }
             }
@@ -120,6 +133,16 @@ static bool HandleStructAssetAction_Delete(UMcpAutomationBridgeSubsystem& Bridge
                 Event.Trigger();
             });
             Event.Get()->Wait();  // pure wait, NO Pump — pumping deadlocks
+        }
+
+        if (DeletedCount == 0)
+        {
+            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+            Result->SetStringField(TEXT("deletedPath"), StructPath);
+            Result->SetBoolField(TEXT("deleted"), false);
+            Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                TEXT("Struct delete failed (0 objects removed)"), Result);
+            return true;
         }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

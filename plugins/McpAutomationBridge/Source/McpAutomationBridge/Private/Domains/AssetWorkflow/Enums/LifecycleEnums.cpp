@@ -1,7 +1,7 @@
 #include "Domains/AssetWorkflow/Enums/Shared.h"
 #include "Kismet2/EnumEditorUtils.h"
-#include "Misc/PackageName.h"
-#include "HAL/FileManager.h"
+#include "Misc/ScopedEvent.h"
+#include "ObjectTools.h"
 
 #if WITH_EDITOR
 
@@ -174,31 +174,56 @@ bool HandleEnumLifecycleActions(
             return true;
         }
 
-        // Non-blocking delete: unload the package from memory and remove the
-        // asset file. Direct file delete + GC avoids the synchronous-request
-        // deadlock that ObjectTools::DeleteObjects would cause on this thread.
-        UPackage* Pkg = Enum->GetOutermost();
-        if (Pkg)
+        // Editor-tracked delete via ObjectTools::DeleteObjects (issue
+        // #struct-ecosystem [27]). The previous implementation unloaded the
+        // package and deleted the .uasset/.uexp files directly, which bypassed
+        // the editor deletion flow (asset registry, source control, redirectors,
+        // loaded references) and could leave a referenced enum half-unregistered.
+        // ObjectTools::DeleteObjects performs the file deletion, redirector
+        // creation, GC and source-control bookkeeping for us and must run on the
+        // game thread. Capture the path BEFORE deletion: the pointer is dangling
+        // once the delete succeeds.
+        const FString EnumPath = Enum->GetPathName();
+        TArray<UObject*> ObjectsToDelete = { Enum };
+
+        // ObjectTools::DeleteObjects returns the number of objects actually removed.
+        // A cancelled or failed delete returns 0; we must NOT claim success.
+        int32 DeletedCount = 0;
+        auto DoDelete = [&ObjectsToDelete, &DeletedCount]()
         {
-            Pkg->ClearFlags(RF_Standalone | RF_Public);
-            Pkg->RemoveFromRoot();
-            Pkg->MarkAsGarbage();
+            DeletedCount = ObjectTools::DeleteObjects(ObjectsToDelete, /*bShowConfirmation=*/false);
+        };
+
+        // When invoked from the request queue (native MCP path) the handler already
+        // runs on the game thread; dispatching to the game thread via AsyncTask +
+        // Wait there would deadlock. Detect the game-thread case and call
+        // ObjectTools directly. Otherwise run on the game thread and wait.
+        if (IsInGameThread())
+        {
+            DoDelete();
+        }
+        else
+        {
+            FScopedEvent Event;
+            AsyncTask(ENamedThreads::GameThread, [&Event, &DoDelete]()
+            {
+                DoDelete();
+                Event.Trigger();
+            });
+            Event.Get()->Wait(); // pure wait, NO Pump — pumping deadlocks
         }
 
-        const FString PackageName = FPackageName::ObjectPathToPackageName(Enum->GetPathName());
-        const FString FilePath = FPackageName::LongPackageNameToFilename(
-            PackageName, FPackageName::GetAssetPackageExtension());
-        IFileManager::Get().Delete(*FilePath, /*bRequireExists=*/false, /*bEvenReadOnly=*/true, /*bQuiet=*/true);
-
-        const FString UexpPath = FPackageName::LongPackageNameToFilename(
-            PackageName, TEXT(".uexp"));
-        if (IFileManager::Get().FileExists(*UexpPath))
+        if (DeletedCount == 0)
         {
-            IFileManager::Get().Delete(*UexpPath, /*bRequireExists=*/false, /*bEvenReadOnly=*/true, /*bQuiet=*/true);
+            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+            Result->SetStringField(TEXT("enumPath"), EnumPath);
+            Result->SetBoolField(TEXT("deleted"), false);
+            OutResult = Result;
+            return true;
         }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("enumPath"), Enum->GetPathName());
+        Result->SetStringField(TEXT("enumPath"), EnumPath);
         Result->SetBoolField(TEXT("deleted"), true);
         OutResult = Result;
         return true;

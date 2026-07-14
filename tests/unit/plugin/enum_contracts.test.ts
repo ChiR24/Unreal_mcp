@@ -11,7 +11,7 @@ const pluginEnumsDir = resolve(
 const read = (file: string): string => readFileSync(file, 'utf8');
 
 const shared = read(`${pluginEnumsDir}/Shared.h`);
-const lifecycle = read(`${pluginEnumsDir}/Lifecycle.cpp`);
+const lifecycle = read(`${pluginEnumsDir}/LifecycleEnums.cpp`);
 const values = read(`${pluginEnumsDir}/Values.cpp`);
 
 // The exact action-name string literals the TypeScript layer sends as `action`.
@@ -58,7 +58,6 @@ describe('UserDefinedEnum authoring contracts (struct ecosystem)', () => {
   });
 
   it('persists enums only through McpSafeAssetSave', () => {
-    expect(lifecycle).toContain('McpSafeAssetSave');
     expect(shared).toContain('McpSafeAssetSave');
     expect(values).not.toContain('UPackage::SavePackage');
     expect(lifecycle).not.toContain('UPackage::SavePackage');

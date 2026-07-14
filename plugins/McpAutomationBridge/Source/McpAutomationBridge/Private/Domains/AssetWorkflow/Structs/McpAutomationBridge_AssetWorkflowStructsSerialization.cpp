@@ -58,38 +58,33 @@ bool HandleStructSerializationActions(UMcpAutomationBridgeSubsystem& Bridge, con
     {
         FString PathFilter = GetPayloadString(Payload, TEXT("path"), TEXT("/Game/Structs"));
 
-        // Enumerate ALL UserDefinedStruct assets (including unloaded ones) via
-        // the Asset Registry. The synchronous GetAssetsByClass scan is safe on
-        // the game thread; only an async LOAD would risk the sync request
-        // thread, and we resolve each discovered asset with a synchronous
-        // LoadObject below precisely so unloaded structs are discovered.
+        // Enumerate UserDefinedStruct assets via the Asset Registry without
+        // loading each asset. The FARFilter scopes the query to the requested
+        // package hierarchy (bRecursivePaths) so sibling paths like
+        // /Game/StructsExtra are excluded, and only the intended subtree matches.
         FAssetRegistryModule& ARM = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
         IAssetRegistry& AR = ARM.GetRegistry();
 
+        FARFilter Filter;
+        Filter.ClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
+        Filter.bRecursiveClasses = true;
+        if (!PathFilter.IsEmpty())
+        {
+            Filter.PackagePaths.Add(FName(*PathFilter));
+            Filter.bRecursivePaths = true;
+        }
+
         TArray<FAssetData> StructAssets;
-        AR.GetAssetsByClass(UUserDefinedStruct::StaticClass()->GetClassPathName(),
-            StructAssets, /*bSearchSubClasses=*/true);
+        AR.GetAssets(Filter, StructAssets);
 
         TArray<TSharedPtr<FJsonValue>> Arr;
         for (const FAssetData& AssetData : StructAssets)
         {
-            const FString AssetPath = MCP_ASSET_DATA_GET_OBJECT_PATH(AssetData);
-            if (!PathFilter.IsEmpty() && !AssetPath.StartsWith(PathFilter))
-            {
-                continue;
-            }
-
-            // Materialize the struct to report its canonical path/name, so
-            // structs not yet loaded into memory are still discovered.
-            UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *AssetPath);
-            if (!S)
-            {
-                continue;
-            }
-
+            // Use the asset registry's path/name directly — no LoadObject needed,
+            // so unloaded structs are still discovered without materializing them.
             TSharedPtr<FJsonObject> O = MakeShared<FJsonObject>();
-            O->SetStringField(TEXT("assetPath"), S->GetPathName());
-            O->SetStringField(TEXT("name"), S->GetName());
+            O->SetStringField(TEXT("assetPath"), MCP_ASSET_DATA_GET_OBJECT_PATH(AssetData));
+            O->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
             Arr.Add(MakeShared<FJsonValueObject>(O));
         }
 

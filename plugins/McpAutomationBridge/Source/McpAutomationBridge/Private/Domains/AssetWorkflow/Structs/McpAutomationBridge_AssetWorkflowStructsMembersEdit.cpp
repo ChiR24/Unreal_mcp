@@ -58,7 +58,8 @@ bool HandleStructMemberEditActions(UMcpAutomationBridgeSubsystem& Bridge, const 
         else
         {
             if (RelativeToStr.IsEmpty()) { Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: relativeTo (required for before/after)"), TEXT("MISSING_PARAMETER")); return true; }
-            const FGuid RelGuid = ResolveMemberGuid(S, RelativeToStr, FString());
+            // Pass value as both GUID and NAME: ResolveMemberGuid tries GUID first, then FriendlyName.
+            const FGuid RelGuid = ResolveMemberGuid(S, RelativeToStr, RelativeToStr);
             if (!RelGuid.IsValid() || !FStructureEditorUtils::GetVarDescByGuid(S, RelGuid)) { Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Relative target member not found"), TEXT("MEMBER_NOT_FOUND")); return true; }
             if (RelGuid == G) { Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Cannot move a member relative to itself"), TEXT("INVALID_OPERATION")); return true; }
             TargetGuid = RelGuid;
@@ -113,6 +114,23 @@ bool HandleStructMemberEditActions(UMcpAutomationBridgeSubsystem& Bridge, const 
         if (!Prop) { Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Struct member property not found"), TEXT("MEMBER_NOT_FOUND")); return true; }
 
         const FString ExportText = BuildDefaultExportText(S, Prop, *DefaultVal);
+
+        // [29] A non-empty defaultValue that cannot be converted yields an empty
+        // export text. Applying it would silently clear the existing default.
+        // Reject invalid input instead of clearing; only treat empty export text
+        // as a valid clear when the input itself was empty/null.
+        const TSharedPtr<FJsonValue>& DefaultValueJson = *DefaultVal;
+        const bool bInputIsEmpty =
+            !DefaultValueJson.IsValid() ||
+            DefaultValueJson->Type == EJson::Null ||
+            (DefaultValueJson->Type == EJson::String && DefaultValueJson->AsString().IsEmpty());
+        if (ExportText.IsEmpty() && !bInputIsEmpty)
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                TEXT("defaultValue could not be converted to the member property type"), TEXT("INVALID_DEFAULT"));
+            return true;
+        }
+
         FStructureEditorUtils::ChangeVariableDefaultValue(S, G, ExportText);
         FStructureEditorUtils::CompileStructure(S);
         McpRefreshStructDependents(S);
