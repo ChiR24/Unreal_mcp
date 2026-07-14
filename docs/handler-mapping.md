@@ -1395,3 +1395,10 @@ Struct (UserDefinedStruct) authoring is exposed as `manage_asset` sub-actions di
 | `reorder_enum_values` | `AssetWorkflow/Enums/Values.cpp` | `HandleEnumValueActions` | |
 | `set_enum_value_metadata` | `AssetWorkflow/Enums/Values.cpp` | `HandleEnumValueActions` | |
 | `split_enum` | `AssetWorkflow/Enums/LifecycleEnums.cpp` | `HandleEnumAction` | |
+
+## FInstancedStruct (`manage_asset` — instanced-struct actions)
+
+| Action | C++ Handler File | C++ Function | Notes |
+| :--- | :--- | :--- | :--- |
+| `get_instanced_struct_property` | `Domains/StructProperty/McpAutomationBridge_StructPropertyInstanced.cpp` | `HandleStructPropertyAction` | Reads an `FInstancedStruct` property on any UObject asset; returns inner struct type and exported fields. |
+| `set_instanced_struct_property` | `Domains/StructProperty/McpAutomationBridge_StructPropertyInstanced.cpp` | `HandleStructPropertyAction` | (Re)initializes the instance to `structType` and applies `value`, then persists via the safe save wrapper. Requires a pre-authored asset that already exposes an `FInstancedStruct` property (the type resolver has no `InstancedStruct:` token, so such properties cannot be created through MCP). |
