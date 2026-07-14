@@ -80,6 +80,44 @@ bool HandleEnumLifecycleActions(
             return true;
         }
 
+        // Apply initial enum values when provided. Both the TS and native MCP
+        // schemas advertise a `values` array for create_enum; previously the
+        // handler created an empty enum and silently ignored it, leaving the
+        // advertised parameter non-functional. Reuses the same SetEnums pattern
+        // as add_enum_value.
+        const TArray<TSharedPtr<FJsonValue>>* InitValues = nullptr;
+        if (Params->TryGetArrayField(TEXT("values"), InitValues) && InitValues && InitValues->Num() > 0)
+        {
+            TArray<TPair<FName, int64>> Names;
+            Names.Reserve(InitValues->Num());
+            for (const TSharedPtr<FJsonValue>& V : *InitValues)
+            {
+                FString ValName;
+                if (V->Type == EJson::Object)
+                {
+                    const TSharedPtr<FJsonObject>* Obj = nullptr;
+                    if (V->TryGetObject(Obj) && *Obj)
+                    {
+                        (*Obj)->TryGetStringField(TEXT("name"), ValName);
+                    }
+                }
+                else
+                {
+                    ValName = V->AsString();
+                }
+                if (ValName.IsEmpty())
+                {
+                    continue;
+                }
+                Names.Emplace(*Enum->GenerateFullEnumName(*ValName), 0);
+            }
+            for (int32 i = 0; i < Names.Num(); ++i)
+            {
+                Names[i].Value = i;
+            }
+            Enum->SetEnums(Names, Enum->GetCppForm());
+        }
+
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(Enum);
         FinalizeEnum(Enum, bSave);
