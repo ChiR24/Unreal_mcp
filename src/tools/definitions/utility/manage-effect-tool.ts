@@ -152,6 +152,7 @@ export const manageEffectToolDefinition: ToolDefinition = {
         ...commonSchemas.outputBase,
         systemPath: commonSchemas.assetPath,
         emitterName: commonSchemas.stringProp,
+        dynamicInputNodeId: commonSchemas.nodeId,
         shapes: commonSchemas.arrayOfObjects,
         niagaraInfo: commonSchemas.objectProp,
         validationResult: commonSchemas.objectProp

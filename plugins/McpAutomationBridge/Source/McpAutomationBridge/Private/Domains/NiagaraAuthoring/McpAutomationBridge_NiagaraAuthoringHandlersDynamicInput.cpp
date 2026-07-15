@@ -102,6 +102,36 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
         return true;
     }
 
+    FNiagaraTypeDefinition DIOutputType;
+    bool bFoundDIOutputType = false;
+    if (UNiagaraScriptSourceBase* DISourceBase = DynamicInputScript->GetLatestSource())
+    {
+        if (UNiagaraScriptSource* DIScriptSource = Cast<UNiagaraScriptSource>(DISourceBase))
+    {
+        if (UNiagaraGraph* DIGraph = DIScriptSource->NodeGraph)
+        {
+            for (UEdGraphNode* Node : DIGraph->Nodes)
+            {
+                if (UNiagaraNodeOutput* OutputNode = Cast<UNiagaraNodeOutput>(Node))
+                {
+                    const TArray<FNiagaraVariable>& DIOutputs = OutputNode->GetOutputs();
+                    if (DIOutputs.Num() > 0)
+                    {
+                        DIOutputType = DIOutputs[0].GetType();
+                        bFoundDIOutputType = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    }
+    if (bFoundDIOutputType && DIOutputType != InputType)
+    {
+        Context.SendError(FString::Printf(TEXT("Dynamic Input output type does not match input '%s' type."), *InputName), TEXT("TYPE_MISMATCH"));
+        return true;
+    }
+
     Graph->Modify();
     UEdGraphPin& OverridePin = FNiagaraStackGraphUtilities::GetOrCreateStackFunctionInputOverridePin(
         *TargetNode, AliasedHandle, InputType, FGuid(), FGuid());
@@ -133,7 +163,12 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
 
     if (!CreatedDINode)
     {
-        Context.SendError(TEXT("Failed to create Dynamic Input node."), TEXT("DYNAMIC_INPUT_CREATE_FAILED"));
+        FString ErrorMsg = TEXT("Failed to create Dynamic Input node.");
+        if (bReplaceExisting && ExistingDIs.Num() > 0)
+        {
+            ErrorMsg += TEXT(" Note: existing Dynamic Input was removed.");
+        }
+        Context.SendError(ErrorMsg, TEXT("DYNAMIC_INPUT_CREATE_FAILED"));
         return true;
     }
 

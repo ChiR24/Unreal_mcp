@@ -49,7 +49,8 @@ export async function handleNiagaraAuthoringTools(
       'emitterPath',
       'meshPath',
       'splinePath',
-      'audioPath'
+      'audioPath',
+      'dynamicInputScriptPath'
     ]
   });
 
