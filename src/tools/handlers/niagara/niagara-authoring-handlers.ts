@@ -224,6 +224,14 @@ export async function handleNiagaraAuthoringTools(
       return sendRequest('bind_parameter_to_source');
     }
 
+    case 'set_niagara_dynamic_input': {
+      requireNonEmptyString(argsRecord.systemPath, 'systemPath', 'Missing required parameter: systemPath');
+      requireNonEmptyString(argsRecord.targetNodeId, 'targetNodeId', 'Missing required parameter: targetNodeId');
+      requireNonEmptyString(argsRecord.inputName, 'inputName', 'Missing required parameter: inputName');
+      requireNonEmptyString(argsRecord.dynamicInputScriptPath, 'dynamicInputScriptPath', 'Missing required parameter: dynamicInputScriptPath');
+      return sendRequest('set_niagara_dynamic_input');
+    }
+
     case 'add_skeletal_mesh_data_interface': {
       requireNonEmptyString(argsRecord.systemPath, 'systemPath', 'Missing required parameter: systemPath');
       requireNonEmptyString(argsRecord.emitterName, 'emitterName', 'Missing required parameter: emitterName');
