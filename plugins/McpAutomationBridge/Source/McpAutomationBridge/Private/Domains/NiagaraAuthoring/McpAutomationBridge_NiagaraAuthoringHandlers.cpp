@@ -51,6 +51,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
     if (McpNiagaraAuthoringHandlers::HandleDynamicsModuleAction(Context, SubAction)) return true;
     if (McpNiagaraAuthoringHandlers::HandleRendererAction(Context, SubAction)) return true;
     if (McpNiagaraAuthoringHandlers::HandleParameterAction(Context, SubAction)) return true;
+    if (McpNiagaraAuthoringHandlers::HandleDynamicInputAction(Context, SubAction)) return true;
     if (McpNiagaraAuthoringHandlers::HandleDataInterfaceAction(Context, SubAction)) return true;
     if (McpNiagaraAuthoringHandlers::HandleEventAction(Context, SubAction)) return true;
     if (McpNiagaraAuthoringHandlers::HandleSimulationAction(Context, SubAction)) return true;
