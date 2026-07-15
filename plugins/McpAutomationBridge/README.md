@@ -266,6 +266,24 @@ The plugin uses `PCHUsageMode.NoPCHs` to prevent memory issues during compilatio
 3. Regenerate project files
 4. Rebuild
 
+### Python Execution Crash Recovery
+
+`execute_python` writes temporary artifacts to `<Project>/Saved/Temp/MCP_Python/` before each run:
+
+- `mcp_exec_<executionId>.py` — generated wrapper script
+- `code_<executionId>.py` — user-provided code (inline `code` parameter only)
+- `output_<executionId>.txt`, `error_<executionId>.txt`, `status_<executionId>.txt` — captured streams
+
+On success these files are cleaned up automatically. If the editor is terminated by a fatal error during Python execution (e.g. an Engine-side assertion or access violation in native code called from Python), the cleanup does not run and the temp files remain on disk.
+
+To identify the script that was active when a crash occurred, check the editor log for the `execute_python begin:` line emitted **before** native execution:
+
+```
+LogMcpAutomationBridgeSubsystem: execute_python begin: executionId=<guid> requestId=<id> origin=WebSocket mode=ExecuteFile scope=Private codeSha256=<sha256> codePath=<path> wrapperPath=<path>
+```
+
+The `executionId` matches the suffix of the leftover `mcp_exec_<executionId>.py` / `code_<executionId>.py` files. The `codeSha256` is the SHA-256 of the executed code bytes, so the active script is identifiable without logging raw source. Crash-leftover temp files can be safely deleted manually from `<Project>/Saved/Temp/MCP_Python/` once diagnosed.
+
 ---
 
 ## Documentation
