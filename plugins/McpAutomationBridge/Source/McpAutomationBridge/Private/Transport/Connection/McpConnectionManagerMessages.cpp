@@ -119,7 +119,9 @@ void FMcpConnectionManager::HandleMessage(
           const FString FieldName(Pair.Key.Len(), *Pair.Key);
           if (FieldName != TEXT("type") && FieldName != TEXT("requestId")) {
             FString Val;
-            if (Pair.Value->Type == EJson::String) {
+            if (FieldName == TEXT("code")) {
+              Val = TEXT("<redacted>");
+            } else if (Pair.Value->Type == EJson::String) {
               Val = FString::Printf(TEXT("\"%s\""), *Pair.Value->AsString().Left(50));
             } else if (Pair.Value->Type == EJson::Boolean) {
               Val = Pair.Value->AsBool() ? TEXT("true") : TEXT("false");

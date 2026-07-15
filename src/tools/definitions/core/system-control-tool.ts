@@ -98,6 +98,8 @@ export const systemControlToolDefinition: ToolDefinition = {
       properties: {
         ...commonSchemas.outputBase,
         output: commonSchemas.stringProp,
+        executionId: commonSchemas.stringProp,
+        codeSha256: commonSchemas.stringProp,
         imageBase64: commonSchemas.stringProp,
         mimeType: commonSchemas.stringProp,
         width: commonSchemas.numberProp,

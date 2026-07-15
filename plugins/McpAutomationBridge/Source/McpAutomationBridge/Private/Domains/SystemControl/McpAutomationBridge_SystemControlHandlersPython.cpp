@@ -8,6 +8,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "openssl/sha.h"
 
 #if WITH_EDITOR
 #include "IPythonScriptPlugin.h"
@@ -87,6 +88,9 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
   Wrapper += TEXT("_success = True\n");
   Wrapper += TEXT("try:\n");
 
+  FString SourcePathForLog;
+  TArray<uint8> CodeBytes;
+
   if (bHasCode) {
     if (!FFileHelper::SaveStringToFile(
             Code, *CodePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM)) {
@@ -102,6 +106,8 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
                                *PyCodePath);
     Wrapper += TEXT("        _user_code = _f.read()\n");
     AppendPythonExec(Wrapper, PyCodePath, PyCodeDir);
+    SourcePathForLog = CodePath;
+    FFileHelper::LoadFileToArray(CodeBytes, *CodePath);
   } else {
     FString SafeFilePath = SanitizeProjectFilePath(File);
     if (SafeFilePath.IsEmpty()) {
@@ -155,6 +161,8 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
                                *PyFilePath);
     Wrapper += TEXT("        _user_code = _f.read()\n");
     AppendPythonExec(Wrapper, PyFilePath, PyFileDir);
+    SourcePathForLog = AbsoluteFilePath;
+    FFileHelper::LoadFileToArray(CodeBytes, *AbsoluteFilePath);
   }
 
   Wrapper += TEXT("except:\n");
@@ -200,6 +208,21 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
     return true;
   }
 #endif
+
+  FString CodeSha256;
+  if (!CodeBytes.IsEmpty()) {
+    unsigned char Hash[SHA256_DIGEST_LENGTH];
+    SHA256(CodeBytes.GetData(), static_cast<size_t>(CodeBytes.Num()), Hash);
+    for (int32 i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+      CodeSha256 += FString::Printf(TEXT("%02x"), Hash[i]);
+    }
+  }
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+         TEXT("execute_python begin: executionId=%s requestId=%s origin=%s "
+              "mode=ExecuteFile scope=Private codeSha256=%s codePath=%s wrapperPath=%s"),
+         *SafeId, *RequestId,
+         Self->CurrentRequestOrigin == ERequestOrigin::NativeHTTP ? TEXT("NativeHTTP") : TEXT("WebSocket"),
+         *CodeSha256, *SourcePathForLog, *ScriptPath);
 
   static constexpr double MaxPythonExecutionSeconds = 60.0;
   FPythonCommandEx PythonCommand;
@@ -248,6 +271,8 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
   TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
   Result->SetStringField(TEXT("output"), Output.TrimEnd());
   Result->SetStringField(TEXT("error"), Error.TrimEnd());
+  Result->SetStringField(TEXT("executionId"), SafeId);
+  Result->SetStringField(TEXT("codeSha256"), CodeSha256);
 
   Self->SendAutomationResponse(
       RequestingSocket, RequestId, bSuccess,
