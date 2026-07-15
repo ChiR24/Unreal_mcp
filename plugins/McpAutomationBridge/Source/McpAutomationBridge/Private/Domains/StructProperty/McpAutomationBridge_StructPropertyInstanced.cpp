@@ -235,19 +235,33 @@ bool HandleStructPropertyAction(
             Inst->InitializeAs(TargetStruct);
         }
 
-        // Persist only through the safe wrapper; never the raw package save API.
-        if (!McpSafeAssetSave(Asset))
+        // Optional persistence opt-out. Default true to preserve the historical
+        // always-save contract; accepted as `bSave` (priority) or `save`.
+        bool bSave = true;
+        Params->TryGetBoolField(TEXT("bSave"), bSave);
+        if (!bSave)
         {
-            OutResult->SetBoolField(TEXT("success"), false);
-            OutResult->SetStringField(TEXT("error"), TEXT("OPERATION_FAILED"));
-            OutResult->SetStringField(TEXT("message"),
-                TEXT("Failed to save asset after setting FInstancedStruct"));
-            return true;
+            Params->TryGetBoolField(TEXT("save"), bSave);
+        }
+
+        // Persist only through the safe wrapper; never the raw package save API.
+        // Skip the save (without erroring) when the opt-out is requested.
+        if (bSave)
+        {
+            if (!McpSafeAssetSave(Asset))
+            {
+                OutResult->SetBoolField(TEXT("success"), false);
+                OutResult->SetStringField(TEXT("error"), TEXT("OPERATION_FAILED"));
+                OutResult->SetStringField(TEXT("message"),
+                    TEXT("Failed to save asset after setting FInstancedStruct"));
+                return true;
+            }
         }
 
         OutResult->SetBoolField(TEXT("success"), true);
         OutResult->SetStringField(TEXT("propertyName"), PropertyName);
         OutResult->SetStringField(TEXT("structType"), TargetStruct->GetName());
+        OutResult->SetBoolField(TEXT("saved"), bSave);
         return true;
     }
 

@@ -1,6 +1,51 @@
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
+#include "UObject/UnrealType.h"
+#include <functional>
 
 #if WITH_EDITOR
+
+// Detects whether Target is reachable from Start by walking member property
+// types (struct fields and container element/value props), guarding cycles with
+// an already-visited set. Object properties reference a UClass, never a
+// UUserDefinedStruct, so they cannot form a struct cycle and are skipped.
+static bool ReferencesStruct(const UUserDefinedStruct* Start, const UUserDefinedStruct* Target, TSet<const UUserDefinedStruct*>& Visited)
+{
+    if (Start == Target) { return true; }
+    if (!Start || Visited.Contains(Start)) { return false; }
+    Visited.Add(Start);
+    bool bFound = false;
+    std::function<void(const FProperty*)> Check = [&](const FProperty* P)
+    {
+        if (bFound || !P) { return; }
+        if (const FStructProperty* SP = CastField<FStructProperty>(P))
+        {
+            if (const UUserDefinedStruct* U = Cast<UUserDefinedStruct>(SP->Struct))
+                if (ReferencesStruct(U, Target, Visited)) { bFound = true; }
+        }
+        else if (const FArrayProperty* AP = CastField<FArrayProperty>(P)) { Check(AP->Inner); }
+        else if (const FSetProperty* SP2 = CastField<FSetProperty>(P)) { Check(SP2->ElementProp); }
+        else if (const FMapProperty* MP = CastField<FMapProperty>(P)) { Check(MP->KeyProp); Check(MP->ValueProp); }
+    };
+    for (TFieldIterator<FProperty> It(Start); It && !bFound; ++It) { Check(*It); }
+    return bFound;
+}
+
+// Rejects (c) indirect recursive (cyclic) reference: if the member's resolved
+// type (base or container element/value) transitively references SelfStruct.
+// Direct/container element self-reference (a)/(b) is handled by the caller's
+// existing SELF_REFERENCE check. Returns true (and sends the error) when rejected.
+static bool DetectRecursiveStructRef(UMcpAutomationBridgeSubsystem& Bridge, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& RequestId, const FEdGraphPinType& Pin, UUserDefinedStruct* Self, const FString& MemberName)
+{
+    const UUserDefinedStruct* Base = Cast<UUserDefinedStruct>(Pin.PinSubCategoryObject.Get());
+    const UUserDefinedStruct* Elem = Cast<UUserDefinedStruct>(Pin.PinValueType.TerminalSubCategoryObject.Get());
+    TSet<const UUserDefinedStruct*> Visited;
+    if ((Base && ReferencesStruct(Base, Self, Visited)) || (Elem && ReferencesStruct(Elem, Self, Visited)))
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Struct '%s' would create a recursive (cyclic) reference through member '%s'"), *Self->GetName(), *MemberName), TEXT("RECURSIVE_REFERENCE")); return true;
+    }
+    return false;
+}
+
 
 
 bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -43,12 +88,12 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
         const FEdGraphPinType PinType = Resolved.PinType;
 
         UObject* Sub = PinType.PinSubCategoryObject.Get();
-        if (Sub == static_cast<UObject*>(S))
+        if (Sub == static_cast<UObject*>(S) || PinType.PinValueType.TerminalSubCategoryObject.Get() == static_cast<UObject*>(S))
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Struct cannot reference itself as a member type"), TEXT("SELF_REFERENCE"));
-            return true;
+            Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Struct cannot reference itself as a member type"), TEXT("SELF_REFERENCE")); return true;
         }
+
+        if (DetectRecursiveStructRef(Bridge, RequestingSocket, RequestId, PinType, S, MemberName)) return true;
 
         if (!FStructureEditorUtils::AddVariable(S, PinType))
         {
@@ -152,6 +197,9 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
             return true;
         }
 
+        // Sanitize member names before rename (mirrors the create_struct name policy).
+        MemberName = SanitizeAssetName(MemberName); NewMemberName = SanitizeAssetName(NewMemberName);
+
         UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
         if (!S)
         {
@@ -233,12 +281,12 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
         const FEdGraphPinType PinType = Resolved.PinType;
 
         UObject* Sub = PinType.PinSubCategoryObject.Get();
-        if (Sub == static_cast<UObject*>(S))
+        if (Sub == static_cast<UObject*>(S) || PinType.PinValueType.TerminalSubCategoryObject.Get() == static_cast<UObject*>(S))
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Struct cannot reference itself as a member type"), TEXT("SELF_REFERENCE"));
-            return true;
+            Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Struct cannot reference itself as a member type"), TEXT("SELF_REFERENCE")); return true;
         }
+
+        if (DetectRecursiveStructRef(Bridge, RequestingSocket, RequestId, PinType, S, MemberName)) return true;
 
         FStructureEditorUtils::ChangeVariableType(S, G, PinType);
         FStructureEditorUtils::CompileStructure(S);

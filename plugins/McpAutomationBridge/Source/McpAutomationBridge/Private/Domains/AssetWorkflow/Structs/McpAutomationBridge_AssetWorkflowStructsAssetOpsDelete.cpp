@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
 
 // Deadlock-free tracked delete of a UserDefinedStruct (delete_struct).

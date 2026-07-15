@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
 #include "Engine/DataTable.h"
 #include "EdGraphSchema_K2.h"

@@ -5,6 +5,7 @@
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
 #include "Misc/ScopedEvent.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 
 #if WITH_EDITOR
 
@@ -48,7 +49,8 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
     auto DuplicateStructTo = [&](const FString& SrcPath, const FString& DestPath,
                                  const FString& DestName, FString& OutError) -> UUserDefinedStruct*
     {
-        UUserDefinedStruct* Src = LoadObject<UUserDefinedStruct>(nullptr, *SrcPath);
+        const FString SanitizedSrcPath = SanitizeProjectRelativePath(SrcPath);
+        UUserDefinedStruct* Src = LoadObject<UUserDefinedStruct>(nullptr, *SanitizedSrcPath);
         if (!Src)
         {
             OutError = FString::Printf(TEXT("Struct not found: %s"), *SrcPath);
@@ -112,8 +114,30 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
             FinalDest = FString::Printf(TEXT("%s/%s"), *Parent, *FinalName);
         }
 
+        // Normalize the resolved name and validate the destination through the
+        // project's asset-path validation before creating the package. This
+        // rejects out-of-root paths, '..' traversal, and read-only engine/script
+        // targets, and yields a canonical package path for CreatePackage.
+        FinalName = SanitizeAssetName(FinalName);
+        const FString DupParentFolder = FPaths::GetPath(FinalDest);
+        FString DupPackageName;
+        FString DupPathError;
+        if (!ValidateAssetCreationPath(DupParentFolder, FinalName, DupPackageName, DupPathError))
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId, DupPathError, TEXT("INVALID_PATH"));
+            return true;
+        }
+        // Engine/script roots are read-only; asset creation must target /Game.
+        if (DupPackageName.StartsWith(TEXT("/Engine/")) || DupPackageName.StartsWith(TEXT("/Script/")))
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Destination must reside under /Game (engine/script roots are read-only)"),
+                TEXT("INVALID_PATH"));
+            return true;
+        }
+
         FString Err;
-        UUserDefinedStruct* Dup = DuplicateStructTo(StructPath, FinalDest, FinalName, Err);
+        UUserDefinedStruct* Dup = DuplicateStructTo(StructPath, DupPackageName, FinalName, Err);
         if (!Dup)
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId, Err, TEXT("OPERATION_FAILED"));
@@ -122,7 +146,7 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("sourcePath"), StructPath);
-        const FString DupObjectPath = FinalDest + TEXT(".") + FinalName;
+        const FString DupObjectPath = DupPackageName + TEXT(".") + FinalName;
         Result->SetStringField(TEXT("duplicatedPath"), DupObjectPath);
         Result->SetBoolField(TEXT("duplicated"), true);
         Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -172,7 +196,38 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
             return true;
         }
 
-        UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
+        // Validate the resolved destination through the project's asset-path
+        // validation before performing the rename. This rejects out-of-root
+        // paths, '..' traversal, and read-only engine/script targets, and
+        // normalizes the folder/name so the rename lands on a canonical path.
+        FString NewPackagePath;
+        {
+            const FString NewParentFolder = FPaths::GetPath(FinalObjectPath);
+            const FString NewRawName = FPaths::GetBaseFilename(FinalObjectPath);
+            const FString NewSanitizedName = SanitizeAssetName(NewRawName);
+            FString NewPackageName;
+            FString NewPathError;
+            if (!ValidateAssetCreationPath(NewParentFolder, NewSanitizedName, NewPackageName, NewPathError))
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId, NewPathError, TEXT("INVALID_PATH"));
+                return true;
+            }
+            // Engine/script roots are read-only; asset creation must target /Game.
+            if (NewPackageName.StartsWith(TEXT("/Engine/")) || NewPackageName.StartsWith(TEXT("/Script/")))
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId,
+                    TEXT("Destination must reside under /Game (engine/script roots are read-only)"),
+                    TEXT("INVALID_PATH"));
+                return true;
+            }
+            NewNameOnly = NewSanitizedName;
+            NewPackagePath = FPaths::GetPath(NewPackageName);
+            FinalObjectPath = NewPackageName + TEXT(".") + NewSanitizedName;
+        }
+
+        // Sanitize the read-only source path before lookup (root-safe).
+        const FString SanitizedStructPath = SanitizeProjectRelativePath(StructPath);
+        UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *SanitizedStructPath);
         if (!S)
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -195,14 +250,14 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
         // FindPackage check produced false positives in UE 5.7 (the package
         // path resolution matched the parent /Game package or a stale
         // redirector), blocking valid renames of brand-new names.
-        if (LoadObject<UUserDefinedStruct>(nullptr, *FinalObjectPath))
+        // Root-safe lookup: sanitize the destination path before the collision check.
+        const FString SanitizedDestPath = SanitizeProjectRelativePath(FinalObjectPath);
+        if (!SanitizedDestPath.IsEmpty() && LoadObject<UUserDefinedStruct>(nullptr, *SanitizedDestPath))
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Destination already exists: ") + FinalObjectPath, TEXT("ALREADY_EXISTS"));
             return true;
         }
-
-        const FString NewPackagePath = FPaths::GetPath(FinalObjectPath);
 
         // Supported, editor-side rename. AssetTools::RenameAssets moves the
         // asset, leaves a UObjectRedirector at the old path automatically when
@@ -246,7 +301,7 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
         }
 
         // Did the supported rename leave a redirector at the old path?
-        const bool bLeftRedirector = (LoadObject<UObjectRedirector>(nullptr, *StructPath) != nullptr);
+        const bool bLeftRedirector = (LoadObject<UObjectRedirector>(nullptr, *SanitizedStructPath) != nullptr);
 
         // Recompile every referencing Blueprint and notify matching DataTables
         // via the shared helper (redirector detection above happens first).
