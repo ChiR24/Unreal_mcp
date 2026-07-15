@@ -136,9 +136,11 @@ bool HandleStructAnalysisCompare(UMcpAutomationBridgeSubsystem& Bridge, const FS
     };
 
     // Attribute-level diffs (VarGuid / ToolTip / MetaData) for a paired member.
-    auto AddAttributeDiffs = [&DiffArr](const FString& Name, const FStructVariableDescription& A, const FStructVariableDescription& B)
+    // Fallback-matched pairs (matched by FriendlyName, not VarGuid) always have
+    // different GUIDs by construction; suppress the spurious guid_mismatch.
+    auto AddAttributeDiffs = [&DiffArr](const FString& Name, const FStructVariableDescription& A, const FStructVariableDescription& B, bool bSkipGuidMismatch = false)
     {
-        if (A.VarGuid != B.VarGuid)
+        if (!bSkipGuidMismatch && A.VarGuid != B.VarGuid)
         {
             TSharedPtr<FJsonObject> Diff = MakeShared<FJsonObject>();
             Diff->SetStringField(TEXT("type"), TEXT("guid_mismatch"));
@@ -217,7 +219,7 @@ bool HandleStructAnalysisCompare(UMcpAutomationBridgeSubsystem& Bridge, const FS
         if (B)
         {
             AddDiff(Pair.Value->FriendlyName, Pair.Value, B);
-            AddAttributeDiffs(Pair.Value->FriendlyName, *Pair.Value, *B);
+            AddAttributeDiffs(Pair.Value->FriendlyName, *Pair.Value, *B, /*bSkipGuidMismatch=*/true);
         }
         else
         {

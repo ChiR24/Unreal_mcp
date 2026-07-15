@@ -104,13 +104,39 @@ FString PinTypeToSummary(const FEdGraphPinType& Pin)
     if (Pin.ContainerType == EPinContainerType::Map)
     {
         // For a Map pin, PinCategory is the KEY and PinValueType the VALUE.
-        const FString ValueBase = Pin.PinValueType.TerminalSubCategoryObject.Get()
-            ? (Pin.PinValueType.TerminalCategory == UEdGraphSchema_K2::PC_Struct
-                   ? TEXT("Struct:") + Cast<UScriptStruct>(Pin.PinValueType.TerminalSubCategoryObject.Get())->GetPathName()
-               : Pin.PinValueType.TerminalCategory == UEdGraphSchema_K2::PC_Enum
-                   ? TEXT("Enum:") + Cast<UEnum>(Pin.PinValueType.TerminalSubCategoryObject.Get())->GetPathName()
-                   : Pin.PinValueType.TerminalCategory.ToString())
-            : Pin.PinValueType.TerminalCategory.ToString();
+        // Map the value's TerminalCategory to a user-facing string that
+        // round-trips through ParseMemberType.  Raw .ToString() produces UE
+        // internal names ("Boolean", "Real") instead of the MCP names
+        // ("Bool", "Float" / "Double").
+        auto ValueTypeToSummary = [](const FEdGraphTerminalType& Vt) -> FString
+        {
+            if (Vt.TerminalSubCategoryObject.Get())
+            {
+                if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_Struct)
+                {
+                    return TEXT("Struct:") + Cast<UScriptStruct>(Vt.TerminalSubCategoryObject.Get())->GetPathName();
+                }
+                if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_Enum)
+                {
+                    return TEXT("Enum:") + Cast<UEnum>(Vt.TerminalSubCategoryObject.Get())->GetPathName();
+                }
+            }
+            // Primitive value types — map UE internal category names to the
+            // same user-facing tokens the key-type switch produces above.
+            if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_Boolean) return TEXT("Bool");
+            if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_Int)     return TEXT("Int");
+            if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_Float)   return TEXT("Float");
+            if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_Real)    return (Vt.TerminalSubCategory == UEdGraphSchema_K2::PC_Double) ? TEXT("Double") : TEXT("Float");
+            if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_String)  return TEXT("String");
+            if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_Name)   return TEXT("Name");
+            if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_Text)   return TEXT("Text");
+            if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_Object) return TEXT("Object");
+            if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_Class)  return TEXT("Class");
+            if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_SoftObject) return TEXT("SoftObject");
+            if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_SoftClass)  return TEXT("SoftClass");
+            return Vt.TerminalCategory.ToString();
+        };
+        const FString ValueBase = ValueTypeToSummary(Pin.PinValueType);
         return TEXT("Map:") + Base + TEXT(",") + ValueBase;
     }
     return Base;

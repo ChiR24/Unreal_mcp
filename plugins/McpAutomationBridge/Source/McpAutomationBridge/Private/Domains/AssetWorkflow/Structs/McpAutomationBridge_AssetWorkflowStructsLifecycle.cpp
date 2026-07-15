@@ -117,6 +117,7 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
                 Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                     FString::Printf(TEXT("Struct created but %d member(s) failed to apply"), ApplyFailures.Num()),
                     ApplyResult);
+                return true;
             }
         }
 

@@ -197,8 +197,8 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
             return true;
         }
 
-        // Sanitize member names before rename (mirrors the create_struct name policy).
-        MemberName = SanitizeAssetName(MemberName); NewMemberName = SanitizeAssetName(NewMemberName);
+        // Sanitize only the new name (the lookup key must match the existing member exactly).
+        NewMemberName = SanitizeAssetName(NewMemberName);
 
         UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
         if (!S)
