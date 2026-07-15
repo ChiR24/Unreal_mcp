@@ -29,7 +29,7 @@ const EFFECT_AUTHORING_ACTIONS = new Set<string>([
   'add_sprite_renderer_module', 'add_mesh_renderer_module',
   'add_ribbon_renderer_module', 'add_light_renderer_module',
   'add_collision_module', 'add_kill_particles_module', 'add_camera_offset_module',
-  'add_user_parameter', 'set_parameter_value', 'bind_parameter_to_source',
+  'add_user_parameter', 'set_parameter_value', 'bind_parameter_to_source', 'set_niagara_dynamic_input',
   'add_skeletal_mesh_data_interface', 'add_static_mesh_data_interface',
   'add_spline_data_interface', 'add_audio_spectrum_data_interface',
   'add_collision_query_data_interface',

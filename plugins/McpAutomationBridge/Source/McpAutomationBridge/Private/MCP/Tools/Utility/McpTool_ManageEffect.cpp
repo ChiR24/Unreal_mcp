@@ -69,6 +69,7 @@ public:
 				TEXT("add_user_parameter"),
 				TEXT("set_parameter_value"),
 				TEXT("bind_parameter_to_source"),
+				TEXT("set_niagara_dynamic_input"),
 				TEXT("add_skeletal_mesh_data_interface"),
 				TEXT("add_static_mesh_data_interface"),
 				TEXT("add_spline_data_interface"),
@@ -120,6 +121,10 @@ public:
 			.String(TEXT("scriptType"), TEXT("Niagara script target, e.g. Spawn or Update."))
 			.Bool(TEXT("autoConnect"), TEXT("Automatically connect a compatible Niagara graph pin pair."))
 			.String(TEXT("nodeId"), TEXT("ID of the node."))
+			.String(TEXT("targetNodeId"), TEXT("GUID of the target module or dynamic input node."))
+			.String(TEXT("inputName"), TEXT("Aliased input parameter handle, e.g. Module.InputName."))
+			.String(TEXT("dynamicInputScriptPath"), TEXT("Asset path of the Niagara Dynamic Input script."))
+			.Bool(TEXT("replaceExisting"), TEXT("If true, replace any existing dynamic input on the target input."))
 			.String(TEXT("parameterName"), TEXT("Name of the parameter."))
 			.String(TEXT("parameterType"), TEXT(""))
 			.FreeformObject(TEXT("parameterValue"), TEXT("Generic parameter value (any type)."))

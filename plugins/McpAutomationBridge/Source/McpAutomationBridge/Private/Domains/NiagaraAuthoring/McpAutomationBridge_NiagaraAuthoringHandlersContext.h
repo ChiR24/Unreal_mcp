@@ -80,6 +80,7 @@
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "ViewModels/Stack/NiagaraStackGraphUtilities.h"
+#include "ViewModels/Stack/NiagaraParameterHandle.h"
 #define MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES 1
 #else
 #define MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES 0
@@ -164,6 +165,7 @@ bool HandleSpawnModuleAction(FActionContext& Context, const FString& SubAction);
 bool HandleDynamicsModuleAction(FActionContext& Context, const FString& SubAction);
 bool HandleRendererAction(FActionContext& Context, const FString& SubAction);
 bool HandleParameterAction(FActionContext& Context, const FString& SubAction);
+bool HandleDynamicInputAction(FActionContext& Context, const FString& SubAction);
 bool HandleDataInterfaceAction(FActionContext& Context, const FString& SubAction);
 bool HandleEventAction(FActionContext& Context, const FString& SubAction);
 bool HandleSimulationAction(FActionContext& Context, const FString& SubAction);

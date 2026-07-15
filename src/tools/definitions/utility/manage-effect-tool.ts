@@ -24,7 +24,7 @@ export const manageEffectToolDefinition: ToolDefinition = {
             'add_sprite_renderer_module', 'add_mesh_renderer_module', 'add_ribbon_renderer_module',
             'add_light_renderer_module', 'add_collision_module', 'add_kill_particles_module',
             'add_camera_offset_module', 'add_user_parameter', 'set_parameter_value',
-            'bind_parameter_to_source', 'add_skeletal_mesh_data_interface',
+            'bind_parameter_to_source', 'set_niagara_dynamic_input', 'add_skeletal_mesh_data_interface',
             'add_static_mesh_data_interface', 'add_spline_data_interface', 'add_audio_spectrum_data_interface',
             'add_collision_query_data_interface', 'add_event_generator', 'add_event_receiver',
             'configure_event_payload', 'enable_gpu_simulation', 'add_simulation_stage',
@@ -86,6 +86,10 @@ export const manageEffectToolDefinition: ToolDefinition = {
         scriptType: commonSchemas.stringProp,
         autoConnect: commonSchemas.booleanProp,
         nodeId: commonSchemas.nodeId,
+        targetNodeId: commonSchemas.nodeId,
+        inputName: commonSchemas.stringProp,
+        dynamicInputScriptPath: commonSchemas.assetPath,
+        replaceExisting: commonSchemas.booleanProp,
         // Niagara parameters
         parameterName: commonSchemas.parameterName,
         parameterType: commonSchemas.stringProp,
@@ -148,6 +152,7 @@ export const manageEffectToolDefinition: ToolDefinition = {
         ...commonSchemas.outputBase,
         systemPath: commonSchemas.assetPath,
         emitterName: commonSchemas.stringProp,
+        dynamicInputNodeId: commonSchemas.nodeId,
         shapes: commonSchemas.arrayOfObjects,
         niagaraInfo: commonSchemas.objectProp,
         validationResult: commonSchemas.objectProp
