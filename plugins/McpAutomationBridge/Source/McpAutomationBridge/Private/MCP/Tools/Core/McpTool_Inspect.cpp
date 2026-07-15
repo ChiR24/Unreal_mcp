@@ -62,10 +62,13 @@ public:
 				TEXT("get_scene_stats"),
 				TEXT("get_performance_stats"),
 				TEXT("get_memory_stats"),
-				TEXT("get_editor_settings")
+				TEXT("get_editor_settings"),
+				// Struct ecosystem — read-only struct layout introspection (issue #struct-ecosystem)
+				TEXT("inspect_struct")
 			}, TEXT("Action"))
-			.String(TEXT("objectPath"), TEXT("Asset path (e.g., /Game/Path/Asset)."))
-			.String(TEXT("propertyName"), TEXT("Name of the property."))
+		.String(TEXT("objectPath"), TEXT("Asset path (e.g., /Game/Path/Asset)."))
+		.String(TEXT("structPath"), TEXT("Asset path of a struct to inspect (inspect_struct)."))
+		.String(TEXT("propertyName"), TEXT("Name of the property."))
 			.String(TEXT("propertyPath"), TEXT(""))
 			.FreeformObject(TEXT("value"), TEXT("Generic value (any type)."))
 			.String(TEXT("actorName"), TEXT("Name of the actor."))

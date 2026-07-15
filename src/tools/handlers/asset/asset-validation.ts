@@ -12,7 +12,24 @@ const VALID_ASSET_ACTIONS = new Set([
   'add_material_node', 'remove_material_node', 'rebuild_material',
   'connect_material_pins', 'break_material_connections', 'get_material_node_details',
   'source_control_checkout', 'source_control_submit', 'source_control_enable', 'get_source_control_state',
-  'analyze_graph', 'get_asset_graph'
+  'analyze_graph', 'get_asset_graph',
+  // Struct authoring (first-class Blueprint Struct support, issue #510)
+  'create_struct', 'get_struct', 'read_struct', 'list_struct_members',
+  'add_struct_member', 'remove_struct_member', 'rename_struct_member',
+  'set_struct_member_type', 'reorder_struct_members', 'set_struct_member_default',
+  'set_struct_member_metadata', 'compare_structs', 'search_struct_usage', 'recompile_struct',
+  'rename_struct', 'duplicate_struct', 'delete_struct', 'refresh_struct_dependencies',
+  'list_structs', 'export_struct', 'import_struct',
+  // Struct ecosystem — DataTable (issue #struct-ecosystem)
+  'create_data_table', 'set_data_table_row_struct', 'create_row_struct', 'get_row_struct',
+  'set_struct_as_row_struct', 'add_data_table_row', 'get_data_table_row',
+  'update_data_table_row', 'delete_data_table_row', 'list_data_table_rows',
+  'import_data_table_rows', 'clear_data_table_rows',
+  // Struct ecosystem — Enum
+  'create_enum', 'delete_enum', 'get_enum', 'add_enum_value', 'remove_enum_value',
+  'rename_enum_value', 'reorder_enum_values', 'set_enum_value_metadata', 'split_enum',
+  // Struct ecosystem — FInstancedStruct
+  'get_instanced_struct_property', 'set_instanced_struct_property'
 ]);
 
 const TRAVERSAL_PATTERNS = [

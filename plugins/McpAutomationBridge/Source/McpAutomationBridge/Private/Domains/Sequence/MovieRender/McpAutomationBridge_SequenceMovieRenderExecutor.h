@@ -2,6 +2,7 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "CoreMinimal.h"
+#include "Templates/SubclassOf.h"
 #include "Dom/JsonObject.h"
 #include "Templates/SubclassOf.h"
 

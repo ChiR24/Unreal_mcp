@@ -4,6 +4,14 @@
 
 #include "Dom/JsonObject.h"
 
+// Struct ecosystem (issue #struct-ecosystem) — Wave 1 handler shard headers.
+#include "Domains/AssetWorkflow/DataTables/Shared.h"
+#include "Domains/AssetWorkflow/Enums/Shared.h"
+namespace McpStructProperty
+{
+    bool HandleStructPropertyAction(FString Action, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject>& OutResult);
+}
+
 bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -120,6 +128,76 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleGetMaterialNodeDetails(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("rebuild_material"))
     return HandleRebuildMaterial(RequestId, Action, Payload, RequestingSocket);
+
+  // Struct Authoring (first-class Blueprint Struct support, issue #510)
+  if (Lower == TEXT("create_struct") || Lower == TEXT("get_struct") ||
+      Lower == TEXT("read_struct") || Lower == TEXT("list_struct_members") ||
+      Lower == TEXT("add_struct_member") || Lower == TEXT("remove_struct_member") ||
+      Lower == TEXT("rename_struct_member") || Lower == TEXT("set_struct_member_type") ||
+      Lower == TEXT("reorder_struct_members") || Lower == TEXT("set_struct_member_default") ||
+      Lower == TEXT("set_struct_member_metadata") || Lower == TEXT("compare_structs") ||
+      Lower == TEXT("search_struct_usage") || Lower == TEXT("recompile_struct") ||
+      Lower == TEXT("rename_struct") || Lower == TEXT("duplicate_struct") ||
+      Lower == TEXT("delete_struct") || Lower == TEXT("refresh_struct_dependencies") ||
+      Lower == TEXT("list_structs") || Lower == TEXT("export_struct") || Lower == TEXT("import_struct"))
+    return HandleStructAction(RequestId, Lower, Payload, RequestingSocket);
+
+  // Struct ecosystem — DataTable (issue #struct-ecosystem)
+  if (Lower == TEXT("create_data_table") || Lower == TEXT("set_data_table_row_struct") ||
+      Lower == TEXT("create_row_struct") || Lower == TEXT("get_row_struct") ||
+      Lower == TEXT("set_struct_as_row_struct") || Lower == TEXT("add_data_table_row") ||
+      Lower == TEXT("get_data_table_row") || Lower == TEXT("update_data_table_row") ||
+      Lower == TEXT("delete_data_table_row") || Lower == TEXT("list_data_table_rows") ||
+      Lower == TEXT("import_data_table_rows") || Lower == TEXT("clear_data_table_rows"))
+  {
+    TSharedPtr<FJsonObject> Result;
+    if (HandleDataTableAction(Lower, Payload, Result))
+    {
+      // A DataTable action that fails validation still returns true (it fills
+      // Result with an error object via McpDataTableMakeError). Propagate that
+      // failure to the caller instead of claiming success (issue
+      // #struct-ecosystem [22]). An error result only carries the "error" /
+      // "errorCode" fields and never a populated success payload, so keying the
+      // success flag off the presence of an "error" field is reliable.
+      FString Err;
+      const bool bOk = !(Result.IsValid() &&
+                         Result->TryGetStringField(TEXT("error"), Err) &&
+                         !Err.IsEmpty());
+      SendAutomationResponse(RequestingSocket, RequestId, bOk,
+          bOk ? TEXT("DataTable action completed") : TEXT("DataTable action failed"),
+          Result);
+      return true;
+    }
+    return false;
+  }
+
+  // Struct ecosystem — Enum
+  if (Lower == TEXT("create_enum") || Lower == TEXT("delete_enum") ||
+      Lower == TEXT("get_enum") || Lower == TEXT("add_enum_value") ||
+      Lower == TEXT("remove_enum_value") || Lower == TEXT("rename_enum_value") ||
+      Lower == TEXT("reorder_enum_values") || Lower == TEXT("set_enum_value_metadata") ||
+      Lower == TEXT("split_enum"))
+  {
+    TSharedPtr<FJsonObject> Result;
+    if (HandleEnumAction(Lower, Payload, Result))
+    {
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Enum action completed"), Result);
+      return true;
+    }
+    return false;
+  }
+
+  // Struct ecosystem — FInstancedStruct
+  if (Lower == TEXT("get_instanced_struct_property") || Lower == TEXT("set_instanced_struct_property"))
+  {
+    TSharedPtr<FJsonObject> Result;
+    if (McpStructProperty::HandleStructPropertyAction(Lower, Payload, Result))
+    {
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("FInstancedStruct property action completed"), Result);
+      return true;
+    }
+    return false;
+  }
 
   return false;
 }

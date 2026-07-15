@@ -93,6 +93,7 @@ public:
 			.String(TEXT("toPinName"), TEXT("Name of the target pin."))
 			.String(TEXT("path"), TEXT("Path to a directory or asset."))
 			.String(TEXT("folder"), TEXT("Path to a directory."))
+			.String(TEXT("structPath"), TEXT("Blueprint Struct asset path (create_struct_make_break_nodes)."))
 			.String(TEXT("widgetPath"), TEXT("Widget blueprint path."))
 			.String(TEXT("slotName"), TEXT("Name of the widget slot."))
 			.String(TEXT("parentSlot"), TEXT("Parent slot to add widget to."))

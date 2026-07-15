@@ -55,6 +55,7 @@ tmp/
 .research/
 .lcm/
 .omo/
+.codegraph
 .unreal-agent/
 /Saved/
 plugins/*/Saved/

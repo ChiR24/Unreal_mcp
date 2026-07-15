@@ -16,6 +16,23 @@ export const manageAssetToolDefinition: ToolDefinition = {
             'get_dependencies', 'get_source_control_state', 'analyze_graph', 'get_asset_graph', 'create_thumbnail', 'set_tags', 'get_metadata', 'set_metadata', 'validate', 'fixup_redirectors', 'find_by_tag', 'generate_report',
             'create_render_target', 'generate_lods', 'add_material_parameter', 'list_instances', 'reset_instance_parameters', 'exists', 'get_material_stats',
             'nanite_rebuild_mesh', 'bulk_rename', 'bulk_delete', 'source_control_checkout', 'source_control_submit',
+            // Struct authoring (first-class Blueprint Struct support, issue #510)
+            'create_struct', 'get_struct', 'read_struct', 'list_struct_members',
+            'add_struct_member', 'remove_struct_member', 'rename_struct_member',
+            'set_struct_member_type', 'reorder_struct_members', 'set_struct_member_default',
+            'set_struct_member_metadata', 'compare_structs', 'search_struct_usage', 'recompile_struct',
+            'rename_struct', 'duplicate_struct', 'delete_struct', 'refresh_struct_dependencies',
+            'list_structs', 'export_struct', 'import_struct',
+            // Struct ecosystem — DataTable (issue #struct-ecosystem)
+            'create_data_table', 'set_data_table_row_struct', 'create_row_struct', 'get_row_struct',
+            'set_struct_as_row_struct', 'add_data_table_row', 'get_data_table_row',
+            'update_data_table_row', 'delete_data_table_row', 'list_data_table_rows',
+            'import_data_table_rows', 'clear_data_table_rows',
+            // Struct ecosystem — Enum
+            'create_enum', 'delete_enum', 'get_enum', 'add_enum_value', 'remove_enum_value',
+            'rename_enum_value', 'reorder_enum_values', 'set_enum_value_metadata', 'split_enum',
+            // Struct ecosystem — FInstancedStruct
+            'get_instanced_struct_property', 'set_instanced_struct_property',
             ...MATERIAL_AUTHORING_ACTIONS, ...TEXTURE_ACTIONS],
           description: 'Action to perform'
         },
@@ -144,7 +161,54 @@ export const manageAssetToolDefinition: ToolDefinition = {
         speed: commonSchemas.numberProp,
         speedX: commonSchemas.numberProp,
         speedY: commonSchemas.numberProp,
-        levels: commonSchemas.numberProp
+        levels: commonSchemas.numberProp,
+        // Struct authoring (first-class Blueprint Struct support, issue #510)
+        structPath: { type: 'string', description: 'Asset path of the Blueprint Struct (e.g. /Game/Structs/S_MyStruct).' },
+        otherStructPath: { type: 'string', description: 'Second struct path for compare_structs.' },
+        memberName: { type: 'string', description: 'Member (variable) name to add/rename/remove.' },
+        newMemberName: { type: 'string', description: 'New member name (rename_struct_member).' },
+        memberType: { type: 'string', description: 'Unreal property type for the member: Bool, Int, Float, String, Name, Text, Vector, Rotator, Transform, Object, SoftObject, Class, SoftClass, Enum:<Name>, Struct:<Path>, or with container prefix Array:..., Set:..., Map:<K>,<V>:' },
+        varGuid: { type: 'string', description: 'Stable member GUID (from list_struct_members) identifying the member.' },
+        tooltip: { type: 'string', description: 'Member tooltip (set_struct_member_metadata).' },
+        position: { type: 'string', enum: ['first', 'last', 'before', 'after'], description: 'Reorder anchor position (reorder_struct_members).' },
+        relativeTo: { type: 'string', description: 'Target member GUID/name to reorder relative to (reorder_struct_members position before/after).' },
+        searchScope: { type: 'string', description: 'Optional path scope for search_struct_usage.' },
+        destinationName: { type: 'string', description: 'New asset name for duplicate_struct (without path).' },
+        members: {
+          type: 'array', description: 'Member definitions for import_struct / create_struct. Each entry accepts either the short form { name, type, default?, tooltip?, metadata? } or the add_struct_member form { memberName, memberType, defaultValue?, tooltip?, metadata? }. type/memberType use the same grammar as memberType (Struct:<Path> for nested structs, Array:/Set:/Map: containers). Invalid members cause the whole request to be rejected before any change is made.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Member name (short form). Alias: memberName.' },
+              memberName: { type: 'string', description: 'Member name (add_struct_member form). Alias: name.' },
+              type: { type: 'string', description: 'Unreal property type (same grammar as memberType, including Struct:<Path> for nested structs). Alias: memberType.' },
+              memberType: { type: 'string', description: 'Unreal property type (add_struct_member form). Alias: type.' },
+              defaultValue: { type: 'string', description: 'Optional default value as a string (same format as add_struct_member defaultValue). Alias: default.' },
+              default: { type: 'string', description: 'Optional default value as a string (short form). Alias: defaultValue.' },
+              tooltip: { type: 'string', description: 'Optional member tooltip.' },
+              metadata: { type: 'object', description: 'Optional metadata key/value pairs.' }
+            },
+            required: []
+          }
+        },
+      // Struct ecosystem — DataTable / Enum / FInstancedStruct (issue #struct-ecosystem)
+      dataTablePath: { type: 'string', description: 'Asset path of the DataTable (e.g. /Game/DataTables/DT_MyTable).' },
+      rowStructPath: { type: 'string', description: 'Asset path of the row UScriptStruct bound to a DataTable.' },
+      rowName: { type: 'string', description: 'Name of the row to add/get/update/delete in a DataTable.' },
+      rowData: commonSchemas.objectProp,
+      rows: commonSchemas.arrayOfObjects,
+      clearExisting: commonSchemas.booleanProp,
+      enumPath: { type: 'string', description: 'Asset path of the UserDefinedEnum (e.g. /Game/Enums/E_MyEnum).' },
+      valueName: { type: 'string', description: 'Enum value (entry) name.' },
+      newValueName: { type: 'string', description: 'New enum value name (rename_enum_value).' },
+      newEnumName: { type: 'string', description: 'Name for the new enum produced by split_enum.' },
+      order: commonSchemas.arrayOfStrings,
+      index: commonSchemas.numberProp,
+      key: { type: 'string', description: 'Metadata key for set_enum_value_metadata.' },
+      values: commonSchemas.arrayOfStrings,
+      propertyName: commonSchemas.propertyName,
+      structType: { type: 'string', description: 'Asset path of the inner UScriptStruct for an FInstancedStruct property (set_instanced_struct_property).' },
+      structValues: { type: 'object', additionalProperties: true, description: 'Field-name to value map applied to the inner UScriptStruct when setting an FInstancedStruct property (set_instanced_struct_property).' },
       },
       required: ['action']
     },
