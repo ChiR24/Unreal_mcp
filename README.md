@@ -429,7 +429,7 @@ The gateway hides these 23 canonical parent tools. They are listed here for refe
 
 | Tool | Description |
 |------|-------------|
-| `manage_asset` | Assets, Materials, Render Targets, Behavior Trees |
+| `manage_asset` | Assets, Materials, Render Targets, Behavior Trees, Blueprint Struct (UserDefinedStruct) authoring |
 | `manage_blueprint` | Blueprints, SCS components, graph editing, UMG widgets, layout, bindings, animations |
 | `control_actor` | Spawn, delete, transform, physics, tags |
 | `control_editor` | PIE, Camera, viewport, screenshots |

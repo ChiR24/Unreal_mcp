@@ -11,6 +11,7 @@
 #include "Engine/Blueprint.h"
 #include "K2Node_VariableGet.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Math/Vector2D.h"
 #endif
 
 #if WITH_EDITOR
@@ -24,6 +25,71 @@ MCPAUTOMATIONBRIDGE_API UEdGraphPin* FindDataPin(
     EEdGraphPinDirection Direction,
     const FName& PreferredName = NAME_None);
 MCPAUTOMATIONBRIDGE_API UEdGraphPin* FindPreferredEventExec(UEdGraph* Graph);
+
+/**
+ * Structured result of a type-string resolution.  When bSuccess is false,
+ * OutError contains a human-readable diagnostic that identifies which part
+ * of a (potentially nested) type specification failed (e.g.
+ * "Unsupported map key type 'MyStruct' in 'Map:MyStruct,Int'").
+ *
+ * The legacy MakePinType() wrapper calls ResolvePinType() and, on failure,
+ * returns a PC_Wildcard pin (preserving the previous fallback behaviour for
+ * existing call-sites that have not yet been upgraded to surface errors).
+ */
+struct FTypeResolutionResult
+{
+    bool bSuccess = false;
+    FEdGraphPinType PinType;
+    FString OutError;
+};
+
+/**
+ * Canonical type-string -> FEdGraphPinType resolver used by struct members,
+ * Blueprint variables, function/event parameters, Make/Break Struct nodes,
+ * typed container nodes and DataTable row-struct workflows.
+ *
+ * Supported syntax (both colon and angle-bracket forms are accepted for
+ * backward compatibility; the serialised canonical form is the colon form):
+ *
+ *   Primitives :  Bool Byte Int Int64 Float Double String Name Text
+ *   Structs    :  Vector Vector2D Vector4 Rotator Transform Color
+ *                 LinearColor  (case-insensitive short names)
+ *                 Struct:/Game/Path/ST_X.ST_X        (full object path)
+ *                 Struct:/Script/Engine.FVector      (native UScriptStruct)
+ *   Enums      :  Enum:/Game/Path/E_X.E_X
+ *                 Enum:/Script/Engine.EMyEnum
+ *   References:  Object   Object:/Script/Engine.Actor
+ *                 Class    Class:/Script/Engine.Actor
+ *                 SoftObject  SoftObject:/Script/Engine.Texture2D
+ *                 SoftClass   SoftClass:/Script/Engine.Actor
+ *   Containers :  Array:<Type>
+ *                 Set:<Type>
+ *                 Map:<KeyType>,<ValueType>
+ *
+ * Nesting is recursive (e.g. Array:Map:Name,Struct:/Game/Structs/ST_X.ST_X).
+ *
+ * Validation rules:
+ *   - Unknown base type names are rejected (error).
+ *   - Unresolved structs/enums/classes/objects are rejected (error).
+ *   - Recursive *by-value* struct references are rejected (the caller may
+ *     pass the owning struct path via InSelfStructPath to enable the check;
+ *     pass NAME_None to skip the self-reference guard).
+ *   - Unsupported map key types are rejected (only hashable primitives are
+ *     valid map keys: Byte, Int, Int64, Name, String, and enums).
+ *   - Malformed container forms are rejected (empty Array:/Set:/Map: body,
+ *     Map with three or more comma-separated parts).
+ *   - A malformed type is NEVER silently coerced to Int or any other valid
+ *     type; on failure PinType is left as a PC_Wildcard placeholder.
+ *
+ * Round-trips with DescribePinType: resolving DescribePinType(result.PinType)
+ * yields the canonical colon-form string of the resolved type.
+ */
+MCPAUTOMATIONBRIDGE_API FTypeResolutionResult ResolvePinType(
+    const FString& TypeSpec,
+    const FName& InSelfStructPath = NAME_None);
+
+/** Legacy wrapper: resolves the type and falls back to PC_Wildcard on error
+ *  (logging the diagnostic).  Prefer ResolvePinType() in new code. */
 MCPAUTOMATIONBRIDGE_API FEdGraphPinType MakePinType(const FString& TypeName);
 MCPAUTOMATIONBRIDGE_API FString DescribePinType(const FEdGraphPinType& PinType);
 MCPAUTOMATIONBRIDGE_API UK2Node_VariableGet* CreateVariableGetter(
@@ -40,5 +106,32 @@ MCPAUTOMATIONBRIDGE_API TArray<TSharedPtr<FJsonValue>> CollectBlueprintVariables
 MCPAUTOMATIONBRIDGE_API TArray<TSharedPtr<FJsonValue>> CollectBlueprintFunctions(UBlueprint* Blueprint);
 MCPAUTOMATIONBRIDGE_API FProperty* FindBlueprintProperty(UBlueprint* Blueprint, const FString& PropertyName);
 MCPAUTOMATIONBRIDGE_API UFunction* FindBlueprintFunction(UBlueprint* Blueprint, const FString& FunctionName);
+
+/**
+ * Create a Make (bMake=true) or Break (bMake=false) Struct node for Struct on
+ * Graph inside BP, position it at Pos, compile the Blueprint and populate
+ * OutResult with structured diagnostics.
+ *
+ * OutResult fields (legacy fields kept for backward compatibility):
+ *   nodeGuid      (string)  guid of the created node
+ *   nodeType      (NOT set here; the caller supplies it)
+ *   structPath    (string)  object path of the resolved struct
+ *   pinNames      (array)   pin display names (legacy)
+ *   pinTypes      (array)   per-pin objects: { name, direction, type, category, subCategory }
+ *   diagnostics   (array)   compile messages: { severity, message }
+ *   compilerStatus(string)  BS_* status of BP after compile
+ *   compiled      (bool)    true when the BP is up-to-date (warnings allowed)
+ *
+ * Deadlock-safe: never saves the package and never touches ObjectTools. The
+ * caller owns any save.  Returns early (with an "error" field and
+ * compiled=false) when BP/Graph/Struct are null or Struct is not a UScriptStruct.
+ */
+MCPAUTOMATIONBRIDGE_API void McpBuildStructMakeBreakNodes(
+    UBlueprint* BP,
+    UStruct* Struct,
+    UEdGraph* Graph,
+    const FVector2f& Pos,
+    bool bMake,
+    TSharedPtr<FJsonObject>& OutResult);
 }
 #endif

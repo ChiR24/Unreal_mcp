@@ -28,20 +28,67 @@ bool HandleBlueprintConnectPins(const FBlueprintActionContext &Context) {
       return true;
     }
 
-    FString SourceNodeGuid, TargetNodeGuid;
-    LocalPayload->TryGetStringField(TEXT("sourceNodeGuid"), SourceNodeGuid);
-    LocalPayload->TryGetStringField(TEXT("targetNodeGuid"), TargetNodeGuid);
+    // Accept all documented field-name aliases for the source/target node and
+    // pin so the TS transport (fromNodeId/fromPinName/toNodeId/toPinName,
+    // sourceNode/sourcePin/targetNode/targetPin), the native MCP transport
+    // (sourceNodeId/sourcePin/targetNodeId/targetPin), and the linkedTo form
+    // all resolve. Canonical sourceNodeGuid/targetNodeGuid remain accepted for
+    // backward compatibility. A regression that read only the Guid-prefixed
+    // names silently broke every documented connect_pins call on both
+    // transports.
+    auto PickFirstNonEmpty = [](const TSharedPtr<FJsonObject> &P,
+                                const TArray<const TCHAR *> &Keys) -> FString {
+      FString V;
+      for (const TCHAR *K : Keys) {
+        if (P->TryGetStringField(K, V) && !V.TrimStartAndEnd().IsEmpty()) {
+          return V;
+        }
+      }
+      return FString();
+    };
 
-    if (SourceNodeGuid.IsEmpty() || TargetNodeGuid.IsEmpty()) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("sourceNodeGuid and targetNodeGuid required"),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
-      return true;
+    FString SourceNodeGuid = PickFirstNonEmpty(
+        LocalPayload, {TEXT("sourceNodeGuid"), TEXT("sourceNodeId"),
+                       TEXT("fromNodeId"), TEXT("sourceNode"), TEXT("nodeId")});
+    FString TargetNodeGuid = PickFirstNonEmpty(
+        LocalPayload, {TEXT("targetNodeGuid"), TEXT("targetNodeId"),
+                       TEXT("toNodeId"), TEXT("targetNode")});
+    FString SourcePinName = PickFirstNonEmpty(
+        LocalPayload, {TEXT("sourcePinName"), TEXT("sourcePin"),
+                       TEXT("fromPinName"), TEXT("fromPin"), TEXT("outputPin"),
+                       TEXT("pinName")});
+    FString TargetPinName = PickFirstNonEmpty(
+        LocalPayload, {TEXT("targetPinName"), TEXT("targetPin"),
+                       TEXT("toPinName"), TEXT("toPin"), TEXT("inputPin")});
+
+    // linkedTo alias form: "TargetNodeId.TargetPinName"
+    // Treat linkedTo as a FALLBACK only: populate the target node/pin from it
+    // solely when the explicitly-provided target fields were left empty, so a
+    // valid targetNodeId/targetPinName (or toNodeId/toPinName) is never
+    // clobbered by linkedTo (issue #struct-ecosystem [21]).
+    FString LinkedTo;
+    if (LocalPayload->TryGetStringField(TEXT("linkedTo"), LinkedTo) &&
+        !LinkedTo.IsEmpty()) {
+      FString LinkedNode, LinkedPin;
+      if (LinkedTo.Split(TEXT("."), &LinkedNode, &LinkedPin)) {
+        if (TargetNodeGuid.IsEmpty()) {
+          TargetNodeGuid = LinkedNode.TrimStartAndEnd();
+        }
+        if (TargetPinName.IsEmpty() && !LinkedPin.IsEmpty()) {
+          TargetPinName = LinkedPin.TrimStartAndEnd();
+        }
+      }
     }
 
-    FString SourcePinName, TargetPinName;
-    LocalPayload->TryGetStringField(TEXT("sourcePinName"), SourcePinName);
-    LocalPayload->TryGetStringField(TEXT("targetPinName"), TargetPinName);
+    if (SourceNodeGuid.IsEmpty() || TargetNodeGuid.IsEmpty()) {
+      Bridge.SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("connect_pins requires a source and target node identifier "
+               "(sourceNodeGuid/fromNodeId/sourceNode/nodeId, or "
+               "targetNodeGuid/toNodeId/targetNode/linkedTo)"),
+          nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
 
     if (GBlueprintBusySet.Contains(Path)) {
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,

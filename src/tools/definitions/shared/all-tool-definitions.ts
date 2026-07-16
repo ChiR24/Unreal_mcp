@@ -46,5 +46,5 @@ export const allToolDefinitions: ToolDefinition[] = [
   manageInventoryToolDefinition,
   manageInteractionToolDefinition,
   manageNetworkingToolDefinition,
-  manageLevelStructureToolDefinition
+  manageLevelStructureToolDefinition,
 ];

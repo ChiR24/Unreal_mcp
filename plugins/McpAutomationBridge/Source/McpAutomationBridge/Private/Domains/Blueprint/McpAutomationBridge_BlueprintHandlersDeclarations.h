@@ -180,6 +180,7 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context);
 bool HandleBlueprintConnectPins(const FBlueprintActionContext &Context);
 bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context);
 bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context);
+bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context);
 bool HandleScsAddComponent(const FBlueprintActionContext &Context);
 bool HandleScsSetTransform(const FBlueprintActionContext &Context);
 bool HandleScsRemoveComponent(const FBlueprintActionContext &Context);

@@ -57,6 +57,7 @@ bool IsNiagaraAuthoringSubAction(const FString& SubAction)
         TEXT("add_user_parameter"),
         TEXT("set_parameter_value"),
         TEXT("bind_parameter_to_source"),
+        TEXT("set_niagara_dynamic_input"),
         TEXT("add_skeletal_mesh_data_interface"),
         TEXT("add_static_mesh_data_interface"),
         TEXT("add_spline_data_interface"),

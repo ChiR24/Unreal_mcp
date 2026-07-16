@@ -19,7 +19,9 @@ export const inspectToolDefinition: ToolDefinition = {
             'get_metadata', 'add_tag', 'find_by_tag',
             'create_snapshot', 'restore_snapshot', 'export', 'delete_object', 'find_by_class', 'get_bounding_box',
             'get_project_settings', 'get_world_settings', 'get_viewport_info', 'get_selected_actors',
-            'get_scene_stats', 'get_performance_stats', 'get_memory_stats', 'get_editor_settings'
+            'get_scene_stats', 'get_performance_stats', 'get_memory_stats', 'get_editor_settings',
+            // Struct ecosystem — read-only struct layout introspection (issue #struct-ecosystem)
+            'inspect_struct'
           ],
           description: 'Action'
         },
@@ -38,7 +40,9 @@ export const inspectToolDefinition: ToolDefinition = {
         blueprintPath: commonSchemas.blueprintPath,
         detailed: commonSchemas.booleanProp,
         propertyNames: commonSchemas.arrayOfStrings,
-        componentNames: commonSchemas.arrayOfStrings
+        componentNames: commonSchemas.arrayOfStrings,
+        // Struct ecosystem — inspect_struct (issue #struct-ecosystem)
+        structPath: commonSchemas.assetPath
       },
       required: ['action']
     },

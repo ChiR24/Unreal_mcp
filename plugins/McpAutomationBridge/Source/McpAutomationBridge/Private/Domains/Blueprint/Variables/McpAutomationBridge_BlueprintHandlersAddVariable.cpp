@@ -1,4 +1,4 @@
-#include "Domains/Blueprint/Variables/McpAutomationBridge_BlueprintHandlersAddVariablePinType.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintAssetLoad.h"
@@ -58,14 +58,21 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
                              : false;
 
     // Validate variableType BEFORE checking existence to ensure parameter
-    // validation occurs even if variable already exists
-    FEdGraphPinType PinType;
-    FString PinTypeError;
-    if (!ResolveAddVariablePinType(VarType, PinType, PinTypeError)) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId, PinTypeError,
-                                 TEXT("CLASS_NOT_FOUND"));
+    // validation occurs even if variable already exists. Route through the
+    // shared resolver so struct/enum/container/soft-ref type specs all work
+    // and unknown or malformed specs fail with a structured error instead of
+    // silently falling back to another type.
+    const McpBlueprintUtils::FTypeResolutionResult VarTypeResolved =
+        McpBlueprintUtils::ResolvePinType(VarType);
+    if (!VarTypeResolved.bSuccess) {
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
+          FString::Printf(TEXT("Type '%s' rejected: %s"), *VarType,
+                          *VarTypeResolved.OutError),
+          TEXT("TYPE_RESOLUTION_FAILED"));
       return true;
     }
+    const FEdGraphPinType PinType = VarTypeResolved.PinType;
 
     const FString RequestedPath = Path;
     FString RegKey = Path;

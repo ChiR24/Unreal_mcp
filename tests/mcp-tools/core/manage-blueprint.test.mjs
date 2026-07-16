@@ -194,6 +194,14 @@ const testCases = [
   // Delete the PrintString node after all pin operations have used it.
   { scenario: 'DELETE: delete_node', toolName: 'manage_blueprint', arguments: { action: 'delete_node', blueprintPath: BP_PATH, nodeGuid: '${captured:printNodeId}', graphName: 'EventGraph' }, expected: 'success' },
 
+  // === STRUCT MAKE/BREAK NODES (issue #510) ===
+  { scenario: 'STRUCT NODE: create_struct for node test', toolName: 'manage_asset', arguments: { action: 'create_struct', name: `S_MCP_Node_${ts}`, path: TEST_FOLDER, save: true }, expected: 'success', captureResult: { key: 'nodeStructPath', fromField: 'result.assetPath' } },
+  { scenario: 'STRUCT NODE: add_struct_member', toolName: 'manage_asset', arguments: { action: 'add_struct_member', structPath: '${captured:nodeStructPath}', memberName: 'Amount', memberType: 'Float', save: true }, expected: 'success' },
+  { scenario: 'STRUCT NODE: make_struct node', toolName: 'manage_blueprint', arguments: { action: 'create_struct_make_break_nodes', blueprintPath: BP_PATH, structPath: '${captured:nodeStructPath}', nodeType: 'make' }, expected: 'success', captureResult: { key: 'makeNodeId', fromField: 'result.nodeGuid' }, assertions: [{ path: 'structuredContent.result.nodeType', equals: 'make', label: 'make node reported' }] },
+  { scenario: 'STRUCT NODE: break_struct node', toolName: 'manage_blueprint', arguments: { action: 'create_struct_make_break_nodes', blueprintPath: BP_PATH, structPath: '${captured:nodeStructPath}', nodeType: 'break' }, expected: 'success', captureResult: { key: 'breakNodeId', fromField: 'result.nodeGuid' }, assertions: [{ path: 'structuredContent.result.nodeType', equals: 'break', label: 'break node reported' }] },
+  { scenario: 'STRUCT NODE: delete make node', toolName: 'manage_blueprint', arguments: { action: 'delete_node', blueprintPath: BP_PATH, nodeGuid: '${captured:makeNodeId}', graphName: 'EventGraph' }, expected: 'success' },
+  { scenario: 'STRUCT NODE: delete break node', toolName: 'manage_blueprint', arguments: { action: 'delete_node', blueprintPath: BP_PATH, nodeGuid: '${captured:breakNodeId}', graphName: 'EventGraph' }, expected: 'success' },
+
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: BP_PATH, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },

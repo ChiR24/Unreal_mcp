@@ -1,5 +1,11 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
+// Struct ecosystem (issue #struct-ecosystem) — inspect_struct handler shard forward declaration.
+namespace McpInspectStruct
+{
+    bool HandleInspectStructAction(FString Action, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject>& OutResult);
+}
+
 using namespace McpEnvironmentHandlers;
 
 bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
@@ -99,6 +105,31 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     if (LowerSubAction.Equals(TEXT("inspect_cdo")))
     {
         return HandleInspectCdoAction(RequestId, Payload, RequestingSocket);
+    }
+
+    // Struct ecosystem — read-only struct layout introspection (issue #struct-ecosystem)
+    if (LowerSubAction.Equals(TEXT("inspect_struct")))
+    {
+        TSharedPtr<FJsonObject> Result;
+        if (McpInspectStruct::HandleInspectStructAction(LowerSubAction, Payload, Result) && Result.IsValid())
+        {
+            if (Result->GetBoolField(TEXT("success")))
+            {
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Struct inspected"), Result);
+            }
+            else
+            {
+                // Handled failure (e.g. MISSING_PARAMETER / ASSET_NOT_FOUND): forward the
+                // shard's specific diagnostic instead of falling through to UNKNOWN_ACTION.
+                FString ErrorCode = TEXT("INTERNAL_ERROR");
+                FString Message = TEXT("inspect_struct failed");
+                Result->TryGetStringField(TEXT("error"), ErrorCode);
+                Result->TryGetStringField(TEXT("message"), Message);
+                SendAutomationError(RequestingSocket, RequestId, Message, ErrorCode);
+            }
+            return true;
+        }
+        return false;
     }
 
     if (bIsGlobalAction)
