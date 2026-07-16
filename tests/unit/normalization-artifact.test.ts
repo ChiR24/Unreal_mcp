@@ -40,7 +40,7 @@ describe('determinism and committed artifact', () => {
 
   it('validates the committed artifact on disk', () => {
     const inv = readArtifact(ARTIFACT_PATH);
-    expect(inv.occurrences.length).toBe(1288);
+    expect(inv.occurrences.length).toBe(1335);
     expect(inv.schemaVersion).toBe('task5.normalization.v1');
   });
 });

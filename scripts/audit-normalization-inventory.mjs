@@ -2,8 +2,8 @@
 // Run: node --loader ts-node/esm scripts/audit-normalization-inventory.mjs
 // Prints exact counts and exercises one proven synonym mapping + the four
 // delete-target non-merges with binary PASS/FAIL lines (exit 1 on any failure).
-import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { readArtifact } from '../src/tools/catalog/capabilities/normalization/io.ts';
 import { naiveNameOnlyCanonicalId } from '../src/tools/catalog/capabilities/normalization/naive.ts';
 
@@ -44,11 +44,11 @@ function check(label, cond) {
   if (!cond) failures += 1;
 }
 
-check('occurrenceCount === 1288', m.occurrenceCount === 1288);
+check('occurrenceCount === 1335', m.occurrenceCount === 1335);
 check('duplicateNames === 36', m.duplicateNames === 36);
 check('duplicateNameOccurrences === 83', m.duplicateNameOccurrences === 83);
 check('maxExactNameReductions === 47', m.maxExactNameReductions === 47);
-check('verbFamilyAddCreateSetConfigure === 801', m.verbFamilyAddCreateSetConfigure === 801);
+check('verbFamilyAddCreateSetConfigure === 817', m.verbFamilyAddCreateSetConfigure === 817);
 check('unclassifiedOccurrences === 0', m.unclassifiedOccurrences === 0);
 check('canonicalCollisions === 0', m.canonicalCollisions === 0);
 check('taxonomy is strictly A-F (no P class)', !('P' in m.classificationCounts));

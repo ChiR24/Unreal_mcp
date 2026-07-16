@@ -13,7 +13,7 @@
  *
  * The prior 'P' (primary baseline) class has been removed. Primary/alias
  * position is now carried by the separate `role` field on each occurrence, so
- * the `classification` field stays strictly A-F for all 1,288 occurrences.
+ * the `classification` field stays strictly A-F for all 1,335 occurrences.
  */
 
 import type { Classification, Disposition, Role } from './types.js';
@@ -53,11 +53,11 @@ export function namespaceOf(canonicalId: string): string {
 
 /** Reviewed fixed metrics that must be reproduced exactly from source. */
 export const REVIEWED_METRICS = {
-  occurrenceCount: 1288,
+  occurrenceCount: 1335,
   duplicateNames: 36,
   duplicateNameOccurrences: 83,
   maxExactNameReductions: 47,
-  verbFamilyAddCreateSetConfigure: 801,
+  verbFamilyAddCreateSetConfigure: 817,
 } as const;
 
 /**

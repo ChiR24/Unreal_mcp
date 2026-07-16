@@ -72,6 +72,39 @@ const testCases = [
     ],
   },
 
+  // set_instanced_struct_property negative contract: exercises structType and
+  // structValues so the strict parameter audit sees both optional parameters.
+  {
+    scenario: 'INSTANCED STRUCT ERROR: set on a non-instanced property',
+    toolName: 'manage_asset',
+    arguments: {
+      action: 'set_instanced_struct_property',
+      assetPath: `${TEST_FOLDER}/BP_InstancedHolder_${ts}`,
+      propertyName: 'SomeRegularField',
+      structType: '/Game/MCPTest/StructProperty/S_MyInner',
+      structValues: { Score: 42, Label: 'hi' },
+    },
+    expected: 'error',
+    assertions: [
+      { path: 'structuredContent.data.result.error', includes: 'INVALID_OPERATION', label: 'non-instanced property rejected on set' },
+    ],
+  },
+  {
+    scenario: 'INSTANCED STRUCT ERROR: set on missing asset',
+    toolName: 'manage_asset',
+    arguments: {
+      action: 'set_instanced_struct_property',
+      assetPath: `${TEST_FOLDER}/BP_DoesNotExist_${ts}`,
+      propertyName: 'Payload',
+      structType: '/Game/MCPTest/StructProperty/S_MyInner',
+      structValues: { Score: 42 },
+    },
+    expected: 'error',
+    assertions: [
+      { path: 'structuredContent.data.result.error', includes: 'ASSET_NOT_FOUND', label: 'missing asset reported on set' },
+    ],
+  },
+
   // === Intended full positive coverage (NOT executable with current toolset) =============
   // These document the contract the handler implements and should be enabled once an
   // FInstancedStruct property can be created/seeded (e.g. a dedicated action or a fixture asset):

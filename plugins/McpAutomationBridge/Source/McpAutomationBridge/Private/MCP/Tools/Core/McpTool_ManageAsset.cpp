@@ -1,4 +1,4 @@
-// McpTool_ManageAsset.cpp — manage_asset tool definition (114 actions)
+// McpTool_ManageAsset.cpp — manage_asset tool definition (158 actions)
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "MCP/Registry/McpToolDefinition.h"

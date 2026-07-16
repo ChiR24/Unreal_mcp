@@ -257,11 +257,11 @@ describe('route dispositions: structural invariants', () => {
   });
 });
 
-describe('public/non-public separation (1,288 public vs 67 non-public)', () => {
+describe('public/non-public separation (1,335 public vs 67 non-public)', () => {
   const inv = buildInventory();
 
-  it('keeps the 1,288 public occurrences structurally separate from the 67 non-public routes', () => {
-    expect(inv.occurrences.length).toBe(1288);
+  it('keeps the 1,335 public occurrences structurally separate from the 67 non-public routes', () => {
+    expect(inv.occurrences.length).toBe(1335);
     expect(inv.routeDispositions.length).toBe(67);
     const occKeys = new Set(inv.occurrences.map((o) => o.occurrenceKey));
     const routeKeys = new Set(inv.routeDispositions.map((r) => r.dispositionKey));
@@ -272,7 +272,7 @@ describe('public/non-public separation (1,288 public vs 67 non-public)', () => {
   it('P classification is absent; role field is separate from A-F taxonomy', () => {
     const cc = inv.metrics.classificationCounts;
     expect('P' in cc).toBe(false);
-    expect(cc.A + cc.B + cc.C + cc.D + cc.E + cc.F).toBe(1288);
+    expect(cc.A + cc.B + cc.C + cc.D + cc.E + cc.F).toBe(1335);
     for (const o of inv.occurrences) {
       expect(['A', 'B', 'C', 'D', 'E', 'F']).toContain(o.classification);
       expect(['primary', 'alias']).toContain(o.role);

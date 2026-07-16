@@ -19,7 +19,7 @@
  *
  * The prior 'P' (primary baseline) class is intentionally REMOVED. Primary/alias
  * status is modelled by the separate `role` field on each occurrence so that the
- * normalization-class field stays strictly A-F for every one of the 1,288 rows.
+ * normalization-class field stays strictly A-F for every one of the 1,335 rows.
  */
 export const CLASSIFICATIONS = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
 export type Classification = (typeof CLASSIFICATIONS)[number];
@@ -64,7 +64,7 @@ export type RouteDisposition = (typeof ROUTE_DISPOSITIONS)[number];
 export const ROUTE_DISPOSITION_STATUSES = ['hidden', 'raw', 'dead'] as const;
 export type RouteDispositionStatus = (typeof ROUTE_DISPOSITION_STATUSES)[number];
 
-/** Verb-family used by the reviewed 801 metric. */
+/** Verb-family used by the reviewed 817 metric. */
 export const VERB_FAMILY = ['add', 'create', 'set', 'configure'] as const;
 export type VerbFamily = (typeof VERB_FAMILY)[number];
 
@@ -187,7 +187,7 @@ export interface InventoryMetrics {
   readonly canonicalCollisions: number;
   readonly classificationCounts: Readonly<Record<Classification, number>>;
   readonly dispositionCounts: Readonly<Record<Disposition, number>>;
-  // Route-disposition metrics (separate model; do not distort the 1,288 public count).
+  // Route-disposition metrics (separate model; do not distort the 1,335 public count).
   readonly routeDispositionTotal: number;
   readonly routeDispositionUnresolved: number;
   readonly routeStatusCounts: Readonly<Record<RouteDispositionStatus, number>>;

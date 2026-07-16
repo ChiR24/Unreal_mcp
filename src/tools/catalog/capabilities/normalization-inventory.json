@@ -3,30 +3,30 @@
   "metadata": {
     "generatedBy": "generate-normalization-inventory",
     "sourceToolCount": 23,
-    "occurrenceCount": 1288,
-    "contentSha256": "dd8095b4a206cd9f4dd1fcf56487af5a7175ee933c76816f1da47ee950ce52e5"
+    "occurrenceCount": 1335,
+    "contentSha256": "8c137c9d00bea91b4dc42833efa14c4fd40b8e4b501d8eb85dfe71f7510c71a6"
   },
   "metrics": {
-    "occurrenceCount": 1288,
+    "occurrenceCount": 1335,
     "toolCount": 23,
-    "distinctActionNames": 1241,
+    "distinctActionNames": 1288,
     "duplicateNames": 36,
     "duplicateNameOccurrences": 83,
     "maxExactNameReductions": 47,
     "actualCanonicalReductions": 5,
-    "verbFamilyAddCreateSetConfigure": 801,
+    "verbFamilyAddCreateSetConfigure": 817,
     "unclassifiedOccurrences": 0,
     "canonicalCollisions": 0,
     "classificationCounts": {
       "A": 10,
       "B": 0,
-      "C": 1270,
+      "C": 1317,
       "D": 0,
       "E": 8,
       "F": 0
     },
     "dispositionCounts": {
-      "keep": 1283,
+      "keep": 1330,
       "alias": 5,
       "map": 0,
       "promote": 0,
@@ -5632,6 +5632,22 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:inspect:inspect_struct",
+      "action": "inspect_struct",
+      "namespace": "inspect",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "inspect:inspect_struct"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/inspect-tool.ts",
+        "symbol": "inspectToolDefinition.inputSchema.properties.action.enum",
+        "tool": "inspect"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:inspect:list_objects",
       "action": "list_objects",
       "namespace": "inspect",
@@ -6736,6 +6752,38 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:add_data_table_row",
+      "action": "add_data_table_row",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:add_data_table_row"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:add_enum_value",
+      "action": "add_enum_value",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:add_enum_value"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:add_fresnel",
       "action": "add_fresnel",
       "namespace": "manage_asset",
@@ -6967,6 +7015,22 @@
       "disposition": "keep",
       "occurrences": [
         "manage_asset:add_static_switch_parameter"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:add_struct_member",
+      "action": "add_struct_member",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:add_struct_member"
       ],
       "evidence": {
         "source": "src/tools/definitions/core/manage-asset-tool.ts",
@@ -7232,6 +7296,22 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:clear_data_table_rows",
+      "action": "clear_data_table_rows",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:clear_data_table_rows"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:combine_textures",
       "action": "combine_textures",
       "namespace": "manage_asset",
@@ -7239,6 +7319,22 @@
       "disposition": "keep",
       "occurrences": [
         "manage_asset:combine_textures"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:compare_structs",
+      "action": "compare_structs",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:compare_structs"
       ],
       "evidence": {
         "source": "src/tools/definitions/core/manage-asset-tool.ts",
@@ -7344,6 +7440,22 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:create_data_table",
+      "action": "create_data_table",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:create_data_table"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:create_decal_material",
       "action": "create_decal_material",
       "namespace": "manage_asset",
@@ -7351,6 +7463,22 @@
       "disposition": "keep",
       "occurrences": [
         "manage_asset:create_decal_material"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:create_enum",
+      "action": "create_enum",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:create_enum"
       ],
       "evidence": {
         "source": "src/tools/definitions/core/manage-asset-tool.ts",
@@ -7536,6 +7664,38 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:create_row_struct",
+      "action": "create_row_struct",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:create_row_struct"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:create_struct",
+      "action": "create_struct",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:create_struct"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:create_thumbnail",
       "action": "create_thumbnail",
       "namespace": "manage_asset",
@@ -7600,6 +7760,38 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:delete_data_table_row",
+      "action": "delete_data_table_row",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:delete_data_table_row"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:delete_enum",
+      "action": "delete_enum",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:delete_enum"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:delete_node",
       "action": "delete_node",
       "namespace": "manage_asset",
@@ -7607,6 +7799,22 @@
       "disposition": "keep",
       "occurrences": [
         "manage_asset:delete_node"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:delete_struct",
+      "action": "delete_struct",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:delete_struct"
       ],
       "evidence": {
         "source": "src/tools/definitions/core/manage-asset-tool.ts",
@@ -7680,6 +7888,22 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:duplicate_struct",
+      "action": "duplicate_struct",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:duplicate_struct"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:exists",
       "action": "exists",
       "namespace": "manage_asset",
@@ -7687,6 +7911,22 @@
       "disposition": "keep",
       "occurrences": [
         "manage_asset:exists"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:export_struct",
+      "action": "export_struct",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:export_struct"
       ],
       "evidence": {
         "source": "src/tools/definitions/core/manage-asset-tool.ts",
@@ -7808,6 +8048,22 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:get_data_table_row",
+      "action": "get_data_table_row",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:get_data_table_row"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:get_dependencies",
       "action": "get_dependencies",
       "namespace": "manage_asset",
@@ -7815,6 +8071,38 @@
       "disposition": "keep",
       "occurrences": [
         "manage_asset:get_dependencies"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:get_enum",
+      "action": "get_enum",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:get_enum"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:get_instanced_struct_property",
+      "action": "get_instanced_struct_property",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:get_instanced_struct_property"
       ],
       "evidence": {
         "source": "src/tools/definitions/core/manage-asset-tool.ts",
@@ -7952,6 +8240,22 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:get_row_struct",
+      "action": "get_row_struct",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:get_row_struct"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:get_source_control_state",
       "action": "get_source_control_state",
       "namespace": "manage_asset",
@@ -7959,6 +8263,22 @@
       "disposition": "keep",
       "occurrences": [
         "manage_asset:get_source_control_state"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:get_struct",
+      "action": "get_struct",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:get_struct"
       ],
       "evidence": {
         "source": "src/tools/definitions/core/manage-asset-tool.ts",
@@ -8000,6 +8320,38 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:import_data_table_rows",
+      "action": "import_data_table_rows",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:import_data_table_rows"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:import_struct",
+      "action": "import_struct",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:import_struct"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:invert",
       "action": "invert",
       "namespace": "manage_asset",
@@ -8032,6 +8384,22 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:list_data_table_rows",
+      "action": "list_data_table_rows",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:list_data_table_rows"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:list_instances",
       "action": "list_instances",
       "namespace": "manage_asset",
@@ -8039,6 +8407,38 @@
       "disposition": "keep",
       "occurrences": [
         "manage_asset:list_instances"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:list_struct_members",
+      "action": "list_struct_members",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:list_struct_members"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:list_structs",
+      "action": "list_structs",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:list_structs"
       ],
       "evidence": {
         "source": "src/tools/definitions/core/manage-asset-tool.ts",
@@ -8096,6 +8496,22 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:read_struct",
+      "action": "read_struct",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:read_struct"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:rebuild_material",
       "action": "rebuild_material",
       "namespace": "manage_asset",
@@ -8112,6 +8528,54 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:recompile_struct",
+      "action": "recompile_struct",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:recompile_struct"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:refresh_struct_dependencies",
+      "action": "refresh_struct_dependencies",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:refresh_struct_dependencies"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:remove_enum_value",
+      "action": "remove_enum_value",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:remove_enum_value"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:remove_material_node",
       "action": "remove_material_node",
       "namespace": "manage_asset",
@@ -8119,6 +8583,22 @@
       "disposition": "keep",
       "occurrences": [
         "manage_asset:remove_material_node"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:remove_struct_member",
+      "action": "remove_struct_member",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:remove_struct_member"
       ],
       "evidence": {
         "source": "src/tools/definitions/core/manage-asset-tool.ts",
@@ -8151,6 +8631,86 @@
       "disposition": "keep",
       "occurrences": [
         "manage_asset:rename_asset"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:rename_enum_value",
+      "action": "rename_enum_value",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:rename_enum_value"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:rename_struct",
+      "action": "rename_struct",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:rename_struct"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:rename_struct_member",
+      "action": "rename_struct_member",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:rename_struct_member"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:reorder_enum_values",
+      "action": "reorder_enum_values",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:reorder_enum_values"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:reorder_struct_members",
+      "action": "reorder_struct_members",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:reorder_struct_members"
       ],
       "evidence": {
         "source": "src/tools/definitions/core/manage-asset-tool.ts",
@@ -8208,6 +8768,22 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:search_struct_usage",
+      "action": "search_struct_usage",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:search_struct_usage"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:set_blend_mode",
       "action": "set_blend_mode",
       "namespace": "manage_asset",
@@ -8231,6 +8807,54 @@
       "disposition": "keep",
       "occurrences": [
         "manage_asset:set_compression_settings"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:set_data_table_row_struct",
+      "action": "set_data_table_row_struct",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:set_data_table_row_struct"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:set_enum_value_metadata",
+      "action": "set_enum_value_metadata",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:set_enum_value_metadata"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:set_instanced_struct_property",
+      "action": "set_instanced_struct_property",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:set_instanced_struct_property"
       ],
       "evidence": {
         "source": "src/tools/definitions/core/manage-asset-tool.ts",
@@ -8368,6 +8992,70 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:set_struct_as_row_struct",
+      "action": "set_struct_as_row_struct",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:set_struct_as_row_struct"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:set_struct_member_default",
+      "action": "set_struct_member_default",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:set_struct_member_default"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:set_struct_member_metadata",
+      "action": "set_struct_member_metadata",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:set_struct_member_metadata"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:set_struct_member_type",
+      "action": "set_struct_member_type",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:set_struct_member_type"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:set_tags",
       "action": "set_tags",
       "namespace": "manage_asset",
@@ -8496,6 +9184,22 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_asset:split_enum",
+      "action": "split_enum",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:split_enum"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_asset:update_custom_expression",
       "action": "update_custom_expression",
       "namespace": "manage_asset",
@@ -8503,6 +9207,22 @@
       "disposition": "keep",
       "occurrences": [
         "manage_asset:update_custom_expression"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:update_data_table_row",
+      "action": "update_data_table_row",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:update_data_table_row"
       ],
       "evidence": {
         "source": "src/tools/definitions/core/manage-asset-tool.ts",
@@ -10343,6 +11063,22 @@
       "disposition": "keep",
       "occurrences": [
         "manage_blueprint:create_settings_menu"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/core/blueprint/manage-blueprint-tool.ts",
+        "symbol": "manageBlueprintToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_blueprint"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_blueprint:create_struct_make_break_nodes",
+      "action": "create_struct_make_break_nodes",
+      "namespace": "manage_blueprint",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_blueprint:create_struct_make_break_nodes"
       ],
       "evidence": {
         "source": "src/tools/definitions/core/blueprint/manage-blueprint-tool.ts",
@@ -12903,6 +13639,22 @@
       "disposition": "keep",
       "occurrences": [
         "manage_effect:set_emitter_properties"
+      ],
+      "evidence": {
+        "source": "src/tools/definitions/utility/manage-effect-tool.ts",
+        "symbol": "manageEffectToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_effect"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_effect:set_niagara_dynamic_input",
+      "action": "set_niagara_dynamic_input",
+      "namespace": "manage_effect",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_effect:set_niagara_dynamic_input"
       ],
       "evidence": {
         "source": "src/tools/definitions/utility/manage-effect-tool.ts",
@@ -28027,6 +28779,27 @@
       "justification": "Distinct target/semantics: single declaration of \"inspect_object\" under \"inspect\" (cap:inspect:inspect_object); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "inspect:inspect_struct",
+      "tool": "inspect",
+      "action": "inspect_struct",
+      "canonicalId": "cap:inspect:inspect_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/inspect-tool.ts",
+        "symbol": "inspectToolDefinition.inputSchema.properties.action.enum",
+        "tool": "inspect"
+      },
+      "rawRoute": {
+        "ownerTool": "inspect",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "inspect"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"inspect_struct\" under \"inspect\" (cap:inspect:inspect_struct); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "inspect:list_objects",
       "tool": "inspect",
       "action": "list_objects",
@@ -29476,6 +30249,48 @@
       "justification": "Distinct target/semantics: single declaration of \"add_custom_expression\" under \"manage_asset\" (cap:manage_asset:add_custom_expression); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:add_data_table_row",
+      "tool": "manage_asset",
+      "action": "add_data_table_row",
+      "canonicalId": "cap:manage_asset:add_data_table_row",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"add_data_table_row\" under \"manage_asset\" (cap:manage_asset:add_data_table_row); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:add_enum_value",
+      "tool": "manage_asset",
+      "action": "add_enum_value",
+      "canonicalId": "cap:manage_asset:add_enum_value",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"add_enum_value\" under \"manage_asset\" (cap:manage_asset:add_enum_value); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:add_fresnel",
       "tool": "manage_asset",
       "action": "add_fresnel",
@@ -29789,6 +30604,27 @@
         "namespace": "manage_asset"
       },
       "justification": "Distinct target/semantics: single declaration of \"add_static_switch_parameter\" under \"manage_asset\" (cap:manage_asset:add_static_switch_parameter); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:add_struct_member",
+      "tool": "manage_asset",
+      "action": "add_struct_member",
+      "canonicalId": "cap:manage_asset:add_struct_member",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"add_struct_member\" under \"manage_asset\" (cap:manage_asset:add_struct_member); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_asset:add_switch",
@@ -30127,6 +30963,27 @@
       "justification": "Distinct target/semantics: single declaration of \"channel_pack\" under \"manage_asset\" (cap:manage_asset:channel_pack); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:clear_data_table_rows",
+      "tool": "manage_asset",
+      "action": "clear_data_table_rows",
+      "canonicalId": "cap:manage_asset:clear_data_table_rows",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"clear_data_table_rows\" under \"manage_asset\" (cap:manage_asset:clear_data_table_rows); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:combine_textures",
       "tool": "manage_asset",
       "action": "combine_textures",
@@ -30146,6 +31003,27 @@
         "namespace": "manage_asset"
       },
       "justification": "Distinct target/semantics: single declaration of \"combine_textures\" under \"manage_asset\" (cap:manage_asset:combine_textures); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:compare_structs",
+      "tool": "manage_asset",
+      "action": "compare_structs",
+      "canonicalId": "cap:manage_asset:compare_structs",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"compare_structs\" under \"manage_asset\" (cap:manage_asset:compare_structs); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_asset:compile_material",
@@ -30274,6 +31152,27 @@
       "justification": "Distinct target/semantics: single declaration of \"create_ao_from_mesh\" under \"manage_asset\" (cap:manage_asset:create_ao_from_mesh); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:create_data_table",
+      "tool": "manage_asset",
+      "action": "create_data_table",
+      "canonicalId": "cap:manage_asset:create_data_table",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"create_data_table\" under \"manage_asset\" (cap:manage_asset:create_data_table); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:create_decal_material",
       "tool": "manage_asset",
       "action": "create_decal_material",
@@ -30293,6 +31192,27 @@
         "namespace": "manage_asset"
       },
       "justification": "Distinct target/semantics: single declaration of \"create_decal_material\" under \"manage_asset\" (cap:manage_asset:create_decal_material); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:create_enum",
+      "tool": "manage_asset",
+      "action": "create_enum",
+      "canonicalId": "cap:manage_asset:create_enum",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"create_enum\" under \"manage_asset\" (cap:manage_asset:create_enum); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_asset:create_folder",
@@ -30526,6 +31446,48 @@
       "justification": "Distinct target/semantics: single declaration of \"create_render_target\" under \"manage_asset\" (cap:manage_asset:create_render_target); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:create_row_struct",
+      "tool": "manage_asset",
+      "action": "create_row_struct",
+      "canonicalId": "cap:manage_asset:create_row_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"create_row_struct\" under \"manage_asset\" (cap:manage_asset:create_row_struct); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:create_struct",
+      "tool": "manage_asset",
+      "action": "create_struct",
+      "canonicalId": "cap:manage_asset:create_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"create_struct\" under \"manage_asset\" (cap:manage_asset:create_struct); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:create_thumbnail",
       "tool": "manage_asset",
       "action": "create_thumbnail",
@@ -30610,6 +31572,48 @@
       "justification": "Distinct target/semantics: single declaration of \"delete_assets\" under \"manage_asset\" (cap:manage_asset:delete_assets); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:delete_data_table_row",
+      "tool": "manage_asset",
+      "action": "delete_data_table_row",
+      "canonicalId": "cap:manage_asset:delete_data_table_row",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"delete_data_table_row\" under \"manage_asset\" (cap:manage_asset:delete_data_table_row); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:delete_enum",
+      "tool": "manage_asset",
+      "action": "delete_enum",
+      "canonicalId": "cap:manage_asset:delete_enum",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"delete_enum\" under \"manage_asset\" (cap:manage_asset:delete_enum); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:delete_node",
       "tool": "manage_asset",
       "action": "delete_node",
@@ -30629,6 +31633,27 @@
         "namespace": "manage_asset"
       },
       "justification": "Distinct target/semantics: single declaration of \"delete_node\" under \"manage_asset\" (cap:manage_asset:delete_node); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:delete_struct",
+      "tool": "manage_asset",
+      "action": "delete_struct",
+      "canonicalId": "cap:manage_asset:delete_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"delete_struct\" under \"manage_asset\" (cap:manage_asset:delete_struct); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_asset:desaturate",
@@ -30715,6 +31740,27 @@
       "justification": "Distinct target/semantics: single declaration of \"duplicate_asset\" under \"manage_asset\" (cap:manage_asset:duplicate_asset); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:duplicate_struct",
+      "tool": "manage_asset",
+      "action": "duplicate_struct",
+      "canonicalId": "cap:manage_asset:duplicate_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"duplicate_struct\" under \"manage_asset\" (cap:manage_asset:duplicate_struct); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:exists",
       "tool": "manage_asset",
       "action": "exists",
@@ -30734,6 +31780,27 @@
         "namespace": "manage_asset"
       },
       "justification": "Distinct target/semantics: single declaration of \"exists\" under \"manage_asset\" (cap:manage_asset:exists); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:export_struct",
+      "tool": "manage_asset",
+      "action": "export_struct",
+      "canonicalId": "cap:manage_asset:export_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"export_struct\" under \"manage_asset\" (cap:manage_asset:export_struct); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_asset:find_by_tag",
@@ -30883,6 +31950,27 @@
       "justification": "Distinct target/semantics: single declaration of \"get_connected_subgraph\" under \"manage_asset\" (cap:manage_asset:get_connected_subgraph); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:get_data_table_row",
+      "tool": "manage_asset",
+      "action": "get_data_table_row",
+      "canonicalId": "cap:manage_asset:get_data_table_row",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"get_data_table_row\" under \"manage_asset\" (cap:manage_asset:get_data_table_row); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:get_dependencies",
       "tool": "manage_asset",
       "action": "get_dependencies",
@@ -30902,6 +31990,48 @@
         "namespace": "manage_asset"
       },
       "justification": "Distinct target/semantics: single declaration of \"get_dependencies\" under \"manage_asset\" (cap:manage_asset:get_dependencies); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:get_enum",
+      "tool": "manage_asset",
+      "action": "get_enum",
+      "canonicalId": "cap:manage_asset:get_enum",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"get_enum\" under \"manage_asset\" (cap:manage_asset:get_enum); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:get_instanced_struct_property",
+      "tool": "manage_asset",
+      "action": "get_instanced_struct_property",
+      "canonicalId": "cap:manage_asset:get_instanced_struct_property",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"get_instanced_struct_property\" under \"manage_asset\" (cap:manage_asset:get_instanced_struct_property); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_asset:get_material_function_info",
@@ -31072,6 +32202,27 @@
       "justification": "Distinct target/semantics: single declaration of \"get_node_properties\" under \"manage_asset\" (cap:manage_asset:get_node_properties); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:get_row_struct",
+      "tool": "manage_asset",
+      "action": "get_row_struct",
+      "canonicalId": "cap:manage_asset:get_row_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"get_row_struct\" under \"manage_asset\" (cap:manage_asset:get_row_struct); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:get_source_control_state",
       "tool": "manage_asset",
       "action": "get_source_control_state",
@@ -31091,6 +32242,27 @@
         "namespace": "manage_asset"
       },
       "justification": "Distinct target/semantics: single declaration of \"get_source_control_state\" under \"manage_asset\" (cap:manage_asset:get_source_control_state); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:get_struct",
+      "tool": "manage_asset",
+      "action": "get_struct",
+      "canonicalId": "cap:manage_asset:get_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"get_struct\" under \"manage_asset\" (cap:manage_asset:get_struct); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_asset:get_texture_info",
@@ -31135,6 +32307,48 @@
       "justification": "Distinct target/semantics: single declaration of \"import\" under \"manage_asset\" (cap:manage_asset:import); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:import_data_table_rows",
+      "tool": "manage_asset",
+      "action": "import_data_table_rows",
+      "canonicalId": "cap:manage_asset:import_data_table_rows",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"import_data_table_rows\" under \"manage_asset\" (cap:manage_asset:import_data_table_rows); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:import_struct",
+      "tool": "manage_asset",
+      "action": "import_struct",
+      "canonicalId": "cap:manage_asset:import_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"import_struct\" under \"manage_asset\" (cap:manage_asset:import_struct); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:invert",
       "tool": "manage_asset",
       "action": "invert",
@@ -31177,6 +32391,27 @@
       "justification": "Distinct target/semantics: single declaration of \"list\" under \"manage_asset\" (cap:manage_asset:list); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:list_data_table_rows",
+      "tool": "manage_asset",
+      "action": "list_data_table_rows",
+      "canonicalId": "cap:manage_asset:list_data_table_rows",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"list_data_table_rows\" under \"manage_asset\" (cap:manage_asset:list_data_table_rows); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:list_instances",
       "tool": "manage_asset",
       "action": "list_instances",
@@ -31196,6 +32431,48 @@
         "namespace": "manage_asset"
       },
       "justification": "Distinct target/semantics: single declaration of \"list_instances\" under \"manage_asset\" (cap:manage_asset:list_instances); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:list_struct_members",
+      "tool": "manage_asset",
+      "action": "list_struct_members",
+      "canonicalId": "cap:manage_asset:list_struct_members",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"list_struct_members\" under \"manage_asset\" (cap:manage_asset:list_struct_members); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:list_structs",
+      "tool": "manage_asset",
+      "action": "list_structs",
+      "canonicalId": "cap:manage_asset:list_structs",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"list_structs\" under \"manage_asset\" (cap:manage_asset:list_structs); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_asset:move",
@@ -31261,6 +32538,27 @@
       "justification": "Distinct target/semantics: single declaration of \"nanite_rebuild_mesh\" under \"manage_asset\" (cap:manage_asset:nanite_rebuild_mesh); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:read_struct",
+      "tool": "manage_asset",
+      "action": "read_struct",
+      "canonicalId": "cap:manage_asset:read_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"read_struct\" under \"manage_asset\" (cap:manage_asset:read_struct); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:rebuild_material",
       "tool": "manage_asset",
       "action": "rebuild_material",
@@ -31282,6 +32580,69 @@
       "justification": "Distinct target/semantics: single declaration of \"rebuild_material\" under \"manage_asset\" (cap:manage_asset:rebuild_material); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:recompile_struct",
+      "tool": "manage_asset",
+      "action": "recompile_struct",
+      "canonicalId": "cap:manage_asset:recompile_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"recompile_struct\" under \"manage_asset\" (cap:manage_asset:recompile_struct); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:refresh_struct_dependencies",
+      "tool": "manage_asset",
+      "action": "refresh_struct_dependencies",
+      "canonicalId": "cap:manage_asset:refresh_struct_dependencies",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"refresh_struct_dependencies\" under \"manage_asset\" (cap:manage_asset:refresh_struct_dependencies); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:remove_enum_value",
+      "tool": "manage_asset",
+      "action": "remove_enum_value",
+      "canonicalId": "cap:manage_asset:remove_enum_value",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"remove_enum_value\" under \"manage_asset\" (cap:manage_asset:remove_enum_value); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:remove_material_node",
       "tool": "manage_asset",
       "action": "remove_material_node",
@@ -31301,6 +32662,27 @@
         "namespace": "manage_asset"
       },
       "justification": "Distinct target/semantics: single declaration of \"remove_material_node\" under \"manage_asset\" (cap:manage_asset:remove_material_node); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:remove_struct_member",
+      "tool": "manage_asset",
+      "action": "remove_struct_member",
+      "canonicalId": "cap:manage_asset:remove_struct_member",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"remove_struct_member\" under \"manage_asset\" (cap:manage_asset:remove_struct_member); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_asset:rename",
@@ -31343,6 +32725,111 @@
         "namespace": "manage_asset"
       },
       "justification": "Distinct target/semantics: single declaration of \"rename_asset\" under \"manage_asset\" (cap:manage_asset:rename_asset); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:rename_enum_value",
+      "tool": "manage_asset",
+      "action": "rename_enum_value",
+      "canonicalId": "cap:manage_asset:rename_enum_value",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"rename_enum_value\" under \"manage_asset\" (cap:manage_asset:rename_enum_value); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:rename_struct",
+      "tool": "manage_asset",
+      "action": "rename_struct",
+      "canonicalId": "cap:manage_asset:rename_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"rename_struct\" under \"manage_asset\" (cap:manage_asset:rename_struct); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:rename_struct_member",
+      "tool": "manage_asset",
+      "action": "rename_struct_member",
+      "canonicalId": "cap:manage_asset:rename_struct_member",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"rename_struct_member\" under \"manage_asset\" (cap:manage_asset:rename_struct_member); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:reorder_enum_values",
+      "tool": "manage_asset",
+      "action": "reorder_enum_values",
+      "canonicalId": "cap:manage_asset:reorder_enum_values",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"reorder_enum_values\" under \"manage_asset\" (cap:manage_asset:reorder_enum_values); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:reorder_struct_members",
+      "tool": "manage_asset",
+      "action": "reorder_struct_members",
+      "canonicalId": "cap:manage_asset:reorder_struct_members",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"reorder_struct_members\" under \"manage_asset\" (cap:manage_asset:reorder_struct_members); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_asset:reset_instance_parameters",
@@ -31408,6 +32895,27 @@
       "justification": "Distinct target/semantics: single declaration of \"search_assets\" under \"manage_asset\" (cap:manage_asset:search_assets); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:search_struct_usage",
+      "tool": "manage_asset",
+      "action": "search_struct_usage",
+      "canonicalId": "cap:manage_asset:search_struct_usage",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"search_struct_usage\" under \"manage_asset\" (cap:manage_asset:search_struct_usage); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:set_blend_mode",
       "tool": "manage_asset",
       "action": "set_blend_mode",
@@ -31448,6 +32956,69 @@
         "namespace": "manage_asset"
       },
       "justification": "Distinct target/semantics: single declaration of \"set_compression_settings\" under \"manage_asset\" (cap:manage_asset:set_compression_settings); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:set_data_table_row_struct",
+      "tool": "manage_asset",
+      "action": "set_data_table_row_struct",
+      "canonicalId": "cap:manage_asset:set_data_table_row_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"set_data_table_row_struct\" under \"manage_asset\" (cap:manage_asset:set_data_table_row_struct); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:set_enum_value_metadata",
+      "tool": "manage_asset",
+      "action": "set_enum_value_metadata",
+      "canonicalId": "cap:manage_asset:set_enum_value_metadata",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"set_enum_value_metadata\" under \"manage_asset\" (cap:manage_asset:set_enum_value_metadata); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:set_instanced_struct_property",
+      "tool": "manage_asset",
+      "action": "set_instanced_struct_property",
+      "canonicalId": "cap:manage_asset:set_instanced_struct_property",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"set_instanced_struct_property\" under \"manage_asset\" (cap:manage_asset:set_instanced_struct_property); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_asset:set_lod_bias",
@@ -31618,6 +33189,90 @@
       "justification": "Distinct target/semantics: single declaration of \"set_streaming_priority\" under \"manage_asset\" (cap:manage_asset:set_streaming_priority); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:set_struct_as_row_struct",
+      "tool": "manage_asset",
+      "action": "set_struct_as_row_struct",
+      "canonicalId": "cap:manage_asset:set_struct_as_row_struct",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"set_struct_as_row_struct\" under \"manage_asset\" (cap:manage_asset:set_struct_as_row_struct); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:set_struct_member_default",
+      "tool": "manage_asset",
+      "action": "set_struct_member_default",
+      "canonicalId": "cap:manage_asset:set_struct_member_default",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"set_struct_member_default\" under \"manage_asset\" (cap:manage_asset:set_struct_member_default); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:set_struct_member_metadata",
+      "tool": "manage_asset",
+      "action": "set_struct_member_metadata",
+      "canonicalId": "cap:manage_asset:set_struct_member_metadata",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"set_struct_member_metadata\" under \"manage_asset\" (cap:manage_asset:set_struct_member_metadata); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:set_struct_member_type",
+      "tool": "manage_asset",
+      "action": "set_struct_member_type",
+      "canonicalId": "cap:manage_asset:set_struct_member_type",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"set_struct_member_type\" under \"manage_asset\" (cap:manage_asset:set_struct_member_type); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:set_tags",
       "tool": "manage_asset",
       "action": "set_tags",
@@ -31786,6 +33441,27 @@
       "justification": "Distinct target/semantics: single declaration of \"source_control_submit\" under \"manage_asset\" (cap:manage_asset:source_control_submit); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_asset:split_enum",
+      "tool": "manage_asset",
+      "action": "split_enum",
+      "canonicalId": "cap:manage_asset:split_enum",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"split_enum\" under \"manage_asset\" (cap:manage_asset:split_enum); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_asset:update_custom_expression",
       "tool": "manage_asset",
       "action": "update_custom_expression",
@@ -31805,6 +33481,27 @@
         "namespace": "manage_asset"
       },
       "justification": "Distinct target/semantics: single declaration of \"update_custom_expression\" under \"manage_asset\" (cap:manage_asset:update_custom_expression); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:update_data_table_row",
+      "tool": "manage_asset",
+      "action": "update_data_table_row",
+      "canonicalId": "cap:manage_asset:update_data_table_row",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/manage-asset-tool.ts",
+        "symbol": "manageAssetToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"update_data_table_row\" under \"manage_asset\" (cap:manage_asset:update_data_table_row); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_asset:use_material_function",
@@ -34220,6 +35917,27 @@
         "namespace": "manage_blueprint"
       },
       "justification": "Preset/workflow scaffold \"create_settings_menu\" exposed as a single convenience action under \"manage_blueprint\"."
+    },
+    {
+      "occurrenceKey": "manage_blueprint:create_struct_make_break_nodes",
+      "tool": "manage_blueprint",
+      "action": "create_struct_make_break_nodes",
+      "canonicalId": "cap:manage_blueprint:create_struct_make_break_nodes",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/core/blueprint/manage-blueprint-tool.ts",
+        "symbol": "manageBlueprintToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_blueprint"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_blueprint",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_blueprint"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"create_struct_make_break_nodes\" under \"manage_blueprint\" (cap:manage_blueprint:create_struct_make_break_nodes); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_blueprint:create_widget_animation",
@@ -37580,6 +39298,27 @@
         "namespace": "manage_effect"
       },
       "justification": "Distinct target/semantics: single declaration of \"set_emitter_properties\" under \"manage_effect\" (cap:manage_effect:set_emitter_properties); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_effect:set_niagara_dynamic_input",
+      "tool": "manage_effect",
+      "action": "set_niagara_dynamic_input",
+      "canonicalId": "cap:manage_effect:set_niagara_dynamic_input",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/definitions/utility/manage-effect-tool.ts",
+        "symbol": "manageEffectToolDefinition.inputSchema.properties.action.enum",
+        "tool": "manage_effect"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_effect",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_effect"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"set_niagara_dynamic_input\" under \"manage_effect\" (cap:manage_effect:set_niagara_dynamic_input); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_effect:set_niagara_parameter",
