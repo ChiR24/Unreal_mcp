@@ -4,26 +4,14 @@
 // generated from canonical TypeScript tool definitions (scripts/generate-gateway-manifest.ts).
 // Both the TS gateway and the native MCP Gateway consume this same artifact (no drift).
 
-import { gatewayManifest } from './gateway-manifest.generated.js';
 import type { ToolDefinition } from '../tools/definitions/shared/tool-definition.js';
+import { gatewayManifest } from './gateway-manifest.generated.js';
+import type { GatewayManifest, GatewayManifestTool } from './gateway-manifest-types.js';
+import { GatewayManifestSchema } from './gateway-manifest-types.js';
 
-export type GatewayManifestTool = {
-  name: string;
-  category: string | null;
-  description: string;
-  actions: string[];
-  parameterNames: string[];
-  inputSchema: Record<string, unknown>;
-  perActionSchemas: boolean;
-};
+export type { GatewayManifest, GatewayManifestTool } from './gateway-manifest-types.js';
 
-export type GatewayManifest = {
-  version: number;
-  source: string;
-  tools: GatewayManifestTool[];
-};
-
-const manifest = gatewayManifest as unknown as GatewayManifest;
+const manifest = GatewayManifestSchema.parse(gatewayManifest);
 
 export function getGatewayManifest(): GatewayManifest {
   return manifest;
@@ -33,11 +21,10 @@ export function getGatewayManifestTools(): readonly GatewayManifestTool[] {
   return manifest.tools;
 }
 
-/** Manifest-derived tool definitions consumed by the TS gateway search/describe/execute. */
 export function getManifestToolDefinitions(): ToolDefinition[] {
   return manifest.tools.map((tool) => ({
     name: tool.name,
-    category: (tool.category ?? undefined) as ToolDefinition['category'],
+    category: tool.category ?? undefined,
     description: tool.description,
     inputSchema: tool.inputSchema,
   }));
