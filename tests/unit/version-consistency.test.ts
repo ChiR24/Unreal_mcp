@@ -70,11 +70,6 @@ const SOURCES: VersionSource[] = [
     extract: upluginVersionName,
   },
   {
-    id: 'UnrealAgent.uplugin',
-    file: 'plugins/UnrealAgent/UnrealAgent.uplugin',
-    extract: upluginVersionName,
-  },
-  {
     id: 'server-info.json',
     file: 'plugins/McpAutomationBridge/Resources/MCP/server-info.json',
     extract: (text) => [(JSON.parse(text) as { version: string }).version],
@@ -119,7 +114,6 @@ const EXPECTED_IDS = [
   'package-lock.json',
   'server.json',
   'McpAutomationBridge.uplugin',
-  'UnrealAgent.uplugin',
   'server-info.json',
   'server-factory.ts',
   'McpNativeTransport.h',
@@ -130,7 +124,7 @@ describe('version source consistency', () => {
     expect(CANONICAL).toMatch(/^[0-9]+\.[0-9]+\.[0-9]+$/);
   });
 
-  it('enumerates exactly the eight coordinated version sources', () => {
+  it('enumerates exactly the seven coordinated version sources', () => {
     expect(SOURCES.map((source) => source.id)).toEqual(EXPECTED_IDS);
   });
 
@@ -152,7 +146,7 @@ describe('version source consistency', () => {
     });
   }
 
-  it('agrees across all eight version sources', () => {
+  it('agrees across all seven version sources', () => {
     const all = SOURCES.flatMap((source) => readVersions(source, source.file));
     expect(all.length, 'no version sources extracted').toBeGreaterThan(0);
     expect(
@@ -199,7 +193,7 @@ describe('version source consistency', () => {
     expect(existsSync(fixtureDir)).toBe(false);
   });
 
-  it('bump-version.yml rewrites the identical eight-source set', () => {
+  it('bump-version.yml rewrites the identical seven-source set', () => {
     const workflow = readText('.github/workflows/bump-version.yml');
     for (const source of SOURCES) {
       expect(

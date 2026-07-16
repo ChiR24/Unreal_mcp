@@ -181,11 +181,12 @@ source is compared against `package.json` by `npm run version:check`
 - `package.json` (`version`) and `package-lock.json` (`version`, rewritten by `npm version`)
 - `server.json` (`version` and the npm package `version`)
 - `plugins/McpAutomationBridge/McpAutomationBridge.uplugin` (`VersionName`)
-- `plugins/UnrealAgent/UnrealAgent.uplugin` (`VersionName`)
 - `plugins/McpAutomationBridge/Resources/MCP/server-info.json` (`version`)
 - `src/server/server-factory.ts` (`SERVER_VERSION` fallback when
   `package.json` cannot be read)
 - `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h`
   (`ServerVersion` `TEXT` fallback)
 
-`npm run version:check` asserts agreement across all eight sources.
+`npm run version:check` asserts agreement across all seven sources.
+
+> **Removed:** the experimental `UnrealAgent` in-editor OpenCode ACP panel has been removed. External consumers that previously drove OpenCode over ACP through the editor panel must now target the native `/mcp` `unreal` gateway endpoint (or the TypeScript stdio `unreal` gateway tool) instead.

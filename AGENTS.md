@@ -1,6 +1,6 @@
 # PROJECT KNOWLEDGE BASE
 
-MCP tooling for Unreal Engine 5.0-5.8 Preview. Server package version `0.5.30`; bridge plugin version `0.5.30` (separate `.uplugin`). Three user-facing surfaces: a TypeScript stdio MCP server, the bridge plugin's WebSocket transport and optional native `/mcp` HTTP/SSE transport, and an experimental UnrealAgent editor panel that drives OpenCode over ACP.
+MCP tooling for Unreal Engine 5.0-5.8 Preview. Server package version `0.5.30`; bridge plugin version `0.5.30` (separate `.uplugin`). Two user-facing surfaces: a TypeScript stdio MCP server, and the bridge plugin's WebSocket transport and optional native `/mcp` HTTP/SSE transport.
 
 Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** below). This root file is the workspace-wide view; do not duplicate their detail here.
 
@@ -22,8 +22,6 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |-- plugins/McpAutomationBridge/ # editor-only UE plugin (bridge + native MCP)
 |   `-- Source/McpAutomationBridge/{Public,Private/}
 |       Private/: Core/ Domains/ Foundation/ MCP/ Safety/ Transport/ Tests/ UI/
-|-- plugins/UnrealAgent/         # optional in-editor OpenCode ACP panel
-|   `-- Source/UnrealAgent/Private/{Acp/Client,UI/Core,...}
 |-- tests/                       # Vitest unit tests + custom MCP integration runner
 |-- scripts/                     # packaging, sync, smoke, cleanup
 |-- docs/                        # handler maps, testing, plugin extension
@@ -45,7 +43,6 @@ NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-
 | Change shared Unreal helpers | `plugins/McpAutomationBridge/.../Private/Foundation/` | Reflection, Blueprint, paths, responses, handler primitives |
 | Fix UE save/load/delete crashes | `plugins/McpAutomationBridge/.../Private/Safety/` | Use the project wrappers and preserve verification/cleanup |
 | Change bridge sockets | `plugins/McpAutomationBridge/.../Private/Transport/` | WebSocket framing/TLS plus connection auth, rate limits, telemetry |
-| Change UnrealAgent ACP/UI | `plugins/UnrealAgent/Source/UnrealAgent/Private/Acp/Client/`, `.../Private/UI/Core/` | Keep process/protocol work out of Slate layout code |
 | Path/command security | `src/utils/paths/path-security.ts`, `src/utils/commands/command-validator.ts` | Enforce UE roots and console-command block lists |
 | Vitest unit tests | `tests/unit/`, `src/**/*.test.ts` | No Unreal required |
 | Integration tests | `tests/integration.mjs`, `tests/test-runner.mjs`, `tests/mcp-tools/` | Unreal-dependent unless a live editor is present |
@@ -63,14 +60,12 @@ NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-
 | `routeStdoutLogsToStderr()` | TS fn | `src/server/server-factory.ts` | Redirects logs off JSON-RPC stdout |
 | `UMcpAutomationBridgeSubsystem` | C++ class | `.../Public/McpAutomationBridgeSubsystem.h` (+ `Private/Core/Subsystem/.cpp`) | Plugin request queue, native MCP startup, handler map |
 | `FMcpNativeTransport` | C++ class | `.../Private/MCP/Transport/McpNativeTransport.h` | Native `/mcp` HTTP/SSE JSON-RPC endpoint |
-| `SUnrealAgentPanel` / `FOpenCodeAcpClient` | C++ class | `.../Private/UI/Core/SUnrealAgentPanel.h`, `.../Private/Acp/Client/McpOpenCodeAcpClient.h` | In-editor ACP chat surface and process/session client (file is `McpOpenCodeAcpClient.*`) |
 
 ## CONVENTIONS
 ### Transport Surfaces
 1. **TypeScript stdio MCP**: `src/index.ts` exposes the public API; `src/server/` owns construction/lifecycle; `src/automation/` connects to Unreal. Defaults to **gateway mode** (single `unreal` tool); set `MCP_GATEWAY_MODE=false` to restore the legacy 23-tool direct listing (validated boolean in `src/config.ts` EnvSchema, default `true`).
 2. **WebSocket bridge**: plugin listen sockets default to loopback `8090,8091`; TS sends automation requests through the negotiated bridge. `MCP_AUTOMATION_CLIENT_MODE=true` flips TS to server mode.
 3. **Native MCP**: optional plugin HTTP/SSE under `Private/MCP/`; `GET /mcp` opens SSE, `POST /mcp` handles JSON-RPC, `DELETE /mcp` tears down sessions. Default port `3000` (override with `MCP_NATIVE_PORT`). Defaults to gateway mode via `bEnableNativeGateway` (default `true`); disable in Project Settings to restore the 23-tool native listing.
-4. **UnrealAgent ACP**: optional editor panel starts `opencode acp`; injects the configured native `unreal-engine` MCP endpoint but exposes no MCP tools itself.
 
 ### Security Boundaries
 - Loopback-only by default. Non-loopback requires `MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true` (TS) or `bAllowNonLoopback` (plugin). The two flags are independent surfaces (the TS bridge is a WebSocket *client* to the plugin socket, not a second server).
@@ -138,7 +133,7 @@ npm run test:unit:coverage
 ```
 
 ## NOTES
-- **Version sources**: `package.json` (`version`) is the canonical source. `npm version` rewrites it together with `package-lock.json`, so both stay in lockstep. `server.json` versions the npm package distribution (top-level `version` plus the npm package `version`). Bridge/UnrealAgent versions live in their `.uplugin` `VersionName`. The native HTTP/SSE transport advertises `server-info.json` (`version`) and the `McpNativeTransport.h` `ServerVersion` `TEXT` fallback; the TS server advertises the `SERVER_VERSION` fallback in `src/server/server-factory.ts` when `package.json` cannot be read. Coordinated release bumps must resync all of: `package.json` (+`package-lock.json`), `server.json`, both `.uplugin` files, `server-info.json`, `src/server/server-factory.ts`, and `McpNativeTransport.h`. The `bump-version.yml` workflow already rewrites every one of these (via `npm version`, `jq`, and `perl`), so a coordinated bump is a single workflow run. Verify with `npm run version:check` (`tests/unit/version-consistency.test.ts`), which asserts agreement across all eight sources. For a manual audit, grep the canonical version across `package.json server.json plugins/*/*.uplugin plugins/*/Resources/MCP/server-info.json` rather than a hardcoded literal.
+- **Version sources**: `package.json` (`version`) is the canonical source. `npm version` rewrites it together with `package-lock.json`, so both stay in lockstep. `server.json` versions the npm package distribution (top-level `version` plus the npm package `version`). The bridge version lives in its `.uplugin` `VersionName`. The native HTTP/SSE transport advertises `server-info.json` (`version`) and the `McpNativeTransport.h` `ServerVersion` `TEXT` fallback; the TS server advertises the `SERVER_VERSION` fallback in `src/server/server-factory.ts` when `package.json` cannot be read. Coordinated release bumps must resync all of: `package.json` (+`package-lock.json`), `server.json`, the McpAutomationBridge `.uplugin`, `server-info.json`, `src/server/server-factory.ts`, and `McpNativeTransport.h`. The `bump-version.yml` workflow already rewrites every one of these (via `npm version`, `jq`, and `perl`), so a coordinated bump is a single workflow run. Verify with `npm run version:check` (`tests/unit/version-consistency.test.ts`), which asserts agreement across all seven sources. For a manual audit, grep the canonical version across `package.json server.json plugins/*/*.uplugin plugins/*/Resources/MCP/server-info.json` rather than a hardcoded literal.
 - **Engine reference path**: `/data/UnrealEngine/Engine/`.
 - **External GitHub Actions** are pinned to full commit SHAs.
 - **`GEMINI.md` is stale and not authoritative** — it references `src/unreal-bridge.ts` (now split into `src/unreal-bridge*.ts`), uppercase `Plugins/`, non-existent Rust modules, and `npm run test:control_actor`. Prefer this file and the nested AGENTS.
