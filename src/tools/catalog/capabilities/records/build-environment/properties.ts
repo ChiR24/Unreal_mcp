@@ -162,4 +162,4 @@ export const P = {
   message: str('Human-readable result message.'),
 };
 
-export type PropertyMap = Readonly<Record<string, JsonObject>>;
+export type PropertyMap = JsonObject;

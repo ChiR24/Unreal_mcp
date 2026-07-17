@@ -16,9 +16,14 @@ import type {
   CapabilityPolicy,
   CapabilityRecordSource,
   CapabilityRouting,
-  CapabilitySchemas,
   Draft202012ObjectSchema,
   JsonObject,
+} from '../../index.js';
+import {
+  CapabilityAliasSchema,
+  CapabilityIdSchema,
+  LegacyActionNameSchema,
+  LegacyToolNameSchema,
 } from '../../index.js';
 import type { PropertyMap } from './properties.js';
 
@@ -30,7 +35,7 @@ export function schema(properties: PropertyMap, required: readonly string[]): Dr
   return {
     $schema: SCHEMA_URI,
     type: 'object',
-    properties: properties as unknown as JsonObject,
+    properties,
     required: [...required],
     additionalProperties: false,
   };
@@ -82,8 +87,8 @@ function policy(effect: EffectType): CapabilityPolicy {
 
 function routing(dispatchAction: string, dispatchMode: 'tool' | 'action' | 'local' = 'tool'): CapabilityRouting {
   return {
-    parentTool: 'build_environment' as unknown as CapabilityRouting['parentTool'],
-    dispatchAction: dispatchAction as unknown as CapabilityRouting['dispatchAction'],
+    parentTool: LegacyToolNameSchema.parse('build_environment'),
+    dispatchAction: LegacyActionNameSchema.parse(dispatchAction),
     dispatchMode,
   };
 }
@@ -120,9 +125,9 @@ export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
     ? outputSchema(spec.outputProps, spec.outputRequired ?? [])
     : EMPTY_OUTPUT;
   return {
-    id: spec.id as unknown as CapabilityRecordSource['id'],
-    aliases: (spec.aliases ?? []) as unknown as CapabilityRecordSource['aliases'],
-    legacyIds: [{ tool: 'build_environment', action: spec.action }] as unknown as CapabilityRecordSource['legacyIds'],
+    id: CapabilityIdSchema.parse(spec.id),
+    aliases: (spec.aliases ?? []).map((alias) => CapabilityAliasSchema.parse(alias)),
+    legacyIds: [{ tool: LegacyToolNameSchema.parse('build_environment'), action: LegacyActionNameSchema.parse(spec.action) }],
     discovery: {
       domain: 'environment',
       family: spec.family,
@@ -131,7 +136,7 @@ export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
       whenToUse: [...spec.whenToUse],
       whenNotToUse: [...spec.whenNotToUse],
     },
-    schemas: { input, output } as unknown as CapabilitySchemas,
+    schemas: { input, output },
     examples: [{ title: spec.summary, input: spec.exampleInput, output: spec.exampleOutput }],
     availability: availability(spec.plugins, spec.editorStates),
     behavior: behavior(spec.effect, spec.behavior),
