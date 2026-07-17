@@ -1,0 +1,128 @@
+/**
+ * Cinematic records part 1: create_master_sequence, add_subsequence,
+ * add_shot_track, configure_shot_settings, create_cine_camera_actor,
+ * configure_camera_settings, add_camera_cut_track, add_camera_shake_track,
+ * configure_camera_rig_rail.
+ *
+ * Grounded in CINEMATICS_ACTIONS and native SequenceCinematics* bodies.
+ * Gated by LevelSequenceEditor plugin.
+ */
+import type { CapabilityRecordSource } from '../../index.js';
+import { buildRecord, P, SEQ_PLUGINS } from './helpers.js';
+
+const F = 'cinematic';
+const D = 'cinematics';
+const NR = 'Distinct cinematic track or camera operation with unique target.';
+
+export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
+  buildRecord({
+    id: 'sequence.cinematic.create_master_sequence', action: 'create_master_sequence', family: F, domain: D,
+    summary: 'Create a master cinematic sequence with sub-sequence and shot track structure.',
+    whenToUse: ['A new cinematic with shots must be scaffolded.'],
+    whenNotToUse: ['A flat sequence without shots is sufficient.'],
+    inputProps: { action: P.action, masterSequencePath: P.masterSequencePath, mapPath: P.mapPath },
+    required: ['action', 'masterSequencePath'],
+    outputProps: { sequencePath: P.sequencePath },
+    outputRequired: ['sequencePath'],
+    effect: 'write', latency: 'interactive', resources: 'medium', plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'create_master_sequence', masterSequencePath: '/Game/Cinematics/SEQ_Master', mapPath: '/Game/Maps/M_Cinematics' },
+    exampleOutput: { success: true, sequencePath: '/Game/Cinematics/SEQ_Master' },
+    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
+  }),
+  buildRecord({
+    id: 'sequence.cinematic.add_subsequence', action: 'add_subsequence', family: F, domain: D,
+    summary: 'Add a sub-sequence to a master sequence shot track.',
+    whenToUse: ['A sub-sequence must be nested inside the master sequence.'],
+    whenNotToUse: ['The sequence should remain flat.'],
+    inputProps: { action: P.action, masterSequencePath: P.masterSequencePath, subsequencePath: P.subsequencePath },
+    required: ['action', 'masterSequencePath', 'subsequencePath'],
+    effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'add_subsequence', masterSequencePath: '/Game/Cinematics/SEQ_Master', subsequencePath: '/Game/Cinematics/SEQ_Shot01' },
+    exampleOutput: { success: true, message: 'Subsequence added' },
+    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
+  }),
+  buildRecord({
+    id: 'sequence.cinematic.add_shot_track', action: 'add_shot_track', family: F, domain: D,
+    summary: 'Add a cinematic shot track to a master sequence.',
+    whenToUse: ['A shot track must be added to organize camera cuts.'],
+    whenNotToUse: ['The master sequence already has a shot track.'],
+    inputProps: { action: P.action, masterSequencePath: P.masterSequencePath },
+    required: ['action', 'masterSequencePath'],
+    effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'add_shot_track', masterSequencePath: '/Game/Cinematics/SEQ_Master' },
+    exampleOutput: { success: true, message: 'Shot track added' },
+    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
+  }),
+  buildRecord({
+    id: 'sequence.cinematic.configure_shot_settings', action: 'configure_shot_settings', family: F, domain: D,
+    summary: 'Configure shot settings (display name, range) for a cinematic shot.',
+    whenToUse: ['Shot display name or frame range must be set.'],
+    whenNotToUse: ['The shot does not exist on the shot track.'],
+    inputProps: { action: P.action, shotSequencePath: P.shotSequencePath, shotName: P.name, start: P.start, end: P.end },
+    required: ['action', 'shotSequencePath'],
+    effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'configure_shot_settings', shotSequencePath: '/Game/Cinematics/SEQ_Shot01', shotName: 'Shot 01', start: 0, end: 120 },
+    exampleOutput: { success: true, message: 'Shot settings configured' },
+    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
+  }),
+  buildRecord({
+    id: 'sequence.cinematic.create_cine_camera_actor', action: 'create_cine_camera_actor', family: F, domain: D,
+    summary: 'Create a CineCameraActor in the level and bind it to the sequence.',
+    whenToUse: ['A cinematic camera actor must be created for a shot.'],
+    whenNotToUse: ['An existing camera should be used.'],
+    inputProps: { action: P.action, path: P.path, cameraName: P.actorName, location: { type: 'object', description: 'Camera location.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] }, rotation: { type: 'object', description: 'Camera rotation.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] } },
+    required: ['action', 'path'],
+    effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'create_cine_camera_actor', path: '/Game/Cinematics/SEQ_Master', cameraName: 'CineCam_01' },
+    exampleOutput: { success: true, message: 'Cine camera created' },
+    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
+  }),
+  buildRecord({
+    id: 'sequence.cinematic.configure_camera_settings', action: 'configure_camera_settings', family: F, domain: D,
+    summary: 'Configure CineCamera lens, filmback, and focus settings on a sequence binding.',
+    whenToUse: ['Camera lens, focal length, aperture, or focus must be set.'],
+    whenNotToUse: ['Default camera settings are acceptable.'],
+    inputProps: { action: P.action, path: P.path, cameraActorName: P.actorName, focalLength: { type: 'number', description: 'Focal length in mm.' }, aperture: { type: 'number', description: 'Aperture f-stop.' }, focusDistance: { type: 'number', description: 'Focus distance.' }, sensorWidth: { type: 'number', description: 'Sensor width in mm.' }, sensorHeight: { type: 'number', description: 'Sensor height in mm.' } },
+    required: ['action', 'path'],
+    effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'configure_camera_settings', path: '/Game/Cinematics/SEQ_Master', cameraActorName: 'CineCam_01', focalLength: 35, aperture: 2.8 },
+    exampleOutput: { success: true, message: 'Camera settings configured' },
+    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
+  }),
+  buildRecord({
+    id: 'sequence.cinematic.add_camera_cut_track', action: 'add_camera_cut_track', family: F, domain: D,
+    summary: 'Add a camera cut track to a cinematic sequence.',
+    whenToUse: ['A camera cut track must be added for shot transitions.'],
+    whenNotToUse: ['The sequence already has a camera cut track.'],
+    inputProps: { action: P.action, path: P.path },
+    required: ['action', 'path'],
+    effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'add_camera_cut_track', path: '/Game/Cinematics/SEQ_Master' },
+    exampleOutput: { success: true, message: 'Camera cut track added' },
+    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
+  }),
+  buildRecord({
+    id: 'sequence.cinematic.add_camera_shake_track', action: 'add_camera_shake_track', family: F, domain: D,
+    summary: 'Add a camera shake track to a cinematic sequence.',
+    whenToUse: ['Camera shake must be animated along the sequence.'],
+    whenNotToUse: ['No camera shake is needed.'],
+    inputProps: { action: P.action, path: P.path, cameraShakeClass: P.property },
+    required: ['action', 'path'],
+    effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'add_camera_shake_track', path: '/Game/Cinematics/SEQ_Master', cameraShakeClass: '/Script/EngineCameras.DefaultCameraShakeBase' },
+    exampleOutput: { success: true, message: 'Camera shake track added' },
+    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
+  }),
+  buildRecord({
+    id: 'sequence.cinematic.configure_camera_rig_rail', action: 'configure_camera_rig_rail', family: F, domain: D,
+    summary: 'Configure a camera rig rail for dolly camera movement.',
+    whenToUse: ['A camera must move along a rail for dolly shots.'],
+    whenNotToUse: ['No rail-based camera movement is needed.'],
+    inputProps: { action: P.action, path: P.path, positionOnRail: { type: 'number', description: 'Position on the rail (0-1).' } },
+    required: ['action', 'path'],
+    effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'configure_camera_rig_rail', path: '/Game/Cinematics/SEQ_Master', positionOnRail: 0.5 },
+    exampleOutput: { success: true, message: 'Camera rig rail configured' },
+    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
+  }),
+];

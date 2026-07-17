@@ -1,0 +1,246 @@
+/**
+ * Local builders for manage_sequence capability records.
+ *
+ * These helpers are private to the manage-sequence pilot. They construct the
+ * boilerplate portions of a CapabilityRecordSource (schemas, availability,
+ * behavior, policy, cost, routing, normalization) so that each family file
+ * only declares the fields that actually vary per action.
+ *
+ * The helpers do NOT touch the shared capability model, schema, or generator.
+ */
+import type {
+  CapabilityAvailability,
+  CapabilityBehavior,
+  CapabilityPolicy,
+  CapabilityRecordSource,
+  CapabilityRouting,
+  Draft202012ObjectSchema,
+  JsonObject,
+} from '../../index.js';
+import {
+  CapabilityAliasSchema,
+  CapabilityIdSchema,
+  LegacyActionNameSchema,
+  LegacyToolNameSchema,
+} from '../../index.js';
+
+const SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema';
+
+const V5_0 = { major: 5 as const, minor: 0, patch: 0, channel: 'stable' as const };
+const V5_8_P1 = { major: 5 as const, minor: 8, patch: 0, channel: 'preview' as const, preview: 1 };
+
+export type PropertyMap = JsonObject;
+
+function schema(
+  properties: PropertyMap,
+  required: readonly string[],
+): Draft202012ObjectSchema {
+  return {
+    $schema: SCHEMA_URI,
+    type: 'object',
+    properties,
+    required: [...required],
+    additionalProperties: false,
+  };
+}
+
+const strProp = (desc: string): JsonObject => ({ type: 'string', description: desc });
+const intProp = (desc: string): JsonObject => ({ type: 'integer', description: desc });
+const numProp = (desc: string): JsonObject => ({ type: 'number', description: desc });
+const boolProp = (desc: string): JsonObject => ({ type: 'boolean', description: desc });
+
+export const P = {
+  action: strProp('The manage_sequence action to execute.'),
+  path: strProp('Canonical /Game sequence asset path.'),
+  name: strProp('Name for the new sequence or asset.'),
+  assetPath: strProp('Canonical /Game asset path.'),
+  newName: strProp('New name for the sequence asset.'),
+  destinationPath: strProp('Destination /Game folder for the copy.'),
+  actorName: strProp('Actor name in the current level.'),
+  actorNames: { type: 'array', items: strProp('Actor name.'), description: 'Actor names.' },
+  className: strProp('Unreal class path for the spawnable.'),
+  trackType: strProp('MovieScene track type string.'),
+  trackName: strProp('Name of the track to modify.'),
+  property: strProp('Property name to keyframe (Transform, Location, Rotation, Scale).'),
+  frame: intProp('Frame number for the keyframe.'),
+  value: { description: 'Generic value (any type).' },
+  speed: numProp('Playback speed multiplier (positive).'),
+  start: numProp('Range start frame or time.'),
+  end: numProp('Range end frame or time.'),
+  resolution: { description: 'Tick resolution as a frame rate string or number.' },
+  frameRate: {
+    type: ['number', 'string'],
+    description: 'Frame rate as fps or a rate string such as 24fps.',
+  },
+  success: boolProp('Whether the action succeeded.'),
+  message: strProp('Human-readable result message.'),
+  sequencePath: strProp('Canonical /Game sequence asset path.'),
+  masterSequencePath: strProp('Canonical /Game master sequence path.'),
+  subsequencePath: strProp('Canonical /Game subsequence path.'),
+  shotSequencePath: strProp('Canonical /Game shot sequence path.'),
+  mapPath: strProp('Canonical /Game map path.'),
+  jobId: strProp('Render job identifier.'),
+  renderJobName: strProp('Name for the render job.'),
+  outputDirectory: strProp('Output directory for rendered frames.'),
+  timeoutMs: numProp('Render timeout in milliseconds (max 3600000).'),
+  mediaPlayerPath: strProp('Canonical /Game media player path.'),
+  mediaSourcePath: strProp('Canonical /Game media source path.'),
+  playlistPath: strProp('Canonical /Game media playlist path.'),
+  playerPath: strProp('Canonical /Game media player path.'),
+  sourcePath: strProp('Source file or asset path.'),
+  filePath: strProp('File system path to a media file.'),
+  url: strProp('URL to a media stream.'),
+  replayName: strProp('Name for the demo replay.'),
+  demoName: strProp('Demo replay name.'),
+  takePresetPath: strProp('Canonical /Game take preset path.'),
+  recordingSequencePath: strProp('Canonical /Game recording sequence path.'),
+  takeSequencePath: strProp('Canonical /Game take sequence path.'),
+  metadata: {
+    type: 'object',
+    description: 'Arbitrary metadata key-value pairs.',
+    additionalProperties: true,
+    'x-unreal-reflection-boundary': true,
+  },
+};
+
+function outputSchema(props: PropertyMap, required: readonly string[]): Draft202012ObjectSchema {
+  const full: PropertyMap = { success: P.success, message: P.message, ...props };
+  return schema(full, ['success', ...required]);
+}
+
+const EMPTY_OUTPUT = outputSchema({}, []);
+
+const SEQ_PLUGINS = ['LevelSequenceEditor'];
+const MRQ_PLUGINS = ['LevelSequenceEditor', 'MovieRenderPipeline'];
+const TAKE_PLUGINS = ['LevelSequenceEditor', 'Takes'];
+const MEDIA_PLUGINS = ['LevelSequenceEditor', 'ElectraPlayer'];
+
+function availability(
+  requiredPlugins: readonly string[],
+  editorStates: readonly ('edit' | 'pie' | 'simulate')[] = ['edit'],
+): CapabilityAvailability {
+  return {
+    unreal: { min: V5_0, max: V5_8_P1 },
+    requiredPlugins: [...requiredPlugins],
+    editorStates: [...editorStates],
+  };
+}
+
+type EffectType = 'read' | 'write' | 'destructive';
+
+function behavior(
+  effect: EffectType,
+  opts: Partial<CapabilityBehavior> = {},
+): CapabilityBehavior {
+  const isWrite = effect !== 'read';
+  return {
+    effect,
+    idempotency: opts.idempotency ?? (effect === 'read' ? 'idempotent' : 'non-idempotent'),
+    longRunning: opts.longRunning ?? false,
+    safeToRetry: opts.safeToRetry ?? (effect === 'read'),
+    supportsPreview: opts.supportsPreview ?? false,
+    supportsUndo: opts.supportsUndo ?? isWrite,
+  };
+}
+
+function policy(effect: EffectType): CapabilityPolicy {
+  return {
+    requiredScope: effect,
+    consent: effect === 'destructive' ? 'explicit' : 'none',
+    dataAccess: effect === 'read' ? 'project-read' : 'project-write',
+  };
+}
+
+function cost(
+  latency: 'instant' | 'interactive' | 'long-running',
+  resources: 'low' | 'medium' | 'high',
+) {
+  return { latency, resources };
+}
+
+function routing(
+  dispatchAction: string,
+  dispatchMode: 'tool' | 'action' | 'local' = 'tool',
+): CapabilityRouting {
+  return {
+    parentTool: LegacyToolNameSchema.parse('manage_sequence'),
+    dispatchAction: LegacyActionNameSchema.parse(dispatchAction),
+    dispatchMode,
+  };
+}
+
+export interface RecordSpec {
+  readonly id: string;
+  readonly action: string;
+  readonly family: string;
+  readonly domain: string;
+  readonly summary: string;
+  readonly whenToUse: readonly string[];
+  readonly whenNotToUse: readonly string[];
+  readonly inputProps: PropertyMap;
+  readonly required: readonly string[];
+  readonly outputProps?: PropertyMap;
+  readonly outputRequired?: readonly string[];
+  readonly effect: EffectType;
+  readonly behavior?: Partial<CapabilityBehavior>;
+  readonly latency: 'instant' | 'interactive' | 'long-running';
+  readonly resources: 'low' | 'medium' | 'high';
+  readonly plugins: readonly string[];
+  readonly editorStates?: readonly ('edit' | 'pie' | 'simulate')[];
+  readonly dispatchMode?: 'tool' | 'action' | 'local';
+  readonly exampleInput: JsonObject;
+  readonly exampleOutput: JsonObject;
+  readonly normalizationClass: CapabilityRecordSource['normalization']['class'];
+  readonly normalizationRationale: string;
+  readonly aliases?: readonly string[];
+}
+
+export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
+  const input = schema(spec.inputProps, spec.required);
+  const output = spec.outputProps
+    ? outputSchema(spec.outputProps, spec.outputRequired ?? [])
+    : EMPTY_OUTPUT;
+  return {
+    id: CapabilityIdSchema.parse(spec.id),
+    aliases: (spec.aliases ?? []).map((alias) => CapabilityAliasSchema.parse(alias)),
+    legacyIds: [{ tool: LegacyToolNameSchema.parse('manage_sequence'), action: LegacyActionNameSchema.parse(spec.action) }],
+    discovery: {
+      domain: spec.domain,
+      family: spec.family,
+      topics: [spec.action],
+      summary: spec.summary,
+      whenToUse: [...spec.whenToUse],
+      whenNotToUse: [...spec.whenNotToUse],
+    },
+    schemas: { input, output },
+    examples: [{ title: spec.summary, input: spec.exampleInput, output: spec.exampleOutput }],
+    availability: availability(spec.plugins, spec.editorStates),
+    behavior: behavior(spec.effect, spec.behavior),
+    policy: policy(spec.effect),
+    cost: cost(spec.latency, spec.resources),
+    routing: routing(spec.action, spec.dispatchMode),
+    normalization: {
+      class: spec.normalizationClass,
+      disposition: 'canonical',
+      rationale: spec.normalizationRationale,
+    },
+    deprecation: { status: 'active' },
+  };
+}
+
+export {
+  availability,
+  behavior,
+  cost,
+  EMPTY_OUTPUT,
+  MEDIA_PLUGINS,
+  MRQ_PLUGINS,
+  outputSchema,
+  policy,
+  routing,
+  SEQ_PLUGINS,
+  schema,
+  TAKE_PLUGINS,
+  V5_0,
+  V5_8_P1,
+};
