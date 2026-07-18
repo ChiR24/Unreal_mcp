@@ -83,6 +83,11 @@ bool HandleNodeDetailAction(FActionContext& Context);
 #if WITH_EDITOR
 const TTuple<FString, FString>* FindCommonFunctionNode(const FString& NodeType);
 UClass* FindNodeClassByName(const FString& NodeType);
+// Resolve a class string (Blueprint asset path like /Game/..., generated-class
+// path, or native class name) to a UClass. Shared so every create_node branch
+// with a class pin accepts the same input formats — including /Game/ Blueprint
+// paths, which the name-oriented ResolveUClass() cannot load.
+UClass* ResolveTargetClassFromString(const FString& InClassString);
 FEdGraphPinType ResolveCustomEventPinType(const FString& TypeName);
 FProperty* CreateCustomEventParameter(
     UFunction* Function,
@@ -115,6 +120,11 @@ bool TryCreateSpecialNode(
     float X,
     float Y);
 bool TryCreateEnhancedInputNode(
+    FActionContext& Context,
+    UClass* NodeClass,
+    float X,
+    float Y);
+bool TryCreateConstructObjectNode(
     FActionContext& Context,
     UClass* NodeClass,
     float X,

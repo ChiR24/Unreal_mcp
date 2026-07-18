@@ -42,8 +42,10 @@ namespace McpBlueprintGraphHandlers
 // Shared helper: resolve a class string (Blueprint asset path, generated-class
 // path, or native class name) to a UClass. Used by every node branch that has
 // a class pin (DynamicCast TargetType, CreateWidget WidgetType, etc.) so all
-// callers accept the same input formats consistently.
-static UClass* ResolveTargetClassFromString(const FString& InClassString)
+// callers accept the same input formats consistently. Declared in the shared
+// private header so other translation units (e.g. the ConstructObject-family
+// path in SpecialNodes) resolve classes identically.
+UClass* ResolveTargetClassFromString(const FString& InClassString)
 {
     if (InClassString.IsEmpty())
     {
@@ -345,6 +347,22 @@ void CreateDynamicNode(
         return;
     }
 #endif
+
+    // UK2Node_ConstructObjectFromClass and its subclasses (SpawnActorFromClass,
+    // ConstructObjectFromClass, ...) hard-crash the editor on the generic path
+    // below: their PostPlacedNewNode() dereferences a checked pin accessor (e.g.
+    // UK2Node_SpawnActorFromClass::GetScaleMethodPin() -> FindPinChecked) before
+    // AllocateDefaultPins() has created any pins. They need pins allocated first.
+    //
+    // This must run *below* the specialized CreateWidget handler above:
+    // UK2Node_CreateWidget is itself a ConstructObjectFromClass subclass, so if
+    // this ran first it would swallow CreateWidget and silently drop its typed
+    // targetClass. Widget nodes are fully handled above; here we cover the
+    // remaining ConstructObject-family nodes (SpawnActorFromClass, etc.).
+    if (TryCreateConstructObjectNode(Context, NodeClass, X, Y))
+    {
+        return;
+    }
 
     UEdGraphNode* NewNode =
         NewObject<UEdGraphNode>(Context.TargetGraph, NodeClass);
