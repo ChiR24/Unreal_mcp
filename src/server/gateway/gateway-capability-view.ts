@@ -1,0 +1,140 @@
+// src/server/gateway/gateway-capability-view.ts
+// Response projections for one canonical capability record.
+//
+// `search` rows stay compact (no schema bodies) while `describe` returns the
+// action-exact input/output schemas straight off the record. Neither projection
+// ever reads the parent tool's union schema, so a described action can only
+// show the parameters it actually declares.
+
+import { isRecord } from '../../utils/validation/type-guards.js';
+import type { CapabilityRecord } from '../../tools/catalog/capabilities/model.js';
+import { capabilityAvailability, isRunnable, type CapabilityAvailability } from './gateway-availability.js';
+
+export type CapabilityNextCall = Record<string, unknown>;
+
+export function capabilityNextCall(
+  record: CapabilityRecord,
+  availability: CapabilityAvailability
+): CapabilityNextCall {
+  if (availability.status === 'disabled') {
+    return { operation: 'configure', tool: record.routing.parentTool };
+  }
+  if (availability.status === 'unavailable') {
+    return { operation: 'search', domain: record.discovery.domain };
+  }
+  return {
+    operation: 'execute',
+    tool: record.routing.parentTool,
+    action: record.routing.dispatchAction,
+    params: {}
+  };
+}
+
+/**
+ * Deliberately NOT `capabilityNextCall`: a search hit points at `describe`,
+ * never `execute`, because the caller has not seen the contract yet.
+ */
+export function searchNextCall(
+  record: CapabilityRecord,
+  availability: CapabilityAvailability
+): CapabilityNextCall {
+  if (availability.status === 'available') {
+    return { operation: 'describe', capability: record.id };
+  }
+  return capabilityNextCall(record, availability);
+}
+
+export function declaredParameterNames(record: CapabilityRecord): readonly string[] {
+  return Object.keys(record.schemas.input.properties).sort();
+}
+
+function requiredSet(record: CapabilityRecord): ReadonlySet<string> {
+  return new Set(record.schemas.input.required);
+}
+
+export function parameterSchema(
+  record: CapabilityRecord,
+  name: string
+): Record<string, unknown> | undefined {
+  const schema = record.schemas.input.properties[name];
+  return isRecord(schema) ? (schema as Record<string, unknown>) : undefined;
+}
+
+export function parameterSummaries(record: CapabilityRecord): Array<Record<string, unknown>> {
+  const required = requiredSet(record);
+  return declaredParameterNames(record).map((name) => {
+    const schema = parameterSchema(record, name) ?? {};
+    const summary: Record<string, unknown> = {
+      name,
+      type: typeof schema.type === 'string' ? schema.type : 'unknown',
+      required: required.has(name)
+    };
+    if (typeof schema.description === 'string') summary.description = schema.description;
+    if (Array.isArray(schema.enum)) summary.enum = schema.enum;
+    return summary;
+  });
+}
+
+export function isRequiredParameter(record: CapabilityRecord, name: string): boolean {
+  return requiredSet(record).has(name);
+}
+
+/** Compact `search` row: identity, routing, discovery, policy and hashes only. */
+export function capabilitySearchRow(
+  record: CapabilityRecord,
+  reasons: readonly unknown[]
+): Record<string, unknown> {
+  const availability = capabilityAvailability(record);
+  return {
+    capability: record.id,
+    parentTool: record.routing.parentTool,
+    action: record.routing.dispatchAction,
+    category: record.parent.category,
+    domain: record.discovery.domain,
+    family: record.discovery.family,
+    summary: record.discovery.summary,
+    effect: record.behavior.effect,
+    availability,
+    policy: record.policy,
+    outputs: Object.keys(record.schemas.output.properties),
+    hashes: record.hashes,
+    reasons,
+    runnable: isRunnable(availability),
+    nextCall: searchNextCall(record, availability)
+  };
+}
+
+/** Full `describe` contract for one capability, including its exact schemas. */
+export function capabilityContract(record: CapabilityRecord): Record<string, unknown> {
+  const availability = capabilityAvailability(record);
+  const parameters = parameterSummaries(record);
+  return {
+    scope: 'capability',
+    capability: record.id,
+    parentTool: record.routing.parentTool,
+    action: record.routing.dispatchAction,
+    dispatchMode: record.routing.dispatchMode,
+    category: record.parent.category,
+    domain: record.discovery.domain,
+    family: record.discovery.family,
+    topics: record.discovery.topics,
+    summary: record.discovery.summary,
+    whenToUse: record.discovery.whenToUse,
+    whenNotToUse: record.discovery.whenNotToUse,
+    aliases: record.aliases,
+    legacyIds: record.legacyIds,
+    perActionSchemas: true,
+    inputSchema: record.schemas.input,
+    outputSchema: record.schemas.output,
+    parameters,
+    parameterCount: parameters.length,
+    availability,
+    behavior: record.behavior,
+    policy: record.policy,
+    cost: record.cost,
+    deprecation: record.deprecation,
+    hashes: record.hashes,
+    runnable: isRunnable(availability),
+    nextCall: capabilityNextCall(record, availability)
+  };
+}

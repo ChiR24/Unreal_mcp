@@ -62,7 +62,6 @@ describe('gateway migration doc contract', () => {
       'package-lock.json',
       'server.json',
       'McpAutomationBridge.uplugin',
-      'UnrealAgent.uplugin',
       'server-info.json',
       'server-factory.ts',
       'McpNativeTransport.h',

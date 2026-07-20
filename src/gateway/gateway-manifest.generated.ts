@@ -6,50 +6,4051 @@ export const gatewayManifest = {
   "source": "consolidatedToolDefinitions",
   "tools": [
     {
-      "name": "manage_tools",
-      "category": "core",
-      "description": "Dynamic MCP tool management. List canonical tools, view category counts, and enable/disable tools or categories at runtime.",
+      "name": "animation_physics",
+      "category": "gameplay",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
       "actions": [
-        "list_tools",
-        "list_categories",
-        "enable_tools",
-        "disable_tools",
-        "enable_category",
-        "disable_category",
-        "get_status",
-        "reset"
+        "create_animation_blueprint",
+        "create_animation_bp",
+        "create_anim_blueprint",
+        "create_blend_space",
+        "create_blend_space_1d",
+        "create_blend_space_2d",
+        "create_blend_tree",
+        "create_procedural_anim",
+        "create_aim_offset",
+        "add_aim_offset_sample",
+        "create_state_machine",
+        "add_state_machine",
+        "add_state",
+        "add_transition",
+        "set_transition_rules",
+        "add_blend_node",
+        "add_cached_pose",
+        "add_slot_node",
+        "create_control_rig",
+        "create_ik_rig",
+        "create_ik_retargeter",
+        "setup_ik",
+        "create_pose_library",
+        "create_animation_asset",
+        "create_animation_sequence",
+        "set_sequence_length",
+        "add_bone_track",
+        "set_bone_key",
+        "set_curve_key",
+        "add_notify_state",
+        "add_sync_marker",
+        "set_root_motion_settings",
+        "set_additive_settings",
+        "create_montage",
+        "add_montage_section",
+        "add_montage_slot",
+        "set_section_timing",
+        "add_montage_notify",
+        "set_blend_in",
+        "set_blend_out",
+        "link_sections",
+        "add_notify",
+        "play_montage",
+        "play_anim_montage",
+        "setup_ragdoll",
+        "activate_ragdoll",
+        "configure_vehicle",
+        "setup_physics_simulation",
+        "add_blend_sample",
+        "force_rebuild_blend_space",
+        "set_axis_settings",
+        "set_interpolation_settings",
+        "setup_retargeting",
+        "add_layered_blend_per_bone",
+        "set_anim_graph_node_value",
+        "set_retarget_chain_mapping",
+        "get_animation_info",
+        "cleanup",
+        "create_skeleton",
+        "add_bone",
+        "remove_bone",
+        "rename_bone",
+        "set_bone_transform",
+        "set_bone_parent",
+        "create_virtual_bone",
+        "create_socket",
+        "configure_socket",
+        "auto_skin_weights",
+        "set_vertex_weights",
+        "normalize_weights",
+        "prune_weights",
+        "copy_weights",
+        "mirror_weights",
+        "create_physics_asset",
+        "add_physics_body",
+        "configure_physics_body",
+        "add_physics_constraint",
+        "configure_constraint_limits",
+        "bind_cloth_to_skeletal_mesh",
+        "assign_cloth_asset_to_mesh",
+        "create_morph_target",
+        "set_morph_target_deltas",
+        "import_morph_targets",
+        "get_skeleton_info",
+        "list_bones",
+        "list_sockets",
+        "list_physics_bodies"
       ],
       "parameterNames": [
-        "category",
-        "tools"
+        "activate",
+        "actorName",
+        "additiveAnimType",
+        "angularDamping",
+        "animationPath",
+        "artifacts",
+        "assetPath",
+        "assets",
+        "assignToMesh",
+        "attachBoneName",
+        "axis",
+        "axisName",
+        "basePoseFrame",
+        "basePoseType",
+        "blendTime",
+        "blendType",
+        "blueprintPath",
+        "bodyA",
+        "bodyB",
+        "bodyType",
+        "boneName",
+        "boneTracks",
+        "cacheName",
+        "center",
+        "collisionEnabled",
+        "compileReferencers",
+        "constraintName",
+        "curveName",
+        "deltas",
+        "dragCoefficient",
+        "enableRootMotion",
+        "endFrame",
+        "forceRootLock",
+        "frame",
+        "frameRate",
+        "fromSection",
+        "fromState",
+        "interpolationType",
+        "layerSetup",
+        "length",
+        "limits",
+        "linearDamping",
+        "location",
+        "lodIndex",
+        "machineName",
+        "markerName",
+        "mass",
+        "maxValue",
+        "meshPath",
+        "minValue",
+        "montagePath",
+        "morphTargetName",
+        "morphTargetPath",
+        "name",
+        "newBoneName",
+        "nodeName",
+        "notifyName",
+        "numFrames",
+        "outputPath",
+        "overwrite",
+        "parentBoneName",
+        "parentClass",
+        "path",
+        "physicsAssetName",
+        "physicsAssetPath",
+        "pitch",
+        "playRate",
+        "profileName",
+        "propertyName",
+        "radius",
+        "rebuildBlendParameters",
+        "relativeLocation",
+        "relativeRotation",
+        "relativeScale",
+        "removeChildren",
+        "rootBoneName",
+        "rootMotionRootLock",
+        "rotation",
+        "sampleValue",
+        "save",
+        "savePath",
+        "scale",
+        "sectionName",
+        "simulatePhysics",
+        "skeletalMeshPath",
+        "skeletonPath",
+        "slotName",
+        "socketName",
+        "sourceBoneName",
+        "sourceChain",
+        "sourceIKRigPath",
+        "sourceMeshPath",
+        "sourceSkeleton",
+        "startFrame",
+        "startTime",
+        "stateMachineName",
+        "stateName",
+        "suffix",
+        "targetBoneName",
+        "targetChain",
+        "targetIKRigPath",
+        "targetMeshPath",
+        "targetSkeleton",
+        "threshold",
+        "time",
+        "toSection",
+        "toState",
+        "trackIndex",
+        "value",
+        "vehicleType",
+        "weights",
+        "yaw"
       ],
       "inputSchema": {
         "type": "object",
         "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "list_tools",
-              "list_categories",
-              "enable_tools",
-              "disable_tools",
-              "enable_category",
-              "disable_category",
-              "get_status",
-              "reset"
-            ],
-            "description": "list_tools: show canonical tools with status. list_categories: show category counts. enable/disable_tools: toggle specific tools. enable/disable_category: toggle category. get_status: current state. reset: restore defaults."
+          "activate": {
+            "type": "boolean",
+            "description": "Whether to activate the target."
           },
-          "tools": {
+          "actorName": {
+            "type": "string",
+            "description": "Target actor name in the current level."
+          },
+          "additiveAnimType": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "angularDamping": {
+            "type": "number",
+            "description": "Angular damping value."
+          },
+          "animationPath": {
+            "type": "string",
+            "description": "Canonical /Game Animation asset path."
+          },
+          "artifacts": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Tool names to enable/disable"
+            "description": "Canonical /Game asset paths to delete during cleanup."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Canonical /Game animation asset paths to retarget."
+          },
+          "assignToMesh": {
+            "type": "boolean",
+            "description": "Whether the generated Physics Asset is assigned to the mesh."
+          },
+          "attachBoneName": {
+            "type": "string",
+            "description": "Bone the socket attaches to."
+          },
+          "axis": {
+            "type": "string",
+            "description": "Mirror or blend axis (X, Y, Z)."
+          },
+          "axisName": {
+            "type": "string",
+            "description": "Axis name."
+          },
+          "basePoseFrame": {
+            "type": "number",
+            "description": "Frame used as the additive base pose."
+          },
+          "basePoseType": {
+            "type": "string",
+            "description": "Additive base pose type (RefPose, AnimScaled, AnimFrame)."
+          },
+          "blendTime": {
+            "type": "number",
+            "description": "Blend duration in seconds."
+          },
+          "blendType": {
+            "type": "string",
+            "description": "Blend node type (TwoWayBlend, BlendListByBool, BlendListByInt)."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "bodyA": {
+            "type": "string",
+            "description": "First physics body."
+          },
+          "bodyB": {
+            "type": "string",
+            "description": "Second physics body."
+          },
+          "bodyType": {
+            "type": "string",
+            "description": "Physics body primitive type (Sphere, Box, Capsule)."
+          },
+          "boneName": {
+            "type": "string",
+            "description": "Target bone name."
+          },
+          "boneTracks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Procedural bone track descriptors with keyframes."
+          },
+          "cacheName": {
+            "type": "string",
+            "description": "Cached pose name."
+          },
+          "center": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Physics body centre offset relative to its bone as [x, y, z]."
+          },
+          "collisionEnabled": {
+            "type": "boolean",
+            "description": "Whether collision is enabled."
+          },
+          "compileReferencers": {
+            "type": "boolean",
+            "description": "Whether referring assets are compiled."
+          },
+          "constraintName": {
+            "type": "string",
+            "description": "Name of the created physics constraint."
+          },
+          "curveName": {
+            "type": "string",
+            "description": "Animation curve name."
+          },
+          "deltas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Per-vertex morph target position deltas."
+          },
+          "dragCoefficient": {
+            "type": "number",
+            "description": "Drag coefficient."
+          },
+          "enableRootMotion": {
+            "type": "boolean",
+            "description": "Boolean parameter."
+          },
+          "endFrame": {
+            "type": "number",
+            "description": "Last frame of the notify state range."
+          },
+          "forceRootLock": {
+            "type": "boolean",
+            "description": "Whether root motion is force-locked to the reference pose."
+          },
+          "frame": {
+            "type": "number",
+            "description": "Frame index."
+          },
+          "frameRate": {
+            "type": "number",
+            "description": "Frames per second."
+          },
+          "fromSection": {
+            "type": "string",
+            "description": "Source montage section."
+          },
+          "fromState": {
+            "type": "string",
+            "description": "Source state name."
+          },
+          "interpolationType": {
+            "type": "string",
+            "description": "Interpolation mode."
+          },
+          "layerSetup": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Layered blend-per-bone branch filter descriptors."
+          },
+          "length": {
+            "type": "number",
+            "description": "Sequence length."
+          },
+          "limits": {
+            "type": "object",
+            "description": "Key-value property map.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "linearDamping": {
+            "type": "number",
+            "description": "Linear damping value."
+          },
+          "location": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "World or relative location as [x, y, z]."
+          },
+          "lodIndex": {
+            "type": "number",
+            "description": "Skeletal mesh LOD index."
+          },
+          "machineName": {
+            "type": "string",
+            "description": "State machine name."
+          },
+          "markerName": {
+            "type": "string",
+            "description": "Animation sync marker name."
+          },
+          "mass": {
+            "type": "number",
+            "description": "Mass value."
+          },
+          "maxValue": {
+            "type": "number",
+            "description": "Maximum numeric value."
+          },
+          "meshPath": {
+            "type": "string",
+            "description": "Canonical /Game mesh asset path."
+          },
+          "minValue": {
+            "type": "number",
+            "description": "Minimum numeric value."
+          },
+          "montagePath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "morphTargetName": {
+            "type": "string",
+            "description": "Morph target name."
+          },
+          "morphTargetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset the morph targets are imported from."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the created asset or actor."
+          },
+          "newBoneName": {
+            "type": "string",
+            "description": "Replacement bone name."
+          },
+          "nodeName": {
+            "type": "string",
+            "description": "Graph node name."
+          },
+          "notifyName": {
+            "type": "string",
+            "description": "Animation notify name."
+          },
+          "numFrames": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "outputPath": {
+            "type": "string",
+            "description": "Canonical /Game path for the generated Physics Asset."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "description": "Overwrite an existing asset with the same name."
+          },
+          "parentBoneName": {
+            "type": "string",
+            "description": "Parent bone name."
+          },
+          "parentClass": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical /Game output path for the created asset."
+          },
+          "physicsAssetName": {
+            "type": "string",
+            "description": "Name of the generated Physics Asset."
+          },
+          "physicsAssetPath": {
+            "type": "string",
+            "description": "Canonical /Game PhysicsAsset path."
+          },
+          "pitch": {
+            "type": "number",
+            "description": "Aim offset pitch in degrees."
+          },
+          "playRate": {
+            "type": "number",
+            "description": "Playback rate."
+          },
+          "profileName": {
+            "type": "string",
+            "description": "Skin weight profile name."
+          },
+          "propertyName": {
+            "type": "string",
+            "description": "Property name."
+          },
+          "radius": {
+            "type": "number",
+            "description": "Radius in world units."
+          },
+          "rebuildBlendParameters": {
+            "type": "boolean",
+            "description": "Whether blend parameters are rebuilt."
+          },
+          "relativeLocation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Socket location relative to its attach bone as [x, y, z]."
+          },
+          "relativeRotation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Socket rotation relative to its attach bone as [pitch, yaw, roll]."
+          },
+          "relativeScale": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Socket scale relative to its attach bone as [x, y, z]."
+          },
+          "removeChildren": {
+            "type": "boolean",
+            "description": "Whether child bones are removed with the target bone."
+          },
+          "rootBoneName": {
+            "type": "string",
+            "description": "Root bone name for the created skeleton."
+          },
+          "rootMotionRootLock": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "rotation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Rotation as [pitch, yaw, roll] in degrees."
+          },
+          "sampleValue": {
+            "type": "number",
+            "description": "Blend sample coordinate."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the created/modified asset to disk."
+          },
+          "savePath": {
+            "type": "string",
+            "description": "Canonical /Game directory for generated assets."
+          },
+          "scale": {
+            "description": "Uniform scale factor, or non-uniform scale as [x, y, z]."
+          },
+          "sectionName": {
+            "type": "string",
+            "description": "Montage section name."
+          },
+          "simulatePhysics": {
+            "type": "boolean",
+            "description": "Whether physics simulation is enabled."
+          },
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game SkeletalMesh asset path."
+          },
+          "skeletonPath": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name."
+          },
+          "socketName": {
+            "type": "string",
+            "description": "Target socket name."
+          },
+          "sourceBoneName": {
+            "type": "string",
+            "description": "Source bone name."
+          },
+          "sourceChain": {
+            "type": "string",
+            "description": "Source retarget chain."
+          },
+          "sourceIKRigPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "sourceMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game mesh asset path."
+          },
+          "sourceSkeleton": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
+          },
+          "startFrame": {
+            "type": "number",
+            "description": "First frame of the notify state range."
+          },
+          "startTime": {
+            "type": "number",
+            "description": "Start time in seconds."
+          },
+          "stateMachineName": {
+            "type": "string",
+            "description": "Target state machine name inside the Animation Blueprint."
+          },
+          "stateName": {
+            "type": "string",
+            "description": "State name."
+          },
+          "suffix": {
+            "type": "string",
+            "description": "Suffix appended to each retargeted asset name."
+          },
+          "targetBoneName": {
+            "type": "string",
+            "description": "Target bone name."
+          },
+          "targetChain": {
+            "type": "string",
+            "description": "Target retarget chain."
+          },
+          "targetIKRigPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "targetMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game skeletal mesh receiving the copied weights."
+          },
+          "targetSkeleton": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
+          },
+          "threshold": {
+            "type": "number",
+            "description": "Numeric threshold."
+          },
+          "time": {
+            "type": "number",
+            "description": "Time in seconds."
+          },
+          "toSection": {
+            "type": "string",
+            "description": "Target montage section."
+          },
+          "toState": {
+            "type": "string",
+            "description": "Target state name."
+          },
+          "trackIndex": {
+            "type": "number",
+            "description": "Notify track index within the animation sequence."
+          },
+          "value": {
+            "description": "Property value (any type)."
+          },
+          "vehicleType": {
+            "type": "string",
+            "description": "Vehicle type."
+          },
+          "weights": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Per-vertex skin weight descriptors with bone influences."
+          },
+          "yaw": {
+            "type": "number",
+            "description": "Aim offset yaw in degrees."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "create_animation_blueprint",
+              "create_animation_bp",
+              "create_anim_blueprint",
+              "create_blend_space",
+              "create_blend_space_1d",
+              "create_blend_space_2d",
+              "create_blend_tree",
+              "create_procedural_anim",
+              "create_aim_offset",
+              "add_aim_offset_sample",
+              "create_state_machine",
+              "add_state_machine",
+              "add_state",
+              "add_transition",
+              "set_transition_rules",
+              "add_blend_node",
+              "add_cached_pose",
+              "add_slot_node",
+              "create_control_rig",
+              "create_ik_rig",
+              "create_ik_retargeter",
+              "setup_ik",
+              "create_pose_library",
+              "create_animation_asset",
+              "create_animation_sequence",
+              "set_sequence_length",
+              "add_bone_track",
+              "set_bone_key",
+              "set_curve_key",
+              "add_notify_state",
+              "add_sync_marker",
+              "set_root_motion_settings",
+              "set_additive_settings",
+              "create_montage",
+              "add_montage_section",
+              "add_montage_slot",
+              "set_section_timing",
+              "add_montage_notify",
+              "set_blend_in",
+              "set_blend_out",
+              "link_sections",
+              "add_notify",
+              "play_montage",
+              "play_anim_montage",
+              "setup_ragdoll",
+              "activate_ragdoll",
+              "configure_vehicle",
+              "setup_physics_simulation",
+              "add_blend_sample",
+              "force_rebuild_blend_space",
+              "set_axis_settings",
+              "set_interpolation_settings",
+              "setup_retargeting",
+              "add_layered_blend_per_bone",
+              "set_anim_graph_node_value",
+              "set_retarget_chain_mapping",
+              "get_animation_info",
+              "cleanup",
+              "create_skeleton",
+              "add_bone",
+              "remove_bone",
+              "rename_bone",
+              "set_bone_transform",
+              "set_bone_parent",
+              "create_virtual_bone",
+              "create_socket",
+              "configure_socket",
+              "auto_skin_weights",
+              "set_vertex_weights",
+              "normalize_weights",
+              "prune_weights",
+              "copy_weights",
+              "mirror_weights",
+              "create_physics_asset",
+              "add_physics_body",
+              "configure_physics_body",
+              "add_physics_constraint",
+              "configure_constraint_limits",
+              "bind_cloth_to_skeletal_mesh",
+              "assign_cloth_asset_to_mesh",
+              "create_morph_target",
+              "set_morph_target_deltas",
+              "import_morph_targets",
+              "get_skeleton_info",
+              "list_bones",
+              "list_sockets",
+              "list_physics_bodies"
+            ],
+            "description": "Action to invoke on animation_physics."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "build_environment",
+      "category": "world",
+      "description": "Build environments: landscapes, foliage, procedural terrain/biomes, lighting setups, spline roads/rivers/fences, and world decoration.",
+      "actions": [
+        "create_landscape",
+        "sculpt",
+        "sculpt_landscape",
+        "modify_heightmap",
+        "set_landscape_material",
+        "paint_landscape",
+        "paint_landscape_layer",
+        "import_heightmap",
+        "export_heightmap",
+        "create_landscape_layer_info",
+        "configure_landscape_material",
+        "configure_landscape_splines",
+        "configure_landscape_lod",
+        "create_landscape_streaming_proxy",
+        "create_landscape_grass_type",
+        "generate_lods",
+        "add_foliage",
+        "add_foliage_instances",
+        "get_foliage_instances",
+        "remove_foliage",
+        "remove_foliage_instances",
+        "paint_foliage",
+        "paint_foliage_instances",
+        "create_foliage_type",
+        "configure_foliage_mesh",
+        "configure_foliage_placement",
+        "configure_foliage_lod",
+        "configure_foliage_collision",
+        "configure_foliage_culling",
+        "create_procedural_foliage",
+        "create_procedural_terrain",
+        "bake_lightmap",
+        "export_snapshot",
+        "import_snapshot",
+        "delete",
+        "spawn_light",
+        "create_light",
+        "spawn_sky_light",
+        "create_sky_light",
+        "ensure_single_sky_light",
+        "create_lightmass_volume",
+        "create_lighting_enabled_level",
+        "create_dynamic_light",
+        "setup_global_illumination",
+        "configure_shadows",
+        "set_exposure",
+        "set_ambient_occlusion",
+        "setup_volumetric_fog",
+        "build_lighting",
+        "list_light_types",
+        "configure_ray_traced_shadows",
+        "configure_ray_traced_gi",
+        "configure_ray_traced_reflections",
+        "configure_ray_traced_ao",
+        "configure_path_tracing",
+        "set_light_channel",
+        "set_actor_light_channel",
+        "configure_lightmass_settings",
+        "build_lighting_quality",
+        "configure_indirect_lighting_cache",
+        "create_sphere_reflection_capture",
+        "create_box_reflection_capture",
+        "configure_reflection_capture_resolution",
+        "configure_capture_resolution",
+        "configure_capture_offset",
+        "recapture_scene",
+        "create_planar_reflection",
+        "configure_planar_reflection",
+        "configure_ssr_settings",
+        "configure_lumen_reflection_settings",
+        "configure_pp_blend",
+        "set_pp_white_balance",
+        "set_pp_color_grading",
+        "set_pp_lut",
+        "configure_tonemapper",
+        "set_tonemapper_type",
+        "configure_bloom",
+        "set_bloom_intensity",
+        "set_bloom_threshold",
+        "configure_lens_flare",
+        "configure_dof",
+        "set_dof_method",
+        "set_focal_distance",
+        "set_aperture",
+        "configure_bokeh",
+        "configure_motion_blur",
+        "set_motion_blur_amount",
+        "set_motion_blur_max",
+        "configure_exposure",
+        "set_exposure_method",
+        "set_exposure_compensation",
+        "set_exposure_min_max",
+        "configure_ssao",
+        "configure_gtao",
+        "configure_vignette",
+        "configure_chromatic_aberration",
+        "configure_grain",
+        "configure_screen_percentage",
+        "create_scene_capture_2d",
+        "create_scene_capture_cube",
+        "configure_capture_source",
+        "assign_render_target",
+        "capture_scene",
+        "create_spline_actor",
+        "add_spline_point",
+        "remove_spline_point",
+        "set_spline_point_position",
+        "set_spline_point_tangents",
+        "set_spline_point_rotation",
+        "set_spline_point_scale",
+        "set_spline_type",
+        "create_spline_mesh_component",
+        "set_spline_mesh_asset",
+        "configure_spline_mesh_axis",
+        "set_spline_mesh_material",
+        "scatter_meshes_along_spline",
+        "configure_mesh_spacing",
+        "configure_mesh_randomization",
+        "create_road_spline",
+        "create_river_spline",
+        "create_fence_spline",
+        "create_wall_spline",
+        "create_cable_spline",
+        "create_pipe_spline",
+        "get_splines_info",
+        "create_sky_sphere",
+        "set_time_of_day",
+        "create_time_of_day_system",
+        "create_fog_volume",
+        "configure_sky_atmosphere",
+        "configure_sky_light",
+        "configure_directional_light_atmosphere",
+        "configure_exponential_height_fog",
+        "configure_volumetric_cloud",
+        "configure_sun_position",
+        "configure_light_color_curve",
+        "configure_sky_color_curve",
+        "create_weather_system",
+        "configure_rain_particles",
+        "configure_snow_particles",
+        "configure_wind",
+        "configure_lightning",
+        "create_water_body_ocean",
+        "create_water_body_lake",
+        "create_water_body_river",
+        "create_water_body_custom",
+        "configure_water_waves",
+        "configure_water_material",
+        "configure_water_collision",
+        "create_buoyancy_component"
+      ],
+      "parameterNames": [
+        "actorName",
+        "actorPath",
+        "alignToNormal",
+        "alignToSpline",
+        "amount",
+        "amplitude",
+        "aperture",
+        "arriveTangent",
+        "assetPaths",
+        "assets",
+        "azimuth",
+        "bClosedLoop",
+        "blendWeight",
+        "blueprintPath",
+        "bounds",
+        "captureOffset",
+        "captureSource",
+        "channel",
+        "channels",
+        "collisionEnabled",
+        "compensationValue",
+        "componentCount",
+        "componentName",
+        "count",
+        "cubemapPath",
+        "cullDistance",
+        "curvePath",
+        "density",
+        "direction",
+        "directionalLightActorPath",
+        "distance",
+        "elevation",
+        "enabled",
+        "falloff",
+        "filename",
+        "foliageType",
+        "foliageTypePath",
+        "foliageTypes",
+        "forwardAxis",
+        "hardness",
+        "heightData",
+        "heightScale",
+        "heightmapPath",
+        "hour",
+        "infiniteUnbound",
+        "initialPoints",
+        "intensity",
+        "landscapeActorPath",
+        "landscapeName",
+        "landscapePath",
+        "layerInfoPath",
+        "layerName",
+        "leaveTangent",
+        "lightType",
+        "location",
+        "locations",
+        "lutPath",
+        "material",
+        "materialIndex",
+        "materialPath",
+        "maxBrightness",
+        "maxScale",
+        "maxX",
+        "maxY",
+        "meshPath",
+        "method",
+        "minBrightness",
+        "minScale",
+        "minX",
+        "minY",
+        "name",
+        "names",
+        "noWeightBlend",
+        "numLODs",
+        "operation",
+        "outputPath",
+        "particleSystemPath",
+        "path",
+        "physicalMaterialPath",
+        "pointIndex",
+        "pointRotation",
+        "pointScale",
+        "pointType",
+        "points",
+        "position",
+        "propertyValue",
+        "quadsPerSection",
+        "quality",
+        "radius",
+        "randomOffsetRange",
+        "randomYaw",
+        "randomizeRotation",
+        "randomizeScale",
+        "region",
+        "removeAll",
+        "renderTargetPath",
+        "resolution",
+        "rotation",
+        "rotationRange",
+        "save",
+        "screenPercentage",
+        "sectionSize",
+        "sectionsPerComponent",
+        "seed",
+        "settings",
+        "sizeX",
+        "sizeY",
+        "skipFlush",
+        "skyLightActorPath",
+        "skyLightIntensity",
+        "spacing",
+        "speed",
+        "splineType",
+        "staticMesh",
+        "steepness",
+        "strength",
+        "subdivisions",
+        "targetActor",
+        "threshold",
+        "tileSize",
+        "time",
+        "timeoutMs",
+        "tool",
+        "transforms",
+        "updateNormals",
+        "useRandomOffset",
+        "volumeName",
+        "waterBodyName",
+        "waveHeight",
+        "waveLength",
+        "width"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the current level."
+          },
+          "actorPath": {
+            "type": "string",
+            "description": "Actor path in the level."
+          },
+          "alignToNormal": {
+            "type": "boolean",
+            "description": "Align instance to surface normal."
+          },
+          "alignToSpline": {
+            "type": "boolean",
+            "description": "Align meshes to spline direction."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Effect amount."
+          },
+          "amplitude": {
+            "type": "number",
+            "description": "Wave amplitude."
+          },
+          "aperture": {
+            "type": "number",
+            "description": "Camera aperture (f-stop)."
+          },
+          "arriveTangent": {
+            "type": "object",
+            "description": "Arrive tangent.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "assetPaths": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Asset path."
+            },
+            "description": "Asset paths for LOD generation."
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Asset path."
+            },
+            "description": "Asset paths for LOD generation."
+          },
+          "azimuth": {
+            "type": "number",
+            "description": "Sun azimuth in degrees."
+          },
+          "bClosedLoop": {
+            "type": "boolean",
+            "description": "Whether the spline is a closed loop."
+          },
+          "blendWeight": {
+            "type": "number",
+            "description": "Blend weight (0-1)."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game blueprint path."
+          },
+          "bounds": {
+            "type": "object",
+            "description": "Procedural foliage bounds {location, size}.",
+            "properties": {
+              "location": {
+                "type": "object",
+                "description": "Bounds location.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "size": {
+                "type": "object",
+                "description": "Bounds size.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "captureOffset": {
+            "type": "object",
+            "description": "Capture offset.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "captureSource": {
+            "type": "string",
+            "description": "Capture source string."
+          },
+          "channel": {
+            "type": "integer",
+            "description": "Light channel index."
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "description": "Lighting channel index."
+            },
+            "description": "Lighting channel indices (0, 1, or 2)."
+          },
+          "collisionEnabled": {
+            "type": "boolean",
+            "description": "Whether collision is enabled."
+          },
+          "compensationValue": {
+            "type": "number",
+            "description": "Exposure compensation value."
+          },
+          "componentCount": {
+            "type": "object",
+            "description": "Component count {x, y}.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "componentName": {
+            "type": "string",
+            "description": "Component name."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of instances to generate when locations are derived from location+radius."
+          },
+          "cubemapPath": {
+            "type": "string",
+            "description": "Canonical /Game cubemap asset path."
+          },
+          "cullDistance": {
+            "type": "number",
+            "description": "Cull distance in world units."
+          },
+          "curvePath": {
+            "type": "string",
+            "description": "Canonical /Game curve asset path."
+          },
+          "density": {
+            "type": "number",
+            "description": "Foliage density."
+          },
+          "direction": {
+            "type": "object",
+            "description": "Direction rotation.",
+            "properties": {
+              "pitch": {
+                "type": "number",
+                "description": "Pitch"
+              },
+              "yaw": {
+                "type": "number",
+                "description": "Yaw"
+              },
+              "roll": {
+                "type": "number",
+                "description": "Roll"
+              }
+            },
+            "additionalProperties": false
+          },
+          "directionalLightActorPath": {
+            "type": "string",
+            "description": "Directional light actor path. As input, selects the light to snapshot; the first directional light in the level is used when omitted. As output, the resolved actor path."
+          },
+          "distance": {
+            "type": "number",
+            "description": "Focus distance."
+          },
+          "elevation": {
+            "type": "number",
+            "description": "Sun elevation in degrees."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the feature is enabled."
+          },
+          "falloff": {
+            "type": "number",
+            "description": "Brush falloff (0-1)."
+          },
+          "filename": {
+            "type": "string",
+            "description": "File name for snapshot export/import."
+          },
+          "foliageType": {
+            "type": "string",
+            "description": "Foliage type name or path."
+          },
+          "foliageTypePath": {
+            "type": "string",
+            "description": "Canonical /Game foliage type asset path."
+          },
+          "foliageTypes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Foliage type with mesh and density.",
+              "properties": {
+                "meshPath": {
+                  "type": "string",
+                  "description": "Mesh path."
+                },
+                "density": {
+                  "type": "number",
+                  "description": "Density."
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Foliage type specs."
+          },
+          "forwardAxis": {
+            "type": "string",
+            "description": "Spline mesh forward axis (X, Y, Z)."
+          },
+          "hardness": {
+            "type": "number",
+            "description": "Landscape layer hardness (0-1)."
+          },
+          "heightData": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "description": "Height value."
+            },
+            "description": "Heightmap values."
+          },
+          "heightScale": {
+            "type": "number",
+            "description": "Height scale multiplier."
+          },
+          "heightmapPath": {
+            "type": "string",
+            "description": "Heightmap file path."
+          },
+          "hour": {
+            "type": "number",
+            "description": "Hour of day (0-23)."
+          },
+          "infiniteUnbound": {
+            "type": "boolean",
+            "description": "Whether the volume is infinite and unbound."
+          },
+          "initialPoints": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Spline point with a world location.",
+              "properties": {
+                "location": {
+                  "type": "object",
+                  "description": "Point location.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Initial spline points (alias of points)."
+          },
+          "intensity": {
+            "type": "number",
+            "description": "Light intensity."
+          },
+          "landscapeActorPath": {
+            "type": "string",
+            "description": "Landscape actor path in the level."
+          },
+          "landscapeName": {
+            "type": "string",
+            "description": "Target landscape actor name."
+          },
+          "landscapePath": {
+            "type": "string",
+            "description": "Canonical /Game landscape asset path."
+          },
+          "layerInfoPath": {
+            "type": "string",
+            "description": "Canonical /Game landscape layer info asset path."
+          },
+          "layerName": {
+            "type": "string",
+            "description": "Landscape layer name."
+          },
+          "leaveTangent": {
+            "type": "object",
+            "description": "Leave tangent.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "lightType": {
+            "type": "string",
+            "description": "Light type string."
+          },
+          "location": {
+            "type": "object",
+            "description": "World-space location {x, y, z}.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Location.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Instance locations."
+          },
+          "lutPath": {
+            "type": "string",
+            "description": "Canonical /Game LUT texture path."
+          },
+          "material": {
+            "type": "string",
+            "description": "Canonical /Game material asset path."
+          },
+          "materialIndex": {
+            "type": "integer",
+            "description": "Material index."
+          },
+          "materialPath": {
+            "type": "string",
+            "description": "Canonical /Game material asset path."
+          },
+          "maxBrightness": {
+            "type": "number",
+            "description": "Maximum brightness."
+          },
+          "maxScale": {
+            "type": "number",
+            "description": "Maximum foliage scale."
+          },
+          "maxX": {
+            "type": "number",
+            "description": "Region max X."
+          },
+          "maxY": {
+            "type": "number",
+            "description": "Region max Y."
+          },
+          "meshPath": {
+            "type": "string",
+            "description": "Canonical /Game static mesh asset path."
+          },
+          "method": {
+            "type": "string",
+            "description": "Method string."
+          },
+          "minBrightness": {
+            "type": "number",
+            "description": "Minimum brightness."
+          },
+          "minScale": {
+            "type": "number",
+            "description": "Minimum foliage scale."
+          },
+          "minX": {
+            "type": "number",
+            "description": "Region min X."
+          },
+          "minY": {
+            "type": "number",
+            "description": "Region min Y."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the new actor, asset, or volume."
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Actor name."
+            },
+            "description": "Actor names to delete."
+          },
+          "noWeightBlend": {
+            "type": "boolean",
+            "description": "Disable weight blending for the landscape layer."
+          },
+          "numLODs": {
+            "type": "integer",
+            "description": "Number of LODs to generate."
+          },
+          "operation": {
+            "type": "string",
+            "description": "Heightmap operation: set, add, subtract, smooth."
+          },
+          "outputPath": {
+            "type": "string",
+            "description": "Filesystem path the heightmap is written to."
+          },
+          "particleSystemPath": {
+            "type": "string",
+            "description": "Canonical /Game particle system asset path."
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical /Game asset or directory path."
+          },
+          "physicalMaterialPath": {
+            "type": "string",
+            "description": "Canonical /Game physical material path."
+          },
+          "pointIndex": {
+            "type": "integer",
+            "description": "Spline point index."
+          },
+          "pointRotation": {
+            "type": "object",
+            "description": "Spline point rotation.",
+            "properties": {
+              "pitch": {
+                "type": "number",
+                "description": "Pitch"
+              },
+              "yaw": {
+                "type": "number",
+                "description": "Yaw"
+              },
+              "roll": {
+                "type": "number",
+                "description": "Roll"
+              }
+            },
+            "additionalProperties": false
+          },
+          "pointScale": {
+            "type": "object",
+            "description": "Spline point scale.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "pointType": {
+            "type": "string",
+            "description": "Spline point type (Linear, Curve, Constant, etc.)."
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Spline point with position and tangent.",
+              "properties": {
+                "position": {
+                  "type": "object",
+                  "description": "Position.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "arriveTangent": {
+                  "type": "object",
+                  "description": "Arrive tangent.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "leaveTangent": {
+                  "type": "object",
+                  "description": "Leave tangent.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "rotation": {
+                  "type": "object",
+                  "description": "Rotation.",
+                  "properties": {
+                    "pitch": {
+                      "type": "number",
+                      "description": "Pitch"
+                    },
+                    "yaw": {
+                      "type": "number",
+                      "description": "Yaw"
+                    },
+                    "roll": {
+                      "type": "number",
+                      "description": "Roll"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "scale": {
+                  "type": "object",
+                  "description": "Scale.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Spline points."
+          },
+          "position": {
+            "type": "object",
+            "description": "Position {x, y, z}.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "propertyValue": {
+            "type": "number",
+            "description": "Numeric property value."
+          },
+          "quadsPerSection": {
+            "type": "number",
+            "description": "Quads per section."
+          },
+          "quality": {
+            "type": "string",
+            "description": "Lightmap bake quality (Preview, Medium, High, Production)."
+          },
+          "radius": {
+            "type": "number",
+            "description": "Brush radius in world units."
+          },
+          "randomOffsetRange": {
+            "type": "number",
+            "description": "Random offset range."
+          },
+          "randomYaw": {
+            "type": "boolean",
+            "description": "Apply random yaw rotation."
+          },
+          "randomizeRotation": {
+            "type": "boolean",
+            "description": "Randomize mesh rotation."
+          },
+          "randomizeScale": {
+            "type": "boolean",
+            "description": "Randomize mesh scale."
+          },
+          "region": {
+            "type": "object",
+            "description": "Rectangular region {minX, minY, maxX, maxY}.",
+            "properties": {
+              "minX": {
+                "type": "number",
+                "description": "Min X."
+              },
+              "minY": {
+                "type": "number",
+                "description": "Min Y."
+              },
+              "maxX": {
+                "type": "number",
+                "description": "Max X."
+              },
+              "maxY": {
+                "type": "number",
+                "description": "Max Y."
+              }
+            },
+            "additionalProperties": false
+          },
+          "removeAll": {
+            "type": "boolean",
+            "description": "Remove all foliage instances."
+          },
+          "renderTargetPath": {
+            "type": "string",
+            "description": "Render target path string."
+          },
+          "resolution": {
+            "type": "integer",
+            "description": "Capture resolution."
+          },
+          "rotation": {
+            "type": "object",
+            "description": "Rotation {pitch, yaw, roll}.",
+            "properties": {
+              "pitch": {
+                "type": "number",
+                "description": "Pitch"
+              },
+              "yaw": {
+                "type": "number",
+                "description": "Yaw"
+              },
+              "roll": {
+                "type": "number",
+                "description": "Roll"
+              }
+            },
+            "additionalProperties": false
+          },
+          "rotationRange": {
+            "type": "number",
+            "description": "Random rotation range in degrees."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Whether to save after the operation."
+          },
+          "screenPercentage": {
+            "type": "number",
+            "description": "Screen percentage (0-100)."
+          },
+          "sectionSize": {
+            "type": "number",
+            "description": "Section size in quads."
+          },
+          "sectionsPerComponent": {
+            "type": "number",
+            "description": "Sections per component."
+          },
+          "seed": {
+            "type": "integer",
+            "description": "Random seed for procedural generation."
+          },
+          "settings": {
+            "type": "object",
+            "description": "Action-specific settings key-value pairs.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "sizeX": {
+            "type": "number",
+            "description": "Landscape size in quads (X)."
+          },
+          "sizeY": {
+            "type": "number",
+            "description": "Landscape size in quads (Y)."
+          },
+          "skipFlush": {
+            "type": "boolean",
+            "description": "Skip flushing rendering after the operation."
+          },
+          "skyLightActorPath": {
+            "type": "string",
+            "description": "Sky light actor path. As input, selects the light to snapshot; the first sky light in the level is used when omitted. As output, the resolved actor path."
+          },
+          "skyLightIntensity": {
+            "type": "number",
+            "description": "Sky light intensity."
+          },
+          "spacing": {
+            "type": "number",
+            "description": "Mesh spacing along the spline."
+          },
+          "speed": {
+            "type": "number",
+            "description": "Animation or wave speed."
+          },
+          "splineType": {
+            "type": "string",
+            "description": "Spline point type."
+          },
+          "staticMesh": {
+            "type": "string",
+            "description": "Canonical /Game static mesh asset path."
+          },
+          "steepness": {
+            "type": "number",
+            "description": "Wave steepness."
+          },
+          "strength": {
+            "type": "number",
+            "description": "Brush strength (0-1)."
+          },
+          "subdivisions": {
+            "type": "integer",
+            "description": "Mesh subdivision count."
+          },
+          "targetActor": {
+            "type": "string",
+            "description": "Target actor name for the operation."
+          },
+          "threshold": {
+            "type": "number",
+            "description": "Effect threshold."
+          },
+          "tileSize": {
+            "type": "number",
+            "description": "Procedural foliage tile size."
+          },
+          "time": {
+            "type": "number",
+            "description": "Time of day in hours (0-24)."
+          },
+          "timeoutMs": {
+            "type": "number",
+            "description": "Client-side request deadline in milliseconds."
+          },
+          "tool": {
+            "type": "string",
+            "description": "Sculpt tool name (e.g. Raise, Lower, Smooth)."
+          },
+          "transforms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Transform with location, rotation, scale.",
+              "properties": {
+                "location": {
+                  "type": "object",
+                  "description": "Location.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "rotation": {
+                  "type": "object",
+                  "description": "Rotation.",
+                  "properties": {
+                    "pitch": {
+                      "type": "number",
+                      "description": "Pitch"
+                    },
+                    "yaw": {
+                      "type": "number",
+                      "description": "Yaw"
+                    },
+                    "roll": {
+                      "type": "number",
+                      "description": "Roll"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "scale": {
+                  "type": "object",
+                  "description": "Scale.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Instance transforms."
+          },
+          "updateNormals": {
+            "type": "boolean",
+            "description": "Recompute normals after modification."
+          },
+          "useRandomOffset": {
+            "type": "boolean",
+            "description": "Apply a random offset to scattered meshes."
+          },
+          "volumeName": {
+            "type": "string",
+            "description": "Volume actor name."
+          },
+          "waterBodyName": {
+            "type": "string",
+            "description": "Water body actor name."
+          },
+          "waveHeight": {
+            "type": "number",
+            "description": "Wave height."
+          },
+          "waveLength": {
+            "type": "number",
+            "description": "Wave length."
+          },
+          "width": {
+            "type": "number",
+            "description": "Spline width."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "create_landscape",
+              "sculpt",
+              "sculpt_landscape",
+              "modify_heightmap",
+              "set_landscape_material",
+              "paint_landscape",
+              "paint_landscape_layer",
+              "import_heightmap",
+              "export_heightmap",
+              "create_landscape_layer_info",
+              "configure_landscape_material",
+              "configure_landscape_splines",
+              "configure_landscape_lod",
+              "create_landscape_streaming_proxy",
+              "create_landscape_grass_type",
+              "generate_lods",
+              "add_foliage",
+              "add_foliage_instances",
+              "get_foliage_instances",
+              "remove_foliage",
+              "remove_foliage_instances",
+              "paint_foliage",
+              "paint_foliage_instances",
+              "create_foliage_type",
+              "configure_foliage_mesh",
+              "configure_foliage_placement",
+              "configure_foliage_lod",
+              "configure_foliage_collision",
+              "configure_foliage_culling",
+              "create_procedural_foliage",
+              "create_procedural_terrain",
+              "bake_lightmap",
+              "export_snapshot",
+              "import_snapshot",
+              "delete",
+              "spawn_light",
+              "create_light",
+              "spawn_sky_light",
+              "create_sky_light",
+              "ensure_single_sky_light",
+              "create_lightmass_volume",
+              "create_lighting_enabled_level",
+              "create_dynamic_light",
+              "setup_global_illumination",
+              "configure_shadows",
+              "set_exposure",
+              "set_ambient_occlusion",
+              "setup_volumetric_fog",
+              "build_lighting",
+              "list_light_types",
+              "configure_ray_traced_shadows",
+              "configure_ray_traced_gi",
+              "configure_ray_traced_reflections",
+              "configure_ray_traced_ao",
+              "configure_path_tracing",
+              "set_light_channel",
+              "set_actor_light_channel",
+              "configure_lightmass_settings",
+              "build_lighting_quality",
+              "configure_indirect_lighting_cache",
+              "create_sphere_reflection_capture",
+              "create_box_reflection_capture",
+              "configure_reflection_capture_resolution",
+              "configure_capture_resolution",
+              "configure_capture_offset",
+              "recapture_scene",
+              "create_planar_reflection",
+              "configure_planar_reflection",
+              "configure_ssr_settings",
+              "configure_lumen_reflection_settings",
+              "configure_pp_blend",
+              "set_pp_white_balance",
+              "set_pp_color_grading",
+              "set_pp_lut",
+              "configure_tonemapper",
+              "set_tonemapper_type",
+              "configure_bloom",
+              "set_bloom_intensity",
+              "set_bloom_threshold",
+              "configure_lens_flare",
+              "configure_dof",
+              "set_dof_method",
+              "set_focal_distance",
+              "set_aperture",
+              "configure_bokeh",
+              "configure_motion_blur",
+              "set_motion_blur_amount",
+              "set_motion_blur_max",
+              "configure_exposure",
+              "set_exposure_method",
+              "set_exposure_compensation",
+              "set_exposure_min_max",
+              "configure_ssao",
+              "configure_gtao",
+              "configure_vignette",
+              "configure_chromatic_aberration",
+              "configure_grain",
+              "configure_screen_percentage",
+              "create_scene_capture_2d",
+              "create_scene_capture_cube",
+              "configure_capture_source",
+              "assign_render_target",
+              "capture_scene",
+              "create_spline_actor",
+              "add_spline_point",
+              "remove_spline_point",
+              "set_spline_point_position",
+              "set_spline_point_tangents",
+              "set_spline_point_rotation",
+              "set_spline_point_scale",
+              "set_spline_type",
+              "create_spline_mesh_component",
+              "set_spline_mesh_asset",
+              "configure_spline_mesh_axis",
+              "set_spline_mesh_material",
+              "scatter_meshes_along_spline",
+              "configure_mesh_spacing",
+              "configure_mesh_randomization",
+              "create_road_spline",
+              "create_river_spline",
+              "create_fence_spline",
+              "create_wall_spline",
+              "create_cable_spline",
+              "create_pipe_spline",
+              "get_splines_info",
+              "create_sky_sphere",
+              "set_time_of_day",
+              "create_time_of_day_system",
+              "create_fog_volume",
+              "configure_sky_atmosphere",
+              "configure_sky_light",
+              "configure_directional_light_atmosphere",
+              "configure_exponential_height_fog",
+              "configure_volumetric_cloud",
+              "configure_sun_position",
+              "configure_light_color_curve",
+              "configure_sky_color_curve",
+              "create_weather_system",
+              "configure_rain_particles",
+              "configure_snow_particles",
+              "configure_wind",
+              "configure_lightning",
+              "create_water_body_ocean",
+              "create_water_body_lake",
+              "create_water_body_river",
+              "create_water_body_custom",
+              "configure_water_waves",
+              "configure_water_material",
+              "configure_water_collision",
+              "create_buoyancy_component"
+            ],
+            "description": "Action to invoke on build_environment."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "control_actor",
+      "category": "core",
+      "description": "Spawn actors, set transforms, enable physics, add components, manage tags, and attach actors.",
+      "actions": [
+        "spawn",
+        "spawn_actor",
+        "spawn_blueprint",
+        "duplicate",
+        "delete",
+        "destroy_actor",
+        "delete_by_tag",
+        "set_transform",
+        "teleport_actor",
+        "set_actor_location",
+        "set_actor_rotation",
+        "set_actor_scale",
+        "set_actor_transform",
+        "get_transform",
+        "get_actor_transform",
+        "apply_force",
+        "add_component",
+        "remove_component",
+        "set_component_property",
+        "set_component_properties",
+        "get_component_property",
+        "set_material",
+        "set_actor_material",
+        "apply_material",
+        "set_visibility",
+        "set_actor_visible",
+        "get_components",
+        "get_actor_components",
+        "get_actor_bounds",
+        "list",
+        "add_tag",
+        "remove_tag",
+        "find_by_tag",
+        "find_actors_by_tag",
+        "find_by_name",
+        "find_actors_by_name",
+        "find_by_class",
+        "find_actors_by_class",
+        "attach",
+        "attach_actor",
+        "detach",
+        "detach_actor",
+        "set_blueprint_variables",
+        "create_snapshot",
+        "set_actor_collision",
+        "call_actor_function"
+      ],
+      "parameterNames": [
+        "actorClass",
+        "actorName",
+        "actorNames",
+        "allComponents",
+        "arguments",
+        "blueprintPath",
+        "childActor",
+        "className",
+        "classPath",
+        "collisionEnabled",
+        "componentName",
+        "componentType",
+        "filter",
+        "force",
+        "functionName",
+        "limit",
+        "location",
+        "materialIndex",
+        "materialPath",
+        "materialSlot",
+        "meshPath",
+        "name",
+        "newName",
+        "offset",
+        "parentActor",
+        "properties",
+        "propertyName",
+        "rotation",
+        "scale",
+        "snapshotName",
+        "tag",
+        "value",
+        "variables",
+        "visible"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actorClass": {
+            "type": "string",
+            "description": "Alias of classPath accepted by the spawn handler (normalizeArgs alias)."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Target actor name in the current level."
+          },
+          "actorNames": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Actor name."
+            },
+            "description": "Actor names to act on (batch delete)."
+          },
+          "allComponents": {
+            "type": "boolean",
+            "description": "When true, apply the material to all mesh components."
+          },
+          "arguments": {
+            "description": "Function arguments (any type)."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path to spawn from."
+          },
+          "childActor": {
+            "type": "string",
+            "description": "Child actor name to attach."
+          },
+          "className": {
+            "type": "string",
+            "description": "Unreal class name or path to find actors by class."
+          },
+          "classPath": {
+            "type": "string",
+            "description": "Unreal class path (e.g. /Script/Engine.PointLight) for the actor to spawn."
+          },
+          "collisionEnabled": {
+            "type": "boolean",
+            "description": "Desired collision enabled state."
+          },
+          "componentName": {
+            "type": "string",
+            "description": "Target component name on the actor."
+          },
+          "componentType": {
+            "type": "string",
+            "description": "Component class to add."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Optional name substring filter for list."
+          },
+          "force": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Force vector to apply as [x, y, z]."
+          },
+          "functionName": {
+            "type": "string",
+            "description": "Actor function name to call."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of actors to return in a list."
+          },
+          "location": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "World or relative location as [x, y, z]."
+          },
+          "materialIndex": {
+            "type": "number",
+            "description": "Alias of materialSlot accepted by the material handlers (normalizeArgs alias)."
+          },
+          "materialPath": {
+            "type": "string",
+            "description": "Canonical /Game material asset path to apply."
+          },
+          "materialSlot": {
+            "type": "number",
+            "description": "Material slot/index to override (0-based)."
+          },
+          "meshPath": {
+            "type": "string",
+            "description": "Canonical /Game mesh asset path to assign on spawn."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actor name or search query."
+          },
+          "newName": {
+            "type": "string",
+            "description": "New name for the duplicate or renamed actor."
+          },
+          "offset": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Spawn/duplicate offset as [x, y, z]."
+          },
+          "parentActor": {
+            "type": "string",
+            "description": "Parent actor name to attach to."
+          },
+          "properties": {
+            "type": "object",
+            "description": "Component property key-value pairs.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "propertyName": {
+            "type": "string",
+            "description": "Component property name to read or write."
+          },
+          "rotation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Rotation as [pitch, yaw, roll] in degrees."
+          },
+          "scale": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Scale as [x, y, z]."
+          },
+          "snapshotName": {
+            "type": "string",
+            "description": "Name for the actor snapshot."
+          },
+          "tag": {
+            "type": "string",
+            "description": "Gameplay tag string to add, remove, or find."
+          },
+          "value": {
+            "description": "Property value (any type)."
+          },
+          "variables": {
+            "type": "object",
+            "description": "Blueprint variable name to value map.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "Desired visibility state."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "spawn",
+              "spawn_actor",
+              "spawn_blueprint",
+              "duplicate",
+              "delete",
+              "destroy_actor",
+              "delete_by_tag",
+              "set_transform",
+              "teleport_actor",
+              "set_actor_location",
+              "set_actor_rotation",
+              "set_actor_scale",
+              "set_actor_transform",
+              "get_transform",
+              "get_actor_transform",
+              "apply_force",
+              "add_component",
+              "remove_component",
+              "set_component_property",
+              "set_component_properties",
+              "get_component_property",
+              "set_material",
+              "set_actor_material",
+              "apply_material",
+              "set_visibility",
+              "set_actor_visible",
+              "get_components",
+              "get_actor_components",
+              "get_actor_bounds",
+              "list",
+              "add_tag",
+              "remove_tag",
+              "find_by_tag",
+              "find_actors_by_tag",
+              "find_by_name",
+              "find_actors_by_name",
+              "find_by_class",
+              "find_actors_by_class",
+              "attach",
+              "attach_actor",
+              "detach",
+              "detach_actor",
+              "set_blueprint_variables",
+              "create_snapshot",
+              "set_actor_collision",
+              "call_actor_function"
+            ],
+            "description": "Action to invoke on control_actor."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "control_editor",
+      "category": "core",
+      "description": "Start/stop PIE, control viewport camera, run console commands, take screenshots, simulate input.",
+      "actions": [
+        "play",
+        "stop",
+        "stop_pie",
+        "pause",
+        "resume",
+        "eject",
+        "possess",
+        "set_game_speed",
+        "set_fixed_delta_time",
+        "step_frame",
+        "single_frame_step",
+        "start_recording",
+        "stop_recording",
+        "set_view_target",
+        "set_game_view_target",
+        "set_camera",
+        "set_camera_position",
+        "set_viewport_camera",
+        "set_camera_fov",
+        "set_view_mode",
+        "set_viewport_resolution",
+        "set_viewport_realtime",
+        "set_editor_mode",
+        "set_immersive_mode",
+        "set_game_view",
+        "show_stats",
+        "hide_stats",
+        "console_command",
+        "execute_command",
+        "set_preferences",
+        "screenshot",
+        "take_screenshot",
+        "create_bookmark",
+        "jump_to_bookmark",
+        "open_asset",
+        "close_asset",
+        "open_level",
+        "focus_actor",
+        "save_all",
+        "simulate_input",
+        "undo",
+        "redo"
+      ],
+      "parameterNames": [
+        "actorName",
+        "assetPath",
+        "blendTime",
+        "bookmarkName",
+        "button",
+        "category",
+        "command",
+        "deltaTime",
+        "description",
+        "durationSeconds",
+        "enabled",
+        "filename",
+        "fov",
+        "frameRate",
+        "height",
+        "id",
+        "includeMetadata",
+        "inputAction",
+        "inputType",
+        "key",
+        "levelPath",
+        "location",
+        "metadata",
+        "mode",
+        "name",
+        "objectPath",
+        "path",
+        "preferences",
+        "realtime",
+        "resolution",
+        "returnBase64",
+        "rotation",
+        "speed",
+        "stat",
+        "steps",
+        "type",
+        "viewMode",
+        "width",
+        "x",
+        "y"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actorName": {
+            "type": "string",
+            "description": "Name of the actor to target."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Asset path (e.g. /Game/Path/Asset)."
+          },
+          "blendTime": {
+            "type": "number",
+            "description": "Blend time in seconds for set_view_target."
+          },
+          "bookmarkName": {
+            "type": "string",
+            "description": "Bookmark name identifier."
+          },
+          "button": {
+            "type": "string",
+            "description": "Mouse button for simulate_input."
           },
           "category": {
             "type": "string",
-            "description": "Category name to enable/disable (core, world, gameplay, utility, all)"
+            "description": "Preferences category."
+          },
+          "command": {
+            "type": "string",
+            "description": "Console command string."
+          },
+          "deltaTime": {
+            "type": "number",
+            "description": "Fixed delta time in seconds."
+          },
+          "description": {
+            "type": "string",
+            "description": "Bookmark description."
+          },
+          "durationSeconds": {
+            "type": "number",
+            "description": "Recording duration in seconds."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the feature is enabled."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Screenshot or recording filename."
+          },
+          "fov": {
+            "type": "number",
+            "description": "Camera field of view in degrees."
+          },
+          "frameRate": {
+            "type": "number",
+            "description": "Recording frame rate."
+          },
+          "height": {
+            "type": "number",
+            "description": "Viewport height in pixels."
+          },
+          "id": {
+            "type": "string",
+            "description": "Bookmark identifier."
+          },
+          "includeMetadata": {
+            "type": "boolean",
+            "description": "Attach caller-provided metadata to the response."
+          },
+          "inputAction": {
+            "type": "string",
+            "description": "Input action descriptor for simulate_input."
+          },
+          "inputType": {
+            "type": "string",
+            "description": "Alias for type used by simulate_input."
+          },
+          "key": {
+            "type": "string",
+            "description": "Input key name for simulate_input."
+          },
+          "levelPath": {
+            "type": "string",
+            "description": "Level asset path."
+          },
+          "location": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "x"
+              },
+              "y": {
+                "type": "number",
+                "description": "y"
+              },
+              "z": {
+                "type": "number",
+                "description": "z"
+              }
+            },
+            "description": "3D location (x, y, z).",
+            "additionalProperties": false
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Caller-provided metadata.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "mode": {
+            "type": "string",
+            "description": "Editor mode for set_editor_mode, or screenshot source."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name identifier."
+          },
+          "objectPath": {
+            "type": "string",
+            "description": "Object path alias for actorName."
+          },
+          "path": {
+            "type": "string",
+            "description": "Directory or file path."
+          },
+          "preferences": {
+            "type": "object",
+            "description": "Editor preferences key-value pairs.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "realtime": {
+            "type": "boolean",
+            "description": "Whether realtime rendering is enabled."
+          },
+          "resolution": {
+            "type": "string",
+            "description": "Resolution setting (e.g. 1024x1024)."
+          },
+          "returnBase64": {
+            "type": "boolean",
+            "description": "Return PNG image data as base64."
+          },
+          "rotation": {
+            "type": "object",
+            "properties": {
+              "pitch": {
+                "type": "number",
+                "description": "pitch"
+              },
+              "yaw": {
+                "type": "number",
+                "description": "yaw"
+              },
+              "roll": {
+                "type": "number",
+                "description": "roll"
+              }
+            },
+            "description": "3D rotation (pitch, yaw, roll).",
+            "additionalProperties": false
+          },
+          "speed": {
+            "type": "number",
+            "description": "Game speed multiplier."
+          },
+          "stat": {
+            "type": "string",
+            "description": "Stat name to show or hide."
+          },
+          "steps": {
+            "type": "integer",
+            "description": "Number of frames to step."
+          },
+          "type": {
+            "type": "string",
+            "description": "Input event type (key_down, key_up, mouse_click, mouse_move)."
+          },
+          "viewMode": {
+            "type": "string",
+            "description": "Viewport view mode (e.g. Lit, Unlit, Wireframe)."
+          },
+          "width": {
+            "type": "number",
+            "description": "Viewport width in pixels."
+          },
+          "x": {
+            "type": "number",
+            "description": "Mouse X coordinate for simulate_input."
+          },
+          "y": {
+            "type": "number",
+            "description": "Mouse Y coordinate for simulate_input."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "play",
+              "stop",
+              "stop_pie",
+              "pause",
+              "resume",
+              "eject",
+              "possess",
+              "set_game_speed",
+              "set_fixed_delta_time",
+              "step_frame",
+              "single_frame_step",
+              "start_recording",
+              "stop_recording",
+              "set_view_target",
+              "set_game_view_target",
+              "set_camera",
+              "set_camera_position",
+              "set_viewport_camera",
+              "set_camera_fov",
+              "set_view_mode",
+              "set_viewport_resolution",
+              "set_viewport_realtime",
+              "set_editor_mode",
+              "set_immersive_mode",
+              "set_game_view",
+              "show_stats",
+              "hide_stats",
+              "console_command",
+              "execute_command",
+              "set_preferences",
+              "screenshot",
+              "take_screenshot",
+              "create_bookmark",
+              "jump_to_bookmark",
+              "open_asset",
+              "close_asset",
+              "open_level",
+              "focus_actor",
+              "save_all",
+              "simulate_input",
+              "undo",
+              "redo"
+            ],
+            "description": "Action to invoke on control_editor."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "inspect",
+      "category": "core",
+      "description": "Inspect any UObject: read/write properties, list components, export snapshots, and query class info. Actions: inspect_cdo (Blueprint CDO properties + all components without spawning an actor; use blueprintPath, optional detailed/componentName/propertyNames), inspect_class (class metadata), inspect_object (world actor), get_property/set_property, get_components, get_component_details (WORLD actors: actorName+componentName; a blueprintPath is routed to inspect_cdo), list_objects, find_by_class, find_by_tag, runtime_report.",
+      "actions": [
+        "inspect_object",
+        "get_actor_details",
+        "get_blueprint_details",
+        "get_mesh_details",
+        "get_texture_details",
+        "get_material_details",
+        "get_level_details",
+        "get_property",
+        "set_property",
+        "inspect_class",
+        "inspect_cdo",
+        "inspect_struct",
+        "get_components",
+        "get_component_property",
+        "set_component_property",
+        "get_component_details",
+        "get_metadata",
+        "add_tag",
+        "find_by_tag",
+        "create_snapshot",
+        "restore_snapshot",
+        "export",
+        "delete_object",
+        "list_objects",
+        "find_by_class",
+        "get_bounding_box",
+        "runtime_report",
+        "pie_report",
+        "get_project_settings",
+        "get_world_settings",
+        "get_viewport_info",
+        "get_selected_actors",
+        "get_scene_stats",
+        "get_performance_stats",
+        "get_memory_stats",
+        "get_editor_settings"
+      ],
+      "parameterNames": [
+        "actorName",
+        "blueprintPath",
+        "className",
+        "classPath",
+        "componentName",
+        "componentNames",
+        "detailed",
+        "filter",
+        "name",
+        "objectPath",
+        "propertyName",
+        "propertyNames",
+        "propertyPath",
+        "snapshotName",
+        "structPath",
+        "tag",
+        "value"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actorName": {
+            "type": "string",
+            "description": "World actor name to inspect."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
+          },
+          "className": {
+            "type": "string",
+            "description": "Class name or /Script/ class path to inspect."
+          },
+          "classPath": {
+            "type": "string",
+            "description": "Class asset path (alias of className)."
+          },
+          "componentName": {
+            "type": "string",
+            "description": "Component name on the actor."
+          },
+          "componentNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Specific component names to include."
+          },
+          "detailed": {
+            "type": "boolean",
+            "description": "Return detailed property/component information."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Runtime report filter expression."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actor name identifier (alias of actorName)."
+          },
+          "objectPath": {
+            "type": "string",
+            "description": "Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel)."
+          },
+          "propertyName": {
+            "type": "string",
+            "description": "Property name to read or write."
+          },
+          "propertyNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Specific property names to include."
+          },
+          "propertyPath": {
+            "type": "string",
+            "description": "Property path (alias of propertyName)."
+          },
+          "snapshotName": {
+            "type": "string",
+            "description": "Snapshot name for create/restore."
+          },
+          "structPath": {
+            "type": "string",
+            "description": "UserDefinedStruct asset /Game path to introspect."
+          },
+          "tag": {
+            "type": "string",
+            "description": "Actor tag to match."
+          },
+          "value": {
+            "description": "Property value to set (type depends on the target property)."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "inspect_object",
+              "get_actor_details",
+              "get_blueprint_details",
+              "get_mesh_details",
+              "get_texture_details",
+              "get_material_details",
+              "get_level_details",
+              "get_property",
+              "set_property",
+              "inspect_class",
+              "inspect_cdo",
+              "inspect_struct",
+              "get_components",
+              "get_component_property",
+              "set_component_property",
+              "get_component_details",
+              "get_metadata",
+              "add_tag",
+              "find_by_tag",
+              "create_snapshot",
+              "restore_snapshot",
+              "export",
+              "delete_object",
+              "list_objects",
+              "find_by_class",
+              "get_bounding_box",
+              "runtime_report",
+              "pie_report",
+              "get_project_settings",
+              "get_world_settings",
+              "get_viewport_info",
+              "get_selected_actors",
+              "get_scene_stats",
+              "get_performance_stats",
+              "get_memory_stats",
+              "get_editor_settings"
+            ],
+            "description": "Action to invoke on inspect."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "manage_ai",
+      "category": "gameplay",
+      "description": "Build AI systems: AI controllers, Behavior Trees, Blackboards, EQS, perception, State Trees, Smart Objects, NavMesh settings, nav modifiers, links, and pathfinding.",
+      "actions": [
+        "add_ai_perception_component",
+        "add_blackboard_key",
+        "add_composite_node",
+        "add_decorator",
+        "add_eqs_context",
+        "add_eqs_generator",
+        "add_eqs_test",
+        "add_mass_spawner",
+        "add_node",
+        "add_service",
+        "add_smart_object_component",
+        "add_smart_object_slot",
+        "add_state_tree_state",
+        "add_state_tree_transition",
+        "add_subnode",
+        "add_task_node",
+        "assign_behavior_tree",
+        "assign_blackboard",
+        "break_connections",
+        "clear_focus",
+        "configure_bt_node",
+        "configure_damage_sense_config",
+        "configure_hearing_config",
+        "configure_mass_entity",
+        "configure_nav_area_cost",
+        "configure_nav_link",
+        "configure_nav_mesh_settings",
+        "configure_sight_config",
+        "configure_slot_behavior",
+        "configure_smart_link_behavior",
+        "configure_state_tree_task",
+        "configure_test_scoring",
+        "connect_nodes",
+        "create",
+        "create_ai_controller",
+        "create_behavior_tree",
+        "create_blackboard",
+        "create_blackboard_asset",
+        "create_eqs_query",
+        "create_mass_entity_config",
+        "create_nav_link_proxy",
+        "create_nav_modifier_component",
+        "create_smart_link",
+        "create_smart_object_definition",
+        "create_state_tree",
+        "get_ai_info",
+        "get_blackboard_value",
+        "get_navigation_info",
+        "get_tree",
+        "rebuild_navigation",
+        "remove_node",
+        "run_behavior_tree",
+        "set_blackboard_value",
+        "set_focus",
+        "set_key_instance_synced",
+        "set_nav_agent_properties",
+        "set_nav_area_class",
+        "set_nav_link_type",
+        "set_node_properties",
+        "set_perception_team",
+        "setup_perception",
+        "stop_behavior_tree"
+      ],
+      "parameterNames": [
+        "actorName",
+        "agentHeight",
+        "agentMaxSlope",
+        "agentRadius",
+        "agentStepHeight",
+        "areaClass",
+        "areaCost",
+        "assetPath",
+        "bCreateBoxObstacle",
+        "baseObjectClass",
+        "behaviorTreePath",
+        "blackboardPath",
+        "blueprintPath",
+        "broadcastInterval",
+        "broadcastRadius",
+        "cellHeight",
+        "cellSize",
+        "childNodeId",
+        "comment",
+        "componentName",
+        "compositeType",
+        "configPath",
+        "contextType",
+        "controllerPath",
+        "damageConfig",
+        "decoratorType",
+        "definitionPath",
+        "direction",
+        "disabledAreaClass",
+        "dominantSense",
+        "enableDamage",
+        "enableHearing",
+        "enableSight",
+        "enabled",
+        "enabledAreaClass",
+        "endPoint",
+        "failsafeExtent",
+        "focusActorName",
+        "fromState",
+        "generatorSettings",
+        "generatorType",
+        "hearingConfig",
+        "hearingRange",
+        "isInstanceSynced",
+        "keyName",
+        "keyType",
+        "linkEnabled",
+        "linkType",
+        "location",
+        "loseSightRadius",
+        "maxSimplificationError",
+        "mergeRegionSize",
+        "minRegionArea",
+        "name",
+        "nodeClass",
+        "nodeId",
+        "nodeType",
+        "obstacleAreaClass",
+        "obstacleExtent",
+        "obstacleOffset",
+        "offset",
+        "parentNodeId",
+        "parentStateName",
+        "path",
+        "peripheralVisionAngle",
+        "properties",
+        "queryPath",
+        "rotation",
+        "save",
+        "savePath",
+        "serviceType",
+        "sightConfig",
+        "sightRadius",
+        "slotIndex",
+        "snapRadius",
+        "spawnCount",
+        "startPoint",
+        "stateName",
+        "stateTreePath",
+        "stateType",
+        "subnodeType",
+        "taskType",
+        "teamId",
+        "testIndex",
+        "testSettings",
+        "testType",
+        "tileSizeUU",
+        "toState",
+        "triggerType",
+        "value",
+        "x",
+        "y"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actorName": {
+            "type": "string",
+            "description": "Target actor name in the current level."
+          },
+          "agentHeight": {
+            "type": "number",
+            "description": "Navigation agent height (default: 144)."
+          },
+          "agentMaxSlope": {
+            "type": "number",
+            "description": "Maximum slope angle in degrees (default: 44)."
+          },
+          "agentRadius": {
+            "type": "number",
+            "description": "Navigation agent radius (default: 35)."
+          },
+          "agentStepHeight": {
+            "type": "number",
+            "description": "Maximum step height the agent can climb (default: 35)."
+          },
+          "areaClass": {
+            "type": "string",
+            "description": "Navigation area class path."
+          },
+          "areaCost": {
+            "type": "number",
+            "description": "Pathfinding cost multiplier for the area (1.0 = normal)."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "bCreateBoxObstacle": {
+            "type": "boolean",
+            "description": "Add a box obstacle during navigation generation."
+          },
+          "baseObjectClass": {
+            "type": "string",
+            "description": "Base class filter for Object/Class blackboard keys."
+          },
+          "behaviorTreePath": {
+            "type": "string",
+            "description": "Canonical /Game Behavior Tree asset path."
+          },
+          "blackboardPath": {
+            "type": "string",
+            "description": "Canonical /Game Blackboard asset path."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "broadcastInterval": {
+            "type": "number",
+            "description": "Interval for the state-change broadcast (0 = single)."
+          },
+          "broadcastRadius": {
+            "type": "number",
+            "description": "Radius for the state-change broadcast."
+          },
+          "cellHeight": {
+            "type": "number",
+            "description": "NavMesh cell height (default: 10)."
+          },
+          "cellSize": {
+            "type": "number",
+            "description": "NavMesh cell size (default: 19)."
+          },
+          "childNodeId": {
+            "type": "string",
+            "description": "ID of the child node."
+          },
+          "comment": {
+            "type": "string",
+            "description": "Comment text applied to the graph node."
+          },
+          "componentName": {
+            "type": "string",
+            "description": "Name of the component to add."
+          },
+          "compositeType": {
+            "type": "string",
+            "enum": [
+              "Selector",
+              "Sequence",
+              "Parallel",
+              "SimpleParallel"
+            ],
+            "description": "Composite node type."
+          },
+          "configPath": {
+            "type": "string",
+            "description": "Canonical /Game Mass Entity config asset path."
+          },
+          "contextType": {
+            "type": "string",
+            "enum": [
+              "Querier",
+              "Item",
+              "EnvQueryContext_BlueprintBase",
+              "Custom"
+            ],
+            "description": "EQS context type."
+          },
+          "controllerPath": {
+            "type": "string",
+            "description": "Canonical /Game AI controller asset path."
+          },
+          "damageConfig": {
+            "type": "object",
+            "properties": {
+              "maxAge": {
+                "type": "number"
+              }
+            },
+            "description": "AI damage sense configuration.",
+            "additionalProperties": false
+          },
+          "decoratorType": {
+            "type": "string",
+            "enum": [
+              "Blackboard",
+              "BlackboardBased",
+              "CompareBBEntries",
+              "Cooldown",
+              "ConeCheck",
+              "DoesPathExist",
+              "IsAtLocation",
+              "IsBBEntryOfClass",
+              "KeepInCone",
+              "Loop",
+              "SetTagCooldown",
+              "TagCooldown",
+              "TimeLimit",
+              "ForceSuccess",
+              "ConditionalLoop",
+              "Custom"
+            ],
+            "description": "Decorator node type."
+          },
+          "definitionPath": {
+            "type": "string",
+            "description": "Canonical /Game Smart Object definition asset path."
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "BothWays",
+              "LeftToRight",
+              "RightToLeft"
+            ],
+            "description": "Link traversal direction."
+          },
+          "disabledAreaClass": {
+            "type": "string",
+            "description": "Area class applied while the smart link is disabled."
+          },
+          "dominantSense": {
+            "type": "string",
+            "enum": [
+              "Sight",
+              "Hearing",
+              "Damage",
+              "Touch",
+              "None"
+            ],
+            "description": "Dominant sense for perception prioritization."
+          },
+          "enableDamage": {
+            "type": "boolean",
+            "description": "Enable the damage sense."
+          },
+          "enableHearing": {
+            "type": "boolean",
+            "description": "Enable the hearing sense."
+          },
+          "enableSight": {
+            "type": "boolean",
+            "description": "Enable the sight sense."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the slot is enabled."
+          },
+          "enabledAreaClass": {
+            "type": "string",
+            "description": "Area class applied while the smart link is enabled."
+          },
+          "endPoint": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "description": "End point of the navigation link (relative to the actor).",
+            "additionalProperties": false
+          },
+          "failsafeExtent": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "description": "Failsafe extent used when the actor has no collision.",
+            "additionalProperties": false
+          },
+          "focusActorName": {
+            "type": "string",
+            "description": "Actor the controller should focus on."
+          },
+          "fromState": {
+            "type": "string",
+            "description": "Source state name."
+          },
+          "generatorSettings": {
+            "type": "object",
+            "properties": {
+              "searchRadius": {
+                "type": "number"
+              },
+              "searchCenter": {
+                "type": "string"
+              },
+              "actorClass": {
+                "type": "string"
+              },
+              "gridSize": {
+                "type": "number"
+              },
+              "spacesBetween": {
+                "type": "number"
+              },
+              "innerRadius": {
+                "type": "number"
+              },
+              "outerRadius": {
+                "type": "number"
+              }
+            },
+            "description": "Generator-specific settings.",
+            "additionalProperties": false
+          },
+          "generatorType": {
+            "type": "string",
+            "enum": [
+              "ActorsOfClass",
+              "CurrentLocation",
+              "Donut",
+              "OnCircle",
+              "PathingGrid",
+              "SimpleGrid",
+              "Composite",
+              "Custom"
+            ],
+            "description": "EQS generator type."
+          },
+          "hearingConfig": {
+            "type": "object",
+            "properties": {
+              "hearingRange": {
+                "type": "number"
+              },
+              "loSHearingRange": {
+                "type": "number"
+              },
+              "detectFriendly": {
+                "type": "boolean"
+              },
+              "maxAge": {
+                "type": "number"
+              }
+            },
+            "description": "AI hearing sense configuration.",
+            "additionalProperties": false
+          },
+          "hearingRange": {
+            "type": "number",
+            "description": "Hearing range in world units."
+          },
+          "isInstanceSynced": {
+            "type": "boolean",
+            "description": "Sync key across instances."
+          },
+          "keyName": {
+            "type": "string",
+            "description": "Blackboard key name."
+          },
+          "keyType": {
+            "type": "string",
+            "enum": [
+              "Bool",
+              "Int",
+              "Float",
+              "Vector",
+              "Rotator",
+              "Object",
+              "Class",
+              "Enum",
+              "Name",
+              "String"
+            ],
+            "description": "Blackboard key data type."
+          },
+          "linkEnabled": {
+            "type": "boolean",
+            "description": "Whether the link is enabled."
+          },
+          "linkType": {
+            "type": "string",
+            "enum": [
+              "simple",
+              "smart"
+            ],
+            "description": "Type of navigation link."
+          },
+          "location": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "description": "World location for the spawned link actor.",
+            "additionalProperties": false
+          },
+          "loseSightRadius": {
+            "type": "number",
+            "description": "Radius at which sight is lost."
+          },
+          "maxSimplificationError": {
+            "type": "number",
+            "description": "Edge simplification error."
+          },
+          "mergeRegionSize": {
+            "type": "number",
+            "description": "Region merge threshold."
+          },
+          "minRegionArea": {
+            "type": "number",
+            "description": "Minimum region area to keep."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the created asset or actor."
+          },
+          "nodeClass": {
+            "type": "string",
+            "description": "Node class path."
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "ID of the node."
+          },
+          "nodeType": {
+            "type": "string",
+            "description": "Behavior Tree graph node type."
+          },
+          "obstacleAreaClass": {
+            "type": "string",
+            "description": "Area class for the box obstacle."
+          },
+          "obstacleExtent": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "description": "Extent of the simple box obstacle.",
+            "additionalProperties": false
+          },
+          "obstacleOffset": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "description": "Offset of the simple box obstacle.",
+            "additionalProperties": false
+          },
+          "offset": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "description": "Slot offset relative to the definition origin.",
+            "additionalProperties": false
+          },
+          "parentNodeId": {
+            "type": "string",
+            "description": "ID of the parent node."
+          },
+          "parentStateName": {
+            "type": "string",
+            "description": "Parent state name for the added state."
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical /Game output path for the created asset."
+          },
+          "peripheralVisionAngle": {
+            "type": "number",
+            "description": "Peripheral vision half-angle in degrees."
+          },
+          "properties": {
+            "type": "object",
+            "description": "Key-value property map.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "queryPath": {
+            "type": "string",
+            "description": "Canonical /Game Environment Query asset path."
+          },
+          "rotation": {
+            "type": "object",
+            "properties": {
+              "pitch": {
+                "type": "number"
+              },
+              "yaw": {
+                "type": "number"
+              },
+              "roll": {
+                "type": "number"
+              }
+            },
+            "description": "Rotation as {pitch, yaw, roll} in degrees.",
+            "additionalProperties": false
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the created/modified asset to disk."
+          },
+          "savePath": {
+            "type": "string",
+            "description": "Directory path used when saving the created Behavior Tree."
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "DefaultFocus",
+              "RunEQS",
+              "Custom"
+            ],
+            "description": "Service node type."
+          },
+          "sightConfig": {
+            "type": "object",
+            "properties": {
+              "sightRadius": {
+                "type": "number"
+              },
+              "loseSightRadius": {
+                "type": "number"
+              },
+              "peripheralVisionAngle": {
+                "type": "number"
+              },
+              "pointOfViewBackwardOffset": {
+                "type": "number"
+              },
+              "nearClippingRadius": {
+                "type": "number"
+              },
+              "autoSuccessRange": {
+                "type": "number"
+              },
+              "maxAge": {
+                "type": "number"
+              },
+              "detectionByAffiliation": {
+                "type": "object",
+                "properties": {
+                  "enemies": {
+                    "type": "boolean"
+                  },
+                  "neutrals": {
+                    "type": "boolean"
+                  },
+                  "friendlies": {
+                    "type": "boolean"
+                  }
+                },
+                "description": "Affiliation detection flags.",
+                "additionalProperties": false
+              }
+            },
+            "description": "AI sight sense configuration.",
+            "additionalProperties": false
+          },
+          "sightRadius": {
+            "type": "number",
+            "description": "Sight radius in world units."
+          },
+          "slotIndex": {
+            "type": "number",
+            "description": "Index of the slot to configure."
+          },
+          "snapRadius": {
+            "type": "number",
+            "description": "Snap radius for link endpoints (default: 30)."
+          },
+          "spawnCount": {
+            "type": "number",
+            "description": "Number of entities the spawner creates."
+          },
+          "startPoint": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "description": "Start point of the navigation link (relative to the actor).",
+            "additionalProperties": false
+          },
+          "stateName": {
+            "type": "string",
+            "description": "State name."
+          },
+          "stateTreePath": {
+            "type": "string",
+            "description": "Canonical /Game State Tree asset path."
+          },
+          "stateType": {
+            "type": "string",
+            "description": "State kind for the added state."
+          },
+          "subnodeType": {
+            "type": "string",
+            "enum": [
+              "Decorator",
+              "Service"
+            ],
+            "description": "Behavior Tree subnode kind for add_subnode."
+          },
+          "taskType": {
+            "type": "string",
+            "enum": [
+              "MoveTo",
+              "MoveDirectlyToward",
+              "RotateToFaceBBEntry",
+              "Wait",
+              "WaitBlackboardTime",
+              "PlayAnimation",
+              "PlaySound",
+              "RunEQSQuery",
+              "RunBehaviorDynamic",
+              "SetBlackboardValue",
+              "PushPawnAction",
+              "FinishWithResult",
+              "MakeNoise",
+              "GameplayTaskBase",
+              "Custom"
+            ],
+            "description": "Task node type."
+          },
+          "teamId": {
+            "type": "number",
+            "description": "Team ID for perception affiliation (0=Neutral, 1=Player, 2=Enemy, ...)."
+          },
+          "testIndex": {
+            "type": "number",
+            "description": "Index of the test to configure."
+          },
+          "testSettings": {
+            "type": "object",
+            "properties": {
+              "scoringEquation": {
+                "type": "string",
+                "enum": [
+                  "Linear",
+                  "Square",
+                  "InverseLinear",
+                  "Constant"
+                ]
+              },
+              "clampMin": {
+                "type": "number"
+              },
+              "clampMax": {
+                "type": "number"
+              },
+              "filterType": {
+                "type": "string",
+                "enum": [
+                  "Minimum",
+                  "Maximum",
+                  "Range"
+                ]
+              },
+              "floatMin": {
+                "type": "number"
+              },
+              "floatMax": {
+                "type": "number"
+              }
+            },
+            "description": "Test scoring and filter settings.",
+            "additionalProperties": false
+          },
+          "testType": {
+            "type": "string",
+            "enum": [
+              "Distance",
+              "Dot",
+              "GameplayTags",
+              "Overlap",
+              "Pathfinding",
+              "PathfindingBatch",
+              "Project",
+              "Random",
+              "Trace",
+              "Custom"
+            ],
+            "description": "EQS test type."
+          },
+          "tileSizeUU": {
+            "type": "number",
+            "description": "NavMesh tile size in Unreal units (default: 1000)."
+          },
+          "toState": {
+            "type": "string",
+            "description": "Target state name."
+          },
+          "triggerType": {
+            "type": "string",
+            "description": "Transition trigger kind."
+          },
+          "value": {
+            "description": "Property value (any type)."
+          },
+          "x": {
+            "type": "number",
+            "description": "Graph node X coordinate."
+          },
+          "y": {
+            "type": "number",
+            "description": "Graph node Y coordinate."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "add_ai_perception_component",
+              "add_blackboard_key",
+              "add_composite_node",
+              "add_decorator",
+              "add_eqs_context",
+              "add_eqs_generator",
+              "add_eqs_test",
+              "add_mass_spawner",
+              "add_node",
+              "add_service",
+              "add_smart_object_component",
+              "add_smart_object_slot",
+              "add_state_tree_state",
+              "add_state_tree_transition",
+              "add_subnode",
+              "add_task_node",
+              "assign_behavior_tree",
+              "assign_blackboard",
+              "break_connections",
+              "clear_focus",
+              "configure_bt_node",
+              "configure_damage_sense_config",
+              "configure_hearing_config",
+              "configure_mass_entity",
+              "configure_nav_area_cost",
+              "configure_nav_link",
+              "configure_nav_mesh_settings",
+              "configure_sight_config",
+              "configure_slot_behavior",
+              "configure_smart_link_behavior",
+              "configure_state_tree_task",
+              "configure_test_scoring",
+              "connect_nodes",
+              "create",
+              "create_ai_controller",
+              "create_behavior_tree",
+              "create_blackboard",
+              "create_blackboard_asset",
+              "create_eqs_query",
+              "create_mass_entity_config",
+              "create_nav_link_proxy",
+              "create_nav_modifier_component",
+              "create_smart_link",
+              "create_smart_object_definition",
+              "create_state_tree",
+              "get_ai_info",
+              "get_blackboard_value",
+              "get_navigation_info",
+              "get_tree",
+              "rebuild_navigation",
+              "remove_node",
+              "run_behavior_tree",
+              "set_blackboard_value",
+              "set_focus",
+              "set_key_instance_synced",
+              "set_nav_agent_properties",
+              "set_nav_area_class",
+              "set_nav_link_type",
+              "set_node_properties",
+              "set_perception_team",
+              "setup_perception",
+              "stop_behavior_tree"
+            ],
+            "description": "Action to invoke on manage_ai."
           },
           "params": {
             "type": "object",
@@ -106,54 +4107,12 @@ export const gatewayManifest = {
         "bulk_delete",
         "source_control_checkout",
         "source_control_submit",
-        "create_struct",
-        "get_struct",
-        "read_struct",
-        "list_struct_members",
-        "add_struct_member",
-        "remove_struct_member",
-        "rename_struct_member",
-        "set_struct_member_type",
-        "reorder_struct_members",
-        "set_struct_member_default",
-        "set_struct_member_metadata",
-        "compare_structs",
-        "search_struct_usage",
-        "recompile_struct",
-        "rename_struct",
-        "duplicate_struct",
-        "delete_struct",
-        "refresh_struct_dependencies",
-        "list_structs",
-        "export_struct",
-        "import_struct",
-        "create_data_table",
-        "set_data_table_row_struct",
-        "create_row_struct",
-        "get_row_struct",
-        "set_struct_as_row_struct",
-        "add_data_table_row",
-        "get_data_table_row",
-        "update_data_table_row",
-        "delete_data_table_row",
-        "list_data_table_rows",
-        "import_data_table_rows",
-        "clear_data_table_rows",
-        "create_enum",
-        "delete_enum",
-        "get_enum",
-        "add_enum_value",
-        "remove_enum_value",
-        "rename_enum_value",
-        "reorder_enum_values",
-        "set_enum_value_metadata",
-        "split_enum",
-        "get_instanced_struct_property",
-        "set_instanced_struct_property",
         "create_material",
-        "set_blend_mode",
-        "set_shading_model",
-        "set_material_domain",
+        "create_material_instance",
+        "create_material_function",
+        "create_landscape_material",
+        "create_decal_material",
+        "create_post_process_material",
         "add_texture_sample",
         "add_texture_coordinate",
         "add_scalar_parameter",
@@ -176,22 +4135,6 @@ export const gatewayManifest = {
         "connect_material_pins",
         "disconnect_nodes",
         "break_material_connections",
-        "create_material_function",
-        "add_function_input",
-        "add_function_output",
-        "use_material_function",
-        "get_material_function_info",
-        "create_material_instance",
-        "set_scalar_parameter_value",
-        "set_vector_parameter_value",
-        "set_texture_parameter_value",
-        "create_landscape_material",
-        "create_decal_material",
-        "create_post_process_material",
-        "add_landscape_layer",
-        "configure_layer_blend",
-        "compile_material",
-        "get_material_info",
         "find_node",
         "get_node_connections",
         "get_node_properties",
@@ -205,7 +4148,21 @@ export const gatewayManifest = {
         "set_material_parameter",
         "get_material_node_details",
         "remove_material_node",
+        "set_blend_mode",
+        "set_shading_model",
+        "set_material_domain",
+        "compile_material",
+        "get_material_info",
         "set_two_sided",
+        "add_function_input",
+        "add_function_output",
+        "use_material_function",
+        "get_material_function_info",
+        "set_scalar_parameter_value",
+        "set_vector_parameter_value",
+        "set_texture_parameter_value",
+        "add_landscape_layer",
+        "configure_layer_blend",
         "create_noise_texture",
         "create_gradient_texture",
         "create_pattern_texture",
@@ -226,7 +4183,51 @@ export const gatewayManifest = {
         "set_lod_bias",
         "configure_virtual_texture",
         "set_streaming_priority",
-        "get_texture_info"
+        "get_texture_info",
+        "create_struct",
+        "get_struct",
+        "read_struct",
+        "list_struct_members",
+        "add_struct_member",
+        "remove_struct_member",
+        "rename_struct_member",
+        "set_struct_member_type",
+        "reorder_struct_members",
+        "set_struct_member_default",
+        "set_struct_member_metadata",
+        "compare_structs",
+        "search_struct_usage",
+        "recompile_struct",
+        "rename_struct",
+        "duplicate_struct",
+        "delete_struct",
+        "refresh_struct_dependencies",
+        "list_structs",
+        "export_struct",
+        "import_struct",
+        "get_instanced_struct_property",
+        "set_instanced_struct_property",
+        "create_data_table",
+        "set_data_table_row_struct",
+        "create_row_struct",
+        "get_row_struct",
+        "set_struct_as_row_struct",
+        "add_data_table_row",
+        "get_data_table_row",
+        "update_data_table_row",
+        "delete_data_table_row",
+        "list_data_table_rows",
+        "import_data_table_rows",
+        "clear_data_table_rows",
+        "create_enum",
+        "delete_enum",
+        "get_enum",
+        "add_enum_value",
+        "remove_enum_value",
+        "rename_enum_value",
+        "reorder_enum_values",
+        "set_enum_value_metadata",
+        "split_enum"
       ],
       "parameterNames": [
         "additionalOutputs",
@@ -262,6 +4263,7 @@ export const gatewayManifest = {
         "downstream",
         "endPin",
         "enumPath",
+        "expressionIndex",
         "filterMethod",
         "fixupRedirectors",
         "folderPath",
@@ -269,6 +4271,7 @@ export const gatewayManifest = {
         "format",
         "functionPath",
         "gamma",
+        "gradientType",
         "greenTexture",
         "group",
         "height",
@@ -306,6 +4309,7 @@ export const gatewayManifest = {
         "nodeId",
         "nodeIds",
         "nodeType",
+        "noiseType",
         "octaves",
         "offset",
         "opacity",
@@ -313,8 +4317,10 @@ export const gatewayManifest = {
         "order",
         "orphansOnly",
         "otherStructPath",
+        "outputPath",
         "outputType",
         "overwrite",
+        "packagePath",
         "packagePaths",
         "pagination",
         "parameterName",
@@ -323,6 +4329,7 @@ export const gatewayManifest = {
         "path",
         "paths",
         "pattern",
+        "patternType",
         "pinName",
         "posX",
         "posY",
@@ -344,9 +4351,11 @@ export const gatewayManifest = {
         "rows",
         "samples",
         "save",
+        "savePath",
         "scale",
         "searchScope",
         "searchText",
+        "seed",
         "shadingModel",
         "showConfirmation",
         "sourceNodeId",
@@ -386,6 +4395,848 @@ export const gatewayManifest = {
       "inputSchema": {
         "type": "object",
         "properties": {
+          "additionalOutputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Additional named output definitions."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Desaturation amount (0-1)."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Asset /Game path."
+          },
+          "assetPaths": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Explicit asset paths to delete."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Explicit asset paths."
+              }
+            ],
+            "description": "Explicit asset paths to delete."
+          },
+          "baseTexture": {
+            "type": "string",
+            "description": "Base texture path."
+          },
+          "blendMode": {
+            "type": "string",
+            "description": "Blend mode."
+          },
+          "blendTexture": {
+            "type": "string",
+            "description": "Blend texture path."
+          },
+          "blendType": {
+            "type": "string",
+            "description": "Blend mode."
+          },
+          "blueTexture": {
+            "type": "string",
+            "description": "Blue channel source."
+          },
+          "channel": {
+            "type": "string",
+            "description": "Channel to adjust."
+          },
+          "checkoutFiles": {
+            "type": "boolean",
+            "description": "Check out files in source control."
+          },
+          "classNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Asset class names to filter."
+          },
+          "clearExisting": {
+            "type": "boolean",
+            "description": "Clear existing rows before import."
+          },
+          "code": {
+            "type": "string",
+            "description": "HLSL code."
+          },
+          "compressionSettings": {
+            "type": "string",
+            "description": "Compression format."
+          },
+          "constA": {
+            "type": "number",
+            "description": "Constant A."
+          },
+          "constB": {
+            "type": "number",
+            "description": "Constant B."
+          },
+          "coordinateIndex": {
+            "type": "number",
+            "description": "UV channel index (default 0)."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque pagination cursor returned by a previous list response. Forward verbatim to resume."
+          },
+          "curvePoints": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Curve control points."
+          },
+          "dataTablePath": {
+            "type": "string",
+            "description": "Asset path of the DataTable (e.g. /Game/DataTables/DT_MyTable)."
+          },
+          "defaultValue": {
+            "oneOf": [
+              {
+                "description": "Default RGBA value."
+              },
+              {
+                "type": "string",
+                "description": "Default value as string."
+              }
+            ],
+            "description": "Default RGBA value."
+          },
+          "depth": {
+            "type": "number",
+            "description": "Maximum recursion depth."
+          },
+          "description": {
+            "type": "string",
+            "description": "Submit description."
+          },
+          "destinationName": {
+            "type": "string",
+            "description": "New asset name."
+          },
+          "destinationPath": {
+            "type": "string",
+            "description": "Destination /Game asset path."
+          },
+          "direction": {
+            "type": "string",
+            "description": "Connection direction to report (inputs or outputs)."
+          },
+          "directory": {
+            "type": "string",
+            "description": "Directory to report on."
+          },
+          "directoryPath": {
+            "type": "string",
+            "description": "Directory path to fix up."
+          },
+          "domain": {
+            "type": "string",
+            "description": "Material domain."
+          },
+          "downstream": {
+            "type": "boolean",
+            "description": "Report downstream connections instead of upstream."
+          },
+          "endPin": {
+            "type": "string",
+            "description": "Terminal pin name to stop the chain walk at."
+          },
+          "enumPath": {
+            "type": "string",
+            "description": "Asset path of the UserDefinedEnum (e.g. /Game/Enums/E_MyEnum)."
+          },
+          "expressionIndex": {
+            "type": "number",
+            "description": "Expression index."
+          },
+          "filterMethod": {
+            "type": "string",
+            "description": "Resampling filter."
+          },
+          "fixupRedirectors": {
+            "type": "boolean",
+            "description": "Fix up redirectors left behind by the deletion."
+          },
+          "folderPath": {
+            "type": "string",
+            "description": "Folder path for bulk operation."
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Force deletion even when the asset is still referenced (bridge delete path)."
+          },
+          "format": {
+            "type": "string",
+            "description": "Pixel format."
+          },
+          "functionPath": {
+            "type": "string",
+            "description": "Material function /Game path."
+          },
+          "gamma": {
+            "type": "number",
+            "description": "Gamma."
+          },
+          "gradientType": {
+            "type": "string",
+            "description": "Gradient type."
+          },
+          "greenTexture": {
+            "type": "string",
+            "description": "Green channel source."
+          },
+          "group": {
+            "type": "string",
+            "description": "Parameter group."
+          },
+          "height": {
+            "type": "number",
+            "description": "Height in pixels."
+          },
+          "inBlack": {
+            "type": "number",
+            "description": "Input black point."
+          },
+          "inWhite": {
+            "type": "number",
+            "description": "Input white point."
+          },
+          "includeTags": {
+            "type": "boolean",
+            "description": "When true, include asset tags in the listing response."
+          },
+          "index": {
+            "type": "number",
+            "description": "Split index."
+          },
+          "inputName": {
+            "type": "string",
+            "description": "Input pin name."
+          },
+          "inputType": {
+            "type": "string",
+            "description": "Input type."
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Input definitions."
+          },
+          "instancePath": {
+            "type": "string",
+            "description": "Material instance /Game path."
+          },
+          "key": {
+            "type": "string",
+            "description": "Metadata key."
+          },
+          "layerName": {
+            "type": "string",
+            "description": "Layer name."
+          },
+          "layers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Layer blend definitions."
+          },
+          "levels": {
+            "type": "number",
+            "description": "Noise level count."
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 500,
+            "default": 50,
+            "description": "Page size (1-500, default 50)."
+          },
+          "lodBias": {
+            "type": "number",
+            "description": "LOD bias value."
+          },
+          "lodCount": {
+            "type": "number",
+            "description": "Number of LOD levels to generate."
+          },
+          "materialDomain": {
+            "type": "string",
+            "description": "Material domain."
+          },
+          "materialPath": {
+            "type": "string",
+            "description": "Material /Game asset path."
+          },
+          "maxDepth": {
+            "type": "number",
+            "description": "Maximum traversal depth."
+          },
+          "memberName": {
+            "type": "string",
+            "description": "Member (variable) name."
+          },
+          "memberType": {
+            "type": "string",
+            "description": "Unreal property type: Bool, Int, Float, String, Name, Text, Vector, Rotator, Transform, Object, SoftObject, Class, SoftClass, Enum:<Name>, Struct:<Path>, or with container prefix Array:..., Set:..., Map:<K>,<V>:"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Member definitions."
+          },
+          "meshPath": {
+            "type": "string",
+            "description": "Mesh /Game path."
+          },
+          "metadata": {
+            "oneOf": [
+              {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "description": "Metadata key-value pairs."
+              },
+              {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "description": "Metadata key/value pairs."
+              }
+            ],
+            "description": "Metadata key-value pairs."
+          },
+          "name": {
+            "type": "string",
+            "description": "DataTable name."
+          },
+          "neverStream": {
+            "type": "boolean",
+            "description": "Never stream this texture."
+          },
+          "newEnumName": {
+            "type": "string",
+            "description": "Name for the new enum."
+          },
+          "newHeight": {
+            "type": "number",
+            "description": "New height."
+          },
+          "newMemberName": {
+            "type": "string",
+            "description": "New member name."
+          },
+          "newName": {
+            "type": "string",
+            "description": "New asset name."
+          },
+          "newValueName": {
+            "type": "string",
+            "description": "New enum value name."
+          },
+          "newWidth": {
+            "type": "number",
+            "description": "New width."
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "Node ID to delete."
+          },
+          "nodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Node IDs to delete in one batch, in place of nodeId."
+          },
+          "nodeType": {
+            "type": "string",
+            "description": "Node type to find."
+          },
+          "noiseType": {
+            "type": "string",
+            "description": "Noise type."
+          },
+          "octaves": {
+            "type": "number",
+            "description": "Noise octaves."
+          },
+          "offset": {
+            "type": "number",
+            "description": "Zero-based offset into the full result set."
+          },
+          "opacity": {
+            "type": "number",
+            "description": "Blend opacity."
+          },
+          "operation": {
+            "type": "string",
+            "description": "Math operation (Add, Multiply, etc.)."
+          },
+          "order": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Desired value name order."
+          },
+          "orphansOnly": {
+            "type": "boolean",
+            "description": "Report only orphaned nodes; accepted in place of nodeId."
+          },
+          "otherStructPath": {
+            "type": "string",
+            "description": "Second struct path for comparison."
+          },
+          "outputPath": {
+            "type": "string",
+            "description": "Output file path."
+          },
+          "outputType": {
+            "type": "string",
+            "description": "Output type."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "description": "Overwrite existing asset at destination."
+          },
+          "packagePath": {
+            "type": "string",
+            "description": "Package path (default /Game)."
+          },
+          "packagePaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Package paths to search within."
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 500,
+                "default": 50,
+                "description": "Page size (1-500, default 50)."
+              },
+              "offset": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Zero-based offset into the full result set."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Nested pagination envelope. Top-level limit/offset take precedence when both are supplied."
+          },
+          "parameterName": {
+            "type": "string",
+            "description": "Parameter name."
+          },
+          "parameterType": {
+            "type": "string",
+            "description": "Parameter type."
+          },
+          "parentMaterial": {
+            "type": "string",
+            "description": "Parent material /Game path."
+          },
+          "path": {
+            "oneOf": [
+              {
+                "type": "string",
+                "default": "/Game",
+                "description": "Canonical /Game path to list."
+              },
+              {
+                "type": "string",
+                "description": "Alternative directory path."
+              },
+              {
+                "type": "string",
+                "description": "Folder path (must start with /)."
+              },
+              {
+                "type": "string",
+                "description": "Package path to search."
+              },
+              {
+                "type": "string",
+                "description": "Package path."
+              }
+            ],
+            "description": "Alternative directory path."
+          },
+          "paths": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Asset paths to check out."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Asset paths to delete."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Asset paths to submit."
+              }
+            ],
+            "description": "Asset paths to check out."
+          },
+          "pattern": {
+            "type": "string",
+            "description": "Search pattern (used when searchText is absent)."
+          },
+          "patternType": {
+            "type": "string",
+            "description": "Pattern type."
+          },
+          "pinName": {
+            "type": "string",
+            "description": "Pin name."
+          },
+          "posX": {
+            "type": "number",
+            "description": "Node X position."
+          },
+          "posY": {
+            "type": "number",
+            "description": "Node Y position."
+          },
+          "position": {
+            "type": "string",
+            "enum": [
+              "first",
+              "last",
+              "before",
+              "after"
+            ],
+            "description": "Reorder anchor position."
+          },
+          "prefix": {
+            "type": "string",
+            "description": "Name prefix."
+          },
+          "propertyName": {
+            "type": "string",
+            "description": "Property name."
+          },
+          "radius": {
+            "type": "number",
+            "description": "Blur radius."
+          },
+          "recursive": {
+            "type": "boolean",
+            "description": "Recurse into dependencies."
+          },
+          "recursiveClasses": {
+            "type": "boolean",
+            "description": "Recurse into child classes."
+          },
+          "recursivePaths": {
+            "type": "boolean",
+            "description": "Recurse into subdirectories."
+          },
+          "redTexture": {
+            "type": "string",
+            "description": "Red channel source."
+          },
+          "relativeTo": {
+            "type": "string",
+            "description": "Target member GUID/name."
+          },
+          "replaceText": {
+            "type": "string",
+            "description": "Replacement text."
+          },
+          "replacement": {
+            "type": "string",
+            "description": "Replacement text (used when replaceText is absent)."
+          },
+          "reportType": {
+            "type": "string",
+            "description": "Report type."
+          },
+          "rowData": {
+            "oneOf": [
+              {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "description": "Row data key/value map."
+              },
+              {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "description": "Updated row data."
+              }
+            ],
+            "description": "Row data key/value map."
+          },
+          "rowName": {
+            "type": "string",
+            "description": "Name of the row."
+          },
+          "rowStructPath": {
+            "type": "string",
+            "description": "Asset path of the row UScriptStruct."
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Row data objects."
+          },
+          "samples": {
+            "type": "number",
+            "description": "AO samples."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Save after adjustment."
+          },
+          "savePath": {
+            "type": "string",
+            "description": "Package path for the instance."
+          },
+          "scale": {
+            "type": "number",
+            "description": "Noise scale."
+          },
+          "searchScope": {
+            "type": "string",
+            "description": "Optional path scope."
+          },
+          "searchText": {
+            "type": "string",
+            "description": "Search pattern."
+          },
+          "seed": {
+            "type": "number",
+            "description": "Random seed."
+          },
+          "shadingModel": {
+            "type": "string",
+            "description": "Shading model."
+          },
+          "showConfirmation": {
+            "type": "boolean",
+            "description": "Show confirmation prompt."
+          },
+          "sourceNodeId": {
+            "type": "string",
+            "description": "Source node ID."
+          },
+          "sourcePath": {
+            "type": "string",
+            "description": "Source /Game asset path."
+          },
+          "sourcePin": {
+            "type": "string",
+            "description": "Source pin name."
+          },
+          "sourceTexture": {
+            "type": "string",
+            "description": "Source heightmap texture path."
+          },
+          "speed": {
+            "type": "number",
+            "description": "Rotation speed."
+          },
+          "speedX": {
+            "type": "number",
+            "description": "Pan speed X."
+          },
+          "speedY": {
+            "type": "number",
+            "description": "Pan speed Y."
+          },
+          "startNodeId": {
+            "type": "string",
+            "description": "Starting node ID accepted by the handler in place of nodeId."
+          },
+          "streamingPriority": {
+            "type": "number",
+            "description": "Texture streaming priority (default 0)."
+          },
+          "strength": {
+            "type": "number",
+            "description": "Normal strength."
+          },
+          "structPath": {
+            "type": "string",
+            "description": "Asset path of the Blueprint Struct (e.g. /Game/Structs/S_MyStruct)."
+          },
+          "structType": {
+            "type": "string",
+            "description": "Inner UScriptStruct asset path."
+          },
+          "structValues": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true,
+            "description": "Field-name to value map."
+          },
+          "suffix": {
+            "type": "string",
+            "description": "Name suffix."
+          },
+          "tag": {
+            "type": "string",
+            "description": "Tag name to search for."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags to set."
+          },
+          "targetNodeId": {
+            "type": "string",
+            "description": "Target node ID."
+          },
+          "targetPin": {
+            "type": "string",
+            "description": "Target pin name."
+          },
+          "textureGroup": {
+            "type": "string",
+            "description": "Texture group name."
+          },
+          "texturePath": {
+            "type": "string",
+            "description": "Texture /Game asset path."
+          },
+          "tooltip": {
+            "type": "string",
+            "description": "Member tooltip."
+          },
+          "twoSided": {
+            "type": "boolean",
+            "description": "Two-sided flag."
+          },
+          "type": {
+            "type": "string",
+            "description": "Node type (alias of nodeType)."
+          },
+          "uTiling": {
+            "type": "number",
+            "description": "U tiling factor (default 1)."
+          },
+          "vTiling": {
+            "type": "number",
+            "description": "V tiling factor (default 1)."
+          },
+          "value": {
+            "oneOf": [
+              {
+                "description": "Metadata value."
+              },
+              {
+                "description": "Parameter value."
+              },
+              {
+                "description": "Vector value."
+              },
+              {
+                "type": "boolean",
+                "description": "Default switch value."
+              },
+              {
+                "type": "boolean",
+                "description": "Switch value."
+              },
+              {
+                "type": "boolean",
+                "description": "Two-sided value."
+              },
+              {
+                "type": "number",
+                "description": "Scalar value."
+              },
+              {
+                "type": "string",
+                "description": "Optional tag value."
+              }
+            ],
+            "description": "Default switch value."
+          },
+          "valueName": {
+            "type": "string",
+            "description": "Enum value (entry) name."
+          },
+          "values": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Initial enum value names."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Value names to move to the new enum."
+              }
+            ],
+            "description": "Initial enum value names."
+          },
+          "varGuid": {
+            "type": "string",
+            "description": "Member GUID to move."
+          },
+          "virtualTextureStreaming": {
+            "type": "boolean",
+            "description": "Enable VT streaming."
+          },
+          "width": {
+            "type": "number",
+            "description": "Texture width in pixels (default 1024)."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -426,54 +5277,12 @@ export const gatewayManifest = {
               "bulk_delete",
               "source_control_checkout",
               "source_control_submit",
-              "create_struct",
-              "get_struct",
-              "read_struct",
-              "list_struct_members",
-              "add_struct_member",
-              "remove_struct_member",
-              "rename_struct_member",
-              "set_struct_member_type",
-              "reorder_struct_members",
-              "set_struct_member_default",
-              "set_struct_member_metadata",
-              "compare_structs",
-              "search_struct_usage",
-              "recompile_struct",
-              "rename_struct",
-              "duplicate_struct",
-              "delete_struct",
-              "refresh_struct_dependencies",
-              "list_structs",
-              "export_struct",
-              "import_struct",
-              "create_data_table",
-              "set_data_table_row_struct",
-              "create_row_struct",
-              "get_row_struct",
-              "set_struct_as_row_struct",
-              "add_data_table_row",
-              "get_data_table_row",
-              "update_data_table_row",
-              "delete_data_table_row",
-              "list_data_table_rows",
-              "import_data_table_rows",
-              "clear_data_table_rows",
-              "create_enum",
-              "delete_enum",
-              "get_enum",
-              "add_enum_value",
-              "remove_enum_value",
-              "rename_enum_value",
-              "reorder_enum_values",
-              "set_enum_value_metadata",
-              "split_enum",
-              "get_instanced_struct_property",
-              "set_instanced_struct_property",
               "create_material",
-              "set_blend_mode",
-              "set_shading_model",
-              "set_material_domain",
+              "create_material_instance",
+              "create_material_function",
+              "create_landscape_material",
+              "create_decal_material",
+              "create_post_process_material",
               "add_texture_sample",
               "add_texture_coordinate",
               "add_scalar_parameter",
@@ -496,22 +5305,6 @@ export const gatewayManifest = {
               "connect_material_pins",
               "disconnect_nodes",
               "break_material_connections",
-              "create_material_function",
-              "add_function_input",
-              "add_function_output",
-              "use_material_function",
-              "get_material_function_info",
-              "create_material_instance",
-              "set_scalar_parameter_value",
-              "set_vector_parameter_value",
-              "set_texture_parameter_value",
-              "create_landscape_material",
-              "create_decal_material",
-              "create_post_process_material",
-              "add_landscape_layer",
-              "configure_layer_blend",
-              "compile_material",
-              "get_material_info",
               "find_node",
               "get_node_connections",
               "get_node_properties",
@@ -525,7 +5318,21 @@ export const gatewayManifest = {
               "set_material_parameter",
               "get_material_node_details",
               "remove_material_node",
+              "set_blend_mode",
+              "set_shading_model",
+              "set_material_domain",
+              "compile_material",
+              "get_material_info",
               "set_two_sided",
+              "add_function_input",
+              "add_function_output",
+              "use_material_function",
+              "get_material_function_info",
+              "set_scalar_parameter_value",
+              "set_vector_parameter_value",
+              "set_texture_parameter_value",
+              "add_landscape_layer",
+              "configure_layer_blend",
               "create_noise_texture",
               "create_gradient_texture",
               "create_pattern_texture",
@@ -546,622 +5353,531 @@ export const gatewayManifest = {
               "set_lod_bias",
               "configure_virtual_texture",
               "set_streaming_priority",
-              "get_texture_info"
+              "get_texture_info",
+              "create_struct",
+              "get_struct",
+              "read_struct",
+              "list_struct_members",
+              "add_struct_member",
+              "remove_struct_member",
+              "rename_struct_member",
+              "set_struct_member_type",
+              "reorder_struct_members",
+              "set_struct_member_default",
+              "set_struct_member_metadata",
+              "compare_structs",
+              "search_struct_usage",
+              "recompile_struct",
+              "rename_struct",
+              "duplicate_struct",
+              "delete_struct",
+              "refresh_struct_dependencies",
+              "list_structs",
+              "export_struct",
+              "import_struct",
+              "get_instanced_struct_property",
+              "set_instanced_struct_property",
+              "create_data_table",
+              "set_data_table_row_struct",
+              "create_row_struct",
+              "get_row_struct",
+              "set_struct_as_row_struct",
+              "add_data_table_row",
+              "get_data_table_row",
+              "update_data_table_row",
+              "delete_data_table_row",
+              "list_data_table_rows",
+              "import_data_table_rows",
+              "clear_data_table_rows",
+              "create_enum",
+              "delete_enum",
+              "get_enum",
+              "add_enum_value",
+              "remove_enum_value",
+              "rename_enum_value",
+              "reorder_enum_values",
+              "set_enum_value_metadata",
+              "split_enum"
             ],
-            "description": "Action to perform"
+            "description": "Action to invoke on manage_asset."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "manage_audio",
+      "category": "utility",
+      "description": "Play/stop sounds, add audio components, configure mixes, attenuation, spatial audio, and author Sound Cues/MetaSounds.",
+      "actions": [
+        "add_cue_node",
+        "add_metasound_input",
+        "add_metasound_node",
+        "add_metasound_output",
+        "add_mix_modifier",
+        "add_source_effect",
+        "clear_sound_mix_class_override",
+        "configure_distance_attenuation",
+        "configure_mix_eq",
+        "configure_occlusion",
+        "configure_reverb_send",
+        "configure_spatialization",
+        "connect_cue_nodes",
+        "connect_metasound_nodes",
+        "create_ambient_sound",
+        "create_attenuation_settings",
+        "create_audio_component",
+        "create_dialogue_voice",
+        "create_dialogue_wave",
+        "create_metasound",
+        "create_reverb_effect",
+        "create_reverb_zone",
+        "create_sound_class",
+        "create_sound_cue",
+        "create_sound_mix",
+        "create_source_effect_chain",
+        "create_submix_effect",
+        "enable_audio_analysis",
+        "fade_sound",
+        "fade_sound_in",
+        "fade_sound_out",
+        "get_audio_info",
+        "play_sound_2d",
+        "play_sound_at_location",
+        "play_sound_attached",
+        "pop_sound_mix",
+        "prime_sound",
+        "push_sound_mix",
+        "set_audio_occlusion",
+        "set_base_sound_mix",
+        "set_class_parent",
+        "set_class_properties",
+        "set_cue_attenuation",
+        "set_cue_concurrency",
+        "set_dialogue_context",
+        "set_doppler_effect",
+        "set_metasound_default",
+        "set_sound_attenuation",
+        "set_sound_mix_class_override",
+        "spawn_sound_at_location"
+      ],
+      "parameterNames": [
+        "actorName",
+        "analysisType",
+        "assetPath",
+        "attachPointName",
+        "attenuationPath",
+        "attenuationShape",
+        "autoPlay",
+        "componentName",
+        "concurrencyPath",
+        "defaultValue",
+        "dopplerIntensity",
+        "effectType",
+        "enable",
+        "enableReverbSend",
+        "enabled",
+        "fadeInTime",
+        "fadeOutTime",
+        "fadeTime",
+        "fadeType",
+        "falloffDistance",
+        "falloffMode",
+        "innerRadius",
+        "inputName",
+        "inputType",
+        "location",
+        "looping",
+        "lowPassFilterFrequency",
+        "mixName",
+        "name",
+        "nodeType",
+        "occlusionFilterScale",
+        "occlusionInterpolationTime",
+        "occlusionVolumeScale",
+        "outputName",
+        "outputType",
+        "parentClass",
+        "path",
+        "pitch",
+        "properties",
+        "reverbDistanceMax",
+        "reverbDistanceMin",
+        "reverbEffect",
+        "reverbWetLevelMax",
+        "reverbWetLevelMin",
+        "rotation",
+        "save",
+        "size",
+        "soundClassName",
+        "soundClassPath",
+        "soundName",
+        "soundPath",
+        "sourceNode",
+        "sourceNodeId",
+        "sourceOutputName",
+        "sourcePin",
+        "spatialization",
+        "speakerPath",
+        "startTime",
+        "targetInputName",
+        "targetNode",
+        "targetNodeId",
+        "targetPin",
+        "targetVolume",
+        "velocityScale",
+        "volume",
+        "volumeAdjuster",
+        "wavePath",
+        "windowSize"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actorName": {
+            "type": "string",
+            "description": "actorName"
+          },
+          "analysisType": {
+            "type": "string",
+            "description": "analysisType"
           },
           "assetPath": {
             "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
+            "description": "assetPath"
           },
-          "directory": {
+          "attachPointName": {
             "type": "string",
-            "description": "Path to a directory."
+            "description": "attachPointName"
           },
-          "classNames": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "packagePaths": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "recursivePaths": {
-            "type": "boolean"
-          },
-          "recursiveClasses": {
-            "type": "boolean"
-          },
-          "limit": {
-            "type": "number"
-          },
-          "offset": {
-            "type": "number"
-          },
-          "cursor": {
+          "attenuationPath": {
             "type": "string",
-            "description": "Opaque pagination cursor returned by a previous list response. Forward verbatim to resume listing from the next page."
+            "description": "attenuationPath"
           },
-          "includeTags": {
+          "attenuationShape": {
+            "type": "string",
+            "description": "attenuationShape"
+          },
+          "autoPlay": {
             "type": "boolean",
-            "description": "When true, include asset tags in the listing response. Default false."
+            "description": "autoPlay"
           },
-          "pagination": {
-            "type": "object",
-            "description": "Optional nested pagination control. limit/offset may also be supplied at the top level.",
-            "properties": {
-              "limit": {
-                "type": "number",
-                "description": "Maximum number of items to return per page."
-              },
-              "offset": {
-                "type": "number",
-                "description": "Zero-based offset into the full result set."
-              }
-            }
-          },
-          "sourcePath": {
+          "componentName": {
             "type": "string",
-            "description": "Source path for import/move/copy."
+            "description": "componentName"
           },
-          "destinationPath": {
+          "concurrencyPath": {
             "type": "string",
-            "description": "Destination path for move/copy."
+            "description": "concurrencyPath"
           },
-          "assetPaths": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "lodCount": {
-            "type": "number"
-          },
-          "posX": {
-            "type": "number"
-          },
-          "posY": {
-            "type": "number"
-          },
-          "newName": {
+          "defaultValue": {
             "type": "string",
-            "description": "New name for renaming."
+            "description": "defaultValue"
           },
-          "overwrite": {
+          "dopplerIntensity": {
+            "type": "number",
+            "description": "dopplerIntensity"
+          },
+          "effectType": {
+            "type": "string",
+            "description": "effectType"
+          },
+          "enable": {
             "type": "boolean",
-            "description": "Overwrite if the asset/file already exists."
+            "description": "enable"
           },
-          "save": {
+          "enableReverbSend": {
+            "type": "string",
+            "description": "enableReverbSend"
+          },
+          "enabled": {
             "type": "boolean",
-            "description": "Save the asset(s) after the operation."
+            "description": "enabled"
           },
-          "fixupRedirectors": {
-            "type": "boolean"
+          "fadeInTime": {
+            "type": "number",
+            "description": "fadeInTime"
           },
-          "directoryPath": {
+          "fadeOutTime": {
+            "type": "number",
+            "description": "fadeOutTime"
+          },
+          "fadeTime": {
+            "type": "number",
+            "description": "fadeTime"
+          },
+          "fadeType": {
             "type": "string",
-            "description": "Path to a directory."
+            "description": "fadeType"
           },
-          "name": {
+          "falloffDistance": {
+            "type": "number",
+            "description": "falloffDistance"
+          },
+          "falloffMode": {
             "type": "string",
-            "description": "Name identifier."
+            "description": "falloffMode"
           },
-          "path": {
-            "type": "string",
-            "description": "Path to a directory."
-          },
-          "parentMaterial": {
-            "type": "string",
-            "description": "Material asset path."
-          },
-          "width": {
-            "type": "number"
-          },
-          "height": {
-            "type": "number"
-          },
-          "depth": {
-            "type": "number"
-          },
-          "format": {
-            "type": "string"
-          },
-          "meshPath": {
-            "type": "string",
-            "description": "Mesh asset path."
-          },
-          "tag": {
-            "type": "string",
-            "description": "Name of the tag."
-          },
-          "metadata": {
-            "type": "object"
-          },
-          "nodeType": {
-            "type": "string"
-          },
-          "nodeId": {
-            "type": "string",
-            "description": "ID of the node."
-          },
-          "sourceNodeId": {
-            "type": "string",
-            "description": "ID of the source node."
-          },
-          "targetNodeId": {
-            "type": "string",
-            "description": "ID of the target node."
+          "innerRadius": {
+            "type": "number",
+            "description": "innerRadius"
           },
           "inputName": {
             "type": "string",
-            "description": "Name of the pin."
+            "description": "inputName"
           },
-          "parameterName": {
+          "inputType": {
             "type": "string",
-            "description": "Name of the parameter."
+            "description": "inputType"
           },
-          "value": {
-            "description": "Generic value (any type)."
+          "location": {
+            "type": "object",
+            "description": "location",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
           },
-          "x": {
-            "type": "number"
+          "looping": {
+            "type": "boolean",
+            "description": "looping"
           },
-          "y": {
-            "type": "number"
+          "lowPassFilterFrequency": {
+            "type": "number",
+            "description": "lowPassFilterFrequency"
           },
-          "maxDepth": {
-            "type": "number"
-          },
-          "prefix": {
-            "type": "string"
-          },
-          "suffix": {
-            "type": "string"
-          },
-          "searchText": {
-            "type": "string"
-          },
-          "replaceText": {
-            "type": "string"
-          },
-          "paths": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "description": {
-            "type": "string"
-          },
-          "checkoutFiles": {
-            "type": "boolean"
-          },
-          "showConfirmation": {
-            "type": "boolean"
-          },
-          "pinName": {
+          "mixName": {
             "type": "string",
-            "description": "Name of the pin."
+            "description": "mixName"
           },
-          "materialPath": {
+          "name": {
             "type": "string",
-            "description": "Material asset path."
+            "description": "name"
           },
-          "texturePath": {
+          "nodeType": {
             "type": "string",
-            "description": "Texture asset path."
+            "description": "nodeType"
           },
-          "coordinateIndex": {
-            "type": "number"
+          "occlusionFilterScale": {
+            "type": "number",
+            "description": "occlusionFilterScale"
           },
-          "parameterType": {
-            "type": "string"
+          "occlusionInterpolationTime": {
+            "type": "number",
+            "description": "occlusionInterpolationTime"
           },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "occlusionVolumeScale": {
+            "type": "number",
+            "description": "occlusionVolumeScale"
           },
-          "folderPath": {
+          "outputName": {
             "type": "string",
-            "description": "Path to a directory."
-          },
-          "type": {
-            "type": "string"
-          },
-          "defaultValue": {
-            "description": "Generic value (any type)."
-          },
-          "force": {
-            "type": "boolean"
-          },
-          "recursive": {
-            "type": "boolean"
-          },
-          "reportType": {
-            "type": "string"
-          },
-          "pattern": {
-            "type": "string"
-          },
-          "replacement": {
-            "type": "string"
-          },
-          "materialDomain": {
-            "type": "string"
-          },
-          "blendMode": {
-            "type": "string"
-          },
-          "shadingModel": {
-            "type": "string"
-          },
-          "domain": {
-            "type": "string"
-          },
-          "twoSided": {
-            "type": "boolean"
-          },
-          "uTiling": {
-            "type": "number"
-          },
-          "vTiling": {
-            "type": "number"
-          },
-          "operation": {
-            "type": "string"
-          },
-          "constA": {
-            "type": "number"
-          },
-          "constB": {
-            "type": "number"
-          },
-          "code": {
-            "type": "string"
+            "description": "outputName"
           },
           "outputType": {
-            "type": "string"
+            "type": "string",
+            "description": "outputType"
           },
-          "inputs": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
+          "parentClass": {
+            "type": "string",
+            "description": "parentClass"
           },
-          "additionalOutputs": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
+          "path": {
+            "type": "string",
+            "description": "path"
           },
-          "group": {
-            "type": "string"
+          "pitch": {
+            "type": "number",
+            "description": "pitch"
+          },
+          "properties": {
+            "type": "object",
+            "description": "properties",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "reverbDistanceMax": {
+            "type": "string",
+            "description": "reverbDistanceMax"
+          },
+          "reverbDistanceMin": {
+            "type": "string",
+            "description": "reverbDistanceMin"
+          },
+          "reverbEffect": {
+            "type": "string",
+            "description": "reverbEffect"
+          },
+          "reverbWetLevelMax": {
+            "type": "string",
+            "description": "reverbWetLevelMax"
+          },
+          "reverbWetLevelMin": {
+            "type": "string",
+            "description": "reverbWetLevelMin"
+          },
+          "rotation": {
+            "type": "object",
+            "description": "rotation",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "save": {
+            "type": "boolean",
+            "description": "save"
+          },
+          "size": {
+            "type": "object",
+            "description": "size",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "soundClassName": {
+            "type": "string",
+            "description": "soundClassName"
+          },
+          "soundClassPath": {
+            "type": "string",
+            "description": "soundClassPath"
+          },
+          "soundName": {
+            "type": "string",
+            "description": "soundName"
+          },
+          "soundPath": {
+            "type": "string",
+            "description": "soundPath"
+          },
+          "sourceNode": {
+            "type": "string",
+            "description": "sourceNode"
+          },
+          "sourceNodeId": {
+            "type": "string",
+            "description": "sourceNodeId"
+          },
+          "sourceOutputName": {
+            "type": "string",
+            "description": "sourceOutputName"
           },
           "sourcePin": {
             "type": "string",
-            "description": "Name of the source pin."
+            "description": "sourcePin"
+          },
+          "spatialization": {
+            "type": "string",
+            "description": "spatialization"
+          },
+          "speakerPath": {
+            "type": "string",
+            "description": "speakerPath"
+          },
+          "startTime": {
+            "type": "number",
+            "description": "startTime"
+          },
+          "targetInputName": {
+            "type": "string",
+            "description": "targetInputName"
+          },
+          "targetNode": {
+            "type": "string",
+            "description": "targetNode"
+          },
+          "targetNodeId": {
+            "type": "string",
+            "description": "targetNodeId"
           },
           "targetPin": {
             "type": "string",
-            "description": "Name of the target pin."
+            "description": "targetPin"
           },
-          "direction": {
-            "type": "string"
+          "targetVolume": {
+            "type": "number",
+            "description": "targetVolume"
           },
-          "downstream": {
-            "type": "boolean"
+          "velocityScale": {
+            "type": "number",
+            "description": "velocityScale"
           },
-          "startNodeId": {
+          "volume": {
+            "type": "number",
+            "description": "volume"
+          },
+          "volumeAdjuster": {
             "type": "string",
-            "description": "ID of the node."
+            "description": "volumeAdjuster"
           },
-          "endPin": {
+          "wavePath": {
             "type": "string",
-            "description": "Name of the pin."
+            "description": "wavePath"
           },
-          "orphansOnly": {
-            "type": "boolean"
+          "windowSize": {
+            "type": "number",
+            "description": "windowSize"
           },
-          "functionPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "inputType": {
-            "type": "string"
-          },
-          "instancePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "layerName": {
-            "type": "string"
-          },
-          "blendType": {
-            "type": "string"
-          },
-          "layers": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "nodeIds": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "sourceTexture": {
-            "type": "string",
-            "description": "Texture asset path."
-          },
-          "strength": {
-            "type": "number"
-          },
-          "scale": {
-            "type": "number"
-          },
-          "octaves": {
-            "type": "number"
-          },
-          "samples": {
-            "type": "number"
-          },
-          "newWidth": {
-            "type": "number"
-          },
-          "newHeight": {
-            "type": "number"
-          },
-          "filterMethod": {
-            "type": "string"
-          },
-          "inBlack": {
-            "type": "number"
-          },
-          "inWhite": {
-            "type": "number"
-          },
-          "gamma": {
-            "type": "number"
-          },
-          "curvePoints": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "amount": {
-            "type": "number"
-          },
-          "radius": {
-            "type": "number"
-          },
-          "channel": {
-            "type": "string"
-          },
-          "redTexture": {
-            "type": "string",
-            "description": "Texture asset path."
-          },
-          "greenTexture": {
-            "type": "string",
-            "description": "Texture asset path."
-          },
-          "blueTexture": {
-            "type": "string",
-            "description": "Texture asset path."
-          },
-          "baseTexture": {
-            "type": "string",
-            "description": "Texture asset path."
-          },
-          "blendTexture": {
-            "type": "string",
-            "description": "Texture asset path."
-          },
-          "opacity": {
-            "type": "number"
-          },
-          "compressionSettings": {
-            "type": "string"
-          },
-          "textureGroup": {
-            "type": "string"
-          },
-          "lodBias": {
-            "type": "number"
-          },
-          "virtualTextureStreaming": {
-            "type": "boolean"
-          },
-          "neverStream": {
-            "type": "boolean"
-          },
-          "streamingPriority": {
-            "type": "number"
-          },
-          "speed": {
-            "type": "number"
-          },
-          "speedX": {
-            "type": "number"
-          },
-          "speedY": {
-            "type": "number"
-          },
-          "levels": {
-            "type": "number"
-          },
-          "structPath": {
-            "type": "string",
-            "description": "Asset path of the Blueprint Struct (e.g. /Game/Structs/S_MyStruct)."
-          },
-          "otherStructPath": {
-            "type": "string",
-            "description": "Second struct path for compare_structs."
-          },
-          "memberName": {
-            "type": "string",
-            "description": "Member (variable) name to add/rename/remove."
-          },
-          "newMemberName": {
-            "type": "string",
-            "description": "New member name (rename_struct_member)."
-          },
-          "memberType": {
-            "type": "string",
-            "description": "Unreal property type for the member: Bool, Int, Float, String, Name, Text, Vector, Rotator, Transform, Object, SoftObject, Class, SoftClass, Enum:<Name>, Struct:<Path>, or with container prefix Array:..., Set:..., Map:<K>,<V>:"
-          },
-          "varGuid": {
-            "type": "string",
-            "description": "Stable member GUID (from list_struct_members) identifying the member."
-          },
-          "tooltip": {
-            "type": "string",
-            "description": "Member tooltip (set_struct_member_metadata)."
-          },
-          "position": {
+          "action": {
             "type": "string",
             "enum": [
-              "first",
-              "last",
-              "before",
-              "after"
+              "add_cue_node",
+              "add_metasound_input",
+              "add_metasound_node",
+              "add_metasound_output",
+              "add_mix_modifier",
+              "add_source_effect",
+              "clear_sound_mix_class_override",
+              "configure_distance_attenuation",
+              "configure_mix_eq",
+              "configure_occlusion",
+              "configure_reverb_send",
+              "configure_spatialization",
+              "connect_cue_nodes",
+              "connect_metasound_nodes",
+              "create_ambient_sound",
+              "create_attenuation_settings",
+              "create_audio_component",
+              "create_dialogue_voice",
+              "create_dialogue_wave",
+              "create_metasound",
+              "create_reverb_effect",
+              "create_reverb_zone",
+              "create_sound_class",
+              "create_sound_cue",
+              "create_sound_mix",
+              "create_source_effect_chain",
+              "create_submix_effect",
+              "enable_audio_analysis",
+              "fade_sound",
+              "fade_sound_in",
+              "fade_sound_out",
+              "get_audio_info",
+              "play_sound_2d",
+              "play_sound_at_location",
+              "play_sound_attached",
+              "pop_sound_mix",
+              "prime_sound",
+              "push_sound_mix",
+              "set_audio_occlusion",
+              "set_base_sound_mix",
+              "set_class_parent",
+              "set_class_properties",
+              "set_cue_attenuation",
+              "set_cue_concurrency",
+              "set_dialogue_context",
+              "set_doppler_effect",
+              "set_metasound_default",
+              "set_sound_attenuation",
+              "set_sound_mix_class_override",
+              "spawn_sound_at_location"
             ],
-            "description": "Reorder anchor position (reorder_struct_members)."
-          },
-          "relativeTo": {
-            "type": "string",
-            "description": "Target member GUID/name to reorder relative to (reorder_struct_members position before/after)."
-          },
-          "searchScope": {
-            "type": "string",
-            "description": "Optional path scope for search_struct_usage."
-          },
-          "destinationName": {
-            "type": "string",
-            "description": "New asset name for duplicate_struct (without path)."
-          },
-          "members": {
-            "type": "array",
-            "description": "Member definitions for import_struct / create_struct. Each entry accepts either the short form { name, type, default?, tooltip?, metadata? } or the add_struct_member form { memberName, memberType, defaultValue?, tooltip?, metadata? }. type/memberType use the same grammar as memberType (Struct:<Path> for nested structs, Array:/Set:/Map: containers). Invalid members cause the whole request to be rejected before any change is made.",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "description": "Member name (short form). Alias: memberName."
-                },
-                "memberName": {
-                  "type": "string",
-                  "description": "Member name (add_struct_member form). Alias: name."
-                },
-                "type": {
-                  "type": "string",
-                  "description": "Unreal property type (same grammar as memberType, including Struct:<Path> for nested structs). Alias: memberType."
-                },
-                "memberType": {
-                  "type": "string",
-                  "description": "Unreal property type (add_struct_member form). Alias: type."
-                },
-                "defaultValue": {
-                  "type": "string",
-                  "description": "Optional default value as a string (same format as add_struct_member defaultValue). Alias: default."
-                },
-                "default": {
-                  "type": "string",
-                  "description": "Optional default value as a string (short form). Alias: defaultValue."
-                },
-                "tooltip": {
-                  "type": "string",
-                  "description": "Optional member tooltip."
-                },
-                "metadata": {
-                  "type": "object",
-                  "description": "Optional metadata key/value pairs."
-                }
-              },
-              "required": []
-            }
-          },
-          "dataTablePath": {
-            "type": "string",
-            "description": "Asset path of the DataTable (e.g. /Game/DataTables/DT_MyTable)."
-          },
-          "rowStructPath": {
-            "type": "string",
-            "description": "Asset path of the row UScriptStruct bound to a DataTable."
-          },
-          "rowName": {
-            "type": "string",
-            "description": "Name of the row to add/get/update/delete in a DataTable."
-          },
-          "rowData": {
-            "type": "object"
-          },
-          "rows": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "clearExisting": {
-            "type": "boolean"
-          },
-          "enumPath": {
-            "type": "string",
-            "description": "Asset path of the UserDefinedEnum (e.g. /Game/Enums/E_MyEnum)."
-          },
-          "valueName": {
-            "type": "string",
-            "description": "Enum value (entry) name."
-          },
-          "newValueName": {
-            "type": "string",
-            "description": "New enum value name (rename_enum_value)."
-          },
-          "newEnumName": {
-            "type": "string",
-            "description": "Name for the new enum produced by split_enum."
-          },
-          "order": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "index": {
-            "type": "number"
-          },
-          "key": {
-            "type": "string",
-            "description": "Metadata key for set_enum_value_metadata."
-          },
-          "values": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "propertyName": {
-            "type": "string",
-            "description": "Name of the property."
-          },
-          "structType": {
-            "type": "string",
-            "description": "Asset path of the inner UScriptStruct for an FInstancedStruct property (set_instanced_struct_property)."
-          },
-          "structValues": {
-            "type": "object",
-            "additionalProperties": true,
-            "description": "Field-name to value map applied to the inner UScriptStruct when setting an FInstancedStruct property (set_instanced_struct_property)."
+            "description": "Action to invoke on manage_audio."
           },
           "params": {
             "type": "object",
@@ -1185,43 +5901,44 @@ export const gatewayManifest = {
         "create_blueprint",
         "get_blueprint",
         "get",
+        "ensure_exists",
         "compile",
         "add_component",
-        "set_default",
+        "add_scs_component",
         "modify_scs",
         "get_scs",
-        "add_scs_component",
         "remove_scs_component",
         "reparent_scs_component",
         "set_scs_transform",
         "set_scs_property",
-        "ensure_exists",
-        "probe_handle",
         "add_variable",
         "remove_variable",
         "rename_variable",
-        "add_function",
-        "remove_function",
-        "add_event",
-        "remove_event",
-        "add_construction_script",
         "set_variable_metadata",
         "set_metadata",
+        "set_default",
         "create_node",
         "add_node",
         "delete_node",
-        "connect_pins",
-        "break_pin_links",
-        "set_node_property",
         "create_reroute_node",
         "get_node_details",
         "get_graph_details",
         "get_pin_details",
         "list_node_types",
-        "set_pin_default_value",
         "create_struct_make_break_nodes",
+        "connect_pins",
+        "break_pin_links",
+        "set_node_property",
+        "set_pin_default_value",
+        "add_construction_script",
+        "add_function",
+        "remove_function",
+        "add_event",
+        "remove_event",
+        "probe_handle",
         "create_widget_blueprint",
         "set_widget_parent_class",
+        "preview_widget",
         "add_canvas_panel",
         "add_horizontal_box",
         "add_vertical_box",
@@ -1245,6 +5962,22 @@ export const gatewayManifest = {
         "add_spin_box",
         "add_list_view",
         "add_tree_view",
+        "add_health_bar",
+        "add_ammo_counter",
+        "add_minimap",
+        "add_crosshair",
+        "add_compass",
+        "add_interaction_prompt",
+        "add_objective_tracker",
+        "add_damage_indicator",
+        "create_main_menu",
+        "create_pause_menu",
+        "create_settings_menu",
+        "create_loading_screen",
+        "create_hud_widget",
+        "create_inventory_ui",
+        "create_dialog_widget",
+        "create_radial_menu",
         "set_anchor",
         "set_alignment",
         "set_position",
@@ -1267,24 +6000,7 @@ export const gatewayManifest = {
         "add_animation_track",
         "add_animation_keyframe",
         "set_animation_loop",
-        "create_main_menu",
-        "create_pause_menu",
-        "create_settings_menu",
-        "create_loading_screen",
-        "create_hud_widget",
-        "add_health_bar",
-        "add_ammo_counter",
-        "add_minimap",
-        "add_crosshair",
-        "add_compass",
-        "add_interaction_prompt",
-        "add_objective_tracker",
-        "add_damage_indicator",
-        "create_inventory_ui",
-        "create_dialog_widget",
-        "create_radial_menu",
-        "get_widget_info",
-        "preview_widget"
+        "get_widget_info"
       ],
       "parameterNames": [
         "actionPath",
@@ -1438,445 +6154,79 @@ export const gatewayManifest = {
       "inputSchema": {
         "type": "object",
         "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "create",
-              "create_blueprint",
-              "get_blueprint",
-              "get",
-              "compile",
-              "add_component",
-              "set_default",
-              "modify_scs",
-              "get_scs",
-              "add_scs_component",
-              "remove_scs_component",
-              "reparent_scs_component",
-              "set_scs_transform",
-              "set_scs_property",
-              "ensure_exists",
-              "probe_handle",
-              "add_variable",
-              "remove_variable",
-              "rename_variable",
-              "add_function",
-              "remove_function",
-              "add_event",
-              "remove_event",
-              "add_construction_script",
-              "set_variable_metadata",
-              "set_metadata",
-              "create_node",
-              "add_node",
-              "delete_node",
-              "connect_pins",
-              "break_pin_links",
-              "set_node_property",
-              "create_reroute_node",
-              "get_node_details",
-              "get_graph_details",
-              "get_pin_details",
-              "list_node_types",
-              "set_pin_default_value",
-              "create_struct_make_break_nodes",
-              "create_widget_blueprint",
-              "set_widget_parent_class",
-              "add_canvas_panel",
-              "add_horizontal_box",
-              "add_vertical_box",
-              "add_overlay",
-              "add_grid_panel",
-              "add_uniform_grid",
-              "add_wrap_box",
-              "add_scroll_box",
-              "add_size_box",
-              "add_scale_box",
-              "add_border",
-              "add_text_block",
-              "add_rich_text_block",
-              "add_image",
-              "add_button",
-              "add_check_box",
-              "add_slider",
-              "add_progress_bar",
-              "add_text_input",
-              "add_combo_box",
-              "add_spin_box",
-              "add_list_view",
-              "add_tree_view",
-              "set_anchor",
-              "set_alignment",
-              "set_position",
-              "set_size",
-              "set_padding",
-              "set_z_order",
-              "set_render_transform",
-              "set_visibility",
-              "set_style",
-              "set_clipping",
-              "create_property_binding",
-              "bind_text",
-              "bind_visibility",
-              "bind_color",
-              "bind_enabled",
-              "bind_on_clicked",
-              "bind_on_hovered",
-              "bind_on_value_changed",
-              "create_widget_animation",
-              "add_animation_track",
-              "add_animation_keyframe",
-              "set_animation_loop",
-              "create_main_menu",
-              "create_pause_menu",
-              "create_settings_menu",
-              "create_loading_screen",
-              "create_hud_widget",
-              "add_health_bar",
-              "add_ammo_counter",
-              "add_minimap",
-              "add_crosshair",
-              "add_compass",
-              "add_interaction_prompt",
-              "add_objective_tracker",
-              "add_damage_indicator",
-              "create_inventory_ui",
-              "create_dialog_widget",
-              "create_radial_menu",
-              "get_widget_info",
-              "preview_widget"
-            ],
-            "description": "Blueprint action"
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "blueprintPath": {
-            "type": "string",
-            "description": "Blueprint asset path."
-          },
-          "blueprintType": {
-            "type": "string",
-            "description": "Path or name of the parent class."
-          },
-          "savePath": {
-            "type": "string",
-            "description": "Path to save the asset."
-          },
-          "componentType": {
-            "type": "string"
-          },
-          "componentName": {
-            "type": "string",
-            "description": "Name of the component."
-          },
-          "componentClass": {
-            "type": "string"
-          },
-          "attachTo": {
-            "type": "string"
-          },
-          "newParent": {
-            "type": "string"
-          },
-          "propertyName": {
-            "type": "string",
-            "description": "Name of the property."
-          },
-          "variableName": {
-            "type": "string",
-            "description": "Name of the variable."
-          },
-          "oldName": {
-            "type": "string"
-          },
-          "newName": {
-            "type": "string",
-            "description": "New name for renaming."
-          },
-          "value": {
-            "description": "Generic value (any type)."
-          },
-          "metadata": {
-            "type": "object"
-          },
-          "properties": {
-            "type": "object"
-          },
-          "graphName": {
-            "type": "string",
-            "description": "Name of the graph."
-          },
-          "includePins": {
-            "type": "boolean",
-            "description": "get_graph_details: when true, each node also carries its pins and their linkedTo connections, so a graph's exec/data flow is readable in one call (no per-node get_node_details loop). Default false keeps the lightweight nodeId/nodeName/nodeTitle list."
-          },
-          "nodeType": {
-            "type": "string"
-          },
-          "nodeId": {
-            "type": "string",
-            "description": "ID of the node."
-          },
-          "pinName": {
-            "type": "string",
-            "description": "Name of the pin."
-          },
-          "linkedTo": {
-            "type": "string"
-          },
-          "memberName": {
-            "type": "string"
-          },
-          "x": {
-            "type": "number"
-          },
-          "y": {
-            "type": "number"
-          },
-          "location": {
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          },
-          "rotation": {
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          },
-          "scale": {
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          },
-          "operations": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "eventType": {
-            "type": "string"
-          },
-          "customEventName": {
-            "type": "string",
-            "description": "Name of the event."
-          },
-          "parameters": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "variableType": {
-            "type": "string",
-            "description": "Variable type (e.g., Boolean, Float, Integer, Vector, String, Object)"
-          },
-          "defaultValue": {
-            "description": "Generic value (any type)."
-          },
-          "category": {
-            "type": "string"
-          },
-          "isReplicated": {
-            "type": "boolean"
-          },
-          "isPublic": {
-            "type": "boolean"
-          },
-          "functionName": {
-            "type": "string",
-            "description": "Name of the function."
-          },
-          "inputs": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "outputs": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "posX": {
-            "type": "number"
-          },
-          "posY": {
-            "type": "number"
-          },
-          "eventName": {
-            "type": "string",
-            "description": "Name of the event."
-          },
-          "parentComponent": {
-            "type": "string"
-          },
-          "meshPath": {
-            "type": "string",
-            "description": "Mesh asset path."
-          },
-          "materialPath": {
-            "type": "string",
-            "description": "Material asset path."
-          },
-          "applyAndSave": {
-            "type": "boolean"
-          },
-          "memberClass": {
-            "type": "string"
-          },
-          "targetClass": {
-            "type": "string"
-          },
-          "inputAxisName": {
-            "type": "string"
-          },
           "actionPath": {
             "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "inputActionPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "inputActionAssetPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "saveAfterCompile": {
-            "type": "boolean"
-          },
-          "timeoutMs": {
-            "type": "number"
-          },
-          "parentClass": {
-            "type": "string",
-            "description": "Path or name of the parent class."
-          },
-          "fromNodeId": {
-            "type": "string",
-            "description": "ID of the source node."
-          },
-          "fromPinName": {
-            "type": "string",
-            "description": "Name of the source pin."
-          },
-          "toNodeId": {
-            "type": "string",
-            "description": "ID of the target node."
-          },
-          "toPinName": {
-            "type": "string",
-            "description": "Name of the target pin."
-          },
-          "structPath": {
-            "type": "string",
-            "description": "Blueprint Struct asset path (create_struct_make_break_nodes)."
-          },
-          "path": {
-            "type": "string",
-            "description": "Directory path for asset creation."
-          },
-          "folder": {
-            "type": "string",
-            "description": "Path to a directory."
-          },
-          "widgetPath": {
-            "type": "string",
-            "description": "Widget blueprint path."
-          },
-          "slotName": {
-            "type": "string",
-            "description": "Name of the slot."
-          },
-          "parentSlot": {
-            "type": "string",
-            "description": "Parent slot to add widget to."
-          },
-          "anchorMin": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              }
-            },
-            "description": "Minimum anchor point (0-1)."
-          },
-          "anchorMax": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              }
-            },
-            "description": "Maximum anchor point (0-1)."
+            "description": "Enhanced Input action asset path accepted in place of inputActionPath."
           },
           "alignment": {
             "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              }
-            },
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
             "description": "Widget alignment (0-1)."
           },
-          "zOrder": {
-            "type": "number",
-            "description": "Z-order for canvas slot."
+          "alwaysShowScrollbar": {
+            "type": "boolean",
+            "description": "Always show scrollbar."
           },
-          "translation": {
+          "anchorMax": {
             "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              }
-            },
-            "description": "Render translation."
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Maximum anchor point (0-1)."
           },
-          "shear": {
+          "anchorMin": {
             "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              }
-            },
-            "description": "Render shear."
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Minimum anchor point (0-1)."
           },
           "angle": {
             "type": "number",
-            "description": "Angle in degrees."
+            "description": "Render rotation angle in degrees."
           },
-          "visibility": {
+          "animationName": {
             "type": "string",
-            "enum": [
-              "Visible",
-              "Collapsed",
-              "Hidden",
-              "HitTestInvisible",
-              "SelfHitTestInvisible"
-            ],
-            "description": "Widget visibility state."
+            "description": "Widget animation name."
+          },
+          "applyAndSave": {
+            "type": "boolean",
+            "description": "Whether to save the Blueprint after applying SCS changes."
+          },
+          "attachTo": {
+            "type": "string",
+            "description": "Socket or parent component to attach to."
+          },
+          "autoWrap": {
+            "type": "boolean",
+            "description": "Enable text auto-wrap."
+          },
+          "bindingSource": {
+            "type": "string",
+            "description": "Variable or function name to bind to."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "blueprintType": {
+            "type": "string",
+            "description": "Blueprint type hint for creation."
+          },
+          "brushColor": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Border brush color."
+          },
+          "brushSize": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Brush/image size."
+          },
+          "category": {
+            "type": "string",
+            "description": "Category folder for the variable."
           },
           "clipping": {
             "type": "string",
@@ -1889,101 +6239,132 @@ export const gatewayManifest = {
             ],
             "description": "Widget clipping mode."
           },
-          "text": {
-            "type": "string",
-            "description": "Text content."
-          },
-          "fontSize": {
-            "type": "number",
-            "description": "Font size."
-          },
           "colorAndOpacity": {
             "type": "object",
-            "properties": {
-              "r": {
-                "type": "number"
-              },
-              "g": {
-                "type": "number"
-              },
-              "b": {
-                "type": "number"
-              },
-              "a": {
-                "type": "number"
-              }
-            },
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
             "description": "Color and opacity (0-1 values)."
           },
-          "autoWrap": {
-            "type": "boolean",
-            "description": "Enable text auto-wrap."
+          "columnCount": {
+            "type": "number",
+            "description": "Number of columns in a uniform/grid panel."
           },
-          "texturePath": {
+          "componentClass": {
             "type": "string",
-            "description": "Texture asset path."
+            "description": "Component class path for SCS node creation."
           },
-          "brushSize": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              }
-            },
-            "description": "Brush/image size."
+          "componentName": {
+            "type": "string",
+            "description": "Name for the SCS component node."
           },
-          "isEnabled": {
-            "type": "boolean",
-            "description": "Widget enabled state."
+          "componentType": {
+            "type": "string",
+            "description": "Component class name to add."
           },
-          "isChecked": {
-            "type": "boolean",
-            "description": "Checkbox checked state."
+          "customEventName": {
+            "type": "string",
+            "description": "Custom event name to create."
           },
-          "minValue": {
-            "type": "number",
-            "description": "Minimum value."
-          },
-          "maxValue": {
-            "type": "number",
-            "description": "Maximum value."
-          },
-          "stepSize": {
-            "type": "number",
-            "description": "Value step size."
+          "defaultValue": {
+            "description": "Default value for the variable or property."
           },
           "delta": {
             "type": "number",
             "description": "Spinbox increment."
           },
-          "percent": {
+          "duration": {
             "type": "number",
-            "description": "Progress bar percentage (0-1)."
+            "description": "Duration in seconds."
+          },
+          "eventName": {
+            "type": "string",
+            "description": "Custom event name."
+          },
+          "eventType": {
+            "type": "string",
+            "description": "Event type string for add_event."
+          },
+          "explicitWrapWidth": {
+            "type": "boolean",
+            "description": "Use explicit wrap width."
+          },
+          "fadeTime": {
+            "type": "number",
+            "description": "Fade time in seconds."
           },
           "fillColorAndOpacity": {
             "type": "object",
-            "properties": {
-              "r": {
-                "type": "number"
-              },
-              "g": {
-                "type": "number"
-              },
-              "b": {
-                "type": "number"
-              },
-              "a": {
-                "type": "number"
-              }
-            },
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
             "description": "Fill color for progress bar."
           },
-          "isMarquee": {
+          "folder": {
+            "type": "string",
+            "description": "Destination /Game folder for a Widget Blueprint."
+          },
+          "fontSize": {
+            "type": "number",
+            "description": "Font size."
+          },
+          "fromNodeId": {
+            "type": "string",
+            "description": "Source node identifier for a pin connection."
+          },
+          "fromPinName": {
+            "type": "string",
+            "description": "Source pin name for a pin connection."
+          },
+          "functionName": {
+            "type": "string",
+            "description": "Function name to add or remove."
+          },
+          "graphName": {
+            "type": "string",
+            "description": "Target graph name (Event Graph, Construction Script, etc.)."
+          },
+          "gridSize": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Inventory grid size {columns,rows}."
+          },
+          "height": {
+            "type": "number",
+            "description": "Height override."
+          },
+          "heightOverride": {
+            "type": "number",
+            "description": "Height override for size box."
+          },
+          "hintText": {
+            "type": "string",
+            "description": "Placeholder hint text."
+          },
+          "includePins": {
             "type": "boolean",
-            "description": "Progress bar marquee mode."
+            "description": "When true, graph details include per-node pins and links."
+          },
+          "includeProgressBar": {
+            "type": "boolean",
+            "description": "Include progress bar."
+          },
+          "innerSlotPadding": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Inner wrap box slot padding."
+          },
+          "inputActionAssetPath": {
+            "type": "string",
+            "description": "Enhanced Input action asset path accepted in place of inputActionPath."
+          },
+          "inputActionPath": {
+            "type": "string",
+            "description": "Enhanced Input action asset path for an EnhancedInputAction node."
+          },
+          "inputAxisName": {
+            "type": "string",
+            "description": "Axis name for an InputAxis event node."
           },
           "inputType": {
             "type": "string",
@@ -1993,20 +6374,179 @@ export const gatewayManifest = {
             ],
             "description": "Text input type."
           },
-          "hintText": {
+          "inputs": {
+            "type": "array",
+            "description": "Function input parameter descriptors.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true
+          },
+          "interpolation": {
             "type": "string",
-            "description": "Placeholder hint text."
+            "enum": [
+              "linear",
+              "cubic",
+              "constant"
+            ],
+            "description": "Keyframe interpolation."
+          },
+          "isChecked": {
+            "type": "boolean",
+            "description": "Checkbox checked state."
+          },
+          "isEnabled": {
+            "type": "boolean",
+            "description": "Widget enabled state."
+          },
+          "isMarquee": {
+            "type": "boolean",
+            "description": "Progress bar marquee mode."
+          },
+          "isPublic": {
+            "type": "boolean",
+            "description": "Whether the variable is exposed to the editor/BP graph."
+          },
+          "isReplicated": {
+            "type": "boolean",
+            "description": "Whether the variable is replicated."
+          },
+          "linkedTo": {
+            "type": "string",
+            "description": "Target pin descriptor for a pin link."
+          },
+          "location": {
+            "type": "object",
+            "description": "Relative location {x, y, z} for an SCS component template.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "loopCount": {
+            "type": "number",
+            "description": "Number of loops (-1 for infinite)."
+          },
+          "materialPath": {
+            "type": "string",
+            "description": "Material asset path for a component."
+          },
+          "maxValue": {
+            "type": "number",
+            "description": "Maximum slider/spinbox value."
+          },
+          "maxVisibleObjectives": {
+            "type": "number",
+            "description": "Maximum visible objectives."
+          },
+          "memberClass": {
+            "type": "string",
+            "description": "Member class (function, variable, event, etc.)."
+          },
+          "memberName": {
+            "type": "string",
+            "description": "Member (function/variable/event) name the node represents."
+          },
+          "meshPath": {
+            "type": "string",
+            "description": "Static/Skeletal mesh asset path for a mesh component."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Arbitrary metadata key-value pairs.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "minDesiredHeight": {
+            "type": "number",
+            "description": "Minimum desired height."
+          },
+          "minDesiredSlotHeight": {
+            "type": "number",
+            "description": "Minimum slot height."
+          },
+          "minDesiredSlotWidth": {
+            "type": "number",
+            "description": "Minimum slot width."
+          },
+          "minDesiredWidth": {
+            "type": "number",
+            "description": "Minimum desired width."
+          },
+          "minValue": {
+            "type": "number",
+            "description": "Minimum slider/spinbox value."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the new Blueprint or asset."
+          },
+          "newName": {
+            "type": "string",
+            "description": "New name for a renamed variable, function, or component."
+          },
+          "newParent": {
+            "type": "string",
+            "description": "New parent SCS node name."
+          },
+          "nodeGuid": {
+            "type": "string",
+            "description": "Node GUID accepted in place of nodeId."
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "Existing node identifier returned by create_node or get_graph_details."
+          },
+          "nodeName": {
+            "type": "string",
+            "description": "Human-readable node name."
+          },
+          "nodeType": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Blueprint node type string for creation."
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "make",
+                  "break"
+                ],
+                "description": "Struct node kind: make (UK2Node_MakeStruct) or break (UK2Node_BreakStruct)."
+              }
+            ],
+            "description": "Blueprint node type string for creation."
+          },
+          "oldName": {
+            "type": "string",
+            "description": "Current variable name before renaming."
+          },
+          "onHoveredFunction": {
+            "type": "string",
+            "description": "Function to call on hover."
+          },
+          "onUnhoveredFunction": {
+            "type": "string",
+            "description": "Function to call on unhover."
+          },
+          "operations": {
+            "type": "array",
+            "description": "Batch operations for probe_handle.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true
           },
           "options": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "description": "Option string."
             },
             "description": "Combo box options."
-          },
-          "selectedOption": {
-            "type": "string",
-            "description": "Selected combo box option."
           },
           "orientation": {
             "type": "string",
@@ -2015,6 +6555,138 @@ export const gatewayManifest = {
               "Vertical"
             ],
             "description": "Widget orientation."
+          },
+          "outputs": {
+            "type": "array",
+            "description": "Function output parameter descriptors.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true
+          },
+          "padding": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Widget slot padding {left,top,right,bottom}."
+          },
+          "parameters": {
+            "type": "array",
+            "description": "Function/event parameter descriptors.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true
+          },
+          "parentClass": {
+            "type": "string",
+            "description": "Parent class path for Blueprint creation (e.g. /Script/Engine.Actor)."
+          },
+          "parentComponent": {
+            "type": "string",
+            "description": "Parent SCS node name for reparenting."
+          },
+          "parentName": {
+            "type": "string",
+            "description": "Optional parent panel name to add the widget under."
+          },
+          "parentSlot": {
+            "type": "string",
+            "description": "Parent slot to add the widget to."
+          },
+          "path": {
+            "type": "string",
+            "description": "Destination /Game folder for a new Widget Blueprint."
+          },
+          "percent": {
+            "type": "number",
+            "description": "Progress bar percentage (0-1)."
+          },
+          "pinName": {
+            "type": "string",
+            "description": "Pin name on a graph node."
+          },
+          "playMode": {
+            "type": "string",
+            "enum": [
+              "forward",
+              "reverse",
+              "pingpong"
+            ],
+            "description": "Animation play mode."
+          },
+          "posX": {
+            "type": "number",
+            "description": "X coordinate for node placement."
+          },
+          "posY": {
+            "type": "number",
+            "description": "Y coordinate for node placement."
+          },
+          "position": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Widget position offset."
+          },
+          "preset": {
+            "type": "string",
+            "description": "Named anchor preset (e.g. TopCenter) applied in place of anchorMin/anchorMax."
+          },
+          "previewSize": {
+            "type": "string",
+            "enum": [
+              "1080p",
+              "720p",
+              "mobile",
+              "custom"
+            ],
+            "description": "Preview resolution preset."
+          },
+          "promptFormat": {
+            "type": "string",
+            "description": "Interaction prompt format."
+          },
+          "properties": {
+            "type": "object",
+            "description": "Property bag applied to the CDO, component template, or node.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "propertyName": {
+            "type": "string",
+            "description": "Property name to set on the CDO or component."
+          },
+          "propertyValue": {
+            "description": "Value to assign to the property."
+          },
+          "rotation": {
+            "type": "object",
+            "description": "Relative rotation {pitch, yaw, roll} for an SCS component template.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "rowCount": {
+            "type": "number",
+            "description": "Number of rows in a uniform/grid panel."
+          },
+          "saveAfterCompile": {
+            "type": "boolean",
+            "description": "Whether to save the asset after compiling."
+          },
+          "savePath": {
+            "type": "string",
+            "description": "Destination /Game folder for a new Blueprint."
+          },
+          "scale": {
+            "type": "object",
+            "description": "Relative scale {x, y, z} for an SCS component template, or {x, y} for a widget render transform.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
           },
           "scrollBarVisibility": {
             "type": "string",
@@ -2025,85 +6697,60 @@ export const gatewayManifest = {
             ],
             "description": "Scroll bar visibility."
           },
-          "alwaysShowScrollbar": {
+          "segmentCount": {
+            "type": "number",
+            "description": "Number of radial segments."
+          },
+          "selectedOption": {
+            "type": "string",
+            "description": "Selected combo box option."
+          },
+          "settingsType": {
+            "type": "string",
+            "enum": [
+              "video",
+              "audio",
+              "controls",
+              "gameplay",
+              "all"
+            ],
+            "description": "Settings menu type."
+          },
+          "shear": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Render shear."
+          },
+          "showSpeakerName": {
             "type": "boolean",
-            "description": "Always show scrollbar."
+            "description": "Show speaker name in dialog."
           },
-          "columnCount": {
+          "size": {
             "type": "number",
-            "description": "Number of columns."
+            "description": "Widget size value."
           },
-          "rowCount": {
-            "type": "number",
-            "description": "Number of rows."
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
           },
           "slotPadding": {
             "type": "object",
-            "properties": {
-              "left": {
-                "type": "number"
-              },
-              "top": {
-                "type": "number"
-              },
-              "right": {
-                "type": "number"
-              },
-              "bottom": {
-                "type": "number"
-              }
-            },
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
             "description": "Padding between uniform grid slots."
           },
-          "minDesiredSlotWidth": {
+          "sourceNode": {
+            "type": "string",
+            "description": "Source node id accepted in place of fromNodeId."
+          },
+          "sourcePin": {
+            "type": "string",
+            "description": "Source pin name on the originating node."
+          },
+          "stepSize": {
             "type": "number",
-            "description": "Minimum slot width."
-          },
-          "minDesiredSlotHeight": {
-            "type": "number",
-            "description": "Minimum slot height."
-          },
-          "innerSlotPadding": {
-            "type": "object",
-            "properties": {
-              "left": {
-                "type": "number"
-              },
-              "top": {
-                "type": "number"
-              },
-              "right": {
-                "type": "number"
-              },
-              "bottom": {
-                "type": "number"
-              }
-            },
-            "description": "Inner wrap box slot padding."
-          },
-          "wrapWidth": {
-            "type": "number",
-            "description": "Wrap width for wrap box."
-          },
-          "explicitWrapWidth": {
-            "type": "boolean",
-            "description": "Use explicit wrap width."
-          },
-          "widthOverride": {
-            "type": "number",
-            "description": "Width override for size box."
-          },
-          "heightOverride": {
-            "type": "number",
-            "description": "Height override for size box."
-          },
-          "minDesiredWidth": {
-            "type": "number",
-            "description": "Minimum desired width."
-          },
-          "minDesiredHeight": {
-            "type": "number",
-            "description": "Minimum desired height."
+            "description": "Value step size for slider."
           },
           "stretch": {
             "type": "string",
@@ -2127,61 +6774,49 @@ export const gatewayManifest = {
             ],
             "description": "Scale box stretch direction."
           },
-          "userSpecifiedScale": {
+          "structPath": {
+            "type": "string",
+            "description": "Blueprint Struct asset path (UserDefinedStruct or native UScriptStruct)."
+          },
+          "targetClass": {
+            "type": "string",
+            "description": "Target class for a class-member node."
+          },
+          "targetNode": {
+            "type": "string",
+            "description": "Target node id accepted in place of toNodeId."
+          },
+          "targetPin": {
+            "type": "string",
+            "description": "Target pin name on the destination node."
+          },
+          "text": {
+            "type": "string",
+            "description": "Text content for a text block or button."
+          },
+          "texturePath": {
+            "type": "string",
+            "description": "Texture asset path for an image or brush."
+          },
+          "time": {
             "type": "number",
-            "description": "User specified scale value."
+            "description": "Keyframe time."
           },
-          "brushColor": {
-            "type": "object",
-            "properties": {
-              "r": {
-                "type": "number"
-              },
-              "g": {
-                "type": "number"
-              },
-              "b": {
-                "type": "number"
-              },
-              "a": {
-                "type": "number"
-              }
-            },
-            "description": "Border brush color."
+          "timeoutMs": {
+            "type": "number",
+            "description": "Request timeout in milliseconds."
           },
-          "padding": {
-            "type": "object",
-            "properties": {
-              "left": {
-                "type": "number"
-              },
-              "top": {
-                "type": "number"
-              },
-              "right": {
-                "type": "number"
-              },
-              "bottom": {
-                "type": "number"
-              }
-            },
-            "description": "Widget slot padding."
-          },
-          "bindingSource": {
+          "title": {
             "type": "string",
-            "description": "Variable or function name to bind to."
+            "description": "Title text for a menu template."
           },
-          "onHoveredFunction": {
+          "toNodeId": {
             "type": "string",
-            "description": "Function to call on hover."
+            "description": "Target node identifier for a pin connection."
           },
-          "onUnhoveredFunction": {
+          "toPinName": {
             "type": "string",
-            "description": "Function to call on unhover."
-          },
-          "animationName": {
-            "type": "string",
-            "description": "Animation name."
+            "description": "Target pin name for a pin connection."
           },
           "trackType": {
             "type": "string",
@@ -2194,6948 +6829,176 @@ export const gatewayManifest = {
             ],
             "description": "Animation track type."
           },
-          "time": {
+          "translation": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Render translation offset."
+          },
+          "userSpecifiedScale": {
             "type": "number",
-            "description": "Keyframe time."
-          },
-          "interpolation": {
-            "type": "string",
-            "enum": [
-              "linear",
-              "cubic",
-              "constant"
-            ],
-            "description": "Keyframe interpolation."
-          },
-          "loopCount": {
-            "type": "number",
-            "description": "Number of loops (-1 for infinite)."
-          },
-          "playMode": {
-            "type": "string",
-            "enum": [
-              "forward",
-              "reverse",
-              "pingpong"
-            ],
-            "description": "Animation play mode."
-          },
-          "settingsType": {
-            "type": "string",
-            "enum": [
-              "video",
-              "audio",
-              "controls",
-              "gameplay",
-              "all"
-            ],
-            "description": "Settings menu type."
-          },
-          "includeProgressBar": {
-            "type": "boolean",
-            "description": "Include progress bar."
-          },
-          "promptFormat": {
-            "type": "string",
-            "description": "Interaction prompt format."
-          },
-          "maxVisibleObjectives": {
-            "type": "number",
-            "description": "Maximum visible objectives."
-          },
-          "fadeTime": {
-            "type": "number",
-            "description": "Fade time in seconds."
-          },
-          "gridSize": {
-            "type": "object",
-            "properties": {
-              "columns": {
-                "type": "number"
-              },
-              "rows": {
-                "type": "number"
-              }
-            },
-            "description": "Inventory grid size."
-          },
-          "showSpeakerName": {
-            "type": "boolean",
-            "description": "Show speaker name."
-          },
-          "segmentCount": {
-            "type": "number",
-            "description": "Number of radial segments."
-          },
-          "previewSize": {
-            "type": "string",
-            "enum": [
-              "1080p",
-              "720p",
-              "mobile",
-              "custom"
-            ],
-            "description": "Preview resolution preset."
-          },
-          "duration": {
-            "type": "number"
-          },
-          "height": {
-            "type": "number"
-          },
-          "nodeGuid": {
-            "type": "string"
-          },
-          "nodeName": {
-            "type": "string",
-            "description": "Name of the node."
-          },
-          "parentName": {
-            "type": "string"
-          },
-          "position": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "preset": {
-            "type": "string"
-          },
-          "propertyValue": {
-            "description": "Generic value (any type)."
-          },
-          "size": {
-            "type": "number"
-          },
-          "sourceNode": {
-            "type": "string"
-          },
-          "sourcePin": {
-            "type": "string",
-            "description": "Name of the source pin."
-          },
-          "targetNode": {
-            "type": "string"
-          },
-          "targetPin": {
-            "type": "string",
-            "description": "Name of the target pin."
-          },
-          "title": {
-            "type": "string"
-          },
-          "width": {
-            "type": "number"
-          },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "control_actor",
-      "category": "core",
-      "description": "Spawn actors, set transforms, enable physics, add components, manage tags, and attach actors.",
-      "actions": [
-        "spawn",
-        "spawn_actor",
-        "spawn_blueprint",
-        "delete",
-        "destroy_actor",
-        "delete_by_tag",
-        "duplicate",
-        "apply_force",
-        "set_transform",
-        "teleport_actor",
-        "set_actor_location",
-        "set_actor_rotation",
-        "set_actor_scale",
-        "set_actor_transform",
-        "get_transform",
-        "get_actor_transform",
-        "set_visibility",
-        "set_actor_visible",
-        "add_component",
-        "remove_component",
-        "set_component_properties",
-        "set_component_property",
-        "get_component_property",
-        "set_material",
-        "set_actor_material",
-        "apply_material",
-        "get_components",
-        "get_actor_components",
-        "get_actor_bounds",
-        "add_tag",
-        "remove_tag",
-        "find_by_tag",
-        "find_actors_by_tag",
-        "find_by_name",
-        "find_actors_by_name",
-        "find_by_class",
-        "find_actors_by_class",
-        "list",
-        "set_blueprint_variables",
-        "create_snapshot",
-        "attach",
-        "attach_actor",
-        "detach",
-        "detach_actor",
-        "set_actor_collision",
-        "call_actor_function"
-      ],
-      "parameterNames": [
-        "actorClass",
-        "actorName",
-        "actorNames",
-        "allComponents",
-        "arguments",
-        "blueprintPath",
-        "childActor",
-        "className",
-        "classPath",
-        "collisionEnabled",
-        "componentName",
-        "componentType",
-        "filter",
-        "force",
-        "functionName",
-        "limit",
-        "location",
-        "materialIndex",
-        "materialPath",
-        "materialSlot",
-        "meshPath",
-        "name",
-        "newName",
-        "offset",
-        "parentActor",
-        "properties",
-        "propertyName",
-        "rotation",
-        "scale",
-        "snapshotName",
-        "tag",
-        "value",
-        "variables",
-        "visible"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "spawn",
-              "spawn_actor",
-              "spawn_blueprint",
-              "delete",
-              "destroy_actor",
-              "delete_by_tag",
-              "duplicate",
-              "apply_force",
-              "set_transform",
-              "teleport_actor",
-              "set_actor_location",
-              "set_actor_rotation",
-              "set_actor_scale",
-              "set_actor_transform",
-              "get_transform",
-              "get_actor_transform",
-              "set_visibility",
-              "set_actor_visible",
-              "add_component",
-              "remove_component",
-              "set_component_properties",
-              "set_component_property",
-              "get_component_property",
-              "set_material",
-              "set_actor_material",
-              "apply_material",
-              "get_components",
-              "get_actor_components",
-              "get_actor_bounds",
-              "add_tag",
-              "remove_tag",
-              "find_by_tag",
-              "find_actors_by_tag",
-              "find_by_name",
-              "find_actors_by_name",
-              "find_by_class",
-              "find_actors_by_class",
-              "list",
-              "set_blueprint_variables",
-              "create_snapshot",
-              "attach",
-              "attach_actor",
-              "detach",
-              "detach_actor",
-              "set_actor_collision",
-              "call_actor_function"
-            ],
-            "description": "Action"
-          },
-          "actorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "childActor": {
-            "type": "string",
-            "description": "Name of the child actor (for attach/detach operations)."
-          },
-          "parentActor": {
-            "type": "string",
-            "description": "Name of the parent actor (for attach operations)."
-          },
-          "classPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "meshPath": {
-            "type": "string",
-            "description": "Mesh asset path."
-          },
-          "materialPath": {
-            "type": "string",
-            "description": "Material asset path."
-          },
-          "materialSlot": {
-            "type": "integer"
-          },
-          "materialIndex": {
-            "type": "integer"
-          },
-          "allComponents": {
-            "type": "boolean"
-          },
-          "blueprintPath": {
-            "type": "string",
-            "description": "Blueprint asset path."
-          },
-          "location": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "rotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "3D rotation (pitch, yaw, roll)."
-          },
-          "scale": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D scale (x, y, z)."
-          },
-          "force": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D vector."
-          },
-          "componentType": {
-            "type": "string"
-          },
-          "componentName": {
-            "type": "string",
-            "description": "Name of the component."
-          },
-          "properties": {
-            "type": "object"
-          },
-          "visible": {
-            "type": "boolean",
-            "description": "Whether the item/actor is visible."
-          },
-          "newName": {
-            "type": "string",
-            "description": "New name for renaming."
-          },
-          "tag": {
-            "type": "string",
-            "description": "Name of the tag."
-          },
-          "variables": {
-            "type": "object"
-          },
-          "snapshotName": {
-            "type": "string"
-          },
-          "actorClass": {
-            "type": "string"
-          },
-          "actorNames": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "arguments": {
-            "description": "Generic value (any type)."
-          },
-          "className": {
-            "type": "string"
-          },
-          "collisionEnabled": {
-            "type": "boolean"
-          },
-          "functionName": {
-            "type": "string",
-            "description": "Name of the function."
-          },
-          "limit": {
-            "type": "number"
-          },
-          "filter": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "offset": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "propertyName": {
-            "type": "string",
-            "description": "Name of the property."
+            "description": "User specified scale value."
           },
           "value": {
-            "description": "Generic value (any type)."
+            "type": "number",
+            "description": "Numeric value for a slider, spin box, or animation keyframe."
           },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "control_editor",
-      "category": "core",
-      "description": "Start/stop PIE, control viewport camera, run console commands, take screenshots, simulate input.",
-      "actions": [
-        "play",
-        "stop",
-        "stop_pie",
-        "pause",
-        "resume",
-        "eject",
-        "possess",
-        "set_view_target",
-        "set_game_view_target",
-        "set_game_speed",
-        "set_fixed_delta_time",
-        "set_camera",
-        "set_camera_position",
-        "set_viewport_camera",
-        "set_camera_fov",
-        "set_view_mode",
-        "set_viewport_resolution",
-        "console_command",
-        "execute_command",
-        "screenshot",
-        "take_screenshot",
-        "step_frame",
-        "single_frame_step",
-        "start_recording",
-        "stop_recording",
-        "create_bookmark",
-        "jump_to_bookmark",
-        "set_preferences",
-        "set_viewport_realtime",
-        "open_asset",
-        "close_asset",
-        "simulate_input",
-        "open_level",
-        "focus_actor",
-        "show_stats",
-        "hide_stats",
-        "set_editor_mode",
-        "set_immersive_mode",
-        "set_game_view",
-        "undo",
-        "redo",
-        "save_all"
-      ],
-      "parameterNames": [
-        "actorName",
-        "assetPath",
-        "blendTime",
-        "bookmarkName",
-        "button",
-        "category",
-        "command",
-        "deltaTime",
-        "enabled",
-        "filename",
-        "fov",
-        "height",
-        "id",
-        "includeMetadata",
-        "inputAction",
-        "inputType",
-        "key",
-        "levelPath",
-        "location",
-        "metadata",
-        "mode",
-        "name",
-        "objectPath",
-        "path",
-        "preferences",
-        "realtime",
-        "resolution",
-        "returnBase64",
-        "rotation",
-        "speed",
-        "stat",
-        "steps",
-        "type",
-        "viewMode",
-        "width",
-        "x",
-        "y"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
+          "variableName": {
+            "type": "string",
+            "description": "Variable name to add, remove, rename, or modify."
+          },
+          "variableType": {
+            "type": "string",
+            "description": "Variable type (Boolean, Float, Integer, Vector, String, Object)."
+          },
+          "visibility": {
             "type": "string",
             "enum": [
-              "play",
-              "stop",
-              "stop_pie",
-              "pause",
-              "resume",
-              "eject",
-              "possess",
-              "set_view_target",
-              "set_game_view_target",
-              "set_game_speed",
-              "set_fixed_delta_time",
-              "set_camera",
-              "set_camera_position",
-              "set_viewport_camera",
-              "set_camera_fov",
-              "set_view_mode",
-              "set_viewport_resolution",
-              "console_command",
-              "execute_command",
-              "screenshot",
-              "take_screenshot",
-              "step_frame",
-              "single_frame_step",
-              "start_recording",
-              "stop_recording",
-              "create_bookmark",
-              "jump_to_bookmark",
-              "set_preferences",
-              "set_viewport_realtime",
-              "open_asset",
-              "close_asset",
-              "simulate_input",
-              "open_level",
-              "focus_actor",
-              "show_stats",
-              "hide_stats",
-              "set_editor_mode",
-              "set_immersive_mode",
-              "set_game_view",
-              "undo",
-              "redo",
-              "save_all"
+              "Visible",
+              "Collapsed",
+              "Hidden",
+              "HitTestInvisible",
+              "SelfHitTestInvisible"
             ],
-            "description": "Editor action"
-          },
-          "location": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "rotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "3D rotation (pitch, yaw, roll)."
-          },
-          "viewMode": {
-            "type": "string"
-          },
-          "enabled": {
-            "type": "boolean",
-            "description": "Whether the item/feature is enabled."
-          },
-          "speed": {
-            "type": "number"
-          },
-          "filename": {
-            "type": "string"
-          },
-          "fov": {
-            "type": "number"
-          },
-          "width": {
-            "type": "number"
-          },
-          "height": {
-            "type": "number"
-          },
-          "command": {
-            "type": "string"
-          },
-          "steps": {
-            "type": "integer"
-          },
-          "bookmarkName": {
-            "type": "string"
-          },
-          "assetPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "path": {
-            "type": "string",
-            "description": "Path to a directory."
-          },
-          "levelPath": {
-            "type": "string",
-            "description": "Level asset path."
-          },
-          "actorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "objectPath": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "blendTime": {
-            "type": "number"
-          },
-          "mode": {
-            "type": "string",
-            "description": "Editor mode for set_editor_mode, or screenshot source: editor_viewport, game_viewport, full_editor_window."
-          },
-          "returnBase64": {
-            "type": "boolean",
-            "description": "Return PNG image data as base64 when supported. Defaults to true for full_editor_window and game_viewport modes."
-          },
-          "includeMetadata": {
-            "type": "boolean"
-          },
-          "metadata": {
-            "type": "object"
-          },
-          "deltaTime": {
-            "type": "number"
-          },
-          "resolution": {
-            "type": "string",
-            "description": "Resolution setting (e.g., 1024x1024)."
-          },
-          "realtime": {
-            "type": "boolean"
-          },
-          "stat": {
-            "type": "string"
-          },
-          "category": {
-            "type": "string"
-          },
-          "preferences": {
-            "type": "object"
-          },
-          "key": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string"
-          },
-          "inputType": {
-            "type": "string"
-          },
-          "inputAction": {
-            "type": "string"
-          },
-          "x": {
-            "type": "number"
-          },
-          "y": {
-            "type": "number"
-          },
-          "button": {
-            "type": "string"
-          },
-          "id": {
-            "type": "string"
-          },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "manage_level",
-      "category": "core",
-      "description": "Load/save levels, configure streaming, and build lighting.",
-      "actions": [
-        "load",
-        "load_level",
-        "save",
-        "save_level",
-        "save_as",
-        "save_level_as",
-        "stream",
-        "unload",
-        "unload_level",
-        "create_level",
-        "create_light",
-        "build_lighting",
-        "set_metadata",
-        "export_level",
-        "import_level",
-        "list_levels",
-        "get_summary",
-        "delete",
-        "delete_level",
-        "validate_level",
-        "add_sublevel",
-        "rename_level",
-        "duplicate_level",
-        "get_current_level"
-      ],
-      "parameterNames": [
-        "assetPath",
-        "color",
-        "destinationPath",
-        "exportPath",
-        "intensity",
-        "levelName",
-        "levelPath",
-        "levelPaths",
-        "lightType",
-        "location",
-        "metadata",
-        "name",
-        "newName",
-        "overwrite",
-        "packagePath",
-        "parentLevel",
-        "parentPath",
-        "path",
-        "quality",
-        "rotation",
-        "saveDirtyPackages",
-        "savePath",
-        "shouldBeLoaded",
-        "shouldBeVisible",
-        "sourcePath",
-        "streaming",
-        "streamingMethod",
-        "subLevelPath",
-        "sublevelPath",
-        "targetPath",
-        "template",
-        "timeoutMs",
-        "useWorldPartition"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "load",
-              "load_level",
-              "save",
-              "save_level",
-              "save_as",
-              "save_level_as",
-              "stream",
-              "unload",
-              "unload_level",
-              "create_level",
-              "create_light",
-              "build_lighting",
-              "set_metadata",
-              "export_level",
-              "import_level",
-              "list_levels",
-              "get_summary",
-              "delete",
-              "delete_level",
-              "validate_level",
-              "add_sublevel",
-              "rename_level",
-              "duplicate_level",
-              "get_current_level"
-            ],
-            "description": "Action"
-          },
-          "levelPath": {
-            "type": "string",
-            "description": "Level asset path."
-          },
-          "assetPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "levelPaths": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "levelName": {
-            "type": "string"
-          },
-          "path": {
-            "type": "string",
-            "description": "Directory path for asset creation."
-          },
-          "savePath": {
-            "type": "string",
-            "description": "Path to save the asset."
-          },
-          "destinationPath": {
-            "type": "string",
-            "description": "Destination path for move/copy."
-          },
-          "overwrite": {
-            "type": "boolean",
-            "description": "Overwrite if the asset/file already exists."
-          },
-          "targetPath": {
-            "type": "string",
-            "description": "Path to a directory."
-          },
-          "exportPath": {
-            "type": "string",
-            "description": "Export file path."
-          },
-          "packagePath": {
-            "type": "string",
-            "description": "Path to a directory."
-          },
-          "sourcePath": {
-            "type": "string",
-            "description": "Source path for import/move/copy."
-          },
-          "sublevelPath": {
-            "type": "string",
-            "description": "Level asset path."
-          },
-          "parentLevel": {
-            "type": "string",
-            "description": "Parent level path."
-          },
-          "parentPath": {
-            "type": "string",
-            "description": "Path to a directory."
-          },
-          "streamingMethod": {
-            "type": "string"
-          },
-          "streaming": {
-            "type": "boolean"
-          },
-          "shouldBeLoaded": {
-            "type": "boolean"
-          },
-          "shouldBeVisible": {
-            "type": "boolean"
-          },
-          "saveDirtyPackages": {
-            "type": "boolean"
-          },
-          "lightType": {
-            "type": "string",
-            "enum": [
-              "Directional",
-              "Point",
-              "Spot",
-              "Rect",
-              "DirectionalLight",
-              "PointLight",
-              "SpotLight",
-              "RectLight",
-              "directional",
-              "point",
-              "spot",
-              "rect"
-            ],
-            "description": "Light type. Accepts short names (Point), class names (PointLight), or lowercase (point)."
-          },
-          "intensity": {
-            "type": "number"
-          },
-          "color": {
-            "type": "array",
-            "items": {
-              "type": "number"
-            },
-            "description": "RGBA color as an array [r, g, b, a]."
-          },
-          "location": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "rotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "3D rotation (pitch, yaw, roll)."
-          },
-          "template": {
-            "type": "string"
-          },
-          "useWorldPartition": {
-            "type": "boolean"
-          },
-          "metadata": {
-            "type": "object"
-          },
-          "newName": {
-            "type": "string"
-          },
-          "timeoutMs": {
-            "type": "number"
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "quality": {
-            "type": "string"
-          },
-          "subLevelPath": {
-            "type": "string",
-            "description": "Level asset path."
-          },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "build_environment",
-      "category": "world",
-      "description": "Build environments: landscapes, foliage, procedural terrain/biomes, lighting setups, spline roads/rivers/fences, and world decoration.",
-      "actions": [
-        "create_landscape",
-        "sculpt",
-        "sculpt_landscape",
-        "add_foliage",
-        "paint_foliage",
-        "create_procedural_terrain",
-        "create_procedural_foliage",
-        "add_foliage_instances",
-        "get_foliage_instances",
-        "remove_foliage",
-        "paint_landscape",
-        "paint_landscape_layer",
-        "modify_heightmap",
-        "set_landscape_material",
-        "create_landscape_grass_type",
-        "generate_lods",
-        "bake_lightmap",
-        "export_snapshot",
-        "import_snapshot",
-        "delete",
-        "create_sky_sphere",
-        "set_time_of_day",
-        "create_fog_volume",
-        "import_heightmap",
-        "export_heightmap",
-        "create_landscape_layer_info",
-        "configure_landscape_material",
-        "configure_landscape_splines",
-        "configure_landscape_lod",
-        "create_landscape_streaming_proxy",
-        "create_foliage_type",
-        "configure_foliage_mesh",
-        "configure_foliage_placement",
-        "configure_foliage_lod",
-        "configure_foliage_collision",
-        "configure_foliage_culling",
-        "paint_foliage_instances",
-        "remove_foliage_instances",
-        "configure_sky_atmosphere",
-        "configure_sky_light",
-        "configure_directional_light_atmosphere",
-        "configure_exponential_height_fog",
-        "configure_volumetric_cloud",
-        "create_weather_system",
-        "configure_rain_particles",
-        "configure_snow_particles",
-        "configure_wind",
-        "configure_lightning",
-        "create_time_of_day_system",
-        "configure_sun_position",
-        "configure_light_color_curve",
-        "configure_sky_color_curve",
-        "create_water_body_ocean",
-        "create_water_body_lake",
-        "create_water_body_river",
-        "create_water_body_custom",
-        "configure_water_waves",
-        "configure_water_material",
-        "configure_water_collision",
-        "create_buoyancy_component",
-        "configure_ray_traced_shadows",
-        "configure_ray_traced_gi",
-        "configure_ray_traced_reflections",
-        "configure_ray_traced_ao",
-        "configure_path_tracing",
-        "set_light_channel",
-        "set_actor_light_channel",
-        "configure_lightmass_settings",
-        "build_lighting_quality",
-        "configure_indirect_lighting_cache",
-        "create_sphere_reflection_capture",
-        "create_box_reflection_capture",
-        "configure_reflection_capture_resolution",
-        "configure_capture_resolution",
-        "configure_capture_offset",
-        "recapture_scene",
-        "create_planar_reflection",
-        "configure_planar_reflection",
-        "configure_ssr_settings",
-        "configure_lumen_reflection_settings",
-        "configure_pp_blend",
-        "set_pp_white_balance",
-        "set_pp_color_grading",
-        "set_pp_lut",
-        "configure_tonemapper",
-        "set_tonemapper_type",
-        "configure_bloom",
-        "set_bloom_intensity",
-        "set_bloom_threshold",
-        "configure_lens_flare",
-        "configure_dof",
-        "set_dof_method",
-        "set_focal_distance",
-        "set_aperture",
-        "configure_bokeh",
-        "configure_motion_blur",
-        "set_motion_blur_amount",
-        "set_motion_blur_max",
-        "configure_exposure",
-        "set_exposure_method",
-        "set_exposure_compensation",
-        "set_exposure_min_max",
-        "configure_ssao",
-        "configure_gtao",
-        "configure_vignette",
-        "configure_chromatic_aberration",
-        "configure_grain",
-        "configure_screen_percentage",
-        "create_scene_capture_2d",
-        "create_scene_capture_cube",
-        "configure_capture_source",
-        "assign_render_target",
-        "capture_scene",
-        "spawn_light",
-        "create_light",
-        "spawn_sky_light",
-        "create_sky_light",
-        "ensure_single_sky_light",
-        "create_lightmass_volume",
-        "create_lighting_enabled_level",
-        "create_dynamic_light",
-        "setup_global_illumination",
-        "configure_shadows",
-        "set_exposure",
-        "set_ambient_occlusion",
-        "setup_volumetric_fog",
-        "build_lighting",
-        "list_light_types",
-        "create_spline_actor",
-        "add_spline_point",
-        "remove_spline_point",
-        "set_spline_point_position",
-        "set_spline_point_tangents",
-        "set_spline_point_rotation",
-        "set_spline_point_scale",
-        "set_spline_type",
-        "create_spline_mesh_component",
-        "set_spline_mesh_asset",
-        "configure_spline_mesh_axis",
-        "set_spline_mesh_material",
-        "scatter_meshes_along_spline",
-        "configure_mesh_spacing",
-        "configure_mesh_randomization",
-        "create_road_spline",
-        "create_river_spline",
-        "create_fence_spline",
-        "create_wall_spline",
-        "create_cable_spline",
-        "create_pipe_spline",
-        "get_splines_info"
-      ],
-      "parameterNames": [
-        "actorName",
-        "actorPath",
-        "alignToNormal",
-        "alignToSpline",
-        "amount",
-        "amplitude",
-        "aperture",
-        "arriveTangent",
-        "assetPaths",
-        "assets",
-        "azimuth",
-        "bClosedLoop",
-        "blendWeight",
-        "blueprintPath",
-        "bounds",
-        "captureOffset",
-        "captureSource",
-        "channel",
-        "channels",
-        "collisionEnabled",
-        "compensationValue",
-        "componentCount",
-        "componentName",
-        "count",
-        "cubemapPath",
-        "cullDistance",
-        "curvePath",
-        "density",
-        "direction",
-        "directionalLightActorPath",
-        "distance",
-        "elevation",
-        "enabled",
-        "falloff",
-        "filename",
-        "foliageType",
-        "foliageTypePath",
-        "foliageTypes",
-        "forwardAxis",
-        "hardness",
-        "heightData",
-        "heightScale",
-        "heightmapPath",
-        "hour",
-        "infiniteUnbound",
-        "initialPoints",
-        "intensity",
-        "landscapeActorPath",
-        "landscapeName",
-        "landscapePath",
-        "layerInfoPath",
-        "layerName",
-        "leaveTangent",
-        "lightType",
-        "location",
-        "locations",
-        "lutPath",
-        "material",
-        "materialIndex",
-        "materialPath",
-        "maxBrightness",
-        "maxScale",
-        "maxX",
-        "maxY",
-        "meshPath",
-        "method",
-        "minBrightness",
-        "minScale",
-        "minX",
-        "minY",
-        "name",
-        "names",
-        "noWeightBlend",
-        "numLODs",
-        "operation",
-        "outputPath",
-        "particleSystemPath",
-        "path",
-        "physicalMaterialPath",
-        "pointIndex",
-        "pointRotation",
-        "pointScale",
-        "pointType",
-        "points",
-        "position",
-        "propertyName",
-        "propertyValue",
-        "quadsPerSection",
-        "quality",
-        "radius",
-        "randomOffsetRange",
-        "randomYaw",
-        "randomizeRotation",
-        "randomizeScale",
-        "region",
-        "removeAll",
-        "renderTargetPath",
-        "resolution",
-        "rotation",
-        "rotationRange",
-        "save",
-        "screenPercentage",
-        "sectionSize",
-        "sectionsPerComponent",
-        "seed",
-        "settings",
-        "sizeX",
-        "sizeY",
-        "skipFlush",
-        "skyLightActorPath",
-        "skyLightIntensity",
-        "spacing",
-        "speed",
-        "splineType",
-        "staticMesh",
-        "steepness",
-        "strength",
-        "subdivisions",
-        "targetActor",
-        "threshold",
-        "tileSize",
-        "time",
-        "timeoutMs",
-        "tool",
-        "transforms",
-        "updateNormals",
-        "useRandomOffset",
-        "volumeName",
-        "waterBodyName",
-        "waveHeight",
-        "waveLength",
-        "width"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "create_landscape",
-              "sculpt",
-              "sculpt_landscape",
-              "add_foliage",
-              "paint_foliage",
-              "create_procedural_terrain",
-              "create_procedural_foliage",
-              "add_foliage_instances",
-              "get_foliage_instances",
-              "remove_foliage",
-              "paint_landscape",
-              "paint_landscape_layer",
-              "modify_heightmap",
-              "set_landscape_material",
-              "create_landscape_grass_type",
-              "generate_lods",
-              "bake_lightmap",
-              "export_snapshot",
-              "import_snapshot",
-              "delete",
-              "create_sky_sphere",
-              "set_time_of_day",
-              "create_fog_volume",
-              "import_heightmap",
-              "export_heightmap",
-              "create_landscape_layer_info",
-              "configure_landscape_material",
-              "configure_landscape_splines",
-              "configure_landscape_lod",
-              "create_landscape_streaming_proxy",
-              "create_foliage_type",
-              "configure_foliage_mesh",
-              "configure_foliage_placement",
-              "configure_foliage_lod",
-              "configure_foliage_collision",
-              "configure_foliage_culling",
-              "paint_foliage_instances",
-              "remove_foliage_instances",
-              "configure_sky_atmosphere",
-              "configure_sky_light",
-              "configure_directional_light_atmosphere",
-              "configure_exponential_height_fog",
-              "configure_volumetric_cloud",
-              "create_weather_system",
-              "configure_rain_particles",
-              "configure_snow_particles",
-              "configure_wind",
-              "configure_lightning",
-              "create_time_of_day_system",
-              "configure_sun_position",
-              "configure_light_color_curve",
-              "configure_sky_color_curve",
-              "create_water_body_ocean",
-              "create_water_body_lake",
-              "create_water_body_river",
-              "create_water_body_custom",
-              "configure_water_waves",
-              "configure_water_material",
-              "configure_water_collision",
-              "create_buoyancy_component",
-              "configure_ray_traced_shadows",
-              "configure_ray_traced_gi",
-              "configure_ray_traced_reflections",
-              "configure_ray_traced_ao",
-              "configure_path_tracing",
-              "set_light_channel",
-              "set_actor_light_channel",
-              "configure_lightmass_settings",
-              "build_lighting_quality",
-              "configure_indirect_lighting_cache",
-              "create_sphere_reflection_capture",
-              "create_box_reflection_capture",
-              "configure_reflection_capture_resolution",
-              "configure_capture_resolution",
-              "configure_capture_offset",
-              "recapture_scene",
-              "create_planar_reflection",
-              "configure_planar_reflection",
-              "configure_ssr_settings",
-              "configure_lumen_reflection_settings",
-              "configure_pp_blend",
-              "set_pp_white_balance",
-              "set_pp_color_grading",
-              "set_pp_lut",
-              "configure_tonemapper",
-              "set_tonemapper_type",
-              "configure_bloom",
-              "set_bloom_intensity",
-              "set_bloom_threshold",
-              "configure_lens_flare",
-              "configure_dof",
-              "set_dof_method",
-              "set_focal_distance",
-              "set_aperture",
-              "configure_bokeh",
-              "configure_motion_blur",
-              "set_motion_blur_amount",
-              "set_motion_blur_max",
-              "configure_exposure",
-              "set_exposure_method",
-              "set_exposure_compensation",
-              "set_exposure_min_max",
-              "configure_ssao",
-              "configure_gtao",
-              "configure_vignette",
-              "configure_chromatic_aberration",
-              "configure_grain",
-              "configure_screen_percentage",
-              "create_scene_capture_2d",
-              "create_scene_capture_cube",
-              "configure_capture_source",
-              "assign_render_target",
-              "capture_scene",
-              "spawn_light",
-              "create_light",
-              "spawn_sky_light",
-              "create_sky_light",
-              "ensure_single_sky_light",
-              "create_lightmass_volume",
-              "create_lighting_enabled_level",
-              "create_dynamic_light",
-              "setup_global_illumination",
-              "configure_shadows",
-              "set_exposure",
-              "set_ambient_occlusion",
-              "setup_volumetric_fog",
-              "build_lighting",
-              "list_light_types",
-              "create_spline_actor",
-              "add_spline_point",
-              "remove_spline_point",
-              "set_spline_point_position",
-              "set_spline_point_tangents",
-              "set_spline_point_rotation",
-              "set_spline_point_scale",
-              "set_spline_type",
-              "create_spline_mesh_component",
-              "set_spline_mesh_asset",
-              "configure_spline_mesh_axis",
-              "set_spline_mesh_material",
-              "scatter_meshes_along_spline",
-              "configure_mesh_spacing",
-              "configure_mesh_randomization",
-              "create_road_spline",
-              "create_river_spline",
-              "create_fence_spline",
-              "create_wall_spline",
-              "create_cable_spline",
-              "create_pipe_spline",
-              "get_splines_info"
-            ],
-            "description": "Action"
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "landscapeName": {
-            "type": "string"
-          },
-          "heightData": {
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          },
-          "minX": {
-            "type": "number"
-          },
-          "minY": {
-            "type": "number"
-          },
-          "maxX": {
-            "type": "number"
-          },
-          "maxY": {
-            "type": "number"
-          },
-          "updateNormals": {
-            "type": "boolean"
-          },
-          "location": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "rotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "3D rotation (pitch, yaw, roll)."
-          },
-          "sizeX": {
-            "type": "number"
-          },
-          "sizeY": {
-            "type": "number"
-          },
-          "sectionSize": {
-            "type": "number"
-          },
-          "sectionsPerComponent": {
-            "type": "number"
-          },
-          "componentCount": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              }
-            },
-            "description": "2D vector."
-          },
-          "materialPath": {
-            "type": "string",
-            "description": "Material asset path."
-          },
-          "tool": {
-            "type": "string"
-          },
-          "radius": {
-            "type": "number"
-          },
-          "strength": {
-            "type": "number"
-          },
-          "falloff": {
-            "type": "number"
-          },
-          "layerName": {
-            "type": "string"
-          },
-          "actorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "foliageType": {
-            "type": "string"
-          },
-          "foliageTypePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "meshPath": {
-            "type": "string",
-            "description": "Mesh asset path."
-          },
-          "density": {
-            "type": "number"
-          },
-          "minScale": {
-            "type": "number"
-          },
-          "maxScale": {
-            "type": "number"
-          },
-          "cullDistance": {
-            "type": "number"
-          },
-          "alignToNormal": {
-            "type": "boolean"
-          },
-          "randomYaw": {
-            "type": "boolean"
-          },
-          "removeAll": {
-            "type": "boolean"
-          },
-          "locations": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                },
-                "z": {
-                  "type": "number"
-                }
-              },
-              "description": "3D location (x, y, z)."
-            }
-          },
-          "transforms": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "x": {
-                      "type": "number"
-                    },
-                    "y": {
-                      "type": "number"
-                    },
-                    "z": {
-                      "type": "number"
-                    }
-                  },
-                  "description": "3D location (x, y, z)."
-                },
-                "rotation": {
-                  "type": "object",
-                  "properties": {
-                    "pitch": {
-                      "type": "number"
-                    },
-                    "yaw": {
-                      "type": "number"
-                    },
-                    "roll": {
-                      "type": "number"
-                    }
-                  },
-                  "description": "3D rotation (pitch, yaw, roll)."
-                },
-                "scale": {
-                  "type": "object",
-                  "properties": {
-                    "x": {
-                      "type": "number"
-                    },
-                    "y": {
-                      "type": "number"
-                    },
-                    "z": {
-                      "type": "number"
-                    }
-                  },
-                  "description": "3D scale (x, y, z)."
-                }
-              }
-            }
-          },
-          "position": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "bounds": {
-            "type": "object"
-          },
-          "volumeName": {
-            "type": "string"
-          },
-          "seed": {
-            "type": "number"
-          },
-          "foliageTypes": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "points": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "quadsPerSection": {
-            "type": "number"
-          },
-          "count": {
-            "type": "number"
-          },
-          "assets": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "numLODs": {
-            "type": "number"
-          },
-          "subdivisions": {
-            "type": "number"
-          },
-          "tileSize": {
-            "type": "number"
-          },
-          "quality": {
-            "type": "string"
-          },
-          "staticMesh": {
-            "type": "string",
-            "description": "Mesh asset path."
-          },
-          "timeoutMs": {
-            "type": "number"
-          },
-          "path": {
-            "type": "string",
-            "description": "Path to a directory."
-          },
-          "filename": {
-            "type": "string"
-          },
-          "assetPaths": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "heightmapPath": {
-            "type": "string"
-          },
-          "outputPath": {
-            "type": "string"
-          },
-          "landscapePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "landscapeActorPath": {
-            "type": "string"
-          },
-          "actorPath": {
-            "type": "string"
-          },
-          "directionalLightActorPath": {
-            "type": "string"
-          },
-          "skyLightActorPath": {
-            "type": "string"
-          },
-          "layerInfoPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "physicalMaterialPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "noWeightBlend": {
-            "type": "boolean"
-          },
-          "hardness": {
-            "type": "number"
-          },
-          "waterBodyName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "targetActor": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "particleSystemPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "curvePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "cubemapPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "settings": {
-            "type": "object"
-          },
-          "waveHeight": {
-            "type": "number"
-          },
-          "waveLength": {
-            "type": "number"
-          },
-          "amplitude": {
-            "type": "number"
-          },
-          "steepness": {
-            "type": "number"
-          },
-          "speed": {
-            "type": "number"
-          },
-          "direction": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "3D rotation (pitch, yaw, roll)."
-          },
-          "azimuth": {
-            "type": "number"
-          },
-          "elevation": {
-            "type": "number"
-          },
-          "collisionEnabled": {
-            "type": "boolean"
-          },
-          "names": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "time": {
-            "type": "number"
-          },
-          "spacing": {
-            "type": "number"
-          },
-          "heightScale": {
-            "type": "number"
-          },
-          "material": {
-            "type": "string",
-            "description": "Material asset path."
-          },
-          "resolution": {
-            "oneOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "description": "Resolution setting (e.g., 1024x1024)."
-              }
-            ],
-            "description": "Capture or reflection resolution."
-          },
-          "hour": {
-            "type": "number"
-          },
-          "intensity": {
-            "type": "number"
-          },
-          "skyLightIntensity": {
-            "type": "number"
-          },
-          "alignToSpline": {
-            "type": "boolean"
-          },
-          "arriveTangent": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "bClosedLoop": {
-            "type": "boolean"
-          },
-          "blueprintPath": {
-            "type": "string",
-            "description": "Blueprint asset path."
-          },
-          "compensationValue": {
-            "type": "number"
-          },
-          "componentName": {
-            "type": "string",
-            "description": "Name of the component."
-          },
-          "enabled": {
-            "type": "boolean",
-            "description": "Whether the item/feature is enabled."
-          },
-          "forwardAxis": {
-            "type": "string"
-          },
-          "initialPoints": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "leaveTangent": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "lightType": {
-            "type": "string"
-          },
-          "materialIndex": {
-            "type": "number"
-          },
-          "maxBrightness": {
-            "type": "number"
-          },
-          "method": {
-            "type": "string"
-          },
-          "minBrightness": {
-            "type": "number"
-          },
-          "operation": {
-            "type": "string"
-          },
-          "pointIndex": {
-            "type": "number"
-          },
-          "pointRotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "3D rotation (pitch, yaw, roll)."
-          },
-          "pointScale": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D scale (x, y, z)."
-          },
-          "pointType": {
-            "type": "string"
-          },
-          "propertyName": {
-            "type": "string",
-            "description": "Name of the property."
-          },
-          "propertyValue": {
-            "description": "Generic value (any type)."
-          },
-          "randomOffsetRange": {
-            "type": "number"
-          },
-          "randomizeRotation": {
-            "type": "boolean"
-          },
-          "randomizeScale": {
-            "type": "boolean"
-          },
-          "channel": {
-            "type": "number"
-          },
-          "channels": {
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          },
-          "lutPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "captureOffset": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "blendWeight": {
-            "type": "number"
-          },
-          "infiniteUnbound": {
-            "type": "boolean"
-          },
-          "amount": {
-            "type": "number"
-          },
-          "threshold": {
-            "type": "number"
-          },
-          "aperture": {
-            "type": "number"
-          },
-          "distance": {
-            "type": "number"
-          },
-          "renderTargetPath": {
-            "type": "string"
-          },
-          "region": {
-            "type": "object"
-          },
-          "rotationRange": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "3D rotation (pitch, yaw, roll)."
-          },
-          "save": {
-            "type": "boolean",
-            "description": "Save the asset(s) after the operation."
-          },
-          "screenPercentage": {
-            "type": "number"
-          },
-          "skipFlush": {
-            "type": "boolean"
-          },
-          "splineType": {
-            "type": "string"
-          },
-          "captureSource": {
-            "type": "string"
-          },
-          "useRandomOffset": {
-            "type": "boolean"
-          },
-          "width": {
-            "type": "number"
-          },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "animation_physics",
-      "category": "gameplay",
-      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
-      "actions": [
-        "create_animation_blueprint",
-        "create_animation_bp",
-        "create_anim_blueprint",
-        "create_blend_space",
-        "create_blend_space_1d",
-        "create_blend_space_2d",
-        "create_blend_tree",
-        "create_procedural_anim",
-        "create_aim_offset",
-        "add_aim_offset_sample",
-        "create_state_machine",
-        "add_state_machine",
-        "add_state",
-        "add_transition",
-        "set_transition_rules",
-        "add_blend_node",
-        "add_cached_pose",
-        "add_slot_node",
-        "create_control_rig",
-        "create_ik_rig",
-        "create_ik_retargeter",
-        "setup_ik",
-        "create_pose_library",
-        "create_animation_asset",
-        "create_animation_sequence",
-        "set_sequence_length",
-        "add_bone_track",
-        "set_bone_key",
-        "set_curve_key",
-        "add_notify_state",
-        "add_sync_marker",
-        "set_root_motion_settings",
-        "set_additive_settings",
-        "create_montage",
-        "add_montage_section",
-        "add_montage_slot",
-        "set_section_timing",
-        "add_montage_notify",
-        "set_blend_in",
-        "set_blend_out",
-        "link_sections",
-        "add_notify",
-        "play_montage",
-        "play_anim_montage",
-        "setup_ragdoll",
-        "activate_ragdoll",
-        "configure_vehicle",
-        "setup_physics_simulation",
-        "add_blend_sample",
-        "force_rebuild_blend_space",
-        "set_axis_settings",
-        "set_interpolation_settings",
-        "setup_retargeting",
-        "add_layered_blend_per_bone",
-        "set_anim_graph_node_value",
-        "set_retarget_chain_mapping",
-        "get_animation_info",
-        "cleanup",
-        "create_skeleton",
-        "add_bone",
-        "remove_bone",
-        "rename_bone",
-        "set_bone_transform",
-        "set_bone_parent",
-        "create_virtual_bone",
-        "create_socket",
-        "configure_socket",
-        "auto_skin_weights",
-        "set_vertex_weights",
-        "normalize_weights",
-        "prune_weights",
-        "copy_weights",
-        "mirror_weights",
-        "create_physics_asset",
-        "add_physics_body",
-        "configure_physics_body",
-        "add_physics_constraint",
-        "configure_constraint_limits",
-        "bind_cloth_to_skeletal_mesh",
-        "assign_cloth_asset_to_mesh",
-        "create_morph_target",
-        "set_morph_target_deltas",
-        "import_morph_targets",
-        "get_skeleton_info",
-        "list_bones",
-        "list_sockets",
-        "list_physics_bodies"
-      ],
-      "parameterNames": [
-        "actorName",
-        "additiveAnimType",
-        "angularDamping",
-        "animationPath",
-        "artifacts",
-        "assetPath",
-        "assets",
-        "assignToMesh",
-        "attachBoneName",
-        "axis",
-        "axisName",
-        "basePoseFrame",
-        "basePoseType",
-        "blendTime",
-        "blendType",
-        "blueprintPath",
-        "bodyA",
-        "bodyB",
-        "bodyType",
-        "boneName",
-        "boneTracks",
-        "cacheName",
-        "center",
-        "collisionEnabled",
-        "compileReferencers",
-        "constraintName",
-        "curveName",
-        "deltas",
-        "dragCoefficient",
-        "enableRootMotion",
-        "endFrame",
-        "forceRootLock",
-        "frame",
-        "frameRate",
-        "fromSection",
-        "fromState",
-        "interpolationType",
-        "layerSetup",
-        "length",
-        "limits",
-        "linearDamping",
-        "location",
-        "lodIndex",
-        "machineName",
-        "markerName",
-        "mass",
-        "maxValue",
-        "minValue",
-        "montagePath",
-        "morphTargetName",
-        "morphTargetPath",
-        "name",
-        "newBoneName",
-        "nodeName",
-        "notifyName",
-        "numFrames",
-        "outputPath",
-        "overwrite",
-        "parentBoneName",
-        "parentClass",
-        "path",
-        "physicsAssetName",
-        "physicsAssetPath",
-        "pitch",
-        "playRate",
-        "profileName",
-        "propertyName",
-        "radius",
-        "rebuildBlendParameters",
-        "relativeLocation",
-        "relativeRotation",
-        "relativeScale",
-        "removeChildren",
-        "rootBoneName",
-        "rootMotionRootLock",
-        "rotation",
-        "sampleValue",
-        "save",
-        "savePath",
-        "scale",
-        "sectionName",
-        "simulatePhysics",
-        "skeletalMeshPath",
-        "skeletonPath",
-        "slotName",
-        "socketName",
-        "sourceBoneName",
-        "sourceChain",
-        "sourceIKRigPath",
-        "sourceMeshPath",
-        "sourceSkeleton",
-        "startFrame",
-        "startTime",
-        "stateMachineName",
-        "stateName",
-        "suffix",
-        "targetBoneName",
-        "targetChain",
-        "targetIKRigPath",
-        "targetMeshPath",
-        "targetSkeleton",
-        "threshold",
-        "time",
-        "toSection",
-        "toState",
-        "trackIndex",
-        "value",
-        "vehicleType",
-        "weights",
-        "yaw"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "create_animation_blueprint",
-              "create_animation_bp",
-              "create_anim_blueprint",
-              "create_blend_space",
-              "create_blend_space_1d",
-              "create_blend_space_2d",
-              "create_blend_tree",
-              "create_procedural_anim",
-              "create_aim_offset",
-              "add_aim_offset_sample",
-              "create_state_machine",
-              "add_state_machine",
-              "add_state",
-              "add_transition",
-              "set_transition_rules",
-              "add_blend_node",
-              "add_cached_pose",
-              "add_slot_node",
-              "create_control_rig",
-              "create_ik_rig",
-              "create_ik_retargeter",
-              "setup_ik",
-              "create_pose_library",
-              "create_animation_asset",
-              "create_animation_sequence",
-              "set_sequence_length",
-              "add_bone_track",
-              "set_bone_key",
-              "set_curve_key",
-              "add_notify_state",
-              "add_sync_marker",
-              "set_root_motion_settings",
-              "set_additive_settings",
-              "create_montage",
-              "add_montage_section",
-              "add_montage_slot",
-              "set_section_timing",
-              "add_montage_notify",
-              "set_blend_in",
-              "set_blend_out",
-              "link_sections",
-              "add_notify",
-              "play_montage",
-              "play_anim_montage",
-              "setup_ragdoll",
-              "activate_ragdoll",
-              "configure_vehicle",
-              "setup_physics_simulation",
-              "add_blend_sample",
-              "force_rebuild_blend_space",
-              "set_axis_settings",
-              "set_interpolation_settings",
-              "setup_retargeting",
-              "add_layered_blend_per_bone",
-              "set_anim_graph_node_value",
-              "set_retarget_chain_mapping",
-              "get_animation_info",
-              "cleanup",
-              "create_skeleton",
-              "add_bone",
-              "remove_bone",
-              "rename_bone",
-              "set_bone_transform",
-              "set_bone_parent",
-              "create_virtual_bone",
-              "create_socket",
-              "configure_socket",
-              "auto_skin_weights",
-              "set_vertex_weights",
-              "normalize_weights",
-              "prune_weights",
-              "copy_weights",
-              "mirror_weights",
-              "create_physics_asset",
-              "add_physics_body",
-              "configure_physics_body",
-              "add_physics_constraint",
-              "configure_constraint_limits",
-              "bind_cloth_to_skeletal_mesh",
-              "assign_cloth_asset_to_mesh",
-              "create_morph_target",
-              "set_morph_target_deltas",
-              "import_morph_targets",
-              "get_skeleton_info",
-              "list_bones",
-              "list_sockets",
-              "list_physics_bodies"
-            ],
-            "description": "Action"
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "path": {
-            "type": "string",
-            "description": "Directory path for asset creation."
-          },
-          "assetPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "animationPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "savePath": {
-            "type": "string",
-            "description": "Path to save the asset."
-          },
-          "skeletonPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "parentClass": {
-            "type": "string"
-          },
-          "actorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "targetSkeleton": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "slotName": {
-            "type": "string"
-          },
-          "sectionName": {
-            "type": "string"
-          },
-          "notifyName": {
-            "type": "string"
-          },
-          "boneName": {
-            "type": "string",
-            "description": "Name of the bone."
-          },
-          "curveName": {
-            "type": "string"
-          },
-          "stateName": {
-            "type": "string"
-          },
-          "machineName": {
-            "type": "string"
-          },
-          "numFrames": {
-            "type": "number"
-          },
-          "frameRate": {
-            "type": "number"
-          },
-          "interpolationType": {
-            "type": "string"
-          },
-          "axisName": {
-            "type": "string"
-          },
-          "playRate": {
-            "type": "number"
-          },
-          "frame": {
-            "type": "number"
-          },
-          "time": {
-            "type": "number"
-          },
-          "length": {
-            "type": "number"
-          },
-          "location": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "rotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "3D rotation (pitch, yaw, roll)."
-          },
-          "scale": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D scale (x, y, z)."
-          },
-          "value": {
-            "description": "Generic value (any type)."
-          },
-          "vehicleType": {
-            "type": "string"
-          },
-          "mass": {
-            "type": "number"
-          },
-          "dragCoefficient": {
-            "type": "number"
-          },
-          "artifacts": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "sourceSkeleton": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "sourceIKRigPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "targetIKRigPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "save": {
-            "type": "boolean",
-            "description": "Save the asset(s) after the operation."
-          },
-          "additiveAnimType": {
-            "type": "string"
-          },
-          "angularDamping": {
-            "type": "number"
-          },
-          "assets": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "assignToMesh": {
-            "type": "boolean"
-          },
-          "attachBoneName": {
-            "type": "string",
-            "description": "Name of the bone."
-          },
-          "axis": {
-            "type": "string"
-          },
-          "basePoseFrame": {
-            "type": "number"
-          },
-          "basePoseType": {
-            "type": "string"
-          },
-          "blendTime": {
-            "type": "number"
-          },
-          "blendType": {
-            "type": "string"
-          },
-          "blueprintPath": {
-            "type": "string",
-            "description": "Blueprint asset path."
-          },
-          "bodyA": {
-            "type": "string"
-          },
-          "bodyB": {
-            "type": "string"
-          },
-          "bodyType": {
-            "type": "string"
-          },
-          "boneTracks": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "cacheName": {
-            "type": "string"
-          },
-          "center": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "collisionEnabled": {
-            "type": "boolean"
-          },
-          "compileReferencers": {
-            "type": "boolean",
-            "description": "force_rebuild_blend_space: after rebuilding the BS, cascade-compile every AnimBlueprint that references it (via IAssetRegistry referencers). Response returns referencersCompiled count + compiledAnimBlueprints path list. Default true."
-          },
-          "constraintName": {
-            "type": "string"
-          },
-          "deltas": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "enableRootMotion": {
-            "type": "boolean"
-          },
-          "endFrame": {
-            "type": "number"
-          },
-          "forceRootLock": {
-            "type": "boolean"
-          },
-          "fromSection": {
-            "type": "string"
-          },
-          "fromState": {
-            "type": "string"
-          },
-          "layerSetup": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "limits": {
-            "type": "object"
-          },
-          "linearDamping": {
-            "type": "number"
-          },
-          "lodIndex": {
-            "type": "number"
-          },
-          "markerName": {
-            "type": "string"
-          },
-          "maxValue": {
-            "type": "number"
-          },
-          "minValue": {
-            "type": "number"
-          },
-          "montagePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "morphTargetName": {
-            "type": "string"
-          },
-          "morphTargetPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "newBoneName": {
-            "type": "string",
-            "description": "Name of the bone."
-          },
-          "nodeName": {
-            "type": "string",
-            "description": "Name of the node."
-          },
-          "outputPath": {
-            "type": "string",
-            "description": "Output file or directory path."
-          },
-          "overwrite": {
-            "type": "boolean",
-            "description": "Overwrite if the asset/file already exists."
-          },
-          "parentBoneName": {
-            "type": "string",
-            "description": "Name of the bone."
-          },
-          "physicsAssetName": {
-            "type": "string"
-          },
-          "physicsAssetPath": {
-            "type": "string",
-            "description": "Path to physics asset."
-          },
-          "pitch": {
-            "type": "number"
-          },
-          "profileName": {
-            "type": "string"
-          },
-          "propertyName": {
-            "type": "string",
-            "description": "Name of the property."
-          },
-          "radius": {
-            "type": "number"
-          },
-          "rebuildBlendParameters": {
-            "type": "boolean",
-            "description": "force_rebuild_blend_space: also trigger PostEditChangeProperty for the BlendParameters UPROPERTY (axis min/max changed). Default false."
-          },
-          "relativeLocation": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "relativeRotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "3D rotation (pitch, yaw, roll)."
-          },
-          "relativeScale": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D scale (x, y, z)."
-          },
-          "removeChildren": {
-            "type": "boolean"
-          },
-          "rootBoneName": {
-            "type": "string",
-            "description": "Name of the bone."
-          },
-          "rootMotionRootLock": {
-            "type": "string"
-          },
-          "sampleValue": {
-            "type": "number"
-          },
-          "simulatePhysics": {
-            "type": "boolean"
-          },
-          "skeletalMeshPath": {
-            "type": "string",
-            "description": "Skeletal mesh path."
-          },
-          "socketName": {
-            "type": "string",
-            "description": "Name of the socket."
-          },
-          "sourceBoneName": {
-            "type": "string",
-            "description": "Name of the bone."
-          },
-          "sourceChain": {
-            "type": "string"
-          },
-          "sourceMeshPath": {
-            "type": "string",
-            "description": "Mesh asset path."
-          },
-          "startFrame": {
-            "type": "number"
-          },
-          "startTime": {
-            "type": "number"
-          },
-          "stateMachineName": {
-            "type": "string"
-          },
-          "suffix": {
-            "type": "string"
-          },
-          "targetBoneName": {
-            "type": "string",
-            "description": "Name of the bone."
-          },
-          "targetChain": {
-            "type": "string"
-          },
-          "targetMeshPath": {
-            "type": "string",
-            "description": "Mesh asset path."
-          },
-          "threshold": {
-            "type": "number"
-          },
-          "toSection": {
-            "type": "string"
-          },
-          "toState": {
-            "type": "string"
-          },
-          "trackIndex": {
-            "type": "number"
-          },
-          "weights": {
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          },
-          "yaw": {
-            "type": "number"
-          },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "system_control",
-      "category": "core",
-      "description": "Control the project runtime: profiling, benchmarks, scalability/LOD/Nanite settings, CVars, console commands, Python scripts, UBT, tests, logs, and widgets.",
-      "actions": [
-        "profile",
-        "show_fps",
-        "set_quality",
-        "screenshot",
-        "set_resolution",
-        "set_fullscreen",
-        "execute_command",
-        "console_command",
-        "run_ubt",
-        "run_tests",
-        "subscribe",
-        "unsubscribe",
-        "spawn_category",
-        "start_session",
-        "start_unreal_insights",
-        "capture_insights_trace",
-        "get_trace_status",
-        "pause_session",
-        "resume_session",
-        "stop_session",
-        "write_snapshot",
-        "send_snapshot",
-        "analyze_trace",
-        "lumen_update_scene",
-        "play_sound",
-        "create_widget",
-        "show_widget",
-        "add_widget_child",
-        "set_cvar",
-        "get_project_settings",
-        "validate_assets",
-        "set_project_setting",
-        "execute_python",
-        "start_profiling",
-        "stop_profiling",
-        "run_benchmark",
-        "show_stats",
-        "generate_memory_report",
-        "set_scalability",
-        "set_resolution_scale",
-        "set_vsync",
-        "set_frame_rate_limit",
-        "enable_gpu_timing",
-        "configure_texture_streaming",
-        "configure_lod",
-        "apply_baseline_settings",
-        "optimize_draw_calls",
-        "merge_actors",
-        "configure_occlusion_culling",
-        "optimize_shaders",
-        "configure_nanite",
-        "configure_world_partition"
-      ],
-      "parameterNames": [
-        "actors",
-        "arguments",
-        "assetPath",
-        "boostPlayerLocation",
-        "category",
-        "categoryName",
-        "cellSize",
-        "channels",
-        "childClass",
-        "code",
-        "command",
-        "configuration",
-        "connectionType",
-        "detailed",
-        "duration",
-        "enableBatching",
-        "enableInstancing",
-        "enabled",
-        "file",
-        "filename",
-        "filter",
-        "forceLOD",
-        "height",
-        "host",
-        "includeMetadata",
-        "key",
-        "level",
-        "lodBias",
-        "maxFPS",
-        "mergeActors",
-        "message",
-        "metadata",
-        "mode",
-        "name",
-        "outputPath",
-        "overwrite",
-        "packageName",
-        "parentName",
-        "path",
-        "paths",
-        "platform",
-        "poolSize",
-        "port",
-        "profileType",
-        "recursive",
-        "replaceSourceActors",
-        "resolution",
-        "returnBase64",
-        "savePath",
-        "scale",
-        "section",
-        "snapshotPath",
-        "streamingDistance",
-        "target",
-        "text",
-        "traceFile",
-        "tracePath",
-        "type",
-        "value",
-        "volume",
-        "widgetId",
-        "widgetPath",
-        "width",
-        "windowed"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "profile",
-              "show_fps",
-              "set_quality",
-              "screenshot",
-              "set_resolution",
-              "set_fullscreen",
-              "execute_command",
-              "console_command",
-              "run_ubt",
-              "run_tests",
-              "subscribe",
-              "unsubscribe",
-              "spawn_category",
-              "start_session",
-              "start_unreal_insights",
-              "capture_insights_trace",
-              "get_trace_status",
-              "pause_session",
-              "resume_session",
-              "stop_session",
-              "write_snapshot",
-              "send_snapshot",
-              "analyze_trace",
-              "lumen_update_scene",
-              "play_sound",
-              "create_widget",
-              "show_widget",
-              "add_widget_child",
-              "set_cvar",
-              "get_project_settings",
-              "validate_assets",
-              "set_project_setting",
-              "execute_python",
-              "start_profiling",
-              "stop_profiling",
-              "run_benchmark",
-              "show_stats",
-              "generate_memory_report",
-              "set_scalability",
-              "set_resolution_scale",
-              "set_vsync",
-              "set_frame_rate_limit",
-              "enable_gpu_timing",
-              "configure_texture_streaming",
-              "configure_lod",
-              "apply_baseline_settings",
-              "optimize_draw_calls",
-              "merge_actors",
-              "configure_occlusion_culling",
-              "optimize_shaders",
-              "configure_nanite",
-              "configure_world_partition"
-            ],
-            "description": "Action"
-          },
-          "profileType": {
-            "type": "string"
-          },
-          "category": {
-            "type": "string"
-          },
-          "level": {
-            "type": "number"
-          },
-          "enabled": {
-            "type": "boolean",
-            "description": "Whether the item/feature is enabled."
-          },
-          "resolution": {
-            "type": "string",
-            "description": "Resolution setting (e.g., 1024x1024)."
-          },
-          "command": {
-            "type": "string"
-          },
-          "target": {
-            "type": "string"
-          },
-          "platform": {
-            "type": "string"
-          },
-          "configuration": {
-            "type": "string"
-          },
-          "arguments": {
-            "type": "string"
-          },
-          "filter": {
-            "type": "string"
-          },
-          "channels": {
-            "type": "string"
-          },
-          "connectionType": {
-            "type": "string",
-            "enum": [
-              "file",
-              "network"
-            ],
-            "description": "Trace connection type. Network traces are restricted to loopback hosts by the bridge."
-          },
-          "host": {
-            "type": "string"
-          },
-          "port": {
-            "type": "number"
-          },
-          "traceFile": {
-            "type": "string",
-            "description": "Output file or directory path."
-          },
-          "tracePath": {
-            "type": "string",
-            "description": "Output file or directory path."
-          },
-          "snapshotPath": {
-            "type": "string",
-            "description": "Output file or directory path."
-          },
-          "overwrite": {
-            "type": "boolean",
-            "description": "Overwrite if the asset/file already exists."
+            "description": "Widget visibility state."
           },
           "widgetPath": {
             "type": "string",
-            "description": "Widget blueprint path."
-          },
-          "childClass": {
-            "type": "string"
-          },
-          "parentName": {
-            "type": "string"
-          },
-          "section": {
-            "type": "string"
-          },
-          "key": {
-            "type": "string"
-          },
-          "value": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string",
-            "description": "Python code to execute inline",
-            "maxLength": 1048576
-          },
-          "file": {
-            "type": "string",
-            "description": "Path to .py file to execute",
-            "maxLength": 4096
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "editor_viewport",
-              "game_viewport",
-              "full_editor_window"
-            ],
-            "description": "Screenshot source. editor_viewport captures the active editor viewport; game_viewport captures the PIE/game viewport; full_editor_window captures the full Slate editor window and returns imageBase64 by default."
-          },
-          "returnBase64": {
-            "type": "boolean",
-            "description": "Return PNG image data as base64 when supported. Defaults to true for full_editor_window and game_viewport screenshot modes."
-          },
-          "includeMetadata": {
-            "type": "boolean"
-          },
-          "metadata": {
-            "type": "object"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "CPU",
-              "GPU",
-              "Memory",
-              "RenderThread",
-              "GameThread",
-              "All"
-            ]
-          },
-          "duration": {
-            "type": "number"
-          },
-          "outputPath": {
-            "type": "string",
-            "description": "Output file or directory path."
-          },
-          "detailed": {
-            "type": "boolean"
-          },
-          "scale": {
-            "type": "number"
-          },
-          "maxFPS": {
-            "type": "number"
-          },
-          "poolSize": {
-            "type": "number"
-          },
-          "boostPlayerLocation": {
-            "type": "boolean"
-          },
-          "forceLOD": {
-            "type": "number"
-          },
-          "lodBias": {
-            "type": "number"
-          },
-          "enableInstancing": {
-            "type": "boolean"
-          },
-          "enableBatching": {
-            "type": "boolean"
-          },
-          "mergeActors": {
-            "type": "boolean"
-          },
-          "actors": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "streamingDistance": {
-            "type": "number"
-          },
-          "cellSize": {
-            "type": "number"
-          },
-          "categoryName": {
-            "type": "string"
-          },
-          "filename": {
-            "type": "string"
-          },
-          "height": {
-            "type": "number"
-          },
-          "message": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "packageName": {
-            "type": "string"
-          },
-          "assetPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "path": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "paths": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "recursive": {
-            "type": "boolean",
-            "description": "Perform the operation recursively."
-          },
-          "replaceSourceActors": {
-            "type": "boolean"
-          },
-          "savePath": {
-            "type": "string",
-            "description": "Path to save the asset."
-          },
-          "text": {
-            "type": "string"
-          },
-          "volume": {
-            "type": "number"
-          },
-          "widgetId": {
-            "type": "string"
+            "description": "Canonical /Game Widget Blueprint asset path."
           },
           "width": {
-            "type": "number"
+            "type": "number",
+            "description": "Width override."
           },
-          "windowed": {
-            "type": "boolean"
+          "widthOverride": {
+            "type": "number",
+            "description": "Width override for size box."
           },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "manage_sequence",
-      "category": "utility",
-      "description": "Edit Level Sequences, cinematic tracks, Movie Render Queue jobs, media playback assets, Take Recorder, and replay controls.",
-      "actions": [
-        "create",
-        "open",
-        "add_camera",
-        "add_actor",
-        "add_actors",
-        "remove_actors",
-        "get_bindings",
-        "play",
-        "pause",
-        "stop",
-        "set_playback_speed",
-        "add_keyframe",
-        "get_properties",
-        "set_properties",
-        "duplicate",
-        "rename",
-        "delete",
-        "list",
-        "get_metadata",
-        "set_metadata",
-        "add_spawnable_from_class",
-        "add_track",
-        "add_section",
-        "set_display_rate",
-        "set_tick_resolution",
-        "set_work_range",
-        "set_view_range",
-        "set_track_muted",
-        "set_track_solo",
-        "set_track_locked",
-        "list_tracks",
-        "remove_track",
-        "list_track_types",
-        "create_master_sequence",
-        "add_subsequence",
-        "add_shot_track",
-        "configure_shot_settings",
-        "create_cine_camera_actor",
-        "configure_camera_settings",
-        "add_camera_cut_track",
-        "add_camera_shake_track",
-        "configure_camera_rig_rail",
-        "configure_camera_rig_crane",
-        "add_fade_track",
-        "add_level_visibility_track",
-        "add_material_parameter_track",
-        "add_particle_track",
-        "add_skeletal_animation_track",
-        "add_transform_track",
-        "add_event_track",
-        "add_property_track",
-        "create_render_job",
-        "configure_output_settings",
-        "add_render_pass",
-        "configure_anti_aliasing",
-        "configure_console_variables",
-        "configure_burn_ins",
-        "queue_render",
-        "start_render",
-        "create_media_player",
-        "create_media_source",
-        "create_media_texture",
-        "create_media_sound_component",
-        "create_media_playlist",
-        "play_media",
-        "pause_media",
-        "seek_media",
-        "create_take_recorder_panel",
-        "configure_take_sources",
-        "start_recording",
-        "stop_recording",
-        "configure_recorded_tracks",
-        "start_demo_recording",
-        "stop_demo_recording",
-        "configure_demo_settings",
-        "play_demo",
-        "pause_demo",
-        "seek_demo",
-        "set_demo_playback_speed",
-        "configure_killcam_duration",
-        "start_killcam"
-      ],
-      "parameterNames": [
-        "activate",
-        "actorName",
-        "actorNames",
-        "actors",
-        "additionalOptions",
-        "animationPath",
-        "animationSequencePath",
-        "antiAliasingMethod",
-        "aperture",
-        "assetPath",
-        "autoClear",
-        "autoPlay",
-        "bindingGuid",
-        "burnIn",
-        "cameraActorName",
-        "cameraName",
-        "cameraShakeClass",
-        "cameraShakePath",
-        "checkpointSaveMaxMSPerFrame",
-        "className",
-        "clearSources",
-        "componentName",
-        "consoleVariables",
-        "craneArmLength",
-        "cranePitch",
-        "craneYaw",
-        "currentAperture",
-        "currentFocalLength",
-        "defaultSourcePath",
-        "demoName",
-        "destinationPath",
-        "disableOthers",
-        "displayName",
-        "duration",
-        "durationFrames",
-        "durationSeconds",
-        "enabled",
-        "end",
-        "endFrame",
-        "endTime",
-        "executorClass",
-        "fileNameFormat",
-        "filePath",
-        "filePaths",
-        "filmback",
-        "focalLength",
-        "focus",
-        "focusDistance",
-        "frame",
-        "frameRate",
-        "friendlyName",
-        "from",
-        "height",
-        "includeTranslucentObjects",
-        "jobId",
-        "jobName",
-        "label",
-        "lengthInFrames",
-        "lens",
-        "levelNames",
-        "loadDefaultMapOnStop",
-        "location",
-        "locked",
-        "loop",
-        "loopMode",
-        "looping",
-        "manualFocusDistance",
-        "mapPath",
-        "masterSequencePath",
-        "materialIndex",
-        "materialPath",
-        "maxRecordTimeSeconds",
-        "mediaPath",
-        "mediaPlayerPath",
-        "mediaSourcePath",
-        "metadata",
-        "method",
-        "muted",
-        "name",
-        "newName",
-        "onlyJob",
-        "outputDirectory",
-        "parameterName",
-        "path",
-        "paused",
-        "platformSources",
-        "playOnOpen",
-        "playbackEnd",
-        "playbackSpeed",
-        "playbackStart",
-        "playerPath",
-        "playlistIndex",
-        "playlistPath",
-        "positionOnRail",
-        "precacheFile",
-        "prioritizeActors",
-        "properties",
-        "property",
-        "propertyName",
-        "propertyPath",
-        "propertyType",
-        "recordInto",
-        "recordParentHierarchy",
-        "recordType",
-        "recordingSequencePath",
-        "reduceKeys",
-        "renderJobId",
-        "renderJobName",
-        "renderPass",
-        "renderPasses",
-        "replayName",
-        "resolution",
-        "rotation",
-        "rowIndex",
-        "save",
-        "seconds",
-        "sectionIndex",
-        "sectionName",
-        "seekTime",
-        "sensorHeight",
-        "sensorWidth",
-        "sequencePath",
-        "settings",
-        "shotName",
-        "shotSequencePath",
-        "skeletalMeshPath",
-        "solo",
-        "sourceActors",
-        "sourceClasses",
-        "sourcePath",
-        "sourcePaths",
-        "sourceType",
-        "spatialSampleCount",
-        "spawnable",
-        "speed",
-        "start",
-        "startFrame",
-        "startTime",
-        "streamUrl",
-        "subsequencePath",
-        "takePresetPath",
-        "takeSequencePath",
-        "targetActor",
-        "temporalSampleCount",
-        "time",
-        "timeSeconds",
-        "timeoutMs",
-        "to",
-        "trackName",
-        "trackNames",
-        "trackType",
-        "tracks",
-        "url",
-        "urls",
-        "useCurrentLevel",
-        "value",
-        "visibility",
-        "width"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
+          "wrapWidth": {
+            "type": "number",
+            "description": "Wrap width for wrap box."
+          },
+          "x": {
+            "type": "number",
+            "description": "Canvas X position for a HUD element (default 20)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Canvas Y position for a HUD element (default 20)."
+          },
+          "zOrder": {
+            "type": "number",
+            "description": "Z-order for a canvas slot."
+          },
           "action": {
             "type": "string",
             "enum": [
               "create",
-              "open",
-              "add_camera",
-              "add_actor",
-              "add_actors",
-              "remove_actors",
-              "get_bindings",
-              "play",
-              "pause",
-              "stop",
-              "set_playback_speed",
-              "add_keyframe",
-              "get_properties",
-              "set_properties",
-              "duplicate",
-              "rename",
-              "delete",
-              "list",
-              "get_metadata",
+              "create_blueprint",
+              "get_blueprint",
+              "get",
+              "ensure_exists",
+              "compile",
+              "add_component",
+              "add_scs_component",
+              "modify_scs",
+              "get_scs",
+              "remove_scs_component",
+              "reparent_scs_component",
+              "set_scs_transform",
+              "set_scs_property",
+              "add_variable",
+              "remove_variable",
+              "rename_variable",
+              "set_variable_metadata",
               "set_metadata",
-              "add_spawnable_from_class",
-              "add_track",
-              "add_section",
-              "set_display_rate",
-              "set_tick_resolution",
-              "set_work_range",
-              "set_view_range",
-              "set_track_muted",
-              "set_track_solo",
-              "set_track_locked",
-              "list_tracks",
-              "remove_track",
-              "list_track_types",
-              "create_master_sequence",
-              "add_subsequence",
-              "add_shot_track",
-              "configure_shot_settings",
-              "create_cine_camera_actor",
-              "configure_camera_settings",
-              "add_camera_cut_track",
-              "add_camera_shake_track",
-              "configure_camera_rig_rail",
-              "configure_camera_rig_crane",
-              "add_fade_track",
-              "add_level_visibility_track",
-              "add_material_parameter_track",
-              "add_particle_track",
-              "add_skeletal_animation_track",
-              "add_transform_track",
-              "add_event_track",
-              "add_property_track",
-              "create_render_job",
-              "configure_output_settings",
-              "add_render_pass",
-              "configure_anti_aliasing",
-              "configure_console_variables",
-              "configure_burn_ins",
-              "queue_render",
-              "start_render",
-              "create_media_player",
-              "create_media_source",
-              "create_media_texture",
-              "create_media_sound_component",
-              "create_media_playlist",
-              "play_media",
-              "pause_media",
-              "seek_media",
-              "create_take_recorder_panel",
-              "configure_take_sources",
-              "start_recording",
-              "stop_recording",
-              "configure_recorded_tracks",
-              "start_demo_recording",
-              "stop_demo_recording",
-              "configure_demo_settings",
-              "play_demo",
-              "pause_demo",
-              "seek_demo",
-              "set_demo_playback_speed",
-              "configure_killcam_duration",
-              "start_killcam"
+              "set_default",
+              "create_node",
+              "add_node",
+              "delete_node",
+              "create_reroute_node",
+              "get_node_details",
+              "get_graph_details",
+              "get_pin_details",
+              "list_node_types",
+              "create_struct_make_break_nodes",
+              "connect_pins",
+              "break_pin_links",
+              "set_node_property",
+              "set_pin_default_value",
+              "add_construction_script",
+              "add_function",
+              "remove_function",
+              "add_event",
+              "remove_event",
+              "probe_handle",
+              "create_widget_blueprint",
+              "set_widget_parent_class",
+              "preview_widget",
+              "add_canvas_panel",
+              "add_horizontal_box",
+              "add_vertical_box",
+              "add_overlay",
+              "add_grid_panel",
+              "add_uniform_grid",
+              "add_wrap_box",
+              "add_scroll_box",
+              "add_size_box",
+              "add_scale_box",
+              "add_border",
+              "add_text_block",
+              "add_rich_text_block",
+              "add_image",
+              "add_button",
+              "add_check_box",
+              "add_slider",
+              "add_progress_bar",
+              "add_text_input",
+              "add_combo_box",
+              "add_spin_box",
+              "add_list_view",
+              "add_tree_view",
+              "add_health_bar",
+              "add_ammo_counter",
+              "add_minimap",
+              "add_crosshair",
+              "add_compass",
+              "add_interaction_prompt",
+              "add_objective_tracker",
+              "add_damage_indicator",
+              "create_main_menu",
+              "create_pause_menu",
+              "create_settings_menu",
+              "create_loading_screen",
+              "create_hud_widget",
+              "create_inventory_ui",
+              "create_dialog_widget",
+              "create_radial_menu",
+              "set_anchor",
+              "set_alignment",
+              "set_position",
+              "set_size",
+              "set_padding",
+              "set_z_order",
+              "set_render_transform",
+              "set_visibility",
+              "set_style",
+              "set_clipping",
+              "create_property_binding",
+              "bind_text",
+              "bind_visibility",
+              "bind_color",
+              "bind_enabled",
+              "bind_on_clicked",
+              "bind_on_hovered",
+              "bind_on_value_changed",
+              "create_widget_animation",
+              "add_animation_track",
+              "add_animation_keyframe",
+              "set_animation_loop",
+              "get_widget_info"
             ],
-            "description": "Action"
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "path": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "assetPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "sequencePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "masterSequencePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "subsequencePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "shotSequencePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "mapPath": {
-            "type": "string",
-            "description": "Level asset path."
-          },
-          "mediaPlayerPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "mediaSourcePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "playlistPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "playerPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "sourcePath": {
-            "type": "string",
-            "description": "Source path for import/move/copy."
-          },
-          "defaultSourcePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "sourcePaths": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "platformSources": {
-            "type": "object"
-          },
-          "animationPath": {
-            "type": "string",
-            "description": "Animation asset path."
-          },
-          "animationSequencePath": {
-            "type": "string",
-            "description": "Animation asset path."
-          },
-          "skeletalMeshPath": {
-            "type": "string",
-            "description": "Skeletal mesh path."
-          },
-          "materialPath": {
-            "type": "string",
-            "description": "Optional expected material asset for the selected component slot."
-          },
-          "cameraShakePath": {
-            "type": "string",
-            "description": "Path to camera shake asset."
-          },
-          "cameraShakeClass": {
-            "type": "string"
-          },
-          "takePresetPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "recordingSequencePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "takeSequencePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "actorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "actorNames": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "actors": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "sourceClasses": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "cameraActorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "cameraName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "targetActor": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "sourceActors": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "location": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "rotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "3D rotation (pitch, yaw, roll)."
-          },
-          "bindingGuid": {
-            "type": "string"
-          },
-          "sectionName": {
-            "type": "string",
-            "description": "Name of the section."
-          },
-          "shotName": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "label": {
-            "type": "string"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "renderJobName": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "jobName": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "jobId": {
-            "type": "string"
-          },
-          "renderJobId": {
-            "type": "string"
-          },
-          "replayName": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "friendlyName": {
-            "type": "string"
-          },
-          "sourceType": {
-            "type": "string"
-          },
-          "filePath": {
-            "type": "string",
-            "description": "Output file or directory path."
-          },
-          "mediaPath": {
-            "type": "string",
-            "description": "Output file or directory path."
-          },
-          "filePaths": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "url": {
-            "type": "string"
-          },
-          "urls": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "streamUrl": {
-            "type": "string"
-          },
-          "outputDirectory": {
-            "type": "string",
-            "description": "Output file or directory path."
-          },
-          "fileNameFormat": {
-            "type": "string"
-          },
-          "renderPass": {
-            "type": "string"
-          },
-          "renderPasses": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "antiAliasingMethod": {
-            "type": "string"
-          },
-          "method": {
-            "type": "string"
-          },
-          "executorClass": {
-            "type": "string"
-          },
-          "useCurrentLevel": {
-            "type": "boolean"
-          },
-          "consoleVariables": {
-            "type": "object"
-          },
-          "burnIn": {
-            "type": "object",
-            "properties": {
-              "enabled": {
-                "type": "boolean"
-              },
-              "compositeOntoFinalImage": {
-                "type": "boolean"
-              },
-              "classPath": {
-                "type": "string"
-              }
-            }
-          },
-          "filmback": {
-            "type": "object"
-          },
-          "lens": {
-            "type": "object"
-          },
-          "focus": {
-            "type": "object"
-          },
-          "settings": {
-            "type": "object",
-            "properties": {
-              "handleFrameCount": {
-                "type": "integer"
-              },
-              "zeroPadFrameNumbers": {
-                "type": "integer"
-              },
-              "spatialSampleCount": {
-                "type": "integer"
-              },
-              "temporalSampleCount": {
-                "type": "integer"
-              },
-              "antiAliasingMethod": {
-                "type": "string"
-              },
-              "method": {
-                "type": "string"
-              }
-            }
-          },
-          "tracks": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "trackNames": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "levelNames": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "properties": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "additionalOptions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "componentName": {
-            "type": "string",
-            "description": "Name of the component."
-          },
-          "demoName": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "frame": {
-            "type": "integer"
-          },
-          "value": {
-            "description": "Generic value (any type)."
-          },
-          "property": {
-            "type": "string",
-            "description": "Name of the property."
-          },
-          "propertyName": {
-            "type": "string",
-            "description": "Name of the property."
-          },
-          "propertyPath": {
-            "type": "string"
-          },
-          "propertyType": {
-            "type": "string"
-          },
-          "parameterName": {
-            "type": "string",
-            "description": "Name of the parameter."
-          },
-          "destinationPath": {
-            "type": "string",
-            "description": "Destination path for move/copy."
-          },
-          "newName": {
-            "type": "string",
-            "description": "New name for renaming."
-          },
-          "speed": {
-            "type": "number"
-          },
-          "playbackSpeed": {
-            "type": "number"
-          },
-          "focalLength": {
-            "type": "number"
-          },
-          "aperture": {
-            "type": "number"
-          },
-          "focusDistance": {
-            "type": "number"
-          },
-          "currentFocalLength": {
-            "type": "number"
-          },
-          "currentAperture": {
-            "type": "number"
-          },
-          "manualFocusDistance": {
-            "type": "number"
-          },
-          "sensorWidth": {
-            "type": "number"
-          },
-          "sensorHeight": {
-            "type": "number"
-          },
-          "positionOnRail": {
-            "type": "number"
-          },
-          "cranePitch": {
-            "type": "number"
-          },
-          "craneYaw": {
-            "type": "number"
-          },
-          "craneArmLength": {
-            "type": "number"
-          },
-          "width": {
-            "type": "integer"
-          },
-          "height": {
-            "type": "integer"
-          },
-          "temporalSampleCount": {
-            "type": "integer"
-          },
-          "spatialSampleCount": {
-            "type": "integer"
-          },
-          "playlistIndex": {
-            "type": "integer"
-          },
-          "seekTime": {
-            "type": "number"
-          },
-          "time": {
-            "type": "number"
-          },
-          "timeSeconds": {
-            "type": "number"
-          },
-          "seconds": {
-            "type": "number"
-          },
-          "duration": {
-            "type": "number",
-            "description": "Duration in seconds."
-          },
-          "durationFrames": {
-            "type": "integer"
-          },
-          "durationSeconds": {
-            "type": "number",
-            "description": "Duration in seconds."
-          },
-          "startTime": {
-            "type": "number"
-          },
-          "endTime": {
-            "type": "number"
-          },
-          "from": {
-            "type": "number"
-          },
-          "to": {
-            "type": "number"
-          },
-          "loopMode": {
-            "type": "string"
-          },
-          "className": {
-            "type": "string"
-          },
-          "spawnable": {
-            "type": "boolean"
-          },
-          "activate": {
-            "type": "boolean"
-          },
-          "autoClear": {
-            "type": "boolean"
-          },
-          "autoPlay": {
-            "type": "boolean"
-          },
-          "playOnOpen": {
-            "type": "boolean"
-          },
-          "loop": {
-            "type": "boolean"
-          },
-          "looping": {
-            "type": "boolean",
-            "description": "Whether to loop."
-          },
-          "enabled": {
-            "type": "boolean",
-            "description": "Whether the item/feature is enabled."
-          },
-          "paused": {
-            "type": "boolean"
-          },
-          "clearSources": {
-            "type": "boolean"
-          },
-          "disableOthers": {
-            "type": "boolean"
-          },
-          "includeTranslucentObjects": {
-            "type": "boolean"
-          },
-          "loadDefaultMapOnStop": {
-            "type": "boolean"
-          },
-          "onlyJob": {
-            "type": "boolean"
-          },
-          "precacheFile": {
-            "type": "boolean"
-          },
-          "prioritizeActors": {
-            "type": "boolean"
-          },
-          "recordParentHierarchy": {
-            "type": "boolean"
-          },
-          "recordInto": {
-            "type": "boolean"
-          },
-          "reduceKeys": {
-            "type": "boolean"
-          },
-          "save": {
-            "type": "boolean",
-            "description": "Save the asset(s) after the operation."
-          },
-          "trackType": {
-            "type": "string"
-          },
-          "trackName": {
-            "type": "string"
-          },
-          "recordType": {
-            "type": "string"
-          },
-          "visibility": {
-            "type": "string"
-          },
-          "muted": {
-            "type": "boolean"
-          },
-          "solo": {
-            "type": "boolean"
-          },
-          "locked": {
-            "type": "boolean"
-          },
-          "startFrame": {
-            "type": "integer"
-          },
-          "endFrame": {
-            "type": "integer"
-          },
-          "rowIndex": {
-            "type": "integer"
-          },
-          "sectionIndex": {
-            "type": "integer"
-          },
-          "frameRate": {
-            "type": [
-              "number",
-              "string"
-            ],
-            "description": "Frame rate as frames per second or a rate string such as 24fps or 24000/1001."
-          },
-          "resolution": {
-            "type": "string"
-          },
-          "materialIndex": {
-            "type": "integer"
-          },
-          "checkpointSaveMaxMSPerFrame": {
-            "type": "number"
-          },
-          "maxRecordTimeSeconds": {
-            "type": "number"
-          },
-          "timeoutMs": {
-            "type": "number"
-          },
-          "start": {
-            "type": "number"
-          },
-          "end": {
-            "type": "number"
-          },
-          "lengthInFrames": {
-            "type": "integer"
-          },
-          "playbackStart": {
-            "type": "integer"
-          },
-          "playbackEnd": {
-            "type": "integer"
-          },
-          "metadata": {
-            "type": "object"
-          },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "inspect",
-      "category": "core",
-      "description": "Inspect any UObject: read/write properties, list components, export snapshots, and query class info. Actions: inspect_cdo (Blueprint CDO properties + all components without spawning an actor; use blueprintPath, optional detailed/componentName/propertyNames), inspect_class (class metadata), inspect_object (world actor), get_property/set_property, get_components, get_component_details (WORLD actors: actorName+componentName; a blueprintPath is routed to inspect_cdo), list_objects, find_by_class, find_by_tag, runtime_report.",
-      "actions": [
-        "inspect_object",
-        "get_actor_details",
-        "get_blueprint_details",
-        "get_mesh_details",
-        "get_texture_details",
-        "get_material_details",
-        "get_level_details",
-        "get_component_details",
-        "set_property",
-        "get_property",
-        "get_components",
-        "get_component_property",
-        "set_component_property",
-        "inspect_class",
-        "inspect_cdo",
-        "runtime_report",
-        "pie_report",
-        "list_objects",
-        "get_metadata",
-        "add_tag",
-        "find_by_tag",
-        "create_snapshot",
-        "restore_snapshot",
-        "export",
-        "delete_object",
-        "find_by_class",
-        "get_bounding_box",
-        "get_project_settings",
-        "get_world_settings",
-        "get_viewport_info",
-        "get_selected_actors",
-        "get_scene_stats",
-        "get_performance_stats",
-        "get_memory_stats",
-        "get_editor_settings",
-        "inspect_struct"
-      ],
-      "parameterNames": [
-        "actorName",
-        "blueprintPath",
-        "className",
-        "classPath",
-        "componentName",
-        "componentNames",
-        "detailed",
-        "filter",
-        "name",
-        "objectPath",
-        "propertyName",
-        "propertyNames",
-        "propertyPath",
-        "snapshotName",
-        "structPath",
-        "tag",
-        "value"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "inspect_object",
-              "get_actor_details",
-              "get_blueprint_details",
-              "get_mesh_details",
-              "get_texture_details",
-              "get_material_details",
-              "get_level_details",
-              "get_component_details",
-              "set_property",
-              "get_property",
-              "get_components",
-              "get_component_property",
-              "set_component_property",
-              "inspect_class",
-              "inspect_cdo",
-              "runtime_report",
-              "pie_report",
-              "list_objects",
-              "get_metadata",
-              "add_tag",
-              "find_by_tag",
-              "create_snapshot",
-              "restore_snapshot",
-              "export",
-              "delete_object",
-              "find_by_class",
-              "get_bounding_box",
-              "get_project_settings",
-              "get_world_settings",
-              "get_viewport_info",
-              "get_selected_actors",
-              "get_scene_stats",
-              "get_performance_stats",
-              "get_memory_stats",
-              "get_editor_settings",
-              "inspect_struct"
-            ],
-            "description": "Action"
-          },
-          "objectPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "propertyName": {
-            "type": "string",
-            "description": "Name of the property."
-          },
-          "propertyPath": {
-            "type": "string"
-          },
-          "value": {
-            "description": "Generic value (any type)."
-          },
-          "actorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "componentName": {
-            "type": "string",
-            "description": "Name of the component."
-          },
-          "className": {
-            "type": "string"
-          },
-          "classPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "tag": {
-            "type": "string",
-            "description": "Name of the tag."
-          },
-          "filter": {
-            "type": "string"
-          },
-          "snapshotName": {
-            "type": "string"
-          },
-          "blueprintPath": {
-            "type": "string",
-            "description": "Blueprint asset path."
-          },
-          "detailed": {
-            "type": "boolean"
-          },
-          "propertyNames": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "componentNames": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "structPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "manage_audio",
-      "category": "utility",
-      "description": "Play/stop sounds, add audio components, configure mixes, attenuation, spatial audio, and author Sound Cues/MetaSounds.",
-      "actions": [
-        "create_sound_cue",
-        "play_sound_at_location",
-        "play_sound_2d",
-        "create_audio_component",
-        "create_sound_mix",
-        "push_sound_mix",
-        "pop_sound_mix",
-        "set_sound_mix_class_override",
-        "clear_sound_mix_class_override",
-        "set_base_sound_mix",
-        "prime_sound",
-        "play_sound_attached",
-        "spawn_sound_at_location",
-        "fade_sound_in",
-        "fade_sound_out",
-        "create_ambient_sound",
-        "create_sound_class",
-        "set_sound_attenuation",
-        "create_reverb_zone",
-        "enable_audio_analysis",
-        "fade_sound",
-        "set_doppler_effect",
-        "set_audio_occlusion",
-        "add_cue_node",
-        "connect_cue_nodes",
-        "set_cue_attenuation",
-        "set_cue_concurrency",
-        "create_metasound",
-        "add_metasound_node",
-        "connect_metasound_nodes",
-        "add_metasound_input",
-        "add_metasound_output",
-        "set_metasound_default",
-        "set_class_properties",
-        "set_class_parent",
-        "add_mix_modifier",
-        "configure_mix_eq",
-        "create_attenuation_settings",
-        "configure_distance_attenuation",
-        "configure_spatialization",
-        "configure_occlusion",
-        "configure_reverb_send",
-        "create_dialogue_voice",
-        "create_dialogue_wave",
-        "set_dialogue_context",
-        "create_reverb_effect",
-        "create_source_effect_chain",
-        "add_source_effect",
-        "create_submix_effect",
-        "get_audio_info"
-      ],
-      "parameterNames": [
-        "actorName",
-        "analysisType",
-        "assetPath",
-        "attachPointName",
-        "attenuationPath",
-        "attenuationShape",
-        "componentName",
-        "concurrencyPath",
-        "defaultValue",
-        "dopplerIntensity",
-        "effectType",
-        "enable",
-        "enableReverbSend",
-        "enabled",
-        "fadeInTime",
-        "fadeOutTime",
-        "fadeTime",
-        "fadeType",
-        "falloffDistance",
-        "falloffMode",
-        "innerRadius",
-        "inputName",
-        "inputType",
-        "location",
-        "looping",
-        "lowPassFilterFrequency",
-        "mixName",
-        "name",
-        "nodeType",
-        "occlusionFilterScale",
-        "occlusionInterpolationTime",
-        "occlusionVolumeScale",
-        "outputName",
-        "outputType",
-        "parentClass",
-        "path",
-        "pitch",
-        "properties",
-        "reverbDistanceMax",
-        "reverbDistanceMin",
-        "reverbEffect",
-        "reverbWetLevelMax",
-        "reverbWetLevelMin",
-        "rotation",
-        "save",
-        "size",
-        "soundClassName",
-        "soundClassPath",
-        "soundName",
-        "soundPath",
-        "sourceNode",
-        "sourceNodeId",
-        "sourceOutputName",
-        "sourcePin",
-        "spatialization",
-        "speakerPath",
-        "startTime",
-        "targetInputName",
-        "targetNode",
-        "targetNodeId",
-        "targetPin",
-        "targetVolume",
-        "velocityScale",
-        "volume",
-        "volumeAdjuster",
-        "wavePath",
-        "windowSize"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "create_sound_cue",
-              "play_sound_at_location",
-              "play_sound_2d",
-              "create_audio_component",
-              "create_sound_mix",
-              "push_sound_mix",
-              "pop_sound_mix",
-              "set_sound_mix_class_override",
-              "clear_sound_mix_class_override",
-              "set_base_sound_mix",
-              "prime_sound",
-              "play_sound_attached",
-              "spawn_sound_at_location",
-              "fade_sound_in",
-              "fade_sound_out",
-              "create_ambient_sound",
-              "create_sound_class",
-              "set_sound_attenuation",
-              "create_reverb_zone",
-              "enable_audio_analysis",
-              "fade_sound",
-              "set_doppler_effect",
-              "set_audio_occlusion",
-              "add_cue_node",
-              "connect_cue_nodes",
-              "set_cue_attenuation",
-              "set_cue_concurrency",
-              "create_metasound",
-              "add_metasound_node",
-              "connect_metasound_nodes",
-              "add_metasound_input",
-              "add_metasound_output",
-              "set_metasound_default",
-              "set_class_properties",
-              "set_class_parent",
-              "add_mix_modifier",
-              "configure_mix_eq",
-              "create_attenuation_settings",
-              "configure_distance_attenuation",
-              "configure_spatialization",
-              "configure_occlusion",
-              "configure_reverb_send",
-              "create_dialogue_voice",
-              "create_dialogue_wave",
-              "set_dialogue_context",
-              "create_reverb_effect",
-              "create_source_effect_chain",
-              "add_source_effect",
-              "create_submix_effect",
-              "get_audio_info"
-            ],
-            "description": "Action"
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "soundPath": {
-            "type": "string",
-            "description": "Sound asset path."
-          },
-          "location": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "rotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "3D rotation (pitch, yaw, roll)."
-          },
-          "volume": {
-            "type": "number"
-          },
-          "pitch": {
-            "type": "number"
-          },
-          "startTime": {
-            "type": "number"
-          },
-          "attenuationPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "concurrencyPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "mixName": {
-            "type": "string"
-          },
-          "soundClassName": {
-            "type": "string"
-          },
-          "fadeInTime": {
-            "type": "number"
-          },
-          "fadeOutTime": {
-            "type": "number"
-          },
-          "fadeTime": {
-            "type": "number"
-          },
-          "targetVolume": {
-            "type": "number"
-          },
-          "attachPointName": {
-            "type": "string",
-            "description": "Name of the socket."
-          },
-          "actorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "componentName": {
-            "type": "string",
-            "description": "Name of the component."
-          },
-          "parentClass": {
-            "type": "string"
-          },
-          "properties": {
-            "type": "object"
-          },
-          "innerRadius": {
-            "type": "number"
-          },
-          "falloffDistance": {
-            "type": "number"
-          },
-          "attenuationShape": {
-            "type": "string"
-          },
-          "falloffMode": {
-            "type": "string"
-          },
-          "reverbEffect": {
-            "type": "string"
-          },
-          "size": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D scale (x, y, z)."
-          },
-          "analysisType": {
-            "type": "string"
-          },
-          "windowSize": {
-            "type": "number"
-          },
-          "outputType": {
-            "type": "string"
-          },
-          "soundName": {
-            "type": "string"
-          },
-          "fadeType": {
-            "type": "string"
-          },
-          "lowPassFilterFrequency": {
-            "type": "number"
-          },
-          "enabled": {
-            "type": "boolean",
-            "description": "Whether the item/feature is enabled."
-          },
-          "path": {
-            "type": "string",
-            "description": "Directory path for asset creation."
-          },
-          "assetPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "save": {
-            "type": "boolean",
-            "description": "Save the asset(s) after the operation."
-          },
-          "wavePath": {
-            "type": "string",
-            "description": "Path to SoundWave asset."
-          },
-          "nodeType": {
-            "type": "string"
-          },
-          "sourceNodeId": {
-            "type": "string",
-            "description": "ID of the source node."
-          },
-          "targetNodeId": {
-            "type": "string",
-            "description": "ID of the target node."
-          },
-          "looping": {
-            "type": "boolean",
-            "description": "Whether to loop."
-          },
-          "inputName": {
-            "type": "string",
-            "description": "Name of the input."
-          },
-          "inputType": {
-            "type": "string"
-          },
-          "outputName": {
-            "type": "string",
-            "description": "Name of the output."
-          },
-          "sourceNode": {
-            "type": "string",
-            "description": "Source node name."
-          },
-          "sourcePin": {
-            "type": "string",
-            "description": "Name of the source pin."
-          },
-          "targetNode": {
-            "type": "string",
-            "description": "Target node name."
-          },
-          "targetPin": {
-            "type": "string",
-            "description": "Name of the target pin."
-          },
-          "defaultValue": {
-            "description": "Generic value (any type)."
-          },
-          "soundClassPath": {
-            "type": "string",
-            "description": "Sound class path."
-          },
-          "dopplerIntensity": {
-            "type": "number"
-          },
-          "effectType": {
-            "type": "string"
-          },
-          "enable": {
-            "type": "boolean"
-          },
-          "enableReverbSend": {
-            "type": "boolean"
-          },
-          "occlusionFilterScale": {
-            "type": "number"
-          },
-          "occlusionInterpolationTime": {
-            "type": "number"
-          },
-          "occlusionVolumeScale": {
-            "type": "number"
-          },
-          "reverbDistanceMax": {
-            "type": "number"
-          },
-          "reverbDistanceMin": {
-            "type": "number"
-          },
-          "reverbWetLevelMax": {
-            "type": "number"
-          },
-          "reverbWetLevelMin": {
-            "type": "number"
-          },
-          "sourceOutputName": {
-            "type": "string"
-          },
-          "spatialization": {
-            "type": "string"
-          },
-          "speakerPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "targetInputName": {
-            "type": "string"
-          },
-          "velocityScale": {
-            "type": "number"
-          },
-          "volumeAdjuster": {
-            "type": "number"
-          },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "manage_geometry",
-      "category": "world",
-      "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
-      "actions": [
-        "create_box",
-        "create_sphere",
-        "create_cylinder",
-        "create_cone",
-        "create_capsule",
-        "create_torus",
-        "create_plane",
-        "create_disc",
-        "create_stairs",
-        "create_spiral_stairs",
-        "create_ring",
-        "create_arch",
-        "create_pipe",
-        "create_ramp",
-        "boolean_union",
-        "boolean_subtract",
-        "boolean_intersection",
-        "boolean_trim",
-        "self_union",
-        "extrude",
-        "inset",
-        "outset",
-        "bevel",
-        "offset_faces",
-        "shell",
-        "revolve",
-        "chamfer",
-        "extrude_along_spline",
-        "bridge",
-        "loft",
-        "sweep",
-        "duplicate_along_spline",
-        "loop_cut",
-        "edge_split",
-        "quadrangulate",
-        "bend",
-        "twist",
-        "taper",
-        "noise_deform",
-        "smooth",
-        "relax",
-        "stretch",
-        "spherify",
-        "cylindrify",
-        "lattice_deform",
-        "displace_by_texture",
-        "triangulate",
-        "poke",
-        "mirror",
-        "array_linear",
-        "array_radial",
-        "simplify_mesh",
-        "subdivide",
-        "remesh_uniform",
-        "merge_vertices",
-        "remesh_voxel",
-        "weld_vertices",
-        "fill_holes",
-        "remove_degenerates",
-        "auto_uv",
-        "project_uv",
-        "transform_uvs",
-        "unwrap_uv",
-        "pack_uv_islands",
-        "recalculate_normals",
-        "flip_normals",
-        "recompute_tangents",
-        "generate_collision",
-        "generate_complex_collision",
-        "simplify_collision",
-        "generate_lods",
-        "set_lod_settings",
-        "set_lod_screen_sizes",
-        "convert_to_nanite",
-        "convert_to_static_mesh",
-        "get_mesh_info"
-      ],
-      "parameterNames": [
-        "actorName",
-        "amount",
-        "angle",
-        "assetPath",
-        "axis",
-        "cap",
-        "center",
-        "collisionType",
-        "computeWeightedNormals",
-        "count",
-        "depth",
-        "depthSegments",
-        "dimensions",
-        "distance",
-        "hardEdgeAngle",
-        "height",
-        "heightScale",
-        "heightSegments",
-        "hullCount",
-        "hullPrecision",
-        "innerRadius",
-        "iterations",
-        "keepInside",
-        "keepTool",
-        "latticeResolution",
-        "location",
-        "lodCount",
-        "lodIndex",
-        "maxHullCount",
-        "maxHullVerts",
-        "maxVerticesPerHull",
-        "midpoint",
-        "name",
-        "numRings",
-        "numSides",
-        "numSteps",
-        "numTurns",
-        "offset",
-        "outputPath",
-        "path",
-        "position",
-        "radialSegments",
-        "radius",
-        "recomputeNormals",
-        "recomputeTangents",
-        "reductionPercent",
-        "rotation",
-        "scale",
-        "screenSizes",
-        "segments",
-        "simplificationFactor",
-        "splineActorName",
-        "stepDepth",
-        "stepHeight",
-        "stepWidth",
-        "steps",
-        "strength",
-        "targetActor",
-        "targetEdgeLength",
-        "targetHullCount",
-        "targetTriangleCount",
-        "texturePath",
-        "toolActor",
-        "trianglePercent",
-        "trimActorName",
-        "uvChannel",
-        "uvOffset",
-        "uvScale",
-        "weight",
-        "weldDistance",
-        "width",
-        "widthSegments"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "create_box",
-              "create_sphere",
-              "create_cylinder",
-              "create_cone",
-              "create_capsule",
-              "create_torus",
-              "create_plane",
-              "create_disc",
-              "create_stairs",
-              "create_spiral_stairs",
-              "create_ring",
-              "create_arch",
-              "create_pipe",
-              "create_ramp",
-              "boolean_union",
-              "boolean_subtract",
-              "boolean_intersection",
-              "boolean_trim",
-              "self_union",
-              "extrude",
-              "inset",
-              "outset",
-              "bevel",
-              "offset_faces",
-              "shell",
-              "revolve",
-              "chamfer",
-              "extrude_along_spline",
-              "bridge",
-              "loft",
-              "sweep",
-              "duplicate_along_spline",
-              "loop_cut",
-              "edge_split",
-              "quadrangulate",
-              "bend",
-              "twist",
-              "taper",
-              "noise_deform",
-              "smooth",
-              "relax",
-              "stretch",
-              "spherify",
-              "cylindrify",
-              "lattice_deform",
-              "displace_by_texture",
-              "triangulate",
-              "poke",
-              "mirror",
-              "array_linear",
-              "array_radial",
-              "simplify_mesh",
-              "subdivide",
-              "remesh_uniform",
-              "merge_vertices",
-              "remesh_voxel",
-              "weld_vertices",
-              "fill_holes",
-              "remove_degenerates",
-              "auto_uv",
-              "project_uv",
-              "transform_uvs",
-              "unwrap_uv",
-              "pack_uv_islands",
-              "recalculate_normals",
-              "flip_normals",
-              "recompute_tangents",
-              "generate_collision",
-              "generate_complex_collision",
-              "simplify_collision",
-              "generate_lods",
-              "set_lod_settings",
-              "set_lod_screen_sizes",
-              "convert_to_nanite",
-              "convert_to_static_mesh",
-              "get_mesh_info"
-            ],
-            "description": "Geometry action to perform"
-          },
-          "outputPath": {
-            "type": "string",
-            "description": "Output file or directory path."
-          },
-          "assetPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "path": {
-            "type": "string",
-            "description": "Path to a directory."
-          },
-          "actorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "width": {
-            "type": "number",
-            "description": "Width value."
-          },
-          "height": {
-            "type": "number",
-            "description": "Height value."
-          },
-          "depth": {
-            "type": "number",
-            "description": "Depth value."
-          },
-          "radius": {
-            "type": "number",
-            "description": "Radius value."
-          },
-          "innerRadius": {
-            "type": "number",
-            "description": "Inner radius for torus."
-          },
-          "numSides": {
-            "type": "number",
-            "description": "Number of sides for cylinder, cone, etc."
-          },
-          "numRings": {
-            "type": "number",
-            "description": "Number of rings for sphere, torus."
-          },
-          "numSteps": {
-            "type": "number",
-            "description": "Number of steps for stairs."
-          },
-          "stepWidth": {
-            "type": "number",
-            "description": "Width of each stair step."
-          },
-          "stepHeight": {
-            "type": "number",
-            "description": "Height of each stair step."
-          },
-          "stepDepth": {
-            "type": "number",
-            "description": "Depth of each stair step."
-          },
-          "numTurns": {
-            "type": "number",
-            "description": "Number of turns for spiral."
-          },
-          "widthSegments": {
-            "type": "number",
-            "description": "Segments along width."
-          },
-          "heightSegments": {
-            "type": "number",
-            "description": "Segments along height."
-          },
-          "depthSegments": {
-            "type": "number",
-            "description": "Segments along depth."
-          },
-          "radialSegments": {
-            "type": "number",
-            "description": "Radial segments for circular shapes."
-          },
-          "location": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "rotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "3D rotation (pitch, yaw, roll)."
-          },
-          "scale": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D scale (x, y, z)."
-          },
-          "distance": {
-            "type": "number",
-            "description": "Distance value."
-          },
-          "amount": {
-            "type": "number",
-            "description": "Generic amount for operations (bevel size, inset distance, etc.)."
-          },
-          "segments": {
-            "type": "number",
-            "description": "Number of segments for bevel, subdivide."
-          },
-          "angle": {
-            "type": "number",
-            "description": "Angle in degrees."
-          },
-          "axis": {
-            "type": "string",
-            "enum": [
-              "X",
-              "Y",
-              "Z"
-            ],
-            "description": "Axis for deformation operations."
-          },
-          "strength": {
-            "type": "number",
-            "description": "Strength or weight."
-          },
-          "weight": {
-            "type": "number",
-            "description": "Weight for lattice deformation."
-          },
-          "latticeResolution": {
-            "type": "number",
-            "description": "Control lattice resolution for lattice deformation."
-          },
-          "heightScale": {
-            "type": "number",
-            "description": "Texture displacement height scale."
-          },
-          "midpoint": {
-            "type": "number",
-            "description": "Texture luminance midpoint for displacement."
-          },
-          "texturePath": {
-            "type": "string",
-            "description": "Texture asset path."
-          },
-          "position": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "center": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "offset": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "dimensions": {
-            "type": "object",
-            "properties": {
-              "width": {
-                "type": "number"
-              },
-              "height": {
-                "type": "number"
-              },
-              "depth": {
-                "type": "number"
-              }
-            },
-            "description": "3D dimensions (width, height, depth)."
-          },
-          "targetActor": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "toolActor": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "trimActorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "splineActorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "keepTool": {
-            "type": "boolean"
-          },
-          "keepInside": {
-            "type": "boolean"
-          },
-          "cap": {
-            "type": "boolean"
-          },
-          "count": {
-            "type": "number"
-          },
-          "steps": {
-            "type": "number"
-          },
-          "iterations": {
-            "type": "number",
-            "description": "Number of iterations for smooth, remesh."
-          },
-          "targetTriangleCount": {
-            "type": "number",
-            "description": "Target triangle count for simplification."
-          },
-          "targetEdgeLength": {
-            "type": "number",
-            "description": "Target edge length for remeshing."
-          },
-          "weldDistance": {
-            "type": "number",
-            "description": "Distance threshold for vertex welding."
-          },
-          "uvChannel": {
-            "type": "number",
-            "description": "UV channel index (0-7)."
-          },
-          "uvScale": {
-            "type": "object",
-            "properties": {
-              "u": {
-                "type": "number"
-              },
-              "v": {
-                "type": "number"
-              }
-            },
-            "description": "UV scale."
-          },
-          "uvOffset": {
-            "type": "object",
-            "properties": {
-              "u": {
-                "type": "number"
-              },
-              "v": {
-                "type": "number"
-              }
-            },
-            "description": "UV offset."
-          },
-          "hardEdgeAngle": {
-            "type": "number",
-            "description": "Angle threshold for hard edges (degrees)."
-          },
-          "computeWeightedNormals": {
-            "type": "boolean",
-            "description": "Use area-weighted normals."
-          },
-          "collisionType": {
-            "type": "string",
-            "enum": [
-              "Default",
-              "Simple",
-              "Complex",
-              "UseComplexAsSimple",
-              "UseSimpleAsComplex"
-            ],
-            "description": "Collision complexity type."
-          },
-          "hullCount": {
-            "type": "number",
-            "description": "Number of convex hulls for decomposition."
-          },
-          "maxHullCount": {
-            "type": "number",
-            "description": "Maximum hull count for complex collision generation."
-          },
-          "maxHullVerts": {
-            "type": "number",
-            "description": "Maximum vertices per hull for complex collision generation."
-          },
-          "targetHullCount": {
-            "type": "number",
-            "description": "Target hull count for collision simplification."
-          },
-          "simplificationFactor": {
-            "type": "number",
-            "description": "Collision simplification factor."
-          },
-          "hullPrecision": {
-            "type": "number",
-            "description": "Precision for convex hull generation (0-1)."
-          },
-          "maxVerticesPerHull": {
-            "type": "number",
-            "description": "Maximum vertices per convex hull."
-          },
-          "lodCount": {
-            "type": "number",
-            "description": "Number of LOD levels to generate."
-          },
-          "lodIndex": {
-            "type": "number",
-            "description": "Specific LOD index to configure."
-          },
-          "reductionPercent": {
-            "type": "number",
-            "description": "Percent of triangles to reduce per LOD."
-          },
-          "trianglePercent": {
-            "type": "number",
-            "description": "Percent of triangles to keep for LOD reduction."
-          },
-          "recomputeNormals": {
-            "type": "boolean"
-          },
-          "recomputeTangents": {
-            "type": "boolean"
-          },
-          "screenSizes": {
-            "type": "array",
-            "items": {
-              "type": "number"
-            },
-            "description": "Array of screen sizes for each LOD."
-          },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "manage_pcg",
-      "category": "world",
-      "description": "Create, edit, execute, and configure PCG graphs: graph assets, input/sampler/filter/spawner nodes, pin connections, node settings, and partition grid size.",
-      "actions": [
-        "create_pcg_graph",
-        "create_pcg_subgraph",
-        "add_pcg_node",
-        "connect_pcg_pins",
-        "set_pcg_node_settings",
-        "add_landscape_data_node",
-        "add_spline_data_node",
-        "add_volume_data_node",
-        "add_actor_data_node",
-        "add_texture_data_node",
-        "add_surface_sampler",
-        "add_mesh_sampler",
-        "add_spline_sampler",
-        "add_volume_sampler",
-        "add_bounds_modifier",
-        "add_density_filter",
-        "add_height_filter",
-        "add_slope_filter",
-        "add_distance_filter",
-        "add_bounds_filter",
-        "add_self_pruning",
-        "add_transform_points",
-        "add_project_to_surface",
-        "add_copy_points",
-        "add_merge_points",
-        "add_static_mesh_spawner",
-        "add_actor_spawner",
-        "add_spline_spawner",
-        "execute_pcg_graph",
-        "set_pcg_partition_grid_size"
-      ],
-      "parameterNames": [
-        "actorClass",
-        "actorName",
-        "assetPath",
-        "classPath",
-        "componentName",
-        "componentPath",
-        "createComponent",
-        "force",
-        "graphPath",
-        "gridSize",
-        "inputName",
-        "meshPath",
-        "name",
-        "nodeId",
-        "nodeName",
-        "nodeType",
-        "outputName",
-        "overwrite",
-        "parentGraphPath",
-        "path",
-        "posX",
-        "posY",
-        "save",
-        "scope",
-        "settings",
-        "settingsClass",
-        "sourceNodeId",
-        "sourcePin",
-        "subgraphPath",
-        "targetNodeId",
-        "targetPin",
-        "texturePath",
-        "timeoutMs",
-        "title",
-        "wait",
-        "x",
-        "y"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "create_pcg_graph",
-              "create_pcg_subgraph",
-              "add_pcg_node",
-              "connect_pcg_pins",
-              "set_pcg_node_settings",
-              "add_landscape_data_node",
-              "add_spline_data_node",
-              "add_volume_data_node",
-              "add_actor_data_node",
-              "add_texture_data_node",
-              "add_surface_sampler",
-              "add_mesh_sampler",
-              "add_spline_sampler",
-              "add_volume_sampler",
-              "add_bounds_modifier",
-              "add_density_filter",
-              "add_height_filter",
-              "add_slope_filter",
-              "add_distance_filter",
-              "add_bounds_filter",
-              "add_self_pruning",
-              "add_transform_points",
-              "add_project_to_surface",
-              "add_copy_points",
-              "add_merge_points",
-              "add_static_mesh_spawner",
-              "add_actor_spawner",
-              "add_spline_spawner",
-              "execute_pcg_graph",
-              "set_pcg_partition_grid_size"
-            ],
-            "description": "PCG graph action to perform"
-          },
-          "graphPath": {
-            "type": "string",
-            "description": "PCG graph asset path (e.g., /Game/PCG/PCG_MyGraph)."
-          },
-          "parentGraphPath": {
-            "type": "string",
-            "description": "Parent PCG graph asset path for subgraph insertion."
-          },
-          "subgraphPath": {
-            "type": "string",
-            "description": "PCG subgraph asset path used by subgraph nodes."
-          },
-          "assetPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "path": {
-            "type": "string",
-            "description": "Path to a directory."
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "nodeType": {
-            "type": "string",
-            "description": "PCG node type alias or UPCGSettings class path/name."
-          },
-          "settingsClass": {
-            "type": "string",
-            "description": "UPCGSettings class path/name for the PCG node."
-          },
-          "nodeId": {
-            "type": "string",
-            "description": "ID of the node."
-          },
-          "nodeName": {
-            "type": "string",
-            "description": "Name of the node."
-          },
-          "title": {
-            "type": "string"
-          },
-          "sourceNodeId": {
-            "type": "string",
-            "description": "ID of the source node."
-          },
-          "targetNodeId": {
-            "type": "string",
-            "description": "ID of the target node."
-          },
-          "sourcePin": {
-            "type": "string",
-            "description": "Name of the source pin."
-          },
-          "targetPin": {
-            "type": "string",
-            "description": "Name of the target pin."
-          },
-          "inputName": {
-            "type": "string",
-            "description": "Name of the pin."
-          },
-          "outputName": {
-            "type": "string",
-            "description": "Name of the pin."
-          },
-          "actorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "componentName": {
-            "type": "string",
-            "description": "Name of the component."
-          },
-          "componentPath": {
-            "type": "string",
-            "description": "Component path/name for PCG execution."
-          },
-          "classPath": {
-            "type": "string"
-          },
-          "actorClass": {
-            "type": "string"
-          },
-          "meshPath": {
-            "type": "string",
-            "description": "Mesh asset path."
-          },
-          "texturePath": {
-            "type": "string",
-            "description": "Texture asset path."
-          },
-          "createComponent": {
-            "type": "boolean"
-          },
-          "force": {
-            "type": "boolean"
-          },
-          "wait": {
-            "type": "boolean"
-          },
-          "gridSize": {
-            "type": "number"
-          },
-          "scope": {
-            "type": "string",
-            "enum": [
-              "world",
-              "component"
-            ],
-            "description": "Partition grid target scope."
-          },
-          "settings": {
-            "type": "object",
-            "description": "Node settings keyed by reflected PCG settings property name."
-          },
-          "x": {
-            "type": "number"
-          },
-          "y": {
-            "type": "number"
-          },
-          "posX": {
-            "type": "number"
-          },
-          "posY": {
-            "type": "number"
-          },
-          "save": {
-            "type": "boolean",
-            "description": "Save the asset(s) after the operation."
-          },
-          "overwrite": {
-            "type": "boolean",
-            "description": "Overwrite if the asset/file already exists."
-          },
-          "timeoutMs": {
-            "type": "number"
-          },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "manage_effect",
-      "category": "gameplay",
-      "description": "Niagara particle systems, VFX, debug shapes, and GPU simulations. Create systems, emitters, modules, and control particle effects.",
-      "actions": [
-        "particle",
-        "niagara",
-        "debug_shape",
-        "spawn_niagara",
-        "create_dynamic_light",
-        "create_niagara_system",
-        "create_niagara_emitter",
-        "create_volumetric_fog",
-        "create_particle_trail",
-        "create_environment_effect",
-        "create_impact_effect",
-        "create_niagara_ribbon",
-        "activate",
-        "activate_effect",
-        "deactivate",
-        "reset",
-        "advance_simulation",
-        "add_niagara_module",
-        "connect_niagara_pins",
-        "remove_niagara_node",
-        "set_niagara_parameter",
-        "clear_debug_shapes",
-        "cleanup",
-        "list_debug_shapes",
-        "add_emitter_to_system",
-        "set_emitter_properties",
-        "add_spawn_rate_module",
-        "add_spawn_burst_module",
-        "add_spawn_per_unit_module",
-        "add_initialize_particle_module",
-        "add_particle_state_module",
-        "add_force_module",
-        "add_velocity_module",
-        "add_acceleration_module",
-        "add_size_module",
-        "add_color_module",
-        "add_sprite_renderer_module",
-        "add_mesh_renderer_module",
-        "add_ribbon_renderer_module",
-        "add_light_renderer_module",
-        "add_collision_module",
-        "add_kill_particles_module",
-        "add_camera_offset_module",
-        "add_user_parameter",
-        "set_parameter_value",
-        "bind_parameter_to_source",
-        "set_niagara_dynamic_input",
-        "add_skeletal_mesh_data_interface",
-        "add_static_mesh_data_interface",
-        "add_spline_data_interface",
-        "add_audio_spectrum_data_interface",
-        "add_collision_query_data_interface",
-        "add_event_generator",
-        "add_event_receiver",
-        "configure_event_payload",
-        "enable_gpu_simulation",
-        "add_simulation_stage",
-        "get_niagara_info",
-        "validate_niagara_system"
-      ],
-      "parameterNames": [
-        "acceleration",
-        "actorName",
-        "alignment",
-        "assetPath",
-        "attachToActor",
-        "autoConnect",
-        "burstCount",
-        "burstTime",
-        "cameraOffset",
-        "collisionMode",
-        "color",
-        "colorMode",
-        "deltaTime",
-        "density",
-        "deterministicEnabled",
-        "dieOnCollision",
-        "duration",
-        "dynamicInputScriptPath",
-        "emitter",
-        "emitterName",
-        "emitterPath",
-        "emitterProperties",
-        "eventName",
-        "eventPayload",
-        "eventSpawnCount",
-        "eventType",
-        "extinction",
-        "facingMode",
-        "filter",
-        "fixedBoundsEnabled",
-        "forceStrength",
-        "forceType",
-        "forceVector",
-        "friction",
-        "inputName",
-        "intensity",
-        "killCondition",
-        "lifetime",
-        "lightRadius",
-        "lightType",
-        "location",
-        "mass",
-        "materialPath",
-        "meshPath",
-        "modulePath",
-        "name",
-        "nodeId",
-        "parameterName",
-        "parameterType",
-        "parameterValue",
-        "path",
-        "preset",
-        "radius",
-        "replaceExisting",
-        "reset",
-        "restitution",
-        "save",
-        "savePath",
-        "scattering",
-        "scriptType",
-        "shape",
-        "shapeType",
-        "sizeMode",
-        "sourceBinding",
-        "spawnOnEvent",
-        "spawnPerUnit",
-        "spawnRate",
-        "stageIterationSource",
-        "stageName",
-        "steps",
-        "system",
-        "systemName",
-        "systemPath",
-        "targetNodeId",
-        "timeoutMs",
-        "uniformSize",
-        "value",
-        "velocity",
-        "velocityMode"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "particle",
-              "niagara",
-              "debug_shape",
-              "spawn_niagara",
-              "create_dynamic_light",
-              "create_niagara_system",
-              "create_niagara_emitter",
-              "create_volumetric_fog",
-              "create_particle_trail",
-              "create_environment_effect",
-              "create_impact_effect",
-              "create_niagara_ribbon",
-              "activate",
-              "activate_effect",
-              "deactivate",
-              "reset",
-              "advance_simulation",
-              "add_niagara_module",
-              "connect_niagara_pins",
-              "remove_niagara_node",
-              "set_niagara_parameter",
-              "clear_debug_shapes",
-              "cleanup",
-              "list_debug_shapes",
-              "add_emitter_to_system",
-              "set_emitter_properties",
-              "add_spawn_rate_module",
-              "add_spawn_burst_module",
-              "add_spawn_per_unit_module",
-              "add_initialize_particle_module",
-              "add_particle_state_module",
-              "add_force_module",
-              "add_velocity_module",
-              "add_acceleration_module",
-              "add_size_module",
-              "add_color_module",
-              "add_sprite_renderer_module",
-              "add_mesh_renderer_module",
-              "add_ribbon_renderer_module",
-              "add_light_renderer_module",
-              "add_collision_module",
-              "add_kill_particles_module",
-              "add_camera_offset_module",
-              "add_user_parameter",
-              "set_parameter_value",
-              "bind_parameter_to_source",
-              "set_niagara_dynamic_input",
-              "add_skeletal_mesh_data_interface",
-              "add_static_mesh_data_interface",
-              "add_spline_data_interface",
-              "add_audio_spectrum_data_interface",
-              "add_collision_query_data_interface",
-              "add_event_generator",
-              "add_event_receiver",
-              "configure_event_payload",
-              "enable_gpu_simulation",
-              "add_simulation_stage",
-              "get_niagara_info",
-              "validate_niagara_system"
-            ],
-            "description": "Effect/Niagara action to perform."
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "path": {
-            "type": "string",
-            "description": "Directory path for asset creation."
-          },
-          "savePath": {
-            "type": "string",
-            "description": "Path to save the asset."
-          },
-          "assetPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "timeoutMs": {
-            "type": "number"
-          },
-          "save": {
-            "type": "boolean"
-          },
-          "system": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "systemPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "systemName": {
-            "type": "string"
-          },
-          "emitter": {
-            "type": "string"
-          },
-          "emitterName": {
-            "type": "string"
-          },
-          "emitterPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "emitterProperties": {
-            "type": "object"
-          },
-          "location": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "actorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "attachToActor": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "reset": {
-            "type": "boolean"
-          },
-          "filter": {
-            "type": "string"
-          },
-          "deltaTime": {
-            "type": "number"
-          },
-          "steps": {
-            "type": "integer"
-          },
-          "preset": {
-            "type": "string"
-          },
-          "shape": {
-            "type": "string"
-          },
-          "shapeType": {
-            "type": "string"
-          },
-          "radius": {
-            "type": "number"
-          },
-          "color": {
-            "oneOf": [
-              {
-                "type": "array",
-                "items": {
-                  "type": "number"
-                }
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "r": {
-                    "type": "number"
-                  },
-                  "g": {
-                    "type": "number"
-                  },
-                  "b": {
-                    "type": "number"
-                  },
-                  "a": {
-                    "type": "number"
-                  }
-                }
-              }
-            ],
-            "description": "RGBA color as an array [r,g,b,a] or object {r,g,b,a} depending on action."
-          },
-          "duration": {
-            "type": "number"
-          },
-          "lightType": {
-            "type": "string"
-          },
-          "intensity": {
-            "type": "number"
-          },
-          "density": {
-            "type": "number"
-          },
-          "scattering": {
-            "type": "number"
-          },
-          "extinction": {
-            "type": "number"
-          },
-          "modulePath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "scriptType": {
-            "type": "string"
-          },
-          "autoConnect": {
-            "type": "boolean"
-          },
-          "nodeId": {
-            "type": "string",
-            "description": "ID of the node."
-          },
-          "targetNodeId": {
-            "type": "string",
-            "description": "ID of the node."
-          },
-          "inputName": {
-            "type": "string"
-          },
-          "dynamicInputScriptPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "replaceExisting": {
-            "type": "boolean"
-          },
-          "parameterName": {
-            "type": "string",
-            "description": "Name of the parameter."
-          },
-          "parameterType": {
-            "type": "string"
-          },
-          "parameterValue": {
-            "description": "Generic value (any type)."
-          },
-          "value": {
-            "description": "Generic value (any type)."
-          },
-          "sourceBinding": {
-            "type": "string"
-          },
-          "spawnRate": {
-            "type": "number"
-          },
-          "burstCount": {
-            "type": "number"
-          },
-          "burstTime": {
-            "type": "number"
-          },
-          "spawnPerUnit": {
-            "type": "number"
-          },
-          "lifetime": {
-            "type": "number"
-          },
-          "mass": {
-            "type": "number"
-          },
-          "forceType": {
-            "type": "string"
-          },
-          "forceStrength": {
-            "type": "number"
-          },
-          "forceVector": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "velocity": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "velocityMode": {
-            "type": "string"
-          },
-          "acceleration": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "3D location (x, y, z)."
-          },
-          "sizeMode": {
-            "type": "string"
-          },
-          "uniformSize": {
-            "type": "number"
-          },
-          "colorMode": {
-            "type": "string"
-          },
-          "materialPath": {
-            "type": "string",
-            "description": "Material asset path."
-          },
-          "alignment": {
-            "type": "string"
-          },
-          "facingMode": {
-            "type": "string"
-          },
-          "meshPath": {
-            "type": "string",
-            "description": "Mesh asset path."
-          },
-          "lightRadius": {
-            "type": "number"
-          },
-          "collisionMode": {
-            "type": "string"
-          },
-          "restitution": {
-            "type": "number"
-          },
-          "friction": {
-            "type": "number"
-          },
-          "dieOnCollision": {
-            "type": "boolean"
-          },
-          "killCondition": {
-            "type": "string"
-          },
-          "cameraOffset": {
-            "type": "number"
-          },
-          "eventName": {
-            "type": "string",
-            "description": "Name of the event."
-          },
-          "eventType": {
-            "type": "string"
-          },
-          "spawnOnEvent": {
-            "type": "boolean"
-          },
-          "eventSpawnCount": {
-            "type": "number"
-          },
-          "eventPayload": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "description": "Name identifier."
-                },
-                "type": {
-                  "type": "string"
-                }
-              }
-            },
-            "description": "Niagara event payload attributes to expose."
-          },
-          "fixedBoundsEnabled": {
-            "type": "boolean"
-          },
-          "deterministicEnabled": {
-            "type": "boolean"
-          },
-          "stageName": {
-            "type": "string"
-          },
-          "stageIterationSource": {
-            "type": "string"
-          },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "manage_gas",
-      "category": "gameplay",
-      "description": "Create Gameplay Abilities, Effects, Attribute Sets, and Gameplay Cues for ability systems.",
-      "actions": [
-        "add_ability_system_component",
-        "configure_asc",
-        "create_attribute_set",
-        "add_attribute",
-        "set_attribute_base_value",
-        "set_attribute_clamping",
-        "create_gameplay_ability",
-        "set_ability_tags",
-        "set_ability_costs",
-        "set_ability_cooldown",
-        "set_ability_targeting",
-        "add_ability_task",
-        "set_activation_policy",
-        "set_instancing_policy",
-        "create_gameplay_effect",
-        "set_effect_duration",
-        "add_effect_modifier",
-        "set_modifier_magnitude",
-        "add_effect_execution_calculation",
-        "add_effect_cue",
-        "set_effect_stacking",
-        "set_effect_tags",
-        "create_gameplay_cue_notify",
-        "configure_cue_trigger",
-        "set_cue_effects",
-        "add_tag_to_asset",
-        "get_gas_info"
-      ],
-      "parameterNames": [
-        "abilityPath",
-        "abilityTags",
-        "activationBlockedTags",
-        "activationPolicy",
-        "activationRequiredTags",
-        "aoeRadius",
-        "applicationRequiredTags",
-        "assetPath",
-        "attributeName",
-        "attributeSetPath",
-        "attributeType",
-        "baseValue",
-        "blockAbilitiesWithTag",
-        "blueprintPath",
-        "calculationClass",
-        "cameraShakePath",
-        "cancelAbilitiesWithTag",
-        "clampMode",
-        "componentName",
-        "cooldownEffectPath",
-        "costEffectPath",
-        "cuePath",
-        "cueTag",
-        "cueType",
-        "decalPath",
-        "defaultValue",
-        "duration",
-        "durationType",
-        "effectPath",
-        "grantedTags",
-        "immunityTags",
-        "instancingPolicy",
-        "magnitudeCalculationType",
-        "maxValue",
-        "minValue",
-        "modifierIndex",
-        "modifierMagnitude",
-        "modifierOperation",
-        "name",
-        "particleSystemPath",
-        "path",
-        "period",
-        "removalTags",
-        "replicationMode",
-        "setByCallerTag",
-        "soundPath",
-        "stackDurationRefreshPolicy",
-        "stackExpirationPolicy",
-        "stackLimitCount",
-        "stackPeriodResetPolicy",
-        "stackingType",
-        "tagName",
-        "targetAttribute",
-        "targetRange",
-        "targetingMode",
-        "taskType",
-        "triggerType"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "add_ability_system_component",
-              "configure_asc",
-              "create_attribute_set",
-              "add_attribute",
-              "set_attribute_base_value",
-              "set_attribute_clamping",
-              "create_gameplay_ability",
-              "set_ability_tags",
-              "set_ability_costs",
-              "set_ability_cooldown",
-              "set_ability_targeting",
-              "add_ability_task",
-              "set_activation_policy",
-              "set_instancing_policy",
-              "create_gameplay_effect",
-              "set_effect_duration",
-              "add_effect_modifier",
-              "set_modifier_magnitude",
-              "add_effect_execution_calculation",
-              "add_effect_cue",
-              "set_effect_stacking",
-              "set_effect_tags",
-              "create_gameplay_cue_notify",
-              "configure_cue_trigger",
-              "set_cue_effects",
-              "add_tag_to_asset",
-              "get_gas_info"
-            ],
-            "description": "GAS action to perform."
-          },
-          "name": {
-            "type": "string",
-            "description": "Name of the asset to create."
-          },
-          "path": {
-            "type": "string",
-            "description": "Directory path for asset creation."
-          },
-          "assetPath": {
-            "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "blueprintPath": {
-            "type": "string",
-            "description": "Blueprint asset path."
-          },
-          "replicationMode": {
-            "type": "string",
-            "enum": [
-              "Full",
-              "Minimal",
-              "Mixed"
-            ],
-            "description": "ASC replication mode."
-          },
-          "attributeSetPath": {
-            "type": "string",
-            "description": "Path to Attribute Set asset."
-          },
-          "attributeName": {
-            "type": "string",
-            "description": "Name of the attribute."
-          },
-          "attributeType": {
-            "type": "string",
-            "enum": [
-              "Health",
-              "MaxHealth",
-              "Mana",
-              "MaxMana",
-              "Stamina",
-              "MaxStamina",
-              "Damage",
-              "Armor",
-              "AttackPower",
-              "MoveSpeed",
-              "Custom"
-            ],
-            "description": "Predefined attribute type or Custom."
-          },
-          "baseValue": {
-            "type": "number",
-            "description": "Base value for attribute."
-          },
-          "minValue": {
-            "type": "number",
-            "description": "Minimum value for clamping."
-          },
-          "maxValue": {
-            "type": "number",
-            "description": "Maximum value for clamping."
-          },
-          "clampMode": {
-            "type": "string",
-            "enum": [
-              "None",
-              "Min",
-              "Max",
-              "MinMax"
-            ],
-            "description": "Attribute clamping mode."
-          },
-          "abilityPath": {
-            "type": "string",
-            "description": "Path to ability asset."
-          },
-          "abilityTags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Gameplay tags for this ability."
-          },
-          "cancelAbilitiesWithTag": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Tags of abilities to cancel when this activates."
-          },
-          "blockAbilitiesWithTag": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Tags of abilities blocked while this is active."
-          },
-          "activationRequiredTags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Tags required to activate this ability."
-          },
-          "activationBlockedTags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Tags that block activation of this ability."
-          },
-          "costEffectPath": {
-            "type": "string",
-            "description": "Path to cost Gameplay Effect."
-          },
-          "cooldownEffectPath": {
-            "type": "string",
-            "description": "Path to cooldown Gameplay Effect."
-          },
-          "targetingMode": {
-            "type": "string",
-            "enum": [
-              "None",
-              "SingleTarget",
-              "AOE",
-              "Directional",
-              "Ground",
-              "ActorPlacement"
-            ],
-            "description": "Targeting mode for ability."
-          },
-          "targetRange": {
-            "type": "number",
-            "description": "Maximum targeting range."
-          },
-          "aoeRadius": {
-            "type": "number",
-            "description": "Area of effect radius."
-          },
-          "taskType": {
-            "type": "string",
-            "enum": [
-              "WaitDelay",
-              "WaitInputPress",
-              "WaitInputRelease",
-              "WaitGameplayEvent",
-              "WaitTargetData",
-              "WaitConfirmCancel",
-              "PlayMontageAndWait",
-              "ApplyRootMotionConstantForce",
-              "WaitMovementModeChange"
-            ],
-            "description": "Type of ability task to add."
-          },
-          "activationPolicy": {
-            "type": "string",
-            "enum": [
-              "OnInputPressed",
-              "WhileInputActive",
-              "OnSpawn",
-              "OnGiven"
-            ],
-            "description": "When the ability activates."
-          },
-          "instancingPolicy": {
-            "type": "string",
-            "enum": [
-              "NonInstanced",
-              "InstancedPerActor",
-              "InstancedPerExecution"
-            ],
-            "description": "How the ability is instanced."
-          },
-          "effectPath": {
-            "type": "string",
-            "description": "Path to effect asset."
-          },
-          "durationType": {
-            "type": "string",
-            "enum": [
-              "Instant",
-              "Infinite",
-              "HasDuration"
-            ],
-            "description": "Effect duration type."
-          },
-          "duration": {
-            "type": "number",
-            "description": "Duration in seconds."
-          },
-          "period": {
-            "type": "number",
-            "description": "Period for periodic effects."
-          },
-          "modifierOperation": {
-            "type": "string",
-            "enum": [
-              "Add",
-              "Multiply",
-              "Divide",
-              "Override"
-            ],
-            "description": "Modifier operation on attribute."
-          },
-          "modifierMagnitude": {
-            "type": "number",
-            "description": "Magnitude of the modifier."
-          },
-          "magnitudeCalculationType": {
-            "type": "string",
-            "enum": [
-              "ScalableFloat",
-              "AttributeBased",
-              "SetByCaller",
-              "CustomCalculationClass"
-            ],
-            "description": "How magnitude is calculated."
-          },
-          "setByCallerTag": {
-            "type": "string",
-            "description": "Tag for SetByCaller magnitude."
-          },
-          "targetAttribute": {
-            "type": "string",
-            "description": "Target attribute for modifier."
-          },
-          "calculationClass": {
-            "type": "string",
-            "description": "UGameplayEffectExecutionCalculation class path."
-          },
-          "cueTag": {
-            "type": "string",
-            "description": "Gameplay Cue tag (e.g., GameplayCue.Damage.Fire)."
-          },
-          "cuePath": {
-            "type": "string",
-            "description": "Path to Gameplay Cue asset."
-          },
-          "stackingType": {
-            "type": "string",
-            "enum": [
-              "None",
-              "AggregateBySource",
-              "AggregateByTarget"
-            ],
-            "description": "Stacking type for effect."
-          },
-          "stackLimitCount": {
-            "type": "number",
-            "description": "Maximum stack count."
-          },
-          "stackDurationRefreshPolicy": {
-            "type": "string",
-            "enum": [
-              "RefreshOnSuccessfulApplication",
-              "NeverRefresh"
-            ],
-            "description": "When to refresh stack duration."
-          },
-          "stackPeriodResetPolicy": {
-            "type": "string",
-            "enum": [
-              "ResetOnSuccessfulApplication",
-              "NeverReset"
-            ],
-            "description": "When to reset stack period."
-          },
-          "stackExpirationPolicy": {
-            "type": "string",
-            "enum": [
-              "ClearEntireStack",
-              "RemoveSingleStackAndRefreshDuration",
-              "RefreshDuration"
-            ],
-            "description": "What happens when stack expires."
-          },
-          "grantedTags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Tags granted while effect is active."
-          },
-          "applicationRequiredTags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Tags required to apply this effect."
-          },
-          "removalTags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Tags that cause effect removal."
-          },
-          "immunityTags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Tags that block this effect."
-          },
-          "cueType": {
-            "type": "string",
-            "enum": [
-              "Static",
-              "Actor"
-            ],
-            "description": "Type of gameplay cue notify."
-          },
-          "triggerType": {
-            "type": "string",
-            "enum": [
-              "OnActive",
-              "WhileActive",
-              "Executed",
-              "OnRemove"
-            ],
-            "description": "When the cue triggers."
-          },
-          "particleSystemPath": {
-            "type": "string",
-            "description": "Path to particle system."
-          },
-          "soundPath": {
-            "type": "string",
-            "description": "Sound asset path."
-          },
-          "cameraShakePath": {
-            "type": "string",
-            "description": "Path to camera shake asset."
-          },
-          "decalPath": {
-            "type": "string",
-            "description": "Path to decal material."
-          },
-          "tagName": {
-            "type": "string",
-            "description": "Name of the tag."
-          },
-          "componentName": {
-            "type": "string",
-            "description": "Name of the component."
-          },
-          "defaultValue": {
-            "description": "Generic value (any type)."
-          },
-          "modifierIndex": {
-            "type": "number"
+            "description": "Action to invoke on manage_blueprint."
           },
           "params": {
             "type": "object",
@@ -9164,6 +7027,12 @@ export const gatewayManifest = {
         "configure_rotation",
         "add_custom_movement_mode",
         "configure_nav_movement",
+        "setup_movement",
+        "set_walk_speed",
+        "set_jump_height",
+        "set_gravity_scale",
+        "set_ground_friction",
+        "set_braking_deceleration",
         "setup_mantling",
         "setup_vaulting",
         "setup_climbing",
@@ -9174,12 +7043,6 @@ export const gatewayManifest = {
         "map_surface_to_sound",
         "configure_footstep_fx",
         "get_character_info",
-        "setup_movement",
-        "set_walk_speed",
-        "set_jump_height",
-        "set_gravity_scale",
-        "set_ground_friction",
-        "set_braking_deceleration",
         "configure_crouch",
         "configure_sprint"
       ],
@@ -9253,6 +7116,290 @@ export const gatewayManifest = {
       "inputSchema": {
         "type": "object",
         "properties": {
+          "acceleration": {
+            "type": "number",
+            "description": "Maximum acceleration."
+          },
+          "airControl": {
+            "type": "number",
+            "description": "Air control fraction (0-1)."
+          },
+          "animBlueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Animation Blueprint asset path."
+          },
+          "avoidanceEnabled": {
+            "type": "boolean",
+            "description": "Whether RVO avoidance is enabled."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "brakingDeceleration": {
+            "type": "number",
+            "description": "Braking deceleration while walking."
+          },
+          "cameraUsePawnControlRotation": {
+            "type": "boolean",
+            "description": "Whether the camera uses pawn control rotation."
+          },
+          "canCrouch": {
+            "type": "boolean",
+            "description": "Whether the character is allowed to crouch."
+          },
+          "capsuleHalfHeight": {
+            "type": "number",
+            "description": "Capsule collision half-height in world units."
+          },
+          "capsuleRadius": {
+            "type": "number",
+            "description": "Capsule collision radius in world units."
+          },
+          "climbSpeed": {
+            "type": "number",
+            "description": "Climb speed."
+          },
+          "climbableTag": {
+            "type": "string",
+            "description": "Actor tag marking climbable surfaces."
+          },
+          "crouchSpeed": {
+            "type": "number",
+            "description": "Maximum walk speed while crouched."
+          },
+          "crouchedHalfHeight": {
+            "type": "number",
+            "description": "Capsule half-height while crouched."
+          },
+          "customSpeed": {
+            "type": "number",
+            "description": "Movement speed for the custom mode."
+          },
+          "deceleration": {
+            "type": "number",
+            "description": "Walking deceleration."
+          },
+          "fallingLateralFriction": {
+            "type": "number",
+            "description": "Lateral friction while falling."
+          },
+          "flySpeed": {
+            "type": "number",
+            "description": "Maximum fly speed."
+          },
+          "footstepEnabled": {
+            "type": "boolean",
+            "description": "Whether the footstep system is enabled."
+          },
+          "footstepSocketLeft": {
+            "type": "string",
+            "description": "Left foot socket name."
+          },
+          "footstepSocketRight": {
+            "type": "string",
+            "description": "Right foot socket name."
+          },
+          "footstepTraceDistance": {
+            "type": "number",
+            "description": "Footstep ground-trace distance."
+          },
+          "grappleRange": {
+            "type": "number",
+            "description": "Maximum grapple range in world units."
+          },
+          "grappleSpeed": {
+            "type": "number",
+            "description": "Grapple pull speed."
+          },
+          "grappleTargetTag": {
+            "type": "string",
+            "description": "Actor tag marking valid grapple targets."
+          },
+          "gravityScale": {
+            "type": "number",
+            "description": "Gravity scale multiplier."
+          },
+          "groundFriction": {
+            "type": "number",
+            "description": "Ground friction."
+          },
+          "jumpHeight": {
+            "type": "number",
+            "description": "Jump z-velocity."
+          },
+          "jumpHoldTime": {
+            "type": "number",
+            "description": "Maximum jump hold time in seconds."
+          },
+          "mantleHeight": {
+            "type": "number",
+            "description": "Maximum mantle height in world units."
+          },
+          "mantleReachDistance": {
+            "type": "number",
+            "description": "Maximum mantle reach distance."
+          },
+          "maxJumpCount": {
+            "type": "number",
+            "description": "Maximum number of jumps."
+          },
+          "meshOffset": {
+            "type": "object",
+            "description": "Mesh relative location offset.",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false
+          },
+          "meshRotation": {
+            "type": "object",
+            "description": "Mesh relative rotation in degrees.",
+            "properties": {
+              "pitch": {
+                "type": "number"
+              },
+              "yaw": {
+                "type": "number"
+              },
+              "roll": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false
+          },
+          "modeId": {
+            "type": "number",
+            "description": "Custom movement mode identifier."
+          },
+          "modeName": {
+            "type": "string",
+            "description": "Custom movement mode name."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the created asset or actor."
+          },
+          "navAgentHeight": {
+            "type": "number",
+            "description": "Nav agent height."
+          },
+          "navAgentRadius": {
+            "type": "number",
+            "description": "Nav agent radius."
+          },
+          "orientToMovement": {
+            "type": "boolean",
+            "description": "Whether the character orients rotation to movement."
+          },
+          "parentClass": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "particleScale": {
+            "type": "number",
+            "description": "Footstep particle scale multiplier."
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical /Game output path for the created asset."
+          },
+          "rotationRate": {
+            "type": "number",
+            "description": "Rotation rate in degrees per second."
+          },
+          "runSpeed": {
+            "type": "number",
+            "description": "Run speed; ignored when walkSpeed is also supplied."
+          },
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game SkeletalMesh asset path."
+          },
+          "slideCooldown": {
+            "type": "number",
+            "description": "Slide cooldown in seconds."
+          },
+          "slideDuration": {
+            "type": "number",
+            "description": "Slide duration in seconds."
+          },
+          "slideSpeed": {
+            "type": "number",
+            "description": "Slide speed."
+          },
+          "springArmLagEnabled": {
+            "type": "boolean",
+            "description": "Whether spring-arm camera lag is enabled."
+          },
+          "springArmLagSpeed": {
+            "type": "number",
+            "description": "Spring-arm camera lag speed."
+          },
+          "springArmLength": {
+            "type": "number",
+            "description": "Spring-arm target arm length."
+          },
+          "sprintSpeed": {
+            "type": "number",
+            "description": "Sprint speed."
+          },
+          "surfaceType": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "swimSpeed": {
+            "type": "number",
+            "description": "Maximum swim speed."
+          },
+          "useControllerRotationPitch": {
+            "type": "boolean",
+            "description": "Whether controller pitch drives actor rotation."
+          },
+          "useControllerRotationRoll": {
+            "type": "boolean",
+            "description": "Whether controller roll drives actor rotation."
+          },
+          "useControllerRotationYaw": {
+            "type": "boolean",
+            "description": "Whether controller yaw drives actor rotation."
+          },
+          "vaultDepth": {
+            "type": "number",
+            "description": "Maximum vault depth in world units."
+          },
+          "vaultHeight": {
+            "type": "number",
+            "description": "Maximum vault height in world units."
+          },
+          "volumeMultiplier": {
+            "type": "number",
+            "description": "Footstep audio volume multiplier."
+          },
+          "walkSpeed": {
+            "type": "number",
+            "description": "Maximum walk speed."
+          },
+          "wallRunDuration": {
+            "type": "number",
+            "description": "Wall-run duration in seconds."
+          },
+          "wallRunGravityScale": {
+            "type": "number",
+            "description": "Gravity scale applied while wall running."
+          },
+          "wallRunSpeed": {
+            "type": "number",
+            "description": "Wall-run speed."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -9265,6 +7412,12 @@ export const gatewayManifest = {
               "configure_rotation",
               "add_custom_movement_mode",
               "configure_nav_movement",
+              "setup_movement",
+              "set_walk_speed",
+              "set_jump_height",
+              "set_gravity_scale",
+              "set_ground_friction",
+              "set_braking_deceleration",
               "setup_mantling",
               "setup_vaulting",
               "setup_climbing",
@@ -9275,288 +7428,10 @@ export const gatewayManifest = {
               "map_surface_to_sound",
               "configure_footstep_fx",
               "get_character_info",
-              "setup_movement",
-              "set_walk_speed",
-              "set_jump_height",
-              "set_gravity_scale",
-              "set_ground_friction",
-              "set_braking_deceleration",
               "configure_crouch",
               "configure_sprint"
             ],
-            "description": "Character action to perform."
-          },
-          "name": {
-            "type": "string",
-            "description": "Name of the asset to create."
-          },
-          "path": {
-            "type": "string",
-            "description": "Directory path for asset creation."
-          },
-          "blueprintPath": {
-            "type": "string",
-            "description": "Blueprint asset path."
-          },
-          "parentClass": {
-            "type": "string",
-            "enum": [
-              "Character",
-              "ACharacter",
-              "PlayerCharacter",
-              "AICharacter"
-            ],
-            "description": "Parent class for character blueprint."
-          },
-          "skeletalMeshPath": {
-            "type": "string",
-            "description": "Skeletal mesh path."
-          },
-          "animBlueprintPath": {
-            "type": "string",
-            "description": "Path to animation blueprint."
-          },
-          "capsuleRadius": {
-            "type": "number"
-          },
-          "capsuleHalfHeight": {
-            "type": "number"
-          },
-          "meshOffset": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "Mesh location offset."
-          },
-          "meshRotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "Mesh rotation offset."
-          },
-          "cameraUsePawnControlRotation": {
-            "type": "boolean",
-            "description": "Camera follows controller rotation."
-          },
-          "springArmLength": {
-            "type": "number"
-          },
-          "springArmLagEnabled": {
-            "type": "boolean",
-            "description": "Enable camera lag."
-          },
-          "springArmLagSpeed": {
-            "type": "number",
-            "description": "Camera lag speed."
-          },
-          "walkSpeed": {
-            "type": "number"
-          },
-          "runSpeed": {
-            "type": "number"
-          },
-          "sprintSpeed": {
-            "type": "number"
-          },
-          "crouchSpeed": {
-            "type": "number"
-          },
-          "swimSpeed": {
-            "type": "number"
-          },
-          "flySpeed": {
-            "type": "number"
-          },
-          "acceleration": {
-            "type": "number"
-          },
-          "deceleration": {
-            "type": "number"
-          },
-          "groundFriction": {
-            "type": "number"
-          },
-          "jumpHeight": {
-            "type": "number"
-          },
-          "airControl": {
-            "type": "number"
-          },
-          "maxJumpCount": {
-            "type": "number"
-          },
-          "jumpHoldTime": {
-            "type": "number",
-            "description": "Max hold time for variable jump."
-          },
-          "gravityScale": {
-            "type": "number"
-          },
-          "fallingLateralFriction": {
-            "type": "number",
-            "description": "Air friction."
-          },
-          "orientToMovement": {
-            "type": "boolean",
-            "description": "Orient rotation to movement direction."
-          },
-          "useControllerRotationYaw": {
-            "type": "boolean",
-            "description": "Use controller yaw rotation."
-          },
-          "useControllerRotationPitch": {
-            "type": "boolean",
-            "description": "Use controller pitch rotation."
-          },
-          "useControllerRotationRoll": {
-            "type": "boolean",
-            "description": "Use controller roll rotation."
-          },
-          "rotationRate": {
-            "type": "number"
-          },
-          "modeName": {
-            "type": "string",
-            "description": "Name for custom movement mode."
-          },
-          "modeId": {
-            "type": "number",
-            "description": "Custom movement mode ID."
-          },
-          "navAgentRadius": {
-            "type": "number"
-          },
-          "navAgentHeight": {
-            "type": "number"
-          },
-          "avoidanceEnabled": {
-            "type": "boolean",
-            "description": "Enable AI avoidance."
-          },
-          "mantleHeight": {
-            "type": "number",
-            "description": "Maximum mantle height."
-          },
-          "mantleReachDistance": {
-            "type": "number",
-            "description": "Forward reach for mantle check."
-          },
-          "vaultHeight": {
-            "type": "number",
-            "description": "Maximum vault obstacle height."
-          },
-          "vaultDepth": {
-            "type": "number",
-            "description": "Obstacle depth to check."
-          },
-          "climbSpeed": {
-            "type": "number"
-          },
-          "climbableTag": {
-            "type": "string",
-            "description": "Tag for climbable surfaces."
-          },
-          "slideSpeed": {
-            "type": "number"
-          },
-          "slideDuration": {
-            "type": "number"
-          },
-          "slideCooldown": {
-            "type": "number"
-          },
-          "wallRunSpeed": {
-            "type": "number",
-            "description": "Wall running speed."
-          },
-          "wallRunDuration": {
-            "type": "number",
-            "description": "Maximum wall run duration."
-          },
-          "wallRunGravityScale": {
-            "type": "number",
-            "description": "Gravity during wall run."
-          },
-          "grappleRange": {
-            "type": "number",
-            "description": "Maximum grapple distance."
-          },
-          "grappleSpeed": {
-            "type": "number",
-            "description": "Grapple pull speed."
-          },
-          "grappleTargetTag": {
-            "type": "string",
-            "description": "Tag for grapple targets."
-          },
-          "footstepEnabled": {
-            "type": "boolean",
-            "description": "Enable footstep system."
-          },
-          "footstepSocketLeft": {
-            "type": "string",
-            "description": "Left foot socket name."
-          },
-          "footstepSocketRight": {
-            "type": "string",
-            "description": "Right foot socket name."
-          },
-          "footstepTraceDistance": {
-            "type": "number",
-            "description": "Ground trace distance."
-          },
-          "surfaceType": {
-            "type": "string",
-            "enum": [
-              "Default",
-              "Concrete",
-              "Grass",
-              "Dirt",
-              "Metal",
-              "Wood",
-              "Water",
-              "Snow",
-              "Sand",
-              "Gravel",
-              "Custom"
-            ],
-            "description": "Physical surface type."
-          },
-          "brakingDeceleration": {
-            "type": "number"
-          },
-          "canCrouch": {
-            "type": "boolean"
-          },
-          "crouchedHalfHeight": {
-            "type": "number"
-          },
-          "customSpeed": {
-            "type": "number"
-          },
-          "particleScale": {
-            "type": "number"
-          },
-          "volumeMultiplier": {
-            "type": "number"
+            "description": "Action to invoke on manage_character."
           },
           "params": {
             "type": "object",
@@ -9715,6 +7590,450 @@ export const gatewayManifest = {
       "inputSchema": {
         "type": "object",
         "properties": {
+          "adsEnabled": {
+            "type": "boolean",
+            "description": "Enable aim-down-sights."
+          },
+          "adsFov": {
+            "type": "number",
+            "description": "Field of view while aiming."
+          },
+          "adsSpeed": {
+            "type": "number",
+            "description": "Time in seconds to reach full aim."
+          },
+          "adsSpreadMultiplier": {
+            "type": "number",
+            "description": "Spread multiplier applied while aiming."
+          },
+          "ammoPerShot": {
+            "type": "number",
+            "description": "Ammo consumed per shot."
+          },
+          "ammoType": {
+            "type": "string",
+            "description": "Ammo type identifier."
+          },
+          "armorValue": {
+            "type": "number",
+            "description": "Armor value written to the Blueprint."
+          },
+          "attachmentSlots": {
+            "type": "array",
+            "description": "Attachment slot definitions created on the weapon.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "slotName": {
+                  "type": "string",
+                  "description": "Slot identifier."
+                },
+                "socketName": {
+                  "type": "string",
+                  "description": "Socket the attachment binds to."
+                },
+                "allowedTypes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Attachment types accepted by this slot."
+                }
+              }
+            }
+          },
+          "baseDamage": {
+            "type": "number",
+            "description": "Base damage per shot."
+          },
+          "blockDamageReduction": {
+            "type": "number",
+            "description": "Damage reduction while blocking (0-1)."
+          },
+          "blockStaminaCost": {
+            "type": "number",
+            "description": "Stamina consumed per blocked hit."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "bounceEnabled": {
+            "type": "boolean",
+            "description": "Enable projectile bouncing on impact."
+          },
+          "bounceVelocityRatio": {
+            "type": "number",
+            "description": "Fraction of velocity retained on bounce (0-1)."
+          },
+          "collisionRadius": {
+            "type": "number",
+            "description": "Projectile collision sphere radius."
+          },
+          "comboWindowTime": {
+            "type": "number",
+            "description": "Seconds the combo input window stays open."
+          },
+          "criticalMultiplier": {
+            "type": "number",
+            "description": "Critical hit damage multiplier."
+          },
+          "damageAmount": {
+            "type": "number",
+            "description": "Damage amount written to the Blueprint."
+          },
+          "damageImpulse": {
+            "type": "number",
+            "description": "Physics impulse applied on hit."
+          },
+          "damageMultiplier": {
+            "type": "number",
+            "description": "Damage multiplier applied for this hitbox."
+          },
+          "damagePerSecond": {
+            "type": "number",
+            "description": "Damage applied per second by the effect."
+          },
+          "damageReduction": {
+            "type": "number",
+            "description": "Fraction of incoming damage mitigated by armor (0-1)."
+          },
+          "damageType": {
+            "type": "string",
+            "description": "Damage type name written to the Blueprint."
+          },
+          "duration": {
+            "type": "number",
+            "description": "Duration in seconds."
+          },
+          "effectType": {
+            "type": "string",
+            "description": "Damage effect classifier, for example DamageOverTime."
+          },
+          "ejectionSocketName": {
+            "type": "string",
+            "description": "Socket name used as the shell ejection point."
+          },
+          "equipAnimationPath": {
+            "type": "string",
+            "description": "Canonical /Game equip montage path."
+          },
+          "fireRate": {
+            "type": "number",
+            "description": "Rate of fire in rounds per minute."
+          },
+          "headshotMultiplier": {
+            "type": "number",
+            "description": "Headshot damage multiplier."
+          },
+          "healAmount": {
+            "type": "number",
+            "description": "Heal amount written to the Blueprint."
+          },
+          "hitPauseDuration": {
+            "type": "number",
+            "description": "Hitstop duration in seconds."
+          },
+          "hitPauseTimeDilation": {
+            "type": "number",
+            "description": "Time dilation applied during hitstop."
+          },
+          "hitReactionMontage": {
+            "type": "string",
+            "description": "Canonical /Game hit reaction montage path."
+          },
+          "hitReactionStunTime": {
+            "type": "number",
+            "description": "Stun duration in seconds after a hit."
+          },
+          "hitboxBoneName": {
+            "type": "string",
+            "description": "Bone the hitbox is attached to."
+          },
+          "hitboxSize": {
+            "type": "object",
+            "description": "Hitbox dimensions: extent for Box, radius/halfHeight for Sphere and Capsule.",
+            "additionalProperties": false,
+            "properties": {
+              "radius": {
+                "type": "number",
+                "description": "Sphere or capsule radius."
+              },
+              "halfHeight": {
+                "type": "number",
+                "description": "Capsule half height."
+              },
+              "extent": {
+                "type": "object",
+                "description": "Box half extent.",
+                "additionalProperties": false,
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "Half extent along X."
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Half extent along Y."
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Half extent along Z."
+                  }
+                }
+              }
+            }
+          },
+          "hitboxType": {
+            "type": "string",
+            "enum": [
+              "Capsule",
+              "Box",
+              "Sphere"
+            ],
+            "description": "Hitbox collision shape."
+          },
+          "hitscanEnabled": {
+            "type": "boolean",
+            "description": "Enable instant-hit (hitscan) firing."
+          },
+          "homingAcceleration": {
+            "type": "number",
+            "description": "Homing turn acceleration."
+          },
+          "homingEnabled": {
+            "type": "boolean",
+            "description": "Enable homing behaviour."
+          },
+          "impactDecalPath": {
+            "type": "string",
+            "description": "Canonical /Game impact decal path."
+          },
+          "impactParticlePath": {
+            "type": "string",
+            "description": "Canonical /Game impact particle path."
+          },
+          "impactSoundPath": {
+            "type": "string",
+            "description": "Canonical /Game impact sound path."
+          },
+          "infiniteAmmo": {
+            "type": "boolean",
+            "description": "Skip ammo consumption entirely."
+          },
+          "isDamageZoneHead": {
+            "type": "boolean",
+            "description": "Mark this hitbox as a headshot zone."
+          },
+          "magazineSize": {
+            "type": "number",
+            "description": "Rounds per magazine."
+          },
+          "maxAmmo": {
+            "type": "number",
+            "description": "Maximum carried ammo."
+          },
+          "maxComboCount": {
+            "type": "number",
+            "description": "Maximum number of chained combo hits."
+          },
+          "maxHealth": {
+            "type": "number",
+            "description": "Maximum health written to the Blueprint."
+          },
+          "maxShield": {
+            "type": "number",
+            "description": "Maximum shield value."
+          },
+          "meleeTraceEndSocket": {
+            "type": "string",
+            "description": "Socket where the melee sweep ends."
+          },
+          "meleeTraceRadius": {
+            "type": "number",
+            "description": "Melee sphere sweep radius."
+          },
+          "meleeTraceStartSocket": {
+            "type": "string",
+            "description": "Socket where the melee sweep starts."
+          },
+          "muzzleFlashParticlePath": {
+            "type": "string",
+            "description": "Canonical /Game muzzle flash particle path."
+          },
+          "muzzleFlashScale": {
+            "type": "number",
+            "description": "Muzzle flash scale multiplier."
+          },
+          "muzzleSocketName": {
+            "type": "string",
+            "description": "Socket name used as the muzzle attach point."
+          },
+          "muzzleSoundPath": {
+            "type": "string",
+            "description": "Canonical /Game firing sound path."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the created asset or actor."
+          },
+          "parryAnimationPath": {
+            "type": "string",
+            "description": "Canonical /Game parry animation path."
+          },
+          "parryWindowEnd": {
+            "type": "number",
+            "description": "Normalized parry window end (0-1)."
+          },
+          "parryWindowStart": {
+            "type": "number",
+            "description": "Normalized parry window start (0-1)."
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical /Game output path for the created asset."
+          },
+          "projectileClass": {
+            "type": "string",
+            "description": "Class path of the projectile the weapon spawns."
+          },
+          "projectileGravityScale": {
+            "type": "number",
+            "description": "Gravity scale applied to the projectile."
+          },
+          "projectileLifespan": {
+            "type": "number",
+            "description": "Projectile lifetime in seconds."
+          },
+          "projectileMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game projectile mesh path."
+          },
+          "projectileSpeed": {
+            "type": "number",
+            "description": "Projectile launch/travel speed."
+          },
+          "range": {
+            "type": "number",
+            "description": "Effective weapon range in world units."
+          },
+          "recoilPitch": {
+            "type": "number",
+            "description": "Vertical recoil per shot in degrees."
+          },
+          "recoilRecovery": {
+            "type": "number",
+            "description": "Recoil recovery speed."
+          },
+          "recoilYaw": {
+            "type": "number",
+            "description": "Horizontal recoil per shot in degrees."
+          },
+          "reloadAnimationPath": {
+            "type": "string",
+            "description": "Canonical /Game reload animation montage path."
+          },
+          "reloadTime": {
+            "type": "number",
+            "description": "Reload duration in seconds."
+          },
+          "shellEjectionForce": {
+            "type": "number",
+            "description": "Impulse applied to ejected shells."
+          },
+          "shellLifespan": {
+            "type": "number",
+            "description": "Shell casing lifetime in seconds."
+          },
+          "shellMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game shell casing mesh path."
+          },
+          "shieldAmount": {
+            "type": "number",
+            "description": "Starting shield value."
+          },
+          "shieldRegenDelay": {
+            "type": "number",
+            "description": "Seconds before shield regeneration starts."
+          },
+          "shieldRegenRate": {
+            "type": "number",
+            "description": "Shield regenerated per second."
+          },
+          "spread": {
+            "type": "number",
+            "description": "Base spread cone in degrees."
+          },
+          "spreadIncrease": {
+            "type": "number",
+            "description": "Spread added per shot."
+          },
+          "spreadPattern": {
+            "type": "string",
+            "enum": [
+              "Random",
+              "Fixed",
+              "FixedWithRandom",
+              "Shotgun"
+            ],
+            "description": "Spread pattern type."
+          },
+          "spreadRecovery": {
+            "type": "number",
+            "description": "Spread recovery rate per second."
+          },
+          "startingAmmo": {
+            "type": "number",
+            "description": "Ammo carried at spawn."
+          },
+          "switchInTime": {
+            "type": "number",
+            "description": "Time in seconds to equip the weapon."
+          },
+          "switchOutTime": {
+            "type": "number",
+            "description": "Time in seconds to unequip the weapon."
+          },
+          "traceChannel": {
+            "type": "string",
+            "enum": [
+              "Visibility",
+              "Camera",
+              "Weapon",
+              "Custom"
+            ],
+            "description": "Trace channel used for hitscan."
+          },
+          "tracerParticlePath": {
+            "type": "string",
+            "description": "Canonical /Game tracer particle path."
+          },
+          "tracerSpeed": {
+            "type": "number",
+            "description": "Tracer travel speed."
+          },
+          "unequipAnimationPath": {
+            "type": "string",
+            "description": "Canonical /Game unequip montage path."
+          },
+          "weaponMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game weapon static or skeletal mesh path."
+          },
+          "weaponTrailEndSocket": {
+            "type": "string",
+            "description": "Socket where the weapon trail ends."
+          },
+          "weaponTrailParticlePath": {
+            "type": "string",
+            "description": "Canonical /Game weapon trail particle path."
+          },
+          "weaponTrailStartSocket": {
+            "type": "string",
+            "description": "Socket where the weapon trail starts."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -9758,413 +8077,7 @@ export const gatewayManifest = {
               "create_shield",
               "modify_armor"
             ],
-            "description": "Combat action to perform"
-          },
-          "blueprintPath": {
-            "type": "string",
-            "description": "Blueprint asset path."
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "path": {
-            "type": "string",
-            "description": "Directory path for asset creation."
-          },
-          "weaponMeshPath": {
-            "type": "string",
-            "description": "Path to weapon static/skeletal mesh."
-          },
-          "muzzleSocketName": {
-            "type": "string",
-            "description": "Muzzle socket name."
-          },
-          "ejectionSocketName": {
-            "type": "string",
-            "description": "Shell ejection socket name."
-          },
-          "baseDamage": {
-            "type": "number"
-          },
-          "fireRate": {
-            "type": "number"
-          },
-          "range": {
-            "type": "number"
-          },
-          "spread": {
-            "type": "number"
-          },
-          "hitscanEnabled": {
-            "type": "boolean",
-            "description": "Enable hitscan firing."
-          },
-          "traceChannel": {
-            "type": "string",
-            "enum": [
-              "Visibility",
-              "Camera",
-              "Weapon",
-              "Custom"
-            ],
-            "description": "Trace channel for hitscan."
-          },
-          "projectileClass": {
-            "type": "string",
-            "description": "Projectile class path."
-          },
-          "spreadPattern": {
-            "type": "string",
-            "enum": [
-              "Random",
-              "Fixed",
-              "FixedWithRandom",
-              "Shotgun"
-            ],
-            "description": "Spread pattern type."
-          },
-          "spreadIncrease": {
-            "type": "number",
-            "description": "Spread increase per shot."
-          },
-          "spreadRecovery": {
-            "type": "number",
-            "description": "Spread recovery rate."
-          },
-          "recoilPitch": {
-            "type": "number",
-            "description": "Vertical recoil (degrees)."
-          },
-          "recoilYaw": {
-            "type": "number",
-            "description": "Horizontal recoil (degrees)."
-          },
-          "recoilRecovery": {
-            "type": "number",
-            "description": "Recoil recovery speed."
-          },
-          "adsEnabled": {
-            "type": "boolean",
-            "description": "Enable aim down sights."
-          },
-          "adsFov": {
-            "type": "number",
-            "description": "FOV when aiming."
-          },
-          "adsSpeed": {
-            "type": "number",
-            "description": "Time to aim down sights."
-          },
-          "adsSpreadMultiplier": {
-            "type": "number",
-            "description": "Spread multiplier when aiming."
-          },
-          "projectileSpeed": {
-            "type": "number"
-          },
-          "projectileGravityScale": {
-            "type": "number"
-          },
-          "projectileLifespan": {
-            "type": "number"
-          },
-          "projectileMeshPath": {
-            "type": "string",
-            "description": "Path to projectile mesh."
-          },
-          "collisionRadius": {
-            "type": "number"
-          },
-          "bounceEnabled": {
-            "type": "boolean",
-            "description": "Enable projectile bouncing."
-          },
-          "bounceVelocityRatio": {
-            "type": "number",
-            "description": "Velocity retained on bounce (0-1)."
-          },
-          "homingEnabled": {
-            "type": "boolean",
-            "description": "Enable homing behavior."
-          },
-          "homingAcceleration": {
-            "type": "number",
-            "description": "Homing turn rate."
-          },
-          "damageImpulse": {
-            "type": "number",
-            "description": "Impulse applied on hit."
-          },
-          "criticalMultiplier": {
-            "type": "number",
-            "description": "Critical hit damage multiplier."
-          },
-          "headshotMultiplier": {
-            "type": "number",
-            "description": "Headshot damage multiplier."
-          },
-          "hitboxBoneName": {
-            "type": "string",
-            "description": "Bone name for hitbox."
-          },
-          "hitboxType": {
-            "type": "string",
-            "enum": [
-              "Capsule",
-              "Box",
-              "Sphere"
-            ],
-            "description": "Hitbox collision shape."
-          },
-          "hitboxSize": {
-            "type": "object",
-            "properties": {
-              "radius": {
-                "type": "number"
-              },
-              "halfHeight": {
-                "type": "number"
-              },
-              "extent": {
-                "type": "object",
-                "properties": {
-                  "x": {
-                    "type": "number"
-                  },
-                  "y": {
-                    "type": "number"
-                  },
-                  "z": {
-                    "type": "number"
-                  }
-                },
-                "description": "3D extent (half-size)."
-              }
-            },
-            "description": "Hitbox dimensions."
-          },
-          "isDamageZoneHead": {
-            "type": "boolean",
-            "description": "Mark as headshot zone."
-          },
-          "damageMultiplier": {
-            "type": "number",
-            "description": "Damage multiplier for this hitbox."
-          },
-          "magazineSize": {
-            "type": "number"
-          },
-          "reloadTime": {
-            "type": "number"
-          },
-          "reloadAnimationPath": {
-            "type": "string",
-            "description": "Path to reload animation."
-          },
-          "ammoType": {
-            "type": "string",
-            "description": "Ammo type identifier."
-          },
-          "maxAmmo": {
-            "type": "number"
-          },
-          "startingAmmo": {
-            "type": "number"
-          },
-          "attachmentSlots": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "slotName": {
-                  "type": "string"
-                },
-                "socketName": {
-                  "type": "string"
-                },
-                "allowedTypes": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
-              }
-            },
-            "description": "Attachment slot definitions."
-          },
-          "switchInTime": {
-            "type": "number",
-            "description": "Time to equip weapon."
-          },
-          "switchOutTime": {
-            "type": "number",
-            "description": "Time to unequip weapon."
-          },
-          "equipAnimationPath": {
-            "type": "string",
-            "description": "Path to equip animation montage."
-          },
-          "unequipAnimationPath": {
-            "type": "string",
-            "description": "Path to unequip animation montage."
-          },
-          "muzzleFlashParticlePath": {
-            "type": "string",
-            "description": "Path to muzzle flash particle."
-          },
-          "muzzleFlashScale": {
-            "type": "number",
-            "description": "Muzzle flash scale."
-          },
-          "muzzleSoundPath": {
-            "type": "string",
-            "description": "Path to firing sound."
-          },
-          "tracerParticlePath": {
-            "type": "string",
-            "description": "Path to tracer particle."
-          },
-          "tracerSpeed": {
-            "type": "number",
-            "description": "Tracer travel speed."
-          },
-          "impactParticlePath": {
-            "type": "string",
-            "description": "Path to impact particle."
-          },
-          "impactSoundPath": {
-            "type": "string",
-            "description": "Path to impact sound."
-          },
-          "impactDecalPath": {
-            "type": "string",
-            "description": "Path to impact decal."
-          },
-          "shellMeshPath": {
-            "type": "string",
-            "description": "Path to shell casing mesh."
-          },
-          "shellEjectionForce": {
-            "type": "number",
-            "description": "Shell ejection impulse."
-          },
-          "shellLifespan": {
-            "type": "number",
-            "description": "Shell casing lifetime."
-          },
-          "meleeTraceStartSocket": {
-            "type": "string",
-            "description": "Socket for trace start."
-          },
-          "meleeTraceEndSocket": {
-            "type": "string",
-            "description": "Socket for trace end."
-          },
-          "meleeTraceRadius": {
-            "type": "number",
-            "description": "Sphere trace radius."
-          },
-          "comboWindowTime": {
-            "type": "number",
-            "description": "Time window for combo input."
-          },
-          "maxComboCount": {
-            "type": "number",
-            "description": "Maximum combo length."
-          },
-          "hitPauseDuration": {
-            "type": "number",
-            "description": "Hitstop duration in seconds."
-          },
-          "hitPauseTimeDilation": {
-            "type": "number",
-            "description": "Time dilation during hitstop."
-          },
-          "hitReactionMontage": {
-            "type": "string",
-            "description": "Path to hit reaction montage."
-          },
-          "hitReactionStunTime": {
-            "type": "number",
-            "description": "Stun duration on hit."
-          },
-          "parryWindowStart": {
-            "type": "number",
-            "description": "Parry window start time (normalized)."
-          },
-          "parryWindowEnd": {
-            "type": "number",
-            "description": "Parry window end time (normalized)."
-          },
-          "parryAnimationPath": {
-            "type": "string",
-            "description": "Path to parry animation."
-          },
-          "blockDamageReduction": {
-            "type": "number",
-            "description": "Damage reduction when blocking (0-1)."
-          },
-          "blockStaminaCost": {
-            "type": "number",
-            "description": "Stamina cost per blocked hit."
-          },
-          "weaponTrailParticlePath": {
-            "type": "string",
-            "description": "Path to weapon trail particle."
-          },
-          "weaponTrailStartSocket": {
-            "type": "string",
-            "description": "Trail start socket."
-          },
-          "weaponTrailEndSocket": {
-            "type": "string",
-            "description": "Trail end socket."
-          },
-          "ammoPerShot": {
-            "type": "number"
-          },
-          "armorValue": {
-            "type": "number"
-          },
-          "damageAmount": {
-            "type": "number"
-          },
-          "damagePerSecond": {
-            "type": "number"
-          },
-          "damageReduction": {
-            "type": "number"
-          },
-          "damageType": {
-            "type": "string"
-          },
-          "duration": {
-            "type": "number"
-          },
-          "effectType": {
-            "type": "string"
-          },
-          "healAmount": {
-            "type": "number"
-          },
-          "infiniteAmmo": {
-            "type": "boolean"
-          },
-          "maxHealth": {
-            "type": "number"
-          },
-          "maxShield": {
-            "type": "number"
-          },
-          "shieldAmount": {
-            "type": "number"
-          },
-          "shieldRegenDelay": {
-            "type": "number"
-          },
-          "shieldRegenRate": {
-            "type": "number"
+            "description": "Action to invoke on manage_combat."
           },
           "params": {
             "type": "object",
@@ -10180,890 +8093,1933 @@ export const gatewayManifest = {
       "perActionSchemas": false
     },
     {
-      "name": "manage_ai",
+      "name": "manage_effect",
       "category": "gameplay",
-      "description": "Build AI systems: AI controllers, Behavior Trees, Blackboards, EQS, perception, State Trees, Smart Objects, NavMesh settings, nav modifiers, links, and pathfinding.",
+      "description": "Niagara particle systems, VFX, debug shapes, and GPU simulations. Create systems, emitters, modules, and control particle effects.",
       "actions": [
-        "create_ai_controller",
-        "assign_behavior_tree",
-        "assign_blackboard",
-        "create_blackboard_asset",
-        "add_blackboard_key",
-        "set_key_instance_synced",
-        "create_behavior_tree",
-        "add_composite_node",
-        "add_task_node",
-        "add_decorator",
-        "add_service",
-        "configure_bt_node",
-        "create_eqs_query",
-        "add_eqs_generator",
-        "add_eqs_context",
-        "add_eqs_test",
-        "configure_test_scoring",
-        "add_ai_perception_component",
-        "configure_sight_config",
-        "configure_hearing_config",
-        "configure_damage_sense_config",
-        "set_perception_team",
-        "create_state_tree",
-        "add_state_tree_state",
-        "add_state_tree_transition",
-        "configure_state_tree_task",
-        "create_smart_object_definition",
-        "add_smart_object_slot",
-        "configure_slot_behavior",
-        "add_smart_object_component",
-        "create_mass_entity_config",
-        "configure_mass_entity",
-        "add_mass_spawner",
-        "get_ai_info",
-        "create_blackboard",
-        "setup_perception",
-        "set_focus",
-        "clear_focus",
-        "set_blackboard_value",
-        "get_blackboard_value",
-        "run_behavior_tree",
-        "stop_behavior_tree",
-        "create",
-        "add_node",
-        "connect_nodes",
-        "remove_node",
-        "break_connections",
-        "set_node_properties",
-        "add_subnode",
-        "get_tree",
-        "configure_nav_mesh_settings",
-        "set_nav_agent_properties",
-        "rebuild_navigation",
-        "create_nav_modifier_component",
-        "set_nav_area_class",
-        "configure_nav_area_cost",
-        "create_nav_link_proxy",
-        "configure_nav_link",
-        "set_nav_link_type",
-        "create_smart_link",
-        "configure_smart_link_behavior",
-        "get_navigation_info"
+        "particle",
+        "niagara",
+        "debug_shape",
+        "spawn_niagara",
+        "create_dynamic_light",
+        "create_niagara_system",
+        "create_niagara_emitter",
+        "create_volumetric_fog",
+        "create_particle_trail",
+        "create_environment_effect",
+        "create_impact_effect",
+        "create_niagara_ribbon",
+        "activate",
+        "activate_effect",
+        "deactivate",
+        "reset",
+        "advance_simulation",
+        "add_niagara_module",
+        "connect_niagara_pins",
+        "remove_niagara_node",
+        "set_niagara_parameter",
+        "clear_debug_shapes",
+        "cleanup",
+        "list_debug_shapes",
+        "add_emitter_to_system",
+        "set_emitter_properties",
+        "add_spawn_rate_module",
+        "add_spawn_burst_module",
+        "add_spawn_per_unit_module",
+        "add_initialize_particle_module",
+        "add_particle_state_module",
+        "add_force_module",
+        "add_velocity_module",
+        "add_acceleration_module",
+        "add_size_module",
+        "add_color_module",
+        "add_user_parameter",
+        "set_parameter_value",
+        "bind_parameter_to_source",
+        "set_niagara_dynamic_input",
+        "add_sprite_renderer_module",
+        "add_mesh_renderer_module",
+        "add_ribbon_renderer_module",
+        "add_light_renderer_module",
+        "add_collision_module",
+        "add_kill_particles_module",
+        "add_camera_offset_module",
+        "add_skeletal_mesh_data_interface",
+        "add_static_mesh_data_interface",
+        "add_spline_data_interface",
+        "add_audio_spectrum_data_interface",
+        "add_collision_query_data_interface",
+        "add_event_generator",
+        "add_event_receiver",
+        "configure_event_payload",
+        "enable_gpu_simulation",
+        "add_simulation_stage",
+        "get_niagara_info",
+        "validate_niagara_system"
       ],
       "parameterNames": [
+        "acceleration",
         "actorName",
-        "agentHeight",
-        "agentMaxSlope",
-        "agentRadius",
-        "agentStepHeight",
-        "areaClass",
-        "areaCost",
         "assetPath",
-        "bCreateBoxObstacle",
-        "baseObjectClass",
-        "behaviorTreePath",
-        "blackboardPath",
-        "blueprintPath",
-        "broadcastInterval",
-        "broadcastRadius",
-        "cellHeight",
-        "cellSize",
-        "childNodeId",
-        "comment",
-        "componentName",
-        "compositeType",
-        "configPath",
-        "contextType",
-        "controllerPath",
-        "damageConfig",
-        "decoratorType",
-        "definitionPath",
-        "direction",
-        "disabledAreaClass",
-        "dominantSense",
-        "enableDamage",
-        "enableHearing",
-        "enableSight",
-        "enabled",
-        "enabledAreaClass",
-        "endPoint",
-        "failsafeExtent",
-        "focusActorName",
-        "fromState",
-        "generatorSettings",
-        "generatorType",
-        "hearingConfig",
-        "hearingRange",
-        "isInstanceSynced",
-        "keyName",
-        "keyType",
-        "linkEnabled",
-        "linkType",
+        "attachToActor",
+        "autoConnect",
+        "burstCount",
+        "burstTime",
+        "cameraOffset",
+        "collisionMode",
+        "color",
+        "colorMode",
+        "count",
+        "deltaTime",
+        "density",
+        "deterministicEnabled",
+        "dieOnCollision",
+        "duration",
+        "dynamicInputScriptPath",
+        "emitter",
+        "emitterName",
+        "emitterPath",
+        "emitterProperties",
+        "eventName",
+        "eventPayload",
+        "eventSpawnCount",
+        "eventType",
+        "extinction",
+        "filter",
+        "fixedBoundsEnabled",
+        "forceStrength",
+        "forceType",
+        "friction",
+        "inputName",
+        "intensity",
+        "killCondition",
+        "lifetime",
+        "lightRadius",
+        "lightType",
         "location",
-        "loseSightRadius",
-        "maxSimplificationError",
-        "mergeRegionSize",
-        "minRegionArea",
+        "mass",
+        "materialPath",
+        "meshPath",
+        "modulePath",
         "name",
-        "nodeClass",
         "nodeId",
-        "nodeType",
-        "obstacleAreaClass",
-        "obstacleExtent",
-        "obstacleOffset",
-        "offset",
-        "parentNodeId",
-        "parentStateName",
+        "parameterName",
+        "parameterType",
+        "parameterValue",
         "path",
-        "peripheralVisionAngle",
-        "properties",
-        "queryPath",
-        "rotation",
+        "preset",
+        "radius",
+        "replaceExisting",
+        "reset",
+        "restitution",
         "save",
         "savePath",
-        "serviceType",
-        "sightConfig",
-        "sightRadius",
-        "slotIndex",
-        "snapRadius",
-        "spawnCount",
-        "startPoint",
-        "stateName",
-        "stateTreePath",
-        "stateType",
-        "subnodeType",
-        "taskType",
-        "teamId",
-        "testIndex",
-        "testSettings",
-        "testType",
-        "tileSizeUU",
-        "toState",
-        "triggerType",
+        "scattering",
+        "scriptType",
+        "shape",
+        "shapeType",
+        "sizeMode",
+        "sourceBinding",
+        "spawnOnEvent",
+        "spawnPerUnit",
+        "spawnRate",
+        "stageIterationSource",
+        "stageName",
+        "steps",
+        "system",
+        "systemName",
+        "systemPath",
+        "targetNodeId",
+        "timeoutMs",
+        "uniformSize",
         "value",
-        "x",
-        "y"
+        "velocityMode"
       ],
       "inputSchema": {
         "type": "object",
         "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "create_ai_controller",
-              "assign_behavior_tree",
-              "assign_blackboard",
-              "create_blackboard_asset",
-              "add_blackboard_key",
-              "set_key_instance_synced",
-              "create_behavior_tree",
-              "add_composite_node",
-              "add_task_node",
-              "add_decorator",
-              "add_service",
-              "configure_bt_node",
-              "create_eqs_query",
-              "add_eqs_generator",
-              "add_eqs_context",
-              "add_eqs_test",
-              "configure_test_scoring",
-              "add_ai_perception_component",
-              "configure_sight_config",
-              "configure_hearing_config",
-              "configure_damage_sense_config",
-              "set_perception_team",
-              "create_state_tree",
-              "add_state_tree_state",
-              "add_state_tree_transition",
-              "configure_state_tree_task",
-              "create_smart_object_definition",
-              "add_smart_object_slot",
-              "configure_slot_behavior",
-              "add_smart_object_component",
-              "create_mass_entity_config",
-              "configure_mass_entity",
-              "add_mass_spawner",
-              "get_ai_info",
-              "create_blackboard",
-              "setup_perception",
-              "set_focus",
-              "clear_focus",
-              "set_blackboard_value",
-              "get_blackboard_value",
-              "run_behavior_tree",
-              "stop_behavior_tree",
-              "create",
-              "add_node",
-              "connect_nodes",
-              "remove_node",
-              "break_connections",
-              "set_node_properties",
-              "add_subnode",
-              "get_tree",
-              "configure_nav_mesh_settings",
-              "set_nav_agent_properties",
-              "rebuild_navigation",
-              "create_nav_modifier_component",
-              "set_nav_area_class",
-              "configure_nav_area_cost",
-              "create_nav_link_proxy",
-              "configure_nav_link",
-              "set_nav_link_type",
-              "create_smart_link",
-              "configure_smart_link_behavior",
-              "get_navigation_info"
-            ],
-            "description": "AI action to perform"
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "path": {
-            "type": "string",
-            "description": "Directory path for asset creation."
-          },
-          "blueprintPath": {
-            "type": "string",
-            "description": "Blueprint asset path."
-          },
-          "controllerPath": {
-            "type": "string",
-            "description": "Path to controller blueprint."
-          },
-          "behaviorTreePath": {
-            "type": "string",
-            "description": "Path to behavior tree asset."
-          },
-          "blackboardPath": {
-            "type": "string",
-            "description": "Path to blackboard asset."
-          },
-          "keyName": {
-            "type": "string",
-            "description": "Name of the key."
-          },
-          "keyType": {
-            "type": "string",
-            "enum": [
-              "Bool",
-              "Int",
-              "Float",
-              "Vector",
-              "Rotator",
-              "Object",
-              "Class",
-              "Enum",
-              "Name",
-              "String"
-            ],
-            "description": "Blackboard key data type."
-          },
-          "baseObjectClass": {
-            "type": "string"
-          },
-          "isInstanceSynced": {
-            "type": "boolean",
-            "description": "Sync key across instances."
-          },
-          "compositeType": {
-            "type": "string",
-            "enum": [
-              "Selector",
-              "Sequence",
-              "Parallel",
-              "SimpleParallel"
-            ],
-            "description": "Composite node type."
-          },
-          "taskType": {
-            "type": "string",
-            "enum": [
-              "MoveTo",
-              "MoveDirectlyToward",
-              "RotateToFaceBBEntry",
-              "Wait",
-              "WaitBlackboardTime",
-              "PlayAnimation",
-              "PlaySound",
-              "RunEQSQuery",
-              "RunBehaviorDynamic",
-              "SetBlackboardValue",
-              "PushPawnAction",
-              "FinishWithResult",
-              "MakeNoise",
-              "GameplayTaskBase",
-              "Custom"
-            ],
-            "description": "Task node type."
-          },
-          "decoratorType": {
-            "type": "string",
-            "enum": [
-              "Blackboard",
-              "BlackboardBased",
-              "CompareBBEntries",
-              "Cooldown",
-              "ConeCheck",
-              "DoesPathExist",
-              "IsAtLocation",
-              "IsBBEntryOfClass",
-              "KeepInCone",
-              "Loop",
-              "SetTagCooldown",
-              "TagCooldown",
-              "TimeLimit",
-              "ForceSuccess",
-              "ConditionalLoop",
-              "Custom"
-            ],
-            "description": "Decorator node type."
-          },
-          "serviceType": {
-            "type": "string",
-            "enum": [
-              "DefaultFocus",
-              "RunEQS",
-              "Custom"
-            ],
-            "description": "Service node type."
-          },
-          "subnodeType": {
-            "type": "string",
-            "enum": [
-              "Decorator",
-              "Service"
-            ],
-            "description": "Behavior Tree subnode kind for add_subnode."
-          },
-          "nodeClass": {
-            "type": "string",
-            "description": "Node class path."
-          },
-          "parentNodeId": {
-            "type": "string",
-            "description": "ID of the node."
-          },
-          "nodeId": {
-            "type": "string",
-            "description": "ID of the node."
-          },
-          "queryPath": {
-            "type": "string",
-            "description": "Path to EQS query asset."
-          },
-          "generatorType": {
-            "type": "string",
-            "enum": [
-              "ActorsOfClass",
-              "CurrentLocation",
-              "Donut",
-              "OnCircle",
-              "PathingGrid",
-              "SimpleGrid",
-              "Composite",
-              "Custom"
-            ],
-            "description": "EQS generator type."
-          },
-          "contextType": {
-            "type": "string",
-            "enum": [
-              "Querier",
-              "Item",
-              "EnvQueryContext_BlueprintBase",
-              "Custom"
-            ],
-            "description": "EQS context type."
-          },
-          "testType": {
-            "type": "string",
-            "enum": [
-              "Distance",
-              "Dot",
-              "GameplayTags",
-              "Overlap",
-              "Pathfinding",
-              "PathfindingBatch",
-              "Project",
-              "Random",
-              "Trace",
-              "Custom"
-            ],
-            "description": "EQS test type."
-          },
-          "generatorSettings": {
+          "acceleration": {
             "type": "object",
             "properties": {
-              "searchRadius": {
+              "x": {
                 "type": "number"
               },
-              "searchCenter": {
-                "type": "string"
-              },
-              "actorClass": {
-                "type": "string"
-              },
-              "gridSize": {
+              "y": {
                 "type": "number"
               },
-              "spacesBetween": {
-                "type": "number"
-              },
-              "innerRadius": {
-                "type": "number"
-              },
-              "outerRadius": {
+              "z": {
                 "type": "number"
               }
             },
-            "description": "Generator-specific settings."
-          },
-          "testSettings": {
-            "type": "object",
-            "properties": {
-              "scoringEquation": {
-                "type": "string",
-                "enum": [
-                  "Linear",
-                  "Square",
-                  "InverseLinear",
-                  "Constant"
-                ]
-              },
-              "clampMin": {
-                "type": "number"
-              },
-              "clampMax": {
-                "type": "number"
-              },
-              "filterType": {
-                "type": "string",
-                "enum": [
-                  "Minimum",
-                  "Maximum",
-                  "Range"
-                ]
-              },
-              "floatMin": {
-                "type": "number"
-              },
-              "floatMax": {
-                "type": "number"
-              }
-            },
-            "description": "Test scoring and filter settings."
-          },
-          "testIndex": {
-            "type": "number",
-            "description": "Index of test to configure."
-          },
-          "sightConfig": {
-            "type": "object",
-            "properties": {
-              "sightRadius": {
-                "type": "number"
-              },
-              "loseSightRadius": {
-                "type": "number"
-              },
-              "peripheralVisionAngle": {
-                "type": "number"
-              },
-              "pointOfViewBackwardOffset": {
-                "type": "number"
-              },
-              "nearClippingRadius": {
-                "type": "number"
-              },
-              "autoSuccessRange": {
-                "type": "number"
-              },
-              "maxAge": {
-                "type": "number"
-              },
-              "detectionByAffiliation": {
-                "type": "object",
-                "properties": {
-                  "enemies": {
-                    "type": "boolean"
-                  },
-                  "neutrals": {
-                    "type": "boolean"
-                  },
-                  "friendlies": {
-                    "type": "boolean"
-                  }
-                }
-              }
-            },
-            "description": "AI sight sense configuration."
-          },
-          "hearingConfig": {
-            "type": "object",
-            "properties": {
-              "hearingRange": {
-                "type": "number"
-              },
-              "loSHearingRange": {
-                "type": "number"
-              },
-              "detectFriendly": {
-                "type": "boolean"
-              },
-              "maxAge": {
-                "type": "number"
-              }
-            },
-            "description": "AI hearing sense configuration."
-          },
-          "damageConfig": {
-            "type": "object",
-            "properties": {
-              "maxAge": {
-                "type": "number"
-              }
-            },
-            "description": "AI damage sense configuration."
-          },
-          "teamId": {
-            "type": "number",
-            "description": "Team ID for perception affiliation (0=Neutral, 1=Player, 2=Enemy, etc.)."
-          },
-          "dominantSense": {
-            "type": "string",
-            "enum": [
-              "Sight",
-              "Hearing",
-              "Damage",
-              "Touch",
-              "None"
-            ],
-            "description": "Dominant sense for perception prioritization."
-          },
-          "stateTreePath": {
-            "type": "string",
-            "description": "Path to State Tree asset."
-          },
-          "stateName": {
-            "type": "string",
-            "description": "Name of the state."
-          },
-          "fromState": {
-            "type": "string",
-            "description": "Source state name."
-          },
-          "toState": {
-            "type": "string",
-            "description": "Target state name."
-          },
-          "definitionPath": {
-            "type": "string",
-            "description": "Path to definition asset."
-          },
-          "slotIndex": {
-            "type": "number",
-            "description": "Index of slot to configure."
-          },
-          "configPath": {
-            "type": "string",
-            "description": "Path to config asset."
+            "additionalProperties": false,
+            "description": "Constant acceleration vector applied to particles."
           },
           "actorName": {
             "type": "string",
-            "description": "Name of the actor."
-          },
-          "agentRadius": {
-            "type": "number",
-            "description": "Navigation agent radius (default: 35)."
-          },
-          "agentHeight": {
-            "type": "number",
-            "description": "Navigation agent height (default: 144)."
-          },
-          "agentStepHeight": {
-            "type": "number",
-            "description": "Maximum step height agent can climb (default: 35)."
-          },
-          "agentMaxSlope": {
-            "type": "number",
-            "description": "Maximum slope angle in degrees (default: 44)."
-          },
-          "cellSize": {
-            "type": "number",
-            "description": "NavMesh cell size (default: 19)."
-          },
-          "cellHeight": {
-            "type": "number",
-            "description": "NavMesh cell height (default: 10)."
-          },
-          "tileSizeUU": {
-            "type": "number",
-            "description": "NavMesh tile size in UU (default: 1000)."
-          },
-          "minRegionArea": {
-            "type": "number",
-            "description": "Minimum region area to keep."
-          },
-          "mergeRegionSize": {
-            "type": "number",
-            "description": "Region merge threshold."
-          },
-          "maxSimplificationError": {
-            "type": "number",
-            "description": "Edge simplification error."
-          },
-          "areaClass": {
-            "type": "string",
-            "description": "Navigation area class path."
-          },
-          "failsafeExtent": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "Failsafe extent for nav modifier when actor has no collision."
-          },
-          "areaCost": {
-            "type": "number",
-            "description": "Pathfinding cost multiplier for area (1.0 = normal)."
-          },
-          "startPoint": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "Start point of navigation link (relative to actor)."
-          },
-          "endPoint": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "End point of navigation link (relative to actor)."
-          },
-          "direction": {
-            "type": "string",
-            "enum": [
-              "BothWays",
-              "LeftToRight",
-              "RightToLeft"
-            ],
-            "description": "Link traversal direction."
-          },
-          "snapRadius": {
-            "type": "number",
-            "description": "Snap radius for link endpoints (default: 30)."
-          },
-          "linkEnabled": {
-            "type": "boolean",
-            "description": "Whether the link is enabled."
-          },
-          "linkType": {
-            "type": "string",
-            "enum": [
-              "simple",
-              "smart"
-            ],
-            "description": "Type of navigation link."
-          },
-          "enabledAreaClass": {
-            "type": "string",
-            "description": "Area class when smart link is enabled."
-          },
-          "disabledAreaClass": {
-            "type": "string",
-            "description": "Area class when smart link is disabled."
-          },
-          "broadcastRadius": {
-            "type": "number",
-            "description": "Radius for state change broadcast."
-          },
-          "broadcastInterval": {
-            "type": "number",
-            "description": "Interval for state change broadcast (0 = single)."
-          },
-          "bCreateBoxObstacle": {
-            "type": "boolean",
-            "description": "Add box obstacle during nav generation."
-          },
-          "obstacleOffset": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "Offset of simple box obstacle."
-          },
-          "obstacleExtent": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "Extent of simple box obstacle."
-          },
-          "obstacleAreaClass": {
-            "type": "string",
-            "description": "Area class for box obstacle."
-          },
-          "save": {
-            "type": "boolean",
-            "description": "Save the asset(s) after the operation."
-          },
-          "componentName": {
-            "type": "string",
-            "description": "Name of the component."
-          },
-          "location": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "World location for nav link proxy."
-          },
-          "rotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "Rotation for nav link proxy."
+            "description": "Target actor name in the current level."
           },
           "assetPath": {
             "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
+            "description": "Canonical /Game asset path."
           },
-          "childNodeId": {
+          "attachToActor": {
             "type": "string",
-            "description": "ID of the node."
+            "description": "Name of the actor the spawned system attaches to."
           },
-          "comment": {
-            "type": "string"
+          "autoConnect": {
+            "type": "boolean",
+            "description": "Whether inserted pins are auto-connected."
           },
-          "enableDamage": {
-            "type": "boolean"
+          "burstCount": {
+            "type": "number",
+            "description": "Particle count emitted per burst."
           },
-          "enableHearing": {
-            "type": "boolean"
+          "burstTime": {
+            "type": "number",
+            "description": "Normalized emitter time at which the burst fires."
           },
-          "enableSight": {
-            "type": "boolean"
+          "cameraOffset": {
+            "type": "number",
+            "description": "Camera-relative offset distance."
           },
-          "enabled": {
-            "type": "boolean"
-          },
-          "focusActorName": {
+          "collisionMode": {
             "type": "string",
-            "description": "Name of the actor."
+            "description": "Particle collision mode."
           },
-          "hearingRange": {
-            "type": "number"
+          "color": {
+            "description": "Color as an {r,g,b,a} object or an [r, g, b, a] array."
           },
-          "loseSightRadius": {
-            "type": "number"
+          "colorMode": {
+            "type": "string",
+            "description": "Color module mode."
           },
-          "nodeType": {
-            "type": "string"
+          "count": {
+            "type": "number",
+            "description": "Count value."
           },
-          "offset": {
+          "deltaTime": {
+            "type": "number",
+            "description": "Simulation delta time per step, in seconds."
+          },
+          "density": {
+            "type": "number",
+            "description": "Volumetric fog density."
+          },
+          "deterministicEnabled": {
+            "type": "boolean",
+            "description": "Whether deterministic GPU simulation is enabled."
+          },
+          "dieOnCollision": {
+            "type": "boolean",
+            "description": "Whether particles are destroyed on collision."
+          },
+          "duration": {
+            "type": "number",
+            "description": "Duration in seconds."
+          },
+          "dynamicInputScriptPath": {
+            "type": "string",
+            "description": "Canonical /Niagara dynamic input script path."
+          },
+          "emitter": {
+            "type": "string",
+            "description": "Emitter name; alias normalized to emitterName."
+          },
+          "emitterName": {
+            "type": "string",
+            "description": "Emitter name within the target Niagara system."
+          },
+          "emitterPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "emitterProperties": {
             "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
+            "additionalProperties": true,
+            "description": "Emitter property key-value pairs applied by reflection.",
+            "x-unreal-reflection-boundary": true
+          },
+          "eventName": {
+            "type": "string",
+            "description": "Niagara event name."
+          },
+          "eventPayload": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
               },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
+              "additionalProperties": false
             },
-            "description": "3D vector."
+            "description": "Event payload attribute descriptors as [{ name, type }]."
           },
-          "parentStateName": {
-            "type": "string"
+          "eventSpawnCount": {
+            "type": "number",
+            "description": "Particles spawned per received event."
           },
-          "peripheralVisionAngle": {
-            "type": "number"
+          "eventType": {
+            "type": "string",
+            "description": "Niagara event generator type (Location, Death, Collision)."
           },
-          "properties": {
-            "type": "object"
+          "extinction": {
+            "type": "number",
+            "description": "Volumetric fog extinction scale."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Actor name prefix selecting which transient effects are cleaned up."
+          },
+          "fixedBoundsEnabled": {
+            "type": "boolean",
+            "description": "Whether fixed system bounds are enabled."
+          },
+          "forceStrength": {
+            "type": "number",
+            "description": "Force magnitude applied to particles."
+          },
+          "forceType": {
+            "type": "string",
+            "description": "Force module type (Gravity, Drag, Wind, Curl, Vortex, PointAttraction)."
+          },
+          "friction": {
+            "type": "number",
+            "description": "Collision friction coefficient."
+          },
+          "inputName": {
+            "type": "string",
+            "description": "Module input name receiving the dynamic input."
+          },
+          "intensity": {
+            "type": "number",
+            "description": "Light intensity."
+          },
+          "killCondition": {
+            "type": "string",
+            "description": "Expression deciding when particles are killed."
+          },
+          "lifetime": {
+            "type": "number",
+            "description": "Particle lifetime in seconds."
+          },
+          "lightRadius": {
+            "type": "number",
+            "description": "Per-particle light radius."
+          },
+          "lightType": {
+            "type": "string",
+            "description": "Dynamic light type (Point, Spot, Directional, Rect)."
+          },
+          "location": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "World or relative location as [x, y, z]."
+          },
+          "mass": {
+            "type": "number",
+            "description": "Mass value."
+          },
+          "materialPath": {
+            "type": "string",
+            "description": "Canonical /Game material asset path for the renderer."
+          },
+          "meshPath": {
+            "type": "string",
+            "description": "Canonical /Game mesh asset path."
+          },
+          "modulePath": {
+            "type": "string",
+            "description": "Canonical /Niagara module script path to insert."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the created asset or actor."
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "Niagara graph node identifier."
+          },
+          "parameterName": {
+            "type": "string",
+            "description": "Niagara parameter name."
+          },
+          "parameterType": {
+            "type": "string",
+            "description": "Niagara parameter type (Float, Vector, Color, ...)."
+          },
+          "parameterValue": {
+            "description": "Niagara parameter value (any type)."
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical /Game output path for the created asset."
+          },
+          "preset": {
+            "type": "string",
+            "description": "Particle preset name or canonical /Game particle asset path."
+          },
+          "radius": {
+            "type": "number",
+            "description": "Radius in world units."
+          },
+          "replaceExisting": {
+            "type": "boolean",
+            "description": "Whether an existing dynamic input is replaced."
+          },
+          "reset": {
+            "type": "boolean",
+            "description": "Whether the effect restarts from its initial state."
+          },
+          "restitution": {
+            "type": "number",
+            "description": "Collision restitution (bounciness)."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the created/modified asset to disk."
           },
           "savePath": {
             "type": "string",
-            "description": "Path to save the asset."
+            "description": "Canonical /Game directory for the created asset."
           },
-          "sightRadius": {
-            "type": "number"
+          "scattering": {
+            "type": "number",
+            "description": "Volumetric fog scattering distribution."
           },
-          "spawnCount": {
-            "type": "number"
+          "scriptType": {
+            "type": "string",
+            "description": "Niagara script usage (System, Emitter, Particle)."
           },
-          "stateType": {
-            "type": "string"
+          "shape": {
+            "type": "string",
+            "description": "String parameter."
           },
-          "triggerType": {
-            "type": "string"
+          "shapeType": {
+            "type": "string",
+            "description": "Debug shape type (Sphere, Box, Line, Capsule)."
+          },
+          "sizeMode": {
+            "type": "string",
+            "description": "Sprite size mode."
+          },
+          "sourceBinding": {
+            "type": "string",
+            "description": "Data source the parameter binds to."
+          },
+          "spawnOnEvent": {
+            "type": "boolean",
+            "description": "Whether the receiver spawns particles on each event."
+          },
+          "spawnPerUnit": {
+            "type": "number",
+            "description": "Particles spawned per unit of movement."
+          },
+          "spawnRate": {
+            "type": "number",
+            "description": "Particles spawned per second."
+          },
+          "stageIterationSource": {
+            "type": "string",
+            "description": "Simulation stage iteration source."
+          },
+          "stageName": {
+            "type": "string",
+            "description": "Simulation stage name."
+          },
+          "steps": {
+            "type": "number",
+            "description": "Number of simulation steps to advance."
+          },
+          "system": {
+            "type": "string",
+            "description": "Niagara system path; alias normalized to systemPath."
+          },
+          "systemName": {
+            "type": "string",
+            "description": "Runtime Niagara system/component name on the target actor."
+          },
+          "systemPath": {
+            "type": "string",
+            "description": "Canonical /Game Niagara System asset path."
+          },
+          "targetNodeId": {
+            "type": "string",
+            "description": "Niagara graph node the dynamic input is attached to."
+          },
+          "timeoutMs": {
+            "type": "number",
+            "description": "Per-request timeout in milliseconds applied by the bridge dispatcher."
+          },
+          "uniformSize": {
+            "type": "number",
+            "description": "Uniform sprite size."
           },
           "value": {
-            "description": "Generic value (any type)."
+            "description": "Property value (any type)."
           },
-          "x": {
-            "type": "number"
+          "velocityMode": {
+            "type": "string",
+            "description": "Velocity module mode (Linear, Cone, FromPoint)."
           },
-          "y": {
-            "type": "number"
+          "action": {
+            "type": "string",
+            "enum": [
+              "particle",
+              "niagara",
+              "debug_shape",
+              "spawn_niagara",
+              "create_dynamic_light",
+              "create_niagara_system",
+              "create_niagara_emitter",
+              "create_volumetric_fog",
+              "create_particle_trail",
+              "create_environment_effect",
+              "create_impact_effect",
+              "create_niagara_ribbon",
+              "activate",
+              "activate_effect",
+              "deactivate",
+              "reset",
+              "advance_simulation",
+              "add_niagara_module",
+              "connect_niagara_pins",
+              "remove_niagara_node",
+              "set_niagara_parameter",
+              "clear_debug_shapes",
+              "cleanup",
+              "list_debug_shapes",
+              "add_emitter_to_system",
+              "set_emitter_properties",
+              "add_spawn_rate_module",
+              "add_spawn_burst_module",
+              "add_spawn_per_unit_module",
+              "add_initialize_particle_module",
+              "add_particle_state_module",
+              "add_force_module",
+              "add_velocity_module",
+              "add_acceleration_module",
+              "add_size_module",
+              "add_color_module",
+              "add_user_parameter",
+              "set_parameter_value",
+              "bind_parameter_to_source",
+              "set_niagara_dynamic_input",
+              "add_sprite_renderer_module",
+              "add_mesh_renderer_module",
+              "add_ribbon_renderer_module",
+              "add_light_renderer_module",
+              "add_collision_module",
+              "add_kill_particles_module",
+              "add_camera_offset_module",
+              "add_skeletal_mesh_data_interface",
+              "add_static_mesh_data_interface",
+              "add_spline_data_interface",
+              "add_audio_spectrum_data_interface",
+              "add_collision_query_data_interface",
+              "add_event_generator",
+              "add_event_receiver",
+              "configure_event_payload",
+              "enable_gpu_simulation",
+              "add_simulation_stage",
+              "get_niagara_info",
+              "validate_niagara_system"
+            ],
+            "description": "Action to invoke on manage_effect."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "manage_gas",
+      "category": "gameplay",
+      "description": "Create Gameplay Abilities, Effects, Attribute Sets, and Gameplay Cues for ability systems.",
+      "actions": [
+        "add_ability_system_component",
+        "configure_asc",
+        "create_attribute_set",
+        "add_attribute",
+        "set_attribute_base_value",
+        "set_attribute_clamping",
+        "create_gameplay_ability",
+        "set_ability_tags",
+        "set_ability_costs",
+        "set_ability_cooldown",
+        "set_ability_targeting",
+        "add_ability_task",
+        "set_activation_policy",
+        "set_instancing_policy",
+        "create_gameplay_effect",
+        "set_effect_duration",
+        "add_effect_modifier",
+        "set_modifier_magnitude",
+        "add_effect_execution_calculation",
+        "add_effect_cue",
+        "set_effect_stacking",
+        "set_effect_tags",
+        "create_gameplay_cue_notify",
+        "configure_cue_trigger",
+        "set_cue_effects",
+        "add_tag_to_asset",
+        "get_gas_info"
+      ],
+      "parameterNames": [
+        "abilityPath",
+        "abilityTags",
+        "activationBlockedTags",
+        "activationPolicy",
+        "activationRequiredTags",
+        "aoeRadius",
+        "applicationRequiredTags",
+        "assetPath",
+        "attributeName",
+        "attributeSetPath",
+        "attributeType",
+        "baseValue",
+        "blockAbilitiesWithTag",
+        "blueprintPath",
+        "calculationClass",
+        "cameraShakePath",
+        "cancelAbilitiesWithTag",
+        "clampMode",
+        "componentName",
+        "cooldownEffectPath",
+        "costEffectPath",
+        "cuePath",
+        "cueTag",
+        "cueType",
+        "decalPath",
+        "defaultValue",
+        "duration",
+        "durationType",
+        "effectPath",
+        "grantedTags",
+        "immunityTags",
+        "instancingPolicy",
+        "magnitudeCalculationType",
+        "maxValue",
+        "minValue",
+        "modifierIndex",
+        "modifierMagnitude",
+        "modifierOperation",
+        "name",
+        "particleSystemPath",
+        "path",
+        "period",
+        "removalTags",
+        "replicationMode",
+        "setByCallerTag",
+        "soundPath",
+        "stackDurationRefreshPolicy",
+        "stackExpirationPolicy",
+        "stackLimitCount",
+        "stackPeriodResetPolicy",
+        "stackingType",
+        "tag",
+        "tagName",
+        "targetAttribute",
+        "targetRange",
+        "targetingMode",
+        "taskType",
+        "triggerType"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "abilityPath": {
+            "type": "string",
+            "description": "Canonical /Game gameplay ability asset path."
+          },
+          "abilityTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Gameplay tags granted to this ability."
+          },
+          "activationBlockedTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags that block activation of this ability."
+          },
+          "activationPolicy": {
+            "type": "string",
+            "enum": [
+              "OnInputPressed",
+              "WhileInputActive",
+              "OnSpawn",
+              "OnGiven"
+            ],
+            "description": "When the ability activates."
+          },
+          "activationRequiredTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags required to activate this ability."
+          },
+          "aoeRadius": {
+            "type": "number",
+            "description": "Area-of-effect radius in world units."
+          },
+          "applicationRequiredTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags required to apply this effect."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "attributeName": {
+            "type": "string",
+            "description": "Target attribute name."
+          },
+          "attributeSetPath": {
+            "type": "string",
+            "description": "Canonical /Game attribute set asset path."
+          },
+          "attributeType": {
+            "type": "string",
+            "enum": [
+              "Health",
+              "MaxHealth",
+              "Mana",
+              "MaxMana",
+              "Stamina",
+              "MaxStamina",
+              "Damage",
+              "Armor",
+              "AttackPower",
+              "MoveSpeed",
+              "Custom"
+            ],
+            "description": "Predefined attribute type or Custom."
+          },
+          "baseValue": {
+            "type": "number",
+            "description": "Base value for the attribute."
+          },
+          "blockAbilitiesWithTag": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags of abilities blocked while this is active."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "calculationClass": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "cameraShakePath": {
+            "type": "string",
+            "description": "Canonical /Game camera shake asset path."
+          },
+          "cancelAbilitiesWithTag": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags of abilities cancelled when this activates."
+          },
+          "clampMode": {
+            "type": "string",
+            "enum": [
+              "None",
+              "Min",
+              "Max",
+              "MinMax"
+            ],
+            "description": "Attribute clamping mode."
+          },
+          "componentName": {
+            "type": "string",
+            "description": "AbilitySystemComponent name (defaults to AbilitySystemComponent)."
+          },
+          "cooldownEffectPath": {
+            "type": "string",
+            "description": "Canonical /Game path to the cooldown Gameplay Effect."
+          },
+          "costEffectPath": {
+            "type": "string",
+            "description": "Canonical /Game path to the cost Gameplay Effect."
+          },
+          "cuePath": {
+            "type": "string",
+            "description": "Canonical /Game gameplay cue asset path."
+          },
+          "cueTag": {
+            "type": "string",
+            "description": "Gameplay tag string."
+          },
+          "cueType": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "decalPath": {
+            "type": "string",
+            "description": "Canonical /Game decal material asset path."
+          },
+          "defaultValue": {
+            "type": "number",
+            "description": "Initial value for the added attribute."
+          },
+          "duration": {
+            "type": "number",
+            "description": "Duration in seconds."
+          },
+          "durationType": {
+            "type": "string",
+            "enum": [
+              "Instant",
+              "Infinite",
+              "HasDuration"
+            ],
+            "description": "Effect duration type."
+          },
+          "effectPath": {
+            "type": "string",
+            "description": "Canonical /Game gameplay effect asset path."
+          },
+          "grantedTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags granted while the effect is active."
+          },
+          "immunityTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags that make a target immune to this effect."
+          },
+          "instancingPolicy": {
+            "type": "string",
+            "enum": [
+              "NonInstanced",
+              "InstancedPerActor",
+              "InstancedPerExecution"
+            ],
+            "description": "How the ability is instanced."
+          },
+          "magnitudeCalculationType": {
+            "type": "string",
+            "enum": [
+              "ScalableFloat",
+              "AttributeBased",
+              "SetByCaller",
+              "CustomCalculationClass"
+            ],
+            "description": "How the modifier magnitude is calculated."
+          },
+          "maxValue": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "minValue": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "modifierIndex": {
+            "type": "number",
+            "description": "Zero-based index of the modifier to edit."
+          },
+          "modifierMagnitude": {
+            "type": "number",
+            "description": "Magnitude of the modifier."
+          },
+          "modifierOperation": {
+            "type": "string",
+            "enum": [
+              "Add",
+              "Multiply",
+              "Divide",
+              "Override"
+            ],
+            "description": "Modifier operation applied to the attribute."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the created asset or actor."
+          },
+          "particleSystemPath": {
+            "type": "string",
+            "description": "Canonical /Game particle system asset path."
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical /Game output path for the created asset."
+          },
+          "period": {
+            "type": "number",
+            "description": "Period in seconds for periodic effects."
+          },
+          "removalTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags that cause this effect to be removed."
+          },
+          "replicationMode": {
+            "type": "string",
+            "enum": [
+              "Full",
+              "Minimal",
+              "Mixed"
+            ],
+            "description": "ASC replication mode."
+          },
+          "setByCallerTag": {
+            "type": "string",
+            "description": "Gameplay tag keying a SetByCaller magnitude."
+          },
+          "soundPath": {
+            "type": "string",
+            "description": "Canonical /Game sound asset path."
+          },
+          "stackDurationRefreshPolicy": {
+            "type": "string",
+            "enum": [
+              "RefreshOnSuccessfulApplication",
+              "NeverRefresh"
+            ],
+            "description": "When stack duration refreshes."
+          },
+          "stackExpirationPolicy": {
+            "type": "string",
+            "enum": [
+              "ClearEntireStack",
+              "RemoveSingleStackAndRefreshDuration",
+              "RefreshDuration"
+            ],
+            "description": "What happens when a stack expires."
+          },
+          "stackLimitCount": {
+            "type": "number",
+            "description": "Maximum stack count."
+          },
+          "stackPeriodResetPolicy": {
+            "type": "string",
+            "enum": [
+              "ResetOnSuccessfulApplication",
+              "NeverReset"
+            ],
+            "description": "When the stack period resets."
+          },
+          "stackingType": {
+            "type": "string",
+            "enum": [
+              "None",
+              "AggregateBySource",
+              "AggregateByTarget"
+            ],
+            "description": "Stacking aggregation for the effect."
+          },
+          "tag": {
+            "type": "string",
+            "description": "Gameplay tag string."
+          },
+          "tagName": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "targetAttribute": {
+            "type": "string",
+            "description": "Target attribute captured by the modifier."
+          },
+          "targetRange": {
+            "type": "number",
+            "description": "Maximum targeting range in world units."
+          },
+          "targetingMode": {
+            "type": "string",
+            "enum": [
+              "None",
+              "SingleTarget",
+              "AOE",
+              "Directional",
+              "Ground",
+              "ActorPlacement"
+            ],
+            "description": "Targeting mode for the ability."
+          },
+          "taskType": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "triggerType": {
+            "type": "string",
+            "enum": [
+              "OnActive",
+              "WhileActive",
+              "Executed",
+              "OnRemove"
+            ],
+            "description": "When the gameplay cue triggers."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "add_ability_system_component",
+              "configure_asc",
+              "create_attribute_set",
+              "add_attribute",
+              "set_attribute_base_value",
+              "set_attribute_clamping",
+              "create_gameplay_ability",
+              "set_ability_tags",
+              "set_ability_costs",
+              "set_ability_cooldown",
+              "set_ability_targeting",
+              "add_ability_task",
+              "set_activation_policy",
+              "set_instancing_policy",
+              "create_gameplay_effect",
+              "set_effect_duration",
+              "add_effect_modifier",
+              "set_modifier_magnitude",
+              "add_effect_execution_calculation",
+              "add_effect_cue",
+              "set_effect_stacking",
+              "set_effect_tags",
+              "create_gameplay_cue_notify",
+              "configure_cue_trigger",
+              "set_cue_effects",
+              "add_tag_to_asset",
+              "get_gas_info"
+            ],
+            "description": "Action to invoke on manage_gas."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "manage_geometry",
+      "category": "world",
+      "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
+      "actions": [
+        "create_box",
+        "create_sphere",
+        "create_cylinder",
+        "create_cone",
+        "create_capsule",
+        "create_torus",
+        "create_plane",
+        "create_disc",
+        "create_stairs",
+        "create_spiral_stairs",
+        "create_ring",
+        "create_arch",
+        "create_pipe",
+        "create_ramp",
+        "boolean_union",
+        "boolean_subtract",
+        "boolean_intersection",
+        "boolean_trim",
+        "self_union",
+        "extrude",
+        "inset",
+        "outset",
+        "bevel",
+        "offset_faces",
+        "shell",
+        "revolve",
+        "chamfer",
+        "extrude_along_spline",
+        "bridge",
+        "loft",
+        "sweep",
+        "duplicate_along_spline",
+        "loop_cut",
+        "edge_split",
+        "quadrangulate",
+        "bend",
+        "twist",
+        "taper",
+        "noise_deform",
+        "smooth",
+        "relax",
+        "stretch",
+        "spherify",
+        "cylindrify",
+        "lattice_deform",
+        "displace_by_texture",
+        "triangulate",
+        "poke",
+        "mirror",
+        "array_linear",
+        "array_radial",
+        "simplify_mesh",
+        "subdivide",
+        "remesh_uniform",
+        "merge_vertices",
+        "remesh_voxel",
+        "weld_vertices",
+        "fill_holes",
+        "remove_degenerates",
+        "auto_uv",
+        "project_uv",
+        "transform_uvs",
+        "unwrap_uv",
+        "pack_uv_islands",
+        "recalculate_normals",
+        "flip_normals",
+        "recompute_tangents",
+        "generate_collision",
+        "generate_complex_collision",
+        "simplify_collision",
+        "generate_lods",
+        "set_lod_settings",
+        "set_lod_screen_sizes",
+        "convert_to_nanite",
+        "convert_to_static_mesh",
+        "get_mesh_info"
+      ],
+      "parameterNames": [
+        "actorName",
+        "amount",
+        "angle",
+        "assetPath",
+        "axis",
+        "cap",
+        "center",
+        "collisionType",
+        "computeWeightedNormals",
+        "count",
+        "depth",
+        "depthSegments",
+        "dimensions",
+        "distance",
+        "hardEdgeAngle",
+        "height",
+        "heightScale",
+        "heightSegments",
+        "hullCount",
+        "hullPrecision",
+        "innerRadius",
+        "iterations",
+        "keepInside",
+        "keepTool",
+        "latticeResolution",
+        "location",
+        "lodCount",
+        "lodIndex",
+        "maxHullCount",
+        "maxHullVerts",
+        "maxVerticesPerHull",
+        "midpoint",
+        "name",
+        "numRings",
+        "numSides",
+        "numSteps",
+        "numTurns",
+        "offset",
+        "outerRadius",
+        "outputPath",
+        "path",
+        "position",
+        "radialSegments",
+        "radius",
+        "recomputeNormals",
+        "recomputeTangents",
+        "reductionPercent",
+        "rotation",
+        "scale",
+        "screenSizes",
+        "segments",
+        "simplificationFactor",
+        "splineActorName",
+        "stepDepth",
+        "stepHeight",
+        "stepWidth",
+        "steps",
+        "strength",
+        "targetActor",
+        "targetEdgeLength",
+        "targetHullCount",
+        "targetTriangleCount",
+        "texturePath",
+        "thickness",
+        "toolActor",
+        "trianglePercent",
+        "trimActorName",
+        "uvChannel",
+        "uvOffset",
+        "uvScale",
+        "weight",
+        "weldDistance",
+        "width",
+        "widthSegments"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Generic amount (bevel size, inset/extrude distance)."
+          },
+          "angle": {
+            "type": "number",
+            "description": "Angle in degrees."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "axis": {
+            "type": "string",
+            "description": "Deformation axis: X, Y, or Z."
+          },
+          "cap": {
+            "type": "boolean",
+            "description": "Cap open ends of tubes."
+          },
+          "center": {
+            "type": "object",
+            "description": "Center of operation.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "collisionType": {
+            "type": "string",
+            "description": "Collision complexity type."
+          },
+          "computeWeightedNormals": {
+            "type": "boolean",
+            "description": "Use area-weighted normals."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Count of repeated elements."
+          },
+          "depth": {
+            "type": "number",
+            "description": "Primitive depth along Z."
+          },
+          "depthSegments": {
+            "type": "integer",
+            "description": "Tessellation segments along depth."
+          },
+          "dimensions": {
+            "type": "object",
+            "description": "Primitive dimensions {x, y, z}.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "distance": {
+            "type": "number",
+            "description": "Distance for offset-style operations."
+          },
+          "hardEdgeAngle": {
+            "type": "number",
+            "description": "Angle threshold for hard edges (degrees)."
+          },
+          "height": {
+            "type": "number",
+            "description": "Primitive height."
+          },
+          "heightScale": {
+            "type": "number",
+            "description": "Texture displacement height scale."
+          },
+          "heightSegments": {
+            "type": "integer",
+            "description": "Tessellation segments along height."
+          },
+          "hullCount": {
+            "type": "integer",
+            "description": "Number of convex hulls for decomposition."
+          },
+          "hullPrecision": {
+            "type": "number",
+            "description": "Precision for convex hull generation."
+          },
+          "innerRadius": {
+            "type": "number",
+            "description": "Inner radius (torus minor radius, ring/pipe inner wall)."
+          },
+          "iterations": {
+            "type": "integer",
+            "description": "Number of iterations for smooth/remesh."
+          },
+          "keepInside": {
+            "type": "boolean",
+            "description": "Keep geometry inside the tool."
+          },
+          "keepTool": {
+            "type": "boolean",
+            "description": "Keep the tool actor after the operation."
+          },
+          "latticeResolution": {
+            "type": "integer",
+            "description": "Control lattice resolution for lattice deformation."
+          },
+          "location": {
+            "type": "object",
+            "description": "World location {x, y, z}.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "lodCount": {
+            "type": "integer",
+            "description": "Number of LOD levels to generate."
+          },
+          "lodIndex": {
+            "type": "integer",
+            "description": "Specific LOD index to configure."
+          },
+          "maxHullCount": {
+            "type": "integer",
+            "description": "Maximum hull count for complex collision generation."
+          },
+          "maxHullVerts": {
+            "type": "integer",
+            "description": "Maximum vertices per hull for complex collision generation."
+          },
+          "maxVerticesPerHull": {
+            "type": "integer",
+            "description": "Maximum vertices per convex hull."
+          },
+          "midpoint": {
+            "type": "number",
+            "description": "Texture luminance midpoint for displacement."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the new asset or node."
+          },
+          "numRings": {
+            "type": "integer",
+            "description": "Number of rings for sphere, capsule, torus, arch."
+          },
+          "numSides": {
+            "type": "integer",
+            "description": "Number of sides for cylinder, cone, disc, ring, torus."
+          },
+          "numSteps": {
+            "type": "integer",
+            "description": "Number of steps for stair primitives."
+          },
+          "numTurns": {
+            "type": "number",
+            "description": "Number of turns for spiral stairs (converted to a curve angle)."
+          },
+          "offset": {
+            "type": "object",
+            "description": "Offset vector.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "outerRadius": {
+            "type": "number",
+            "description": "Outer radius for ring and pipe primitives."
+          },
+          "outputPath": {
+            "type": "string",
+            "description": "Canonical /Game output asset path."
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical /Game directory path."
+          },
+          "position": {
+            "type": "object",
+            "description": "Position {x, y, z} for the operation.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "radialSegments": {
+            "type": "integer",
+            "description": "Radial tessellation segments for circular primitives."
+          },
+          "radius": {
+            "type": "number",
+            "description": "Primitive radius."
+          },
+          "recomputeNormals": {
+            "type": "boolean",
+            "description": "Recompute normals for the LOD."
+          },
+          "recomputeTangents": {
+            "type": "boolean",
+            "description": "Recompute tangents for the LOD."
+          },
+          "reductionPercent": {
+            "type": "number",
+            "description": "Percent of triangles to reduce."
+          },
+          "rotation": {
+            "oneOf": [
+              {
+                "type": "number",
+                "description": "UV rotation in degrees (transform_uvs takes a scalar, not a rotator)."
+              },
+              {
+                "type": "object",
+                "description": "Rotation {pitch, yaw, roll}.",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll"
+                  }
+                },
+                "additionalProperties": false
+              }
+            ],
+            "description": "Rotation {pitch, yaw, roll}."
+          },
+          "scale": {
+            "type": "object",
+            "description": "Spawn scale {x, y, z}.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "screenSizes": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "description": "Screen size."
+            },
+            "description": "Screen size for each LOD."
+          },
+          "segments": {
+            "type": "integer",
+            "description": "Number of segments for the operation."
+          },
+          "simplificationFactor": {
+            "type": "number",
+            "description": "Collision simplification factor."
+          },
+          "splineActorName": {
+            "type": "string",
+            "description": "Spline actor name for extrude/sweep along spline."
+          },
+          "stepDepth": {
+            "type": "number",
+            "description": "Depth of each stair step."
+          },
+          "stepHeight": {
+            "type": "number",
+            "description": "Height of each stair step."
+          },
+          "stepWidth": {
+            "type": "number",
+            "description": "Width of each stair step."
+          },
+          "steps": {
+            "type": "integer",
+            "description": "Number of steps."
+          },
+          "strength": {
+            "type": "number",
+            "description": "Deformation strength."
+          },
+          "targetActor": {
+            "type": "string",
+            "description": "Target actor name for boolean operations."
+          },
+          "targetEdgeLength": {
+            "type": "number",
+            "description": "Target edge length for remeshing."
+          },
+          "targetHullCount": {
+            "type": "integer",
+            "description": "Target hull count for collision simplification."
+          },
+          "targetTriangleCount": {
+            "type": "number",
+            "description": "Target triangle count for simplification."
+          },
+          "texturePath": {
+            "type": "string",
+            "description": "Canonical /Game texture asset path."
+          },
+          "thickness": {
+            "type": "number",
+            "description": "Shell wall thickness (scalar)."
+          },
+          "toolActor": {
+            "type": "string",
+            "description": "Tool actor name for boolean operations."
+          },
+          "trianglePercent": {
+            "type": "number",
+            "description": "Percent of triangles to keep for LOD reduction."
+          },
+          "trimActorName": {
+            "type": "string",
+            "description": "Trim actor name for boolean trim."
+          },
+          "uvChannel": {
+            "type": "integer",
+            "description": "UV channel index (0-7)."
+          },
+          "uvOffset": {
+            "type": "object",
+            "description": "UV offset {u, v}.",
+            "properties": {
+              "u": {
+                "type": "number",
+                "description": "U"
+              },
+              "v": {
+                "type": "number",
+                "description": "V"
+              }
+            },
+            "additionalProperties": false
+          },
+          "uvScale": {
+            "type": "object",
+            "description": "UV scale {u, v}.",
+            "properties": {
+              "u": {
+                "type": "number",
+                "description": "U"
+              },
+              "v": {
+                "type": "number",
+                "description": "V"
+              }
+            },
+            "additionalProperties": false
+          },
+          "weight": {
+            "type": "number",
+            "description": "Weight for lattice deformation."
+          },
+          "weldDistance": {
+            "type": "number",
+            "description": "Distance threshold for vertex welding."
+          },
+          "width": {
+            "type": "number",
+            "description": "Primitive width along X."
+          },
+          "widthSegments": {
+            "type": "integer",
+            "description": "Tessellation segments along width."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "create_box",
+              "create_sphere",
+              "create_cylinder",
+              "create_cone",
+              "create_capsule",
+              "create_torus",
+              "create_plane",
+              "create_disc",
+              "create_stairs",
+              "create_spiral_stairs",
+              "create_ring",
+              "create_arch",
+              "create_pipe",
+              "create_ramp",
+              "boolean_union",
+              "boolean_subtract",
+              "boolean_intersection",
+              "boolean_trim",
+              "self_union",
+              "extrude",
+              "inset",
+              "outset",
+              "bevel",
+              "offset_faces",
+              "shell",
+              "revolve",
+              "chamfer",
+              "extrude_along_spline",
+              "bridge",
+              "loft",
+              "sweep",
+              "duplicate_along_spline",
+              "loop_cut",
+              "edge_split",
+              "quadrangulate",
+              "bend",
+              "twist",
+              "taper",
+              "noise_deform",
+              "smooth",
+              "relax",
+              "stretch",
+              "spherify",
+              "cylindrify",
+              "lattice_deform",
+              "displace_by_texture",
+              "triangulate",
+              "poke",
+              "mirror",
+              "array_linear",
+              "array_radial",
+              "simplify_mesh",
+              "subdivide",
+              "remesh_uniform",
+              "merge_vertices",
+              "remesh_voxel",
+              "weld_vertices",
+              "fill_holes",
+              "remove_degenerates",
+              "auto_uv",
+              "project_uv",
+              "transform_uvs",
+              "unwrap_uv",
+              "pack_uv_islands",
+              "recalculate_normals",
+              "flip_normals",
+              "recompute_tangents",
+              "generate_collision",
+              "generate_complex_collision",
+              "simplify_collision",
+              "generate_lods",
+              "set_lod_settings",
+              "set_lod_screen_sizes",
+              "convert_to_nanite",
+              "convert_to_static_mesh",
+              "get_mesh_info"
+            ],
+            "description": "Action to invoke on manage_geometry."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "manage_interaction",
+      "category": "gameplay",
+      "description": "Create interactive objects: doors, switches, chests, levers. Set up destructible meshes and trigger volumes.",
+      "actions": [
+        "add_destruction_component",
+        "add_interaction_events",
+        "configure_chest_properties",
+        "configure_destruction_damage",
+        "configure_destruction_effects",
+        "configure_destruction_levels",
+        "configure_door_properties",
+        "configure_interaction_trace",
+        "configure_interaction_widget",
+        "configure_switch_properties",
+        "configure_trigger_events",
+        "configure_trigger_filter",
+        "configure_trigger_response",
+        "create_chest_actor",
+        "create_door_actor",
+        "create_interactable_interface",
+        "create_interaction_component",
+        "create_lever_actor",
+        "create_switch_actor",
+        "create_trigger_actor",
+        "get_interaction_info",
+        "setup_destructible_mesh"
+      ],
+      "parameterNames": [
+        "actorName",
+        "autoClose",
+        "autoCloseDelay",
+        "blueprintPath",
+        "canToggle",
+        "chestPath",
+        "componentName",
+        "doorPath",
+        "folder",
+        "locked",
+        "lootTablePath",
+        "name",
+        "openAngle",
+        "openTime",
+        "promptTextFormat",
+        "requiresKey",
+        "resetTime",
+        "showOnHover",
+        "showPromptText",
+        "switchPath",
+        "switchType",
+        "traceDistance",
+        "traceRadius",
+        "traceType",
+        "triggerPath",
+        "triggerShape",
+        "widgetClass"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actorName": {
+            "type": "string",
+            "description": "Target actor name in the current level."
+          },
+          "autoClose": {
+            "type": "boolean",
+            "description": "Whether the door closes automatically."
+          },
+          "autoCloseDelay": {
+            "type": "number",
+            "description": "Delay in seconds before the door auto-closes."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "canToggle": {
+            "type": "boolean",
+            "description": "Whether the switch can toggle back off."
+          },
+          "chestPath": {
+            "type": "string",
+            "description": "Canonical /Game chest actor Blueprint asset path."
+          },
+          "componentName": {
+            "type": "string",
+            "description": "Name for the component added to the Blueprint."
+          },
+          "doorPath": {
+            "type": "string",
+            "description": "Canonical /Game door actor Blueprint asset path."
+          },
+          "folder": {
+            "type": "string",
+            "description": "Canonical /Game folder that receives the created asset."
+          },
+          "locked": {
+            "type": "boolean",
+            "description": "Whether the interactable starts locked."
+          },
+          "lootTablePath": {
+            "type": "string",
+            "description": "Canonical /Game loot table asset path."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the created asset or actor."
+          },
+          "openAngle": {
+            "type": "number",
+            "description": "Open angle in degrees."
+          },
+          "openTime": {
+            "type": "number",
+            "description": "Open animation duration in seconds."
+          },
+          "promptTextFormat": {
+            "type": "string",
+            "description": "Interaction prompt format string, e.g. \"Press {Key} to Interact\"."
+          },
+          "requiresKey": {
+            "type": "boolean",
+            "description": "Whether opening requires a key."
+          },
+          "resetTime": {
+            "type": "number",
+            "description": "Switch reset delay in seconds."
+          },
+          "showOnHover": {
+            "type": "boolean",
+            "description": "Whether the interaction widget appears on hover."
+          },
+          "showPromptText": {
+            "type": "boolean",
+            "description": "Whether the interaction widget shows prompt text."
+          },
+          "switchPath": {
+            "type": "string",
+            "description": "Canonical /Game switch actor Blueprint asset path."
+          },
+          "switchType": {
+            "type": "string",
+            "description": "Switch type (button, lever, or pressure_plate)."
+          },
+          "traceDistance": {
+            "type": "number",
+            "description": "Interaction trace distance in world units."
+          },
+          "traceRadius": {
+            "type": "number",
+            "description": "Interaction trace radius in world units."
+          },
+          "traceType": {
+            "type": "string",
+            "description": "Interaction trace shape (line, sphere, or box)."
+          },
+          "triggerPath": {
+            "type": "string",
+            "description": "Canonical /Game trigger actor Blueprint asset path."
+          },
+          "triggerShape": {
+            "type": "string",
+            "description": "Trigger volume shape (box, sphere, or capsule)."
+          },
+          "widgetClass": {
+            "type": "string",
+            "description": "Canonical /Game interaction widget class path."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "add_destruction_component",
+              "add_interaction_events",
+              "configure_chest_properties",
+              "configure_destruction_damage",
+              "configure_destruction_effects",
+              "configure_destruction_levels",
+              "configure_door_properties",
+              "configure_interaction_trace",
+              "configure_interaction_widget",
+              "configure_switch_properties",
+              "configure_trigger_events",
+              "configure_trigger_filter",
+              "configure_trigger_response",
+              "create_chest_actor",
+              "create_door_actor",
+              "create_interactable_interface",
+              "create_interaction_component",
+              "create_lever_actor",
+              "create_switch_actor",
+              "create_trigger_actor",
+              "get_interaction_info",
+              "setup_destructible_mesh"
+            ],
+            "description": "Action to invoke on manage_interaction."
           },
           "params": {
             "type": "object",
@@ -11083,39 +10039,39 @@ export const gatewayManifest = {
       "category": "gameplay",
       "description": "Create item data assets, inventory components, world pickups, loot tables, and crafting recipes.",
       "actions": [
-        "create_item_data_asset",
-        "set_item_properties",
-        "create_item_category",
-        "assign_item_category",
-        "create_inventory_component",
-        "configure_inventory_slots",
+        "add_crafting_component",
+        "add_equipment_functions",
         "add_inventory_functions",
+        "add_loot_entry",
+        "add_recipe_ingredient",
+        "assign_item_category",
+        "configure_equipment_effects",
+        "configure_equipment_visuals",
         "configure_inventory_events",
-        "set_inventory_replication",
-        "create_pickup_actor",
+        "configure_inventory_slots",
+        "configure_inventory_weight",
+        "configure_item_stacking",
+        "configure_loot_drop",
+        "configure_pickup_effects",
         "configure_pickup_interaction",
         "configure_pickup_respawn",
-        "configure_pickup_effects",
-        "create_equipment_component",
-        "define_equipment_slots",
-        "configure_equipment_effects",
-        "add_equipment_functions",
-        "configure_equipment_visuals",
-        "create_loot_table",
-        "add_loot_entry",
-        "configure_loot_drop",
-        "set_loot_quality_tiers",
-        "create_crafting_recipe",
         "configure_recipe_requirements",
-        "create_crafting_station",
-        "add_crafting_component",
-        "configure_item_stacking",
-        "set_item_icon",
-        "add_recipe_ingredient",
-        "remove_loot_entry",
-        "configure_inventory_weight",
         "configure_station_recipes",
-        "get_inventory_info"
+        "create_crafting_recipe",
+        "create_crafting_station",
+        "create_equipment_component",
+        "create_inventory_component",
+        "create_item_category",
+        "create_item_data_asset",
+        "create_loot_table",
+        "create_pickup_actor",
+        "define_equipment_slots",
+        "get_inventory_info",
+        "remove_loot_entry",
+        "set_inventory_replication",
+        "set_item_icon",
+        "set_item_properties",
+        "set_loot_quality_tiers"
       ],
       "parameterNames": [
         "abilityGrants",
@@ -11177,1417 +10133,545 @@ export const gatewayManifest = {
       "inputSchema": {
         "type": "object",
         "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "create_item_data_asset",
-              "set_item_properties",
-              "create_item_category",
-              "assign_item_category",
-              "create_inventory_component",
-              "configure_inventory_slots",
-              "add_inventory_functions",
-              "configure_inventory_events",
-              "set_inventory_replication",
-              "create_pickup_actor",
-              "configure_pickup_interaction",
-              "configure_pickup_respawn",
-              "configure_pickup_effects",
-              "create_equipment_component",
-              "define_equipment_slots",
-              "configure_equipment_effects",
-              "add_equipment_functions",
-              "configure_equipment_visuals",
-              "create_loot_table",
-              "add_loot_entry",
-              "configure_loot_drop",
-              "set_loot_quality_tiers",
-              "create_crafting_recipe",
-              "configure_recipe_requirements",
-              "create_crafting_station",
-              "add_crafting_component",
-              "configure_item_stacking",
-              "set_item_icon",
-              "add_recipe_ingredient",
-              "remove_loot_entry",
-              "configure_inventory_weight",
-              "configure_station_recipes",
-              "get_inventory_info"
-            ],
-            "description": "Inventory action to perform."
-          },
-          "name": {
-            "type": "string",
-            "description": "Name of the asset to create."
-          },
-          "path": {
-            "type": "string",
-            "description": "Directory path for asset creation."
-          },
-          "save": {
+          "abilityGrants": {
             "type": "boolean",
-            "description": "Save the asset(s) after the operation."
+            "description": "Whether equipment grants abilities."
+          },
+          "actorPath": {
+            "type": "string",
+            "description": "Canonical /Game actor Blueprint asset path that drops loot."
+          },
+          "attachToSocket": {
+            "type": "boolean",
+            "description": "Whether equipped items attach to a socket."
           },
           "blueprintPath": {
             "type": "string",
-            "description": "Blueprint asset path."
-          },
-          "itemPath": {
-            "type": "string",
-            "description": "Path to item data asset."
-          },
-          "iconPath": {
-            "type": "string",
-            "description": "Path to icon texture."
-          },
-          "maxStackSize": {
-            "type": "number"
-          },
-          "stackable": {
-            "type": "boolean"
-          },
-          "uniqueItems": {
-            "type": "boolean"
-          },
-          "enableWeight": {
-            "type": "boolean"
-          },
-          "encumberanceSystem": {
-            "type": "boolean"
-          },
-          "encumberanceThreshold": {
-            "type": "number"
-          },
-          "categoryPath": {
-            "type": "string",
-            "description": "Path to item category asset."
-          },
-          "componentName": {
-            "type": "string",
-            "description": "Name of the component."
-          },
-          "slotCount": {
-            "type": "number"
-          },
-          "maxWeight": {
-            "type": "number"
-          },
-          "replicated": {
-            "type": "boolean",
-            "description": "Whether to replicate."
-          },
-          "replicationCondition": {
-            "type": "string",
-            "enum": [
-              "None",
-              "OwnerOnly",
-              "SkipOwner",
-              "SimulatedOnly",
-              "AutonomousOnly",
-              "Custom"
-            ],
-            "description": "Replication condition for inventory."
-          },
-          "pickupPath": {
-            "type": "string",
-            "description": "Path to pickup actor Blueprint."
-          },
-          "interactionType": {
-            "type": "string",
-            "enum": [
-              "Overlap",
-              "Interact",
-              "Key",
-              "Hold"
-            ],
-            "description": "How player picks up item."
-          },
-          "prompt": {
-            "type": "string",
-            "description": "Prompt text."
-          },
-          "respawnable": {
-            "type": "boolean"
-          },
-          "respawnTime": {
-            "type": "number",
-            "description": "Respawn time in seconds."
+            "description": "Canonical /Game Blueprint asset path."
           },
           "bobbing": {
             "type": "boolean",
-            "description": "Enable bobbing animation."
+            "description": "Whether the pickup bobs vertically."
           },
-          "rotation": {
+          "categoryPath": {
+            "type": "string",
+            "description": "Canonical /Game item category asset path."
+          },
+          "componentName": {
+            "type": "string",
+            "description": "Name for the component added to the Blueprint."
+          },
+          "craftTime": {
+            "type": "number",
+            "description": "Craft duration in seconds."
+          },
+          "craftingSpeedMultiplier": {
+            "type": "number",
+            "description": "Crafting speed multiplier applied by the station."
+          },
+          "defaultSocket": {
+            "type": "string",
+            "description": "Default attachment socket name for equipped items."
+          },
+          "dropCount": {
+            "type": "number",
+            "description": "Number of loot stacks dropped."
+          },
+          "dropOnDeath": {
             "type": "boolean",
-            "description": "Enable rotation animation."
+            "description": "Whether loot drops when the actor dies."
+          },
+          "dropRadius": {
+            "type": "number",
+            "description": "Loot scatter radius in world units."
+          },
+          "enableWeight": {
+            "type": "boolean",
+            "description": "Whether the carry-weight system is enabled."
+          },
+          "encumberanceSystem": {
+            "type": "boolean",
+            "description": "Whether the encumberance system is enabled."
+          },
+          "encumberanceThreshold": {
+            "type": "number",
+            "description": "Encumberance threshold as a fraction of max weight."
+          },
+          "entryIndex": {
+            "type": "number",
+            "description": "Zero-based loot entry index to remove."
           },
           "glowEffect": {
             "type": "boolean",
-            "description": "Enable glow effect."
+            "description": "Whether the pickup emits a glow effect."
+          },
+          "iconPath": {
+            "type": "string",
+            "description": "Canonical /Game texture or material path used as the item icon."
+          },
+          "ingredientItemPath": {
+            "type": "string",
+            "description": "Canonical /Game ingredient item asset path."
+          },
+          "interactionType": {
+            "type": "string",
+            "description": "Pickup interaction type (Overlap, Interact, or Key)."
+          },
+          "itemPath": {
+            "type": "string",
+            "description": "Canonical /Game item definition asset path."
+          },
+          "lootTablePath": {
+            "type": "string",
+            "description": "Canonical /Game loot table asset path."
+          },
+          "lootWeight": {
+            "type": "number",
+            "description": "Relative selection weight for the loot entry."
+          },
+          "maxQuantity": {
+            "type": "number",
+            "description": "Maximum quantity granted by the loot entry."
+          },
+          "maxStackSize": {
+            "type": "number",
+            "description": "Maximum stack size."
+          },
+          "maxWeight": {
+            "type": "number",
+            "description": "Maximum carry weight."
+          },
+          "minQuantity": {
+            "type": "number",
+            "description": "Minimum quantity granted by the loot entry."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the created asset or actor."
+          },
+          "outputItemPath": {
+            "type": "string",
+            "description": "Canonical /Game item asset path produced by the recipe."
+          },
+          "outputQuantity": {
+            "type": "number",
+            "description": "Quantity produced per craft."
+          },
+          "passiveEffects": {
+            "type": "boolean",
+            "description": "Whether equipment applies passive effects."
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical /Game output path for the created asset."
+          },
+          "pickupPath": {
+            "type": "string",
+            "description": "Canonical /Game pickup Blueprint asset path."
+          },
+          "prompt": {
+            "type": "string",
+            "description": "Pickup interaction prompt text."
+          },
+          "properties": {
+            "type": "object",
+            "description": "Key-value property map.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Ingredient quantity consumed per craft."
+          },
+          "recipePath": {
+            "type": "string",
+            "description": "Canonical /Game crafting recipe asset path."
+          },
+          "recipePaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of string values."
+          },
+          "replicated": {
+            "type": "boolean",
+            "description": "Whether the inventory component replicates."
+          },
+          "replicationCondition": {
+            "type": "string",
+            "description": "Replication condition name applied to inventory state."
+          },
+          "requiredLevel": {
+            "type": "number",
+            "description": "Minimum character level required to craft."
+          },
+          "requiredStation": {
+            "type": "string",
+            "description": "Crafting station type required by the recipe."
+          },
+          "respawnTime": {
+            "type": "number",
+            "description": "Pickup respawn delay in seconds."
+          },
+          "respawnable": {
+            "type": "boolean",
+            "description": "Whether the pickup respawns after collection."
+          },
+          "rotation": {
+            "type": "boolean",
+            "description": "Whether the pickup spins in place."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the created/modified asset to disk."
+          },
+          "slotCount": {
+            "type": "number",
+            "description": "Number of inventory slots to author."
           },
           "slots": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Equipment slot names to configure."
+            "description": "List of string values."
+          },
+          "stackable": {
+            "type": "boolean",
+            "description": "Whether the item stacks."
           },
           "statModifiers": {
             "type": "boolean",
-            "description": "Enable stat modifier support when equipped."
+            "description": "Whether equipment grants stat modifiers."
           },
-          "abilityGrants": {
-            "type": "boolean",
-            "description": "Enable ability grant support when equipped."
-          },
-          "passiveEffects": {
-            "type": "boolean",
-            "description": "Enable passive effect support when equipped."
-          },
-          "attachToSocket": {
-            "type": "boolean",
-            "description": "Attach mesh to socket when equipped."
-          },
-          "lootTablePath": {
+          "stationPath": {
             "type": "string",
-            "description": "Path to loot table asset."
+            "description": "Canonical /Game crafting station Blueprint asset path."
           },
-          "lootWeight": {
-            "type": "number",
-            "description": "Weight for drop chance calculation."
-          },
-          "minQuantity": {
-            "type": "number",
-            "description": "Minimum drop quantity."
-          },
-          "maxQuantity": {
-            "type": "number",
-            "description": "Maximum drop quantity."
-          },
-          "actorPath": {
+          "stationType": {
             "type": "string",
-            "description": "Path to actor Blueprint for loot drop."
-          },
-          "dropCount": {
-            "type": "number",
-            "description": "Number of drops to roll."
-          },
-          "dropRadius": {
-            "type": "number",
-            "description": "Radius for scattered drops."
+            "description": "Crafting station type."
           },
           "tiers": {
             "type": "array",
             "items": {
               "type": "object",
+              "additionalProperties": false,
               "properties": {
                 "name": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Quality tier name."
                 },
                 "dropWeight": {
-                  "type": "number"
+                  "type": "number",
+                  "description": "Relative drop weight for the tier."
                 }
-              }
+              },
+              "required": [
+                "name",
+                "dropWeight"
+              ]
             },
-            "description": "Quality tier definitions."
+            "description": "Quality tiers, each with a name and a dropWeight."
           },
-          "recipePath": {
+          "uniqueItems": {
+            "type": "boolean",
+            "description": "Whether duplicate instances of the item are disallowed."
+          },
+          "action": {
             "type": "string",
-            "description": "Path to crafting recipe asset."
+            "enum": [
+              "add_crafting_component",
+              "add_equipment_functions",
+              "add_inventory_functions",
+              "add_loot_entry",
+              "add_recipe_ingredient",
+              "assign_item_category",
+              "configure_equipment_effects",
+              "configure_equipment_visuals",
+              "configure_inventory_events",
+              "configure_inventory_slots",
+              "configure_inventory_weight",
+              "configure_item_stacking",
+              "configure_loot_drop",
+              "configure_pickup_effects",
+              "configure_pickup_interaction",
+              "configure_pickup_respawn",
+              "configure_recipe_requirements",
+              "configure_station_recipes",
+              "create_crafting_recipe",
+              "create_crafting_station",
+              "create_equipment_component",
+              "create_inventory_component",
+              "create_item_category",
+              "create_item_data_asset",
+              "create_loot_table",
+              "create_pickup_actor",
+              "define_equipment_slots",
+              "get_inventory_info",
+              "remove_loot_entry",
+              "set_inventory_replication",
+              "set_item_icon",
+              "set_item_properties",
+              "set_loot_quality_tiers"
+            ],
+            "description": "Action to invoke on manage_inventory."
           },
-          "outputItemPath": {
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "manage_level",
+      "category": "core",
+      "description": "Load/save levels, configure streaming, and build lighting.",
+      "actions": [
+        "load",
+        "load_level",
+        "save",
+        "save_level",
+        "save_as",
+        "save_level_as",
+        "create_level",
+        "delete",
+        "delete_level",
+        "rename_level",
+        "duplicate_level",
+        "stream",
+        "unload",
+        "unload_level",
+        "create_light",
+        "build_lighting",
+        "set_metadata",
+        "list_levels",
+        "get_current_level",
+        "get_summary",
+        "validate_level",
+        "export_level",
+        "import_level",
+        "add_sublevel"
+      ],
+      "parameterNames": [
+        "assetPath",
+        "color",
+        "destinationPath",
+        "exportPath",
+        "intensity",
+        "levelName",
+        "levelPath",
+        "levelPaths",
+        "lightType",
+        "location",
+        "metadata",
+        "name",
+        "newName",
+        "overwrite",
+        "packagePath",
+        "parentLevel",
+        "parentPath",
+        "path",
+        "quality",
+        "rotation",
+        "saveDirtyPackages",
+        "savePath",
+        "shouldBeLoaded",
+        "shouldBeVisible",
+        "sourcePath",
+        "streaming",
+        "streamingMethod",
+        "subLevelPath",
+        "sublevelPath",
+        "targetPath",
+        "template",
+        "timeoutMs",
+        "useWorldPartition"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "assetPath": {
             "type": "string",
-            "description": "Path to item produced by recipe."
+            "description": "Alias of levelPath resolved by the manage_level argument normalizer."
           },
-          "outputQuantity": {
+          "color": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Linear color [r, g, b] or [r, g, b, a]."
+          },
+          "destinationPath": {
+            "type": "string",
+            "description": "Destination path for move/copy."
+          },
+          "exportPath": {
+            "type": "string",
+            "description": "Export file path."
+          },
+          "intensity": {
             "type": "number",
-            "description": "Quantity produced."
+            "description": "Light intensity."
           },
-          "craftTime": {
-            "type": "number",
-            "description": "Time in seconds to craft."
-          },
-          "ingredientItemPath": {
+          "levelName": {
             "type": "string",
-            "description": "Path to item data asset."
+            "description": "Level name identifier."
           },
-          "quantity": {
-            "type": "number"
-          },
-          "requiredLevel": {
-            "type": "number",
-            "description": "Required player level."
-          },
-          "requiredStation": {
+          "levelPath": {
             "type": "string",
-            "description": "Required crafting station type."
+            "description": "Level asset path (e.g. /Game/Maps/Demo)."
           },
-          "stationPath": {
-            "type": "string"
-          },
-          "recipePaths": {
+          "levelPaths": {
             "type": "array",
             "items": {
               "type": "string"
-            }
-          },
-          "craftingSpeedMultiplier": {
-            "type": "number"
-          },
-          "stationType": {
-            "type": "string",
-            "description": "Type of crafting station."
-          },
-          "defaultSocket": {
-            "type": "string",
-            "description": "Name of the socket."
-          },
-          "dropOnDeath": {
-            "type": "boolean"
-          },
-          "entryIndex": {
-            "type": "number"
-          },
-          "properties": {
-            "type": "object"
-          },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "manage_interaction",
-      "category": "gameplay",
-      "description": "Create interactive objects: doors, switches, chests, levers. Set up destructible meshes and trigger volumes.",
-      "actions": [
-        "create_interaction_component",
-        "configure_interaction_trace",
-        "configure_interaction_widget",
-        "add_interaction_events",
-        "create_interactable_interface",
-        "create_door_actor",
-        "configure_door_properties",
-        "create_switch_actor",
-        "configure_switch_properties",
-        "create_chest_actor",
-        "configure_chest_properties",
-        "create_lever_actor",
-        "setup_destructible_mesh",
-        "configure_destruction_levels",
-        "configure_destruction_effects",
-        "configure_destruction_damage",
-        "add_destruction_component",
-        "create_trigger_actor",
-        "configure_trigger_events",
-        "configure_trigger_filter",
-        "configure_trigger_response",
-        "get_interaction_info"
-      ],
-      "parameterNames": [
-        "actorName",
-        "autoClose",
-        "autoCloseDelay",
-        "blueprintPath",
-        "canToggle",
-        "chestPath",
-        "componentName",
-        "doorPath",
-        "folder",
-        "locked",
-        "lootTablePath",
-        "name",
-        "openAngle",
-        "openTime",
-        "promptTextFormat",
-        "requiresKey",
-        "resetTime",
-        "showOnHover",
-        "showPromptText",
-        "switchPath",
-        "switchType",
-        "traceDistance",
-        "traceRadius",
-        "traceType",
-        "triggerPath",
-        "triggerShape",
-        "widgetClass"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "create_interaction_component",
-              "configure_interaction_trace",
-              "configure_interaction_widget",
-              "add_interaction_events",
-              "create_interactable_interface",
-              "create_door_actor",
-              "configure_door_properties",
-              "create_switch_actor",
-              "configure_switch_properties",
-              "create_chest_actor",
-              "configure_chest_properties",
-              "create_lever_actor",
-              "setup_destructible_mesh",
-              "configure_destruction_levels",
-              "configure_destruction_effects",
-              "configure_destruction_damage",
-              "add_destruction_component",
-              "create_trigger_actor",
-              "configure_trigger_events",
-              "configure_trigger_filter",
-              "configure_trigger_response",
-              "get_interaction_info"
-            ],
-            "description": "The interaction action to perform."
-          },
-          "name": {
-            "type": "string",
-            "description": "Name identifier."
-          },
-          "folder": {
-            "type": "string",
-            "description": "Path to a directory."
-          },
-          "blueprintPath": {
-            "type": "string",
-            "description": "Blueprint asset path."
-          },
-          "actorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "componentName": {
-            "type": "string",
-            "description": "Name of the component."
-          },
-          "traceType": {
-            "type": "string",
-            "enum": [
-              "line",
-              "sphere",
-              "box"
-            ],
-            "description": "Type of interaction trace."
-          },
-          "traceDistance": {
-            "type": "number",
-            "description": "Trace distance."
-          },
-          "traceRadius": {
-            "type": "number",
-            "description": "Trace radius."
-          },
-          "widgetClass": {
-            "type": "string",
-            "description": "Widget class path."
-          },
-          "showOnHover": {
-            "type": "boolean",
-            "description": "Show widget when hovering."
-          },
-          "showPromptText": {
-            "type": "boolean",
-            "description": "Show interaction prompt text."
-          },
-          "promptTextFormat": {
-            "type": "string",
-            "description": "Format string for prompt (e.g., \"Press {Key} to {Action}\")."
-          },
-          "doorPath": {
-            "type": "string",
-            "description": "Path to door actor blueprint."
-          },
-          "openAngle": {
-            "type": "number",
-            "description": "Door open rotation angle in degrees."
-          },
-          "openTime": {
-            "type": "number",
-            "description": "Time to open/close door in seconds."
-          },
-          "locked": {
-            "type": "boolean",
-            "description": "Whether the item is locked."
-          },
-          "autoClose": {
-            "type": "boolean",
-            "description": "Automatically close after opening."
-          },
-          "autoCloseDelay": {
-            "type": "number",
-            "description": "Delay before auto-close in seconds."
-          },
-          "requiresKey": {
-            "type": "boolean",
-            "description": "Whether interaction requires a key item."
-          },
-          "switchPath": {
-            "type": "string",
-            "description": "Path to switch actor blueprint."
-          },
-          "switchType": {
-            "type": "string",
-            "enum": [
-              "button",
-              "lever",
-              "pressure_plate",
-              "toggle"
-            ],
-            "description": "Type of switch."
-          },
-          "resetTime": {
-            "type": "number",
-            "description": "Time to reset switch in seconds."
-          },
-          "chestPath": {
-            "type": "string",
-            "description": "Path to chest actor blueprint."
-          },
-          "lootTablePath": {
-            "type": "string",
-            "description": "Path to loot table asset."
-          },
-          "triggerPath": {
-            "type": "string",
-            "description": "Path to trigger actor blueprint."
-          },
-          "triggerShape": {
-            "type": "string",
-            "enum": [
-              "box",
-              "sphere",
-              "capsule"
-            ],
-            "description": "Shape of trigger volume."
-          },
-          "canToggle": {
-            "type": "boolean"
-          },
-          "params": {
-            "type": "object",
-            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
-            "additionalProperties": true
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "additionalProperties": true
-      },
-      "perActionSchemas": false
-    },
-    {
-      "name": "manage_networking",
-      "category": "utility",
-      "description": "Configure multiplayer and player flow: replication, RPCs, authority/relevancy, network prediction, sessions, split-screen, LAN/voice chat, game framework classes, match rules, and input mappings.",
-      "actions": [
-        "set_property_replicated",
-        "set_replication_condition",
-        "configure_net_update_frequency",
-        "configure_net_priority",
-        "set_net_dormancy",
-        "configure_replication_graph",
-        "create_rpc_function",
-        "configure_rpc_validation",
-        "set_rpc_reliability",
-        "set_owner",
-        "set_autonomous_proxy",
-        "check_has_authority",
-        "check_is_locally_controlled",
-        "configure_net_cull_distance",
-        "set_always_relevant",
-        "set_only_relevant_to_owner",
-        "configure_net_serialization",
-        "set_replicated_using",
-        "configure_push_model",
-        "configure_client_prediction",
-        "configure_server_correction",
-        "add_network_prediction_data",
-        "configure_movement_prediction",
-        "configure_net_driver",
-        "set_net_role",
-        "configure_replicated_movement",
-        "get_networking_info",
-        "configure_local_session_settings",
-        "configure_session_interface",
-        "configure_split_screen",
-        "set_split_screen_type",
-        "add_local_player",
-        "remove_local_player",
-        "configure_lan_play",
-        "host_lan_server",
-        "join_lan_server",
-        "enable_voice_chat",
-        "configure_voice_settings",
-        "set_voice_channel",
-        "mute_player",
-        "set_voice_attenuation",
-        "configure_push_to_talk",
-        "get_sessions_info",
-        "create_game_mode",
-        "create_game_state",
-        "create_player_controller",
-        "create_player_state",
-        "create_game_instance",
-        "create_hud_class",
-        "set_default_pawn_class",
-        "set_player_controller_class",
-        "set_game_state_class",
-        "set_player_state_class",
-        "configure_game_rules",
-        "setup_match_states",
-        "configure_round_system",
-        "configure_team_system",
-        "configure_scoring_system",
-        "configure_spawn_system",
-        "configure_player_start",
-        "set_respawn_rules",
-        "configure_spectating",
-        "get_game_framework_info",
-        "create_input_action",
-        "create_input_mapping_context",
-        "add_mapping",
-        "remove_mapping",
-        "add_legacy_action_mapping",
-        "remove_legacy_action_mapping",
-        "add_legacy_axis_mapping",
-        "remove_legacy_axis_mapping",
-        "map_input_action",
-        "set_input_trigger",
-        "set_input_modifier",
-        "enable_input_mapping",
-        "disable_input_action",
-        "get_input_info"
-      ],
-      "parameterNames": [
-        "actionName",
-        "actionPath",
-        "actorName",
-        "allowSpectating",
-        "alt",
-        "alwaysRelevant",
-        "assetPath",
-        "attenuationFalloff",
-        "attenuationRadius",
-        "autoBalance",
-        "axisName",
-        "bAllowInvites",
-        "bAllowJoinInProgress",
-        "bDelayedStart",
-        "bIsLANMatch",
-        "bShouldAdvertise",
-        "bUseLobbiesIfAvailable",
-        "bUsesPresence",
-        "blueprintPath",
-        "canRespawn",
-        "channelName",
-        "channelType",
-        "cmd",
-        "condition",
-        "contextPath",
-        "controllerId",
-        "correctionThreshold",
-        "ctrl",
-        "customSerialization",
-        "dataType",
-        "defaultPawnClass",
-        "dormancy",
-        "enablePrediction",
-        "enabled",
-        "executeTravel",
-        "forceRespawn",
-        "friendlyFire",
-        "functionName",
-        "gameModeBlueprint",
-        "gameStateClass",
-        "hudClass",
-        "interfaceType",
-        "intermissionTime",
-        "isAutonomousProxy",
-        "key",
-        "localPlayerNum",
-        "mapName",
-        "maxClientRate",
-        "maxInternetClientRate",
-        "maxPlayers",
-        "maxRespawns",
-        "minNetUpdateFrequency",
-        "modifierType",
-        "muted",
-        "name",
-        "netCullDistanceSquared",
-        "netLoadOnClient",
-        "netPriority",
-        "netServerMaxTickRate",
-        "netUpdateFrequency",
-        "networkMaxSmoothUpdateDistance",
-        "networkNoSmoothUpdateDistance",
-        "networkSmoothingMode",
-        "numRounds",
-        "numTeams",
-        "onlyRelevantToOwner",
-        "ownerActorName",
-        "parentClass",
-        "path",
-        "pawnClass",
-        "playerControllerClass",
-        "playerIndex",
-        "playerName",
-        "playerStateClass",
-        "predictionThreshold",
-        "priority",
-        "propertyName",
-        "pushToTalkEnabled",
-        "pushToTalkKey",
-        "reliable",
-        "repNotifyFunc",
-        "replicateMovement",
-        "replicated",
-        "replicationPolicy",
-        "respawnDelay",
-        "respawnLives",
-        "respawnLocation",
-        "role",
-        "roundTime",
-        "rpcType",
-        "save",
-        "scale",
-        "scorePerAssist",
-        "scorePerDeath",
-        "scorePerKill",
-        "scorePerObjective",
-        "serverAddress",
-        "serverName",
-        "serverPassword",
-        "serverPort",
-        "sessionName",
-        "shift",
-        "smoothingRate",
-        "spatiallyLoaded",
-        "spawnSelectionMethod",
-        "spectatorClass",
-        "spectatorViewMode",
-        "splitScreenType",
-        "states",
-        "structName",
-        "systemWide",
-        "targetPlayerId",
-        "teamIndex",
-        "teamSize",
-        "timeoutMs",
-        "travelOptions",
-        "triggerType",
-        "useOwnerNetRelevancy",
-        "usePlayerStarts",
-        "usePushModel",
-        "variableName",
-        "voiceEnabled",
-        "voiceSettings",
-        "winScore",
-        "withValidation"
-      ],
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "set_property_replicated",
-              "set_replication_condition",
-              "configure_net_update_frequency",
-              "configure_net_priority",
-              "set_net_dormancy",
-              "configure_replication_graph",
-              "create_rpc_function",
-              "configure_rpc_validation",
-              "set_rpc_reliability",
-              "set_owner",
-              "set_autonomous_proxy",
-              "check_has_authority",
-              "check_is_locally_controlled",
-              "configure_net_cull_distance",
-              "set_always_relevant",
-              "set_only_relevant_to_owner",
-              "configure_net_serialization",
-              "set_replicated_using",
-              "configure_push_model",
-              "configure_client_prediction",
-              "configure_server_correction",
-              "add_network_prediction_data",
-              "configure_movement_prediction",
-              "configure_net_driver",
-              "set_net_role",
-              "configure_replicated_movement",
-              "get_networking_info",
-              "configure_local_session_settings",
-              "configure_session_interface",
-              "configure_split_screen",
-              "set_split_screen_type",
-              "add_local_player",
-              "remove_local_player",
-              "configure_lan_play",
-              "host_lan_server",
-              "join_lan_server",
-              "enable_voice_chat",
-              "configure_voice_settings",
-              "set_voice_channel",
-              "mute_player",
-              "set_voice_attenuation",
-              "configure_push_to_talk",
-              "get_sessions_info",
-              "create_game_mode",
-              "create_game_state",
-              "create_player_controller",
-              "create_player_state",
-              "create_game_instance",
-              "create_hud_class",
-              "set_default_pawn_class",
-              "set_player_controller_class",
-              "set_game_state_class",
-              "set_player_state_class",
-              "configure_game_rules",
-              "setup_match_states",
-              "configure_round_system",
-              "configure_team_system",
-              "configure_scoring_system",
-              "configure_spawn_system",
-              "configure_player_start",
-              "set_respawn_rules",
-              "configure_spectating",
-              "get_game_framework_info",
-              "create_input_action",
-              "create_input_mapping_context",
-              "add_mapping",
-              "remove_mapping",
-              "add_legacy_action_mapping",
-              "remove_legacy_action_mapping",
-              "add_legacy_axis_mapping",
-              "remove_legacy_axis_mapping",
-              "map_input_action",
-              "set_input_trigger",
-              "set_input_modifier",
-              "enable_input_mapping",
-              "disable_input_action",
-              "get_input_info"
-            ],
-            "description": "Networking action to perform"
-          },
-          "blueprintPath": {
-            "type": "string",
-            "description": "Blueprint asset path."
-          },
-          "actorName": {
-            "type": "string",
-            "description": "Name of the actor."
-          },
-          "propertyName": {
-            "type": "string",
-            "description": "Name of the property."
-          },
-          "replicated": {
-            "type": "boolean",
-            "description": "Whether property should be replicated."
-          },
-          "condition": {
-            "type": "string",
-            "enum": [
-              "COND_None",
-              "COND_InitialOnly",
-              "COND_OwnerOnly",
-              "COND_SkipOwner",
-              "COND_SimulatedOnly",
-              "COND_AutonomousOnly",
-              "COND_SimulatedOrPhysics",
-              "COND_InitialOrOwner",
-              "COND_Custom",
-              "COND_ReplayOrOwner",
-              "COND_ReplayOnly",
-              "COND_SimulatedOnlyNoReplay",
-              "COND_SimulatedOrPhysicsNoReplay",
-              "COND_SkipReplay",
-              "COND_Never"
-            ],
-            "description": "Replication condition."
-          },
-          "repNotifyFunc": {
-            "type": "string",
-            "description": "RepNotify function name."
-          },
-          "netUpdateFrequency": {
-            "type": "number",
-            "description": "How often actor replicates (Hz, default 100)."
-          },
-          "minNetUpdateFrequency": {
-            "type": "number",
-            "description": "Minimum update frequency when idle (Hz, default 2)."
-          },
-          "netPriority": {
-            "type": "number",
-            "description": "Network priority for bandwidth (default 1.0)."
-          },
-          "dormancy": {
-            "type": "string",
-            "enum": [
-              "DORM_Never",
-              "DORM_Awake",
-              "DORM_DormantAll",
-              "DORM_DormantPartial",
-              "DORM_Initial"
-            ],
-            "description": "Net dormancy mode."
-          },
-          "functionName": {
-            "type": "string",
-            "description": "Name of the function."
-          },
-          "rpcType": {
-            "type": "string",
-            "enum": [
-              "Server",
-              "Client",
-              "NetMulticast"
-            ],
-            "description": "Type of RPC."
-          },
-          "reliable": {
-            "type": "boolean",
-            "description": "Whether the operation is reliable."
-          },
-          "withValidation": {
-            "type": "boolean",
-            "description": "Enable RPC validation."
-          },
-          "ownerActorName": {
-            "type": "string",
-            "description": "Name of owner actor (null to clear)."
-          },
-          "isAutonomousProxy": {
-            "type": "boolean",
-            "description": "Configure as autonomous proxy."
-          },
-          "netCullDistanceSquared": {
-            "type": "number",
-            "description": "Network cull distance squared."
-          },
-          "useOwnerNetRelevancy": {
-            "type": "boolean",
-            "description": "Use owner relevancy."
-          },
-          "alwaysRelevant": {
-            "type": "boolean",
-            "description": "Always relevant to all clients."
-          },
-          "onlyRelevantToOwner": {
-            "type": "boolean",
-            "description": "Only relevant to owner."
-          },
-          "structName": {
-            "type": "string",
-            "description": "Name of struct for custom serialization."
-          },
-          "usePushModel": {
-            "type": "boolean",
-            "description": "Use push-model replication."
-          },
-          "enablePrediction": {
-            "type": "boolean",
-            "description": "Enable client-side prediction."
-          },
-          "correctionThreshold": {
-            "type": "number",
-            "description": "Server correction threshold."
-          },
-          "smoothingRate": {
-            "type": "number",
-            "description": "Smoothing rate for corrections."
-          },
-          "dataType": {
-            "type": "string",
-            "enum": [
-              "Transform",
-              "Vector",
-              "Rotator",
-              "Float"
-            ],
-            "description": "Network prediction data type."
-          },
-          "networkSmoothingMode": {
-            "type": "string",
-            "enum": [
-              "Disabled",
-              "Linear",
-              "Exponential"
-            ],
-            "description": "Movement smoothing mode."
-          },
-          "networkMaxSmoothUpdateDistance": {
-            "type": "number",
-            "description": "Max smooth update distance."
-          },
-          "networkNoSmoothUpdateDistance": {
-            "type": "number",
-            "description": "No smooth update distance."
-          },
-          "maxClientRate": {
-            "type": "number",
-            "description": "Max client rate."
-          },
-          "maxInternetClientRate": {
-            "type": "number",
-            "description": "Max internet client rate."
-          },
-          "netServerMaxTickRate": {
-            "type": "number",
-            "description": "Server max tick rate."
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "ROLE_None",
-              "ROLE_SimulatedProxy",
-              "ROLE_AutonomousProxy",
-              "ROLE_Authority"
-            ],
-            "description": "Net role."
-          },
-          "replicateMovement": {
-            "type": "boolean",
-            "description": "Replicate movement."
-          },
-          "spatiallyLoaded": {
-            "type": "boolean",
-            "description": "Spatially loaded for replication graph."
-          },
-          "netLoadOnClient": {
-            "type": "boolean",
-            "description": "Net load on client for replication graph."
-          },
-          "replicationPolicy": {
-            "type": "string",
-            "description": "Replication policy for replication graph."
-          },
-          "customSerialization": {
-            "type": "boolean",
-            "description": "Use custom serialization."
-          },
-          "predictionThreshold": {
-            "type": "number",
-            "description": "Prediction threshold for client prediction."
-          },
-          "sessionName": {
-            "type": "string",
-            "description": "Name of the session."
-          },
-          "maxPlayers": {
-            "type": "number"
-          },
-          "bIsLANMatch": {
-            "type": "boolean",
-            "description": "Whether this is a LAN match."
-          },
-          "bAllowJoinInProgress": {
-            "type": "boolean",
-            "description": "Allow joining games in progress."
-          },
-          "bAllowInvites": {
-            "type": "boolean",
-            "description": "Allow player invites."
-          },
-          "bUsesPresence": {
-            "type": "boolean",
-            "description": "Use presence for session discovery."
-          },
-          "bUseLobbiesIfAvailable": {
-            "type": "boolean",
-            "description": "Use lobby system if available."
-          },
-          "bShouldAdvertise": {
-            "type": "boolean",
-            "description": "Advertise session publicly."
-          },
-          "interfaceType": {
-            "type": "string",
-            "enum": [
-              "Default",
-              "LAN",
-              "Null"
-            ],
-            "description": "Type of session interface to use. REQUIRED for configure_session_interface."
-          },
-          "enabled": {
-            "type": "boolean",
-            "description": "Whether the item/feature is enabled."
-          },
-          "splitScreenType": {
-            "type": "string",
-            "enum": [
-              "None",
-              "TwoPlayer_Horizontal",
-              "TwoPlayer_Vertical",
-              "ThreePlayer_FavorTop",
-              "ThreePlayer_FavorBottom",
-              "FourPlayer_Grid"
-            ],
-            "description": "Split-screen layout type. REQUIRED for set_split_screen_type."
-          },
-          "playerIndex": {
-            "type": "number",
-            "description": "Local player index. REQUIRED for remove_local_player."
-          },
-          "controllerId": {
-            "type": "number",
-            "description": "Controller ID for player input. REQUIRED for add_local_player."
-          },
-          "serverAddress": {
-            "type": "string",
-            "description": "Server IP address. REQUIRED for join_lan_server."
-          },
-          "serverPort": {
-            "type": "number"
-          },
-          "serverPassword": {
-            "type": "string",
-            "description": "Server password for protected games."
-          },
-          "serverName": {
-            "type": "string",
-            "description": "Display name for the server."
-          },
-          "mapName": {
-            "type": "string",
-            "description": "Map to load for hosting. REQUIRED for host_lan_server."
-          },
-          "travelOptions": {
-            "type": "string",
-            "description": "Travel URL options string."
-          },
-          "voiceEnabled": {
-            "type": "boolean",
-            "description": "Enable/disable voice chat. REQUIRED for enable_voice_chat."
-          },
-          "voiceSettings": {
-            "type": "object",
-            "properties": {
-              "volume": {
-                "type": "number",
-                "description": "Voice volume (0.0 - 1.0)."
-              },
-              "noiseGateThreshold": {
-                "type": "number",
-                "description": "Noise gate threshold."
-              },
-              "noiseSuppression": {
-                "type": "boolean",
-                "description": "Enable noise suppression."
-              },
-              "echoCancellation": {
-                "type": "boolean",
-                "description": "Enable echo cancellation."
-              },
-              "sampleRate": {
-                "type": "number",
-                "description": "Audio sample rate in Hz."
-              }
             },
-            "description": "Voice processing settings. REQUIRED for configure_voice_settings."
+            "description": "Array of level asset paths."
           },
-          "channelName": {
+          "lightType": {
             "type": "string",
-            "description": "Voice channel name. REQUIRED for set_voice_channel."
+            "description": "Light type: Point, Directional, Spot, Sky, or Rect (short/class/lowercase accepted)."
           },
-          "channelType": {
-            "type": "string",
-            "enum": [
-              "Team",
-              "Global",
-              "Proximity",
-              "Party"
-            ],
-            "description": "Voice channel type."
+          "location": {
+            "type": "object",
+            "description": "Actor world location {x, y, z}.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
           },
-          "playerName": {
-            "type": "string",
-            "description": "Player name for voice operations. REQUIRED for mute_player (or targetPlayerId)."
-          },
-          "targetPlayerId": {
-            "type": "string",
-            "description": "Target player ID. REQUIRED for mute_player (or playerName)."
-          },
-          "muted": {
-            "type": "boolean",
-            "description": "Whether the item is muted."
-          },
-          "attenuationRadius": {
-            "type": "number",
-            "description": "Radius for voice attenuation (Proximity chat). REQUIRED for set_voice_attenuation."
-          },
-          "attenuationFalloff": {
-            "type": "number",
-            "description": "Falloff rate for voice attenuation."
-          },
-          "pushToTalkEnabled": {
-            "type": "boolean",
-            "description": "Enable push-to-talk mode. REQUIRED for configure_push_to_talk."
-          },
-          "pushToTalkKey": {
-            "type": "string",
-            "description": "Key binding for push-to-talk."
+          "metadata": {
+            "type": "object",
+            "description": "Metadata key/value pairs to write.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
           },
           "name": {
             "type": "string",
-            "description": "Name identifier."
+            "description": "Light actor name."
+          },
+          "newName": {
+            "type": "string",
+            "description": "New name for the level asset."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "description": "Overwrite if the destination already exists."
+          },
+          "packagePath": {
+            "type": "string",
+            "description": "Package path for import."
+          },
+          "parentLevel": {
+            "type": "string",
+            "description": "Parent level path for the sub-level."
+          },
+          "parentPath": {
+            "type": "string",
+            "description": "Parent directory path for the sub-level."
           },
           "path": {
             "type": "string",
-            "description": "Directory path for asset creation."
+            "description": "Alias of levelPath resolved by the manage_level argument normalizer."
           },
-          "gameModeBlueprint": {
+          "quality": {
             "type": "string",
-            "description": "Path to GameMode blueprint to configure."
+            "description": "Lighting build quality: Preview, Medium, High, or Production."
           },
-          "parentClass": {
-            "type": "string",
-            "description": "Path or name of the parent class."
+          "rotation": {
+            "type": "object",
+            "description": "Actor rotation {pitch, yaw, roll} or {x, y, z, w}.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
           },
-          "pawnClass": {
-            "type": "string",
-            "description": "Pawn class to use."
-          },
-          "defaultPawnClass": {
-            "type": "string",
-            "description": "Default pawn class for GameMode."
-          },
-          "playerControllerClass": {
-            "type": "string",
-            "description": "PlayerController class path."
-          },
-          "gameStateClass": {
-            "type": "string",
-            "description": "GameState class path."
-          },
-          "playerStateClass": {
-            "type": "string",
-            "description": "PlayerState class path."
-          },
-          "spectatorClass": {
-            "type": "string",
-            "description": "Spectator pawn class."
-          },
-          "hudClass": {
-            "type": "string",
-            "description": "HUD class path."
-          },
-          "bDelayedStart": {
+          "saveDirtyPackages": {
             "type": "boolean",
-            "description": "Whether to delay match start."
+            "description": "Save dirty packages before the operation."
           },
-          "states": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "enum": [
-                    "waiting",
-                    "warmup",
-                    "in_progress",
-                    "post_match",
-                    "custom"
-                  ]
-                },
-                "duration": {
-                  "type": "number",
-                  "description": "Duration in seconds."
-                },
-                "customName": {
-                  "type": "string",
-                  "description": "Custom state name if name is \"custom\"."
-                }
-              }
-            },
-            "description": "Match state definitions."
-          },
-          "numRounds": {
-            "type": "number"
-          },
-          "roundTime": {
-            "type": "number"
-          },
-          "intermissionTime": {
-            "type": "number"
-          },
-          "numTeams": {
-            "type": "number"
-          },
-          "teamSize": {
-            "type": "number"
-          },
-          "autoBalance": {
-            "type": "boolean",
-            "description": "Enable automatic team balancing."
-          },
-          "friendlyFire": {
-            "type": "boolean",
-            "description": "Enable friendly fire damage."
-          },
-          "teamIndex": {
-            "type": "number",
-            "description": "Team index for PlayerStart."
-          },
-          "scorePerKill": {
-            "type": "number",
-            "description": "Points awarded per kill."
-          },
-          "scorePerObjective": {
-            "type": "number",
-            "description": "Points awarded per objective."
-          },
-          "scorePerAssist": {
-            "type": "number",
-            "description": "Points awarded per assist."
-          },
-          "spawnSelectionMethod": {
+          "savePath": {
             "type": "string",
-            "enum": [
-              "Random",
-              "RoundRobin",
-              "FarthestFromEnemies"
-            ],
-            "description": "How to select spawn points."
+            "description": "Path to save the level asset."
           },
-          "respawnDelay": {
-            "type": "number"
-          },
-          "respawnLocation": {
-            "type": "string",
-            "enum": [
-              "PlayerStart",
-              "LastDeath",
-              "TeamBase"
-            ],
-            "description": "Where players respawn."
-          },
-          "usePlayerStarts": {
+          "shouldBeLoaded": {
             "type": "boolean",
-            "description": "Use PlayerStart actors."
+            "description": "Whether the level should be loaded."
           },
-          "allowSpectating": {
+          "shouldBeVisible": {
             "type": "boolean",
-            "description": "Allow spectator mode."
+            "description": "Whether the level should be visible."
           },
-          "spectatorViewMode": {
+          "sourcePath": {
             "type": "string",
-            "enum": [
-              "FreeCam",
-              "ThirdPerson",
-              "FirstPerson",
-              "DeathCam"
-            ],
-            "description": "Spectator view mode."
+            "description": "Source path for import/move/copy."
           },
-          "save": {
+          "streaming": {
             "type": "boolean",
-            "description": "Save the asset(s) after the operation."
+            "description": "Load the level in streaming mode."
           },
-          "contextPath": {
+          "streamingMethod": {
             "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
+            "description": "Streaming method: Blueprint or AlwaysLoaded."
           },
-          "actionPath": {
+          "subLevelPath": {
             "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
+            "description": "Sub-level asset path to add as a streaming child."
           },
-          "actionName": {
+          "sublevelPath": {
             "type": "string",
-            "description": "Legacy input action mapping name."
+            "description": "Alias of subLevelPath resolved by the manage_level argument normalizer."
           },
-          "axisName": {
+          "targetPath": {
             "type": "string",
-            "description": "Legacy input axis mapping name."
+            "description": "Alias of destinationPath resolved by the manage_level argument normalizer."
           },
-          "key": {
-            "type": "string"
-          },
-          "scale": {
-            "type": "number",
-            "description": "Legacy input axis scale."
-          },
-          "shift": {
-            "type": "boolean",
-            "description": "Require Shift for a legacy action mapping."
-          },
-          "ctrl": {
-            "type": "boolean",
-            "description": "Require Ctrl for a legacy action mapping."
-          },
-          "alt": {
-            "type": "boolean",
-            "description": "Require Alt for a legacy action mapping."
-          },
-          "cmd": {
-            "type": "boolean",
-            "description": "Require Cmd for a legacy action mapping."
-          },
-          "triggerType": {
-            "type": "string"
-          },
-          "modifierType": {
-            "type": "string"
-          },
-          "assetPath": {
+          "template": {
             "type": "string",
-            "description": "Asset path (e.g., /Game/Path/Asset)."
-          },
-          "priority": {
-            "type": "number",
-            "description": "Priority for input mapping context (default: 0)."
+            "description": "Level template path accepted for compatibility; create_level dispatch does not apply it."
           },
           "timeoutMs": {
-            "type": "number"
+            "type": "number",
+            "description": "Operation timeout in milliseconds."
           },
-          "canRespawn": {
-            "type": "boolean"
+          "useWorldPartition": {
+            "type": "boolean",
+            "description": "Create the level with World Partition enabled."
           },
-          "executeTravel": {
-            "type": "boolean"
-          },
-          "forceRespawn": {
-            "type": "boolean"
-          },
-          "localPlayerNum": {
-            "type": "number"
-          },
-          "maxRespawns": {
-            "type": "number"
-          },
-          "respawnLives": {
-            "type": "number"
-          },
-          "scorePerDeath": {
-            "type": "number"
-          },
-          "systemWide": {
-            "type": "boolean"
-          },
-          "variableName": {
+          "action": {
             "type": "string",
-            "description": "Name of the variable."
-          },
-          "winScore": {
-            "type": "number"
+            "enum": [
+              "load",
+              "load_level",
+              "save",
+              "save_level",
+              "save_as",
+              "save_level_as",
+              "create_level",
+              "delete",
+              "delete_level",
+              "rename_level",
+              "duplicate_level",
+              "stream",
+              "unload",
+              "unload_level",
+              "create_light",
+              "build_lighting",
+              "set_metadata",
+              "list_levels",
+              "get_current_level",
+              "get_summary",
+              "validate_level",
+              "export_level",
+              "import_level",
+              "add_sublevel"
+            ],
+            "description": "Action to invoke on manage_level."
           },
           "params": {
             "type": "object",
@@ -12735,6 +10819,545 @@ export const gatewayManifest = {
       "inputSchema": {
         "type": "object",
         "properties": {
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "actorPath": {
+            "type": "string",
+            "description": "Actor path in the level."
+          },
+          "bAutoCalculateBounds": {
+            "type": "boolean",
+            "description": "Auto-calculate bounds from content."
+          },
+          "bBlockOnSlowStreaming": {
+            "type": "boolean",
+            "description": "Block on slow streaming."
+          },
+          "bCreateWorldPartition": {
+            "type": "boolean",
+            "description": "Create with World Partition enabled."
+          },
+          "bDisableDistanceStreaming": {
+            "type": "boolean",
+            "description": "Disable distance-based streaming."
+          },
+          "bEnableWorldPartition": {
+            "type": "boolean",
+            "description": "Enable World Partition for level."
+          },
+          "bEnabled": {
+            "type": "boolean",
+            "description": "Whether the audio volume is enabled."
+          },
+          "bIsInitiallyLoaded": {
+            "type": "boolean",
+            "description": "Data layer initially loaded."
+          },
+          "bIsInitiallyVisible": {
+            "type": "boolean",
+            "description": "Data layer initially visible."
+          },
+          "bIsSpatiallyLoaded": {
+            "type": "boolean",
+            "description": "HLOD is spatially loaded."
+          },
+          "bPackBlueprints": {
+            "type": "boolean",
+            "description": "Include blueprints in packed level."
+          },
+          "bPackStaticMeshes": {
+            "type": "boolean",
+            "description": "Include static meshes in packed level."
+          },
+          "bPainCausing": {
+            "type": "boolean",
+            "description": "Whether the volume causes pain/damage."
+          },
+          "bShouldBeVisible": {
+            "type": "boolean",
+            "description": "Level should be visible when loaded."
+          },
+          "bShouldBlockOnLoad": {
+            "type": "boolean",
+            "description": "Block game until level is loaded."
+          },
+          "bUnbound": {
+            "type": "boolean",
+            "description": "Whether post process volume affects entire world."
+          },
+          "bUseExternalActors": {
+            "type": "boolean",
+            "description": "Enable One File Per Actor (OFPA) for Data Layer compatibility."
+          },
+          "bWaterVolume": {
+            "type": "boolean",
+            "description": "Whether this is a water volume."
+          },
+          "blendRadius": {
+            "type": "number",
+            "description": "Blend radius for post process volume."
+          },
+          "blendWeight": {
+            "type": "number",
+            "description": "Blend weight (0.0-1.0) for post process."
+          },
+          "bounds": {
+            "type": "object",
+            "description": "Bounds {origin, extent}.",
+            "properties": {
+              "origin": {
+                "type": "object",
+                "description": "Origin.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "extent": {
+                "type": "object",
+                "description": "Extent.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "boundsExtent": {
+            "type": "object",
+            "description": "Extent of level bounds.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "boundsOrigin": {
+            "type": "object",
+            "description": "Origin of level bounds.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "boxExtent": {
+            "type": "object",
+            "description": "Extent for box trigger volumes.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "capsuleHalfHeight": {
+            "type": "number",
+            "description": "Half-height for capsule trigger volumes."
+          },
+          "capsuleRadius": {
+            "type": "number",
+            "description": "Radius for capsule trigger volumes."
+          },
+          "cellSize": {
+            "type": "number",
+            "description": "HLOD cell size."
+          },
+          "createIfMissing": {
+            "type": "boolean",
+            "description": "Create the grid if missing."
+          },
+          "createVolume": {
+            "type": "boolean",
+            "description": "Create a streaming volume (true) or report existing volumes (false)."
+          },
+          "cullDistances": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "size": {
+                  "type": "number",
+                  "description": "Object size threshold."
+                },
+                "cullDistance": {
+                  "type": "number",
+                  "description": "Distance at which to cull."
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Size/distance pairs for cull distance volumes."
+          },
+          "damagePerSec": {
+            "type": "number",
+            "description": "Damage per second for pain volumes."
+          },
+          "dataLayerName": {
+            "type": "string",
+            "description": "Data layer name."
+          },
+          "dataLayerType": {
+            "type": "string",
+            "description": "Type of data layer: Runtime or Editor."
+          },
+          "extent": {
+            "type": "object",
+            "description": "Extent (half-size) of the volume in each axis.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "fadeTime": {
+            "type": "number",
+            "description": "Fade time for audio volume."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Type filter for get_volumes_info (e.g. \"Trigger\", \"Physics\")."
+          },
+          "fluidFriction": {
+            "type": "number",
+            "description": "Fluid friction for physics volumes."
+          },
+          "gridCellSize": {
+            "type": "number",
+            "description": "World Partition grid cell size."
+          },
+          "gridName": {
+            "type": "string",
+            "description": "World Partition runtime hash set grid name."
+          },
+          "hlodLayerName": {
+            "type": "string",
+            "description": "HLOD layer name."
+          },
+          "hlodLayerPath": {
+            "type": "string",
+            "description": "Canonical /Game HLOD layer asset path."
+          },
+          "instanceLocation": {
+            "type": "object",
+            "description": "Location of the level instance.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "instanceRotation": {
+            "type": "object",
+            "description": "Rotation of the level instance.",
+            "properties": {
+              "pitch": {
+                "type": "number",
+                "description": "Pitch"
+              },
+              "yaw": {
+                "type": "number",
+                "description": "Yaw"
+              },
+              "roll": {
+                "type": "number",
+                "description": "Roll"
+              }
+            },
+            "additionalProperties": false
+          },
+          "instanceScale": {
+            "type": "object",
+            "description": "Scale of the level instance.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "layerType": {
+            "type": "string",
+            "description": "Layer type for runtime hash set grid."
+          },
+          "levelAssetPath": {
+            "type": "string",
+            "description": "Canonical /Game level asset path for instancing."
+          },
+          "levelInstanceName": {
+            "type": "string",
+            "description": "Level instance actor name."
+          },
+          "levelName": {
+            "type": "string",
+            "description": "Level asset name."
+          },
+          "levelPath": {
+            "type": "string",
+            "description": "Canonical /Game level asset path."
+          },
+          "loadingDistance": {
+            "type": "number",
+            "description": "HLOD loading distance."
+          },
+          "loadingRange": {
+            "type": "number",
+            "description": "Loading range for grid cells."
+          },
+          "location": {
+            "type": "object",
+            "description": "World location {x, y, z}.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "nodeClass": {
+            "type": "string",
+            "description": "Level blueprint graph node class."
+          },
+          "nodeName": {
+            "type": "string",
+            "description": "Level blueprint node name."
+          },
+          "nodePosition": {
+            "type": "object",
+            "description": "Node graph position {x, y}.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              }
+            },
+            "additionalProperties": false
+          },
+          "packedLevelName": {
+            "type": "string",
+            "description": "Name for the packed level actor."
+          },
+          "parentLevel": {
+            "type": "string",
+            "description": "Parent level asset path."
+          },
+          "priority": {
+            "type": "number",
+            "description": "Priority for audio volume."
+          },
+          "reverbVolume": {
+            "type": "number",
+            "description": "Volume level for reverb (0.0-1.0)."
+          },
+          "rotation": {
+            "type": "object",
+            "description": "Rotation {pitch, yaw, roll}.",
+            "properties": {
+              "pitch": {
+                "type": "number",
+                "description": "Pitch"
+              },
+              "yaw": {
+                "type": "number",
+                "description": "Yaw"
+              },
+              "roll": {
+                "type": "number",
+                "description": "Roll"
+              }
+            },
+            "additionalProperties": false
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Whether to save the level after the operation."
+          },
+          "sourceNodeName": {
+            "type": "string",
+            "description": "Source node name for connection."
+          },
+          "sourcePinName": {
+            "type": "string",
+            "description": "Source pin name."
+          },
+          "sphereRadius": {
+            "type": "number",
+            "description": "Radius for sphere trigger volumes."
+          },
+          "streamingDistance": {
+            "type": "number",
+            "description": "Distance/radius for streaming volume."
+          },
+          "streamingMethod": {
+            "type": "string",
+            "description": "Level streaming method: Blueprint, AlwaysLoaded, or Disabled."
+          },
+          "streamingUsage": {
+            "type": "string",
+            "description": "Streaming volume usage mode."
+          },
+          "sublevelName": {
+            "type": "string",
+            "description": "Sub-level asset name."
+          },
+          "sublevelPath": {
+            "type": "string",
+            "description": "Sub-level asset path."
+          },
+          "targetNodeName": {
+            "type": "string",
+            "description": "Target node name for connection."
+          },
+          "targetPinName": {
+            "type": "string",
+            "description": "Target pin name."
+          },
+          "terminalVelocity": {
+            "type": "number",
+            "description": "Terminal velocity in the volume."
+          },
+          "volumeExtent": {
+            "type": "object",
+            "description": "Extent of the volume.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "volumeLocation": {
+            "type": "object",
+            "description": "Location of the volume.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "volumeName": {
+            "type": "string",
+            "description": "Volume actor name."
+          },
+          "volumeType": {
+            "type": "string",
+            "description": "Volume type for get_volumes_info."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -12784,467 +11407,2859 @@ export const gatewayManifest = {
               "remove_volume",
               "get_volumes_info"
             ],
-            "description": "Level structure action to perform."
+            "description": "Action to invoke on manage_level_structure."
           },
-          "levelName": {
-            "type": "string"
-          },
-          "levelPath": {
-            "type": "string",
-            "description": "Level asset path."
-          },
-          "parentLevel": {
-            "type": "string",
-            "description": "Parent level path."
-          },
-          "bCreateWorldPartition": {
-            "type": "boolean",
-            "description": "Create with World Partition enabled."
-          },
-          "bUseExternalActors": {
-            "type": "boolean",
-            "description": "Enable One File Per Actor (OFPA/External Actors) for Data Layer compatibility. Automatically enabled when bCreateWorldPartition is true."
-          },
-          "sublevelName": {
-            "type": "string",
-            "description": "Name of the sublevel."
-          },
-          "sublevelPath": {
-            "type": "string",
-            "description": "Level asset path."
-          },
-          "streamingMethod": {
-            "type": "string",
-            "enum": [
-              "Blueprint",
-              "AlwaysLoaded",
-              "Disabled"
-            ],
-            "description": "Level streaming method."
-          },
-          "bShouldBeVisible": {
-            "type": "boolean",
-            "description": "Level should be visible when loaded."
-          },
-          "bShouldBlockOnLoad": {
-            "type": "boolean",
-            "description": "Block game until level is loaded."
-          },
-          "bDisableDistanceStreaming": {
-            "type": "boolean",
-            "description": "Disable distance-based streaming."
-          },
-          "streamingDistance": {
-            "type": "number",
-            "description": "Distance/radius for streaming volume (creates ALevelStreamingVolume)."
-          },
-          "streamingUsage": {
-            "type": "string",
-            "enum": [
-              "Loading",
-              "LoadingAndVisibility",
-              "VisibilityBlockingOnLoad",
-              "BlockingOnLoad",
-              "LoadingNotVisible"
-            ],
-            "description": "Streaming volume usage mode (default: LoadingAndVisibility)."
-          },
-          "createVolume": {
-            "type": "boolean",
-            "description": "Create a streaming volume (true) or just report existing volumes (false). Default: true."
-          },
-          "boundsOrigin": {
+          "params": {
             "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "Origin of level bounds."
-          },
-          "boundsExtent": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "Extent of level bounds."
-          },
-          "bAutoCalculateBounds": {
-            "type": "boolean",
-            "description": "Auto-calculate bounds from content."
-          },
-          "bEnableWorldPartition": {
-            "type": "boolean",
-            "description": "Enable World Partition for level."
-          },
-          "gridCellSize": {
-            "type": "number",
-            "description": "World Partition grid cell size."
-          },
-          "loadingRange": {
-            "type": "number",
-            "description": "Loading range for grid cells."
-          },
-          "dataLayerName": {
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "manage_networking",
+      "category": "utility",
+      "description": "Configure multiplayer and player flow: replication, RPCs, authority/relevancy, network prediction, sessions, split-screen, LAN/voice chat, game framework classes, match rules, and input mappings.",
+      "actions": [
+        "add_legacy_action_mapping",
+        "add_legacy_axis_mapping",
+        "add_local_player",
+        "add_mapping",
+        "add_network_prediction_data",
+        "check_has_authority",
+        "check_is_locally_controlled",
+        "configure_client_prediction",
+        "configure_game_rules",
+        "configure_lan_play",
+        "configure_local_session_settings",
+        "configure_movement_prediction",
+        "configure_net_cull_distance",
+        "configure_net_driver",
+        "configure_net_priority",
+        "configure_net_serialization",
+        "configure_net_update_frequency",
+        "configure_player_start",
+        "configure_push_model",
+        "configure_push_to_talk",
+        "configure_replicated_movement",
+        "configure_replication_graph",
+        "configure_round_system",
+        "configure_rpc_validation",
+        "configure_scoring_system",
+        "configure_server_correction",
+        "configure_session_interface",
+        "configure_spawn_system",
+        "configure_spectating",
+        "configure_split_screen",
+        "configure_team_system",
+        "configure_voice_settings",
+        "create_game_instance",
+        "create_game_mode",
+        "create_game_state",
+        "create_hud_class",
+        "create_input_action",
+        "create_input_mapping_context",
+        "create_player_controller",
+        "create_player_state",
+        "create_rpc_function",
+        "disable_input_action",
+        "enable_input_mapping",
+        "enable_voice_chat",
+        "get_game_framework_info",
+        "get_input_info",
+        "get_networking_info",
+        "get_sessions_info",
+        "host_lan_server",
+        "join_lan_server",
+        "map_input_action",
+        "mute_player",
+        "remove_legacy_action_mapping",
+        "remove_legacy_axis_mapping",
+        "remove_local_player",
+        "remove_mapping",
+        "set_always_relevant",
+        "set_autonomous_proxy",
+        "set_default_pawn_class",
+        "set_game_state_class",
+        "set_input_modifier",
+        "set_input_trigger",
+        "set_net_dormancy",
+        "set_net_role",
+        "set_only_relevant_to_owner",
+        "set_owner",
+        "set_player_controller_class",
+        "set_player_state_class",
+        "set_property_replicated",
+        "set_replicated_using",
+        "set_replication_condition",
+        "set_respawn_rules",
+        "set_rpc_reliability",
+        "set_split_screen_type",
+        "set_voice_attenuation",
+        "set_voice_channel",
+        "setup_match_states"
+      ],
+      "parameterNames": [
+        "actionName",
+        "actionPath",
+        "actorName",
+        "allowSpectating",
+        "alt",
+        "alwaysRelevant",
+        "assetPath",
+        "attenuationFalloff",
+        "attenuationRadius",
+        "autoBalance",
+        "axisName",
+        "bAllowInvites",
+        "bAllowJoinInProgress",
+        "bDelayedStart",
+        "bIsLANMatch",
+        "bShouldAdvertise",
+        "bUseLobbiesIfAvailable",
+        "bUsesPresence",
+        "blueprintPath",
+        "canRespawn",
+        "channelName",
+        "channelType",
+        "cmd",
+        "condition",
+        "contextPath",
+        "controllerId",
+        "correctionThreshold",
+        "ctrl",
+        "customSerialization",
+        "dataType",
+        "defaultPawnClass",
+        "dormancy",
+        "enablePrediction",
+        "enabled",
+        "executeTravel",
+        "forceRespawn",
+        "friendlyFire",
+        "functionName",
+        "gameModeBlueprint",
+        "gameStateClass",
+        "hudClass",
+        "interfaceType",
+        "intermissionTime",
+        "isAutonomousProxy",
+        "key",
+        "localPlayerNum",
+        "mapName",
+        "maxClientRate",
+        "maxInternetClientRate",
+        "maxPlayers",
+        "maxRespawns",
+        "minNetUpdateFrequency",
+        "modifierType",
+        "muted",
+        "name",
+        "netCullDistanceSquared",
+        "netLoadOnClient",
+        "netPriority",
+        "netServerMaxTickRate",
+        "netUpdateFrequency",
+        "networkMaxSmoothUpdateDistance",
+        "networkNoSmoothUpdateDistance",
+        "networkSmoothingMode",
+        "numRounds",
+        "numTeams",
+        "onlyRelevantToOwner",
+        "ownerActorName",
+        "parentClass",
+        "path",
+        "pawnClass",
+        "playerControllerClass",
+        "playerIndex",
+        "playerName",
+        "playerStateClass",
+        "predictionThreshold",
+        "priority",
+        "propertyName",
+        "pushToTalkEnabled",
+        "pushToTalkKey",
+        "reliable",
+        "repNotifyFunc",
+        "replicateMovement",
+        "replicated",
+        "replicationPolicy",
+        "respawnDelay",
+        "respawnLives",
+        "respawnLocation",
+        "role",
+        "roundTime",
+        "rpcType",
+        "save",
+        "scale",
+        "scorePerAssist",
+        "scorePerDeath",
+        "scorePerKill",
+        "scorePerObjective",
+        "serverAddress",
+        "serverName",
+        "serverPassword",
+        "serverPort",
+        "sessionName",
+        "shift",
+        "smoothingRate",
+        "spatiallyLoaded",
+        "spawnSelectionMethod",
+        "spectatorClass",
+        "spectatorViewMode",
+        "splitScreenType",
+        "states",
+        "structName",
+        "systemWide",
+        "targetPlayerId",
+        "teamIndex",
+        "teamSize",
+        "timeoutMs",
+        "travelOptions",
+        "triggerType",
+        "useOwnerNetRelevancy",
+        "usePlayerStarts",
+        "usePushModel",
+        "variableName",
+        "voiceEnabled",
+        "voiceSettings",
+        "winScore",
+        "withValidation"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actionName": {
             "type": "string",
-            "description": "Name of the data layer."
+            "description": "actionName"
           },
-          "bIsInitiallyVisible": {
-            "type": "boolean",
-            "description": "Data layer initially visible."
-          },
-          "bIsInitiallyLoaded": {
-            "type": "boolean",
-            "description": "Data layer initially loaded."
-          },
-          "dataLayerType": {
+          "actionPath": {
             "type": "string",
-            "enum": [
-              "Runtime",
-              "Editor"
-            ],
-            "description": "Type of data layer."
+            "description": "actionPath"
           },
           "actorName": {
             "type": "string",
-            "description": "Name of the actor."
+            "description": "actorName"
           },
-          "actorPath": {
+          "allowSpectating": {
             "type": "string",
-            "description": "Path to actor."
+            "description": "allowSpectating"
           },
-          "hlodLayerName": {
+          "alt": {
             "type": "string",
-            "description": "Name of the HLOD layer."
+            "description": "alt"
           },
-          "hlodLayerPath": {
-            "type": "string",
-            "description": "Path to HLOD layer."
-          },
-          "bIsSpatiallyLoaded": {
+          "alwaysRelevant": {
             "type": "boolean",
-            "description": "HLOD is spatially loaded."
+            "description": "alwaysRelevant"
           },
-          "cellSize": {
+          "assetPath": {
+            "type": "string",
+            "description": "assetPath"
+          },
+          "attenuationFalloff": {
             "type": "number",
-            "description": "HLOD cell size."
+            "description": "attenuationFalloff"
           },
-          "loadingDistance": {
+          "attenuationRadius": {
             "type": "number",
-            "description": "HLOD loading distance."
+            "description": "attenuationRadius"
           },
-          "volumeName": {
+          "autoBalance": {
             "type": "string",
-            "description": "Name of the volume."
+            "description": "autoBalance"
           },
-          "volumeLocation": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "Location of the volume."
-          },
-          "volumeExtent": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "Extent of the volume."
-          },
-          "nodeClass": {
+          "axisName": {
             "type": "string",
-            "description": "Node class path."
+            "description": "axisName"
           },
-          "nodePosition": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              }
-            },
-            "description": "Position of node in graph."
-          },
-          "nodeName": {
-            "type": "string",
-            "description": "Name of the node."
-          },
-          "sourceNodeName": {
-            "type": "string",
-            "description": "Source node name."
-          },
-          "sourcePinName": {
-            "type": "string",
-            "description": "Name of the source pin."
-          },
-          "targetNodeName": {
-            "type": "string",
-            "description": "Target node name."
-          },
-          "targetPinName": {
-            "type": "string",
-            "description": "Name of the target pin."
-          },
-          "levelInstanceName": {
-            "type": "string",
-            "description": "Level instance name."
-          },
-          "levelAssetPath": {
-            "type": "string",
-            "description": "Path to the level asset for instancing."
-          },
-          "instanceLocation": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "Location of the level instance."
-          },
-          "instanceRotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "Rotation of the level instance."
-          },
-          "instanceScale": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "Scale of the level instance."
-          },
-          "packedLevelName": {
-            "type": "string",
-            "description": "Name for the packed level actor."
-          },
-          "bPackBlueprints": {
+          "bAllowInvites": {
             "type": "boolean",
-            "description": "Include blueprints in packed level."
+            "description": "bAllowInvites"
           },
-          "bPackStaticMeshes": {
+          "bAllowJoinInProgress": {
             "type": "boolean",
-            "description": "Include static meshes in packed level."
+            "description": "bAllowJoinInProgress"
           },
-          "save": {
+          "bDelayedStart": {
+            "type": "string",
+            "description": "bDelayedStart"
+          },
+          "bIsLANMatch": {
             "type": "boolean",
-            "description": "Save the asset(s) after the operation."
+            "description": "bIsLANMatch"
           },
-          "location": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "World location for the volume."
-          },
-          "rotation": {
-            "type": "object",
-            "properties": {
-              "pitch": {
-                "type": "number"
-              },
-              "yaw": {
-                "type": "number"
-              },
-              "roll": {
-                "type": "number"
-              }
-            },
-            "description": "Rotation of the volume."
-          },
-          "extent": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "Extent (half-size) of the volume in each axis."
-          },
-          "sphereRadius": {
-            "type": "number",
-            "description": "Radius for sphere trigger volumes."
-          },
-          "capsuleRadius": {
-            "type": "number",
-            "description": "Radius for capsule trigger volumes."
-          },
-          "capsuleHalfHeight": {
-            "type": "number",
-            "description": "Half-height for capsule trigger volumes."
-          },
-          "boxExtent": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
-              }
-            },
-            "description": "Extent for box trigger volumes."
-          },
-          "bPainCausing": {
+          "bShouldAdvertise": {
             "type": "boolean",
-            "description": "Whether the volume causes pain/damage."
+            "description": "bShouldAdvertise"
           },
-          "damagePerSec": {
-            "type": "number",
-            "description": "Damage per second for pain volumes."
-          },
-          "bWaterVolume": {
+          "bUseLobbiesIfAvailable": {
             "type": "boolean",
-            "description": "Whether this is a water volume."
+            "description": "bUseLobbiesIfAvailable"
           },
-          "fluidFriction": {
-            "type": "number",
-            "description": "Fluid friction for physics volumes."
+          "bUsesPresence": {
+            "type": "boolean",
+            "description": "bUsesPresence"
           },
-          "terminalVelocity": {
+          "blueprintPath": {
+            "type": "string",
+            "description": "blueprintPath"
+          },
+          "canRespawn": {
+            "type": "boolean",
+            "description": "canRespawn"
+          },
+          "channelName": {
+            "type": "string",
+            "description": "channelName"
+          },
+          "channelType": {
+            "type": "string",
+            "description": "channelType"
+          },
+          "cmd": {
+            "type": "string",
+            "description": "cmd"
+          },
+          "condition": {
+            "type": "string",
+            "description": "condition"
+          },
+          "contextPath": {
+            "type": "string",
+            "description": "contextPath"
+          },
+          "controllerId": {
             "type": "number",
-            "description": "Terminal velocity in the volume."
+            "description": "controllerId"
+          },
+          "correctionThreshold": {
+            "type": "number",
+            "description": "correctionThreshold"
+          },
+          "ctrl": {
+            "type": "string",
+            "description": "ctrl"
+          },
+          "customSerialization": {
+            "type": "string",
+            "description": "customSerialization"
+          },
+          "dataType": {
+            "type": "string",
+            "description": "dataType"
+          },
+          "defaultPawnClass": {
+            "type": "string",
+            "description": "defaultPawnClass"
+          },
+          "dormancy": {
+            "type": "string",
+            "description": "dormancy"
+          },
+          "enablePrediction": {
+            "type": "boolean",
+            "description": "enablePrediction"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "enabled"
+          },
+          "executeTravel": {
+            "type": "boolean",
+            "description": "executeTravel"
+          },
+          "forceRespawn": {
+            "type": "boolean",
+            "description": "forceRespawn"
+          },
+          "friendlyFire": {
+            "type": "string",
+            "description": "friendlyFire"
+          },
+          "functionName": {
+            "type": "string",
+            "description": "functionName"
+          },
+          "gameModeBlueprint": {
+            "type": "string",
+            "description": "gameModeBlueprint"
+          },
+          "gameStateClass": {
+            "type": "string",
+            "description": "gameStateClass"
+          },
+          "hudClass": {
+            "type": "string",
+            "description": "hudClass"
+          },
+          "interfaceType": {
+            "type": "string",
+            "description": "interfaceType"
+          },
+          "intermissionTime": {
+            "type": "number",
+            "description": "intermissionTime"
+          },
+          "isAutonomousProxy": {
+            "type": "string",
+            "description": "isAutonomousProxy"
+          },
+          "key": {
+            "type": "string",
+            "description": "key"
+          },
+          "localPlayerNum": {
+            "type": "number",
+            "description": "localPlayerNum"
+          },
+          "mapName": {
+            "type": "string",
+            "description": "mapName"
+          },
+          "maxClientRate": {
+            "type": "string",
+            "description": "maxClientRate"
+          },
+          "maxInternetClientRate": {
+            "type": "string",
+            "description": "maxInternetClientRate"
+          },
+          "maxPlayers": {
+            "type": "string",
+            "description": "maxPlayers"
+          },
+          "maxRespawns": {
+            "type": "number",
+            "description": "maxRespawns"
+          },
+          "minNetUpdateFrequency": {
+            "type": "number",
+            "description": "minNetUpdateFrequency"
+          },
+          "modifierType": {
+            "type": "string",
+            "description": "modifierType"
+          },
+          "muted": {
+            "type": "boolean",
+            "description": "muted"
+          },
+          "name": {
+            "type": "string",
+            "description": "name"
+          },
+          "netCullDistanceSquared": {
+            "type": "number",
+            "description": "netCullDistanceSquared"
+          },
+          "netLoadOnClient": {
+            "type": "string",
+            "description": "netLoadOnClient"
+          },
+          "netPriority": {
+            "type": "number",
+            "description": "netPriority"
+          },
+          "netServerMaxTickRate": {
+            "type": "string",
+            "description": "netServerMaxTickRate"
+          },
+          "netUpdateFrequency": {
+            "type": "number",
+            "description": "netUpdateFrequency"
+          },
+          "networkMaxSmoothUpdateDistance": {
+            "type": "string",
+            "description": "networkMaxSmoothUpdateDistance"
+          },
+          "networkNoSmoothUpdateDistance": {
+            "type": "string",
+            "description": "networkNoSmoothUpdateDistance"
+          },
+          "networkSmoothingMode": {
+            "type": "string",
+            "description": "networkSmoothingMode"
+          },
+          "numRounds": {
+            "type": "number",
+            "description": "numRounds"
+          },
+          "numTeams": {
+            "type": "number",
+            "description": "numTeams"
+          },
+          "onlyRelevantToOwner": {
+            "type": "boolean",
+            "description": "onlyRelevantToOwner"
+          },
+          "ownerActorName": {
+            "type": "string",
+            "description": "ownerActorName"
+          },
+          "parentClass": {
+            "type": "string",
+            "description": "parentClass"
+          },
+          "path": {
+            "type": "string",
+            "description": "path"
+          },
+          "pawnClass": {
+            "type": "string",
+            "description": "pawnClass"
+          },
+          "playerControllerClass": {
+            "type": "string",
+            "description": "playerControllerClass"
+          },
+          "playerIndex": {
+            "type": "number",
+            "description": "playerIndex"
+          },
+          "playerName": {
+            "type": "string",
+            "description": "playerName"
+          },
+          "playerStateClass": {
+            "type": "string",
+            "description": "playerStateClass"
+          },
+          "predictionThreshold": {
+            "type": "string",
+            "description": "predictionThreshold"
           },
           "priority": {
             "type": "number",
-            "description": "Priority value."
+            "description": "priority"
           },
-          "bEnabled": {
+          "propertyName": {
+            "type": "string",
+            "description": "propertyName"
+          },
+          "pushToTalkEnabled": {
             "type": "boolean",
-            "description": "Whether the audio volume is enabled."
+            "description": "pushToTalkEnabled"
           },
-          "reverbVolume": {
+          "pushToTalkKey": {
+            "type": "string",
+            "description": "pushToTalkKey"
+          },
+          "reliable": {
+            "type": "boolean",
+            "description": "reliable"
+          },
+          "repNotifyFunc": {
+            "type": "string",
+            "description": "repNotifyFunc"
+          },
+          "replicateMovement": {
+            "type": "boolean",
+            "description": "replicateMovement"
+          },
+          "replicated": {
+            "type": "boolean",
+            "description": "replicated"
+          },
+          "replicationPolicy": {
+            "type": "string",
+            "description": "replicationPolicy"
+          },
+          "respawnDelay": {
             "type": "number",
-            "description": "Volume level for reverb (0.0-1.0)."
+            "description": "respawnDelay"
           },
-          "fadeTime": {
+          "respawnLives": {
+            "type": "string",
+            "description": "respawnLives"
+          },
+          "respawnLocation": {
+            "type": "string",
+            "description": "respawnLocation"
+          },
+          "role": {
+            "type": "string",
+            "description": "role"
+          },
+          "roundTime": {
             "type": "number",
-            "description": "Fade time in seconds."
+            "description": "roundTime"
           },
-          "cullDistances": {
+          "rpcType": {
+            "type": "string",
+            "description": "rpcType"
+          },
+          "save": {
+            "type": "boolean",
+            "description": "save"
+          },
+          "scale": {
+            "type": "number",
+            "description": "scale"
+          },
+          "scorePerAssist": {
+            "type": "number",
+            "description": "scorePerAssist"
+          },
+          "scorePerDeath": {
+            "type": "string",
+            "description": "scorePerDeath"
+          },
+          "scorePerKill": {
+            "type": "number",
+            "description": "scorePerKill"
+          },
+          "scorePerObjective": {
+            "type": "number",
+            "description": "scorePerObjective"
+          },
+          "serverAddress": {
+            "type": "string",
+            "description": "serverAddress"
+          },
+          "serverName": {
+            "type": "string",
+            "description": "serverName"
+          },
+          "serverPassword": {
+            "type": "string",
+            "description": "serverPassword"
+          },
+          "serverPort": {
+            "type": "number",
+            "description": "serverPort"
+          },
+          "sessionName": {
+            "type": "string",
+            "description": "sessionName"
+          },
+          "shift": {
+            "type": "string",
+            "description": "shift"
+          },
+          "smoothingRate": {
+            "type": "number",
+            "description": "smoothingRate"
+          },
+          "spatiallyLoaded": {
+            "type": "string",
+            "description": "spatiallyLoaded"
+          },
+          "spawnSelectionMethod": {
+            "type": "string",
+            "description": "spawnSelectionMethod"
+          },
+          "spectatorClass": {
+            "type": "string",
+            "description": "spectatorClass"
+          },
+          "spectatorViewMode": {
+            "type": "string",
+            "description": "spectatorViewMode"
+          },
+          "splitScreenType": {
+            "type": "string",
+            "description": "splitScreenType"
+          },
+          "states": {
+            "type": "array",
+            "description": "states",
+            "items": {}
+          },
+          "structName": {
+            "type": "string",
+            "description": "structName"
+          },
+          "systemWide": {
+            "type": "boolean",
+            "description": "systemWide"
+          },
+          "targetPlayerId": {
+            "type": "string",
+            "description": "targetPlayerId"
+          },
+          "teamIndex": {
+            "type": "number",
+            "description": "teamIndex"
+          },
+          "teamSize": {
+            "type": "number",
+            "description": "teamSize"
+          },
+          "timeoutMs": {
+            "type": "number",
+            "description": "timeoutMs"
+          },
+          "travelOptions": {
+            "type": "string",
+            "description": "travelOptions"
+          },
+          "triggerType": {
+            "type": "string",
+            "description": "triggerType"
+          },
+          "useOwnerNetRelevancy": {
+            "type": "string",
+            "description": "useOwnerNetRelevancy"
+          },
+          "usePlayerStarts": {
+            "type": "string",
+            "description": "usePlayerStarts"
+          },
+          "usePushModel": {
+            "type": "boolean",
+            "description": "usePushModel"
+          },
+          "variableName": {
+            "type": "string",
+            "description": "variableName"
+          },
+          "voiceEnabled": {
+            "type": "boolean",
+            "description": "voiceEnabled"
+          },
+          "voiceSettings": {
+            "type": "object",
+            "description": "voiceSettings",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "winScore": {
+            "type": "number",
+            "description": "winScore"
+          },
+          "withValidation": {
+            "type": "boolean",
+            "description": "withValidation"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "add_legacy_action_mapping",
+              "add_legacy_axis_mapping",
+              "add_local_player",
+              "add_mapping",
+              "add_network_prediction_data",
+              "check_has_authority",
+              "check_is_locally_controlled",
+              "configure_client_prediction",
+              "configure_game_rules",
+              "configure_lan_play",
+              "configure_local_session_settings",
+              "configure_movement_prediction",
+              "configure_net_cull_distance",
+              "configure_net_driver",
+              "configure_net_priority",
+              "configure_net_serialization",
+              "configure_net_update_frequency",
+              "configure_player_start",
+              "configure_push_model",
+              "configure_push_to_talk",
+              "configure_replicated_movement",
+              "configure_replication_graph",
+              "configure_round_system",
+              "configure_rpc_validation",
+              "configure_scoring_system",
+              "configure_server_correction",
+              "configure_session_interface",
+              "configure_spawn_system",
+              "configure_spectating",
+              "configure_split_screen",
+              "configure_team_system",
+              "configure_voice_settings",
+              "create_game_instance",
+              "create_game_mode",
+              "create_game_state",
+              "create_hud_class",
+              "create_input_action",
+              "create_input_mapping_context",
+              "create_player_controller",
+              "create_player_state",
+              "create_rpc_function",
+              "disable_input_action",
+              "enable_input_mapping",
+              "enable_voice_chat",
+              "get_game_framework_info",
+              "get_input_info",
+              "get_networking_info",
+              "get_sessions_info",
+              "host_lan_server",
+              "join_lan_server",
+              "map_input_action",
+              "mute_player",
+              "remove_legacy_action_mapping",
+              "remove_legacy_axis_mapping",
+              "remove_local_player",
+              "remove_mapping",
+              "set_always_relevant",
+              "set_autonomous_proxy",
+              "set_default_pawn_class",
+              "set_game_state_class",
+              "set_input_modifier",
+              "set_input_trigger",
+              "set_net_dormancy",
+              "set_net_role",
+              "set_only_relevant_to_owner",
+              "set_owner",
+              "set_player_controller_class",
+              "set_player_state_class",
+              "set_property_replicated",
+              "set_replicated_using",
+              "set_replication_condition",
+              "set_respawn_rules",
+              "set_rpc_reliability",
+              "set_split_screen_type",
+              "set_voice_attenuation",
+              "set_voice_channel",
+              "setup_match_states"
+            ],
+            "description": "Action to invoke on manage_networking."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "manage_pcg",
+      "category": "world",
+      "description": "Create, edit, execute, and configure PCG graphs: graph assets, input/sampler/filter/spawner nodes, pin connections, node settings, and partition grid size.",
+      "actions": [
+        "create_pcg_graph",
+        "create_pcg_subgraph",
+        "add_pcg_node",
+        "connect_pcg_pins",
+        "set_pcg_node_settings",
+        "add_landscape_data_node",
+        "add_spline_data_node",
+        "add_volume_data_node",
+        "add_actor_data_node",
+        "add_texture_data_node",
+        "add_surface_sampler",
+        "add_mesh_sampler",
+        "add_spline_sampler",
+        "add_volume_sampler",
+        "add_bounds_modifier",
+        "add_density_filter",
+        "add_height_filter",
+        "add_slope_filter",
+        "add_distance_filter",
+        "add_bounds_filter",
+        "add_self_pruning",
+        "add_transform_points",
+        "add_project_to_surface",
+        "add_copy_points",
+        "add_merge_points",
+        "add_static_mesh_spawner",
+        "add_actor_spawner",
+        "add_spline_spawner",
+        "set_pcg_partition_grid_size",
+        "execute_pcg_graph"
+      ],
+      "parameterNames": [
+        "actorClass",
+        "actorName",
+        "assetPath",
+        "classPath",
+        "componentName",
+        "componentPath",
+        "createComponent",
+        "force",
+        "graphPath",
+        "gridSize",
+        "inputName",
+        "meshPath",
+        "name",
+        "nodeId",
+        "nodeName",
+        "nodeType",
+        "outputName",
+        "overwrite",
+        "parentGraphPath",
+        "path",
+        "posX",
+        "posY",
+        "save",
+        "scope",
+        "settings",
+        "settingsClass",
+        "sourceNodeId",
+        "sourcePin",
+        "subgraphPath",
+        "targetNodeId",
+        "targetPin",
+        "texturePath",
+        "timeoutMs",
+        "title",
+        "x",
+        "y"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actorClass": {
+            "type": "string",
+            "description": "Actor class path/name."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "classPath": {
+            "type": "string",
+            "description": "Class path/name."
+          },
+          "componentName": {
+            "type": "string",
+            "description": "Component name for PCG execution."
+          },
+          "componentPath": {
+            "type": "string",
+            "description": "Component path/name for PCG execution."
+          },
+          "createComponent": {
+            "type": "boolean",
+            "description": "Create a new PCG component when no selector is supplied."
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Force regeneration even if a result already exists."
+          },
+          "graphPath": {
+            "type": "string",
+            "description": "PCG graph asset path (e.g. /Game/PCG/PCG_MyGraph)."
+          },
+          "gridSize": {
+            "type": "number",
+            "description": "PCG partition grid cell size."
+          },
+          "inputName": {
+            "type": "string",
+            "description": "PCG input pin name."
+          },
+          "meshPath": {
+            "type": "string",
+            "description": "Canonical /Game static mesh asset path."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the new asset or node."
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "PCG node identifier."
+          },
+          "nodeName": {
+            "type": "string",
+            "description": "Level blueprint node name."
+          },
+          "nodeType": {
+            "type": "string",
+            "description": "PCG node type alias or UPCGSettings class path/name."
+          },
+          "outputName": {
+            "type": "string",
+            "description": "PCG output pin name."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "description": "Overwrite the asset when it already exists."
+          },
+          "parentGraphPath": {
+            "type": "string",
+            "description": "Parent PCG graph asset path for subgraph insertion."
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical /Game directory path."
+          },
+          "posX": {
+            "type": "number",
+            "description": "Node graph X position."
+          },
+          "posY": {
+            "type": "number",
+            "description": "Node graph Y position."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Whether to save the level after the operation."
+          },
+          "scope": {
+            "type": "string",
+            "description": "Partition grid target scope: 'world' or 'component'."
+          },
+          "settings": {
+            "type": "object",
+            "description": "UPCGSettings property key-value pairs applied by reflection.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "settingsClass": {
+            "type": "string",
+            "description": "UPCGSettings class path/name for the PCG node."
+          },
+          "sourceNodeId": {
+            "type": "string",
+            "description": "Source node identifier for pin connection."
+          },
+          "sourcePin": {
+            "type": "string",
+            "description": "Source pin name."
+          },
+          "subgraphPath": {
+            "type": "string",
+            "description": "PCG subgraph asset path used by subgraph nodes."
+          },
+          "targetNodeId": {
+            "type": "string",
+            "description": "Target node identifier for pin connection."
+          },
+          "targetPin": {
+            "type": "string",
+            "description": "Target pin name."
+          },
+          "texturePath": {
+            "type": "string",
+            "description": "Canonical /Game texture asset path."
+          },
+          "timeoutMs": {
+            "type": "number",
+            "description": "Client-side request deadline in milliseconds."
+          },
+          "title": {
+            "type": "string",
+            "description": "Node title (alias of nodeName)."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node graph X position (alias of posX)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node graph Y position (alias of posY)."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "create_pcg_graph",
+              "create_pcg_subgraph",
+              "add_pcg_node",
+              "connect_pcg_pins",
+              "set_pcg_node_settings",
+              "add_landscape_data_node",
+              "add_spline_data_node",
+              "add_volume_data_node",
+              "add_actor_data_node",
+              "add_texture_data_node",
+              "add_surface_sampler",
+              "add_mesh_sampler",
+              "add_spline_sampler",
+              "add_volume_sampler",
+              "add_bounds_modifier",
+              "add_density_filter",
+              "add_height_filter",
+              "add_slope_filter",
+              "add_distance_filter",
+              "add_bounds_filter",
+              "add_self_pruning",
+              "add_transform_points",
+              "add_project_to_surface",
+              "add_copy_points",
+              "add_merge_points",
+              "add_static_mesh_spawner",
+              "add_actor_spawner",
+              "add_spline_spawner",
+              "set_pcg_partition_grid_size",
+              "execute_pcg_graph"
+            ],
+            "description": "Action to invoke on manage_pcg."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "manage_sequence",
+      "category": "utility",
+      "description": "Edit Level Sequences, cinematic tracks, Movie Render Queue jobs, media playback assets, Take Recorder, and replay controls.",
+      "actions": [
+        "create",
+        "open",
+        "duplicate",
+        "rename",
+        "delete",
+        "list",
+        "play",
+        "pause",
+        "stop",
+        "set_playback_speed",
+        "get_properties",
+        "set_properties",
+        "add_camera",
+        "add_actor",
+        "add_actors",
+        "remove_actors",
+        "get_bindings",
+        "add_spawnable_from_class",
+        "add_keyframe",
+        "add_track",
+        "add_section",
+        "remove_track",
+        "list_tracks",
+        "list_track_types",
+        "set_track_muted",
+        "set_track_solo",
+        "set_track_locked",
+        "set_display_rate",
+        "set_tick_resolution",
+        "set_work_range",
+        "set_view_range",
+        "get_metadata",
+        "set_metadata",
+        "create_master_sequence",
+        "add_subsequence",
+        "add_shot_track",
+        "configure_shot_settings",
+        "create_cine_camera_actor",
+        "configure_camera_settings",
+        "add_camera_cut_track",
+        "add_camera_shake_track",
+        "configure_camera_rig_rail",
+        "configure_camera_rig_crane",
+        "add_fade_track",
+        "add_level_visibility_track",
+        "add_material_parameter_track",
+        "add_particle_track",
+        "add_skeletal_animation_track",
+        "add_transform_track",
+        "add_event_track",
+        "add_property_track",
+        "create_render_job",
+        "configure_output_settings",
+        "add_render_pass",
+        "configure_anti_aliasing",
+        "configure_console_variables",
+        "configure_burn_ins",
+        "queue_render",
+        "start_render",
+        "create_media_player",
+        "create_media_source",
+        "create_media_texture",
+        "create_media_sound_component",
+        "create_media_playlist",
+        "play_media",
+        "pause_media",
+        "seek_media",
+        "create_take_recorder_panel",
+        "configure_take_sources",
+        "start_recording",
+        "stop_recording",
+        "configure_recorded_tracks",
+        "start_demo_recording",
+        "stop_demo_recording",
+        "configure_demo_settings",
+        "play_demo",
+        "pause_demo",
+        "seek_demo",
+        "set_demo_playback_speed",
+        "configure_killcam_duration",
+        "start_killcam"
+      ],
+      "parameterNames": [
+        "activate",
+        "actorName",
+        "actorNames",
+        "actors",
+        "additionalOptions",
+        "animationPath",
+        "animationSequencePath",
+        "antiAliasingMethod",
+        "aperture",
+        "assetPath",
+        "autoClear",
+        "autoPlay",
+        "bindingGuid",
+        "bindingId",
+        "burnIn",
+        "cameraActorName",
+        "cameraName",
+        "cameraShakeClass",
+        "cameraShakePath",
+        "checkpointSaveMaxMSPerFrame",
+        "className",
+        "clearSources",
+        "componentName",
+        "consoleVariables",
+        "craneArmLength",
+        "cranePitch",
+        "craneYaw",
+        "currentAperture",
+        "currentFocalLength",
+        "defaultSourcePath",
+        "demoName",
+        "destinationPath",
+        "disableOthers",
+        "displayName",
+        "duration",
+        "durationFrames",
+        "durationSeconds",
+        "enabled",
+        "end",
+        "endFrame",
+        "executorClass",
+        "fileNameFormat",
+        "filePath",
+        "filePaths",
+        "filmback",
+        "focalLength",
+        "focus",
+        "focusDistance",
+        "frame",
+        "frameRate",
+        "friendlyName",
+        "from",
+        "height",
+        "includeTranslucentObjects",
+        "jobId",
+        "jobName",
+        "label",
+        "lengthInFrames",
+        "lens",
+        "levelNames",
+        "loadDefaultMapOnStop",
+        "location",
+        "locked",
+        "loop",
+        "loopMode",
+        "looping",
+        "manualFocusDistance",
+        "mapPath",
+        "masterSequencePath",
+        "materialIndex",
+        "materialPath",
+        "maxRecordTimeSeconds",
+        "mediaPath",
+        "mediaPlayerPath",
+        "mediaSourcePath",
+        "metadata",
+        "method",
+        "muted",
+        "name",
+        "newName",
+        "onlyJob",
+        "outputDirectory",
+        "parameterName",
+        "path",
+        "paused",
+        "platformSources",
+        "playOnOpen",
+        "playbackEnd",
+        "playbackSpeed",
+        "playbackStart",
+        "playerPath",
+        "playlistIndex",
+        "playlistPath",
+        "positionOnRail",
+        "precacheFile",
+        "prioritizeActors",
+        "properties",
+        "property",
+        "propertyName",
+        "propertyPath",
+        "propertyType",
+        "recordInto",
+        "recordParentHierarchy",
+        "recordType",
+        "recordingSequencePath",
+        "reduceKeys",
+        "renderJobId",
+        "renderJobName",
+        "renderPass",
+        "renderPasses",
+        "replayName",
+        "resolution",
+        "rotation",
+        "rowIndex",
+        "save",
+        "seconds",
+        "sectionIndex",
+        "seekTime",
+        "sensorHeight",
+        "sensorWidth",
+        "sequencePath",
+        "settings",
+        "shotName",
+        "shotSequencePath",
+        "skeletalMeshPath",
+        "solo",
+        "sourceActors",
+        "sourceClasses",
+        "sourcePath",
+        "sourcePaths",
+        "sourceType",
+        "spatialSampleCount",
+        "spawnable",
+        "speed",
+        "start",
+        "startFrame",
+        "startTime",
+        "streamUrl",
+        "subsequencePath",
+        "takePresetPath",
+        "takeSequencePath",
+        "targetActor",
+        "temporalSampleCount",
+        "time",
+        "timeSeconds",
+        "timeoutMs",
+        "to",
+        "trackName",
+        "trackNames",
+        "trackType",
+        "tracks",
+        "url",
+        "urls",
+        "useCurrentLevel",
+        "value",
+        "visibility",
+        "width"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "activate": {
+            "type": "boolean",
+            "description": "Whether the key activates (true) or deactivates (false)."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the current level."
+          },
+          "actorNames": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "size": {
-                  "type": "number",
-                  "description": "Object size threshold."
-                },
-                "cullDistance": {
-                  "type": "number",
-                  "description": "Distance at which to cull."
-                }
+              "type": "string",
+              "description": "Actor name."
+            },
+            "description": "Actor names."
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Actor name."
+            },
+            "description": "Actor names to record (alias of actorNames)."
+          },
+          "additionalOptions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Replay option string."
+            },
+            "description": "Additional replay streamer options."
+          },
+          "animationPath": {
+            "type": "string",
+            "description": "Animation sequence asset path (alias of animationSequencePath)."
+          },
+          "animationSequencePath": {
+            "type": "string",
+            "description": "Animation sequence asset path."
+          },
+          "antiAliasingMethod": {
+            "type": "string",
+            "description": "Anti-aliasing method name, such as TSAA or FXAA."
+          },
+          "aperture": {
+            "type": "number",
+            "description": "Aperture f-stop."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "autoClear": {
+            "type": "boolean",
+            "description": "Whether the media texture clears when playback stops."
+          },
+          "autoPlay": {
+            "type": "boolean",
+            "description": "Whether the media player plays automatically on open."
+          },
+          "bindingGuid": {
+            "type": "string",
+            "description": "Sequencer binding GUID (alias of bindingId)."
+          },
+          "bindingId": {
+            "type": "string",
+            "description": "Sequencer binding GUID to key against."
+          },
+          "burnIn": {
+            "type": "object",
+            "description": "Burn-in settings.",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether burn-ins are enabled."
+              },
+              "compositeOntoFinalImage": {
+                "type": "boolean",
+                "description": "Whether to composite onto the final image."
+              },
+              "classPath": {
+                "type": "string",
+                "description": "Burn-in widget class path."
               }
             },
-            "description": "Array of size/distance pairs for cull distance volumes."
+            "required": [
+              "enabled"
+            ]
           },
-          "bUnbound": {
+          "cameraActorName": {
+            "type": "string",
+            "description": "Actor name in the current level."
+          },
+          "cameraName": {
+            "type": "string",
+            "description": "Actor name in the current level."
+          },
+          "cameraShakeClass": {
+            "type": "string",
+            "description": "Camera shake class path."
+          },
+          "cameraShakePath": {
+            "type": "string",
+            "description": "Camera shake asset path."
+          },
+          "checkpointSaveMaxMSPerFrame": {
+            "type": "number",
+            "description": "Max checkpoint save MS per frame (<=1000)."
+          },
+          "className": {
+            "type": "string",
+            "description": "Unreal class path for the spawnable."
+          },
+          "clearSources": {
             "type": "boolean",
-            "description": "Whether post process volume affects entire world."
+            "description": "Whether to clear existing Take Recorder sources first."
           },
-          "blendRadius": {
-            "type": "number",
-            "description": "Blend radius for post process volume."
+          "componentName": {
+            "type": "string",
+            "description": "Name of the component owning the target material."
           },
-          "blendWeight": {
+          "consoleVariables": {
+            "type": "object",
+            "description": "CVar name-value pairs.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "craneArmLength": {
             "type": "number",
-            "description": "Blend weight (0.0-1.0) for post process."
+            "description": "Crane arm length."
+          },
+          "cranePitch": {
+            "type": "number",
+            "description": "Crane pitch in degrees."
+          },
+          "craneYaw": {
+            "type": "number",
+            "description": "Crane yaw in degrees."
+          },
+          "currentAperture": {
+            "type": "number",
+            "description": "Aperture as an f-stop (alias of aperture)."
+          },
+          "currentFocalLength": {
+            "type": "number",
+            "description": "Focal length in millimetres (alias of focalLength)."
+          },
+          "defaultSourcePath": {
+            "type": "string",
+            "description": "Default media source asset path for a platform media source."
+          },
+          "demoName": {
+            "type": "string",
+            "description": "Demo replay name."
+          },
+          "destinationPath": {
+            "type": "string",
+            "description": "Destination /Game folder for the copy."
+          },
+          "disableOthers": {
+            "type": "boolean",
+            "description": "Whether non-matching recorded tracks are disabled."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Shot display name (alias of shotName)."
+          },
+          "duration": {
+            "type": "number",
+            "description": "Optional max recording duration in seconds."
+          },
+          "durationFrames": {
+            "type": "integer",
+            "description": "Section duration in display-rate frames."
+          },
+          "durationSeconds": {
+            "type": "number",
+            "description": "Killcam duration in seconds (<=600)."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the matched recorded tracks are enabled."
+          },
+          "end": {
+            "type": "number",
+            "description": "Range end frame or time."
+          },
+          "endFrame": {
+            "type": "integer",
+            "description": "Custom playback range end frame (>= startFrame)."
+          },
+          "executorClass": {
+            "type": "string",
+            "description": "Movie pipeline executor class path."
+          },
+          "fileNameFormat": {
+            "type": "string",
+            "description": "Output file name format string."
+          },
+          "filePath": {
+            "type": "string",
+            "description": "File system path to a media file."
+          },
+          "filePaths": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Media file path."
+            },
+            "description": "Media file paths appended to the playlist."
+          },
+          "filmback": {
+            "type": "object",
+            "description": "Nested filmback overrides (Cameras.cpp:77-80 nested object \"filmback\").",
+            "additionalProperties": false,
+            "properties": {
+              "sensorWidth": {
+                "type": "number",
+                "description": "Sensor width in millimetres."
+              },
+              "sensorHeight": {
+                "type": "number",
+                "description": "Sensor height in millimetres."
+              }
+            }
+          },
+          "focalLength": {
+            "type": "number",
+            "description": "Focal length in mm."
+          },
+          "focus": {
+            "type": "object",
+            "description": "Nested focus overrides (Cameras.cpp:81-83 nested object \"focus\").",
+            "additionalProperties": false,
+            "properties": {
+              "manualFocusDistance": {
+                "type": "number",
+                "description": "Manual focus distance in centimetres."
+              },
+              "focusDistance": {
+                "type": "number",
+                "description": "Manual focus distance alias in centimetres."
+              }
+            }
+          },
+          "focusDistance": {
+            "type": "number",
+            "description": "Focus distance."
+          },
+          "frame": {
+            "type": "integer",
+            "description": "Frame number for the keyframe."
+          },
+          "frameRate": {
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Frame rate as fps or a rate string such as 24fps or 24000/1001."
+          },
+          "friendlyName": {
+            "type": "string",
+            "description": "Human-readable replay name."
+          },
+          "from": {
+            "type": "number",
+            "description": "Fade start opacity value."
+          },
+          "height": {
+            "type": "integer",
+            "description": "Output height in pixels (positive; paired with width)."
+          },
+          "includeTranslucentObjects": {
+            "type": "boolean",
+            "description": "Whether the pass includes translucent objects."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Render job identifier."
+          },
+          "jobName": {
+            "type": "string",
+            "description": "Render job name (alias of renderJobName)."
+          },
+          "label": {
+            "type": "string",
+            "description": "Actor label alias for the camera or rig actor (alias of actorName)."
+          },
+          "lengthInFrames": {
+            "type": "integer",
+            "description": "Sequence length in frames."
+          },
+          "lens": {
+            "type": "object",
+            "description": "Nested lens overrides (Cameras.cpp:71-76 nested object \"lens\").",
+            "additionalProperties": false,
+            "properties": {
+              "currentFocalLength": {
+                "type": "number",
+                "description": "Focal length in millimetres."
+              },
+              "focalLength": {
+                "type": "number",
+                "description": "Focal length alias in millimetres."
+              },
+              "currentAperture": {
+                "type": "number",
+                "description": "Aperture as an f-stop."
+              },
+              "aperture": {
+                "type": "number",
+                "description": "Aperture alias as an f-stop."
+              }
+            }
+          },
+          "levelNames": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Level name."
+            },
+            "description": "Level names toggled by the visibility track."
+          },
+          "loadDefaultMapOnStop": {
+            "type": "boolean",
+            "description": "Whether to load the default map on stop."
+          },
+          "location": {
+            "type": "object",
+            "description": "Camera location.",
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
+          },
+          "locked": {
+            "type": "boolean",
+            "description": "Whether to lock."
+          },
+          "loop": {
+            "type": "boolean",
+            "description": "Whether media playback loops."
+          },
+          "loopMode": {
+            "type": "string",
+            "description": "Playback loop mode: once, loop, or pingpong."
+          },
+          "looping": {
+            "type": "boolean",
+            "description": "Whether media playback loops (alias of loop)."
+          },
+          "manualFocusDistance": {
+            "type": "number",
+            "description": "Manual focus distance in centimetres (alias of focusDistance)."
+          },
+          "mapPath": {
+            "type": "string",
+            "description": "Canonical /Game map path."
+          },
+          "masterSequencePath": {
+            "type": "string",
+            "description": "Canonical /Game master sequence path."
+          },
+          "materialIndex": {
+            "type": "integer",
+            "description": "Material slot index on the component."
+          },
+          "materialPath": {
+            "type": "string",
+            "description": "Material asset path for a material render pass."
+          },
+          "maxRecordTimeSeconds": {
+            "type": "number",
+            "description": "Max record time (<=86400)."
+          },
+          "mediaPath": {
+            "type": "string",
+            "description": "Media file path (alias of filePath)."
+          },
+          "mediaPlayerPath": {
+            "type": "string",
+            "description": "Canonical /Game media player path."
+          },
+          "mediaSourcePath": {
+            "type": "string",
+            "description": "Canonical /Game media source path."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Arbitrary metadata key-value pairs.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "method": {
+            "type": "string",
+            "description": "Anti-aliasing method (alias of antiAliasingMethod)."
+          },
+          "muted": {
+            "type": "boolean",
+            "description": "Whether to mute."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the new sequence or asset."
+          },
+          "newName": {
+            "type": "string",
+            "description": "New name for the sequence asset."
+          },
+          "onlyJob": {
+            "type": "boolean",
+            "description": "Whether to queue only this job."
+          },
+          "outputDirectory": {
+            "type": "string",
+            "description": "Output directory for rendered frames."
+          },
+          "parameterName": {
+            "type": "string",
+            "description": "Material parameter name to animate."
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical /Game sequence asset path."
+          },
+          "paused": {
+            "type": "boolean",
+            "description": "Whether replay playback is paused."
+          },
+          "platformSources": {
+            "type": "object",
+            "description": "Per-platform media source asset paths keyed by platform name.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "playOnOpen": {
+            "type": "boolean",
+            "description": "Whether the media player plays on open (alias of autoPlay)."
+          },
+          "playbackEnd": {
+            "type": "integer",
+            "description": "Playback end frame."
+          },
+          "playbackSpeed": {
+            "type": "number",
+            "description": "Playback speed multiplier (positive)."
+          },
+          "playbackStart": {
+            "type": "integer",
+            "description": "Playback start frame."
+          },
+          "playerPath": {
+            "type": "string",
+            "description": "Canonical /Game media player path."
+          },
+          "playlistIndex": {
+            "type": "integer",
+            "description": "Zero-based index into the media playlist."
+          },
+          "playlistPath": {
+            "type": "string",
+            "description": "Canonical /Game media playlist path."
+          },
+          "positionOnRail": {
+            "type": "number",
+            "description": "Position on the rail (0-1)."
+          },
+          "precacheFile": {
+            "type": "boolean",
+            "description": "Whether the file media source precaches on open."
+          },
+          "prioritizeActors": {
+            "type": "boolean",
+            "description": "Whether to prioritize actor replication during recording."
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Property name."
+            },
+            "description": "Recorded property names (alias of tracks)."
+          },
+          "property": {
+            "type": "string",
+            "description": "Property name to keyframe (Transform, Location, Rotation, Scale)."
+          },
+          "propertyName": {
+            "type": "string",
+            "description": "Property name to animate (alias of property)."
+          },
+          "propertyPath": {
+            "type": "string",
+            "description": "Nested property path to animate."
+          },
+          "propertyType": {
+            "type": "string",
+            "description": "Property value type hint (alias of type)."
+          },
+          "recordInto": {
+            "type": "boolean",
+            "description": "Whether to record into the supplied sequence rather than a new take."
+          },
+          "recordParentHierarchy": {
+            "type": "boolean",
+            "description": "Whether the source records its parent hierarchy."
+          },
+          "recordType": {
+            "type": "string",
+            "description": "Take recording source type."
+          },
+          "recordingSequencePath": {
+            "type": "string",
+            "description": "Canonical /Game recording sequence path."
+          },
+          "reduceKeys": {
+            "type": "boolean",
+            "description": "Whether to reduce keyframes."
+          },
+          "renderJobId": {
+            "type": "string",
+            "description": "Render job identifier (alias of jobId)."
+          },
+          "renderJobName": {
+            "type": "string",
+            "description": "Name for the render job."
+          },
+          "renderPass": {
+            "type": "string",
+            "description": "Render pass identifier, such as beauty or object_id."
+          },
+          "renderPasses": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Render pass identifier."
+            },
+            "description": "Render pass identifiers to add."
+          },
+          "replayName": {
+            "type": "string",
+            "description": "Name for the demo replay."
+          },
+          "resolution": {
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Output resolution in WIDTHxHEIGHT format, such as 1920x1080."
+          },
+          "rotation": {
+            "type": "object",
+            "description": "Camera rotation.",
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
+          },
+          "rowIndex": {
+            "type": "integer",
+            "description": "Sequencer row index for the created section."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Whether to save the sequence asset after the mutation."
+          },
+          "seconds": {
+            "type": "number",
+            "description": "Seek time in seconds (alias of timeSeconds)."
+          },
+          "sectionIndex": {
+            "type": "integer",
+            "description": "Index of the shot section to configure."
+          },
+          "seekTime": {
+            "type": "number",
+            "description": "Seek time in seconds."
+          },
+          "sensorHeight": {
+            "type": "number",
+            "description": "Sensor height in mm."
+          },
+          "sensorWidth": {
+            "type": "number",
+            "description": "Sensor width in mm."
+          },
+          "sequencePath": {
+            "type": "string",
+            "description": "Canonical /Game sequence asset path."
+          },
+          "settings": {
+            "type": "object",
+            "description": "Nested MRQ settings.",
+            "additionalProperties": false,
+            "properties": {
+              "handleFrameCount": {
+                "type": "integer",
+                "description": "Handle frame count clamped to >= 0."
+              },
+              "zeroPadFrameNumbers": {
+                "type": "integer",
+                "description": "Zero-padding width for frame numbers."
+              },
+              "spatialSampleCount": {
+                "type": "integer",
+                "description": "Spatial sample count per render sample pass."
+              },
+              "temporalSampleCount": {
+                "type": "integer",
+                "description": "Temporal sample count per render sample pass."
+              },
+              "antiAliasingMethod": {
+                "type": "string",
+                "description": "Anti-aliasing method name, such as TSAA or FXAA."
+              },
+              "method": {
+                "type": "string",
+                "description": "Anti-aliasing method alias."
+              }
+            }
+          },
+          "shotName": {
+            "type": "string",
+            "description": "Name for the new sequence or asset."
+          },
+          "shotSequencePath": {
+            "type": "string",
+            "description": "Canonical /Game shot sequence path."
+          },
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Skeletal mesh asset path."
+          },
+          "solo": {
+            "type": "boolean",
+            "description": "Whether to solo."
+          },
+          "sourceActors": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Actor name."
+            },
+            "description": "Actor names."
+          },
+          "sourceClasses": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Source class path."
+            },
+            "description": "Take Recorder source class paths."
+          },
+          "sourcePath": {
+            "type": "string",
+            "description": "Source file or asset path."
+          },
+          "sourcePaths": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Media source asset path."
+            },
+            "description": "Media source asset paths for the playlist."
+          },
+          "sourceType": {
+            "type": "string",
+            "description": "Media source type: file, stream, or platform."
+          },
+          "spatialSampleCount": {
+            "type": "integer",
+            "description": "Sample count per render sample pass."
+          },
+          "spawnable": {
+            "type": "boolean",
+            "description": "Whether to add as spawnable."
+          },
+          "speed": {
+            "type": "number",
+            "description": "Playback speed multiplier (positive)."
+          },
+          "start": {
+            "type": "number",
+            "description": "Range start frame or time."
+          },
+          "startFrame": {
+            "type": "integer",
+            "description": "Custom playback range start frame (paired with endFrame)."
+          },
+          "startTime": {
+            "type": "number",
+            "description": "Range start frame or time."
+          },
+          "streamUrl": {
+            "type": "string",
+            "description": "URL for a stream media source."
+          },
+          "subsequencePath": {
+            "type": "string",
+            "description": "Canonical /Game subsequence path."
+          },
+          "takePresetPath": {
+            "type": "string",
+            "description": "Canonical /Game take preset path."
+          },
+          "takeSequencePath": {
+            "type": "string",
+            "description": "Canonical /Game take sequence path."
+          },
+          "targetActor": {
+            "type": "string",
+            "description": "Actor receiving the media sound component (alias of actorName)."
+          },
+          "temporalSampleCount": {
+            "type": "integer",
+            "description": "Sample count per render sample pass."
+          },
+          "time": {
+            "type": "number",
+            "description": "Seek time in seconds (alias of timeSeconds)."
+          },
+          "timeSeconds": {
+            "type": "number",
+            "description": "Seek time in seconds (<=86400)."
+          },
+          "timeoutMs": {
+            "type": "number",
+            "description": "Render timeout in milliseconds (max 3600000)."
+          },
+          "to": {
+            "type": "number",
+            "description": "Fade end opacity value."
+          },
+          "trackName": {
+            "type": "string",
+            "description": "Name of the track to modify."
+          },
+          "trackNames": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Track name."
+            },
+            "description": "Recorded track names (alias of tracks)."
+          },
+          "trackType": {
+            "type": "string",
+            "description": "MovieScene track type string."
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Track name."
+            },
+            "description": "Track names to record per source."
+          },
+          "url": {
+            "type": "string",
+            "description": "URL to a media stream."
+          },
+          "urls": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Media stream URL."
+            },
+            "description": "Stream URLs appended to the playlist."
+          },
+          "useCurrentLevel": {
+            "type": "boolean",
+            "description": "Whether to render against the currently loaded level."
+          },
+          "value": {
+            "description": "Generic value (any type)."
+          },
+          "visibility": {
+            "type": "string",
+            "description": "Level visibility state: Visible or Hidden."
+          },
+          "width": {
+            "type": "integer",
+            "description": "Output width in pixels (positive; paired with height)."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "open",
+              "duplicate",
+              "rename",
+              "delete",
+              "list",
+              "play",
+              "pause",
+              "stop",
+              "set_playback_speed",
+              "get_properties",
+              "set_properties",
+              "add_camera",
+              "add_actor",
+              "add_actors",
+              "remove_actors",
+              "get_bindings",
+              "add_spawnable_from_class",
+              "add_keyframe",
+              "add_track",
+              "add_section",
+              "remove_track",
+              "list_tracks",
+              "list_track_types",
+              "set_track_muted",
+              "set_track_solo",
+              "set_track_locked",
+              "set_display_rate",
+              "set_tick_resolution",
+              "set_work_range",
+              "set_view_range",
+              "get_metadata",
+              "set_metadata",
+              "create_master_sequence",
+              "add_subsequence",
+              "add_shot_track",
+              "configure_shot_settings",
+              "create_cine_camera_actor",
+              "configure_camera_settings",
+              "add_camera_cut_track",
+              "add_camera_shake_track",
+              "configure_camera_rig_rail",
+              "configure_camera_rig_crane",
+              "add_fade_track",
+              "add_level_visibility_track",
+              "add_material_parameter_track",
+              "add_particle_track",
+              "add_skeletal_animation_track",
+              "add_transform_track",
+              "add_event_track",
+              "add_property_track",
+              "create_render_job",
+              "configure_output_settings",
+              "add_render_pass",
+              "configure_anti_aliasing",
+              "configure_console_variables",
+              "configure_burn_ins",
+              "queue_render",
+              "start_render",
+              "create_media_player",
+              "create_media_source",
+              "create_media_texture",
+              "create_media_sound_component",
+              "create_media_playlist",
+              "play_media",
+              "pause_media",
+              "seek_media",
+              "create_take_recorder_panel",
+              "configure_take_sources",
+              "start_recording",
+              "stop_recording",
+              "configure_recorded_tracks",
+              "start_demo_recording",
+              "stop_demo_recording",
+              "configure_demo_settings",
+              "play_demo",
+              "pause_demo",
+              "seek_demo",
+              "set_demo_playback_speed",
+              "configure_killcam_duration",
+              "start_killcam"
+            ],
+            "description": "Action to invoke on manage_sequence."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "manage_tools",
+      "category": "core",
+      "description": "Dynamic MCP tool management. List canonical tools, view category counts, and enable/disable tools or categories at runtime.",
+      "actions": [
+        "list_tools",
+        "list_categories",
+        "enable_tools",
+        "disable_tools",
+        "enable_category",
+        "disable_category",
+        "get_status",
+        "reset"
+      ],
+      "parameterNames": [
+        "category",
+        "tools"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "core",
+              "world",
+              "gameplay",
+              "utility",
+              "all"
+            ],
+            "description": "Category name to enable/disable."
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tool names to enable or disable."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "list_tools",
+              "list_categories",
+              "enable_tools",
+              "disable_tools",
+              "enable_category",
+              "disable_category",
+              "get_status",
+              "reset"
+            ],
+            "description": "Action to invoke on manage_tools."
+          },
+          "params": {
+            "type": "object",
+            "description": "Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "perActionSchemas": false
+    },
+    {
+      "name": "system_control",
+      "category": "core",
+      "description": "Control the project runtime: profiling, benchmarks, scalability/LOD/Nanite settings, CVars, console commands, Python scripts, UBT, tests, logs, and widgets.",
+      "actions": [
+        "show_fps",
+        "profile",
+        "set_quality",
+        "execute_command",
+        "console_command",
+        "set_cvar",
+        "set_resolution",
+        "set_fullscreen",
+        "start_profiling",
+        "stop_profiling",
+        "run_benchmark",
+        "show_stats",
+        "generate_memory_report",
+        "set_scalability",
+        "set_resolution_scale",
+        "set_vsync",
+        "set_frame_rate_limit",
+        "enable_gpu_timing",
+        "configure_texture_streaming",
+        "configure_lod",
+        "apply_baseline_settings",
+        "optimize_draw_calls",
+        "merge_actors",
+        "configure_occlusion_culling",
+        "optimize_shaders",
+        "configure_nanite",
+        "configure_world_partition",
+        "run_ubt",
+        "run_tests",
+        "subscribe",
+        "unsubscribe",
+        "spawn_category",
+        "execute_python",
+        "set_project_setting",
+        "get_project_settings",
+        "validate_assets",
+        "lumen_update_scene",
+        "start_session",
+        "start_unreal_insights",
+        "capture_insights_trace",
+        "get_trace_status",
+        "pause_session",
+        "resume_session",
+        "stop_session",
+        "write_snapshot",
+        "send_snapshot",
+        "analyze_trace",
+        "create_widget",
+        "show_widget",
+        "add_widget_child",
+        "play_sound",
+        "screenshot"
+      ],
+      "parameterNames": [
+        "actors",
+        "arguments",
+        "assetPath",
+        "boostPlayerLocation",
+        "category",
+        "categoryName",
+        "cellSize",
+        "channels",
+        "childClass",
+        "code",
+        "command",
+        "configuration",
+        "connectionType",
+        "cvar",
+        "detailed",
+        "duration",
+        "enableBatching",
+        "enableInstancing",
+        "enabled",
+        "file",
+        "filename",
+        "filter",
+        "forceLOD",
+        "forceRecompile",
+        "height",
+        "host",
+        "includeMetadata",
+        "key",
+        "level",
+        "lodBias",
+        "maxFPS",
+        "mergeActors",
+        "message",
+        "metadata",
+        "mode",
+        "name",
+        "outputPath",
+        "overwrite",
+        "packageName",
+        "parentName",
+        "path",
+        "paths",
+        "pitch",
+        "platform",
+        "poolSize",
+        "port",
+        "profile",
+        "profileType",
+        "recursive",
+        "replaceSourceActors",
+        "resolution",
+        "returnBase64",
+        "savePath",
+        "scale",
+        "section",
+        "snapshotPath",
+        "soundPath",
+        "streamingDistance",
+        "target",
+        "text",
+        "traceFile",
+        "tracePath",
+        "type",
+        "value",
+        "volume",
+        "widgetId",
+        "widgetPath",
+        "widgetType",
+        "width",
+        "windowed"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Actor names to merge (>=2 required)."
+          },
+          "arguments": {
+            "type": "string",
+            "description": "Extra UBT arguments (validated)."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Single asset path to validate."
+          },
+          "boostPlayerLocation": {
+            "type": "boolean",
+            "description": "Prioritize streaming around the player."
+          },
+          "category": {
+            "type": "string",
+            "description": "Alternate category name field."
+          },
+          "categoryName": {
+            "type": "string",
+            "description": "Category name (letters, digits, underscore, hyphen only)."
+          },
+          "cellSize": {
+            "type": "number",
+            "description": "Partition cell size."
+          },
+          "channels": {
+            "type": "string",
+            "description": "Log channel(s) to subscribe to."
+          },
+          "childClass": {
+            "type": "string",
+            "description": "Child component class (required)."
+          },
+          "code": {
+            "type": "string",
+            "description": "Python code to execute inline (1 MB max).",
+            "maxLength": 1048576
+          },
+          "command": {
+            "type": "string",
+            "description": "Alternate CVar name field (parsed as name + value)."
+          },
+          "configuration": {
+            "type": "string",
+            "description": "Build configuration (default Development)."
+          },
+          "connectionType": {
+            "type": "string",
+            "enum": [
+              "file",
+              "network"
+            ],
+            "description": "Trace connection type; network is restricted to loopback."
+          },
+          "cvar": {
+            "type": "string",
+            "description": "Alternate CVar name field."
+          },
+          "detailed": {
+            "type": "boolean",
+            "description": "Produce a detailed report."
+          },
+          "duration": {
+            "type": "number",
+            "description": "Benchmark duration in seconds (default 60)."
+          },
+          "enableBatching": {
+            "type": "boolean",
+            "description": "Enable batching."
+          },
+          "enableInstancing": {
+            "type": "boolean",
+            "description": "Enable instancing on the merged mesh."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable (true) or disable (false) GPU timing."
+          },
+          "file": {
+            "type": "string",
+            "description": "Path to a .py file to execute.",
+            "maxLength": 4096
+          },
+          "filename": {
+            "type": "string",
+            "description": "Screenshot filename base."
           },
           "filter": {
             "type": "string",
-            "description": "General search filter."
+            "description": "Optional test name filter."
           },
-          "volumeType": {
+          "forceLOD": {
+            "type": "number",
+            "description": "Forced LOD level."
+          },
+          "forceRecompile": {
+            "type": "boolean",
+            "description": "Force a shader recompile."
+          },
+          "height": {
+            "type": "number",
+            "description": "Height in pixels."
+          },
+          "host": {
             "type": "string",
-            "description": "Type filter for get_volumes_info (e.g., \"Trigger\", \"Physics\")."
+            "description": "Trace host (loopback for network)."
           },
-          "bBlockOnSlowStreaming": {
-            "type": "boolean"
+          "includeMetadata": {
+            "type": "boolean",
+            "description": "Include capture metadata."
           },
-          "bounds": {
-            "type": "object"
+          "key": {
+            "type": "string",
+            "description": "Alternate CVar name field."
           },
-          "createIfMissing": {
-            "type": "boolean"
+          "level": {
+            "type": "number",
+            "description": "Level 0-4 (clamped)."
           },
-          "gridName": {
-            "type": "string"
+          "lodBias": {
+            "type": "number",
+            "description": "Additional LOD bias."
           },
-          "layerType": {
-            "type": "string"
+          "maxFPS": {
+            "type": "number",
+            "description": "Maximum frames per second."
+          },
+          "mergeActors": {
+            "type": "boolean",
+            "description": "Whether to merge source actors; forced true by the merge_actors action."
+          },
+          "message": {
+            "type": "string",
+            "description": "Notification message text."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Optional metadata payload.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "mode": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Optimization mode."
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "editor_viewport",
+                  "game_viewport",
+                  "full_editor_window"
+                ],
+                "description": "Screenshot target mode."
+              }
+            ],
+            "description": "Optimization mode."
+          },
+          "name": {
+            "type": "string",
+            "description": "Alternate widget path selector."
+          },
+          "outputPath": {
+            "type": "string",
+            "description": "Optional output path for the report."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "description": "Overwrite existing trace files."
+          },
+          "packageName": {
+            "type": "string",
+            "description": "Package name for the merged asset."
+          },
+          "parentName": {
+            "type": "string",
+            "description": "Optional parent panel name."
+          },
+          "path": {
+            "type": "string",
+            "description": "Alternate single asset path field."
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Asset paths to validate."
+          },
+          "pitch": {
+            "type": "number",
+            "description": "Pitch multiplier."
+          },
+          "platform": {
+            "type": "string",
+            "description": "Platform (default Win64)."
+          },
+          "poolSize": {
+            "type": "number",
+            "description": "Streaming pool size in MB."
+          },
+          "port": {
+            "type": "number",
+            "description": "Trace port."
+          },
+          "profile": {
+            "type": "string",
+            "description": "Baseline profile name (default balanced)."
+          },
+          "profileType": {
+            "type": "string",
+            "enum": [
+              "CPU",
+              "GPU",
+              "Memory",
+              "RenderThread",
+              "GameThread",
+              "All"
+            ],
+            "description": "Profiling domain to display."
+          },
+          "recursive": {
+            "type": "boolean",
+            "description": "Validate recursively."
+          },
+          "replaceSourceActors": {
+            "type": "boolean",
+            "description": "Replace source actors in the level."
+          },
+          "resolution": {
+            "type": "string",
+            "description": "Resolution as WxH (e.g. 1920x1080)."
+          },
+          "returnBase64": {
+            "type": "boolean",
+            "description": "Return PNG as base64 (default true for game_viewport and full_editor_window)."
+          },
+          "savePath": {
+            "type": "string",
+            "description": "Destination /Game folder."
+          },
+          "scale": {
+            "type": "number",
+            "description": "Resolution scale percentage."
+          },
+          "section": {
+            "type": "string",
+            "description": "Settings section."
+          },
+          "snapshotPath": {
+            "type": "string",
+            "description": "Output snapshot path."
+          },
+          "soundPath": {
+            "type": "string",
+            "description": "Sound asset path."
+          },
+          "streamingDistance": {
+            "type": "number",
+            "description": "Loading/streaming range."
+          },
+          "target": {
+            "type": "string",
+            "description": "UBT target name (required)."
+          },
+          "text": {
+            "type": "string",
+            "description": "Optional text for text-bearing components."
+          },
+          "traceFile": {
+            "type": "string",
+            "description": "Output trace file path."
+          },
+          "tracePath": {
+            "type": "string",
+            "description": "Output trace directory path."
+          },
+          "type": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Alternate category selector."
+              },
+              {
+                "type": "string",
+                "description": "Optional benchmark type."
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "CPU",
+                  "GPU",
+                  "Memory",
+                  "RenderThread",
+                  "GameThread",
+                  "All",
+                  "fps"
+                ],
+                "description": "Profiling domain to capture."
+              }
+            ],
+            "description": "Alternate category selector."
+          },
+          "value": {
+            "type": "string",
+            "description": "Setting value."
+          },
+          "volume": {
+            "type": "number",
+            "description": "Volume multiplier (0 silences the request)."
+          },
+          "widgetId": {
+            "type": "string",
+            "description": "Widget id; \"notification\" renders a notification."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Full widget path; name and savePath are derived when name is absent."
+          },
+          "widgetType": {
+            "type": "string",
+            "description": "Widget type."
+          },
+          "width": {
+            "type": "number",
+            "description": "Width in pixels."
+          },
+          "windowed": {
+            "type": "boolean",
+            "description": "Force windowed (true) or fullscreen (false)."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "show_fps",
+              "profile",
+              "set_quality",
+              "execute_command",
+              "console_command",
+              "set_cvar",
+              "set_resolution",
+              "set_fullscreen",
+              "start_profiling",
+              "stop_profiling",
+              "run_benchmark",
+              "show_stats",
+              "generate_memory_report",
+              "set_scalability",
+              "set_resolution_scale",
+              "set_vsync",
+              "set_frame_rate_limit",
+              "enable_gpu_timing",
+              "configure_texture_streaming",
+              "configure_lod",
+              "apply_baseline_settings",
+              "optimize_draw_calls",
+              "merge_actors",
+              "configure_occlusion_culling",
+              "optimize_shaders",
+              "configure_nanite",
+              "configure_world_partition",
+              "run_ubt",
+              "run_tests",
+              "subscribe",
+              "unsubscribe",
+              "spawn_category",
+              "execute_python",
+              "set_project_setting",
+              "get_project_settings",
+              "validate_assets",
+              "lumen_update_scene",
+              "start_session",
+              "start_unreal_insights",
+              "capture_insights_trace",
+              "get_trace_status",
+              "pause_session",
+              "resume_session",
+              "stop_session",
+              "write_snapshot",
+              "send_snapshot",
+              "analyze_trace",
+              "create_widget",
+              "show_widget",
+              "add_widget_child",
+              "play_sound",
+              "screenshot"
+            ],
+            "description": "Action to invoke on system_control."
           },
           "params": {
             "type": "object",

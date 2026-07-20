@@ -41,10 +41,9 @@ describe('progressive search stays compact', () => {
     }
   });
 
-  it('still keeps enough to filter by action name', () => {
-    expect(results.some((tool) => tool.name === 'manage_asset')).toBe(true);
-    const everyHasActions = results.every((tool) => Array.isArray(tool.actions));
-    expect(everyHasActions).toBe(true);
+  it('still keeps enough to route a hit back to its parent tool and action', () => {
+    expect(results.some((row) => row.parentTool === 'manage_asset')).toBe(true);
+    expect(results.every((row) => typeof row.action === 'string')).toBe(true);
   });
 });
 
@@ -83,53 +82,37 @@ describe('describe tool-only returns a summary + paginated actions (no schema du
   });
 });
 
-describe('describe tool+action returns a parameter catalog (no inputSchema)', () => {
+// Task 24 replaced the tool-union parameter catalog with the action's exact
+// schema: describing manage_asset:import used to list 161 union parameters and
+// now lists the 4 that `asset.import` actually declares.
+describe('describe tool+action returns that action\'s exact contract', () => {
   const result = describeGatewayCapability({ tool: 'manage_asset', action: 'import' }) as Record<string, unknown>;
 
-  it('does not return the full inputSchema', () => {
+  it('returns the action-exact inputSchema instead of a union catalog', () => {
     expect(result.success).toBe(true);
-    expect(result.inputSchema).toBeUndefined();
+    expect(result.scope).toBe('capability');
+    expect(result.perActionSchemas).toBe(true);
+    expect(isRecord(result.inputSchema)).toBe(true);
+    const properties = (result.inputSchema as Record<string, unknown>).properties as Record<string, unknown>;
+    expect(Object.keys(properties).sort()).toEqual(['destinationPath', 'overwrite', 'save', 'sourcePath']);
   });
 
-  it('returns a paginated/filterable compact parameter catalog labeled as the tool-union', () => {
+  it('returns a compact parameter list holding only the declared parameters', () => {
     expect(result.action).toBe('import');
-    expect(result.scope).toBe('union');
-    expect(result.perActionSchemas).toBe(false);
-    expect(Array.isArray(result.parameters)).toBe(true);
     const params = result.parameters as Array<Record<string, unknown>>;
-    if (params.length > 0) {
-      const first = params[0];
-      expect(typeof first.name).toBe('string');
-      expect(typeof first.type).toBe('string');
-      // Compact summary only: no nested full schema bodies per entry.
-      expect(first).not.toHaveProperty('properties');
+    expect(params).toHaveLength(4);
+    expect(result.parameterCount).toBe(4);
+    for (const param of params) {
+      expect(typeof param.name).toBe('string');
+      expect(typeof param.type).toBe('string');
+      expect(typeof param.required).toBe('boolean');
+      expect(param).not.toHaveProperty('properties');
     }
-    expect(typeof result.parameterCount).toBe('number');
-    expect(typeof result.parameterLimit).toBe('number');
-    expect(typeof result.parameterHasMore).toBe('boolean');
-    expect(isRecord(result.drillDown)).toBe(true);
-    const drill = result.drillDown as Record<string, unknown>;
-    expect(drill.operation).toBe('describe');
-    expect(drill.tool).toBe('manage_asset');
-    expect(drill.action).toBe('import');
-    expect(typeof drill.param).toBe('string');
   });
 
-  it('filters the parameter catalog by query', () => {
-    const filtered = describeGatewayCapability({
-      tool: 'manage_asset',
-      action: 'import',
-      query: 'path'
-    }) as Record<string, unknown>;
-    const params = filtered.parameters as Array<{ name: string; description?: string }>;
-    expect(params.length).toBeGreaterThan(0);
-    expect(
-      params.every(
-        (p) =>
-          p.name.toLowerCase().includes('path') ||
-          (typeof p.description === 'string' && p.description.toLowerCase().includes('path'))
-      )
-    ).toBe(true);
+  it('routes the legacy pair to its canonical capability id', () => {
+    expect(result.capability).toBe('asset.import');
+    expect(result.migratedFrom).toEqual({ tool: 'manage_asset', action: 'import' });
   });
 });
 
@@ -140,15 +123,15 @@ describe('describe tool+action+param returns exactly one parameter schema', () =
     param: 'sourcePath'
   }) as Record<string, unknown>;
 
-  it('returns a single parameter full schema with union scope', () => {
+  it('returns a single parameter full schema scoped to the action', () => {
     expect(result.success).toBe(true);
     expect(result.operation).toBe('describe');
-    expect(result.tool).toBe('manage_asset');
+    expect(result.parentTool).toBe('manage_asset');
     expect(result.action).toBe('import');
     expect(result.param).toBe('sourcePath');
-    expect(result.scope).toBe('union');
-    expect(result.perActionSchemas).toBe(false);
-    expect(typeof result.required).toBe('boolean');
+    expect(result.scope).toBe('parameter');
+    expect(result.perActionSchemas).toBe(true);
+    expect(result.required).toBe(true);
     expect(isRecord(result.schema)).toBe(true);
     const schema = result.schema as Record<string, unknown>;
     expect(schema.type).toBe('string');
@@ -170,8 +153,7 @@ describe('describe tool+action+param returns exactly one parameter schema', () =
     expect(isRecord(bad.nextCall)).toBe(true);
     const next = bad.nextCall as Record<string, unknown>;
     expect(next.operation).toBe('describe');
-    expect(next.tool).toBe('manage_asset');
-    expect(next.action).toBe('import');
+    expect(next.capability).toBe('asset.import');
     expect(typeof next.param).toBe('string');
   });
 });
@@ -236,9 +218,13 @@ describe('execute gateway errors carry guided self-correction', () => {
     expect(next.action).toBe('get_status');
   });
 
+  // Task 26 supersession: suggestions are the action's exact declared parameters
+  // rather than the parent-tool union, so this case moved off
+  // manage_tools.get_status (which declares none) onto a capability that has
+  // them. The non-empty suggestion assertion is retained unchanged.
   it('INVALID_PARAMS (non-object params) returns suggestions and a describe nextCall', async () => {
     const result = (await handleUnrealGatewayCall(
-      { operation: 'execute', tool: 'manage_tools', action: 'get_status', params: 'not-an-object' },
+      { operation: 'execute', tool: 'manage_asset', action: 'import', params: 'not-an-object' },
       context
     )) as Record<string, unknown>;
     expect(result.success).toBe(false);
@@ -248,7 +234,7 @@ describe('execute gateway errors carry guided self-correction', () => {
     expect(isRecord(result.nextCall)).toBe(true);
     const next = result.nextCall as Record<string, unknown>;
     expect(next.operation).toBe('describe');
-    expect(next.tool).toBe('manage_tools');
+    expect(next.tool).toBe('manage_asset');
   });
 });
 

@@ -5,6 +5,7 @@
 
 import { getManifestToolDefinitions } from '../../gateway/gateway-manifest.js';
 import { isRecord } from '../../utils/validation/type-guards.js';
+import { normalizeSchemaTypes } from './gateway-schema-normalize.js';
 import type { ToolDefinition } from '../../tools/definitions/shared/tool-definition.js';
 
 export const DEFAULT_SEARCH_LIMIT = 12;
@@ -21,6 +22,14 @@ export function getBoundedInteger(value: unknown, fallback: number, minimum: num
     : fallback;
 }
 
+// Clamps like getBoundedInteger, but returns undefined instead of a fallback so
+// callers can tell "no page size requested" apart from an explicit one.
+export function getOptionalBoundedInteger(value: unknown, minimum: number, maximum: number): number | undefined {
+  return typeof value === 'number' && Number.isInteger(value)
+    ? Math.min(Math.max(value, minimum), maximum)
+    : undefined;
+}
+
 export function gatewayError(operation: string, errorCode: string, message: string): Record<string, unknown> {
   return { success: false, operation, errorCode, error: message, message };
 }
@@ -29,12 +38,24 @@ export function isGatewayFailure(result: unknown): result is Record<string, unkn
   return isRecord(result) && result.success === false;
 }
 
+// The manifest is parsed once at module load and gateway consumers only read it,
+// so the normalized projection is built on first use and shared thereafter.
+let normalizedToolDefinitions: ToolDefinition[] | undefined;
+
+function gatewayToolDefinitions(): ToolDefinition[] {
+  normalizedToolDefinitions ??= getManifestToolDefinitions().map((tool) => ({
+    ...tool,
+    inputSchema: normalizeSchemaTypes(tool.inputSchema)
+  }));
+  return normalizedToolDefinitions;
+}
+
 export function findTool(name: string | undefined): ToolDefinition | undefined {
-  return name === undefined ? undefined : getManifestToolDefinitions().find((tool) => tool.name === name);
+  return name === undefined ? undefined : gatewayToolDefinitions().find((tool) => tool.name === name);
 }
 
 export function allToolNames(): string[] {
-  return getManifestToolDefinitions().map((tool) => tool.name);
+  return gatewayToolDefinitions().map((tool) => tool.name);
 }
 
 export function getActionValues(tool: ToolDefinition): string[] {

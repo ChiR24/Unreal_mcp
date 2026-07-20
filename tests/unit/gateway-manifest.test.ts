@@ -50,14 +50,27 @@ describe('gateway manifest', () => {
     }
   });
 
-  it('TS gateway search/describe consume the manifest', () => {
-    const search = searchGatewayCatalog({ limit: 25 }) as { total: number; results: Array<{ name: string }> };
-    expect(search.total).toBe(getManifestToolDefinitions().length);
-    expect(search.results.map((r) => r.name).sort()).toEqual(getGatewayManifestTools().map((t) => t.name).sort());
+  // Task 24 split the two consumers apart: the legacy parent-tool summary still
+  // describes the manifest dispatch surface, while `search` now ranks canonical
+  // capability records. Asserting search against the manifest would re-couple
+  // discovery to the union schemas Task 24 removed from the contract.
+  it('the legacy TS gateway tool summary still consumes the manifest', () => {
     const tool = getGatewayManifestTools()[0];
     const desc = describeGatewayCapability({ tool: tool.name }) as { perActionSchemas: boolean; actions: string[] };
     expect(desc.perActionSchemas).toBe(false);
     expect(desc.actions).toEqual(tool.actions);
+  });
+
+  it('TS gateway search covers every manifest tool through canonical capabilities', () => {
+    const parents = new Set<string>();
+    for (const tool of getManifestToolDefinitions()) {
+      const search = searchGatewayCatalog({ tool: tool.name, limit: 1 }) as {
+        total: number; results: Array<{ parentTool: string }>;
+      };
+      expect(search.total).toBeGreaterThan(0);
+      parents.add(search.results[0].parentTool);
+    }
+    expect(parents.size).toBe(getManifestToolDefinitions().length);
   });
 
   it('native MCP Gateway embeds the identical manifest contract', () => {

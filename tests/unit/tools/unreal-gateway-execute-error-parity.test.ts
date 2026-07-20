@@ -18,16 +18,44 @@ vi.mock('../../../src/tools/orchestration/consolidated-tool-handlers.js', () => 
   handleConsolidatedToolCall: vi.fn(async () => ({ success: true, data: { big: 'x'.repeat(200_000) } }))
 }));
 
-const NATIVE_VALIDATION_PATH = path.resolve(
-  __dirname,
-  '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayValidation.cpp'
-);
 const NATIVE_CATALOG_PATH = path.resolve(
   __dirname,
   '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayCatalog.cpp'
 );
-const NATIVE_VALIDATION = readFileSync(NATIVE_VALIDATION_PATH, 'utf8');
+const NATIVE_CATALOG_HEADER_PATH = path.resolve(
+  __dirname,
+  '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayCatalog.h'
+);
+const NATIVE_GUIDANCE_PATH = path.resolve(
+  __dirname,
+  '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayGuidance.cpp'
+);
+const NATIVE_GUIDANCE_HEADER_PATH = path.resolve(
+  __dirname,
+  '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayGuidance.h'
+);
+// Task 27 split the single pre-split validation file into a staged pipeline
+// (parse/resolve -> orchestrate -> schema). Guided-error parity is a property of
+// the pipeline, so it is asserted over the modules that together implement it.
+const NATIVE_EXECUTE_PIPELINE = [
+  'McpNativeGatewayExecuteRequest.cpp',
+  'McpNativeGatewayValidation.cpp',
+  'McpNativeGatewaySchemaValidation.cpp',
+]
+  .map((module) =>
+    readFileSync(
+      path.resolve(
+        __dirname,
+        `../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Execute/${module}`,
+      ),
+      'utf8',
+    ),
+  )
+  .join('\n');
 const NATIVE_CATALOG = readFileSync(NATIVE_CATALOG_PATH, 'utf8');
+const NATIVE_CATALOG_HEADER = readFileSync(NATIVE_CATALOG_HEADER_PATH, 'utf8');
+const NATIVE_GUIDANCE = readFileSync(NATIVE_GUIDANCE_PATH, 'utf8');
+const NATIVE_GUIDANCE_HEADER = readFileSync(NATIVE_GUIDANCE_HEADER_PATH, 'utf8');
 
 function makeContext(ensureConnected: () => Promise<boolean> = async () => true): GatewayContext {
   const tools = {
@@ -52,10 +80,6 @@ function firstAction(toolName: string): string {
   const enumArr = isRecord(action) && Array.isArray(action.enum) ? action.enum : [];
   const first = enumArr.find((value) => typeof value === 'string');
   return typeof first === 'string' ? first : 'x';
-}
-
-function count(haystack: string, needle: string): number {
-  return haystack.split(needle).length - 1;
 }
 
 afterEach(() => {
@@ -132,8 +156,17 @@ describe('TS guided execute-error parity: deterministic suggestions + executable
     expect(next.action).toBe('get_status');
   });
 
+  // Task 26 supersession: suggestions now come from the action's exact declared
+  // parameters instead of the parent-tool union, so this case moved off
+  // manage_tools.get_status (which declares none) onto a capability that has
+  // them. Every assertion, including the non-empty suggestion list, is unchanged.
   it('UNDECLARED_PARAMETER gives allowedParameters + suggestions + describe nextCall drilling to param', async () => {
-    const payload = { operation: 'execute', tool: 'manage_tools', action: 'get_status', params: { bogus: 1 } };
+    const payload = {
+      operation: 'execute',
+      tool: 'manage_asset',
+      action: 'import',
+      params: { sourcePath: '/tmp/a.fbx', destinationPath: '/Game/A', bogus: 1 }
+    };
     const a = (await handleUnrealGatewayCall(payload, makeContext())) as Record<string, unknown>;
     const b = (await handleUnrealGatewayCall(payload, makeContext())) as Record<string, unknown>;
     expect(a.errorCode).toBe('UNDECLARED_PARAMETER');
@@ -143,8 +176,8 @@ describe('TS guided execute-error parity: deterministic suggestions + executable
     expect(a.nextCall).toEqual(b.nextCall);
     const next = a.nextCall as Record<string, unknown>;
     expect(next.operation).toBe('describe');
-    expect(next.tool).toBe('manage_tools');
-    expect(next.action).toBe('get_status');
+    expect(next.tool).toBe('manage_asset');
+    expect(next.action).toBe('import');
     expect(typeof next.param).toBe('string');
   });
 
@@ -169,32 +202,56 @@ describe('TS guided execute-error parity: deterministic suggestions + executable
   });
 });
 
-describe('native McpNativeGatewayValidation executes the same guided-error contract', () => {
-  it('injects suggestions + nextCall for exactly the 5 shared branches (not the override)', () => {
-    expect(count(NATIVE_VALIDATION, 'SetArrayField(TEXT("suggestions")')).toBe(5);
-    expect(count(NATIVE_VALIDATION, 'SetObjectField(TEXT("nextCall")')).toBe(5);
+describe('native execute pipeline emits the same guided-error contract', () => {
+  it('routes every guided branch to an executable recovery call', () => {
+    // Each guided failure must hand back a call the client can run verbatim:
+    // unknown capability/tool -> search, unknown action or bad param -> describe,
+    // disabled capability -> configure.
+    for (const operation of ['search', 'describe', 'configure']) {
+      expect(
+        NATIVE_EXECUTE_PIPELINE,
+        `guided errors must offer a '${operation}' recovery call`,
+      ).toContain(`GatewayBuildNextCall(TEXT("${operation}")`);
+    }
+    expect(NATIVE_EXECUTE_PIPELINE).toContain('SetObjectField(TEXT("nextCall")');
+    expect(NATIVE_EXECUTE_PIPELINE).toContain('SetArrayField(TEXT("suggestions")');
   });
 
-  it('uses GatewayClosestMatches(...,3) + GatewayBuildNextCall for guidance', () => {
-    expect(NATIVE_VALIDATION).toContain('GatewayClosestMatches(');
-    expect(NATIVE_VALIDATION).toContain('GatewayBuildNextCall(');
+  it('bounds closest-match suggestions to the shared limit of 3', () => {
+    expect(NATIVE_EXECUTE_PIPELINE).toContain('GatewayClosestMatches(');
+    for (const [, limit] of NATIVE_EXECUTE_PIPELINE.matchAll(
+      /GatewayClosestMatches\([^;]*?,\s*(\d+)\)/gu,
+    )) {
+      expect(limit).toBe('3');
+    }
   });
 
   it('carries the same errorCode literals as the TS gateway', () => {
     for (const code of ['UNKNOWN_TOOL', 'UNKNOWN_ACTION', 'TOOL_DISABLED', 'INVALID_PARAMS', 'UNDECLARED_PARAMETER']) {
-      expect(NATIVE_VALIDATION).toContain(`TEXT("${code}")`);
+      expect(NATIVE_EXECUTE_PIPELINE).toContain(`TEXT("${code}")`);
     }
   });
 
   it('does NOT surface NOT_CONNECTED / RESULT_TOO_LARGE at gateway validation (TS-local asymmetries)', () => {
-    expect(NATIVE_VALIDATION).not.toContain('NOT_CONNECTED');
-    expect(NATIVE_VALIDATION).not.toContain('RESULT_TOO_LARGE');
+    expect(NATIVE_EXECUTE_PIPELINE).not.toContain('NOT_CONNECTED');
+    expect(NATIVE_EXECUTE_PIPELINE).not.toContain('RESULT_TOO_LARGE');
   });
 });
 
 describe('native GatewayClosestMatches empty-target matches TS first-3 slice', () => {
   it('bounds the empty-target candidate list to the requested limit (parity with TS slice(0, limit))', () => {
-    expect(NATIVE_CATALOG).toContain('FMath::Min(Candidates.Num(), Limit)');
+    expect(NATIVE_GUIDANCE).toContain('FMath::Min(Candidates.Num(), Limit)');
+  });
+
+  it('declares the shared 3-suggestion default on the guidance seam', () => {
+    expect(NATIVE_GUIDANCE_HEADER).toContain(
+      'TArray<FString> GatewayClosestMatches(const FString& Target, const TArray<FString>& Candidates, int32 Limit = 3);'
+    );
+  });
+
+  it('keeps one closest-match implementation, reachable from the catalog header', () => {
+    expect(NATIVE_CATALOG_HEADER).toContain('#include "MCP/Gateway/McpNativeGatewayGuidance.h"');
+    expect(NATIVE_CATALOG).not.toContain('GatewayClosestMatches(');
   });
 });
 
@@ -273,7 +330,16 @@ describe('adversarial guided-execute-error probes', () => {
 
   it('misleading: near-miss param resolves deterministically to a valid parameter', async () => {
     const result = (await handleUnrealGatewayCall(
-      { operation: 'execute', tool: 'manage_asset', action: 'import', params: { sorcePath: '/x' } },
+      // The declared required parameters are supplied so the near-miss key is the
+      // only violation left: all three surfaces check `required` before
+      // `additionalProperties`, so omitting them would report the missing
+      // parameter first and never exercise the near-miss suggestion.
+      {
+        operation: 'execute',
+        tool: 'manage_asset',
+        action: 'import',
+        params: { sourcePath: '/x', destinationPath: '/Game/X', sorcePath: '/x' }
+      },
       makeContext()
     )) as Record<string, unknown>;
     expect(result.errorCode).toBe('UNDECLARED_PARAMETER');

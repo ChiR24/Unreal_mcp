@@ -1,18 +1,16 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+// Pay the one-time transform cost during collection; each case still reloads
+// the module after installing its own environment fixture.
+await import('../../../src/server/server-factory.js');
 
 async function buildWithGatewayMode(mode: string | undefined) {
     vi.resetModules();
-    const original = process.env;
-    process.env = { ...original };
-    if (mode === undefined) {
-        delete process.env.MCP_GATEWAY_MODE;
-    } else {
-        process.env.MCP_GATEWAY_MODE = mode;
-    }
-    process.env.MOCK_UNREAL_CONNECTION = 'true';
-    process.env.NODE_ENV = 'test';
+    vi.stubEnv('MCP_GATEWAY_MODE', mode);
+    vi.stubEnv('MOCK_UNREAL_CONNECTION', 'true');
+    vi.stubEnv('NODE_ENV', 'test');
 
     const { createServer } = await import('../../../src/server/server-factory.js');
     const built = createServer();
@@ -34,8 +32,7 @@ describe('gateway-mode behavior (MCP_GATEWAY_MODE)', () => {
             ctx.built.metricsServer?.close();
         }
         ctx = undefined;
-        process.env = { ...process.env };
-        vi.resetModules();
+        vi.unstubAllEnvs();
     });
 
     it('defaults to gateway mode: exactly one public tool (unreal)', async () => {

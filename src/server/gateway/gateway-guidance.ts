@@ -23,7 +23,18 @@ function levenshtein(a: string, b: string): number {
   return previous[n];
 }
 
-/** Ranked closest candidates to `target` by substring boost + edit distance. */
+function commonPrefixLength(left: string, right: string): number {
+  const limit = Math.min(left.length, right.length);
+  let shared = 0;
+  while (shared < limit && left[shared] === right[shared]) shared += 1;
+  return shared;
+}
+
+// Edit distance alone ties candidates a caller would never confuse: `manage_asts`
+// is 3 edits from `manage_asset`, `manage_ai`, and `manage_gas` alike, so the top
+// suggestion fell to whichever the catalog listed first. A typo keeps the prefix
+// it was mistyped from, so the longer shared prefix is the better correction; the
+// trailing name comparison makes the order total rather than catalog-dependent.
 export function closestMatches(target: string, candidates: string[], limit: number = MAX_SUGGESTIONS): string[] {
   if (limit <= 0) return [];
   const normalized = target.trim().toLowerCase();
@@ -33,9 +44,12 @@ export function closestMatches(target: string, candidates: string[], limit: numb
       const lower = candidate.toLowerCase();
       let score = levenshtein(lower, normalized);
       if (lower.includes(normalized) || normalized.includes(lower)) score -= 4;
-      return { candidate, score };
+      return { candidate, score, prefix: commonPrefixLength(lower, normalized) };
     })
-    .sort((left, right) => left.score - right.score)
+    .sort((left, right) =>
+      left.score - right.score
+      || right.prefix - left.prefix
+      || left.candidate.localeCompare(right.candidate))
     .slice(0, limit)
     .map((entry) => entry.candidate);
 }

@@ -42,43 +42,36 @@ describe('unreal gateway public list', () => {
     });
 });
 
+// Task 24: search ranks canonical capability records, so a result row is a
+// capability (`capability`/`parentTool`/`action`), not a parent tool (`name`).
 describe('unreal gateway search', () => {
-    it('returns all canonical tools when the query is empty', () => {
+    it('browses the whole canonical catalog when the query is empty', () => {
         const result = searchGatewayCatalog({ limit: 25 }) as Record<string, unknown>;
         expect(result.success).toBe(true);
         expect(result.operation).toBe('search');
         const results = result.results as Array<Record<string, unknown>>;
-        expect(results.length).toBe(23);
-        expect(result.total).toBe(23);
-        expect(result.hasMore).toBe(false);
+        expect(results.length).toBe(25);
+        expect(result.total).toBe(1335);
+        expect(result.hasMore).toBe(true);
     });
 
-    it('filters by query across name, description, and actions', () => {
+    it('ranks capabilities of the matching parent for a keyword query', () => {
         const result = searchGatewayCatalog({ query: 'asset' }) as Record<string, unknown>;
         const results = result.results as Array<Record<string, unknown>>;
         expect(results.length).toBeGreaterThan(0);
         expect(results.length).toBeLessThanOrEqual(25);
-        expect(results.some((tool) => tool.name === 'manage_asset')).toBe(true);
-        const matches = results.every((tool) => {
-            const haystack = [
-                tool.name,
-                tool.category ?? '',
-                tool.description,
-                ...((tool.actions as string[]) ?? [])
-            ].join(' ').toLowerCase();
-            return haystack.includes('asset');
-        });
-        expect(matches).toBe(true);
+        expect(results.some((row) => row.parentTool === 'manage_asset')).toBe(true);
+        expect(results.every((row) => typeof row.capability === 'string')).toBe(true);
     });
 
     it('bounds pagination and reports hasMore correctly', () => {
-        const first = searchGatewayCatalog({ limit: 5, offset: 0 }) as Record<string, unknown>;
-        const firstResults = first.results as Array<unknown>;
-        expect(firstResults.length).toBe(5);
+        const first = searchGatewayCatalog({ tool: 'manage_tools', limit: 5, offset: 0 }) as Record<string, unknown>;
+        expect((first.results as Array<unknown>).length).toBe(5);
         expect(first.hasMore).toBe(true);
 
-        const last = searchGatewayCatalog({ limit: 25, offset: 20 }) as Record<string, unknown>;
-        expect((last.results as Array<unknown>).length).toBe(3);
+        const total = first.total as number;
+        const last = searchGatewayCatalog({ tool: 'manage_tools', limit: 25, offset: 5 }) as Record<string, unknown>;
+        expect((last.results as Array<unknown>).length).toBe(total - 5);
         expect(last.hasMore).toBe(false);
     });
 
@@ -99,11 +92,13 @@ describe('unreal gateway describe', () => {
         expect(actions).toContain('disable_category');
     });
 
-    it('narrows to a single exact action when provided', () => {
+    it('narrows a legacy tool+action pair to that action\'s exact capability', () => {
         const result = describeGatewayCapability({ tool: 'manage_tools', action: 'get_status' }) as Record<string, unknown>;
         expect(result.success).toBe(true);
         expect(result.action).toBe('get_status');
-        expect(result.actions).toEqual(['get_status']);
+        expect(result.scope).toBe('capability');
+        expect(result.capability).toBe('manage_tools.get_status');
+        expect(result.migratedFrom).toEqual({ tool: 'manage_tools', action: 'get_status' });
     });
 
     it('rejects an unknown tool', () => {
