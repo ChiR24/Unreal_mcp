@@ -42,15 +42,19 @@ function runtimeTypescriptBlocked(command: string): boolean {
 }
 
 describe('console-command policy model', () => {
-  it('provides typed policy data when Task 6 is implemented', () => {
-    // Given: Task 6 requires a behavior-neutral model outside the runtime validator.
+  it('wires the runtime validator to the shared generated policy (Task 22)', () => {
+    // Given: Task 22 replaces duplicated handwritten block lists with one generated policy.
     const validatorPath = resolve(process.cwd(), 'src/utils/commands/command-validator.ts');
 
-    // When: the existing runtime validator source is inspected after model creation.
+    // When: the runtime validator source is inspected after Task 22 wiring.
     const validatorSource = readFileSync(validatorPath, 'utf8');
 
-    // Then: the new model remains unwired and cannot change current filtering behavior.
-    expect(validatorSource).not.toContain('console-command-policy');
+    // Then: the validator imports the generated policy and no longer carries its own
+    // duplicated DANGEROUS_COMMANDS / FORBIDDEN_TOKENS / FORBIDDEN_PATTERNS arrays.
+    expect(validatorSource).toContain('console-command-policy-generated');
+    expect(validatorSource).not.toMatch(/readonly\s+static\s+readonly\s+DANGEROUS_COMMANDS/);
+    expect(validatorSource).not.toMatch(/readonly\s+static\s+readonly\s+FORBIDDEN_TOKENS/);
+    expect(validatorSource).not.toMatch(/readonly\s+static\s+readonly\s+FORBIDDEN_PATTERNS/);
   });
 
   it('reproduces every current surface outcome in the locked corpus', () => {

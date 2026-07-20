@@ -1,60 +1,20 @@
 /**
  * Validates console commands before execution to prevent dangerous operations.
- * Blocks crash-inducing commands, shell injection, and Python execution.
+ *
+ * The authoritative block lists are generated from the canonical typed policy
+ * (src/utils/commands/console-command-policy-rules.ts) by
+ * scripts/generate-console-command-policy.ts into
+ * console-command-policy.generated.ts (Task 22). This module no longer
+ * hand-maintains duplicated rule arrays; it delegates to the shared generated
+ * policy so TypeScript and native transports stay in lockstep.
+ *
+ * Runtime behavior (blocked commands, tokens, separators, Python) is unchanged.
  */
+import {
+  applyGeneratedConsoleCommandPolicy,
+} from './console-command-policy-generated.js';
+
 export class CommandValidator {
-    /**
-     * Commands that can crash the engine or cause severe instability.
-     * These are blocked unconditionally.
-     */
-    private static readonly DANGEROUS_COMMANDS = [
-        // Engine termination commands
-        'quit', 'exit', 'kill', 'crash',
-        // Crash-inducing commands
-        'r.gpucrash', 'r.crash', 'debug crash', 'forcecrash', 'debug break',
-        'assert false', 'check(false)',
-        // View buffer commands that can crash on some hardware
-        'viewmode visualizebuffer basecolor',
-        'viewmode visualizebuffer worldnormal',
-        // Heavy operations that can cause access violations if systems not initialized
-        'buildpaths', 'rebuildnavigation',
-        // Heavy debug commands that can stall or crash
-        'obj garbage', 'obj list', 'memreport',
-        // Potentially destructive without proper setup
-        'delete', 'destroy'
-    ];
-
-    /**
-     * Tokens that indicate shell injection or external system access attempts.
-     * Any command containing these is blocked.
-     */
-    private static readonly FORBIDDEN_TOKENS = [
-        // Shell commands (Windows/Unix)
-        'shutdown', 'reboot', 'rmdir', 'mklink',
-        // Python injection attempts
-        'import os', 'import subprocess', 'subprocess.', 'os.system',
-        'exec(', 'eval(', '__import__', 'import sys', 'import importlib',
-        'with open', 'open(', 'write(', 'read('
-    ];
-
-    /**
-     * Regex patterns for forbidden tokens to handle flexible whitespace.
-     */
-    private static readonly FORBIDDEN_PATTERNS = [
-        // Dangerous shell commands (with word boundaries to prevent substring matching and allow flexible whitespace)
-        /\b(?:rm|del|format|copy|move|start)\b/i,
-        // Python imports with whitespace
-        /import\s+(?:os|sys|subprocess|importlib|shutil)/i,
-        /from\s+(?:os|sys|subprocess|importlib|shutil)\s+import/i,
-        // Function calls with flexible whitespace before parenthesis
-        /(?:exec|eval|open|write|read|system)\s*\(/i,
-        // Specific dangerous constructs
-        /__import__\s*\(/i,
-        /subprocess\./i,
-        /os\.system/i,
-        /start\s+"/i,
-    ];
-
     /**
      * Patterns that indicate obviously invalid commands.
      * Used to warn about likely typos or invalid input.
@@ -64,14 +24,6 @@ export class CommandValidator {
         /^invalid_command/i,
         /^this_is_not_a_valid/i,
     ];
-
-    /**
-     * Pre-compiled patterns for dangerous commands using word boundaries.
-     * This prevents false positives like 'show exit menu' matching 'exit'.
-     */
-    private static readonly DANGEROUS_PATTERNS = CommandValidator.DANGEROUS_COMMANDS.map(
-        cmd => new RegExp(`(?:^|\\s)${cmd.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s|$)`, 'i')
-    );
 
     /**
      * Validates a console command for safety before execution.
@@ -94,40 +46,14 @@ export class CommandValidator {
 
         const cmdLower = cmdTrimmed.toLowerCase();
 
-        // Check for 'py' or 'python' followed by any whitespace or end of string
-        // This catches 'py', 'py ', 'python', 'python ' etc. to prevent bypasses
-        if (/^(?:py|python)(?:\s|$)/.test(cmdLower)) {
-            throw new Error('Python console commands are blocked from external calls for safety.');
-        }
-
-        // Use word-boundary matching to avoid false positives like 'show exit menu'
-        if (this.DANGEROUS_PATTERNS.some(pattern => pattern.test(cmdLower))) {
+        // Use the single generated fail-closed policy. The generated policy
+        // reproduces the prior TS block behavior exactly (Task 6 baseline).
+        if (applyGeneratedConsoleCommandPolicy(cmdLower, 'typescript')) {
             throw new Error(`Dangerous command blocked: ${command}`);
         }
 
-        if (cmdLower.includes('&&') || cmdLower.includes('||')) {
-            throw new Error('Command chaining with && or || is blocked for safety.');
-        }
-
-        // Block semicolon and pipe which can also be used for command chaining/injection
-        if (cmdTrimmed.includes(';')) {
-            throw new Error('Command chaining with ; (semicolon) is blocked for safety.');
-        }
-        if (cmdTrimmed.includes('|')) {
-            throw new Error('Command piping with | is blocked for safety.');
-        }
-
-        // Check for forbidden tokens (simple string match)
-        if (this.FORBIDDEN_TOKENS.some(token => cmdLower.includes(token))) {
-            throw new Error(`Command contains unsafe token and was blocked: ${command}`);
-        }
-
-        // Check for forbidden patterns (regex match for flexible whitespace)
-        if (this.FORBIDDEN_PATTERNS.some(pattern => pattern.test(cmdLower))) {
-             throw new Error(`Command contains unsafe pattern and was blocked: ${command}`);
-        }
-
-        // Block backticks which can be used for shell execution
+        // Block backticks which can be used for shell execution (covered by the
+        // generated UNSAFE_SEPARATOR rule; kept explicit for the clear message).
         if (cmdTrimmed.includes('`')) {
             throw new Error('Backtick characters are blocked for safety.');
         }
