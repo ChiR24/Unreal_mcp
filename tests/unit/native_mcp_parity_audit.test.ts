@@ -1,111 +1,98 @@
 /// <reference types="node" />
 
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-const temporaryDirectories: string[] = [];
+import {
+  createTrackedTempRoot,
+  registerTempRootCleanup,
+  writeFixtureFile
+} from './audit-fixture-workspace.js';
+import {
+  createClassSlicingFixture,
+  createParityFixture
+} from './native-mcp-parity-fixtures.js';
 
-function writeFile(root: string, relativePath: string, source: string): void {
-  const filePath = path.join(root, relativePath);
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, source);
-}
-
-function toolSource(name: string): string {
-  return [
-    `export const ${name.replace(/_/g, '')}ToolDefinition = {`,
-    `  name: '${name}',`,
-    "  inputSchema: { properties: { action: { enum: ['run'], description: 'Action' } }, required: ['action'] }",
-    '};',
-    ''
-  ].join('\n');
-}
-
-function nativeToolSource(name: string): string {
-  return [
-    'class FFixtureTool {',
-    `  FString GetName() const override { return TEXT("${name}"); }`,
-    '  auto GetSchema() {',
-    '    return Builder.StringEnum(TEXT("action"), { TEXT("run") }, TEXT("Action"));',
-    '  }',
-    '};',
-    ''
-  ].join('\n');
-}
-
-function createParityFixture(
-  typeScriptNames: readonly string[],
-  registryNames: readonly string[],
-  nativeDefinitionNames: readonly string[]
-): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'native-parity-audit-'));
-  temporaryDirectories.push(root);
-
-  writeFile(
-    root,
-    'src/tools/definitions/shared/action-sets.ts',
-    "export const UNUSED_ACTIONS = ['unused'] as const;\n"
-  );
-  typeScriptNames.forEach((name, index) => {
-    writeFile(
-      root,
-      `src/tools/definitions/group-${index % 2}/${index}-${name}-tool.ts`,
-      toolSource(name)
-    );
-  });
-
-  const registryValues = registryNames.map((name) => `TEXT("${name}")`).join(', ');
-  writeFile(
-    root,
-    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Registry/McpToolRegistry.cpp',
-    `const TArray<FString> CanonicalToolNames = { ${registryValues} };\n`
-  );
-  writeFile(
-    root,
-    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Routing/McpConsolidatedActionRoutingFixture.h',
-    ''
-  );
-  nativeDefinitionNames.forEach((name, index) => {
-    writeFile(
-      root,
-      `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools/group-${index % 2}/${index}-${name}.cpp`,
-      nativeToolSource(name)
-    );
-  });
-
-  return root;
-}
-
-function createClassSlicingFixture(fileName: string, alphaMembers: readonly string[]): string {
-  const root = createParityFixture(['alpha', 'beta'], ['alpha', 'beta'], []);
-  writeFile(
-    root,
-    `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools/${fileName}`,
-    [
-      'class FAlphaTool {',
-      ...alphaMembers,
-      '};',
-      'class FBetaTool {',
-      '  FString GetName() const override { return TEXT("beta"); }',
-      '  auto GetSchema() {',
-      '    return Builder.StringEnum(TEXT("action"), { TEXT("run") }, TEXT("Action"));',
-      '  }',
-      '};',
-      ''
-    ].join('\n')
-  );
-  return root;
-}
-
-afterEach(() => {
-  for (const directory of temporaryDirectories.splice(0)) {
-    fs.rmSync(directory, { recursive: true, force: true });
-  }
-});
+registerTempRootCleanup();
 
 describe('native MCP parity audit', () => {
+  it('discovers both real canonical surfaces instead of comparing nothing', async () => {
+    // Given the real repository on both surfaces
+    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+
+    // When parity is audited with no fixture root
+    const result = auditNativeMcpParity({ repoRoot: process.cwd() });
+
+    // Then all 23 canonical parents are compared, with no name or action drift
+    expect(result.emptyDiscovery).toEqual([]);
+    expect(result.counts.typeScriptDefinitions).toBe(23);
+    expect(result.counts.uniqueTypeScriptNames).toBe(23);
+    expect(result.counts.nativeDefinitions).toBe(23);
+    expect(result.toolNameGaps).toEqual({
+      missingFromNativeRegistry: [],
+      extraInNativeRegistry: [],
+      missingNativeDefinitions: []
+    });
+    expect(result.actionGaps).toEqual([]);
+    expect(result.duplicateNames).toEqual({
+      typeScriptTools: [],
+      nativeCanonicalRegistry: [],
+      nativeToolDefinitions: []
+    });
+  });
+
+  it('fails closed when the TypeScript side discovers no definitions', async () => {
+    // Given a repository whose parent definitions all vanished
+    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+    const canonicalNames = Array.from({ length: 23 }, (_, index) => `tool_${index + 1}`);
+    const root = createParityFixture([], canonicalNames, canonicalNames);
+
+    // When parity is audited
+    const result = auditNativeMcpParity({ repoRoot: root });
+
+    // Then the empty side is itself a mismatch, not a clean comparison of nothing
+    expect(result.counts.typeScriptDefinitions).toBe(0);
+    expect(result.actionGaps).toEqual([]);
+    expect(result.emptyDiscovery).toEqual(['typeScriptTools']);
+    expect(result.hasMismatches).toBe(true);
+  });
+
+  it('fails closed when no native tool definitions are discovered', async () => {
+    // Given a native Tools tree that declares no tool classes
+    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+    const root = createParityFixture(['alpha'], ['alpha'], []);
+    writeFixtureFile(
+      root,
+      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools/none.cpp',
+      'void Unrelated() {}\n'
+    );
+
+    // When parity is audited
+    const result = auditNativeMcpParity({ repoRoot: root });
+
+    // Then the missing native side is reported rather than silently skipped
+    expect(result.emptyDiscovery).toEqual(['nativeToolDefinitions']);
+    expect(result.hasMismatches).toBe(true);
+  });
+
+  it('fails closed when the generated parent artifact is emptied', async () => {
+    // Given a generated parent artifact that emits an empty definition list
+    const { readGeneratedParentToolDefinitions } = await import('../parameter-audit-context.mjs');
+    const root = createTrackedTempRoot('native-parity-empty-generated-');
+    const artifactPath = path.join(root, 'parent-tool-definitions.generated.ts');
+    fs.writeFileSync(
+      artifactPath,
+      'export const generatedParentToolDefinitions: readonly unknown[] = [];\n'
+    );
+
+    // When the parity parser loads it
+    // Then it raises instead of handing the audit an empty TypeScript surface
+    expect(() => readGeneratedParentToolDefinitions(artifactPath)).toThrow(
+      /zero parent tool definitions/
+    );
+  });
+
   it('fails when 24 TypeScript definitions collapse to 23 unique names', async () => {
     const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
     const canonicalNames = Array.from({ length: 23 }, (_, index) => `tool_${index + 1}`);
@@ -163,7 +150,7 @@ describe('native MCP parity audit', () => {
   it('attributes action enums to the matching class in multi-tool source files', async () => {
     const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
     const root = createParityFixture(['alpha', 'beta'], ['alpha', 'beta'], []);
-    writeFile(
+    writeFixtureFile(
       root,
       'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools/multi.cpp',
       [
@@ -197,7 +184,7 @@ describe('native MCP parity audit', () => {
   it('prefers the tool definition action enum over slug-prefixed helpers', async () => {
     const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
     const root = createParityFixture(['alpha'], ['alpha'], ['alpha']);
-    writeFile(
+    writeFixtureFile(
       root,
       'src/tools/definitions/group-0/0-alpha-a-helper.ts',
       [

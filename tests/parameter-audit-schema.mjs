@@ -1,7 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
-import { definitionsRoot as defaultDefinitionsRoot } from './parameter-audit-context.mjs';
+import {
+  isGeneratedDefinitionsRoot,
+  readRuntimeFacadeToolDefinitions
+} from './parameter-audit-context.mjs';
 
 function propertyName(node) {
   if (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name) || ts.isNumericLiteral(node.name)) {
@@ -157,8 +160,23 @@ function toolDefinitionDeclarations(sourceFiles) {
   return declarations;
 }
 
-export function extractToolSchemas(config = {}) {
-  const definitionsRoot = config.definitionsRoot ?? defaultDefinitionsRoot;
+function sortedStrings(values) {
+  return Array.isArray(values)
+    ? [...new Set(values.filter((value) => typeof value === 'string'))].sort()
+    : [];
+}
+
+function schemaFromRuntimeFacade(definition) {
+  const properties = definition.inputSchema?.properties ?? {};
+  return {
+    name: definition.name,
+    actions: sortedStrings(properties['action']?.enum),
+    properties: Object.keys(properties).sort(),
+    required: sortedStrings(definition.inputSchema?.required)
+  };
+}
+
+function toolSchemasFromSource(definitionsRoot) {
   const { program, sourceFiles } = createDefinitionsProgram(definitionsRoot);
   const checker = program.getTypeChecker();
   const tools = [];
@@ -185,6 +203,22 @@ export function extractToolSchemas(config = {}) {
       required: required ? stringArray(required, checker) : []
     });
   }
+
+  return tools;
+}
+
+/**
+ * Real-repo mode projects the generated runtime facade, which is the surface the
+ * server actually exposes. Explicit fixture roots keep the compiler-AST parser,
+ * which the schema-discovery fixtures exercise directly.
+ *
+ * The facade loader fails closed on an empty artifact, so a missing or emptied
+ * generated surface raises instead of silently reporting zero coverage.
+ */
+export function extractToolSchemas(config = {}) {
+  const tools = isGeneratedDefinitionsRoot(config.definitionsRoot)
+    ? readRuntimeFacadeToolDefinitions().map(schemaFromRuntimeFacade)
+    : toolSchemasFromSource(config.definitionsRoot);
 
   return tools.sort((left, right) => left.name.localeCompare(right.name));
 }

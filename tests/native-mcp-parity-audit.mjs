@@ -203,6 +203,14 @@ export function auditNativeMcpParity(config = {}) {
   const nativeCanonicalDefinitionNames = nativeCanonicalTools.map((tool) => tool.name);
   const uniqueNativeCanonicalDefinitionNames = uniqueSorted(nativeCanonicalDefinitionNames);
   const nativeToolsByName = new Map(nativeCanonicalTools.map((tool) => [tool.name, tool]));
+  // Every per-tool comparison below iterates a discovered side. If a side is
+  // empty the loops do nothing and the audit would report a clean run without
+  // having compared anything, so an empty side is itself a mismatch.
+  const emptyDiscovery = [
+    ...(typeScriptTools.length === 0 ? ['typeScriptTools'] : []),
+    ...(uniqueNativeRegistryNames.length === 0 ? ['nativeCanonicalRegistry'] : []),
+    ...(nativeCanonicalTools.length === 0 ? ['nativeToolDefinitions'] : [])
+  ];
   const toolNameGaps = {
     missingFromNativeRegistry: difference(uniqueTypeScriptNames, uniqueNativeRegistryNames),
     extraInNativeRegistry: difference(uniqueNativeRegistryNames, uniqueTypeScriptNames),
@@ -241,7 +249,8 @@ export function auditNativeMcpParity(config = {}) {
     uniqueNativeDefinitionNames: uniqueNativeCanonicalDefinitionNames.length,
     toolsWithSchemaPropertyParity: schemaParityTools.size
   };
-  const hasMismatches = Object.values(duplicateNames).some((values) => values.length > 0)
+  const hasMismatches = emptyDiscovery.length > 0
+    || Object.values(duplicateNames).some((values) => values.length > 0)
     || Object.values(toolNameGaps).some((values) => values.length > 0)
     || actionGaps.length > 0
     || schemaPropertyGaps.length > 0;
@@ -250,6 +259,7 @@ export function auditNativeMcpParity(config = {}) {
     paths,
     counts,
     schemaParityTools: [...schemaParityTools].sort(),
+    emptyDiscovery,
     duplicateNames,
     toolNameGaps,
     actionGaps,

@@ -5,6 +5,10 @@ import {
   maskTypeScriptLiteralsAndComments
 } from './native-mcp-source-parser.mjs';
 import { extractTypeScriptSchemaMap } from './audits/typescript-schema-parser.mjs';
+import {
+  isGeneratedDefinitionsRoot,
+  readGeneratedParentToolDefinitions
+} from './parameter-audit-context.mjs';
 
 function recursiveFiles(root, predicate) {
   return fs.readdirSync(root, { withFileTypes: true })
@@ -78,7 +82,19 @@ function activeToolName(source) {
       && maskedSource.slice(match.index, match.index + 'name'.length) === 'name')?.[1];
 }
 
-export function extractTypeScriptTools(paths) {
+function generatedParityTools() {
+  return readGeneratedParentToolDefinitions().map((definition) => {
+    const inputSchema = definition.inputSchema ?? { type: 'object', properties: {}, required: [] };
+    const actionEnum = inputSchema.properties?.['action']?.enum;
+    return {
+      name: definition.name,
+      actions: Array.isArray(actionEnum) ? [...new Set(actionEnum)].sort() : [],
+      schema: inputSchema
+    };
+  });
+}
+
+function sourceParityTools(paths) {
   const schemas = extractTypeScriptSchemaMap(paths.tsDefinitionsRoot);
   const actionSource = fs.readFileSync(
     path.join(paths.tsDefinitionsRoot, 'shared', 'action-sets.ts'),
@@ -119,6 +135,22 @@ export function extractTypeScriptTools(paths) {
       schema: schemas.get(name) ?? { type: 'object', properties: {}, required: [] }
     });
   }
+
+  return tools;
+}
+
+/**
+ * Real-repo mode reads the generated parent definitions, which are the neutral
+ * contract the native plugin generates from the same capability records. They
+ * intentionally omit the TypeScript-only `params` passthrough, so comparing them
+ * against native parent schemas stays apples-to-apples.
+ *
+ * Explicit fixture roots keep scanning `*-tool.ts` with the compiler AST parser.
+ */
+export function extractTypeScriptTools(paths) {
+  const tools = isGeneratedDefinitionsRoot(paths.tsDefinitionsRoot)
+    ? generatedParityTools()
+    : sourceParityTools(paths);
 
   return tools.sort((left, right) => left.name.localeCompare(right.name));
 }
