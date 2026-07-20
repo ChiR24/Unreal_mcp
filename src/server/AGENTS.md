@@ -34,7 +34,7 @@ server/
 
 ## REQUEST FLOW
 1. `tools/list`: detect client -> select effective categories -> query `dynamicToolManager` -> sanitize schemas. Gateway mode returns the single `unreal` tool; legacy mode returns the 23-tool list.
-2. `manage_tools`: execute locally -> emit `notifications/tools/list_changed` only for mutating actions.
+2. `manage_tools` (legacy direct-listing mode only): execute locally -> emit `notifications/tools/list_changed` only for mutating actions. Gateway mode (`unreal` tool) routes `configure` through `handleUnrealGatewayCall` and never reaches this notifier, so no list-changed notification is emitted on the gateway surface.
 3. Other calls: merge action params -> check enabled/connection -> elicit -> consolidated handler -> clean -> validate.
 4. `system_control:get_project_settings` may fall back to project INI data without a live bridge.
 5. Cancellation forwarding is **implemented** on this surface. `server-factory.ts` registers `CancelledNotificationSchema` and forwards it to `AutomationBridge.cancelMcpRequest`, which drops the matching queued work and sends a best-effort `cancel_request` frame to Unreal for in-flight work; it cannot interrupt an already-executing editor operation (advisory only). SDK AbortSignal cancellation converges on the same primitive.
@@ -42,7 +42,7 @@ server/
 ## CONVENTIONS
 - Keep `tool-registry.ts` as orchestration; put isolated listing, capability, control, or elicitation logic in its matching helper.
 - Gateway mode is the default. `isGatewayMode()` reads the validated `config.MCP_GATEWAY_MODE`; raw `process.env` access is not allowed for this flag.
-- Clients without reliable `listChanged` support receive the `all` category for compatibility.
+- Clients without reliable `listChanged` support receive the `all` category for compatibility. This concern applies only to the legacy 23-tool direct-listing surface; the gateway surface exposes a single stable `unreal` tool and does not emit list-changed notifications, so client `listChanged` handling is moot there.
 - Keep `cleanObject()` before `responseValidator.wrapResponse()` and derive health success from the wrapped result.
 - Preserve tool/action context, `isError`, health timing, and image-payload redaction on every response path.
 - Register output schemas during server construction before serving calls.

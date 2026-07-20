@@ -126,7 +126,7 @@ export function disableCategoryState(
       }
     }
     for (const state of toolStates.values()) {
-      if (PROTECTED_TOOL_NAMES.has(state.name)) {
+      if (PROTECTED_TOOL_NAMES.has(state.name) || PROTECTED_CATEGORIES.includes(state.category)) {
         protectedTools.push(state.name);
       } else if (state.enabled) {
         state.enabled = false;
@@ -145,8 +145,18 @@ export function disableCategoryState(
     return { success: false, disabled: [], notFound: true, protected: [] };
   }
 
-  const categoryIsProtected = PROTECTED_CATEGORIES.includes(category);
-  catState.enabled = categoryIsProtected;
+  // Rejected outright, not partially applied: the catalog advertises that core
+  // cannot be disabled, so disabling its unprotected members would falsify that claim.
+  if (PROTECTED_CATEGORIES.includes(category)) {
+    for (const state of toolStates.values()) {
+      if (state.category === category && PROTECTED_TOOL_NAMES.has(state.name)) {
+        protectedTools.push(state.name);
+      }
+    }
+    return { success: true, disabled, notFound: false, protected: protectedTools };
+  }
+
+  catState.enabled = false;
 
   for (const state of toolStates.values()) {
     if (state.category !== category) {
@@ -160,7 +170,7 @@ export function disableCategoryState(
     }
   }
 
-  catState.enabledCount = categoryIsProtected ? protectedTools.length : 0;
+  catState.enabledCount = 0;
   return { success: true, disabled, notFound: false, protected: protectedTools };
 }
 

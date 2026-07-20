@@ -38,7 +38,7 @@ manage_ai, manage_inventory, manage_interaction, manage_networking, manage_level
 ## DYNAMIC TOOLS
 - Startup enables all accepted tools when `bLoadAllToolsOnStart` is true; otherwise it enables the `core` category.
 - `manage_tools` and `inspect` are protected tools. The `core` category cannot be disabled.
-- State changes must emit `notifications/tools/list_changed`; preserve locking around tool/category state and cached registry schemas.
+- `DynamicTools` owns the tool visibility state and the legacy `notifications/tools/list_changed` behavior. State changes emit `notifications/tools/list_changed` in legacy mode (23-tool direct listing) only; preserve locking around tool/category state and cached registry schemas. In gateway mode (`bEnableNativeGateway`, default `true`) the public `tools/list` is a single static `unreal` tool and visibility does not change its shape, so `OnToolsListChanged()` returns early and the notification is suppressed. Task 30 owns removing the legacy public listing; do not document or implement that cutover early.
 
 ## TRANSPORT LIFECYCLE
 - `POST /mcp` handles JSON-RPC; `GET /mcp` opens the persistent notification SSE stream; `DELETE /mcp` terminates a session and its streams.

@@ -6,6 +6,7 @@
 
 import { ITools } from '../../../types/tools/tool-interfaces.js';
 import { ResponseFactory } from '../../../utils/responses/response-factory.js';
+import { CATALOG_REVISION } from '../../catalog/capabilities/generated/canonical-registry.generated.js';
 import { dynamicToolManager, type ToolCategory } from '../../dynamic/dynamic-tool-manager.js';
 
 /**
@@ -202,7 +203,9 @@ export async function handleManageToolsTools(
             enabled: cat.enabled,
             toolCount: cat.toolCount,
             enabledCount: cat.enabledCount
-          }))
+          })),
+          catalogRevision: CATALOG_REVISION,
+          catalogStateRevision: status.catalogStateRevision
         }, `${status.enabledTools}/${status.totalTools} tools enabled`);
       }
 

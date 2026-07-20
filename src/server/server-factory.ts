@@ -119,6 +119,11 @@ export function createServer() {
   log.debug('Server starting without connecting to Unreal Engine');
   healthMonitor.metrics.connectionStatus = 'disconnected';
 
+  // Gateway mode publishes one stable `unreal` tool, so `listChanged` is omitted
+  // rather than set false: the notification is never sent, and omission and `false`
+  // are different claims. Legacy membership really changes, so it keeps the claim
+  // until Task 30 retires that surface. `prompts` is dropped in both modes because
+  // no prompt handler is registered; `resources` stays, backed by real handlers.
   const server = new Server(
     {
       name: SERVER_NAME,
@@ -126,9 +131,8 @@ export function createServer() {
     },
     {
       capabilities: {
-        tools: { listChanged: true },
+        tools: config.MCP_GATEWAY_MODE ? {} : { listChanged: true },
         resources: {},
-        prompts: {},
       },
     },
   );

@@ -138,9 +138,15 @@ FString FMcpNativeTransport::HandleInitialize(
 	Result->SetStringField(TEXT("protocolVersion"), NegotiatedVersion);
 
 	auto Capabilities = MakeShared<FJsonObject>();
-	auto ToolsCap = MakeShared<FJsonObject>();
-	ToolsCap->SetBoolField(TEXT("listChanged"), true);
-	Capabilities->SetObjectField(TEXT("tools"), ToolsCap);
+	// Legacy mode serves a dynamic tools/list and notifies on change. The
+	// gateway exposes one stable 'unreal' tool, so listChanged is omitted
+	// rather than advertised false — omission and false are different claims.
+	auto ToolsCapability = MakeShared<FJsonObject>();
+	if (!bGatewayMode)
+	{
+		ToolsCapability->SetBoolField(TEXT("listChanged"), true);
+	}
+	Capabilities->SetObjectField(TEXT("tools"), ToolsCapability);
 	Result->SetObjectField(TEXT("capabilities"), Capabilities);
 
 	auto ServerInfo = MakeShared<FJsonObject>();

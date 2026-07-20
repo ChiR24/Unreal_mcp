@@ -1,3 +1,4 @@
+import { CATALOG_REVISION } from '../tools/catalog/capabilities/generated/canonical-registry.generated.js';
 import { dynamicToolManager, type ToolCategory } from '../tools/dynamic/dynamic-tool-manager.js';
 
 const VALID_TOOL_CATEGORIES: ToolCategory[] = ['core', 'world', 'gameplay', 'utility', 'all'];
@@ -180,6 +181,8 @@ function getStatus(): Record<string, unknown> {
             toolCount: cat.toolCount,
             enabledCount: cat.enabledCount
         })),
+        catalogRevision: CATALOG_REVISION,
+        catalogStateRevision: status.catalogStateRevision,
         message: `${status.enabledTools}/${status.totalTools} tools enabled`
     };
 }
