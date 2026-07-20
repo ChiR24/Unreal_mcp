@@ -8,6 +8,7 @@
  *
  * The helpers do NOT touch the shared capability model, schema, or generator.
  */
+import { getParentToolMetadata } from '../parent-metadata.js';
 import type {
   CapabilityAvailability,
   CapabilityBehavior,
@@ -48,6 +49,11 @@ const strProp = (desc: string): JsonObject => ({ type: 'string', description: de
 const intProp = (desc: string): JsonObject => ({ type: 'integer', description: desc });
 const numProp = (desc: string): JsonObject => ({ type: 'number', description: desc });
 const boolProp = (desc: string): JsonObject => ({ type: 'boolean', description: desc });
+const strArrProp = (itemDesc: string, desc: string): JsonObject => ({
+  type: 'array',
+  items: strProp(itemDesc),
+  description: desc,
+});
 
 export const P = {
   action: strProp('The manage_sequence action to execute.'),
@@ -64,14 +70,21 @@ export const P = {
   property: strProp('Property name to keyframe (Transform, Location, Rotation, Scale).'),
   frame: intProp('Frame number for the keyframe.'),
   value: { description: 'Generic value (any type).' },
+  bindingId: strProp('Sequencer binding GUID to key against.'),
   speed: numProp('Playback speed multiplier (positive).'),
   start: numProp('Range start frame or time.'),
   end: numProp('Range end frame or time.'),
-  resolution: { description: 'Tick resolution as a frame rate string or number.' },
+  resolution: {
+    type: ['number', 'string'],
+    description: 'Tick resolution as ticks per second or a rate string such as 24000/1001.',
+  },
   frameRate: {
     type: ['number', 'string'],
-    description: 'Frame rate as fps or a rate string such as 24fps.',
+    description: 'Frame rate as fps or a rate string such as 24fps or 24000/1001.',
   },
+  loopMode: strProp('Playback loop mode: once, loop, or pingpong.'),
+  cameraShakeClass: strProp('Camera shake class path.'),
+  levelNames: strArrProp('Level name.', 'Level names toggled by the visibility track.'),
   success: boolProp('Whether the action succeeded.'),
   message: strProp('Human-readable result message.'),
   sequencePath: strProp('Canonical /Game sequence asset path.'),
@@ -83,6 +96,34 @@ export const P = {
   renderJobName: strProp('Name for the render job.'),
   outputDirectory: strProp('Output directory for rendered frames.'),
   timeoutMs: numProp('Render timeout in milliseconds (max 3600000).'),
+  fileNameFormat: strProp('Output file name format string.'),
+  mrqResolution: strProp('Output resolution in WIDTHxHEIGHT format, such as 1920x1080.'),
+  width: intProp('Output width in pixels (positive; paired with height).'),
+  height: intProp('Output height in pixels (positive; paired with width).'),
+  startFrame: intProp('Custom playback range start frame (paired with endFrame).'),
+  endFrame: intProp('Custom playback range end frame (>= startFrame).'),
+  mrqSettings: {
+    type: 'object',
+    description: 'Nested MRQ settings.',
+    additionalProperties: false,
+    properties: {
+      handleFrameCount: intProp('Handle frame count clamped to >= 0.'),
+      zeroPadFrameNumbers: intProp('Zero-padding width for frame numbers.'),
+      spatialSampleCount: intProp('Spatial sample count per render sample pass.'),
+      temporalSampleCount: intProp('Temporal sample count per render sample pass.'),
+      antiAliasingMethod: strProp('Anti-aliasing method name, such as TSAA or FXAA.'),
+      method: strProp('Anti-aliasing method alias.'),
+    },
+  },
+  renderPass: strProp('Render pass identifier, such as beauty or object_id.'),
+  renderPasses: strArrProp('Render pass identifier.', 'Render pass identifiers to add.'),
+  materialPath: strProp('Material asset path for a material render pass.'),
+  includeTranslucentObjects: boolProp('Whether the pass includes translucent objects.'),
+  antiAliasingMethod: strProp('Anti-aliasing method name, such as TSAA or FXAA.'),
+  sampleCount: intProp('Sample count per render sample pass.'),
+  useCurrentLevel: boolProp('Whether to render against the currently loaded level.'),
+  executorClass: strProp('Movie pipeline executor class path.'),
+  burnInClassPath: strProp('Burn-in widget class path.'),
   mediaPlayerPath: strProp('Canonical /Game media player path.'),
   mediaSourcePath: strProp('Canonical /Game media source path.'),
   playlistPath: strProp('Canonical /Game media playlist path.'),
@@ -90,11 +131,33 @@ export const P = {
   sourcePath: strProp('Source file or asset path.'),
   filePath: strProp('File system path to a media file.'),
   url: strProp('URL to a media stream.'),
+  sourceType: strProp('Media source type: file, stream, or platform.'),
+  precacheFile: boolProp('Whether the file media source precaches on open.'),
+  streamUrl: strProp('URL for a stream media source.'),
+  defaultSourcePath: strProp('Default media source asset path for a platform media source.'),
+  platformSources: {
+    type: 'object',
+    description: 'Per-platform media source asset paths keyed by platform name.',
+    additionalProperties: true,
+    'x-unreal-reflection-boundary': true,
+  },
+  sourcePaths: strArrProp('Media source asset path.', 'Media source asset paths for the playlist.'),
+  urls: strArrProp('Media stream URL.', 'Stream URLs appended to the playlist.'),
+  filePaths: strArrProp('Media file path.', 'Media file paths appended to the playlist.'),
   replayName: strProp('Name for the demo replay.'),
   demoName: strProp('Demo replay name.'),
+  friendlyName: strProp('Human-readable replay name.'),
+  additionalOptions: strArrProp('Replay option string.', 'Additional replay streamer options.'),
+  prioritizeActors: boolProp('Whether to prioritize actor replication during recording.'),
+  paused: boolProp('Whether replay playback is paused.'),
   takePresetPath: strProp('Canonical /Game take preset path.'),
   recordingSequencePath: strProp('Canonical /Game recording sequence path.'),
   takeSequencePath: strProp('Canonical /Game take sequence path.'),
+  recordType: strProp('Take recording source type.'),
+  sourceClasses: strArrProp('Source class path.', 'Take Recorder source class paths.'),
+  clearSources: boolProp('Whether to clear existing Take Recorder sources first.'),
+  recordInto: boolProp('Whether to record into the supplied sequence rather than a new take.'),
+  recordedTracks: strArrProp('Track name.', 'Track names to record per source.'),
   metadata: {
     type: 'object',
     description: 'Arbitrary metadata key-value pairs.',
@@ -225,6 +288,7 @@ export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
       rationale: spec.normalizationRationale,
     },
     deprecation: { status: 'active' },
+    parent: getParentToolMetadata('manage_sequence'),
   };
 }
 

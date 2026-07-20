@@ -95,7 +95,7 @@ export const TIMELINE_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a keyframe for a property at a specific frame on a bound actor.',
     whenToUse: ['A property value must be animated at a specific frame.'],
     whenNotToUse: ['The actor is not bound to the sequence.'],
-    inputProps: { action: P.action, path: P.path, actorName: P.actorName, property: P.property, frame: P.frame, value: P.value },
+    inputProps: { action: P.action, path: P.path, actorName: P.actorName, bindingId: P.bindingId, property: P.property, frame: P.frame, value: P.value },
     required: ['action', 'path', 'actorName', 'frame'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'add_keyframe', path: '/Game/Cinematics/SEQ_Master', actorName: 'Cube', property: 'Transform', frame: 0, value: { location: { x: 0, y: 0, z: 100 } } },

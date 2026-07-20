@@ -18,7 +18,7 @@ export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Start playing the currently open Level Sequence.',
     whenToUse: ['Sequence playback must be started for preview or PIE.'],
     whenNotToUse: ['The sequence is already playing.'],
-    inputProps: { action: P.action, path: P.path, startTime: P.start, loopMode: P.property },
+    inputProps: { action: P.action, path: P.path, startTime: P.start, loopMode: P.loopMode },
     required: ['action', 'path'],
     effect: 'write', latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'play', path: '/Game/Cinematics/SEQ_Master' },

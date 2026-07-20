@@ -5,7 +5,7 @@ import {
   MOVIE_RENDER_ACTIONS,
   RECORD_REPLAY_ACTIONS,
 } from '../../../../definitions/shared/action-sets.js';
-import { manageSequenceToolDefinition } from '../../../../definitions/utility/manage-sequence-tool.js';
+import { consolidatedToolDefinitions } from '../../../../catalog/consolidated-tool-definitions.js';
 import { createCapabilityRecord, parseCapabilityCatalog } from '../../index.js';
 import {
   MANAGE_SEQUENCE_RECORD_COUNT,
@@ -58,7 +58,8 @@ describe('manage_sequence exact-set: 81 records mapped 1:1 to tool actions', () 
   });
 
   it('the tool definition action enum matches the union of action sets exactly', () => {
-    const props = manageSequenceToolDefinition.inputSchema.properties as Record<string, { enum?: readonly string[] }>;
+    const seqTool = consolidatedToolDefinitions.find((t) => t.name === 'manage_sequence') as NonNullable<typeof consolidatedToolDefinitions[number]>;
+    const props = seqTool.inputSchema.properties as Record<string, { enum?: readonly string[] }>;
     const actionProp = props.action;
     if (!actionProp?.enum) {
       throw new TypeError('manage_sequence action enum is unavailable');
@@ -228,6 +229,141 @@ describe('manage_sequence failure and cancellation semantics', () => {
     for (const record of destructive) {
       expect(record.behavior.safeToRetry).toBe(false);
     }
+  });
+});
+
+function inputProps(action: string): Record<string, Record<string, unknown>> {
+  return findByAction(action).schemas.input.properties as Record<string, Record<string, unknown>>;
+}
+
+describe('manage_sequence generic value, frame rate, and tick resolution contracts', () => {
+  it('value stays an unconstrained any (no type) so C++ emits AnyValue', () => {
+    const value = inputProps('add_keyframe').value;
+    expect(value).toEqual({ description: 'Generic value (any type).' });
+    expect(Object.hasOwn(value, 'type')).toBe(false);
+  });
+
+  it('frameRate is a number|string union naming the rational rate form', () => {
+    for (const action of ['set_display_rate', 'set_properties']) {
+      const frameRate = inputProps(action).frameRate;
+      expect(frameRate.type).toEqual(['number', 'string']);
+      expect(String(frameRate.description)).toContain('24000/1001');
+    }
+  });
+
+  it('tick resolution is a number|string union, not a keyframe property string', () => {
+    const resolution = inputProps('set_tick_resolution').resolution;
+    expect(resolution.type).toEqual(['number', 'string']);
+    expect(String(resolution.description)).not.toContain('Property name to keyframe');
+  });
+
+  it('MRQ output resolution is the WIDTHxHEIGHT string, distinct from tick resolution', () => {
+    const resolution = inputProps('configure_output_settings').resolution;
+    expect(resolution.type).toBe('string');
+    expect(String(resolution.description)).toContain('WIDTHxHEIGHT');
+  });
+
+  it('no record reuses the keyframe property descriptor for an unrelated field', () => {
+    const KEYFRAME_DESC = 'Property name to keyframe (Transform, Location, Rotation, Scale).';
+    for (const record of MANAGE_SEQUENCE_RECORDS) {
+      const props = record.schemas.input.properties as Record<string, Record<string, unknown>>;
+      for (const [name, shape] of Object.entries(props)) {
+        if (name === 'property') continue;
+        expect(shape.description).not.toBe(KEYFRAME_DESC);
+      }
+    }
+  });
+});
+
+describe('manage_sequence MRQ fields match the native accepted contract', () => {
+  it('configure_output_settings declares the integer resolution and frame-range fields', () => {
+    const props = inputProps('configure_output_settings');
+    for (const name of ['width', 'height', 'startFrame', 'endFrame']) {
+      expect(props[name].type).toBe('integer');
+    }
+    expect(props.frameRate.type).toEqual(['number', 'string']);
+  });
+
+  it('configure_output_settings nests handleFrameCount/zeroPadFrameNumbers under settings', () => {
+    const settings = inputProps('configure_output_settings').settings;
+    expect(settings.type).toBe('object');
+    const nested = settings.properties as Record<string, Record<string, unknown>>;
+    expect(nested.handleFrameCount.type).toBe('integer');
+    expect(nested.zeroPadFrameNumbers.type).toBe('integer');
+  });
+
+  it('anti-aliasing sample counts are integers', () => {
+    const props = inputProps('configure_anti_aliasing');
+    expect(props.spatialSampleCount.type).toBe('integer');
+    expect(props.temporalSampleCount.type).toBe('integer');
+  });
+
+  it('add_render_pass accepts the batch, material, and translucency fields', () => {
+    const props = inputProps('add_render_pass');
+    expect(props.renderPasses.type).toBe('array');
+    expect(props.materialPath.type).toBe('string');
+    expect(props.includeTranslucentObjects.type).toBe('boolean');
+  });
+
+  it('queue_render and start_render both accept useCurrentLevel', () => {
+    for (const action of ['queue_render', 'start_render']) {
+      expect(inputProps(action).useCurrentLevel.type).toBe('boolean');
+    }
+  });
+});
+
+describe('manage_sequence media fields match the native accepted contract', () => {
+  it('create_media_source declares the platform/stream/precache fields', () => {
+    const props = inputProps('create_media_source');
+    expect(props.platformSources.type).toBe('object');
+    expect(props.defaultSourcePath.type).toBe('string');
+    expect(props.streamUrl.type).toBe('string');
+    expect(props.precacheFile.type).toBe('boolean');
+  });
+
+  it('create_media_playlist declares the three string-array item sources', () => {
+    const props = inputProps('create_media_playlist');
+    for (const name of ['sourcePaths', 'urls', 'filePaths']) {
+      expect(props[name].type).toBe('array');
+      expect((props[name].items as Record<string, unknown>).type).toBe('string');
+    }
+  });
+
+  it('does not advertise the verified-dead media path aliases', () => {
+    for (const record of MANAGE_SEQUENCE_RECORDS) {
+      const props = record.schemas.input.properties as Record<string, unknown>;
+      expect(Object.hasOwn(props, 'mediaTexturePath')).toBe(false);
+      expect(Object.hasOwn(props, 'mediaPlaylistPath')).toBe(false);
+      expect(Object.hasOwn(props, 'particleSystemPath')).toBe(false);
+    }
+  });
+});
+
+describe('manage_sequence replay and take fields match the native accepted contract', () => {
+  it('prioritizeActors is a boolean, matching TryGetBoolField', () => {
+    expect(inputProps('configure_demo_settings').prioritizeActors.type).toBe('boolean');
+  });
+
+  it('configure_demo_settings accepts additionalOptions as a string array', () => {
+    const options = inputProps('configure_demo_settings').additionalOptions;
+    expect(options.type).toBe('array');
+    expect((options.items as Record<string, unknown>).type).toBe('string');
+  });
+
+  it('pause_demo accepts the paused toggle', () => {
+    expect(inputProps('pause_demo').paused.type).toBe('boolean');
+  });
+
+  it('configure_take_sources accepts sourceClasses and clearSources', () => {
+    const props = inputProps('configure_take_sources');
+    expect(props.sourceClasses.type).toBe('array');
+    expect(props.clearSources.type).toBe('boolean');
+  });
+
+  it('start_recording accepts recordInto and the frame-rate union', () => {
+    const props = inputProps('start_recording');
+    expect(props.recordInto.type).toBe('boolean');
+    expect(props.frameRate.type).toEqual(['number', 'string']);
   });
 });
 

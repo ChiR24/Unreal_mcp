@@ -8,11 +8,18 @@
  * Gated by LevelSequenceEditor plugin.
  */
 import type { CapabilityRecordSource } from '../../index.js';
+import { A } from './alias-props.js';
 import { buildRecord, P, SEQ_PLUGINS } from './helpers.js';
 
 const F = 'cinematic';
 const D = 'cinematics';
 const NR = 'Distinct cinematic track or camera operation with unique target.';
+
+/** Output-only: set at Assets.cpp:184 (add_subsequence) and :242 (add_shot_track); never read as input. */
+const sectionNameOutput = {
+  type: 'string',
+  description: 'Name of the created section, assigned by Sequencer.',
+};
 
 export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
   buildRecord({
@@ -20,7 +27,7 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     summary: 'Create a master cinematic sequence with sub-sequence and shot track structure.',
     whenToUse: ['A new cinematic with shots must be scaffolded.'],
     whenNotToUse: ['A flat sequence without shots is sufficient.'],
-    inputProps: { action: P.action, masterSequencePath: P.masterSequencePath, mapPath: P.mapPath },
+    inputProps: { action: P.action, masterSequencePath: P.masterSequencePath, mapPath: P.mapPath, save: A.save },
     required: ['action', 'masterSequencePath'],
     outputProps: { sequencePath: P.sequencePath },
     outputRequired: ['sequencePath'],
@@ -34,8 +41,10 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     summary: 'Add a sub-sequence to a master sequence shot track.',
     whenToUse: ['A sub-sequence must be nested inside the master sequence.'],
     whenNotToUse: ['The sequence should remain flat.'],
-    inputProps: { action: P.action, masterSequencePath: P.masterSequencePath, subsequencePath: P.subsequencePath },
+    inputProps: { action: P.action, masterSequencePath: P.masterSequencePath, subsequencePath: P.subsequencePath, rowIndex: A.rowIndex, durationFrames: A.durationFrames, save: A.save },
     required: ['action', 'masterSequencePath', 'subsequencePath'],
+    outputProps: { sectionName: sectionNameOutput },
+    outputRequired: [],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'add_subsequence', masterSequencePath: '/Game/Cinematics/SEQ_Master', subsequencePath: '/Game/Cinematics/SEQ_Shot01' },
     exampleOutput: { success: true, message: 'Subsequence added' },
@@ -46,8 +55,10 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     summary: 'Add a cinematic shot track to a master sequence.',
     whenToUse: ['A shot track must be added to organize camera cuts.'],
     whenNotToUse: ['The master sequence already has a shot track.'],
-    inputProps: { action: P.action, masterSequencePath: P.masterSequencePath },
+    inputProps: { action: P.action, masterSequencePath: P.masterSequencePath, shotSequencePath: P.shotSequencePath, displayName: A.displayName, durationFrames: A.durationFrames, rowIndex: A.rowIndex, save: A.save },
     required: ['action', 'masterSequencePath'],
+    outputProps: { sectionName: sectionNameOutput },
+    outputRequired: [],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'add_shot_track', masterSequencePath: '/Game/Cinematics/SEQ_Master' },
     exampleOutput: { success: true, message: 'Shot track added' },
@@ -58,7 +69,7 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     summary: 'Configure shot settings (display name, range) for a cinematic shot.',
     whenToUse: ['Shot display name or frame range must be set.'],
     whenNotToUse: ['The shot does not exist on the shot track.'],
-    inputProps: { action: P.action, shotSequencePath: P.shotSequencePath, shotName: P.name, start: P.start, end: P.end },
+    inputProps: { action: P.action, shotSequencePath: P.shotSequencePath, shotName: P.name, start: P.start, end: P.end, displayName: A.displayName, sectionIndex: A.sectionIndex, durationFrames: A.durationFrames, save: A.save },
     required: ['action', 'shotSequencePath'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'configure_shot_settings', shotSequencePath: '/Game/Cinematics/SEQ_Shot01', shotName: 'Shot 01', start: 0, end: 120 },
@@ -70,7 +81,7 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     summary: 'Create a CineCameraActor in the level and bind it to the sequence.',
     whenToUse: ['A cinematic camera actor must be created for a shot.'],
     whenNotToUse: ['An existing camera should be used.'],
-    inputProps: { action: P.action, path: P.path, cameraName: P.actorName, location: { type: 'object', description: 'Camera location.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] }, rotation: { type: 'object', description: 'Camera rotation.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] } },
+    inputProps: { action: P.action, path: P.path, cameraName: P.actorName, location: { type: 'object', description: 'Camera location.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] }, rotation: { type: 'object', description: 'Camera rotation.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] }, cameraActorName: P.actorName, label: A.label, save: A.save },
     required: ['action', 'path'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'create_cine_camera_actor', path: '/Game/Cinematics/SEQ_Master', cameraName: 'CineCam_01' },
@@ -82,7 +93,7 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     summary: 'Configure CineCamera lens, filmback, and focus settings on a sequence binding.',
     whenToUse: ['Camera lens, focal length, aperture, or focus must be set.'],
     whenNotToUse: ['Default camera settings are acceptable.'],
-    inputProps: { action: P.action, path: P.path, cameraActorName: P.actorName, focalLength: { type: 'number', description: 'Focal length in mm.' }, aperture: { type: 'number', description: 'Aperture f-stop.' }, focusDistance: { type: 'number', description: 'Focus distance.' }, sensorWidth: { type: 'number', description: 'Sensor width in mm.' }, sensorHeight: { type: 'number', description: 'Sensor height in mm.' } },
+    inputProps: { action: P.action, path: P.path, cameraActorName: P.actorName, focalLength: { type: 'number', description: 'Focal length in mm.' }, aperture: { type: 'number', description: 'Aperture f-stop.' }, focusDistance: { type: 'number', description: 'Focus distance.' }, sensorWidth: { type: 'number', description: 'Sensor width in mm.' }, sensorHeight: { type: 'number', description: 'Sensor height in mm.' }, cameraName: P.actorName, actorName: P.actorName, currentFocalLength: A.currentFocalLength, currentAperture: A.currentAperture, manualFocusDistance: A.manualFocusDistance, lens: A.lens, filmback: A.filmback, focus: A.focus },
     required: ['action', 'path'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'configure_camera_settings', path: '/Game/Cinematics/SEQ_Master', cameraActorName: 'CineCam_01', focalLength: 35, aperture: 2.8 },
@@ -94,7 +105,7 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     summary: 'Add a camera cut track to a cinematic sequence.',
     whenToUse: ['A camera cut track must be added for shot transitions.'],
     whenNotToUse: ['The sequence already has a camera cut track.'],
-    inputProps: { action: P.action, path: P.path },
+    inputProps: { action: P.action, path: P.path, cameraActorName: P.actorName, rowIndex: A.rowIndex, durationFrames: A.durationFrames, save: A.save },
     required: ['action', 'path'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'add_camera_cut_track', path: '/Game/Cinematics/SEQ_Master' },
@@ -106,7 +117,7 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     summary: 'Add a camera shake track to a cinematic sequence.',
     whenToUse: ['Camera shake must be animated along the sequence.'],
     whenNotToUse: ['No camera shake is needed.'],
-    inputProps: { action: P.action, path: P.path, cameraShakeClass: P.property },
+    inputProps: { action: P.action, path: P.path, cameraShakeClass: P.cameraShakeClass, cameraShakePath: A.cameraShakePath, cameraName: P.actorName, save: A.save },
     required: ['action', 'path'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'add_camera_shake_track', path: '/Game/Cinematics/SEQ_Master', cameraShakeClass: '/Script/EngineCameras.DefaultCameraShakeBase' },
@@ -118,7 +129,7 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     summary: 'Configure a camera rig rail for dolly camera movement.',
     whenToUse: ['A camera must move along a rail for dolly shots.'],
     whenNotToUse: ['No rail-based camera movement is needed.'],
-    inputProps: { action: P.action, path: P.path, positionOnRail: { type: 'number', description: 'Position on the rail (0-1).' } },
+    inputProps: { action: P.action, path: P.path, positionOnRail: { type: 'number', description: 'Position on the rail (0-1).' }, actorName: P.actorName, label: A.label, save: A.save },
     required: ['action', 'path'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'configure_camera_rig_rail', path: '/Game/Cinematics/SEQ_Master', positionOnRail: 0.5 },
