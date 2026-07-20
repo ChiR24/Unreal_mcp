@@ -72,7 +72,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a LightmassImportanceVolume actor.',
     whenToUse: ['A lightmass importance volume is needed for baking.'],
     whenNotToUse: ['Dynamic lighting is used exclusively.'],
-    inputProps: { action: P.action, name: P.name, location: P.location, scale: P.scale },
+    inputProps: { action: P.action, name: P.name, location: P.location },
     required: ['action'],
     effect: 'write', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'create_lightmass_volume', name: 'LIV_1' },

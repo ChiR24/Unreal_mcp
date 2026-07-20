@@ -21,7 +21,7 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
     id: 'build_environment.add_foliage', action: 'add_foliage', family: F,
     summary: 'Add foliage: create a type (meshPath) or place instances (foliageType + locations).',
     whenToUse: WU, whenNotToUse: ['A procedural foliage volume should be used for large areas.'],
-    inputProps: { action: P.action, name: P.name, foliageType: P.foliageType, foliageTypePath: P.foliageTypePath,
+    inputProps: { count: P.count, action: P.action, name: P.name, foliageType: P.foliageType, foliageTypePath: P.foliageTypePath,
       meshPath: P.meshPath, density: P.density, minScale: P.minScale, maxScale: P.maxScale,
       alignToNormal: P.alignToNormal, randomYaw: P.randomYaw, cullDistance: P.cullDistance,
       locations: P.locations, location: P.location, radius: P.radius, position: P.position },

@@ -25,6 +25,7 @@ import {
   LegacyActionNameSchema,
   LegacyToolNameSchema,
 } from '../../index.js';
+import { getParentToolMetadata } from '../parent-metadata.js';
 import type { PropertyMap } from './properties.js';
 
 const SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema';
@@ -119,7 +120,9 @@ export interface RecordSpec {
 
 const NR = 'Distinct build_environment target and semantics; no cross-tool duplicate.';
 
-export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
+export function buildRecord(
+  spec: RecordSpec,
+): CapabilityRecordSource {
   const input = schema(spec.inputProps, spec.required);
   const output = spec.outputProps
     ? outputSchema(spec.outputProps, spec.outputRequired ?? [])
@@ -145,6 +148,7 @@ export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
     routing: routing(spec.dispatchAction ?? spec.action, spec.dispatchMode),
     normalization: { class: 'C_SAME_VERB_DIFFERENT_TARGET', disposition: 'retain', rationale: NR },
     deprecation: { status: 'active' },
+    parent: getParentToolMetadata('build_environment'),
   };
 }
 

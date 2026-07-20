@@ -30,7 +30,7 @@ export const RENDER_RAYTRACE_RECORDS: readonly CapabilityRecordSource[] = [
   R('configure_ray_traced_ao', 'Configure ray-traced ambient occlusion.', { settings: P.settings, enabled: P.enabled }, ['action']),
   R('configure_path_tracing', 'Configure path tracing settings.', { settings: P.settings, enabled: P.enabled }, ['action']),
   R('set_light_channel', 'Set the light channel on a light actor.', { actorName: P.actorName, channel: { type: 'integer', description: 'Light channel index.' } }, ['action']),
-  R('set_actor_light_channel', 'Set the light channel on a target actor.', { actorName: P.actorName, targetActor: P.targetActor, channel: { type: 'integer', description: 'Light channel index.' } }, ['action']),
+  R('set_actor_light_channel', 'Set the light channel on a target actor.', { actorName: P.actorName, targetActor: P.targetActor, channel: { type: 'integer', description: 'Light channel index.' }, channels: P.channels }, ['action']),
   R('configure_lightmass_settings', 'Configure Lightmass global settings.', { settings: P.settings }, ['action']),
   R('build_lighting_quality', 'Build lighting at a specific quality.', { quality: P.quality, settings: P.settings }, ['action']),
   R('configure_indirect_lighting_cache', 'Configure indirect lighting cache.', { settings: P.settings, enabled: P.enabled }, ['action']),

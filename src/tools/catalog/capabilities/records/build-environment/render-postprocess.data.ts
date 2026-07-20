@@ -23,7 +23,7 @@ const R = (action: string, summary: string, inputProps: Record<string, unknown>,
 export const RENDER_POSTPROCESS_RECORDS: readonly CapabilityRecordSource[] = [
   R('configure_ssr_settings', 'Configure screen-space reflections.', { settings: P.settings }),
   R('configure_lumen_reflection_settings', 'Configure Lumen reflection settings.', { settings: P.settings }),
-  R('configure_pp_blend', 'Configure post-process blend weight.', { blendWeight: P.blendWeight }),
+  R('configure_pp_blend', 'Configure post-process blend weight.', { blendWeight: P.blendWeight, infiniteUnbound: P.infiniteUnbound }),
   R('set_pp_white_balance', 'Set post-process white balance.', { settings: P.settings }),
   R('set_pp_color_grading', 'Set post-process color grading.', { settings: P.settings }),
   R('set_pp_lut', 'Set post-process LUT texture.', { lutPath: P.lutPath }),

@@ -8,6 +8,11 @@
  * bake_lightmap dispatches to 'bake_lightmap'. export_snapshot/import_snapshot
  * dispatch through build_environment. delete dispatches through build_environment.
  *
+ * Snapshot light selectors are asymmetric: ExportSnapshot reads
+ * directionalLightActorPath/skyLightActorPath from the request payload, while
+ * McpApplyEnvironmentSnapshot reads them from the snapshot file being imported.
+ * Both echo the resolved actor paths back on the response.
+ *
  * Note: create_procedural_foliage is in the foliage family (foliage.data.ts)
  * because it creates a foliage volume. generate_lods is in the landscape family.
  */
@@ -50,11 +55,17 @@ export const PROCEDURAL_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Export an environment snapshot to a file.',
     whenToUse: ['An environment state must be exported for later restoration.'],
     whenNotToUse: ['The level should be saved directly.'],
-    inputProps: { action: P.action, path: P.path, filename: P.filename },
+    inputProps: { action: P.action, path: P.path, filename: P.filename,
+      directionalLightActorPath: P.directionalLightActorPath, skyLightActorPath: P.skyLightActorPath },
     required: ['action'],
+    outputProps: { directionalLightActorPath: P.directionalLightActorPath, skyLightActorPath: P.skyLightActorPath },
+    outputRequired: [],
     effect: 'read', latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'export_snapshot', path: '/Game/Snapshots', filename: 'env.json' },
-    exampleOutput: { success: true, message: 'Snapshot exported' },
+    exampleInput: { action: 'export_snapshot', path: '/Game/Snapshots', filename: 'env.json',
+      directionalLightActorPath: '/Game/Maps/Main.Main:PersistentLevel.DirectionalLight_0' },
+    exampleOutput: { success: true, message: 'Snapshot exported',
+      directionalLightActorPath: '/Game/Maps/Main.Main:PersistentLevel.DirectionalLight_0',
+      skyLightActorPath: '/Game/Maps/Main.Main:PersistentLevel.SkyLight_0' },
   }),
   buildRecord({
     id: 'build_environment.import_snapshot', action: 'import_snapshot', family: F,
@@ -63,9 +74,13 @@ export const PROCEDURAL_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The environment should be rebuilt from scratch.'],
     inputProps: { action: P.action, path: P.path, filename: P.filename },
     required: ['action'],
+    outputProps: { directionalLightActorPath: P.directionalLightActorPath, skyLightActorPath: P.skyLightActorPath },
+    outputRequired: [],
     effect: 'write', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'import_snapshot', path: '/Game/Snapshots', filename: 'env.json' },
-    exampleOutput: { success: true, message: 'Snapshot imported' },
+    exampleOutput: { success: true, message: 'Snapshot imported',
+      directionalLightActorPath: '/Game/Maps/Main.Main:PersistentLevel.DirectionalLight_0',
+      skyLightActorPath: '/Game/Maps/Main.Main:PersistentLevel.SkyLight_0' },
   }),
   buildRecord({
     id: 'build_environment.delete', action: 'delete', family: F,
