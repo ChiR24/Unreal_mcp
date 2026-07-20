@@ -52,6 +52,8 @@ const testCases = [
 // === CREATE ===
 { scenario: 'CREATE: create_sound_cue', toolName: 'manage_audio', arguments: { action: 'create_sound_cue', name: `Testsound_cue_${ts}`, path: '/Game/MCPTest', wavePath: SOUND_WAVE, looping: true }, expected: 'success|already exists' },
 { scenario: 'CREATE: create_audio_component', toolName: 'manage_audio', arguments: { action: 'create_audio_component', soundPath: SOUND_CUE }, expected: 'success' },
+// autoPlay is read by the TS playback handler and forwarded to the bridge payload.
+{ scenario: 'CREATE: create_audio_component with autoPlay', toolName: 'manage_audio', arguments: { action: 'create_audio_component', soundPath: SOUND_CUE, actorName: FADE_ACTOR_NAME, componentName: `MCPTestAutoPlayAudio_${ts}`, autoPlay: true }, expected: 'success' },
 { scenario: 'CREATE: create_sound_mix', toolName: 'manage_audio', arguments: { action: 'create_sound_mix', name: `Testsound_mix_${ts}`, path: '/Game/MCPTest' }, expected: 'success|already exists' },
 { scenario: 'CREATE: create_sound_class', toolName: 'manage_audio', arguments: { action: 'create_sound_class', name: `Testsound_class_${ts}`, path: '/Game/MCPTest', properties: { volume: 0.9, pitch: 1.05 } }, expected: 'success|already exists' },
 
@@ -151,6 +153,9 @@ const testCases = [
 
 // === INFO ===
 { scenario: 'INFO: get_audio_info', toolName: 'manage_audio', arguments: { action: 'get_audio_info', assetPath: SOUND_CUE }, expected: 'success' },
+// params envelope: clients that cannot send arbitrary top-level fields nest them
+// under `params`, which is merged with top-level arguments before routing.
+{ scenario: 'INFO: get_audio_info via params envelope', toolName: 'manage_audio', arguments: { action: 'get_audio_info', params: { assetPath: SOUND_CUE } }, expected: 'success' },
 
 // === CLEANUP ===
 // In-memory assets may not unload properly — DELETE_FAILED is acceptable

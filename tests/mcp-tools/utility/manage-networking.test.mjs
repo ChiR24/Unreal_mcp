@@ -224,6 +224,18 @@ const testCases = [
       { path: 'structuredContent.result.networkingInfo.netDormancy', equals: 'DORM_Awake', label: 'networking info reads dormancy' }
     ]
   },
+  // params envelope: clients that cannot send arbitrary top-level fields nest them
+  // under `params`, which is merged with top-level arguments before routing.
+  {
+    scenario: 'INFO: get_networking_info via params envelope',
+    toolName: 'manage_networking',
+    arguments: { action: 'get_networking_info', params: { blueprintPath: ACTOR_BP_PATH } },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.networkingInfo.bReplicates', equals: true, label: 'nested params resolved the same replicated actor CDO' },
+      { path: 'structuredContent.result.networkingInfo.netUpdateFrequency', equals: 33, label: 'nested params read the configured net update frequency' }
+    ]
+  },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [TARGET_ACTOR, OWNER_ACTOR, PAWN_ACTOR] }, expected: 'success|not found' },

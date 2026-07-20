@@ -15,6 +15,7 @@ const effectName = `BP_TestEffect_${ts}`;
 const cueName = `BP_TestCue_${ts}`;
 const attributeName = `Health_${ts}`;
 const abilityTag = `Ability.Test.${ts}`;
+const aliasTag = `Ability.TestAlias.${ts}`;
 const effectTag = `Effect.Test.${ts}`;
 const cueTag = `GameplayCue.Test.${ts}`;
 
@@ -87,7 +88,14 @@ const testCases = [
   { scenario: 'CONFIG: configure_cue_trigger', toolName: 'manage_gas', arguments: { action: 'configure_cue_trigger', cuePath: '${captured:cuePath}', triggerType: 'Executed' }, expected: 'success' },
   { scenario: 'CONFIG: set_cue_effects', toolName: 'manage_gas', arguments: { action: 'set_cue_effects', cuePath: '${captured:cuePath}', particleSystemPath: '/Engine/EngineResources/DefaultTexture', soundPath: '/Engine/EngineSounds/Notifications/CompileSuccess_Cue', cameraShakePath: '/Script/Engine.CameraShakeBase', decalPath: '/Engine/EngineMaterials/DefaultMaterial.DefaultMaterial' }, expected: 'success', assertions: [{ path: 'structuredContent.result.decalPath', equals: '/Engine/EngineMaterials/DefaultMaterial.DefaultMaterial', label: 'decal path applied' }, { path: 'structuredContent.result.variableCount', equals: 12, label: 'decal variables added' }] },
   { scenario: 'ADD: add_tag_to_asset', toolName: 'manage_gas', arguments: { action: 'add_tag_to_asset', assetPath: '${captured:abilityPath}', tagName: abilityTag }, expected: 'success' },
+  // `tag` is the handler-level fallback for `tagName` (gas-special-actions.ts#handleAddTagToAsset),
+  // so it needs its own case: the tagName spelling above never exercises that branch.
+  { scenario: 'ADD: add_tag_to_asset via tag alias', toolName: 'manage_gas', arguments: { action: 'add_tag_to_asset', assetPath: '${captured:abilityPath}', tag: aliasTag }, expected: 'success' },
   { scenario: 'INFO: get_gas_info', toolName: 'manage_gas', arguments: { action: 'get_gas_info', assetPath: '${captured:abilityPath}' }, expected: 'success' },
+  // params envelope: clients that cannot send arbitrary top-level fields nest them
+  // under `params`, which is merged with top-level arguments before routing.
+  // get_gas_info requires assetPath, so a success proves the merge reached the handler.
+  { scenario: 'INFO: get_gas_info via params envelope', toolName: 'manage_gas', arguments: { action: 'get_gas_info', params: { assetPath: '${captured:abilityPath}' } }, expected: 'success' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' }

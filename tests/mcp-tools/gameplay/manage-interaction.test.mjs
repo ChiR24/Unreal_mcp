@@ -113,6 +113,9 @@ const testCases = [
 
   // === INFO ===
   { scenario: 'INFO: get_interaction_info blueprint', toolName: 'manage_interaction', arguments: { action: 'get_interaction_info', blueprintPath }, expected: 'success', assertions: [{ path: 'structuredContent.result.assetType', equals: 'Blueprint', label: 'interaction info reports blueprint asset type' }, { path: 'structuredContent.result.blueprintPath', equals: EXPECTED_BLUEPRINT_PATH, label: 'interaction info returns blueprint path' }, { path: 'structuredContent.result.blueprintName', equals: BLUEPRINT_NAME, label: 'interaction info returns blueprint name' }] },
+  // params envelope: clients that cannot send arbitrary top-level fields nest them
+  // under `params`, which is merged with top-level arguments before routing.
+  { scenario: 'INFO: get_interaction_info blueprint via params envelope', toolName: 'manage_interaction', arguments: { action: 'get_interaction_info', params: { blueprintPath } }, expected: 'success', assertions: [{ path: 'structuredContent.result.assetType', equals: 'Blueprint', label: 'nested params selected the blueprint asset branch' }, { path: 'structuredContent.result.blueprintPath', equals: EXPECTED_BLUEPRINT_PATH, label: 'nested params resolved the same interaction blueprint' }] },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: TEST_ACTOR }, expected: 'success|not found' },

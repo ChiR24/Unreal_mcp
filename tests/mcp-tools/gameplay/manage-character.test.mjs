@@ -66,6 +66,9 @@ const testCases = [
 
   // === INFO ===
   { scenario: 'INFO: get_character_info', toolName: 'manage_character', arguments: { action: 'get_character_info', blueprintPath: '${captured:blueprintPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.hasCamera', equals: true, label: 'character info sees camera component' }] },
+  // params envelope: clients that cannot send arbitrary top-level fields nest them
+  // under `params`, which is merged with top-level arguments before routing.
+  { scenario: 'INFO: get_character_info via params envelope', toolName: 'manage_character', arguments: { action: 'get_character_info', params: { blueprintPath: '${captured:blueprintPath}' } }, expected: 'success', assertions: [{ path: 'structuredContent.result.hasCamera', equals: true, label: 'nested params resolved the same character blueprint' }] },
 
   // === MOVEMENT SHORTCUTS ===
   { scenario: 'ACTION: setup_movement', toolName: 'manage_character', arguments: { action: 'setup_movement', blueprintPath: '${captured:blueprintPath}', walkSpeed: 500, acceleration: 1500 }, expected: 'success' },

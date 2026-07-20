@@ -89,7 +89,8 @@ const testCases = [
   // === CREATE ===
   { scenario: 'CREATE: create_sky_sphere', toolName: 'build_environment', arguments: {"action": "create_sky_sphere", "name": `TestSkySphere_${ts}`, "path": TEST_FOLDER}, expected: 'success|already exists' },
   // === CONFIG ===
-  { scenario: 'CONFIG: set_time_of_day', toolName: 'build_environment', arguments: {"action": "set_time_of_day", "time": 9, "hour": 9, "propertyName": "time_of_day", "propertyValue": 1}, expected: 'success' },
+  { scenario: 'CONFIG: set_time_of_day', toolName: 'build_environment', arguments: {"action": "set_time_of_day", "time": 9, "hour": 9, "propertyValue": 1}, expected: 'success' },
+  { scenario: 'CONFIG: set_time_of_day via params passthrough', toolName: 'build_environment', arguments: { action: 'set_time_of_day', params: { time: 9, hour: 9 } }, expected: 'success' },
   // === CREATE ===
   { scenario: 'CREATE: create_fog_volume', toolName: 'build_environment', arguments: {"action": "create_fog_volume", "name": `TestFogVolume_${ts}`, "path": TEST_FOLDER}, expected: 'success|already exists' },
 

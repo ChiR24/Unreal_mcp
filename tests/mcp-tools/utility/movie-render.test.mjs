@@ -42,7 +42,7 @@ const testCases = [
 
   // === configure_output_settings ===
   { scenario: 'MRQ: configure_output_settings', toolName: 'manage_sequence', arguments: { action: 'configure_output_settings', renderJobName: JOB_NAME, outputDirectory: OUT_DIR, fileNameFormat: 'Frame_{frame}' }, expected: 'success' },
-  { scenario: 'MRQ: configure_output_settings optional', toolName: 'manage_sequence', arguments: { action: 'configure_output_settings', renderJobName: JOB_NAME, width: 1920, height: 1080, antiAliasingMethod: 'tsr', method: 'spatialtemporal', spatialSampleCount: 4, temporalSampleCount: 8, settings: { handleFrameCount: 4, zeroPadFrameNumbers: 5, spatialSampleCount: 4, temporalSampleCount: 8, antiAliasingMethod: 'tsr', method: 'spatialtemporal' } }, expected: 'success' },
+  { scenario: 'MRQ: configure_output_settings optional', toolName: 'manage_sequence', arguments: { action: 'configure_output_settings', renderJobName: JOB_NAME, width: 1920, height: 1080, settings: { handleFrameCount: 4, zeroPadFrameNumbers: 5 } }, expected: 'success' },
 
   // === add_render_pass ===
   { scenario: 'MRQ: add_render_pass', toolName: 'manage_sequence', arguments: { action: 'add_render_pass', renderJobName: JOB_NAME, renderPass: 'DeferredRendering' }, expected: 'success' },

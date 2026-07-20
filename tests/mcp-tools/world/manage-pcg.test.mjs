@@ -76,6 +76,7 @@ const basicCoverageCases = [
   { scenario: 'Setup: create PCG test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: BASIC_TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: spawn PCG execution actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Script/Engine.StaticMeshActor', meshPath: '/Engine/BasicShapes/Cube.Cube', actorName: BASIC_PCG_ACTOR, location: { x: 0, y: 0, z: 120 } }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_pcg_graph', toolName: 'manage_pcg', arguments: { action: 'create_pcg_graph', graphPath: BASIC_GRAPH_PATH, overwrite: true, save: false }, expected: pcgOptionalExpected },
+  { scenario: 'CREATE: create_pcg_graph via params passthrough', toolName: 'manage_pcg', arguments: { action: 'create_pcg_graph', params: { graphPath: BASIC_GRAPH_PATH, overwrite: true, save: false } }, expected: pcgOptionalExpected },
   { scenario: 'CREATE: create_pcg_subgraph', toolName: 'manage_pcg', arguments: { action: 'create_pcg_subgraph', subgraphPath: BASIC_SUBGRAPH_PATH, parentGraphPath: BASIC_GRAPH_PATH, nodeName: `Subgraph_${ts}`, overwrite: true, save: false }, expected: pcgOptionalExpected },
   { scenario: 'CREATE: add_pcg_node', toolName: 'manage_pcg', arguments: { action: 'add_pcg_node', graphPath: BASIC_GRAPH_PATH, settingsClass: 'PCGRerouteSettings', nodeName: BASIC_REROUTE_NODE, x: 120, y: 80, save: false }, expected: pcgOptionalExpected },
   ...basicNodeActionCases,
@@ -310,7 +311,7 @@ const realWorldCoverageCases = [
   {
     scenario: 'EXECUTE: create PCG component and generate on mesh actor',
     toolName: 'manage_pcg',
-    arguments: { action: 'execute_pcg_graph', graphPath: REAL_GRAPH_PATH, actorName: EXEC_ACTOR, componentName: COMPONENT_NAME, createComponent: true, force: true, wait: false, timeoutMs: 120000, save: false },
+    arguments: { action: 'execute_pcg_graph', graphPath: REAL_GRAPH_PATH, actorName: EXEC_ACTOR, componentName: COMPONENT_NAME, createComponent: true, force: true, timeoutMs: 120000, save: false },
     expected: pcgExpected,
     captureResult: { key: 'pcgComponentPath', fromField: 'result.componentPath' },
     assertions: [

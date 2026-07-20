@@ -66,9 +66,9 @@ const testCases = [
       name: PLAYER_NAME,
       path: TEST_FOLDER_ALIAS,
       autoPlay: false,
+      playOnOpen: false,
       loop: true,
-      looping: false,
-      playOnOpen: false
+      looping: false
     },
     expected: 'success|already exists'
   },
@@ -126,7 +126,7 @@ const testCases = [
       path: TEST_FOLDER_ALIAS,
       mediaPlayerPath: PLAYER_PATH,
       playerPath: PLAYER_PATH,
-      autoClear: true
+      autoClear: true,
     },
     expected: 'success|already exists'
   },
@@ -141,7 +141,7 @@ const testCases = [
       targetActor: ACTOR_MEDIA,
       mediaPlayerPath: PLAYER_PATH,
       componentName: 'MediaSound',
-      activate: true
+      activate: true,
     },
     expected: 'success|already exists'
   },
@@ -202,7 +202,7 @@ const testCases = [
       action: 'play_media',
       mediaPlayerPath: PLAYER_PATH,
       playlistPath: PLAYLIST_PATH,
-      playlistIndex: 0
+      playlistIndex: 0,
     },
     expected: 'success',
     assertions: [
@@ -262,7 +262,7 @@ const testCases = [
       mediaPlayerPath: PLAYER_PATH,
       timeSeconds: 5,
       seconds: 5,
-      time: 5
+      time: 5,
     },
     expected: 'success',
     assertions: [

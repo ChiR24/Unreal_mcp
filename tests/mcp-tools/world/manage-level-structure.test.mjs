@@ -60,6 +60,7 @@ const testCases = [
 
   // === INFO ===
   { scenario: 'INFO: get_level_structure_info', toolName: 'manage_level_structure', arguments: { action: 'get_level_structure_info' }, expected: 'success' },
+  { scenario: 'INFO: get_volumes_info via params passthrough', toolName: 'manage_level_structure', arguments: { action: 'get_volumes_info', params: { filter: 'Test' } }, expected: 'success' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete level instance', toolName: 'control_actor', arguments: { action: 'delete', actorName: LEVEL_INSTANCE }, expected: 'success|not found' },

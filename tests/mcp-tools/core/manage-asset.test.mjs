@@ -108,11 +108,14 @@ const testCases = [
   { scenario: 'ACTION: fixup_redirectors', toolName: 'manage_asset', arguments: { action: 'fixup_redirectors', directoryPath: TEST_FOLDER, checkoutFiles: false }, expected: 'success' },
   { scenario: 'INFO: find_by_tag', toolName: 'manage_asset', arguments: { action: 'find_by_tag', tag: TAG_KEY }, expected: 'success' },
   { scenario: 'ACTION: generate_report', toolName: 'manage_asset', arguments: { action: 'generate_report', directory: TEST_FOLDER, reportType: 'Summary' }, expected: 'success' },
+  { scenario: 'OPTIONAL: generate_report with outputPath', toolName: 'manage_asset', arguments: { action: 'generate_report', directory: TEST_FOLDER, reportType: 'Summary', outputPath: `${TEST_FOLDER}/AssetReport_${ts}.json` }, expected: 'success' },
 
   // === MATERIAL / MESH ACTIONS ===
   { scenario: 'CREATE: create_material', toolName: 'manage_asset', arguments: { action: 'create_material', name: `M_CreateAction_${ts}`, path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_material_instance', toolName: 'manage_asset', arguments: { action: 'create_material_instance', name: `MI_AssetBase_${ts}`, parentMaterial: BASE_MATERIAL, path: TEST_FOLDER }, expected: 'success|already exists' },
+  { scenario: 'OPTIONAL: create_material_instance via savePath', toolName: 'manage_asset', arguments: { action: 'create_material_instance', name: `MI_AssetSavePath_${ts}`, parentMaterial: BASE_MATERIAL, savePath: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_render_target', toolName: 'manage_asset', arguments: { action: 'create_render_target', name: RENDER_TARGET, path: TEST_FOLDER, width: 256, height: 256, format: 'RGBA16F' }, expected: 'success|already exists' },
+  { scenario: 'OPTIONAL: create_render_target via packagePath', toolName: 'manage_asset', arguments: { action: 'create_render_target', name: `RT_AssetPackagePath_${ts}`, packagePath: TEST_FOLDER, width: 128, height: 128 }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_render_target save false', toolName: 'manage_asset', arguments: { action: 'create_render_target', name: `RT_Asset_NoSave_${ts}`, path: TEST_FOLDER, width: 128, height: 128, save: false }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.data.saved', equals: false, label: 'save flag preserved' }] },
   { scenario: 'ACTION: generate_lods', toolName: 'manage_asset', arguments: { action: 'generate_lods', assetPath: EXISTING_STATIC_MESH, lodCount: 2 }, expected: 'success' },
   { scenario: 'ADD: add_material_parameter', toolName: 'manage_asset', arguments: { action: 'add_material_parameter', assetPath: BASE_MATERIAL, parameterName: `ScalarParam_${ts}`, parameterType: 'Scalar', value: 0.5 }, expected: 'success|already exists' },
@@ -133,6 +136,7 @@ const testCases = [
   { scenario: 'CONNECT: connect_material_pins', toolName: 'manage_asset', arguments: { action: 'connect_material_pins', assetPath: BASE_MATERIAL, sourceNodeId: '${captured:constantNodeId}', sourcePin: '0', targetNodeId: '${captured:multiplyNodeId}', targetPin: 'A' }, expected: 'success' },
   { scenario: 'ACTION: break_material_connections', toolName: 'manage_asset', arguments: { action: 'break_material_connections', assetPath: BASE_MATERIAL, nodeId: '${captured:multiplyNodeId}', pinName: 'A' }, expected: 'success' },
   { scenario: 'INFO: get_material_node_details', toolName: 'manage_asset', arguments: { action: 'get_material_node_details', assetPath: BASE_MATERIAL, nodeId: '${captured:multiplyNodeId}' }, expected: 'success' },
+  { scenario: 'OPTIONAL: get_material_node_details by expressionIndex', toolName: 'manage_asset', arguments: { action: 'get_material_node_details', assetPath: BASE_MATERIAL, nodeId: '${captured:multiplyNodeId}', expressionIndex: 0 }, expected: 'success' },
   { scenario: 'DELETE: remove_material_node', toolName: 'manage_asset', arguments: { action: 'remove_material_node', assetPath: BASE_MATERIAL, nodeId: '${captured:multiplyNodeId}' }, expected: 'success' },
   { scenario: 'ACTION: rebuild_material', toolName: 'manage_asset', arguments: { action: 'rebuild_material', assetPath: BASE_MATERIAL }, expected: 'success' },
 ];
@@ -267,8 +271,11 @@ const testCases = [
 
     // === CREATE ===
     { scenario: 'CREATE: create_noise_texture', toolName: 'manage_asset', arguments: { action: 'create_noise_texture', name: 'Testnoise_texture', path: TEST_FOLDER, width: 64, height: 64 }, expected: 'success|already exists' },
+    { scenario: 'OPTIONAL: create_noise_texture with noiseType and seed', toolName: 'manage_asset', arguments: { action: 'create_noise_texture', name: `Testnoise_texture_Opt_${ts}`, path: TEST_FOLDER, width: 64, height: 64, noiseType: 'Perlin', seed: 1234 }, expected: 'success|already exists' },
     { scenario: 'CREATE: create_gradient_texture', toolName: 'manage_asset', arguments: { action: 'create_gradient_texture', name: 'Testgradient_texture', path: TEST_FOLDER, width: 64, height: 64 }, expected: 'success|already exists' },
+    { scenario: 'OPTIONAL: create_gradient_texture with gradientType', toolName: 'manage_asset', arguments: { action: 'create_gradient_texture', name: `Testgradient_texture_Opt_${ts}`, path: TEST_FOLDER, width: 64, height: 64, gradientType: 'Linear' }, expected: 'success|already exists' },
     { scenario: 'CREATE: create_pattern_texture', toolName: 'manage_asset', arguments: { action: 'create_pattern_texture', name: 'Testpattern_texture', path: TEST_FOLDER, width: 64, height: 64 }, expected: 'success|already exists' },
+    { scenario: 'OPTIONAL: create_pattern_texture with patternType', toolName: 'manage_asset', arguments: { action: 'create_pattern_texture', name: `Testpattern_texture_Opt_${ts}`, path: TEST_FOLDER, width: 64, height: 64, patternType: 'Checker' }, expected: 'success|already exists' },
     { scenario: 'CREATE: create_normal_from_height', toolName: 'manage_asset', arguments: { action: 'create_normal_from_height', sourceTexture: NOISE_TEXTURE, name: 'Testnormal_from_height', path: TEST_FOLDER, strength: 1.0 }, expected: 'success|already exists' },
     { scenario: 'CREATE: create_ao_from_mesh', toolName: 'manage_asset', arguments: { action: 'create_ao_from_mesh', meshPath: ENGINE_CUBE, name: 'Testao_from_mesh', path: TEST_FOLDER, width: 64, height: 64, samples: 8 }, expected: 'success|already exists' },
     // === ACTION ===
