@@ -3,7 +3,6 @@
 #include "UObject/UnrealType.h"
 #include "StructUtils/InstancedStruct.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
-#include "JsonObjectConverter.h"
 #include "Safety/McpSafeOperationsAssetSave.h"
 
 // =============================================================================
@@ -195,14 +194,13 @@ bool HandleStructPropertyAction(
         if (Values.IsValid())
         {
             // Validate against a throwaway instance BEFORE touching the live
-            // FInstancedStruct (issue #struct-ecosystem [23]). The generic
-            // reflection layer has no FStructProperty branch, so apply the JSON
-            // object with the struct-aware converter directly; doing it on a
-            // scratch instance means a malformed structValues payload never
-            // mutates the in-memory asset. Only after validation succeeds do
-            // we commit the instance.
-            const TSharedPtr<FJsonObject>* ValuesObj = nullptr;
-            if (!Values->TryGetObject(ValuesObj) || !*ValuesObj)
+            // FInstancedStruct (issue #struct-ecosystem [23]). Route the JSON
+            // object through the shared reflection importer
+            // (McpPropertyReflection::ApplyJsonValueToProperty) bound to scratch
+            // struct memory via a temporary FStructProperty, so a malformed
+            // structValues payload never mutates the in-memory asset. Only after
+            // validation succeeds do we commit the instance via MoveTemp.
+            if (Values->Type != EJson::Object)
             {
                 OutResult->SetBoolField(TEXT("success"), false);
                 OutResult->SetStringField(TEXT("error"), TEXT("INVALID_OPERATION"));
@@ -213,14 +211,19 @@ bool HandleStructPropertyAction(
 
             FInstancedStruct Scratch;
             Scratch.InitializeAs(TargetStruct);
-            if (!FJsonObjectConverter::JsonObjectToUStruct(
-                    (*ValuesObj).ToSharedRef(), TargetStruct,
-                    Scratch.GetMutableMemory(), 0, 0))
+
+            FStructProperty* InnerProp = MakeInnerStructProperty(TargetStruct);
+            FString ImportError;
+            const bool bImported = McpPropertyReflection::ApplyJsonValueToProperty(
+                Scratch.GetMutableMemory(), InnerProp, Values, ImportError);
+            delete InnerProp;
+
+            if (!bImported)
             {
                 OutResult->SetBoolField(TEXT("success"), false);
                 OutResult->SetStringField(TEXT("error"), TEXT("OPERATION_FAILED"));
                 OutResult->SetStringField(TEXT("message"),
-                    TEXT("Failed to apply structValues to the requested struct type"));
+                    FString::Printf(TEXT("Failed to apply structValues: %s"), *ImportError));
                 return true;
             }
 

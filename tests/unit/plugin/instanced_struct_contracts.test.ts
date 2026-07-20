@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -42,13 +42,34 @@ describe('FInstancedStruct property access contracts (struct ecosystem)', () => 
     expect(cpp).toContain('McpSafeAssetSave');
   });
 
-  it('reuses the generic reflection layer instead of reimplementing struct (de)serialization', () => {
-    // Given / When: get must serialize the inner struct via
-    // ExportPropertyToJsonValue; set must import via the reflection layer.
+  it('routes struct value validation through the shared reflection importer on scratch memory', () => {
+    // Given / When: set must import via McpPropertyReflection::ApplyJsonValueToProperty
+    // on a scratch instance (call syntax, not a comment or dead reference), never via a
+    // direct FJsonObjectConverter call. The shared importer must own the FStructProperty
+    // JSON-object branch. Scratch-instance atomicity (validate before commit, then move)
+    // must be preserved so malformed structValues never mutates the live FInstancedStruct.
     // Then
     const cpp = read(instancedStructCpp);
-    expect(cpp).toContain('ExportPropertyToJsonValue');
-    expect(cpp).toContain('ApplyJsonValueToProperty');
+    // Handler must invoke the shared importer with call syntax.
+    expect(cpp).toMatch(/McpPropertyReflection::ApplyJsonValueToProperty\s*\(/);
+    // Handler must not deserialize struct values directly with the engine converter.
+    expect(cpp).not.toContain('FJsonObjectConverter::JsonObjectToUStruct');
+    // The now-unused JsonObjectConverter include must be gone from the handler.
+    expect(cpp).not.toMatch(/#\s*include\s*"[^"]*JsonObjectConverter\.h"/);
+    // Scratch-instance atomicity: validate before commit, then move.
+    expect(cpp).toContain('Scratch');
+    expect(cpp).toContain('MoveTemp');
+
+    // The shared importer must own the FStructProperty branch with explicit guards.
+    const importCpp = read(resolve(
+      process.cwd(),
+      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Foundation/Reflection/McpPropertyReflectionImport.cpp',
+    ));
+    expect(importCpp).toContain('FStructProperty');
+    expect(importCpp).toContain('FJsonObjectConverter::JsonObjectToUStruct');
+    expect(importCpp).toContain('EJson::Object');
+    expect(importCpp).toContain('UScriptStruct');
+    expect(importCpp).toContain('Failed to convert JSON object to struct');
   });
 
   it('reports the correct error codes and never uses UPackage::SavePackage', () => {
