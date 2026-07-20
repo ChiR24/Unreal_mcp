@@ -20,6 +20,7 @@ import type {
   LegacyToolName,
   UnrealVersion
 } from './identifiers.js';
+import type { ParentToolMetadata } from './records/parent-metadata.js';
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
@@ -132,6 +133,7 @@ export type CapabilityRecordSource = {
   readonly routing: CapabilityRouting;
   readonly normalization: CapabilityNormalization;
   readonly deprecation: CapabilityDeprecation;
+  readonly parent: ParentToolMetadata;
 };
 
 export type CapabilityRecord = CapabilityRecordSource & {

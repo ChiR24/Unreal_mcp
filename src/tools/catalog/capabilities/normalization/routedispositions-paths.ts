@@ -102,7 +102,7 @@ export const ROUTE_EVIDENCE_PATHS = {
   // Effect
   EFFECT_NIAGARA_SPAWN: `${P}/Effect/McpAutomationBridge_EffectHandlersNiagaraSpawn.cpp`,
   EFFECT_MODULE_ROUTING: `${P}/Effect/McpAutomationBridge_EffectHandlersNiagaraModuleRouting.cpp`,
-  EFFECT_TOOL: 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools/Utility/McpTool_ManageEffect.cpp',
+  EFFECT_TOOL: `${P}/Effect/McpAutomationBridge_EffectHandlersNiagaraLifecycle.cpp`,
   // Geometry
   GEOMETRY_HANDLERS: `${P}/Geometry/McpAutomationBridge_GeometryHandlers.cpp`,
   // Audio

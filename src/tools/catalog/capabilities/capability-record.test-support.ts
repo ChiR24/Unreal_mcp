@@ -1,5 +1,7 @@
 export const DRAFT_SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema';
 
+import { getParentToolMetadata } from './records/parent-metadata.js';
+
 export function validCapabilitySource() {
   return {
     id: 'asset.delete',
@@ -84,7 +86,8 @@ export function validCapabilitySource() {
     },
     deprecation: {
       status: 'active'
-    }
+    },
+    parent: getParentToolMetadata('manage_asset')
   };
 }
 

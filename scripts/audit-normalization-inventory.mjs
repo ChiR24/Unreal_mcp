@@ -52,15 +52,15 @@ check('verbFamilyAddCreateSetConfigure === 817', m.verbFamilyAddCreateSetConfigu
 check('unclassifiedOccurrences === 0', m.unclassifiedOccurrences === 0);
 check('canonicalCollisions === 0', m.canonicalCollisions === 0);
 check('taxonomy is strictly A-F (no P class)', !('P' in m.classificationCounts));
-check('routeDispositions total === 67 (v2 expected)', inv.routeDispositions.length === 67);
+check('routeDispositions total === 77 (v3 expected)', inv.routeDispositions.length === 77);
 check('routeDisposition unresolved === 0', m.routeDispositionUnresolved === 0);
 check(
-  'route status: dead20/raw14/hidden33 (v2)',
-  m.routeStatusCounts.dead === 20 && m.routeStatusCounts.raw === 14 && m.routeStatusCounts.hidden === 33,
+  'route status: dead20/raw24/hidden33 (v3)',
+  m.routeStatusCounts.dead === 20 && m.routeStatusCounts.raw === 24 && m.routeStatusCounts.hidden === 33,
 );
 check(
-  'route disposition: promote43/map16/remove8 (v2)',
-  m.routeDispositionCounts.promote === 43 && m.routeDispositionCounts.map === 16 && m.routeDispositionCounts.remove === 8,
+  'route disposition: promote53/map16/remove8 (v3)',
+  m.routeDispositionCounts.promote === 53 && m.routeDispositionCounts.map === 16 && m.routeDispositionCounts.remove === 8,
 );
 check(
   'invented MRQ audio routes absent',

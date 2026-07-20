@@ -22,6 +22,7 @@ import {
   UnrealVersionSchema
 } from './identifiers.js';
 import { Draft202012ObjectSchemaSchema, jsonObjectSchema } from './json-schema.js';
+import { getParentToolMetadata, type ParentToolMetadata } from './records/parent-metadata.js';
 import { compareUnrealVersion } from './version.js';
 
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -114,6 +115,43 @@ const legacyIdSchema = z.strictObject({
   action: LegacyActionNameSchema
 });
 
+// Canonical parent-tool metadata: shape-checked here, content-checked against
+// the single-source lookup in records/parent-metadata.ts so descriptions and
+// categories are never duplicated locally.
+const parentSchema = z
+  .strictObject({
+    parent: LegacyToolNameSchema,
+    description: z.string().min(1),
+    category: z.enum(['core', 'world', 'gameplay', 'utility'])
+  })
+  .superRefine((candidate, ctx) => {
+    let canonical: ParentToolMetadata;
+    try {
+      canonical = getParentToolMetadata(candidate.parent);
+    } catch {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['parent'],
+        message: 'parent is not one of the 23 canonical tools'
+      });
+      return;
+    }
+    if (candidate.description !== canonical.description) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['description'],
+        message: 'parent description does not match the canonical lookup'
+      });
+    }
+    if (candidate.category !== canonical.category) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['category'],
+        message: 'parent category does not match the canonical lookup'
+      });
+    }
+  });
+
 const sourceShape = {
   id: CapabilityIdSchema,
   aliases: z.array(CapabilityAliasSchema),
@@ -130,7 +168,8 @@ const sourceShape = {
   cost: costSchema,
   routing: routingSchema,
   normalization: normalizationSchema,
-  deprecation: deprecationSchema
+  deprecation: deprecationSchema,
+  parent: parentSchema
 };
 
 export const CapabilityRecordSourceSchema = z.strictObject(sourceShape);

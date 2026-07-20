@@ -229,6 +229,67 @@ describe('CapabilityRecord validation boundary', () => {
   });
 });
 
+describe('Capability parent metadata validation', () => {
+  it('rejects an unknown parent tool at the exact pointer', () => {
+    // Given
+    const source = validCapabilitySource();
+
+    // When
+    const pointers = sourceRejectionPointers({
+      ...source,
+      parent: { parent: 'not_a_tool', description: 'x', category: 'core' }
+    });
+
+    // Then the unknown tool name fails the inner LegacyToolNameSchema check
+    expect(pointers).toContain('/parent/parent');
+  });
+
+  it('rejects a mismatched parent description at the exact pointer', () => {
+    // Given
+    const source = validCapabilitySource();
+
+    // When
+    const pointers = sourceRejectionPointers({
+      ...source,
+      parent: {
+        parent: 'manage_asset',
+        description: 'Wrong description text.',
+        category: 'core'
+      }
+    });
+
+    // Then
+    expect(pointers).toContain('/parent/description');
+  });
+
+  it('rejects a mismatched parent category at the exact pointer', () => {
+    // Given
+    const source = validCapabilitySource();
+
+    // When
+    const pointers = sourceRejectionPointers({
+      ...source,
+      parent: {
+        parent: 'manage_asset',
+        description:
+          'Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.',
+        category: 'utility'
+      }
+    });
+
+    // Then
+    expect(pointers).toContain('/parent/category');
+  });
+
+  it('accepts a record whose parent agrees exactly with the canonical lookup', () => {
+    // Given
+    const source = validCapabilitySource();
+
+    // When / Then
+    expect(sourceRejectionPointers(source)).toEqual([]);
+  });
+});
+
 describe('Capability serializer invariants', () => {
   it('rejects non-JSON and non-finite values with a typed error', () => {
     // Given unsupported inputs
