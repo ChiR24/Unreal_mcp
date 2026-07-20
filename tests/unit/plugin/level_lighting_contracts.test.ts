@@ -97,16 +97,21 @@ describe('level and lighting build contracts', () => {
     expect(source).not.toContain('NavSys->Build()');
   });
 
-  it('advertises rendering method values in the native build_environment schema', () => {
-    const source = pluginSource(
-      'MCP',
-      'Tools',
-      'World',
-      'McpBuildEnvironmentSchemaFields.h',
+  it('advertises rendering method values in the active render sources', () => {
+    const postProcessSource = pluginSource(
+      'Domains',
+      'Render',
+      'McpAutomationBridge_RenderPostProcessColor.cpp',
+    );
+    const supportEnumsSource = pluginSource(
+      'Domains',
+      'Render',
+      'McpAutomationBridge_RenderSupportEnums.h',
     );
 
-    for (const value of ['Filmic', 'CinematicDOF', 'Manual']) {
-      expect(source).toContain(`TEXT("${value}")`);
+    expect(postProcessSource).toContain('TEXT("Filmic")');
+    for (const value of ['CinematicDOF', 'Manual']) {
+      expect(supportEnumsSource).toContain(`TEXT("${value}")`);
     }
   });
 

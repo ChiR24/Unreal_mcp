@@ -28,7 +28,12 @@ const discovery = read('MCP/Transport/McpNativeTransportToolDiscovery.cpp');
 const httpParsing = read('MCP/Transport/McpNativeTransportHttpParsing.cpp');
 const connection = read('MCP/Transport/McpNativeTransportConnection.cpp');
 const protocolVersion = read('MCP/Transport/McpNativeTransportProtocolVersion.cpp');
-const header = read('MCP/Transport/McpNativeTransport.h');
+// Transport-declared state spans two headers: the transport class itself and the
+// per-connection structs split out of it to hold the 250-line ceiling.
+const header = [
+  read('MCP/Transport/McpNativeTransport.h'),
+  read('MCP/Transport/McpNativeTransportConnectionTypes.h'),
+].join('\n');
 const privateH = read('MCP/Transport/McpNativeTransportPrivate.h');
 const jsonRpcH = read('MCP/Protocol/McpJsonRpc.h');
 

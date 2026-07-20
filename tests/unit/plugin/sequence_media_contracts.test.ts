@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   privateSource,
 } from './sequence_contract_test_utils.js';
-import { manageSequenceToolDefinition } from '../../../src/tools/definitions/utility/manage-sequence-tool.js';
+import { consolidatedToolDefinitions } from '../../../src/tools/catalog/consolidated-tool-definitions.js';
 
 describe('sequence media contracts', () => {
   it('does not mutate existing media assets during create actions', () => {
@@ -206,7 +206,7 @@ describe('manage_sequence dead-schema-drift guard', () => {
   ];
 
   it('omits verified-dead fields from the canonical TS schema', () => {
-    const inputSchema = manageSequenceToolDefinition.inputSchema as {
+    const inputSchema = (consolidatedToolDefinitions.find((t) => t.name === 'manage_sequence') as NonNullable<typeof consolidatedToolDefinitions[number]>).inputSchema as {
       properties?: Record<string, unknown>;
     };
     const properties = inputSchema.properties ?? {};
@@ -216,7 +216,7 @@ describe('manage_sequence dead-schema-drift guard', () => {
   });
 
   it('retains RecordReplay-owned fields and does not claim them as Media', () => {
-    const inputSchema = manageSequenceToolDefinition.inputSchema as {
+    const inputSchema = (consolidatedToolDefinitions.find((t) => t.name === 'manage_sequence') as NonNullable<typeof consolidatedToolDefinitions[number]>).inputSchema as {
       properties?: Record<string, unknown>;
     };
     const properties = inputSchema.properties ?? {};
@@ -226,7 +226,7 @@ describe('manage_sequence dead-schema-drift guard', () => {
   });
 
   it('keeps all eight Media actions in the canonical action enum', () => {
-    const inputSchema = manageSequenceToolDefinition.inputSchema as {
+    const inputSchema = (consolidatedToolDefinitions.find((t) => t.name === 'manage_sequence') as NonNullable<typeof consolidatedToolDefinitions[number]>).inputSchema as {
       properties?: { action?: { enum?: string[] } };
     };
     const actions = inputSchema.properties?.action?.enum ?? [];
@@ -251,7 +251,7 @@ describe('manage_sequence dead-schema-drift guard', () => {
     const nativeSchemaSource = readFileSync(
       resolve(
         process.cwd(),
-        'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools/Utility/McpTool_ManageSequenceSchemaFields.cpp',
+        'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools/McpGeneratedParentRegistry_Utility_Sequence.cpp',
       ),
       'utf8',
     );

@@ -5,6 +5,8 @@ import { resolve } from 'node:path';
 import {
   privateSource,
   publicSource,
+  recordSource,
+  sliceObject,
 } from './sequence_contract_test_utils.js';
 
 describe('MRQ frame accounting and native schema parity', () => {
@@ -61,21 +63,18 @@ describe('MRQ frame accounting and native schema parity', () => {
   });
 
   it('declares every nested MRQ setting accepted by handlers', () => {
-    // Given
-    const schema = privateSource(
-      'MCP',
-      'Tools',
-      'Utility',
-      'McpTool_ManageSequenceSchemaFields.cpp',
-    );
-    const settingsStart = schema.indexOf('.Object(TEXT("settings")');
-    const settingsEnd = schema.indexOf(
-      '.FreeformObject(TEXT("platformSources")',
-      settingsStart,
-    );
+    // Given: `settings` is one tool-level key, so its schema must be the union
+    // of every key any MRQ handler reads from it. configure_output_settings
+    // reads handleFrameCount/zeroPadFrameNumbers via TryGetSettingsInt
+    // (MovieRenderOutput.cpp:25-30,163-167); configure_anti_aliasing reads the
+    // remaining four via TryGetIntEither/TryGetStringEither, which accept
+    // either nested or top-level (MovieRenderSettings.cpp:28-46,98-102,125-127).
+    // Declaring two competing shapes for one key degrades the generated native
+    // schema to AnyValue and silently drops the nested properties.
+    const records = recordSource('helpers.ts');
 
     // When
-    const settingsSchema = schema.slice(settingsStart, settingsEnd);
+    const settingsSchema = sliceObject(records, 'mrqSettings: {');
 
     // Then
     for (const field of [
@@ -86,7 +85,7 @@ describe('MRQ frame accounting and native schema parity', () => {
       'antiAliasingMethod',
       'method',
     ]) {
-      expect(settingsSchema).toContain(`TEXT("${field}")`);
+      expect(settingsSchema).toContain(`${field}:`);
     }
   });
 

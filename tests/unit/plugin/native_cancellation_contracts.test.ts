@@ -39,6 +39,8 @@ const privateH = read('MCP/Transport/McpNativeTransportPrivate.h');
 const cancellation = read('MCP/Transport/McpNativeTransportCancellation.cpp');
 const gateway = read('MCP/Transport/McpNativeTransportGateway.cpp');
 const gatewayStream = read('MCP/Transport/McpNativeTransportGatewayStream.cpp');
+const gatewayExecute = read('MCP/Execute/McpNativeTransportGatewayExecute.cpp');
+const connectionTypes = read('MCP/Transport/McpNativeTransportConnectionTypes.h');
 const pending = read('MCP/Transport/McpNativeTransportPendingRequests.cpp');
 const connection = read('MCP/Transport/McpNativeTransportConnection.cpp');
 const jsonRpcH = read('MCP/Protocol/McpJsonRpc.h');
@@ -62,7 +64,7 @@ describe('C4: notifications/cancelled cancellation + late-response suppression',
 
   it('correlates the client requestId to the inflight SSE connection', () => {
     // FSSEConnection records the canonical key of the client JSON-RPC id.
-    expect(header).toContain('FString ClientRequestIdKey;');
+    expect(connectionTypes).toContain('FString ClientRequestIdKey;');
     // Gateway stream stamps it from the tools/call id.
     expect(gatewayStream).toContain('Conn->ClientRequestIdKey = McpJsonRpcIdKey(Id);');
     // Cancellation matches the inflight connection by that key.
@@ -91,7 +93,7 @@ describe('C4: notifications/cancelled cancellation + late-response suppression',
 
   it('scopes cancellation to the caller session so one session cannot cancel another', () => {
     // The SSE connection records the owning session.
-    expect(header).toContain('FString SessionId;  // for touching ActiveSessions during long-running calls');
+    expect(connectionTypes).toContain('FString SessionId;  // for touching ActiveSessions during long-running calls');
     // The handler receives the caller session id and matches it.
     expect(cancellation).toContain('const FString& CallerSessionId');
     expect(cancellation).toContain('Conn->SessionId == CallerSessionId');
@@ -146,8 +148,8 @@ describe('C4: notifications/cancelled cancellation + late-response suppression',
 
 describe('C4: client _meta.progressToken preservation through gateway streaming', () => {
   it('captures the progressToken on the SSE connection', () => {
-    expect(header).toContain('TSharedPtr<FJsonValue> ProgressToken;');
-    expect(header).toContain('bool bHasProgressToken = false;');
+    expect(connectionTypes).toContain('TSharedPtr<FJsonValue> ProgressToken;');
+    expect(connectionTypes).toContain('bool bHasProgressToken = false;');
     expect(gatewayStream).toContain('Conn->ProgressToken = ProgressToken;');
     expect(gatewayStream).toContain('Conn->bHasProgressToken = ProgressToken.IsValid();');
   });
@@ -157,13 +159,16 @@ describe('C4: client _meta.progressToken preservation through gateway streaming'
     expect(gateway).toContain(
       'const TSharedPtr<FJsonValue>& ProgressToken',
     );
-    // HandleGatewayCall forwards it into StreamToolCall.
-    expect(gateway).toContain(
-      'StreamToolCall(Tool, DispatchAction, ResolvedArgs, Id, ClientSocket, SessionId, CorsOrigin, ProgressToken);',
+    // HandleGatewayCall forwards it into HandleGatewayExecute, which forwards it
+    // into StreamToolCall alongside the resolved capability context.
+    expect(gateway).toContain('HandleGatewayExecute(');
+    expect(gatewayExecute).toContain(
+      'SessionId, CorsOrigin, ProgressToken, Plan.CapabilityId, Plan.OutputSchema,',
     );
-    // StreamToolCall declares the token parameter.
+    // StreamToolCall declares the token parameter ahead of the gateway
+    // capability context, so the trailing comma pins StreamToolCall itself.
     expect(header).toContain(
-      'const TSharedPtr<FJsonValue>& ProgressToken = nullptr);',
+      'const TSharedPtr<FJsonValue>& ProgressToken = nullptr,',
     );
   });
 

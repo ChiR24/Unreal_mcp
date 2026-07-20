@@ -426,8 +426,7 @@ describe('sequence render and native security contracts', () => {
     const definition = privateSource(
       'MCP',
       'Tools',
-      'Utility',
-      'McpTool_ManageSequence.cpp',
+      'McpGeneratedParentRegistry_Utility_Sequence.cpp',
     );
     const transport = privateSource(
       'MCP',
@@ -446,8 +445,7 @@ describe('sequence render and native security contracts', () => {
     const schemaFields = privateSource(
       'MCP',
       'Tools',
-      'Utility',
-      'McpTool_ManageSequenceSchemaFields.cpp',
+      'McpGeneratedParentRegistry_Utility_Sequence.cpp',
     );
     expect(validation).toContain('ValidateValueAgainstSchema');
     expect(validation).toContain('INVALID_TOOL_ARGUMENT');
@@ -521,7 +519,7 @@ describe('sequence render and native security contracts', () => {
     const transport = privateSource(
       'MCP',
       'Transport',
-      'McpNativeTransport.h',
+      'McpNativeTransportConnectionTypes.h',
     );
     const pending = privateSource(
       'MCP',
@@ -546,22 +544,24 @@ describe('sequence render and native security contracts', () => {
   });
 
   it('declares frame and resolution inputs as integers in both schemas', () => {
-    const typeScript = readFileSync(
-      resolve(
-        process.cwd(),
-        'src',
-        'tools',
-        'definitions',
-        'utility',
-        'manage-sequence-tool.ts',
+    // The hand-written definitions module was removed; the canonical TypeScript
+    // surface is now the generated gateway manifest projected from the
+    // capability records, so assert its structural types rather than source text.
+    const manifest = JSON.parse(
+      readFileSync(
+        resolve(process.cwd(), 'src', 'gateway', 'gateway-manifest.generated.json'),
+        'utf8',
       ),
-      'utf8',
+    ) as { tools: { name: string; inputSchema: { properties: Record<string, { type?: string }> } }[] };
+    const sequenceTool = manifest.tools.find(
+      (tool) => tool.name === 'manage_sequence',
     );
+    if (!sequenceTool) throw new Error('manage_sequence missing from gateway manifest');
+    const properties = sequenceTool.inputSchema.properties;
     const native = privateSource(
       'MCP',
       'Tools',
-      'Utility',
-      'McpTool_ManageSequenceSchemaFields.cpp',
+      'McpGeneratedParentRegistry_Utility_Sequence.cpp',
     );
 
     for (const field of [
@@ -574,7 +574,7 @@ describe('sequence render and native security contracts', () => {
       'playbackStart',
       'playbackEnd',
     ]) {
-      expect(typeScript).toContain(`${field}: commonSchemas.integerProp`);
+      expect(properties[field]?.type).toBe('integer');
       expect(native).toContain(`.Integer(TEXT("${field}")`);
       expect(native).not.toContain(`.Number(TEXT("${field}")`);
     }
@@ -600,7 +600,7 @@ describe('sequence render and native security contracts', () => {
     const transport = privateSource(
       'MCP',
       'Transport',
-      'McpNativeTransport.h',
+      'McpNativeTransportConnectionTypes.h',
     );
     const notifications = privateSource(
       'MCP',
@@ -822,7 +822,7 @@ describe('sequence render and native security contracts', () => {
     const transport = privateSource(
       'MCP',
       'Transport',
-      'McpNativeTransport.h',
+      'McpNativeTransportConnectionTypes.h',
     );
     const jsonRpc = privateSource(
       'MCP',
