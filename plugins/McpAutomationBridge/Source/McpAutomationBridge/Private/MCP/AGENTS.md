@@ -9,7 +9,7 @@ Direct plugin MCP implementation for Streamable HTTP/SSE at `/mcp`. This subtree
 | `Protocol/` | JSON-RPC parse/build helpers and MCP tool-result envelopes |
 | `Registry/` | Canonical-name gate, static definitions, cached schemas |
 | `Routing/` | Consolidated parent-tool action routing helpers |
-| `Tools/<Category>/` | Self-describing name, description, category, schema, dispatch metadata |
+| `Tools/<Category>/` | (Historical per-tool `MCP_REGISTER_TOOL` classes were removed) Native MCP tool definitions are now generated into the native registry from the canonical records; the registry reads canonical name/description/category/schema/dispatch metadata |
 | `Transport/` | Bind/listen, HTTP parsing, sessions, SSE, pending requests, shutdown |
 
 ## CANONICAL SURFACE
@@ -22,9 +22,9 @@ manage_audio, manage_geometry, manage_effect, manage_gas, manage_character, mana
 manage_ai, manage_inventory, manage_interaction, manage_networking, manage_level_structure, manage_pcg
 ```
 
-- `MCP_REGISTER_TOOL` only attempts static registration. The source tree may contain more registrars; non-canonical names are silently filtered and duplicate names are ignored.
-- Do not infer the exposed native surface from the number of `McpTool_*.cpp` files. `Registry/McpToolRegistry.cpp` is authoritative.
-- Adding a registrar alone cannot expose a new parent tool. Update the canonical gate deliberately, keep TS/native parity, and justify context growth.
+- The native registration is **generated** from the canonical tool/action records (the TypeScript `consolidated-tool-definitions.ts` is the canonical facade over that metadata); the handwritten per-tool `MCP_REGISTER_TOOL` classes have been removed. `Registry/McpToolRegistry.cpp` is authoritative for the runtime registry; only canonical names survive, and duplicate names are ignored.
+- Do not infer the exposed native surface from the number of `McpTool_*.cpp` files — the per-tool C++ files no longer exist. `Registry/McpToolRegistry.cpp` is authoritative.
+- Adding a canonical registrar entry alone cannot expose a new parent tool. Update the canonical gate deliberately, keep TS/native parity, and justify context growth.
 - `tools/list` filters accepted registry entries by dynamic enabled state; `tools/call` enforces the same state before dispatch.
 
 ## TOOL DEFINITIONS

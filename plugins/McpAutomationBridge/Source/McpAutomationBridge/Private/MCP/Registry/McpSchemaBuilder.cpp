@@ -141,6 +141,30 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::FreeformObject(const FString& Name,
 	return *this;
 }
 
+FMcpSchemaBuilder& FMcpSchemaBuilder::AnyValue(const FString& Name, const FString& Description)
+{
+	auto Prop = MakeShared<FJsonObject>();
+	if (!Description.IsEmpty())
+	{
+		Prop->SetStringField(TEXT("description"), Description);
+	}
+	AddProperty(Name, Prop);
+	return *this;
+}
+
+FMcpSchemaBuilder& FMcpSchemaBuilder::TypeUnion(const FString& Name,
+	const TArray<FString>& Types, const FString& Description)
+{
+	auto Prop = MakeShared<FJsonObject>();
+	Prop->SetArrayField(TEXT("type"), MakeStringValueArray(Types));
+	if (!Description.IsEmpty())
+	{
+		Prop->SetStringField(TEXT("description"), Description);
+	}
+	AddProperty(Name, Prop);
+	return *this;
+}
+
 FMcpSchemaBuilder& FMcpSchemaBuilder::Required(const TArray<FString>& Names)
 {
 	for (const FString& Name : Names)

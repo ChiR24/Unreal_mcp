@@ -2,6 +2,8 @@
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
+#include "MCP/Execute/McpNativeGatewayValidation.h"
 #include "MCP/Registry/McpToolDefinition.h"
 
 namespace McpNativeArgumentValidation {
@@ -180,16 +182,29 @@ bool ValidateToolArguments(const FMcpToolDefinition *ToolDefinition,
   OutArgumentPath.Reset();
   OutErrorCode.Reset();
   OutErrorMessage.Reset();
-  if (!ToolDefinition || !ToolDefinition->EnforceStrictArguments())
+  if (!ToolDefinition)
     return true;
-  const TSharedPtr<FJsonObject> Schema = ToolDefinition->BuildInputSchema();
-  if (!Schema.IsValid() || !Arguments.IsValid()) {
-    OutErrorCode = TEXT("INVALID_TOOL_ARGUMENT");
-    OutErrorMessage = TEXT("Tool arguments could not be validated");
-    return false;
+
+  // Until the canonical records load, validation degrades to the pre-Task-27
+  // per-tool opt-in against the tool-union schema — never to no validation.
+  if (!McpCanonicalRecordsAvailable()) {
+    if (!ToolDefinition->EnforceStrictArguments())
+      return true;
+    const TSharedPtr<FJsonObject> Schema = ToolDefinition->BuildInputSchema();
+    if (!Schema.IsValid() || !Arguments.IsValid()) {
+      OutErrorCode = TEXT("INVALID_TOOL_ARGUMENT");
+      OutErrorMessage = TEXT("Tool arguments could not be validated");
+      return false;
+    }
+    return ValidateObject(Arguments, Schema, FString(), OutArgumentPath,
+                          OutErrorCode, OutErrorMessage);
   }
-  return ValidateObject(Arguments, Schema, FString(), OutArgumentPath,
-                        OutErrorCode, OutErrorMessage);
+
+  // Records are loaded: every action of every tool is validated against its own
+  // exact schema, replacing the opt-in that covered a single parent tool.
+  return McpValidateCanonicalToolArguments(ToolDefinition->GetName(), Arguments,
+                                           OutArgumentPath, OutErrorCode,
+                                           OutErrorMessage);
 }
 
 }

@@ -7,7 +7,8 @@ void FMcpNativeTransport::StreamToolCall(
 	const FString& ToolName, const FString& DispatchAction,
 	const TSharedPtr<FJsonObject>& Arguments, const TSharedPtr<FJsonValue>& Id,
 	FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
-	const TSharedPtr<FJsonValue>& ProgressToken)
+	const TSharedPtr<FJsonValue>& ProgressToken, const FString& CapabilityId,
+	const TSharedPtr<FJsonObject>& OutputSchema, const FString& CorrelationId)
 {
 	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 
@@ -28,6 +29,9 @@ void FMcpNativeTransport::StreamToolCall(
 			Settings ? Settings->MaxMovieRenderCancellationWaitMs : 30000);
 	Conn->ToolName = ToolName;
 	Conn->SessionId = SessionId;
+	Conn->CapabilityId = CapabilityId;
+	Conn->CorrelationId = CorrelationId;
+	Conn->OutputSchema = OutputSchema;
 	bool bPendingLimitReached = false;
 	bool bSessionInvalid = false;
 	{

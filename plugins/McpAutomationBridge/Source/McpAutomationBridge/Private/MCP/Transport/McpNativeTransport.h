@@ -6,6 +6,7 @@
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
 #include "Async/Future.h"
 #include <atomic>
+#include "MCP/Transport/McpNativeTransportConnectionTypes.h"
 
 class UMcpAutomationBridgeSubsystem;
 class FSocket;
@@ -97,65 +98,6 @@ public:
 	virtual void Stop() override;
 
 private:
-	/** Parsed HTTP request (minimal — only POST/DELETE /mcp). */
-	struct FParsedHttpRequest
-	{
-		FString Method;      // "GET", "POST", or "DELETE"
-		FString Path;        // "/mcp"
-		FString Body;
-		FString SessionId;   // from Mcp-Session-Id header
-		FString Accept;      // from Accept header
-		FString CapabilityToken;  // from X-MCP-Capability-Token header
-		FString Origin;      // from Origin header for browser CORS validation
-		FString ProtocolVersion;  // from MCP-Protocol-Version header (post-initialize)
-		int32 ContentLength = 0;
-	};
-
-	/** Active SSE streaming connection for a tools/call request. */
-	struct FSSEConnection
-	{
-		FSocket* Socket = nullptr;
-		TSharedPtr<FJsonValue> JsonRpcId;
-		double StartTime = 0.0;
-		double TimeoutSeconds = 300.0;
-		FString ToolName;
-		FString SessionId;  // for touching ActiveSessions during long-running calls
-		FCriticalSection WriteMutex;  // protects socket writes from GameThread
-		std::atomic<bool> bMarkedForRemoval{false};  // set by failed writes, checked by CleanupStaleRequests
-		// Set by HandleCancelledNotification UNDER SSEConnectionsMutex when the
-		// client cancels this in-flight request via notifications/cancelled. Read
-		// by CompletePendingRequest (under/after SSEConnectionsMutex) to suppress
-		// the late response race-safely: because both paths serialize on
-		// SSEConnectionsMutex, the flag is the happens-before boundary, closing
-		// the window where the completion could check CancelledInternalRequestIds
-		// before HandleCancelledNotification populated it.
-		std::atomic<bool> bCancelled{false};
-		std::atomic<bool> bProgressWritePending{false};
-		// Client-supplied _meta.progressToken, echoed verbatim (type-preserving)
-		// in notifications/progress so the client can correlate streamed progress.
-		TSharedPtr<FJsonValue> ProgressToken;
-		bool bHasProgressToken = false;
-		// Canonical key of JsonRpcId (the client's tools/call id) used to
-		// correlate notifications/cancelled requestId -> this inflight request.
-		FString ClientRequestIdKey;
-	};
-
-	/** Persistent SSE notification stream (GET /mcp). */
-	struct FNotificationStream
-	{
-		FSocket* Socket = nullptr;
-		FString SessionId;
-		FString StreamId;
-		double StartTime = 0.0;
-		// Non-atomic: written once in HandleGetMcp before the stream is published into
-		// NotificationStreams (that publish establishes the happens-before), then
-		// read/written only by the keepalive thread (RunKeepaliveLoop).
-		double LastKeepaliveTime = 0.0;
-		FCriticalSection WriteMutex;
-		std::atomic<bool> bReady{false};
-		std::atomic<bool> bMarkedForRemoval{false};
-	};
-
 	enum class ESessionValidationResult
 	{
 		Valid,
@@ -215,13 +157,24 @@ private:
 		const FString& SessionId, const FString& CorsOrigin,
 		const TSharedPtr<FJsonValue>& ProgressToken = nullptr);
 
+	// Canonical execute operation of the 'unreal' gateway tool.
+	void HandleGatewayExecute(
+		const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
+		FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
+		const TSharedPtr<FJsonValue>& ProgressToken);
+
 	// Shared SSE streaming + subsystem queue path used by both canonical and
 	// gateway execute calls. DispatchAction + Arguments are already resolved.
+	// CapabilityId/OutputSchema are supplied only by gateway execute, so the
+	// completion path can validate the result and emit a semantic receipt.
 	void StreamToolCall(
 		const FString& ToolName, const FString& DispatchAction,
 		const TSharedPtr<FJsonObject>& Arguments, const TSharedPtr<FJsonValue>& Id,
 		FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
-		const TSharedPtr<FJsonValue>& ProgressToken = nullptr);
+		const TSharedPtr<FJsonValue>& ProgressToken = nullptr,
+		const FString& CapabilityId = FString(),
+		const TSharedPtr<FJsonObject>& OutputSchema = nullptr,
+		const FString& CorrelationId = FString());
 
 	// Session validation
 	ESessionValidationResult ValidateSession(const FString& SessionId, FString& OutError);

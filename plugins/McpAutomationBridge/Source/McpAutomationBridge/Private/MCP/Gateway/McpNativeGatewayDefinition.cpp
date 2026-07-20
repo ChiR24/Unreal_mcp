@@ -11,7 +11,9 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 			{ TEXT("search"), TEXT("describe"), TEXT("execute"), TEXT("configure") },
 			TEXT("search finds capabilities. describe returns an exact parent-tool contract. "
 				"execute runs one validated action. configure manages internal capability availability."))
-		.String(TEXT("query"), TEXT("Search words for tools, categories, descriptions, or actions."))
+		.String(TEXT("query"), TEXT("Search words matched against capability id, family, domain, topics, and summary."))
+		.String(TEXT("domain"), TEXT("Exact capability domain to browse. Use with search only."))
+		.String(TEXT("family"), TEXT("Exact capability family to browse. Use with search only."))
 		.String(TEXT("tool"), TEXT("Exact canonical parent tool name returned by search or describe."))
 		.String(TEXT("action"), TEXT("Exact action name returned by describe. For configure, this is a manage_tools action."))
 		.String(TEXT("param"), TEXT("Exact parameter name (tool-union catalog) to inspect. Requires tool and action for full drill-down; resolves the single parameter schema. Use with describe only."))

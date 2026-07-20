@@ -1,4 +1,32 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "MCP/Execute/McpNativeGatewayReceipt.h"
+#include "MCP/Execute/McpNativeGatewayValidation.h"
+
+namespace
+{
+// A gateway execute call answers with a semantic receipt: the handler result
+// is checked against the capability output schema first, so a schema violation
+// is reported as an error instead of being returned as a success.
+TSharedPtr<FJsonObject> BuildGatewayExecuteReceipt(
+	const FSSEConnection& Conn, bool bSuccess, const FString& Message,
+	const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode)
+{
+	if (!bSuccess)
+	{
+		FMcpSemanticError Error = McpUnrealExecutionError(Message, Result);
+		if (!ErrorCode.IsEmpty())
+		{
+			Error.GatewayCode = ErrorCode;
+		}
+		return McpBuildErrorReceipt(Conn.CapabilityId, Error, Conn.CorrelationId);
+	}
+	const TSharedPtr<FJsonObject> OutputError = ValidateGatewayExecuteOutput(
+		Conn.CapabilityId, Conn.OutputSchema, Result, Conn.CorrelationId);
+	return OutputError.IsValid()
+		? OutputError
+		: McpBuildSuccessReceipt(Conn.CapabilityId, Result, Conn.CorrelationId, Message);
+}
+}
 
 bool FMcpNativeTransport::CompletePendingRequest(
 	const FString& RequestId, bool bSuccess, const FString& Message,
@@ -72,15 +100,27 @@ bool FMcpNativeTransport::CompletePendingRequest(
 	}
 
 	// Build final JSON-RPC result (cheap, no I/O)
+	bool bReportedSuccess = bSuccess;
+	FString ReportedMessage = Message;
+	FString ReportedErrorCode = ErrorCode;
+	TSharedPtr<FJsonObject> ReportedResult = Result;
+	if (!Conn->CapabilityId.IsEmpty())
+	{
+		ReportedResult = BuildGatewayExecuteReceipt(*Conn, bSuccess, Message, Result, ErrorCode);
+		bReportedSuccess = McpReceiptSucceeded(ReportedResult);
+		ReportedMessage = McpReceiptMessage(ReportedResult);
+		ReportedErrorCode.Reset();
+		ReportedResult->TryGetStringField(TEXT("errorCode"), ReportedErrorCode);
+	}
 	TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
-		bSuccess, Message, Result, ErrorCode);
+		bReportedSuccess, ReportedMessage, ReportedResult, ReportedErrorCode);
 	FString ResponseBody = FMcpJsonRpc::BuildResponse(Conn->JsonRpcId, ToolResult);
 
 	// Offload blocking write + close to thread pool so GameThread is not blocked
 	FString CapturedRequestId = RequestId;
 	FString CapturedToolName = Conn->ToolName;
 	FString CapturedSessionId = Conn->SessionId;
-	bool bCapturedSuccess = bSuccess;
+	bool bCapturedSuccess = bReportedSuccess;
 	PendingAsyncWrites.fetch_add(1);
 
 	Async(EAsyncExecution::ThreadPool,

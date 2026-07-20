@@ -1,10 +1,11 @@
 // McpNativeTransportGateway.cpp — route tools/call for the 'unreal' gateway tool
 
 #include "MCP/Transport/McpNativeTransportPrivate.h"
-#include "MCP/Transport/McpNativeTransportArgumentValidation.h"
 #include "MCP/Gateway/McpNativeGatewayDefinition.h"
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
-#include "MCP/Gateway/McpNativeGatewayValidation.h"
+#include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+#include "MCP/Gateway/McpNativeGatewayDescribe.h"
+#include "MCP/Gateway/McpNativeGatewaySearch.h"
 
 void FMcpNativeTransport::HandleGatewayCall(
 	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
@@ -55,57 +56,62 @@ void FMcpNativeTransport::HandleGatewayCall(
 
 	const FMcpToolRegistry& Registry = FMcpToolRegistry::Get();
 
+	// Discovery reads the generated capability store on this thread: pure data,
+	// no editor API, so it never blocks the socket thread on Unreal work.
+	const FMcpCapabilityStore& CapabilityStore = FMcpCapabilityStore::Get();
+	auto IsToolEnabled = [this](const FString& ToolName) { return ToolManager.IsToolEnabled(ToolName); };
+
+	auto SendDiscoveryResult = [&](const TSharedPtr<FJsonObject>& Result)
+	{
+		bool bOk = false;
+		if (Result.IsValid()) Result->TryGetBoolField(TEXT("success"), bOk);
+		const FString Msg = bOk ? TEXT("ok")
+			: (Result.IsValid() ? Result->GetStringField(TEXT("message")) : TEXT("discovery failed"));
+		const FString Code = bOk ? FString()
+			: (Result.IsValid() ? Result->GetStringField(TEXT("errorCode")) : FString());
+		SendOneShot(FMcpJsonRpc::BuildToolResult(bOk, Msg, Result, Code));
+	};
+
 	if (Operation == TEXT("search"))
 	{
-		FString Query;
-		Params->TryGetStringField(TEXT("query"), Query);
-		int32 Limit = 12;
+		FMcpDiscoveryQuery DiscoveryQuery;
+		Params->TryGetStringField(TEXT("query"), DiscoveryQuery.Query);
+		DiscoveryQuery.bHasDomain = Params->TryGetStringField(TEXT("domain"), DiscoveryQuery.Domain);
+		DiscoveryQuery.bHasFamily = Params->TryGetStringField(TEXT("family"), DiscoveryQuery.Family);
+		DiscoveryQuery.Limit = McpSearchDefaultLimit;
 		if (Params->HasField(TEXT("limit")))
 		{
 			int32 L = 0;
-			if (Params->TryGetNumberField(TEXT("limit"), L)) Limit = FMath::Clamp(L, 1, 25);
+			if (Params->TryGetNumberField(TEXT("limit"), L)) DiscoveryQuery.Limit = FMath::Clamp(L, 1, McpSearchMaxLimit);
 		}
-		int32 Offset = 0;
 		if (Params->HasField(TEXT("offset")))
 		{
 			int32 O = 0;
-			if (Params->TryGetNumberField(TEXT("offset"), O)) Offset = FMath::Max(0, O);
+			if (Params->TryGetNumberField(TEXT("offset"), O)) DiscoveryQuery.Offset = FMath::Max(0, O);
 		}
-		TSharedPtr<FJsonObject> Result = SearchGatewayCatalog(Query, Limit, Offset, Registry, ToolManager);
-		SendOneShot(FMcpJsonRpc::BuildToolResult(true, TEXT("ok"), Result));
+		SendDiscoveryResult(McpGatewaySearchCapabilities(DiscoveryQuery, CapabilityStore, IsToolEnabled));
 		return;
 	}
 
 	if (Operation == TEXT("describe"))
 	{
-		FString Tool;
-		Params->TryGetStringField(TEXT("tool"), Tool);
-		FString Action;
-		Params->TryGetStringField(TEXT("action"), Action);
-		FString Param;
-		Params->TryGetStringField(TEXT("param"), Param);
-		FString Query;
-		Params->TryGetStringField(TEXT("query"), Query);
-		int32 Limit = 20;
+		FMcpDiscoveryQuery DiscoveryQuery;
+		Params->TryGetStringField(TEXT("tool"), DiscoveryQuery.Tool);
+		DiscoveryQuery.bHasAction = Params->TryGetStringField(TEXT("action"), DiscoveryQuery.Action);
+		DiscoveryQuery.bHasParam = Params->TryGetStringField(TEXT("param"), DiscoveryQuery.Param);
+		Params->TryGetStringField(TEXT("query"), DiscoveryQuery.Query);
+		DiscoveryQuery.Limit = McpDescribeDefaultLimit;
 		if (Params->HasField(TEXT("limit")))
 		{
 			int32 L = 0;
-			if (Params->TryGetNumberField(TEXT("limit"), L)) Limit = FMath::Clamp(L, 1, 50);
+			if (Params->TryGetNumberField(TEXT("limit"), L)) DiscoveryQuery.Limit = FMath::Clamp(L, 1, McpDescribeMaxLimit);
 		}
-		int32 Offset = 0;
 		if (Params->HasField(TEXT("offset")))
 		{
 			int32 O = 0;
-			if (Params->TryGetNumberField(TEXT("offset"), O)) Offset = FMath::Max(0, O);
+			if (Params->TryGetNumberField(TEXT("offset"), O)) DiscoveryQuery.Offset = FMath::Max(0, O);
 		}
-		TSharedPtr<FJsonObject> Result = DescribeGatewayCapability(Tool, Action, Registry, ToolManager, Param, Query, Limit, Offset);
-		bool bOk = false;
-		if (Result.IsValid()) Result->TryGetBoolField(TEXT("success"), bOk);
-		const FString Msg = bOk ? TEXT("ok")
-			: (Result.IsValid() ? Result->GetStringField(TEXT("message")) : TEXT("describe failed"));
-		const FString Code = bOk ? FString()
-			: (Result.IsValid() ? Result->GetStringField(TEXT("errorCode")) : FString());
-		SendOneShot(FMcpJsonRpc::BuildToolResult(bOk, Msg, Result, Code));
+		SendDiscoveryResult(McpGatewayDescribeCapability(DiscoveryQuery, CapabilityStore, IsToolEnabled));
 		return;
 	}
 
@@ -137,76 +143,7 @@ void FMcpNativeTransport::HandleGatewayCall(
 
 	if (Operation == TEXT("execute"))
 	{
-		FString Tool;
-		Params->TryGetStringField(TEXT("tool"), Tool);
-		FString Action;
-		Params->TryGetStringField(TEXT("action"), Action);
-		TSharedPtr<FJsonObject> RawParams;
-		const TSharedPtr<FJsonObject>* Nested = nullptr;
-		if (Params->TryGetObjectField(TEXT("params"), Nested) && *Nested)
-		{
-			RawParams = *Nested;
-		}
-		else
-		{
-			RawParams = MakeShared<FJsonObject>();
-		}
-
-		FString DispatchAction;
-		TSharedPtr<FJsonObject> ResolvedArgs;
-		TSharedPtr<FJsonObject> Err = ValidateAndResolveGatewayExecute(
-			Tool, Action, RawParams, Registry, ToolManager, DispatchAction, ResolvedArgs);
-		if (Err.IsValid())
-		{
-			bool bOk = false;
-			Err->TryGetBoolField(TEXT("success"), bOk);
-			const FString Msg = Err->GetStringField(TEXT("message"));
-			const FString Code = Err->GetStringField(TEXT("errorCode"));
-			SendOneShot(FMcpJsonRpc::BuildToolResult(bOk, Msg, Err, Code));
-			return;
-		}
-
-		// Let locally-handled tools (e.g. manage_tools) complete without
-		// queueing through the subsystem. Run this BEFORE ValidateToolArguments
-		// so locally-intercepted strict tools are not rejected by the schema
-		// pass (mirrors HandleToolsCall ordering: :71-75 local -> :79-98 validate).
-		if (TryHandleLocalToolCall(
-				Tool, ResolvedArgs, Id, ClientSocket, SessionId, CorsOrigin))
-		{
-			return;
-		}
-
-		// Validate required fields and value types against the canonical tool
-		// schema before queueing. The gateway's own validation only checks
-		// tool/action existence and param-key whitelist; this catches missing
-		// required fields and type mismatches upfront (matching the non-gateway
-		// tools/call path in McpNativeTransportJsonRpc.cpp).
-		FMcpToolDefinition* ToolDef = Registry.FindTool(Tool);
-		FString ArgPath, ArgErrorCode, ArgErrorMessage;
-		if (!McpNativeArgumentValidation::ValidateToolArguments(
-				ToolDef, ResolvedArgs, ArgPath, ArgErrorCode, ArgErrorMessage))
-		{
-			const FString Message = ArgErrorMessage.IsEmpty()
-				? FString::Printf(TEXT("Tool '%s' could not validate its arguments"), *Tool)
-				: ArgErrorMessage;
-			SendOneShot(FMcpJsonRpc::BuildToolResult(false, Message, nullptr,
-				ArgErrorCode.IsEmpty() ? TEXT("INVALID_TOOL_ARGUMENT") : ArgErrorCode));
-			return;
-		}
-
-		// Mirror 'action' into 'subAction' after validation so handlers that
-		// still read the legacy 'subAction' field find the value. Injecting this
-		// before ValidateToolArguments would reject the 5 strict tools (subAction
-		// is not a declared schema property). Mirrors HandleToolsCall :247-252.
-		if (!ResolvedArgs->HasField(TEXT("subAction")) && ResolvedArgs->HasField(TEXT("action")))
-		{
-			FString ActionVal;
-			ResolvedArgs->TryGetStringField(TEXT("action"), ActionVal);
-			ResolvedArgs->SetStringField(TEXT("subAction"), ActionVal);
-		}
-
-		// Reuse the existing dispatch action resolution + subsystem queue path.
-		StreamToolCall(Tool, DispatchAction, ResolvedArgs, Id, ClientSocket, SessionId, CorsOrigin, ProgressToken);
+		HandleGatewayExecute(Params, Id, ClientSocket, SessionId, CorsOrigin, ProgressToken);
 		return;
 	}
 
