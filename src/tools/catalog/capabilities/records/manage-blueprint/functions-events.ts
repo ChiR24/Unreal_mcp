@@ -59,7 +59,7 @@ export const FUNCTIONS_EVENTS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add an event node (built-in or custom) to the EventGraph of a Blueprint.',
     whenToUse: ['An event handler node must be created in the EventGraph.'],
     whenNotToUse: ['A callable function is needed (use add_function).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, eventType: P.eventType, eventName: P.eventName, customEventName: P.customEventName, posX: P.posX, posY: P.posY },
+    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, eventType: P.eventType, eventName: P.eventName, customEventName: P.customEventName, posX: P.posX, posY: P.posY, parameters: P.parameters },
     required: ['action', 'blueprintPath'],
     outputProps: {
       nodeGuid: { type: 'string', description: 'Event node identifier.' },

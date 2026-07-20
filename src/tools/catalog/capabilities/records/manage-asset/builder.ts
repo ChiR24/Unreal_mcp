@@ -14,6 +14,7 @@ import type {
   Draft202012ObjectSchema,
   JsonObject
 } from '../../model.js';
+import { getParentToolMetadata } from '../parent-metadata.js';
 
 // --- Schema helpers ---
 
@@ -32,6 +33,19 @@ export const refObj = (desc: string): JsonObject => ({ type: 'object', 'x-unreal
 export const boundedLimit = (maxPageSize: number, defaultPageSize: number): JsonObject => ({
   type: 'number', minimum: 1, maximum: maxPageSize, default: defaultPageSize,
   description: `Page size (1-${maxPageSize}, default ${defaultPageSize}).`
+});
+
+// Nested pagination envelope accepted alongside the flat limit/offset pair.
+// handleListAssets reads `params.limit ?? pagination.limit` (same for offset),
+// so the flat form wins whenever both are supplied.
+export const boundedPagination = (maxPageSize: number, defaultPageSize: number): JsonObject => ({
+  type: 'object',
+  properties: {
+    limit: boundedLimit(maxPageSize, defaultPageSize),
+    offset: { type: 'number', minimum: 0, description: 'Zero-based offset into the full result set.' }
+  },
+  additionalProperties: false,
+  description: 'Nested pagination envelope. Top-level limit/offset take precedence when both are supplied.'
 });
 
 // --- Behavior presets ---
@@ -168,6 +182,7 @@ export function toSource(spec: RecordSpec): Record<string, unknown> {
     cost: spec.cost,
     routing: { parentTool: 'manage_asset', dispatchAction: spec.dispatchAction, dispatchMode: spec.dispatchMode },
     normalization: spec.normalization,
-    deprecation: { status: 'active' }
+    deprecation: { status: 'active' },
+    parent: getParentToolMetadata('manage_asset')
   };
 }

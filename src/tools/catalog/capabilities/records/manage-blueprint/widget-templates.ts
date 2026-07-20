@@ -38,7 +38,7 @@ function template(action: string, id: string, summary: string, extraProps: Recor
 }
 
 export const WIDGET_TEMPLATES_RECORDS: readonly CapabilityRecordSource[] = [
-  template('create_main_menu', 'blueprint.create_main_menu', 'Create a main menu Widget Blueprint from a standard template.'),
+  template('create_main_menu', 'blueprint.create_main_menu', 'Create a main menu Widget Blueprint from a standard template.', { title: P.title }),
   template('create_pause_menu', 'blueprint.create_pause_menu', 'Create a pause menu Widget Blueprint from a standard template.'),
   template('create_settings_menu', 'blueprint.create_settings_menu', 'Create a settings menu Widget Blueprint with video/audio/controls tabs.', { settingsType: P.settingsType }),
   template('create_loading_screen', 'blueprint.create_loading_screen', 'Create a loading screen Widget Blueprint with optional progress bar.', { includeProgressBar: P.includeProgressBar, fadeTime: P.fadeTime }),

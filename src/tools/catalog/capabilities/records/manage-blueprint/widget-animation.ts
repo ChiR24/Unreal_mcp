@@ -61,7 +61,7 @@ export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a keyframe at a specific time on a widget animation track.',
     whenToUse: ['A property value must be keyframed at a specific time in a widget animation.'],
     whenNotToUse: ['The track should be removed rather than keyframed.'],
-    inputProps: { action: P.action, widgetPath: P.widgetPath, animationName: P.animationName, trackType: P.trackType, slotName: P.slotName, time: P.time, propertyValue: P.propertyValue, interpolation: P.interpolation },
+    inputProps: { action: P.action, widgetPath: P.widgetPath, animationName: P.animationName, trackType: P.trackType, slotName: P.slotName, time: P.time, propertyValue: P.propertyValue, interpolation: P.interpolation, value: P.value },
     required: ['action', 'widgetPath', 'animationName', 'time'],
     effect: 'write',
     latency: 'interactive',

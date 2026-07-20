@@ -43,7 +43,7 @@ export const WIDGET_PANELS_RECORDS: readonly CapabilityRecordSource[] = [
   panel('add_vertical_box', 'blueprint.add_vertical_box', 'Add a Vertical Box to a Widget Blueprint for top-to-bottom child layout.'),
   panel('add_overlay', 'blueprint.add_overlay', 'Add an Overlay to a Widget Blueprint for stacked/z-order child layout.'),
   panel('add_grid_panel', 'blueprint.add_grid_panel', 'Add a Grid Panel to a Widget Blueprint for row/column-based child layout.'),
-  panel('add_uniform_grid', 'blueprint.add_uniform_grid', 'Add a Uniform Grid Panel to a Widget Blueprint for equal-cell child layout.', { columnCount: P.columnCount, rowCount: P.rowCount, slotPadding: P.slotPadding }),
+  panel('add_uniform_grid', 'blueprint.add_uniform_grid', 'Add a Uniform Grid Panel to a Widget Blueprint for equal-cell child layout.', { columnCount: P.columnCount, rowCount: P.rowCount, slotPadding: P.slotPadding, minDesiredSlotWidth: P.minDesiredSlotWidth, minDesiredSlotHeight: P.minDesiredSlotHeight }),
   panel('add_wrap_box', 'blueprint.add_wrap_box', 'Add a Wrap Box to a Widget Blueprint for auto-wrapping child layout.', { wrapWidth: P.wrapWidth, explicitWrapWidth: P.explicitWrapWidth, innerSlotPadding: P.innerSlotPadding }),
   panel('add_scroll_box', 'blueprint.add_scroll_box', 'Add a Scroll Box to a Widget Blueprint for scrollable child layout.', { scrollBarVisibility: P.scrollBarVisibility, alwaysShowScrollbar: P.alwaysShowScrollbar, orientation: P.orientation }),
   panel('add_size_box', 'blueprint.add_size_box', 'Add a Size Box to a Widget Blueprint for explicit child size override.', { widthOverride: P.widthOverride, heightOverride: P.heightOverride, minDesiredWidth: P.minDesiredWidth, minDesiredHeight: P.minDesiredHeight }),

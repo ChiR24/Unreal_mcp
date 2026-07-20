@@ -23,7 +23,7 @@ function gameUi(action: string, id: string, summary: string, extraProps: Record<
     summary,
     whenToUse: [`A ${action.replace(/_/g, ' ')} must be added to a HUD or game UI Widget Blueprint.`],
     whenNotToUse: ['A generic content widget is sufficient (see widget-content family).'],
-    inputProps: { action: P.action, widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, ...extraProps },
+    inputProps: { action: P.action, widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, parentName: P.parentName, ...extraProps },
     required: ['action', 'widgetPath'],
     outputProps: SLOT_OUT,
     outputRequired: ['slotName'],
@@ -37,7 +37,7 @@ function gameUi(action: string, id: string, summary: string, extraProps: Record<
 }
 
 export const WIDGET_GAME_UI_RECORDS: readonly CapabilityRecordSource[] = [
-  gameUi('add_health_bar', 'blueprint.add_health_bar', 'Add a health bar widget to a HUD Widget Blueprint.', { percent: P.percent, fillColorAndOpacity: P.fillColorAndOpacity }),
+  gameUi('add_health_bar', 'blueprint.add_health_bar', 'Add a health bar widget to a HUD Widget Blueprint.', { percent: P.percent, fillColorAndOpacity: P.fillColorAndOpacity, x: P.x, y: P.y }),
   gameUi('add_ammo_counter', 'blueprint.add_ammo_counter', 'Add an ammo counter widget to a HUD Widget Blueprint.', { text: P.text, fontSize: P.fontSize }),
   gameUi('add_minimap', 'blueprint.add_minimap', 'Add a minimap widget to a HUD Widget Blueprint.', { brushSize: P.brushSize }),
   gameUi('add_crosshair', 'blueprint.add_crosshair', 'Add a crosshair widget to a HUD Widget Blueprint.', { colorAndOpacity: P.colorAndOpacity }),

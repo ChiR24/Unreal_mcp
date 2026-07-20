@@ -29,6 +29,7 @@ import {
   LegacyToolNameSchema,
 } from '../../index.js';
 import type { PropertyMap } from './properties.js';
+import { getParentToolMetadata } from '../parent-metadata.js';
 
 const SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema';
 
@@ -154,6 +155,7 @@ export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
     routing: routing(spec.dispatchAction ?? spec.action, spec.dispatchMode),
     normalization: { class: 'C_SAME_VERB_DIFFERENT_TARGET', disposition: 'retain', rationale: NR },
     deprecation: { status: 'active' },
+    parent: getParentToolMetadata('manage_blueprint'),
   };
 }
 

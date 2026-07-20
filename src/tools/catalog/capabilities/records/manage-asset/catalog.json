@@ -43,6 +43,25 @@
             "type": "number",
             "description": "Zero-based offset into the full result set."
           },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 500,
+                "default": 50,
+                "description": "Page size (1-500, default 50)."
+              },
+              "offset": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Zero-based offset into the full result set."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Nested pagination envelope. Top-level limit/offset take precedence when both are supplied."
+          },
           "cursor": {
             "type": "string",
             "description": "Opaque pagination cursor returned by a previous list response. Forward verbatim to resume."
@@ -194,10 +213,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "191b7dae6735cc81d499ddf247a553a9cbda07011410b3a0e2153061b3095dba",
-      "content": "62b6860da0840e595d08f06fb6c7130ed227d4169e6f49e33a8a1e1f032ddada"
+      "schema": "41c3f16c65f0d6c9acb3c64e49d8be6a7f2e0c6633c948e82ae89a6d9df8d8f6",
+      "content": "bf152e2c6decd6d5baf0a5c65d20fdd985ebf227c5beda005ffbab9d748ae92f"
     }
   },
   {
@@ -336,10 +360,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "8145032abab044ee8e4ea3960cc422e219c02ceed47171dd60a12b9fbbf71478",
-      "content": "7d10f80e355db27317000c35fd00a96d6e927d89915f155e6f70e42d88eaf8a8"
+      "content": "c502e49a4b53c7cb43ec3e95890147837a013bf81574c2235c058b7f0dc70d57"
     }
   },
   {
@@ -462,10 +491,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
-      "content": "3b8106514106654851647e46dde5028592fb2d31d2bcaf7b066fa8c501133a72"
+      "content": "4984a95cda7eb5d928df5b2facdae0f64893ca0362ee7cf0dc0e4a530cc48a29"
     }
   },
   {
@@ -588,10 +622,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
-      "content": "100a0a9457495697f23558a9f7c566af076c65c684be60b522b974fa982354d2"
+      "content": "5c30b1295ff1c6b6816b5f4e25b117abaee15cfb07208290c78952dec666564f"
     }
   },
   {
@@ -714,10 +753,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
-      "content": "c291aebf449a59a31295d3deaff0054a6386b2472bee008dff84945d529e9295"
+      "content": "874ac7f1849a339cfe9e6e551b10816d5b7c7dbe2c12fc00bc2033892e97c07a"
     }
   },
   {
@@ -840,10 +884,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
-      "content": "72a6f82250e7e64c63730a86f2912d3cf1d378ebe617182bf84fbcee5b0eceb1"
+      "content": "bd43ccde9a389c4d63349b410ea7614091f37576026fc63fd96766dabdfaaa59"
     }
   },
   {
@@ -962,10 +1011,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "4d9438752a060d8cadd3eb6e01754d693c96a8e1e18d75a3ffed4655fe803d5b",
-      "content": "5479932a3b33111e4efed1ee2c4e7a9b4e8a03a8c73575b38d59c67c89e4bed9"
+      "content": "3bfe25f8731e3c94489e5c0bfa83a494cfc925674bd2bb7a660ab1787c2db173"
     }
   },
   {
@@ -1084,10 +1138,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "4d9438752a060d8cadd3eb6e01754d693c96a8e1e18d75a3ffed4655fe803d5b",
-      "content": "b674660f57a2b1f790eb9d3071af609ead75f583204d38af95b69e52852c2ecd"
+      "content": "7a9443ab8d9df5f8010f5e8b39c84b7d1fcc6d8a483b10ce5e435fc3b29ba4c8"
     }
   },
   {
@@ -1128,6 +1187,10 @@
           "assetPath": {
             "type": "string",
             "description": "Single asset path (alternative to paths)."
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Force deletion even when the asset is still referenced (bridge delete path)."
           }
         },
         "required": [],
@@ -1219,10 +1282,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "32f4bdd88cac169e74fc50ba85c434f0c333fac399d9449be51eec8f9b5240fb",
-      "content": "d328c49205610ff9df77b6a5295267f1d78d5426ffae8597e40c59e79f16cb88"
+      "schema": "0c711c40fbefd27ff5f3bb95a617eb18eaf7d8aef4912354b290aca4860321e9",
+      "content": "bc309f7c6524e815ed318fe24530fc623f8a30354c0eb5a69d6bcaf492e55007"
     }
   },
   {
@@ -1263,6 +1331,10 @@
           "assetPath": {
             "type": "string",
             "description": "Single asset path."
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Force deletion even when the asset is still referenced (bridge delete path)."
           }
         },
         "required": [],
@@ -1342,10 +1414,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "778309f886c9a98ed039e2ff5100f990ebda86b42d2b37a06ffd083f76b48592",
-      "content": "7ab7e2e1be1b42d1fbf5056c627f585cc1d0d12fdfd7953a10ecd75daef2441f"
+      "schema": "475aab8e125d7dec714ef5641bb5a5079f26d007bf8e87b9c7c3e8a2140716c4",
+      "content": "5d9f657ea52c07b968584ba7604d5a64e7a56e19ac49c08f1a33f8b94baa4cef"
     }
   },
   {
@@ -1386,6 +1463,10 @@
           "assetPath": {
             "type": "string",
             "description": "Single asset path."
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Force deletion even when the asset is still referenced (bridge delete path)."
           }
         },
         "required": [],
@@ -1465,10 +1546,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "778309f886c9a98ed039e2ff5100f990ebda86b42d2b37a06ffd083f76b48592",
-      "content": "62121f608edc260dde9b95b981be248e77039639a441faccde796daa0fa2d897"
+      "schema": "475aab8e125d7dec714ef5641bb5a5079f26d007bf8e87b9c7c3e8a2140716c4",
+      "content": "7757fcbbcd708c1dcb77cfd9c959d2c08068510ca750a8222dcfa1d1087f5345"
     }
   },
   {
@@ -1593,10 +1679,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "df22aa27611628e6998c307909134f119a053dfc73c20b553e88e7a8c016a2a8",
-      "content": "166c83c3147a601258426b1d6970dfa6ebe71ad59459ca0669419d84addddd8b"
+      "content": "387d9df8d339a159dee402525e1e6cf6d36d3a1539805b0fc92b3b8e451f0cb6"
     }
   },
   {
@@ -1784,10 +1875,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "2d10c7ae588ac0b45e1d074894d75b7ab13606cb9a124ec58bfc9cffc1393be2",
-      "content": "621ff767b1ec6cbb4ec2d8e33183839ed77811d0315d96fe51ba030739bbfdab"
+      "content": "befc5cd997281b3488137ba454fb7384b2a9c74b5eeaeee2c3ddab50eb2a05ec"
     }
   },
   {
@@ -1910,10 +2006,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "797b8e55fd742b528d21d0a475c319bbbf4e1be6dd942f98826cae5907880492",
-      "content": "0a4223433fa87c83f1d5d185b3827313dd8529cf71b64e20d62fefe52fda100d"
+      "content": "f79661273c1154f5c603eb4be47f8d289ed028a966149fb22fc58935add6283e"
     }
   },
   {
@@ -2032,10 +2133,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "5f81969e8ec8b730a002fba06c30b6c1bbc793907c18723c780fd4b6fda0b267",
-      "content": "eef8f067394ab49aa2b9c3037db1587c6cb43c0462c4f5b09ded5a1223a11b62"
+      "content": "58b31fc643d4ae00c0ba549ca2cbce7f89e7f35156457acf1b935e8115ac7425"
     }
   },
   {
@@ -2154,10 +2260,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "27091e8d9b3bcc434e80580fd2847e681bf98e85c494b6b5861bb3c4001bcbeb",
-      "content": "17023ca0954f0e57969991f75de094cdeb54eb088c105fed9abb82eed3a7b671"
+      "content": "1a53766ca33c93a1a16105c948a8c2f16f1a6dc96bd10e4133bb7e2ca4aeb008"
     }
   },
   {
@@ -2276,10 +2387,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "27091e8d9b3bcc434e80580fd2847e681bf98e85c494b6b5861bb3c4001bcbeb",
-      "content": "bb2f21f28f8d8d624f2b77825f63c1172ab1db9495f28e3379b31a5194069c26"
+      "content": "fe188567727dac62b88eda530526da251ab27b40b3e964e1bac9460c7483569e"
     }
   },
   {
@@ -2402,10 +2518,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "b70000ae0c347a4551f4976d7da5b4c896db23fd57da76c9f5f91f8a46e6551c",
-      "content": "e6486b4e7815123ab7cafc3b920630983738cd19d66ef75c113366e340bb8225"
+      "content": "44d91d3d1ad473d5a47ced6018f2677020b65881474e00c931f34a8fb65c6869"
     }
   },
   {
@@ -2528,10 +2649,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "911d112cd2faeb9a4fed88b9f83b54fb0f78e0314d8d02541c6a69bf81105691",
-      "content": "6aa032ba668d7fd506cc1ab2379260ccba18bbc37452a90ca2ba700504026a51"
+      "content": "e4eb5ab6b9d1fb0dcce3f1bb110c826fbd01c3b59f9a9b693fdfc234f1894934"
     }
   },
   {
@@ -2646,10 +2772,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "556fb3d05526b844fde83744346e790c5540f760ac2d61c34e45a06b6b57d139",
-      "content": "4793a487f8ce0c2bbe24109211913f541fa441a861642c91520ab3ca4a93ac6c"
+      "content": "04ec97f54304b3f1817012ca2230a937a72234401bb1d5066e79dfa9b4abd159"
     }
   },
   {
@@ -2770,10 +2901,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "1fb3ccd95be135ccff86339f8a0bcab2fb7808ab3ef6cf3356002776c2c46c31",
-      "content": "dca59562f361827b754356342022b7ba23e53fdd3d0ce10cba5d21f08d7ba381"
+      "content": "9cbfc26dbc182af40ab98c2207e9e4aa90812c337dfb475e447772b49988820b"
     }
   },
   {
@@ -2888,10 +3024,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "556fb3d05526b844fde83744346e790c5540f760ac2d61c34e45a06b6b57d139",
-      "content": "39eef46fbd4c9dbe5f1d765c0e29610c3e316790363cd5ad39fdd6dc4f34e28b"
+      "content": "e1dd6f33882f4dae95ef6f6208f10ee8df719e955df95d4e86d8c93756cc500b"
     }
   },
   {
@@ -3008,10 +3149,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "b521ae76c39589ff9c333a2cde46c3368e969a9ec8d7e2d91dcf5e773f7187e0",
-      "content": "594cc3ddc0f5798d97641d40f8baddccafcb3af8c6c0331707aa92e4f05b9b0c"
+      "content": "9cc9f0c731c5748b7fc1281fd260ef805493511601bfd4d78b04197102d3327a"
     }
   },
   {
@@ -3130,10 +3276,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "264855fce223640783b35fb609d22f3394e88e339c482b35c5a7e471ac6133bb",
-      "content": "4fd985638690e38c876d2b47408be6e2d6d3b6171f60dba0a5af4c31eaa5e07a"
+      "content": "197779bedcb9b9962c6dab5fd07d026536a646d7533742296fe4cf6081d8b250"
     }
   },
   {
@@ -3254,10 +3405,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "8c302b39ef482c72467d3d470e10fc7c0bb2df1f218033472f97fe647466584c",
-      "content": "47cf52db20e68d376d45eb228137f4b876ec3beb1d05c3a0595f8d0b5eb35288"
+      "content": "7b57691545558f0fb59b77c4bdaa1f64ef79291b9a7809cec9014a67b89869af"
     }
   },
   {
@@ -3392,10 +3548,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "db0c183e59348125045a757b013ea6f8c96707a6e2c534212ae34065570439a8",
-      "content": "2c9da299ccf476a58de37b71ad49ec11772179b998c04d53c4cd996f716aed5d"
+      "content": "46fabb6925d46326e620476654d9caa11e63cbbf6d8cb5603d90cf217e986906"
     }
   },
   {
@@ -3488,7 +3649,7 @@
     "behavior": {
       "effect": "write",
       "idempotency": "idempotent",
-      "longRunning": false,
+      "longRunning": true,
       "safeToRetry": true,
       "supportsPreview": true,
       "supportsUndo": true
@@ -3515,10 +3676,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "2fd4e269a96f755ce6ce911960bdf7f5e8b688574fdf2b0711f3546ebc228e6f",
-      "content": "fd8e248641af528de927a0edd7666b89c3ffe16c001d0c380f1d3bc916be58d0"
+      "content": "5d2ea580395d99180d82c31e0daec870939b0365adf07096cc3936bab832fe17"
     }
   },
   {
@@ -3645,10 +3811,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "c12f050b81e15bec41e3b509fef43ade066add1dd529b49052921c3aa9825970",
-      "content": "33a54e5a1cf85ac086535b7f43de06dd70d800c5e62024aa9e493f7e30242bd4"
+      "content": "2e25dec3f04cc9437d34a830e32022724f3d4e3c5a01925cccc3681056ead864"
     }
   },
   {
@@ -3763,10 +3934,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "9e74b440020137d8289215d9beab7a91b5cf04546b4222f0c6df79ffe0707d0d",
-      "content": "3d0fcba3fc3badf9a8e0693f314ec13bce1f58338b7e186af42bb26b5251278e"
+      "content": "a4e8ddf53f2c8d06426dbea99cfce9928ceafb127e663e72112c51374497c255"
     }
   },
   {
@@ -3881,10 +4057,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "c7a943329dbf2f6a8aa11677787e1858bac43dbf49d0b5778ed90c7fbd887541",
-      "content": "bedd66de6dd02886f5d69545ec371442aad9c360fe47487429d029bf5a9afa82"
+      "content": "46eb835f617f6dabac52f98e629a58bf1d7769555bf980d9df68110699159791"
     }
   },
   {
@@ -3999,10 +4180,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "556fb3d05526b844fde83744346e790c5540f760ac2d61c34e45a06b6b57d139",
-      "content": "f06dbb3d92b459d8e0d25073400bdab3f315cb79d34a3be21af47ac7533ee250"
+      "content": "238fb2946a6707daa03b893a21c231117d002d45ac69e0ca26a035eac5eca201"
     }
   },
   {
@@ -4117,10 +4303,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "9e74b440020137d8289215d9beab7a91b5cf04546b4222f0c6df79ffe0707d0d",
-      "content": "19a90ff50876e4a173dcd97cedcbd0cce13f7d9ab60720f12a944cdb902b71a5"
+      "content": "cf6d6cd097bd3eaba34ecb815e69de2f67126e82bf5ec23e1597892865cb4150"
     }
   },
   {
@@ -4208,7 +4399,7 @@
     "behavior": {
       "effect": "write",
       "idempotency": "idempotent",
-      "longRunning": false,
+      "longRunning": true,
       "safeToRetry": true,
       "supportsPreview": true,
       "supportsUndo": true
@@ -4235,10 +4426,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "70ec53a5040634167f09ea8ccb0625b205efacbd365bdf4dfa55da2cb496c591",
-      "content": "9e045ceff03bf8b0e67b2caa45da774595de668ce5238f329083308c96f4c0b7"
+      "content": "4a20bb4af25eecf12dbf4318ff999a9733e8f3f9ff60384918672ef8247e8b97"
     }
   },
   {
@@ -4284,9 +4480,17 @@
             "type": "string",
             "description": "Search pattern."
           },
+          "pattern": {
+            "type": "string",
+            "description": "Search pattern (used when searchText is absent)."
+          },
           "replaceText": {
             "type": "string",
             "description": "Replacement text."
+          },
+          "replacement": {
+            "type": "string",
+            "description": "Replacement text (used when replaceText is absent)."
           },
           "prefix": {
             "type": "string",
@@ -4378,10 +4582,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "e7a3a53204536bc136103901f050dff3264367fba0402a20befd57acc8738e29",
-      "content": "5f745db6c41f4904c55b32c46641957fba53a0065ce458d94460bab8317e0c18"
+      "schema": "d6693082f5e12aa69567cf1741ea4821f193dded3dccd1f7effa944fdf80a120",
+      "content": "dfb05b0ac5b6a6d5f8894a6821131edc277a70e0a855d953e9bcfb7dc17bddba"
     }
   },
   {
@@ -4426,6 +4635,10 @@
           "showConfirmation": {
             "type": "boolean",
             "description": "Show confirmation prompt."
+          },
+          "fixupRedirectors": {
+            "type": "boolean",
+            "description": "Fix up redirectors left behind by the deletion."
           }
         },
         "required": [],
@@ -4505,10 +4718,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "cad58935151a22842de5659594826c8b14b8e4a5618989d88513f21e28da44a5",
-      "content": "53bf5cdff81b95f4b27429af9dc64c66e7bd62eb01a7611b9a9c50fe198cd722"
+      "schema": "45edb8841a3411a73bcbf30ccf27fcb43a986e7904e2e1bb0d781f58b96b838c",
+      "content": "0aa9b020805e78ac0d2bc5624891752dd66b44188b39efe65f72bb488857d524"
     }
   },
   {
@@ -4628,10 +4846,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "98c619ccffbb71b1e77c87819ec06c3e48c416348e9d97ba1494c07fe22f6f84",
-      "content": "751a7fcadabb961cd129c099a322a691a35546e9591a605df9299dd9b762bad0"
+      "content": "7af9b2789ef3d65136ef9117b7d1e8794202a157bb2c4b08ccd19b1a8e7722ab"
     }
   },
   {
@@ -4757,10 +4980,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "34a52200f4dc6027fda64acdc4ca79b160a61b75aeb329b2136d6ca26c590345",
-      "content": "f85a328db853eb0241f417d9481584a19ef1ea3394db20f4acb98b57216fa91c"
+      "content": "242620443f580432351600ce2e78fad2d0830ad0951c9ffaed1e1ec5c04edcdd"
     }
   },
   {
@@ -4899,10 +5127,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "97e0c5492bddb7f312de0f2f537918e8da3178efa5b2a6f0acb1ce60c2ce0e93",
-      "content": "ae998a1a2d7329f8f1c906abe2d65b947b8a793421d87bc0efc73c27baf13732"
+      "content": "d2c98273f77e20447734fd50f05f79d1546c357bd17dc45be17d66fc5df839e2"
     }
   },
   {
@@ -5026,10 +5259,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "7acd591d009ac2b719723356d3e4466d1230a096c90f9039685f3b2188d03669",
-      "content": "e4ba63fdaa045939b7a17aecd86a7374fb936ef729c66c97db9d1bb502192fb5"
+      "content": "3d104a03401ee114f58171d0b7a30d2b2c28adf059d2eb835cba8839a904ac4d"
     }
   },
   {
@@ -5148,10 +5386,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "0f7ed81531adfeedd4366203f16b5e67f6b17748ad43815d8cb050702b9e1938",
-      "content": "132229a850bcf5f48adb28fcceef8103b1439d06e0f0db412b46fcf068a13adc"
+      "content": "4834d9c992cc0bbf165bfee2fa0829d94d69bb73f6b7e05adbe764b37bdb3e8e"
     }
   },
   {
@@ -5270,10 +5513,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "20fd882d6d7675481647171a8f3bebc4ba2ff3ec2ac3c4d8ae6510cae0b4933f",
-      "content": "e0f81d277701c0281cc9590e045429e956cd297a1890eb96f07d12385b9be78e"
+      "content": "afd2537045c700feae33554f302740045317cac1c6e11f7724d9d82719631aa5"
     }
   },
   {
@@ -5392,10 +5640,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "20fd882d6d7675481647171a8f3bebc4ba2ff3ec2ac3c4d8ae6510cae0b4933f",
-      "content": "4ee3836b063ede2775f5372d6069dc3cb6a8ecda13a620ba79b67f099c961c71"
+      "content": "041a43d917f47157dc3058197da73c45e484e0e126d651bcd1d0f9a4fae5ca51"
     }
   },
   {
@@ -5514,10 +5767,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "20fd882d6d7675481647171a8f3bebc4ba2ff3ec2ac3c4d8ae6510cae0b4933f",
-      "content": "b67a30a1bf232f71e3e58456b20f5d936e41c0a5f86396095279b984b3a6d1a7"
+      "content": "e9a205ade6acce13d0cf484348080d41bd2b98c34c24a0eab2d6bb60a57c66a3"
     }
   },
   {
@@ -5563,6 +5821,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -5648,10 +5914,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b136a7b911ec4ac54e17c09f2012beb07114c78d6bff4ce12089ea5cbdda8a2e",
-      "content": "ffdf41bd3816c39e6c6a51a3270a9d099cae8ac08bc5ecb4bfd159eb6f47800d"
+      "schema": "eaeae0d81d0d81a3c9eac9bbdebe549366a9b16ad30db732ca4aa755994c4a62",
+      "content": "6695720848efb1dcd36700ad50fc8e45228f83dcfb2194ccd9d954da29337317"
     }
   },
   {
@@ -5686,6 +5957,18 @@
             "type": "string",
             "description": "Material /Game asset path."
           },
+          "coordinateIndex": {
+            "type": "number",
+            "description": "UV channel index (default 0)."
+          },
+          "uTiling": {
+            "type": "number",
+            "description": "U tiling factor (default 1)."
+          },
+          "vTiling": {
+            "type": "number",
+            "description": "V tiling factor (default 1)."
+          },
           "posX": {
             "type": "number",
             "description": "Node X position."
@@ -5693,6 +5976,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -5778,10 +6069,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "637a353d6656fe5692ce21bec4d864f33d7cf2b96d4fbf4618cd9fe687125dac",
-      "content": "dbc6305c3495824f1efc70077b835f15c595a8fa5d0370bde3dc0d153664213e"
+      "schema": "38d9e8f1d92f7dc912c2a029463139f4733bc69bac4aab20cc5999ee7aa96f63",
+      "content": "b1c0e2b9858ffbe0225393abb801d3af5add1377a534178ef54b3691df185c2b"
     }
   },
   {
@@ -5831,6 +6127,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -5917,10 +6221,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7a9e214f1e2e1ac88361c87926673d1920ac6cb08cc4226e2fe2bf3fb78692cb",
-      "content": "52ee82e307a86d51ac1d2cf93cf8cc9a0dd8581534053a0309066da5bf8b3961"
+      "schema": "6128241ebadfa8bdeb8b3dd658d61c080bdfe6a5284a5196ff6e3315d9063c3d",
+      "content": "dfef74fbc89c59ad279733e60ff73e5b5489481358f162b76bd7a6af471c25c6"
     }
   },
   {
@@ -5969,6 +6278,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -6055,10 +6372,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "1eb22704a832e9803ca2f4b5a414d7e441dbb1a8fb78f89788f76a8b352a9fe7",
-      "content": "0d8b253650506ef750a5208dbb76f080c3c7d8266f1366b2410d65da6b308f34"
+      "schema": "b4a7a82a5db2f235a370711667b770a3ac44a67525d0286e846c93e36c26cf72",
+      "content": "20159c0e1b3889e93874a89275506724b9ec2f868c69dda9ec7e1d87aea9080c"
     }
   },
   {
@@ -6108,6 +6430,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -6194,10 +6524,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "96ff4106a9e120e8c5bd08ca8d96a93a1df719d84e3c09718c7a73562a99137b",
-      "content": "b45ad0362d8fb6527405dfce1303026f21c4486910d9ed917c0a8a1faf3694d9"
+      "schema": "4336db260db0b0059e6c1d2d3545049c4981c7a3278a8efc4fbc42ac75f27e59",
+      "content": "bffee78c5fefe4116f8c61fd22e24a74679ceddbb4027f49f59ad993470d97c9"
     }
   },
   {
@@ -6251,6 +6586,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -6337,10 +6680,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "d14120173a72266122891d43591ed44fd31d1f851e6ce1624bdcd75ae9517c4b",
-      "content": "07f52850f9d25250ae0facf6baeb363829f3ae0d81924532b898868916fc80a3"
+      "schema": "ac26c68e101a62705877f5e6b347fbd595ac62507c7ee6042b408df3d12fc1cb",
+      "content": "68bdfd5ccb39bc05cc0a03d1abbdf826027d045631203303bd144ee80ab0f8ff"
     }
   },
   {
@@ -6382,6 +6730,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -6467,10 +6823,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "637a353d6656fe5692ce21bec4d864f33d7cf2b96d4fbf4618cd9fe687125dac",
-      "content": "97a5a3674860b096879816483b3120f112ddd09e1120a322ee89f78ac9d8751a"
+      "schema": "bba69d9ec7d4140a6f6b831fe648426dad863aecd45077631c2ee9007231c845",
+      "content": "15e76ea3a924509e561447c096e9357eb09852377c393b4cc46eaf8d900ce9ee"
     }
   },
   {
@@ -6512,6 +6873,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -6597,10 +6966,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "637a353d6656fe5692ce21bec4d864f33d7cf2b96d4fbf4618cd9fe687125dac",
-      "content": "44e7d7313778f251eeaf7038fa29c02b951ae5e7f2a30aaf38002acd9db03fab"
+      "schema": "bba69d9ec7d4140a6f6b831fe648426dad863aecd45077631c2ee9007231c845",
+      "content": "441e65e6d920f54a0243b706a033bdd212066c49658dffb977ac3c2a07ebba5d"
     }
   },
   {
@@ -6642,6 +7016,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -6727,10 +7109,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "637a353d6656fe5692ce21bec4d864f33d7cf2b96d4fbf4618cd9fe687125dac",
-      "content": "da5220a033816765bad530df1a3c666bcdb1efbeb8651a3ed42bfa754fea9954"
+      "schema": "bba69d9ec7d4140a6f6b831fe648426dad863aecd45077631c2ee9007231c845",
+      "content": "e0b35ad75dc226a65461eb1cb15362693262fbfab131ba82e4625d19396a3125"
     }
   },
   {
@@ -6772,6 +7159,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -6857,10 +7252,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "637a353d6656fe5692ce21bec4d864f33d7cf2b96d4fbf4618cd9fe687125dac",
-      "content": "7fa3d14b1960af9085cad62ed2bf6270be21cb841505cd7a9f1421d25b7275f8"
+      "schema": "bba69d9ec7d4140a6f6b831fe648426dad863aecd45077631c2ee9007231c845",
+      "content": "8b06f1269b385f2b99bacfebf7cd9d9ddbe240b93da89e813391daeefe1400cb"
     }
   },
   {
@@ -6902,6 +7302,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -6987,10 +7395,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "637a353d6656fe5692ce21bec4d864f33d7cf2b96d4fbf4618cd9fe687125dac",
-      "content": "3fee54cf4fde305dc6a30add455134574fc155ef2950b250d3be57d57f7b4a0e"
+      "schema": "bba69d9ec7d4140a6f6b831fe648426dad863aecd45077631c2ee9007231c845",
+      "content": "44a1fd032f4b56e3c74a17e8ba89dde1a234d086e0e002d5e96e94b2b5affe9c"
     }
   },
   {
@@ -7040,6 +7453,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -7125,10 +7546,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "516c7384245bcec722dd38fad6286e7fbe97698b3d9097c5b9ab7e0ec1b1f4e6",
-      "content": "e543234d8938f0b2459b2df08269b182524fb9ab26a317a4c865a86dbed96775"
+      "schema": "f9def68f4fb0098556c3234df04a5ba1243c4d42f53d6a6af85528ebf429c7e7",
+      "content": "0e81312e775caf53675251915dd39f046d495d42239bd2db5cd95e81727a68a4"
     }
   },
   {
@@ -7174,6 +7600,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -7259,10 +7693,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "0e8eebce946284e7079f082decf3c60a3f150493b368edb5e853248188caccfc",
-      "content": "5bb164169359761bdc05703397491689601250a0fad07d7873e90c12eacebdd8"
+      "schema": "27a2bedee85bed340305aceda3c3902862edc0291f93f16c6dcc16c2fa5ca180",
+      "content": "8b9f468372e296ab7ad84aa3086cf71d46eb37225ab34904e2d6bf94ad147fc4"
     }
   },
   {
@@ -7305,6 +7744,10 @@
             "type": "number",
             "description": "Noise octaves."
           },
+          "levels": {
+            "type": "number",
+            "description": "Noise level count."
+          },
           "posX": {
             "type": "number",
             "description": "Node X position."
@@ -7312,6 +7755,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -7397,10 +7848,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "546e8d7e6820dfc257827f7f7673e16f4eb52a9473db2410a212e4b5853aaca7",
-      "content": "76f3189e8b624ddee364264eae3a37db903db588ce89f6a424131862869d4c79"
+      "schema": "311d6cde7412c34c903ea6e555a69e7a2e5b5cf38c56b4adf9f6651c10a649a1",
+      "content": "87bb1e368fa75e6ceb0ec3fddcaebd57852bd2a795314fa89be6e3ea366ae1c6"
     }
   },
   {
@@ -7446,6 +7902,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -7531,10 +7995,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7f975e2254f78c7c0db27d71e7c5c826bb5b1e963fb597166fe4678784dfbe75",
-      "content": "9a26aa58812850be010908d3fdccfd4b1c229d0bb43a8bbd598888f44b953e73"
+      "schema": "d3134f5799588bce4a0373ae9e31d75ac3054ecdce006e279c1dc4d810388dc9",
+      "content": "eceee76642557c34af38092fc8e2a7b740bd987d7ccd2944104dac9ce274aa8b"
     }
   },
   {
@@ -7576,6 +8045,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -7661,10 +8138,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "637a353d6656fe5692ce21bec4d864f33d7cf2b96d4fbf4618cd9fe687125dac",
-      "content": "64623a0cdbff5e61e850263824470baa3025f4522b58de7ef4c3403076e2933b"
+      "schema": "bba69d9ec7d4140a6f6b831fe648426dad863aecd45077631c2ee9007231c845",
+      "content": "76247a880cffee9a074de9febd765c36e9576cc0d939b6a9415577f8a94a369a"
     }
   },
   {
@@ -7706,6 +8188,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -7791,10 +8281,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "637a353d6656fe5692ce21bec4d864f33d7cf2b96d4fbf4618cd9fe687125dac",
-      "content": "d96335017ad79661a8da27ac2cdae9ebca53e55d90c93f2144eab64d4b474a1a"
+      "schema": "bba69d9ec7d4140a6f6b831fe648426dad863aecd45077631c2ee9007231c845",
+      "content": "f037804164fed619943ee808c4cdcf47efc77d6c10d6b1088b0c6f2c61cad550"
     }
   },
   {
@@ -7845,6 +8340,14 @@
             },
             "description": "Input definitions."
           },
+          "additionalOutputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Additional named output definitions."
+          },
           "posX": {
             "type": "number",
             "description": "Node X position."
@@ -7852,6 +8355,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -7938,10 +8449,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "17ef2257fa10c4940b07f0bbf2d13f291c07e6bfbed01ab0c4d01dfb0b374adb",
-      "content": "2e64cfcb8e9503abccf8fe98954fdc391bb1c7f6d005e598d11421d5e12de032"
+      "schema": "8f1059c258b9979da06783c2bdf18cf954d997f8ace7b0f8b7e3484c807d0770",
+      "content": "9aec8bb818e1605e9eb38d64566b9e121e133a8e11cfd383d624d5ea69a12c27"
     }
   },
   {
@@ -8078,10 +8594,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "192d8bd744e3626231d946b8f255d25a6d7bd0b20246da02e6602fe36f2c2477",
-      "content": "46f0b19fb94d379fba05faf6b5dbee785abea14d4a8d5ff44a2c528f51b738b9"
+      "content": "d8932b3baebcb414c98f4a35395a913e912f43120a9f0c882fc2e5f5b3be8b7c"
     }
   },
   {
@@ -8214,10 +8735,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "32f1dd6186296880e7e9a02a90c408d39e357e8e8f36208a22aceedb56ccb99a",
-      "content": "cb4dc3b79e72721978eaa3510ef1c9c128804e13a018133a073b3349ed05a507"
+      "content": "995d1851564d77b09f128b73b2d6e080b015ca4f504693ee45b475e6ab711b06"
     }
   },
   {
@@ -8341,10 +8867,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "7380f88bfa14c951ba653172606ef8e7d3eb62f351daaf0f546d7a94c7d3b480",
-      "content": "eb937a05c3bbe00aa50796984c7f8ae13f0671380ee4ad7ff37f567bf73d48eb"
+      "content": "8bbf14cf6e006e07ca068621abeb03affe99c9e628afbbc672e6cdd5d7fea422"
     }
   },
   {
@@ -8468,10 +8999,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "7380f88bfa14c951ba653172606ef8e7d3eb62f351daaf0f546d7a94c7d3b480",
-      "content": "2557a49fbb6fd03975c260088e4ddb07c0944e91435241cd1c27ae5e314993b0"
+      "content": "6410f31096ab3801ced182d5648985598ed43b65f9f6a2f8b2864431fd766252"
     }
   },
   {
@@ -8590,10 +9126,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "8b777d2c25908b9f5d628b2a431541554ef4e03cb4883571fc3da4841257328a",
-      "content": "c5d2a6e95ad8c611c23901811fe8b456bf5b0c6fb4435086532e59413a8d4372"
+      "content": "1dad251e5a42f4898d92aa3a9ae375e9e9da85ec3dd9a5a1cd4b5f6c4332a9ae"
     }
   },
   {
@@ -8631,6 +9172,14 @@
           "nodeId": {
             "type": "string",
             "description": "Node ID."
+          },
+          "direction": {
+            "type": "string",
+            "description": "Connection direction to report (inputs or outputs)."
+          },
+          "downstream": {
+            "type": "boolean",
+            "description": "Report downstream connections instead of upstream."
           }
         },
         "required": [
@@ -8713,10 +9262,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "e1da722dc6f4ab6596e3e011f2e0627f8e07c127f41d971fc2172734f2c7ccec",
-      "content": "72450bc4b8b935ca357beabe5929ff5a14358e89ab91af7838f7bf3ecb227930"
+      "schema": "4690782367cad68e082f8c9d9d6441f32969536fc898437114bf5dcae458b088",
+      "content": "8ad307f37d3282171de8f73a11c7d51a559d09fb3bbf712727c21dd3a80e8ce4"
     }
   },
   {
@@ -8836,10 +9390,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "e1da722dc6f4ab6596e3e011f2e0627f8e07c127f41d971fc2172734f2c7ccec",
-      "content": "3a71106d122fec19b65f2983236f168b4569d6cab9742ac63d7bb92b891e2e2a"
+      "content": "d18a35679100d00b5d3883fad22d11055799bc0eb27cb56bcfbffb4d7516fedf"
     }
   },
   {
@@ -8964,10 +9523,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "4cf5a44553644cd42284a0f802972a451e92c698de9913e05c79feeadd0e27eb",
-      "content": "7be7266cda57ac42550c287a4e0ec599573160a076cedae7d5b1207103306554"
+      "content": "ca9f287fe4b9e1a89b3c405a26ea69d5ca74d3ef012476f14085f8688983e391"
     }
   },
   {
@@ -9005,6 +9569,13 @@
           "nodeId": {
             "type": "string",
             "description": "Node ID to delete."
+          },
+          "nodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Node IDs to delete in one batch, in place of nodeId."
           }
         },
         "required": [
@@ -9087,10 +9658,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "c4c129e30218fef5fea6ba2233151f38205f615c4611897fa499ac62fd10a679",
-      "content": "219e746c70b87b3b4cff390860ed48abba07325c5da4ef12a67f4066bc2c8a62"
+      "schema": "9f0015fcd9bb5a76ea44c211d2901870730e60ecb56e821b05b2d77052ed1941",
+      "content": "49096a1b6b1105c2b92c8c8ad8f353e89702604015bee7382555b08d143b2254"
     }
   },
   {
@@ -9132,6 +9708,14 @@
           "code": {
             "type": "string",
             "description": "Updated HLSL code."
+          },
+          "additionalOutputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Additional named output definitions."
           }
         },
         "required": [
@@ -9215,10 +9799,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "1016bda2171d7241dea2781cb541cd9c7abeee24d3b92bd124c85582b56fd18c",
-      "content": "d21bb0e2dddf6560b27772ced2c3d6c0e14193a9c24e8ee1a1a4c071b3fadb3b"
+      "schema": "5d93e4bee2c308f6945ac8e233940b59c4804d06ce7e25a7633ec8a1e9c5fe97",
+      "content": "2b20786813d14c38cf7228b5944410c88b97717ba7e714162f76fb456968fefd"
     }
   },
   {
@@ -9256,6 +9845,14 @@
           "nodeId": {
             "type": "string",
             "description": "Starting node ID."
+          },
+          "startNodeId": {
+            "type": "string",
+            "description": "Starting node ID accepted by the handler in place of nodeId."
+          },
+          "endPin": {
+            "type": "string",
+            "description": "Terminal pin name to stop the chain walk at."
           }
         },
         "required": [
@@ -9338,10 +9935,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "f205581da8087e9322b1de56e434962ab2ebd5a9d2f6144245e1935e991561a1",
-      "content": "4ed1889f80a9a9e82328a6774fb366fbc053c728ab90f2b6e2520cabbc87e683"
+      "schema": "b67a676b29208bcbbd5f13a0756a8691d23b57fac5e6bf89bc0538b32d35aa16",
+      "content": "d9189f40a473a12e61a1d8d3ec581e5ce8cc059e433faf820ce34e4af46e8862"
     }
   },
   {
@@ -9379,6 +9981,10 @@
           "nodeId": {
             "type": "string",
             "description": "Starting node ID."
+          },
+          "orphansOnly": {
+            "type": "boolean",
+            "description": "Report only orphaned nodes; accepted in place of nodeId."
           }
         },
         "required": [
@@ -9461,10 +10067,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "f205581da8087e9322b1de56e434962ab2ebd5a9d2f6144245e1935e991561a1",
-      "content": "d0e5166c136c07461756c748d85c6774076bb8c5342db36bf5fb5bc8b11c1213"
+      "schema": "39c189dfa04e9534677cb7de5ba1b0794cb3a99179dc036b8e7a5c8edd5211ee",
+      "content": "664c719f3152c6ddcafde3081ac0ab30ab30d6e05638c1e02a5b6df2620580a9"
     }
   },
   {
@@ -9503,6 +10114,10 @@
             "type": "string",
             "description": "Node type."
           },
+          "type": {
+            "type": "string",
+            "description": "Node type (alias of nodeType)."
+          },
           "posX": {
             "type": "number",
             "description": "Node X position."
@@ -9510,6 +10125,14 @@
           "posY": {
             "type": "number",
             "description": "Node Y position."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -9592,10 +10215,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b79a579d8924c3a1c21b0fda230f7df90523d54355ad3129c2271f09f5e65920",
-      "content": "3abfc9e13f9d5800eee96344948fe2aedcef7de1ce8d69accb4395fe846f80a0"
+      "schema": "6495540fcecc1e9485e8e96ffd24a098c981cd00d601644f7ece291517ec3f9a",
+      "content": "af7e56eb695862760c99043f3cfee9745c54a035dc7a60a4276bc8f70b3b90fb"
     }
   },
   {
@@ -9710,10 +10338,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "7e44435b56e28b261708e0cbcd5f065543a8b5960b599ce84f184da7364a64ec",
-      "content": "7833e091439a3680c02ab39f955d2e46368d732556ca1950ea8f7d881b6d4dee"
+      "content": "6dd37390612957da1df42cab3ef2109d690e46963130c3dab299efa7da3ea84d"
     }
   },
   {
@@ -9836,10 +10469,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "035dcd6f082c7b77f5d99ad7c092f6eb91e3e7e4a29a1dc096d39f744926ec5d",
-      "content": "ce515bf5fa24abfc41cd4994de36e520f9877b2c0f3f2dd37baa12b5b38f61c2"
+      "content": "2e5f2f21dc512993904e4f09a6b530d2917fb4227a906a52a349f4bbb2d7c6d8"
     }
   },
   {
@@ -9963,10 +10601,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "fb12ff735f29f57efbceb2587fd46aef20bee08833b137e30e4df28e4e0626a9",
-      "content": "0244f0eb569021b84e7376c1c87abe89cd07bbf3a4c714c4dade361a2269e057"
+      "content": "7f18d9f815602e765d4595159eef24f37b0b3d38c5e991c19b75e26eea9e837a"
     }
   },
   {
@@ -10086,10 +10729,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "d151da01de0578dfe1a3f664590c4940e19bf91d305c1a55a2650fe1795db4e7",
-      "content": "685b11ecd101af956a7ead729075a09f464dbb57382e87484c28378bedd12adf"
+      "content": "f72046f6aa098caf7c9ab63865c97622c3fb029f9921f83cf0f464b3e52fb93f"
     }
   },
   {
@@ -10209,10 +10857,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "6c8d053ec155c6ea3e7343e8f00c9c228627bd69288aeb28fa0687c5d0bd2f3d",
-      "content": "a6521da1716a204d69367392ac15929281d1a816c722fbd1fc5bb44f7e847b30"
+      "content": "9e582a881b5c3a20b074a92686db53ad38683d7e6c26d34f7cf2495fbe01219d"
     }
   },
   {
@@ -10332,10 +10985,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "6a192503fded16bac4067eb58bfce6e900669bde713e4273f5a8098f95c8dd43",
-      "content": "e0e86a25d27cb4b301bcc5253ace0fc08b26c0f8b8a5f404a10385af9102abb6"
+      "content": "e1b5c8db79d10c322d52ff8065910c1f3baad8818f65d8ad975fe309d93eafd2"
     }
   },
   {
@@ -10455,10 +11113,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "167aec7bb032d7f37655c903f1d5a9532ca266a87e83287b72e3301100fd32eb",
-      "content": "166e1ffd0c5955695db163bdf695959c397885fd41af60460d5f5bd8ea31296d"
+      "content": "56338922ee9d0abc8901d3b4648b4e77be9a4cbf0ccb53a6723556b7d971fc18"
     }
   },
   {
@@ -10573,10 +11236,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "7e44435b56e28b261708e0cbcd5f065543a8b5960b599ce84f184da7364a64ec",
-      "content": "4404aef4459a1b02289a783bb0f4d715620294344486243414cb27bb3190b44d"
+      "content": "4ac5b43d662cc9aad31ac03ff591d2ebc3b6f375a02170a6fe70e7fa3a89ff23"
     }
   },
   {
@@ -10691,10 +11359,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "7e44435b56e28b261708e0cbcd5f065543a8b5960b599ce84f184da7364a64ec",
-      "content": "78b8a04259eb807010a9cd7aa94648784ab6483e9199c6177a0ee48e556899ae"
+      "content": "cbb182e7695d56b1f85b59fac3287e30cf9f72f8579d1012abe88506ef9b7472"
     }
   },
   {
@@ -10814,10 +11487,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "600deea356e9ff0428d6ff450e40f0a64f12af58394b902ce8e88e40aa556bb6",
-      "content": "688db6a2063be521a9808189a1e002c98553f913f17fed1b950e4d44915de25b"
+      "content": "ab16c44c7c11544bcfd32dc8305308727b952ec0e1c869bc744b743474462350"
     }
   },
   {
@@ -10859,6 +11537,14 @@
           "inputType": {
             "type": "string",
             "description": "Input type."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -10941,10 +11627,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "0d89f52c779eb4f7067c8aa995ca87c0dd34deb361567ede858a13162572a7ac",
-      "content": "ac1fd805a4f05bf9b69e5c71d03417b1a14fe7a89d1c6641c610b9a5b3c0c40c"
+      "schema": "dd857c63b52db88b0c327c5c0d2073830ecd09f42122e800bae91dbb46500ee1",
+      "content": "870e9684eeca88ecb734ec5c5aea36b9d780a965cdddae5fbc41f36a3f0a8286"
     }
   },
   {
@@ -10986,6 +11677,14 @@
           "inputType": {
             "type": "string",
             "description": "Output type."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -11068,10 +11767,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "0a40c411d7bb74d886534cb04c8cf3460598fd48f86ac6da8291d8c295e2a694",
-      "content": "d9f01142f12c5500b3bf2ac7a45fb7d7d022032d4468cfdf298a3f260973c746"
+      "schema": "9403fd659743bf3faf8d98c0bcb83455c937f08130e4b6b781e3edb7ef2bcbae",
+      "content": "bee770172be08c6bfb6f042ce36f981ac6dcaa58bcc7fd4b4144d78b0bc058e7"
     }
   },
   {
@@ -11109,6 +11813,14 @@
           "functionPath": {
             "type": "string",
             "description": "Material function /Game path."
+          },
+          "x": {
+            "type": "number",
+            "description": "Node X position (preferred spelling; posX is the fallback)."
+          },
+          "y": {
+            "type": "number",
+            "description": "Node Y position (preferred spelling; posY is the fallback)."
           }
         },
         "required": [
@@ -11191,10 +11903,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "df8ee2ca5cc41969dcb31132e0a79e283174fad84161f6ae5d0dac3dfa8e6bfc",
-      "content": "f764ad2aa6d19689c2c414bd3219caedc1cc4b905127b6f43c544c7006716d90"
+      "schema": "c8c27a182d4597ff469d446a0436d7ae552ad2615573b1d35efac46f9f1e779e",
+      "content": "892b3106f10fb464bed8af27536217abd4fe7ffa94b91d7dc52204a89c380944"
     }
   },
   {
@@ -11309,10 +12026,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "0799194790be99281da6396ef57ee8dc1f6fc48972ffb1ff180fd6e414fc37da",
-      "content": "fbbd6d11a499c5f22a02316191162532f8358912e25fb9279f6157ff41c6d558"
+      "content": "9d373a00284c55e16b55749dd2e1ecc72ef44377d7e708fbeab403a933113ce4"
     }
   },
   {
@@ -11437,10 +12159,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "a1de716fb7186a0539a2bcc4b8a70d676591a39a04c15f1f12aa064ed24e8797",
-      "content": "d1811f70634c06063b74a0f9576b68b32176f870c118751a8d7222eeb8a7567a"
+      "content": "85dc141221db513eafa1c4c7877099cdeb13d15e80927d4971cbda0bd40d824b"
     }
   },
   {
@@ -11564,10 +12291,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "794e13b4094361e1cc47dff26cc8be1f1e39196b37923c544798ec981f5831c2",
-      "content": "73cacbc0ce241da0fc1fe794ad72b32a57c4f24581cc5378b1120839a738d962"
+      "content": "61a6883452714b45fed0c3260c96e2012094ec1e78d47bdac0d61cc3a3b901c0"
     }
   },
   {
@@ -11692,10 +12424,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "d34ea1720cddbe5e0eda881f984c218222e1592fd1ab37ed63b6a2848d7a541a",
-      "content": "fc3a9523fd61ab63175629da6f914c03da01e74c7ea8106c5ad23defbb7a99cd"
+      "content": "c4a06265a053b4e50b2b3929c3a0de7325b49f62f0f49f50603d7c246fc30b4d"
     }
   },
   {
@@ -11815,10 +12552,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "c91cb76729ecf8c77032ab325054fde21fc6d1b04ce1aaac2282ded3001027bd",
-      "content": "f6c61e5b065fa16268346ab8ef4f2cb697301a0401c5e12ef92e4e3adb74ce81"
+      "content": "71d5f92c3577f5f15d15b71bbe3621f6c01e3797defe04e31332d1cf9710e2fd"
     }
   },
   {
@@ -11945,10 +12687,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "087aae5aa028fbfb4f53d76612a3f0deb3865dc03bdac353229095c0288b4ef0",
-      "content": "a6c73c205b39b27f0580c2e313a0a887f14a63d36595887b3d04e9aa01f98691"
+      "content": "7cef96bd41e679fb2beb6946e879f1523903378ad4d1a20cd1fd8abfb0dd49e6"
     }
   },
   {
@@ -11991,9 +12738,13 @@
             "type": "string",
             "description": "Noise type."
           },
-          "size": {
+          "width": {
             "type": "number",
-            "description": "Texture size."
+            "description": "Texture width in pixels (default 1024)."
+          },
+          "height": {
+            "type": "number",
+            "description": "Texture height in pixels (default 1024)."
           },
           "seed": {
             "type": "number",
@@ -12087,10 +12838,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "bc8cd9ef1e65d62924f2a7b79ddaa1609209710c6ce2defe990d3a8992d80a30",
-      "content": "1d01886a7d6f58901eb860db9c95548437d838423d8b88996af299e81a8b7593"
+      "schema": "f3e6354d1b5210a5d1696b18ec83abaf7954dff2251ce62e3df549bb8eb2a759",
+      "content": "3576894268e7ad2bc77616cf840223a0d3d887340ea7eb608ef0aca9fed88cda"
     }
   },
   {
@@ -12133,9 +12889,13 @@
             "type": "string",
             "description": "Gradient type."
           },
-          "size": {
+          "width": {
             "type": "number",
-            "description": "Texture size."
+            "description": "Texture width in pixels (default 1024)."
+          },
+          "height": {
+            "type": "number",
+            "description": "Texture height in pixels (default 1024)."
           }
         },
         "required": [
@@ -12217,10 +12977,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "bb4d2e2d022474b5137165d181679404a1f93cec3b075ffcd2d301629b9bfb8f",
-      "content": "12d40be62c92328cf095154d4db4f821359d1cd84e0b87fb5a6ba2e1fa27eb2e"
+      "schema": "3c5e12da4aaf8c279e8a9af6ead134114516ddf2a0b8b8ef78fc26dc1afd0574",
+      "content": "93464c72ceea97117aa5dd1a5f8470697edb04eecf6f6093f37333164ea7b0ad"
     }
   },
   {
@@ -12263,9 +13028,13 @@
             "type": "string",
             "description": "Pattern type."
           },
-          "size": {
+          "width": {
             "type": "number",
-            "description": "Texture size."
+            "description": "Texture width in pixels (default 1024)."
+          },
+          "height": {
+            "type": "number",
+            "description": "Texture height in pixels (default 1024)."
           }
         },
         "required": [
@@ -12347,10 +13116,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "75cd3655dd76ca73bad5cf07e17e4254f8bd209a550d7d479ca6e1494cc28a00",
-      "content": "55ac40a5cd0866caeaa9ccbae807cb19b2d44811a3766c60e9decff056c7322f"
+      "schema": "46c640481063c2a646749ef58db5f573f4858e309ec02025974a1a2549863267",
+      "content": "a8c3b648a5cb50ba8e854c796f2825d91e027f84c6ea6cdce28e176bf233e878"
     }
   },
   {
@@ -12478,10 +13252,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "d8e524d0da0ec1fafa4dead948e09a55f5bbdd4c0e0726af13dca66b7a488f51",
-      "content": "4c6e14969f9cab568e70303d7cc71bfb18b3e7ae4d726e55cc736c8bd31d7576"
+      "content": "14c0b745c50c72106c28266981b2f88ee2a9d9038160d9b2489838cd2df2ed9f"
     }
   },
   {
@@ -12524,9 +13303,13 @@
             "type": "string",
             "description": "Package path."
           },
-          "resolution": {
+          "width": {
             "type": "number",
-            "description": "Output resolution."
+            "description": "Texture width in pixels (default 1024)."
+          },
+          "height": {
+            "type": "number",
+            "description": "Texture height in pixels (default 1024)."
           },
           "samples": {
             "type": "number",
@@ -12613,10 +13396,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "9e4147eb558c3be770c1d104b50355e7194ae6dd26ffd4e607c3767e56f98ec2",
-      "content": "ccb1614b3af6b9ba9faaaee2b263ed6cbe44d311bf9b4ba52846f1b6a3eea302"
+      "schema": "d42bba1e1fe4016375171a8884640a09d87ffa9c1d6afa2f669f1dcdf93d5054",
+      "content": "50c2fed18eadbb9213002df28a6774a978bfcafdc72fbc3cafb91b31e1f61d7e"
     }
   },
   {
@@ -12752,10 +13540,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "67945a0b18391468a2cbe1c01ae36a6a5446e0455e4eb9339d8226407137a394",
-      "content": "88286806b0a5946055ab4ad6125c925c73d3d59d62ea0ed5d010f0849fc6e10e"
+      "content": "b10b54c1758a638bdd609b6e427a2cb8fee93d84fb2c011f5e9c5ae9424aeb5a"
     }
   },
   {
@@ -12890,10 +13683,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "106e4fe256b3fa21cf0e33d8fb5018a7f027861104672b207d2af21113d2c9c9",
-      "content": "1c288fe454cda075fbfad8c8d34f6c105a2bc9ec2523ce958fdbac27f5d6fadc"
+      "content": "3e77beac6937528d9a4d87805c8f3cfcd8702d8131637f3a9d17ba30ed4a0ce1"
     }
   },
   {
@@ -13024,10 +13822,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "db368d7ccd6fcd915849849aeaadc14e75d21da53528d5c34e4b265715450428",
-      "content": "c58e9779c00bf7f35d92a5aba09363810b13d98e0468f643ddb698f88fe25f50"
+      "content": "d75069c97c5e58bcd4aeba85941cf7730073834a143e3d651344fdb92386985f"
     }
   },
   {
@@ -13154,10 +13957,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "eeeb809022acece54818e3725bee1fc4a3e4108c2d0bcc988d729c2824f8400a",
-      "content": "b504d8f2aada6a9df402bc78016f6709e936d53daf5bb76d4f7397252850ec7b"
+      "content": "dc549d0211b78054c33e843a5b322391e16c104840a4e138abeeb55ad24acfd8"
     }
   },
   {
@@ -13280,10 +14088,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "5647cf911878666e5bc57ab4d9ac6dcdf65aa9983a980a8ef7c6441664d930cf",
-      "content": "960e324a8b71422e9118bd770b11d80cc3ddede4a6858db3805aceed206ac964"
+      "content": "40158f63f5ec7ebe4ea15ac1b328d1b56cb156476bbb652750c0b32637bb7480"
     }
   },
   {
@@ -13406,10 +14219,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "5011779a66efa958675254a5498ea4d68712fd342a8fb5ade562aec87a45f732",
-      "content": "28be4ab087f28198fc043cfa13ae021bd9e398a9320caa519fb6f8777109c65c"
+      "content": "d144e149ce6e908fd056d6e7ec30d1911d798107a2cac93569cdff19c9715046"
     }
   },
   {
@@ -13532,10 +14350,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "60fe4a47860c0bf86ac345b590967baf14bc8df118313bb2be028fe0677f9b76",
-      "content": "acb3508f6ec0e901dda2d7a5687f998d8f88f0b490c980557a592b5ef689bd83"
+      "content": "f2e8e618a33f9bc7ae1c798bb23f4735f88ffd7a4310477f60d19c20cb88a77a"
     }
   },
   {
@@ -13665,10 +14488,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "51c86c3efab0511552dcf48f911ed1796f56f5d9283bafa01932acf0a757c534",
-      "content": "428f7c1c6b2c038013422e79ea92b830613c8bb3843bd8ee0dca9e671952c650"
+      "content": "8b23a8251fc29c1500d1e7247243c5de4c68e0797e53231c5247238e02b1771b"
     }
   },
   {
@@ -13793,10 +14621,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "e812e3be3a7f110f5a8aa619222a167321b790fde1aebd7a31380ac7811cf9d2",
-      "content": "f9387ce63594fb3c3b8f4832c532e9d6e9ca3662a1a82da0ebde9af86f4f4ed2"
+      "content": "fb0362e2b804b9ed80fb5e55ad62157a7e9a7a76500c1fe1340cf1870f335505"
     }
   },
   {
@@ -13929,10 +14762,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "f10c6b973c3dbfa4190505ccddeed4a5731c1f8762c90f8277d6dcf68c80347d",
-      "content": "d48e9b213029e37b67b7218f15046f2d6db69fe09907c08dff826cb0067b82f4"
+      "content": "c298766128dade504acf9fc736037ed5fce07da0336ddaaa6b82014a572b8bb3"
     }
   },
   {
@@ -14056,10 +14894,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "995122f21613904392a09e1f3fc048e8aa036799327211d18a0842ae17f7f6a7",
-      "content": "23f3ae3a7b82b87c2197e80a78f0a0104c944be3f0759d5f9fc7a371ef79db88"
+      "content": "70c33d0f5966add109f4af1ee1fa690ee27abced222c006a8056efca277f89a5"
     }
   },
   {
@@ -14183,10 +15026,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "5e29db137d37b0c5b0285b894ed1d7906db761c452b786c289790b3761404393",
-      "content": "3f437bd94ecae9b78b92461a03a502c78f026cdd1fab6ae952623282d131a004"
+      "content": "63d21dbcf9d7aa51b5fec86d667164683e7fffe94bc4d2d0e0f119ffbed1a6ce"
     }
   },
   {
@@ -14310,10 +15158,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "9fb5681922fadc985f69d0b1acd484b98dc5f26eb33efcb6841ab96c58b91153",
-      "content": "68d8321fe2789d0e85e06b7efe1842d54159ce11779b534c196b96ccfe23c565"
+      "content": "ace0a59322437d8c8012d7369ec0f0fd0601dab5c33e543d290a098e55e121f4"
     }
   },
   {
@@ -14436,10 +15289,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "b4c13a23d868c80b8fb4f460818ac4230d29088ba09a36c5dd678060ce8e4a08",
-      "content": "696e394ca216b13ea88b47bbacc64f4419ad0fc26a33c6be7126bdd2aadab056"
+      "content": "c1a9267c9e9cb2bbb9654eaf89ce3c24923c4aea0ff8966b874b9afc69eb1c90"
     }
   },
   {
@@ -14473,6 +15331,10 @@
           "assetPath": {
             "type": "string",
             "description": "Texture /Game path."
+          },
+          "streamingPriority": {
+            "type": "number",
+            "description": "Texture streaming priority (default 0)."
           },
           "neverStream": {
             "type": "boolean",
@@ -14562,10 +15424,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "fb04b24d48ef5dbc8de94678d496af9bc90d0a63ae0e14b0889be5100ed4bd2f",
-      "content": "68f29a01997a2606cf35e279f9d04b1fc250e8d21fb33e2fa800de767c0ab1bf"
+      "schema": "0b314ec2465d35b71d83d6f3347772c54e68652692d0863753132580e21750c9",
+      "content": "ba188918bb77d304be3021153f1f972312765817cddfd014b0b18a95e16aa5f5"
     }
   },
   {
@@ -14680,10 +15547,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "10e205271d2121e78dc0575315d231d52509112f528477ec685c23db7b54ee09",
-      "content": "aab5c90a77e50773948ea46274f7a4c0e6a3c605319cc2591ad84970810c0ed4"
+      "content": "0bb94dc417ae077789a36518bc25fa9df687f50bcf30143978db84e3d9c90f49"
     }
   },
   {
@@ -14810,10 +15682,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "d933904069ef1325b309f64259c6d986176c867c212ebedf4873093f456f5d24",
-      "content": "ef4d758623a82c5076ba781fe8193d0c5456257cc1e2c11485cd79cb77079f34"
+      "content": "9c33d84b796877b1f3ab33b570fdbbb0107ec9efe32b90bf28c6871b9bf5412e"
     }
   },
   {
@@ -14928,10 +15805,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "bc23f779527810c1a7dc637a55aeab8e42cf2b663cd6e36df2747bb7760b04f0",
-      "content": "87afd51a4070f62230c774f8d831d99a9667e5b122c1d0c636f5acb5b8ea8079"
+      "content": "e7d61b8db5f1748c1f7508d051fa184f45375bcc65ece1da9520deef1d43d1fc"
     }
   },
   {
@@ -15046,10 +15928,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "bc23f779527810c1a7dc637a55aeab8e42cf2b663cd6e36df2747bb7760b04f0",
-      "content": "8451e5a4e20f562470dfaddbc7c6427b4d922a34bf475f2d32ce075c0b196181"
+      "content": "ecc8174d22ef86b22f8283675b35bc726d2fde362ffeb91d7cfdb41f5d8dc5cf"
     }
   },
   {
@@ -15164,10 +16051,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "bc23f779527810c1a7dc637a55aeab8e42cf2b663cd6e36df2747bb7760b04f0",
-      "content": "9c700f508e67cdcefc04d31103108a41122731d4fdc9734734a15e0b9cda1f8c"
+      "content": "8fdc6683412154683fb3126a735458e0308726b924d1bc67a8f64da28b4c19c6"
     }
   },
   {
@@ -15305,10 +16197,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "4ba80ed7c0e8e42e7ebc670a552f090630b8333cbac7565e2074e70f2efbe4e0",
-      "content": "a66f46596e657375a40907653f8804aa2cccb2451515c3969048fd27f4274500"
+      "content": "d2638d415718b890e87333ab54101a38316533fb6f6ab391192c19f9e5310eb3"
     }
   },
   {
@@ -15405,7 +16302,7 @@
     "behavior": {
       "effect": "destructive",
       "idempotency": "idempotent",
-      "longRunning": true,
+      "longRunning": false,
       "safeToRetry": false,
       "supportsPreview": true,
       "supportsUndo": false
@@ -15432,10 +16329,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "92d08354e78c4b2ffcfc713b41139537db6d31e5f301be9b77eb8a1e5085f4b1",
-      "content": "d247935651847d80c7d07c1fbd2a14dc3daeac841fdb578470e50bf1b4589366"
+      "content": "f4431c8f915b5db0ab3ffea2952395eacf9cca9bb6cd1bd9e806455e7355786f"
     }
   },
   {
@@ -15564,10 +16466,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "ec7b11a052847ae6e7acefe4a25e38bcfe4838163f235573006ae84aa34fe4ba",
-      "content": "3b64bbaca030de20e10ec6a487257a5fa643b7ad3dbdb140a6f933ad72a9e285"
+      "content": "fdb4788ca51c4f8b36045c0aba26acb285cff8a757914d898bc9ae2e297bee2c"
     }
   },
   {
@@ -15696,10 +16603,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "92d886d9bd264fd0dc241f6fb665811870451cf81c767d69c8a05ba6c1ec9434",
-      "content": "c3273e34de25b68dfe10b0d623307936ae5ddccf898c7bd19752b3cbbf589c0a"
+      "content": "69c06612236668634b835395895f1df155276c7a89fd6bbe967a6b0d041635df"
     }
   },
   {
@@ -15833,10 +16745,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "9ffbdc7372c91d304e956a9557b9f5579f05154a809b6caa19bd21712b37df69",
-      "content": "15b9b2556418a2804aa388fa9065a63684e45d5543f0319e92831b072f31c7d1"
+      "content": "a76b016344b91a26a3ae724dc1c2d541e48e476ea968d0d0a75a9d5217c0d07e"
     }
   },
   {
@@ -15965,10 +16882,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "a258fc1c4c7ae63da536251442365449d15c1bcab11817f954af6e3c62d4856a",
-      "content": "8e91ec71d1e1cfef0d3e3051738fae05a9c53b1263291b8f38763262594e7aa1"
+      "content": "f01cb9bfb9f9900ae0df9f726b556f41110c5a3f238dd4b81b5bc6872581fc46"
     }
   },
   {
@@ -16101,10 +17023,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "ee2ee67d8fcf2b33d2209ceec3f7c4e2bb76303a8047c8c22c5d905539ae438d",
-      "content": "25b3ffaaaaaa81db6a90dbed3d862cf211e47324424a53438a057cec84bc5000"
+      "content": "0e8fbb574d5b7e29701ff37df1faaa5afdfb40ad615f96f64e69ed29f51552a6"
     }
   },
   {
@@ -16224,10 +17151,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "b366476baf9f836cc83a7c8a25b2d5e217b63fda0fd354490287248382201f32",
-      "content": "c4a89e78316106bca9d4c166da7398ccdd037ecf71133e47fe94323c64edfe7c"
+      "content": "f9c5dccdf9abd368d7af1251c563e71da0f8eca3d4897d89c44c02511adcdace"
     }
   },
   {
@@ -16346,10 +17278,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "dc5e088008d2b4f1fa986662a450cfe4548096d7a1a13c086082e6a0811345b6",
-      "content": "7758b78183c6e22e0b6eb60c7c170a8f1e9b689bccfaf639d1ffa12bc2e4d60c"
+      "content": "2a525dff8b95e586c2b9996dabbe4f3978512fa463e41157ee75e41b03ce8b1c"
     }
   },
   {
@@ -16437,7 +17374,7 @@
     "behavior": {
       "effect": "write",
       "idempotency": "idempotent",
-      "longRunning": false,
+      "longRunning": true,
       "safeToRetry": true,
       "supportsPreview": true,
       "supportsUndo": true
@@ -16464,10 +17401,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "bc23f779527810c1a7dc637a55aeab8e42cf2b663cd6e36df2747bb7760b04f0",
-      "content": "6e6ff9d6eb9dea92a7e2d945a7e8421b12b8aa45320a8ff3540380d5c1c3b6a7"
+      "content": "aed535ec1b4f8e3697f6ad0554cd80f1f223a179cd52c8ddc19172c729997745"
     }
   },
   {
@@ -16587,10 +17529,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "be6f0cff63943f4eb8f8e127910530c1756e02f7f6d9fa77ba7fabfe090cf5f6",
-      "content": "73137259e97916cc6870aad3759a990d32675230ef9e595a977022717fef46c6"
+      "content": "6b4bddb106238d1db7a7f7a0540fe6b1e050d3c4673b5a945f4736d8f56b5826"
     }
   },
   {
@@ -16714,10 +17661,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "b0457b2afd0c7786f048bb665264825da569db5f68a5ee683f75f6d6cdaf3d4e",
-      "content": "312ed0c9130b6b59360e8012b1eb41cf0d8a63507eb48633f847e0e2777926ee"
+      "content": "4536e4e5c6cf9a651ac8ee3e668d6a9fc44733baad68e0d147bf789d1edb9256"
     }
   },
   {
@@ -16805,7 +17757,7 @@
     "behavior": {
       "effect": "destructive",
       "idempotency": "idempotent",
-      "longRunning": true,
+      "longRunning": false,
       "safeToRetry": false,
       "supportsPreview": true,
       "supportsUndo": false
@@ -16832,10 +17784,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "bc23f779527810c1a7dc637a55aeab8e42cf2b663cd6e36df2747bb7760b04f0",
-      "content": "d1b9fb8a7e87f01552253ae4816c2648ccaf66587dd8887b8e99c6adaaff9a93"
+      "content": "1dd056674f156d53654b9bb409d375f25abddeac9702aa117e56650ddac07435"
     }
   },
   {
@@ -16950,10 +17907,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "bc23f779527810c1a7dc637a55aeab8e42cf2b663cd6e36df2747bb7760b04f0",
-      "content": "2814210f32afd827c5c64ce548899ee72ff7d556ebf66c2bddccf0416df49d57"
+      "content": "c9bf4b04109ccc02e07d8ee9d8af846db10382abb57def60b16291e140f04529"
     }
   },
   {
@@ -17070,10 +18032,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "bf170efdd00c15f3e09b3bf7155d3c18af5e8576b30ad98fbecd8c684b45958b",
-      "content": "6ce6830254e98e1f0cb8d0b43cc6ab8e3ca53eace4f8473b7a1aff42b8dae2f5"
+      "content": "ba89d5cb262f4b81145055bf5ae656d7957a6d53ec3b91bf4e437646565be718"
     }
   },
   {
@@ -17193,10 +18160,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "61d7cd770689bcd7847e8da93ba796d901cd8d1dc06675f78cf987ac45924479",
-      "content": "21054ee55ea01f31dd16924e5cb5dd6e99cf4fde7c89aff398280cbc9da6d4ea"
+      "content": "d5b8efc45be2e1702690afcd6f43fd3875ebe16abe642c4d3e22dd487a2fc7f8"
     }
   },
   {
@@ -17323,10 +18295,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "5334dab902ccc7bde6f97ea6ee6e58f189fccae543fd372d87beab4b721a5eb8",
-      "content": "b0f79fb135f95a58441b1f9b2a03f3a8f99a36922a2676db3994d27c9abac8bc"
+      "content": "3ad7edb01a336de68c9ddd3d2a1d4391356b1483fda753fdabd1747fd0738f37"
     }
   },
   {
@@ -17446,10 +18423,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "a78eebc3503f33caa5b84796c1fd02b0e46db0fe24aa5a82089d03a32bd5e558",
-      "content": "8b15887f369a7a3887550da691e9501f2c2b4f62ebdaba0e54e716d4f19a049b"
+      "content": "d22c9ebbd575525b06a8b8b66701e47e2038d0b0ae42f1eb7faf98089756a7b2"
     }
   },
   {
@@ -17579,10 +18561,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "3946d1873467469ab5cef5ae1ecf812fd56247bb8b8a566efecf08f3094f1a1b",
-      "content": "491205fae2f2b37033afcb77d6be69b52821516b83769a1e9619d890a363aebc"
+      "content": "e4732bba75bbd92057dff4b013a5b2fc3b6bce8756f0499aebb8a6b240cfbbfa"
     }
   },
   {
@@ -17705,10 +18692,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "fe80d5cc6fccb975832e989211f7b9db5c3e116975cde221b8a8077220df1a60",
-      "content": "b67e93adb00c8c225714ece618de7328e62b0ad9f7210d28359c98639f352edf"
+      "content": "bc34d4af9cdceef4094870b8322021c829f975507ad109612912d7b4924cd571"
     }
   },
   {
@@ -17828,10 +18820,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "5782563736af95c277e4ffb3c5020507103740cc1e5a1e4aec062a971d3ffab4",
-      "content": "3880adb047aa69a3a556c64d93341b44918ca45913b2a7a3619dfdf18b535543"
+      "content": "fa8cf33e6fae2a596139ed965a7bd8e20f65959b2506df800422ac4cc6d18eae"
     }
   },
   {
@@ -17958,10 +18955,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "d933904069ef1325b309f64259c6d986176c867c212ebedf4873093f456f5d24",
-      "content": "076e9b4ff512724f1181809b0387a5c6fed48b736933d176cfc163b579b2505c"
+      "content": "a5fe828f10d19f3730a409440597f0da78c595a3baa2bc9fe1846b001a6954b9"
     }
   },
   {
@@ -18076,10 +19078,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "85e4dbc84c524b97450dc041ce06a6b889fa8bd32f87556eb455c2ad56c30460",
-      "content": "2051814e611afc4988e0c6b658962027229c17a59e5d2ab05ac71481759c68fc"
+      "content": "16b730fa137475960db0941a0a9f91eea6e4104080ddf5bf1f44ccfc9c996fd1"
     }
   },
   {
@@ -18199,10 +19206,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "5782563736af95c277e4ffb3c5020507103740cc1e5a1e4aec062a971d3ffab4",
-      "content": "1a240ea983976aa216b10b0537c50049a70c53ab1175560845b72161cf93ffdb"
+      "content": "cb40d14df2555b44863301746967a8929e5ff591b4341c3d08c777908d0a6901"
     }
   },
   {
@@ -18328,10 +19340,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "d404387c9253ad9585fd51bfba713efd52caa05feeaad179e35f73f346600c02",
-      "content": "593b8d63c60aeba242f9e3c94598fe8612b1e78a955347dd6a9a69a2490075f8"
+      "content": "ccc5fac0439cb82c30b24f7b74d933bd3c9fffb671df3e12212fe11cd1bf8b46"
     }
   },
   {
@@ -18451,10 +19468,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "611d7b316f0bee97bf031d261adaaa4fc0d944197654262dc2ff8e8f2dd653dd",
-      "content": "798494ea8b6b5353b046d93a1a6678bc9f732048636d7caca27ee215c45e8bc5"
+      "content": "61c644a3008c6ea39f3fa22dfe089a0ed7d0ed41ee8174c30c7a1b2b11a505f5"
     }
   },
   {
@@ -18580,10 +19602,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "43c7aeb7865de6512a2e5cd65f01bec41e1daa49d202b4b4851f2dfd38b5f806",
-      "content": "65d97d8d40c47560c18eb2bd69ef1f721a209358e4d6ad8f795580bf54dc84c4"
+      "content": "4f4caea31c1ed1abf6c723f090c785b9ee82ac4a75e92b47a89c8a22978a214e"
     }
   },
   {
@@ -18676,7 +19703,7 @@
     "behavior": {
       "effect": "destructive",
       "idempotency": "idempotent",
-      "longRunning": true,
+      "longRunning": false,
       "safeToRetry": false,
       "supportsPreview": true,
       "supportsUndo": false
@@ -18703,10 +19730,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "611d7b316f0bee97bf031d261adaaa4fc0d944197654262dc2ff8e8f2dd653dd",
-      "content": "89c14a4c770abd9f97525fd447fbcea10b0e76be356ea142208e91f429cc4841"
+      "content": "dc51e465daa6a2c50e4d97f38d329ed6d1ac73c2e926998c5b31b6f38507cce0"
     }
   },
   {
@@ -18821,10 +19853,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "85e4dbc84c524b97450dc041ce06a6b889fa8bd32f87556eb455c2ad56c30460",
-      "content": "e5d936e7d58a1a6d473e598005c73de287ce9d9266a6fa557022885820c1b9bd"
+      "content": "6db564a6f7876473faf5a3e85874c79c0618574467b72dbd529e1bf2c4eb8c88"
     }
   },
   {
@@ -18952,10 +19989,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "4b23fd983cac51e89bfbe30c03a10b891c725a3e4732b72d13c6a50687ee0ef2",
-      "content": "81d0333e3b4bf96d54e81413ae030acc67d4a87b3afa5ef9d36a3aabff93cf99"
+      "content": "d70ac5b07aa1fda21ddbbd6c92f1582664402b7772ba2e67b90b37a9e2a84b3f"
     }
   },
   {
@@ -19043,7 +20085,7 @@
     "behavior": {
       "effect": "destructive",
       "idempotency": "idempotent",
-      "longRunning": true,
+      "longRunning": false,
       "safeToRetry": false,
       "supportsPreview": true,
       "supportsUndo": false
@@ -19070,10 +20112,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "85e4dbc84c524b97450dc041ce06a6b889fa8bd32f87556eb455c2ad56c30460",
-      "content": "a92ec7a0f062ca5fdfb8a57f6ee1306058aade21b97aeb17495cb5b48b8cd585"
+      "content": "785edf1d8b14d1635abb613937b416d4f6b4294d1d2706ff0ebdc5b5a3898544"
     }
   },
   {
@@ -19199,10 +20246,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "ae574fcd19c96e73c5ef9791453751942ac821625ba7c17cad1378bdcd69bc06",
-      "content": "85c8f4e1d1750e49cca845f42316f3ef2ea079d6868879d90d9b1c7463bb0630"
+      "content": "94481b1e6e59d46c652174ed12bb96ded88db27816e7543f21807c76f13db344"
     }
   },
   {
@@ -19290,7 +20342,7 @@
     "behavior": {
       "effect": "destructive",
       "idempotency": "idempotent",
-      "longRunning": true,
+      "longRunning": false,
       "safeToRetry": false,
       "supportsPreview": true,
       "supportsUndo": false
@@ -19317,10 +20369,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "7c29d6fda67438a93c70057c205ad77742d03234f471cb0e01170f065585c3da",
-      "content": "8b982b71ed67824ec38041af0f3958834039bbc9c2a3613e903cbc417cac7eae"
+      "content": "4ac932e0b28ebfe0be7974886069eca88f8deaa6b80b23b15fefafc5c4fa9a79"
     }
   },
   {
@@ -19435,10 +20492,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "7c29d6fda67438a93c70057c205ad77742d03234f471cb0e01170f065585c3da",
-      "content": "bed64359f9b111af31844ddb8859b5e91f4c495057ee6a437054fa3df3ce27c5"
+      "content": "a7b2e4cc8f3f159b7ce091e5d73aeaedff396a1205c126f0eb9b94d0dfca0d6b"
     }
   },
   {
@@ -19558,10 +20620,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "ac92a1f62dfedf01efa0968adef6a7f2b3fa520d93d49ca1123bc2f089973e9d",
-      "content": "0bcae37e5c35c663cb8fb3616d73f51091b966b86670dff970b4de84843e18cf"
+      "content": "6e2b115f4b07142e4114a6eb8b50dbfcdcb23f276eb723281058a086ebff5e03"
     }
   },
   {
@@ -19654,7 +20721,7 @@
     "behavior": {
       "effect": "destructive",
       "idempotency": "idempotent",
-      "longRunning": true,
+      "longRunning": false,
       "safeToRetry": false,
       "supportsPreview": true,
       "supportsUndo": false
@@ -19681,10 +20748,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "ac92a1f62dfedf01efa0968adef6a7f2b3fa520d93d49ca1123bc2f089973e9d",
-      "content": "4ad36bdcf242dcbfcf22dbc20279dfeee51f635be702641bc435a674d39a0c3e"
+      "content": "2d6dd32d2f7e3922b47b8c70b560929581b8211a79e4043e505946bb3955b1c3"
     }
   },
   {
@@ -19809,10 +20881,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "2b2580260ba70bdd2a59dfe3cf5fa71b79ae5e50612346e4655d721e4883aed0",
-      "content": "789bbbe8bd6ee85a76b9abd6ea9d561820d8d7212741f97cc675ab9c0fc25c45"
+      "content": "f15f49db11c834be2791976320bada141e7893359f0c06a837e0af39b8a28f9c"
     }
   },
   {
@@ -19935,10 +21012,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "0dcd3e828dc4cb03db621ae2758d69d32ae2c40c59e1d9336d027cf36cded1b4",
-      "content": "4170ee8740c683ed7b6e8e65d417b9975cfccc6f9d9b592a1ee053cc97f33969"
+      "content": "1b67868df388d9356476e8671490ef2b76382d0269f0f7a1609530ba2a0f0c26"
     }
   },
   {
@@ -20066,10 +21148,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "b7c5109935702925176b5de856fc171c00db8cac06ef6a95411d38a340efa1d2",
-      "content": "cc13854e0a4b3ddc1c5a0a89de95c9152d48ae8afb2506447703a7d074bf11b7"
+      "content": "973b03f58345f541fda623b82a60e529c86c4796c7d3006be82b3f931038933c"
     }
   },
   {
@@ -20200,10 +21287,15 @@
     "deprecation": {
       "status": "active"
     },
+    "parent": {
+      "parent": "manage_asset",
+      "description": "Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.",
+      "category": "core"
+    },
     "hashes": {
       "algorithm": "sha256",
       "schema": "c3755f9c9fcfd4e1892c33144380f36fcf92ee4cc918d093b3605c3f5f1aae3f",
-      "content": "689560b6a63ba928a61d14f9665f2292c4bab8ed7c4efec28b595b79494490ec"
+      "content": "6b5bbf8c474c9104d5543f00ab9a0ee2c009d400f3e63017bc733a97a195d782"
     }
   }
 ]

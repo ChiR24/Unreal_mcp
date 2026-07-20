@@ -42,11 +42,11 @@ export const WIDGET_CONTENT_RECORDS: readonly CapabilityRecordSource[] = [
   content('add_image', 'blueprint.add_image', 'Add an Image widget for displaying a texture or brush.', { texturePath: P.texturePath, brushSize: P.brushSize, colorAndOpacity: P.colorAndOpacity }),
   content('add_button', 'blueprint.add_button', 'Add a Button widget for click interaction.', { text: P.text, isEnabled: P.isEnabled }),
   content('add_check_box', 'blueprint.add_check_box', 'Add a Check Box widget for boolean toggle.', { isChecked: P.isChecked, isEnabled: P.isEnabled }),
-  content('add_slider', 'blueprint.add_slider', 'Add a Slider widget for range selection.', { minValue: P.minValue, maxValue: P.maxValue, stepSize: P.stepSize, isEnabled: P.isEnabled }),
+  content('add_slider', 'blueprint.add_slider', 'Add a Slider widget for range selection.', { minValue: P.minValue, maxValue: P.maxValue, stepSize: P.stepSize, isEnabled: P.isEnabled, value: P.value }),
   content('add_progress_bar', 'blueprint.add_progress_bar', 'Add a Progress Bar widget for percentage display.', { percent: P.percent, fillColorAndOpacity: P.fillColorAndOpacity, isMarquee: P.isMarquee }),
   content('add_text_input', 'blueprint.add_text_input', 'Add a Text Input (editable text) widget for user text entry.', { inputType: P.inputType, hintText: P.hintText, isEnabled: P.isEnabled }),
   content('add_combo_box', 'blueprint.add_combo_box', 'Add a Combo Box (dropdown) widget for option selection.', { options: P.options, selectedOption: P.selectedOption, isEnabled: P.isEnabled }),
-  content('add_spin_box', 'blueprint.add_spin_box', 'Add a Spin Box widget for numeric increment/decrement.', { minValue: P.minValue, maxValue: P.maxValue, delta: P.delta, stepSize: P.stepSize }),
+  content('add_spin_box', 'blueprint.add_spin_box', 'Add a Spin Box widget for numeric increment/decrement.', { minValue: P.minValue, maxValue: P.maxValue, delta: P.delta, stepSize: P.stepSize, value: P.value }),
   content('add_list_view', 'blueprint.add_list_view', 'Add a List View widget for scrollable entry lists.', { orientation: P.orientation, scrollBarVisibility: P.scrollBarVisibility }),
   content('add_tree_view', 'blueprint.add_tree_view', 'Add a Tree View widget for hierarchical entry display.', { orientation: P.orientation, scrollBarVisibility: P.scrollBarVisibility }),
 ];

@@ -3,7 +3,7 @@
 // continuation with max page size 500 and opaque cursor contract.
 
 import type { RecordSpec } from './builder.js';
-import { aliasCanonical, aliasOf, arr, arrObj, bool, boundedLimit, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, num, READ, READ_POLICY, r, schema, str, WRITE, WRITE_POLICY } from './builder.js';
+import { aliasCanonical, aliasOf, arr, arrObj, bool, boundedLimit, boundedPagination, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, num, READ, READ_POLICY, r, schema, str, WRITE, WRITE_POLICY } from './builder.js';
 
 const SOURCE_PATH = str('Source filesystem path for import.');
 const DEST_PATH = str('Destination /Game asset path.');
@@ -30,6 +30,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       path: { type: 'string', default: '/Game', description: 'Canonical /Game path to list.' },
       limit: boundedLimit(500, 50),
       offset: num('Zero-based offset into the full result set.'),
+      pagination: boundedPagination(500, 50),
       cursor: str('Opaque pagination cursor returned by a previous list response. Forward verbatim to resume.'),
       recursive: bool('Recurse into subdirectories.'),
       depth: num('Maximum recursion depth.'),
@@ -79,18 +80,18 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('delete', 'asset', 'Permanently delete one or more assets after explicit confirmation.',
-    schema({ paths: arr('Asset paths to delete.'), assetPath: str('Single asset path (alternative to paths).') }, []),
+    schema({ paths: arr('Asset paths to delete.'), assetPath: str('Single asset path (alternative to paths).'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { normalization: aliasCanonical('delete_asset/delete_assets'),
       examples: [ex('Delete one asset', { paths: ['/Game/MCPTest/Disposable'] }, { success: true })] }
   ),
   r('delete_asset', 'asset', 'Long-form alias for delete.',
-    schema({ paths: arr('Asset paths to delete.'), assetPath: str('Single asset path.') }, []),
+    schema({ paths: arr('Asset paths to delete.'), assetPath: str('Single asset path.'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { normalization: aliasOf('asset.delete') }
   ),
   r('delete_assets', 'asset', 'Plural-form alias for delete.',
-    schema({ paths: arr('Asset paths to delete.'), assetPath: str('Single asset path.') }, []),
+    schema({ paths: arr('Asset paths to delete.'), assetPath: str('Single asset path.'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { normalization: aliasOf('asset.delete') }
   ),

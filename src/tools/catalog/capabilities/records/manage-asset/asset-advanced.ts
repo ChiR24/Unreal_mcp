@@ -18,7 +18,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
   ),
   r('generate_lods', 'asset', 'Generate LOD levels for a static mesh asset.',
     schema({ assetPath: ASSET_PATH, lodCount: num('Number of LOD levels to generate.') }, ['assetPath', 'lodCount']),
-    OK, WRITE, WRITE_POLICY, HIGH, { dispatchMode: 'tool' }
+    OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH, { dispatchMode: 'tool' }
   ),
   r('add_material_parameter', 'asset', 'Add a parameter to a material.',
     schema({ assetPath: str('Material asset path.'), parameterName: str('Parameter name.'), parameterType: str('Parameter type.'), value: { description: 'Parameter value.' } }, ['assetPath', 'parameterName']),
@@ -42,16 +42,16 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
   ),
   r('nanite_rebuild_mesh', 'asset', 'Rebuild a Nanite mesh representation.',
     schema({ assetPath: str('Static mesh asset path.') }, ['assetPath']),
-    OK, WRITE, WRITE_POLICY, HIGH,
+    OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { dispatchAction: 'manage_render', dispatchMode: 'action',
       normalization: divergence('Transport divergence: TS routes nanite_rebuild_mesh through the manage_render bridge action, not manage_asset.') }
   ),
   r('bulk_rename', 'asset', 'Rename multiple assets by pattern or explicit paths.',
-    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths.'), searchText: str('Search pattern.'), replaceText: str('Replacement text.'), prefix: str('Name prefix.'), suffix: str('Name suffix.'), checkoutFiles: bool('Check out files in source control.') }, []),
+    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths.'), searchText: str('Search pattern.'), pattern: str('Search pattern (used when searchText is absent).'), replaceText: str('Replacement text.'), replacement: str('Replacement text (used when replaceText is absent).'), prefix: str('Name prefix.'), suffix: str('Name suffix.'), checkoutFiles: bool('Check out files in source control.') }, []),
     OK, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM, { dispatchAction: 'bulk_rename', dispatchMode: 'action' }
   ),
   r('bulk_delete', 'asset', 'Delete multiple assets by folder or explicit paths.',
-    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths to delete.'), showConfirmation: bool('Show confirmation prompt.') }, []),
+    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths to delete.'), showConfirmation: bool('Show confirmation prompt.'), fixupRedirectors: bool('Fix up redirectors left behind by the deletion.') }, []),
     OK, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH, { dispatchAction: 'bulk_delete', dispatchMode: 'action' }
   ),
   r('source_control_checkout', 'asset', 'Check out assets in source control.',

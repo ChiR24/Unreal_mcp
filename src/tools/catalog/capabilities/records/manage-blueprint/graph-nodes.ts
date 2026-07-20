@@ -25,7 +25,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.',
     whenToUse: ['A new node must be placed in a Blueprint event or function graph.'],
     whenNotToUse: ['A reroute node for wire organization is needed (use create_reroute_node).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeType: P.nodeType, memberName: P.memberName, posX: P.posX, posY: P.posY, functionName: P.functionName, eventName: P.eventName, customEventName: P.customEventName },
+    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeType: P.nodeType, memberName: P.memberName, posX: P.posX, posY: P.posY, functionName: P.functionName, eventName: P.eventName, customEventName: P.customEventName, memberClass: P.memberClass, targetClass: P.targetClass, inputAxisName: P.inputAxisName, inputActionPath: P.inputActionPath, inputActionAssetPath: P.inputActionAssetPath, actionPath: P.actionPath },
     required: ['action', 'blueprintPath', 'nodeType', 'posX', 'posY'],
     outputProps: {
       nodeGuid: { type: 'string', description: 'Unique node identifier for subsequent graph operations.' },
@@ -49,7 +49,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a node to a Blueprint graph (alias of create_node with simplified type resolution).',
     whenToUse: ['A node must be added using a friendly type alias (e.g. Branch, Cast, GetVariable).'],
     whenNotToUse: ['Full member-class control is needed (use create_node).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeType: P.nodeType, posX: P.posX, posY: P.posY, memberName: P.memberName, functionName: P.functionName, eventName: P.eventName },
+    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeType: P.nodeType, posX: P.posX, posY: P.posY, memberName: P.memberName, functionName: P.functionName, eventName: P.eventName, nodeName: P.nodeName },
     required: ['action', 'blueprintPath', 'nodeType'],
     outputProps: {
       nodeGuid: { type: 'string', description: 'Unique node identifier for subsequent graph operations.' },
@@ -71,7 +71,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Delete a node from a Blueprint graph by its nodeGuid.',
     whenToUse: ['A graph node must be permanently removed.'],
     whenNotToUse: ['The node should be moved rather than deleted.'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId },
+    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, nodeGuid: P.nodeGuid },
     required: ['action', 'blueprintPath', 'nodeId'],
     effect: 'destructive',
     behavior: { safeToRetry: false, supportsUndo: false },
@@ -110,7 +110,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Read details for one graph node, including its pins and linked connections.',
     whenToUse: ['A single node\'s pins, type, and links must be inspected.'],
     whenNotToUse: ['All nodes in a graph are needed (use get_graph_details).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId },
+    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, nodeGuid: P.nodeGuid },
     required: ['action', 'blueprintPath', 'nodeId'],
     outputProps: {
       nodeId: P.nodeId,
@@ -156,7 +156,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Read pin details (direction, type, links, defaults) for one node in a Blueprint graph.',
     whenToUse: ['Pin-level details including linkedTo connections must be inspected for a single node.'],
     whenNotToUse: ['All nodes with pins are needed (use get_graph_details with includePins).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId },
+    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, nodeGuid: P.nodeGuid },
     required: ['action', 'blueprintPath', 'nodeId'],
     outputProps: {
       nodeId: P.nodeId,
@@ -225,7 +225,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     },
     outputRequired: ['nodeGuid'],
     effect: 'write',
-    behavior: { longRunning: true, supportsUndo: true },
+    behavior: { longRunning: false, supportsUndo: true },
     latency: 'interactive',
     resources: 'medium',
     plugins: BP_PLUGINS,
