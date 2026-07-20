@@ -14,7 +14,7 @@ vi.mock('../foundation/dispatch/common-handlers.js', async () => {
 });
 
 import { handleSequenceTools } from './sequence-handlers.js';
-import { manageSequenceToolDefinition } from '../../definitions/utility/manage-sequence-tool.js';
+import { consolidatedToolDefinitions } from '../../catalog/consolidated-tool-definitions.js';
 
 const tools = {
   systemTools: {
@@ -266,6 +266,7 @@ describe('handleSequenceTools path normalization', () => {
 
 describe('manage_sequence value and frame-rate schema', () => {
   it('advertises every value shape accepted by sequence handlers', () => {
+    const manageSequenceToolDefinition = consolidatedToolDefinitions.find((t) => t.name === 'manage_sequence') as NonNullable<typeof consolidatedToolDefinitions[number]>;
     const properties = manageSequenceToolDefinition.inputSchema.properties;
     if (typeof properties !== 'object' || properties === null || Array.isArray(properties)) {
       throw new TypeError('manage_sequence properties schema is unavailable');
@@ -283,6 +284,7 @@ describe('manage_sequence value and frame-rate schema', () => {
   });
 
   it('does not advertise particle asset assignment for activation tracks', () => {
+    const manageSequenceToolDefinition = consolidatedToolDefinitions.find((t) => t.name === 'manage_sequence') as NonNullable<typeof consolidatedToolDefinitions[number]>;
     const properties = manageSequenceToolDefinition.inputSchema.properties;
     if (typeof properties !== 'object' || properties === null || Array.isArray(properties)) {
       throw new TypeError('manage_sequence properties schema is unavailable');

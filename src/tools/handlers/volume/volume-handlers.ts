@@ -147,8 +147,14 @@ export async function handleVolumeTools(
     // Volume Configuration (3 actions)
     // ========================================================================
     case 'set_volume_extent':
-    case 'set_volume_bounds': // Alias for compatibility
       return sendRequest('set_volume_extent');
+
+    case 'set_volume_bounds':
+      // Distinct native six-value min/max bounds contract
+      // (McpAutomationBridge_VolumeHandlersBounds.cpp HandleSetVolumeBounds),
+      // NOT an alias of set_volume_extent. Task 21: stop the silent lossy
+      // collapse that dropped the bounds.origin/position semantics.
+      return sendRequest('set_volume_bounds');
 
     case 'set_volume_properties':
       return sendRequest('set_volume_properties');

@@ -54,7 +54,7 @@ describe('handleActorTools list', () => {
 
   it('exposes actor-list result fields in the public schemas', async () => {
     const { consolidatedToolDefinitions } = await import('../../catalog/consolidated-tool-definitions.js');
-    const { coreToolDefinitions } = await import('../../schemas/core-tools.js');
+    const { generatedParentToolDefinitions: coreToolDefinitions } = await import('../../catalog/capabilities/generated/parent-tool-definitions.generated.js');
     const tools = [
       consolidatedToolDefinitions.find((tool) => tool.name === 'control_actor'),
       coreToolDefinitions.find((tool) => tool.name === 'control_actor')
@@ -76,6 +76,7 @@ describe('handleActorTools list', () => {
       expect(outputProperties).toHaveProperty('isPieWorld');
       expect(outputProperties).toHaveProperty('worldName');
       expect(outputProperties).toHaveProperty('filter');
+      expect(outputProperties).toHaveProperty('success');
     }
   });
 

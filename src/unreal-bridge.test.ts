@@ -83,7 +83,7 @@ describe('UnrealBridge timeout env parsing', () => {
     const bridge = new UnrealBridge();
 
     await expect(bridge.executeConsoleCommand('py print("unsafe")'))
-      .rejects.toThrow(/Python console commands are blocked/);
+      .rejects.toThrow(/Dangerous command blocked/);
     bridge.dispose();
   });
 

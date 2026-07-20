@@ -24,7 +24,7 @@ function createConnectedTools() {
 describe('handleEditorTools', () => {
   it('keeps control_editor schemas strict-function compatible', async () => {
     const { consolidatedToolDefinitions } = await import('../../catalog/consolidated-tool-definitions.js');
-    const { coreToolDefinitions } = await import('../../schemas/core-tools.js');
+    const { generatedParentToolDefinitions: coreToolDefinitions } = await import('../../catalog/capabilities/generated/parent-tool-definitions.generated.js');
     const tools = [
       consolidatedToolDefinitions.find((tool) => tool.name === 'control_editor'),
       coreToolDefinitions.find((tool) => tool.name === 'control_editor')
@@ -43,7 +43,7 @@ describe('handleEditorTools', () => {
 
   it('exposes all supported simulate_input parameters in the public schemas', async () => {
     const { consolidatedToolDefinitions } = await import('../../catalog/consolidated-tool-definitions.js');
-    const { coreToolDefinitions } = await import('../../schemas/core-tools.js');
+    const { generatedParentToolDefinitions: coreToolDefinitions } = await import('../../catalog/capabilities/generated/parent-tool-definitions.generated.js');
     const tools = [
       consolidatedToolDefinitions.find((tool) => tool.name === 'control_editor'),
       coreToolDefinitions.find((tool) => tool.name === 'control_editor')

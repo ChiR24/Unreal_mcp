@@ -225,7 +225,7 @@ describe('executeAutomationRequest console command validation', () => {
     const { tools, sendAutomationRequest } = createConnectedTools();
 
     await expect(executeAutomationRequest(tools, 'console_command', { command: 'py print("unsafe")' }))
-      .rejects.toThrow(/Python console commands are blocked/);
+      .rejects.toThrow(/Dangerous command blocked/);
 
     expect(sendAutomationRequest).not.toHaveBeenCalled();
   });
