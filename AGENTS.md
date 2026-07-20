@@ -39,7 +39,7 @@ NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-
 | Change WebSocket automation | `src/automation/` (plus `src/unreal-bridge*.ts` at root) | Handshake, connection policy, request tracking, token/TLS plumbing |
 | Change Unreal request routing | `plugins/McpAutomationBridge/.../Private/Core/` | Queue, game-thread dispatch, handler registration, responses |
 | Add Unreal bridge behavior | `plugins/McpAutomationBridge/.../Private/Domains/<Domain>/` | Register through `Private/Core/Subsystem/*Registration.cpp` shard |
-| Add native MCP metadata | `plugins/McpAutomationBridge/.../Private/MCP/` | Self-register with `MCP_REGISTER_TOOL`; keep canonical names only |
+| Add native MCP metadata | `plugins/McpAutomationBridge/.../Private/MCP/` | Canonical tool/action records are the source of truth; native registration is generated into the native registry from those records — do not hand-author per-tool `MCP_REGISTER_TOOL` classes |
 | Change shared Unreal helpers | `plugins/McpAutomationBridge/.../Private/Foundation/` | Reflection, Blueprint, paths, responses, handler primitives |
 | Fix UE save/load/delete crashes | `plugins/McpAutomationBridge/.../Private/Safety/` | Use the project wrappers and preserve verification/cleanup |
 | Change bridge sockets | `plugins/McpAutomationBridge/.../Private/Transport/` | WebSocket framing/TLS plus connection auth, rate limits, telemetry |
@@ -106,7 +106,7 @@ NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-
 ## UNIQUE STYLES
 - 23 canonical parent tools hide hundreds of actions behind action enums to reduce client context.
 - Dynamic tool management exists in both TS and native MCP; `manage_tools` and `inspect` are protected (cannot be disabled; `core` category is fixed).
-- The native plugin has self-describing MCP tool definitions in C++ separate from TS JSON schemas; `MCP_REGISTER_TOOL` only attempts static registration and non-canonical names are silently filtered.
+- The native plugin's MCP tool definitions are generated into a native registry from the canonical TS records (the TypeScript `consolidated-tool-definitions.ts` is itself a generated facade over the canonical parent metadata). Handwritten per-tool `MCP_REGISTER_TOOL` classes have been removed; the generated native registration replaces them, and only canonical names survive.
 - The bridge plugin is responsibility-split: `Core` routes, `Domains` implement, `Foundation` shares primitives, `Safety` wraps hazardous editor ops, `Transport` owns sockets.
 - Both transports default to a single `unreal` gateway tool (`search`/`describe`/`execute`/`configure`). Discovery is **progressive and never dumps full schemas**: `describe` drills down `tool` summary -> `tool+action` parameter catalog -> `tool+action+param` single schema, and `perActionSchemas` is always `false` (the parameter catalog is the tool-union). Invalid calls return guided errors with `suggestions` plus an executable `nextCall`. Opt out of gateway mode per-surface (`MCP_GATEWAY_MODE=false` for TS; `Enable Native Gateway` off for native).
 - Protocol version negotiation is **intentionally asymmetric**: the native `/mcp` transport supports exactly the three modern MCP versions (`2025-11-25`, `2025-06-18`, `2025-03-26`) and deliberately does not implement the later `2026-07-28` RC. The TypeScript SDK also accepts two older legacy versions (`2024-11-05`, `2024-10-07`) from its `SUPPORTED_PROTOCOL_VERSIONS` set, so the native surface is intentionally stricter than the TS surface.
