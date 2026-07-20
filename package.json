@@ -41,8 +41,14 @@
     "test:native-parity": "node tests/native-mcp-parity-audit.mjs",
     "test:params": "npm run test:native-parity && node tests/parameter-combination-audit.mjs --static --strict --optional-strict",
     "type-check": "tsc --noEmit",
+    "registry:generate": "node --loader ts-node/esm scripts/generate-canonical-registry.ts",
+    "registry:check": "node --loader ts-node/esm scripts/generate-canonical-registry.ts --check",
     "manifest:check": "node --loader ts-node/esm scripts/generate-gateway-manifest.ts --check",
-    "version:check": "vitest run tests/unit/version-consistency.test.ts"
+    "normalization:check": "node --loader ts-node/esm scripts/generate-normalization-inventory.mjs --check",
+    "normalization:audit": "node --loader ts-node/esm scripts/audit-normalization-inventory.mjs",
+    "version:check": "vitest run tests/unit/version-consistency.test.ts",
+    "policy:generate": "node --loader ts-node/esm scripts/generate-console-command-policy.ts",
+    "policy:check": "node --loader ts-node/esm scripts/generate-console-command-policy.ts --check"
   },
   "engines": {
     "node": ">=20.19.0"
