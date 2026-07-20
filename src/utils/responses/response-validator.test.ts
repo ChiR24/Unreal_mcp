@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { consolidatedToolDefinitions } from '../../tools/catalog/consolidated-tool-definitions.js';
+import { unrealGatewayToolDefinition } from '../../tools/catalog/unreal-gateway-definition.js';
 import { ResponseValidator } from './response-validator.js';
 
 describe('ResponseValidator', () => {
@@ -122,5 +124,91 @@ describe('ResponseValidator', () => {
         mimeType: 'image/png'
       }
     });
+  });
+
+  it('compiles a schema with the boolean x-unreal-reflection-boundary annotation', () => {
+    const validator = new ResponseValidator();
+
+    const schema = {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          'x-unreal-reflection-boundary': true
+        }
+      }
+    };
+
+    expect(() => validator.registerSchema('ue_reflection_tool', schema)).not.toThrow();
+  });
+
+  it('passes valid freeform reflection data through an annotated schema', async () => {
+    const validator = new ResponseValidator();
+
+    const schema = {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          'x-unreal-reflection-boundary': true
+        }
+      }
+    };
+    validator.registerSchema('ue_reflection_tool', schema);
+
+    const response = {
+      success: true,
+      data: {
+        className: 'AActor',
+        properties: { health: 100, name: 'Hero' }
+      }
+    };
+
+    const result = await validator.validateResponse('ue_reflection_tool', response);
+    expect(result.valid).toBe(true);
+  });
+
+  it('fails malformed schema-backed response data for an annotated schema', async () => {
+    const validator = new ResponseValidator();
+
+    const schema = {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          'x-unreal-reflection-boundary': true
+        }
+      }
+    };
+    validator.registerSchema('ue_reflection_tool', schema);
+
+    const response = {
+      success: true,
+      data: 'not-an-object'
+    };
+
+    const result = await validator.validateResponse('ue_reflection_tool', response);
+    expect(result.valid).toBe(false);
+    expect(Array.isArray(result.errors)).toBe(true);
+    expect(result.errors?.length).toBeGreaterThan(0);
+  });
+
+  it('registers all 23 canonical parent schemas plus the gateway (24 total)', () => {
+    const validator = new ResponseValidator();
+
+    // Mirror the exact registration order used by server-factory.createServer().
+    for (const tool of consolidatedToolDefinitions) {
+      if (tool.outputSchema) {
+        validator.registerSchema(tool.name, tool.outputSchema);
+      }
+    }
+    if (unrealGatewayToolDefinition.outputSchema) {
+      validator.registerSchema(unrealGatewayToolDefinition.name, unrealGatewayToolDefinition.outputSchema);
+    }
+
+    const stats = validator.getStats();
+    expect(stats.totalSchemas).toBe(24);
+    expect(stats.tools).toContain('manage_sequence');
+    expect(stats.tools).toContain('unreal');
   });
 });

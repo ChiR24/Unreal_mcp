@@ -22,7 +22,15 @@ export class ResponseValidator {
     this.ajv = new AjvClass({
       allErrors: true,
       verbose: true,
-      strict: true // Enforce strict schema validation
+      strict: true, // Enforce strict schema validation
+      allowUnionTypes: true // Accept intentional multiple-type unions (e.g. frameRate: ['number','string'])
+    });
+
+    // Register the UE reflection-boundary annotation as a boolean, annotation-only keyword (valid:true) so strict compilation accepts it without weakening strict mode.
+    this.ajv.addKeyword({
+      keyword: 'x-unreal-reflection-boundary',
+      schemaType: 'boolean',
+      valid: true
     });
   }
 
