@@ -188,15 +188,22 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
     TSet<FKey> PressedButtons;
     PressedButtons.Add(MouseButtonKey);
 
-    FPointerEvent MouseDownEvent(0, Position, Position, FVector2D(0.0f, 0.0f),
-                                 PressedButtons, FModifierKeysState());
-    SlateApp.ProcessMouseButtonDownEvent(nullptr, MouseDownEvent);
+    // Slate widgets (SButton, SComboBox, ...) gate clicks on
+    // GetEffectingButton(); the EffectingButton-less FPointerEvent
+    // constructor leaves it as an invalid FKey, so synthetic clicks never
+    // trigger any editor UI. Use the EffectingButton-aware constructor and
+    // mirror platform behaviour: down carries the button in PressedButtons,
+    // up carries an empty set.
+    FPointerEvent MouseDownEvent(0, Position, Position, PressedButtons,
+                                 MouseButtonKey, 0.0f, FModifierKeysState());
+    const bool bDownHandled =
+        SlateApp.ProcessMouseButtonDownEvent(nullptr, MouseDownEvent);
 
     TSet<FKey> ReleasedButtons;
-    FPointerEvent MouseUpEvent(0, Position, Position, FVector2D(0.0f, 0.0f),
-                               ReleasedButtons, FModifierKeysState());
-    SlateApp.ProcessMouseButtonUpEvent(MouseUpEvent);
-    bHandledBySlate = true;
+    FPointerEvent MouseUpEvent(0, Position, Position, ReleasedButtons,
+                               MouseButtonKey, 0.0f, FModifierKeysState());
+    const bool bUpHandled = SlateApp.ProcessMouseButtonUpEvent(MouseUpEvent);
+    bHandledBySlate = bDownHandled || bUpHandled;
     bSuccess = true;
     Message = FString::Printf(TEXT("Mouse click at (%f, %f)"), X, Y);
   } else if (InputType == TEXT("mouse_move") || InputType == TEXT("move")) {
