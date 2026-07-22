@@ -1,0 +1,31 @@
+{
+  "_comment": "Task 33 lane-local normalized completion parity fixture. The neutral shared contract that BOTH the TypeScript modules (src/server/mcp-primitives/completions/) and the native mirror (Private/MCP/Primitives/McpCompletionProvider.{h,cpp}) are checked against. Not a runtime import; read by completion-fixtures.test.ts (TS) and tests/unit/plugin/mcp_completions_contracts.test.ts (native + TS source).",
+  "budgets": { "maxItems": 100, "maxBytes": 8192, "maxPrefixLength": 128 },
+  "guidanceCodes": [
+    "COMPLETION_SECRET_FIELD",
+    "COMPLETION_DESTRUCTIVE_FIELD",
+    "COMPLETION_UNBOUNDED_PREFIX",
+    "COMPLETION_UNBOUNDED_PATH",
+    "COMPLETION_UNAVAILABLE",
+    "COMPLETION_NO_MATCH"
+  ],
+  "candidateKinds": ["capability", "legacy-id", "enum", "project-handle"],
+  "slotKinds": ["capability", "enum", "project-handle"],
+  "slots": [
+    { "refType": "ref/resource", "refId": "ue://capability/{capabilityId}", "argumentName": "capabilityId", "kind": "capability", "capabilityScoped": true },
+    { "refType": "ref/resource", "refId": "ue://knowledge/{engineVersion}/{topic}", "argumentName": "engineVersion", "kind": "enum", "capabilityScoped": false },
+    { "refType": "ref/resource", "refId": "ue://knowledge/{engineVersion}/{topic}", "argumentName": "topic", "kind": "enum", "capabilityScoped": false },
+    { "refType": "ref/resource", "refId": "ue://object/{objectPath}", "argumentName": "objectPath", "kind": "project-handle", "capabilityScoped": false },
+    { "refType": "ref/resource", "refId": "ue://asset/{assetPath}", "argumentName": "assetPath", "kind": "project-handle", "capabilityScoped": false },
+    { "refType": "ref/prompt", "refId": "asset-import", "argumentName": "sourceFormat", "kind": "enum", "capabilityScoped": false },
+    { "refType": "ref/prompt", "refId": "sequence-render", "argumentName": "outputFormat", "kind": "enum", "capabilityScoped": false }
+  ],
+  "enumSets": {
+    "engineVersion": ["5.0", "5.1", "5.2", "5.3", "5.4", "5.5", "5.6", "5.7", "5.8"],
+    "topic": ["overview", "assets", "actors", "blueprints", "levels", "sequencer", "niagara", "physics"],
+    "sourceFormat": ["fbx", "obj", "gltf", "png", "wav"],
+    "outputFormat": ["png", "jpeg", "exr", "custom"]
+  },
+  "secretFragments": ["token", "secret", "password", "passwd", "apikey", "credential", "privatekey", "bearer", "auth"],
+  "destructiveFragments": ["confirm", "force", "overwrite", "purge", "wipe", "destroy"]
+}
