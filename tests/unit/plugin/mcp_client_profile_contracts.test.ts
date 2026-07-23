@@ -9,6 +9,7 @@ const nativeRoot = resolve(root, 'plugins/McpAutomationBridge/Source/McpAutomati
 const profileHeader = readFileSync(resolve(nativeRoot, 'Primitives/McpSessionCapabilityProfile.h'), 'utf8');
 const storeHeader = readFileSync(resolve(nativeRoot, 'Primitives/McpClientProfileStore.h'), 'utf8');
 const storeSource = readFileSync(resolve(nativeRoot, 'Primitives/McpClientProfileStore.cpp'), 'utf8');
+const elicitationHeader = readFileSync(resolve(nativeRoot, 'Primitives/McpElicitationPolicy.h'), 'utf8');
 
 const tsProfile = readFileSync(resolve(root, 'src/server/mcp-primitives/session-capability-profile.ts'), 'utf8');
 const tsFallback = readFileSync(resolve(root, 'src/server/mcp-primitives/fallback-pointers.ts'), 'utf8');
@@ -18,7 +19,7 @@ const tsElicitation = readFileSync(resolve(root, 'src/server/tool-registry-elici
 const NATIVE_BOOLS = ['bHasResources', 'bHasPrompts', 'bHasCompletions', 'bHasSubscriptions', 'bHasElicitation', 'bHasTasks'];
 const TS_BOOLS = ['hasResources', 'hasPrompts', 'hasCompletions', 'hasSubscriptions', 'hasElicitation', 'hasTasks'];
 const CAPABILITY_KEYS = ['resources', 'prompts', 'completions', 'subscriptions', 'elicitation', 'tasks', 'experimental'];
-const NATIVE_METHODS = ['resources/list', 'prompts/list', 'completion/complete', 'resources/subscribe', 'tasks/list'];
+const NATIVE_METHODS = ['resources/list', 'prompts/list', 'completion/complete', 'resources/subscribe'];
 
 const countPureLines = (source: string): number =>
   source.split(/\r?\n/u).filter((line) => !/^\s*$/u.test(line) && !/^\s*(?:#|\/\/)/u.test(line)).length;
@@ -50,6 +51,13 @@ describe('mcp client-profile C3 source contracts', () => {
       expect(tsFallback).toContain(op);
     }
     expect(profileHeader).toContain('McpFallbackPointerFor');
+    // Tasks is client-declarable but NOT server-backed (Task 44 pending): neither
+    // surface may emit a phantom native tasks/list, and both gate native mode on a
+    // server-backed check so a Tasks-declaring client is routed to the gateway.
+    expect(profileHeader).not.toContain('tasks/list');
+    expect(tsFallback).not.toContain('tasks/list');
+    expect(profileHeader).toContain('ServerBacksPrimitive');
+    expect(tsFallback).toContain('SERVER_BACKED_PRIMITIVES');
   });
 
   it('keeps the native store standalone with an explicit ClearSession', () => {
@@ -78,8 +86,33 @@ describe('mcp client-profile C3 source contracts', () => {
     }
   });
 
+  it('mirrors the safe elicitation policy and bounded consent decision in native metadata', () => {
+    for (const symbol of ['McpIsSafeToElicitField', 'McpEvaluateHighImpactConsent', 'FMcpConsentDecision', 'EMcpConsentReason', 'McpHighImpactConsentField']) {
+      expect(elicitationHeader).toContain(symbol);
+    }
+    // Bounded typed outcomes mirror the TS ConsentDecision.reason union.
+    for (const reason of ['Granted', 'Declined', 'Unsupported']) {
+      expect(elicitationHeader).toContain(reason);
+    }
+    // Secret and destructive field markers are excluded on BOTH surfaces.
+    for (const needle of ['token', 'secret', 'password', 'credential', 'authorization', 'confirm', 'force', 'delete', 'destroy', 'overwrite']) {
+      expect(elicitationHeader).toContain(needle);
+      expect(tsElicitation).toContain(needle);
+    }
+    // High-impact consent asks for the single boolean `consent` field, never a secret.
+    expect(elicitationHeader).toContain('consent');
+    // Decision-only mirror: no transport wiring, no server-initiated RPC, no new MCP method.
+    for (const forbidden of ['setRequestHandler', 'elicitation/create', 'SendRequest', 'HttpRequest', 'FMcpNativeTransport']) {
+      expect(elicitationHeader).not.toContain(forbidden);
+    }
+    // Never logs a token or field value.
+    for (const forbidden of ['UE_LOG', 'UE_LOGFMT']) {
+      expect(elicitationHeader).not.toContain(forbidden);
+    }
+  });
+
   it('never emits a host path, project env, or unsafe save in native metadata', () => {
-    for (const source of [profileHeader, storeHeader, storeSource]) {
+    for (const source of [profileHeader, storeHeader, storeSource, elicitationHeader]) {
       for (const forbidden of ['C:\\', '/home/', '/Users/', '.uproject', 'UE_PROJECT_PATH', 'UPackage::SavePackage']) {
         expect(source).not.toContain(forbidden);
       }
@@ -87,7 +120,7 @@ describe('mcp client-profile C3 source contracts', () => {
   });
 
   it('keeps each native file within the 250 pure-line ceiling', () => {
-    for (const source of [profileHeader, storeHeader, storeSource]) {
+    for (const source of [profileHeader, storeHeader, storeSource, elicitationHeader]) {
       expect(countPureLines(source)).toBeLessThanOrEqual(250);
     }
   });

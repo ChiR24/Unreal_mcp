@@ -1,0 +1,14 @@
+{
+  "id": "inadmissible-missing-cleanup",
+  "captureKind": "executable-ts",
+  "domain": "session",
+  "match": "exact",
+  "provenance": "a session that was never torn down (no cleanup receipt)",
+  "value": {
+    "sessionId": "harness-session-A",
+    "records": [
+      { "uri": "ue://selection", "ownerSessionId": "harness-session-A" }
+    ],
+    "cleaned": false
+  }
+}

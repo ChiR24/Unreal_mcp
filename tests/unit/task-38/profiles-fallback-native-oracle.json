@@ -1,0 +1,111 @@
+{
+  "_comment": "Task 38 lane D — normalized native decision oracle. This is the 'executable native fixture' the parity suite runs against: it encodes the NATIVE-side decision tables transcribed verbatim from the C++ source (line provenance below), NOT the TypeScript constants. The parity tests assert the TS runtime output equals these native values, so a one-sided drift (TS changed, native not) fails exact parity. This is normalized SEMANTIC parity (decision outputs), never source-text equivalence. LIMITATION (production gap): the values are transcribed from source, not captured from a live native /mcp runtime; the integrator must wire a live native comparison to close the transcription gap.",
+  "provenance": {
+    "profile": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Primitives/McpSessionCapabilityProfile.h:70-101 (McpParseSessionCapabilityProfile)",
+    "fallback": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Primitives/McpSessionCapabilityProfile.h:128-171 (NativeMethodFor / GatewayOperationFor / ServerBacksPrimitive / McpFallbackPointerFor)",
+    "store": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Primitives/McpClientProfileStore.cpp:7-44",
+    "directCall": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayDirectCallMigration.cpp:83-135 (McpBuildDirectCallMigration)",
+    "errorCodes": "MCP SDK JSON-RPC + src/server/mcp-primitives/primitive-handlers.ts:66-75; plugins/.../MCP/AGENTS.md (refused-but-supported vs method-not-found)",
+    "elicitation": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Primitives/McpElicitationPolicy.h (McpIsSafeToElicitField / EMcpConsentReason / FMcpConsentDecision / McpEvaluateHighImpactConsent / McpHighImpactConsentField), mirroring src/server/tool-registry-elicitation.ts"
+  },
+  "profileRules": {
+    "keys": ["resources", "prompts", "completions", "subscriptions", "elicitation", "tasks"],
+    "presentWhen": ["boolean-true", "json-object-including-empty"],
+    "absentWhen": ["missing", "boolean-false", "string", "number", "array", "null"],
+    "experimentalNesting": true,
+    "subscriptionsFromResourcesSubscribeTrue": true,
+    "subscriptionsIgnoreExperimentalResourcesSubscribe": true,
+    "malformedYieldsAllFalse": true,
+    "readsClientNameOrVersion": false
+  },
+  "fallback": {
+    "primitives": ["resources", "prompts", "completions", "subscriptions", "tasks"],
+    "serverBackedPrimitives": ["resources", "prompts", "completions", "subscriptions"],
+    "nativeMethod": {
+      "resources": "resources/list",
+      "prompts": "prompts/list",
+      "completions": "completion/complete",
+      "subscriptions": "resources/subscribe"
+    },
+    "gatewayOperation": {
+      "resources": "search",
+      "prompts": "describe",
+      "completions": "search",
+      "subscriptions": "search",
+      "tasks": "execute"
+    },
+    "supportedYieldsMode": "native-only-when-server-backed",
+    "unsupportedYieldsMode": "gateway",
+    "tasksNote": "tasks is client-declarable but NOT server-backed (Task 44 pending); it always resolves to the gateway execute operation, never a native tasks/list.",
+    "referenceKey": {
+      "native": "method",
+      "gateway": "operation"
+    }
+  },
+  "serverBackedMethods": [
+    "tools/list",
+    "tools/call",
+    "resources/list",
+    "resources/templates/list",
+    "resources/read",
+    "resources/subscribe",
+    "resources/unsubscribe",
+    "prompts/list",
+    "prompts/get",
+    "completion/complete"
+  ],
+  "advertisedSessionCapabilities": {
+    "tools": {},
+    "resources": { "subscribe": true },
+    "prompts": {},
+    "completions": {}
+  },
+  "errorCodes": {
+    "unsupportedMethod": -32601,
+    "refusedButSupported": -32602
+  },
+  "directCallMigration": {
+    "errorCode": "DIRECT_TOOL_CALL_REMOVED",
+    "controlFieldsStripped": ["action", "subAction", "params", "operation"],
+    "unknownTool": {
+      "operation": "search",
+      "nextCall": { "operation": "search" },
+      "messageFormat": "Direct tool calls are removed. '{tool}' is not a known tool; call the 'unreal' gateway with operation 'search' to discover the right capability.",
+      "includesSuggestions": true
+    },
+    "knownNoAction": {
+      "operation": "describe",
+      "nextCallShape": { "operation": "describe", "tool": "{tool}" },
+      "messageFormat": "Direct tool calls are removed. Call the 'unreal' gateway: describe '{tool}' to choose an action, then execute it."
+    },
+    "knownWithAction": {
+      "operation": "execute",
+      "nextCallShape": { "operation": "execute", "tool": "{tool}", "action": "{action}", "params": "{migratedParams}" },
+      "messageFormat": "Direct tool calls are removed. Call the 'unreal' gateway with operation 'execute' to run '{tool}.{action}'."
+    },
+    "actionSelection": "trimmed non-empty string action wins, else trimmed non-empty subAction, else no action"
+  },
+  "store": {
+    "emptySessionId": "silent-noop",
+    "clearAbsentIsNoop": true,
+    "clearRemovesOnlyNamed": true,
+    "overwriteOnReinit": true,
+    "sessionIsolation": true
+  },
+  "elicitation": {
+    "safeFieldPolicy": {
+      "excludedSecretFields": ["token", "apiKey", "api_key", "password", "passwd", "secret", "credential", "privateKey", "bearerToken", "authorization", "accessKey"],
+      "excludedDestructiveFields": ["confirm", "confirmDelete", "force", "delete", "destroy", "purge", "wipe", "overwrite", "drop"],
+      "allowedSafeFields": ["name", "assetPath", "count", "width", "mode", "destinationPath"]
+    },
+    "highImpactConsent": {
+      "field": "consent",
+      "type": "boolean",
+      "grantedOnlyOnExplicitTrue": true,
+      "unsupportedWhenClientCannotElicit": true,
+      "reasons": ["granted", "declined", "unsupported"],
+      "neverElicitsSecretOrDestructiveValue": true,
+      "logsTokenOrValue": false
+    }
+  }
+}

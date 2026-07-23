@@ -1,0 +1,14 @@
+{
+  "id": "inadmissible-source-text-grep",
+  "captureKind": "source-text",
+  "domain": "result",
+  "match": "exact",
+  "provenance": "grep of plugins/.../MCP/Transport/McpNativeTransportPrimitives.cpp lines 156-166 — a SOURCE snapshot, never an execution",
+  "value": {
+    "uri": "ue://capability/catalog",
+    "mimeType": "application/json",
+    "revision": 1,
+    "dataPresent": false,
+    "dataKeys": []
+  }
+}

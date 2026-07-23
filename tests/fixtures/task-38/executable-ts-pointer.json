@@ -1,0 +1,12 @@
+{
+  "id": "ts-pointer-resources-gateway-fallback",
+  "captureKind": "executable-ts",
+  "domain": "pointer",
+  "match": "exact",
+  "provenance": "Executed at runtime: fallbackPointerFor(MINIMAL_PROFILE, 'resources') from src/server/mcp-primitives/fallback-pointers.ts, normalized from {primitive,mode,hint,nextCall:{operation}} to the bounded {primitive,mode,reference}. Re-derived live in parity-harness-characterization.test.ts.",
+  "value": {
+    "primitive": "resources",
+    "mode": "gateway",
+    "reference": "search"
+  }
+}

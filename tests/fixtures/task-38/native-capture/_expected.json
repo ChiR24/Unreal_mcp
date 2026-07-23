@@ -1,0 +1,8 @@
+{
+  "note": "Sidecar manifest (NOT a capture) for the native-capture rejection fixtures. Maps each inadmissible harness-shaped native capture to the EXACT HarnessRejection.reason checkFixture must throw. model-not-genuine.json is intentionally ABSENT here: it is schema-VALID (a native-model is a recognized kind) but not a genuine parity side, so it is asserted via isGenuineNativeCapture/assertParityReady, not via a thrown reason.",
+  "expected": {
+    "reject-source-text-with-transcript.json": "SOURCE_TEXT_CAPTURE",
+    "reject-native-missing-transcript.json": "MALFORMED",
+    "reject-native-bad-protocol.json": "MALFORMED"
+  }
+}

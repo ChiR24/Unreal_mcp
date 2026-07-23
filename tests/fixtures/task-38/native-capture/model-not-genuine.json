@@ -1,0 +1,8 @@
+{
+  "id": "native-model-pointer-oracle",
+  "captureKind": "native-model",
+  "domain": "pointer",
+  "match": "exact",
+  "provenance": "hand-authored native oracle — admissible for characterization ONLY, never a completion claim",
+  "value": { "primitive": "resources", "mode": "gateway", "reference": "search" }
+}

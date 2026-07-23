@@ -122,13 +122,15 @@ namespace McpClientProfileInternal
 		return false;
 	}
 
+	// Native method for a SERVER-BACKED primitive only. There is deliberately no
+	// tasks branch: Task 44 has not implemented or advertised MCP Tasks, so tasks
+	// never resolves to a native method (it would only answer with -32601).
 	inline FString NativeMethodFor(const FString& Primitive)
 	{
 		if (Primitive == TEXT("resources")) return TEXT("resources/list");
 		if (Primitive == TEXT("prompts")) return TEXT("prompts/list");
 		if (Primitive == TEXT("completions")) return TEXT("completion/complete");
 		if (Primitive == TEXT("subscriptions")) return TEXT("resources/subscribe");
-		if (Primitive == TEXT("tasks")) return TEXT("tasks/list");
 		return FString();
 	}
 
@@ -138,16 +140,30 @@ namespace McpClientProfileInternal
 		if (Primitive == TEXT("tasks")) return TEXT("execute");
 		return TEXT("search");
 	}
+
+	// Mirrors SERVER_BACKED_PRIMITIVES in fallback-pointers.ts: the primitives the
+	// server backs with a registered native method. Tasks is excluded, so it never
+	// takes the native branch and a Tasks-declaring client is routed to the gateway.
+	inline bool ServerBacksPrimitive(const FString& Primitive)
+	{
+		return Primitive == TEXT("resources")
+			|| Primitive == TEXT("prompts")
+			|| Primitive == TEXT("completions")
+			|| Primitive == TEXT("subscriptions");
+	}
 }
 
 // The bounded pointer for one primitive under the given profile. Deterministic.
+// Native mode requires BOTH that the client declares the primitive AND that the
+// server backs it; otherwise the client gets exactly one bounded gateway op.
 inline FMcpFallbackPointer McpFallbackPointerFor(const FMcpSessionCapabilityProfile& Profile, const FString& Primitive)
 {
-	const bool bSupported = McpClientProfileInternal::ProfileSupports(Profile, Primitive);
+	const bool bNative = McpClientProfileInternal::ProfileSupports(Profile, Primitive)
+		&& McpClientProfileInternal::ServerBacksPrimitive(Primitive);
 	FMcpFallbackPointer Pointer;
 	Pointer.Primitive = Primitive;
-	Pointer.Mode = bSupported ? TEXT("native") : TEXT("gateway");
-	Pointer.Reference = bSupported
+	Pointer.Mode = bNative ? TEXT("native") : TEXT("gateway");
+	Pointer.Reference = bNative
 		? McpClientProfileInternal::NativeMethodFor(Primitive)
 		: McpClientProfileInternal::GatewayOperationFor(Primitive);
 	return Pointer;

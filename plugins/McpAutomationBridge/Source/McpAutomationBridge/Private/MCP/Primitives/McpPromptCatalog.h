@@ -31,31 +31,38 @@ namespace McpPromptErrorCodes
 }
 
 // A strictly typed prompt argument. `Kind` drives boundary validation; `Allowed`
-// is used only for the `enum` kind. Arguments are never secrets or host paths.
+// is used only for the `enum` kind. `Description` is the MCP-visible argument
+// description returned by prompts/list. Arguments are never secrets or host paths.
 struct FMcpPromptArgumentSpec
 {
 	FString Name;
 	FString Kind;
 	bool bRequired = false;
+	FString Description;
 	TArray<FString> Allowed;
 };
 
-// One workflow step: exactly one canonical capability, the parent tool + legacy
-// action used to `describe` it, and an optional Task 31 resource uri to read.
+// One workflow step: a human `Summary`, exactly one canonical capability, the
+// parent tool + legacy action used to `describe` it, an optional Task 31 resource
+// uri to read, and a human `Safety` note. Mirror the TypeScript PromptStep.
 struct FMcpPromptStep
 {
+	FString Summary;
 	FString CapabilityId;
 	FString ParentTool;
 	FString Action;
 	FString ResourceUri;
+	FString Safety;
 };
 
-// A versioned, immutable user-selected workflow prompt definition.
+// A versioned, immutable user-selected workflow prompt definition. `Description`
+// is the MCP-visible prompt description returned by prompts/list and prompts/get.
 struct FMcpWorkflowPrompt
 {
 	FString Id;
 	int32 Version = 1;
 	FString Title;
+	FString Description;
 	TArray<FMcpPromptArgumentSpec> Arguments;
 	TArray<FMcpPromptStep> Steps;
 };

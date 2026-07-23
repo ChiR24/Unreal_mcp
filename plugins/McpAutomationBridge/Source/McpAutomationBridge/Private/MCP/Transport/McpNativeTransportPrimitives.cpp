@@ -1,9 +1,12 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "MCP/Resources/McpResourceCatalog.h"
 #include "MCP/Resources/McpResourceUri.h"
+#include "MCP/Resources/McpResourceReadContent.h"
 #include "MCP/Primitives/McpResourceRevision.h"
 #include "MCP/Primitives/McpPromptCatalog.h"
+#include "MCP/Primitives/McpPromptRender.h"
 #include "MCP/Primitives/McpCompletionProvider.h"
+#include "MCP/Primitives/McpCompletionPools.h"
 #include "MCP/Primitives/McpSubscriptionStore.h"
 
 // Task 37 (native mirror of primitive-handlers.ts + primitive-wiring.ts): the
@@ -13,37 +16,6 @@
 // thread; editor-state URIs return a typed RESOURCE_UNAVAILABLE rather than
 // scanning editor APIs off-thread. resources/updated delivery lives in the
 // sibling McpNativeTransportPrimitiveNotifications.cpp.
-
-namespace
-{
-// The only URIs whose read is a bounded static/project payload safe to serve from
-// the socket thread. Every editor-state URI needs a game-thread scan we must not
-// run here, so it returns a typed RESOURCE_UNAVAILABLE instead.
-bool IsSocketThreadReadableResource(const FString& Uri)
-{
-	return Uri == TEXT("ue://capability/catalog") || Uri == TEXT("ue://project");
-}
-
-TSharedPtr<FJsonValue> ResourceEntry(const FMcpResourceDefinition& Def)
-{
-	auto Obj = MakeShared<FJsonObject>();
-	Obj->SetStringField(TEXT("uri"), Def.Uri);
-	Obj->SetStringField(TEXT("name"), Def.Name);
-	Obj->SetStringField(TEXT("description"), Def.Description);
-	Obj->SetStringField(TEXT("mimeType"), Def.MimeType);
-	return MakeShared<FJsonValueObject>(Obj);
-}
-
-TSharedPtr<FJsonValue> TemplateEntry(const FMcpResourceTemplateDefinition& Def)
-{
-	auto Obj = MakeShared<FJsonObject>();
-	Obj->SetStringField(TEXT("uriTemplate"), Def.UriTemplate);
-	Obj->SetStringField(TEXT("name"), Def.Name);
-	Obj->SetStringField(TEXT("description"), Def.Description);
-	Obj->SetStringField(TEXT("mimeType"), Def.MimeType);
-	return MakeShared<FJsonValueObject>(Obj);
-}
-}  // namespace
 
 void FMcpNativeTransport::InitializePrimitivesIfNeeded()
 {
@@ -123,9 +95,9 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 	{
 		auto Result = MakeShared<FJsonObject>();
 		TArray<TSharedPtr<FJsonValue>> Items;
-		for (const FMcpResourceDefinition& Def : McpResourceCatalog::NewStaticResources())
+		for (const FMcpResourceDefinition& Def : McpResourceCatalog::AllListedResources())
 		{
-			Items.Add(ResourceEntry(Def));
+			Items.Add(McpResourceRead::ListEntry(Def));
 		}
 		Result->SetArrayField(TEXT("resources"), Items);
 		Reply(FMcpJsonRpc::BuildResponse(Id, Result));
@@ -137,7 +109,7 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 		TArray<TSharedPtr<FJsonValue>> Items;
 		for (const FMcpResourceTemplateDefinition& Def : McpResourceCatalog::Templates())
 		{
-			Items.Add(TemplateEntry(Def));
+			Items.Add(McpResourceRead::TemplateEntry(Def));
 		}
 		Result->SetArrayField(TEXT("resourceTemplates"), Items);
 		Reply(FMcpJsonRpc::BuildResponse(Id, Result));
@@ -145,7 +117,16 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 	}
 	if (Method == TEXT("resources/read"))
 	{
-		if (!IsSocketThreadReadableResource(Uri))
+		const McpResourceRead::EReadKind Kind = McpResourceRead::Classify(Uri);
+		if (Kind == McpResourceRead::EReadKind::Unknown)
+		{
+			auto Data = MakeShared<FJsonObject>();
+			Data->SetStringField(TEXT("code"), TEXT("RESOURCE_NOT_FOUND"));
+			Reply(FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidParams,
+				FString::Printf(TEXT("RESOURCE_NOT_FOUND: unknown resource: %s"), *Uri), Data));
+			return true;
+		}
+		if (Kind == McpResourceRead::EReadKind::EditorUnavailable)
 		{
 			auto Data = MakeShared<FJsonObject>();
 			Data->SetStringField(TEXT("code"), TEXT("RESOURCE_UNAVAILABLE"));
@@ -157,8 +138,7 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 		Content->SetStringField(TEXT("uri"), Uri);
 		Content->SetStringField(TEXT("mimeType"), McpResourceCatalog::JsonMimeType());
 		Content->SetNumberField(TEXT("revision"), McpInitialResourceRevision);
-		Content->SetStringField(TEXT("text"),
-			FString::Printf(TEXT("{\"uri\":\"%s\",\"revision\":1}"), *Uri));
+		Content->SetStringField(TEXT("text"), McpResourceRead::BuildReadBodyText(Uri, McpInitialResourceRevision));
 		TArray<TSharedPtr<FJsonValue>> Contents;
 		Contents.Add(MakeShared<FJsonValueObject>(Content));
 		auto Result = MakeShared<FJsonObject>();
@@ -189,15 +169,7 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 	if (Method == TEXT("prompts/list"))
 	{
 		auto Result = MakeShared<FJsonObject>();
-		TArray<TSharedPtr<FJsonValue>> Items;
-		for (const FMcpWorkflowPrompt& Prompt : McpWorkflowPrompts())
-		{
-			auto Obj = MakeShared<FJsonObject>();
-			Obj->SetStringField(TEXT("name"), Prompt.Id);
-			Obj->SetStringField(TEXT("title"), Prompt.Title);
-			Items.Add(MakeShared<FJsonValueObject>(Obj));
-		}
-		Result->SetArrayField(TEXT("prompts"), Items);
+		Result->SetArrayField(TEXT("prompts"), McpBuildPromptListEntries());
 		Reply(FMcpJsonRpc::BuildResponse(Id, Result));
 		return true;
 	}
@@ -208,24 +180,37 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 		{
 			Params->TryGetStringField(TEXT("name"), Name);
 		}
-		if (!McpIsWorkflowPromptId(Name))
+		TMap<FString, FString> Args;
+		const TSharedPtr<FJsonObject>* ArgsObj = nullptr;
+		if (Params.IsValid() && Params->TryGetObjectField(TEXT("arguments"), ArgsObj) && ArgsObj)
 		{
-			Reply(FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidParams,
-				FString::Printf(TEXT("Unknown workflow prompt: %s"), *Name)));
+			for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*ArgsObj)->Values)
+			{
+				FString Val;
+				if (Pair.Value.IsValid() && Pair.Value->TryGetString(Val))
+				{
+					Args.Add(Pair.Key, Val);
+				}
+			}
+		}
+		const FMcpPromptRenderResult Render = McpRenderWorkflowPrompt(Name, Args);
+		if (!Render.bOk)
+		{
+			auto Data = MakeShared<FJsonObject>();
+			Data->SetStringField(TEXT("code"), Render.ErrorCode);
+			Reply(FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidParams, Render.ErrorMessage, Data));
 			return true;
 		}
-		const FString Body = FString::Printf(
-			TEXT("# %s\nGuidance only. Discover parameters with the unreal gateway describe operation, then run one execute call at a time."),
-			*Name);
 		auto ContentObj = MakeShared<FJsonObject>();
 		ContentObj->SetStringField(TEXT("type"), TEXT("text"));
-		ContentObj->SetStringField(TEXT("text"), Body);
+		ContentObj->SetStringField(TEXT("text"), Render.Body);
 		auto MsgObj = MakeShared<FJsonObject>();
 		MsgObj->SetStringField(TEXT("role"), TEXT("user"));
 		MsgObj->SetObjectField(TEXT("content"), ContentObj);
 		TArray<TSharedPtr<FJsonValue>> Messages;
 		Messages.Add(MakeShared<FJsonValueObject>(MsgObj));
 		auto Result = MakeShared<FJsonObject>();
+		Result->SetStringField(TEXT("description"), Render.Description);
 		Result->SetArrayField(TEXT("messages"), Messages);
 		Reply(FMcpJsonRpc::BuildResponse(Id, Result));
 		return true;
@@ -248,9 +233,11 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 			(*ArgObj)->TryGetStringField(TEXT("name"), ArgName);
 			(*ArgObj)->TryGetStringField(TEXT("value"), Value);
 		}
+		const TSet<FString> Enabled = McpEnabledCapabilityIds(
+			[this, &SessionId](const FString& Parent) { return SessionConfigureStore.IsToolEnabled(SessionId, Parent); });
 		const FMcpCompletionOutcome Outcome = McpCompleteFromPool(
 			RefType, RefId, ArgName, Value,
-			TArray<FMcpCompletionCandidate>(), TArray<FMcpCompletionCandidate>(), TSet<FString>());
+			McpCapabilityCompletionPool(), McpProjectHandleCompletionPool(), Enabled);
 		auto Completion = MakeShared<FJsonObject>();
 		TArray<TSharedPtr<FJsonValue>> Values;
 		for (const FString& Candidate : Outcome.Result.Values)

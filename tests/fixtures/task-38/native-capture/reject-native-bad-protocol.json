@@ -1,0 +1,19 @@
+{
+  "id": "native-pointer-bad-protocol",
+  "captureKind": "native-protocol",
+  "domain": "pointer",
+  "match": "exact",
+  "provenance": "native-protocol capture pinned to the fictional 2026-07-28 RC the native surface does not implement",
+  "transcript": {
+    "mechanism": "native-automation-inprocess",
+    "testName": "McpAutomationBridge.Task38.NativeProtocolCapture",
+    "engineVersion": "5.7.4-0+UE5",
+    "protocolVersion": "2026-07-28",
+    "capturedAt": "2026-07-23T00:00:00.000Z",
+    "transcriptRef": "native-transcript.jsonl",
+    "transcriptSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "sourceHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "packageHash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "value": { "primitive": "resources", "mode": "gateway", "reference": "search" }
+}

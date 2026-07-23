@@ -1,0 +1,15 @@
+{
+  "id": "inadmissible-unknown-field",
+  "captureKind": "executable-ts",
+  "domain": "result",
+  "match": "exact",
+  "provenance": "a valid capture with an undeclared top-level field smuggled in",
+  "value": {
+    "uri": "ue://capability/catalog",
+    "mimeType": "application/json",
+    "revision": 1,
+    "dataPresent": true,
+    "dataKeys": ["capabilities", "count", "totalCount", "truncated"]
+  },
+  "capturedAt": "2026-07-23T00:00:00Z"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "ts-result-capability-catalog",
+  "captureKind": "executable-ts",
+  "domain": "result",
+  "match": "exact",
+  "provenance": "Executed at runtime: new ResourceReadRouter(new CapabilityResources(new GatewayManifestCapabilitySource(), new InMemoryRevisionProvider()), EditorStateResources(unavailable), KnowledgeResources(unavailable)).read('ue://capability/catalog') -> contents[0], normalized to {uri,mimeType,revision,dataPresent,dataKeys}. Re-derived live and asserted equal in parity-harness-characterization.test.ts.",
+  "value": {
+    "uri": "ue://capability/catalog",
+    "mimeType": "application/json",
+    "revision": 1,
+    "dataPresent": true,
+    "dataKeys": ["capabilities", "count", "totalCount", "truncated"]
+  }
+}

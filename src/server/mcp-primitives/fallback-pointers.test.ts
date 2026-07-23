@@ -3,7 +3,9 @@ import {
   FALLBACK_PRIMITIVES,
   fallbackPointerFor,
   missingPrimitivePointers,
+  SERVER_BACKED_PRIMITIVES,
   type FallbackPrimitive,
+  type ServerBackedPrimitive,
 } from './fallback-pointers.js';
 import { MINIMAL_PROFILE, type ClientCapabilityProfile } from './session-capability-profile.js';
 
@@ -16,12 +18,11 @@ const FULL_PROFILE: ClientCapabilityProfile = {
   hasTasks: true,
 };
 
-const NATIVE_METHOD: Record<FallbackPrimitive, string> = {
+const NATIVE_METHOD: Record<ServerBackedPrimitive, string> = {
   resources: 'resources/list',
   prompts: 'prompts/list',
   completions: 'completion/complete',
   subscriptions: 'resources/subscribe',
-  tasks: 'tasks/list',
 };
 const GATEWAY_OP: Record<FallbackPrimitive, string> = {
   resources: 'search',
@@ -36,12 +37,21 @@ describe('fallback-pointers', () => {
     expect([...FALLBACK_PRIMITIVES]).toEqual(['resources', 'prompts', 'completions', 'subscriptions', 'tasks']);
   });
 
-  it('gives a capable client a native method reference per primitive', () => {
-    for (const primitive of FALLBACK_PRIMITIVES) {
+  it('gives a capable client a native method reference for every server-backed primitive', () => {
+    for (const primitive of SERVER_BACKED_PRIMITIVES) {
       const pointer = fallbackPointerFor(FULL_PROFILE, primitive);
       expect(pointer.mode).toBe('native');
       expect(pointer.nextCall).toEqual({ method: NATIVE_METHOD[primitive] });
     }
+  });
+
+  it('routes a Tasks-declaring client to the bounded gateway because the server does not back Tasks', () => {
+    // Tasks is not server-backed (Task 44 pending), so even a fully capable
+    // client is pointed at the gateway execute op, never a phantom tasks/list.
+    const pointer = fallbackPointerFor(FULL_PROFILE, 'tasks');
+    expect(pointer.mode).toBe('gateway');
+    expect(pointer.nextCall).toEqual({ operation: GATEWAY_OP.tasks });
+    expect((SERVER_BACKED_PRIMITIVES as readonly string[]).includes('tasks')).toBe(false);
   });
 
   it('gives a minimal client exactly one bounded gateway operation per primitive', () => {

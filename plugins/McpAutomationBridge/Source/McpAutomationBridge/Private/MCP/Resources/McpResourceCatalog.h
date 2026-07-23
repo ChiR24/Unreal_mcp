@@ -56,6 +56,24 @@ namespace McpResourceCatalog
 		return Defs;
 	}
 
+	// The six pre-existing resources the TypeScript resource-registry serves
+	// directly (src/server/resource-registry.ts RESOURCE_DEFINITIONS). Native
+	// resources/list must advertise the SAME public set as the TS transport, so
+	// they are mirrored here verbatim (name/description/mimeType byte-equal).
+	inline const TArray<FMcpResourceDefinition>& LegacyStaticResources()
+	{
+		static const TArray<FMcpResourceDefinition> Defs = {
+			{ TEXT("ue://assets"), TEXT("Assets"), TEXT("Project assets"), JsonMimeType() },
+			{ TEXT("ue://actors"), TEXT("Actors"), TEXT("Actors in the current level"), JsonMimeType() },
+			{ TEXT("ue://level"), TEXT("Current Level"), TEXT("Current level name and path"), JsonMimeType() },
+			{ TEXT("ue://health"), TEXT("Health Status"), TEXT("Server health and performance metrics"), JsonMimeType() },
+			{ TEXT("ue://automation-bridge"), TEXT("Automation Bridge"),
+				TEXT("Automation bridge diagnostics and recent activity"), JsonMimeType() },
+			{ TEXT("ue://version"), TEXT("Engine Version"), TEXT("Unreal Engine version and compatibility info"), JsonMimeType() },
+		};
+		return Defs;
+	}
+
 	// Read-only resource templates added by Task 31. Mirrors the TypeScript
 	// `RESOURCE_TEMPLATES`.
 	inline const TArray<FMcpResourceTemplateDefinition>& Templates()
@@ -71,5 +89,52 @@ namespace McpResourceCatalog
 				TEXT("Normalized handle for an asset at a UE content path"), JsonMimeType() },
 		};
 		return Defs;
+	}
+
+	// The complete resources/list surface: the six legacy resources followed by
+	// the four Task 31 additions, matching the TypeScript order
+	// [...RESOURCE_DEFINITIONS, ...NEW_RESOURCE_DEFINITIONS].
+	inline const TArray<FMcpResourceDefinition>& AllListedResources()
+	{
+		static const TArray<FMcpResourceDefinition> All = []()
+		{
+			TArray<FMcpResourceDefinition> Out;
+			Out.Append(LegacyStaticResources());
+			Out.Append(NewStaticResources());
+			return Out;
+		}();
+		return All;
+	}
+
+	// True when Uri is one of the listed static resources (any of the ten).
+	inline bool IsListedResourceUri(const FString& Uri)
+	{
+		for (const FMcpResourceDefinition& Def : AllListedResources())
+		{
+			if (Def.Uri == Uri)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// True when Uri is a concrete instance of a known resource template (e.g.
+	// `ue://capability/manage_asset`, `ue://object/...`). Used to distinguish a
+	// KNOWN-but-editor-state read (RESOURCE_UNAVAILABLE) from a genuinely unknown
+	// uri (RESOURCE_NOT_FOUND).
+	inline bool MatchesKnownTemplate(const FString& Uri)
+	{
+		static const TArray<FString> Prefixes = {
+			TEXT("ue://capability/"), TEXT("ue://knowledge/"), TEXT("ue://object/"), TEXT("ue://asset/"),
+		};
+		for (const FString& Prefix : Prefixes)
+		{
+			if (Uri.StartsWith(Prefix, ESearchCase::CaseSensitive) && Uri.Len() > Prefix.Len())
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 }

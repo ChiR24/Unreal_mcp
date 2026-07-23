@@ -1,0 +1,14 @@
+{
+  "id": "inadmissible-schema-dump",
+  "captureKind": "executable-ts",
+  "domain": "result",
+  "match": "exact",
+  "provenance": "a normalized result whose bounded body leaks a full schema",
+  "value": {
+    "uri": "ue://capability/catalog",
+    "mimeType": "application/json",
+    "revision": 1,
+    "dataPresent": true,
+    "dataKeys": ["capabilities", "inputSchema"]
+  }
+}

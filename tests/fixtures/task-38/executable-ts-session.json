@@ -1,0 +1,15 @@
+{
+  "id": "ts-session-cleaned-isolated",
+  "captureKind": "executable-ts",
+  "domain": "session",
+  "match": "exact",
+  "provenance": "Executed at runtime: ClientProfileStore lifecycle — setSession('harness-session-A'), setSession('harness-session-B'), clearSession('harness-session-A') then hasSession('harness-session-A') === false proves per-session cleanup; getSession('harness-session-B') stays isolated. Re-derived live in parity-harness-characterization.test.ts.",
+  "value": {
+    "sessionId": "harness-session-A",
+    "records": [
+      { "uri": "ue://capability/catalog", "ownerSessionId": "harness-session-A" },
+      { "uri": "ue://selection", "ownerSessionId": "harness-session-A" }
+    ],
+    "cleaned": true
+  }
+}

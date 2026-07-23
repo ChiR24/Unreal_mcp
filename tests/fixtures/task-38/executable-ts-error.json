@@ -1,0 +1,11 @@
+{
+  "id": "ts-error-unknown-uri",
+  "captureKind": "executable-ts",
+  "domain": "error",
+  "match": "exact",
+  "provenance": "Executed at runtime: ResourceReadRouter.read('ue://does-not-exist') threw a typed ResourceError; captured .code (RESOURCE_ERROR_CODES.NOT_FOUND) and .uri. The numeric JSON-RPC framing (-32603) is intentionally NOT part of the normalized value. Re-derived live in parity-harness-characterization.test.ts.",
+  "value": {
+    "code": "RESOURCE_NOT_FOUND",
+    "uri": "ue://does-not-exist"
+  }
+}

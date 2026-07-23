@@ -1,0 +1,167 @@
+// tests/unit/task-38/resources-baseline.test.ts
+// Task 38 lane A - BASELINE CHARACTERIZATION. Pins the CURRENT observable output
+// of each transport INDEPENDENTLY (no cross-comparison): the executed TS MCP SDK
+// resource surface, and the native `/mcp` fixture oracle. It documents ground
+// truth and MUST PASS unchanged - it is the stable reference the RED parity gate
+// (resources-parity.test.ts) is measured against. Expected values are an
+// independent hard-coded oracle, not re-derived from the modules under test.
+
+import { describe, expect, it, vi } from 'vitest';
+
+import {
+  captureTsTransport,
+  captureRouterError,
+  captureRouterRead,
+  normalizeList,
+  normalizeRead,
+  normalizeTemplates,
+  unavailableRouter,
+  type NormEntry,
+} from './resources-harness.js';
+import { NATIVE_LIST, NATIVE_TEMPLATES, nativeRead, isNativeError } from './resources-native-fixture.js';
+
+// Each captureTsTransport boots a real MCP SDK server; under the full parallel unit
+// suite that can exceed the 10s default. Raise the ceiling only (assertions unchanged).
+vi.setConfig({ testTimeout: 30000, hookTimeout: 30000 });
+
+const FULL_CAPS = { experimental: { resources: { subscribe: true } }, elicitation: {} } as const;
+const MINIMAL_CAPS = {} as const;
+
+// Independent oracle: the exact public resource surface the TS transport serves today.
+const TS_LIST_URIS = [
+  'ue://actors',
+  'ue://assets',
+  'ue://automation-bridge',
+  'ue://capability/catalog',
+  'ue://editor',
+  'ue://health',
+  'ue://level',
+  'ue://project',
+  'ue://selection',
+  'ue://version',
+] as const;
+
+const TEMPLATE_URIS = [
+  'ue://asset/{assetPath}',
+  'ue://capability/{capabilityId}',
+  'ue://knowledge/{engineVersion}/{topic}',
+  'ue://object/{objectPath}',
+] as const;
+
+const CATALOG_DATA_KEYS = ['capabilities', 'count', 'totalCount', 'truncated'] as const;
+const PROJECT_DATA_KEYS = ['connected', 'contentRoot', 'engineVersion', 'projectName'] as const;
+
+const uris = (entries: readonly NormEntry[]): string[] => entries.map((entry) => entry.uri);
+
+describe('Task 38 baseline - TS transport observable (executed via MCP SDK)', () => {
+  it('resources/list returns the ten current resources with full {uri,name,description,mimeType}', async () => {
+    const capture = await captureTsTransport(FULL_CAPS);
+    const list = normalizeList(capture.list);
+    expect(uris(list)).toEqual([...TS_LIST_URIS]);
+    // Spot-pin one legacy and one Task-31 entry verbatim (exact MIME/name fields).
+    expect(list.find((entry) => entry.uri === 'ue://assets')).toEqual({
+      uri: 'ue://assets',
+      name: 'Assets',
+      description: 'Project assets',
+      mimeType: 'application/json',
+    });
+    expect(list.find((entry) => entry.uri === 'ue://capability/catalog')).toEqual({
+      uri: 'ue://capability/catalog',
+      name: 'Capability Catalog',
+      description: 'Bounded catalog of gateway capabilities with a monotonic revision',
+      mimeType: 'application/json',
+    });
+  });
+
+  it('resources/templates/list returns the four current templates', async () => {
+    const capture = await captureTsTransport(FULL_CAPS);
+    const templates = normalizeTemplates(capture.templates);
+    expect(templates.map((entry) => entry.uriTemplate)).toEqual([...TEMPLATE_URIS]);
+    expect(templates.every((entry) => entry.mimeType === 'application/json')).toBe(true);
+  });
+
+  it('resources/read ue://capability/catalog returns bounded revisioned data (revision inside text, no top-level revision)', async () => {
+    const capture = await captureTsTransport(FULL_CAPS);
+    const read = normalizeRead(capture.catalogContent);
+    expect(read.uri).toBe('ue://capability/catalog');
+    expect(read.mimeType).toBe('application/json');
+    expect(read.revision).toBe(1);
+    expect(read.dataPresent).toBe(true);
+    expect(read.dataKeys).toEqual([...CATALOG_DATA_KEYS]);
+    // The SDK content object itself carries NO top-level revision (TS puts it in text).
+    expect(capture.catalogContent.revision).toBeUndefined();
+  });
+
+  it('a minimal-capability client observes the identical resource list (profile independent)', async () => {
+    const full = normalizeList((await captureTsTransport(FULL_CAPS)).list);
+    const minimal = normalizeList((await captureTsTransport(MINIMAL_CAPS)).list);
+    expect(uris(minimal)).toEqual(uris(full));
+  });
+
+  it('resources/read errors carry typed codes at the engine boundary: unknown=NOT_FOUND, unavailable=UNAVAILABLE', async () => {
+    const router = unavailableRouter();
+    const unknown = await captureRouterError(router, 'ue://nope');
+    const unavailable = await captureRouterError(router, 'ue://editor');
+    expect(unknown).toEqual({ code: 'RESOURCE_NOT_FOUND', uri: 'ue://nope', message: 'Unknown resource: ue://nope' });
+    expect(unavailable.code).toBe('RESOURCE_UNAVAILABLE');
+    expect(unavailable.uri).toBe('ue://editor');
+    // A known capability record still reads with a visible revision.
+    const record = await captureRouterRead(router, 'ue://capability/manage_asset');
+    expect(record.revision).toBe(1);
+    expect(record.dataPresent).toBe(true);
+  });
+});
+
+describe('Task 38 baseline - native `/mcp` fixture oracle (independent stand-in)', () => {
+  it('native resources/list defines the same ten resources as the TS transport (six legacy + four new)', () => {
+    expect(normalizeList(NATIVE_LIST.resources).map((entry) => entry.uri)).toEqual([...TS_LIST_URIS]);
+  });
+
+  it('native resources/templates/list mirrors the four TS templates', () => {
+    expect(normalizeTemplates(NATIVE_TEMPLATES.resourceTemplates).map((entry) => entry.uriTemplate)).toEqual([
+      ...TEMPLATE_URIS,
+    ]);
+  });
+
+  it('native resources/read of ue://capability/catalog returns bounded revisioned data', () => {
+    const result = nativeRead('ue://capability/catalog');
+    expect(isNativeError(result)).toBe(false);
+    if (isNativeError(result)) {
+      return;
+    }
+    expect(result.contents[0]?.revision).toBe(1); // native keeps revision at content top level
+    const read = normalizeRead(result.contents[0] ?? { uri: '', mimeType: '', text: '' });
+    expect(read.revision).toBe(1);
+    expect(read.dataPresent).toBe(true);
+    expect(read.dataKeys).toEqual([...CATALOG_DATA_KEYS]);
+  });
+
+  it('native resources/read of ue://project returns bounded revisioned data', () => {
+    const result = nativeRead('ue://project');
+    expect(isNativeError(result)).toBe(false);
+    if (isNativeError(result)) {
+      return;
+    }
+    const read = normalizeRead(result.contents[0] ?? { uri: '', mimeType: '', text: '' });
+    expect(read.revision).toBe(1);
+    expect(read.dataPresent).toBe(true);
+    expect(read.dataKeys).toEqual([...PROJECT_DATA_KEYS]);
+  });
+
+  it('native resources/read: editor-state uris are RESOURCE_UNAVAILABLE, an unknown uri is RESOURCE_NOT_FOUND', () => {
+    for (const uri of ['ue://editor', 'ue://selection']) {
+      const result = nativeRead(uri);
+      expect(isNativeError(result)).toBe(true);
+      if (isNativeError(result)) {
+        expect(result.code).toBe('RESOURCE_UNAVAILABLE');
+        expect(result.jsonRpcCode).toBe(-32600);
+      }
+    }
+    const unknown = nativeRead('ue://nope');
+    expect(isNativeError(unknown)).toBe(true);
+    if (isNativeError(unknown)) {
+      expect(unknown.code).toBe('RESOURCE_NOT_FOUND');
+      expect(unknown.jsonRpcCode).toBe(-32602);
+    }
+  });
+});

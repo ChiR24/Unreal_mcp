@@ -1,0 +1,14 @@
+{
+  "id": "inadmissible-cross-session",
+  "captureKind": "executable-ts",
+  "domain": "session",
+  "match": "exact",
+  "provenance": "a session whose record is owned by a foreign session id (a leak)",
+  "value": {
+    "sessionId": "harness-session-A",
+    "records": [
+      { "uri": "ue://selection", "ownerSessionId": "harness-session-B" }
+    ],
+    "cleaned": true
+  }
+}
