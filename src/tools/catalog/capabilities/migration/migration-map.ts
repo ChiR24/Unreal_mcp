@@ -8,6 +8,7 @@ import type {
   MigrationEntry,
   MigrationMap
 } from './types.js';
+import { requireCanonicalTarget } from './canonical-targets.js';
 import { findLossyRule } from './lossy-translations.js';
 
 /**
@@ -17,6 +18,11 @@ import { findLossyRule } from './lossy-translations.js';
  * typed removal, or is marked non-translatable at translate time for lossy
  * mismatches. Nothing here is hand-written into handlers; the map is derived
  * from the inventory and the curated lossy rules.
+ *
+ * The inventory supplies WHICH legacy pairs shipped and HOW each was
+ * adjudicated. It does not supply the target: its `canonicalId` is the Task 5
+ * analysis reference, so every target is looked up in the live record source
+ * by the entry's own legacy pair (`canonical-targets.ts`).
  */
 
 const DEPRECATION_WINDOW = 'until next major (v1.0) gateway surface';
@@ -29,11 +35,12 @@ function identityTransform(): ArgumentTransform {
   return { kind: 'identity', renames: {}, dropped: [] };
 }
 
+// `canonicalId` is deliberately absent: the inventory's analysis reference is
+// never consumed, so the map cannot silently fall back to it.
 type InventoryOccurrence = {
   readonly occurrenceKey: string;
   readonly tool: string;
   readonly action: string;
-  readonly canonicalId: string;
   readonly disposition: string;
   readonly classification: string;
 };
@@ -65,22 +72,20 @@ function buildEntryFromOccurrence(occurrence: InventoryOccurrence): MigrationEnt
   const tool = LegacyToolNameSchema.parse(occurrence.tool);
   const action = LegacyActionNameSchema.parse(occurrence.action);
   const key = legacyKey(tool, action);
-  const canonicalId = occurrence.canonicalId;
   const disposition = dispositionFromInventory(occurrence.disposition);
 
-  const entry: MigrationEntry = {
+  return {
     legacyKey: key,
     tool,
     action,
     disposition,
-    canonicalId,
+    canonicalId: requireCanonicalTarget(key),
     argumentTransform: identityTransform(),
     deprecation: {
       status: disposition === 'alias' ? 'deprecated' : 'active',
       window: DEPRECATION_WINDOW
     }
   };
-  return entry;
 }
 
 function buildRemovalFromRoute(route: RouteDisposition): MigrationEntry | undefined {
@@ -92,6 +97,15 @@ function buildRemovalFromRoute(route: RouteDisposition): MigrationEntry | undefi
   const actionName = LegacyActionNameSchema.safeParse(action ?? '');
   if (!toolName.success || !actionName.success) return undefined;
   const key = legacyKey(toolName.data, actionName.data);
+  // No retired route declares a replacement today, and an inventory reference
+  // could not be re-keyed into one: `cap:shared:*` is ambiguous across two
+  // records. A future replacement must arrive as a legacy `{tool, action}` pair.
+  if (route.targetCanonicalId !== undefined) {
+    throw new TypeError(
+      `Removed route ${key} declares targetCanonicalId '${route.targetCanonicalId}'; `
+        + 'a migration replacement must be declared as a legacy {tool, action} pair.'
+    );
+  }
   return {
     legacyKey: key,
     tool: toolName.data,
@@ -99,8 +113,7 @@ function buildRemovalFromRoute(route: RouteDisposition): MigrationEntry | undefi
     disposition: 'removed',
     removal: {
       since: '5.0',
-      guidance: route.removalGuidance ?? route.rationale,
-      replacement: route.targetCanonicalId ? route.targetCanonicalId : undefined
+      guidance: route.removalGuidance ?? route.rationale
     },
     deprecation: { status: 'removed', window: DEPRECATION_WINDOW }
   };
@@ -132,7 +145,7 @@ export function buildMigrationMap(): MigrationMap {
             tool: toolName.data,
             action: actionName.data,
             disposition: 'canonical',
-            canonicalId: route.targetCanonicalId,
+            canonicalId: requireCanonicalTarget(key),
             argumentTransform: identityTransform(),
             deprecation: { status: 'active', window: DEPRECATION_WINDOW }
           });

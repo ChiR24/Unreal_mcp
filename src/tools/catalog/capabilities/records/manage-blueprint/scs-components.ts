@@ -167,14 +167,16 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Multiple properties need batch updates (use modify_scs).'],
     inputProps: { action: P.action, blueprintPath: P.blueprintPath, componentName: P.componentName, propertyName: P.propertyName, propertyValue: P.propertyValue },
     required: ['action', 'blueprintPath', 'componentName', 'propertyName'],
+    // SCSHandlersSetProperty re-reads the property after writing and returns it
+    // as verifiedValue, but only when the value exports to JSON, so it is
+    // declared optional (not required).
     outputProps: { verifiedValue: P.propertyValue },
-    outputRequired: ['verifiedValue'],
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',
     resources: 'low',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'set_scs_property', blueprintPath: '/Game/Blueprints/BP_Test', componentName: 'SCS_Mesh', propertyName: 'bCastShadow', propertyValue: true },
-    exampleOutput: { success: true, message: 'SCS property set' },
+    exampleOutput: { success: true, message: 'SCS property set', verifiedValue: true },
   }),
 ];

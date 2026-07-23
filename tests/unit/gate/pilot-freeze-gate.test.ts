@@ -30,9 +30,9 @@ import {
   retrieveCapabilities,
 } from '../../../src/tools/catalog/capabilities/retrieval/index.js';
 
-const FROZEN_JSON_HASH = '3dc1687888c002d59b23b5c9a5a291882262e2a4fb0cd6253c8a27792c820ecd';
-const FROZEN_TS_HASH = '206815fc9f0a3b115ec0a4dbf6514c73afea1d58c4b20f1c7b929c5defaed312';
-const FROZEN_NATIVE_HASH = 'e9fec3c4c000dbc86196eff2549b693ffef035036f849046bf0650c329fbabb2';
+const FROZEN_JSON_HASH = '3f9fc255af92691fb855e4fd92f748df8ff969e5f4b617688493de7ebe1bf66a';
+const FROZEN_TS_HASH = 'ed5ab8498e9e10720544dcdc44ab7cf3e7afb5abfc065066abe8fcc5d1b2f5fd';
+const FROZEN_NATIVE_HASH = '2da381eec4c4136a3b278cf0ea986823d38314925dbee58261dde57ebfa714c5';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

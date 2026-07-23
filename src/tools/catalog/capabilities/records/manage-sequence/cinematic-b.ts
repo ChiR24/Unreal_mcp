@@ -7,6 +7,7 @@
  * Grounded in CINEMATICS_ACTIONS and native SequenceCinematics* bodies.
  */
 import type { CapabilityRecordSource } from '../../index.js';
+import type { JsonObject } from '../../model.js';
 import { A } from './alias-props.js';
 import { buildRecord, P, SEQ_PLUGINS } from './helpers.js';
 
@@ -14,7 +15,10 @@ const F = 'cinematic';
 const D = 'cinematics';
 const NR = 'Distinct cinematic track operation with unique track type and target.';
 
-function trackRecord(id: string, action: string, summary: string, extraProps: Record<string, unknown> = {}, required: string[] = ['action', 'path']): CapabilityRecordSource {
+// `spec` keeps the required list and the example values that satisfy it in one
+// place, so a track that requires an extra parameter cannot ship an example without it.
+function trackRecord(id: string, action: string, summary: string, extraProps: Record<string, unknown> = {}, spec: { required: string[]; example: JsonObject } = { required: ['action', 'path'], example: {} }): CapabilityRecordSource {
+  const { required, example } = spec;
   return buildRecord({
     id, action, family: F, domain: D,
     summary,
@@ -23,7 +27,7 @@ function trackRecord(id: string, action: string, summary: string, extraProps: Re
     inputProps: { action: P.action, path: P.path, save: A.save, ...extraProps },
     required,
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
-    exampleInput: { action, path: '/Game/Cinematics/SEQ_Master' },
+    exampleInput: { action, path: '/Game/Cinematics/SEQ_Master', ...example },
     exampleOutput: { success: true, message: 'Track added' },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   });
@@ -56,5 +60,6 @@ export const CINEMATIC_RECORDS_B: readonly CapabilityRecordSource[] = [
     { actorName: P.actorName }),
   trackRecord('sequence.cinematic.add_property_track', 'add_property_track',
     'Add a property track to animate a specific property on a bound actor.',
-    { property: P.property, actorName: P.actorName, propertyName: A.propertyName, propertyPath: A.propertyPath, propertyType: A.propertyType }, ['action', 'path', 'property']),
+    { property: P.property, actorName: P.actorName, propertyName: A.propertyName, propertyPath: A.propertyPath, propertyType: A.propertyType },
+    { required: ['action', 'path', 'property'], example: { property: 'Transform' } }),
 ];

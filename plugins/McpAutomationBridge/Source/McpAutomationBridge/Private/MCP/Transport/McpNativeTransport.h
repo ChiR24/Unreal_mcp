@@ -4,6 +4,9 @@
 #include "HAL/Runnable.h"
 #include "Dom/JsonValue.h"
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
+#include "MCP/DynamicTools/McpSessionConfigureStore.h"
+#include "MCP/Primitives/McpSubscriptionStore.h"
+#include "MCP/Primitives/McpNotificationCoalescer.h"
 #include "Async/Future.h"
 #include <atomic>
 #include "MCP/Transport/McpNativeTransportConnectionTypes.h"
@@ -32,8 +35,7 @@ public:
 	bool Start(int32 Port, const FString& PluginDir, bool bLoadAllTools = false,
 		const FString& InUserInstructions = TEXT(""),
 		const FString& InListenHost = TEXT("127.0.0.1"),
-		bool bInAllowNonLoopback = false,
-		bool bInEnableGateway = false);
+		bool bInAllowNonLoopback = false);
 
 	/** Shut down HTTP server, stop accept thread, close all SSE connections. */
 	void Shutdown();
@@ -227,8 +229,35 @@ private:
 		const TArray<TSharedPtr<FNotificationStream>>& Streams,
 		const FString& NotificationJson);
 
+	// ─── MCP primitives (Tasks 31-36 wiring) ────────────────────────────────
+	// Dispatches resources/*, prompts/*, and completion/complete by delegating
+	// to the pure Tasks 31-36 primitives, inserted before the ErrorMethodNotFound
+	// fallback so an implemented primitive never 404s. Returns true when it
+	// handled (or errored) the method. Static capability/project reads are served
+	// safely; editor-state URIs return a typed RESOURCE_UNAVAILABLE rather than
+	// reading editor APIs from the socket thread.
+	bool HandlePrimitiveMethod(
+		const FString& Method, const TSharedPtr<FJsonObject>& Params,
+		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
+		const FString& SessionId, const FString& CorsOrigin);
+	// Lazily construct the coalescer + wire the subscription release hook once.
+	void InitializePrimitivesIfNeeded();
+	// The single per-session primitive cleanup seam: drains a session's
+	// subscriptions + coalescer pending. Invoked at every session-teardown moment.
+	void ReleaseSessionPrimitives(const FString& SessionId);
+	// URI-only resources/updated over the reused async notification writer.
+	void SendResourceUpdatedNotification(const FString& SessionId, const FString& Uri);
+	// Drain due coalesced notifications from the existing keepalive loop.
+	void FlushDuePrimitiveNotifications();
+
 	UMcpAutomationBridgeSubsystem* Subsystem;
 	FMcpDynamicToolManager ToolManager;
+	// Per-session MCP primitive state (Tasks 34/36). The coalescer holds
+	// references to the store + configure store, so those are declared first.
+	FMcpSubscriptionStore SubscriptionStore;
+	FMcpSessionConfigureStore SessionConfigureStore;
+	TUniquePtr<FMcpNotificationCoalescer> NotificationCoalescer;
+	mutable FCriticalSection PrimitiveStateMutex;
 	int32 ListenPort = 0;
 
 	// Server identity & instructions (loaded from server-info.json + settings)
@@ -240,9 +269,6 @@ private:
 	// Bind configuration
 	FString ListenHost = TEXT("127.0.0.1");
 	bool bAllowNonLoopback = false;
-
-	// Gateway mode: tools/list advertises only 'unreal', and direct canonical calls are rejected.
-	bool bGatewayMode = false;
 
 	// Socket infrastructure
 	FSocket* ListenSocket = nullptr;

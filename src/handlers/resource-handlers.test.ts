@@ -6,6 +6,7 @@ import type { LevelResources } from '../resources/levels.js';
 import { HealthMonitor } from '../services/health-monitor.js';
 import { Logger } from '../utils/logging/logger.js';
 import { ResourceHandler, type ResourceServer } from './resource-handlers.js';
+import type { ExtendedResourceReader } from '../resources/resource-read-router.js';
 
 type RegisteredResourceHandler = (request: { params: { uri: string } }) => Promise<{ contents: Array<{ text: string }> }>;
 type BridgeStub = {
@@ -17,7 +18,8 @@ type BridgeStub = {
 function createRegisteredHandler(
   status: AutomationBridgeStatus,
   healthMonitor: HealthMonitor,
-  bridgeStub: BridgeStub = { isConnected: false }
+  bridgeStub: BridgeStub = { isConnected: false },
+  extendedReader?: ExtendedResourceReader
 ): RegisteredResourceHandler {
   let registeredHandler: RegisteredResourceHandler | undefined;
   const server = {
@@ -36,7 +38,8 @@ function createRegisteredHandler(
     {} as ActorResources,
     {} as LevelResources,
     healthMonitor,
-    async () => true
+    async () => true,
+    extendedReader
   ).registerHandlers();
 
   if (!registeredHandler) {
@@ -145,5 +148,34 @@ describe('ResourceHandler diagnostics redaction', () => {
 
     expect(health.unrealConnection.engineVersion).toEqual({});
     expect(health.unrealConnection.features.subsystems).toEqual({});
+  });
+});
+
+describe('ResourceHandler extended resource delegation', () => {
+  it('delegates a non-legacy URI to the injected reader', async () => {
+    // Given
+    const healthMonitor = new HealthMonitor(new Logger('ResourceHandlerTest', 'error'));
+    const reader: ExtendedResourceReader = {
+      read: async (uri) => ({
+        contents: [{ uri, mimeType: 'application/json', text: JSON.stringify({ uri, revision: 1, data: { ok: true } }) }]
+      })
+    };
+    const handler = createRegisteredHandler(createAutomationStatus(), healthMonitor, { isConnected: false }, reader);
+
+    // When
+    const result = await handler({ params: { uri: 'ue://project' } });
+
+    // Then
+    const parsed = JSON.parse(result.contents[0].text) as { data: { ok: boolean } };
+    expect(parsed.data.ok).toBe(true);
+  });
+
+  it('throws Unknown resource for a non-legacy URI when no reader is injected', async () => {
+    // Given
+    const healthMonitor = new HealthMonitor(new Logger('ResourceHandlerTest', 'error'));
+    const handler = createRegisteredHandler(createAutomationStatus(), healthMonitor);
+
+    // When / Then
+    await expect(handler({ params: { uri: 'ue://project' } })).rejects.toThrow('Unknown resource');
   });
 });

@@ -7,13 +7,23 @@
  * bindingSource identifies the variable or function to bind to.
  */
 import type { CapabilityRecordSource } from '../../index.js';
+import type { JsonObject } from '../../model.js';
 import { buildRecord, WIDGET_PLUGINS } from './helpers.js';
 import { P } from './properties.js';
 
 const FAMILY = 'widget-bindings';
 const DOMAIN = 'widget';
 
-function binding(action: string, id: string, summary: string, extraProps: Record<string, unknown> = {}, extraRequired: readonly string[] = []): CapabilityRecordSource {
+/** `required` and `example` share K, so a required binding argument absent from the example fails to compile. */
+interface BindingExtras<K extends string> {
+  readonly props: Record<string, unknown>;
+  readonly required: readonly K[];
+  readonly example: Record<K, unknown> & JsonObject;
+}
+
+function binding<K extends string>(action: string, id: string, summary: string, extras?: BindingExtras<K>): CapabilityRecordSource {
+  const extraProps = extras?.props ?? {};
+  const extraRequired = extras?.required ?? [];
   return buildRecord({
     id,
     action,
@@ -28,7 +38,7 @@ function binding(action: string, id: string, summary: string, extraProps: Record
     latency: 'interactive',
     resources: 'low',
     plugins: WIDGET_PLUGINS,
-    exampleInput: { action, widgetPath: '/Game/UI/WBP_MainUI', slotName: 'Widget_Text', bindingSource: 'PlayerName' },
+    exampleInput: { action, widgetPath: '/Game/UI/WBP_MainUI', slotName: 'Widget_Text', bindingSource: 'PlayerName', ...(extras?.example ?? {}) },
     exampleOutput: { success: true, message: `${action} bound` },
   });
 }
@@ -39,7 +49,8 @@ export const WIDGET_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
   binding('bind_visibility', 'blueprint.bind_visibility', 'Bind the Visibility property of a widget to a Blueprint variable or function.'),
   binding('bind_color', 'blueprint.bind_color', 'Bind the ColorAndOpacity property of a widget to a Blueprint variable or function.'),
   binding('bind_enabled', 'blueprint.bind_enabled', 'Bind the IsEnabled property of a widget to a Blueprint variable or function.'),
-  binding('bind_on_clicked', 'blueprint.bind_on_clicked', 'Bind the OnClicked event of a Button widget to a Blueprint function.', {}, []),
-  binding('bind_on_hovered', 'blueprint.bind_on_hovered', 'Bind the OnHovered/OnUnhovered events of a widget to Blueprint functions.', { onHoveredFunction: P.onHoveredFunction, onUnhoveredFunction: P.onUnhoveredFunction }, ['onHoveredFunction']),
-  binding('bind_on_value_changed', 'blueprint.bind_on_value_changed', 'Bind the OnValueChanged event of a Slider or SpinBox to a Blueprint function.', {}, []),
+  binding('bind_on_clicked', 'blueprint.bind_on_clicked', 'Bind the OnClicked event of a Button widget to a Blueprint function.'),
+  binding('bind_on_hovered', 'blueprint.bind_on_hovered', 'Bind the OnHovered/OnUnhovered events of a widget to Blueprint functions.',
+    { props: { onHoveredFunction: P.onHoveredFunction, onUnhoveredFunction: P.onUnhoveredFunction }, required: ['onHoveredFunction'], example: { onHoveredFunction: 'OnButtonHovered', onUnhoveredFunction: 'OnButtonUnhovered' } }),
+  binding('bind_on_value_changed', 'blueprint.bind_on_value_changed', 'Bind the OnValueChanged event of a Slider or SpinBox to a Blueprint function.'),
 ];

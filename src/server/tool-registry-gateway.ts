@@ -12,7 +12,13 @@ async function configureGateway(args: Record<string, unknown>): Promise<Record<s
   if (!action) return gatewayError('configure', 'MISSING_ACTION', 'configure requires a manage_tools action.');
   if (!isRecord(args.params) && args.params !== undefined) return gatewayError('configure', 'INVALID_PARAMS', 'params must be an object.');
   const result = await handleManageToolsCall({ ...(isRecord(args.params) ? args.params : {}), action });
-  return { success: result.success === true, operation: 'configure', action, result };
+  const envelope: Record<string, unknown> = { success: result.success === true, operation: 'configure', action, result };
+  // get_status surfaces the session's derived structural client profile; hoist it
+  // to the envelope top level so a gateway caller reads it without unwrapping `result`.
+  if (result.clientProfile !== undefined) {
+    envelope.clientProfile = result.clientProfile;
+  }
+  return envelope;
 }
 
 async function dispatchGatewayOperation(

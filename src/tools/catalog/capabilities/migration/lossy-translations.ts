@@ -1,5 +1,6 @@
 import { LegacyActionNameSchema, LegacyToolNameSchema } from '../identifiers.js';
 import type { LegacyActionName, LegacyToolName } from '../identifiers.js';
+import { requireCanonicalTarget } from './canonical-targets.js';
 import type { CanonicalCapabilityRef, LegacyKey, ReplacementGuidance } from './types.js';
 
 /**
@@ -36,13 +37,13 @@ function hasOrigin(params: Readonly<Record<string, unknown>>): boolean {
   return 'origin' in (bounds as Record<string, unknown>);
 }
 
+const VOLUME_TOOL = LegacyToolNameSchema.parse('manage_level_structure');
+const VOLUME_EXTENT_ACTION = LegacyActionNameSchema.parse('set_volume_extent');
+
 export const LOSSY_RULES: ReadonlyArray<LossyRule> = [
   {
-    legacyKey: legacyKey(
-      LegacyToolNameSchema.parse('manage_level_structure'),
-      LegacyActionNameSchema.parse('set_volume_bounds')
-    ),
-    canonicalId: 'cap:manage_level_structure:set_volume_extent',
+    legacyKey: legacyKey(VOLUME_TOOL, LegacyActionNameSchema.parse('set_volume_bounds')),
+    canonicalId: requireCanonicalTarget(legacyKey(VOLUME_TOOL, VOLUME_EXTENT_ACTION)),
     reason:
       'Legacy set_volume_bounds carried a bounds.origin (volume position) that the ' +
       'extent-only canonical path drops. Translating silently would lose the position.',
@@ -68,7 +69,7 @@ export function buildReplacementGuidance(rule: LossyRule): ReplacementGuidance {
     nextCall: {
       operation: 'execute',
       tool,
-      action: LegacyActionNameSchema.parse('set_volume_extent')
+      action: VOLUME_EXTENT_ACTION
     }
   };
 }

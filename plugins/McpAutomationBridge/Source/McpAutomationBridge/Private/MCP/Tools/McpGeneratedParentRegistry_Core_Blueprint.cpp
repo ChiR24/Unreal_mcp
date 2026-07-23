@@ -125,7 +125,7 @@ public:
 			Schema.StringEnum(TEXT("settingsType"), { TEXT("video"), TEXT("audio"), TEXT("controls"), TEXT("gameplay"), TEXT("all") }, TEXT("Settings menu type."));
 			Schema.FreeformObject(TEXT("shear"), TEXT("Render shear."));
 			Schema.Bool(TEXT("showSpeakerName"), TEXT("Show speaker name in dialog."));
-			Schema.Number(TEXT("size"), TEXT("Widget size value."));
+			Schema.FreeformObject(TEXT("size"), TEXT("Widget size override {x,y}."));
 			Schema.String(TEXT("slotName"), TEXT("Slot name for a child widget inside its parent."));
 			Schema.FreeformObject(TEXT("slotPadding"), TEXT("Padding between uniform grid slots."));
 			Schema.String(TEXT("sourceNode"), TEXT("Source node id accepted in place of fromNodeId."));

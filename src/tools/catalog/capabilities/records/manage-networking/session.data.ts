@@ -25,5 +25,5 @@ export const NETWORKING_SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   s('mute_player', 'Set mute state for an online player.', ['playerName', 'targetPlayerId', 'muted', 'localPlayerNum', 'systemWide'], []),
   s('set_voice_attenuation', 'Configure proximity voice attenuation.', ['attenuationRadius', 'attenuationFalloff'], ['attenuationRadius']),
   s('configure_push_to_talk', 'Configure push-to-talk input.', ['pushToTalkEnabled', 'pushToTalkKey'], ['pushToTalkEnabled']),
-  s('get_sessions_info', 'Read identifiable online-session state.', [], [], ['sessions'], ['sessions'], 'read'),
+  s('get_sessions_info', 'Read identifiable online-session state.', [], [], ['sessionsInfo'], ['sessionsInfo'], 'read'),
 ];

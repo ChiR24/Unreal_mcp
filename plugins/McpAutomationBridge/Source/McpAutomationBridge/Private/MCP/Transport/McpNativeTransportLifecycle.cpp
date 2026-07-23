@@ -17,7 +17,7 @@ FMcpNativeTransport::~FMcpNativeTransport()
 
 bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoadAllTools,
 	const FString& InUserInstructions, const FString& InListenHost,
-	bool bInAllowNonLoopback, bool bInEnableGateway)
+	bool bInAllowNonLoopback)
 {
 	if (Port <= 0 || Port > 65535)
 	{
@@ -29,7 +29,6 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 	ListenPort = Port;
 	UserInstructions = InUserInstructions;
 	bAllowNonLoopback = bInAllowNonLoopback;
-	bGatewayMode = bInEnableGateway;
 
 	ListenHost = InListenHost.IsEmpty() ? TEXT("127.0.0.1") : InListenHost;
 	if (ListenHost.Equals(TEXT("localhost"), ESearchCase::IgnoreCase))
@@ -299,6 +298,10 @@ void FMcpNativeTransport::Shutdown()
 		NotificationStreams.Empty();
 	}
 
+	// Task 37: drain each active session's MCP primitive state before the session
+	// maps below are emptied — the fifth teardown moment (shutdown all-clear).
+	TArray<FString> PrimSids; { FScopeLock Lock(&SessionMutex); ActiveSessions.GetKeys(PrimSids); }
+	for (const FString& PrimSid : PrimSids) { ReleaseSessionPrimitives(PrimSid); }
 	{
 		FScopeLock Lock(&SessionMutex);
 		ActiveSessions.Empty();

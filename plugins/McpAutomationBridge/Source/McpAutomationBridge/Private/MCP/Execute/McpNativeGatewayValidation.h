@@ -43,15 +43,27 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	const FString& CorrelationId, FMcpGatewayExecutePlan& OutPlan);
 
 /**
- * Validate a handler result against the capability output schema.
+ * Project a handler result to the capability's declared output fields.
  *
- * Returns nullptr when the result conforms; otherwise the error receipt. The
- * handler payload is preserved on the error as structured Unreal detail so a
- * schema violation never discards what Unreal actually reported.
+ * Mirrors the TypeScript gateway (projectCanonicalOutput): keeps only the
+ * declared output properties, reading each from the result root and then from
+ * its nested `data` payload. Undeclared native transport/verification fields are
+ * dropped so a real success payload can never violate its closed output schema.
+ */
+TSharedPtr<FJsonObject> McpProjectCanonicalOutput(
+	const TSharedPtr<FJsonObject>& Result, const TSharedPtr<FJsonObject>& OutputSchema);
+
+/**
+ * Validate a projected canonical output against the capability output schema.
+ *
+ * Returns nullptr when the canonical output conforms; otherwise the error
+ * receipt. The raw handler payload is preserved on the error as structured
+ * Unreal detail so a schema violation never discards what Unreal reported.
  */
 TSharedPtr<FJsonObject> ValidateGatewayExecuteOutput(
 	const FString& CapabilityId, const TSharedPtr<FJsonObject>& OutputSchema,
-	const TSharedPtr<FJsonObject>& Result, const FString& CorrelationId);
+	const TSharedPtr<FJsonObject>& CanonicalOutput, const TSharedPtr<FJsonObject>& RawResult,
+	const FString& CorrelationId);
 
 /**
  * Per-action strictness for the direct (non-gateway) tools/call path.

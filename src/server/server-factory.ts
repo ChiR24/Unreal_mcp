@@ -13,6 +13,7 @@ import { unrealGatewayToolDefinition } from '../tools/catalog/unreal-gateway-def
 import { UnrealBridge } from '../unreal-bridge.js';
 import { canonicalizeMcpRequestId } from '../automation/request-context.js';
 import { responseValidator } from '../utils/responses/response-validator.js';
+import { wirePrimitives } from './mcp-primitives/primitive-wiring.js';
 
 const require = createRequire(import.meta.url);
 const packageInfo: { name?: string; version?: string } = (() => {
@@ -119,11 +120,13 @@ export function createServer() {
   log.debug('Server starting without connecting to Unreal Engine');
   healthMonitor.metrics.connectionStatus = 'disconnected';
 
-  // Gateway mode publishes one stable `unreal` tool, so `listChanged` is omitted
-  // rather than set false: the notification is never sent, and omission and `false`
-  // are different claims. Legacy membership really changes, so it keeps the claim
-  // until Task 30 retires that surface. `prompts` is dropped in both modes because
-  // no prompt handler is registered; `resources` stays, backed by real handlers.
+  // Task 37: advertise exactly the implemented session-profile primitives — the
+  // single `unreal` tool, resources (with subscribe), prompts, and completions —
+  // and nothing else. Capabilities are set at constructor time, before
+  // serverSetup registers the backing handlers; wirePrimitives then fails closed
+  // if any advertised capability lacks its handler. The single stable tool never
+  // changes membership, so no *_list_changed member is declared. This shape
+  // mirrors ADVERTISED_SESSION_CAPABILITIES and is kept an inline literal.
   const server = new Server(
     {
       name: SERVER_NAME,
@@ -131,8 +134,10 @@ export function createServer() {
     },
     {
       capabilities: {
-        tools: config.MCP_GATEWAY_MODE ? {} : { listChanged: true },
-        resources: {},
+        tools: {},
+        resources: { subscribe: true },
+        prompts: {},
+        completions: {},
       },
     },
   );
@@ -158,6 +163,14 @@ export function createServer() {
   );
   serverSetup.setup();
 
+  // Wire the Tasks 31-36 MCP primitives (resource subscriptions + coalesced
+  // notifications, workflow prompts, completions, and the adaptive client
+  // profile) onto the server. Runs after setup() so the read-only resource and
+  // tools handlers already exist when the fail-closed PrimitiveRegistry validates
+  // the advertised surface. Its cleanup helper drains every primitive store and
+  // the flush timer on server close.
+  const wiredPrimitives = wirePrimitives(server);
+
   // Forward inbound notifications/cancelled to the automation bridge so the
   // matching queued or inflight Unreal work is cancelled. This is the TS stdio
   // counterpart to the native /mcp transport's cancellation and converges on
@@ -175,5 +188,6 @@ export function createServer() {
     automationBridge,
     healthMonitor,
     metricsServer,
+    wiredPrimitives,
   };
 }

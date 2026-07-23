@@ -275,11 +275,6 @@ public:
         meta = (DisplayName = "Load All Tools on Start", EditCondition = "bEnableNativeMCP"))
     bool bLoadAllToolsOnStart = true;
 
-    /** When true, tools/list advertises only the 'unreal' gateway; the canonical 23 tools stay registered and reachable through it. Default: true. */
-    UPROPERTY(config, EditAnywhere, Category = "Native MCP",
-        meta = (DisplayName = "Enable Native Gateway Mode", EditCondition = "bEnableNativeMCP"))
-    bool bEnableNativeGateway = true;
-
     /** Additional instructions sent to AI clients in the MCP initialize response.
      * Use this to describe your project, conventions, or constraints.
      * Appended after the default server instructions from server-info.json. */

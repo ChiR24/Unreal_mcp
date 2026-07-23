@@ -179,22 +179,24 @@ describe('manage_blueprint pilot: SCS ownership and distinct contracts', () => {
     expect(compRecord?.schemas.output.properties).not.toHaveProperty('scsVerification');
   });
 
-  it('set_default targets CDO (verifiedValue output, distinct from set_scs_property)', () => {
+  it('set_default targets CDO and returns the re-read `value`, distinct from set_scs_property', () => {
     const setDefault = MANAGE_BLUEPRINT_RECORDS.find((r) => r.id === 'blueprint.set_default');
     const setScsProp = MANAGE_BLUEPRINT_RECORDS.find((r) => r.id === 'blueprint.set_scs_property');
     expect(setDefault).toBeDefined();
     expect(setScsProp).toBeDefined();
-    // Both return verifiedValue but target different objects (CDO vs SCS template)
-    expect(setDefault?.schemas.output.properties).toHaveProperty('verifiedValue');
+    // set_default emits the CDO read-back as `value` (never verifiedValue); set_scs_property emits verifiedValue
+    expect(setDefault?.schemas.output.properties).toHaveProperty('value');
+    expect(setDefault?.schemas.output.properties).not.toHaveProperty('verifiedValue');
     expect(setScsProp?.schemas.output.properties).toHaveProperty('verifiedValue');
     // set_default discovery summary mentions CDO
     expect(setDefault?.discovery.summary).toContain('CDO');
   });
 
-  it('set_scs_property output includes verifiedValue (post-write verification)', () => {
+  it('set_scs_property declares verifiedValue as an optional (conditional) post-write verification', () => {
     const setScsProp = MANAGE_BLUEPRINT_RECORDS.find((r) => r.id === 'blueprint.set_scs_property');
     expect(setScsProp?.schemas.output.properties).toHaveProperty('verifiedValue');
-    expect(setScsProp?.schemas.output.required).toContain('verifiedValue');
+    // Native emits verifiedValue only when the re-read exports to JSON, so it is declared but not required
+    expect(setScsProp?.schemas.output.required).not.toContain('verifiedValue');
   });
 
   it('add_scs_component output includes SCS verification fields (compiled, saved, scsVerification)', () => {

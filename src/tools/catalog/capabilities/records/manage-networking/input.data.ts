@@ -23,5 +23,7 @@ export const NETWORKING_INPUT_RECORDS: readonly CapabilityRecordSource[] = [
   i('set_input_modifier', 'Set an Enhanced Input modifier.', ['contextPath', 'actionPath', 'key', 'modifierType'], ['actionPath', 'modifierType']),
   i('enable_input_mapping', 'Enable an Enhanced Input Mapping Context.', ['contextPath', 'priority'], ['contextPath']),
   i('disable_input_action', 'Disable an Enhanced Input Action.', ['actionPath'], ['actionPath']),
-  i('get_input_info', 'Read input asset and mapping state.', ['assetPath'], ['assetPath'], ['inputInfo'], ['inputInfo'], true, 'read'),
+  i('get_input_info', 'Read input asset and mapping state.', ['assetPath'], ['assetPath'],
+    ['assetPath', 'assetClass', 'assetName', 'existsAfter', 'type', 'valueType', 'consumeInput', 'mappingCount'],
+    ['assetPath', 'assetClass', 'assetName', 'existsAfter'], true, 'read'),
 ];

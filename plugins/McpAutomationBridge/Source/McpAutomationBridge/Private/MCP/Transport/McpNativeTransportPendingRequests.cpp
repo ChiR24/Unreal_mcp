@@ -20,11 +20,31 @@ TSharedPtr<FJsonObject> BuildGatewayExecuteReceipt(
 		}
 		return McpBuildErrorReceipt(Conn.CapabilityId, Error, Conn.CorrelationId);
 	}
+
+	// Project the handler result to the capability's declared output fields
+	// before validating and publishing it, mirroring the TypeScript gateway
+	// (projectCanonicalOutput). This keeps undeclared native transport and
+	// verification fields (compiled, saved, scsVerification, assetPath, ...) from
+	// turning a correct success payload into OUTPUT_SCHEMA_VIOLATION. The native
+	// completion carries the success verdict separately from the payload (the
+	// WebSocket frame the TS gateway projects embeds it), so it is reunited
+	// first; the projected output is what is both validated and published.
+	TSharedPtr<FJsonObject> WithVerdict = MakeShared<FJsonObject>();
+	if (Result.IsValid())
+	{
+		WithVerdict->Values = Result->Values;
+	}
+	if (!WithVerdict->HasField(TEXT("success")))
+	{
+		WithVerdict->SetBoolField(TEXT("success"), true);
+	}
+	const TSharedPtr<FJsonObject> Canonical =
+		McpProjectCanonicalOutput(WithVerdict, Conn.OutputSchema);
 	const TSharedPtr<FJsonObject> OutputError = ValidateGatewayExecuteOutput(
-		Conn.CapabilityId, Conn.OutputSchema, Result, Conn.CorrelationId);
+		Conn.CapabilityId, Conn.OutputSchema, Canonical, Result, Conn.CorrelationId);
 	return OutputError.IsValid()
 		? OutputError
-		: McpBuildSuccessReceipt(Conn.CapabilityId, Result, Conn.CorrelationId, Message);
+		: McpBuildSuccessReceipt(Conn.CapabilityId, Canonical, Conn.CorrelationId, Message);
 }
 }
 

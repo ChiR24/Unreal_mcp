@@ -42,6 +42,28 @@ describe('native MCP parity audit', () => {
     });
   });
 
+  it('defaults the schema-audit scope to every canonical parent in deterministic order', async () => {
+    // Given the real repository with no explicit override
+    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+
+    // When the audit runs
+    const result = auditNativeMcpParity({ repoRoot: process.cwd() });
+
+    // Then the default scope is the full 23-parent set, sorted, and the count
+    // matches the discovery so future parent additions cannot silently shrink
+    // the default audit surface
+    expect(result.schemaParityTools).toEqual([
+      'animation_physics', 'build_environment', 'control_actor', 'control_editor',
+      'inspect', 'manage_ai', 'manage_asset', 'manage_audio', 'manage_blueprint',
+      'manage_character', 'manage_combat', 'manage_effect', 'manage_gas',
+      'manage_geometry', 'manage_interaction', 'manage_inventory', 'manage_level',
+      'manage_level_structure', 'manage_networking', 'manage_pcg',
+      'manage_sequence', 'manage_tools', 'system_control'
+    ]);
+    expect(result.schemaParityTools.length).toBe(23);
+    expect(result.counts.toolsWithSchemaPropertyParity).toBe(23);
+  });
+
   it('fails closed when the TypeScript side discovers no definitions', async () => {
     // Given a repository whose parent definitions all vanished
     const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
@@ -95,9 +117,12 @@ describe('native MCP parity audit', () => {
 
   it('fails when 24 TypeScript definitions collapse to 23 unique names', async () => {
     const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
-    const canonicalNames = Array.from({ length: 23 }, (_, index) => `tool_${index + 1}`);
+    const canonicalNames = Array.from(
+      { length: 23 },
+      (_, index) => `t${String(index + 1).padStart(2, '0')}`
+    );
     const root = createParityFixture(
-      [...canonicalNames, canonicalNames[22] ?? 'tool_23'],
+      [...canonicalNames, canonicalNames[22] ?? 't23'],
       canonicalNames,
       canonicalNames
     );
@@ -111,10 +136,14 @@ describe('native MCP parity audit', () => {
       uniqueNativeRegistryNames: 23,
       nativeDefinitions: 23,
       uniqueNativeDefinitionNames: 23,
-      toolsWithSchemaPropertyParity: 1
+      toolsWithSchemaPropertyParity: 23
     });
-    expect(result.schemaParityTools).toEqual(['manage_sequence']);
-    expect(result.duplicateNames.typeScriptTools).toEqual(['tool_23']);
+    expect(result.schemaParityTools).toEqual([
+      't01', 't02', 't03', 't04', 't05', 't06', 't07', 't08', 't09', 't10',
+      't11', 't12', 't13', 't14', 't15', 't16', 't17', 't18', 't19', 't20',
+      't21', 't22', 't23'
+    ]);
+    expect(result.duplicateNames.typeScriptTools).toEqual(['t23']);
     expect(result.hasMismatches).toBe(true);
   });
 
@@ -141,7 +170,9 @@ describe('native MCP parity audit', () => {
       ['alpha', 'beta', 'legacy_tool']
     );
 
-    const result = auditNativeMcpParity({ repoRoot: root });
+    // Opt out of schema parity so the synthetic `alpha`/`beta` shapes stay
+    // decoupled from the default-scope widening.
+    const result = auditNativeMcpParity({ repoRoot: root, schemaParityTools: [] });
 
     expect(result.counts.nativeDefinitions).toBe(2);
     expect(result.hasMismatches).toBe(false);
@@ -195,7 +226,9 @@ describe('native MCP parity audit', () => {
       ].join('\n'),
     );
 
-    const result = auditNativeMcpParity({ repoRoot: root });
+    // Opt out of schema parity so the synthetic `alpha` shape stays decoupled
+    // from the default-scope widening.
+    const result = auditNativeMcpParity({ repoRoot: root, schemaParityTools: [] });
 
     expect(result.actionGaps).toEqual([]);
     expect(result.hasMismatches).toBe(false);

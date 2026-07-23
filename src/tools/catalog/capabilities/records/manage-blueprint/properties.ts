@@ -134,7 +134,9 @@ export const P = {
   zOrder: N('Z-order for a canvas slot.'),
   padding: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Widget slot padding {left,top,right,bottom}.' },
   position: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Widget position offset.' },
-  size: N('Widget size value.'),
+  // set_size reads this via GetObjectField + x/y, exactly like position/alignment;
+  // it was declared as a bare number, which no handler ever read.
+  size: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Widget size override {x,y}.' },
   width: N('Width override.'),
   height: N('Height override.'),
   translation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Render translation offset.' },

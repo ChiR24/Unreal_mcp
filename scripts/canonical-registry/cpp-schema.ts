@@ -176,6 +176,16 @@ const emitObjectNode = (
   out.push(`${indent}});`);
 };
 
+// FIDELITY RULE: `items: {}` accepts any element, so defaulting it to `string`
+// would make the native schema reject payloads the contract accepts.
+const isUnconstrainedItems = (items: JsonSchemaNode): boolean =>
+  items.type === undefined
+  && items.enum === undefined
+  && items.oneOf === undefined
+  && items.anyOf === undefined
+  && items.properties === undefined
+  && items.items === undefined;
+
 const emitArrayNode = (
   name: string,
   node: JsonSchemaNode,
@@ -202,6 +212,10 @@ const emitArrayNode = (
     }
     emitRequired(itemRequired, `${subIndent}  `, out, 'S');
     out.push(`${indent}});`);
+    return;
+  }
+  if (isUnconstrainedItems(items)) {
+    out.push(`${indent}${builder}.ArrayOfAny(${lit}, ${descLit});`);
     return;
   }
   const cppItem = itemType === 'number' ? 'number'

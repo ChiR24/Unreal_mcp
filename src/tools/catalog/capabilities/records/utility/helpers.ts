@@ -10,6 +10,8 @@ import {
   LegacyToolNameSchema,
 } from '../../index.js';
 import { getParentToolMetadata } from '../parent-metadata.js';
+import { outputProperty } from './output-glossary.js';
+import { buildExampleInput, buildExampleOutput } from './example-values.js';
 
 const SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema';
 const V5_0 = { major: 5 as const, minor: 0, patch: 0, channel: 'stable' as const };
@@ -38,6 +40,9 @@ const NUMBER_FIELDS = new Set([
 const OBJECT_FIELDS = new Set(['location', 'rotation', 'size', 'properties', 'settings', 'voiceSettings']);
 const ARRAY_FIELDS = new Set(['states', 'sessions', 'players', 'mappings']);
 
+// INPUT-ONLY. Keyed on bare field names, so adding an envelope field such as
+// `success` here would silently retype any input sharing that name. The output
+// envelope is built explicitly in ./output-glossary.js instead.
 function property(name: string): JsonObject {
   if (BOOLEAN_FIELDS.has(name)) return { type: 'boolean', description: name };
   if (NUMBER_FIELDS.has(name)) return { type: 'number', description: name };
@@ -56,6 +61,18 @@ function property(name: string): JsonObject {
 function schema(fields: readonly string[], required: readonly string[]): Draft202012ObjectSchema {
   const properties: Record<string, JsonObject> = {};
   for (const field of fields) properties[field] = property(field);
+  return {
+    $schema: SCHEMA_URI,
+    type: 'object',
+    properties,
+    required: [...required],
+    additionalProperties: false,
+  };
+}
+
+function outputSchema(fields: readonly string[], required: readonly string[]): Draft202012ObjectSchema {
+  const properties: Record<string, JsonObject> = {};
+  for (const field of fields) properties[field] = outputProperty(field);
   return {
     $schema: SCHEMA_URI,
     type: 'object',
@@ -120,12 +137,12 @@ export function utilityRecord(spec: UtilityRecordSpec): CapabilityRecordSource {
     },
     schemas: {
       input: schema(inputFields, required),
-      output: schema(outputFields, outputRequired),
+      output: outputSchema(outputFields, outputRequired),
     },
     examples: [{
       title: spec.summary,
-      input: { action: spec.action },
-      output: { success: true },
+      input: buildExampleInput(spec.action, spec.family, required),
+      output: buildExampleOutput(spec.action, spec.family, outputRequired),
     }],
     availability: {
       unreal: { min: V5_0, max: V5_8_P1 },

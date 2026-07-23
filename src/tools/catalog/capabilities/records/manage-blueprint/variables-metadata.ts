@@ -116,14 +116,17 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['An SCS component template property is the target (use set_scs_property).'],
     inputProps: { action: P.action, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyValue: P.propertyValue },
     required: ['action', 'blueprintPath', 'propertyName'],
-    outputProps: { verifiedValue: P.propertyValue },
-    outputRequired: ['verifiedValue'],
+    // The literal set_default path re-reads the CDO property after the write and
+    // returns it as `value`, but only when it exports to JSON; the object path
+    // returns neither value. `value` is therefore an optional output, and
+    // `verifiedValue` (which no set_default path emits) is not declared.
+    outputProps: { value: { description: 'Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON.' } },
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',
     resources: 'low',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'set_default', blueprintPath: '/Game/Blueprints/BP_Test', propertyName: 'InitialHealth', propertyValue: 100 },
-    exampleOutput: { success: true, verifiedValue: 100 },
+    exampleOutput: { success: true, value: 100 },
   }),
 ];

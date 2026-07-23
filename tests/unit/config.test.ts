@@ -206,48 +206,33 @@ describe('config module load (regression: src/config.ts must not throw on empty 
     });
 });
 
-describe('MCP_GATEWAY_MODE schema (validated gateway mode)', () => {
-    it('defaults to true when the env var is absent', () => {
+describe('MCP_GATEWAY_MODE removed from schema (permanent single-tool surface)', () => {
+    it('EnvSchema.parse({}) surfaces no MCP_GATEWAY_MODE field but keeps MCP_AUTOMATION_CLIENT_MODE', () => {
+        // Given the removed gateway toggle...
         const result = EnvSchema.parse({});
-        expect(result.MCP_GATEWAY_MODE).toBe(true);
+        // When the empty env is parsed...
+        // Then no gateway-mode flag is produced, and the sibling toggle survives.
+        expect(Object.hasOwn(result, 'MCP_GATEWAY_MODE')).toBe(false);
+        expect(Object.hasOwn(result, 'MCP_AUTOMATION_CLIENT_MODE')).toBe(true);
     });
 
-    it('accepts the true aliases already handled by stringToBoolean', () => {
-        for (const value of ['true', '1', 'on', 'TRUE', 'On', ' true ']) {
-            const result = EnvSchema.parse({ MCP_GATEWAY_MODE: value });
-            expect(result.MCP_GATEWAY_MODE, `value=${JSON.stringify(value)}`).toBe(true);
-        }
+    it('supplying MCP_GATEWAY_MODE is stripped as an unknown key rather than honored', () => {
+        // Given a client that still passes the removed toggle...
+        const result = EnvSchema.parse({ MCP_GATEWAY_MODE: 'false' });
+        // Then the schema drops it entirely.
+        expect(Object.hasOwn(result, 'MCP_GATEWAY_MODE')).toBe(false);
     });
 
-    it('accepts the legacy false aliases (false|0|no) and other false forms', () => {
-        for (const value of ['false', '0', 'no', 'FALSE', 'No', 'off', 'OFF', ' false ']) {
-            const result = EnvSchema.parse({ MCP_GATEWAY_MODE: value });
-            expect(result.MCP_GATEWAY_MODE, `value=${JSON.stringify(value)}`).toBe(false);
-        }
-    });
-
-    it('treats non-boolean strings as false via stringToBoolean (no accidental gateway enable)', () => {
-        const result = EnvSchema.parse({ MCP_GATEWAY_MODE: 'garbage' });
-        expect(result.MCP_GATEWAY_MODE).toBe(false);
-    });
-
-    it('module-level config defaults MCP_GATEWAY_MODE to true', async () => {
+    it('module-level config exposes no MCP_GATEWAY_MODE while preserving MCP_AUTOMATION_CLIENT_MODE', async () => {
         const originalEnv = process.env;
         process.env = { ...originalEnv };
         delete process.env.MCP_GATEWAY_MODE;
         vi.resetModules();
+        // When the config module loads...
         const mod = await import('../../src/config.js');
-        expect(mod.config.MCP_GATEWAY_MODE).toBe(true);
-        process.env = originalEnv;
-        vi.resetModules();
-    });
-
-    it('module-level config honors MCP_GATEWAY_MODE=false', async () => {
-        const originalEnv = process.env;
-        process.env = { ...originalEnv, MCP_GATEWAY_MODE: 'false' };
-        vi.resetModules();
-        const mod = await import('../../src/config.js');
-        expect(mod.config.MCP_GATEWAY_MODE).toBe(false);
+        // Then the runtime config carries no gateway toggle, only the preserved client flag.
+        expect(Object.hasOwn(mod.config, 'MCP_GATEWAY_MODE')).toBe(false);
+        expect(mod.config.MCP_AUTOMATION_CLIENT_MODE).toBe(false);
         process.env = originalEnv;
         vi.resetModules();
     });

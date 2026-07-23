@@ -106,7 +106,7 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('48262ba08f85792cad4b6136dc8501cb4f506ef723008c00b098422809bd5f8a');
+      .toBe('b2cc5fb036d84d9c19f57d36ff2447a55e7e0ad8ab248e43fe3e2795625f5707');
   });
 
   it('retains stable record hashes after recomputation', () => {
@@ -175,8 +175,11 @@ describe('Task 18 truthful availability, routing, async, and artifact metadata',
       .toContain('assetPath');
     expect(recordById('manage_networking.create_game_mode').schemas.output.required)
       .toContain('assetPath');
+    // `sessionsInfo`, not `sessions`: SetObjectField(TEXT("sessionsInfo")) is the
+    // only sessions-shaped key any transport emits. Identifiable session state is
+    // still required here, so this assertion keeps its intent.
     expect(recordById('manage_networking.get_sessions_info').schemas.output.required)
-      .toContain('sessions');
+      .toContain('sessionsInfo');
   });
 
   it('keeps destructive/reconfiguration operations fail-closed for retries', () => {

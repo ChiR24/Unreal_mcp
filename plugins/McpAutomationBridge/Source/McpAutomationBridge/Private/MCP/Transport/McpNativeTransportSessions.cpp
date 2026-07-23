@@ -162,6 +162,12 @@ void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
 		return;
 	}
 
+	// Task 37: the single close funnel is where DELETE, init-eviction, failed
+	// init, and the inactivity-timeout close converge, so draining the session's
+	// MCP primitive state (subscriptions + coalescer pending) here covers all of
+	// those teardown moments with one seam.
+	ReleaseSessionPrimitives(SessionId);
+
 	{
 		FScopeLock Lock(&LogEventSubscriptionsMutex);
 		LogEventSubscribedSessions.Remove(SessionId);
@@ -237,15 +243,11 @@ void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
 
 void FMcpNativeTransport::OnToolsListChanged()
 {
-	if (bGatewayMode)
-	{
-		UE_LOG(LogMcpNativeTransport, Verbose,
-			TEXT("Tool list changed — suppressed in gateway mode (public surface is static)"));
-		return;
-	}
-	UE_LOG(LogMcpNativeTransport, Log,
-		TEXT("Tool list changed — broadcasting notifications/tools/list_changed"));
-	BroadcastToolsListChanged();
+	// The public tools/list is permanently the single static 'unreal' gateway
+	// tool, so a dynamic-tool visibility change never alters its shape; the
+	// notifications/tools/list_changed broadcast is suppressed unconditionally.
+	UE_LOG(LogMcpNativeTransport, Verbose,
+		TEXT("Tool list changed — suppressed (public surface is a static single tool)"));
 }
 
 void FMcpNativeTransport::BroadcastToolsListChanged()

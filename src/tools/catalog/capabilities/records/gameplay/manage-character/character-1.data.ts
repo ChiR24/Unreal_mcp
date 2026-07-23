@@ -24,7 +24,7 @@ export const CHARACTER_1: readonly CapabilityRecordSource[] = [
     inputProps: { action: P.action, name: P.name, path: P.path, parentClass: P.string_, skeletalMeshPath: P.skeletalMeshPath }, required: ['action', 'name'],
     effect: 'write', latency: 'interactive', resources: 'medium',
     outputProps: { blueprintPath: P.blueprintPath }, outputRequired: ['blueprintPath'],
-    exampleInput: { action: 'create_character_blueprint', name: 'BP_Char', parentClass: 'Character' }, exampleOutput: { success: true, message: 'Character Blueprint created' } }),
+    exampleInput: { action: 'create_character_blueprint', name: 'BP_Char', parentClass: 'Character' }, exampleOutput: { success: true, message: 'Character Blueprint created', blueprintPath: '/Game/BP_Char' } }),
   buildRecord({ parentTool: T, id: `${T}.configure_capsule_component`, action: 'configure_capsule_component', family: F,
     summary: 'Configure the capsule collision component.', whenToUse: ['Capsule size must change.'], whenNotToUse: ['Use configure_mesh_component.'],
     inputProps: { action: P.action, blueprintPath: P.blueprintPath, capsuleRadius: C.capsuleRadius, capsuleHalfHeight: C.capsuleHalfHeight }, required: ['action', 'blueprintPath'],

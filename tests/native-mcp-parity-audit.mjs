@@ -185,8 +185,16 @@ function duplicateValues(values) {
 
 export function auditNativeMcpParity(config = {}) {
   const paths = auditPaths(config);
-  const schemaParityTools = new Set(config.schemaParityTools ?? ['manage_sequence']);
   const typeScriptTools = extractTypeScriptTools(paths);
+  // Default the schema-audit scope to every canonical parent the TypeScript
+  // surface already discovered. Reusing the discovered list keeps the default
+  // in lockstep with the actual contract without hardcoding the 23 names in a
+  // second place, and stays a pure-`.mjs` value (no TS loader cycles). Explicit
+  // `schemaParityTools` overrides still win so narrow fixture tests can scope
+  // down to a single synthetic tool.
+  const schemaParityTools = new Set(
+    config.schemaParityTools ?? typeScriptTools.map((tool) => tool.name)
+  );
   const nativeRegistry = extractNativeCanonicalRegistry(paths);
   const nativeTools = extractNativeToolDefinitions(paths);
   const typeScriptNames = typeScriptTools.map((tool) => tool.name);

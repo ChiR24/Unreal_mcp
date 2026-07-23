@@ -30,7 +30,7 @@ export const ANIM_AUTHORED_1: readonly CapabilityRecordSource[] = [
     inputProps: { action: P.action, name: P.name, path: P.path, skeletonPath: P.skeletonPath, targetSkeleton: P.skeletonPath, parentClass: P.string_ },
     required: ['action', 'name'], effect: 'write', latency: 'interactive', resources: 'medium', plugins: CR_ESU,
     outputProps: { assetPath: P.assetPath }, outputRequired: ['assetPath'],
-    exampleInput: { action: 'create_animation_blueprint', name: 'ABP_Char', skeletonPath: '/Game/SK_Char', parentClass: 'Actor' }, exampleOutput: { success: true, message: 'Animation Blueprint created' } }),
+    exampleInput: { action: 'create_animation_blueprint', name: 'ABP_Char', skeletonPath: '/Game/SK_Char', parentClass: 'Actor' }, exampleOutput: { success: true, message: 'Animation Blueprint created', assetPath: '/Game/ABP_Char' } }),
   buildRecord({ parentTool: T, id: `${T}.create_animation_bp`, action: 'create_animation_bp', family: F,
     summary: 'Alias of create_animation_blueprint (short form).', whenToUse: ['Caller uses the create_animation_bp verb.'], whenNotToUse: ['Use create_animation_blueprint.'],
     inputProps: { action: P.action, name: P.name, path: P.path, skeletonPath: P.skeletonPath, targetSkeleton: P.skeletonPath, parentClass: P.string_ }, required: ['action', 'name'],

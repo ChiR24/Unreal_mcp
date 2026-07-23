@@ -105,6 +105,10 @@ export function ex(title: string, input: JsonObject, output: JsonObject): Capabi
 export type Family = 'asset' | 'material' | 'texture' | 'struct' | 'datatable' | 'enum';
 export type DispatchMode = 'tool' | 'action' | 'local';
 
+// An example is the only executable documentation a client sees for an action,
+// so absence is a contract defect rather than a default worth tolerating.
+export type NonEmptyExamples = readonly [CapabilityExample, ...CapabilityExample[]];
+
 export interface RecordSpec {
   readonly action: string;
   readonly family: Family;
@@ -118,7 +122,7 @@ export interface RecordSpec {
   readonly dispatchAction: string;
   readonly dispatchMode: DispatchMode;
   readonly normalization: CapabilityNormalization;
-  readonly examples: readonly CapabilityExample[];
+  readonly examples: NonEmptyExamples;
   readonly availability: CapabilityAvailability;
 }
 
@@ -127,7 +131,7 @@ export interface SpecOptions {
   readonly dispatchAction?: string;
   readonly dispatchMode?: DispatchMode;
   readonly normalization?: CapabilityNormalization;
-  readonly examples?: readonly CapabilityExample[];
+  readonly examples: NonEmptyExamples;
   readonly requiredPlugins?: readonly string[];
 }
 
@@ -142,18 +146,18 @@ export function r(
   behavior: CapabilityBehavior,
   policy: CapabilityPolicy,
   cost: CapabilityCost,
-  options?: SpecOptions
+  options: SpecOptions
 ): RecordSpec {
-  const plugins = options?.requiredPlugins
+  const plugins = options.requiredPlugins
     ? [...new Set([...DEFAULT_AVAILABILITY.requiredPlugins, ...options.requiredPlugins])]
     : DEFAULT_AVAILABILITY.requiredPlugins;
   return {
     action, family, summary, input, output, behavior, policy, cost,
-    aliases: options?.aliases ?? [],
-    dispatchAction: options?.dispatchAction ?? action,
-    dispatchMode: options?.dispatchMode ?? 'tool',
-    normalization: options?.normalization ?? RETAIN,
-    examples: options?.examples ?? [],
+    aliases: options.aliases ?? [],
+    dispatchAction: options.dispatchAction ?? action,
+    dispatchMode: options.dispatchMode ?? 'tool',
+    normalization: options.normalization ?? RETAIN,
+    examples: options.examples,
     availability: { ...DEFAULT_AVAILABILITY, requiredPlugins: plugins }
   };
 }

@@ -76,8 +76,6 @@ const EnvSchemaShape = z.object({
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('debug'),
   MCP_ROUTE_STDOUT_LOGS: z.preprocess(stringToBoolean, z.boolean()).default(true),
 
-  MCP_GATEWAY_MODE: z.preprocess(stringToBoolean, z.boolean()).default(true),
-
   // Unreal Settings
   UE_PROJECT_PATH: z.string().optional(),
   UE_EDITOR_EXE: z.string().optional(),

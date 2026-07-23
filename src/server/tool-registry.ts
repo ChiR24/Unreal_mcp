@@ -14,7 +14,6 @@ import { AssetResources } from '../resources/assets.js';
 import { ActorResources } from '../resources/actors.js';
 import { LevelResources } from '../resources/levels.js';
 import { getProjectSetting } from '../utils/config/ini-reader.js';
-import { config } from '../config.js';
 import type { ITools } from '../types/tools/tool-interfaces.js';
 import {
     canonicalizeMcpRequestId,
@@ -22,11 +21,7 @@ import {
 } from '../automation/request-context.js';
 import { handleUnrealGatewayCall, type GatewayContext } from './tool-registry-gateway.js';
 import { buildGatewayToolDefinition } from './tool-registry-listing.js';
-import { buildLegacyToolList, handleLegacyToolCall, type LegacyContext } from './tool-registry-legacy.js';
-
-function isGatewayMode(): boolean {
-    return config.MCP_GATEWAY_MODE;
-}
+import { buildDirectCallMigration } from './gateway/direct-call-migration.js';
 
 export class ToolRegistry {
     private defaultElicitationTimeoutMs = 60000;
@@ -104,7 +99,6 @@ export class ToolRegistry {
     register() {
         const systemTools = this.buildSystemTools();
         const elicitation = createElicitationHelper(this.server, this.logger);
-        const gateway = isGatewayMode();
 
         const tools: ITools = {
             systemTools,
@@ -119,11 +113,8 @@ export class ToolRegistry {
         };
 
         this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-            if (gateway) {
-                this.logger.debug('Serving gateway tool list (static single-tool mode)');
-                return { tools: [buildGatewayToolDefinition()] };
-            }
-            return { tools: buildLegacyToolList(this.server, this.logger) };
+            this.logger.debug('Serving gateway tool list (static single-tool mode)');
+            return { tools: [buildGatewayToolDefinition()] };
         });
 
         this.server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
@@ -150,57 +141,49 @@ export class ToolRegistry {
                     ? runWithMcpRequestContext({ requestId: mcpRequestId, signal: extra.signal }, fn)
                     : fn();
 
-            if (gateway && name !== 'unreal') {
+            if (name !== 'unreal') {
                 this.healthMonitor.trackPerformance(startTime, false);
-                const op = typeof args.operation === 'string' ? args.operation : 'unknown';
-                return responseValidator.wrapResponse('unreal', {
-                    success: false, isError: true, operation: op, error: 'UNKNOWN_TOOL',
-                    message: `Unknown tool: ${name}. Capabilities are exposed only through the 'unreal' gateway. Call 'unreal' with operation 'search' to discover available tools.`
-                });
+                const migration = buildDirectCallMigration(name, args);
+                // The receipt carries the gateway envelope fields the `unreal`
+                // output schema requires (success:false + operation); wrapResponse
+                // promotes success:false to top-level isError.
+                return responseValidator.wrapResponse('unreal', migration);
             }
 
-            if (gateway) {
-                try {
-                    const context: GatewayContext = { tools, logger: this.logger, elicitationTimeoutMs: this.defaultElicitationTimeoutMs, ensureConnected: this.ensureConnected };
-                    const gatewayResult = cleanObject(await withRequestContext(() => handleUnrealGatewayCall(args, context)));
-                    const wrapped = await responseValidator.wrapResponse('unreal', gatewayResult);
+            try {
+                const context: GatewayContext = { tools, logger: this.logger, elicitationTimeoutMs: this.defaultElicitationTimeoutMs, ensureConnected: this.ensureConnected };
+                const gatewayResult = cleanObject(await withRequestContext(() => handleUnrealGatewayCall(args, context)));
+                const wrapped = await responseValidator.wrapResponse('unreal', gatewayResult);
 
-                    const resultObj = gatewayResult as Record<string, unknown> | null;
-                    const explicitSuccess = typeof resultObj?.success === 'boolean' ? Boolean(resultObj.success) : undefined;
-                    let wrappedSuccess: boolean | undefined = undefined;
-                    if (isRecord(wrapped.structuredContent)) {
-                        const sc = wrapped.structuredContent;
-                        if (sc && typeof sc.success === 'boolean') wrappedSuccess = Boolean(sc.success);
-                    }
-                    const isErrorResponse = Boolean(wrapped.isError === true);
-                    const finalSuccess = (explicitSuccess ?? wrappedSuccess) === true && !isErrorResponse;
-                    this.healthMonitor.trackPerformance(startTime, finalSuccess);
-
-                    if (this.logger.isEnabled('debug')) {
-                        const preview = JSON.stringify(redactImagePayloadForLog(wrapped)).substring(0, 100);
-                        this.logger.debug(`Returning gateway response to MCP client: ${preview}...`);
-                    }
-                    return wrapped;
-                } catch (error) {
-                    this.healthMonitor.trackPerformance(startTime, false);
-                    const normalizedError = error instanceof Error || isRecord(error) ? error : String(error);
-                    const errorResponse = ErrorHandler.createErrorResponse(normalizedError, 'unreal', { ...args, scope: 'tool-call/unreal' });
-                    this.logger.error('Gateway tool execution failed', errorResponse);
-                    if (isRecord(errorResponse)) this.healthMonitor.recordError(errorResponse);
-                    const sanitizedError = cleanObject(errorResponse);
-                    if (isRecord(sanitizedError)) {
-                        sanitizedError.isError = true;
-                        return responseValidator.wrapResponse('unreal', sanitizedError);
-                    }
-                    return responseValidator.wrapResponse('unreal', { success: false, isError: true, operation: 'execute', error: 'UNKNOWN_ERROR', message: 'Failed to execute unreal gateway' });
+                const resultObj = gatewayResult as Record<string, unknown> | null;
+                const explicitSuccess = typeof resultObj?.success === 'boolean' ? Boolean(resultObj.success) : undefined;
+                let wrappedSuccess: boolean | undefined = undefined;
+                if (isRecord(wrapped.structuredContent)) {
+                    const sc = wrapped.structuredContent;
+                    if (sc && typeof sc.success === 'boolean') wrappedSuccess = Boolean(sc.success);
                 }
-            }
+                const isErrorResponse = Boolean(wrapped.isError === true);
+                const finalSuccess = (explicitSuccess ?? wrappedSuccess) === true && !isErrorResponse;
+                this.healthMonitor.trackPerformance(startTime, finalSuccess);
 
-            const legacyContext: LegacyContext = {
-                server: this.server, tools, logger: this.logger, healthMonitor: this.healthMonitor,
-                elicitationTimeoutMs: this.defaultElicitationTimeoutMs, ensureConnected: this.ensureConnected
-            };
-            return withRequestContext(() => handleLegacyToolCall(name, args, startTime, legacyContext));
+                if (this.logger.isEnabled('debug')) {
+                    const preview = JSON.stringify(redactImagePayloadForLog(wrapped)).substring(0, 100);
+                    this.logger.debug(`Returning gateway response to MCP client: ${preview}...`);
+                }
+                return wrapped;
+            } catch (error) {
+                this.healthMonitor.trackPerformance(startTime, false);
+                const normalizedError = error instanceof Error || isRecord(error) ? error : String(error);
+                const errorResponse = ErrorHandler.createErrorResponse(normalizedError, 'unreal', { ...args, scope: 'tool-call/unreal' });
+                this.logger.error('Gateway tool execution failed', errorResponse);
+                if (isRecord(errorResponse)) this.healthMonitor.recordError(errorResponse);
+                const sanitizedError = cleanObject(errorResponse);
+                if (isRecord(sanitizedError)) {
+                    sanitizedError.isError = true;
+                    return responseValidator.wrapResponse('unreal', sanitizedError);
+                }
+                return responseValidator.wrapResponse('unreal', { success: false, isError: true, operation: 'execute', error: 'UNKNOWN_ERROR', message: 'Failed to execute unreal gateway' });
+            }
         });
     }
 }

@@ -31,5 +31,5 @@ export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [
   f('configure_player_start', 'Configure PlayerStart behavior.', ['blueprintPath', 'gameModeBlueprint', 'teamIndex'], ['blueprintPath']),
   f('set_respawn_rules', 'Configure player respawn rules.', ['gameModeBlueprint', 'blueprintPath', 'respawnDelay', 'respawnLocation', 'forceRespawn', 'respawnLives'], ['gameModeBlueprint']),
   f('configure_spectating', 'Configure spectator behavior.', ['gameModeBlueprint', 'blueprintPath', 'allowSpectating', 'spectatorClass', 'spectatorViewMode'], ['gameModeBlueprint']),
-  f('get_game_framework_info', 'Read Game Framework class and rule state.', ['gameModeBlueprint', 'blueprintPath'], [], ['frameworkInfo'], ['frameworkInfo'], true),
+  f('get_game_framework_info', 'Read Game Framework class and rule state.', ['gameModeBlueprint', 'blueprintPath'], [], ['gameFrameworkInfo'], ['gameFrameworkInfo'], true),
 ];

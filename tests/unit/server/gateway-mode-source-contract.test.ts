@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -19,19 +19,26 @@ function collectTsFiles(dir: string): string[] {
     return out;
 }
 
-describe('MCP_GATEWAY_MODE source contract (server registry)', () => {
+// Task 30 makes the single-tool surface permanent. The gateway-mode toggle, its
+// selector, and the legacy registry it selected are all removed from source.
+describe('permanent single-tool surface source contract (no gateway toggle)', () => {
     const files = collectTsFiles(serverDir);
 
-    it('exposes no source file under src/server that reads process.env.MCP_GATEWAY_MODE directly', () => {
-        const directReadPattern = /process\.env\.MCP_GATEWAY_MODE/;
-        const offenders = files.filter((f) => directReadPattern.test(readFileSync(f, 'utf8')));
+    it('no source file under src/server references MCP_GATEWAY_MODE at all', () => {
+        // Not just raw process.env: the toggle is gone, so neither the config
+        // field read nor any branch on it may survive anywhere under src/server.
+        const offenders = files.filter((f) => /MCP_GATEWAY_MODE/.test(readFileSync(f, 'utf8')));
         expect(offenders).toEqual([]);
     });
 
-    it('tool-registry.ts reads the validated config.MCP_GATEWAY_MODE instead of raw env', () => {
-        const source = readFileSync(resolve(serverDir, 'tool-registry.ts'), 'utf8');
-        expect(source).toContain("import { config } from '../config.js'");
-        expect(source).toContain('return config.MCP_GATEWAY_MODE;');
-        expect(source).not.toMatch(/process\.env\.MCP_GATEWAY_MODE/);
+    it('no source file under src/server defines or calls isGatewayMode', () => {
+        // The mode selector disappears together with the flag it read.
+        const offenders = files.filter((f) => /isGatewayMode/.test(readFileSync(f, 'utf8')));
+        expect(offenders).toEqual([]);
+    });
+
+    it('the legacy 23-tool registry file (tool-registry-legacy.ts) is deleted', () => {
+        // tool-registry-legacy.ts only existed to back MCP_GATEWAY_MODE=false.
+        expect(existsSync(resolve(serverDir, 'tool-registry-legacy.ts'))).toBe(false);
     });
 });

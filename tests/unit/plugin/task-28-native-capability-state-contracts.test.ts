@@ -79,13 +79,14 @@ describe('Task 28 BASELINE: native capability + catalog-change behavior to prese
     expect(managerHeader).toContain('FOnToolsChanged OnToolsChanged;');
   });
 
-  it('suppresses the list-changed broadcast in gateway mode', () => {
-    expect(onToolsListChanged).toContain('if (bGatewayMode)');
-    expect(onToolsListChanged).toContain('BroadcastToolsListChanged();');
-    // The gateway guard returns before the broadcast can run.
-    expect(onToolsListChanged.indexOf('return;')).toBeGreaterThan(-1);
-    expect(onToolsListChanged.indexOf('return;')).toBeLessThan(
-      onToolsListChanged.indexOf('BroadcastToolsListChanged();'),
+  it('permanently suppresses the list-changed broadcast', () => {
+    // Task 30 cutover: the public surface is a permanent single static tool, so
+    // suppression is unconditional — no gateway-mode gate and no reachable broadcast.
+    expect(onToolsListChanged).not.toContain('if (bGatewayMode)');
+    expect(onToolsListChanged).not.toContain('BroadcastToolsListChanged();');
+    // Suppression is explicit, not an accidental empty body: the handler logs it.
+    expect(onToolsListChanged).toContain(
+      'suppressed (public surface is a static single tool)',
     );
   });
 
@@ -124,9 +125,16 @@ describe('Task 28 BASELINE: native capability + catalog-change behavior to prese
     );
   });
 
-  it('advertises no unimplemented resources/prompts/subscription primitives', () => {
+  it('advertises the Task 37 wired primitives on native initialize (tools + resources.subscribe + prompts + completions), never logging/tasks', () => {
+    // Task 37 wired the native resources/prompts/completions primitives through
+    // HandlePrimitiveMethod, so the native initialize surface now advertises them
+    // truthfully. Only genuinely-unbacked primitives stay off the surface.
     expect(capabilitiesBlock).toContain('SetObjectField(TEXT("tools")');
-    for (const unbacked of ['resources', 'prompts', 'completions', 'logging', 'subscribe']) {
+    expect(capabilitiesBlock).toContain('TEXT("resources")');
+    expect(capabilitiesBlock).toContain('TEXT("subscribe")');
+    expect(capabilitiesBlock).toContain('TEXT("prompts")');
+    expect(capabilitiesBlock).toContain('TEXT("completions")');
+    for (const unbacked of ['TEXT("logging")', 'TEXT("tasks")', 'TEXT("listChanged")']) {
       expect(capabilitiesBlock).not.toContain(unbacked);
     }
   });
@@ -149,13 +157,14 @@ describe('Task 28 BASELINE: native capability + catalog-change behavior to prese
 });
 
 describe('Task 28 DESIRED: truthful capability advertisement + catalog state revision', () => {
-  it('advertises tools always but tools.listChanged only outside gateway mode', () => {
+  it('advertises tools always and permanently omits tools.listChanged', () => {
     expect(capabilitiesBlock).toContain('SetObjectField(TEXT("tools")');
-    // The member must be OMITTED in gateway mode, never advertised as false.
+    // Task 30 cutover: the single static tool never changes shape, so listChanged
+    // is permanently omitted — never advertised false, never true, no gateway gate.
     expect(discovery).not.toContain('SetBoolField(TEXT("listChanged"), false)');
     expect(discovery).not.toContain('ToolsCap->SetBoolField(TEXT("listChanged"), true);');
-    expect(capabilitiesBlock).toMatch(/bGatewayMode/);
-    expect(capabilitiesBlock).toMatch(/listChanged/);
+    expect(capabilitiesBlock).not.toContain('bGatewayMode');
+    expect(discovery).not.toContain('SetBoolField(TEXT("listChanged")');
   });
 
   it('gives the dynamic manager a monotonic catalogStateRevision with a typed getter', () => {

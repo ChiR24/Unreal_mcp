@@ -113,6 +113,14 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::Array(const FString& Name, const FString& 
 	return *this;
 }
 
+FMcpSchemaBuilder& FMcpSchemaBuilder::ArrayOfAny(const FString& Name, const FString& Description)
+{
+	auto Prop = MakeTypedProperty(TEXT("array"), Description);
+	Prop->SetObjectField(TEXT("items"), MakeShared<FJsonObject>());
+	AddProperty(Name, Prop);
+	return *this;
+}
+
 FMcpSchemaBuilder& FMcpSchemaBuilder::ArrayOfObjects(const FString& Name,
 	const FString& Description, TFunction<void(FMcpSchemaBuilder&)> ItemBuilder)
 {

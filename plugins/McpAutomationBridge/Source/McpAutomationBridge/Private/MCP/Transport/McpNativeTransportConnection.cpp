@@ -247,6 +247,14 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		return;  // Socket NOT closed here — parked for SSE
 	}
 
+	// MCP primitive methods (resources/*, prompts/*, completion/complete). Routed
+	// after tools/call and strictly before the method-not-found fallback so a
+	// backed primitive is never reported as an unknown method.
+	if (HandlePrimitiveMethod(Rpc.Method, Rpc.Params, Rpc.Id, ClientSocket, HttpReq.SessionId, HttpReq.Origin))
+	{
+		return;
+	}
+
 	// Unknown method
 	FString ErrorBody = FMcpJsonRpc::BuildError(
 		Rpc.Id, FMcpJsonRpc::ErrorMethodNotFound,

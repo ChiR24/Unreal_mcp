@@ -138,15 +138,20 @@ FString FMcpNativeTransport::HandleInitialize(
 	Result->SetStringField(TEXT("protocolVersion"), NegotiatedVersion);
 
 	auto Capabilities = MakeShared<FJsonObject>();
-	// Legacy mode serves a dynamic tools/list and notifies on change. The
-	// gateway exposes one stable 'unreal' tool, so listChanged is omitted
-	// rather than advertised false — omission and false are different claims.
+	// The public surface is the single static 'unreal' gateway tool, whose shape
+	// never changes, so the tools capability omits listChanged entirely (omission
+	// and an explicit false are different claims); the tools object is still sent.
 	auto ToolsCapability = MakeShared<FJsonObject>();
-	if (!bGatewayMode)
-	{
-		ToolsCapability->SetBoolField(TEXT("listChanged"), true);
-	}
 	Capabilities->SetObjectField(TEXT("tools"), ToolsCapability);
+	// Task 37: advertise exactly the implemented session-profile primitives —
+	// resources (with subscribe), prompts, and completions — all backed by
+	// HandlePrimitiveMethod. Nothing else is claimed (no tasks, no logging, no
+	// list-changed member) so the surface never advertises an unbacked primitive.
+	auto ResourcesCapability = MakeShared<FJsonObject>();
+	ResourcesCapability->SetBoolField(TEXT("subscribe"), true);
+	Capabilities->SetObjectField(TEXT("resources"), ResourcesCapability);
+	Capabilities->SetObjectField(TEXT("prompts"), MakeShared<FJsonObject>());
+	Capabilities->SetObjectField(TEXT("completions"), MakeShared<FJsonObject>());
 	Result->SetObjectField(TEXT("capabilities"), Capabilities);
 
 	auto ServerInfo = MakeShared<FJsonObject>();
@@ -178,29 +183,13 @@ FString FMcpNativeTransport::HandleInitialize(
 FString FMcpNativeTransport::HandleToolsList(
 	const TSharedPtr<FJsonValue>& Id)
 {
-	// In gateway mode expose only the static 'unreal' tool; canonical tools stay reachable through it.
-	if (bGatewayMode)
-	{
-		auto Result = MakeShared<FJsonObject>();
-		TArray<TSharedPtr<FJsonValue>> Tools;
-		Tools.Add(MakeShared<FJsonValueObject>(BuildUnrealGatewayToolDefinition()));
-		Result->SetArrayField(TEXT("tools"), Tools);
-		return FMcpJsonRpc::BuildResponse(Id, Result);
-	}
-
-	TSet<FString> EnabledTools = ToolManager.GetEnabledToolNames();
-	TSharedPtr<FJsonObject> ToolsList =
-		FMcpToolRegistry::Get().GetFilteredToolsResponse(EnabledTools);
-
-	if (ToolsList.IsValid())
-	{
-		return FMcpJsonRpc::BuildResponse(Id, ToolsList);
-	}
-
-	auto EmptyResult = MakeShared<FJsonObject>();
-	TArray<TSharedPtr<FJsonValue>> EmptyArray;
-	EmptyResult->SetArrayField(TEXT("tools"), EmptyArray);
-	return FMcpJsonRpc::BuildResponse(Id, EmptyResult);
+	// The public surface is permanently the single static 'unreal' gateway tool;
+	// the canonical 23 tools stay registered and reachable through it.
+	auto Result = MakeShared<FJsonObject>();
+	TArray<TSharedPtr<FJsonValue>> Tools;
+	Tools.Add(MakeShared<FJsonValueObject>(BuildUnrealGatewayToolDefinition()));
+	Result->SetArrayField(TEXT("tools"), Tools);
+	return FMcpJsonRpc::BuildResponse(Id, Result);
 }
 
 int32 FMcpNativeTransport::GetTotalToolCount() const

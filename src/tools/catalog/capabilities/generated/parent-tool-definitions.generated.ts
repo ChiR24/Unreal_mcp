@@ -4651,8 +4651,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Asset count on this page."
         },
         "cursor": {
-          "type": "string",
-          "description": "Opaque cursor for the current page."
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Opaque cursor for the current page, or null when the page was requested without one."
         },
         "details": {
           "oneOf": [
@@ -4685,7 +4688,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Applied page size."
         },
         "nextCursor": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Opaque cursor for the next page, or null on the last page."
         },
         "nextOffset": {
@@ -5066,31 +5072,79 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
       "properties": {
         "actorName": {
           "type": "string",
-          "description": "actorName"
+          "description": "Name of the actor that was spawned or acted upon."
+        },
+        "assetClass": {
+          "type": "string",
+          "description": "Unreal class name of the asset that was inspected, such as SoundCue or InputAction."
         },
         "assetPath": {
           "type": "string",
-          "description": "assetPath"
+          "description": "Full /Game path of the asset that was created, modified or inspected."
         },
-        "audioInfo": {
+        "attenuationPath": {
           "type": "string",
-          "description": "audioInfo"
+          "description": "Path of the Sound Attenuation asset referenced by the inspected Sound Cue."
         },
         "componentName": {
           "type": "string",
-          "description": "componentName"
+          "description": "Name of the audio component that was created or spawned."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Length of the inspected sound in seconds."
+        },
+        "falloffDistance": {
+          "type": "number",
+          "description": "Distance in centimetres over which the attenuation falls off."
         },
         "message": {
           "type": "string",
-          "description": "message"
+          "description": "Human-readable result message."
+        },
+        "modifierCount": {
+          "type": "number",
+          "description": "Number of Sound Class effects declared by the inspected Sound Mix."
+        },
+        "nodeCount": {
+          "type": "number",
+          "description": "Number of nodes in the inspected Sound Cue graph."
         },
         "nodeId": {
           "type": "string",
-          "description": "nodeId"
+          "description": "Identifier of the graph node that was added."
+        },
+        "numChannels": {
+          "type": "number",
+          "description": "Number of audio channels in the inspected Sound Wave."
+        },
+        "parentClass": {
+          "type": "string",
+          "description": "Path of the parent Sound Class the inspected Sound Class inherits from."
+        },
+        "pitch": {
+          "type": "number",
+          "description": "Pitch multiplier declared by the inspected Sound Class."
+        },
+        "sampleRate": {
+          "type": "number",
+          "description": "Sample rate of the inspected Sound Wave for the current platform."
+        },
+        "spatialize": {
+          "type": "boolean",
+          "description": "Whether the inspected Sound Attenuation spatializes its source."
         },
         "success": {
+          "type": "boolean",
+          "description": "Whether the action succeeded."
+        },
+        "type": {
           "type": "string",
-          "description": "success"
+          "description": "Kind of asset the bridge resolved, such as SoundCue, SoundWave or InputAction."
+        },
+        "volume": {
+          "type": "number",
+          "description": "Volume multiplier declared by the inspected Sound Class."
         }
       },
       "additionalProperties": true
@@ -5676,8 +5730,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Show speaker name in dialog."
         },
         "size": {
-          "type": "number",
-          "description": "Widget size value."
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Widget size override {x,y}."
         },
         "slotName": {
           "type": "string",
@@ -6171,6 +6227,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "value": {
+          "description": "Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON."
         },
         "variableName": {
           "type": "string",
@@ -10691,66 +10750,95 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "assetClass": {
+          "type": "string",
+          "description": "Unreal class name of the asset that was inspected, such as SoundCue or InputAction."
+        },
+        "assetName": {
+          "type": "string",
+          "description": "Object name of the asset that was inspected, without its package path."
+        },
         "assetPath": {
           "type": "string",
-          "description": "assetPath"
+          "description": "Full /Game path of the asset that was created, modified or inspected."
         },
-        "frameworkInfo": {
-          "type": "string",
-          "description": "frameworkInfo"
+        "consumeInput": {
+          "type": "boolean",
+          "description": "Whether the Input Action consumes the input it handles."
+        },
+        "existsAfter": {
+          "type": "boolean",
+          "description": "Whether the asset still resolved after the action completed."
         },
         "functionName": {
           "type": "string",
-          "description": "functionName"
+          "description": "Name of the Blueprint RPC function that was created."
+        },
+        "gameFrameworkInfo": {
+          "type": "object",
+          "description": "Game Framework class assignments and rule state read from the GameMode.",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true
         },
         "hasAuthority": {
-          "type": "string",
-          "description": "hasAuthority"
-        },
-        "inputInfo": {
-          "type": "string",
-          "description": "inputInfo"
+          "type": "boolean",
+          "description": "Whether the actor currently holds network authority."
         },
         "isLocalController": {
-          "type": "string",
-          "description": "isLocalController"
+          "type": "boolean",
+          "description": "Whether the controller possessing this actor is the local controller."
         },
         "isLocallyControlled": {
-          "type": "string",
-          "description": "isLocallyControlled"
+          "type": "boolean",
+          "description": "Whether the actor is controlled by the local player."
+        },
+        "mappingCount": {
+          "type": "number",
+          "description": "Number of key mappings declared by the inspected Input Mapping Context."
         },
         "message": {
           "type": "string",
-          "description": "message"
+          "description": "Human-readable result message."
         },
         "networkingInfo": {
-          "type": "string",
-          "description": "networkingInfo"
+          "type": "object",
+          "description": "Replication, relevancy and network role state read from the Blueprint or actor.",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true
         },
         "playerIndex": {
           "type": "number",
-          "description": "playerIndex"
+          "description": "Index assigned to the local player that was added."
         },
         "role": {
           "type": "string",
-          "description": "role"
+          "description": "Network role of the actor, such as ROLE_Authority."
         },
         "serverAddress": {
           "type": "string",
-          "description": "serverAddress"
+          "description": "Address of the LAN server that was hosted or joined."
         },
         "sessionName": {
           "type": "string",
-          "description": "sessionName"
+          "description": "Name of the online session that was created or joined."
         },
-        "sessions": {
-          "type": "array",
-          "description": "sessions",
-          "items": {}
+        "sessionsInfo": {
+          "type": "object",
+          "description": "Local and online session state, including player counts, split-screen, voice and hosting flags.",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true
         },
         "success": {
+          "type": "boolean",
+          "description": "Whether the action succeeded."
+        },
+        "type": {
           "type": "string",
-          "description": "success"
+          "description": "Kind of asset the bridge resolved, such as SoundCue, SoundWave or InputAction."
+        },
+        "valueType": {
+          "type": "string",
+          "description": "Enhanced Input value type of the Input Action, reported as its numeric enum index."
         }
       },
       "additionalProperties": true

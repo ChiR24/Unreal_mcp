@@ -1,4 +1,4 @@
-import { ListResourcesRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { ListResourcesRequestSchema, ListResourceTemplatesRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { HealthMonitor } from '../services/health-monitor.js';
@@ -6,6 +6,19 @@ import { ResourceHandler, type ResourceServer } from '../handlers/resource-handl
 import { AssetResources } from '../resources/assets.js';
 import { ActorResources } from '../resources/actors.js';
 import { LevelResources } from '../resources/levels.js';
+import { config } from '../config.js';
+import { InMemoryRevisionProvider } from './mcp-primitives/resource-revision.js';
+import {
+    NEW_RESOURCE_DEFINITIONS,
+    RESOURCE_TEMPLATES,
+    type ResourceDefinition,
+    type ResourceTemplateDefinition,
+} from '../resources/resource-catalog.js';
+import { redactProjectName } from '../resources/resource-errors.js';
+import { CapabilityResources, GatewayManifestCapabilitySource } from '../resources/capability-resources.js';
+import { BridgeEditorStateSource, EditorStateResources } from '../resources/editor-state-resources.js';
+import { BridgeAssetLookupSource, KnowledgeResources } from '../resources/knowledge-resources.js';
+import { ResourceReadRouter } from '../resources/resource-read-router.js';
 
 const RESOURCE_DEFINITIONS = [
     { uri: 'ue://assets', name: 'Assets', description: 'Project assets', mimeType: 'application/json' },
@@ -16,12 +29,21 @@ const RESOURCE_DEFINITIONS = [
     { uri: 'ue://version', name: 'Engine Version', description: 'Unreal Engine version and compatibility info', mimeType: 'application/json' }
 ];
 
-type ResourceRegistryServer = ResourceServer & {
+type ListResourcesServer = {
     setRequestHandler(
         schema: typeof ListResourcesRequestSchema,
-        handler: () => Promise<{ resources: typeof RESOURCE_DEFINITIONS }>
+        handler: () => Promise<{ resources: ResourceDefinition[] }>
     ): void;
 };
+
+type ListResourceTemplatesServer = {
+    setRequestHandler(
+        schema: typeof ListResourceTemplatesRequestSchema,
+        handler: () => Promise<{ resourceTemplates: ResourceTemplateDefinition[] }>
+    ): void;
+};
+
+type ResourceRegistryServer = ResourceServer & ListResourcesServer & ListResourceTemplatesServer;
 
 export class ResourceRegistry {
     constructor(
@@ -38,7 +60,13 @@ export class ResourceRegistry {
     register() {
         this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
             return {
-                resources: RESOURCE_DEFINITIONS
+                resources: [...RESOURCE_DEFINITIONS, ...NEW_RESOURCE_DEFINITIONS]
+            };
+        });
+
+        this.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+            return {
+                resourceTemplates: [...RESOURCE_TEMPLATES]
             };
         });
 
@@ -50,8 +78,34 @@ export class ResourceRegistry {
             this.actorResources,
             this.levelResources,
             this.healthMonitor,
-            this.ensureConnected
+            this.ensureConnected,
+            this.buildExtendedReader()
         );
         resourceHandler.registerHandlers();
+    }
+
+    // Built here (not server-setup) to keep the constructor signature stable; revisions injected, Task 34 swaps the default.
+    private buildExtendedReader(): ResourceReadRouter {
+        const revisions = new InMemoryRevisionProvider();
+        const capability = new CapabilityResources(new GatewayManifestCapabilitySource(), revisions);
+        const editorSource = new BridgeEditorStateSource(
+            this.automationBridge,
+            this.ensureConnected,
+            () => this.readEngineVersion()
+        );
+        const projectName = redactProjectName(config.UE_PROJECT_PATH) ?? null;
+        const editorState = new EditorStateResources(editorSource, revisions, projectName);
+        const assetLookup = new BridgeAssetLookupSource(this.automationBridge, this.ensureConnected);
+        const knowledge = new KnowledgeResources(assetLookup, revisions);
+        return new ResourceReadRouter(capability, editorState, knowledge);
+    }
+
+    private async readEngineVersion(): Promise<string | null> {
+        try {
+            const info = await this.bridge.getEngineVersion();
+            return info.version ?? null;
+        } catch {
+            return null;
+        }
     }
 }

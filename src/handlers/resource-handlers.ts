@@ -4,6 +4,7 @@ import { ActorResources } from '../resources/actors.js';
 import { LevelResources } from '../resources/levels.js';
 import { HealthMonitor } from '../services/health-monitor.js';
 import type { AutomationStatusBridge } from '../types/tools/tool-interfaces.js';
+import type { ExtendedResourceReader } from '../resources/resource-read-router.js';
 
 interface ResourceBridge {
   readonly isConnected: boolean;
@@ -56,7 +57,8 @@ export class ResourceHandler {
     private actorResources: ActorResources,
     private levelResources: LevelResources,
     private healthMonitor: HealthMonitor,
-    private ensureConnected: () => Promise<boolean>
+    private ensureConnected: () => Promise<boolean>,
+    private extendedReader?: ExtendedResourceReader
   ) { }
 
   registerHandlers() {
@@ -175,6 +177,10 @@ export class ResourceHandler {
         }
         const info = await this.bridge.getEngineVersion();
         return jsonResource(uri, info);
+      }
+
+      if (this.extendedReader) {
+        return this.extendedReader.read(uri);
       }
 
       throw new Error(`Unknown resource: ${uri}`);

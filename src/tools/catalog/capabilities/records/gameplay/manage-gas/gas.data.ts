@@ -58,7 +58,7 @@ export const GAS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { action: P.action, name: P.name, path: P.path }, required: ['action', 'name'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: GAS_PLUGIN,
     outputProps: { assetPath: P.assetPath }, outputRequired: ['assetPath'],
-    exampleInput: { action: 'create_gameplay_ability', name: 'GA_Fire' }, exampleOutput: { success: true, message: 'Ability created' } }),
+    exampleInput: { action: 'create_gameplay_ability', name: 'GA_Fire' }, exampleOutput: { success: true, message: 'Ability created', assetPath: '/Game/GA_Fire' } }),
   buildRecord({ parentTool: T, id: `${T}.set_ability_tags`, action: 'set_ability_tags', family: F,
     summary: 'Configure ability tag requirements/granted.', whenToUse: ['Ability tags must change.'], whenNotToUse: ['Use create_gameplay_ability.'],
     inputProps: { action: P.action, abilityPath: P.abilityPath, abilityTags: G.abilityTags, cancelAbilitiesWithTag: G.cancelAbilitiesWithTag, blockAbilitiesWithTag: G.blockAbilitiesWithTag, activationRequiredTags: G.activationRequiredTags, activationBlockedTags: G.activationBlockedTags }, required: ['action', 'abilityPath'],

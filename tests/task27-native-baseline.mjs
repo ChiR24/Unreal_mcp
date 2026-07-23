@@ -31,7 +31,14 @@ const validation = [
   'McpNativeGatewaySchemaKeywords.cpp',
   'McpNativeGatewayCanonicalRecords.cpp',
 ].map((module) => read(`MCP/Execute/${module}`)).join('\n');
-const argValidation = read('MCP/Transport/McpNativeTransportArgumentValidation.cpp');
+// The transport-level per-argument validation module was removed in the Task 30
+// cutover; canonical per-action argument validation now lives in the gateway
+// execute pipeline (McpValidateCanonicalToolArguments, gated on
+// McpCanonicalRecordsAvailable). Read those live modules so the strict-coverage
+// detectors characterize the real pipeline instead of a deleted file.
+const argValidation =
+  read('MCP/Execute/McpNativeGatewayValidation.cpp') +
+  read('MCP/Execute/McpNativeGatewayCanonicalRecords.cpp');
 const toolDefinition = read('MCP/Registry/McpToolDefinition.h');
 const pendingRequests = read('MCP/Transport/McpNativeTransportPendingRequests.cpp');
 const jsonRpc = read('MCP/Protocol/McpJsonRpc.cpp');

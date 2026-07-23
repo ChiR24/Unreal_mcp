@@ -45,7 +45,7 @@ export const EFFECT_1: readonly CapabilityRecordSource[] = [
     inputProps: { action: P.action, name: P.name, path: P.path, savePath: E.savePath }, required: ['action', 'name'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: NIAGARA,
     outputProps: { systemPath: P.assetPath }, outputRequired: ['systemPath'],
-    exampleInput: { action: 'create_niagara_system', name: 'NS_Fire' }, exampleOutput: { success: true, message: 'Niagara system created' } }),
+    exampleInput: { action: 'create_niagara_system', name: 'NS_Fire' }, exampleOutput: { success: true, message: 'Niagara system created', systemPath: '/Game/NS_Fire' } }),
   buildRecord({ parentTool: T, id: `${T}.create_niagara_emitter`, action: 'create_niagara_emitter', family: F,
     summary: 'Create a Niagara Emitter asset.', whenToUse: ['A reusable emitter is needed.'], whenNotToUse: ['Use create_niagara_system.'],
     inputProps: { action: P.action, name: P.name, path: P.path, savePath: E.savePath, emitterName: E.emitterName }, required: ['action', 'name'],

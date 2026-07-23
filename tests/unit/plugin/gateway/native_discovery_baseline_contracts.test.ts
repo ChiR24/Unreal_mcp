@@ -81,9 +81,14 @@ describe('Task 25 baseline: native gateway discovery invariants', () => {
     expect(searchDispatch).toBeGreaterThan(sessionGate);
   });
 
-  it('rejects direct canonical tool calls while gateway mode is on', () => {
+  it('answers direct canonical tool calls with the typed removed-tool migration', () => {
+    // Task 30 cutover: 'unreal' routes to the gateway; every removed direct tool
+    // name is answered with a typed DIRECT_TOOL_CALL_REMOVED tool-result whose
+    // bounded, executable migration is built by the shared builder (its 3-way
+    // shape is pinned by native-single-tool-cutover-contract.test.ts).
     expect(transportGateway).toContain('if (ToolName == TEXT("unreal"))');
-    expect(transportGateway).toContain('Gateway mode is enabled.');
+    expect(transportGateway).toContain('McpBuildDirectCallMigration(');
+    expect(transportGateway).toContain('DIRECT_TOOL_CALL_REMOVED');
   });
 
   it('leaves the supported protocol-version set untouched', () => {

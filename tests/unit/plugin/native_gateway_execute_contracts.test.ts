@@ -35,7 +35,6 @@ const REQUEST_CPP = 'MCP/Execute/McpNativeGatewayExecuteRequest.cpp';
 const RECEIPT_CPP = 'MCP/Execute/McpNativeGatewayReceipt.cpp';
 const EXECUTE_CPP = 'MCP/Execute/McpNativeTransportGatewayExecute.cpp';
 const VALIDATION_CPP = 'MCP/Execute/McpNativeGatewayValidation.cpp';
-const ARGS_CPP = 'MCP/Transport/McpNativeTransportArgumentValidation.cpp';
 const NATIVE_TEST = 'Tests/McpNativeGatewayExecuteValidationTests.cpp';
 
 describe('Task 27: native execute owns a canonical validation pipeline', () => {
@@ -135,19 +134,25 @@ describe('Task 27: native execute owns a canonical validation pipeline', () => {
     expect(read(SCHEMA_CPP)).toContain('UNSUPPORTED_SCHEMA_KEYWORD');
   });
 
-  it('replaces the per-tool EnforceStrictArguments opt-in with per-action strictness', () => {
-    const args = read(ARGS_CPP);
-    // The old shape returned early for 22 of 23 tools before any schema ran.
-    expect(args).not.toContain('if (!ToolDefinition || !ToolDefinition->EnforceStrictArguments())');
-    expect(args).toContain('McpCanonicalRecordsAvailable');
-    expect(args).toContain('McpValidateCanonicalToolArguments');
+  it('enforces per-action canonical strictness on the execute path, not a per-tool opt-in', () => {
+    // Task 30: the legacy transport ValidateToolArguments opt-in is deleted; the
+    // gateway execute path validates each request against its capability's exact
+    // per-action input schema, with no per-tool EnforceStrictArguments gate.
+    const validation = read(VALIDATION_CPP);
+    expect(validation).not.toContain('EnforceStrictArguments');
+    expect(validation).toContain('Request.Record->InputSchema');
+    expect(validation).toContain('McpValidateObjectAgainstCanonicalSchema');
   });
 
-  it('falls back to the legacy per-tool gate only while canonical records are unavailable', () => {
-    // Per the plan: replace the opt-in "only after canonical records load".
-    const args = read(ARGS_CPP);
-    expect(args).toContain('EnforceStrictArguments');
-    expect(args).toMatch(/if \(!McpCanonicalRecordsAvailable\(\)\)/);
+  it('fails closed when a capability cannot be resolved instead of skipping validation', () => {
+    // Task 30: the records-unavailable fallback is deleted with ValidateToolArguments.
+    // Execute resolves the capability from canonical records and returns an error
+    // receipt when it cannot, never dispatching unvalidated arguments.
+    const validation = read(VALIDATION_CPP);
+    const records = read(RECORDS_CPP);
+    expect(validation).toContain('McpParseGatewayExecuteRequest');
+    expect(validation).toContain('UNKNOWN_TOOL');
+    expect(records).toContain('McpCanonicalRecordsAvailable');
   });
 
   it('validates the handler result against the capability output schema', () => {

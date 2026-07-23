@@ -204,7 +204,7 @@ public:
 			Schema.String(TEXT("spectatorClass"), TEXT("spectatorClass"));
 			Schema.String(TEXT("spectatorViewMode"), TEXT("spectatorViewMode"));
 			Schema.String(TEXT("splitScreenType"), TEXT("splitScreenType"));
-			Schema.Array(TEXT("states"), TEXT("states"), TEXT("string"));
+			Schema.ArrayOfAny(TEXT("states"), TEXT("states"));
 			Schema.String(TEXT("structName"), TEXT("structName"));
 			Schema.Bool(TEXT("systemWide"), TEXT("systemWide"));
 			Schema.String(TEXT("targetPlayerId"), TEXT("targetPlayerId"));

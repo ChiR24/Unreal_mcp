@@ -117,9 +117,43 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	return nullptr;
 }
 
+TSharedPtr<FJsonObject> McpProjectCanonicalOutput(
+	const TSharedPtr<FJsonObject>& Result, const TSharedPtr<FJsonObject>& OutputSchema)
+{
+	if (!Result.IsValid())
+	{
+		return Result;
+	}
+	const TSharedPtr<FJsonObject>* Properties = nullptr;
+	if (!OutputSchema.IsValid() ||
+		!OutputSchema->TryGetObjectField(TEXT("properties"), Properties) || !Properties)
+	{
+		return MakeShared<FJsonObject>();
+	}
+	const TSharedPtr<FJsonObject>* Payload = nullptr;
+	const bool bHasPayload = Result->TryGetObjectField(TEXT("data"), Payload) && Payload;
+	TSharedPtr<FJsonObject> Projected = MakeShared<FJsonObject>();
+	for (const TPair<FString, TSharedPtr<FJsonValue>>& Property : (*Properties)->Values)
+	{
+		if (const TSharedPtr<FJsonValue>* Field = Result->Values.Find(Property.Key))
+		{
+			Projected->Values.Add(Property.Key, *Field);
+		}
+		else if (bHasPayload)
+		{
+			if (const TSharedPtr<FJsonValue>* PayloadField = (*Payload)->Values.Find(Property.Key))
+			{
+				Projected->Values.Add(Property.Key, *PayloadField);
+			}
+		}
+	}
+	return Projected;
+}
+
 TSharedPtr<FJsonObject> ValidateGatewayExecuteOutput(
 	const FString& CapabilityId, const TSharedPtr<FJsonObject>& OutputSchema,
-	const TSharedPtr<FJsonObject>& Result, const FString& CorrelationId)
+	const TSharedPtr<FJsonObject>& CanonicalOutput, const TSharedPtr<FJsonObject>& RawResult,
+	const FString& CorrelationId)
 {
 	if (!OutputSchema.IsValid())
 	{
@@ -127,7 +161,7 @@ TSharedPtr<FJsonObject> ValidateGatewayExecuteOutput(
 	}
 
 	FMcpSchemaViolationDetail Violation;
-	if (McpValidateObjectAgainstCanonicalSchema(Result, OutputSchema, Violation))
+	if (McpValidateObjectAgainstCanonicalSchema(CanonicalOutput, OutputSchema, Violation))
 	{
 		return nullptr;
 	}
@@ -136,9 +170,9 @@ TSharedPtr<FJsonObject> ValidateGatewayExecuteOutput(
 		FString::Printf(TEXT("Capability '%s' returned a result its output schema refuses: %s"),
 			*CapabilityId, *Violation.Message),
 		Violation.Pointer);
-	// The handler payload is retained verbatim so a schema violation never
+	// The raw handler payload is retained verbatim so a schema violation never
 	// discards the structured detail Unreal actually reported.
-	Error.UnrealDetail = Result;
+	Error.UnrealDetail = RawResult;
 	return McpBuildErrorReceipt(CapabilityId, Error, CorrelationId);
 }
 

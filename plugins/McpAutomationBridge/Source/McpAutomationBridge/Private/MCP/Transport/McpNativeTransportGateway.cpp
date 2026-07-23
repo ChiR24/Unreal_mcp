@@ -6,6 +6,63 @@
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewayDescribe.h"
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
+#include "MCP/Gateway/McpNativeGatewayDirectCallMigration.h"
+
+namespace
+{
+// The visibility-changing configure actions (native mirror of the TS
+// TOOL_LIST_CHANGED_ACTIONS set). Only these fold into a catalog revision.
+bool McpIsVisibilityConfigureAction(const FString& Action)
+{
+	return Action == TEXT("enable_tools") || Action == TEXT("disable_tools")
+		|| Action == TEXT("enable_category") || Action == TEXT("disable_category")
+		|| Action == TEXT("reset");
+}
+
+// Mirror a successful visibility change onto this session's revisioned overlay.
+// The store advances its per-session revision only when the enabled-flag
+// fingerprint actually moves, so a no-op configure leaves the revision (and the
+// downstream SyncCatalog) idle. The store has no EnableCategory mutator, so
+// enable_category re-enables the category's tools via EnableTools (which also
+// re-enables their category), keeping parity with the global manager.
+void McpApplyConfigureVisibility(
+	FMcpSessionConfigureStore& Store, const FString& Action,
+	const FString& SessionId, const TSharedPtr<FJsonObject>& Args)
+{
+	auto ToolNames = [&Args]()
+	{
+		TArray<FString> Names;
+		const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
+		if (Args.IsValid() && Args->TryGetArrayField(TEXT("tools"), Arr) && Arr)
+		{
+			for (const TSharedPtr<FJsonValue>& V : *Arr)
+			{
+				FString S;
+				if (V->TryGetString(S)) Names.Add(S);
+			}
+		}
+		return Names;
+	};
+
+	if (Action == TEXT("enable_tools")) { Store.EnableTools(SessionId, ToolNames()); return; }
+	if (Action == TEXT("disable_tools")) { Store.DisableTools(SessionId, ToolNames()); return; }
+	if (Action == TEXT("reset")) { Store.Reset(SessionId); return; }
+
+	FString Category;
+	if (Args.IsValid()) Args->TryGetStringField(TEXT("category"), Category);
+	if (Action == TEXT("disable_category")) { Store.DisableCategory(SessionId, Category); return; }
+	if (Action == TEXT("enable_category"))
+	{
+		const FMcpToolRegistry& Registry = FMcpToolRegistry::Get();
+		TArray<FString> InCategory;
+		for (const FString& ToolName : Registry.GetToolNames())
+		{
+			if (Registry.GetToolCategory(ToolName) == Category) InCategory.Add(ToolName);
+		}
+		Store.EnableTools(SessionId, InCategory);
+	}
+}
+}  // namespace
 
 void FMcpNativeTransport::HandleGatewayCall(
 	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
@@ -135,6 +192,24 @@ void FMcpNativeTransport::HandleGatewayCall(
 		TSharedPtr<FJsonObject> Result = ToolManager.HandleAction(Action, ManageArgs);
 		bool bOk = false;
 		if (Result.IsValid()) Result->TryGetBoolField(TEXT("success"), bOk);
+
+		// A successful visibility change is mirrored onto this session's revisioned
+		// configure overlay, then folded into one coalesced ue://capability/catalog
+		// resources/updated for subscribed sessions. The overlay fingerprint compare
+		// plus SyncCatalog's per-session cursor make this effective-change-only: a
+		// no-op configure advances no revision and enqueues no notification.
+		if (bOk && McpIsVisibilityConfigureAction(Action))
+		{
+			InitializePrimitivesIfNeeded();
+			McpApplyConfigureVisibility(SessionConfigureStore, Action, SessionId, ManageArgs);
+			FMcpNotificationCoalescer* Coalescer = nullptr;
+			{
+				FScopeLock PrimitiveLock(&PrimitiveStateMutex);
+				Coalescer = NotificationCoalescer.Get();
+			}
+			if (Coalescer) Coalescer->SyncCatalog(SessionId);
+		}
+
 		const FString Msg = bOk ? TEXT("ok")
 			: (Result.IsValid() ? Result->GetStringField(TEXT("error")) : TEXT("configure failed"));
 		SendOneShot(FMcpJsonRpc::BuildToolResult(bOk, Msg, Result));
@@ -160,18 +235,26 @@ bool FMcpNativeTransport::HandleGatewayModePreDispatch(
 {
 	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 
-	// Only the static 'unreal' tool is exposed in gateway mode.
+	// The public surface is permanently the single static 'unreal' gateway tool;
+	// route it through the gateway's search/describe/execute/configure operations.
 	if (ToolName == TEXT("unreal"))
 	{
 		HandleGatewayCall(Arguments, Id, ClientSocket, SessionId, CorsOrigin, ProgressToken);
 		return true;
 	}
 
-	// Direct canonical tool calls are rejected; reach them through 'unreal'.
-	const FString ErrorBody = FMcpJsonRpc::BuildError(
-		Id, FMcpJsonRpc::ErrorInvalidParams,
-		TEXT("Gateway mode is enabled. Call the 'unreal' tool to search, describe, or execute capabilities."));
-	SendHttpResponse(ClientSocket, 200, TEXT("application/json"), ErrorBody, {}, CorsOrigin);
+	// Every other (removed) direct tool name gets a bounded, executable migration
+	// receipt built by the shared builder (mirrors TS buildDirectCallMigration).
+	// Total and non-dispatching: no legacy direct-call path runs after this.
+	const TArray<FString> ParentNames = FMcpToolRegistry::Get().GetToolNames().Array();
+	const TSharedPtr<FJsonObject> Migration =
+		McpBuildDirectCallMigration(ToolName, Arguments, ParentNames);
+	FString Message;
+	Migration->TryGetStringField(TEXT("message"), Message);
+	const TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
+		false, Message, Migration, TEXT("DIRECT_TOOL_CALL_REMOVED"));
+	const FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
+	SendHttpResponse(ClientSocket, 200, TEXT("application/json"), Body, {}, CorsOrigin);
 	ClientSocket->Close();
 	if (SocketSub) SocketSub->DestroySocket(ClientSocket);
 	return true;

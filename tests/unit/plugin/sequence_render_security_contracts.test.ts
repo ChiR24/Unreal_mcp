@@ -428,37 +428,52 @@ describe('sequence render and native security contracts', () => {
       'Tools',
       'McpGeneratedParentRegistry_Utility_Sequence.cpp',
     );
-    const transport = privateSource(
+    // Task 30 cutover: the legacy direct-call ValidateToolArguments tail in
+    // McpNativeTransportJsonRpc.cpp is gone. Strict argument validation now runs on
+    // the Task-27 canonical gateway execute path, which validates each request
+    // against the capability's exact input schema before anything is queued.
+    const gatewayExecute = privateSource(
       'MCP',
-      'Transport',
-      'McpNativeTransportJsonRpc.cpp',
+      'Execute',
+      'McpNativeTransportGatewayExecute.cpp',
+    );
+    const gatewayValidation = privateSource(
+      'MCP',
+      'Execute',
+      'McpNativeGatewayValidation.cpp',
     );
 
     expect(definition).toContain('EnforceStrictArguments() const override');
-    expect(transport).toContain('ValidateToolArguments(');
+    expect(gatewayExecute).toContain('ValidateAndResolveGatewayExecute(');
+    expect(gatewayValidation).toContain('McpValidateObjectAgainstCanonicalSchema');
+    expect(gatewayValidation).toContain('Request.Record->InputSchema');
+    // Strict validation gates the queue: a bad argument never reaches StreamToolCall.
+    expect(gatewayExecute.indexOf('ValidateAndResolveGatewayExecute(')).toBeLessThan(
+      gatewayExecute.indexOf('StreamToolCall('),
+    );
 
-    const validation = privateSource(
+    // Task 30: the legacy transport validator is deleted. Strict per-action
+    // validation runs through the canonical gateway schema keyword validator,
+    // which keeps the exact-integer JSON-number rule (no float-tolerance slop).
+    const schemaKeywords = privateSource(
       'MCP',
-      'Transport',
-      'McpNativeTransportArgumentValidation.cpp',
+      'Execute',
+      'McpNativeGatewaySchemaKeywords.cpp',
     );
     const schemaFields = privateSource(
       'MCP',
       'Tools',
       'McpGeneratedParentRegistry_Utility_Sequence.cpp',
     );
-    expect(validation).toContain('ValidateValueAgainstSchema');
-    expect(validation).toContain('INVALID_TOOL_ARGUMENT');
-    expect(validation).toContain('UNKNOWN_TOOL_ARGUMENT');
-    expect(validation).toContain('FMath::TruncToDouble');
-    expect(validation).toContain('9007199254740991.0');
-    expect(validation).not.toContain('FMath::IsNearlyEqual');
+    expect(schemaKeywords).toContain('MaxExactJsonInteger = 9007199254740991.0');
+    expect(schemaKeywords).toContain('FMath::TruncToDouble');
+    expect(schemaKeywords).not.toContain('FMath::IsNearlyEqual');
     expect(schemaFields).toContain('.Object(TEXT("settings")');
     expect(schemaFields).not.toContain(
       '.FreeformObject(TEXT("settings")',
     );
     expect(schemaFields).toContain('.Object(TEXT("burnIn")');
-    expect(validation).toContain('case EJson::Null:');
+    expect(schemaKeywords).toContain('case EJson::Null:');
   });
 
   it('bounds native sessions, pending calls, and the editor request queue', () => {
@@ -824,10 +839,13 @@ describe('sequence render and native security contracts', () => {
       'Transport',
       'McpNativeTransportConnectionTypes.h',
     );
-    const jsonRpc = privateSource(
+    // Task 30 cutover: the legacy direct-call timeout tail in McpNativeTransportJsonRpc.cpp
+    // is gone. start_render now streams through the gateway execute path, so the
+    // per-tool timeout is resolved in StreamToolCall via the shared timeout policy.
+    const gatewayStream = privateSource(
       'MCP',
       'Transport',
-      'McpNativeTransportJsonRpc.cpp',
+      'McpNativeTransportGatewayStream.cpp',
     );
     const policy = privateSource(
       'MCP',
@@ -844,8 +862,9 @@ describe('sequence render and native security contracts', () => {
     expect(policy).toContain('ResolveToolCallTimeoutSeconds');
     expect(policy).toContain('NativeResponseGraceMs');
     expect(policy).toContain('MaxMovieRenderCancellationWaitMs');
-    expect(jsonRpc).toContain('MaxMovieRenderCancellationWaitMs');
-    expect(jsonRpc).toContain('Conn->TimeoutSeconds');
+    expect(gatewayStream).toContain('ResolveToolCallTimeoutSeconds');
+    expect(gatewayStream).toContain('MaxMovieRenderCancellationWaitMs');
+    expect(gatewayStream).toContain('Conn->TimeoutSeconds');
     expect(cleanup).toContain('Conn->TimeoutSeconds');
     expect(cleanup).toContain('CancelAutomationRequest(Entry.Key)');
     expect(cleanup.indexOf('CancelAutomationRequest(Entry.Key)')).toBeLessThan(

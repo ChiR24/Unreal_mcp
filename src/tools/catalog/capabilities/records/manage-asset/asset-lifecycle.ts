@@ -18,8 +18,10 @@ const PAGINATED_OUTPUT = schema({
   offset: num('Applied zero-based offset.'),
   hasMore: bool('True when more results exist beyond the current page.'),
   nextOffset: num('Next-page offset.'),
-  cursor: str('Opaque cursor for the current page.'),
-  nextCursor: str('Opaque cursor for the next page, or null on the last page.')
+  // handleListAssets resolves both to `... : (cursor ?? null)` / `... : null`, so
+  // null is a produced value on the last page, not merely an absent field.
+  cursor: { type: ['string', 'null'], description: 'Opaque cursor for the current page, or null when the page was requested without one.' },
+  nextCursor: { type: ['string', 'null'], description: 'Opaque cursor for the next page, or null on the last page.' }
 }, ['success']);
 
 const OK_OUTPUT = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
@@ -49,34 +51,40 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   r('duplicate', 'asset', 'Duplicate an existing asset to a new path.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
     OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
-    { normalization: aliasCanonical('duplicate_asset') }
+    { normalization: aliasCanonical('duplicate_asset'),
+      examples: [ex('Duplicate a material', { sourcePath: '/Game/Materials/M_Base', destinationPath: '/Game/Materials', newName: 'M_Base_Variant' }, { success: true })] }
   ),
   r('duplicate_asset', 'asset', 'Long-form alias for duplicate.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
     OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
-    { normalization: aliasOf('asset.duplicate') }
+    { normalization: aliasOf('asset.duplicate'),
+      examples: [ex('Duplicate via the long-form alias', { sourcePath: '/Game/Materials/M_Base', destinationPath: '/Game/Materials', newName: 'M_Base_Variant' }, { success: true })] }
   ),
 
   r('rename', 'asset', 'Rename an existing asset in place.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
     OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
-    { normalization: aliasCanonical('rename_asset') }
+    { normalization: aliasCanonical('rename_asset'),
+      examples: [ex('Rename a mesh in place', { sourcePath: '/Game/Meshes/SM_Crate', newName: 'SM_Crate_Large' }, { success: true })] }
   ),
   r('rename_asset', 'asset', 'Long-form alias for rename.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
     OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
-    { normalization: aliasOf('asset.rename') }
+    { normalization: aliasOf('asset.rename'),
+      examples: [ex('Rename via the long-form alias', { sourcePath: '/Game/Meshes/SM_Crate', newName: 'SM_Crate_Large' }, { success: true })] }
   ),
 
   r('move', 'asset', 'Move an asset to a new package path.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH }, ['sourcePath']),
     OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
-    { normalization: aliasCanonical('move_asset') }
+    { normalization: aliasCanonical('move_asset'),
+      examples: [ex('Move a texture into a subfolder', { sourcePath: '/Game/Textures/T_Rock', destinationPath: '/Game/Textures/Terrain/T_Rock' }, { success: true })] }
   ),
   r('move_asset', 'asset', 'Long-form alias for move.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH }, ['sourcePath']),
     OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
-    { normalization: aliasOf('asset.move') }
+    { normalization: aliasOf('asset.move'),
+      examples: [ex('Move via the long-form alias', { sourcePath: '/Game/Textures/T_Rock', destinationPath: '/Game/Textures/Terrain/T_Rock' }, { success: true })] }
   ),
 
   r('delete', 'asset', 'Permanently delete one or more assets after explicit confirmation.',
@@ -88,12 +96,14 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   r('delete_asset', 'asset', 'Long-form alias for delete.',
     schema({ paths: arr('Asset paths to delete.'), assetPath: str('Single asset path.'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
-    { normalization: aliasOf('asset.delete') }
+    { normalization: aliasOf('asset.delete'),
+      examples: [ex('Delete a single asset by path', { assetPath: '/Game/MCPTest/Disposable' }, { success: true })] }
   ),
   r('delete_assets', 'asset', 'Plural-form alias for delete.',
     schema({ paths: arr('Asset paths to delete.'), assetPath: str('Single asset path.'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
-    { normalization: aliasOf('asset.delete') }
+    { normalization: aliasOf('asset.delete'),
+      examples: [ex('Delete several assets in one call', { paths: ['/Game/MCPTest/DisposableA', '/Game/MCPTest/DisposableB'] }, { success: true })] }
   ),
 
   r('create_folder', 'asset', 'Create a new content-browser folder under a /Game path.',
@@ -113,6 +123,9 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       offset: num('Zero-based offset into the full result set.')
     }, []),
     PAGINATED_OUTPUT, READ, READ_POLICY, MEDIUM,
-    { dispatchAction: 'asset_query', dispatchMode: 'action' }
+    { dispatchAction: 'asset_query', dispatchMode: 'action',
+      examples: [ex('Search materials by name',
+        { searchText: 'M_Rock', classNames: ['Material'], packagePaths: ['/Game/Materials'], recursivePaths: true, limit: 25 },
+        { success: true, assets: [{ name: 'M_Rock', path: '/Game/Materials/M_Rock.M_Rock', class: 'Material', packagePath: '/Game/Materials' }], folders: [], totalCount: 1, count: 1, limit: 25, offset: 0, hasMore: false, nextOffset: 1, cursor: null, nextCursor: null })] }
   )
 ];

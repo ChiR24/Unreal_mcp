@@ -1,15 +1,20 @@
-import type { LegacyActionName, LegacyToolName } from '../identifiers.js';
+import type { CapabilityId, LegacyActionName, LegacyToolName } from '../identifiers.js';
 
-// The migration map's canonical reference uses the inventory's `cap:domain:action`
-// notation, distinct from the dotted capability-record id. Kept verbatim in receipts.
-export type CanonicalCapabilityRef = string;
+/**
+ * A migration target is always a SHIPPED capability record, named by its dotted
+ * record id. The normalization inventory's `cap:<namespace>:<action>` string is
+ * a Task 5 analysis reference that no record ever carried, so it is never
+ * published here — targets are resolved from the record source by legacy pair
+ * (see `canonical-targets.ts`). Receipts therefore quote a live identity.
+ */
+export type CanonicalCapabilityRef = CapabilityId;
 
 /**
  * Migration domain types for Task 20.
  *
  * Every shipped legacy `{tool, action}` occurrence (1,335 of them, sourced from
  * the audited normalization inventory) resolves to exactly one of:
- *   - a canonical capability id (lossless, possibly through an alias), or
+ *   - a live capability record id (lossless, possibly through an alias), or
  *   - an explicit typed removal (the verb was retired), or
  *   - a non-translatable entry (the legacy call cannot be losslessly mapped to
  *     a single canonical capability because the semantics do not line up — e.g.
@@ -57,7 +62,7 @@ export type MigrationEntry = {
   readonly disposition: MigrationDisposition;
   /** Present for canonical/alias dispositions. */
   readonly canonicalId?: CanonicalCapabilityRef;
-  /** Present for removed dispositions. */
+  /** Present for removed dispositions; a retired verb names no canonical target. */
   readonly removal?: {
     readonly since: string;
     readonly guidance: string;
@@ -107,6 +112,20 @@ export class UnknownLegacyCallError extends Error {
   constructor(legacyKey: LegacyKey) {
     super(`Legacy ${legacyKey} is not present in the migration map.`);
     this.name = 'UnknownLegacyCallError';
+    this.legacyKey = legacyKey;
+  }
+}
+
+export class UnmappedLegacyPairError extends Error {
+  readonly code = 'MIGRATION_UNMAPPED_LEGACY_PAIR' as const;
+  readonly legacyKey: LegacyKey;
+
+  constructor(legacyKey: LegacyKey) {
+    super(
+      `Legacy ${legacyKey} selects no live capability record. A migration target must ` +
+        'name a shipped record; the normalization inventory reference is never a fallback.'
+    );
+    this.name = 'UnmappedLegacyPairError';
     this.legacyKey = legacyKey;
   }
 }

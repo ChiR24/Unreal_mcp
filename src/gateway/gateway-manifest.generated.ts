@@ -6727,8 +6727,10 @@ export const gatewayManifest = {
             "description": "Show speaker name in dialog."
           },
           "size": {
-            "type": "number",
-            "description": "Widget size value."
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Widget size override {x,y}."
           },
           "slotName": {
             "type": "string",

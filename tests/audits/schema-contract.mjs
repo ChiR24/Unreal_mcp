@@ -1,9 +1,19 @@
+import { losslessUnionTypes } from './schema-union-acceptance.mjs';
+
 function sortedUnique(values) {
   return [...new Set(values ?? [])].sort();
 }
 
 function normalizedType(value) {
   return Array.isArray(value) ? sortedUnique(value) : value;
+}
+
+// A `oneOf`/`anyOf` node carries no `type` of its own, so comparing `.type`
+// alone reports every union as drift. Compare what the node ACCEPTS: a union
+// whose open branches subsume its constrained ones accepts exactly the open
+// type set -- which is what the native TypeUnion projection encodes.
+function acceptedType(node) {
+  return losslessUnionTypes(node) ?? normalizedType(node.type);
 }
 
 function sameValue(left, right) {
@@ -63,12 +73,7 @@ function compareProperties(path, typeScript, native, mismatches) {
 }
 
 function compareSchemaNode(path, typeScript, native, mismatches) {
-  recordMismatch(
-    mismatches,
-    `${path}.type`,
-    normalizedType(typeScript.type),
-    normalizedType(native.type)
-  );
+  recordMismatch(mismatches, `${path}.type`, acceptedType(typeScript), acceptedType(native));
 
   if (typeScript.enum !== undefined || native.enum !== undefined) {
     recordMismatch(

@@ -23,6 +23,7 @@ export async function startStdioServer(): Promise<void> {
     automationBridge,
     healthMonitor,
     metricsServer,
+    wiredPrimitives,
   } = createServer();
   const transport = new StdioServerTransport();
   let shuttingDown = false;
@@ -67,6 +68,14 @@ export async function startStdioServer(): Promise<void> {
     } catch (error) {
       log.warn(
         'Failed to stop health checks cleanly',
+        error instanceof Error ? error : String(error),
+      );
+    }
+    try {
+      wiredPrimitives.dispose();
+    } catch (error) {
+      log.warn(
+        'Failed to drain MCP primitive stores cleanly',
         error instanceof Error ? error : String(error),
       );
     }
@@ -141,6 +150,7 @@ export async function startStdioServer(): Promise<void> {
     };
 
     runCleanup('stop health checks', () => healthMonitor.stopHealthChecks());
+    runCleanup('drain MCP primitive stores', () => wiredPrimitives.dispose());
     runCleanup('dispose Unreal bridge', () => bridge.dispose());
     runCleanup('stop automation bridge', () => automationBridge.stop());
     runCleanup('close metrics server', () => {

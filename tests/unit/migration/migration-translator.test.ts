@@ -71,9 +71,11 @@ describe('Task 20 migration map — coverage and refusal', () => {
       });
       throw new Error('expected refusal');
     } catch (error) {
-      expect(error).toBeInstanceOf(NonTranslatableMigrationError);
-      const guidance = (error as NonTranslatableMigrationError).guidance;
-      expect(guidance.canonicalId).toBe('cap:manage_level_structure:set_volume_extent');
+      if (!(error instanceof NonTranslatableMigrationError)) {
+        throw error;
+      }
+      const guidance = error.guidance;
+      expect(guidance.canonicalId).toBe('manage_level_structure.set_volume_extent');
       expect(guidance.nextCall.action).toBe('set_volume_extent');
       expect(guidance.reason).toMatch(/origin/i);
     }
@@ -87,16 +89,16 @@ describe('Task 20 migration map — coverage and refusal', () => {
       action: 'set_volume_bounds',
       params: { volumeName: 'PP_01', extent: { x: 1000, y: 1000, z: 500 } }
     });
-    expect(result.canonicalId).toBe('cap:manage_level_structure:set_volume_bounds');
+    expect(result.canonicalId).toBe('manage_level_structure.set_volume_bounds');
   });
 
-  it('resolves an alias occurrence to its shared canonical capability', () => {
+  it('resolves an alias occurrence to the live record its own legacy pair selects', () => {
     const entry = resolveMigrationEntry('system_control', 'console_command');
     expect(entry?.disposition).toBe('alias');
-    expect(entry?.canonicalId).toBe('cap:shared:console_command');
+    expect(entry?.canonicalId).toBe('system_control.console_command');
 
     const result = translateExecute({ tool: 'system_control', action: 'console_command', params: {} });
-    expect(result.canonicalId).toBe('cap:shared:console_command');
+    expect(result.canonicalId).toBe('system_control.console_command');
   });
 
   it('GREEN: round-trips every lossless (canonical + alias) translator and returns the canonical id in the receipt', () => {
@@ -133,7 +135,7 @@ describe('Task 20 migration map — coverage and refusal', () => {
     const consoleAlias = first.aliases.find(
       (a) => a.alias === 'system_control.console_command'
     );
-    expect(consoleAlias?.canonicalId).toBe('cap:shared:console_command');
+    expect(consoleAlias?.canonicalId).toBe('system_control.console_command');
   });
 });
 

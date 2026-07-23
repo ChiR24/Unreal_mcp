@@ -48,6 +48,9 @@ public:
 	FMcpSchemaBuilder& Array(const FString& Name, const FString& Description,
 		const FString& ItemType = TEXT("string"));
 
+	/** Array of unconstrained items (items: {}); Array() would narrow them to a type. */
+	FMcpSchemaBuilder& ArrayOfAny(const FString& Name, const FString& Description);
+
 	/** Array of objects property with item schema. */
 	FMcpSchemaBuilder& ArrayOfObjects(const FString& Name, const FString& Description,
 		TFunction<void(FMcpSchemaBuilder&)> ItemBuilder = nullptr);

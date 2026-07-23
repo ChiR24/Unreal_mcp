@@ -2,8 +2,9 @@
 // Generates the pilot catalog.json and pilot manifest artifacts from the
 // 158 manage_asset records, then writes the evidence JSON. This test both
 // verifies the pilot pipeline end-to-end and produces the evidence artifact.
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { hashManifestContent } from '../../scripts/gateway-manifest/hash.js';
 import { pilotHeaderText, pilotJson, pilotTsText } from '../../scripts/gateway-manifest/pilot.js';
@@ -58,26 +59,33 @@ describe('manage-asset pilot generation and evidence', () => {
         .map((r) => ({ id: r.id, disposition: r.normalization.disposition, aliases: r.aliases }))
     };
 
-    const evidenceDir = resolve(process.cwd(), '.omo/evidence');
-    mkdirSync(evidenceDir, { recursive: true });
-    writeFileSync(
-      resolve(evidenceDir, 'task-10-pure-unreal-mcp-implementation.json'),
-      `${JSON.stringify(evidence, null, 2)}\n`
-    );
+    const tmpRoot = mkdtempSync(join(tmpdir(), 'manage-asset-pilot-generate-'));
+    try {
+      const evidenceDir = join(tmpRoot, 'evidence');
+      mkdirSync(evidenceDir, { recursive: true });
+      writeFileSync(
+        join(evidenceDir, 'task-10-pure-unreal-mcp-implementation.json'),
+        `${JSON.stringify(evidence, null, 2)}\n`
+      );
 
-    // Also write the pilot catalog.json fixture and pilot manifest artifacts.
-    const pilotDir = resolve(process.cwd(), '.omo/pilot-manifest');
-    mkdirSync(pilotDir, { recursive: true });
-    writeFileSync(resolve(pilotDir, 'pilot-manifest.json'), json);
-    writeFileSync(resolve(pilotDir, 'pilot-manifest.ts'), ts);
-    writeFileSync(resolve(pilotDir, 'pilot-manifest.h'), h);
+      const pilotDir = join(tmpRoot, 'pilot-manifest');
+      mkdirSync(pilotDir, { recursive: true });
+      writeFileSync(join(pilotDir, 'pilot-manifest.json'), json);
+      writeFileSync(join(pilotDir, 'pilot-manifest.ts'), ts);
+      writeFileSync(join(pilotDir, 'pilot-manifest.h'), h);
 
-    // Write catalog.json fixture for the pilot pipeline.
-    const catalogDir = resolve(process.cwd(), 'src/tools/catalog/capabilities/records/manage-asset');
-    writeFileSync(resolve(catalogDir, 'catalog.json'), `${JSON.stringify(MANAGE_ASSET_RECORDS, null, 2)}\n`);
+      const catalogDir = join(tmpRoot, 'catalog');
+      mkdirSync(catalogDir, { recursive: true });
+      writeFileSync(
+        join(catalogDir, 'catalog.json'),
+        `${JSON.stringify(MANAGE_ASSET_RECORDS, null, 2)}\n`
+      );
 
-    expect(jsonHash).toBeDefined();
-    expect(tsHash).toBeDefined();
-    expect(hHash).toBeDefined();
+      expect(jsonHash).toBeDefined();
+      expect(tsHash).toBeDefined();
+      expect(hHash).toBeDefined();
+    } finally {
+      rmSync(tmpRoot, { recursive: true, force: true });
+    }
   });
 });

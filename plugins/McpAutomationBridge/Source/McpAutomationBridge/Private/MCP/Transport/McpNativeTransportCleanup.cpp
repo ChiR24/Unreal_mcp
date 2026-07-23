@@ -155,6 +155,9 @@ void FMcpNativeTransport::RunKeepaliveLoop()
 			break;
 		}
 		SweepNotificationKeepalives();
+		// Task 37: drain any due coalesced resources/updated from the same
+		// existing keepalive thread — no dedicated primitive-notification thread.
+		FlushDuePrimitiveNotifications();
 	}
 }
 

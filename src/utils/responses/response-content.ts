@@ -78,7 +78,8 @@ function formatValue(val: unknown): string {
   return String(val);
 }
 
-function flattenPayloadWrappers(payload: Record<string, unknown>): Record<string, unknown> {
+/** Collapses `data`/`result` wrappers onto the root. Inner keys win; input is not mutated. */
+export function flattenPayloadWrappers(payload: Record<string, unknown>): Record<string, unknown> {
   const effectivePayload = { ...payload };
 
   const flattenWrappers = (obj: Record<string, unknown>, depth = 0): void => {
