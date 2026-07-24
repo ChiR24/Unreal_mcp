@@ -44,7 +44,7 @@ bool HandleSetScalarParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const 
         const FName ParamFName(*ParamName);
         // Note: with duplicate-named ScalarParameter expressions (a graph authoring error), the last
         // match wins — same ambiguity UE itself has for duplicate parameter names.
-        for (UMaterialExpression *Expr : BaseMaterial->GetExpressions()) {
+        for (UMaterialExpression *Expr : MCP_GET_MATERIAL_EXPRESSIONS(BaseMaterial)) {
           if (UMaterialExpressionScalarParameter *Scalar =
                   Cast<UMaterialExpressionScalarParameter>(Expr)) {
             AvailableParams.Add(Scalar->ParameterName.ToString());
