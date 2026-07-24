@@ -20,10 +20,13 @@ export async function handleGASTools(
     };
   }
 
-  if (action === 'get_gas_info' && typeof context.argsRecord.assetPath !== 'string') {
+  const existingAssetPath = context.argsRecord.assetPath;
+  const assetPathMissing = typeof existingAssetPath !== 'string' || existingAssetPath.trim().length === 0;
+  if (action === 'get_gas_info' && assetPathMissing) {
     // get_gas_info inspects ANY GAS-relevant asset, so it takes the generic assetPath — but callers
     // coming from the blueprint/inspect tools naturally pass blueprintPath (or path). Alias them
-    // instead of failing validation on a naming difference.
+    // instead of failing validation on a naming difference. Treat an empty/whitespace assetPath as
+    // missing too, so a supplied blueprintPath still gets used.
     const alias = [context.argsRecord.blueprintPath, context.argsRecord.path]
       .find((v): v is string => typeof v === 'string' && v.trim().length > 0);
     if (alias) context.argsRecord.assetPath = alias.trim();
@@ -47,7 +50,7 @@ export async function handleGASTools(
     if (resultData && typeof resultData === 'object' && typeof resultData.gasType !== 'string') {
       try {
         resultData.gasType = 'None';
-        resultData.gasNote = 'No GAS parent class detected (not a GameplayAbility/GameplayEffect/AttributeSet/GameplayCue derivative and no AbilitySystemComponent found).';
+        resultData.gasNote = 'No GAS parent class detected (not a GameplayAbility/GameplayEffect/AttributeSet/GameplayCue derivative).';
       } catch {
         // Best-effort clarity only — a frozen/sealed result must not turn a successful inspection into a failure.
       }
