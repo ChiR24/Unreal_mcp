@@ -89,6 +89,73 @@ export const SemanticErrorSchema = z.discriminatedUnion('kind', [
       suggestions: z.array(z.string()).readonly().optional()
     })
     .readonly(),
+  // Task 39 plan classes. These are additive: the legacy variants above stay so
+  // externally-consumed codes keep working, while every plan failure now has its
+  // own kind (disabled/missing capability, explicit consent, stale revision,
+  // general conflict, cancellation, dispatch/routing, output-contract failure).
+  z
+    .strictObject({
+      kind: z.literal('capability'),
+      code: z.literal('CAPABILITY_DISABLED').or(z.literal('CAPABILITY_UNAVAILABLE')),
+      message: z.string(),
+      retryable: z.boolean(),
+      suggestions: z.array(z.string()).readonly().optional()
+    })
+    .readonly(),
+  z
+    .strictObject({
+      kind: z.literal('consent'),
+      code: z.literal('CONSENT_REQUIRED'),
+      message: z.string(),
+      scope: z.string().min(1).max(64),
+      suggestions: z.array(z.string()).readonly().optional()
+    })
+    .readonly(),
+  z
+    .strictObject({
+      kind: z.literal('staleState'),
+      code: z.literal('STALE_STATE'),
+      message: z.string(),
+      currentRevision: z.string().min(1).max(128),
+      expectedRevision: z.string().min(1).max(128),
+      suggestions: z.array(z.string()).readonly().optional()
+    })
+    .readonly(),
+  z
+    .strictObject({
+      kind: z.literal('conflict'),
+      code: z.literal('STATE_CONFLICT'),
+      message: z.string(),
+      suggestions: z.array(z.string()).readonly().optional()
+    })
+    .readonly(),
+  z
+    .strictObject({
+      kind: z.literal('cancellation'),
+      code: z.literal('OPERATION_CANCELLED'),
+      message: z.string()
+    })
+    .readonly(),
+  z
+    .strictObject({
+      kind: z.literal('dispatch'),
+      code: z.literal('NOT_CONNECTED').or(z.literal('DISPATCH_ERROR')),
+      message: z.string(),
+      retryable: z.boolean(),
+      correlationId: CorrelationIdSchema.optional(),
+      suggestions: z.array(z.string()).readonly().optional()
+    })
+    .readonly(),
+  z
+    .strictObject({
+      kind: z.literal('output'),
+      code: z.literal('OUTPUT_SCHEMA_VIOLATION').or(z.literal('RESULT_TOO_LARGE')),
+      message: z.string(),
+      pointer: z.string().optional(),
+      resultChars: z.number().optional(),
+      suggestions: z.array(z.string()).readonly().optional()
+    })
+    .readonly(),
   z
     .strictObject({
       kind: z.literal('unknown'),

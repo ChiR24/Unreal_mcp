@@ -7,16 +7,34 @@ import { type NextCall, NextCallSchema, type SemanticError, SemanticErrorSchema,
 import type { TypedHandle } from './handles.js';
 import { TypedHandleSchema } from './handles.js';
 import type {
+  CapabilityRevision,
   CatalogRevision,
   CorrelationId,
-  IdempotencyKey
+  IdempotencyKey,
+  RequestId,
+  SchemaRevision
 } from './ids.js';
 import {
+  CapabilityRevisionSchema,
   CatalogRevisionSchema,
   CorrelationIdSchema,
-  IdempotencyKeySchema
+  IdempotencyKeySchema,
+  RequestIdSchema,
+  SchemaRevisionSchema
 } from './ids.js';
 import { JsonValueSchema } from './property-assignment.js';
+import { boundArray, boundStrings, redactText } from './receipt-redaction.js';
+
+// Evidence that the handler result was held to the capability's declared output
+// contract before it became a success receipt: `outputSchema` names whether the
+// schema was checked, `level` echoes the requested validation level.
+export const ValidationEvidenceSchema = z
+  .strictObject({
+    outputSchema: z.enum(['passed', 'skipped']),
+    level: z.enum(['strict', 'lenient', 'none']).optional()
+  })
+  .readonly();
+export type ValidationEvidence = z.infer<typeof ValidationEvidenceSchema>;
 
 // Stable, key-sorted serialization so receipt bytes are reproducible regardless of
 // object insertion order (used for hashing / equality / diffing across transports).
@@ -48,11 +66,15 @@ export function buildSuccessReceipt(input: {
   data: SemanticData;
   handles?: readonly TypedHandle[];
   correlationId?: CorrelationId;
+  requestId?: RequestId;
   idempotencyId?: IdempotencyKey;
   catalogRevision?: CatalogRevision;
+  capabilityRevision?: CapabilityRevision;
+  schemaRevision?: SchemaRevision;
   changes?: readonly string[];
   warnings?: readonly string[];
   timingMs?: number;
+  validation?: ValidationEvidence;
   task?: TaskStatus;
   nextCalls?: readonly NextCall[];
 }): Receipt {
@@ -60,30 +82,56 @@ export function buildSuccessReceipt(input: {
     status: 'success',
     capabilityId: input.capabilityId,
     correlationId: input.correlationId,
+    requestId: input.requestId,
     idempotencyId: input.idempotencyId,
     catalogRevision: input.catalogRevision,
-    handles: input.handles ? [...input.handles] : [],
-    changes: input.changes ? [...input.changes] : [],
-    warnings: input.warnings ? [...input.warnings] : [],
+    capabilityRevision: input.capabilityRevision,
+    schemaRevision: input.schemaRevision,
+    handles: boundArray(input.handles ?? []),
+    changes: boundStrings(input.changes ?? []),
+    warnings: boundStrings(input.warnings ?? []),
     timingMs: input.timingMs,
+    validation: input.validation,
     task: input.task,
-    nextCalls: input.nextCalls ? [...input.nextCalls] : [],
+    nextCalls: boundArray(input.nextCalls ?? []),
     data: input.data
   };
+}
+
+// A typed error crosses the boundary with its free-text message and suggestions
+// secret-masked and bounded, re-parsed through its own schema so the redaction
+// can never produce an off-contract error.
+function redactErrorMessage(error: SemanticError): SemanticError {
+  const suggestions = 'suggestions' in error && Array.isArray(error.suggestions)
+    ? { suggestions: boundStrings(error.suggestions) }
+    : {};
+  return SemanticErrorSchema.parse({ ...error, message: redactText(error.message), ...suggestions });
 }
 
 export function buildErrorReceipt(input: {
   capabilityId: CapabilityId;
   error: SemanticError;
   correlationId?: CorrelationId;
+  requestId?: RequestId;
+  idempotencyId?: IdempotencyKey;
+  catalogRevision?: CatalogRevision;
+  capabilityRevision?: CapabilityRevision;
+  schemaRevision?: SchemaRevision;
+  timingMs?: number;
   nextCalls?: readonly NextCall[];
 }): Receipt {
   return {
     status: 'error',
     capabilityId: input.capabilityId,
     correlationId: input.correlationId,
-    error: input.error,
-    nextCalls: input.nextCalls ? [...input.nextCalls] : []
+    requestId: input.requestId,
+    idempotencyId: input.idempotencyId,
+    catalogRevision: input.catalogRevision,
+    capabilityRevision: input.capabilityRevision,
+    schemaRevision: input.schemaRevision,
+    timingMs: input.timingMs,
+    error: redactErrorMessage(input.error),
+    nextCalls: boundArray(input.nextCalls ?? [])
   };
 }
 
@@ -105,12 +153,16 @@ export const ReceiptSchema = z.discriminatedUnion('status', [
       status: z.literal('success'),
       capabilityId: CapabilityIdSchema,
       correlationId: CorrelationIdSchema.optional(),
+      requestId: RequestIdSchema.optional(),
       idempotencyId: IdempotencyKeySchema.optional(),
       catalogRevision: CatalogRevisionSchema.optional(),
+      capabilityRevision: CapabilityRevisionSchema.optional(),
+      schemaRevision: SchemaRevisionSchema.optional(),
       handles: z.array(TypedHandleSchema).readonly(),
       changes: z.array(z.string()).readonly(),
       warnings: z.array(z.string()).readonly(),
       timingMs: z.number().optional(),
+      validation: ValidationEvidenceSchema.optional(),
       task: TaskStatusSchema.optional(),
       nextCalls: z.array(NextCallSchema).readonly(),
       data: JsonValueSchema
@@ -121,6 +173,12 @@ export const ReceiptSchema = z.discriminatedUnion('status', [
       status: z.literal('error'),
       capabilityId: CapabilityIdSchema,
       correlationId: CorrelationIdSchema.optional(),
+      requestId: RequestIdSchema.optional(),
+      idempotencyId: IdempotencyKeySchema.optional(),
+      catalogRevision: CatalogRevisionSchema.optional(),
+      capabilityRevision: CapabilityRevisionSchema.optional(),
+      schemaRevision: SchemaRevisionSchema.optional(),
+      timingMs: z.number().optional(),
       error: SemanticErrorSchema,
       nextCalls: z.array(NextCallSchema).readonly()
     })

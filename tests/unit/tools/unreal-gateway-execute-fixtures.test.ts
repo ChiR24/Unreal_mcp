@@ -59,6 +59,18 @@ async function execute(args: Record<string, unknown>): Promise<Record<string, un
   return await handleUnrealGatewayCall({ operation: 'execute', ...args }, makeContext());
 }
 
+// The correlation id, external request id and wall-clock timing are minted per
+// request, so the two request forms differ on them by design; cross-form receipt
+// equality is asserted on the stable semantic content only.
+function stableReceipt(value: unknown): unknown {
+  if (!isRecord(value)) return value;
+  const clone = { ...value };
+  delete clone.correlationId;
+  delete clone.requestId;
+  delete clone.timingMs;
+  return clone;
+}
+
 const records = capabilityIndex().records;
 
 // A legacy verb the Task 20 migration map retired must never dispatch, so it is
@@ -214,7 +226,7 @@ describe('generated fixtures: canonical and legacy forms agree', () => {
         failures.push(`${record.id}: capability ${String(canonical.capability)} vs ${String(viaLegacy.capability)}`);
         continue;
       }
-      if (JSON.stringify(canonical.receipt) !== JSON.stringify(viaLegacy.receipt)) {
+      if (JSON.stringify(stableReceipt(canonical.receipt)) !== JSON.stringify(stableReceipt(viaLegacy.receipt))) {
         failures.push(`${record.id}: receipts differ between forms`);
         continue;
       }

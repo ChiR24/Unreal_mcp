@@ -7,6 +7,8 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Execute/McpNativeGatewayValidation.h"
+#include "MCP/Execute/McpNativeReceiptEnrichment.h"
+#include "HAL/PlatformTime.h"
 
 void FMcpNativeTransport::HandleGatewayExecute(
 	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
@@ -15,7 +17,17 @@ void FMcpNativeTransport::HandleGatewayExecute(
 {
 	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 
-	const FString CorrelationId = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphens);
+	FMcpReceiptContext Context;
+	Context.CorrelationId = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphens);
+	Context.RequestId = McpCanonicalizeRequestId(Id);
+	Context.StartTimeSeconds = FPlatformTime::Seconds();
+	{
+		const TSharedPtr<FJsonObject>* Options = nullptr;
+		if (Params.IsValid() && Params->TryGetObjectField(TEXT("options"), Options) && Options)
+		{
+			(*Options)->TryGetStringField(TEXT("idempotencyKey"), Context.IdempotencyId);
+		}
+	}
 
 	auto SendReceipt = [&](const TSharedPtr<FJsonObject>& Receipt)
 	{
@@ -34,11 +46,11 @@ void FMcpNativeTransport::HandleGatewayExecute(
 	// can never reach editor work.
 	FMcpGatewayExecutePlan Plan;
 	const TSharedPtr<FJsonObject> ValidationError = ValidateAndResolveGatewayExecute(
-		Params, FMcpToolRegistry::Get(), ToolManager, CorrelationId, Plan);
+		Params, FMcpToolRegistry::Get(), ToolManager, Context, Plan);
 	if (ValidationError.IsValid())
 	{
 		UE_LOG(LogMcpNativeTransport, Verbose,
-			TEXT("gateway execute rejected before dispatch (correlationId=%s)"), *CorrelationId);
+			TEXT("gateway execute rejected before dispatch (correlationId=%s)"), *Context.CorrelationId);
 		SendReceipt(ValidationError);
 		return;
 	}
@@ -61,5 +73,5 @@ void FMcpNativeTransport::HandleGatewayExecute(
 	StreamToolCall(
 		Plan.ParentTool, Plan.DispatchAction, Plan.Arguments, Id, ClientSocket,
 		SessionId, CorsOrigin, ProgressToken, Plan.CapabilityId, Plan.OutputSchema,
-		CorrelationId);
+		Context);
 }

@@ -128,6 +128,24 @@ describe('AutomationRequestDispatcher cancellation', () => {
     });
 });
 
+describe('AutomationRequestDispatcher correlation metadata (Task 39)', () => {
+    it('stamps the client-facing correlation id onto the outbound automation_request envelope (gateway -> bridge -> queue hop)', () => {
+        const { dispatcher, sent } = createDispatcher(new RequestTracker(50));
+        void dispatcher.sendAutomationRequest('get_actor', { a: 1 }, { correlationId: 'gw-42' });
+        const reqs = automationRequests(sent);
+        expect(reqs).toHaveLength(1);
+        expect(reqs[0].correlationId).toBe('gw-42');
+    });
+
+    it('omits correlationId from the envelope when none is supplied', () => {
+        const { dispatcher, sent } = createDispatcher(new RequestTracker(50));
+        void dispatcher.sendAutomationRequest('get_actor', { a: 1 }, {});
+        const reqs = automationRequests(sent);
+        expect(reqs).toHaveLength(1);
+        expect('correlationId' in reqs[0]).toBe(false);
+    });
+});
+
 describe('AutomationRequestDispatcher send-failure and cancellation edge cases', () => {
     it('rejects every queued caller and keeps draining when send() fails during drain', async () => {
         const tracker = new RequestTracker(1);

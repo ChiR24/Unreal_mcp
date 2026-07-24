@@ -221,3 +221,136 @@ describe('Task 27: native execute owns a canonical validation pipeline', () => {
     expect(nativeTest).toContain('McpNativeGatewayExecuteSuite');
   });
 });
+
+describe('Task 39: native receipt parity — correlated revisions and typed plan-class errors', () => {
+  it('sources capability and schema revisions from the record content/schema hashes', () => {
+    const receipt = read(RECEIPT_CPP);
+    expect(receipt).toContain('TEXT("capabilityRevision")');
+    expect(receipt).toContain('TEXT("schemaRevision")');
+    expect(receipt).toContain('Hashes->TryGetStringField(TEXT("content")');
+    expect(receipt).toContain('Hashes->TryGetStringField(TEXT("schema")');
+  });
+
+  it('adds the plan-class error kinds shared with TypeScript', () => {
+    const receipt = read(RECEIPT_CPP);
+    for (const kind of ['capability', 'output', 'staleState', 'dispatch']) {
+      expect(receipt, `error kind '${kind}' must be representable`).toContain(`TEXT("${kind}")`);
+    }
+    // STALE_STATE is hardcoded in the receipt constructor; the disabled/output
+    // codes are supplied by the call sites in the validation module.
+    expect(receipt).toContain('STALE_STATE');
+  });
+
+  it('carries retryability as a true boolean, not the old Field="retryable" string hack', () => {
+    const receipt = read(RECEIPT_CPP);
+    expect(receipt).toContain('SetBoolField(TEXT("retryable")');
+    expect(receipt).not.toContain('Error.Field = bRetryable');
+  });
+
+  it('classifies a disabled capability and an output violation as their own kinds', () => {
+    const validation = read(VALIDATION_CPP);
+    expect(validation).toContain('McpCapabilityError(TEXT("TOOL_DISABLED")');
+    expect(validation).toContain('McpOutputError(TEXT("OUTPUT_SCHEMA_VIOLATION")');
+  });
+
+  it('refuses a stale expectedCatalogRevision before dispatch', () => {
+    const validation = read(VALIDATION_CPP);
+    expect(validation).toContain('expectedCatalogRevision');
+    expect(validation).toContain('McpStaleStateError');
+    expect(validation).toContain('McpBuildErrorReceipt(Request.CapabilityId');
+  });
+});
+
+describe('Task 39 REMEDIATION: native execute emits the nested canonical receipt at full cross-transport parity', () => {
+  const RECEIPT = read(RECEIPT_CPP);
+  const RECEIPT_HDR = read('MCP/Execute/McpNativeGatewayReceipt.h');
+  const VALIDATION = read(VALIDATION_CPP);
+  const PENDING = read('MCP/Transport/McpNativeTransportPendingRequests.cpp');
+  const STREAM = read('MCP/Transport/McpNativeTransportGatewayStream.cpp');
+  const CONN = read('MCP/Transport/McpNativeTransportConnectionTypes.h');
+  const ENRICH = read('MCP/Execute/McpNativeReceiptEnrichment.cpp');
+
+  it('wraps a nested canonical `receipt` object carrying the typed error as a nested `error` object', () => {
+    // The TS gateway nests the strict ReceiptSchema object under `receipt`; the
+    // native flat envelope additionally emits the same nested object (attached in
+    // the receipt module), assembled by the enrichment module with the typed error
+    // as an `error` object (the flat `typedError` may remain for back-compat).
+    expect(RECEIPT).toContain('SetObjectField(TEXT("receipt")');
+    expect(ENRICH).toContain('SetObjectField(TEXT("error")');
+  });
+
+  it('threads a receipt context so requestId, idempotencyId and timingMs reach the receipt', () => {
+    expect(RECEIPT_HDR).toContain('FMcpReceiptContext');
+    for (const field of ['requestId', 'idempotencyId', 'timingMs']) {
+      expect(ENRICH, `receipt must carry ${field}`).toContain(`TEXT("${field}")`);
+    }
+  });
+
+  it('carries validation evidence, handles, changes and bounded nextCalls on the canonical receipt', () => {
+    for (const field of ['validation', 'handles', 'changes', 'nextCalls']) {
+      expect(ENRICH, `receipt must carry ${field}`).toContain(`TEXT("${field}")`);
+    }
+  });
+
+  it('enforces the same serialized result-size limit as TypeScript (RESULT_TOO_LARGE at 100000 chars)', () => {
+    expect(PENDING).toContain('RESULT_TOO_LARGE');
+    expect(`${PENDING}${STREAM}${RECEIPT}`).toContain('100000');
+  });
+
+  it('classifies a real dispatch failure (queue full / subsystem unavailable / invalid session) as the dispatch kind', () => {
+    // The completion path must map these transport-level failures onto the typed
+    // dispatch algebra, not McpUnrealExecutionError (which is the execution kind).
+    expect(PENDING).toContain('McpDispatchError');
+  });
+
+  it('carries the client-facing correlation id from the pending state into the completed receipt (existing native crossing)', () => {
+    expect(CONN).toContain('CorrelationId');
+    expect(STREAM).toContain('Conn->CorrelationId');
+    expect(PENDING).toContain('Conn.CorrelationId');
+  });
+
+  it('fails closed on a malformed expectedCatalogRevision (empty / non-string / non-hex / over-length) as INVALID_OPTIONS with a pointer, mirroring TS', () => {
+    expect(VALIDATION).toContain('expectedCatalogRevision');
+    expect(VALIDATION).toContain('IsCatalogRevisionDigest');
+    // Explicit JSON-type check so a numeric pin (e.g. 12345) is not silently
+    // coerced to a hex-looking string and misclassified as stale.
+    expect(VALIDATION).toContain('EJson::String');
+    expect(VALIDATION).toContain('McpValidationError(TEXT("INVALID_OPTIONS")');
+    expect(VALIDATION).toContain('/options/expectedCatalogRevision');
+    expect(VALIDATION).toContain('lowercase hex catalog-revision digest');
+  });
+});
+
+describe('Task 39 POLISH: native receipt applies the same bounds/redaction/warnings as TypeScript', () => {
+  const ENRICH = read('MCP/Execute/McpNativeReceiptEnrichment.cpp');
+  const REDACTION = read('MCP/Execute/McpNativeReceiptRedaction.cpp');
+  const REDACTION_HDR = read('MCP/Execute/McpNativeReceiptRedaction.h');
+
+  it('caps receipt arrays at 200 and free text at 2048, mirroring receipt-redaction.ts', () => {
+    expect(REDACTION).toContain('McpMaxReceiptArray = 200');
+    expect(REDACTION).toContain('McpMaxReceiptText = 2048');
+    expect(REDACTION_HDR).toContain('McpBoundJsonArray');
+    expect(REDACTION_HDR).toContain('McpRedactText');
+  });
+
+  it('bounds handles/changes/warnings arrays and redacts changes/warnings/error text on the canonical receipt', () => {
+    expect(ENRICH).toContain('McpBoundJsonArray(McpExtractReceiptHandles');
+    expect(ENRICH).toContain('McpBoundJsonArray(MoveTemp(Changes))');
+    expect(ENRICH).toContain('McpBoundJsonArray(MoveTemp(Warnings))');
+    expect(ENRICH).toContain('McpRedactText(Change)');
+    expect(ENRICH).toContain('McpRedactText(Error.Message)');
+  });
+
+  it('populates receipt warnings from the same deprecation metadata as TS deprecationWarnings', () => {
+    expect(ENRICH).toContain('DeprecationStatus == TEXT("deprecated")');
+    expect(ENRICH).toContain('is deprecated: %s');
+    expect(ENRICH).toContain('TryGetStringField(TEXT("guidance")');
+  });
+
+  it('masks Authorization: Bearer <token>, bare Bearer, and JSON-like quoted assignments identically to TS', () => {
+    expect(REDACTION).toContain('SkipOptionalBearerScheme');
+    expect(REDACTION).toContain('SkipOptionalQuote');
+    expect(REDACTION).toContain('Bearer');
+    expect(REDACTION).toContain('stops at whitespace OR a quote');
+  });
+});

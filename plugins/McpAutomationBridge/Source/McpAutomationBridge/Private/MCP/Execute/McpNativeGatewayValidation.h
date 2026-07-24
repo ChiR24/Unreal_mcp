@@ -13,6 +13,7 @@
 
 class FMcpToolRegistry;
 class FMcpDynamicToolManager;
+struct FMcpReceiptContext;
 
 struct FMcpGatewayExecutePlan
 {
@@ -40,7 +41,7 @@ struct FMcpGatewayExecutePlan
 TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	const TSharedPtr<FJsonObject>& GatewayParams,
 	const FMcpToolRegistry& Registry, const FMcpDynamicToolManager& ToolManager,
-	const FString& CorrelationId, FMcpGatewayExecutePlan& OutPlan);
+	const FMcpReceiptContext& Context, FMcpGatewayExecutePlan& OutPlan);
 
 /**
  * Project a handler result to the capability's declared output fields.
@@ -63,7 +64,7 @@ TSharedPtr<FJsonObject> McpProjectCanonicalOutput(
 TSharedPtr<FJsonObject> ValidateGatewayExecuteOutput(
 	const FString& CapabilityId, const TSharedPtr<FJsonObject>& OutputSchema,
 	const TSharedPtr<FJsonObject>& CanonicalOutput, const TSharedPtr<FJsonObject>& RawResult,
-	const FString& CorrelationId);
+	const FMcpReceiptContext& Context);
 
 /**
  * Per-action strictness for the direct (non-gateway) tools/call path.

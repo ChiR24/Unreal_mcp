@@ -7,6 +7,7 @@ import { getManifestToolDefinitions } from '../../gateway/gateway-manifest.js';
 import { isRecord } from '../../utils/validation/type-guards.js';
 import { normalizeSchemaTypes } from './gateway-schema-normalize.js';
 import type { ToolDefinition } from '../../tools/definitions/shared/tool-definition.js';
+import { CorrelationIdSchema, type CorrelationId } from '../../tools/catalog/capabilities/semantic/ids.js';
 
 export const DEFAULT_SEARCH_LIMIT = 12;
 export const MAX_SEARCH_LIMIT = 25;
@@ -73,7 +74,7 @@ export function getParameterNames(tool: ToolDefinition): string[] {
 
 let gatewayRequestCounter = 0;
 
-export function nextGatewayCorrelationId(): string {
+export function nextGatewayCorrelationId(): CorrelationId {
   gatewayRequestCounter += 1;
-  return `gw-${gatewayRequestCounter}`;
+  return CorrelationIdSchema.parse(`gw-${gatewayRequestCounter}`);
 }

@@ -36,6 +36,9 @@ import {
   type ResolvedFailure
 } from './gateway-execute-envelope.js';
 import { dispatchAndValidate, type GatewayContext } from './gateway-execute-dispatch.js';
+import { checkPreDispatchPolicy } from './gateway-execute-policy.js';
+import { buildReceiptContext } from './gateway-receipt-context.js';
+import type { CorrelationId } from '../../tools/catalog/capabilities/semantic/ids.js';
 
 export type { GatewayContext };
 
@@ -149,8 +152,11 @@ function checkStaticRequest(target: ExecuteTarget, args: Record<string, unknown>
 
 export async function executeGatewayCall(
   args: Record<string, unknown>,
-  context: GatewayContext
+  context: GatewayContext,
+  correlationId: CorrelationId
 ): Promise<Record<string, unknown>> {
+  const options = isRecord(args.options) ? args.options : undefined;
+  const receiptContext = buildReceiptContext(correlationId, options);
   const index = executeTargetIndex();
   const resolution = resolveExecuteTarget(
     {
@@ -169,12 +175,17 @@ export async function executeGatewayCall(
       record: capabilityId === undefined ? undefined : index.byId.get(capabilityId),
       requestedTool: getString(args, 'tool'),
       requestedAction: getString(args, 'action')
-    });
+    }, receiptContext);
   }
 
   const target = resolution.target;
   const checked = checkStaticRequest(target, args);
-  if ('failure' in checked) return refuseWithTarget(target, checked.failure);
+  if ('failure' in checked) return refuseWithTarget(target, checked.failure, receiptContext);
+
+  // Pre-dispatch policy seam: a blocked call (Task 39 stale revision; later
+  // Task 40 scope/consent) never reaches the connection gate, bridge or queue.
+  const policyFailure = checkPreDispatchPolicy(target, options);
+  if (policyFailure !== undefined) return refuseWithTarget(target, policyFailure, receiptContext);
 
   const canRunWithoutConnection = target.record.id === 'system_control.get_project_settings';
   if (!canRunWithoutConnection && !await context.ensureConnected()) {
@@ -182,13 +193,8 @@ export async function executeGatewayCall(
       errorCode: 'NOT_CONNECTED',
       message: 'Unreal Engine is not connected.',
       nextCall: buildNextCall({ operation: 'search' })
-    });
+    }, receiptContext);
   }
 
-  return await dispatchAndValidate(
-    target,
-    checked.params,
-    isRecord(args.options) ? args.options : undefined,
-    context
-  );
+  return await dispatchAndValidate(target, checked.params, options, context, receiptContext);
 }

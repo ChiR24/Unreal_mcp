@@ -140,7 +140,7 @@ export class AutomationBridge extends EventEmitter {
     async sendAutomationRequest<T = AutomationBridgeResponseMessage>(
         action: string,
         payload: Record<string, unknown> = {},
-        options: { timeoutMs?: number; mcpRequestId?: string } = {}
+        options: { timeoutMs?: number; mcpRequestId?: string; correlationId?: string } = {}
     ): Promise<T> {
         return this.requestDispatcher.sendAutomationRequest<T>(action, payload, options);
     }

@@ -62,6 +62,12 @@ struct FSSEConnection
 	// them to validate the handler result and build the semantic receipt.
 	FString CapabilityId;
 	FString CorrelationId;
+	// Task 39: external MCP request id (canonicalized num:/str:), client
+	// idempotency key, and request start time, threaded onto the completed
+	// receipt so an async success/error carries the same join keys as TS.
+	FString RequestId;
+	FString IdempotencyId;
+	double RequestStartSeconds = 0.0;
 	TSharedPtr<FJsonObject> OutputSchema;
 };
 

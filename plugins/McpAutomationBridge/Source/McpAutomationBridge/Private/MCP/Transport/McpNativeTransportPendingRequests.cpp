@@ -1,6 +1,7 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Execute/McpNativeGatewayValidation.h"
+#include "MCP/Execute/McpNativeReceiptRedaction.h"
 
 namespace
 {
@@ -11,14 +12,33 @@ TSharedPtr<FJsonObject> BuildGatewayExecuteReceipt(
 	const FSSEConnection& Conn, bool bSuccess, const FString& Message,
 	const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode)
 {
+	FMcpReceiptContext Context;
+	Context.CorrelationId = Conn.CorrelationId;
+	Context.RequestId = Conn.RequestId;
+	Context.IdempotencyId = Conn.IdempotencyId;
+	Context.StartTimeSeconds = Conn.RequestStartSeconds;
+
 	if (!bSuccess)
 	{
-		FMcpSemanticError Error = McpUnrealExecutionError(Message, Result);
-		if (!ErrorCode.IsEmpty())
+		FMcpSemanticError Error;
+		if (ErrorCode == TEXT("NOT_CONNECTED"))
 		{
-			Error.GatewayCode = ErrorCode;
+			Error = McpDispatchError(ErrorCode, TEXT("NOT_CONNECTED"), Message, true);
 		}
-		return McpBuildErrorReceipt(Conn.CapabilityId, Error, Conn.CorrelationId);
+		else if (ErrorCode == TEXT("NOT_AVAILABLE") || ErrorCode == TEXT("AUTOMATION_QUEUE_FULL")
+			|| ErrorCode == TEXT("INVALID_SESSION"))
+		{
+			Error = McpDispatchError(ErrorCode, TEXT("DISPATCH_ERROR"), Message, true);
+		}
+		else
+		{
+			Error = McpUnrealExecutionError(Message, Result);
+			if (!ErrorCode.IsEmpty())
+			{
+				Error.GatewayCode = ErrorCode;
+			}
+		}
+		return McpBuildErrorReceipt(Conn.CapabilityId, Error, Context);
 	}
 
 	// Project the handler result to the capability's declared output fields
@@ -29,6 +49,14 @@ TSharedPtr<FJsonObject> BuildGatewayExecuteReceipt(
 	// completion carries the success verdict separately from the payload (the
 	// WebSocket frame the TS gateway projects embeds it), so it is reunited
 	// first; the projected output is what is both validated and published.
+	if (McpSerializedResultExceeds(Result, 100000))
+	{
+		return McpBuildErrorReceipt(Conn.CapabilityId,
+			McpOutputError(TEXT("RESULT_TOO_LARGE"),
+				TEXT("Result exceeded the gateway safety limit. Retry with the action pagination or filtering parameters described by this capability.")),
+			Context);
+	}
+
 	TSharedPtr<FJsonObject> WithVerdict = MakeShared<FJsonObject>();
 	if (Result.IsValid())
 	{
@@ -41,10 +69,10 @@ TSharedPtr<FJsonObject> BuildGatewayExecuteReceipt(
 	const TSharedPtr<FJsonObject> Canonical =
 		McpProjectCanonicalOutput(WithVerdict, Conn.OutputSchema);
 	const TSharedPtr<FJsonObject> OutputError = ValidateGatewayExecuteOutput(
-		Conn.CapabilityId, Conn.OutputSchema, Canonical, Result, Conn.CorrelationId);
+		Conn.CapabilityId, Conn.OutputSchema, Canonical, Result, Context);
 	return OutputError.IsValid()
 		? OutputError
-		: McpBuildSuccessReceipt(Conn.CapabilityId, Canonical, Conn.CorrelationId, Message);
+		: McpBuildSuccessReceipt(Conn.CapabilityId, Canonical, Context, Result, Message);
 }
 }
 

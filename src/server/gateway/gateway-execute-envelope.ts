@@ -24,8 +24,16 @@ import {
 import type { SemanticError } from '../../tools/catalog/capabilities/semantic/errors.js';
 import { EXECUTION_OPTION_KEYS } from '../../tools/catalog/capabilities/semantic/execution-options.js';
 import { JsonValueSchema } from '../../tools/catalog/capabilities/semantic/property-assignment.js';
+import { extractChanges, extractHandles, extractTask } from '../../tools/catalog/capabilities/semantic/receipt-outcome.js';
+import { maskSecretsDeep, redactText } from '../../tools/catalog/capabilities/semantic/receipt-redaction.js';
 import { catalogRevision } from './gateway-capability-index.js';
 import type { ExecuteTarget } from './gateway-execute-resolve.js';
+import {
+  correlationFields,
+  elapsedMs,
+  revisionFields,
+  type GatewayReceiptContext
+} from './gateway-receipt-context.js';
 
 export type ExecuteFailure = {
   readonly errorCode: string;
@@ -49,46 +57,88 @@ export type ExecuteFailure = {
   /** Whatever Unreal actually reported, preserved verbatim beside the typed error. */
   readonly detail?: unknown;
   readonly resultChars?: number;
+  /** Present only on a STALE_STATE refusal from the pre-dispatch policy seam. */
+  readonly currentRevision?: string;
+  readonly expectedRevision?: string;
 };
 
-const RANGE_CODES = new Set(['OUT_OF_RANGE']);
 const OPTION_CODES = new Set(['UNSUPPORTED_OPTION']);
-const CONNECTION_CODES = new Set(['NOT_CONNECTED']);
+const RANGE_CODES = new Set(['OUT_OF_RANGE']);
+const DISPATCH_CODES = new Set(['NOT_CONNECTED', 'ROUTING_ERROR', 'DISPATCH_ERROR']);
+const CAPABILITY_DISABLED_CODES = new Set(['TOOL_DISABLED', 'CAPABILITY_DISABLED']);
+const CAPABILITY_UNAVAILABLE_CODES = new Set(['CAPABILITY_REMOVED', 'CAPABILITY_UNAVAILABLE']);
+const CONFLICT_CODES = new Set(['FORM_CONFLICT', 'ALIAS_CONFLICT']);
+const OUTPUT_VIOLATION_CODES = new Set(['OUTPUT_SCHEMA_VIOLATION']);
+const OUTPUT_SIZE_CODES = new Set(['RESULT_TOO_LARGE']);
 const UNREAL_CODES = new Set(['UNREAL_EXECUTION_ERROR']);
-const EXECUTION_CODES = new Set(['TOOL_DISABLED', 'RESULT_TOO_LARGE']);
 
-/** Map one gateway error code onto the typed semantic error algebra. */
+// Map one gateway error code onto the typed semantic error algebra. The mapping
+// is additive: output-contract failures, disabled/missing capabilities, stale
+// revisions, conflicts and dispatch/routing each classify to their own plan
+// kind, and anything unmatched stays a validation error (the legacy default).
 export function toSemanticError(failure: ExecuteFailure): SemanticError {
-  if (OPTION_CODES.has(failure.errorCode)) {
+  const { errorCode, message } = failure;
+  if (errorCode === 'STALE_STATE') {
+    return {
+      kind: 'staleState',
+      code: 'STALE_STATE',
+      message,
+      currentRevision: failure.currentRevision ?? catalogRevision(),
+      expectedRevision: failure.expectedRevision ?? catalogRevision()
+    };
+  }
+  if (OPTION_CODES.has(errorCode)) {
     return {
       kind: 'option',
       code: 'UNSUPPORTED_OPTION',
       option: failure.option ?? '',
       supported: [...EXECUTION_OPTION_KEYS],
-      message: failure.message
+      message
     };
   }
-  if (RANGE_CODES.has(failure.errorCode)) {
+  if (RANGE_CODES.has(errorCode)) {
+    return { kind: 'range', code: 'OUT_OF_RANGE', field: failure.field ?? failure.pointer ?? '', message };
+  }
+  if (DISPATCH_CODES.has(errorCode)) {
     return {
-      kind: 'range',
-      code: 'OUT_OF_RANGE',
-      field: failure.field ?? failure.pointer ?? '',
-      message: failure.message
+      kind: 'dispatch',
+      code: errorCode === 'NOT_CONNECTED' ? 'NOT_CONNECTED' : 'DISPATCH_ERROR',
+      message,
+      retryable: true
     };
   }
-  if (CONNECTION_CODES.has(failure.errorCode)) {
-    return { kind: 'execution', code: 'CONNECTION_ERROR', message: failure.message, retryable: true };
+  if (CAPABILITY_DISABLED_CODES.has(errorCode)) {
+    return { kind: 'capability', code: 'CAPABILITY_DISABLED', message, retryable: false };
   }
-  if (UNREAL_CODES.has(failure.errorCode)) {
-    return { kind: 'execution', code: 'UNREAL_ENGINE_ERROR', message: failure.message, retryable: false };
+  if (CAPABILITY_UNAVAILABLE_CODES.has(errorCode)) {
+    return { kind: 'capability', code: 'CAPABILITY_UNAVAILABLE', message, retryable: false };
   }
-  if (EXECUTION_CODES.has(failure.errorCode)) {
-    return { kind: 'execution', code: 'EXECUTION_ERROR', message: failure.message, retryable: false };
+  if (CONFLICT_CODES.has(errorCode)) {
+    return { kind: 'conflict', code: 'STATE_CONFLICT', message };
+  }
+  if (OUTPUT_VIOLATION_CODES.has(errorCode)) {
+    return {
+      kind: 'output',
+      code: 'OUTPUT_SCHEMA_VIOLATION',
+      message,
+      ...(failure.pointer === undefined ? {} : { pointer: failure.pointer })
+    };
+  }
+  if (OUTPUT_SIZE_CODES.has(errorCode)) {
+    return {
+      kind: 'output',
+      code: 'RESULT_TOO_LARGE',
+      message,
+      ...(failure.resultChars === undefined ? {} : { resultChars: failure.resultChars })
+    };
+  }
+  if (UNREAL_CODES.has(errorCode)) {
+    return { kind: 'execution', code: 'UNREAL_ENGINE_ERROR', message, retryable: false };
   }
   return {
     kind: 'validation',
     code: 'VALIDATION_ERROR',
-    message: failure.message,
+    message,
     ...(failure.pointer === undefined ? {} : { pointer: failure.pointer })
   };
 }
@@ -121,29 +171,40 @@ function definedOnly(entries: Record<string, unknown>): Record<string, unknown> 
 /** A refusal raised after resolution, so the target supplies the provenance. */
 export type ResolvedFailure = Omit<ExecuteFailure, 'record' | 'resolvedFromAlias' | 'migratedFrom'>;
 
-export function refuseWithTarget(target: ExecuteTarget, failure: ResolvedFailure): Record<string, unknown> {
+export function refuseWithTarget(
+  target: ExecuteTarget,
+  failure: ResolvedFailure,
+  context: GatewayReceiptContext
+): Record<string, unknown> {
   return executeErrorEnvelope({
     ...failure,
     record: target.record,
     ...(target.resolvedFromAlias === undefined ? {} : { resolvedFromAlias: target.resolvedFromAlias }),
     ...(target.migratedFrom === undefined ? {} : { migratedFrom: target.migratedFrom })
-  });
+  }, context);
 }
 
-export function executeErrorEnvelope(failure: ExecuteFailure): Record<string, unknown> {
+export function executeErrorEnvelope(
+  failure: ExecuteFailure,
+  context: GatewayReceiptContext
+): Record<string, unknown> {
   const receipt: Receipt | undefined = failure.record === undefined
     ? undefined
     : buildErrorReceipt({
       capabilityId: failure.record.id,
-      error: toSemanticError(failure)
+      error: toSemanticError(failure),
+      ...correlationFields(context),
+      ...revisionFields(failure.record),
+      timingMs: elapsedMs(context)
     });
 
   return definedOnly({
     success: false,
     operation: 'execute',
     errorCode: failure.errorCode,
-    error: failure.message,
-    message: failure.message,
+    error: redactText(failure.message),
+    message: redactText(failure.message),
+    correlationId: context.correlationId,
     catalogRevision: catalogRevision(),
     ...capabilityFields(failure.record, { tool: failure.requestedTool, action: failure.requestedAction }),
     resolvedFromAlias: failure.resolvedFromAlias,
@@ -154,7 +215,7 @@ export function executeErrorEnvelope(failure: ExecuteFailure): Record<string, un
     allowedParameters: failure.allowedParameters,
     pointer: failure.pointer,
     resultChars: failure.resultChars,
-    result: failure.detail,
+    result: maskSecretsDeep(failure.detail),
     receipt
   });
 }
@@ -168,28 +229,36 @@ export function executeSuccessEnvelope(input: {
   readonly migratedFrom?: { readonly tool: string; readonly action: string };
   readonly options?: Record<string, unknown>;
   readonly warnings: readonly string[];
-}): Record<string, unknown> {
+}, context: GatewayReceiptContext): Record<string, unknown> {
   const capabilityId: CapabilityId = input.record.id;
-  // The projected output is built from declared, schema-checked fields, so this
-  // parse is a bounded confirmation rather than a second walk of the raw result.
-  const data = JsonValueSchema.safeParse(input.canonicalOutput);
+  // The projected output is built from declared, schema-checked fields, then
+  // deep-masked so a secret echoed into a declared output field never survives
+  // on the nested receipt.data (the outer envelope result is masked separately).
+  const data = JsonValueSchema.safeParse(maskSecretsDeep(input.canonicalOutput));
   const receipt = buildSuccessReceipt({
     capabilityId,
     data: data.success ? data.data : null,
-    warnings: input.warnings
+    handles: extractHandles(input.result),
+    changes: extractChanges(input.result),
+    task: extractTask(input.result),
+    warnings: input.warnings,
+    ...correlationFields(context),
+    ...revisionFields(input.record),
+    timingMs: elapsedMs(context),
+    validation: { outputSchema: 'passed' }
   });
 
   return definedOnly({
     success: true,
     operation: 'execute',
+    correlationId: context.correlationId,
     catalogRevision: catalogRevision(),
     ...capabilityFields(input.record),
     resolvedFromAlias: input.resolvedFromAlias,
-
     migratedFrom: input.migratedFrom,
     options: input.options,
     warnings: input.warnings.length > 0 ? input.warnings : undefined,
     receipt,
-    result: input.result
+    result: maskSecretsDeep(input.result)
   });
 }

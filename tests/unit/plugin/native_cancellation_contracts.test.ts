@@ -168,7 +168,7 @@ describe('C4: client _meta.progressToken preservation through gateway streaming'
     // StreamToolCall declares the token parameter ahead of the gateway
     // capability context, so the trailing comma pins StreamToolCall itself.
     expect(header).toContain(
-      'const TSharedPtr<FJsonValue>& ProgressToken = nullptr,',
+      'const TSharedPtr<FJsonValue>& ProgressToken,',
     );
   });
 

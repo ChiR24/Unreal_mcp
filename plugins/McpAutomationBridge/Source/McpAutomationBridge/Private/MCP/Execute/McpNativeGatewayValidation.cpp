@@ -13,6 +13,25 @@
 
 namespace
 {
+// Mirror of HEX_REVISION (/^[0-9a-f]{1,64}$/) in ids.ts: a well-formed catalog
+// revision digest is 1..64 lowercase hex characters. Anything else is malformed.
+bool IsCatalogRevisionDigest(const FString& Value)
+{
+	if (Value.IsEmpty() || Value.Len() > 64)
+	{
+		return false;
+	}
+	for (const TCHAR Ch : Value)
+	{
+		const bool bHex = (Ch >= '0' && Ch <= '9') || (Ch >= 'a' && Ch <= 'f');
+		if (!bHex)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 TSharedPtr<FJsonObject> DisabledCapabilityGuidance(const FString& ParentTool)
 {
 	TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
@@ -41,13 +60,13 @@ TSharedPtr<FJsonObject> SchemaGuidance(
 TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	const TSharedPtr<FJsonObject>& GatewayParams,
 	const FMcpToolRegistry& Registry, const FMcpDynamicToolManager& ToolManager,
-	const FString& CorrelationId, FMcpGatewayExecutePlan& OutPlan)
+	const FMcpReceiptContext& Context, FMcpGatewayExecutePlan& OutPlan)
 {
 	if (!GatewayParams.IsValid())
 	{
 		return McpBuildErrorReceipt(FString(),
 			McpValidationError(TEXT("INVALID_PARAMS"), TEXT("execute requires an arguments object.")),
-			CorrelationId);
+			Context);
 	}
 
 	FMcpGatewayExecuteRequest Request;
@@ -55,7 +74,7 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	TSharedPtr<FJsonObject> Guidance;
 	if (!McpParseGatewayExecuteRequest(GatewayParams, Request, Error, Guidance))
 	{
-		return McpBuildErrorReceipt(FString(), Error, CorrelationId, Guidance);
+		return McpBuildErrorReceipt(Request.CapabilityId, Error, Context, Guidance);
 	}
 
 	const FMcpCanonicalRecordIndex& Index = FMcpCanonicalRecordIndex::Get();
@@ -68,16 +87,16 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 		return McpBuildErrorReceipt(Request.CapabilityId,
 			McpValidationError(TEXT("UNKNOWN_TOOL"),
 				FString::Printf(TEXT("Parent tool '%s' is not registered on this surface."), *ParentTool)),
-			CorrelationId);
+			Context);
 	}
 
 	if (!ToolManager.IsToolEnabled(ParentTool))
 	{
 		return McpBuildErrorReceipt(Request.CapabilityId,
-			McpExecutionError(TEXT("TOOL_DISABLED"),
+			McpCapabilityError(TEXT("TOOL_DISABLED"), TEXT("CAPABILITY_DISABLED"),
 				FString::Printf(TEXT("Capability '%s' is disabled or unavailable."), *Request.CapabilityId),
 				false),
-			CorrelationId, DisabledCapabilityGuidance(ParentTool));
+			Context, DisabledCapabilityGuidance(ParentTool));
 	}
 
 	// Canonical per-action schemas mostly omit `action` (the action IS the
@@ -100,8 +119,46 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 		FMcpSemanticError SchemaError = Violation.Reason == EMcpSchemaViolation::Range
 			? McpRangeError(Violation.Pointer, Violation.Message)
 			: McpValidationError(Code, Violation.Message, Violation.Pointer);
-		return McpBuildErrorReceipt(Request.CapabilityId, SchemaError, CorrelationId,
+		return McpBuildErrorReceipt(Request.CapabilityId, SchemaError, Context,
 			SchemaGuidance(ParentTool, LegacyAction, Violation.Pointer));
+	}
+
+	// Task 39 pre-dispatch policy seam: a client that pinned the catalog revision
+	// it planned against is refused before dispatch if the live digest moved on,
+	// so a stale call never reaches the subsystem queue or editor work.
+	if (Request.Options.IsValid() && Request.Options->HasField(TEXT("expectedCatalogRevision")))
+	{
+		const FString Current = FMcpCanonicalRecordIndex::Get().GetCatalogRevision();
+		// TryGetStringField silently coerces a JSON number to its digits (so 12345
+		// would read as the hex-looking "12345"), so the JSON type is checked
+		// explicitly: only a genuine string is a candidate pin, matching the TS
+		// CatalogRevisionSchema which rejects any non-string value.
+		const TSharedPtr<FJsonValue>* PinValue = Request.Options->Values.Find(TEXT("expectedCatalogRevision"));
+		const bool bIsStringPin = PinValue != nullptr && PinValue->IsValid()
+			&& (*PinValue)->Type == EJson::String;
+		FString Expected;
+		if (!bIsStringPin || !(*PinValue)->TryGetString(Expected) || !IsCatalogRevisionDigest(Expected))
+		{
+			// Fail closed: a present-but-malformed pin (non-string / empty / non-hex
+			// / over-length) is a validation error, never coerced into a stale-state
+			// refusal, and can never skip the stale guard and reach the subsystem
+			// queue or editor work.
+			return McpBuildErrorReceipt(Request.CapabilityId,
+				McpValidationError(TEXT("INVALID_OPTIONS"),
+					TEXT("options.expectedCatalogRevision must be a lowercase hex catalog-revision digest of 1..64 characters."),
+					TEXT("/options/expectedCatalogRevision")),
+				Context);
+		}
+		if (Expected != Current)
+		{
+			return McpBuildErrorReceipt(Request.CapabilityId,
+				McpStaleStateError(
+					FString::Printf(
+						TEXT("The capability catalog revision changed since it was read (expected '%s', current '%s'). Re-run search or describe and retry."),
+						*Expected, *Current),
+					Current, Expected),
+				Context);
+		}
 	}
 
 	TSharedPtr<FJsonObject> Arguments = MakeShared<FJsonObject>();
@@ -153,7 +210,7 @@ TSharedPtr<FJsonObject> McpProjectCanonicalOutput(
 TSharedPtr<FJsonObject> ValidateGatewayExecuteOutput(
 	const FString& CapabilityId, const TSharedPtr<FJsonObject>& OutputSchema,
 	const TSharedPtr<FJsonObject>& CanonicalOutput, const TSharedPtr<FJsonObject>& RawResult,
-	const FString& CorrelationId)
+	const FMcpReceiptContext& Context)
 {
 	if (!OutputSchema.IsValid())
 	{
@@ -166,14 +223,14 @@ TSharedPtr<FJsonObject> ValidateGatewayExecuteOutput(
 		return nullptr;
 	}
 
-	FMcpSemanticError Error = McpValidationError(TEXT("OUTPUT_SCHEMA_VIOLATION"),
+	FMcpSemanticError Error = McpOutputError(TEXT("OUTPUT_SCHEMA_VIOLATION"),
 		FString::Printf(TEXT("Capability '%s' returned a result its output schema refuses: %s"),
 			*CapabilityId, *Violation.Message),
 		Violation.Pointer);
 	// The raw handler payload is retained verbatim so a schema violation never
 	// discards the structured detail Unreal actually reported.
 	Error.UnrealDetail = RawResult;
-	return McpBuildErrorReceipt(CapabilityId, Error, CorrelationId);
+	return McpBuildErrorReceipt(CapabilityId, Error, Context);
 }
 
 bool McpValidateCanonicalToolArguments(

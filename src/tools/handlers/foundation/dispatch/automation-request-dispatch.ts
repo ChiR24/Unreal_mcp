@@ -4,6 +4,7 @@ import { CommandValidator } from '../../../../utils/commands/command-validator.j
 import { cleanObject } from '../../../../utils/serialization/safe-json.js';
 import { validateArgsSecurity } from '../arguments/handler-argument-validation.js';
 import { getMcpRequestContext } from '../../../../automation/request-context.js';
+import { getGatewayCorrelationId } from '../../../../automation/gateway-correlation-context.js';
 import { getTimeoutMs } from './handler-timeout.js';
 import { normalizePathFields } from '../normalization/ue-path-normalization.js';
 
@@ -101,9 +102,15 @@ export async function executeAutomationRequest(
   // otherwise the async-local request context set by the tool registry is used.
   const mcpRequestId = options.mcpRequestId ?? getMcpRequestContext()?.requestId;
 
-  const sendOptions: { timeoutMs?: number; mcpRequestId?: string } = {};
+  // The single client-facing gateway correlation id (async-local) crosses here
+  // as bounded request metadata so the outbound automation request, the plugin
+  // queue and the receipt all join on the same id — never a handler param.
+  const gatewayCorrelationId = getGatewayCorrelationId();
+
+  const sendOptions: { timeoutMs?: number; mcpRequestId?: string; correlationId?: string } = {};
   if (timeoutMs !== undefined) sendOptions.timeoutMs = timeoutMs;
   if (mcpRequestId !== undefined) sendOptions.mcpRequestId = mcpRequestId;
+  if (gatewayCorrelationId !== undefined) sendOptions.correlationId = gatewayCorrelationId;
 
   return await automationBridge.sendAutomationRequest(toolName, cleanedArgs, sendOptions);
 }

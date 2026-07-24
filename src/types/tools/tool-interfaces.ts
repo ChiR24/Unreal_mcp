@@ -3,7 +3,7 @@ import type { AutomationErrorDetail } from '../automation/automation-responses.j
 
 export interface AutomationRequestBridge {
     isConnected(): boolean;
-    sendAutomationRequest(action: string, payload: Record<string, unknown>, options?: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number; mcpRequestId?: string }): Promise<unknown>;
+    sendAutomationRequest(action: string, payload: Record<string, unknown>, options?: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number; mcpRequestId?: string; correlationId?: string }): Promise<unknown>;
 }
 
 export interface AutomationStatusBridge {

@@ -24,8 +24,30 @@ struct FMcpSemanticError
 	FString Pointer;
 	FString Option;
 	FString Field;
+	// Task 39: a real boolean carried on the typed error (kinds capability,
+	// dispatch and execution), replacing the earlier Field="retryable" string
+	// hack so retryability is a true boolean matching the TypeScript algebra.
+	bool bHasRetryable = false;
+	bool bRetryable = false;
+	// Task 39: stale-revision references, set only on a staleState error.
+	FString CurrentRevision;
+	FString ExpectedRevision;
 	TArray<FString> Supported;
 	TSharedPtr<FJsonObject> UnrealDetail;
+};
+
+// Per-request join keys + timing threaded onto every receipt so success and error
+// envelopes carry the same correlation/request/idempotency ids and timing as the
+// TypeScript receipt. RequestId is the canonicalized external MCP id (num:/str:),
+// never the internal automation id; IdempotencyId is the client's
+// options.idempotencyKey; StartTimeSeconds is FPlatformTime::Seconds() captured
+// when the request began (0 => timing omitted).
+struct FMcpReceiptContext
+{
+	FString CorrelationId;
+	FString RequestId;
+	FString IdempotencyId;
+	double StartTimeSeconds = 0.0;
 };
 
 FMcpSemanticError McpValidationError(const FString& GatewayCode, const FString& Message, const FString& Pointer = FString());
@@ -33,16 +55,23 @@ FMcpSemanticError McpOptionError(const FString& Option, const TArray<FString>& S
 FMcpSemanticError McpRangeError(const FString& Field, const FString& Message);
 FMcpSemanticError McpExecutionError(const FString& GatewayCode, const FString& Message, bool bRetryable);
 FMcpSemanticError McpUnrealExecutionError(const FString& Message, const TSharedPtr<FJsonObject>& UnrealDetail);
+// Task 39 plan-class constructors mirroring the TypeScript typed error algebra.
+FMcpSemanticError McpCapabilityError(const FString& GatewayCode, const FString& Code, const FString& Message, bool bRetryable);
+FMcpSemanticError McpDispatchError(const FString& GatewayCode, const FString& Code, const FString& Message, bool bRetryable);
+FMcpSemanticError McpOutputError(const FString& Code, const FString& Message, const FString& Pointer = FString());
+FMcpSemanticError McpStaleStateError(const FString& Message, const FString& CurrentRevision, const FString& ExpectedRevision);
 
 /** Error receipt. Guidance (suggestions/nextCall/etc.) is merged in when supplied. */
 TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 	const FString& CapabilityId, const FMcpSemanticError& Error,
-	const FString& CorrelationId, const TSharedPtr<FJsonObject>& Guidance = nullptr);
+	const FMcpReceiptContext& Context, const TSharedPtr<FJsonObject>& Guidance = nullptr);
 
-/** Success receipt carrying the validated handler payload as `data`. */
+/** Success receipt carrying the validated handler payload as `data`. The raw
+ *  handler result (when supplied) is mined for reusable handles/changes/task. */
 TSharedPtr<FJsonObject> McpBuildSuccessReceipt(
 	const FString& CapabilityId, const TSharedPtr<FJsonObject>& Data,
-	const FString& CorrelationId, const FString& Message = FString());
+	const FMcpReceiptContext& Context, const TSharedPtr<FJsonObject>& RawResult = nullptr,
+	const FString& Message = FString());
 
 /** Human-readable one-line summary used as the MCP text content. */
 FString McpReceiptMessage(const TSharedPtr<FJsonObject>& Receipt);

@@ -2,13 +2,14 @@
 
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "MCP/Transport/McpNativeTransportTimeoutPolicy.h"
+#include "MCP/Execute/McpNativeGatewayReceipt.h"
 
 void FMcpNativeTransport::StreamToolCall(
 	const FString& ToolName, const FString& DispatchAction,
 	const TSharedPtr<FJsonObject>& Arguments, const TSharedPtr<FJsonValue>& Id,
 	FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
 	const TSharedPtr<FJsonValue>& ProgressToken, const FString& CapabilityId,
-	const TSharedPtr<FJsonObject>& OutputSchema, const FString& CorrelationId)
+	const TSharedPtr<FJsonObject>& OutputSchema, const FMcpReceiptContext& Context)
 {
 	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 
@@ -30,7 +31,10 @@ void FMcpNativeTransport::StreamToolCall(
 	Conn->ToolName = ToolName;
 	Conn->SessionId = SessionId;
 	Conn->CapabilityId = CapabilityId;
-	Conn->CorrelationId = CorrelationId;
+	Conn->CorrelationId = Context.CorrelationId;
+	Conn->RequestId = Context.RequestId;
+	Conn->IdempotencyId = Context.IdempotencyId;
+	Conn->RequestStartSeconds = Context.StartTimeSeconds;
 	Conn->OutputSchema = OutputSchema;
 	bool bPendingLimitReached = false;
 	bool bSessionInvalid = false;

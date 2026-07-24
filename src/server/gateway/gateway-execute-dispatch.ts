@@ -17,6 +17,7 @@ import { handleConsolidatedToolCall } from '../../tools/orchestration/consolidat
 import { validateAgainstCapabilitySchema } from './gateway-execute-validate.js';
 import type { ExecuteTarget } from './gateway-execute-resolve.js';
 import { executeSuccessEnvelope, refuseWithTarget } from './gateway-execute-envelope.js';
+import type { GatewayReceiptContext } from './gateway-receipt-context.js';
 
 const MAX_EXECUTION_RESULT_CHARS = 100_000;
 
@@ -63,7 +64,8 @@ export async function dispatchAndValidate(
   target: ExecuteTarget,
   params: Record<string, unknown>,
   options: Record<string, unknown> | undefined,
-  context: GatewayContext
+  context: GatewayContext,
+  receiptContext: GatewayReceiptContext
 ): Promise<Record<string, unknown>> {
   const record = target.record;
   const action = target.legacy.action;
@@ -84,7 +86,7 @@ export async function dispatchAndValidate(
       errorCode: 'UNREAL_EXECUTION_ERROR',
       message: failureMessage(result),
       detail: result
-    });
+    }, receiptContext);
   }
 
   const serialized = JSON.stringify(result);
@@ -93,7 +95,7 @@ export async function dispatchAndValidate(
       errorCode: 'RESULT_TOO_LARGE',
       message: 'Result exceeded the gateway safety limit. Retry with the action pagination or filtering parameters described by this capability.',
       resultChars: serialized.length
-    });
+    }, receiptContext);
   }
 
   const canonicalOutput = projectCanonicalOutput(result, record.schemas.output);
@@ -104,7 +106,7 @@ export async function dispatchAndValidate(
       message: `${record.id} returned a result that violates its declared output contract: ${violation.message}`,
       pointer: violation.pointer,
       detail: result
-    });
+    }, receiptContext);
   }
 
   return executeSuccessEnvelope({
@@ -115,5 +117,5 @@ export async function dispatchAndValidate(
     migratedFrom: target.migratedFrom,
     options,
     warnings: deprecationWarnings(record)
-  });
+  }, receiptContext);
 }

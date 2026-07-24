@@ -230,6 +230,11 @@ bool McpParseGatewayExecuteRequest(
 		return false;
 	}
 
+	// Bind the resolved capability id now so a later param/option failure still
+	// carries it (the receipt then keeps its capability + revision triple, like
+	// the TS gateway which resolves the capability before validating options).
+	OutRequest.CapabilityId = Record->Id;
+
 	TSharedPtr<FJsonObject> ActionParams;
 	const TSharedPtr<FJsonValue> RawParams = Params->TryGetField(TEXT("params"));
 	if (RawParams.IsValid() && RawParams->Type != EJson::Null)

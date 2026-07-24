@@ -86,6 +86,18 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value;
 }
 
+// The correlation id, external request id and wall-clock timing are minted per
+// request, so two separate calls (the canonical and legacy forms of one
+// capability) necessarily differ on them. Structural receipt equality across the
+// forms is therefore asserted on the stable semantic content only.
+function stableReceipt(value: unknown): Record<string, unknown> {
+  const clone = { ...asRecord(value) };
+  delete clone.correlationId;
+  delete clone.requestId;
+  delete clone.timingMs;
+  return clone;
+}
+
 beforeEach(() => {
   handlerResult = { success: true, message: 'ok' };
 });
@@ -131,7 +143,7 @@ describe('execute: canonical v2 and generated legacy forms normalize to one disp
     const migrated = await execute({ tool: legacy.tool, action: legacy.action, params });
     const legacyDispatch = dispatched.splice(0);
 
-    expect(migrated.receipt).toEqual(canonical.receipt);
+    expect(stableReceipt(migrated.receipt)).toEqual(stableReceipt(canonical.receipt));
     expect(migrated.capability).toBe(canonical.capability);
     expect(legacyDispatch).toEqual(canonicalDispatch);
   });

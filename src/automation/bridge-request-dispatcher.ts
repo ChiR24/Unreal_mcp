@@ -11,7 +11,7 @@ import type {
     QueuedRequestItem
 } from './types.js';
 
-type AutomationRequestOptions = { timeoutMs?: number; mcpRequestId?: string };
+type AutomationRequestOptions = { timeoutMs?: number; mcpRequestId?: string; correlationId?: string };
 
 export interface AutomationRequestDispatcherDependencies {
     readonly enabled: boolean;
@@ -163,7 +163,9 @@ export class AutomationRequestDispatcher {
             .finally(() => this.correlation.settle(requestId))
             .catch(() => undefined);
 
-        if (this.deps.send({ type: 'automation_request', requestId, action, payload })) {
+        const envelope: AutomationBridgeMessage = { type: 'automation_request', requestId, action, payload };
+        if (options.correlationId !== undefined) envelope.correlationId = options.correlationId;
+        if (this.deps.send(envelope)) {
             this.deps.requestTracker.updateLastRequestSentAt();
             return this.createSubscriberPromise<T>(resultPromise, options.mcpRequestId, requestId);
         }
@@ -232,5 +234,6 @@ function getQueuedOptions(options: Record<string, unknown>): AutomationRequestOp
     const result: AutomationRequestOptions = {};
     if (typeof options.timeoutMs === 'number') result.timeoutMs = options.timeoutMs;
     if (typeof options.mcpRequestId === 'string') result.mcpRequestId = options.mcpRequestId;
+    if (typeof options.correlationId === 'string') result.correlationId = options.correlationId;
     return result;
 }

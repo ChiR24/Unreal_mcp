@@ -11,6 +11,8 @@
 #include <atomic>
 #include "MCP/Transport/McpNativeTransportConnectionTypes.h"
 
+struct FMcpReceiptContext;
+
 class UMcpAutomationBridgeSubsystem;
 class FSocket;
 class FRunnableThread;
@@ -173,10 +175,10 @@ private:
 		const FString& ToolName, const FString& DispatchAction,
 		const TSharedPtr<FJsonObject>& Arguments, const TSharedPtr<FJsonValue>& Id,
 		FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
-		const TSharedPtr<FJsonValue>& ProgressToken = nullptr,
-		const FString& CapabilityId = FString(),
-		const TSharedPtr<FJsonObject>& OutputSchema = nullptr,
-		const FString& CorrelationId = FString());
+		const TSharedPtr<FJsonValue>& ProgressToken,
+		const FString& CapabilityId,
+		const TSharedPtr<FJsonObject>& OutputSchema,
+		const FMcpReceiptContext& Context);
 
 	// Session validation
 	ESessionValidationResult ValidateSession(const FString& SessionId, FString& OutError);

@@ -1,6 +1,8 @@
 import { isRecord } from '../utils/validation/type-guards.js';
 import { handleManageToolsCall } from './tool-registry-manage-tools.js';
 import { getString, gatewayError, isGatewayFailure, nextGatewayCorrelationId } from './gateway/gateway-shared.js';
+import type { CorrelationId } from '../tools/catalog/capabilities/semantic/ids.js';
+import { runWithGatewayCorrelation } from '../automation/gateway-correlation-context.js';
 import { describeGatewayCapability } from './gateway/gateway-describe.js';
 import { searchGatewayCapabilities } from './gateway/gateway-search.js';
 import { executeGatewayCall, type GatewayContext } from './gateway/gateway-execute.js';
@@ -24,12 +26,13 @@ async function configureGateway(args: Record<string, unknown>): Promise<Record<s
 async function dispatchGatewayOperation(
   operation: string,
   args: Record<string, unknown>,
-  context: GatewayContext
+  context: GatewayContext,
+  correlationId: CorrelationId
 ): Promise<Record<string, unknown>> {
   switch (operation) {
     case 'search': return searchGatewayCapabilities(args);
     case 'describe': return describeGatewayCapability(args);
-    case 'execute': return await executeGatewayCall(args, context);
+    case 'execute': return await runWithGatewayCorrelation(correlationId, () => executeGatewayCall(args, context, correlationId));
     case 'configure': return await configureGateway(args);
     default: return gatewayError(operation, 'UNKNOWN_OPERATION', 'operation must be search, describe, execute, or configure.');
   }
@@ -42,7 +45,7 @@ export async function handleUnrealGatewayCall(args: Record<string, unknown>, con
   const action = getString(args, 'action');
   context.logger.debug('gateway request received', { correlationId, operation, tool, action });
 
-  const result = await dispatchGatewayOperation(operation, args, context);
+  const result = await dispatchGatewayOperation(operation, args, context, correlationId);
 
   if (isGatewayFailure(result)) {
     context.logger.warn('gateway request failed', {
