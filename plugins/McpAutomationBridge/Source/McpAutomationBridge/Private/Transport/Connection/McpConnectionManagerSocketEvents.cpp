@@ -23,6 +23,7 @@ void FMcpConnectionManager::HandleClientConnected(
     FScopeLock Lock(&AuthSocketsMutex);
     AuthenticatedSockets.Remove(ClientSocket.Get());
   }
+  ForgetSocketPrincipal(ClientSocket.Get());
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("Client socket connected (port=%d)"), ClientSocket->GetPort());
 
@@ -81,6 +82,7 @@ void FMcpConnectionManager::HandleConnectionError(
       FScopeLock Lock(&AuthSocketsMutex);
       AuthenticatedSockets.Remove(Socket.Get());
     }
+    ForgetSocketPrincipal(Socket.Get());
     {
       FScopeLock Lock(&LogSubscribersMutex);
       LogSubscriberSockets.Remove(Socket.Get());
@@ -133,6 +135,7 @@ void FMcpConnectionManager::HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket,
       FScopeLock Lock(&AuthSocketsMutex);
       AuthenticatedSockets.Remove(Socket.Get());
     }
+    ForgetSocketPrincipal(Socket.Get());
     {
       FScopeLock Lock(&LogSubscribersMutex);
       LogSubscriberSockets.Remove(Socket.Get());

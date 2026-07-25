@@ -5,6 +5,7 @@
 #include "Dom/JsonObject.h"
 #include "Templates/SharedPointer.h"
 #include "Misc/ScopeLock.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 
 class FMcpBridgeWebSocket;
 class UMcpAutomationBridgeSettings;
@@ -102,10 +103,37 @@ private:
 	void EmitAutomationTelemetrySummaryIfNeeded(double NowSeconds);
 	bool UpdateRateLimit(FMcpBridgeWebSocket* SocketPtr, bool bIncrementMessage, bool bIncrementAutomation, FString& OutReason);
 
+	// Resolve the socket's capability principal from the presented bridge_hello
+	// token and bind it in SocketPrincipals. Returns false when the connection
+	// must be refused, which is the ONLY authentication verdict for bridge_hello.
+	bool AuthenticateSocketPrincipal(FMcpBridgeWebSocket* SocketPtr, const FString& PresentedToken, bool bLegacyTokenMatch);
+
+	// Build and send the bridge_ack, including the additive, secret-free authority
+	// descriptor for the principal just bound to this socket.
+	void SendBridgeAck(TSharedPtr<FMcpBridgeWebSocket> Socket, FMcpBridgeWebSocket* SocketPtr);
+
+	// Drop the socket's principal. Takes AuthSocketsMutex itself so every teardown
+	// site keeps its AuthenticatedSockets scope to a single guarded statement.
+	void ForgetSocketPrincipal(FMcpBridgeWebSocket* SocketPtr);
+
+	// Pre-queue security gate for one automation_request. Returns false when the
+	// request was refused and a typed automation_response has already been sent,
+	// so the caller must not map or dispatch it.
+	bool AuthorizeAutomationRequest(TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject>& RootObj);
+
+	// Copy of the socket's bound principal, or an unauthenticated principal when
+	// none is bound. Taken by value under AuthSocketsMutex so callers never hold
+	// a pointer into the map across a teardown.
+	FMcpCapabilityPrincipal GetSocketPrincipal(FMcpBridgeWebSocket* SocketPtr);
+
 private:
 	TArray<TSharedPtr<FMcpBridgeWebSocket>> ActiveSockets;
 	TMap<FString, TSharedPtr<FMcpBridgeWebSocket>> PendingRequestsToSockets;
 	TSet<FMcpBridgeWebSocket*> AuthenticatedSockets;
+	// Bound at bridge_hello, cleared on teardown, guarded by AuthSocketsMutex. The
+	// plugin is the sole authority: the socket's principal is re-consulted before
+	// every request is enqueued; the presented token is never stored here.
+	TMap<FMcpBridgeWebSocket*, FMcpCapabilityPrincipal> SocketPrincipals;
 	TSet<FMcpBridgeWebSocket*> LogSubscriberSockets;
 	FTSTicker::FDelegateHandle TickerHandle;
 	FMcpMessageReceivedCallback OnMessageReceived;

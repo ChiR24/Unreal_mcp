@@ -146,6 +146,10 @@ void FMcpConnectionManager::HandleMessage(
              *PayloadPreview.Left(200));
     }
 
+    if (!AuthorizeAutomationRequest(Socket, RootObj)) {
+      return;
+    }
+
     // Map request to socket for response routing
     {
       FScopeLock Lock(&PendingRequestsMutex);
@@ -169,9 +173,12 @@ void FMcpConnectionManager::HandleMessage(
   if (Type.Equals(TEXT("bridge_hello"), ESearchCase::IgnoreCase)) {
     FString ReceivedToken;
     RootObj->TryGetStringField(TEXT("capabilityToken"), ReceivedToken);
-    if (bRequireCapabilityToken &&
-        (ReceivedToken.IsEmpty() ||
-         !McpConstantTimeTokenEquals(ReceivedToken, CapabilityToken))) {
+    // Legacy-compat input only, NOT the decision: the authority layer scans every
+    // configured candidate in constant time, so scoped tokens authenticate here too.
+    const bool bLegacyTokenMatch =
+        McpConstantTimeTokenEquals(ReceivedToken, CapabilityToken);
+    if (!AuthenticateSocketPrincipal(SocketPtr, ReceivedToken,
+                                     bLegacyTokenMatch)) {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("Capability token mismatch."));
       if (SocketPtr) {
@@ -197,41 +204,7 @@ void FMcpConnectionManager::HandleMessage(
       AuthenticatedSockets.Add(SocketPtr);
     }
 
-    TSharedRef<FJsonObject> Ack = MakeShared<FJsonObject>();
-    Ack->SetStringField(TEXT("type"), TEXT("bridge_ack"));
-    Ack->SetStringField(TEXT("message"), TEXT("Automation bridge ready"));
-    Ack->SetStringField(TEXT("serverName"), !ServerName.IsEmpty()
-                                                ? ServerName
-                                                : TEXT("UnrealEditor"));
-    Ack->SetStringField(TEXT("serverVersion"), !ServerVersion.IsEmpty()
-                                                   ? ServerVersion
-                                                   : TEXT("unreal-engine"));
-
-    if (ActiveSessionId.IsEmpty())
-      ActiveSessionId = FGuid::NewGuid().ToString();
-    Ack->SetStringField(TEXT("sessionId"), ActiveSessionId);
-    Ack->SetNumberField(TEXT("protocolVersion"), 1);
-
-    TArray<TSharedPtr<FJsonValue>> SupportedOps;
-    SupportedOps.Add(MakeShared<FJsonValueString>(TEXT("automation_request")));
-    Ack->SetArrayField(TEXT("supportedOpcodes"), SupportedOps);
-
-    TArray<TSharedPtr<FJsonValue>> ExpectedOps;
-    ExpectedOps.Add(MakeShared<FJsonValueString>(TEXT("automation_response")));
-    Ack->SetArrayField(TEXT("expectedResponseOpcodes"), ExpectedOps);
-
-    TArray<TSharedPtr<FJsonValue>> Caps;
-    Caps.Add(MakeShared<FJsonValueString>(TEXT("console_commands")));
-    Caps.Add(MakeShared<FJsonValueString>(TEXT("native_plugin")));
-    Ack->SetArrayField(TEXT("capabilities"), Caps);
-
-    Ack->SetNumberField(TEXT("heartbeatIntervalMs"), 0);
-
-    FString Serialized;
-    const TSharedRef<TJsonWriter<>> Writer =
-        TJsonWriterFactory<>::Create(&Serialized);
-    FJsonSerializer::Serialize(Ack, Writer);
-    Socket->Send(Serialized);
+    SendBridgeAck(Socket, SocketPtr);
   }
 }
 
