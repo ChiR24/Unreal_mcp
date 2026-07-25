@@ -205,7 +205,7 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
             }
 
             FString ValidityMsg;
-            const bool bValid = FStructureEditorUtils::IsStructureValid(S, nullptr, &ValidityMsg);
+            const bool bValid = (FStructureEditorUtils::IsStructureValid(S, nullptr, &ValidityMsg) == FStructureEditorUtils::EStructureError::Ok);
 
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
             Result->SetStringField(TEXT("assetPath"), StructPath);
