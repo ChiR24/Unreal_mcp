@@ -2,6 +2,7 @@ import { config } from '../config.js';
 import { McpRequestCancelledError } from './request-cancellation-error.js';
 import { ConnectionLifecycle } from './connection-lifecycle.js';
 import { RequestCorrelation } from './request-correlation.js';
+import { ConsentGrantSchema } from '../tools/catalog/capabilities/semantic/authorization.js';
 import type { Logger } from '../utils/logging/logger.js';
 import type { RequestTracker } from './request-tracker.js';
 import type {
@@ -11,7 +12,7 @@ import type {
     QueuedRequestItem
 } from './types.js';
 
-type AutomationRequestOptions = { timeoutMs?: number; mcpRequestId?: string; correlationId?: string };
+type AutomationRequestOptions = { timeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' } };
 
 export interface AutomationRequestDispatcherDependencies {
     readonly enabled: boolean;
@@ -165,6 +166,7 @@ export class AutomationRequestDispatcher {
 
         const envelope: AutomationBridgeMessage = { type: 'automation_request', requestId, action, payload };
         if (options.correlationId !== undefined) envelope.correlationId = options.correlationId;
+        if (options.consent !== undefined) envelope.consent = options.consent;
         if (this.deps.send(envelope)) {
             this.deps.requestTracker.updateLastRequestSentAt();
             return this.createSubscriberPromise<T>(resultPromise, options.mcpRequestId, requestId);
@@ -235,5 +237,11 @@ function getQueuedOptions(options: Record<string, unknown>): AutomationRequestOp
     if (typeof options.timeoutMs === 'number') result.timeoutMs = options.timeoutMs;
     if (typeof options.mcpRequestId === 'string') result.mcpRequestId = options.mcpRequestId;
     if (typeof options.correlationId === 'string') result.correlationId = options.correlationId;
+    // Re-parsed rather than asserted: this arrives as an untyped record, and a
+    // malformed grant must be dropped here rather than forwarded to the plugin.
+    const consent = ConsentGrantSchema.safeParse(options.consent);
+    if (consent.success) {
+        result.consent = { capability: consent.data.capability, acknowledge: consent.data.acknowledge };
+    }
     return result;
 }

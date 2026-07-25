@@ -7,6 +7,7 @@ import { buildAutomationBridgeStatus } from './bridge-status.js';
 import { ConnectionManager } from './connection-manager.js';
 import { HandshakeHandler } from './handshake.js';
 import { AutomationLogger } from './log-redaction.js';
+import { readBridgeAuthority, type BridgeAuthority } from './message-schema.js';
 import { MessageHandler } from './message-handler.js';
 import { RequestTracker } from './request-tracker.js';
 import type {
@@ -137,10 +138,18 @@ export class AutomationBridge extends EventEmitter {
         return this.client.getClientUrl();
     }
 
+    getAuthority(): BridgeAuthority | undefined {
+        return readBridgeAuthority(this.state.lastHandshakeMetadata);
+    }
+
+    isCapabilityTokenConfigured(): boolean {
+        return Boolean(this.config.capabilityToken);
+    }
+
     async sendAutomationRequest<T = AutomationBridgeResponseMessage>(
         action: string,
         payload: Record<string, unknown> = {},
-        options: { timeoutMs?: number; mcpRequestId?: string; correlationId?: string } = {}
+        options: { timeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' } } = {}
     ): Promise<T> {
         return this.requestDispatcher.sendAutomationRequest<T>(action, payload, options);
     }

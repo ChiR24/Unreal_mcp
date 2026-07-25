@@ -5,6 +5,7 @@ import { cleanObject } from '../../../../utils/serialization/safe-json.js';
 import { validateArgsSecurity } from '../arguments/handler-argument-validation.js';
 import { getMcpRequestContext } from '../../../../automation/request-context.js';
 import { getGatewayCorrelationId } from '../../../../automation/gateway-correlation-context.js';
+import { getGatewayConsent } from '../../../../automation/gateway-consent-context.js';
 import { getTimeoutMs } from './handler-timeout.js';
 import { normalizePathFields } from '../normalization/ue-path-normalization.js';
 
@@ -107,10 +108,16 @@ export async function executeAutomationRequest(
   // queue and the receipt all join on the same id — never a handler param.
   const gatewayCorrelationId = getGatewayCorrelationId();
 
-  const sendOptions: { timeoutMs?: number; mcpRequestId?: string; correlationId?: string } = {};
+  // Validated per-call consent (async-local, set by the gateway) rides as an
+  // automation_request envelope sibling for the plugin to re-validate; it is
+  // never a handler param.
+  const gatewayConsent = getGatewayConsent();
+
+  const sendOptions: { timeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' } } = {};
   if (timeoutMs !== undefined) sendOptions.timeoutMs = timeoutMs;
   if (mcpRequestId !== undefined) sendOptions.mcpRequestId = mcpRequestId;
   if (gatewayCorrelationId !== undefined) sendOptions.correlationId = gatewayCorrelationId;
+  if (gatewayConsent !== undefined) sendOptions.consent = gatewayConsent;
 
   return await automationBridge.sendAutomationRequest(toolName, cleanedArgs, sendOptions);
 }

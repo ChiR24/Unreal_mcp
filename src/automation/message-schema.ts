@@ -22,6 +22,29 @@ export const automationEventSchema = z.looseObject({
     message: z.string().optional()
 });
 
+// Task 40 authority descriptor (additive). z.object STRIPS unknown keys, so a
+// stray token, path prefix or limit a plugin might place here can never survive
+// into the cached descriptor: only these six non-secret fields are retained.
+export const bridgeAuthoritySchema = z.object({
+    profile: z.string().optional(),
+    scopes: stringArray.optional(),
+    deprecated: z.boolean().optional(),
+    tokenRequired: z.boolean().optional(),
+    pathRestricted: z.boolean().optional(),
+    projectRestricted: z.boolean().optional()
+});
+
+export type BridgeAuthority = z.infer<typeof bridgeAuthoritySchema>;
+
+export function readBridgeAuthority(
+    metadata: Record<string, unknown> | undefined
+): BridgeAuthority | undefined {
+    const raw = metadata?.authority;
+    if (raw === undefined) return undefined;
+    const parsed = bridgeAuthoritySchema.safeParse(raw);
+    return parsed.success ? parsed.data : undefined;
+}
+
 export const bridgeAckSchema = z.looseObject({
     type: z.literal('bridge_ack'),
     message: z.string().optional(),
@@ -32,7 +55,8 @@ export const bridgeAckSchema = z.looseObject({
     supportedOpcodes: stringArray.optional(),
     expectedResponseOpcodes: stringArray.optional(),
     capabilities: stringArray.optional(),
-    heartbeatIntervalMs: nonNegativeInteger.optional()
+    heartbeatIntervalMs: nonNegativeInteger.optional(),
+    authority: bridgeAuthoritySchema.optional()
 });
 
 export const bridgeErrorSchema = z.looseObject({
