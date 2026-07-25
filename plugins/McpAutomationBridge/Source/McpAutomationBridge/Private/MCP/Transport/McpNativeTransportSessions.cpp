@@ -32,6 +32,7 @@ FMcpNativeTransport::ESessionValidationResult FMcpNativeTransport::ValidateSessi
 		ActiveSessions.Remove(SessionId);
 		SessionRateStates.Remove(SessionId);
 		SessionProtocolVersions.Remove(SessionId);
+		SessionPrincipals.Remove(SessionId);
 	}
 	CloseSessionConnections(SessionId);
 	OutError = TEXT("Invalid or expired session ID");

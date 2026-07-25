@@ -171,6 +171,14 @@ TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 	SetIfPresent(TypedError, TEXT("field"), Error.Field);
 	SetIfPresent(TypedError, TEXT("currentRevision"), Error.CurrentRevision);
 	SetIfPresent(TypedError, TEXT("expectedRevision"), Error.ExpectedRevision);
+	SetIfPresent(TypedError, TEXT("requiredScope"), Error.RequiredScope);
+	SetIfPresent(TypedError, TEXT("scope"), Error.ConsentScope);
+	// grantedScopes is REQUIRED (not optional) on the TypeScript authorization
+	// variant, so it is emitted for that kind even when the principal holds none.
+	if (Error.Kind == TEXT("authorization"))
+	{
+		TypedError->SetArrayField(TEXT("grantedScopes"), GatewayStringArray(Error.GrantedScopes));
+	}
 	if (Error.bHasRetryable)
 	{
 		TypedError->SetBoolField(TEXT("retryable"), Error.bRetryable);

@@ -46,6 +46,7 @@ void FMcpNativeTransport::CleanupStaleRequests()
 		{
 			ActiveSessions.Remove(SessionId);
 			SessionRateStates.Remove(SessionId);
+			SessionPrincipals.Remove(SessionId);
 			UE_LOG(LogMcpNativeTransport, Log,
 				TEXT("Session expired after %.0f min inactivity (remaining: %d)"),
 				SessionTimeoutSeconds / 60.0, ActiveSessions.Num());

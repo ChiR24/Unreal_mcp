@@ -1,4 +1,5 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "MCP/Execute/McpNativeGatewayAuthorization.h"
 #include "MCP/Gateway/McpNativeGatewayDefinition.h"
 #include "Misc/SecureHash.h"
 
@@ -118,6 +119,7 @@ FString FMcpNativeTransport::HandleInitialize(
 		ActiveSessions.Remove(EvictedSessionId);
 		SessionRateStates.Remove(EvictedSessionId);
 		SessionProtocolVersions.Remove(EvictedSessionId);
+		SessionPrincipals.Remove(EvictedSessionId);
 		}
 		OutSessionId = FGuid::NewGuid().ToString();
 		ActiveSessions.Add(OutSessionId, Now);
@@ -181,8 +183,18 @@ FString FMcpNativeTransport::HandleInitialize(
 }
 
 FString FMcpNativeTransport::HandleToolsList(
-	const TSharedPtr<FJsonValue>& Id)
+	const TSharedPtr<FJsonValue>& Id, const FString& SessionId)
 {
+	// Discovery is a read of project capability state, so it is gated on the
+	// session principal exactly like resources/* — not left open to any
+	// principal that merely passed the transport token check.
+	const FString Refusal =
+		McpAuthorizePrimitiveRead(GetSessionPrincipal(SessionId), FString(), Id);
+	if (!Refusal.IsEmpty())
+	{
+		return Refusal;
+	}
+
 	// The public surface is permanently the single static 'unreal' gateway tool;
 	// the canonical 23 tools stay registered and reachable through it.
 	auto Result = MakeShared<FJsonObject>();

@@ -1,4 +1,5 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "MCP/Execute/McpNativeGatewayAuthorization.h"
 #include "MCP/Resources/McpResourceCatalog.h"
 #include "MCP/Resources/McpResourceUri.h"
 #include "MCP/Resources/McpResourceReadContent.h"
@@ -89,6 +90,27 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 	if (Params.IsValid())
 	{
 		Params->TryGetStringField(TEXT("uri"), Uri);
+	}
+
+	// Anything outside these families is not ours: return false FIRST so the
+	// caller still reports method-not-found instead of a policy refusal.
+	if (!Method.StartsWith(TEXT("resources/")) && !Method.StartsWith(TEXT("prompts/")) &&
+		Method != TEXT("completion/complete"))
+	{
+		return false;
+	}
+	// Every primitive below reads project data, so every one of them is gated on
+	// the session principal. Before this, only tools/call consulted the
+	// principal, so a write-only or path-confined token could still read actor,
+	// asset and level state outside its grant.
+	{
+		const FMcpCapabilityPrincipal Principal = GetSessionPrincipal(SessionId);
+		const FString Refusal = McpAuthorizePrimitiveRead(Principal, Uri, Id);
+		if (!Refusal.IsEmpty())
+		{
+			Reply(Refusal);
+			return true;
+		}
 	}
 
 	if (Method == TEXT("resources/list"))

@@ -32,6 +32,11 @@ struct FMcpSemanticError
 	// Task 39: stale-revision references, set only on a staleState error.
 	FString CurrentRevision;
 	FString ExpectedRevision;
+	// Task 40 security-policy payload, each set only on its own kind:
+	// authorization (requiredScope + grantedScopes) and consent (scope).
+	FString RequiredScope;
+	TArray<FString> GrantedScopes;
+	FString ConsentScope;
 	TArray<FString> Supported;
 	TSharedPtr<FJsonObject> UnrealDetail;
 };

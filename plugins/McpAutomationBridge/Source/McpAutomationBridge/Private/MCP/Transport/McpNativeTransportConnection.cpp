@@ -1,5 +1,7 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 
+#include "MCP/Execute/McpNativeGatewayAuthorization.h"
+
 void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 {
 	FParsedHttpRequest HttpReq;
@@ -41,19 +43,44 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 	// Capability token validation (mirrors McpConnectionManager logic)
 	{
 		const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
-		if (Settings && Settings->bRequireCapabilityToken)
+		const bool bTokenRequired = Settings && Settings->bRequireCapabilityToken;
+		// A token that was PRESENTED is always resolved, even when none is
+		// required: otherwise an unresolvable token bound a zero-scope principal
+		// to an accepted session and every later request failed as a scope error.
+		if (Settings && (bTokenRequired || !HttpReq.CapabilityToken.IsEmpty()))
 		{
 			// Empty client token is rejected outright; the remaining comparison
 			// is constant-time so a timing oracle cannot leak how much of the
-			// token matched.
-			if (HttpReq.CapabilityToken.IsEmpty()
-				|| !McpConstantTimeTokenEquals(HttpReq.CapabilityToken, Settings->CapabilityToken))
+			// token matched. The legacy compare is a compat input only — the
+			// resolver scans every configured candidate, also in constant time,
+			// so a scoped token authenticates here with narrower authority.
+			const bool bLegacyTokenMatch =
+				McpConstantTimeTokenEquals(HttpReq.CapabilityToken, Settings->CapabilityToken);
+			const FMcpCapabilityPrincipal Principal =
+				McpResolveNativePrincipal(HttpReq.CapabilityToken);
+			if (HttpReq.CapabilityToken.IsEmpty() || !Principal.bAuthenticated)
 			{
 				UE_LOG(LogMcpNativeTransport, Warning, TEXT("Capability token mismatch - rejecting connection"));
 				SendAndClose(ClientSocket, 401, TEXT("application/json"), FMcpJsonRpc::BuildError(MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest, TEXT("Invalid capability token")), {}, HttpReq.Origin);
 				return;
 			}
+			if (bLegacyTokenMatch && Principal.bDeprecated)
+			{
+				UE_LOG(LogMcpNativeTransport, Warning,
+					TEXT("Native /mcp authenticated with the deprecated all-or-nothing "
+					     "capability token; migrate to a scoped token."));
+			}
 		}
+	}
+
+	// A token swap on an established session is refused before the session is
+	// used for anything, so one token can never initialize and another act.
+	if (!HttpReq.SessionId.IsEmpty()
+		&& !VerifySessionPrincipal(HttpReq.SessionId, HttpReq.CapabilityToken))
+	{
+		UE_LOG(LogMcpNativeTransport, Warning, TEXT("Session principal mismatch - rejecting request"));
+		SendAndClose(ClientSocket, 401, TEXT("application/json"), FMcpJsonRpc::BuildError(MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest, TEXT("Capability token does not match this session")), {}, HttpReq.Origin);
+		return;
 	}
 
 	// ── DELETE /mcp — session termination ──
@@ -76,6 +103,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 				{
 					SessionRateStates.Remove(HttpReq.SessionId);
 					SessionProtocolVersions.Remove(HttpReq.SessionId);
+					SessionPrincipals.Remove(HttpReq.SessionId);
 					UE_LOG(LogMcpNativeTransport, Log,
 						TEXT("Session terminated by client (remaining: %d)"),
 						ActiveSessions.Num());
@@ -211,6 +239,9 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 				HttpReq.Origin);
 			return;
 		}
+		// Bind the principal for the life of the session; every later request on
+		// this session is verified against it.
+		BindSessionPrincipal(NewSessionId, HttpReq.CapabilityToken);
 		TMap<FString, FString> Headers;
 		Headers.Add(TEXT("Mcp-Session-Id"), NewSessionId);
 		const bool bResponseSent = SendAndClose(
@@ -227,6 +258,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 				ActiveSessions.Remove(NewSessionId);
 				SessionRateStates.Remove(NewSessionId);
 				SessionProtocolVersions.Remove(NewSessionId);
+				SessionPrincipals.Remove(NewSessionId);
 			}
 			CloseSessionConnections(NewSessionId);
 		}
@@ -235,7 +267,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 
 	if (Rpc.Method == TEXT("tools/list"))
 	{
-		FString ResponseBody = HandleToolsList(Rpc.Id);
+		FString ResponseBody = HandleToolsList(Rpc.Id, HttpReq.SessionId);
 		SendAndClose(ClientSocket, 200, TEXT("application/json"), ResponseBody, {}, HttpReq.Origin);
 		return;
 	}

@@ -8,6 +8,8 @@
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Execute/McpNativeGatewayValidation.h"
 #include "MCP/Execute/McpNativeReceiptEnrichment.h"
+#include "MCP/Execute/McpNativeGatewayAuthorization.h"
+#include "Core/Security/McpPrequeueGate.h"
 #include "HAL/PlatformTime.h"
 
 void FMcpNativeTransport::HandleGatewayExecute(
@@ -53,6 +55,35 @@ void FMcpNativeTransport::HandleGatewayExecute(
 			TEXT("gateway execute rejected before dispatch (correlationId=%s)"), *Context.CorrelationId);
 		SendReceipt(ValidationError);
 		return;
+	}
+
+	// The same pre-queue security gate the WebSocket bridge applies, so both
+	// transports refuse identically, with the identical typed error, before any
+	// editor work is queued. It runs before the local-tool intercept so a local
+	// tool is held to the same policy as a queued one.
+	{
+		const FMcpCapabilityPrincipal Principal = GetSessionPrincipal(SessionId);
+		FMcpPrequeueRequest AuthRequest;
+		AuthRequest.Principal = &Principal;
+		AuthRequest.CapabilityId = Plan.CapabilityId;
+		AuthRequest.DispatchAction = Plan.DispatchAction;
+		AuthRequest.Payload = Plan.Arguments;
+		const TSharedPtr<FJsonObject>* ConsentField = nullptr;
+		if (Params.IsValid() && Params->TryGetObjectField(TEXT("consent"), ConsentField) && ConsentField)
+		{
+			AuthRequest.Consent = *ConsentField;
+		}
+
+		const FMcpAuthorizationDecision Decision = McpPrequeueGate::Authorize(AuthRequest);
+		if (!Decision.bAllowed)
+		{
+			UE_LOG(LogMcpNativeTransport, Warning,
+				TEXT("gateway execute refused by policy before dispatch (%s, correlationId=%s)"),
+				*Decision.ErrorCode, *Context.CorrelationId);
+			SendReceipt(McpBuildErrorReceipt(
+				Plan.CapabilityId, McpAuthorizationSemanticError(Decision), Context));
+			return;
+		}
 	}
 
 	// Locally-handled tools (manage_tools) complete without queueing. This runs

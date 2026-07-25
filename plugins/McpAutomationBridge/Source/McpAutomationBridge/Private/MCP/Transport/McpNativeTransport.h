@@ -10,6 +10,7 @@
 #include "Async/Future.h"
 #include <atomic>
 #include "MCP/Transport/McpNativeTransportConnectionTypes.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 
 struct FMcpReceiptContext;
 
@@ -138,7 +139,7 @@ private:
 	FString HandleInitialize(const TSharedPtr<FJsonObject>& Params,
 		const TSharedPtr<FJsonValue>& Id, FString& OutSessionId,
 		const FString& ConnectionRemoteAddr);
-	FString HandleToolsList(const TSharedPtr<FJsonValue>& Id);
+	FString HandleToolsList(const TSharedPtr<FJsonValue>& Id, const FString& SessionId);
 	void HandleToolsCall(const TSharedPtr<FJsonObject>& Params,
 		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
 		const FString& SessionId, const FString& CorsOrigin);
@@ -181,6 +182,13 @@ private:
 		const FMcpReceiptContext& Context);
 
 	// Session validation
+	// Task 40 session principal. Bound once at initialize from the presented
+	// capability token, then re-verified on every later request so a client can
+	// never present one token at initialize and a different one afterwards.
+	void BindSessionPrincipal(const FString& SessionId, const FString& PresentedToken);
+	FMcpCapabilityPrincipal GetSessionPrincipal(const FString& SessionId);
+	bool VerifySessionPrincipal(const FString& SessionId, const FString& PresentedToken);
+
 	ESessionValidationResult ValidateSession(const FString& SessionId, FString& OutError);
 	static int32 GetSessionValidationStatusCode(ESessionValidationResult Result);
 	void TouchSession(const FString& SessionId);
@@ -290,6 +298,8 @@ private:
 	// Session state (multi-session, with activity tracking)
 	TMap<FString, double> ActiveSessions;  // SessionId → LastActivityTime
 	TMap<FString, FString> SessionProtocolVersions;  // SessionId → negotiated MCP-Protocol-Version
+	// SessionId → bound principal. The presented token is never stored here.
+	TMap<FString, FMcpCapabilityPrincipal> SessionPrincipals;
 	struct FSessionRateState
 	{
 		double InitializationCompletedAt = 0.0;
