@@ -144,6 +144,24 @@ TSharedPtr<FJsonObject> ToolSummary(
 	return Out;
 }
 
+// The exact `consent` sibling execute demands for this capability, so a grant is
+// discoverable BEFORE the first refusal — the gateway tool description points
+// clients at `describe.consentGrant`. Absent when policy.consent is "none".
+// Must stay identical to the TypeScript capabilityConsentGrant: the two
+// surfaces answer the same discovery question and a client may follow either.
+TSharedPtr<FJsonObject> ConsentGrant(const FMcpCapabilityRecord& Record)
+{
+	FString Consent;
+	if (!Record.Policy.IsValid()) return nullptr;
+	if (!Record.Policy->TryGetStringField(TEXT("consent"), Consent)) return nullptr;
+	if (Consent.Equals(TEXT("none"), ESearchCase::IgnoreCase)) return nullptr;
+	const bool bElevated = Consent.Equals(TEXT("elevated"), ESearchCase::IgnoreCase);
+	auto Grant = MakeShared<FJsonObject>();
+	Grant->SetStringField(TEXT("capability"), Record.Id);
+	Grant->SetStringField(TEXT("acknowledge"), bElevated ? TEXT("elevated") : TEXT("explicit"));
+	return Grant;
+}
+
 TSharedPtr<FJsonObject> CapabilityContract(
 	const FMcpCapabilityRecord& Record, const FString& Tool, const FString& Revision, bool bAvailable)
 {
@@ -154,6 +172,7 @@ TSharedPtr<FJsonObject> CapabilityContract(
 	SetObjectOrEmpty(Out, TEXT("behavior"), Record.Behavior);
 	Out->SetStringField(TEXT("capability"), Record.Id);
 	Out->SetStringField(TEXT("catalogRevision"), Revision);
+	if (const TSharedPtr<FJsonObject> Grant = ConsentGrant(Record)) Out->SetObjectField(TEXT("consentGrant"), Grant);
 	SetObjectOrEmpty(Out, TEXT("cost"), Record.Cost);
 	SetObjectOrEmpty(Out, TEXT("deprecation"), Record.Deprecation);
 	Out->SetStringField(TEXT("domain"), Record.Domain);

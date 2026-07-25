@@ -18,6 +18,19 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		.String(TEXT("action"), TEXT("Exact action name returned by describe. For configure, this is a manage_tools action."))
 		.String(TEXT("param"), TEXT("Exact parameter name (tool-union catalog) to inspect. Requires tool and action for full drill-down; resolves the single parameter schema. Use with describe only."))
 		.Object(TEXT("params"), TEXT("Parameters for execute or configure. Never include action or subAction here."))
+		.Object(TEXT("consent"),
+			TEXT("Per-call consent grant for a capability whose policy.consent is not 'none'. Bound to one "
+				"capability and one call; never persisted, inherited or reused. Read the exact grant from "
+				"describe.consentGrant. Use with execute only."),
+			[](FMcpSchemaBuilder& Sub)
+			{
+				Sub.String(TEXT("capability"),
+					TEXT("Exact canonical capability ID this grant authorizes, as returned by describe."))
+					.StringEnum(TEXT("acknowledge"), { TEXT("explicit"), TEXT("elevated") },
+						TEXT("Acknowledgement strength. 'explicit' satisfies an explicit policy; 'elevated' "
+							"is required by a destructive policy and also satisfies explicit."))
+					.Required({ TEXT("capability"), TEXT("acknowledge") });
+			})
 		.Integer(TEXT("limit"), TEXT("Maximum search results to return. Defaults to 12."))
 		.Integer(TEXT("offset"), TEXT("Zero-based search result offset. Defaults to 0."))
 		.Required({ TEXT("operation") })
@@ -32,6 +45,11 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		const TSharedPtr<FJsonObject> Props = InputSchema->GetObjectField(TEXT("properties"));
 		if (Props.IsValid())
 		{
+			const TSharedPtr<FJsonObject>* ConsentProp = nullptr;
+			if (Props->TryGetObjectField(TEXT("consent"), ConsentProp) && ConsentProp && (*ConsentProp).IsValid())
+			{
+				(*ConsentProp)->SetBoolField(TEXT("additionalProperties"), false);
+			}
 			const TSharedPtr<FJsonObject>* LimitProp = nullptr;
 			const TSharedPtr<FJsonObject>* OffsetProp = nullptr;
 			if (Props->TryGetObjectField(TEXT("limit"), LimitProp) && LimitProp && (*LimitProp).IsValid())
