@@ -12,6 +12,17 @@ import { capabilityAvailability, isRunnable, type CapabilityAvailability } from 
 
 export type CapabilityNextCall = Record<string, unknown>;
 
+/** The exact `consent` sibling this capability needs, so a grant is discoverable BEFORE the first refusal. */
+export function capabilityConsentGrant(
+  record: CapabilityRecord
+): { capability: string; acknowledge: 'explicit' | 'elevated' } | undefined {
+  if (record.policy.consent === 'none') return undefined;
+  return {
+    capability: record.id,
+    acknowledge: record.policy.consent === 'elevated' ? 'elevated' : 'explicit'
+  };
+}
+
 export function capabilityNextCall(
   record: CapabilityRecord,
   availability: CapabilityAvailability
@@ -57,7 +68,7 @@ export function parameterSchema(
   name: string
 ): Record<string, unknown> | undefined {
   const schema = record.schemas.input.properties[name];
-  return isRecord(schema) ? (schema as Record<string, unknown>) : undefined;
+  return isRecord(schema) ? schema : undefined;
 }
 
 export function parameterSummaries(record: CapabilityRecord): Array<Record<string, unknown>> {
@@ -108,7 +119,9 @@ export function capabilitySearchRow(
 export function capabilityContract(record: CapabilityRecord): Record<string, unknown> {
   const availability = capabilityAvailability(record);
   const parameters = parameterSummaries(record);
+  const consentGrant = capabilityConsentGrant(record);
   return {
+    ...(consentGrant === undefined ? {} : { consentGrant }),
     scope: 'capability',
     capability: record.id,
     parentTool: record.routing.parentTool,

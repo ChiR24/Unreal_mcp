@@ -156,6 +156,53 @@ export const SemanticErrorSchema = z.discriminatedUnion('kind', [
       suggestions: z.array(z.string()).readonly().optional()
     })
     .readonly(),
+  // Task 40 security-policy classes. Additive: every Task 39 variant above is
+  // preserved so externally-consumed codes keep validating, while each new plan
+  // refusal (scope, project, path policy, quota, command) gets its own kind. No
+  // token or secret is ever carried on these errors.
+  z
+    .strictObject({
+      kind: z.literal('authorization'),
+      code: z.literal('SCOPE_NOT_GRANTED'),
+      message: z.string(),
+      requiredScope: z.string().min(1).max(32),
+      grantedScopes: z.array(z.string()).readonly(),
+      suggestions: z.array(z.string()).readonly().optional()
+    })
+    .readonly(),
+  z
+    .strictObject({
+      kind: z.literal('project'),
+      code: z.literal('PROJECT_NOT_PERMITTED'),
+      message: z.string(),
+      suggestions: z.array(z.string()).readonly().optional()
+    })
+    .readonly(),
+  z
+    .strictObject({
+      kind: z.literal('pathPolicy'),
+      code: z.literal('PATH_NOT_PERMITTED'),
+      message: z.string(),
+      suggestions: z.array(z.string()).readonly().optional()
+    })
+    .readonly(),
+  z
+    .strictObject({
+      kind: z.literal('quota'),
+      code: z.literal('QUOTA_EXCEEDED'),
+      message: z.string(),
+      retryable: z.boolean(),
+      suggestions: z.array(z.string()).readonly().optional()
+    })
+    .readonly(),
+  z
+    .strictObject({
+      kind: z.literal('command'),
+      code: z.literal('COMMAND_BLOCKED'),
+      message: z.string(),
+      suggestions: z.array(z.string()).readonly().optional()
+    })
+    .readonly(),
   z
     .strictObject({
       kind: z.literal('unknown'),

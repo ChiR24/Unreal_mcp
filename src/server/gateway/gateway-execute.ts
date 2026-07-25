@@ -36,7 +36,9 @@ import {
   type ResolvedFailure
 } from './gateway-execute-envelope.js';
 import { dispatchAndValidate, type GatewayContext } from './gateway-execute-dispatch.js';
-import { checkPreDispatchPolicy } from './gateway-execute-policy.js';
+import { checkConsentAuthorization, checkPreDispatchPolicy, checkScopeAuthorization } from './gateway-execute-policy.js';
+import { ConsentGrantSchema, type ConsentGrant } from '../../tools/catalog/capabilities/semantic/authorization.js';
+import { runWithGatewayConsent } from '../../automation/gateway-consent-context.js';
 import { buildReceiptContext } from './gateway-receipt-context.js';
 import type { CorrelationId } from '../../tools/catalog/capabilities/semantic/ids.js';
 
@@ -182,12 +184,18 @@ export async function executeGatewayCall(
   const checked = checkStaticRequest(target, args);
   if ('failure' in checked) return refuseWithTarget(target, checked.failure, receiptContext);
 
-  // Pre-dispatch policy seam: a blocked call (Task 39 stale revision; later
-  // Task 40 scope/consent) never reaches the connection gate, bridge or queue.
+  // Pre-connection policy seam: a Task 39 stale-revision refusal never reaches
+  // the connection gate, bridge or queue. Task 40 scope/consent cannot run here
+  // — they need the authority descriptor, so they run after ensureConnected().
   const policyFailure = checkPreDispatchPolicy(target, options);
   if (policyFailure !== undefined) return refuseWithTarget(target, policyFailure, receiptContext);
 
-  const canRunWithoutConnection = target.record.id === 'system_control.get_project_settings';
+  // Fail-closed default: a configured capability token means the offline admin
+  // path is no longer available — the client must complete a handshake so the
+  // plugin's authority descriptor is present before any protected/offline action.
+  // With no token configured, the loopback offline path is preserved unchanged.
+  const tokenConfigured = context.tools.automationBridge?.isCapabilityTokenConfigured?.() ?? false;
+  const canRunWithoutConnection = target.record.id === 'system_control.get_project_settings' && !tokenConfigured;
   if (!canRunWithoutConnection && !await context.ensureConnected()) {
     return refuseWithTarget(target, {
       errorCode: 'NOT_CONNECTED',
@@ -196,5 +204,28 @@ export async function executeGatewayCall(
     }, receiptContext);
   }
 
-  return await dispatchAndValidate(target, checked.params, options, context, receiptContext);
+  // Authority fail-fast runs after the connection gate (so the plugin's authority
+  // descriptor is available) and before dispatch. The plugin re-enforces.
+  const authority = context.tools.automationBridge?.getAuthority?.();
+  const scopeFailure = checkScopeAuthorization(target, authority);
+  if (scopeFailure !== undefined) return refuseWithTarget(target, scopeFailure, receiptContext);
+
+  let consentGrant: ConsentGrant | undefined;
+  if (args.consent !== undefined) {
+    const parsedConsent = ConsentGrantSchema.safeParse(args.consent);
+    if (!parsedConsent.success) {
+      return refuseWithTarget(target, {
+        errorCode: 'INVALID_CONSENT',
+        message: 'consent must be { capability: <exact capability id>, acknowledge: "explicit" | "elevated" }.',
+        nextCall: buildNextCall({ operation: 'describe', tool: target.record.routing.parentTool, action: target.legacy.action })
+      }, receiptContext);
+    }
+    consentGrant = parsedConsent.data;
+  }
+  const consentFailure = checkConsentAuthorization(target, authority, consentGrant);
+  if (consentFailure !== undefined) return refuseWithTarget(target, consentFailure, receiptContext);
+
+  const dispatch = (): Promise<Record<string, unknown>> =>
+    dispatchAndValidate(target, checked.params, options, context, receiptContext);
+  return consentGrant === undefined ? await dispatch() : await runWithGatewayConsent(consentGrant, dispatch);
 }

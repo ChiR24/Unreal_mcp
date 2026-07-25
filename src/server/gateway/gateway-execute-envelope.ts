@@ -60,6 +60,8 @@ export type ExecuteFailure = {
   /** Present only on a STALE_STATE refusal from the pre-dispatch policy seam. */
   readonly currentRevision?: string;
   readonly expectedRevision?: string;
+  readonly requiredScope?: string;
+  readonly grantedScopes?: readonly string[];
 };
 
 const OPTION_CODES = new Set(['UNSUPPORTED_OPTION']);
@@ -134,6 +136,18 @@ export function toSemanticError(failure: ExecuteFailure): SemanticError {
   }
   if (UNREAL_CODES.has(errorCode)) {
     return { kind: 'execution', code: 'UNREAL_ENGINE_ERROR', message, retryable: false };
+  }
+  if (errorCode === 'SCOPE_NOT_GRANTED') {
+    return {
+      kind: 'authorization',
+      code: 'SCOPE_NOT_GRANTED',
+      message,
+      requiredScope: failure.requiredScope ?? 'admin',
+      grantedScopes: failure.grantedScopes ?? []
+    };
+  }
+  if (errorCode === 'CONSENT_REQUIRED') {
+    return { kind: 'consent', code: 'CONSENT_REQUIRED', message, scope: failure.requiredScope ?? 'destructive' };
   }
   return {
     kind: 'validation',

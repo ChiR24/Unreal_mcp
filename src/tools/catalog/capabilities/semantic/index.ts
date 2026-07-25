@@ -1,3 +1,4 @@
+export * from './authorization.js';
 export * from './envelope.js';
 export * from './errors.js';
 export * from './execution-options.js';

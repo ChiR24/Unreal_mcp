@@ -20,6 +20,16 @@ export const unrealGatewayToolDefinition: ToolDefinition = {
       action: { type: 'string', description: 'Exact action name returned by describe. For configure, this is a manage_tools action.' },
       param: { type: 'string', description: 'Exact parameter name (tool-union catalog) to inspect. Requires tool and action for full drill-down; resolves the single parameter schema. Use with describe only.' },
       params: { type: 'object', description: 'Parameters for execute or configure. Never include action or subAction here.' },
+      consent: {
+        type: 'object',
+        properties: {
+          capability: { type: 'string', description: 'Exact canonical capability ID this grant authorizes, as returned by describe.' },
+          acknowledge: { type: 'string', enum: ['explicit', 'elevated'], description: "Acknowledgement strength. 'explicit' satisfies an explicit policy; 'elevated' is required by a destructive policy and also satisfies explicit." }
+        },
+        required: ['capability', 'acknowledge'],
+        additionalProperties: false,
+        description: "Per-call consent grant for a capability whose policy.consent is not 'none'. Bound to one capability and one call; never persisted, inherited or reused. Read the exact grant from describe.consentGrant. Use with execute only."
+      },
       limit: { type: 'integer', minimum: 1, maximum: 25, description: 'Maximum search results to return. Defaults to 12.' },
       offset: { type: 'integer', minimum: 0, description: 'Zero-based search result offset. Defaults to 0.' },
       cursor: { type: 'string', description: 'Opaque search cursor from a previous response nextCursor. Supersedes offset.' },
@@ -77,6 +87,7 @@ export const unrealGatewayToolDefinition: ToolDefinition = {
       availability: { description: 'Whether the capability is available, disabled or unavailable, and why.' },
       behavior: { type: 'object' },
       policy: { type: 'object' },
+      consentGrant: { type: 'object', description: "Exact consent grant this capability requires, ready to pass back as the execute call's consent sibling. Absent when policy.consent is 'none'." },
       cost: { type: 'object' },
       deprecation: { type: 'object' },
       hashes: { type: 'object', description: 'Per-record schema and content hashes from the generated catalog.' },

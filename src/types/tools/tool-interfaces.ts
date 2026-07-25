@@ -1,9 +1,12 @@
 import type { AutomationBridgeStatus } from '../../automation/index.js';
+import type { BridgeAuthority } from '../../automation/message-schema.js';
 import type { AutomationErrorDetail } from '../automation/automation-responses.js';
 
 export interface AutomationRequestBridge {
     isConnected(): boolean;
-    sendAutomationRequest(action: string, payload: Record<string, unknown>, options?: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number; mcpRequestId?: string; correlationId?: string }): Promise<unknown>;
+    sendAutomationRequest(action: string, payload: Record<string, unknown>, options?: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' } }): Promise<unknown>;
+    getAuthority?(): BridgeAuthority | undefined;
+    isCapabilityTokenConfigured?(): boolean;
 }
 
 export interface AutomationStatusBridge {
