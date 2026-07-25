@@ -40,6 +40,14 @@ import { checkConsentAuthorization, checkPreDispatchPolicy, checkScopeAuthorizat
 import { ConsentGrantSchema, type ConsentGrant } from '../../tools/catalog/capabilities/semantic/authorization.js';
 import { runWithGatewayConsent } from '../../automation/gateway-consent-context.js';
 import { buildReceiptContext } from './gateway-receipt-context.js';
+import {
+  conflictMessage,
+  IDEMPOTENCY_CONFLICT_CODE,
+  LOCAL_PRINCIPAL,
+  runWithIdempotency,
+  sharedExecuteLedger,
+  type ConflictReason
+} from './gateway-execute-idempotency.js';
 import type { CorrelationId } from '../../tools/catalog/capabilities/semantic/ids.js';
 
 export type { GatewayContext };
@@ -227,5 +235,30 @@ export async function executeGatewayCall(
 
   const dispatch = (): Promise<Record<string, unknown>> =>
     dispatchAndValidate(target, checked.params, options, context, receiptContext);
-  return consentGrant === undefined ? await dispatch() : await runWithGatewayConsent(consentGrant, dispatch);
+
+  // Dedup sits here, after every refusal stage, so an unauthorized or invalid
+  // request can never occupy a slot or be replayed as a recorded success.
+  const guarded = (): Promise<Record<string, unknown>> =>
+    runWithIdempotency(
+      {
+        capabilityId: target.record.id,
+        idempotencyClass: target.record.behavior.idempotency,
+        principal: authority?.profile ?? LOCAL_PRINCIPAL,
+        params: checked.params,
+        idempotencyKey: receiptContext.idempotencyId
+      },
+      sharedExecuteLedger(),
+      dispatch,
+      (receipt: Record<string, unknown>) => receipt.success === true,
+      (reason: ConflictReason) => refuseWithTarget(target, {
+        errorCode: IDEMPOTENCY_CONFLICT_CODE,
+        message: conflictMessage(reason),
+        nextCall: buildNextCall({
+          operation: 'describe',
+          tool: target.record.routing.parentTool,
+          action: target.legacy.action
+        })
+      }, receiptContext)
+    );
+  return consentGrant === undefined ? await guarded() : await runWithGatewayConsent(consentGrant, guarded);
 }
