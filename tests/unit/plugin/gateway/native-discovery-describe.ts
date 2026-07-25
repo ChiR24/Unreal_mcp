@@ -29,6 +29,15 @@ const schemaProperties = (schema: JsonValue): Readonly<Record<string, JsonValue>
   return properties as Record<string, JsonValue>;
 };
 
+/** `policy.consent` when it demands a grant, else undefined for `none`/unreadable. */
+const consentMode = (record: DiscoveryRecord): string | undefined => {
+  const policy = record.policy;
+  if (policy === null || typeof policy !== 'object' || Array.isArray(policy)) return undefined;
+  const consent = (policy as Record<string, JsonValue>).consent;
+  if (typeof consent !== 'string' || consent === 'none') return undefined;
+  return consent;
+};
+
 const requiredNames = (schema: JsonValue): readonly string[] => {
   if (schema === null || typeof schema !== 'object' || Array.isArray(schema)) return [];
   const required = (schema as Record<string, JsonValue>).required;
@@ -138,6 +147,14 @@ export const describeCapability = (input: DiscoveryInput): JsonValue => {
     behavior: record.behavior as JsonValue,
     capability: record.id,
     catalogRevision: registry.catalogRevision,
+    ...(consentMode(record) === undefined
+      ? {}
+      : {
+          consentGrant: {
+            acknowledge: consentMode(record) === 'elevated' ? 'elevated' : 'explicit',
+            capability: record.id,
+          },
+        }),
     cost: record.cost,
     deprecation: record.deprecation as JsonValue,
     domain: record.discovery.domain,
