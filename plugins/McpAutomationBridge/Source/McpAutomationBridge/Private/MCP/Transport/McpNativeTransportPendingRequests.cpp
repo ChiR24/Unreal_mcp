@@ -159,6 +159,7 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		ReportedMessage = McpReceiptMessage(ReportedResult);
 		ReportedErrorCode.Reset();
 		ReportedResult->TryGetStringField(TEXT("errorCode"), ReportedErrorCode);
+		McpSettleIdempotency(Conn->IdempotencySlot, bReportedSuccess, ReportedResult);
 	}
 	TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
 		bReportedSuccess, ReportedMessage, ReportedResult, ReportedErrorCode);

@@ -10,7 +10,10 @@
 #include "MCP/Execute/McpNativeReceiptEnrichment.h"
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
 #include "Core/Security/McpPrequeueGate.h"
+#include "Foundation/McpIdempotencyLedger.h"
 #include "HAL/PlatformTime.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 
 void FMcpNativeTransport::HandleGatewayExecute(
 	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
@@ -99,6 +102,44 @@ void FMcpNativeTransport::HandleGatewayExecute(
 	if (!Plan.Arguments->HasField(TEXT("subAction")))
 	{
 		Plan.Arguments->SetStringField(TEXT("subAction"), Plan.LegacyAction);
+	}
+
+	// Idempotency runs after the local-tool intercept (so configuration tools
+	// never enter the ledger) and before dispatch (so a replay or duplicate never
+	// reaches editor work). A fresh claim stashes its slot on the Context; the
+	// completion funnel settles it. Engages only when a key was supplied.
+	if (!Context.IdempotencyId.IsEmpty())
+	{
+		const FString PrincipalIdentity = GetSessionPrincipal(SessionId).Identity;
+		const FString Fingerprint = McpCanonicalFingerprint(Plan.CapabilityId, Plan.Arguments);
+		FString Slot;
+		FString ReplayReceiptJson;
+		const EMcpIdempotencyOutcome Outcome = FMcpIdempotencyLedger::Get().Begin(
+			PrincipalIdentity, Plan.CapabilityId, Context.IdempotencyId, Fingerprint, Slot, ReplayReceiptJson);
+		if (Outcome == EMcpIdempotencyOutcome::Replay)
+		{
+			TSharedPtr<FJsonObject> Recorded;
+			const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ReplayReceiptJson);
+			if (FJsonSerializer::Deserialize(Reader, Recorded) && Recorded.IsValid())
+			{
+				SendReceipt(Recorded);
+				return;
+			}
+			FMcpIdempotencyLedger::Get().Abandon(Slot);
+		}
+		else if (Outcome == EMcpIdempotencyOutcome::InFlight || Outcome == EMcpIdempotencyOutcome::Conflict)
+		{
+			const FString Detail = Outcome == EMcpIdempotencyOutcome::InFlight
+				? TEXT("This idempotency key is already executing. Wait for the first call to finish and read its receipt; do not retry with the same key.")
+				: TEXT("This idempotency key was already used with different parameters. Use a new idempotency key, or resend the original parameters to replay the recorded receipt.");
+			SendReceipt(McpBuildErrorReceipt(
+				Plan.CapabilityId, McpExecutionError(TEXT("IDEMPOTENCY_CONFLICT"), Detail, false), Context));
+			return;
+		}
+		else if (Outcome == EMcpIdempotencyOutcome::First)
+		{
+			Context.IdempotencySlot = Slot;
+		}
 	}
 
 	StreamToolCall(

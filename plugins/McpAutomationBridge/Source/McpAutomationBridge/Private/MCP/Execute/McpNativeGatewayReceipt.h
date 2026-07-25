@@ -52,6 +52,7 @@ struct FMcpReceiptContext
 	FString CorrelationId;
 	FString RequestId;
 	FString IdempotencyId;
+	FString IdempotencySlot;
 	double StartTimeSeconds = 0.0;
 };
 
@@ -65,6 +66,15 @@ FMcpSemanticError McpCapabilityError(const FString& GatewayCode, const FString& 
 FMcpSemanticError McpDispatchError(const FString& GatewayCode, const FString& Code, const FString& Message, bool bRetryable);
 FMcpSemanticError McpOutputError(const FString& Code, const FString& Message, const FString& Pointer = FString());
 FMcpSemanticError McpStaleStateError(const FString& Message, const FString& CurrentRevision, const FString& ExpectedRevision);
+
+/** Task 41: order-independent SHA-256 digest of the post-normalization params;
+ *  the ledger conflicts a key replayed with different effective arguments. */
+FString McpCanonicalFingerprint(const FString& CapabilityId, const TSharedPtr<FJsonObject>& Params);
+
+/** Task 41: settle one ledger slot from the completed receipt at the single
+ *  completion funnel — success is recorded for replay, anything else releases
+ *  the slot so the key stays retryable. A blank slot is a no-op. */
+void McpSettleIdempotency(const FString& Slot, bool bSuccess, const TSharedPtr<FJsonObject>& Receipt);
 
 /** Error receipt. Guidance (suggestions/nextCall/etc.) is merged in when supplied. */
 TSharedPtr<FJsonObject> McpBuildErrorReceipt(

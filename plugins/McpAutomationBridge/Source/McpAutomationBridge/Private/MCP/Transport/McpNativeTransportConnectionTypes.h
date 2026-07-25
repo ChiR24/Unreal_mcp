@@ -67,6 +67,9 @@ struct FSSEConnection
 	// receipt so an async success/error carries the same join keys as TS.
 	FString RequestId;
 	FString IdempotencyId;
+	// Set only when this request claimed a fresh idempotency slot; the completion
+	// funnel settles that slot (Complete on success, Abandon otherwise).
+	FString IdempotencySlot;
 	double RequestStartSeconds = 0.0;
 	TSharedPtr<FJsonObject> OutputSchema;
 };

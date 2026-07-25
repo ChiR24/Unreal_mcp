@@ -34,6 +34,7 @@ void FMcpNativeTransport::StreamToolCall(
 	Conn->CorrelationId = Context.CorrelationId;
 	Conn->RequestId = Context.RequestId;
 	Conn->IdempotencyId = Context.IdempotencyId;
+	Conn->IdempotencySlot = Context.IdempotencySlot;
 	Conn->RequestStartSeconds = Context.StartTimeSeconds;
 	Conn->OutputSchema = OutputSchema;
 	bool bPendingLimitReached = false;
