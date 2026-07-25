@@ -1,5 +1,7 @@
 # Unreal Engine MCP Server
 
+[![MCP Toplist](https://mcptoplist.com/badge/io.github.ChiR24%2Funreal-engine-mcp.svg)](https://mcptoplist.com/server/io.github.ChiR24%2Funreal-engine-mcp)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NPM Package](https://img.shields.io/npm/v/unreal-engine-mcp-server)](https://www.npmjs.com/package/unreal-engine-mcp-server)
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-TypeScript-blue)](https://github.com/modelcontextprotocol/sdk)
