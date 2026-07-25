@@ -1,0 +1,117 @@
+# task40-security-matrix — how to run the live Task 40 evidence harness
+
+`scripts/qa/task40-security-matrix.cjs` referenced this file from day one and it
+did not exist, so the first reviewer had to reverse-engineer the whole setup
+before they could reproduce a single case. This is that setup, written down.
+
+The harness needs a **live UE editor** with the McpAutomationBridge plugin
+loaded, the WebSocket bridge on 8090 and the native MCP transport on 3000. It
+asserts security behaviour, so it only means anything against a real editor.
+
+## 1. Project configuration
+
+Append to `<Project>/Config/DefaultGame.ini` (the reference project is
+`MCPtest`). Every scoped entry below is load-bearing for at least one case.
+
+```ini
+[/Script/McpAutomationBridge.McpAutomationBridgeSettings]
+bRequireCapabilityToken=True          ; False for the --b4-only pass
+CapabilityToken=mcp-test-loopback-token
++ScopedCapabilityTokens=(Profile="qareader",Token="qa-reader-tok",Scopes=(Read))
++ScopedCapabilityTokens=(Profile="qawriter",Token="qa-writer-tok",Scopes=(Write))
++ScopedCapabilityTokens=(Profile="qadestroyer",Token="qa-destroyer-tok",Scopes=(Destructive))
++ScopedCapabilityTokens=(Profile="qapathbound",Token="qa-pathbound-tok",Scopes=(Write),AllowedPathPrefixes=("/Game/QAAllowed"))
++ScopedCapabilityTokens=(Profile="qaquota",Token="qa-quota-tok",Scopes=(Read),MaxRequestsPerMinute=2)
++ScopedCapabilityTokens=(Profile="qaprojbound",Token="qa-projbound-tok",Scopes=(Read),AllowedProjects=("SomeOtherProjectNotMCPtest"))
++ScopedCapabilityTokens=(Profile="qabadadmin",Token="qa-badadmin-tok",Scopes=(Admin))
+```
+
+Also enable the native transport (Project Settings > Plugins > MCP Automation
+Bridge > **Enable Native MCP**, port `3000`), and leave the WebSocket listen
+ports at their `8090,8091` default.
+
+### Non-obvious constraints — get these wrong and cases fail for the wrong reason
+
+| Constraint | Why | Case that breaks |
+|---|---|---|
+| Identities normalize to **lower case** (`qareader` -> `scoped:qareader`) | the profile is echoed in `bridge_ack.authority.profile` | `S06` |
+| `qaquota` must be **exactly** `MaxRequestsPerMinute=2` | the case spends 2 and asserts the 3rd is refused | `S18`, `S19` |
+| `qaprojbound` must name a project that is **NOT** the open one | it asserts a project-bound principal is refused | `S02` |
+| `qabadadmin` is intentionally invalid | a scoped entry may not grant Admin; it must fail at handshake | `S01` |
+| `qapathbound` prefix is `/Game/QAAllowed` | in/out-of-prefix cases are written against that exact prefix | `B2-*` |
+
+The harness scans responses for every token above and for the path prefix, and
+fails if any appears in a bridge_ack or a refusal receipt (`S05`, `S28`) — so do
+not rename these without updating `ALL_SECRETS`.
+
+## 2. Run
+
+```bash
+# main pass — bRequireCapabilityToken=True
+node scripts/qa/task40-security-matrix.cjs --out .omo/evidence/task-40/live-matrix-main-cycle2.json
+
+# compatibility pass — set bRequireCapabilityToken=False and RESTART the editor
+node scripts/qa/task40-security-matrix.cjs --b4-only --out .omo/evidence/task-40/live-matrix-b4-cycle2.json
+```
+
+`ws@8.21.0` resolves from the repo's existing `node_modules`; no install step.
+Ports are overridable with `MCP_QA_WS_PORT` / `MCP_QA_NATIVE_PORT`.
+
+Exit code is 0 only when every case passes. The JSON written by `--out` is the
+per-case record (`surface`, `name`, `expected`, `actual`, `pass`).
+
+The run is repeatable back-to-back: it `DELETE`s every native session it opened.
+Leaking them exhausts the transport's session cap, and the *second* run then
+fails with `429`/`400` on every native case — which looks like a product fault
+and is not one. If you kill a run mid-way, restart the editor before the next.
+
+## 3. Afterwards
+
+Restore `DefaultGame.ini`. For the reference project the pre-run content hashes
+to SHA-256 `4e88a05aaffa78a0a3efb765199888b582b4282e85f65822f77749709acb759a`;
+verify with `sha256sum <Project>/Config/DefaultGame.ini`.
+
+The happy path (`HP-*`) creates and deletes `/Game/QAHappyProbe/M_QAHappyProbe`
+and `/Game/QAHappyProbeNative/M_QAHappyProbeNative`. It deletes them itself and
+also pre-cleans on entry, so a rerun after a mid-way failure still starts empty.
+If a run is killed between create and delete, delete those two assets by hand.
+
+## 4. Reading the result
+
+Two oracles, and they are not interchangeable:
+
+* **`reachedQueue`** — a pre-queue refusal returns a policy code
+  (`SCOPE_NOT_GRANTED`, `CONSENT_REQUIRED`, `PATH_NOT_PERMITTED`,
+  `PROJECT_NOT_PERMITTED`, `QUOTA_EXCEEDED`, `COMMAND_BLOCKED`); anything else
+  means the request was enqueued. `INVALID_ARGUMENT` counts as reached, because
+  every emitter of it lives in `Private/Domains/**` and only runs post-queue on
+  the game thread. This is the oracle the NEGATIVE cases use.
+* **`provablyDispatched`** — the same, minus `NOT_IMPLEMENTED`, `UNKNOWN` and
+  `METHOD_NOT_FOUND`. A POSITIVE control must use this one: `NOT_IMPLEMENTED`
+  literally means no editor work happened, so a positive control satisfied by it
+  is vacuous.
+
+`HP-1`/`HP-3`/`S22`/`HP-7` are stronger still — they assert `success:true` on
+real editor work, and `HP-4`..`HP-6`/`HP-8`/`HP-9` assert the mutation happened
+**exactly once** (state changed, and an identical re-dispatch does not repeat it).
+
+`HP-0`/`HP-0b` read the consent grant out of `describe` rather than hardcoding
+it, once per acknowledgement level (`asset.delete_asset` demands `elevated`,
+`material.create_material` only `explicit`). If `describe` ever advertises a
+grant the gate then rejects, those two fail and every `HP-*` below them follows.
+
+### Two product quirks the cases are written around
+
+| Quirk | Effect on the harness |
+|---|---|
+| `delete_asset` is served by `HandleDeleteAssets`, which reads `paths`/`path`. Its schema also declares `assetPath`, which that handler ignores. | The delete cases send `paths` — the one key both the declared schema and the handler honour. Native execute validates against the schema (`additionalProperties:false`), so nothing undeclared can be sent there anyway. |
+| The native execute receipt reports `data.success` but not the handler's own `exists` flag, which the WebSocket response does carry. | `HP-8` reads the receipt `message` instead. `HP-2`/`HP-4`/`HP-6` on the WebSocket side read the flag directly. |
+
+### Killing a stuck editor
+
+Use a bracket pattern. Plain `pkill -f 'UnrealEditor-Cmd'` matches the invoking
+shell's own command line and kills the caller:
+
+```bash
+pgrep -f 'UnrealEditor-[C]md'
+```

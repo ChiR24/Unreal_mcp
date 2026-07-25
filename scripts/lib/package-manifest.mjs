@@ -5,8 +5,13 @@ import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+// NOT "reproducible": the zip stores each entry's build-time mtime, so the same
+// sources packaged twice produce different bytes and a different digest. The
+// digest identifies THESE bytes; it is not a function of the inputs alone.
 const REPRODUCIBILITY_NOTE =
-  'Archive bytes and SHA-256 are reproducible for identical package inputs; generatedAt records manifest creation time.';
+  'SHA-256 identifies these exact archive bytes. Archives are NOT bit-reproducible: '
+  + 'zip entries embed build-time modification stamps, so repackaging identical sources '
+  + 'yields a different digest. generatedAt records manifest creation time.';
 
 /** @typedef {{ readonly filename: string, readonly sha256: string }} ArchiveEntry */
 /**
