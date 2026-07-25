@@ -1,3 +1,4 @@
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 #include "Domains/Sequence/Media/McpAutomationBridge_SequenceMedia.h"
 #include "Domains/Sequence/McpAutomationBridge_SequencePathSecurity.h"
 
@@ -17,9 +18,7 @@ namespace {
 FString NormalizeLoadPath(const FString &Input) {
   FString Path = Input.TrimStartAndEnd();
   Path.ReplaceInline(TEXT("\\"), TEXT("/"));
-  if (Path.StartsWith(TEXT("/Content/"))) {
-    Path = TEXT("/Game/") + Path.RightChop(9);
-  }
+  McpAssetPathCanonical::MapContentRootInline(Path);
   if (Path.StartsWith(TEXT("/Game/")) && !Path.Contains(TEXT("."))) {
     Path += TEXT(".") + FPaths::GetBaseFilename(Path);
   }
@@ -121,10 +120,9 @@ bool ResolveMediaAssetIdentity(const TSharedPtr<FJsonObject> &Payload,
     Folder = FPaths::GetPath(AssetPath);
   }
   Folder.ReplaceInline(TEXT("\\"), TEXT("/"));
-  if (Folder.StartsWith(TEXT("/Content/"))) {
-    Folder = TEXT("/Game/") + Folder.RightChop(9);
-  } else if (Folder.Equals(TEXT("Game")) ||
-             Folder.StartsWith(TEXT("Game/"))) {
+  McpAssetPathCanonical::MapContentRootInline(Folder);
+  if (Folder.Equals(TEXT("Game")) ||
+      Folder.StartsWith(TEXT("Game/"))) {
     Folder = TEXT("/") + Folder;
   } else if (!Folder.StartsWith(TEXT("/"))) {
     Folder = TEXT("/Game/") + Folder.TrimChar(TEXT('/'));

@@ -1,3 +1,4 @@
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 #include "Domains/SystemControl/McpAutomationBridge_SystemControlHandlersPrivate.h"
 
 #include "Dom/JsonObject.h"
@@ -71,9 +72,7 @@ bool HandleValidateAssets(UMcpAutomationBridgeSubsystem* Self,
 
   for (const FString& RawPath : PathsToValidate) {
     FString Path = RawPath;
-    if (Path.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) {
-      Path = FString::Printf(TEXT("/Game%s"), *Path.RightChop(8));
-    }
+    McpAssetPathCanonical::MapContentRootInline(Path);
 
     const FString SafePath = SanitizeProjectRelativePath(Path);
     if (SafePath.IsEmpty()) {

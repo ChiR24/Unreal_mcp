@@ -1,3 +1,4 @@
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
@@ -33,9 +34,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
                          : FString::Printf(TEXT("%s/%s"), *Path, *Name);
 
   FString DestFolder = Path.IsEmpty() ? TEXT("/Game") : Path;
-  if (DestFolder.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) {
-    DestFolder = FString::Printf(TEXT("/Game%s"), *DestFolder.RightChop(8));
-  }
+  McpAssetPathCanonical::MapContentRootInline(DestFolder);
 
   FString RequestIdArg = RequestId;
   UMcpAutomationBridgeSubsystem *Subsystem = this;

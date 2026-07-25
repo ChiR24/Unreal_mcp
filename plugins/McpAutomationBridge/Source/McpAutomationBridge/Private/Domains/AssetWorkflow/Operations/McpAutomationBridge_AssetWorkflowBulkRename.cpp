@@ -1,5 +1,6 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -60,9 +61,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
     if (Payload->TryGetStringField(TEXT("folderPath"), FolderPath) && !FolderPath.IsEmpty()) {
       // Normalize path
       FString NormalizedPath = FolderPath;
-      if (NormalizedPath.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) {
-        NormalizedPath = FString::Printf(TEXT("/Game%s"), *NormalizedPath.RightChop(8));
-      }
+      McpAssetPathCanonical::MapContentRootInline(NormalizedPath);
 
       NormalizedPath = SanitizeProjectRelativePath(NormalizedPath);
       if (NormalizedPath.IsEmpty()) {

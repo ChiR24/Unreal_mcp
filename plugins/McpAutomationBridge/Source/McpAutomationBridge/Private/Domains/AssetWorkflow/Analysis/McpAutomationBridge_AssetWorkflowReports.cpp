@@ -1,5 +1,6 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -32,10 +33,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
     Directory = TEXT("/Game");
   }
 
-  // Normalize /Content prefix to /Game for convenience
-  if (Directory.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) {
-    Directory = FString::Printf(TEXT("/Game%s"), *Directory.RightChop(8));
-  }
+  McpAssetPathCanonical::MapContentRootInline(Directory);
 
   FString ReportType;
   Payload->TryGetStringField(TEXT("reportType"), ReportType);

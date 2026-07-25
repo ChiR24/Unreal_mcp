@@ -9,6 +9,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 #include "Misc/Paths.h"
 
 namespace McpResourceUri
@@ -84,10 +85,7 @@ namespace McpResourceUri
 		{
 			Normalized = Normalized.Replace(TEXT("//"), TEXT("/"));
 		}
-		if (Normalized.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase))
-		{
-			Normalized = TEXT("/Game") + Normalized.RightChop(FString(TEXT("/Content")).Len());
-		}
+		McpAssetPathCanonical::MapContentRootInline(Normalized);
 		if (!Normalized.StartsWith(TEXT("/")))
 		{
 			Normalized = TEXT("/") + Normalized;

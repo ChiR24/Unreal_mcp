@@ -6,6 +6,9 @@
 #include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetCreation.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 #include "Safety/McpSafeOperationsAssetSave.h"
+// Supplies `using McpSafeOperations::McpSafeAssetSave`, which makes the
+// unqualified call below legal in any unity-build blob.
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 
 #include "Dom/JsonObject.h"

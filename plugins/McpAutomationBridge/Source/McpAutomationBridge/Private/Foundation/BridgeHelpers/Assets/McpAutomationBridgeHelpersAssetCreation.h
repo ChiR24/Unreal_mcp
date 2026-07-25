@@ -1,5 +1,9 @@
 #pragma once
 
+// Declares SanitizeProjectRelativePath, used below. Included directly rather
+// than relied upon transitively so this header resolves in any unity-build blob.
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
+
 static inline bool IsValidAssetPath(const FString &Path) {
   return !Path.IsEmpty() &&
          Path.StartsWith(TEXT("/")) &&
