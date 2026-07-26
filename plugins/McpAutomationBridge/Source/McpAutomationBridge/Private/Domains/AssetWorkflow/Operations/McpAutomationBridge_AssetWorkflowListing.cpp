@@ -8,6 +8,8 @@
 
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "HAL/FileManager.h"
+#include "Misc/PackageName.h"
 #include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetResolution.h"
 #include "Domains/AssetWorkflow/Operations/McpAutomationBridgeAssetListCursor.h"
 #endif
@@ -58,6 +60,11 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
 
   bool bRecursive = true;
   Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
+
+  // Opt-in per-asset disk metadata (size + modified date). Off by default:
+  // it costs one file stat per listed asset and grows the response.
+  bool bIncludeMetadata = false;
+  Payload->TryGetBoolField(TEXT("includeMetadata"), bIncludeMetadata);
 
   // Parse bounds: direct limit/offset or pagination.{limit,offset}.
   int32 Offset = 0;
@@ -279,6 +286,14 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     ? Payload->GetBoolField(TEXT("includeTags"))
     : false;
 
+  // File stats below are synchronous game-thread IO. Bound how many assets we
+  // stat so an unbounded recursive listing (no pagination limit) cannot stall
+  // the editor. Assets past the cap are still listed, just without disk
+  // metadata; the caller is told via metadataTruncated.
+  const int32 MetadataStatCap = 256;
+  int32 MetadataStatBudget = bIncludeMetadata ? MetadataStatCap : 0;
+  bool bMetadataTruncated = false;
+
   TArray<TSharedPtr<FJsonValue>> AssetsArray;
   for (const FAssetData &Asset : Page) {
     TSharedPtr<FJsonObject> AssetObj = McpHandlerUtils::CreateResultObject();
@@ -299,6 +314,28 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
         Tags.Add(MakeShared<FJsonValueString>(TagPair.Key.ToString()));
       }
       AssetObj->SetArrayField(TEXT("tags"), Tags);
+    }
+
+    if (bIncludeMetadata) {
+      if (MetadataStatBudget > 0) {
+        --MetadataStatBudget;
+        FString PackageFilename;
+        if (FPackageName::DoesPackageExist(Asset.PackageName.ToString(),
+                                           &PackageFilename)) {
+          IFileManager &FileManager = IFileManager::Get();
+          const int64 FileSize = FileManager.FileSize(*PackageFilename);
+          if (FileSize >= 0) {
+            AssetObj->SetNumberField(TEXT("diskSizeBytes"),
+                                     static_cast<double>(FileSize));
+          }
+          const FDateTime Stamp = FileManager.GetTimeStamp(*PackageFilename);
+          if (Stamp != FDateTime::MinValue()) {
+            AssetObj->SetStringField(TEXT("modifiedAt"), Stamp.ToIso8601());
+          }
+        }
+      } else {
+        bMetadataTruncated = true;
+      }
     }
 
     AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
@@ -328,6 +365,9 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
   Resp->SetNumberField(TEXT("nextOffset"), NextOffset);
   Resp->SetStringField(TEXT("cursor"), CurrentCursor);
   Resp->SetStringField(TEXT("nextCursor"), NextCursor);
+  if (bIncludeMetadata) {
+    Resp->SetBoolField(TEXT("metadataTruncated"), bMetadataTruncated);
+  }
 
   SendAutomationResponse(Socket, RequestId, true, TEXT("Assets listed"), Resp,
                          FString());

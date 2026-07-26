@@ -50,6 +50,21 @@ function formatRecordListItem(record: Record<string, unknown>): string {
   return `{ ${entries.map(([key, value]) => `${key}=${formatNestedValue(value)}`).join(', ')}${suffix} }`;
 }
 
+/**
+ * Program output (`output` from execute_python / console commands) gets a larger summary budget than other
+ * string fields: it is the payload the caller explicitly asked the tool to produce, and clients that render
+ * only the text content (many MCP clients never surface structuredContent to the model) would otherwise see
+ * an unusable 150-char head and re-query in a loop. Truncation above this budget is announced explicitly —
+ * with the shown/total sizes and a pointer to structuredContent — never a bare '...'.
+ */
+const OUTPUT_SUMMARY_LIMIT = 2000;
+
+function formatOutputValue(val: unknown): string {
+  if (typeof val !== 'string') return formatValue(val);
+  if (val.length <= OUTPUT_SUMMARY_LIMIT) return val;
+  return `${val.slice(0, OUTPUT_SUMMARY_LIMIT)}... [output truncated: showing ${OUTPUT_SUMMARY_LIMIT} of ${val.length} chars — full text in structuredContent]`;
+}
+
 function formatValue(val: unknown): string {
   if (val === null || val === undefined) return '';
   if (typeof val === 'string') return val.length > 150 ? val.slice(0, 150) + '...' : val;
@@ -138,7 +153,7 @@ export function buildSummaryText(toolName: string, payload: unknown): string {
     if (Array.isArray(val) && val.length > 0) hasArrays = true;
     if ((key === 'count' || key === 'totalCount') && hasArrays) continue;
 
-    const formatted = formatValue(val);
+    const formatted = key === 'output' ? formatOutputValue(val) : formatValue(val);
     if (formatted) {
       parts.push(`${key}: ${formatted}`);
       addedKeys.add(key);

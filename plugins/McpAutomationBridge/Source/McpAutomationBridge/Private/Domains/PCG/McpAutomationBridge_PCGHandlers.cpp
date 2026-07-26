@@ -14,7 +14,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
     SendAutomationError(Socket, RequestId, TEXT("manage_pcg requires an editor build."), TEXT("EDITOR_ONLY"));
     return true;
 #elif !MCP_HAS_PCG
-    SendAutomationError(Socket, RequestId, TEXT("PCG plugin support is not available in this build."), TEXT("PCG_PLUGIN_NOT_AVAILABLE"));
+    SendAutomationError(Socket, RequestId, TEXT("PCG plugin support is not available in this build. Enable the 'Procedural Content Generation Framework (PCG)' plugin (Edit > Plugins), restart the editor, then rebuild this automation plugin so PCG support is compiled in."), TEXT("PCG_PLUGIN_NOT_AVAILABLE"));
     return true;
 #else
     if (!Payload.IsValid())
@@ -26,7 +26,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
     if (!FModuleManager::Get().IsModuleLoaded(TEXT("PCG")) &&
         (!FModuleManager::Get().ModuleExists(TEXT("PCG")) || !FModuleManager::Get().LoadModulePtr<IModuleInterface>(TEXT("PCG"))))
     {
-        SendAutomationError(Socket, RequestId, TEXT("PCG plugin is not enabled in this project."), TEXT("PCG_PLUGIN_NOT_ENABLED"));
+        SendAutomationError(Socket, RequestId, TEXT("PCG plugin is not enabled in this project. Enable the 'Procedural Content Generation Framework (PCG)' plugin (Edit > Plugins) and restart the editor."), TEXT("PCG_PLUGIN_NOT_ENABLED"));
         return true;
     }
 

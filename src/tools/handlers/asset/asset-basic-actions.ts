@@ -57,7 +57,8 @@ export async function handleListAssets(context: AssetHandlerContext): Promise<Re
     { key: 'cursor' },
     { key: 'recursive', aliases: ['recursivePaths'], default: false },
     { key: 'depth' },
-    { key: 'includeTags', default: false }
+    { key: 'includeTags', default: false },
+    { key: 'includeMetadata', aliases: ['withMetadata'], default: undefined }
   ]);
 
   const pagination = extractOptionalObject(params, 'pagination');
@@ -68,6 +69,7 @@ export async function handleListAssets(context: AssetHandlerContext): Promise<Re
   const recursive = extractOptionalBoolean(params, 'recursive') ?? false;
   const depth = extractOptionalNumber(params, 'depth');
   const includeTags = extractOptionalBoolean(params, 'includeTags') ?? false;
+  const includeMetadata = extractOptionalBoolean(params, 'includeMetadata');
 
   // Canonical path normalization; also throws on traversal attempts, which the
   // domain dispatcher turns into a structured SECURITY_VIOLATION error.
@@ -80,7 +82,8 @@ export async function handleListAssets(context: AssetHandlerContext): Promise<Re
     limit,
     offset,
     cursor: cursor ?? undefined,
-    includeTags
+    includeTags,
+    includeMetadata
   }) as AssetListResponse;
 
   if (!res || res.success === false) {
@@ -109,6 +112,8 @@ export async function handleListAssets(context: AssetHandlerContext): Promise<Re
   if (folders.length > 0) message += `; ${folders.length} subfolder(s)`;
   if (hasMore) message += '; more available';
 
+  const rawTruncated = res.metadataTruncated ??
+    (Array.isArray(res.result) ? undefined : (res.result as Record<string, unknown> | undefined)?.metadataTruncated);
   return ResponseFactory.success({
     assets,
     folders,
@@ -119,7 +124,8 @@ export async function handleListAssets(context: AssetHandlerContext): Promise<Re
     hasMore,
     nextOffset,
     cursor: returnedCursor,
-    nextCursor
+    nextCursor,
+    ...(typeof rawTruncated === 'boolean' ? { metadataTruncated: rawTruncated } : {})
   }, message);
 }
 
