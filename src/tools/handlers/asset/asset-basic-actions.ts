@@ -31,16 +31,19 @@ export async function handleListAssets(context: AssetHandlerContext): Promise<Re
     { key: 'path', aliases: ['directory', 'directoryPath', 'assetPath'], default: '/Game' },
     { key: 'limit', default: 50 },
     { key: 'recursive', aliases: ['recursivePaths'], default: false },
-    { key: 'depth', default: undefined }
+    { key: 'depth', default: undefined },
+    { key: 'includeMetadata', aliases: ['withMetadata'], default: undefined }
   ]);
   const path = normalizeAndSanitizeAssetPath(extractOptionalString(params, 'path') ?? '/Game');
   const limit = extractOptionalNumber(params, 'limit') ?? 50;
   const recursive = extractOptionalBoolean(params, 'recursive') ?? false;
   const depth = extractOptionalNumber(params, 'depth');
+  const includeMetadata = extractOptionalBoolean(params, 'includeMetadata');
   const res = await executeAutomationRequest(context.tools, 'list', {
     path,
     recursive: recursive === true || (depth !== undefined && depth > 0),
-    depth
+    depth,
+    includeMetadata
   }) as AssetListResponse;
   const assets: AssetListItem[] = Array.isArray(res.assets)
     ? res.assets
@@ -61,11 +64,14 @@ export async function handleListAssets(context: AssetHandlerContext): Promise<Re
   }
   if (remaining > 0) message += `... and ${remaining} others`;
 
+  const rawTruncated = res.metadataTruncated ??
+    (Array.isArray(res.result) ? undefined : (res.result as Record<string, unknown> | undefined)?.metadataTruncated);
   return ResponseFactory.success({
     assets: limitedAssets,
     folders,
     totalCount: assets.length,
-    count: limitedAssets.length
+    count: limitedAssets.length,
+    ...(typeof rawTruncated === 'boolean' ? { metadataTruncated: rawTruncated } : {})
   }, message);
 }
 
