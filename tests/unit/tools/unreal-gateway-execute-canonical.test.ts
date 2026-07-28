@@ -152,7 +152,7 @@ describe('execute: canonical v2 and generated legacy forms normalize to one disp
     await execute({
       capability: 'asset.import',
       params: { sourcePath: '/tmp/a.fbx', destinationPath: '/Game/A' },
-      options: { preview: true, timeoutMs: 1000 }
+      options: { timeoutMs: 1000 }
     });
 
     expect(dispatched).toHaveLength(1);
@@ -160,10 +160,10 @@ describe('execute: canonical v2 and generated legacy forms normalize to one disp
     expect(call.tool).toBe('manage_asset');
     expect(call.args.action).toBe('import');
     expect(call.args.subAction).toBe('import');
-    // Gateway controls never leak into the action payload.
+    // Gateway controls never leak into the action payload. Do not re-add
+    // `preview` here: it is refused before dispatch (UNSUPPORTED_PREVIEW below).
     expect(call.args.options).toBeUndefined();
     expect(call.args.capability).toBeUndefined();
-    expect(call.args.preview).toBeUndefined();
     expect(call.args.timeoutMs).toBeUndefined();
   });
 
@@ -401,16 +401,30 @@ describe('execute: gateway options are typed and never become action params', ()
     expect(dispatched).toHaveLength(0);
   });
 
-  it('accepts the supported options and echoes them on the receipt without dispatching them', async () => {
+  it('refuses options.preview instead of dispatching the real call under a preview flag', async () => {
     const result = await execute({
       capability: 'asset.list',
       params: {},
       options: { preview: true, timeoutMs: 5_000 }
     });
 
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('UNSUPPORTED_PREVIEW');
+    expect(result.options).toBeUndefined();
+    expect(dispatched).toHaveLength(0);
+  });
+
+  it('accepts the honoured options and echoes them on the receipt without dispatching them', async () => {
+    const result = await execute({
+      capability: 'asset.list',
+      params: {},
+      options: { timeoutMs: 5_000 }
+    });
+
     expect(result.success).toBe(true);
-    expect(result.options).toEqual({ preview: true, timeoutMs: 5_000 });
-    expect(dispatched[0].args.preview).toBeUndefined();
+    expect(result.options).toEqual({ timeoutMs: 5_000 });
+    expect(dispatched).toHaveLength(1);
+    expect(dispatched[0].args.timeoutMs).toBeUndefined();
   });
 });
 

@@ -307,16 +307,21 @@ describe('Task 37 DESIRED: capability advertisement matches the implemented sess
     expect(tsCapabilities).toContain('completions');
   });
 
-  it('never advertises tasks, logging, or any list_changed on either surface', () => {
+  it('never advertises logging or any list_changed, and advertises tasks on BOTH surfaces or neither', () => {
     // Match the real advertisement form (Set*Field(TEXT("..."))), not the bare
     // word — HandleInitialize's comment legitimately mentions "listChanged" while
     // documenting that it is omitted.
-    for (const unbacked of ['TEXT("tasks")', 'TEXT("logging")', 'TEXT("listChanged")']) {
+    for (const unbacked of ['TEXT("logging")', 'TEXT("listChanged")']) {
       expect(toolDiscovery).not.toContain(unbacked);
     }
-    for (const unbacked of ['tasks', 'logging', 'listChanged']) {
+    for (const unbacked of ['logging', 'listChanged']) {
       expect(tsCapabilities).not.toContain(unbacked);
     }
+    // Task 44: tasks is backed on both transports, so both literals must carry
+    // it. Asserting the pair together is what makes this a parity gate — either
+    // surface advertising Tasks alone is the divergence, and it fails here.
+    expect(toolDiscovery).toContain('TEXT("tasks")');
+    expect(tsCapabilities).toContain('tasks:');
   });
 });
 

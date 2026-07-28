@@ -143,14 +143,25 @@ describe('Task 38 lane D — per-session profile store reconnect cleanup (curren
 describe('Task 38 lane D — advertised-capability honesty (current TS behavior)', () => {
   const fullTable = new Map<string, unknown>(
     ['tools/list', 'tools/call', 'resources/list', 'resources/templates/list', 'resources/read',
-      'resources/subscribe', 'resources/unsubscribe', 'prompts/list', 'prompts/get', 'completion/complete']
+      'resources/subscribe', 'resources/unsubscribe', 'prompts/list', 'prompts/get', 'completion/complete',
+      'tasks/get', 'tasks/list', 'tasks/cancel', 'tasks/result']
       .map((m) => [m, () => ({})]),
   );
 
-  it('advertises exactly the backed session profile and never tasks or elicitation', () => {
-    expect(ADVERTISED_SESSION_CAPABILITIES).toEqual({ tools: {}, resources: { subscribe: true }, prompts: {}, completions: {} });
-    expect('tasks' in ADVERTISED_SESSION_CAPABILITIES).toBe(false);
+  it('advertises exactly the backed session profile, tasks included and elicitation never', () => {
+    expect(ADVERTISED_SESSION_CAPABILITIES).toEqual({
+      tools: {}, resources: { subscribe: true }, prompts: {}, completions: {},
+      tasks: { list: {}, cancel: {}, requests: { tools: { call: {} } } },
+    });
+    // tasks is advertised because Task 44 registered all four tasks/* handlers;
+    // elicitation still is not, because nothing backs it.
     expect('elicitation' in ADVERTISED_SESSION_CAPABILITIES).toBe(false);
+  });
+
+  it('drops the tasks claim the moment any one tasks method is missing', () => {
+    const partial = new Map(fullTable);
+    partial.delete('tasks/cancel');
+    expect('tasks' in deriveAdvertisedCapabilities(partial)).toBe(false);
   });
 
   it('derives the advertised surface only from the fully backed handler table', () => {

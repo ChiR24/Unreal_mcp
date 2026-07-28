@@ -134,7 +134,12 @@ describe('Task 28 BASELINE: native capability + catalog-change behavior to prese
     expect(capabilitiesBlock).toContain('TEXT("subscribe")');
     expect(capabilitiesBlock).toContain('TEXT("prompts")');
     expect(capabilitiesBlock).toContain('TEXT("completions")');
-    for (const unbacked of ['TEXT("logging")', 'TEXT("tasks")', 'TEXT("listChanged")']) {
+    // Task 44 backed the native tasks/* surface (FMcpTaskSurface), so tasks is
+    // advertised here too — and only here, alongside the requests.tools.call
+    // claim that a tools/call may be task-augmented.
+    expect(capabilitiesBlock).toContain('TEXT("tasks")');
+    expect(capabilitiesBlock).toContain('TEXT("cancel")');
+    for (const unbacked of ['TEXT("logging")', 'TEXT("listChanged")']) {
       expect(capabilitiesBlock).not.toContain(unbacked);
     }
   });

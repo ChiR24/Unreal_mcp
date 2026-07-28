@@ -125,7 +125,7 @@ describe('Asset Handlers Security', () => {
         expect(sendAutomationRequest).toHaveBeenCalledWith('manage_asset', {
             assetPath: '/Game/Props/SM_Crate',
             subAction: 'get_metadata'
-        }, {});
+        }, { timeoutMs: expect.any(Number) });
         expect(result).toMatchObject({
             success: true,
             message: 'Metadata retrieved (2 items)',

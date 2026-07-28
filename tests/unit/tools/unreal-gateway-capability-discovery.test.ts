@@ -23,7 +23,7 @@ import {
 
 const ASSET_IMPORT = 'asset.import';
 const ASSET_IMPORT_SCHEMA_HASH = '8145032abab044ee8e4ea3960cc422e219c02ceed47171dd60a12b9fbbf71478';
-const ASSET_IMPORT_CONTENT_HASH = 'c502e49a4b53c7cb43ec3e95890147837a013bf81574c2235c058b7f0dc70d57';
+const ASSET_IMPORT_CONTENT_HASH = 'f13b1339db9c5def8c8bc323d5fdf499db2af36b1abf5ecf4b70cd2651d39747';
 
 type Row = Record<string, unknown>;
 

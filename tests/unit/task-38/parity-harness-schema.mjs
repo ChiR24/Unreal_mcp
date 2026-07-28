@@ -18,7 +18,7 @@
 /**
  * Closed rejection taxonomy. Every refusal the harness can emit is one of these
  * — no free-form failures — so callers (and the QA probe) assert on `.reason`.
- * @typedef {'SOURCE_TEXT_CAPTURE'|'BROAD_EXPECTATION'|'UNKNOWN_FIELD'|'SCHEMA_DUMP'|'STALE_REVISION'|'CROSS_SESSION_ID'|'MISSING_CLEANUP'|'UNBOUNDED_FALLBACK'|'NATIVE_CAPTURE_ABSENT'|'MALFORMED'} RejectionReason
+ * @typedef {'SOURCE_TEXT_CAPTURE'|'BROAD_EXPECTATION'|'UNKNOWN_FIELD'|'SCHEMA_DUMP'|'STALE_REVISION'|'CROSS_SESSION_ID'|'MISSING_CLEANUP'|'UNBOUNDED_FALLBACK'|'NATIVE_CAPTURE_ABSENT'|'VACUOUS_CELL'|'MALFORMED'} RejectionReason
  */
 
 /** @type {Readonly<Record<RejectionReason, RejectionReason>>} */
@@ -32,6 +32,11 @@ export const REASONS = Object.freeze({
   MISSING_CLEANUP: 'MISSING_CLEANUP',
   UNBOUNDED_FALLBACK: 'UNBOUNDED_FALLBACK',
   NATIVE_CAPTURE_ABSENT: 'NATIVE_CAPTURE_ABSENT',
+  // Task 46. A matrix cell that asserts NOTHING compares equal to every other
+  // empty cell, so an over-aggressive framing stripper would turn the whole
+  // cross-transport matrix green by deleting the evidence. An empty fact set is
+  // therefore a refusal, not a pass.
+  VACUOUS_CELL: 'VACUOUS_CELL',
   MALFORMED: 'MALFORMED',
 });
 
@@ -39,8 +44,30 @@ export const REASONS = Object.freeze({
 export const EXECUTABLE_KINDS = Object.freeze(['executable-ts', 'native-protocol']);
 /** Every capture kind the schema recognizes (source-text is recognized only to reject it). */
 export const CAPTURE_KINDS = Object.freeze([...EXECUTABLE_KINDS, 'native-model', 'source-text']);
-/** The normalized domains a capture can carry. */
-export const DOMAINS = Object.freeze(['result', 'error', 'revision', 'profile', 'session', 'pointer']);
+/** The normalized domains a capture can carry. `matrix` is the Task 46
+ * cross-transport cell: one (dimension, scenario) judged on semantics only. */
+export const DOMAINS = Object.freeze(['result', 'error', 'revision', 'profile', 'session', 'pointer', 'matrix']);
+
+/**
+ * The 15 runtime/lifecycle dimensions Task 46 gates across both transports.
+ * Frozen and closed: a cell naming a dimension outside this list is MALFORMED,
+ * so the matrix cannot be quietly narrowed by dropping a dimension that fails.
+ */
+export const MATRIX_DIMENSIONS = Object.freeze([
+  'receipt', 'error', 'scope', 'consent', 'idempotency', 'revision', 'preview',
+  'progress', 'task', 'cancellation', 'cache', 'queue', 'reconnect', 'timeout',
+  'shutdown',
+]);
+
+/** The only outcomes a semantic cell may report. A cell is a refusal or it is
+ * not; there is no third "partial" state that both transports could satisfy
+ * with different behavior. */
+export const MATRIX_OUTCOMES = Object.freeze(['success', 'refusal']);
+
+/** The literal code a SUCCESS cell carries. It is still UPPER_SNAKE so the same
+ * typed-code guard runs on every cell, and it can never collide with a real
+ * refusal code. */
+export const NO_CODE = 'NONE';
 
 /** A precise, typed refusal. Carries the closed `reason`, a JSON pointer, and a human detail. */
 export class HarnessRejection extends Error {

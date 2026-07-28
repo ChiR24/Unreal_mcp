@@ -40,6 +40,7 @@ const EXPECTED_SERVER_CAPABILITIES = {
     resources: { subscribe: true },
     prompts: {},
     completions: {},
+    tasks: { list: {}, cancel: {}, requests: { tools: { call: {} } } },
 } as const;
 
 /** The single public tool and its four gateway operations. */
@@ -203,7 +204,7 @@ function collectResourceUpdated(ctx: Built): Notification[] {
 // --- Capability advertisement matrix ---
 
 describe('Task 37 — server capability advertisement', () => {
-    it('advertises exactly { tools, resources.subscribe, prompts, completions }', async () => {
+    it('advertises exactly { tools, resources.subscribe, prompts, completions, tasks }', async () => {
         const ctx = await build({ name: 'task-37-full', version: '1.0.0' }, FULL_CLIENT_CAPABILITIES);
         // When: a full-capability client reads the negotiated server capabilities.
         const capabilities = ctx.client.getServerCapabilities();
@@ -212,12 +213,30 @@ describe('Task 37 — server capability advertisement', () => {
         expect(capabilities).toEqual(EXPECTED_SERVER_CAPABILITIES);
     });
 
-    it('omits tasks, logging, and every listChanged member', async () => {
+    it('advertises tasks ONLY because all four tasks methods answer, and still omits logging and every listChanged member', async () => {
         const ctx = await build({ name: 'task-37-full', version: '1.0.0' }, FULL_CLIENT_CAPABILITIES);
         const capabilities = (ctx.client.getServerCapabilities() ?? {}) as Record<string, unknown>;
-        // When/Then: unimplemented primitives are never advertised, and the stable
+        // Task 44 flipped this assertion, and the pairing below is what makes the
+        // flip honest rather than a weakening: the advert is only allowed to be
+        // present because every method it implies is proven reachable in the SAME
+        // test. Before Task 44 the second half would have thrown -32601 on the
+        // first call, so this case could not have been made to pass by editing
+        // the expectation alone.
+        expect(Object.hasOwn(capabilities, 'tasks')).toBe(true);
+        for (const method of ['tasks/get', 'tasks/list', 'tasks/cancel', 'tasks/result']) {
+            const params = method === 'tasks/list' ? {} : { taskId: 'no-such-task' };
+            let code: unknown;
+            try {
+                await ctx.client.request({ method, params }, EmptyResultSchema, { timeout: 15000 });
+            } catch (caught) {
+                code = asRecord(caught)?.code;
+            }
+            // A backed method answers, or refuses on the ARGUMENT (-32602). What it
+            // must never do is report itself unknown.
+            expect(code).not.toBe(ErrorCode.MethodNotFound);
+        }
+        // Unimplemented primitives are still never advertised, and the stable
         // single-tool surface declares no list-changed notifications.
-        expect(Object.hasOwn(capabilities, 'tasks')).toBe(false);
         expect(Object.hasOwn(capabilities, 'logging')).toBe(false);
         expect(Object.hasOwn(asRecord(capabilities.tools) ?? {}, 'listChanged')).toBe(false);
         expect(Object.hasOwn(asRecord(capabilities.resources) ?? {}, 'listChanged')).toBe(false);
@@ -371,10 +390,10 @@ describe('Task 37 — completions', () => {
     });
 });
 
-// --- Tasks are intentionally absent ---
+// --- Tasks are present and backed (Task 44) ---
 
-describe('Task 37 — tasks primitive absent', () => {
-    it('tasks/list is rejected with MethodNotFound (-32601)', async () => {
+describe('Task 44 — tasks primitive backed', () => {
+    it('tasks/list answers instead of returning MethodNotFound', async () => {
         const ctx = await build({ name: 'task-37-full', version: '1.0.0' }, FULL_CLIENT_CAPABILITIES);
         // When: the client sends a raw tasks/list request.
         let error: unknown;
@@ -383,7 +402,20 @@ describe('Task 37 — tasks primitive absent', () => {
         } catch (caught) {
             error = caught;
         }
-        // Then: the server has no such handler (tasks are never advertised/wired).
+        // Then: a backed handler answers rather than reporting itself unknown.
+        // The list CONTENT is asserted on raw frames in tasks-on-the-wire.test.ts,
+        // where no result schema can strip the tasks array before it is read.
+        expect(asRecord(error)?.code).not.toBe(ErrorCode.MethodNotFound);
+    });
+
+    it('an unknown method is still MethodNotFound, so the family is not a catch-all', async () => {
+        const ctx = await build({ name: 'task-37-full', version: '1.0.0' }, FULL_CLIENT_CAPABILITIES);
+        let error: unknown;
+        try {
+            await ctx.client.request({ method: 'tasks/nope', params: {} }, EmptyResultSchema, { timeout: 15000 });
+        } catch (caught) {
+            error = caught;
+        }
         expect(asRecord(error)?.code).toBe(ErrorCode.MethodNotFound);
     });
 });

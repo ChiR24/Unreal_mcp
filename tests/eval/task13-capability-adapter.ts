@@ -10,6 +10,10 @@ import {
   parseCapabilityRuntimeProfile,
   retrieveCapabilities,
 } from '../../src/tools/catalog/capabilities/retrieval/index.js';
+import {
+  canonicalCapabilityId,
+  deriveAliasFold,
+} from '../../src/tools/catalog/capabilities/retrieval/alias-fold.js';
 import { corpus } from './corpus.js';
 import { type CapabilityRef, TOP_K } from './types.js';
 
@@ -66,8 +70,15 @@ const BASE_PROFILE = parseCapabilityRuntimeProfile({
   requiredOutputFields: [],
 });
 
+// Search answers in primary space, so a rationale-declared alias is resolved to
+// the primary the catalog itself says it is. The relation is the registry's own
+// fold, never the corpus.
+const PILOT_ALIAS_FOLD = deriveAliasFold(PILOT_CAPABILITY_CATALOG);
+
 function canonicalId(reference: CapabilityRef): CapabilityId | undefined {
-  return LEGACY_TO_CANONICAL.get(`${reference.tool}::${reference.action}`);
+  const resolved = LEGACY_TO_CANONICAL.get(`${reference.tool}::${reference.action}`);
+  if (resolved === undefined) return undefined;
+  return canonicalCapabilityId(PILOT_ALIAS_FOLD, String(resolved)) as CapabilityId;
 }
 
 function rate(

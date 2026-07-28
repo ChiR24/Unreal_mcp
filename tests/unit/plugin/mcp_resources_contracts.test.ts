@@ -28,7 +28,13 @@ const SUBSCRIBABLE_URIS = [
   'ue://render',
   'ue://logs',
 ];
-const STATIC_RESOURCES = ['ue://capability/catalog', 'ue://project', 'ue://editor', 'ue://selection'];
+const STATIC_RESOURCES = [
+  'ue://capability/catalog',
+  'ue://project',
+  'ue://editor',
+  'ue://selection',
+  'ue://state/revisions',
+];
 const TEMPLATES = [
   'ue://capability/{capabilityId}',
   'ue://knowledge/{engineVersion}/{topic}',

@@ -4,6 +4,7 @@
     "profile": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Primitives/McpSessionCapabilityProfile.h:70-101 (McpParseSessionCapabilityProfile)",
     "fallback": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Primitives/McpSessionCapabilityProfile.h:128-171 (NativeMethodFor / GatewayOperationFor / ServerBacksPrimitive / McpFallbackPointerFor)",
     "store": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Primitives/McpClientProfileStore.cpp:7-44",
+    "tasks": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Primitives/McpTaskMethods.cpp (FMcpTaskSurface::HandleMethod — the four tasks/* methods) and .../Transport/McpNativeTransportToolDiscovery.cpp (HandleInitialize tasks capability literal)",
     "directCall": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayDirectCallMigration.cpp:83-135 (McpBuildDirectCallMigration)",
     "errorCodes": "MCP SDK JSON-RPC + src/server/mcp-primitives/primitive-handlers.ts:66-75; plugins/.../MCP/AGENTS.md (refused-but-supported vs method-not-found)",
     "elicitation": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Primitives/McpElicitationPolicy.h (McpIsSafeToElicitField / EMcpConsentReason / FMcpConsentDecision / McpEvaluateHighImpactConsent / McpHighImpactConsentField), mirroring src/server/tool-registry-elicitation.ts"
@@ -20,12 +21,13 @@
   },
   "fallback": {
     "primitives": ["resources", "prompts", "completions", "subscriptions", "tasks"],
-    "serverBackedPrimitives": ["resources", "prompts", "completions", "subscriptions"],
+    "serverBackedPrimitives": ["resources", "prompts", "completions", "subscriptions", "tasks"],
     "nativeMethod": {
       "resources": "resources/list",
       "prompts": "prompts/list",
       "completions": "completion/complete",
-      "subscriptions": "resources/subscribe"
+      "subscriptions": "resources/subscribe",
+      "tasks": "tasks/list"
     },
     "gatewayOperation": {
       "resources": "search",
@@ -36,7 +38,7 @@
     },
     "supportedYieldsMode": "native-only-when-server-backed",
     "unsupportedYieldsMode": "gateway",
-    "tasksNote": "tasks is client-declarable but NOT server-backed (Task 44 pending); it always resolves to the gateway execute operation, never a native tasks/list.",
+    "tasksNote": "Task 44 made tasks server-backed on BOTH transports (FMcpTaskSurface natively, BoundedTaskStore in TypeScript), so a Tasks-declaring client now resolves to the native tasks/list and only a Tasks-blind client falls back to the gateway execute operation.",
     "referenceKey": {
       "native": "method",
       "gateway": "operation"
@@ -52,13 +54,18 @@
     "resources/unsubscribe",
     "prompts/list",
     "prompts/get",
-    "completion/complete"
+    "completion/complete",
+    "tasks/get",
+    "tasks/list",
+    "tasks/cancel",
+    "tasks/result"
   ],
   "advertisedSessionCapabilities": {
     "tools": {},
     "resources": { "subscribe": true },
     "prompts": {},
-    "completions": {}
+    "completions": {},
+    "tasks": { "list": {}, "cancel": {}, "requests": { "tools": { "call": {} } } }
   },
   "errorCodes": {
     "unsupportedMethod": -32601,

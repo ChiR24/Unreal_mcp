@@ -146,7 +146,13 @@ describe('capability retrieval stage-two ranking and disclosure', () => {
     const result = retrieveCapabilities(BASE_REQUEST);
 
     expect(result.matches[0]?.id).toBe('asset.search_assets');
-    expect(result.matches).toHaveLength(5);
+    // Disclosure is BOUNDED by the 5-result cap, not required to fill it. The
+    // alias fold removed material.rebuild_material as an independent document
+    // because it is a declared alias of material.compile_material, which still
+    // appears here; asserting exactly 5 would re-require that duplicate.
+    expect(result.matches.length).toBeLessThanOrEqual(5);
+    expect(result.matches.length).toBeGreaterThan(0);
+    expect(new Set(result.matches.map((match) => match.id)).size).toBe(result.matches.length);
     expect(result.matches.every((match) => match.reasons.length <= MAX_MATCH_REASONS)).toBe(true);
     expect(result.matches.every((match) => match.confidence >= 0 && match.confidence <= 1)).toBe(true);
     expect(result.matches.every((match) => match.availability.status === 'available')).toBe(true);

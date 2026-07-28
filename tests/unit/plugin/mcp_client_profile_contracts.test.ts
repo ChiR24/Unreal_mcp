@@ -51,11 +51,13 @@ describe('mcp client-profile C3 source contracts', () => {
       expect(tsFallback).toContain(op);
     }
     expect(profileHeader).toContain('McpFallbackPointerFor');
-    // Tasks is client-declarable but NOT server-backed (Task 44 pending): neither
-    // surface may emit a phantom native tasks/list, and both gate native mode on a
-    // server-backed check so a Tasks-declaring client is routed to the gateway.
-    expect(profileHeader).not.toContain('tasks/list');
-    expect(tsFallback).not.toContain('tasks/list');
+    // Task 44 made Tasks server-backed, so BOTH surfaces now name tasks/list.
+    // The contract is unchanged in substance — a native pointer may only name a
+    // method the surface registers — so the requirement is now that neither side
+    // names it alone. One surface naming tasks/list without the other is exactly
+    // the one-sided drift this file exists to catch.
+    expect(profileHeader).toContain('tasks/list');
+    expect(tsFallback).toContain('tasks/list');
     expect(profileHeader).toContain('ServerBacksPrimitive');
     expect(tsFallback).toContain('SERVER_BACKED_PRIMITIVES');
   });

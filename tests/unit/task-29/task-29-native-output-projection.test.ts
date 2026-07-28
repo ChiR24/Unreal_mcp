@@ -32,7 +32,7 @@ import { validateAgainstSubset } from '../task-27-suite/schema-subset.js';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const PLUGIN = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private';
-const SEAM = `${PLUGIN}/MCP/Transport/McpNativeTransportPendingRequests.cpp`;
+const SEAM = `${PLUGIN}/MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.cpp`;
 const VALIDATION_CPP = `${PLUGIN}/MCP/Execute/McpNativeGatewayValidation.cpp`;
 const VALIDATION_H = `${PLUGIN}/MCP/Execute/McpNativeGatewayValidation.h`;
 
@@ -209,7 +209,7 @@ describe('Task 29 native output projection - the native seam applies the project
     const seam = read(SEAM);
     expect(seam).toContain('McpProjectCanonicalOutput');
     // The success receipt must publish the projected canonical output, never the raw Result.
-    expect(seam).toMatch(/McpBuildSuccessReceipt\(\s*Conn\.CapabilityId,\s*Canonical/);
-    expect(seam).not.toMatch(/McpBuildSuccessReceipt\(\s*Conn\.CapabilityId,\s*Result\b/);
+    expect(seam).toMatch(/McpBuildSuccessReceipt\(\s*(?:Conn\.)?CapabilityId,\s*Canonical/);
+    expect(seam).not.toMatch(/McpBuildSuccessReceipt\(\s*(?:Conn\.)?CapabilityId,\s*Result\b/);
   });
 });

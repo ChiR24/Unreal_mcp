@@ -38,6 +38,7 @@ const TS_LIST_URIS = [
   'ue://level',
   'ue://project',
   'ue://selection',
+  'ue://state/revisions',
   'ue://version',
 ] as const;
 
@@ -50,11 +51,12 @@ const TEMPLATE_URIS = [
 
 const CATALOG_DATA_KEYS = ['capabilities', 'count', 'totalCount', 'truncated'] as const;
 const PROJECT_DATA_KEYS = ['connected', 'contentRoot', 'engineVersion', 'projectName'] as const;
+const LIVE_REVISION_DATA_KEYS = ['assetRegistry', 'level', 'package', 'selection'] as const;
 
 const uris = (entries: readonly NormEntry[]): string[] => entries.map((entry) => entry.uri);
 
 describe('Task 38 baseline - TS transport observable (executed via MCP SDK)', () => {
-  it('resources/list returns the ten current resources with full {uri,name,description,mimeType}', async () => {
+  it('resources/list returns the eleven current resources with full {uri,name,description,mimeType}', async () => {
     const capture = await captureTsTransport(FULL_CAPS);
     const list = normalizeList(capture.list);
     expect(uris(list)).toEqual([...TS_LIST_URIS]);
@@ -113,7 +115,7 @@ describe('Task 38 baseline - TS transport observable (executed via MCP SDK)', ()
 });
 
 describe('Task 38 baseline - native `/mcp` fixture oracle (independent stand-in)', () => {
-  it('native resources/list defines the same ten resources as the TS transport (six legacy + four new)', () => {
+  it('native resources/list defines the same eleven resources as the TS transport (six legacy + five new)', () => {
     expect(normalizeList(NATIVE_LIST.resources).map((entry) => entry.uri)).toEqual([...TS_LIST_URIS]);
   });
 
@@ -146,6 +148,17 @@ describe('Task 38 baseline - native `/mcp` fixture oracle (independent stand-in)
     expect(read.revision).toBe(1);
     expect(read.dataPresent).toBe(true);
     expect(read.dataKeys).toEqual([...PROJECT_DATA_KEYS]);
+  });
+
+  it('native resources/read of ue://state/revisions returns all four counters', () => {
+    const result = nativeRead('ue://state/revisions');
+    expect(isNativeError(result)).toBe(false);
+    if (isNativeError(result)) {
+      return;
+    }
+    const read = normalizeRead(result.contents[0] ?? { uri: '', mimeType: '', text: '' });
+    expect(read.revision).toBe(1);
+    expect(read.dataKeys).toEqual([...LIVE_REVISION_DATA_KEYS]);
   });
 
   it('native resources/read: editor-state uris are RESOURCE_UNAVAILABLE, an unknown uri is RESOURCE_NOT_FOUND', () => {

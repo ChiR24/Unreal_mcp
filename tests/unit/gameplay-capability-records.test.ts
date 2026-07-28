@@ -120,13 +120,22 @@ describe('Task 17 honest behavior metadata', () => {
   // dispatched from McpAutomationBridge_AIHandlers.cpp:252). No manage_ai handler
   // calls AAIController::SetFocus or reads GEditor->PlayWorld, so no manage_ai
   // action may claim a 'pie'/'simulate' state.
+  //
+  // That same McpSafeAssetSave is why neither action is undoable: the save
+  // escapes any editor transaction, so Ctrl+Z cannot reverse it. No AI handler
+  // opens an FScopedTransaction at all, so both carry the pessimistic undo
+  // default rather than a claim. Authoring and undoable are independent facts.
   it('declares every manage_ai action as editor authoring, set_focus included', () => {
     const focus = recordById('manage_ai.set_focus');
     const authoring = recordById('manage_ai.create_behavior_tree');
     expect(focus.availability.editorStates).toEqual(['edit']);
-    expect(focus.behavior.supportsUndo).toBe(true);
     expect(authoring.availability.editorStates).toEqual(['edit']);
-    expect(authoring.behavior.supportsUndo).toBe(true);
+    for (const record of [focus, authoring]) {
+      expect(record.behavior.supportsUndo).toBe(false);
+      expect(record.behavior.semantics.undo.mode).toBe('none');
+      expect(record.behavior.semantics.undo.transactionScope).toBeNull();
+      expect(record.behavior.semantics.undo.evidence.grade).toBe('pessimistic-default');
+    }
 
     const runtimeClaims = GAMEPLAY_SOURCE_RECORDS
       .filter((record) => record.id.startsWith('manage_ai.'))

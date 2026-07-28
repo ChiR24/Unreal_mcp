@@ -70,6 +70,7 @@ function buildRouter(): ResourceReadRouter {
     pieActive: async () => false,
     currentLevel: async () => ({ name: 'None', path: 'None' }),
     selectedActors: async () => [],
+    liveRevisions: async () => ({ selection: 1, level: 1, assetRegistry: 1, package: 1 }),
   };
   const lookup = {
     isAvailable: async () => false,

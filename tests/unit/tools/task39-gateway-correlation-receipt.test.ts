@@ -6,7 +6,9 @@
 //   * one gateway correlation id minted once and carried across the await into
 //     both the success result and the error result,
 //   * a bounded external requestId echoed only when it is truthfully available,
-//   * an echoed idempotency key with NO dedup/persistence,
+//   * an echoed idempotency key (Task 41 later made that key DEDUP as well; the
+//     original "no dedup store" case is now the gateway-level proof of the
+//     Task 46 F4 fix — see the idempotency describe below),
 //   * three DISTINCT bounded revision strings sourced from the live catalog
 //     digest and the resolved record's content/schema hashes,
 //   * the typed error algebra classifying output / capability / dispatch / stale
@@ -29,6 +31,7 @@ import {
   capabilityIndex,
   catalogRevision
 } from '../../../src/server/gateway/gateway-capability-index.js';
+import { resetSharedExecuteLedger } from '../../../src/server/gateway/gateway-execute-idempotency.js';
 import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/model.js';
 
 const dispatched: Array<{ tool: string; args: Record<string, unknown> }> = [];
@@ -82,6 +85,9 @@ function errorOf(result: Record<string, unknown>): Record<string, unknown> {
 
 beforeEach(() => {
   handlerResult = { success: true, message: 'ok' };
+  // The execute ledger is a process-wide singleton; a key recorded by one case
+  // would otherwise decide the outcome of another.
+  resetSharedExecuteLedger();
 });
 
 afterEach(() => {
@@ -176,7 +182,13 @@ describe('task39: timing is reported on the receipt', () => {
   });
 });
 
-describe('task39: idempotency key is echoed only, never persisted or deduped', () => {
+// Task 39 shipped the echo and asserted "no dedup store". Task 41 then built the
+// ledger, so that assertion was superseded — but it kept passing, because Task 46
+// F4 left the ledger unreachable behind a behaviour-class gate no record
+// satisfies. Its green was PRODUCED by the defect. These are the gateway-level
+// (real handleUnrealGatewayCall) proof that a client key now dedups, matching the
+// native surface, which has always gated on key presence for any capability.
+describe('task39/41: an echoed idempotency key also dedups at the gateway', () => {
   it('echoes options.idempotencyKey onto the receipt', async () => {
     const result = await execute({
       capability: 'asset.list',
@@ -186,9 +198,27 @@ describe('task39: idempotency key is echoed only, never persisted or deduped', (
     expect(receiptOf(result).idempotencyId).toBe('k-123');
   });
 
-  it('dispatches again for an identical key (no dedup store)', async () => {
+  it('dispatches ONCE for an identical key and identical params', async () => {
     await execute({ capability: 'asset.list', params: {}, options: { idempotencyKey: 'k-dup' } });
     await execute({ capability: 'asset.list', params: {}, options: { idempotencyKey: 'k-dup' } });
+    expect(dispatched).toHaveLength(1);
+  });
+
+  it('refuses the same key re-used with different params instead of dispatching', async () => {
+    await execute({ capability: 'asset.list', params: {}, options: { idempotencyKey: 'k-clash' } });
+    const clash = await execute({
+      capability: 'asset.list',
+      params: { path: '/Game/Other' },
+      options: { idempotencyKey: 'k-clash' }
+    });
+
+    expect(dispatched).toHaveLength(1);
+    expect(errorOf(clash).code).toBe('IDEMPOTENCY_CONFLICT');
+  });
+
+  it('still dispatches every call when the client supplies no key', async () => {
+    await execute({ capability: 'asset.list', params: {} });
+    await execute({ capability: 'asset.list', params: {} });
     expect(dispatched).toHaveLength(2);
   });
 });

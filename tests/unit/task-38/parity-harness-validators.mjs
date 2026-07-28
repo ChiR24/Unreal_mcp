@@ -13,6 +13,9 @@ import {
   CAPTURE_KINDS,
   EXECUTABLE_KINDS,
   DOMAINS,
+  MATRIX_DIMENSIONS,
+  MATRIX_OUTCOMES,
+  NO_CODE,
   reject,
   isPlainObject,
   assertClosed,
@@ -30,8 +33,9 @@ import {
  * @typedef {{ uri: string, ownerSessionId: string }} SessionRecord
  * @typedef {{ sessionId: string, records: SessionRecord[], cleaned: boolean }} NormSession
  * @typedef {{ primitive: string, mode: 'native'|'gateway', reference: string }} NormPointer
+ * @typedef {{ dimension: string, scenario: string, outcome: 'success'|'refusal', code: string, facts: string[] }} NormMatrixCell
  * @typedef {'executable-ts'|'native-protocol'|'native-model'|'source-text'} CaptureKind
- * @typedef {'result'|'error'|'revision'|'profile'|'session'|'pointer'} Domain
+ * @typedef {'result'|'error'|'revision'|'profile'|'session'|'pointer'|'matrix'} Domain
  * @typedef {{ mechanism: string, testName: string, engineVersion: string, protocolVersion: string, capturedAt: string, transcriptRef: string, transcriptSha256: string, sourceHash: string, packageHash: string }} NativeTranscript
  * @typedef {{ id: string, captureKind: CaptureKind, domain: Domain, executable: boolean, provenance: string, value: unknown, transcript?: NativeTranscript }} Capture
  */
@@ -198,6 +202,64 @@ export function validatePointer(raw, p = '/value') {
   return normalized;
 }
 
+/** Upper bound on one cell's evidence. A cell is a SEMANTIC summary; anything
+ * that needs more than this is carrying payload, not semantics. */
+const MAX_FACTS = 24;
+const MAX_FACT_LENGTH = 160;
+
+/**
+ * Validate one Task 46 cross-transport matrix cell.
+ *
+ * A cell is the normalized SEMANTICS of one (dimension, scenario) as observed
+ * on one transport: did it succeed or refuse, under which typed code, and which
+ * facts were true. It carries no framing — no jsonrpc envelope, no session id,
+ * no timing, no transport name — because the whole point is that stdio and
+ * HTTP/SSE must produce the SAME cell.
+ *
+ * The two guards that keep this from being decorative:
+ *  - a cell with zero facts is VACUOUS_CELL, because an empty cell equals every
+ *    other empty cell and would make the matrix pass by asserting nothing;
+ *  - fact keys go through the schema-dump guard, so a projection that "proves"
+ *    parity by dumping both sides' input schemas is refused.
+ * @param {unknown} raw @param {string} [p] @returns {NormMatrixCell}
+ */
+export function validateMatrixCell(raw, p = '/value') {
+  const o = assertClosed(raw, ['dimension', 'scenario', 'outcome', 'code', 'facts'], p);
+  const dimension = str(o.dimension, `${p}/dimension`);
+  if (!MATRIX_DIMENSIONS.includes(dimension)) {
+    reject(REASONS.MALFORMED, `${p}/dimension`, `unknown dimension "${dimension}"; the Task 46 matrix is closed at {${MATRIX_DIMENSIONS.join(', ')}}`);
+  }
+  const outcome = str(o.outcome, `${p}/outcome`);
+  if (!MATRIX_OUTCOMES.includes(outcome)) {
+    reject(REASONS.MALFORMED, `${p}/outcome`, `outcome must be one of {${MATRIX_OUTCOMES.join(', ')}}, got "${outcome}"`);
+  }
+  const code = assertTypedErrorCode(o.code, `${p}/code`);
+  if (outcome === 'success' && code !== NO_CODE) {
+    reject(REASONS.MALFORMED, `${p}/code`, `a success cell must carry "${NO_CODE}", got "${code}"`);
+  }
+  if (outcome === 'refusal' && code === NO_CODE) {
+    reject(REASONS.MALFORMED, `${p}/code`, 'a refusal cell must carry the typed refusal code, not NONE');
+  }
+  if (!Array.isArray(o.facts)) reject(REASONS.MALFORMED, `${p}/facts`, 'facts must be an array');
+  const rawFacts = /** @type {unknown[]} */ (o.facts);
+  if (rawFacts.length === 0) {
+    reject(REASONS.VACUOUS_CELL, `${p}/facts`, `cell "${dimension}" asserts nothing; an empty fact set matches every other empty cell`);
+  }
+  if (rawFacts.length > MAX_FACTS) {
+    reject(REASONS.UNBOUNDED_FALLBACK, `${p}/facts`, `a semantic cell carries at most ${MAX_FACTS} facts, got ${rawFacts.length}`);
+  }
+  const facts = rawFacts.map((fact, i) => {
+    const value = str(fact, `${p}/facts/${i}`);
+    if (value.length > MAX_FACT_LENGTH) reject(REASONS.UNBOUNDED_FALLBACK, `${p}/facts/${i}`, `fact of ${value.length} chars exceeds ${MAX_FACT_LENGTH}`);
+    if (!value.includes('=')) reject(REASONS.MALFORMED, `${p}/facts/${i}`, `fact "${value}" is not a key=value assertion`);
+    return value;
+  });
+  assertNoSchemaDump(facts.map((fact) => fact.slice(0, fact.indexOf('='))), `${p}/facts`);
+  const deduped = new Set(facts);
+  if (deduped.size !== facts.length) reject(REASONS.MALFORMED, `${p}/facts`, 'facts must be unique');
+  return { dimension, scenario: str(o.scenario, `${p}/scenario`), outcome: /** @type {'success'|'refusal'} */ (outcome), code, facts: [...facts].sort() };
+}
+
 /** @type {Record<Domain, (raw: unknown, p?: string) => unknown>} */
 const DOMAIN_VALIDATORS = {
   result: validateResult,
@@ -206,6 +268,7 @@ const DOMAIN_VALIDATORS = {
   profile: validateProfile,
   session: validateSession,
   pointer: validatePointer,
+  matrix: validateMatrixCell,
 };
 
 /**

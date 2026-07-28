@@ -1,0 +1,123 @@
+{
+  "provenance": {
+    "capturedBy": "raw wire capture against one live editor, both transports, same call",
+    "capturedAt": "2026-07-27T12:18:19.292Z",
+    "editor": "UnrealEditor-Cmd MCPtest (UE 5.7.4), -unattended, native /mcp :3000 + WebSocket bridge :8090/:8091",
+    "capability": "manage_effect.list_debug_shapes",
+    "note": "RAW bytes exactly as each transport emitted them. Never hand-authored: a hand-shaped payload is how F3 was misjudged."
+  },
+  "nativeSseFrame": "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":101,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Available debug shape types\\n\\n{\\\"capabilityId\\\":\\\"manage_effect.list_debug_shapes\\\",\\\"catalogRevision\\\":\\\"7cd288ba1addf148\\\",\\\"capabilityRevision\\\":\\\"bc06306c582771f524f5635851941e156b0e5c3424387060486e1dbcf6cd364b\\\",\\\"schemaRevision\\\":\\\"fd166699ea7887b42602005d4dae757e8d2f7e6979a58c948a95dc4370d52ebf\\\",\\\"correlationId\\\":\\\"ED362780-4381-493B-A143-5A0D503D4F2A\\\",\\\"status\\\":\\\"success\\\",\\\"liveRevisions\\\":{\\\"selection\\\":2,\\\"level\\\":2,\\\"assetRegistry\\\":9109,\\\"package\\\":1},\\\"success\\\":true,\\\"operation\\\":\\\"execute\\\",\\\"message\\\":\\\"Available debug shape types\\\",\\\"receipt\\\":{\\\"status\\\":\\\"success\\\",\\\"capabilityId\\\":\\\"manage_effect.list_debug_shapes\\\",\\\"correlationId\\\":\\\"ED362780-4381-493B-A143-5A0D503D4F2A\\\",\\\"requestId\\\":\\\"num:101\\\",\\\"catalogRevision\\\":\\\"7cd288ba1addf148\\\",\\\"capabilityRevision\\\":\\\"bc06306c582771f524f5635851941e156b0e5c3424387060486e1dbcf6cd364b\\\",\\\"schemaRevision\\\":\\\"fd166699ea7887b42602005d4dae757e8d2f7e6979a58c948a95dc4370d52ebf\\\",\\\"timingMs\\\":124,\\\"nextCalls\\\":[],\\\"handles\\\":[],\\\"changes\\\":[],\\\"warnings\\\":[],\\\"validation\\\":{\\\"outputSchema\\\":\\\"passed\\\"},\\\"data\\\":{\\\"success\\\":true,\\\"message\\\":\\\"Available debug shape types\\\",\\\"shapes\\\":[\\\"sphere\\\",\\\"box\\\",\\\"circle\\\",\\\"line\\\",\\\"point\\\",\\\"coordinate\\\",\\\"cylinder\\\",\\\"cone\\\",\\\"capsule\\\",\\\"arrow\\\",\\\"plane\\\"]},\\\"liveRevisions\\\":{\\\"selection\\\":2,\\\"level\\\":2,\\\"assetRegistry\\\":9109,\\\"package\\\":1}},\\\"data\\\":{\\\"success\\\":true,\\\"message\\\":\\\"Available debug shape types\\\",\\\"shapes\\\":[\\\"sphere\\\",\\\"box\\\",\\\"circle\\\",\\\"line\\\",\\\"point\\\",\\\"coordinate\\\",\\\"cylinder\\\",\\\"cone\\\",\\\"capsule\\\",\\\"arrow\\\",\\\"plane\\\"]}}\"}],\"structuredContent\":{\"capabilityId\":\"manage_effect.list_debug_shapes\",\"catalogRevision\":\"7cd288ba1addf148\",\"capabilityRevision\":\"bc06306c582771f524f5635851941e156b0e5c3424387060486e1dbcf6cd364b\",\"schemaRevision\":\"fd166699ea7887b42602005d4dae757e8d2f7e6979a58c948a95dc4370d52ebf\",\"correlationId\":\"ED362780-4381-493B-A143-5A0D503D4F2A\",\"status\":\"success\",\"liveRevisions\":{\"selection\":2,\"level\":2,\"assetRegistry\":9109,\"package\":1},\"success\":true,\"operation\":\"execute\",\"message\":\"Available debug shape types\",\"receipt\":{\"status\":\"success\",\"capabilityId\":\"manage_effect.list_debug_shapes\",\"correlationId\":\"ED362780-4381-493B-A143-5A0D503D4F2A\",\"requestId\":\"num:101\",\"catalogRevision\":\"7cd288ba1addf148\",\"capabilityRevision\":\"bc06306c582771f524f5635851941e156b0e5c3424387060486e1dbcf6cd364b\",\"schemaRevision\":\"fd166699ea7887b42602005d4dae757e8d2f7e6979a58c948a95dc4370d52ebf\",\"timingMs\":124,\"nextCalls\":[],\"handles\":[],\"changes\":[],\"warnings\":[],\"validation\":{\"outputSchema\":\"passed\"},\"data\":{\"success\":true,\"message\":\"Available debug shape types\",\"shapes\":[\"sphere\",\"box\",\"circle\",\"line\",\"point\",\"coordinate\",\"cylinder\",\"cone\",\"capsule\",\"arrow\",\"plane\"]},\"liveRevisions\":{\"selection\":2,\"level\":2,\"assetRegistry\":9109,\"package\":1}},\"data\":{\"success\":true,\"message\":\"Available debug shape types\",\"shapes\":[\"sphere\",\"box\",\"circle\",\"line\",\"point\",\"coordinate\",\"cylinder\",\"cone\",\"capsule\",\"arrow\",\"plane\"]}},\"isError\":false}}\n\n",
+  "stdioJsonRpcFrame": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "success: true | operation: execute | correlationId: gw-2 | catalogRevision: 7cd288ba1addf148 | capability: manage_effect.list_debug_shapes | tool: manage_effect | action: list_debug_shapes | migratedFrom: { tool=manage_effect, action=list_debug_shapes } | liveRevisions: { selection=2, level=2, assetRegistry=9109, package=1 } | receipt: { status=success, capabilityId=manage_effect.list_debug_shapes, correlationId=gw-2, requestId=num:103, catalogRevision=7cd288ba1addf148, capabilityRevision=bc06306c582771f524f5635851941e156b0e5c3424387060486e1dbcf6cd364b, schemaRevision=fd166699ea7887b42602005d4dae757e8d2f7e6979a58c948a95dc4370d52ebf, handles=0 items ... } | shapes: [sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow, plane] (11) | Available debug shape types"
+        }
+      ],
+      "structuredContent": {
+        "success": true,
+        "operation": "execute",
+        "correlationId": "gw-2",
+        "catalogRevision": "7cd288ba1addf148",
+        "capability": "manage_effect.list_debug_shapes",
+        "tool": "manage_effect",
+        "action": "list_debug_shapes",
+        "migratedFrom": {
+          "tool": "manage_effect",
+          "action": "list_debug_shapes"
+        },
+        "liveRevisions": {
+          "selection": 2,
+          "level": 2,
+          "assetRegistry": 9109,
+          "package": 1
+        },
+        "receipt": {
+          "status": "success",
+          "capabilityId": "manage_effect.list_debug_shapes",
+          "correlationId": "gw-2",
+          "requestId": "num:103",
+          "catalogRevision": "7cd288ba1addf148",
+          "capabilityRevision": "bc06306c582771f524f5635851941e156b0e5c3424387060486e1dbcf6cd364b",
+          "schemaRevision": "fd166699ea7887b42602005d4dae757e8d2f7e6979a58c948a95dc4370d52ebf",
+          "handles": [],
+          "changes": [],
+          "warnings": [],
+          "timingMs": 585,
+          "validation": {
+            "outputSchema": "passed"
+          },
+          "liveRevisions": {
+            "selection": 2,
+            "level": 2,
+            "assetRegistry": 9109,
+            "package": 1
+          },
+          "nextCalls": [],
+          "data": {
+            "success": true,
+            "message": "Available debug shape types",
+            "shapes": [
+              "sphere",
+              "box",
+              "circle",
+              "line",
+              "point",
+              "coordinate",
+              "cylinder",
+              "cone",
+              "capsule",
+              "arrow",
+              "plane"
+            ]
+          }
+        },
+        "data": {
+          "success": true,
+          "message": "Available debug shape types",
+          "shapes": [
+            "sphere",
+            "box",
+            "circle",
+            "line",
+            "point",
+            "coordinate",
+            "cylinder",
+            "cone",
+            "capsule",
+            "arrow",
+            "plane"
+          ]
+        },
+        "result": {
+          "success": true,
+          "message": "Available debug shape types",
+          "liveRevisions": {
+            "selection": 2,
+            "level": 2,
+            "assetRegistry": 9109,
+            "package": 1
+          },
+          "shapes": [
+            "sphere",
+            "box",
+            "circle",
+            "line",
+            "point",
+            "coordinate",
+            "cylinder",
+            "cone",
+            "capsule",
+            "arrow",
+            "plane"
+          ],
+          "count": 11
+        }
+      },
+      "success": true
+    },
+    "jsonrpc": "2.0",
+    "id": 103
+  }
+}

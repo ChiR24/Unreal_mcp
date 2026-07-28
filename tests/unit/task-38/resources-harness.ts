@@ -111,7 +111,8 @@ export function normalizeRead(content: RawContentLike): NormRead {
       dataPresent = true;
       dataKeys = Object.keys(parsed.data as Record<string, unknown>).sort();
     }
-  } catch {
+  } catch (error: unknown) {
+    if (!(error instanceof SyntaxError)) throw error;
     // A non-JSON text leaves dataPresent=false; revision stays as read.
   }
   return { uri: str(content.uri), mimeType: str(content.mimeType), revision, dataPresent, dataKeys };
@@ -171,24 +172,20 @@ export function withStaleRevision(read: NormRead, revision: number): NormRead {
 
 // --- Executable TS transport capture (linked in-memory MCP SDK) ---
 
-interface BuiltServer {
-  server: { connect(transport: unknown): Promise<void> };
-  automationBridge?: { stop(): void };
-  bridge?: { dispose(): void };
-  metricsServer?: { close(): void };
-}
 export interface TsTransportCapture {
   readonly list: readonly RawEntryLike[];
   readonly templates: readonly RawTemplateLike[];
   readonly catalogContent: RawContentLike;
 }
 
+const LIVE_REVISIONS = { selection: 1, level: 1, assetRegistry: 1, package: 1 } as const;
+
 export async function captureTsTransport(capabilities: ClientCapabilities): Promise<TsTransportCapture> {
   vi.resetModules();
   vi.stubEnv('MOCK_UNREAL_CONNECTION', 'true');
   vi.stubEnv('NODE_ENV', 'test');
   const { createServer } = await import('../../../src/server/server-factory.js');
-  const built = createServer() as unknown as BuiltServer;
+  const built = createServer();
   const client = new Client({ name: 'task-38-parity', version: '1.0.0' }, { capabilities });
   const pair = InMemoryTransport.createLinkedPair();
   await built.server.connect(pair[1]);
@@ -203,11 +200,7 @@ export async function captureTsTransport(capabilities: ClientCapabilities): Prom
       catalogContent: (read.contents[0] ?? {}) as RawContentLike,
     };
   } finally {
-    try {
-      await pair[0].close();
-    } catch {
-      // already closed
-    }
+    await pair[0].close();
     built.automationBridge?.stop();
     built.bridge?.dispose();
     built.metricsServer?.close();
@@ -226,9 +219,32 @@ export function unavailableRouter(): ResourceReadRouter {
     pieActive: async () => false,
     currentLevel: async () => ({ name: 'None', path: 'None' }),
     selectedActors: async () => [],
+    liveRevisions: async () => LIVE_REVISIONS,
   };
   const lookup: AssetLookupSource = {
     isAvailable: async () => false,
+    objectExists: async () => false,
+    assetExists: async () => false,
+  };
+  return new ResourceReadRouter(
+    new CapabilityResources(new GatewayManifestCapabilitySource(), revisions),
+    new EditorStateResources(editor, revisions, 'ParityProject'),
+    new KnowledgeResources(lookup, revisions),
+  );
+}
+
+export function liveRevisionRouter(): ResourceReadRouter {
+  const revisions = new InMemoryRevisionProvider();
+  const editor: EditorStateSource = {
+    isAvailable: async () => true,
+    engineVersion: async () => '5.7',
+    pieActive: async () => false,
+    currentLevel: async () => ({ name: 'None', path: 'None' }),
+    selectedActors: async () => [],
+    liveRevisions: async () => LIVE_REVISIONS,
+  };
+  const lookup: AssetLookupSource = {
+    isAvailable: async () => true,
     objectExists: async () => false,
     assetExists: async () => false,
   };

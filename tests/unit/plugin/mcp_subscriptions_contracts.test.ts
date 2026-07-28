@@ -53,9 +53,11 @@ describe('Task 34 BASELINE: subscriptions stay unadvertised/unwired and Task 30 
     expect(capabilities).toContain('resources: { subscribe: true }');
     expect(capabilities).toContain('prompts: {}');
     expect(capabilities).toContain('completions: {}');
+    // Task 44 backed Tasks with a real store, so the literal now carries it.
+    expect(capabilities).toContain('tasks: { list: {}, cancel: {}');
     // Still-unbacked primitives are never advertised: no `subscriptions` client
-    // key, no logging, no tasks, no list-changed member.
-    for (const unbacked of ['subscriptions', 'logging', 'tasks', 'listChanged']) {
+    // key, no logging, no list-changed member.
+    for (const unbacked of ['subscriptions', 'logging', 'listChanged']) {
       expect(capabilities).not.toContain(unbacked);
     }
   });

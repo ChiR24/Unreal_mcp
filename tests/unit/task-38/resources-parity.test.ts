@@ -33,6 +33,7 @@ import {
   normalizeList,
   normalizeRead,
   normalizeTemplates,
+  liveRevisionRouter,
   unavailableRouter,
   withStaleRevision,
   type CapturedError,
@@ -53,6 +54,7 @@ const MINIMAL_CAPS = {} as const;
 let tsFull: TsTransportCapture;
 let tsMinimal: TsTransportCapture;
 const router = unavailableRouter();
+const revisionsRouter = liveRevisionRouter();
 
 beforeAll(async () => {
   tsFull = await captureTsTransport(FULL_CAPS);
@@ -142,6 +144,12 @@ describe('Task 38 parity - normalized semantics agree (divergences closed)', () 
     const tsProject = await captureRouterRead(router, 'ue://project');
     expect(tsProject.dataPresent).toBe(true);
     expect(tsProject).toEqual(nativeReadNorm('ue://project'));
+  });
+
+  it('resources/read ue://state/revisions returns the same four live counters', async () => {
+    const tsRevisions = await captureRouterRead(revisionsRouter, 'ue://state/revisions');
+    expect(tsRevisions.dataKeys).toEqual(['assetRegistry', 'level', 'package', 'selection']);
+    expect(tsRevisions).toEqual(nativeReadNorm('ue://state/revisions'));
   });
 
   it('an unknown uri yields the same typed error code (RESOURCE_NOT_FOUND)', async () => {

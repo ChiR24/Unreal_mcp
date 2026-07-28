@@ -34,6 +34,7 @@ const KEYWORDS_CPP = 'MCP/Execute/McpNativeGatewaySchemaKeywords.cpp';
 const REQUEST_CPP = 'MCP/Execute/McpNativeGatewayExecuteRequest.cpp';
 const RECEIPT_CPP = 'MCP/Execute/McpNativeGatewayReceipt.cpp';
 const EXECUTE_CPP = 'MCP/Execute/McpNativeTransportGatewayExecute.cpp';
+const RECEIPT_BUILD_CPP = 'MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.cpp';
 const VALIDATION_CPP = 'MCP/Execute/McpNativeGatewayValidation.cpp';
 const NATIVE_TEST = 'Tests/McpNativeGatewayExecuteValidationTests.cpp';
 
@@ -157,10 +158,12 @@ describe('Task 27: native execute owns a canonical validation pipeline', () => {
 
   it('validates the handler result against the capability output schema', () => {
     expect(read(VALIDATION_CPP)).toContain('OUTPUT_SCHEMA_VIOLATION');
-    // The completion path is where a handler result actually arrives.
-    const pending = read('MCP/Transport/McpNativeTransportPendingRequests.cpp');
-    expect(pending).toContain('ValidateGatewayExecuteOutput');
-    expect(pending).toContain('McpBuildSuccessReceipt');
+    // The completion path is where a handler result actually arrives; the
+    // receipt it builds lives in MCP/Gateway (extracted from the transport's
+    // pending-request file, which is socket bookkeeping, not receipt shape).
+    const build = read(RECEIPT_BUILD_CPP);
+    expect(build).toContain('ValidateGatewayExecuteOutput');
+    expect(build).toContain('McpBuildSuccessReceipt');
   });
 
   it('emits a semantic receipt carrying capabilityId, catalogRevision and status', () => {
@@ -266,6 +269,7 @@ describe('Task 39 REMEDIATION: native execute emits the nested canonical receipt
   const RECEIPT_HDR = read('MCP/Execute/McpNativeGatewayReceipt.h');
   const VALIDATION = read(VALIDATION_CPP);
   const PENDING = read('MCP/Transport/McpNativeTransportPendingRequests.cpp');
+  const RECEIPT_BUILD = read(RECEIPT_BUILD_CPP);
   const STREAM = read('MCP/Transport/McpNativeTransportGatewayStream.cpp');
   const CONN = read('MCP/Transport/McpNativeTransportConnectionTypes.h');
   const ENRICH = read('MCP/Execute/McpNativeReceiptEnrichment.cpp');
@@ -293,20 +297,20 @@ describe('Task 39 REMEDIATION: native execute emits the nested canonical receipt
   });
 
   it('enforces the same serialized result-size limit as TypeScript (RESULT_TOO_LARGE at 100000 chars)', () => {
-    expect(PENDING).toContain('RESULT_TOO_LARGE');
-    expect(`${PENDING}${STREAM}${RECEIPT}`).toContain('100000');
+    expect(RECEIPT_BUILD).toContain('RESULT_TOO_LARGE');
+    expect(`${RECEIPT_BUILD}${STREAM}${RECEIPT}`).toContain('100000');
   });
 
   it('classifies a real dispatch failure (queue full / subsystem unavailable / invalid session) as the dispatch kind', () => {
     // The completion path must map these transport-level failures onto the typed
     // dispatch algebra, not McpUnrealExecutionError (which is the execution kind).
-    expect(PENDING).toContain('McpDispatchError');
+    expect(RECEIPT_BUILD).toContain('McpDispatchError');
   });
 
   it('carries the client-facing correlation id from the pending state into the completed receipt (existing native crossing)', () => {
     expect(CONN).toContain('CorrelationId');
     expect(STREAM).toContain('Conn->CorrelationId');
-    expect(PENDING).toContain('Conn.CorrelationId');
+    expect(PENDING).toContain('Conn->CorrelationId');
   });
 
   it('fails closed on a malformed expectedCatalogRevision (empty / non-string / non-hex / over-length) as INVALID_OPTIONS with a pointer, mirroring TS', () => {

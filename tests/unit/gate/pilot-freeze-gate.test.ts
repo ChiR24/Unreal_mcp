@@ -89,7 +89,13 @@ describe('pilot architecture-freeze gate: clean 493-record state', () => {
   it('Given the frozen search-material-assets request, When retrieval runs on the clean catalog, Then asset.search_assets is top-1 with bounded disclosure and no schema leakage', () => {
     const result = retrieveCapabilities(FROZEN_REQUEST);
     expect(result.matches[0]?.id).toBe('asset.search_assets');
-    expect(result.matches).toHaveLength(5);
+    // Disclosure is BOUNDED by the 5-result cap, not required to fill it. The
+    // alias fold removed material.rebuild_material as an independent document
+    // because it is a declared alias of material.compile_material, which still
+    // appears here; asserting exactly 5 would re-require that duplicate.
+    expect(result.matches.length).toBeLessThanOrEqual(5);
+    expect(result.matches.length).toBeGreaterThan(0);
+    expect(new Set(result.matches.map((match) => match.id)).size).toBe(result.matches.length);
     expect(JSON.stringify(result)).not.toMatch(/schemas|properties|inputSchema|outputSchema/u);
   });
 });

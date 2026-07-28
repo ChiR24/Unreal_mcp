@@ -15,10 +15,11 @@
 // recording and the parity gate becomes a true cross-runtime gate.
 //
 // Provenance of every value below (native source):
-//   resources/list        -> McpResourceCatalog::AllListedResources() (6 legacy + 4 new = 10)
+//   resources/list        -> McpResourceCatalog::AllListedResources() (6 legacy + 5 new = 11)
 //   resources/templates   -> McpResourceCatalog::Templates()          (4 defs)
-//   resources/read ok      -> McpResourceRead::BuildReadBodyText for the two socket-readable
-//                            URIs (ue://capability/catalog, ue://project): a bounded
+//   resources/read ok      -> McpResourceRead::BuildReadBodyText for the four socket-readable
+//                            URIs (ue://capability/catalog, ue://project, ue://state/revisions,
+//                            and since Task 47 ue://health): a bounded
 //                            {"revision":1,"data":{...}} body with real key sets
 //   resources/read error  -> McpResourceRead::Classify: a listed static resource or a
 //                            template-instance uri that is not socket-readable returns
@@ -62,7 +63,7 @@ const JSON_MIME = 'application/json';
 const NATIVE_INVALID_REQUEST = -32600;
 const NATIVE_INVALID_PARAMS = -32602;
 
-/** native resources/list — the six legacy resources followed by the four new ones. */
+/** native resources/list — the six legacy resources followed by the five new ones. */
 export const NATIVE_LIST: { readonly resources: readonly RawResourceEntry[] } = {
   resources: [
     { uri: 'ue://assets', name: 'Assets', description: 'Project assets', mimeType: JSON_MIME },
@@ -85,6 +86,12 @@ export const NATIVE_LIST: { readonly resources: readonly RawResourceEntry[] } = 
     { uri: 'ue://project', name: 'Project', description: 'Redacted project name, engine version, and content root', mimeType: JSON_MIME },
     { uri: 'ue://editor', name: 'Editor State', description: 'Bounded editor state: PIE status and current level', mimeType: JSON_MIME },
     { uri: 'ue://selection', name: 'Selection', description: 'Bounded list of selected actor handles', mimeType: JSON_MIME },
+    {
+      uri: 'ue://state/revisions',
+      name: 'Live State Revisions',
+      description: 'Current selection, level, asset-registry, and package revision counters',
+      mimeType: JSON_MIME,
+    },
   ],
 };
 
@@ -118,8 +125,8 @@ export const NATIVE_TEMPLATES: { readonly resourceTemplates: readonly RawTemplat
   ],
 };
 
-/** The two URIs the native handler serves bounded real data from the socket thread. */
-const SOCKET_READABLE = new Set(['ue://capability/catalog', 'ue://project']);
+/** The four URIs the native handler serves bounded real data from the socket thread. */
+const SOCKET_READABLE = new Set(['ue://capability/catalog', 'ue://project', 'ue://state/revisions', 'ue://health']);
 const LISTED_URIS = new Set(NATIVE_LIST.resources.map((entry) => entry.uri));
 const TEMPLATE_PREFIXES = ['ue://capability/', 'ue://knowledge/', 'ue://object/', 'ue://asset/'];
 
@@ -129,10 +136,51 @@ function matchesTemplate(uri: string): boolean {
 
 // Only the KEY set of `data` is asserted by the parity comparator; the values are
 // representative of the native BuildReadBodyText output (bounded, redacted).
+/**
+ * Native `ue://health` exposition, transcribed from the line order
+ * `FMcpTelemetryRegistry::RenderPrometheus` emits (family headers are always
+ * present, readiness gauges follow) for an idle registry with all three
+ * components ready.
+ */
+export const NATIVE_HEALTH_EXPOSITION = [
+  '# TYPE unreal_mcp_request_duration_seconds histogram',
+  '# TYPE unreal_mcp_request_duration_quantile_seconds gauge',
+  '# TYPE unreal_mcp_queue_wait_seconds histogram',
+  '# TYPE unreal_mcp_queue_wait_quantile_seconds gauge',
+  '# TYPE unreal_mcp_requests_by_class_total counter',
+  '# TYPE unreal_mcp_failures_by_class_total counter',
+  '# TYPE unreal_mcp_readiness_component gauge',
+  'unreal_mcp_readiness_component{component="editor"} 1',
+  'unreal_mcp_readiness_component{component="registry"} 1',
+  'unreal_mcp_readiness_component{component="transport"} 1',
+  '# TYPE unreal_mcp_ready gauge',
+  'unreal_mcp_ready 1',
+].join('\n') + '\n';
+
+/**
+ * Native `ue://health` data, transcribed from
+ * `Private/MCP/Resources/McpResourceHealthContent.cpp` BuildHealthData().
+ */
+export const NATIVE_HEALTH_DATA = {
+  surface: 'native',
+  readiness: { ready: true, components: { editor: true, registry: true, transport: true }, notReady: [] },
+  diagnostics: {
+    totals: { requests: 0, failures: 0 },
+    byActionClass: [],
+    byFailureClass: [],
+    queueWait: { p50Seconds: null, p95Seconds: null },
+  },
+  metricsExposition: NATIVE_HEALTH_EXPOSITION,
+} as const;
+
 function readBody(uri: string): string {
   const data =
     uri === 'ue://project'
       ? { projectName: 'ParityProject', engineVersion: '5.7', contentRoot: '/Game', connected: true }
+      : uri === 'ue://state/revisions'
+        ? { selection: 1, level: 1, assetRegistry: 1, package: 1 }
+      : uri === 'ue://health'
+        ? NATIVE_HEALTH_DATA
       : { capabilities: ['asset.list', 'asset.import'], count: 2, totalCount: 2, truncated: false };
   return JSON.stringify({ revision: 1, data });
 }

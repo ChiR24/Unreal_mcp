@@ -96,7 +96,7 @@ describe('Task 38 lane D — exact parity rejects injected one-field drift', () 
 // Capability-honesty parity. These two assertions were the lane-D RED gaps
 // (expected-fail ratchets); they are now converted to normal passing assertions
 // after production was made honest. Raw pre-fix failing run: profiles-fallback-RED.log.
-describe('Task 38 lane D — capability honesty (remediated): tasks gateway-only + native elicitation mirror', () => {
+describe('Task 38 lane D — capability honesty (remediated): tasks backed on both surfaces + native elicitation mirror', () => {
   it('routes native-mode fallbacks only to server-backed methods and never emits a phantom native Tasks pointer', () => {
     for (const primitive of FALLBACK_PRIMITIVES) {
       const pointer = fallbackPointerFor(FULL, primitive);
@@ -106,13 +106,19 @@ describe('Task 38 lane D — capability honesty (remediated): tasks gateway-only
         expect(pointer.mode).toBe('gateway');
       }
     }
-    // Tasks is declared by FULL yet unbacked by the server (Task 44 pending): it
-    // must resolve to the bounded gateway execute pointer, never a phantom
-    // native tasks/list the server would only answer with -32601.
+    // Task 44 backed Tasks on both transports, so a Tasks-declaring client is
+    // now pointed at the native tasks/list. The anti-phantom rule above did not
+    // weaken — it GREW to cover a fifth primitive: the loop asserts tasks/list
+    // against the native oracle's serverBackedMethods, so if the native surface
+    // ever stops registering it this case fails again.
     const tasks = fallbackPointerFor(FULL, 'tasks');
-    expect(tasks.mode).toBe('gateway');
-    expect(tasks.nextCall).toEqual({ operation: 'execute' });
-    expect(oracle.serverBackedMethods).not.toContain('tasks/list');
+    expect(tasks.mode).toBe('native');
+    expect(tasks.nextCall).toEqual({ method: 'tasks/list' });
+    expect(oracle.serverBackedMethods).toContain('tasks/list');
+    // A Tasks-BLIND client still gets exactly one bounded gateway operation.
+    const blind = fallbackPointerFor(MINIMAL_PROFILE, 'tasks');
+    expect(blind.mode).toBe('gateway');
+    expect(blind.nextCall).toEqual({ operation: 'execute' });
   });
 
   it('exposes a native elicitation-decision mirror whose safe-field and boolean-consent policy matches the TS runtime', () => {
