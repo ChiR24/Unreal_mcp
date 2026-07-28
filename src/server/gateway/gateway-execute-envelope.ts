@@ -24,9 +24,11 @@ import {
 import type { SemanticError } from '../../tools/catalog/capabilities/semantic/errors.js';
 import { EXECUTION_OPTION_KEYS } from '../../tools/catalog/capabilities/semantic/execution-options.js';
 import { JsonValueSchema } from '../../tools/catalog/capabilities/semantic/property-assignment.js';
+import { liveStateRevisionsFromEnvelope } from '../../tools/catalog/capabilities/semantic/live-state-revisions.js';
 import { extractChanges, extractHandles, extractTask } from '../../tools/catalog/capabilities/semantic/receipt-outcome.js';
 import { maskSecretsDeep, redactText } from '../../tools/catalog/capabilities/semantic/receipt-redaction.js';
 import { catalogRevision } from './gateway-capability-index.js';
+import { IDEMPOTENCY_CONFLICT_CODE } from './gateway-execute-idempotency.js';
 import type { ExecuteTarget } from './gateway-execute-resolve.js';
 import {
   correlationFields,
@@ -115,6 +117,9 @@ export function toSemanticError(failure: ExecuteFailure): SemanticError {
   if (CAPABILITY_UNAVAILABLE_CODES.has(errorCode)) {
     return { kind: 'capability', code: 'CAPABILITY_UNAVAILABLE', message, retryable: false };
   }
+  if (errorCode === IDEMPOTENCY_CONFLICT_CODE) {
+    return { kind: 'conflict', code: IDEMPOTENCY_CONFLICT_CODE, message };
+  }
   if (CONFLICT_CODES.has(errorCode)) {
     return { kind: 'conflict', code: 'STATE_CONFLICT', message };
   }
@@ -202,6 +207,7 @@ export function executeErrorEnvelope(
   failure: ExecuteFailure,
   context: GatewayReceiptContext
 ): Record<string, unknown> {
+  const liveRevisions = liveStateRevisionsFromEnvelope(failure.detail);
   const receipt: Receipt | undefined = failure.record === undefined
     ? undefined
     : buildErrorReceipt({
@@ -209,6 +215,7 @@ export function executeErrorEnvelope(
       error: toSemanticError(failure),
       ...correlationFields(context),
       ...revisionFields(failure.record),
+      liveRevisions,
       timingMs: elapsedMs(context)
     });
 
@@ -229,6 +236,7 @@ export function executeErrorEnvelope(
     allowedParameters: failure.allowedParameters,
     pointer: failure.pointer,
     resultChars: failure.resultChars,
+    liveRevisions,
     result: maskSecretsDeep(failure.detail),
     receipt
   });
@@ -245,13 +253,15 @@ export function executeSuccessEnvelope(input: {
   readonly warnings: readonly string[];
 }, context: GatewayReceiptContext): Record<string, unknown> {
   const capabilityId: CapabilityId = input.record.id;
+  const liveRevisions = liveStateRevisionsFromEnvelope(input.result);
   // The projected output is built from declared, schema-checked fields, then
   // deep-masked so a secret echoed into a declared output field never survives
   // on the nested receipt.data (the outer envelope result is masked separately).
-  const data = JsonValueSchema.safeParse(maskSecretsDeep(input.canonicalOutput));
+  const parsedOutput = JsonValueSchema.safeParse(maskSecretsDeep(input.canonicalOutput));
+  const publishedData = parsedOutput.success ? parsedOutput.data : null;
   const receipt = buildSuccessReceipt({
     capabilityId,
-    data: data.success ? data.data : null,
+    data: publishedData,
     handles: extractHandles(input.result),
     changes: extractChanges(input.result),
     task: extractTask(input.result),
@@ -259,7 +269,8 @@ export function executeSuccessEnvelope(input: {
     ...correlationFields(context),
     ...revisionFields(input.record),
     timingMs: elapsedMs(context),
-    validation: { outputSchema: 'passed' }
+    validation: { outputSchema: 'passed' },
+    liveRevisions
   });
 
   return definedOnly({
@@ -272,7 +283,14 @@ export function executeSuccessEnvelope(input: {
     migratedFrom: input.migratedFrom,
     options: input.options,
     warnings: input.warnings.length > 0 ? input.warnings : undefined,
+    liveRevisions,
     receipt,
+    // The documented payload location, and the one the native surface already
+    // publishes. Without it a client following the receipt contract read
+    // `structuredContent.data` and found the payload on native and NOTHING over
+    // stdio, where it was reachable only as the unprojected `result` or nested
+    // under `receipt.data`. Same value as `receipt.data` by construction.
+    data: publishedData,
     result: maskSecretsDeep(input.result)
   });
 }

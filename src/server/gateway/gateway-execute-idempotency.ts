@@ -5,10 +5,17 @@
 // structural rather than a promise: a refused request returns before it can
 // reach `begin`, so no refusal can ever occupy or replay a slot.
 //
-// Participation is narrow on purpose. Only the `idempotency-key` behaviour class
-// dedups, and only when the client actually supplied a key — an `idempotent`
-// capability is already safe to repeat and a `non-idempotent` one has no
-// meaningful replay semantics, so neither should pay for a ledger entry.
+// Participation is decided by the CLIENT, not by the capability's declared
+// behaviour class: a key dedups whichever capability it was sent to. This
+// mirrors the native gate (`if (!Context.IdempotencyId.IsEmpty())`) exactly, and
+// it is the only reading that matches what a key is for — an idempotency key
+// exists to make a NON-idempotent operation safe to retry, so a class-based gate
+// would disable the protection precisely where it is load-bearing.
+//
+// Consequence, accepted deliberately: a key sent to a read replays that read's
+// recorded receipt for the TTL rather than re-reading the editor. That is what
+// the client asked for by naming the call with a key, it is opt-in per call, and
+// only a successful receipt is ever cacheable.
 //
 // The fingerprint is computed from the POST-normalization params, so a key
 // replayed after defaults/aliases resolved differently is correctly a conflict
@@ -47,14 +54,11 @@ export function conflictMessage(reason: ConflictReason): string {
     : 'This idempotency key was already used with different parameters. Use a new idempotency key, or resend the original parameters to replay the recorded receipt.';
 }
 
-export type IdempotencyClass = 'non-idempotent' | 'idempotent' | 'idempotency-key';
-
 /** Why a duplicate was refused. Distinct values so a client can tell "wait" from "you reused a key". */
 export type ConflictReason = 'IN_FLIGHT' | 'FINGERPRINT_MISMATCH';
 
 export interface IdempotentRequest {
   readonly capabilityId: string;
-  readonly idempotencyClass: IdempotencyClass;
   /** Non-secret principal identity; the plugin owns the real one. */
   readonly principal: string;
   /** Params AFTER defaults and normalization, so the fingerprint reflects real effect. */
@@ -103,7 +107,7 @@ export async function runWithIdempotency(
   conflict: (reason: ConflictReason) => Receipt
 ): Promise<Receipt> {
   const key = request.idempotencyKey;
-  if (request.idempotencyClass !== 'idempotency-key' || key === undefined || key.length === 0) {
+  if (key === undefined || key.length === 0) {
     return dispatch();
   }
 

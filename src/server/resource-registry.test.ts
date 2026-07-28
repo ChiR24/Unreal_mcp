@@ -30,7 +30,7 @@ function registerAndCapture(): Map<unknown, CapturedHandler> {
 }
 
 describe('resource-registry listing', () => {
-  it('keeps the six pre-existing resources and adds the four new ones', async () => {
+  it('keeps the six pre-existing resources and adds the five new ones', async () => {
     // Given
     const handlers = registerAndCapture();
     const listResources = handlers.get(ListResourcesRequestSchema);
@@ -44,12 +44,12 @@ describe('resource-registry listing', () => {
     for (const legacy of ['ue://assets', 'ue://actors', 'ue://level', 'ue://health', 'ue://automation-bridge', 'ue://version']) {
       expect(uris).toContain(legacy);
     }
-    // And the four new version-aware resources are additive.
-    for (const added of ['ue://capability/catalog', 'ue://project', 'ue://editor', 'ue://selection']) {
+    // And the five new version-aware resources are additive.
+    for (const added of ['ue://capability/catalog', 'ue://project', 'ue://editor', 'ue://selection', 'ue://state/revisions']) {
       expect(uris).toContain(added);
     }
-    expect(uris).toHaveLength(10);
-    expect(new Set(uris).size).toBe(10);
+    expect(uris).toHaveLength(11);
+    expect(new Set(uris).size).toBe(11);
   });
 
   it('registers the four resource templates', async () => {

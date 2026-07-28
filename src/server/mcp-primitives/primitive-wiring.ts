@@ -42,6 +42,14 @@ const EXTERNAL_PRIMITIVE_METHODS = [
   'resources/list',
   'resources/templates/list',
   'resources/read',
+  // Registered by the SDK's own Protocol constructor because server-factory
+  // supplies a BoundedTaskStore. Listing them here is what makes the advertised
+  // `tasks` capability fail closed alongside every other one; the wire proof
+  // that they really answer lives in tests/unit/task-44.
+  'tasks/get',
+  'tasks/list',
+  'tasks/cancel',
+  'tasks/result',
 ] as const;
 
 export interface WiredPrimitives {

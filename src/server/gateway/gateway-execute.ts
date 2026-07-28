@@ -24,8 +24,10 @@ import { buildNextCall, closestMatches, MAX_SUGGESTIONS } from './gateway-guidan
 import { executeTargetIndex, resolveExecuteTarget, type ExecuteTarget } from './gateway-execute-resolve.js';
 import {
   applyDeclaredDefaults,
+  checkPreviewSupport,
   findControlKeyInParams,
   hasOwn,
+  HONORED_EXECUTION_OPTION_KEYS,
   validateAgainstCapabilitySchema,
   validateExecutionOptions,
   VIOLATION_GATEWAY_CODES
@@ -39,6 +41,11 @@ import { dispatchAndValidate, type GatewayContext } from './gateway-execute-disp
 import { checkConsentAuthorization, checkPreDispatchPolicy, checkScopeAuthorization } from './gateway-execute-policy.js';
 import { ConsentGrantSchema, type ConsentGrant } from '../../tools/catalog/capabilities/semantic/authorization.js';
 import { runWithGatewayConsent } from '../../automation/gateway-consent-context.js';
+import { runWithGatewayExpectedRevisions } from '../../automation/gateway-expected-revisions-context.js';
+import {
+  ExpectedRevisionsSchema,
+  type ExpectedRevisions
+} from '../../tools/catalog/capabilities/semantic/execution-options.js';
 import { buildReceiptContext } from './gateway-receipt-context.js';
 import {
   conflictMessage,
@@ -91,9 +98,34 @@ function validateInput(target: ExecuteTarget, params: Record<string, unknown>): 
   };
 }
 
+// The caller's own request minus the control the gateway cannot honor IS the
+// call that will run for real, so the refusal hands back something executable
+// rather than a description of what to change.
+function previewFreeNextCall(
+  target: ExecuteTarget,
+  params: Record<string, unknown>,
+  rawOptions: unknown
+): Record<string, unknown> {
+  const remaining = isRecord(rawOptions)
+    ? Object.entries(rawOptions).filter(([key]) => key !== 'preview')
+    : [];
+  return {
+    ...buildNextCall({
+      operation: 'execute',
+      tool: target.record.routing.parentTool,
+      action: target.legacy.action
+    }),
+    params,
+    ...(remaining.length === 0 ? {} : { options: Object.fromEntries(remaining) })
+  };
+}
+
 type StaticCheck =
   | { readonly failure: ResolvedFailure }
-  | { readonly params: Record<string, unknown> };
+  | {
+    readonly params: Record<string, unknown>;
+    readonly expectedRevisions?: ExpectedRevisions;
+  };
 
 function checkStaticRequest(target: ExecuteTarget, args: Record<string, unknown>): StaticCheck {
   const record = target.record;
@@ -142,7 +174,8 @@ function checkStaticRequest(target: ExecuteTarget, args: Record<string, unknown>
     });
   }
 
-  const optionViolation = validateExecutionOptions(args.options);
+  const optionViolation = validateExecutionOptions(args.options)
+    ?? checkPreviewSupport(args.options, record.id);
   if (optionViolation !== undefined) {
     return refuse({
       errorCode: optionViolation.errorCode,
@@ -150,13 +183,28 @@ function checkStaticRequest(target: ExecuteTarget, args: Record<string, unknown>
       ...(optionViolation.option === undefined
         ? {}
         : { option: optionViolation.option, field: optionViolation.option }),
-      ...(optionViolation.pointer === undefined ? {} : { pointer: optionViolation.pointer })
+      ...(optionViolation.pointer === undefined ? {} : { pointer: optionViolation.pointer }),
+      ...(optionViolation.errorCode !== 'UNSUPPORTED_PREVIEW'
+        ? {}
+        : {
+          suggestions: closestMatches('preview', [...HONORED_EXECUTION_OPTION_KEYS], MAX_SUGGESTIONS),
+          nextCall: previewFreeNextCall(target, params, args.options)
+        })
     });
   }
 
+  const expectedRevisions = !isRecord(args.options) || args.options.expectedRevisions === undefined
+    ? undefined
+    : ExpectedRevisionsSchema.parse(args.options.expectedRevisions);
+
   const withDefaults = applyDeclaredDefaults(params, record.schemas.input);
   const inputFailure = validateInput(target, withDefaults);
-  return inputFailure === undefined ? { params: withDefaults } : { failure: inputFailure };
+  return inputFailure === undefined
+    ? {
+      params: withDefaults,
+      ...(expectedRevisions === undefined ? {} : { expectedRevisions })
+    }
+    : { failure: inputFailure };
 }
 
 
@@ -242,7 +290,6 @@ export async function executeGatewayCall(
     runWithIdempotency(
       {
         capabilityId: target.record.id,
-        idempotencyClass: target.record.behavior.idempotency,
         principal: authority?.profile ?? LOCAL_PRINCIPAL,
         params: checked.params,
         idempotencyKey: receiptContext.idempotencyId
@@ -260,5 +307,9 @@ export async function executeGatewayCall(
         })
       }, receiptContext)
     );
-  return consentGrant === undefined ? await guarded() : await runWithGatewayConsent(consentGrant, guarded);
+  const withConsent = (): Promise<Record<string, unknown>> =>
+    consentGrant === undefined ? guarded() : runWithGatewayConsent(consentGrant, guarded);
+  return checked.expectedRevisions === undefined
+    ? await withConsent()
+    : await runWithGatewayExpectedRevisions(checked.expectedRevisions, withConsent);
 }

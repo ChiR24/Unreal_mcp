@@ -54,6 +54,13 @@ function failureMessage(result: unknown): string {
     : 'Unreal reported a failed execution.';
 }
 
+function failureString(result: unknown, key: string): string | undefined {
+  if (!isRecord(result)) return undefined;
+  const value = result[key];
+  if (typeof value === 'string') return value;
+  return typeof value === 'number' ? String(value) : undefined;
+}
+
 function deprecationWarnings(record: CapabilityRecord): readonly string[] {
   return record.deprecation.status === 'deprecated'
     ? [`Capability '${record.id}' is deprecated: ${record.deprecation.guidance}`]
@@ -82,9 +89,27 @@ export async function dispatchAndValidate(
   );
 
   if (handlerReportedFailure(result)) {
+    // The plugin owns the live-state comparison (it must happen on the game
+    // thread), so a Task 42 precondition refusal reaches us as a handler
+    // failure. Flattening it here would make the SAME refusal an untyped
+    // execution error over stdio/WebSocket while the native transport reports a
+    // typed staleState, so the code and any current/expected references are
+    // carried through unchanged.
+    const currentRevision = failureString(result, 'currentRevision');
+    const expectedRevision = failureString(result, 'expectedRevision');
+    // The bridge and the native surface disagree about WHERE the code lives: an
+    // automation_response carries it as `error`, the native receipt as
+    // `errorCode`. Reading only one of them is what let the identical refusal
+    // arrive typed on native and flattened over stdio. Exact equality against
+    // the sentinel, so free text that merely mentions staleness cannot promote
+    // an unrelated failure.
+    const staleState = failureString(result, 'errorCode') === 'STALE_STATE'
+      || failureString(result, 'error') === 'STALE_STATE';
     return refuseWithTarget(target, {
-      errorCode: 'UNREAL_EXECUTION_ERROR',
+      errorCode: staleState ? 'STALE_STATE' : 'UNREAL_EXECUTION_ERROR',
       message: failureMessage(result),
+      ...(staleState && currentRevision !== undefined ? { currentRevision } : {}),
+      ...(staleState && expectedRevision !== undefined ? { expectedRevision } : {}),
       detail: result
     }, receiptContext);
   }

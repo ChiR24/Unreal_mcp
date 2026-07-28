@@ -12,13 +12,17 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { IdempotencyLedger } from './idempotency-ledger.js';
-import { canonicalFingerprint, runWithIdempotency, type IdempotentRequest } from './gateway-execute-idempotency.js';
+import { capabilityIndex } from './gateway-capability-index.js';
+import {
+  canonicalFingerprint,
+  runWithIdempotency,
+  type IdempotentRequest
+} from './gateway-execute-idempotency.js';
 
 const ledger = (): IdempotencyLedger => new IdempotencyLedger({ clock: () => 1_000 });
 
 const req = (over: Partial<IdempotentRequest> = {}): IdempotentRequest => ({
   capabilityId: 'asset.import_asset',
-  idempotencyClass: 'idempotency-key',
   principal: 'scoped:qawriter',
   params: { sourcePath: '/tmp/a.fbx' },
   idempotencyKey: 'key-1',
@@ -51,11 +55,14 @@ describe('canonicalFingerprint', () => {
 });
 
 describe('runWithIdempotency — opt-out cases dispatch straight through', () => {
-  it('does not engage for a non-idempotency-key capability', async () => {
+  // Not supplying a key is the ONLY way out. This used to also list "the
+  // capability's declared class is not idempotency-key", which no record ever
+  // declares — see the reachability block at the foot of this file.
+  it('does not engage for an empty key, which is not a client opting in', async () => {
     const l = ledger();
     const dispatch = vi.fn(async () => ok());
 
-    await runWithIdempotency(req({ idempotencyClass: 'non-idempotent' }), l, dispatch, cacheable, conflict);
+    await runWithIdempotency(req({ idempotencyKey: '' }), l, dispatch, cacheable, conflict);
 
     expect([dispatch.mock.calls.length, l.size()]).toEqual([1, 0]);
   });
@@ -176,4 +183,67 @@ describe('runWithIdempotency — concurrency', () => {
 
     expect(duplicate.reason).toBe('IN_FLIGHT');
   });
+});
+
+// Task 46 F4. Every case above hands the seam a hand-written
+// `idempotencyClass: 'idempotency-key'`, which no capability record declares -
+// so they proved the ledger works without proving any request can reach it.
+// These are anchored to the classes the REAL registry emits instead.
+//
+// Parity anchor: McpNativeTransportGatewayExecute.cpp engages its ledger on
+// `if (!Context.IdempotencyId.IsEmpty())` - a client key, any capability.
+// One real capability per declared class, lexicographically first so the sample
+// moves only when the contract does — never a hand-picked id whose behavior the
+// author already believed.
+const SAMPLE_PER_DECLARED_CLASS: readonly (readonly [string, string])[] = [
+  ...capabilityIndex().records
+    .slice()
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .reduce(
+      (byClass, record) => byClass.has(record.behavior.idempotency)
+        ? byClass
+        : byClass.set(record.behavior.idempotency, record.id),
+      new Map<string, string>()
+    )
+].sort();
+
+describe('runWithIdempotency — reachable for every class the registry actually emits', () => {
+  it('emits classes, and none of them is the one the old gate demanded', () => {
+    expect(SAMPLE_PER_DECLARED_CLASS.length).toBeGreaterThan(0);
+    expect(SAMPLE_PER_DECLARED_CLASS.map(([declaredClass]) => declaredClass)).not.toContain('idempotency-key');
+  });
+
+  it.each(SAMPLE_PER_DECLARED_CLASS)(
+    'dispatches ONCE for a %s capability (%s) called twice with the same key and params',
+    async (_declaredClass, capabilityId) => {
+      const l = ledger();
+      const dispatch = vi.fn(async () => ok());
+
+      const first = await runWithIdempotency(req({ capabilityId }), l, dispatch, cacheable, conflict);
+      const second = await runWithIdempotency(req({ capabilityId }), l, dispatch, cacheable, conflict);
+
+      expect(dispatch).toHaveBeenCalledTimes(1);
+      expect(second).toEqual(first);
+    }
+  );
+
+  it.each(SAMPLE_PER_DECLARED_CLASS)(
+    'refuses a %s key (%s) re-used with different params as a typed conflict',
+    async (_declaredClass, capabilityId) => {
+      const l = ledger();
+      const dispatch = vi.fn(async () => ok());
+      await runWithIdempotency(req({ capabilityId }), l, dispatch, cacheable, conflict);
+
+      const clash = await runWithIdempotency(
+        req({ capabilityId, params: { sourcePath: '/tmp/OTHER.fbx' } }),
+        l,
+        dispatch,
+        cacheable,
+        conflict
+      );
+
+      expect(dispatch).toHaveBeenCalledTimes(1);
+      expect(clash).toMatchObject({ errorCode: 'CONFLICT', reason: 'FINGERPRINT_MISMATCH' });
+    }
+  );
 });

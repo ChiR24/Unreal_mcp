@@ -23,6 +23,7 @@ const NATIVE_METHOD: Record<ServerBackedPrimitive, string> = {
   prompts: 'prompts/list',
   completions: 'completion/complete',
   subscriptions: 'resources/subscribe',
+  tasks: 'tasks/list',
 };
 const GATEWAY_OP: Record<FallbackPrimitive, string> = {
   resources: 'search',
@@ -45,13 +46,18 @@ describe('fallback-pointers', () => {
     }
   });
 
-  it('routes a Tasks-declaring client to the bounded gateway because the server does not back Tasks', () => {
-    // Tasks is not server-backed (Task 44 pending), so even a fully capable
-    // client is pointed at the gateway execute op, never a phantom tasks/list.
+  it('routes a Tasks-declaring client to the native tasks method now that the server backs Tasks', () => {
+    // Task 44 made tasks/list real on both transports, so pointing a capable
+    // client at it is a reachable method rather than a phantom that answers
+    // -32601. The Tasks-BLIND case below still gets the bounded gateway op.
     const pointer = fallbackPointerFor(FULL_PROFILE, 'tasks');
-    expect(pointer.mode).toBe('gateway');
-    expect(pointer.nextCall).toEqual({ operation: GATEWAY_OP.tasks });
-    expect((SERVER_BACKED_PRIMITIVES as readonly string[]).includes('tasks')).toBe(false);
+    expect(pointer.mode).toBe('native');
+    expect(pointer.nextCall).toEqual({ method: 'tasks/list' });
+    expect((SERVER_BACKED_PRIMITIVES as readonly string[]).includes('tasks')).toBe(true);
+
+    const blind = fallbackPointerFor(MINIMAL_PROFILE, 'tasks');
+    expect(blind.mode).toBe('gateway');
+    expect(blind.nextCall).toEqual({ operation: GATEWAY_OP.tasks });
   });
 
   it('gives a minimal client exactly one bounded gateway operation per primitive', () => {

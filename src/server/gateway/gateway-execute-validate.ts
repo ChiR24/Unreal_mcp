@@ -11,7 +11,10 @@
 // under-validated.
 
 import { isRecord } from '../../utils/validation/type-guards.js';
-import { EXECUTION_OPTION_KEYS } from '../../tools/catalog/capabilities/semantic/execution-options.js';
+import {
+  EXECUTION_OPTION_KEYS,
+  LIVE_STATE_REVISION_KEYS
+} from '../../tools/catalog/capabilities/semantic/execution-options.js';
 
 const SUPPORTED_SCHEMA_KEYWORDS = new Set([
   '$schema',
@@ -61,11 +64,15 @@ export type SchemaViolation = {
 };
 
 export type OptionViolation = {
-  readonly errorCode: 'UNSUPPORTED_OPTION' | 'INVALID_OPTIONS' | 'OUT_OF_RANGE';
+  readonly errorCode: 'UNSUPPORTED_OPTION' | 'INVALID_OPTIONS' | 'OUT_OF_RANGE' | 'UNSUPPORTED_PREVIEW';
   readonly message: string;
   readonly option?: string;
   readonly pointer?: string;
 };
+
+/** The accepted options that a dispatch path actually reads. `preview` is not one. */
+export const HONORED_EXECUTION_OPTION_KEYS: readonly string[] =
+  EXECUTION_OPTION_KEYS.filter((key) => key !== 'preview');
 
 function typeMatches(value: unknown, declared: string): boolean {
   switch (declared) {
@@ -288,10 +295,82 @@ export function validateExecutionOptions(raw: unknown): OptionViolation | undefi
     };
   }
 
+  return validateExpectedRevisions(raw.expectedRevisions);
+}
+
+/**
+ * Shape-check the Task 42 live-state pins. Mirrors McpParseExpectedRevisions in
+ * the plugin exactly, so both transports refuse the same input with the same
+ * code. The revision COMPARISON is deliberately not done here: it belongs on the
+ * game thread immediately before mutation, where the value cannot be stale yet.
+ */
+function validateExpectedRevisions(raw: unknown): OptionViolation | undefined {
+  if (raw === undefined) return undefined;
+  if (!isRecord(raw)) {
+    return {
+      errorCode: 'INVALID_OPTIONS',
+      pointer: '/options/expectedRevisions',
+      message: 'options.expectedRevisions must be an object of state revisions.'
+    };
+  }
+
+  const pinnable: readonly string[] = LIVE_STATE_REVISION_KEYS;
+  for (const [key, value] of Object.entries(raw)) {
+    if (!pinnable.includes(key)) {
+      return {
+        errorCode: 'UNSUPPORTED_OPTION',
+        option: `expectedRevisions.${key}`,
+        message: `Unsupported expected revision '${key}'. Supported: [${pinnable.join(', ')}]`
+      };
+    }
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+      return {
+        errorCode: 'OUT_OF_RANGE',
+        option: `expectedRevisions.${key}`,
+        message: `options.expectedRevisions.${key} must be an integer >= 1`
+      };
+    }
+  }
+
   return undefined;
 }
 
 /** A gateway control smuggled into action params is refused, never forwarded. */
 export function findControlKeyInParams(params: Record<string, unknown>): string | undefined {
   return EXECUTION_OPTION_KEYS.find((control) => hasOwn(params, control));
+}
+
+/**
+ * The single refusal text both transports emit, so a client sees the same
+ * sentence whether it reached the gateway over stdio or native `/mcp`. The
+ * native mirror interpolates the capability id through FString::Printf with the
+ * identical wording (asserted by the Task 43 transport-equivalence suite).
+ */
+export function unsupportedPreviewMessage(capabilityId: string): string {
+  return `Capability '${capabilityId}' does not implement options.preview. `
+    + 'No dispatch path performs a dry run, so preview:true would perform the real operation. '
+    + 'Re-send without options.preview to execute for real.';
+}
+
+/**
+ * `preview: true` is refused for every capability, before dispatch.
+ *
+ * No dispatch path reads the option, so there is no dry run to perform: honoring
+ * the request would apply the real, irreversible mutation and then report it as
+ * a preview. `behavior.supportsPreview` is deliberately NOT consulted — 124
+ * records declare it and 10 of those are destructive, yet not one declaration is
+ * backed by an implementation, so trusting it would leave the fake dry run in
+ * place for exactly the most dangerous capabilities.
+ */
+export function checkPreviewSupport(
+  rawOptions: unknown,
+  capabilityId: string
+): OptionViolation | undefined {
+  if (!isRecord(rawOptions) || rawOptions.preview !== true) return undefined;
+  return {
+    errorCode: 'UNSUPPORTED_PREVIEW',
+    option: 'preview',
+    pointer: '/options/preview',
+    message: unsupportedPreviewMessage(capabilityId)
+  };
 }

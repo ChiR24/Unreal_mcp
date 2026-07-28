@@ -13,6 +13,7 @@ import { unrealGatewayToolDefinition } from '../tools/catalog/unreal-gateway-def
 import { UnrealBridge } from '../unreal-bridge.js';
 import { canonicalizeMcpRequestId } from '../automation/request-context.js';
 import { responseValidator } from '../utils/responses/response-validator.js';
+import { BoundedTaskStore } from './mcp-primitives/bounded-task-store.js';
 import { wirePrimitives } from './mcp-primitives/primitive-wiring.js';
 
 const require = createRequire(import.meta.url);
@@ -127,6 +128,14 @@ export function createServer() {
   // if any advertised capability lacks its handler. The single stable tool never
   // changes membership, so no *_list_changed member is declared. This shape
   // mirrors ADVERTISED_SESSION_CAPABILITIES and is kept an inline literal.
+  //
+  // Task 44 adds `tasks`, and it is advertised ONLY because `taskStore` below
+  // makes it real: supplying the store is what makes the SDK register the four
+  // tasks/* handlers, and wirePrimitives then refuses to construct if any of
+  // them is missing. The two must move together — the SDK checks neither
+  // direction, so a store without the advert silently answers methods the
+  // handshake denies, and an advert without the store answers -32601.
+  const taskStore = new BoundedTaskStore();
   const server = new Server(
     {
       name: SERVER_NAME,
@@ -138,7 +147,9 @@ export function createServer() {
         resources: { subscribe: true },
         prompts: {},
         completions: {},
+        tasks: { list: {}, cancel: {}, requests: { tools: { call: {} } } },
       },
+      taskStore,
     },
   );
 
@@ -182,6 +193,15 @@ export function createServer() {
     automationBridge.cancelMcpRequest(requestId, 'Client cancelled request');
   });
 
+  // Shutdown drain, chained so the close handlers wirePrimitives and the tool
+  // registry already installed still run. Retained task results are session
+  // state; a closed server must not keep holding them.
+  const previousOnClose = server.onclose;
+  server.onclose = (): void => {
+    taskStore.clear();
+    previousOnClose?.();
+  };
+
   return {
     server,
     bridge,
@@ -189,5 +209,6 @@ export function createServer() {
     healthMonitor,
     metricsServer,
     wiredPrimitives,
+    taskStore,
   };
 }

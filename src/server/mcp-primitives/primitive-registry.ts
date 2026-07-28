@@ -5,6 +5,12 @@
 // tasks/* — but has NO case for resources/subscribe or resources/unsubscribe. So
 // a server may advertise resources.subscribe:true, register no subscribe handler,
 // connect happily, and only fail at RUNTIME with -32601 when a client subscribes.
+// Tasks has the INVERSE hole and it is just as load-bearing: that same guard
+// early-returns while `_capabilities` is still unset, which is exactly when the
+// Protocol constructor auto-registers tasks/* for a supplied `taskStore`. So a
+// server handed a task store but no `tasks` capability answers tasks/* for real
+// while its initialize says Tasks is unsupported. Neither direction is caught by
+// the SDK; both are caught here.
 // This module closes that gap: it derives the advertised capability surface from
 // the actual handler table and refuses to construct — BEFORE connect — when an
 // advertised capability lacks its backing handler(s). It carries NO transport
@@ -20,6 +26,10 @@ const RESOURCES_READ_METHODS = ['resources/list', 'resources/templates/list', 'r
 const RESOURCES_SUBSCRIBE_METHODS = ['resources/subscribe', 'resources/unsubscribe'] as const;
 const PROMPTS_METHODS = ['prompts/list', 'prompts/get'] as const;
 const COMPLETIONS_METHODS = ['completion/complete'] as const;
+// Task 44: the four MCP Tasks methods. The SDK's Protocol constructor registers
+// all four together the moment a `taskStore` is supplied, so the group is
+// all-or-nothing by construction — there is no partial Tasks surface to advertise.
+const TASKS_METHODS = ['tasks/get', 'tasks/list', 'tasks/cancel', 'tasks/result'] as const;
 
 // The capability surface the implemented session profile advertises — the
 // independent oracle the fail-closed validator checks the handler table against.
@@ -31,6 +41,7 @@ export const ADVERTISED_SESSION_CAPABILITIES: ServerCapabilities = {
   resources: { subscribe: true },
   prompts: {},
   completions: {},
+  tasks: { list: {}, cancel: {}, requests: { tools: { call: {} } } },
 };
 
 /** A registered primitive handler; the registry only checks presence, never shape. */
@@ -75,7 +86,7 @@ function hasAll(handlers: ReadonlyMap<string, unknown>, methods: readonly string
 /**
  * Derive the EXACT advertised capability surface a handler table backs. A
  * complete table derives exactly `{ tools, resources.subscribe, prompts,
- * completions }` and nothing else — never tasks, logging, or any listChanged
+ * completions, tasks }` and nothing else — never logging, never any listChanged
  * member. A partial table only advertises the capabilities it fully backs.
  */
 export function deriveAdvertisedCapabilities(handlers: ReadonlyMap<string, unknown>): ServerCapabilities {
@@ -91,6 +102,14 @@ export function deriveAdvertisedCapabilities(handlers: ReadonlyMap<string, unkno
   }
   if (hasAll(handlers, COMPLETIONS_METHODS)) {
     capabilities.completions = {};
+  }
+  if (hasAll(handlers, TASKS_METHODS)) {
+    // `requests.tools.call` claims a tools/call MAY be task-augmented, so it is
+    // derived from the tools/call handler being present rather than asserted:
+    // a Tasks surface with no tool to run must not claim it.
+    capabilities.tasks = hasAll(handlers, TOOLS_METHODS)
+      ? { list: {}, cancel: {}, requests: { tools: { call: {} } } }
+      : { list: {}, cancel: {} };
   }
   return capabilities;
 }
@@ -117,6 +136,12 @@ function requiredMethods(capabilities: ServerCapabilities): ReadonlyArray<{ capa
   }
   if (capabilities.completions !== undefined) {
     push('completions', COMPLETIONS_METHODS);
+  }
+  if (capabilities.tasks !== undefined) {
+    push('tasks', TASKS_METHODS);
+    if (capabilities.tasks.requests?.tools?.call !== undefined) {
+      push('tasks', TOOLS_METHODS);
+    }
   }
   return required;
 }
