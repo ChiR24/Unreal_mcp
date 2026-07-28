@@ -2,6 +2,23 @@ name: CI
 permissions:
   contents: read
 
+# Hosted CI never requires Unreal. Every deterministic gate below runs on a
+# stock GitHub runner with no engine, no editor and no plugin build.
+#
+# Unreal-dependent work is opt-in, switched on by repository VARIABLES (never
+# by secrets -- a secret in an `if:` is readable in this file and does not
+# function as a gate):
+#
+#   vars.UNREAL_ENGINE_ROOT     switches on `package-plugin` (RunUAT BuildPlugin)
+#   vars.UNREAL_LIVE_TESTS      switches on `live-matrix` (integration vs a live editor)
+#   vars.UNREAL_RUNNER_LABEL    the self-hosted runner label that owns an engine
+#   secrets.UNREAL_ENGINE_ROOT  the engine path itself, supplied via env only
+#
+# `unreal-optional-status` always runs and states, in the job summary, whether
+# each optional job was skipped and why. A silently skipped job is
+# indistinguishable from a job that passed, so the skip is announced rather
+# than left as a grey badge.
+
 on:
   push:
     branches: [ main ]
@@ -16,7 +33,7 @@ jobs:
   lint:
     name: Lint (TS)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,16 +58,91 @@ jobs:
       - name: Run unit tests
         run: npm run test:unit
 
+      # -------------------------------------------------------------------
+      # Deterministic gates. Everything below runs without Unreal and is
+      # ordered after the lint/type/unit sequence above.
+      # -------------------------------------------------------------------
+
+      # The canonical capability records generate the TypeScript facades, the
+      # routing index and the native C++ shards. Nothing else in CI notices
+      # when a generated artifact stops matching its records, so a stale
+      # generate would reach consumers as a build that compiles and lies.
+      - name: Canonical registry generation drift
+        run: npm run registry:check
+
+      - name: Normalization inventory drift
+        run: npm run normalization:check
+
       - name: Verify gateway manifest is in sync
         run: npm run manifest:check
+
+      - name: Console command policy drift
+        run: npm run policy:check
 
       - name: Parameter combination audit (native parity + strict parameter audit)
         run: |
           echo "test:params first runs the native MCP parity audit (npm run test:native-parity), then the strict parameter audit"
           npm run test:params
 
+      - name: Migration gate
+        run: npm run migration:check
+
+      - name: Primitive and runtime parity gate
+        run: npm run primitives:check
+
+      - name: Security gate
+        run: npm run security:check
+
+      # Budget breaches must fail rather than be reported. These live behind a
+      # separate Vitest config, so `npm run test:unit` never reaches them and
+      # they were previously ungated.
+      - name: Evaluation budget gate
+        run: npm run eval:check
+
+      - name: Version consistency
+        run: npm run version:check
+
+      - name: Workflow contract gate
+        run: npm run workflow:check
+
       - name: Dependency audit
         run: npm audit --audit-level=moderate
+
+  unreal-optional-status:
+    name: Unreal optional jobs (status)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Deliberately unconditional. This job is the reader-visible record of
+    # whether the Unreal jobs ran, so it must not itself be skippable.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '20'
+
+      # Announce mode checks configuration only. It cannot stat a self-hosted
+      # engine path from a hosted runner, so filesystem validation is left to
+      # the preflight step inside each opt-in job, which runs on the machine
+      # that actually owns the engine.
+      - name: Report package-plugin gate
+        env:
+          UNREAL_GATE_JOB: package-plugin
+          UNREAL_GATE_KIND: package
+          UNREAL_GATE_ENABLED: ${{ vars.UNREAL_ENGINE_ROOT }}
+          UNREAL_ENGINE_ROOT: ${{ secrets.UNREAL_ENGINE_ROOT }}
+        run: node scripts/ci/unreal-job-gate.mjs --mode=announce
+
+      - name: Report live-matrix gate
+        env:
+          UNREAL_GATE_JOB: live-matrix
+          UNREAL_GATE_KIND: live
+          UNREAL_GATE_ENABLED: ${{ vars.UNREAL_LIVE_TESTS }}
+          UNREAL_GATE_RUNNER_LABEL: ${{ vars.UNREAL_RUNNER_LABEL }}
+          UNREAL_ENGINE_ROOT: ${{ secrets.UNREAL_ENGINE_ROOT }}
+        run: node scripts/ci/unreal-job-gate.mjs --mode=announce
 
   package-plugin:
     name: Package Plugin (opt-in, requires UE source root)
@@ -65,6 +157,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      # Runs before any real work. Once the job is switched on, a bad engine
+      # root has to be red -- degrading into a skip here would produce the
+      # green check that means "we never ran it".
+      - name: Preflight the Unreal gate
+        env:
+          UNREAL_GATE_JOB: package-plugin
+          UNREAL_GATE_KIND: package
+          UNREAL_GATE_ENABLED: ${{ vars.UNREAL_ENGINE_ROOT }}
+          UNREAL_ENGINE_ROOT: ${{ secrets.UNREAL_ENGINE_ROOT }}
+        run: node scripts/ci/unreal-job-gate.mjs --mode=preflight
+
       - name: Setup Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
@@ -78,6 +181,46 @@ jobs:
         env:
           UNREAL_ENGINE_ROOT: ${{ secrets.UNREAL_ENGINE_ROOT }}
         run: ./scripts/package-plugin.sh "$UNREAL_ENGINE_ROOT" build/plugin-package
+
+  live-matrix:
+    name: Live Unreal integration (opt-in, requires owned runner + editor)
+    # The label is supplied by the repository owner rather than hardcoded here.
+    # When live tests are switched on without one, the job lands on a hosted
+    # runner and the preflight below fails loudly instead of skipping.
+    runs-on: ${{ vars.UNREAL_RUNNER_LABEL || 'ubuntu-latest' }}
+    timeout-minutes: 90
+    needs: lint
+    if: ${{ vars.UNREAL_LIVE_TESTS != '' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Preflight the Unreal gate
+        env:
+          UNREAL_GATE_JOB: live-matrix
+          UNREAL_GATE_KIND: live
+          UNREAL_GATE_ENABLED: ${{ vars.UNREAL_LIVE_TESTS }}
+          UNREAL_GATE_RUNNER_LABEL: ${{ vars.UNREAL_RUNNER_LABEL }}
+          UNREAL_ENGINE_ROOT: ${{ secrets.UNREAL_ENGINE_ROOT }}
+        run: node scripts/ci/unreal-job-gate.mjs --mode=preflight
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript server
+        run: npm run build
+
+      - name: Run the Unreal-dependent integration suite
+        env:
+          UNREAL_ENGINE_ROOT: ${{ secrets.UNREAL_ENGINE_ROOT }}
+          UE_PROJECT_PATH: ${{ vars.UE_PROJECT_PATH }}
+        run: npm test
 
   test-matrix:
     name: Test Matrix (Node 20.19 / 26)

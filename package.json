@@ -48,7 +48,12 @@
     "normalization:audit": "node --loader ts-node/esm scripts/audit-normalization-inventory.mjs",
     "version:check": "vitest run tests/unit/version-consistency.test.ts",
     "policy:generate": "node --loader ts-node/esm scripts/generate-console-command-policy.ts",
-    "policy:check": "node --loader ts-node/esm scripts/generate-console-command-policy.ts --check"
+    "policy:check": "node --loader ts-node/esm scripts/generate-console-command-policy.ts --check",
+    "migration:check": "vitest run tests/unit/migration tests/unit/task-38/profiles-fallback-migration-parity.test.ts tests/unit/docs/gateway-migration-doc-contract.test.ts",
+    "primitives:check": "vitest run tests/unit/task-38/resources-parity.test.ts tests/unit/task-38/prompts-completions-parity.test.ts tests/unit/task-38/session-subscription-parity.test.ts tests/unit/task-38/profiles-fallback-parity.test.ts tests/unit/task-38/parity-harness-selftest.test.ts tests/unit/server/task-37-primitive-startup.test.ts",
+    "security:check": "vitest run tests/unit/security tests/unit/task-51",
+    "eval:check": "vitest run --config tests/eval/vitest.eval.config.ts",
+    "workflow:check": "vitest run tests/unit/workflow_ tests/unit/release-archive-excludes.test.ts"
   },
   "engines": {
     "node": ">=20.19.0"
