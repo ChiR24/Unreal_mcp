@@ -1,10 +1,11 @@
 import type { AutomationBridgeStatus } from '../../automation/index.js';
 import type { BridgeAuthority } from '../../automation/message-schema.js';
 import type { AutomationErrorDetail } from '../automation/automation-responses.js';
+import type { ExpectedRevisions } from '../../tools/catalog/capabilities/semantic/execution-options.js';
 
 export interface AutomationRequestBridge {
     isConnected(): boolean;
-    sendAutomationRequest(action: string, payload: Record<string, unknown>, options?: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' } }): Promise<unknown>;
+    sendAutomationRequest(action: string, payload: Record<string, unknown>, options?: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' }; expectedRevisions?: ExpectedRevisions }): Promise<unknown>;
     getAuthority?(): BridgeAuthority | undefined;
     isCapabilityTokenConfigured?(): boolean;
 }
@@ -28,6 +29,8 @@ export interface StandardActionResponse<T = unknown> {
 
 export interface IAssetResources {
     list(directory?: string, recursive?: boolean, limit?: number): Promise<Record<string, unknown>>;
+    /** Optional: read-only callers and test doubles do not implement it. */
+    invalidateAssetPaths?(paths: string[]): void;
 }
 
 export interface ITools {

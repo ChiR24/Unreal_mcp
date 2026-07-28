@@ -7,6 +7,8 @@ import { EditorStateResources, type EditorStateSource } from './editor-state-res
 import { KnowledgeResources, type AssetLookupSource } from './knowledge-resources.js';
 import { ResourceReadRouter } from './resource-read-router.js';
 
+const LIVE_REVISIONS = { selection: 2, level: 3, assetRegistry: 4, package: 5 } as const;
+
 const MANIFEST: GatewayManifest = {
   version: 3,
   source: 'test',
@@ -22,6 +24,7 @@ function editorSource(overrides: Partial<EditorStateSource> = {}): EditorStateSo
     pieActive: async () => false,
     currentLevel: async () => ({ name: 'Main', path: '/Game/Maps/Main' }),
     selectedActors: async () => [{ name: 'Cube', path: '/Game/Cube' }],
+    liveRevisions: async () => LIVE_REVISIONS,
     ...overrides,
   };
 }
@@ -54,6 +57,7 @@ describe('resource-read-router', () => {
     const catalog = parse(await seam.read('ue://capability/catalog'));
     const project = parse(await seam.read('ue://project'));
     const editor = parse(await seam.read('ue://editor'));
+    const revisions = parse(await seam.read('ue://state/revisions'));
     const record = parse(await seam.read('ue://capability/manage_asset'));
     const knowledge = parse(await seam.read('ue://knowledge/5.7/paths'));
     const object = parse(await seam.read('ue://object/%2FGame%2FFoo'));
@@ -63,6 +67,8 @@ describe('resource-read-router', () => {
     expect(typeof catalog.revision).toBe('number');
     expect((project.data as { projectName: string }).projectName).toBe('MyGame');
     expect((editor.data as { pieActive: boolean }).pieActive).toBe(false);
+    expect(revisions.data).toEqual(LIVE_REVISIONS);
+    expect(revisions.revision).toBe(5);
     expect((record.data as { id: string }).id).toBe('manage_asset');
     expect((knowledge.data as { topic: string }).topic).toBe('paths');
     expect((object.data as { path: string }).path).toBe('/Game/Foo');

@@ -121,6 +121,43 @@ try {
 export { config };
 
 /**
+ * Floor for every derived capability timeout.
+ *
+ * A fixed 10s deadline was previously observed expiring while the editor was
+ * still cold-loading, so the bridge reported a dead connection for work that
+ * was actually progressing. No tier may sit at or below that number again --
+ * the cheapest read still has to survive a cold editor.
+ */
+export const MIN_CAPABILITY_TIMEOUT_MS = 15_000;
+
+/**
+ * Deterministic request budgets keyed by a capability's declared cost class
+ * (`cost.latency` x `cost.resources` in the capability records).
+ *
+ * These replace a single flat budget shared by a metadata read and a full asset
+ * import. One number cannot be right for both: it is simultaneously too short
+ * for the import and far too long for the read, which is exactly how a caller
+ * ends up waiting minutes to be told the bridge is gone.
+ *
+ * The table is monotonically increasing along BOTH axes, so a capability that
+ * declares itself more expensive can never be handed a smaller budget than a
+ * cheaper one. Values are static data, not measurements, so the tier a given
+ * capability resolves to is reproducible without a clock.
+ */
+export const CAPABILITY_TIMEOUT_TIER_MS = Object.freeze({
+  instant: Object.freeze({ low: 15_000, medium: 30_000, high: 60_000 }),
+  interactive: Object.freeze({ low: 60_000, medium: 120_000, high: 240_000 }),
+  'long-running': Object.freeze({ low: 300_000, medium: 600_000, high: 1_200_000 })
+});
+
+/**
+ * Budget for a capability whose cost class cannot be resolved (an action that
+ * is not in the canonical records). It matches the historical flat default, so
+ * an unmapped action keeps exactly the behaviour it had before tiers existed.
+ */
+export const UNKNOWN_CAPABILITY_TIMEOUT_MS = CAPABILITY_TIMEOUT_TIER_MS.interactive.medium;
+
+/**
  * Parse MCP_ADDITIONAL_PATH_PREFIXES into a validated prefix array.
  * Each prefix is normalized to start and end with /.
  * Traversal patterns in configured values are silently dropped.

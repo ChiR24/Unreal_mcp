@@ -3,6 +3,10 @@ import { McpRequestCancelledError } from './request-cancellation-error.js';
 import { ConnectionLifecycle } from './connection-lifecycle.js';
 import { RequestCorrelation } from './request-correlation.js';
 import { ConsentGrantSchema } from '../tools/catalog/capabilities/semantic/authorization.js';
+import {
+    ExpectedRevisionsSchema,
+    type ExpectedRevisions,
+} from '../tools/catalog/capabilities/semantic/execution-options.js';
 import type { Logger } from '../utils/logging/logger.js';
 import type { RequestTracker } from './request-tracker.js';
 import type {
@@ -12,7 +16,13 @@ import type {
     QueuedRequestItem
 } from './types.js';
 
-type AutomationRequestOptions = { timeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' } };
+type AutomationRequestOptions = {
+    timeoutMs?: number;
+    mcpRequestId?: string;
+    correlationId?: string;
+    consent?: { capability: string; acknowledge: 'explicit' | 'elevated' };
+    expectedRevisions?: ExpectedRevisions;
+};
 
 export interface AutomationRequestDispatcherDependencies {
     readonly enabled: boolean;
@@ -86,6 +96,11 @@ export class AutomationRequestDispatcher {
         return this.sendRequestInternal<T>(action, payload, options);
     }
 
+    /** The MCP requests awaiting an automation id, for progress fan-out. */
+    public mcpRequestIdsForAuto(autoId: string): string[] {
+        return this.correlation.mcpRequestIdsForAuto(autoId);
+    }
+
     public stop(reason: Error): void {
         this.connection.abort(reason);
         this.rejectQueuedRequests(reason);
@@ -143,7 +158,9 @@ export class AutomationRequestDispatcher {
         options: AutomationRequestOptions
     ): Promise<T> {
         const timeoutMs = options.timeoutMs ?? config.MCP_REQUEST_TIMEOUT_MS;
-        const coalesceKey = this.deps.requestTracker.createCoalesceKey(action, payload);
+        const coalesceKey = options.expectedRevisions === undefined
+            ? this.deps.requestTracker.createCoalesceKey(action, payload)
+            : undefined;
         if (coalesceKey) {
             const existing = this.deps.requestTracker.getCoalescedRequest(coalesceKey);
             const autoId = this.correlation.getAutoIdForCoalesceKey(coalesceKey);
@@ -167,6 +184,7 @@ export class AutomationRequestDispatcher {
         const envelope: AutomationBridgeMessage = { type: 'automation_request', requestId, action, payload };
         if (options.correlationId !== undefined) envelope.correlationId = options.correlationId;
         if (options.consent !== undefined) envelope.consent = options.consent;
+        if (options.expectedRevisions !== undefined) envelope.expectedRevisions = options.expectedRevisions;
         if (this.deps.send(envelope)) {
             this.deps.requestTracker.updateLastRequestSentAt();
             return this.createSubscriberPromise<T>(resultPromise, options.mcpRequestId, requestId);
@@ -243,5 +261,7 @@ function getQueuedOptions(options: Record<string, unknown>): AutomationRequestOp
     if (consent.success) {
         result.consent = { capability: consent.data.capability, acknowledge: consent.data.acknowledge };
     }
+    const expectedRevisions = ExpectedRevisionsSchema.safeParse(options.expectedRevisions);
+    if (expectedRevisions.success) result.expectedRevisions = expectedRevisions.data;
     return result;
 }

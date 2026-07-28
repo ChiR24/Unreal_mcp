@@ -49,6 +49,12 @@ export const NEW_RESOURCE_DEFINITIONS: readonly ResourceDefinition[] = [
     description: 'Bounded list of selected actor handles',
     mimeType: JSON_MIME,
   },
+  {
+    uri: 'ue://state/revisions',
+    name: 'Live State Revisions',
+    description: 'Current selection, level, asset-registry, and package revision counters',
+    mimeType: JSON_MIME,
+  },
 ];
 
 /** Read-only resource templates added by Task 31. */

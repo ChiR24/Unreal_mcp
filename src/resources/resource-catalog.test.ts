@@ -2,12 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { NEW_RESOURCE_DEFINITIONS, RESOURCE_TEMPLATES } from './resource-catalog.js';
 
 describe('resource-catalog', () => {
-  it('defines exactly the four new static resources', () => {
+  it('defines exactly the five new static resources', () => {
     // Given / When
     const uris = NEW_RESOURCE_DEFINITIONS.map((definition) => definition.uri);
 
     // Then
-    expect(uris).toEqual(['ue://capability/catalog', 'ue://project', 'ue://editor', 'ue://selection']);
+    expect(uris).toEqual([
+      'ue://capability/catalog',
+      'ue://project',
+      'ue://editor',
+      'ue://selection',
+      'ue://state/revisions',
+    ]);
     expect(new Set(uris).size).toBe(uris.length);
     for (const definition of NEW_RESOURCE_DEFINITIONS) {
       expect(definition.mimeType).toBe('application/json');

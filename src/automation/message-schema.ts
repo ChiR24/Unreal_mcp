@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LiveStateRevisionsSchema } from '../tools/catalog/capabilities/semantic/live-state-revisions.js';
 
 const stringArray = z.array(z.string());
 const nonNegativeInteger = z.number().int().min(0);
@@ -10,7 +11,8 @@ export const automationResponseSchema = z.looseObject({
     message: z.string().optional(),
     error: z.string().optional(),
     result: z.unknown().optional(),
-    action: z.string().optional()
+    action: z.string().optional(),
+    liveRevisions: LiveStateRevisionsSchema.optional()
 });
 
 export const automationEventSchema = z.looseObject({

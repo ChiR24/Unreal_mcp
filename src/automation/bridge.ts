@@ -10,12 +10,15 @@ import { AutomationLogger } from './log-redaction.js';
 import { readBridgeAuthority, type BridgeAuthority } from './message-schema.js';
 import { MessageHandler } from './message-handler.js';
 import { RequestTracker } from './request-tracker.js';
+import type { ExpectedRevisions } from '../tools/catalog/capabilities/semantic/execution-options.js';
 import type {
     AutomationBridgeEvents,
     AutomationBridgeMessage,
     AutomationBridgeOptions,
     AutomationBridgeResponseMessage,
-    AutomationBridgeStatus
+    AutomationBridgeStatus,
+    AutomationProgressListener,
+    AutomationProgressUpdate
 } from './types.js';
 
 export class AutomationBridge extends EventEmitter {
@@ -28,6 +31,8 @@ export class AutomationBridge extends EventEmitter {
     private readonly client: AutomationBridgeClient;
     private readonly requestDispatcher: AutomationRequestDispatcher;
     private readonly log = new AutomationLogger('AutomationBridge');
+    private progressListener: AutomationProgressListener | undefined;
+    private cancelledListener: ((mcpRequestId: string) => void) | undefined;
 
     constructor(options: AutomationBridgeOptions = {}) {
         super();
@@ -42,7 +47,8 @@ export class AutomationBridge extends EventEmitter {
         this.handshakeHandler = new HandshakeHandler(this.config.capabilityToken);
         this.messageHandler = new MessageHandler(
             this.requestTracker,
-            (event) => this.emitAutomation('automationEvent', event)
+            (event) => this.emitAutomation('automationEvent', event),
+            (autoId, update) => this.forwardAutomationProgress(autoId, update)
         );
         this.client = new AutomationBridgeClient({
             config: this.config,
@@ -105,6 +111,36 @@ export class AutomationBridge extends EventEmitter {
         this.client.startClient();
     }
 
+    /**
+     * Install the server-layer sink that turns resolved progress into MCP
+     * `notifications/progress`. The bridge deliberately does not own that
+     * translation: it knows automation ids, not client progress tokens.
+     */
+    setRequestProgressListener(listener: AutomationProgressListener | undefined): void {
+        this.progressListener = listener;
+    }
+
+    /** Fan-in point for progress already resolved to its owning MCP request. */
+    reportRequestProgress(mcpRequestId: string, update: AutomationProgressUpdate): void {
+        if (!mcpRequestId) return;
+        this.progressListener?.(mcpRequestId, update);
+    }
+
+    /**
+     * Observe requests the client has given up on. Both cancellation paths
+     * (SDK abort and `notifications/cancelled`) converge on cancelMcpRequest,
+     * so this is the one place that learns about every cancelled request.
+     */
+    setRequestCancelledListener(listener: ((mcpRequestId: string) => void) | undefined): void {
+        this.cancelledListener = listener;
+    }
+
+    private forwardAutomationProgress(autoId: string, update: AutomationProgressUpdate): void {
+        for (const mcpRequestId of this.requestDispatcher.mcpRequestIdsForAuto(autoId)) {
+            this.reportRequestProgress(mcpRequestId, update);
+        }
+    }
+
     stop(): void {
         if (this.isConnected()) {
             this.client.broadcast({
@@ -149,7 +185,7 @@ export class AutomationBridge extends EventEmitter {
     async sendAutomationRequest<T = AutomationBridgeResponseMessage>(
         action: string,
         payload: Record<string, unknown> = {},
-        options: { timeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' } } = {}
+        options: { timeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' }; expectedRevisions?: ExpectedRevisions } = {}
     ): Promise<T> {
         return this.requestDispatcher.sendAutomationRequest<T>(action, payload, options);
     }
@@ -161,6 +197,11 @@ export class AutomationBridge extends EventEmitter {
      */
     cancelMcpRequest(requestId: string, reason: string): void {
         this.requestDispatcher.cancelMcpRequest(requestId, reason);
+        // Advisory: queued work is dropped and the in-flight response is
+        // abandoned, but editor work already dispatched to Unreal runs to
+        // completion. The client has stopped listening either way, so its
+        // notification stream ends here.
+        if (requestId) this.cancelledListener?.(requestId);
     }
 
     send(payload: AutomationBridgeMessage): boolean {

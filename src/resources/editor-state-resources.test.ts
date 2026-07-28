@@ -10,6 +10,8 @@ import {
   type SelectionEntry,
 } from './editor-state-resources.js';
 
+const LIVE_REVISIONS = { selection: 2, level: 3, assetRegistry: 4, package: 5 } as const;
+
 function source(overrides: Partial<EditorStateSource> = {}): EditorStateSource {
   return {
     isAvailable: async () => true,
@@ -17,6 +19,7 @@ function source(overrides: Partial<EditorStateSource> = {}): EditorStateSource {
     pieActive: async () => false,
     currentLevel: async () => ({ name: 'Main', path: '/Game/Maps/Main' }),
     selectedActors: async () => [{ name: 'Cube', path: '/Game/Cube' }],
+    liveRevisions: async () => LIVE_REVISIONS,
     ...overrides,
   };
 }
@@ -99,5 +102,14 @@ describe('editor-state-resources', () => {
     expect(selection.data.totalCount).toBe(250);
     expect(selection.data.truncated).toBe(true);
     expect(selection.data.actors).toHaveLength(200);
+  });
+
+  it('reads the exact live revision snapshot and uses its maximum as the resource revision', async () => {
+    const resources = new EditorStateResources(source(), provider(), 'MyGame');
+
+    const revisions = await resources.readStateRevisions();
+
+    expect(revisions.revision).toBe(5);
+    expect(revisions.data).toEqual(LIVE_REVISIONS);
   });
 });

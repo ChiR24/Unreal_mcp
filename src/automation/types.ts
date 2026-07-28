@@ -1,4 +1,5 @@
 import { WebSocket } from 'ws';
+import type { LiveStateRevisions } from '../tools/catalog/capabilities/semantic/live-state-revisions.js';
 
 export interface AutomationBridgeOptions {
     host?: string | null;
@@ -59,6 +60,7 @@ export interface AutomationBridgeResponseMessage extends AutomationBridgeMessage
     message?: string;
     error?: string;
     result?: unknown;
+    liveRevisions?: LiveStateRevisions;
 }
 
 export type PendingRequestDetail = { requestId: string; action: string; ageMs: number };
@@ -123,6 +125,25 @@ export interface AutomationBridgeStatus {
     maxPendingRequests: number;
     heartbeatIntervalMs: number;
 }
+
+/**
+ * One progress observation forwarded from Unreal toward the MCP client.
+ *
+ * Structurally identical to the server-side progress primitive's update shape,
+ * declared here so the automation layer never has to import upward from the
+ * server layer to describe its own outbound signal.
+ */
+export interface AutomationProgressUpdate {
+    readonly progress: number;
+    readonly total?: number;
+    readonly message?: string;
+}
+
+/** Receives progress already resolved to the MCP request that owns it. */
+export type AutomationProgressListener = (
+    mcpRequestId: string,
+    update: AutomationProgressUpdate
+) => void;
 
 export interface PendingRequest {
     resolve: (value: AutomationBridgeResponseMessage) => void;

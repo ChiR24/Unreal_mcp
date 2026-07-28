@@ -10,7 +10,15 @@
 import type { AutomationRequestBridge } from '../types/tools/tool-interfaces.js';
 import { coerceString } from '../utils/responses/result-helpers.js';
 import { isRecord } from '../utils/validation/type-guards.js';
-import type { RevisionProvider, RevisionedResource } from '../server/mcp-primitives/resource-revision.js';
+import {
+  asResourceRevision,
+  type RevisionProvider,
+  type RevisionedResource,
+} from '../server/mcp-primitives/resource-revision.js';
+import {
+  LiveStateRevisionsSchema,
+  type LiveStateRevisions,
+} from '../tools/catalog/capabilities/semantic/live-state-revisions.js';
 import { RESOURCE_ERROR_CODES, ResourceError } from './resource-errors.js';
 
 const MAX_SELECTION = 200;
@@ -51,6 +59,7 @@ export interface EditorStateSource {
   pieActive(): Promise<boolean>;
   currentLevel(): Promise<{ name: string; path: string }>;
   selectedActors(): Promise<readonly SelectionEntry[]>;
+  liveRevisions(): Promise<LiveStateRevisions | undefined>;
 }
 
 export class EditorStateResources {
@@ -92,6 +101,22 @@ export class EditorStateResources {
       uri,
       revision: this.revisions.currentRevision('ue://selection'),
       data: { count: capped.length, totalCount: all.length, truncated: all.length > capped.length, actors: capped },
+    };
+  }
+
+  async readStateRevisions(): Promise<RevisionedResource<LiveStateRevisions>> {
+    const uri = 'ue://state/revisions';
+    if (!(await this.source.isAvailable())) {
+      throw new ResourceError(RESOURCE_ERROR_CODES.UNAVAILABLE, uri, 'Live revisions require a connected Unreal Editor');
+    }
+    const data = await this.source.liveRevisions();
+    if (data === undefined) {
+      throw new ResourceError(RESOURCE_ERROR_CODES.UNAVAILABLE, uri, 'The connected Unreal bridge did not report live revisions');
+    }
+    return {
+      uri,
+      revision: asResourceRevision(Math.max(data.selection, data.level, data.assetRegistry, data.package)),
+      data,
     };
   }
 }
@@ -152,6 +177,12 @@ export class BridgeEditorStateSource implements EditorStateSource {
       });
     }
     return entries;
+  }
+
+  async liveRevisions(): Promise<LiveStateRevisions | undefined> {
+    const response = await this.request('inspect', { action: 'pie_report' });
+    const parsed = LiveStateRevisionsSchema.safeParse(response?.liveRevisions);
+    return parsed.success ? parsed.data : undefined;
   }
 
   private async request(action: string, payload: Record<string, unknown>): Promise<Record<string, unknown> | undefined> {

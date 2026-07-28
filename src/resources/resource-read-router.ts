@@ -53,6 +53,8 @@ export class ResourceReadRouter implements ExtendedResourceReader {
         return this.editorState.readEditor();
       case 'ue://selection':
         return this.editorState.readSelection();
+      case 'ue://state/revisions':
+        return this.editorState.readStateRevisions();
       default:
         break;
     }

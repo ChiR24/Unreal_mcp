@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { automationMessageSchema, cancelRequestSchema, readBridgeAuthority } from './message-schema.js';
 
+const LIVE_REVISIONS = {
+    selection: 2,
+    level: 3,
+    assetRegistry: 4,
+    package: 5
+} as const;
+
 describe('automationMessageSchema', () => {
     it('preserves unknown top-level bridge payload fields', () => {
         const message = {
@@ -37,6 +44,30 @@ describe('automationMessageSchema', () => {
         };
         expect(automationMessageSchema.parse(message)).toEqual(message);
         expect(cancelRequestSchema.parse(message)).toEqual(message);
+    });
+
+    it('parses the exact live revision snapshot on an automation response', () => {
+        const parsed = automationMessageSchema.parse({
+            type: 'automation_response',
+            requestId: 'revision-response',
+            success: true,
+            liveRevisions: LIVE_REVISIONS
+        });
+
+        expect(parsed.liveRevisions).toEqual(LIVE_REVISIONS);
+    });
+
+    it('rejects an incomplete or extended live revision snapshot', () => {
+        expect(automationMessageSchema.safeParse({
+            type: 'automation_response',
+            requestId: 'missing-package',
+            liveRevisions: { selection: 2, level: 3, assetRegistry: 4 }
+        }).success).toBe(false);
+        expect(automationMessageSchema.safeParse({
+            type: 'automation_response',
+            requestId: 'extra-key',
+            liveRevisions: { ...LIVE_REVISIONS, futureState: 6 }
+        }).success).toBe(false);
     });
 
     it('rejects a cancel_request frame with an empty requestId', () => {

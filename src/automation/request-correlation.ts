@@ -64,6 +64,26 @@ export class RequestCorrelation {
         return subscriberId;
     }
 
+    /**
+     * The MCP request ids currently subscribed to an automation request.
+     *
+     * A coalesced read is shared by several MCP requests, so progress observed
+     * for one automation id legitimately fans out to each subscriber — and to
+     * no one else, which is what keeps an unrelated request from ever seeing
+     * another request's progress. Deduplicated: a request that opened several
+     * subscribers for the same automation id is reported once.
+     */
+    public mcpRequestIdsForAuto(autoId: string): string[] {
+        const ids = this.byAuto.get(autoId);
+        if (!ids) return [];
+        const owners = new Set<string>();
+        for (const id of ids) {
+            const mcpRequestId = this.subscribers.get(id)?.mcpRequestId;
+            if (mcpRequestId) owners.add(mcpRequestId);
+        }
+        return [...owners];
+    }
+
     public noteCoalesceKey(coalesceKey: string, autoId: string): void {
         this.autoByCoalesceKey.set(coalesceKey, autoId);
         this.coalesceKeyByAuto.set(autoId, coalesceKey);
