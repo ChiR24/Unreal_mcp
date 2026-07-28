@@ -5,10 +5,13 @@ Direct plugin MCP implementation for Streamable HTTP/SSE at `/mcp`. This subtree
 ## STRUCTURE
 | Area | Responsibility |
 |------|----------------|
-| `DynamicTools/` | Enabled state, categories, protected tools, list-changed notification |
-| `Protocol/` | JSON-RPC parse/build helpers and MCP tool-result envelopes |
-| `Registry/` | Canonical-name gate, static definitions, cached schemas |
-| `Routing/` | Consolidated parent-tool action routing helpers |
+| `DynamicTools/` (5) | Enabled state, categories, protected tools, legacy list-changed notification |
+| `Execute/` (13) | Native execute pipeline: request parse, schema validation, receipts |
+| `Gateway/` (15) | Native gateway mirror of the TS engine: catalog, capability store, describe, search, guidance. `McpNativeGatewayManifest.h` here is GENERATED |
+| `Generated/` (24) | **ALL GENERATED** capability shards (`npm run registry:generate`). Never hand-edit |
+| `Protocol/` (2) | JSON-RPC parse/build helpers and MCP tool-result envelopes |
+| `Registry/` (5) | Canonical-name gate, static definitions, cached schemas |
+| `Routing/` (7) | Consolidated parent-tool action routing helpers |
 | `Tools/<Category>/` | (Historical per-tool `MCP_REGISTER_TOOL` classes were removed) Native MCP tool definitions are now generated into the native registry from the canonical records; the registry reads canonical name/description/category/schema/dispatch metadata |
 | `Transport/` | Bind/listen, HTTP parsing, sessions, SSE, pending requests, shutdown |
 
@@ -38,7 +41,7 @@ manage_ai, manage_inventory, manage_interaction, manage_networking, manage_level
 ## DYNAMIC TOOLS
 - Startup enables all accepted tools when `bLoadAllToolsOnStart` is true; otherwise it enables the `core` category.
 - `manage_tools` and `inspect` are protected tools. The `core` category cannot be disabled.
-- `DynamicTools` owns the tool visibility state and the legacy `notifications/tools/list_changed` behavior. State changes emit `notifications/tools/list_changed` in legacy mode (23-tool direct listing) only; preserve locking around tool/category state and cached registry schemas. In gateway mode (`bEnableNativeGateway`, default `true`) the public `tools/list` is a single static `unreal` tool and visibility does not change its shape, so `OnToolsListChanged()` returns early and the notification is suppressed. Task 30 owns removing the legacy public listing; do not document or implement that cutover early.
+- `DynamicTools` owns the internal tool visibility state (enabled tools/categories) consumed by `unreal.execute`. The public `tools/list` is permanently a single static `unreal` tool, so visibility never changes its shape: `OnToolsListChanged()` returns early and `notifications/tools/list_changed` is suppressed. Preserve locking around tool/category state and cached registry schemas. The `bEnableNativeGateway` setting and the legacy 23-tool direct listing were removed in the Task 30 cutover.
 
 ## TRANSPORT LIFECYCLE
 - `POST /mcp` handles JSON-RPC; `GET /mcp` opens the persistent notification SSE stream; `DELETE /mcp` terminates a session and its streams.
@@ -64,7 +67,7 @@ The native transport supports **exactly the three modern MCP versions**:
 - **Asymmetry with the TS SDK**: the TypeScript stdio server negotiates through the MCP SDK's `SUPPORTED_PROTOCOL_VERSIONS`, which also accepts two older legacy versions (`2024-11-05` and `2024-10-07`). The native `/mcp` transport is intentionally stricter (modern versions only), so a client pinned to a legacy version will negotiate with the TS surface but not the native surface.
 
 ## GATEWAY DISCOVERY
-When gateway mode is on (`bEnableNativeGateway`, default `true`), the native surface exposes the single `unreal` tool and mirrors the TypeScript gateway's progressive discovery. `describe` drills down in three levels and never dumps a full `inputSchema`:
+The native surface permanently exposes the single `unreal` tool and mirrors the TypeScript gateway's progressive discovery. `describe` drills down in three levels and never dumps a full `inputSchema`:
 1. `describe { tool }` -> tool summary + paginated/filterable action list.
 2. `describe { tool, action }` -> paginated/filterable parameter catalog (the **tool-union**, not action-specific).
 3. `describe { tool, action, param }` -> exactly one parameter's full schema.

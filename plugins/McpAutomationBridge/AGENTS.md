@@ -8,12 +8,12 @@ Editor-only UE 5.0-5.8 Preview plugin. It owns the WebSocket automation bridge a
 | Manifest/config/docs | plugin root | `.uplugin`, `Config/`, plugin `README.md` and `CHANGELOG.md` |
 | Module dependencies | `Source/McpAutomationBridge/McpAutomationBridge.Build.cs` | Preserve UE-version probes and optional-module detection |
 | Public API/settings | `Source/McpAutomationBridge/Public/` | Subsystem contract, settings, connection manager API |
-| Core lifecycle/routing | `Private/Core/` | Queue, game-thread dispatch, registration shards, settings, responses |
-| Automation domains | `Private/Domains/` | Domain handlers grouped by responsibility |
-| Shared helpers | `Private/Foundation/` | Reflection, Blueprint, path, response, and handler primitives |
-| Native MCP | `Private/MCP/` | Read its nested `AGENTS.md`; separate registry/session/transport lifecycle |
-| Hazardous UE operations | `Private/Safety/` | Save/load/delete/material wrappers and verification |
-| WebSocket transport | `Private/Transport/` | Connection auth, sockets, framing, TLS, rate limits, telemetry |
+| Core lifecycle/routing | `Private/Core/` (30) | Queue, game-thread dispatch, registration shards, settings, responses — **nested `AGENTS.md`** |
+| Automation domains | `Private/Domains/` (1097 / 66 domains) | Domain handlers grouped by responsibility — **nested `AGENTS.md`** |
+| Shared helpers | `Private/Foundation/` (55) | Reflection, Blueprint, path, response, handler primitives — **nested `AGENTS.md`** |
+| Native MCP | `Private/MCP/` (114) | **Nested `AGENTS.md`**; separate registry/session/transport lifecycle |
+| Hazardous UE operations | `Private/Safety/` (18) | Save/load/delete/material wrappers and verification — **nested `AGENTS.md`** |
+| WebSocket transport | `Private/Transport/` (21) | Connection auth, sockets, framing, TLS, rate limits, telemetry — **nested `AGENTS.md`** |
 | Status UI | `Private/UI/` | Keep Slate presentation thin; do not move transport work here |
 
 ## CROSS-SURFACE RULES
@@ -34,7 +34,7 @@ Editor-only UE 5.0-5.8 Preview plugin. It owns the WebSocket automation bridge a
 - **Fail-closed LAN coupling**: the native `/mcp` transport refuses to bind non-loopback unless `bRequireCapabilityToken` is also enabled, so a LAN-exposed surface can never start without auth. The plugin's non-loopback setting governs both server-side listeners it owns (WebSocket bridge listen socket and native MCP HTTP/SSE transport).
 - `bRequireCapabilityToken` protects both transports. WebSocket uses the bridge hello token; native MCP uses `X-MCP-Capability-Token`.
 - **Constant-time token checks**: both transports compare capability tokens with `McpConstantTimeTokenEquals` (`Private/Foundation/McpSecureTokenCompare.h`), XOR-accumulating over the full UTF-8 byte span with no data-dependent early exit, so timing never leaks how much of a token matched.
-- **Session-scoped bounded cancellation**: native `notifications/cancelled` correlates only to the caller's in-flight request (scoped by session id and client JSON-RPC id key), and the cancel-marker maps are capped with oldest-first eviction; a late response for a cancelled request is suppressed. See the nested MCP `AGENTS.md` for lifecycle detail.
+- **Session-scoped bounded cancellation (advisory for in-flight)**: native `notifications/cancelled` correlates only to the caller's in-flight request (scoped by session id and client JSON-RPC id key), and the cancel-marker maps are capped with oldest-first eviction. Cancellation drops queued requests before they run and suppresses the late response for an in-flight request, but it cannot interrupt an already-executing editor operation — the work runs to completion. See the nested MCP `AGENTS.md` for lifecycle detail.
 - TLS settings belong to the WebSocket transport. Preserve certificate/key validation, rate limits, heartbeat handling, and response sanitization.
 
 ## PACKAGING

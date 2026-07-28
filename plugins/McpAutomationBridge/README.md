@@ -30,7 +30,7 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 - **Unreal Engine**: 5.0 - 5.8 source-compatibility target. The current
   complete live acceptance record covers UE 5.7.4 only.
 - **Platforms**: Win64, Mac, Linux
-- **Node.js**: 18+ (only for TypeScript bridge transport — not needed for Native MCP)
+- **Node.js**: 20.19.0+ (only for TypeScript bridge transport — not needed for Native MCP)
 
 ---
 
@@ -133,11 +133,11 @@ claude mcp add unreal-engine --transport http http://localhost:3000/mcp
 }
 ```
 
-### Native Gateway & Protocol (default on)
+### Native Gateway & Protocol
 
-The native MCP transport exposes a single `unreal` gateway tool by default. Disable **Enable Native Gateway** (Edit → Project Settings → Plugins → MCP Automation Bridge) to restore the legacy 23-tool listing on the native `/mcp` surface. This matches the TypeScript stdio opt-out (`MCP_GATEWAY_MODE=false`), so both transports behave consistently.
+The native MCP transport permanently exposes a single `unreal` gateway tool on the `/mcp` surface; there is no opt-out and no legacy 23-tool listing to restore. This matches the TypeScript stdio transport, so both transports behave consistently. A direct `tools/call` for a canonical tool name returns a bounded, executable `DIRECT_TOOL_CALL_REMOVED` migration receipt whose `nextCall` re-runs the request through `unreal` (`search` → `describe` → `execute`).
 
-The native transport negotiates the MCP protocol version at `initialize` and supports `2025-11-25`, `2025-06-18`, and `2025-03-26`, negotiating down to the highest mutually supported version (`2025-11-25` is the latest). After `initialize`, every request must carry a valid `MCP-Protocol-Version` header; an unsupported or missing header returns HTTP 400. Cancellation (`notifications/cancelled`) maps to the queued operation and late responses are suppressed; client `_meta.progressToken` values are echoed verbatim. See the server README [Gateway Protocol & Transport](https://github.com/ChiR24/Unreal_mcp#gateway-protocol--transport) and `docs/protocol.md` for the full contract.
+Supports MCP protocol versions `2025-11-25` (latest), `2025-06-18`, and `2025-03-26`, and deliberately excludes the later `2026-07-28` RC. The TypeScript bridge transport additionally accepts the legacy `2024-11-05` and `2024-10-07` versions. See [docs/protocol.md](docs/protocol.md) (or the server README [Gateway Protocol & Transport](https://github.com/ChiR24/Unreal_mcp#gateway-protocol--transport)) for the full negotiation and transport contract.
 
 > ⚠️ **Live-editor evidence is not claimed for this build.** The gateway, protocol negotiation, and packaging are verified through source-contract tests and the build, not against a running editor. Integration that requires a live Unreal Editor is not executed here.
 
@@ -224,7 +224,6 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 - **Native MCP Port**: HTTP port for native MCP transport (default: 3000; override at startup with the `MCP_NATIVE_PORT` environment variable)
 - **Listen Host**: Bind address (default: 127.0.0.1)
 - **Load All Tools on Start**: Load all 23 canonical tools at startup (default: on)
-- **Enable Native Gateway**: Expose the single `unreal` gateway tool instead of 23 tools on the native MCP surface (default: on). Disable this setting to restore the legacy 23-tool listing.
 - **Native MCP Instructions**: Custom instructions for AI clients
 - **Require Capability Token**: Enforce token authentication on WS and HTTP transports
 

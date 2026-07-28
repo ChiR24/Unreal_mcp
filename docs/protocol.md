@@ -10,7 +10,7 @@ tool is exposed on each. It is the source of truth for the contract tests in
 | Aspect | TypeScript stdio | Native MCP (`/mcp`) |
 |--------|-----------------|---------------------|
 | Path | `node dist/cli.js` → WebSocket bridge → C++ subsystem | Plugin Streamable HTTP/SSE, no Node.js |
-| Gateway control | `MCP_GATEWAY_MODE` env (set at server start) | `bEnableNativeGateway` project setting (needs editor restart) |
+| Public surface | Permanent single `unreal` gateway tool (no opt-out) | Permanent single `unreal` gateway tool (no opt-out) |
 | Capability token | `bridge_hello.capabilityToken` | `X-MCP-Capability-Token` header |
 | Requires | Node.js 20.19.0+, `unreal-engine-mcp-server` | UE 5.0–5.8, no Node.js |
 
@@ -23,19 +23,33 @@ the `MCP_AUTOMATION_ALLOW_NON_LOOPBACK` environment variable (paired with
 `MCP_AUTOMATION_HOST=0.0.0.0`) on the Node.js process. The two flags are
 independent: flipping one does not change the other surface's binding posture.
 
-## Gateway mode (default on)
+## Permanent single-tool surface
 
-Gateway mode is **on by default** on both transports:
+The single `unreal` gateway tool is **permanent on both transports**. There is
+no opt-out: the TypeScript `MCP_GATEWAY_MODE` env var and the native
+`bEnableNativeGateway` project setting have both been removed, and there is no
+legacy 23-tool direct listing to restore. The 23 canonical parent tools stay
+registered privately and are reachable only through `unreal.execute`.
+(`MCP_AUTOMATION_CLIENT_MODE` is unrelated: it selects WebSocket client vs
+server topology for the TypeScript bridge, not the public tool surface.)
 
-- TypeScript: `isGatewayMode()` returns `true` when `MCP_GATEWAY_MODE` is
-  undefined or empty. Set it to `false`, `0`, or `no` to restore the 23-tool
-  direct-listing (legacy) mode.
-- Native: `bEnableNativeGateway` defaults to `true`. Disabling it restores the
-  23-tool listing on the native surface.
+`tools/list` always returns only `{ "unreal" }`, and the listing never changes
+shape, so `notifications/tools/list_changed` is suppressed on both surfaces.
 
-When the gateway is on, `tools/list` returns only `{ "unreal" }`. A
-`tools/call` whose name is not `unreal` returns an `UNKNOWN_TOOL` error that
-directs the client to `search` / `describe` / `execute`.
+A `tools/call` whose name is not `unreal` is **not routed**. It returns a
+bounded, copy-paste-executable `DIRECT_TOOL_CALL_REMOVED` receipt instead of
+executing. The receipt carries a `nextCall` that drills exactly one level, never
+a full schema dump:
+
+- unknown tool name -> `{ "operation": "search" }`
+- known tool, no action supplied -> `{ "operation": "describe", "tool": "<tool>" }`
+- known tool with an action -> `{ "operation": "execute", "tool": "<tool>",
+  "action": "<action>", "params": { ... } }`
+
+Re-running the `nextCall` through the `unreal` tool completes the migration. The
+TypeScript receipt is built in `src/server/gateway/direct-call-migration.ts`; the
+native transport emits the same `DIRECT_TOOL_CALL_REMOVED` shape from
+`McpNativeTransportGateway.cpp`.
 
 ## Progressive gateway discovery
 

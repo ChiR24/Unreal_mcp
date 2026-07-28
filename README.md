@@ -331,11 +331,6 @@ ASSET_LIST_TTL_MS=10000
 # Custom content mount points (comma-separated)
 # Plugins with CanContainContent register mount points beyond /Game/.
 # MCP_ADDITIONAL_PATH_PREFIXES=/ProjectObject/,/ProjectAnimation/
-
-# Gateway mode (default: true)
-# MCP_GATEWAY_MODE=true exposes the single 'unreal' gateway tool.
-# Set to false to restore legacy 23-tool direct-listing mode.
-# MCP_GATEWAY_MODE=true
 ```
 
 ### LAN Access Configuration
@@ -399,22 +394,16 @@ Then:
 }
 ```
 
-### Opting Out (Legacy 23-Tool Mode)
+### Migration from direct tool calls
 
-To restore the legacy surface where all 23 tools are directly addressable, set `MCP_GATEWAY_MODE=false`:
-
-```env
-MCP_GATEWAY_MODE=false
-```
-
-This affects the TypeScript stdio transport only. The native MCP transport honours the **Enable Native Gateway** project setting in Unreal Editor (Edit > Project Settings > Plugins > MCP Automation Bridge).
+The single `unreal` gateway is permanent on both transports; there is no opt-out and no legacy 23-tool listing to restore. A client that still calls a canonical tool name directly (`tools/call` with `name: "manage_asset"`, `name: "control_actor"`, etc.) receives a bounded, copy-paste-executable `DIRECT_TOOL_CALL_REMOVED` receipt instead of a routed call. The receipt carries a `nextCall` that drills exactly one level: `{ "operation": "search" }` for an unknown name, `{ "operation": "describe", "tool": "<tool>" }` when no action was supplied, or `{ "operation": "execute", "tool": "<tool>", "action": "<action>", "params": { ... } }` when the direct call already named an action. Run that `nextCall` through the `unreal` tool to finish the migration.
 
 ### Gateway Protocol & Transport
 
 Both transports expose the same `unreal` gateway contract, but they are separate lifecycles. Do not route around their boundaries.
 
-- **TypeScript stdio transport** — `node dist/cli.js` talks to the Unreal plugin over a WebSocket bridge. Gateway mode is controlled by the `MCP_GATEWAY_MODE` environment variable (process-level, set at server start).
-- **Native MCP transport** — the plugin's built-in Streamable HTTP/SSE server at `/mcp` (no Node.js, no bridge). Gateway mode is controlled by the **Enable Native Gateway** project setting; toggling it requires an editor restart.
+- **TypeScript stdio transport** — `node dist/cli.js` talks to the Unreal plugin over a WebSocket bridge. It permanently exposes the single `unreal` gateway tool; there is no gateway-mode toggle.
+- **Native MCP transport** — the plugin's built-in Streamable HTTP/SSE server at `/mcp` (no Node.js, no bridge). The native MCP surface permanently exposes the same single `unreal` gateway tool; there is no gateway-mode toggle.
 
 Both surfaces negotiate the MCP protocol version at `initialize`; the supported set is intentionally asymmetric. The native `/mcp` transport supports exactly the three modern versions `2025-11-25`, `2025-06-18`, and `2025-03-26`, and deliberately does not implement the later `2026-07-28` RC. The TypeScript stdio server also accepts the two legacy versions `2024-11-05` and `2024-10-07`, so the native surface is intentionally stricter. Both negotiate down to the highest mutually supported version (`2025-11-25` is the latest). See [docs/protocol.md](docs/protocol.md) for the full negotiation and transport contract, including the `MCP-Protocol-Version` header guard (HTTP 400 on invalid), cancellation semantics, and `progressToken` handling.
 

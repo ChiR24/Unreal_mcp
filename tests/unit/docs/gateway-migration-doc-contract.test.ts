@@ -16,21 +16,21 @@ describe('gateway migration doc contract', () => {
     'plugins/McpAutomationBridge/Source/McpAutomationBridge/Public/McpAutomationBridgeSettings.h',
   );
 
-  it('documents the TypeScript MCP_GATEWAY_MODE opt-out (false/0/no)', () => {
-    expect(readme).toContain('MCP_GATEWAY_MODE=false');
-    // Gateway mode reads the validated config flag, not raw process.env in the registry
-    // (src/server/AGENTS.md: raw process.env access is not allowed for this flag).
-    expect(toolRegistry).toContain('config.MCP_GATEWAY_MODE');
-    // The false/0/no aliases are normalized by the config schema via stringToBoolean.
+  it('documents the permanent single-`unreal` surface with no MCP_GATEWAY_MODE opt-out', () => {
+    expect(readme).not.toContain('MCP_GATEWAY_MODE');
+    expect(toolRegistry).not.toContain('config.MCP_GATEWAY_MODE');
     const configSrc = read('src/config.ts');
-    expect(configSrc).toContain('MCP_GATEWAY_MODE');
-    expect(configSrc).toContain('stringToBoolean');
+    expect(configSrc).not.toContain('MCP_GATEWAY_MODE');
+    expect(readme).toContain('single **`unreal`** gateway tool');
   });
 
-  it('documents the native Enable Native Gateway setting', () => {
-    expect(readme).toContain('Enable Native Gateway');
-    expect(settings).toContain('bEnableNativeGateway');
-    expect(settings).toContain('Enable Native Gateway Mode');
+  it('documents the permanently removed native gateway toggle (single-`unreal` native surface)', () => {
+    // Permanent absence: the native gateway toggle is intentionally removed, so
+    // the native /mcp surface is the single `unreal` tool like the TS surface.
+    expect(settings).not.toContain('bEnableNativeGateway');
+    expect(settings).not.toContain('Enable Native Gateway Mode');
+    expect(readme).not.toContain('Enable Native Gateway');
+    expect(readme).toContain('single **`unreal`** gateway tool');
   });
 
   it('distinguishes the stdio and native transports in the docs', () => {
@@ -69,5 +69,20 @@ describe('gateway migration doc contract', () => {
       expect(protocol, `docs omit version source: ${source}`).toContain(source);
     }
     expect(protocol).toContain('version:check');
+  });
+
+  it('keeps the Unreleased CHANGELOG consistent with the permanent single-`unreal` surface', () => {
+    const changelog = read('CHANGELOG.md');
+    // Slice off released history: `/^## .*\[\d/m` finds the first semver release
+    // heading (e.g. `[0.5.30]`); Unreleased headings have no digit after `[`.
+    const releasedIdx = changelog.search(/^## .*\[\d/m);
+    const unreleased = releasedIdx >= 0 ? changelog.slice(0, releasedIdx) : changelog;
+
+    expect(unreleased).not.toContain('MCP_GATEWAY_MODE=false');
+    expect(unreleased).not.toContain('default-on gateway mode');
+    expect(unreleased).not.toContain('tool by default');
+
+    expect(unreleased).toContain('DIRECT_TOOL_CALL_REMOVED');
+    expect(unreleased).toMatch(/permanent/i);
   });
 });
