@@ -4,7 +4,7 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 
 **Target**: ~2,825 actions covering all Unreal Engine subsystems and major plugin integrations.
 
-**Current sync (2026-06-11)**: Phases 1-30 are implemented and tracked through the consolidated 23-tool TypeScript/native canonical surface. Phase 31+ remains the planned expansion area, with a few seeded actions already available through existing canonical tools.
+**Current sync (2026-06-11)**: Phases 1-30 are implemented and tracked through the 23 **internal** canonical parent tools shared by the TypeScript and native surfaces. The public MCP surface on both transports is the single `unreal` gateway tool; the 23 parents are reachable only through `unreal.execute` (see [`gateway-client-guide.md`](gateway-client-guide.md)). Phase 31+ remains the planned expansion area, with a few seeded actions already available through existing canonical tools.
 
 ---
 
@@ -98,7 +98,7 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 
 **Issue**: [#111](https://github.com/ChiR24/Unreal_mcp/issues/111)
 
-**Results**: Consolidated the public MCP surface to 23 canonical tools while keeping domain actions on parent tools.
+**Results**: Consolidated the MCP surface to 23 canonical tools while keeping domain actions on parent tools. (Historical: those 23 were the public listing at the time. They were later made **internal** behind the single `unreal` gateway tool.)
 
 #### Tool Consolidations
 - [x] Blueprint graph and widget authoring actions live on `manage_blueprint`
@@ -1333,7 +1333,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-> **Roadmap naming note**: In Phases 31-48, `manage_*` names are capability-family placeholders unless they already match one of the current 23 canonical public tools.
+> **Roadmap naming note**: In Phases 31-48, `manage_*` names are capability-family placeholders unless they already match one of the current 23 internal canonical parent tools.
 
 ## Phase 31: Data & Persistence
 

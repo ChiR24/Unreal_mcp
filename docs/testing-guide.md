@@ -2,9 +2,9 @@
 
 ## Overview
 
-This project uses consolidated integration test suites covering the 23 canonical MCP tools:
+This project uses consolidated integration test suites covering the 23 internal canonical parent tools (the public surface is the single `unreal` gateway tool):
 - **Canonical Integration Suite** (`tests/integration.mjs`) for cross-tool workflows
-- **Per-Tool MCP Suites** (`tests/mcp-tools/**/*.test.mjs`) for every exposed parent tool
+- **Per-Tool MCP Suites** (`tests/mcp-tools/**/*.test.mjs`) for every internal parent tool
 
 Plus Vitest for unit tests and a CI smoke test for mock-mode validation.
 
@@ -31,7 +31,7 @@ for f in tests/mcp-tools/{core,gameplay,utility,world}/*.test.mjs; do node "$f";
 
 ### Canonical Integration Suite (`tests/integration.mjs`)
 
-Covers cross-tool workflows across the 23 canonical MCP tools:
+Covers cross-tool workflows across the 23 internal canonical parent tools:
 - Infrastructure & Discovery
 - Asset & Material Lifecycle
 - Actor Control & Introspection
