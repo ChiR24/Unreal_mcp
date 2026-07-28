@@ -1,6 +1,7 @@
 export { CapabilityCatalogSchema } from './catalog-schema.js';
 export {
   BEHAVIOR_EFFECTS,
+  COMPENSATION_MODES,
   CONSENT_MODES,
   DATA_ACCESS_CLASSES,
   DEPRECATION_STATUSES,
@@ -13,7 +14,11 @@ export {
   NORMALIZATION_CLASSES,
   NORMALIZATION_DISPOSITIONS,
   POLICY_SCOPES,
+  PREVIEW_MODES,
+  PREVIEW_REPORTS,
   RESOURCE_CLASSES,
+  SEMANTICS_EVIDENCE_GRADES,
+  UNDO_MODES,
   UNREAL_RELEASE_CHANNELS
 } from './constants.js';
 export { computeCapabilityHashes, readField, stableJsonStringify } from './hashing.js';
@@ -35,7 +40,9 @@ export { Draft202012ObjectSchemaSchema } from './json-schema.js';
 export type {
   CapabilityAvailability,
   CapabilityBehavior,
+  CapabilityBehaviorSource,
   CapabilityCatalog,
+  CapabilityCompensationSemantics,
   CapabilityCost,
   CapabilityDeprecation,
   CapabilityDiscovery,
@@ -43,10 +50,14 @@ export type {
   CapabilityHashes,
   CapabilityNormalization,
   CapabilityPolicy,
+  CapabilityPreviewSemantics,
   CapabilityRecord,
   CapabilityRecordSource,
   CapabilityRouting,
   CapabilitySchemas,
+  CapabilitySemantics,
+  CapabilitySemanticsEvidence,
+  CapabilityUndoSemantics,
   Draft202012ObjectSchema,
   JsonObject,
   JsonPrimitive,

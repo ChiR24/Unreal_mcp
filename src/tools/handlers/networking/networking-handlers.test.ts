@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { handleNetworkingTools } from './networking-handlers.js';
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
-import { getTimeoutMs } from '../foundation/dispatch/common-handlers.js';
+import { resolveActionTimeoutMs } from '../foundation/dispatch/common-handlers.js';
 
 function createTools() {
   const sendAutomationRequest = vi.fn(async () => ({ success: true }));
@@ -38,7 +38,7 @@ describe('handleNetworkingTools path normalization', () => {
       propertyName: 'Health',
       subAction: 'set_property_replicated'
     }, {
-      timeoutMs: getTimeoutMs()
+      timeoutMs: resolveActionTimeoutMs('manage_networking', 'set_property_replicated')
     });
   });
 
@@ -75,7 +75,7 @@ describe('handleNetworkingTools path normalization', () => {
       actorName: 'MCP_NetworkTarget',
       subAction: 'get_networking_info'
     }, {
-      timeoutMs: getTimeoutMs()
+      timeoutMs: resolveActionTimeoutMs('manage_networking', 'get_networking_info')
     });
   });
 

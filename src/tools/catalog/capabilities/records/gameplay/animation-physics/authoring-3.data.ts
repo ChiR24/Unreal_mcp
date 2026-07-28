@@ -37,7 +37,7 @@ export const ANIM_AUTHORED_3: readonly CapabilityRecordSource[] = [
     inputProps: { action: P.action, actorName: P.actorName, montagePath: P.assetPath, playRate: P.playRate }, required: ['action', 'actorName', 'montagePath'],
     effect: 'write', editorStates: ['pie', 'simulate'], behavior: { idempotency: 'idempotent', supportsUndo: false }, latency: 'interactive', resources: 'low',
     plugins: ESU,
-    normalizationClass: 'B_ALIAS', normalizationDisposition: 'alias', normalizationRationale: 'Alias of play_montage (animation-special-handlers.ts).',
+    normalizationClass: 'B_ALIAS', normalizationDisposition: 'alias', normalizationRationale: 'Alias of play_montage (animation-special-handlers.ts).', normalizationAliasOf: `${T}.play_montage`,
     exampleInput: { action: 'play_anim_montage', actorName: 'Char_1', montagePath: '/Game/MT_Slash' }, exampleOutput: { success: true, message: 'Montage played' } }),
   buildRecord({ parentTool: T, id: `${T}.setup_ragdoll`, action: 'setup_ragdoll', family: F,
     summary: 'Enable runtime ragdoll physics on a skeletal actor; requires an assigned PhysicsAsset and an editor build.',

@@ -171,6 +171,77 @@ export const GENERATED_PARENT_ROUTING: readonly GeneratedParentRoutingEntry[] = 
 `;
 };
 
+// Cost index: `<tool>::<action>` -> `"<latency>|<resources>"`.
+//
+// Emitted as its own module because the request-dispatch path needs a
+// capability's cost class on every call, and importing the full canonical
+// registry there costs ~1.4s and ~185MB of resident heap. This projection is a
+// few tens of KB of plain string data and carries no schemas.
+const LATENCY_RANK: Record<string, number> = { instant: 0, interactive: 1, 'long-running': 2 };
+const RESOURCE_RANK: Record<string, number> = { low: 0, medium: 1, high: 2 };
+
+const costRank = (latency: string, resources: string): number => {
+  const latencyRank = LATENCY_RANK[latency];
+  const resourceRank = RESOURCE_RANK[resources];
+  if (latencyRank === undefined || resourceRank === undefined) {
+    throw new Error(`FATAL: unknown capability cost class "${latency}|${resources}". Refusing to generate.`);
+  }
+  return latencyRank * 3 + resourceRank;
+};
+
+export const buildCostIndexModule = (records: readonly CapabilityRecord[]): string => {
+  const index = new Map<string, string>();
+
+  for (const record of records) {
+    const value = `${record.cost.latency}|${record.cost.resources}`;
+    // Guard the value before it is stored so a malformed class fails the build
+    // rather than silently reaching the dispatch path.
+    const rank = costRank(record.cost.latency, record.cost.resources);
+
+    // A capability is reachable under its routing pair AND under every legacy
+    // pair, and the dispatch layer may see either spelling.
+    const keys = new Set<string>([
+      `${record.routing.parentTool}::${record.routing.dispatchAction}`,
+      ...record.legacyIds.map((legacy) => `${legacy.tool}::${legacy.action}`),
+    ]);
+
+    for (const key of keys) {
+      const existing = index.get(key);
+      if (existing === undefined) {
+        index.set(key, value);
+        continue;
+      }
+      if (existing === value) continue;
+      // Several capabilities can share one dispatch route. Under-budgeting a
+      // shared route would kill the expensive member mid-flight, so the route
+      // inherits the most expensive contributor.
+      const [existingLatency, existingResources] = existing.split('|');
+      if (rank > costRank(existingLatency as string, existingResources as string)) {
+        index.set(key, value);
+      }
+    }
+  }
+
+  const sorted = [...index.entries()].sort(([a], [b]) => (a < b ? -1 : 1));
+  const body = sorted.map(([key, value]) => `  ${JSON.stringify(key)}: ${JSON.stringify(value)}`).join(',\n');
+
+  return `${TS_HEADER}
+// \`<parentTool>::<action>\` -> \`"<cost.latency>|<cost.resources>"\`, projected
+// from the capability records so a request deadline can be derived from what
+// the capability actually costs instead of one flat number for every action.
+//
+// Both the routing pair and every legacy pair are keyed, because either
+// spelling can reach the dispatch layer. Where capabilities share a dispatch
+// route, the route carries the most expensive contributor's cost class.
+
+export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
+${body}
+};
+
+export const CAPABILITY_COST_INDEX_KEY_COUNT = ${sorted.length};
+`;
+};
+
 export interface NeutralModelParams {
   readonly catalogRevision: string;
   readonly recordCount: number;

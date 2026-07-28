@@ -49,12 +49,12 @@ describe('handleAnimationAuthoringTools numeric normalization', () => {
       subAction: 'create_animation_sequence',
       numFrames: 30,
       frameRate: 30
-    }), {});
+    }), { timeoutMs: expect.any(Number) });
     expect(sendAutomationRequest).toHaveBeenNthCalledWith(2, 'manage_animation_authoring', expect.objectContaining({
       subAction: 'set_sequence_length',
       numFrames: 12,
       frameRate: undefined
-    }), {});
+    }), { timeoutMs: expect.any(Number) });
   });
 
   it('normalizes frame and track indices before Unreal dispatch', async () => {
@@ -80,12 +80,12 @@ describe('handleAnimationAuthoringTools numeric normalization', () => {
       subAction: 'add_notify',
       frame: 4,
       trackIndex: 0
-    }), {});
+    }), { timeoutMs: expect.any(Number) });
     expect(sendAutomationRequest).toHaveBeenNthCalledWith(2, 'manage_animation_authoring', expect.objectContaining({
       subAction: 'add_notify_state',
       startFrame: 0,
       endFrame: 9,
       trackIndex: 2
-    }), {});
+    }), { timeoutMs: expect.any(Number) });
   });
 });

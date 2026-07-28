@@ -13,6 +13,7 @@ import {
   handleRenameAsset
 } from './asset-basic-actions.js';
 import { handleBulkAssetAction } from './asset-bulk-actions.js';
+import { invalidateAssetCacheForMutation } from './asset-cache-invalidation.js';
 import { createAssetContext, type AssetOperationResponse } from './asset-handler-types.js';
 import { handleMaterialAssetAction } from './asset-material-actions.js';
 import { handleAssetMetadataAction } from './asset-query-actions.js';
@@ -21,44 +22,53 @@ import { isValidAssetAction, validAssetActionMessage } from './asset-validation.
 export async function handleAssetTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const context = createAssetContext(args, tools);
   try {
-    switch (action) {
-      case 'list':
-        return await handleListAssets(context);
-      case 'create_folder':
-        return await handleCreateFolder(context);
-      case 'import':
-        return await handleImportAsset(context);
-      case 'duplicate_asset':
-      case 'duplicate':
-        return await handleDuplicateAsset(context);
-      case 'rename_asset':
-      case 'rename':
-        return await handleRenameAsset(context);
-      case 'move_asset':
-      case 'move':
-        return await handleMoveAsset(context);
-      case 'delete_assets':
-      case 'delete_asset':
-      case 'delete':
-        return await handleDeleteAssets(context);
-      default: {
-        const metadataResult = await handleAssetMetadataAction(action, context);
-        if (metadataResult) return metadataResult;
-
-        const materialResult = await handleMaterialAssetAction(action, context);
-        if (materialResult) return materialResult;
-
-        const bulkResult = await handleBulkAssetAction(action, context);
-        if (bulkResult) return bulkResult;
-
-        return await handleDefaultAssetAction(action, context);
-      }
-    }
+    const result = await routeAssetAction(action, context);
+    invalidateAssetCacheForMutation(tools, action, args, result);
+    return result;
   } catch (error) {
     if (error instanceof Error) {
       return ResponseFactory.error(error);
     }
     return ResponseFactory.error(error);
+  }
+}
+
+async function routeAssetAction(
+  action: string,
+  context: ReturnType<typeof createAssetContext>
+): Promise<Record<string, unknown>> {
+  switch (action) {
+    case 'list':
+      return await handleListAssets(context);
+    case 'create_folder':
+      return await handleCreateFolder(context);
+    case 'import':
+      return await handleImportAsset(context);
+    case 'duplicate_asset':
+    case 'duplicate':
+      return await handleDuplicateAsset(context);
+    case 'rename_asset':
+    case 'rename':
+      return await handleRenameAsset(context);
+    case 'move_asset':
+    case 'move':
+      return await handleMoveAsset(context);
+    case 'delete_assets':
+    case 'delete_asset':
+    case 'delete':
+      return await handleDeleteAssets(context);
+    default: {
+      const metadataResult = await handleAssetMetadataAction(action, context);
+      if (metadataResult) return metadataResult;
+
+      const materialResult = await handleMaterialAssetAction(action, context);
+      if (materialResult) return materialResult;
+
+      const bulkResult = await handleBulkAssetAction(action, context);
+      if (bulkResult) return bulkResult;
+
+      return await handleDefaultAssetAction(action, context);
+    }
   }
 }
 

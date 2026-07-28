@@ -6,6 +6,7 @@ import { type CapabilityId, CapabilityIdSchema } from '../identifiers.js';
 import { type NextCall, NextCallSchema, type SemanticError, SemanticErrorSchema, type TaskStatus, TaskStatusSchema } from './errors.js';
 import type { TypedHandle } from './handles.js';
 import { TypedHandleSchema } from './handles.js';
+import { LiveStateRevisionsSchema, type LiveStateRevisions } from './live-state-revisions.js';
 import type {
   CapabilityRevision,
   CatalogRevision,
@@ -75,6 +76,7 @@ export function buildSuccessReceipt(input: {
   warnings?: readonly string[];
   timingMs?: number;
   validation?: ValidationEvidence;
+  liveRevisions?: LiveStateRevisions;
   task?: TaskStatus;
   nextCalls?: readonly NextCall[];
 }): Receipt {
@@ -92,6 +94,7 @@ export function buildSuccessReceipt(input: {
     warnings: boundStrings(input.warnings ?? []),
     timingMs: input.timingMs,
     validation: input.validation,
+    liveRevisions: input.liveRevisions,
     task: input.task,
     nextCalls: boundArray(input.nextCalls ?? []),
     data: input.data
@@ -118,6 +121,7 @@ export function buildErrorReceipt(input: {
   capabilityRevision?: CapabilityRevision;
   schemaRevision?: SchemaRevision;
   timingMs?: number;
+  liveRevisions?: LiveStateRevisions;
   nextCalls?: readonly NextCall[];
 }): Receipt {
   return {
@@ -130,6 +134,7 @@ export function buildErrorReceipt(input: {
     capabilityRevision: input.capabilityRevision,
     schemaRevision: input.schemaRevision,
     timingMs: input.timingMs,
+    liveRevisions: input.liveRevisions,
     error: redactErrorMessage(input.error),
     nextCalls: boundArray(input.nextCalls ?? [])
   };
@@ -163,6 +168,7 @@ export const ReceiptSchema = z.discriminatedUnion('status', [
       warnings: z.array(z.string()).readonly(),
       timingMs: z.number().optional(),
       validation: ValidationEvidenceSchema.optional(),
+      liveRevisions: LiveStateRevisionsSchema.optional(),
       task: TaskStatusSchema.optional(),
       nextCalls: z.array(NextCallSchema).readonly(),
       data: JsonValueSchema
@@ -179,6 +185,7 @@ export const ReceiptSchema = z.discriminatedUnion('status', [
       capabilityRevision: CapabilityRevisionSchema.optional(),
       schemaRevision: SchemaRevisionSchema.optional(),
       timingMs: z.number().optional(),
+      liveRevisions: LiveStateRevisionsSchema.optional(),
       error: SemanticErrorSchema,
       nextCalls: z.array(NextCallSchema).readonly()
     })

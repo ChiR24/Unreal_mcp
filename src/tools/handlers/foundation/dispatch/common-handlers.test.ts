@@ -257,7 +257,7 @@ describe('executeAutomationRequest console command validation', () => {
 
     await executeAutomationRequest(tools, 'console_command', { command: 'stat fps' });
 
-    expect(sendAutomationRequest).toHaveBeenCalledWith('console_command', { command: 'stat fps' }, {});
+    expect(sendAutomationRequest).toHaveBeenCalledWith('console_command', { command: 'stat fps' }, { timeoutMs: expect.any(Number) });
   });
 
   it('forwards timeoutMs to Unreal only when explicitly requested', async () => {

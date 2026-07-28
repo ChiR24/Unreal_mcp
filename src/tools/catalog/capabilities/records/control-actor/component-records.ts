@@ -14,7 +14,7 @@
  */
 import type { CapabilityRecordSource } from '../../index.js';
 import { buildCoreRecord } from '../core/builder.js';
-import { aliasNr, CANONICAL_NR, DOMAIN, P } from './properties.js';
+import { actorAlias, CANONICAL_NR, DOMAIN, P } from './properties.js';
 
 const FAMILY_COMPONENT = 'component';
 const FAMILY_MATERIAL = 'material';
@@ -89,8 +89,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     behavior: { idempotency: 'idempotent' },
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('set_component_property'),
+    ...actorAlias('set_component_property'),
     exampleInput: { action: 'set_component_properties', actorName: 'Cube1', componentName: 'Light1', properties: { Intensity: 5.0 } },
     exampleOutput: { success: true, message: 'Set properties on Light1' },
   }),
@@ -147,8 +146,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     behavior: { idempotency: 'idempotent' },
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('set_material'),
+    ...actorAlias('set_material'),
     exampleInput: { action: 'set_actor_material', actorName: 'Cube1', materialPath: '/Game/Materials/M_Glow' },
     exampleOutput: { success: true, message: 'Set material on Cube1' },
   }),
@@ -166,8 +164,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     behavior: { idempotency: 'idempotent' },
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('set_material'),
+    ...actorAlias('set_material'),
     exampleInput: { action: 'apply_material', actorName: 'Cube1', materialPath: '/Game/Materials/M_Glow' },
     exampleOutput: { success: true, message: 'Set material on Cube1' },
   }),

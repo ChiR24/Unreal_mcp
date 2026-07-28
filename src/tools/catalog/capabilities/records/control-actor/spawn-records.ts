@@ -11,7 +11,7 @@
  */
 import type { CapabilityRecordSource } from '../../index.js';
 import { buildCoreRecord } from '../core/builder.js';
-import { aliasNr, CANONICAL_NR, DOMAIN, P } from './properties.js';
+import { actorAlias, CANONICAL_NR, DOMAIN, P } from './properties.js';
 
 const FAMILY_SPAWN = 'spawn';
 const FAMILY_LIFECYCLE = 'lifecycle';
@@ -81,8 +81,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
 		effect: 'write',
 		costLatency: 'interactive',
 		costResources: 'low',
-		normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-		normalizationRationale: aliasNr('spawn'),
+		...actorAlias('spawn'),
 		exampleInput: {
 			action: 'spawn_actor',
 			classPath: '/Script/Engine.Cube',
@@ -190,8 +189,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
 		behavior: { safeToRetry: false, supportsUndo: false },
 		costLatency: 'interactive',
 		costResources: 'low',
-		normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-		normalizationRationale: aliasNr('delete'),
+		...actorAlias('delete'),
 		exampleInput: { action: 'destroy_actor', actorName: 'Cube1' },
 		exampleOutput: { success: true, message: 'Deleted Cube1' },
 	}),

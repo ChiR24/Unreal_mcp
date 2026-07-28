@@ -11,7 +11,7 @@
  */
 import type { CapabilityRecordSource } from '../../index.js';
 import { buildCoreRecord } from '../core/builder.js';
-import { aliasNr, CANONICAL_NR, DOMAIN, internalDispatchNr, P } from './properties.js';
+import { actorAlias, CANONICAL_NR, DOMAIN, internalDispatchNr, P } from './properties.js';
 
 const FAMILY_VISIBILITY = 'visibility';
 const FAMILY_QUERY = 'query';
@@ -50,8 +50,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     behavior: { idempotency: 'idempotent' },
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('set_visibility'),
+    ...actorAlias('set_visibility'),
     exampleInput: { action: 'set_actor_visible', actorName: 'Cube1', visible: true },
     exampleOutput: { success: true, message: 'Cube1 visibility set to true' },
   }),
@@ -90,8 +89,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read',
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('get_components'),
+    ...actorAlias('get_components'),
     exampleInput: { action: 'get_actor_components', actorName: 'Cube1' },
     exampleOutput: { success: true, message: 'Components for Cube1', components: [{ name: 'StaticMesh', class: 'StaticMeshComponent' }] },
   }),

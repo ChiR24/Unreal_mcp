@@ -15,7 +15,7 @@
  */
 import type {
   CapabilityAvailability,
-  CapabilityBehavior,
+  CapabilityBehaviorSource,
   CapabilityPolicy,
   CapabilityRecordSource,
   CapabilityRouting,
@@ -55,7 +55,7 @@ export type WorldRecordSpec = {
   readonly outputProps?: JsonObject;
   readonly outputRequired?: readonly string[];
   readonly effect: EffectType;
-  readonly behavior?: Partial<CapabilityBehavior>;
+  readonly behavior?: Partial<CapabilityBehaviorSource>;
   readonly costLatency: 'instant' | 'interactive' | 'long-running';
   readonly costResources: 'low' | 'medium' | 'high';
   readonly plugins?: readonly string[];
@@ -106,7 +106,7 @@ function availability(
   };
 }
 
-function behavior(effect: EffectType, opts: Partial<CapabilityBehavior> = {}): CapabilityBehavior {
+function behavior(effect: EffectType, opts: Partial<CapabilityBehaviorSource> = {}): CapabilityBehaviorSource {
   const isWrite = effect !== 'read';
   return {
     effect,

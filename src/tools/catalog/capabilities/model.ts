@@ -1,5 +1,6 @@
 import type {
   BEHAVIOR_EFFECTS,
+  COMPENSATION_MODES,
   CONSENT_MODES,
   DATA_ACCESS_CLASSES,
   DEPRECATION_STATUSES,
@@ -11,7 +12,11 @@ import type {
   NORMALIZATION_CLASSES,
   NORMALIZATION_DISPOSITIONS,
   POLICY_SCOPES,
-  RESOURCE_CLASSES
+  PREVIEW_MODES,
+  PREVIEW_REPORTS,
+  RESOURCE_CLASSES,
+  SEMANTICS_EVIDENCE_GRADES,
+  UNDO_MODES
 } from './constants.js';
 import type {
   CapabilityAlias,
@@ -68,6 +73,36 @@ export type CapabilityAvailability = {
   readonly editorStates: readonly (typeof EDITOR_STATES)[number][];
 };
 
+export type CapabilitySemanticsEvidence = {
+  readonly grade: (typeof SEMANTICS_EVIDENCE_GRADES)[number];
+  readonly citation: string;
+};
+
+export type CapabilityPreviewSemantics = {
+  readonly mode: (typeof PREVIEW_MODES)[number];
+  readonly reports: readonly (typeof PREVIEW_REPORTS)[number][];
+  readonly evidence: CapabilitySemanticsEvidence;
+};
+
+export type CapabilityUndoSemantics = {
+  readonly mode: (typeof UNDO_MODES)[number];
+  readonly transactionScope: string | null;
+  readonly evidence: CapabilitySemanticsEvidence;
+};
+
+export type CapabilityCompensationSemantics = {
+  readonly mode: (typeof COMPENSATION_MODES)[number];
+  readonly inverse: readonly CapabilityId[];
+  readonly guidance: string | null;
+  readonly evidence: CapabilitySemanticsEvidence;
+};
+
+export type CapabilitySemantics = {
+  readonly preview: CapabilityPreviewSemantics;
+  readonly undo: CapabilityUndoSemantics;
+  readonly compensation: CapabilityCompensationSemantics;
+};
+
 export type CapabilityBehavior = {
   readonly effect: (typeof BEHAVIOR_EFFECTS)[number];
   readonly idempotency: (typeof IDEMPOTENCY_CLASSES)[number];
@@ -75,6 +110,11 @@ export type CapabilityBehavior = {
   readonly safeToRetry: boolean;
   readonly supportsPreview: boolean;
   readonly supportsUndo: boolean;
+  readonly semantics: CapabilitySemantics;
+};
+
+export type CapabilityBehaviorSource = Omit<CapabilityBehavior, 'semantics'> & {
+  readonly semantics?: CapabilitySemantics;
 };
 
 export type CapabilityPolicy = {
@@ -98,6 +138,13 @@ export type CapabilityNormalization = {
   readonly class: (typeof NORMALIZATION_CLASSES)[number];
   readonly disposition: (typeof NORMALIZATION_DISPOSITIONS)[number];
   readonly rationale: string;
+  /**
+   * The capability this one defers to, stated as data rather than left for a
+   * reader to infer from `rationale`. Consumers must never parse the prose:
+   * the native mirror cannot reproduce English parsing, so an unstated
+   * relation is not a relation.
+   */
+  readonly aliasOf?: CapabilityId;
 };
 
 export type ActiveCapability = {
@@ -127,7 +174,7 @@ export type CapabilityRecordSource = {
   readonly schemas: CapabilitySchemas;
   readonly examples: readonly CapabilityExample[];
   readonly availability: CapabilityAvailability;
-  readonly behavior: CapabilityBehavior;
+  readonly behavior: CapabilityBehaviorSource;
   readonly policy: CapabilityPolicy;
   readonly cost: CapabilityCost;
   readonly routing: CapabilityRouting;
@@ -136,7 +183,9 @@ export type CapabilityRecordSource = {
   readonly parent: ParentToolMetadata;
 };
 
-export type CapabilityRecord = CapabilityRecordSource & {
+// Only hand-authored sources may omit semantics; a minted record always has them.
+export type CapabilityRecord = Omit<CapabilityRecordSource, 'behavior'> & {
+  readonly behavior: CapabilityBehavior;
   readonly hashes: CapabilityHashes;
 };
 

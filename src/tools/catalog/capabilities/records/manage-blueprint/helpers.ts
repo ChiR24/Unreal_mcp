@@ -15,7 +15,7 @@
  */
 import type {
   CapabilityAvailability,
-  CapabilityBehavior,
+  CapabilityBehaviorSource,
   CapabilityPolicy,
   CapabilityRecordSource,
   CapabilityRouting,
@@ -74,7 +74,7 @@ function availability(
 
 type EffectType = 'read' | 'write' | 'destructive';
 
-function behavior(effect: EffectType, opts: Partial<CapabilityBehavior> = {}): CapabilityBehavior {
+function behavior(effect: EffectType, opts: Partial<CapabilityBehaviorSource> = {}): CapabilityBehaviorSource {
   const isWrite = effect !== 'read';
   return {
     effect,
@@ -115,7 +115,7 @@ export interface RecordSpec {
   readonly outputProps?: PropertyMap;
   readonly outputRequired?: readonly string[];
   readonly effect: EffectType;
-  readonly behavior?: Partial<CapabilityBehavior>;
+  readonly behavior?: Partial<CapabilityBehaviorSource>;
   readonly latency: 'instant' | 'interactive' | 'long-running';
   readonly resources: 'low' | 'medium' | 'high';
   readonly plugins?: readonly string[];

@@ -124,7 +124,11 @@ export const SemanticErrorSchema = z.discriminatedUnion('kind', [
   z
     .strictObject({
       kind: z.literal('conflict'),
-      code: z.literal('STATE_CONFLICT'),
+      // IDEMPOTENCY_CONFLICT is the string the native surface already emits
+      // (McpNativeTransportGatewayExecute.cpp). Omitting it here forced the TS
+      // conflict through the VALIDATION_ERROR default, so a client could not
+      // tell a re-used key from a malformed request.
+      code: z.literal('STATE_CONFLICT').or(z.literal('IDEMPOTENCY_CONFLICT')),
       message: z.string(),
       suggestions: z.array(z.string()).readonly().optional()
     })

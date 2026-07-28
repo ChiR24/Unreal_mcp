@@ -12,7 +12,7 @@
  */
 import type { CapabilityRecordSource } from '../../index.js';
 import { buildCoreRecord } from '../core/builder.js';
-import { aliasNr, CANONICAL_NR, DOMAIN, P } from './properties.js';
+import { actorAlias, CANONICAL_NR, DOMAIN, P } from './properties.js';
 
 const FAMILY_TRANSFORM = 'transform';
 const FAMILY_PHYSICS = 'physics';
@@ -58,8 +58,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     behavior: { idempotency: 'idempotent' },
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('set_transform'),
+    ...actorAlias('set_transform'),
     exampleInput: { action: 'teleport_actor', actorName: 'Cube1', location: [5, 5, 5] },
     exampleOutput: { success: true, message: 'Transform set for Cube1' },
   }),
@@ -77,8 +76,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     behavior: { idempotency: 'idempotent' },
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('set_transform'),
+    ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_location', actorName: 'Cube1', location: [100, 0, 0] },
     exampleOutput: { success: true, message: 'Transform set for Cube1' },
   }),
@@ -96,8 +94,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     behavior: { idempotency: 'idempotent' },
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('set_transform'),
+    ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_rotation', actorName: 'Cube1', rotation: [0, 45, 0] },
     exampleOutput: { success: true, message: 'Transform set for Cube1' },
   }),
@@ -115,8 +112,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     behavior: { idempotency: 'idempotent' },
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('set_transform'),
+    ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_scale', actorName: 'Cube1', scale: [2, 2, 2] },
     exampleOutput: { success: true, message: 'Transform set for Cube1' },
   }),
@@ -134,8 +130,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     behavior: { idempotency: 'idempotent' },
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('set_transform'),
+    ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_transform', actorName: 'Cube1', location: [1, 2, 3] },
     exampleOutput: { success: true, message: 'Transform set for Cube1' },
   }),
@@ -174,8 +169,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read',
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('get_transform'),
+    ...actorAlias('get_transform'),
     exampleInput: { action: 'get_actor_transform', actorName: 'Cube1' },
     exampleOutput: { success: true, message: 'Transform for Cube1', location: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
   }),

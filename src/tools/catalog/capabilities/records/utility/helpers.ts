@@ -1,5 +1,5 @@
 import type {
-  CapabilityBehavior,
+  CapabilityBehaviorSource,
   CapabilityRecordSource,
   Draft202012ObjectSchema,
   JsonObject,
@@ -102,7 +102,7 @@ export type UtilityRecordSpec = {
   readonly resources?: 'low' | 'medium' | 'high';
 };
 
-function behavior(spec: UtilityRecordSpec): CapabilityBehavior {
+function behavior(spec: UtilityRecordSpec): CapabilityBehaviorSource {
   const effect = spec.effect ?? 'write';
   return {
     effect,

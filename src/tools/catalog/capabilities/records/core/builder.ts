@@ -10,7 +10,7 @@
  */
 import type {
   CapabilityAvailability,
-  CapabilityBehavior,
+  CapabilityBehaviorSource,
   CapabilityPolicy,
   CapabilityRecordSource,
   CapabilityRouting,
@@ -48,7 +48,7 @@ export type CoreRecordSpec = {
   readonly outputProps?: JsonObject;
   readonly outputRequired?: readonly string[];
   readonly effect: EffectType;
-  readonly behavior?: Partial<CapabilityBehavior>;
+  readonly behavior?: Partial<CapabilityBehaviorSource>;
   readonly costLatency: 'instant' | 'interactive' | 'long-running';
   readonly costResources: 'low' | 'medium' | 'high';
   readonly plugins?: readonly string[];
@@ -56,6 +56,7 @@ export type CoreRecordSpec = {
   readonly normalizationClass: CapabilityRecordSource['normalization']['class'];
   readonly normalizationDisposition?: CapabilityRecordSource['normalization']['disposition'];
   readonly normalizationRationale: string;
+  readonly normalizationAliasOf?: string;
   readonly aliases?: readonly string[];
   readonly exampleInput: JsonObject;
   readonly exampleOutput: JsonObject;
@@ -98,7 +99,7 @@ function availability(
   };
 }
 
-function behavior(effect: EffectType, opts: Partial<CapabilityBehavior> = {}): CapabilityBehavior {
+function behavior(effect: EffectType, opts: Partial<CapabilityBehaviorSource> = {}): CapabilityBehaviorSource {
   const isWrite = effect !== 'read';
   return {
     effect,
@@ -171,6 +172,9 @@ export function buildCoreRecord(
       class: spec.normalizationClass,
       disposition: spec.normalizationDisposition ?? 'retain',
       rationale: spec.normalizationRationale,
+      ...(spec.normalizationAliasOf === undefined
+        ? {}
+        : { aliasOf: CapabilityIdSchema.parse(spec.normalizationAliasOf) }),
     },
     deprecation: { status: 'active' },
     parent: getParentToolMetadata(spec.parentTool),

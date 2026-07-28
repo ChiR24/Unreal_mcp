@@ -48,6 +48,7 @@ export const unrealGatewayToolDefinition: ToolDefinition = {
       message: { type: 'string' },
       results: { type: 'array' },
       result: {},
+      data: { description: "Execute payload projected against the capability's declared output schema. Same value as receipt.data, and the same location the native /mcp surface publishes." },
       tool: { type: 'string' },
       action: { type: 'string' },
       param: { type: 'string' },

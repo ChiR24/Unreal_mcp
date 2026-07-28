@@ -4,6 +4,7 @@ import { CapabilityCatalogSchema } from './catalog-schema.js';
 import { computeCapabilityHashes } from './hashing.js';
 import type { CapabilityCatalog, CapabilityRecord } from './model.js';
 import { CapabilityRecordSchema, CapabilityRecordSourceSchema } from './record-schema.js';
+import { resolveBehaviorSemantics } from './records/semantics/resolve.js';
 
 function escapeToken(segment: PropertyKey): string {
   return String(segment).replace(/~/g, '~0').replace(/\//g, '~1');
@@ -29,10 +30,16 @@ export function capabilityErrorPointers(error: unknown): readonly string[] {
   return [...pointers];
 }
 
+// Semantics are resolved here, before hashing, so every minted record carries
+// all three declarations and the hashes cover them.
 export function createCapabilityRecord(source: unknown): CapabilityRecord {
   const validated = CapabilityRecordSourceSchema.parse(source);
-  const hashes = computeCapabilityHashes(validated);
-  return { ...validated, hashes };
+  const enriched = {
+    ...validated,
+    behavior: resolveBehaviorSemantics(validated.id, validated.behavior)
+  };
+  const hashes = computeCapabilityHashes(enriched);
+  return { ...enriched, hashes };
 }
 
 export function parseCapabilityRecord(record: unknown): CapabilityRecord {

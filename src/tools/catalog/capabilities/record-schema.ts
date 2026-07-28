@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import {
   BEHAVIOR_EFFECTS,
+  COMPENSATION_MODES,
   CONSENT_MODES,
   DATA_ACCESS_CLASSES,
   DISPATCH_MODES,
@@ -11,7 +12,11 @@ import {
   NORMALIZATION_CLASSES,
   NORMALIZATION_DISPOSITIONS,
   POLICY_SCOPES,
-  RESOURCE_CLASSES
+  PREVIEW_MODES,
+  PREVIEW_REPORTS,
+  RESOURCE_CLASSES,
+  SEMANTICS_EVIDENCE_GRADES,
+  UNDO_MODES
 } from './constants.js';
 import { computeCapabilityHashes, readField } from './hashing.js';
 import {
@@ -78,14 +83,99 @@ const availabilitySchema = z
     }
   });
 
-const behaviorSchema = z.strictObject({
+const evidenceSchema = z.strictObject({
+  grade: z.enum(SEMANTICS_EVIDENCE_GRADES),
+  citation: z.string().min(1, 'every semantics declaration must cite its evidence')
+});
+
+const semanticsSchema = z
+  .strictObject({
+    preview: z.strictObject({
+      mode: z.enum(PREVIEW_MODES),
+      reports: z.array(z.enum(PREVIEW_REPORTS)),
+      evidence: evidenceSchema
+    }),
+    undo: z.strictObject({
+      mode: z.enum(UNDO_MODES),
+      transactionScope: z.string().min(1).nullable(),
+      evidence: evidenceSchema
+    }),
+    compensation: z.strictObject({
+      mode: z.enum(COMPENSATION_MODES),
+      inverse: z.array(CapabilityIdSchema),
+      guidance: z.string().min(1).nullable(),
+      evidence: evidenceSchema
+    })
+  })
+  .superRefine((semantics, ctx) => {
+    const { preview, undo, compensation } = semantics;
+    const fail = (path: readonly (string | number)[], message: string): void => {
+      ctx.addIssue({ code: 'custom', path: [...path], message });
+    };
+
+    if ((preview.mode === 'none') !== (preview.reports.length === 0)) {
+      fail(['preview', 'reports'], 'a preview reports what it can see, and only when it exists');
+    }
+    if ((undo.mode === 'transaction') !== (undo.transactionScope !== null)) {
+      fail(['undo', 'transactionScope'], 'an undoable mutation must name its transaction scope');
+    }
+    if ((compensation.mode === 'inverse-capability') !== (compensation.inverse.length > 0)) {
+      fail(['compensation', 'inverse'], 'inverse-capability compensation must name its capabilities');
+    }
+    if ((compensation.mode === 'manual-cleanup') !== (compensation.guidance !== null)) {
+      fail(['compensation', 'guidance'], 'manual-cleanup compensation must describe the cleanup');
+    }
+
+    // A claim beyond the pessimistic value must have been earned, and vice versa.
+    const pessimistic: readonly [readonly string[], boolean, string][] = [
+      [['preview'], preview.mode === 'none', preview.evidence.grade],
+      [['undo'], undo.mode === 'none', undo.evidence.grade],
+      [['compensation'], compensation.mode === 'none', compensation.evidence.grade]
+    ];
+    for (const [path, isPessimisticValue, grade] of pessimistic) {
+      if (isPessimisticValue !== (grade === 'pessimistic-default')) {
+        fail(
+          [...path, 'evidence', 'grade'],
+          'evidence grade must agree with the declared mode: only a pessimistic value may be a pessimistic-default'
+        );
+      }
+    }
+  });
+
+const behaviorBaseShape = {
   effect: z.enum(BEHAVIOR_EFFECTS),
   idempotency: z.enum(IDEMPOTENCY_CLASSES),
   longRunning: z.boolean(),
   safeToRetry: z.boolean(),
   supportsPreview: z.boolean(),
   supportsUndo: z.boolean()
+};
+
+const behaviorSchema = z.strictObject({
+  ...behaviorBaseShape,
+  semantics: semanticsSchema.optional()
 });
+
+// A minted record must not advertise a legacy boolean that contradicts the
+// evidence-backed declaration next to it.
+const behaviorRecordSchema = z
+  .strictObject({ ...behaviorBaseShape, semantics: semanticsSchema })
+  .superRefine((behavior, ctx) => {
+    if (behavior.supportsPreview !== (behavior.semantics.preview.mode !== 'none')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['supportsPreview'],
+        message: 'supportsPreview must agree with semantics.preview.mode'
+      });
+    }
+    if (behavior.supportsUndo !== (behavior.semantics.undo.mode === 'transaction')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['supportsUndo'],
+        message: 'supportsUndo must agree with semantics.undo.mode'
+      });
+    }
+  });
 
 const policySchema = z.strictObject({
   requiredScope: z.enum(POLICY_SCOPES),
@@ -104,11 +194,23 @@ const routingSchema = z.strictObject({
   dispatchMode: z.enum(DISPATCH_MODES)
 });
 
-const normalizationSchema = z.strictObject({
-  class: z.enum(NORMALIZATION_CLASSES),
-  disposition: z.enum(NORMALIZATION_DISPOSITIONS),
-  rationale: z.string()
-});
+const normalizationSchema = z
+  .strictObject({
+    class: z.enum(NORMALIZATION_CLASSES),
+    disposition: z.enum(NORMALIZATION_DISPOSITIONS),
+    rationale: z.string(),
+    aliasOf: CapabilityIdSchema.optional()
+  })
+  .superRefine((candidate, ctx) => {
+    if (candidate.aliasOf === undefined) return;
+    if (candidate.disposition !== 'alias') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['aliasOf'],
+        message: 'aliasOf requires disposition "alias"'
+      });
+    }
+  });
 
 const legacyIdSchema = z.strictObject({
   tool: LegacyToolNameSchema,
@@ -174,7 +276,7 @@ const sourceShape = {
 
 export const CapabilityRecordSourceSchema = z.strictObject(sourceShape);
 
-const recordShape = { ...sourceShape, hashes: hashesSchema };
+const recordShape = { ...sourceShape, behavior: behaviorRecordSchema, hashes: hashesSchema };
 
 function verifyHashes(record: Record<string, unknown>, ctx: z.RefinementCtx): void {
   const { hashes, ...source } = record;

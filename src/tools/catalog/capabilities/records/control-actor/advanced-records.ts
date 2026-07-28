@@ -15,7 +15,7 @@
  */
 import type { CapabilityRecordSource } from '../../index.js';
 import { buildCoreRecord } from '../core/builder.js';
-import { aliasNr, CANONICAL_NR, DOMAIN, internalDispatchNr, P } from './properties.js';
+import { actorAlias, CANONICAL_NR, DOMAIN, internalDispatchNr, P } from './properties.js';
 
 const FAMILY_ATTACH = 'attachment';
 const FAMILY_BLUEPRINT = 'blueprint';
@@ -55,8 +55,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write',
     costLatency: 'interactive',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('attach'),
+    ...actorAlias('attach'),
     exampleInput: { action: 'attach_actor', childActor: 'Sword', parentActor: 'Knight' },
     exampleOutput: { success: true, message: 'Attached Sword to Knight' },
   }),
@@ -93,8 +92,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     behavior: { idempotency: 'idempotent' },
     costLatency: 'interactive',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('detach'),
+    ...actorAlias('detach'),
     exampleInput: { action: 'detach_actor', actorName: 'Sword' },
     exampleOutput: { success: true, message: 'Detached Sword' },
   }),

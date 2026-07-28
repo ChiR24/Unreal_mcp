@@ -4,9 +4,10 @@
 // defaults, and routing parent; per-record variation is in schemas, behavior,
 // policy, cost, and optional divergence/alias metadata.
 import { DRAFT_2020_12_SCHEMA_URI } from '../../constants.js';
+import { CapabilityIdSchema } from '../../identifiers.js';
 import type {
   CapabilityAvailability,
-  CapabilityBehavior,
+  CapabilityBehaviorSource,
   CapabilityCost,
   CapabilityExample,
   CapabilityNormalization,
@@ -50,10 +51,10 @@ export const boundedPagination = (maxPageSize: number, defaultPageSize: number):
 
 // --- Behavior presets ---
 
-export const READ: CapabilityBehavior = { effect: 'read', idempotency: 'idempotent', longRunning: false, safeToRetry: true, supportsPreview: false, supportsUndo: false };
-export const WRITE: CapabilityBehavior = { effect: 'write', idempotency: 'idempotent', longRunning: false, safeToRetry: true, supportsPreview: true, supportsUndo: true };
-export const DESTRUCTIVE: CapabilityBehavior = { effect: 'destructive', idempotency: 'idempotent', longRunning: true, safeToRetry: false, supportsPreview: true, supportsUndo: false };
-export const NON_IDEMPOTENT: CapabilityBehavior = { effect: 'write', idempotency: 'non-idempotent', longRunning: false, safeToRetry: false, supportsPreview: true, supportsUndo: true };
+export const READ: CapabilityBehaviorSource = { effect: 'read', idempotency: 'idempotent', longRunning: false, safeToRetry: true, supportsPreview: false, supportsUndo: false };
+export const WRITE: CapabilityBehaviorSource = { effect: 'write', idempotency: 'idempotent', longRunning: false, safeToRetry: true, supportsPreview: true, supportsUndo: true };
+export const DESTRUCTIVE: CapabilityBehaviorSource = { effect: 'destructive', idempotency: 'idempotent', longRunning: true, safeToRetry: false, supportsPreview: true, supportsUndo: false };
+export const NON_IDEMPOTENT: CapabilityBehaviorSource = { effect: 'write', idempotency: 'non-idempotent', longRunning: false, safeToRetry: false, supportsPreview: true, supportsUndo: true };
 
 // --- Policy presets ---
 
@@ -87,7 +88,12 @@ export function aliasCanonical(aliasAction: string): CapabilityNormalization {
 }
 
 export function aliasOf(canonicalId: string): CapabilityNormalization {
-  return { class: 'B_ALIAS', disposition: 'alias', rationale: `Long-form alias of ${canonicalId}.` };
+  return {
+    class: 'B_ALIAS',
+    disposition: 'alias',
+    rationale: `Long-form alias of ${canonicalId}.`,
+    aliasOf: CapabilityIdSchema.parse(canonicalId),
+  };
 }
 
 export function divergence(rationale: string): CapabilityNormalization {
@@ -115,7 +121,7 @@ export interface RecordSpec {
   readonly summary: string;
   readonly input: Draft202012ObjectSchema;
   readonly output: Draft202012ObjectSchema;
-  readonly behavior: CapabilityBehavior;
+  readonly behavior: CapabilityBehaviorSource;
   readonly policy: CapabilityPolicy;
   readonly cost: CapabilityCost;
   readonly aliases: readonly string[];
@@ -143,7 +149,7 @@ export function r(
   summary: string,
   input: Draft202012ObjectSchema,
   output: Draft202012ObjectSchema,
-  behavior: CapabilityBehavior,
+  behavior: CapabilityBehaviorSource,
   policy: CapabilityPolicy,
   cost: CapabilityCost,
   options: SpecOptions

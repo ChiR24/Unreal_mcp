@@ -113,6 +113,20 @@ export function aliasNr(canonical: string): string {
   return `Alias of control_actor.${canonical}; normalizeActorAction maps this action to ${canonical} before dispatch.`;
 }
 
+/**
+ * The whole normalization verdict for a dispatch alias, so the target is named
+ * once. Declaring only the rationale left the class at the `C` default, which
+ * said "distinct capability" about a record the same line called an alias.
+ */
+export function actorAlias(canonical: string) {
+  return {
+    normalizationClass: 'B_ALIAS',
+    normalizationDisposition: 'alias',
+    normalizationRationale: aliasNr(canonical),
+    normalizationAliasOf: `control_actor.${canonical}`,
+  } as const;
+}
+
 export function internalDispatchNr(action: string, dispatchTarget: string): string {
   return `Distinct control_actor operation (canonical record cap:control_actor:${action}). normalizeActorAction maps this action to ${dispatchTarget} as an internal dispatch alias; ${dispatchTarget} is not a separate canonical record in the normalization inventory.`;
 }

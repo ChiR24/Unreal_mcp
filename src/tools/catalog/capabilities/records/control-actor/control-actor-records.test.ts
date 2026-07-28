@@ -155,11 +155,33 @@ describe('control_actor alias normalization grounded in normalizeActorAction', (
     ['set_actor_collision', 'set_collision'],
   ];
 
-  it('retains runtime aliases under the inventory C classification', () => {
-    for (const [alias] of ALIAS_TO_CANONICAL) {
+  /**
+   * normalizeActorAction folds these three onto a dispatch target that is not a
+   * separate canonical record, so they stay distinct capabilities rather than
+   * declared aliases. Every other entry names a real canonical record.
+   */
+  const INTERNAL_DISPATCH_ACTIONS: ReadonlySet<string> = new Set([
+    'get_actor_bounds',
+    'set_actor_collision',
+    'call_actor_function',
+  ]);
+
+  it('declares runtime aliases as B_ALIAS naming their canonical record', () => {
+    for (const [alias, canonical] of ALIAS_TO_CANONICAL) {
+      if (INTERNAL_DISPATCH_ACTIONS.has(alias)) continue;
+      const record = findByAction(alias);
+      expect(record.normalization.class).toBe('B_ALIAS');
+      expect(record.normalization.disposition).toBe('alias');
+      expect(record.normalization.aliasOf).toBe(`control_actor.${canonical}`);
+    }
+  });
+
+  it('retains internal dispatch aliases under the inventory C classification', () => {
+    for (const alias of INTERNAL_DISPATCH_ACTIONS) {
       const record = findByAction(alias);
       expect(record.normalization.class).toBe('C_SAME_VERB_DIFFERENT_TARGET');
       expect(record.normalization.disposition).toBe('retain');
+      expect(record.normalization.aliasOf).toBeUndefined();
     }
   });
 

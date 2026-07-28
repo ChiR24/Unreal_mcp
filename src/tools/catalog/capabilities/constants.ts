@@ -29,3 +29,25 @@ export const NORMALIZATION_DISPOSITIONS = [
 ] as const;
 export const DEPRECATION_STATUSES = ['active', 'deprecated', 'removed'] as const;
 export const HASH_ALGORITHM = 'sha256' as const;
+
+// The FIRST member of each semantics tuple is the pessimistic value and is the
+// default; records/semantics/evidence-ledger.ts is the only elevation path.
+export const PREVIEW_MODES = ['none', 'validate-only', 'simulate'] as const;
+export const PREVIEW_REPORTS = [
+  'affected-objects',
+  'affected-packages',
+  'risk',
+  'estimated-cost',
+  'validation-plan'
+] as const;
+
+// `transaction` requires BOTH a scoped editor transaction around the mutation
+// AND that no durable persistence (package save, on-disk render output,
+// external write) escapes that scope. A partial wrap is NOT undoable.
+export const UNDO_MODES = ['none', 'transaction'] as const;
+export const COMPENSATION_MODES = ['none', 'inverse-capability', 'manual-cleanup'] as const;
+export const SEMANTICS_EVIDENCE_GRADES = [
+  'pessimistic-default',
+  'source-verified',
+  'contract-derived'
+] as const;

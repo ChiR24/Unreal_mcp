@@ -163,6 +163,14 @@ describe('control_editor effect, idempotency, and behavior semantics', () => {
     }
   });
 
+  // Write, but NOT undoable. No control_editor handler opens an
+  // FScopedTransaction: the only transaction sites in the whole plugin are the
+  // three BlueprintGraph node/pin handlers, the struct import, and landscape
+  // creation. save_all and open_level additionally cross a durable boundary no
+  // transaction could revert, and undo/redo ARE the transaction system rather
+  // than participants in it. Each therefore carries the pessimistic undo
+  // default, and the citation proves the resolver reached that value
+  // deliberately instead of defaulting a missing field.
   it('classifies PIE/timing/state-mutating actions as write', () => {
     const writeActions = [
       'play', 'eject', 'possess', 'step_frame', 'single_frame_step',
@@ -173,7 +181,11 @@ describe('control_editor effect, idempotency, and behavior semantics', () => {
     for (const action of writeActions) {
       const record = findByAction(action);
       expect(record.behavior.effect).toBe('write');
-      expect(record.behavior.supportsUndo).toBe(true);
+      expect(record.behavior.supportsUndo).toBe(false);
+      expect(record.behavior.semantics.undo.mode).toBe('none');
+      expect(record.behavior.semantics.undo.transactionScope).toBeNull();
+      expect(record.behavior.semantics.undo.evidence.grade).toBe('pessimistic-default');
+      expect(record.behavior.semantics.undo.evidence.citation).toContain('no scoped editor transaction');
     }
   });
 

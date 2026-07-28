@@ -34,7 +34,7 @@ describe('handleActorTools list', () => {
       action: 'list',
       limit: 10,
       filter: 'Light'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 
   it('normalizes invalid list limits before Unreal dispatch', async () => {
@@ -47,9 +47,9 @@ describe('handleActorTools list', () => {
     await handleActorTools('list', { action: 'list', limit: -5 }, tools);
     await handleActorTools('list', { action: 'list', limit: 10.9 }, tools);
 
-    expect(sendAutomationRequest).toHaveBeenNthCalledWith(1, 'control_actor', expect.objectContaining({ limit: 50 }), {});
-    expect(sendAutomationRequest).toHaveBeenNthCalledWith(2, 'control_actor', expect.objectContaining({ limit: 50 }), {});
-    expect(sendAutomationRequest).toHaveBeenNthCalledWith(3, 'control_actor', expect.objectContaining({ limit: 10 }), {});
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(1, 'control_actor', expect.objectContaining({ limit: 50 }), { timeoutMs: expect.any(Number) });
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(2, 'control_actor', expect.objectContaining({ limit: 50 }), { timeoutMs: expect.any(Number) });
+    expect(sendAutomationRequest).toHaveBeenNthCalledWith(3, 'control_actor', expect.objectContaining({ limit: 10 }), { timeoutMs: expect.any(Number) });
   });
 
   it('exposes actor-list result fields in the public schemas', async () => {
@@ -172,21 +172,21 @@ describe('handleActorTools apply_force', () => {
       action: 'apply_force',
       actorName: 'MCP_PhysicsActor',
       force: { x: 0, y: 0, z: 2500 }
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(sendAutomationRequest).toHaveBeenNthCalledWith(2, 'control_actor', {
       action: 'get_components',
       actorName: 'MCP_PhysicsActor'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(sendAutomationRequest).toHaveBeenNthCalledWith(3, 'control_actor', {
       action: 'set_component_properties',
       actorName: 'MCP_PhysicsActor',
       componentName: 'StaticMeshComponent0',
       properties: { SimulatePhysics: true, bSimulatePhysics: true, Mobility: 2 }
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(sendAutomationRequest).toHaveBeenNthCalledWith(4, 'control_actor', {
       action: 'apply_force',
       actorName: 'MCP_PhysicsActor',
       force: { x: 0, y: 0, z: 2500 }
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 });

@@ -28,6 +28,7 @@ import {
   buildTsDataModule,
   buildParentDefsModule,
   buildRoutingIndexModule,
+  buildCostIndexModule,
   buildNeutralModel,
 } from './ts-targets.js';
 import {
@@ -43,6 +44,12 @@ import {
 } from './native-shards.js';
 import { GENERATED_SHARD_STEMS } from './grouping.js';
 import { deriveParents } from './parent-derivation.js';
+import { buildSupportMatrixDoc, buildSupportMatrixJson } from './support-matrix.js';
+import {
+  buildActionReferenceDoc,
+  buildMigrationReferenceDoc,
+  type MigrationEntryView,
+} from './docs-reference.js';
 
 export type ManifestTarget = readonly [path: string, content: string];
 
@@ -53,7 +60,7 @@ export interface BuildTargetsInput {
   // is consulted), so the generator bootstrap stays acyclic with its own
   // generated output.
   readonly migrationMap: {
-    readonly entries: ReadonlyMap<string, { readonly canonicalId?: string | null; readonly disposition: string }>;
+    readonly entries: ReadonlyMap<string, MigrationEntryView>;
   };
   readonly generateAliases: () => {
     readonly aliases: ReadonlyArray<{ alias: string; canonicalId: string; source: string }>;
@@ -94,6 +101,8 @@ const genDir = (): string =>
 const orchestrationDir = (): string =>
   resolve(ROOT, 'src/tools/orchestration');
 
+const docsDir = (): string => resolve(ROOT, 'docs');
+
 export const buildTargets = (input: BuildTargetsInput): ManifestTarget[] => {
   const { records, migrationMap, generateAliases } = input;
   if (records.length !== 1335) {
@@ -126,6 +135,7 @@ export const buildTargets = (input: BuildTargetsInput): ManifestTarget[] => {
   });
   const parentDefs = buildParentDefsModule(parents);
   const routingIndex = buildRoutingIndexModule(parents);
+  const costIndex = buildCostIndexModule(sortedRecords);
   const neutralJson = `${buildNeutralModel({
     catalogRevision, recordCount: sortedRecords.length, records: sortedRecords, summaries, lexicalIndex,
     migrationData, aliasData, docsData,
@@ -152,7 +162,28 @@ export const buildTargets = (input: BuildTargetsInput): ManifestTarget[] => {
     [resolve(genDir(), 'canonical-registry.generated.ts'), tsData],
     [resolve(genDir(), 'canonical-registry.generated.json'), neutralJson],
     [resolve(genDir(), 'parent-tool-definitions.generated.ts'), parentDefs],
+    [resolve(genDir(), 'capability-cost-index.generated.ts'), costIndex],
     [resolve(orchestrationDir(), 'generated-routing-index.generated.ts'), routingIndex],
+    [
+      resolve(docsDir(), 'capability-support-matrix.md'),
+      buildSupportMatrixDoc({ records: sortedRecords, catalogRevision }),
+    ],
+    [
+      resolve(docsDir(), 'capability-support-matrix.generated.json'),
+      buildSupportMatrixJson({ records: sortedRecords, catalogRevision }),
+    ],
+    [
+      resolve(docsDir(), 'action-reference.generated.md'),
+      buildActionReferenceDoc({ records: sortedRecords, catalogRevision }),
+    ],
+    [
+      resolve(docsDir(), 'migration-reference.generated.md'),
+      buildMigrationReferenceDoc({
+        records: sortedRecords,
+        catalogRevision,
+        migrationEntries: migrationMap.entries,
+      }),
+    ],
     [resolve(nativeToolsDir(), 'McpGeneratedParentRegistry.h'), buildAggregatorHeader()],
     [resolve(nativeToolsDir(), 'McpGeneratedParentRegistry.cpp'), buildAggregatorSource()],
     ...registrySources.map(
@@ -180,7 +211,12 @@ export const staleTargetMeta = (): StaleTargetMeta => ({
     resolve(genDir(), 'canonical-registry.generated.ts'),
     resolve(genDir(), 'canonical-registry.generated.json'),
     resolve(genDir(), 'parent-tool-definitions.generated.ts'),
+    resolve(genDir(), 'capability-cost-index.generated.ts'),
     resolve(orchestrationDir(), 'generated-routing-index.generated.ts'),
+    resolve(docsDir(), 'capability-support-matrix.md'),
+    resolve(docsDir(), 'capability-support-matrix.generated.json'),
+    resolve(docsDir(), 'action-reference.generated.md'),
+    resolve(docsDir(), 'migration-reference.generated.md'),
     resolve(nativeToolsDir(), 'McpGeneratedParentRegistry.h'),
     resolve(nativeToolsDir(), 'McpGeneratedParentRegistry.cpp'),
     ...GENERATED_SHARD_STEMS.map((stem) =>

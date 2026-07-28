@@ -54,12 +54,12 @@ describe('handleAnimationTools payload mapping', () => {
     expect(sendAutomationRequest).toHaveBeenNthCalledWith(1, 'control_actor', {
       action: 'get_components',
       actorName: 'Hero'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(sendAutomationRequest).toHaveBeenNthCalledWith(2, 'create_animation_blueprint', expect.objectContaining({
       name: 'ABP_Hero',
       meshPath: '/Game/Characters/SK_Test',
       savePath: '/Game/Animations'
-    }), {});
+    }), { timeoutMs: expect.any(Number) });
   });
 
   it('falls back to explicit payload values when component lookup fails', async () => {
@@ -82,7 +82,7 @@ describe('handleAnimationTools payload mapping', () => {
       name: 'ABP_Hero',
       skeletonPath: '/Game/Characters/SK_Test_Skeleton',
       savePath: '/Game/Animations'
-    }), {});
+    }), { timeoutMs: expect.any(Number) });
   });
 
   it('rejects invalid blend tree child animation paths before dispatch', async () => {

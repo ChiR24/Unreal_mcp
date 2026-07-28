@@ -17,7 +17,7 @@
  */
 import type {
   CapabilityAvailability,
-  CapabilityBehavior,
+  CapabilityBehaviorSource,
   CapabilityDeprecation,
   CapabilityPolicy,
   CapabilityRecordSource,
@@ -72,7 +72,7 @@ function availability(
 
 type EffectType = 'read' | 'write' | 'destructive';
 
-function behavior(effect: EffectType, opts: Partial<CapabilityBehavior> = {}): CapabilityBehavior {
+function behavior(effect: EffectType, opts: Partial<CapabilityBehaviorSource> = {}): CapabilityBehaviorSource {
   const isWrite = effect !== 'read';
   return {
     effect,
@@ -117,7 +117,7 @@ export interface RecordSpec {
   readonly outputProps?: PropertyMap;
   readonly outputRequired?: readonly string[];
   readonly effect: EffectType;
-  readonly behavior?: Partial<CapabilityBehavior>;
+  readonly behavior?: Partial<CapabilityBehaviorSource>;
   readonly latency: 'instant' | 'interactive' | 'long-running';
   readonly resources: 'low' | 'medium' | 'high';
   readonly plugins?: readonly string[];
@@ -127,6 +127,7 @@ export interface RecordSpec {
   readonly normalizationClass?: CapabilityRecordSource['normalization']['class'];
   readonly normalizationDisposition?: CapabilityRecordSource['normalization']['disposition'];
   readonly normalizationRationale?: string;
+  readonly normalizationAliasOf?: string;
   readonly deprecation?: CapabilityDeprecation;
   readonly aliases?: readonly string[];
   readonly exampleInput: JsonObject;
@@ -166,6 +167,9 @@ export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
       class: spec.normalizationClass ?? 'C_SAME_VERB_DIFFERENT_TARGET',
       disposition: spec.normalizationDisposition ?? 'retain',
       rationale: spec.normalizationRationale ?? 'Distinct gameplay target; no cross-tool duplicate.',
+      ...(spec.normalizationAliasOf === undefined
+        ? {}
+        : { aliasOf: CapabilityIdSchema.parse(spec.normalizationAliasOf) }),
     },
     deprecation: spec.deprecation ?? { status: 'active' },
     parent: getParentToolMetadata(spec.parentTool),

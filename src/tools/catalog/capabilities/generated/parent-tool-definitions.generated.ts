@@ -2541,6 +2541,131 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The control_editor action to execute."
         },
+        "compensation": {
+          "type": "object",
+          "description": "Compensating-cleanup receipt. Present on every outcome including the all-succeeded one, because each package lands independently and a completed save is already durable: non-atomic is a property of the operation, not of one result.",
+          "properties": {
+            "operation": {
+              "type": "string",
+              "description": "Canonical capability this receipt describes."
+            },
+            "atomic": {
+              "type": "boolean",
+              "enum": [
+                false
+              ],
+              "description": "Always false. Packages land one at a time and the ones that landed stay landed."
+            },
+            "rollback": {
+              "type": "string",
+              "enum": [
+                "unavailable"
+              ],
+              "description": "Always \"unavailable\". No editor transaction can reach a finished save, so this call was not and cannot be undone."
+            },
+            "rollbackReason": {
+              "type": "string",
+              "description": "Why no rollback exists for this class of work."
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "completed",
+                "partial",
+                "failed",
+                "noop"
+              ],
+              "description": "Outcome across all steps: everything landed, some did, none did, or there was nothing to do."
+            },
+            "completed": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "One step of the non-atomic save, naming what landed or why it did not.",
+                "properties": {
+                  "step": {
+                    "type": "string",
+                    "description": "Machine-readable step id, e.g. save:/Game/Maps/Main."
+                  },
+                  "detail": {
+                    "type": "string",
+                    "description": "What landed on disk, or the reason nothing did."
+                  }
+                },
+                "required": [
+                  "step",
+                  "detail"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Steps whose effect is now durable on disk."
+            },
+            "notCompleted": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "One step of the non-atomic save, naming what landed or why it did not.",
+                "properties": {
+                  "step": {
+                    "type": "string",
+                    "description": "Machine-readable step id, e.g. save:/Game/Maps/Main."
+                  },
+                  "detail": {
+                    "type": "string",
+                    "description": "What landed on disk, or the reason nothing did."
+                  }
+                },
+                "required": [
+                  "step",
+                  "detail"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Steps that did not complete, each with its reason."
+            },
+            "skipped": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "One step of the non-atomic save, naming what landed or why it did not.",
+                "properties": {
+                  "step": {
+                    "type": "string",
+                    "description": "Machine-readable step id, e.g. save:/Game/Maps/Main."
+                  },
+                  "detail": {
+                    "type": "string",
+                    "description": "What landed on disk, or the reason nothing did."
+                  }
+                },
+                "required": [
+                  "step",
+                  "detail"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Steps deliberately not attempted, such as transient packages."
+            },
+            "compensatingCapabilities": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Canonical capability id that reverses a durable effect."
+              },
+              "description": "Separate calls the caller may make to reverse a durable effect. Never a rollback of this call."
+            },
+            "callerAction": {
+              "type": "string",
+              "description": "Exact instruction for reaching a clean state; empty when nothing is outstanding."
+            }
+          },
+          "required": [
+            "atomic",
+            "rollback",
+            "state"
+          ],
+          "additionalProperties": false
+        },
         "filename": {
           "type": "string",
           "description": "Screenshot or recording filename."

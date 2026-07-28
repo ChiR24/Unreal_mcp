@@ -11,7 +11,7 @@ tools/
 |   |   |-- model.ts                 # CapabilityRecord / ParentToolMetadata types (contract types)
 |   |   |-- records/                 # CANONICAL CONTRACT SOURCE: per_tool/<tool>/ records + parent-metadata.ts
 |   |   `-- generated/               # generated parent-tool-definitions + canonical-registry (do not hand-edit)
-|-- definitions/                     # shared types, action sets, and compatibility fragments (consumed, not edited)
+|-- definitions/shared/              # ONLY 2 files: tool-definition.ts, action-sets.ts (consumed, not edited)
 |-- dynamic/                         # enable/disable state by parent tool and category
 |-- orchestration/
 |   |-- consolidated-handler-registration.ts  # registerDefaultHandlers(): all toolRegistry.register() calls

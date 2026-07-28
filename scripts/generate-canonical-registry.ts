@@ -44,7 +44,7 @@ process.on('unhandledRejection', (reason) => {
 // evaluation quirk when this script is the entry point.
 async function loadModules(): Promise<{
   loadAllCapabilityRecords: () => readonly CapabilityRecord[];
-  migrationMap: { readonly entries: ReadonlyMap<string, { readonly canonicalId?: string | null; readonly disposition: string }> };
+  migrationMap: { readonly entries: ReadonlyMap<string, MigrationEntryView> };
   generateAliases: () => {
     readonly aliases: ReadonlyArray<{ alias: string; canonicalId: string; source: string }>;
     readonly conflicts: ReadonlyArray<{ alias: string; canonicalIds: readonly string[] }>;
@@ -65,6 +65,7 @@ async function loadModules(): Promise<{
 import type { CapabilityRecord } from '../src/tools/catalog/capabilities/model.js';
 
 import { type CanonicalRecordSummary } from './canonical-registry/types.js';
+import { type MigrationEntryView } from './canonical-registry/docs-reference.js';
 import { compareSummaryDrift } from './canonical-registry/summary-drift.js';
 import { assertGroupingComplete } from './canonical-registry/grouping.js';
 import { deriveParents } from './canonical-registry/parent-derivation.js';

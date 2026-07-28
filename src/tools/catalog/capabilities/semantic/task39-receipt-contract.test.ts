@@ -27,11 +27,17 @@ const IDEMPOTENCY = IdempotencyKeySchema.parse('idem-1');
 const HEX16 = '740752bc2cdcb7b9';
 const HEX64 = 'a'.repeat(64);
 const SCHEMA_HEX64 = 'b'.repeat(64);
+const CATALOG_REVISION = ids.CatalogRevisionSchema.parse(HEX16);
+const CAPABILITY_REVISION = ids.CapabilityRevisionSchema.parse(HEX64);
+const SCHEMA_REVISION = ids.SchemaRevisionSchema.parse(SCHEMA_HEX64);
+const REQUEST_ONE = ids.RequestIdSchema.parse('str:req-1');
+const REQUEST_TWO = ids.RequestIdSchema.parse('str:req-2');
+const LIVE_REVISIONS = { selection: 2, level: 3, assetRegistry: 4, package: 5 } as const;
 
-const buildSuccess = (input: Record<string, unknown>): Receipt =>
-  buildSuccessReceipt(input as unknown as Parameters<typeof buildSuccessReceipt>[0]);
-const buildError = (input: Record<string, unknown>): Receipt =>
-  buildErrorReceipt(input as unknown as Parameters<typeof buildErrorReceipt>[0]);
+const buildSuccess = (input: Parameters<typeof buildSuccessReceipt>[0]): Receipt =>
+  buildSuccessReceipt(input);
+const buildError = (input: Parameters<typeof buildErrorReceipt>[0]): Receipt =>
+  buildErrorReceipt(input);
 
 function schemaOf(name: string): { safeParse: (v: unknown) => { success: boolean } } {
   return (ids as Record<string, unknown>)[name] as { safeParse: (v: unknown) => { success: boolean } };
@@ -121,11 +127,11 @@ describe('task39 envelope: the enriched receipt carries correlation, ids and rev
       capabilityId: CAP,
       data: { assetPath: '/Game/A' },
       correlationId: CORRELATION,
-      requestId: 'str:req-1',
+      requestId: REQUEST_ONE,
       idempotencyId: IDEMPOTENCY,
-      catalogRevision: HEX16,
-      capabilityRevision: HEX64,
-      schemaRevision: SCHEMA_HEX64,
+      catalogRevision: CATALOG_REVISION,
+      capabilityRevision: CAPABILITY_REVISION,
+      schemaRevision: SCHEMA_REVISION,
       timingMs: 12,
       validation: { outputSchema: 'passed', level: 'strict' }
     });
@@ -146,10 +152,10 @@ describe('task39 envelope: the enriched receipt carries correlation, ids and rev
       capabilityId: CAP,
       error: { kind: 'output', code: 'OUTPUT_SCHEMA_VIOLATION', message: 'bad', pointer: '/x' },
       correlationId: CORRELATION,
-      requestId: 'str:req-2',
-      catalogRevision: HEX16,
-      capabilityRevision: HEX64,
-      schemaRevision: SCHEMA_HEX64,
+      requestId: REQUEST_TWO,
+      catalogRevision: CATALOG_REVISION,
+      capabilityRevision: CAPABILITY_REVISION,
+      schemaRevision: SCHEMA_REVISION,
       timingMs: 3
     });
 
@@ -158,6 +164,32 @@ describe('task39 envelope: the enriched receipt carries correlation, ids and rev
     expect(view.requestId).toBe('str:req-2');
     expect(view.capabilityRevision).toBe(HEX64);
     expect(view.schemaRevision).toBe(SCHEMA_HEX64);
+  });
+
+  it('carries the same strict live revision snapshot on success and error receipts', () => {
+    const success = buildSuccess({ capabilityId: CAP, data: {}, liveRevisions: LIVE_REVISIONS });
+    const error = buildError({
+      capabilityId: CAP,
+      error: { kind: 'execution', code: 'UNREAL_ENGINE_ERROR', message: 'failed', retryable: false },
+      liveRevisions: LIVE_REVISIONS
+    });
+
+    expect(ReceiptSchema.safeParse(success).success).toBe(true);
+    expect(ReceiptSchema.safeParse(error).success).toBe(true);
+    expect((success as Record<string, unknown>).liveRevisions).toEqual(LIVE_REVISIONS);
+    expect((error as Record<string, unknown>).liveRevisions).toEqual(LIVE_REVISIONS);
+  });
+
+  it('rejects receipt snapshots that omit or add a live revision key', () => {
+    const success = buildSuccess({ capabilityId: CAP, data: {} });
+    expect(ReceiptSchema.safeParse({
+      ...success,
+      liveRevisions: { selection: 2, level: 3, assetRegistry: 4 }
+    }).success).toBe(false);
+    expect(ReceiptSchema.safeParse({
+      ...success,
+      liveRevisions: { ...LIVE_REVISIONS, futureState: 6 }
+    }).success).toBe(false);
   });
 });
 

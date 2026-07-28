@@ -8,13 +8,68 @@
  * is read-effect viewport navigation. TS normalizes focus_actor to 'focus'
  * for handler routing but dispatches 'focus_actor' to the bridge.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource, JsonObject } from '../../index.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const F = 'asset';
 const D = 'editor';
 const NR = 'Distinct control_editor asset or level navigation operation with unique target semantics.';
+
+// The compensating-cleanup receipt save_all emits, declared so it survives the
+// gateway's output narrowing. `projectCanonicalOutput` copies only DECLARED
+// properties into the payload a client reads, so an undeclared block is dropped
+// on the success path and reaches the caller only as un-narrowed error detail.
+// Mirrors FMcpCompensationReceipt::DescribeInto() in
+// plugins/.../Private/Foundation/McpCompensationReceipt.cpp exactly.
+const COMPENSATION_STEP: JsonObject = {
+  type: 'object',
+  description: 'One step of the non-atomic save, naming what landed or why it did not.',
+  properties: {
+    step: { type: 'string', description: 'Machine-readable step id, e.g. save:/Game/Maps/Main.' },
+    detail: { type: 'string', description: 'What landed on disk, or the reason nothing did.' },
+  },
+  required: ['step', 'detail'],
+  additionalProperties: false,
+};
+
+const COMPENSATION: JsonObject = {
+  type: 'object',
+  description:
+    'Compensating-cleanup receipt. Present on every outcome including the all-succeeded one, because '
+    + 'each package lands independently and a completed save is already durable: non-atomic is a property '
+    + 'of the operation, not of one result.',
+  properties: {
+    operation: { type: 'string', description: 'Canonical capability this receipt describes.' },
+    atomic: {
+      type: 'boolean',
+      enum: [false],
+      description: 'Always false. Packages land one at a time and the ones that landed stay landed.',
+    },
+    rollback: {
+      type: 'string',
+      enum: ['unavailable'],
+      description: 'Always "unavailable". No editor transaction can reach a finished save, so this call was not and cannot be undone.',
+    },
+    rollbackReason: { type: 'string', description: 'Why no rollback exists for this class of work.' },
+    state: {
+      type: 'string',
+      enum: ['completed', 'partial', 'failed', 'noop'],
+      description: 'Outcome across all steps: everything landed, some did, none did, or there was nothing to do.',
+    },
+    completed: { type: 'array', items: COMPENSATION_STEP, description: 'Steps whose effect is now durable on disk.' },
+    notCompleted: { type: 'array', items: COMPENSATION_STEP, description: 'Steps that did not complete, each with its reason.' },
+    skipped: { type: 'array', items: COMPENSATION_STEP, description: 'Steps deliberately not attempted, such as transient packages.' },
+    compensatingCapabilities: {
+      type: 'array',
+      items: { type: 'string', description: 'Canonical capability id that reverses a durable effect.' },
+      description: 'Separate calls the caller may make to reverse a durable effect. Never a rollback of this call.',
+    },
+    callerAction: { type: 'string', description: 'Exact instruction for reaching a clean state; empty when nothing is outstanding.' },
+  },
+  required: ['atomic', 'rollback', 'state'],
+  additionalProperties: false,
+};
 
 export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -77,10 +132,26 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Specific assets should be saved individually.'],
     inputProps: {},
     required: [],
+    outputProps: { compensation: COMPENSATION },
     effect: 'write',
     costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'save_all' },
-    exampleOutput: { success: true, message: 'All assets saved' },
+    exampleOutput: {
+      success: true,
+      message: 'All assets saved',
+      compensation: {
+        operation: 'control_editor.save_all',
+        atomic: false,
+        rollback: 'unavailable',
+        rollbackReason: 'Completed steps are already durable on disk. No editor transaction can reach a finished save, build or render, so nothing here was or can be undone.',
+        state: 'completed',
+        completed: [{ step: 'save:/Game/Maps/EntryMap', detail: 'level package written to disk' }],
+        notCompleted: [],
+        skipped: [],
+        compensatingCapabilities: [],
+        callerAction: '',
+      },
+    },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
 ];

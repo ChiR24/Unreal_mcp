@@ -18,7 +18,7 @@ describe('system_control screenshot routing', () => {
       resolution: undefined,
       mode: 'full_editor_window',
       returnBase64: true
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 
   it('forwards screenshot metadata opt-in for system control screenshots', async () => {
@@ -38,7 +38,7 @@ describe('system_control screenshot routing', () => {
       mode: 'full_editor_window',
       returnBase64: true,
       includeMetadata: true
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 });
 

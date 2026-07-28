@@ -11,7 +11,7 @@
  */
 import type { CapabilityRecordSource } from '../../index.js';
 import { buildCoreRecord } from '../core/builder.js';
-import { aliasNr, CANONICAL_NR, DOMAIN, P } from './properties.js';
+import { actorAlias, CANONICAL_NR, DOMAIN, P } from './properties.js';
 
 const FAMILY_TAGS = 'tags';
 const FAMILY_FIND = 'find';
@@ -92,8 +92,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read',
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('find_by_tag'),
+    ...actorAlias('find_by_tag'),
     exampleInput: { action: 'find_actors_by_tag', tag: 'Pickup' },
     exampleOutput: { success: true, message: 'Found 1 actors by tag', actors: [{ label: 'Cube1', name: 'Cube1' }], count: 1 },
   }),
@@ -132,8 +131,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read',
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('find_by_name'),
+    ...actorAlias('find_by_name'),
     exampleInput: { action: 'find_actors_by_name', name: 'Cube' },
     exampleOutput: { success: true, message: 'Found 1 actors: Cube1', actors: [{ label: 'Cube1', name: 'Cube1' }], count: 1 },
   }),
@@ -172,8 +170,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read',
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: aliasNr('find_by_class'),
+    ...actorAlias('find_by_class'),
     exampleInput: { action: 'find_actors_by_class', className: 'PointLight' },
     exampleOutput: { success: true, message: 'Found 2 actors by class', actors: [{ label: 'Light1', name: 'Light1' }], count: 2 },
   }),
