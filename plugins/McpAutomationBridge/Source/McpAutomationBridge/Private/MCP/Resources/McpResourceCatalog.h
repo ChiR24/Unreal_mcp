@@ -39,6 +39,21 @@ namespace McpResourceCatalog
 		return Mime;
 	}
 
+	inline const FString& LiveStateRevisionUri()
+	{
+		static const FString Uri = TEXT("ue://state/revisions");
+		return Uri;
+	}
+
+	// Task 47 serves readiness, anonymous aggregates and the rendered telemetry
+	// exposition here. Named so the read classifier and the health body builder
+	// share ONE spelling with the listed catalog entry below.
+	inline const FString& HealthUri()
+	{
+		static const FString Uri = TEXT("ue://health");
+		return Uri;
+	}
+
 	// NEW static resources added by Task 31 (beyond the pre-existing six).
 	// Mirrors the TypeScript `NEW_RESOURCE_DEFINITIONS`.
 	inline const TArray<FMcpResourceDefinition>& NewStaticResources()
@@ -52,6 +67,8 @@ namespace McpResourceCatalog
 				TEXT("Bounded editor state: PIE status and current level"), JsonMimeType() },
 			{ TEXT("ue://selection"), TEXT("Selection"),
 				TEXT("Bounded list of selected actor handles"), JsonMimeType() },
+			{ LiveStateRevisionUri(), TEXT("Live State Revisions"),
+				TEXT("Current selection, level, asset-registry, and package revision counters"), JsonMimeType() },
 		};
 		return Defs;
 	}
@@ -66,7 +83,7 @@ namespace McpResourceCatalog
 			{ TEXT("ue://assets"), TEXT("Assets"), TEXT("Project assets"), JsonMimeType() },
 			{ TEXT("ue://actors"), TEXT("Actors"), TEXT("Actors in the current level"), JsonMimeType() },
 			{ TEXT("ue://level"), TEXT("Current Level"), TEXT("Current level name and path"), JsonMimeType() },
-			{ TEXT("ue://health"), TEXT("Health Status"), TEXT("Server health and performance metrics"), JsonMimeType() },
+			{ HealthUri(), TEXT("Health Status"), TEXT("Server health and performance metrics"), JsonMimeType() },
 			{ TEXT("ue://automation-bridge"), TEXT("Automation Bridge"),
 				TEXT("Automation bridge diagnostics and recent activity"), JsonMimeType() },
 			{ TEXT("ue://version"), TEXT("Engine Version"), TEXT("Unreal Engine version and compatibility info"), JsonMimeType() },
@@ -92,7 +109,7 @@ namespace McpResourceCatalog
 	}
 
 	// The complete resources/list surface: the six legacy resources followed by
-	// the four Task 31 additions, matching the TypeScript order
+	// the five additive resources, matching the TypeScript order
 	// [...RESOURCE_DEFINITIONS, ...NEW_RESOURCE_DEFINITIONS].
 	inline const TArray<FMcpResourceDefinition>& AllListedResources()
 	{
@@ -106,7 +123,7 @@ namespace McpResourceCatalog
 		return All;
 	}
 
-	// True when Uri is one of the listed static resources (any of the ten).
+	// True when Uri is one of the listed static resources (any of the eleven).
 	inline bool IsListedResourceUri(const FString& Uri)
 	{
 		for (const FMcpResourceDefinition& Def : AllListedResources())

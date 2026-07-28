@@ -9,6 +9,7 @@
 #include "MCP/Execute/McpNativeGatewayValidation.h"
 #include "MCP/Execute/McpNativeReceiptEnrichment.h"
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
+#include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "Core/Security/McpPrequeueGate.h"
 #include "Foundation/McpIdempotencyLedger.h"
 #include "HAL/PlatformTime.h"
@@ -59,6 +60,7 @@ void FMcpNativeTransport::HandleGatewayExecute(
 		SendReceipt(ValidationError);
 		return;
 	}
+	Context.ExpectedRevisions = Plan.ExpectedRevisions;
 
 	// The same pre-queue security gate the WebSocket bridge applies, so both
 	// transports refuse identically, with the identical typed error, before any
@@ -83,8 +85,13 @@ void FMcpNativeTransport::HandleGatewayExecute(
 			UE_LOG(LogMcpNativeTransport, Warning,
 				TEXT("gateway execute refused by policy before dispatch (%s, correlationId=%s)"),
 				*Decision.ErrorCode, *Context.CorrelationId);
+			// Mirrors checkScopeAuthorization/checkConsentAuthorization in
+			// gateway-execute-policy.ts, which emit this same nextCall.
+			TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
+			Guidance->SetObjectField(TEXT("nextCall"),
+				GatewayBuildNextCall(TEXT("describe"), Plan.ParentTool, Plan.LegacyAction, FString()));
 			SendReceipt(McpBuildErrorReceipt(
-				Plan.CapabilityId, McpAuthorizationSemanticError(Decision), Context));
+				Plan.CapabilityId, McpAuthorizationSemanticError(Decision), Context, Guidance));
 			return;
 		}
 	}

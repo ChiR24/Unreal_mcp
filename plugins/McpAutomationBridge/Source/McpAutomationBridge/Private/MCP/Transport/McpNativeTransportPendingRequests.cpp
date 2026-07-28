@@ -1,80 +1,6 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
-#include "MCP/Execute/McpNativeGatewayValidation.h"
-#include "MCP/Execute/McpNativeReceiptRedaction.h"
-
-namespace
-{
-// A gateway execute call answers with a semantic receipt: the handler result
-// is checked against the capability output schema first, so a schema violation
-// is reported as an error instead of being returned as a success.
-TSharedPtr<FJsonObject> BuildGatewayExecuteReceipt(
-	const FSSEConnection& Conn, bool bSuccess, const FString& Message,
-	const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode)
-{
-	FMcpReceiptContext Context;
-	Context.CorrelationId = Conn.CorrelationId;
-	Context.RequestId = Conn.RequestId;
-	Context.IdempotencyId = Conn.IdempotencyId;
-	Context.StartTimeSeconds = Conn.RequestStartSeconds;
-
-	if (!bSuccess)
-	{
-		FMcpSemanticError Error;
-		if (ErrorCode == TEXT("NOT_CONNECTED"))
-		{
-			Error = McpDispatchError(ErrorCode, TEXT("NOT_CONNECTED"), Message, true);
-		}
-		else if (ErrorCode == TEXT("NOT_AVAILABLE") || ErrorCode == TEXT("AUTOMATION_QUEUE_FULL")
-			|| ErrorCode == TEXT("INVALID_SESSION"))
-		{
-			Error = McpDispatchError(ErrorCode, TEXT("DISPATCH_ERROR"), Message, true);
-		}
-		else
-		{
-			Error = McpUnrealExecutionError(Message, Result);
-			if (!ErrorCode.IsEmpty())
-			{
-				Error.GatewayCode = ErrorCode;
-			}
-		}
-		return McpBuildErrorReceipt(Conn.CapabilityId, Error, Context);
-	}
-
-	// Project the handler result to the capability's declared output fields
-	// before validating and publishing it, mirroring the TypeScript gateway
-	// (projectCanonicalOutput). This keeps undeclared native transport and
-	// verification fields (compiled, saved, scsVerification, assetPath, ...) from
-	// turning a correct success payload into OUTPUT_SCHEMA_VIOLATION. The native
-	// completion carries the success verdict separately from the payload (the
-	// WebSocket frame the TS gateway projects embeds it), so it is reunited
-	// first; the projected output is what is both validated and published.
-	if (McpSerializedResultExceeds(Result, 100000))
-	{
-		return McpBuildErrorReceipt(Conn.CapabilityId,
-			McpOutputError(TEXT("RESULT_TOO_LARGE"),
-				TEXT("Result exceeded the gateway safety limit. Retry with the action pagination or filtering parameters described by this capability.")),
-			Context);
-	}
-
-	TSharedPtr<FJsonObject> WithVerdict = MakeShared<FJsonObject>();
-	if (Result.IsValid())
-	{
-		WithVerdict->Values = Result->Values;
-	}
-	if (!WithVerdict->HasField(TEXT("success")))
-	{
-		WithVerdict->SetBoolField(TEXT("success"), true);
-	}
-	const TSharedPtr<FJsonObject> Canonical =
-		McpProjectCanonicalOutput(WithVerdict, Conn.OutputSchema);
-	const TSharedPtr<FJsonObject> OutputError = ValidateGatewayExecuteOutput(
-		Conn.CapabilityId, Conn.OutputSchema, Canonical, Result, Context);
-	return OutputError.IsValid()
-		? OutputError
-		: McpBuildSuccessReceipt(Conn.CapabilityId, Canonical, Context, Result, Message);
-}
-}
+#include "MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.h"
 
 bool FMcpNativeTransport::CompletePendingRequest(
 	const FString& RequestId, bool bSuccess, const FString& Message,
@@ -154,7 +80,13 @@ bool FMcpNativeTransport::CompletePendingRequest(
 	TSharedPtr<FJsonObject> ReportedResult = Result;
 	if (!Conn->CapabilityId.IsEmpty())
 	{
-		ReportedResult = BuildGatewayExecuteReceipt(*Conn, bSuccess, Message, Result, ErrorCode);
+		FMcpReceiptContext Context;
+		Context.CorrelationId = Conn->CorrelationId;
+		Context.RequestId = Conn->RequestId;
+		Context.IdempotencyId = Conn->IdempotencyId;
+		Context.StartTimeSeconds = Conn->RequestStartSeconds;
+		ReportedResult = McpBuildGatewayExecuteReceipt(
+			Conn->CapabilityId, Conn->OutputSchema, Context, bSuccess, Message, Result, ErrorCode);
 		bReportedSuccess = McpReceiptSucceeded(ReportedResult);
 		ReportedMessage = McpReceiptMessage(ReportedResult);
 		ReportedErrorCode.Reset();

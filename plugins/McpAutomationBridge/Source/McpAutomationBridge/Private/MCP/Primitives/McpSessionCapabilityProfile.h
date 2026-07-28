@@ -122,15 +122,15 @@ namespace McpClientProfileInternal
 		return false;
 	}
 
-	// Native method for a SERVER-BACKED primitive only. There is deliberately no
-	// tasks branch: Task 44 has not implemented or advertised MCP Tasks, so tasks
-	// never resolves to a native method (it would only answer with -32601).
+	// Native method for a SERVER-BACKED primitive only. Pointing a client at one
+	// of these is only safe because each is registered and answers for real.
 	inline FString NativeMethodFor(const FString& Primitive)
 	{
 		if (Primitive == TEXT("resources")) return TEXT("resources/list");
 		if (Primitive == TEXT("prompts")) return TEXT("prompts/list");
 		if (Primitive == TEXT("completions")) return TEXT("completion/complete");
 		if (Primitive == TEXT("subscriptions")) return TEXT("resources/subscribe");
+		if (Primitive == TEXT("tasks")) return TEXT("tasks/list");
 		return FString();
 	}
 
@@ -142,14 +142,15 @@ namespace McpClientProfileInternal
 	}
 
 	// Mirrors SERVER_BACKED_PRIMITIVES in fallback-pointers.ts: the primitives the
-	// server backs with a registered native method. Tasks is excluded, so it never
-	// takes the native branch and a Tasks-declaring client is routed to the gateway.
+	// server backs with a registered native method. Tasks joined the list in Task
+	// 44, when FMcpTaskSurface made tasks/get|list|cancel|result real.
 	inline bool ServerBacksPrimitive(const FString& Primitive)
 	{
 		return Primitive == TEXT("resources")
 			|| Primitive == TEXT("prompts")
 			|| Primitive == TEXT("completions")
-			|| Primitive == TEXT("subscriptions");
+			|| Primitive == TEXT("subscriptions")
+			|| Primitive == TEXT("tasks");
 	}
 }
 

@@ -136,7 +136,8 @@ bool FMcpNativeTransport::QueueAutomationRequestForSession(
 	const FString& SessionId, const FString& RequestId,
 	const FString& DispatchAction,
 	const TSharedPtr<FJsonObject>& Arguments,
-	bool& bOutSessionActive)
+	bool& bOutSessionActive,
+	const TMap<EMcpStateKind, int64>& ExpectedRevisions)
 {
 	bOutSessionActive = false;
 	if (!Subsystem)
@@ -150,10 +151,16 @@ bool FMcpNativeTransport::QueueAutomationRequestForSession(
 		return false;
 	}
 	bOutSessionActive = ActiveSessions.Contains(SessionId);
+	// Task 45: a native request carries no socket, so the MCP session id is the
+	// only thing that keeps its queue fairness lane and per-session cap distinct
+	// from every other session's.
 	return bOutSessionActive &&
 		Subsystem->QueueAutomationRequest(
 			RequestId, DispatchAction, Arguments, nullptr,
-			ERequestOrigin::NativeHTTP) == EAutomationQueueRejection::None;
+			ERequestOrigin::NativeHTTP,
+			ExpectedRevisions,
+			FString(TEXT("native:")) + SessionId) ==
+			EAutomationQueueRejection::None;
 }
 
 void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)

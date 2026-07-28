@@ -14,6 +14,7 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "Foundation/McpLiveStateRevisions.h"
 
 struct FMcpSemanticError
 {
@@ -38,6 +39,10 @@ struct FMcpSemanticError
 	TArray<FString> GrantedScopes;
 	FString ConsentScope;
 	TArray<FString> Supported;
+	// Set only on RESULT_TOO_LARGE, mirroring the TypeScript output variant so a
+	// client learns by how much a response overran on either transport.
+	bool bHasResultChars = false;
+	int64 ResultChars = 0;
 	TSharedPtr<FJsonObject> UnrealDetail;
 };
 
@@ -54,6 +59,9 @@ struct FMcpReceiptContext
 	FString IdempotencyId;
 	FString IdempotencySlot;
 	double StartTimeSeconds = 0.0;
+
+	/** Task 42 live-state pins, carried to the game-thread gate that enforces them. */
+	TMap<EMcpStateKind, int64> ExpectedRevisions;
 };
 
 FMcpSemanticError McpValidationError(const FString& GatewayCode, const FString& Message, const FString& Pointer = FString());

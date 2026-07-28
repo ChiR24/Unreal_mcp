@@ -52,6 +52,21 @@ void FMcpNativeTransport::HandleToolsCall(
 
 	if (!Arguments.IsValid()) Arguments = MakeShared<FJsonObject>();
 
+	// Task 44: a task-augmented call asks for a POLLABLE handle, so it is routed
+	// here BEFORE pre-dispatch — answering it any other way would strand the
+	// client polling an id that never existed, and a refusal must never arrive
+	// after the work it refuses has already run.
+	const TSharedPtr<FJsonObject>* TaskCreation = nullptr;
+	if (Params->TryGetObjectField(TEXT("task"), TaskCreation) && TaskCreation)
+	{
+		auto IsToolEnabled = [this](const FString& Name) { return ToolManager.IsToolEnabled(Name); };
+		FString TaskBody;
+		TaskSurface.HandleToolCallCheckpoint(ToolName, Arguments, *TaskCreation, Id,
+			SessionId, IsToolEnabled, TaskBody);
+		SendBodyAndClose(ClientSocket, TaskBody, 200, CorsOrigin);
+		return;
+	}
+
 	// The public surface is permanently the single static 'unreal' gateway tool.
 	// Capture the client's _meta.progressToken (if any) and thread it through the
 	// gateway so streamed notifications/progress echo the client's own token.

@@ -1,4 +1,5 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
+#include "Foundation/McpCompensationReceipt.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -156,6 +157,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
   TArray<FString> FailedPackages;
   TSet<UPackage*> ProcessedPackages;
 
+  // Each package lands independently and the ones that landed stay landed, so a
+  // partial failure here has no rollback -- only a compensating next step.
+  FMcpCompensationReceipt Receipt(TEXT("control_editor.save_all"));
+
   auto ShouldSkipPackage = [](UPackage* Package) -> bool {
     if (!Package || Package->HasAnyFlags(RF_Transient)) {
       return true;
@@ -177,18 +182,24 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
     if (ShouldSkipPackage(Package)) {
       SkippedCount++;
       SkippedPackages.Add(PackagePath);
+      Receipt.NoteSkipped(FString::Printf(TEXT("save:%s"), *PackagePath),
+                          TEXT("transient or temporary package"));
       UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
              TEXT("HandleControlEditorSaveAll: Skipping transient/temp package: %s"), *PackagePath);
       return;
     }
 
+    const FString StepId = FString::Printf(TEXT("save:%s"), *PackagePath);
+
     UWorld* PackageWorld = UWorld::FindWorldInPackage(Package);
     if (PackageWorld) {
       if (PackageWorld->PersistentLevel && McpSafeLevelSave(PackageWorld->PersistentLevel, PackagePath)) {
         SavedWorldCount++;
+        Receipt.NoteCompleted(StepId, TEXT("level package written to disk"));
       } else {
         bSuccess = false;
         FailedPackages.Add(PackagePath);
+        Receipt.NoteNotCompleted(StepId, TEXT("level save failed; this package is unchanged on disk"));
         UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
                TEXT("HandleControlEditorSaveAll: Failed to save world package: %s"), *PackagePath);
       }
@@ -197,9 +208,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
 
     if (McpSafeAssetSave(Package)) {
       SavedContentCount++;
+      Receipt.NoteCompleted(StepId, TEXT("content package written to disk"));
     } else {
       bSuccess = false;
       FailedPackages.Add(PackagePath);
+      Receipt.NoteNotCompleted(StepId, TEXT("content save failed; this package is unchanged on disk"));
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("HandleControlEditorSaveAll: Failed to save content package: %s"), *PackagePath);
     }
@@ -231,6 +244,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
   Resp->SetNumberField(TEXT("totalDirty"), TotalDirty);
   Resp->SetArrayField(TEXT("skippedPackages"), MakeStringArray(SkippedPackages));
   Resp->SetArrayField(TEXT("failedPackages"), MakeStringArray(FailedPackages));
+
+  if (FailedPackages.Num() > 0) {
+    Receipt.AddCompensatingCapability(TEXT("control_editor.save_all"));
+    Receipt.SetCallerAction(FString::Printf(
+        TEXT("%d package(s) are already written to disk and stay written. Resolve the listed "
+             "failures (check out or clear the read-only flag on failedPackages) and call "
+             "control_editor.save_all again to finish the remaining %d."),
+        SavedWorldCount + SavedContentCount, FailedPackages.Num()));
+  } else {
+    Receipt.SetCallerAction(
+        TEXT("Nothing outstanding. The saved packages are durable and are not undoable."));
+  }
+  Receipt.DescribeInto(Resp);
 
   // Only report outer success if the operation actually succeeded
   if (bSuccess || TotalDirty == 0) {

@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -108,7 +109,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
   const FName TagName(*TagValue);
   const bool bAlreadyHad = Found->Tags.Contains(TagName);
 
-  Found->Modify();
+  FMcpScopedEditorTransaction Transaction(
+      FText::FromString(TEXT("Add Actor Tag")),
+      EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{Found});
+
   Found->Tags.AddUnique(TagName);
   Found->MarkPackageDirty();
 
@@ -116,6 +120,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
   Data->SetBoolField(TEXT("wasPresent"), bAlreadyHad);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
   Data->SetStringField(TEXT("tag"), TagName.ToString());
+  Transaction.DescribeInto(Data);
 
   // Add verification data
 	McpHandlerUtils::AddVerification(Data, Found);
@@ -163,7 +168,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
     return true;
   }
 
-  Found->Modify();
+  FMcpScopedEditorTransaction Transaction(
+      FText::FromString(TEXT("Remove Actor Tag")),
+      EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{Found});
+
   Found->Tags.Remove(TagName);
   Found->MarkPackageDirty();
 
@@ -171,6 +179,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
   Data->SetBoolField(TEXT("wasPresent"), true);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
   Data->SetStringField(TEXT("tag"), TagValue);
+  Transaction.DescribeInto(Data);
 
   // Add verification data
 	McpHandlerUtils::AddVerification(Data, Found);

@@ -57,29 +57,29 @@ inline int32 Num() { return 23; }
 inline const FMcpCapabilityShard& At(int32 Index)
 {
 	static const FMcpCapabilityShard Table[] = {
-		{ TEXT("animation_physics"), Detail::MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS, 58, 87 },
-		{ TEXT("build_environment"), Detail::MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS, 105, 150 },
-		{ TEXT("control_actor"), Detail::MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS, 33, 46 },
-		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 27, 42 },
-		{ TEXT("inspect"), Detail::MCP_CAP_SHARD_INSPECT_CHUNKS, 28, 36 },
-		{ TEXT("manage_ai"), Detail::MCP_CAP_SHARD_MANAGE_AI_CHUNKS, 42, 62 },
-		{ TEXT("manage_asset"), Detail::MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS, 101, 158 },
-		{ TEXT("manage_audio"), Detail::MCP_CAP_SHARD_MANAGE_AUDIO_CHUNKS, 33, 50 },
-		{ TEXT("manage_blueprint"), Detail::MCP_CAP_SHARD_MANAGE_BLUEPRINT_CHUNKS, 79, 104 },
-		{ TEXT("manage_character"), Detail::MCP_CAP_SHARD_MANAGE_CHARACTER_CHUNKS, 17, 27 },
-		{ TEXT("manage_combat"), Detail::MCP_CAP_SHARD_MANAGE_COMBAT_CHUNKS, 28, 39 },
-		{ TEXT("manage_effect"), Detail::MCP_CAP_SHARD_MANAGE_EFFECT_CHUNKS, 39, 59 },
-		{ TEXT("manage_gas"), Detail::MCP_CAP_SHARD_MANAGE_GAS_CHUNKS, 17, 27 },
-		{ TEXT("manage_geometry"), Detail::MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS, 53, 76 },
-		{ TEXT("manage_interaction"), Detail::MCP_CAP_SHARD_MANAGE_INTERACTION_CHUNKS, 15, 22 },
-		{ TEXT("manage_inventory"), Detail::MCP_CAP_SHARD_MANAGE_INVENTORY_CHUNKS, 23, 33 },
-		{ TEXT("manage_level"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_CHUNKS, 16, 24 },
-		{ TEXT("manage_level_structure"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_STRUCTURE_CHUNKS, 35, 45 },
-		{ TEXT("manage_networking"), Detail::MCP_CAP_SHARD_MANAGE_NETWORKING_CHUNKS, 53, 77 },
-		{ TEXT("manage_pcg"), Detail::MCP_CAP_SHARD_MANAGE_PCG_CHUNKS, 22, 30 },
-		{ TEXT("manage_sequence"), Detail::MCP_CAP_SHARD_MANAGE_SEQUENCE_CHUNKS, 58, 81 },
-		{ TEXT("manage_tools"), Detail::MCP_CAP_SHARD_MANAGE_TOOLS_CHUNKS, 6, 8 },
-		{ TEXT("system_control"), Detail::MCP_CAP_SHARD_SYSTEM_CONTROL_CHUNKS, 35, 52 },
+		{ TEXT("animation_physics"), Detail::MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS, 72, 87 },
+		{ TEXT("build_environment"), Detail::MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS, 128, 150 },
+		{ TEXT("control_actor"), Detail::MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS, 40, 46 },
+		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 34, 42 },
+		{ TEXT("inspect"), Detail::MCP_CAP_SHARD_INSPECT_CHUNKS, 34, 36 },
+		{ TEXT("manage_ai"), Detail::MCP_CAP_SHARD_MANAGE_AI_CHUNKS, 52, 62 },
+		{ TEXT("manage_asset"), Detail::MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS, 126, 158 },
+		{ TEXT("manage_audio"), Detail::MCP_CAP_SHARD_MANAGE_AUDIO_CHUNKS, 41, 50 },
+		{ TEXT("manage_blueprint"), Detail::MCP_CAP_SHARD_MANAGE_BLUEPRINT_CHUNKS, 95, 104 },
+		{ TEXT("manage_character"), Detail::MCP_CAP_SHARD_MANAGE_CHARACTER_CHUNKS, 22, 27 },
+		{ TEXT("manage_combat"), Detail::MCP_CAP_SHARD_MANAGE_COMBAT_CHUNKS, 34, 39 },
+		{ TEXT("manage_effect"), Detail::MCP_CAP_SHARD_MANAGE_EFFECT_CHUNKS, 48, 59 },
+		{ TEXT("manage_gas"), Detail::MCP_CAP_SHARD_MANAGE_GAS_CHUNKS, 22, 27 },
+		{ TEXT("manage_geometry"), Detail::MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS, 65, 76 },
+		{ TEXT("manage_interaction"), Detail::MCP_CAP_SHARD_MANAGE_INTERACTION_CHUNKS, 19, 22 },
+		{ TEXT("manage_inventory"), Detail::MCP_CAP_SHARD_MANAGE_INVENTORY_CHUNKS, 28, 33 },
+		{ TEXT("manage_level"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_CHUNKS, 20, 24 },
+		{ TEXT("manage_level_structure"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_STRUCTURE_CHUNKS, 42, 45 },
+		{ TEXT("manage_networking"), Detail::MCP_CAP_SHARD_MANAGE_NETWORKING_CHUNKS, 65, 77 },
+		{ TEXT("manage_pcg"), Detail::MCP_CAP_SHARD_MANAGE_PCG_CHUNKS, 26, 30 },
+		{ TEXT("manage_sequence"), Detail::MCP_CAP_SHARD_MANAGE_SEQUENCE_CHUNKS, 70, 81 },
+		{ TEXT("manage_tools"), Detail::MCP_CAP_SHARD_MANAGE_TOOLS_CHUNKS, 7, 8 },
+		{ TEXT("system_control"), Detail::MCP_CAP_SHARD_SYSTEM_CONTROL_CHUNKS, 43, 52 },
 	};
 	check(Index >= 0 && Index < Num());
 	return Table[Index];
@@ -87,5 +87,5 @@ inline const FMcpCapabilityShard& At(int32 Index)
 
 inline int32 TotalRecordCount() { return 1335; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("740752bc2cdcb7b9"); }
+inline const TCHAR* CatalogRevision() { return TEXT("0216a865586f88d6"); }
 }

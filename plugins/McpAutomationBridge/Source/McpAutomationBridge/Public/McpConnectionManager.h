@@ -6,6 +6,7 @@
 #include "Templates/SharedPointer.h"
 #include "Misc/ScopeLock.h"
 #include "Foundation/McpCapabilityPrincipal.h"
+#include "Foundation/McpLiveStateRevisions.h"
 
 class FMcpBridgeWebSocket;
 class UMcpAutomationBridgeSettings;
@@ -14,7 +15,7 @@ class UMcpAutomationBridgeSettings;
  * Delegate for handling incoming automation requests.
  * Params: RequestId, Action, Payload, RequestingSocket
  */
-DECLARE_DELEGATE_FourParams(FMcpMessageReceivedCallback, const FString&, const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FMcpBridgeWebSocket>);
+DECLARE_DELEGATE_FiveParams(FMcpMessageReceivedCallback, const FString&, const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FMcpBridgeWebSocket>, const FMcpExpectedRevisions&);
 
 /**
  * Delegate for handling inbound cancel_request frames from the TS bridge.
@@ -87,6 +88,7 @@ public:
 private:
 	// Allowed access for the focused cancel-scoping automation test.
 	friend class FMcpCancelScopeTest;
+	friend class FMcpDrainSessionTeardownTest;
 
 	void AttemptConnection();
 	void ForceReconnect(const FString& Reason, float ReconnectDelayOverride = -1.0f);

@@ -134,7 +134,7 @@ void FMcpNativeTransport::StreamToolCall(
 		bool bSessionActive = false;
 		const bool bQueued = QueueAutomationRequestForSession(
 			SessionId, CapturedRequestId, CapturedDispatchAction,
-			CapturedArguments, bSessionActive);
+			CapturedArguments, bSessionActive, Context.ExpectedRevisions);
 		if (!bSessionActive)
 		{
 			CompletePendingRequest(

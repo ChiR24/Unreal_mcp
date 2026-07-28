@@ -219,4 +219,32 @@ FMcpCapabilityDemand ResolveDemand(const FMcpPrequeueRequest& Request)
 	}
 	return Demand;
 }
+
+FString ResolveActionClass(const FString& DispatchAction, const TSharedPtr<FJsonObject>& Payload)
+{
+	FMcpPrequeueRequest Request;
+	Request.DispatchAction = DispatchAction;
+	Request.Payload = Payload;
+
+	const FMcpCapabilityDemand Demand = ResolveDemand(Request);
+	if (Demand.CapabilityId.IsEmpty())
+	{
+		// Nothing in the catalogue matched. The gate answers Admin here because
+		// it must fail closed; telemetry answers "unknown" because reporting an
+		// unmatched action as administrative would misstate what ran.
+		return TEXT("unknown");
+	}
+
+	switch (Demand.RequiredScope)
+	{
+	case EMcpCapabilityScope::Read:
+		return TEXT("read");
+	case EMcpCapabilityScope::Write:
+		return TEXT("write");
+	case EMcpCapabilityScope::Destructive:
+		return TEXT("destructive");
+	default:
+		return TEXT("admin");
+	}
+}
 } // namespace McpPrequeueGate

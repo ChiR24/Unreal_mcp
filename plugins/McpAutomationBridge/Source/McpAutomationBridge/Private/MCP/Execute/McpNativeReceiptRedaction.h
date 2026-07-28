@@ -25,4 +25,5 @@ TArray<TSharedPtr<FJsonValue>> McpBoundJsonArray(TArray<TSharedPtr<FJsonValue>> 
 
 /** True when the condensed JSON serialization of Result exceeds MaxChars, matching
  *  the TS gateway's serialized result-size limit. */
-bool McpSerializedResultExceeds(const TSharedPtr<FJsonObject>& Result, int32 MaxChars);
+bool McpSerializedResultExceeds(
+	const TSharedPtr<FJsonObject>& Result, int32 MaxChars, int64* OutSerializedChars = nullptr);

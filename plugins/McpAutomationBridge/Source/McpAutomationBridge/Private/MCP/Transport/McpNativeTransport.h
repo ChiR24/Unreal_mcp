@@ -7,10 +7,12 @@
 #include "MCP/DynamicTools/McpSessionConfigureStore.h"
 #include "MCP/Primitives/McpSubscriptionStore.h"
 #include "MCP/Primitives/McpNotificationCoalescer.h"
+#include "MCP/Primitives/McpTaskMethods.h"
 #include "Async/Future.h"
 #include <atomic>
 #include "MCP/Transport/McpNativeTransportConnectionTypes.h"
 #include "Foundation/McpCapabilityPrincipal.h"
+#include "Foundation/McpLiveStateRevisions.h"
 
 struct FMcpReceiptContext;
 
@@ -201,7 +203,9 @@ private:
 		const FString& SessionId, const FString& RequestId,
 		const FString& DispatchAction,
 		const TSharedPtr<FJsonObject>& Arguments,
-		bool& bOutSessionActive);
+		bool& bOutSessionActive,
+		const TMap<EMcpStateKind, int64>& ExpectedRevisions =
+			TMap<EMcpStateKind, int64>());
 	void CloseSessionConnections(const FString& SessionId);
 
 	// ─── MCP protocol-version negotiation (spec 2025-11-25 lifecycle) ───
@@ -267,6 +271,9 @@ private:
 	FMcpSubscriptionStore SubscriptionStore;
 	FMcpSessionConfigureStore SessionConfigureStore;
 	TUniquePtr<FMcpNotificationCoalescer> NotificationCoalescer;
+	// Task 44: owns the bounded per-session task store AND the tasks/* handlers,
+	// so routing costs the transport no method of its own.
+	FMcpTaskSurface TaskSurface;
 	mutable FCriticalSection PrimitiveStateMutex;
 	int32 ListenPort = 0;
 

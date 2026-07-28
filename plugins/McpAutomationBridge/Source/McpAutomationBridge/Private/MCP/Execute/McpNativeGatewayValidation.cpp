@@ -161,6 +161,16 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 		}
 	}
 
+	// Task 42: the live-state pins are shape-checked here so a malformed envelope
+	// is refused before dispatch, but the revision COMPARISON is deliberately not
+	// done here — it belongs on the game thread immediately before mutation,
+	// because a transport-thread snapshot is already stale by dispatch time.
+	FMcpSemanticError RevisionError;
+	if (!McpParseExpectedRevisions(Request.Options, OutPlan.ExpectedRevisions, RevisionError))
+	{
+		return McpBuildErrorReceipt(Request.CapabilityId, RevisionError, Context);
+	}
+
 	TSharedPtr<FJsonObject> Arguments = MakeShared<FJsonObject>();
 	Arguments->Values = WithDefaults->Values;
 	Arguments->SetStringField(TEXT("action"), LegacyAction);

@@ -1,7 +1,9 @@
 #include "MCP/Resources/McpResourceReadContent.h"
 #include "MCP/Resources/McpResourceCatalog.h"
+#include "MCP/Resources/McpResourceHealthContent.h"
 #include "MCP/Resources/McpResourceUri.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+#include "Foundation/McpLiveStateRevisions.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
@@ -60,7 +62,8 @@ namespace McpResourceRead
 {
 	EReadKind Classify(const FString& Uri)
 	{
-		if (Uri == CatalogUri || Uri == ProjectUri)
+		if (Uri == CatalogUri || Uri == ProjectUri || Uri == McpResourceCatalog::LiveStateRevisionUri() ||
+			Uri == McpResourceCatalog::HealthUri())
 		{
 			return EReadKind::SocketReadable;
 		}
@@ -71,12 +74,36 @@ namespace McpResourceRead
 		return EReadKind::Unknown;
 	}
 
-	FString BuildReadBodyText(const FString& Uri, FMcpResourceRevision Revision)
+	FReadBody BuildReadBody(const FString& Uri, FMcpResourceRevision Revision)
 	{
 		auto Root = MakeShared<FJsonObject>();
+		TSharedRef<FJsonObject> Data = MakeShared<FJsonObject>();
+		if (Uri == ProjectUri)
+		{
+			Data = BuildProjectData();
+		}
+		else if (Uri == McpResourceCatalog::HealthUri())
+		{
+			Data = McpResourceHealth::BuildHealthData();
+		}
+		else if (Uri == McpResourceCatalog::LiveStateRevisionUri())
+		{
+			const FMcpLiveStateRevisionSnapshot Snapshot = FMcpLiveStateRevisions::Get().Snapshot();
+			Revision = Snapshot.Max();
+			Data = Snapshot.ToJson();
+		}
+		else
+		{
+			Data = BuildCatalogData();
+		}
 		Root->SetNumberField(TEXT("revision"), static_cast<double>(Revision));
-		Root->SetObjectField(TEXT("data"), Uri == ProjectUri ? BuildProjectData() : BuildCatalogData());
-		return SerializeCompact(Root);
+		Root->SetObjectField(TEXT("data"), Data);
+		return { Revision, SerializeCompact(Root) };
+	}
+
+	FString BuildReadBodyText(const FString& Uri, FMcpResourceRevision Revision)
+	{
+		return BuildReadBody(Uri, Revision).Text;
 	}
 
 	TSharedPtr<FJsonValue> ListEntry(const FMcpResourceDefinition& Def)

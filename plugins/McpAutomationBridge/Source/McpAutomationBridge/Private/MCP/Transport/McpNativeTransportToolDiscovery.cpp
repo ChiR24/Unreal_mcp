@@ -147,13 +147,27 @@ FString FMcpNativeTransport::HandleInitialize(
 	Capabilities->SetObjectField(TEXT("tools"), ToolsCapability);
 	// Task 37: advertise exactly the implemented session-profile primitives —
 	// resources (with subscribe), prompts, and completions — all backed by
-	// HandlePrimitiveMethod. Nothing else is claimed (no tasks, no logging, no
-	// list-changed member) so the surface never advertises an unbacked primitive.
+	// HandlePrimitiveMethod. Nothing unbacked is ever claimed: no logging and no
+	// list-changed member, and tasks only since Task 44 backed it below.
 	auto ResourcesCapability = MakeShared<FJsonObject>();
 	ResourcesCapability->SetBoolField(TEXT("subscribe"), true);
 	Capabilities->SetObjectField(TEXT("resources"), ResourcesCapability);
 	Capabilities->SetObjectField(TEXT("prompts"), MakeShared<FJsonObject>());
 	Capabilities->SetObjectField(TEXT("completions"), MakeShared<FJsonObject>());
+	// Task 44: tasks is advertised ONLY because FMcpTaskSurface answers all four
+	// tasks/* methods and accepts a task-augmented tools/call. requests.tools.call
+	// is the claim that a tools/call MAY be task-augmented; the surface then
+	// refuses the mutating operations per call, which is a policy the capability
+	// vocabulary cannot express at parameter granularity.
+	auto TasksCapability = MakeShared<FJsonObject>();
+	TasksCapability->SetObjectField(TEXT("list"), MakeShared<FJsonObject>());
+	TasksCapability->SetObjectField(TEXT("cancel"), MakeShared<FJsonObject>());
+	auto TasksToolRequests = MakeShared<FJsonObject>();
+	TasksToolRequests->SetObjectField(TEXT("call"), MakeShared<FJsonObject>());
+	auto TasksRequests = MakeShared<FJsonObject>();
+	TasksRequests->SetObjectField(TEXT("tools"), TasksToolRequests);
+	TasksCapability->SetObjectField(TEXT("requests"), TasksRequests);
+	Capabilities->SetObjectField(TEXT("tasks"), TasksCapability);
 	Result->SetObjectField(TEXT("capabilities"), Capabilities);
 
 	auto ServerInfo = MakeShared<FJsonObject>();

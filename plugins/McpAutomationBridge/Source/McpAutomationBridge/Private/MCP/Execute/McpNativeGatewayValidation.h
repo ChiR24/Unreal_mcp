@@ -10,6 +10,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Foundation/McpLiveStateRevisions.h"
 
 class FMcpToolRegistry;
 class FMcpDynamicToolManager;
@@ -28,6 +29,13 @@ struct FMcpGatewayExecutePlan
 
 	TSharedPtr<FJsonObject> Arguments;
 	TSharedPtr<FJsonObject> OutputSchema;
+
+	/**
+	 * Client live-state pins, parsed but deliberately NOT compared here. The
+	 * comparison belongs on the game thread immediately before mutation; a
+	 * transport-thread comparison would be stale by dispatch time.
+	 */
+	TMap<EMcpStateKind, int64> ExpectedRevisions;
 };
 
 /**

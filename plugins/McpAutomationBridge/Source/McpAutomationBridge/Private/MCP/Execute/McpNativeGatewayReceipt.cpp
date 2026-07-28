@@ -152,6 +152,8 @@ TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 {
 	TSharedPtr<FJsonObject> Receipt = BuildReceiptShell(CapabilityId, Context.CorrelationId);
 	Receipt->SetStringField(TEXT("status"), TEXT("error"));
+	const TSharedRef<FJsonObject> LiveRevisions = FMcpLiveStateRevisions::Get().Snapshot().ToJson();
+	Receipt->SetObjectField(TEXT("liveRevisions"), LiveRevisions);
 
 	// `success` and `message` are retained so pre-Task-27 gateway clients keep
 	// reading the same fields they already branch on.
@@ -187,6 +189,11 @@ TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 	{
 		TypedError->SetArrayField(TEXT("supported"), GatewayStringArray(Error.Supported));
 	}
+	if (Error.bHasResultChars)
+	{
+		TypedError->SetNumberField(TEXT("resultChars"), static_cast<double>(Error.ResultChars));
+		Receipt->SetNumberField(TEXT("resultChars"), static_cast<double>(Error.ResultChars));
+	}
 	if (Error.UnrealDetail.IsValid())
 	{
 		McpMaskSecretsDeep(Error.UnrealDetail);
@@ -199,8 +206,10 @@ TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 	// which builds no receipt for an unresolved request.
 	if (!CapabilityId.IsEmpty())
 	{
-		Receipt->SetObjectField(TEXT("receipt"),
-			McpBuildCanonicalReceipt(CapabilityId, Context, false, &Error, nullptr, nullptr));
+		TSharedPtr<FJsonObject> Canonical =
+			McpBuildCanonicalReceipt(CapabilityId, Context, false, &Error, nullptr, nullptr);
+		Canonical->SetObjectField(TEXT("liveRevisions"), LiveRevisions);
+		Receipt->SetObjectField(TEXT("receipt"), Canonical);
 	}
 
 	if (Guidance.IsValid())
@@ -223,11 +232,15 @@ TSharedPtr<FJsonObject> McpBuildSuccessReceipt(
 {
 	TSharedPtr<FJsonObject> Receipt = BuildReceiptShell(CapabilityId, Context.CorrelationId);
 	Receipt->SetStringField(TEXT("status"), TEXT("success"));
+	const TSharedRef<FJsonObject> LiveRevisions = FMcpLiveStateRevisions::Get().Snapshot().ToJson();
+	Receipt->SetObjectField(TEXT("liveRevisions"), LiveRevisions);
 	Receipt->SetBoolField(TEXT("success"), true);
 	Receipt->SetStringField(TEXT("operation"), TEXT("execute"));
 	SetIfPresent(Receipt, TEXT("message"), Message);
-	Receipt->SetObjectField(TEXT("receipt"),
-		McpBuildCanonicalReceipt(CapabilityId, Context, true, nullptr, Data, RawResult));
+	TSharedPtr<FJsonObject> Canonical =
+		McpBuildCanonicalReceipt(CapabilityId, Context, true, nullptr, Data, RawResult);
+	Canonical->SetObjectField(TEXT("liveRevisions"), LiveRevisions);
+	Receipt->SetObjectField(TEXT("receipt"), Canonical);
 	if (Data.IsValid())
 	{
 		Receipt->SetObjectField(TEXT("data"), Data);

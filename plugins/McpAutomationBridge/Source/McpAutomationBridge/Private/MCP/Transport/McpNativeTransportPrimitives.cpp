@@ -69,6 +69,7 @@ void FMcpNativeTransport::ReleaseSessionPrimitives(const FString& SessionId)
 	// Drop this session's configure overlay so a reused session id restarts
 	// pristine; the coalescer cursor is dropped just below, so no revision leaks.
 	SessionConfigureStore.ClearSession(SessionId);
+	TaskSurface.CloseSession(SessionId);
 	FScopeLock Lock(&PrimitiveStateMutex);
 	if (NotificationCoalescer.IsValid())
 	{
@@ -156,11 +157,13 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 				TEXT("RESOURCE_UNAVAILABLE: editor-state resource is not readable from the transport thread"), Data));
 			return true;
 		}
-		auto Content = MakeShared<FJsonObject>();
-		Content->SetStringField(TEXT("uri"), Uri);
-		Content->SetStringField(TEXT("mimeType"), McpResourceCatalog::JsonMimeType());
-		Content->SetNumberField(TEXT("revision"), McpInitialResourceRevision);
-		Content->SetStringField(TEXT("text"), McpResourceRead::BuildReadBodyText(Uri, McpInitialResourceRevision));
+			const McpResourceRead::FReadBody ReadBody =
+				McpResourceRead::BuildReadBody(Uri, McpInitialResourceRevision);
+			auto Content = MakeShared<FJsonObject>();
+			Content->SetStringField(TEXT("uri"), Uri);
+			Content->SetStringField(TEXT("mimeType"), McpResourceCatalog::JsonMimeType());
+			Content->SetNumberField(TEXT("revision"), ReadBody.Revision);
+			Content->SetStringField(TEXT("text"), ReadBody.Text);
 		TArray<TSharedPtr<FJsonValue>> Contents;
 		Contents.Add(MakeShared<FJsonValueObject>(Content));
 		auto Result = MakeShared<FJsonObject>();

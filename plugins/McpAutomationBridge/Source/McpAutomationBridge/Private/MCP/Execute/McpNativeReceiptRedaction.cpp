@@ -194,7 +194,8 @@ TArray<TSharedPtr<FJsonValue>> McpBoundJsonArray(TArray<TSharedPtr<FJsonValue>> 
 	return Values;
 }
 
-bool McpSerializedResultExceeds(const TSharedPtr<FJsonObject>& Result, int32 MaxChars)
+bool McpSerializedResultExceeds(
+	const TSharedPtr<FJsonObject>& Result, int32 MaxChars, int64* OutSerializedChars)
 {
 	if (!Result.IsValid())
 	{
@@ -204,5 +205,9 @@ bool McpSerializedResultExceeds(const TSharedPtr<FJsonObject>& Result, int32 Max
 	const TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer =
 		TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&Serialized);
 	FJsonSerializer::Serialize(Result.ToSharedRef(), Writer);
+	if (OutSerializedChars != nullptr)
+	{
+		*OutSerializedChars = static_cast<int64>(Serialized.Len());
+	}
 	return Serialized.Len() > MaxChars;
 }

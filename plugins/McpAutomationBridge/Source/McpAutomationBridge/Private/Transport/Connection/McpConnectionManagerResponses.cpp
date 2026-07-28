@@ -1,4 +1,5 @@
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
+#include "Foundation/McpLiveStateRevisions.h"
 
 bool FMcpConnectionManager::SendRawMessage(const FString &Message) {
   if (Message.IsEmpty())
@@ -75,6 +76,8 @@ void FMcpConnectionManager::SendAutomationResponse(
   Response->SetStringField(TEXT("error"), ErrorCode.IsEmpty() ? TEXT("") : ErrorCode);
   if (Result.IsValid())
     Response->SetObjectField(TEXT("result"), Result.ToSharedRef());
+  const FMcpLiveStateRevisionSnapshot Snapshot = FMcpLiveStateRevisions::Get().Snapshot();
+  Response->SetObjectField(TEXT("liveRevisions"), Snapshot.ToJson());
 
   FString Serialized;
   const TSharedRef<TJsonWriter<>> Writer =

@@ -1,7 +1,8 @@
 // McpResourceReadContent.h
-// Task 38 lane A: bounded, socket-thread-safe read content for the two static
+// Task 38 lane A: bounded, socket-thread-safe read content for the static
 // resources the native transport can answer without a game-thread editor scan
-// (`ue://capability/catalog`, `ue://project`), plus the read classification that
+// (`ue://capability/catalog`, `ue://project`, `ue://state/revisions`, and since
+// Task 47 `ue://health`), plus the read classification that
 // separates a socket-readable uri from a known editor-state uri (which returns
 // RESOURCE_UNAVAILABLE) and from a genuinely unknown uri (RESOURCE_NOT_FOUND).
 // Mirrors the typed error codes of the TypeScript ResourceReadRouter without
@@ -16,6 +17,12 @@
 
 namespace McpResourceRead
 {
+	struct FReadBody
+	{
+		FMcpResourceRevision Revision = McpInitialResourceRevision;
+		FString Text;
+	};
+
 	enum class EReadKind : uint8
 	{
 		SocketReadable,
@@ -24,6 +31,8 @@ namespace McpResourceRead
 	};
 
 	EReadKind Classify(const FString& Uri);
+
+	FReadBody BuildReadBody(const FString& Uri, FMcpResourceRevision Revision);
 
 	FString BuildReadBodyText(const FString& Uri, FMcpResourceRevision Revision);
 

@@ -10,6 +10,7 @@ const TArray<FString>& McpExecutionOptionKeys()
 	static const TArray<FString> Keys = {
 		TEXT("idempotencyKey"),
 		TEXT("expectedCatalogRevision"),
+		TEXT("expectedRevisions"),
 		TEXT("preview"),
 		TEXT("savePolicy"),
 		TEXT("timeoutMs"),
@@ -266,7 +267,7 @@ bool McpParseGatewayExecuteRequest(
 		}
 		Options = RawOptions->AsObject();
 	}
-	if (!McpValidateExecutionOptions(Options, OutError))
+	if (!McpValidateExecuteOptionsForCapability(Options, ActionParams, Record, OutError, OutGuidance))
 	{
 		return false;
 	}

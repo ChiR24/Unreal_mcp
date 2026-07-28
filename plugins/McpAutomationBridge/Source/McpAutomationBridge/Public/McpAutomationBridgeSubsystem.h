@@ -9,6 +9,7 @@
 #include "Engine/DataAsset.h"
 #include "HAL/CriticalSection.h"
 #include "McpAutomationBridgeLog.h"
+#include "McpQueueFairness.h"
 #include "Runtime/Launch/Resources/Version.h"
 #include "Templates/SharedPointer.h"
 
@@ -18,6 +19,7 @@ class FMcpNativeTransport;
 class UBlueprint;
 class USkeleton;
 class UMcpAutomationBridgeSubsystem;
+enum class EMcpStateKind : uint8;
 
 namespace McpProcessRequestDispatch
 {
@@ -113,7 +115,7 @@ enum class ERequestOrigin : uint8
 
 enum class EAutomationQueueRejection : uint8
 {
-    None, NotAccepting, AlreadyCanceled, QueueFull
+    None, NotAccepting, AlreadyCanceled, QueueFull, SessionQueueFull
 };
 
 UCLASS()
@@ -217,7 +219,9 @@ public:
       const FString& Action,
       const TSharedPtr<FJsonObject>& Payload,
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-      ERequestOrigin Origin = ERequestOrigin::WebSocket);
+      ERequestOrigin Origin = ERequestOrigin::WebSocket,
+      const TMap<EMcpStateKind, int64>& ExpectedRevisions = TMap<EMcpStateKind, int64>(),
+      const FString& SessionKey = FString());
   // Cancel API contract: best-effort, advisory bool return. The function is
   // idempotent and only operates on QUEUED requests — a request that is
   // already executing inside ProcessAutomationRequest cannot be interrupted
@@ -257,6 +261,8 @@ public:
     TSharedPtr<FJsonObject> Payload;
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket;
     ERequestOrigin Origin = ERequestOrigin::WebSocket;
+    TMap<EMcpStateKind, int64> ExpectedRevisions;
+    FString SessionKey;
   };
   TArray<FPendingAutomationRequest> PendingAutomationRequests;
   TSet<FString> CanceledAutomationRequestIds;
@@ -273,6 +279,8 @@ public:
   bool bAcceptingAutomationRequests = true;
   static constexpr int32 MaxPendingAutomationRequests = 64;
   static constexpr int32 MaxAutomationRequestsPerTick = 16;
+  // Task 45 round-robin rotation + single-mutation-lane guard. See McpQueueFairness.h.
+  FMcpQueueFairnessState QueueFairness;
   void ProcessPendingAutomationRequests();
 
   ERequestOrigin CurrentRequestOrigin = ERequestOrigin::WebSocket;

@@ -287,6 +287,17 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		return;
 	}
 
+	// Task 44: tasks/get|list|cancel|result. Session-scoped inside the surface,
+	// so one session can never read or cancel another session's task.
+	{
+		FString TaskBody;
+		if (TaskSurface.HandleMethod(Rpc.Method, Rpc.Params, Rpc.Id, HttpReq.SessionId, TaskBody))
+		{
+			SendAndClose(ClientSocket, 200, TEXT("application/json"), TaskBody, {}, HttpReq.Origin);
+			return;
+		}
+	}
+
 	// Unknown method
 	FString ErrorBody = FMcpJsonRpc::BuildError(
 		Rpc.Id, FMcpJsonRpc::ErrorMethodNotFound,

@@ -60,6 +60,14 @@ FMcpCapabilityDemand ResolveDemand(const FMcpPrequeueRequest& Request);
 // not consume the principal's budget.
 FMcpAuthorizationDecision Authorize(const FMcpPrequeueRequest& Request);
 
+// Task 47: the BOUNDED telemetry action class for a dispatch action, resolved
+// from the same catalogue demand the gate uses, so "how dangerous was it" is
+// reported by the authority rather than re-derived from the action string.
+// Returns one of read/write/destructive/admin, or "unknown" when no catalogue
+// record resolved. The capability id is read to decide resolved-vs-unresolved
+// and is deliberately NOT returned: it must never become a metric label.
+FString ResolveActionClass(const FString& DispatchAction, const TSharedPtr<FJsonObject>& Payload);
+
 // The same gate for a request that reads project data without naming a
 // capability — the native MCP primitives (resources/*, prompts/*, tools/list).
 // The demand is a fixed `read` with no consent, because there is no catalogue

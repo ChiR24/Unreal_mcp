@@ -150,6 +150,18 @@ void FMcpConnectionManager::HandleMessage(
       return;
     }
 
+    FMcpExpectedRevisionsParseResult ParsedRevisions =
+        FMcpLiveStateRevisions::ParseExpectedRevisions(
+            RootObj->TryGetField(TEXT("expectedRevisions")));
+    if (!ParsedRevisions.bSuccess) {
+      SendAutomationResponse(
+          Socket, RequestId, false, ParsedRevisions.Message, nullptr,
+          ParsedRevisions.ErrorCode);
+      return;
+    }
+    FMcpExpectedRevisions ExpectedRevisions =
+        MoveTemp(ParsedRevisions.Revisions);
+
     // Map request to socket for response routing
     {
       FScopeLock Lock(&PendingRequestsMutex);
@@ -158,7 +170,8 @@ void FMcpConnectionManager::HandleMessage(
 
     // Dispatch to subsystem via callback
     if (OnMessageReceived.IsBound()) {
-      OnMessageReceived.Execute(RequestId, Action, Payload, Socket);
+      OnMessageReceived.Execute(
+          RequestId, Action, Payload, Socket, ExpectedRevisions);
     }
     return;
   }
