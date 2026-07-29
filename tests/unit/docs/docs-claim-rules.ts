@@ -178,6 +178,171 @@ const CERTIFICATION_NEGATIONS: readonly RegExp[] = [
   /\bcompatibility target\b/i,
 ];
 
+// ---------------------------------------------------------------------------
+// Rule 5 — a SUPPORT claim about an engine range, checked against the evidence.
+//
+// Rule 4 fires only on CERTIFICATION vocabulary, and `CERTIFICATION_NEGATIONS`
+// excuses any paragraph containing the phrase "compatibility target". So the
+// strongest engine claim this project actually publishes — that the plugin is
+// "scoped to build and run across UE 5.0 through 5.8 Preview" — is invisible to
+// it twice over: it names no certification verb, and it sits beside the excusing
+// phrase. Rule 4 passes because the prose is hedged, not because it is true.
+//
+// This rule is different in two ways that matter:
+//
+//   1. It scans for SUPPORT/CAPABILITY verbs ("builds and runs", "supports",
+//      "works on", "requires UE x.y") rather than certification verbs, because
+//      "it runs on 5.0-5.8" is the claim a reader actually acts on.
+//   2. It resolves the claimed minors against ENGINE_CERTIFICATION_LEDGER — the
+//      recorded per-minor state — instead of asking whether a hedging word is
+//      present anywhere nearby. A claim is unbacked when it covers a minor the
+//      ledger does not mark certified. That is a fact lookup, not a word count,
+//      so no amount of rewording can make a false claim pass.
+//
+// Negations are SENTENCE-scoped here, deliberately. Paragraph scoping is what
+// let one unrelated "not" disable a whole paragraph; a disclaimer that qualifies
+// a different sentence does not qualify this one.
+// ---------------------------------------------------------------------------
+
+/** One advertised engine minor and what the record actually says about it. */
+export interface EngineLedgerRow {
+  readonly minor: string;
+  readonly state: 'PASS' | 'FAIL' | 'BLOCKED_EXTERNAL';
+  readonly certified: boolean;
+}
+
+/**
+ * The nine advertised minors and their recorded state.
+ *
+ * Transcribed from the engine matrix published in
+ * `docs/performance-and-evidence.md` (itself rendered from the task-64
+ * `/environment/engineMatrix` record): 0 certified, one stale PASS (5.7), one
+ * FAIL that is ours (5.8), seven BLOCKED_EXTERNAL. The contract test re-parses
+ * that table and asserts this constant still matches it, so the ledger cannot
+ * drift away from the document it was taken from. It lives here as data rather
+ * than a file read because these rules are pure functions over text and the
+ * underlying evidence directory is not distributed.
+ */
+export const ENGINE_CERTIFICATION_LEDGER: readonly EngineLedgerRow[] = Object.freeze([
+  { minor: '5.0', state: 'BLOCKED_EXTERNAL', certified: false },
+  { minor: '5.1', state: 'BLOCKED_EXTERNAL', certified: false },
+  { minor: '5.2', state: 'BLOCKED_EXTERNAL', certified: false },
+  { minor: '5.3', state: 'BLOCKED_EXTERNAL', certified: false },
+  { minor: '5.4', state: 'BLOCKED_EXTERNAL', certified: false },
+  { minor: '5.5', state: 'BLOCKED_EXTERNAL', certified: false },
+  { minor: '5.6', state: 'BLOCKED_EXTERNAL', certified: false },
+  { minor: '5.7', state: 'PASS', certified: false },
+  { minor: '5.8', state: 'FAIL', certified: false },
+]);
+
+/**
+ * Sentences, for negation scoping. Splits only on terminal punctuation followed
+ * by whitespace, so `5.0`, `5.8 Preview` and `2025-11-25` never split mid-token;
+ * `e.g.`/`i.e.` are guarded because they are the common false split in prose.
+ *
+ * The closing-delimiter class is load-bearing, not cosmetic. These are markdown
+ * documents, and the sentence this rule exists to catch ends `compatibility
+ * target.** The MCP Automation Bridge plugin is scoped to build and run…`. A
+ * plain `(?<=[.!?])\s+` sees `*` before the space, refuses to split, and hands
+ * the support claim a disclaimer from the previous sentence — reproducing the
+ * exact paragraph-scoping defect this rule was written to remove.
+ *
+ * Markdown table rows are dropped: cells are independent facts, and joining them
+ * into one string manufactures adjacency between a version column and unrelated
+ * prose. Every real claim audited here is a heading, bullet or paragraph.
+ */
+export function sentencesOf(paragraph: string): readonly string[] {
+  return paragraph
+    .split('\n')
+    .filter((line) => !/^\s*\|/.test(line))
+    .join('\n')
+    .replace(/\b(e\.g|i\.e|cf|vs)\.\s/gi, '$1<DOT> ')
+    .split(/(?<=[.!?][*_`)\]"']*)\s+/)
+    .map((s) => s.replace(/<DOT>/g, '.').trim())
+    .filter((s) => s.length > 0);
+}
+
+/** Verbs that assert the software WORKS on an engine, as opposed to certifying it. */
+const ENGINE_SUPPORT_ASSERTIONS: readonly RegExp[] = [
+  /\bscoped to (?:build|run|compile)\b/i,
+  /\bbuilds? and runs?\b/i,
+  /\bruns? and builds?\b/i,
+  /\bsupports?\b/i,
+  /\bsupported (?:on|across|for|by)\b/i,
+  /\bworks? (?:on|with|across)\b/i,
+  /\bruns? (?:on|across)\b/i,
+  /\bcompatible with\b/i,
+  /\brequires? Unreal Engine\b/i,
+  /\bcompiles? (?:on|across|against)\b/i,
+];
+
+/** An explicit engine range: `5.0-5.8`, `5.0–5.8`, `5.0 through 5.8`, `5.0 to 5.8`. */
+const ENGINE_RANGE = /\b(5\.\d)\s*(?:[-–—]|to|through)\s*(5\.\d)\b/i;
+
+/** A bare engine minor mention, e.g. `UE 5.6`, `5.8 Preview`, `Unreal Engine 5.2`. */
+const ENGINE_MINOR_TOKEN = /\b(?:UE\s*|Unreal Engine\s*)?(5\.\d)(?:\.\d+)?\b/gi;
+
+/** Every advertised minor a sentence claims, expanding any range it states. */
+export function claimedEngineMinors(sentence: string): readonly string[] {
+  const claimed = new Set<string>();
+  const range = ENGINE_RANGE.exec(sentence);
+  if (range) {
+    const low = Number(range[1].slice(2));
+    const high = Number(range[2].slice(2));
+    for (let n = Math.min(low, high); n <= Math.max(low, high); n++) claimed.add(`5.${n}`);
+  }
+  for (const match of sentence.matchAll(ENGINE_MINOR_TOKEN)) claimed.add(match[1]);
+  return [...claimed]
+    .filter((m) => ENGINE_CERTIFICATION_LEDGER.some((row) => row.minor === m))
+    .sort();
+}
+
+/**
+ * Markers that make a support sentence honest. Narrow on purpose, and matched
+ * within the SAME sentence as the claim: each one names the gap rather than
+ * merely containing a negative word. `\bnot\b` is deliberately NOT here — it is
+ * what let "Console platforms are not included" excuse a false certification.
+ */
+const SUPPORT_NEGATIONS: readonly RegExp[] = [
+  // An outright denial of the capability. "A build for 5.6 won't work with 5.7"
+  // and "Plugin failed to compile on UE older than 5.4" trip the support verbs
+  // while asserting the exact opposite of support, so the denial must clear them.
+  /\b(?:won't|will not|does ?n'?t|do not|did ?n'?t|cannot|can'?t|never)\s+(?:\w+\s+){0,2}(?:work|build|compile|run|support)/i,
+  /\b(?:failed|fails|failing) to\b/i,
+  /\bnot\s+(?:yet\s+)?(?:been\s+)?(?:certified|verified|compile-verified|validated|proven|tested|confirmed|run|exercised)\b/i,
+  /\bnot\s+(?:currently\s+)?(?:supported|compiling|building)\b/i,
+  /\bdoes not (?:compile|build|run|certify)\b/i,
+  /\bis not a (?:certification|guarantee|claim)\b/i,
+  /\buncertified\b/i,
+  /\bcompatibility target\b/i,
+  /\bintended\b/i,
+  /\bintent\b/i,
+  /\baspiration/i,
+  /\bunverified\b/i,
+  /\bpending\b/i,
+  /\bblocked\b/i,
+  /\bunknown\b/i,
+  /\bdeferred\b/i,
+  /\bin progress\b/i,
+  /\bdo not (?:assume|claim|cite|quote|read)\b/i,
+];
+
+/** The rendered failure reason, so a red gate tells the author what is wrong. */
+export function unbackedEngineMinors(sentence: string): readonly string[] {
+  return claimedEngineMinors(sentence).filter(
+    (minor) => ENGINE_CERTIFICATION_LEDGER.find((row) => row.minor === minor)?.certified !== true,
+  );
+}
+
+function assertsUnbackedEngineSupport(paragraph: string): boolean {
+  return sentencesOf(paragraph).some(
+    (sentence) =>
+      has(sentence, ENGINE_SUPPORT_ASSERTIONS) &&
+      unbackedEngineMinors(sentence).length > 0 &&
+      !has(sentence, SUPPORT_NEGATIONS),
+  );
+}
+
 export const DOCS_CLAIM_RULES: readonly ClaimRule[] = [
   {
     id: 'stale-public-tool-surface',
@@ -208,6 +373,12 @@ export const DOCS_CLAIM_RULES: readonly ClaimRule[] = [
       has(p, CERTIFICATION_CONTEXT) &&
       (absentEngineMention(p) || FULL_RANGE_CLAIM.test(p)) &&
       !has(p, CERTIFICATION_NEGATIONS),
+  },
+  {
+    id: 'unbacked-engine-range-support',
+    description:
+      'A support claim naming an engine minor must be backed by ENGINE_CERTIFICATION_LEDGER, or qualified in the same sentence. No minor is currently certified.',
+    violates: assertsUnbackedEngineSupport,
   },
 ];
 

@@ -19,6 +19,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ABSENT_ENGINE_MINORS,
   DOCS_CLAIM_RULES,
+  ENGINE_CERTIFICATION_LEDGER,
   NATIVE_PROTOCOL_VERSIONS,
   SUPPORTED_PROTOCOL_VERSIONS,
   TS_ONLY_LEGACY_PROTOCOL_VERSIONS,
@@ -124,6 +125,28 @@ describe('docs claim contract — every rule can reject a bad claim', () => {
       rule: 'unbacked-certification',
       fragment: 'Certification completed across 5.0–5.8 on every supported engine root.',
     },
+    {
+      rule: 'unbacked-engine-range-support',
+      fragment: 'The MCP Automation Bridge plugin is scoped to build and run across UE 5.0 through 5.8 Preview.',
+    },
+    {
+      // The bare-`not` escape: `unbacked-certification` goes silent on this
+      // because its negations are paragraph-scoped and `not` appears somewhere.
+      rule: 'unbacked-engine-range-support',
+      fragment:
+        'The plugin builds and runs across UE 5.0 through 5.8 Preview. Console platforms are not included.',
+    },
+    {
+      // The `compatibility target` escape, in a NEIGHBOURING sentence. Sentence
+      // scoping is the only thing that catches this one.
+      rule: 'unbacked-engine-range-support',
+      fragment:
+        'Unreal Engine 5.0–5.8 is the compatibility target. The plugin builds and runs across UE 5.0 through 5.8 Preview.',
+    },
+    {
+      rule: 'unbacked-engine-range-support',
+      fragment: 'The plugin builds and runs on UE 5.8 Preview 1.',
+    },
   ];
 
   for (const { rule, fragment } of BAD_FRAGMENTS) {
@@ -150,10 +173,48 @@ describe('docs claim contract — every rule can reject a bad claim', () => {
       `The experimental ${'Unreal'}${'Agent'} panel has been removed from this tree.`,
       'The native transport deliberately does not implement the later 2026-07-28 release candidate.',
       'Certification across 5.0-5.8 is incomplete; 5.1, 5.2, 5.4 and 5.6 roots are missing.',
+      'The plugin is scoped to build and run across UE 5.0 through 5.8 Preview, but that range is not certified: zero of the nine advertised minors are certified.',
+      'UE 5.6 support is blocked: the root is absent from this host.',
+      'The plugin does not compile on UE 5.8 Preview 1.',
+      'A build for 5.6 will not work with 5.5, 5.7, or 5.8.',
     ];
     for (const paragraph of honest) {
       expect(auditDocument('honest.md', paragraph), paragraph).toEqual([]);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The engine ledger is DATA inside a pure-text module, so nothing stops it
+// drifting away from the record it was transcribed from. This re-parses the
+// published matrix and holds the two together. Without it, a stale ledger would
+// quietly re-certify a minor and `unbacked-engine-range-support` would go blind
+// exactly the way `unbacked-certification` did.
+// ---------------------------------------------------------------------------
+describe('docs claim contract — the engine ledger matches the published matrix', () => {
+  const MATRIX_ROW = /^\|\s*(5\.\d)\s*\|[^|]*\|[^|]*\|[^|]*\|\s*(.+?)\s*\|\s*(yes|no)\s*\|/gm;
+
+  const publishedMatrix = (): ReadonlyArray<{ minor: string; state: string; certified: boolean }> =>
+    [...read('docs/performance-and-evidence.md').matchAll(MATRIX_ROW)].map((m) => ({
+      minor: m[1],
+      state: /FAIL/.test(m[2]) ? 'FAIL' : /PASS/.test(m[2]) ? 'PASS' : 'BLOCKED_EXTERNAL',
+      certified: m[3] === 'yes',
+    }));
+
+  it('publishes all nine advertised minors', () => {
+    expect(publishedMatrix().map((r) => r.minor)).toEqual(
+      ENGINE_CERTIFICATION_LEDGER.map((r) => r.minor),
+    );
+  });
+
+  it('agrees with ENGINE_CERTIFICATION_LEDGER row for row', () => {
+    expect(publishedMatrix()).toEqual(
+      ENGINE_CERTIFICATION_LEDGER.map((r) => ({ minor: r.minor, state: r.state, certified: r.certified })),
+    );
+  });
+
+  it('certifies no minor, so every engine support claim needs an in-sentence qualifier', () => {
+    expect(ENGINE_CERTIFICATION_LEDGER.filter((r) => r.certified)).toEqual([]);
   });
 });
 
