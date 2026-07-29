@@ -80,6 +80,19 @@ Both surfaces bind loopback-first. Non-loopback requires an explicit opt-in
 transport, `bRequireCapabilityToken` as well — the native transport refuses to
 bind non-loopback without it. See [`security-and-receipts.md`](security-and-receipts.md).
 
+### Which engine you can actually run this against
+
+The plugin's build scope spans nine UE minors, but that scope is a build
+target, not a test result. Of the nine, **one** has a passing live record
+(5.7.4) and that record is stale against the current tree; one (5.8 Preview 1)
+does **not** compile today; and the remaining seven could not be tried on the
+recording host, so their compatibility is unknown rather than broken.
+
+Read the per-minor table in
+[`performance-and-evidence.md`](performance-and-evidence.md#the-nine-advertised-minors)
+before you pick an engine. Do not infer support for a minor from the badge
+range.
+
 ## Protocol version negotiation is asymmetric on purpose
 
 The native `/mcp` transport supports exactly three versions

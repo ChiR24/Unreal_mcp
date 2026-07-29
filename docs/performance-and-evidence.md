@@ -109,64 +109,98 @@ flat.
 - Execute paths were exercised only in their fail-closed form. No editor
   mutation was performed or attempted.
 
-## Engine certification
+## Engine support and certification
 
-Source: `.omo/evidence/task-52/certify-5.7.json`
-(sha256 `9b4cdb0c…`, generated 2026-07-27T17:26:39Z).
+Sources: `.omo/evidence/task-62-pure-unreal-mcp-implementation.json` (the
+per-minor aggregate) and `.omo/evidence/task-63-pure-unreal-mcp-implementation.json`
+(the claim decision).
 
-> **There is no completed multi-engine certification.** One engine has a
-> recorded run. Everything else is inventory, not certification.
+**Decided readiness status: `BLOCKED_EXTERNAL`** (rule `FALLBACK-1`; gating
+requirements R1, R2, R4 and R5 unmet; R7 and R8 additionally unmet for the
+stronger best-in-class claim). 15 blockers are carried, classified by who can
+clear them.
 
-### Engine roots present on the recording host
+> **One of the nine advertised minors has a passing live record, and that
+> record does not cover the current tree.** Everything else below is inventory,
+> a compile result, or an explicit blocker. None of it is certification and
+> none of it may be quoted as one.
 
-| Minor | Identity | Buildable | Runnable |
-| --- | --- | --- | --- |
-| 5.0 | 5.0.3 | yes | no |
-| 5.3 | 5.3.2 | yes | no |
-| 5.5 | 5.5.4 | yes | no |
-| 5.7 | 5.7.4 | yes | yes |
-| 5.8 | 5.8.0 | yes | yes |
-
-**Absent: 5.1, 5.2, 5.4, 5.6.** No certification, testing, or support evidence
-exists for those four, and none may be claimed. The plugin's *compatibility
-target* is UE 5.0–5.8; a compatibility target is a build scope, not a test
-result.
+### The nine advertised minors
 
 Engine identity is read from `Engine/Build/Build.version` (hashed in the
-record), never inferred from a folder name — the record even captures a folder
-label that contradicts its contents (`…-preview-1` containing `5.8.0-release`).
+record), never inferred from a folder name — the aggregate even captures a
+folder label that contradicts its contents (`…-preview-1` containing
+`5.8.0-release`).
 
-### What the UE 5.7 run does record
+| Minor | Identity | Root present | Editor built | State | Certified | Next step is owned by |
+| --- | --- | --- | --- | --- | --- | --- |
+| 5.0 | 5.0.3 | yes | no | `BLOCKED_EXTERNAL` / root-unbuilt | no | operator — compile the editor target for the installed root |
+| 5.1 | — | no | no | `BLOCKED_EXTERNAL` / root-absent | no | operator — install the engine, then build its editor target |
+| 5.2 | — | no | no | `BLOCKED_EXTERNAL` / root-absent | no | operator — install the engine, then build its editor target |
+| 5.3 | 5.3.2 | yes | no | `BLOCKED_EXTERNAL` / root-unbuilt | no | operator — compile the editor target for the installed root |
+| 5.4 | — | no | no | `BLOCKED_EXTERNAL` / root-absent | no | operator — install the engine, then build its editor target |
+| 5.5 | 5.5.4 | yes | no | `BLOCKED_EXTERNAL` / root-unbuilt | no | operator — compile the editor target for the installed root |
+| 5.6 | — | no | no | `BLOCKED_EXTERNAL` / root-absent | no | operator — install the engine, then build its editor target |
+| 5.7 | 5.7.4 | yes | yes | `PASS`, but the pass is stale | no | us — re-certify against the current tree |
+| 5.8 | 5.8.0-preview-1 | yes | yes | `FAIL` — our plugin does not compile | no | us — this is our defect, nothing external is missing |
 
-Verdict: **15 of 16 certification stages passed for UE 5.7.**
+**The two blocked subclasses are not the same problem and must not be merged.**
+`root-unbuilt` means the engine is installed but its `UnrealEditor-Cmd` was
+never compiled, so the remediation is a build on an existing root.
+`root-absent` means the engine is not on the host at all, so the remediation is
+an install first. In both cases compatibility is **UNKNOWN**: seven of the nine
+minors have no plugin compile result of any kind, and "we could not try" is
+never "it is broken" — nor is it "it works".
 
-- A plugin package built from this tree: 3,071,460 bytes, sha256
-  `b4f66d37…`, preserved under `.omo/evidence/task-52/artifacts/`.
-- Binary freshness proven `FRESH` — the built `.so` is newer than its newest
-  input.
-- An owned `UnrealEditor-Cmd` launched against a disposable project under
-  `/tmp/opencode`, on uniquely allocated ports.
-- Three loopback listeners observed **out-of-band** via `procfs:net-tcp`
-  (native, plus two WebSocket ports).
-- Complete cleanup: the editor PID gone, all three ports refusing connections,
-  and the 1,961-entry workspace removed, each verified by an independent
-  observation.
-- Positive controls pass: every observation mechanism was shown to see both
-  `present` and `absent`, so a "gone" reading is not a broken probe.
+### 5.7.4 — a passing run whose certification is stale
 
-### What the UE 5.7 run does NOT record
+Two independent runs recorded **20 of 20 stages PASSED, 0 FAILED, 0 NOT_REACHED**
+(Tasks 52 and 59), with 84 automation requests started and 84 completed, and a
+23-pass / 0-fail / 0-blocked driver subset over 24 cases on both the native and
+stdio transports.
 
-The record's `clients`, `transcripts` and `claims` arrays are all **empty**.
-This run proves the certification *orchestration* — package, launch, observe,
-clean up — and does not carry client-transcript evidence of corpus execution.
-Do not cite it as live corpus coverage.
+That certification **predates the current tree**: 139 plugin source files are
+newer than the certified binary, and the record's own tree snapshot covers the
+harness rather than plugin source
+(`certificationDrift.recordedTreeCoversPluginSource = false`).
 
-The one non-passing stage is recorded in the evidence file; it is a harness
-guard outcome, and this page does not restate it as a product result.
+The plugin at `HEAD` **compiles clean** against 5.7.4 — RunUAT `Result:
+Succeeded`, 0 errors, 0 warnings, an empty sync-fidelity diff, 278 files on the
+current `GetJsonStringField` accessor and 0 on the retired macros.
 
-> **Certification is in flight.** A concurrent lane owns editors, plugin builds
-> and UBT. Re-read `.omo/evidence/task-52/certify-5.7.json` before quoting this
-> section; the numbers above describe the file hashed as `9b4cdb0c…`.
+> **A clean compile is not a certification.** The compile says the current
+> source builds; it says nothing about whether the 20 live stages still pass.
+> Re-running those stages end-to-end at `HEAD` is separate, owned work and has
+> **not** been done. Do not read the compile result as a re-certification.
+
+### 5.8 Preview 1 — our plugin does not compile
+
+This is not an external blocker. The engine is installed and its editor is
+built, so nothing is missing from the host; the defect is ours.
+
+RunUAT exits **6** (`UnrealBuildTool: Failed (OtherCompilationError)`) with
+**35 compiler errors** across 20 files. Two upstream API breaks account for all
+of them:
+
+| Break | Errors | Opt-out |
+| --- | --- | --- |
+| `FJsonObject::Values` key type changed from `FString` to `UE::TSharedString<char16_t>` | 29 | Epic ships one, documented as "will be removed" |
+| `UUserDefinedEnum::SetEnums` grew from 2 parameters to 5 | 6 | none |
+
+Because 5.8 is advertised and does not build, this is an **open decision for a
+human**, not a defect to be quietly absorbed. The options and their measured
+costs are recorded in `.omo/evidence/task-64-pure-unreal-mcp-implementation.json`.
+
+### What no engine record covers
+
+- Seven of nine minors have **no plugin compile result at all**.
+- The 5.7.4 pass carries live stage evidence, but the aggregate's own
+  `clients`/`transcripts`/`claims` arrays for the earlier Task 52 run are
+  empty; that run proves certification *orchestration* — package, launch,
+  observe, clean up — not corpus coverage.
+- No engine, editor, plugin build or RunUAT invocation was performed while
+  producing this page. Every engine figure here is re-read from the recorded
+  Tasks 56–62 evidence.
 
 ## Migration map determinism
 
