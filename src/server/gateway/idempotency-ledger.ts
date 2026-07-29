@@ -18,7 +18,7 @@
 //
 // Native mirror: Private/Foundation/McpIdempotencyLedger.{h,cpp} at 4096 entries.
 
-import { createHash } from 'node:crypto';
+import { createHash, type Hash } from 'node:crypto';
 
 /** 24 hours, per plan line 423. */
 export const DEFAULT_IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -58,7 +58,21 @@ interface LedgerEntry {
   completedAt: number;
 }
 
-const FIELD_SEPARATOR = '\u0000';
+// Netstring-style field encoding: <utf8ByteLength> ':' <utf8Bytes>. Gluing the
+// fields with a single delimiter is NOT injective - a delimiter occurring inside
+// a field is indistinguishable from a field boundary, so a crafted principal or
+// capability id can shift bytes across a boundary and land two distinct scopes on
+// one slot. Prefixing each field with its own byte length removes the ambiguity:
+// the reader never has to guess where a field ends.
+//
+// The native mirror (Private/Foundation/McpIdempotencyLedger.cpp) builds the
+// identical preimage, so both surfaces digest the same bytes for the same inputs;
+// the vectors in the colocated test are pinned on both sides.
+function appendLengthPrefixedField(hash: Hash, field: string): void {
+  const bytes = Buffer.from(field, 'utf8');
+  hash.update(`${bytes.length}:`, 'utf8');
+  hash.update(bytes);
+}
 
 export class IdempotencyLedger {
   readonly maxEntries: number;
@@ -88,7 +102,7 @@ export class IdempotencyLedger {
    * effective params is a conflict rather than a silent replay of the old result.
    */
   begin(scope: LedgerScope, fingerprint: string): BeginOutcome {
-    const slot = IdempotencyLedger.slotFor(scope);
+    const slot = IdempotencyLedger.computeSlot(scope);
     const existing = this.entries.get(slot);
 
     if (existing !== undefined && this.isExpired(existing)) {
@@ -201,16 +215,18 @@ export class IdempotencyLedger {
   }
 
   /**
-   * Scope digest. The principal and capability bound the key so one principal
-   * can never replay, collide with, or observe another's execution.
+   * Scope digest over the length-prefixed preimage. The principal and capability
+   * bound the key so one principal can never replay, collide with, or observe
+   * another's execution, and the encoding is injective so no crafted field can
+   * shift a boundary and merge two scopes onto one slot. The raw key is hashed,
+   * never stored, so it cannot reach a log line, a receipt or an evidence file.
+   * Public so both mirrors can pin the same digest vectors.
    */
-  private static slotFor(scope: LedgerScope): string {
-    return createHash('sha256')
-      .update(scope.principal)
-      .update(FIELD_SEPARATOR)
-      .update(scope.capabilityId)
-      .update(FIELD_SEPARATOR)
-      .update(scope.key)
-      .digest('hex');
+  static computeSlot(scope: LedgerScope): string {
+    const hash = createHash('sha256');
+    appendLengthPrefixedField(hash, scope.principal);
+    appendLengthPrefixedField(hash, scope.capabilityId);
+    appendLengthPrefixedField(hash, scope.key);
+    return hash.digest('hex');
   }
 }

@@ -10,7 +10,10 @@
 // idempotency key, so the raw key never enters the map and can never reach a log
 // line, a receipt or an evidence file. Binding the principal into the digest is
 // what stops one principal replaying, colliding with, or observing another's
-// execution.
+// execution. The three fields are LENGTH-PREFIXED into the preimage rather than
+// joined with a delimiter, so no crafted field can shift a boundary and merge two
+// distinct scopes onto one slot; the TypeScript mirror builds the identical
+// preimage, and both surfaces pin the same digest vectors in their tests.
 //
 // Two properties are load-bearing and match the TypeScript side exactly:
 //   * A failure is NEVER recorded. Abandon() drops the slot outright, so a

@@ -6,7 +6,27 @@
 
 namespace
 {
-	const TCHAR* const FieldSeparator = TEXT(" ");
+	// Netstring-style field encoding: <utf8ByteLength> ':' <utf8Bytes>. Gluing the
+	// fields with a single delimiter is NOT injective - a delimiter occurring
+	// inside a field is indistinguishable from a field boundary, and a space is a
+	// legal character in an operator-configured scoped-token profile, so a crafted
+	// principal could shift bytes across a boundary and land two distinct scopes on
+	// one slot. Prefixing each field with its own byte length removes the ambiguity.
+	//
+	// This is byte-for-byte the encoding the TypeScript mirror builds in
+	// src/server/gateway/idempotency-ledger.ts, so both surfaces digest the same
+	// preimage for the same inputs; the vectors below are pinned on both sides.
+	// FString is NUL-terminated, so a field carrying an embedded NUL is truncated
+	// here before encoding - the encoding stays injective over what is encoded.
+	void AppendLengthPrefixedField(TArray<uint8>& Out, const FString& Field)
+	{
+		const FTCHARToUTF8 Utf8(*Field);
+		const int32 ByteLength = Utf8.Length();
+		const FString Prefix = FString::Printf(TEXT("%d:"), ByteLength);
+		const FTCHARToUTF8 PrefixUtf8(*Prefix);
+		Out.Append(reinterpret_cast<const uint8*>(PrefixUtf8.Get()), PrefixUtf8.Length());
+		Out.Append(reinterpret_cast<const uint8*>(Utf8.Get()), ByteLength);
+	}
 }
 
 FMcpIdempotencyLedger& FMcpIdempotencyLedger::Get()
@@ -21,13 +41,15 @@ bool FMcpIdempotencyLedger::ComputeSlot(
 	const FString& IdempotencyKey,
 	FString& OutSlot)
 {
-	const FString Combined = PrincipalIdentity + FieldSeparator + CapabilityId + FieldSeparator + IdempotencyKey;
-	const FTCHARToUTF8 Utf8(*Combined);
+	TArray<uint8> Preimage;
+	AppendLengthPrefixedField(Preimage, PrincipalIdentity);
+	AppendLengthPrefixedField(Preimage, CapabilityId);
+	AppendLengthPrefixedField(Preimage, IdempotencyKey);
 	// OpenSSL, not FPlatformMisc::GetSHA256Signature: the engine's is checkf(false)
 	// on this platform and aborts. This mirrors the plugin's Python handler, which
 	// already links and uses OpenSSL SHA256 for the same digest need.
 	unsigned char Hash[SHA256_DIGEST_LENGTH];
-	SHA256(reinterpret_cast<const unsigned char*>(Utf8.Get()), static_cast<size_t>(Utf8.Length()), Hash);
+	SHA256(reinterpret_cast<const unsigned char*>(Preimage.GetData()), static_cast<size_t>(Preimage.Num()), Hash);
 	FString Digest;
 	Digest.Reserve(SHA256_DIGEST_LENGTH * 2);
 	for (int32 Index = 0; Index < SHA256_DIGEST_LENGTH; ++Index)

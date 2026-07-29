@@ -16,10 +16,12 @@ const SECRET_ASSIGNMENT =
   /((?:token|secret|password|passwd|pwd|api[_-]?key|apikey|authorization)["']?\s*[:=]\s*["']?(?:Bearer\s+)?)([^\s"']+)/gi;
 const BEARER = /(\bBearer\s+)([^\s"']+)/gi;
 
+export const REDACTED = '[REDACTED]';
+
 export function maskSecrets(value: string): string {
   return value
-    .replace(SECRET_ASSIGNMENT, (_m, prefix: string) => `${prefix}[REDACTED]`)
-    .replace(BEARER, (_m, prefix: string) => `${prefix}[REDACTED]`);
+    .replace(SECRET_ASSIGNMENT, (_m, prefix: string) => `${prefix}${REDACTED}`)
+    .replace(BEARER, (_m, prefix: string) => `${prefix}${REDACTED}`);
 }
 
 export function redactText(value: string): string {
@@ -35,18 +37,60 @@ export function boundArray<T>(values: readonly T[]): T[] {
   return values.slice(0, MAX_RECEIPT_ARRAY);
 }
 
+// The same keyword vocabulary as SECRET_ASSIGNMENT, matched against an object
+// KEY rather than inside a string. `maskSecrets` needs a `keyword<sep>value` run
+// within one string, so a credential that arrives as a real JSON value has no
+// keyword context left to match; the key it hangs under is the only signal, and
+// the invariant (a secret never reaches a receipt) makes that signal sufficient.
+const SECRET_KEY_WORDS = new Set([
+  'token',
+  'secret',
+  'password',
+  'passwd',
+  'pwd',
+  'apikey',
+  'authorization',
+  'credential',
+]);
+
+// Split on camelCase and any non-alphanumeric run, drop a plural `s`, and also
+// offer each adjacent pair joined, so apiKey / api_key / X-Api-Keys all reduce to
+// `apikey`. Matching WHOLE words (not substrings) is what keeps `tokenizer`,
+// `passwordless` and `unauthorized` out of the secret set.
+function keyWords(key: string): readonly string[] {
+  const words = key
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .split(/[^A-Za-z0-9]+/)
+    .filter((word) => word.length > 0)
+    .map((word) => word.toLowerCase())
+    .map((word) => (word.length > 1 && word.endsWith('s') ? word.slice(0, -1) : word));
+  const pairs = words.slice(0, -1).map((word, index) => `${word}${words[index + 1] ?? ''}`);
+  return [...words, ...pairs];
+}
+
+function isSecretKey(key: string): boolean {
+  return keyWords(key).some((word) => SECRET_KEY_WORDS.has(word));
+}
+
 // Deep secret masking for the outer legacy envelope. Masks secret-looking string
 // leaves in place WITHOUT bounding arrays or truncating text, so a token echoed
 // by a handler is scrubbed while legitimate (possibly large) result data is
 // preserved verbatim - the RESULT_TOO_LARGE gate bounds total size separately.
 // This is what stops the outer envelope from re-emitting an unredacted copy of
 // content already sanitized inside the receipt.
+//
+// A secret-named KEY masks its entire value whatever the value's shape: an
+// object, an array and a number are all just as capable of carrying a credential
+// as a string, and recursing into them would only find leaves that no longer
+// carry the keyword context the string masker needs.
 export function maskSecretsDeep(value: unknown): unknown {
   if (typeof value === 'string') return maskSecrets(value);
   if (Array.isArray(value)) return value.map(maskSecretsDeep);
   if (value !== null && typeof value === 'object') {
     const out: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(value)) out[key] = maskSecretsDeep(entry);
+    for (const [key, entry] of Object.entries(value)) {
+      out[key] = isSecretKey(key) ? REDACTED : maskSecretsDeep(entry);
+    }
     return out;
   }
   return value;

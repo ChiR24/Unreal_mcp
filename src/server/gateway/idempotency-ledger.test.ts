@@ -195,3 +195,69 @@ describe('IdempotencyLedger — F. secret safety and cleanup', () => {
     expect(ledger.begin(scope({ principal: 'scoped:bob' }), 'fp').kind).toBe('replay');
   });
 });
+
+// The slot preimage must be an INJECTIVE encoding of (principal, capabilityId,
+// key). Joining the fields with a single delimiter is not: a delimiter occurring
+// inside a field is indistinguishable from a field boundary, so two distinct
+// scopes collapse onto one slot — and in a ledger whose whole job is suppressing
+// duplicate mutations, one slot serving two scopes is a correctness bug.
+// The canonical encoding is netstring-style: <utf8ByteLength> ':' <utf8Bytes>
+// per field, concatenated in order. The digests pinned below were computed with
+// an external `sha256sum` over those exact preimage bytes, so they are an
+// oracle independent of this implementation, and the native mirror
+// (Private/Foundation/McpIdempotencyLedger.cpp) pins the same three vectors.
+describe('IdempotencyLedger — G. the slot encoding is injective and mirror-identical', () => {
+  const GOLDEN_TYPICAL = '14190f6efc7cd729e4658414cfa430c59f2c3b8e0e37f3d8ad3571c61dcfa1e5';
+  const GOLDEN_SHIFTED_LEFT = 'f270ca82affdbdc185837d23aabcdb5f1e9f8ef00dcd10711b6508a9cd5b1ad6';
+  const GOLDEN_SHIFTED_RIGHT = '06bd91f8cd81eb5efe434332021c70925320c056150ee133944238aa994d4986';
+
+  it('digests the canonical length-prefixed preimage (cross-surface oracle vector)', () => {
+    expect(
+      IdempotencyLedger.computeSlot({
+        principal: 'scoped:qawriter',
+        capabilityId: 'asset.import_asset',
+        key: 'client-key-0001',
+      }),
+    ).toBe(GOLDEN_TYPICAL);
+  });
+
+  it('keeps a space-bearing principal from colliding with a space-bearing capability', () => {
+    const left = { principal: 'p c', capabilityId: 'k', key: 'x' };
+    const right = { principal: 'p', capabilityId: 'c k', key: 'x' };
+
+    expect(IdempotencyLedger.computeSlot(left)).toBe(GOLDEN_SHIFTED_LEFT);
+    expect(IdempotencyLedger.computeSlot(right)).toBe(GOLDEN_SHIFTED_RIGHT);
+    expect(IdempotencyLedger.computeSlot(left)).not.toBe(IdempotencyLedger.computeSlot(right));
+  });
+
+  it('admits a boundary-shifted pair as two distinct slots rather than one', () => {
+    const ledger = new IdempotencyLedger({ clock: makeClock().now });
+
+    const left = ledger.begin({ principal: 'p c', capabilityId: 'k', key: 'x' }, 'fp');
+    const right = ledger.begin({ principal: 'p', capabilityId: 'c k', key: 'x' }, 'fp');
+
+    expect(left.kind).toBe('first');
+    expect(right.kind).toBe('first');
+    expect(ledger.size()).toBe(2);
+  });
+
+  it('resists the same shift attempted with a NUL byte (the reviewer-executed vector)', () => {
+    const ledger = new IdempotencyLedger({ clock: makeClock().now });
+    const NUL = String.fromCharCode(0);
+
+    const left = ledger.begin({ principal: `p${NUL}c`, capabilityId: 'k', key: 'x' }, 'fp');
+    const right = ledger.begin({ principal: 'p', capabilityId: `c${NUL}k`, key: 'x' }, 'fp');
+
+    expect(left.kind).toBe('first');
+    expect(right.kind).toBe('first');
+    expect(ledger.size()).toBe(2);
+  });
+
+  it('still keeps the raw key out of the slot and out of ledger state', () => {
+    const raw = 'SUPER-SECRET-IDEMPOTENCY-KEY-9999';
+    const slot = IdempotencyLedger.computeSlot({ principal: 'p', capabilityId: 'c', key: raw });
+
+    expect(slot).not.toContain(raw);
+    expect(slot).toMatch(/^[0-9a-f]{64}$/);
+  });
+});

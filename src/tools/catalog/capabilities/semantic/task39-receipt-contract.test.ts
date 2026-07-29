@@ -279,3 +279,65 @@ describe('task39 redaction: secret masking is identical for every credential sha
     expect(maskSecrets(prose)).toBe(prose);
   });
 });
+
+// Key-aware deep masking. The string-shaped masker only fires on `keyword<sep>value`
+// INSIDE one string, so a credential that arrives as a real JSON value under a
+// secret-named key carries no keyword/separator context and survives untouched.
+// The invariant is absolute — a secret must never reach a receipt — so the key
+// name alone has to be sufficient, whatever shape hangs beneath it.
+describe('receipt redaction — a secret-named KEY masks its value whatever its shape', () => {
+  const SECRET = 'sk-supersecret-abcdef0123456789';
+
+  it('masks a plain string value under a secret-named key (no keyword in the value)', () => {
+    const masked = maskSecretsDeep({ capabilityToken: SECRET, nested: { password: 'p' } });
+
+    expect(JSON.stringify(masked)).not.toContain(SECRET);
+    expect((masked as Record<string, unknown>).capabilityToken).toBe('[REDACTED]');
+    expect((masked as { nested: Record<string, unknown> }).nested.password).toBe('[REDACTED]');
+  });
+
+  it('masks a STRUCTURED value (object) under a secret-named key', () => {
+    const masked = maskSecretsDeep({ credentials: { user: 'u', password: SECRET } });
+
+    expect(JSON.stringify(masked)).not.toContain(SECRET);
+    expect((masked as Record<string, unknown>).credentials).toBe('[REDACTED]');
+  });
+
+  it('masks a STRUCTURED value (array) under a secret-named key', () => {
+    const masked = maskSecretsDeep({ apiKeys: [SECRET, { rotated: SECRET }] });
+
+    expect(JSON.stringify(masked)).not.toContain(SECRET);
+    expect((masked as Record<string, unknown>).apiKeys).toBe('[REDACTED]');
+  });
+
+  it('masks a non-string leaf under a secret-named key (numbers leak too)', () => {
+    const masked = maskSecretsDeep({ pwd: 8675309, authorization: null });
+
+    expect((masked as Record<string, unknown>).pwd).toBe('[REDACTED]');
+    expect((masked as Record<string, unknown>).authorization).toBe('[REDACTED]');
+  });
+
+  it('masks the whole subtree the moment a secret-named key appears at any depth', () => {
+    const masked = maskSecretsDeep({
+      a: { b: { c: { api_key: { primary: SECRET, backup: [SECRET] } } } },
+      keep: '/Game/Meshes/SM_Rock',
+    });
+
+    expect(JSON.stringify(masked)).not.toContain(SECRET);
+    expect(JSON.stringify(masked)).toContain('/Game/Meshes/SM_Rock');
+  });
+
+  it('does not over-mask keys that merely embed a secret word inside a longer word', () => {
+    const masked = maskSecretsDeep({
+      tokenizer: 'lexer',
+      passwordless: true,
+      unauthorized: 'no',
+      keep: '/Game/Meshes/SM_Rock',
+    }) as Record<string, unknown>;
+
+    expect(masked.tokenizer).toBe('lexer');
+    expect(masked.passwordless).toBe(true);
+    expect(masked.unauthorized).toBe('no');
+    expect(masked.keep).toBe('/Game/Meshes/SM_Rock');
+  });
+});

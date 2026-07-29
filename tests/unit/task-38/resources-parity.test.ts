@@ -51,15 +51,28 @@ import {
 const FULL_CAPS = { experimental: { resources: { subscribe: true } }, elicitation: {} } as const;
 const MINIMAL_CAPS = {} as const;
 
+// One capture spins the entire production server module graph (the canonical
+// registry alone is six figures of generated source), so it costs seconds even
+// on an idle machine. Capturing BOTH capability profiles back-to-back in one
+// hook put two of those on a single shared budget, which a loaded CI runner
+// blows while the same file passes in isolation - a red that reports scheduler
+// pressure, not a parity divergence. The full-profile capture stays in the hook
+// because every case reads it; the minimal-profile capture is memoized and paid
+// by the one case that compares the two, so neither budget carries the other's
+// cost and the budget itself is sized for a contended runner rather than an idle
+// one. No assertion changes.
+const CAPTURE_BUDGET_MS = 120_000;
+
 let tsFull: TsTransportCapture;
-let tsMinimal: TsTransportCapture;
+let minimalCapture: Promise<TsTransportCapture> | undefined;
+const captureTsMinimal = (): Promise<TsTransportCapture> =>
+  (minimalCapture ??= captureTsTransport(MINIMAL_CAPS));
 const router = unavailableRouter();
 const revisionsRouter = liveRevisionRouter();
 
 beforeAll(async () => {
   tsFull = await captureTsTransport(FULL_CAPS);
-  tsMinimal = await captureTsTransport(MINIMAL_CAPS);
-}, 30000);
+}, CAPTURE_BUDGET_MS);
 
 function nativeErrorCode(uri: string): string {
   const result = nativeRead(uri);
@@ -89,9 +102,10 @@ describe('Task 38 parity - GREEN guards (comparator soundness + real agreement)'
     expect(ts).toEqual(native);
   });
 
-  it('resources/list is invariant across full vs minimal client capability profiles', () => {
+  it('resources/list is invariant across full vs minimal client capability profiles', async () => {
+    const tsMinimal = await captureTsMinimal();
     expect(normalizeList(tsMinimal.list)).toEqual(normalizeList(tsFull.list));
-  });
+  }, CAPTURE_BUDGET_MS);
 
   it('editor-state unavailability agrees: both transports return RESOURCE_UNAVAILABLE', async () => {
     const ts: CapturedError = await captureRouterError(router, 'ue://editor');
