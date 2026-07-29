@@ -9,7 +9,7 @@ export const MANAGE_AUDIO_SOURCES: readonly CapabilityRecordSource[] = Object.fr
 
 export const MANAGE_AUDIO_RECORDS: readonly CapabilityRecord[] = Object.freeze(
   [...MANAGE_AUDIO_SOURCES.map((source) => createCapabilityRecord(source))]
-    .sort((left, right) => left.id.localeCompare(right.id)),
+    .sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0)),
 );
 
 export const MANAGE_AUDIO_RECORD_COUNT = MANAGE_AUDIO_RECORDS.length;

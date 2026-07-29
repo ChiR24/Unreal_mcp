@@ -49,7 +49,7 @@ export function closestMatches(target: string, candidates: string[], limit: numb
     .sort((left, right) =>
       left.score - right.score
       || right.prefix - left.prefix
-      || left.candidate.localeCompare(right.candidate))
+      || (left.candidate < right.candidate ? -1 : left.candidate > right.candidate ? 1 : 0))
     .slice(0, limit)
     .map((entry) => entry.candidate);
 }
