@@ -154,7 +154,7 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 			auto Data = MakeShared<FJsonObject>();
 			Data->SetStringField(TEXT("code"), TEXT("RESOURCE_UNAVAILABLE"));
 			Reply(FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidRequest,
-				TEXT("RESOURCE_UNAVAILABLE: editor-state resource is not readable from the transport thread"), Data));
+				McpResourceRead::UnavailableMessage(Uri), Data));
 			return true;
 		}
 			const McpResourceRead::FReadBody ReadBody =

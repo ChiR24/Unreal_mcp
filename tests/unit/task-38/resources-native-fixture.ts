@@ -63,12 +63,16 @@ const JSON_MIME = 'application/json';
 const NATIVE_INVALID_REQUEST = -32600;
 const NATIVE_INVALID_PARAMS = -32602;
 
-/** native resources/list — the six legacy resources followed by the five new ones. */
+/**
+ * native resources/list — the SIX resources native both advertises and serves.
+ *
+ * ue://assets, ue://actors, ue://level, ue://editor and ue://selection are
+ * deliberately absent: each is live editor state the socket thread may not read,
+ * and native no longer advertises what it would refuse. See
+ * McpResourceCatalog::NativeUnservedUris().
+ */
 export const NATIVE_LIST: { readonly resources: readonly RawResourceEntry[] } = {
   resources: [
-    { uri: 'ue://assets', name: 'Assets', description: 'Project assets', mimeType: JSON_MIME },
-    { uri: 'ue://actors', name: 'Actors', description: 'Actors in the current level', mimeType: JSON_MIME },
-    { uri: 'ue://level', name: 'Current Level', description: 'Current level name and path', mimeType: JSON_MIME },
     { uri: 'ue://health', name: 'Health Status', description: 'Server health and performance metrics', mimeType: JSON_MIME },
     {
       uri: 'ue://automation-bridge',
@@ -84,8 +88,6 @@ export const NATIVE_LIST: { readonly resources: readonly RawResourceEntry[] } = 
       mimeType: JSON_MIME,
     },
     { uri: 'ue://project', name: 'Project', description: 'Redacted project name, engine version, and content root', mimeType: JSON_MIME },
-    { uri: 'ue://editor', name: 'Editor State', description: 'Bounded editor state: PIE status and current level', mimeType: JSON_MIME },
-    { uri: 'ue://selection', name: 'Selection', description: 'Bounded list of selected actor handles', mimeType: JSON_MIME },
     {
       uri: 'ue://state/revisions',
       name: 'Live State Revisions',
@@ -125,9 +127,15 @@ export const NATIVE_TEMPLATES: { readonly resourceTemplates: readonly RawTemplat
   ],
 };
 
-/** The four URIs the native handler serves bounded real data from the socket thread. */
-const SOCKET_READABLE = new Set(['ue://capability/catalog', 'ue://project', 'ue://state/revisions', 'ue://health']);
-const LISTED_URIS = new Set(NATIVE_LIST.resources.map((entry) => entry.uri));
+/**
+ * Every advertised uri is socket-readable, which is the invariant the native
+ * catalogue now enforces by construction: SOCKET_READABLE is derived from the
+ * advertised list rather than maintained beside it, so the two cannot drift.
+ */
+const SOCKET_READABLE = new Set(NATIVE_LIST.resources.map((entry) => entry.uri));
+
+/** Served by the stdio transport, deliberately not advertised by native. */
+export const NATIVE_UNSERVED_URIS = ['ue://assets', 'ue://actors', 'ue://level', 'ue://editor', 'ue://selection'] as const;
 const TEMPLATE_PREFIXES = ['ue://capability/', 'ue://knowledge/', 'ue://object/', 'ue://asset/'];
 
 function matchesTemplate(uri: string): boolean {
@@ -173,6 +181,33 @@ export const NATIVE_HEALTH_DATA = {
   metricsExposition: NATIVE_HEALTH_EXPOSITION,
 } as const;
 
+/**
+ * Native `ue://version`, transcribed from
+ * `Private/MCP/Resources/McpResourceBridgeContent.cpp` BuildEngineVersionData().
+ * Same key set as the TypeScript EngineVersionInfo.
+ */
+export const NATIVE_ENGINE_VERSION_DATA = {
+  version: '5.7.4', major: 5, minor: 7, patch: 4, isUE56OrAbove: true,
+} as const;
+
+/**
+ * Native `ue://automation-bridge`, transcribed from the same file's
+ * BuildAutomationBridgeData(). The timestamp fields are null because the plugin
+ * is the SERVER and holds no client-side connection history; the key set is kept
+ * identical to the TypeScript body so one parser handles both transports.
+ */
+export const NATIVE_AUTOMATION_BRIDGE_DATA = {
+  summary: {
+    enabled: true, connected: true, host: '127.0.0.1', port: 8090,
+    capabilityTokenRequired: false, pendingRequests: 0,
+  },
+  timestamps: { connectedAt: null, lastHandshakeAt: null, lastMessageAt: null, lastRequestSentAt: null },
+  lastDisconnect: null,
+  lastHandshakeFailure: null,
+  lastError: null,
+  listening: true,
+} as const;
+
 function readBody(uri: string): string {
   const data =
     uri === 'ue://project'
@@ -181,6 +216,10 @@ function readBody(uri: string): string {
         ? { selection: 1, level: 1, assetRegistry: 1, package: 1 }
       : uri === 'ue://health'
         ? NATIVE_HEALTH_DATA
+      : uri === 'ue://version'
+        ? NATIVE_ENGINE_VERSION_DATA
+      : uri === 'ue://automation-bridge'
+        ? NATIVE_AUTOMATION_BRIDGE_DATA
       : { capabilities: ['asset.list', 'asset.import'], count: 2, totalCount: 2, truncated: false };
   return JSON.stringify({ revision: 1, data });
 }
@@ -196,7 +235,16 @@ export function nativeRead(uri: string): RawReadResult | RawResourceError {
   if (SOCKET_READABLE.has(uri)) {
     return { contents: [{ uri, mimeType: JSON_MIME, revision: 1, text: readBody(uri) }] };
   }
-  if (LISTED_URIS.has(uri) || matchesTemplate(uri)) {
+  if (NATIVE_UNSERVED_URIS.includes(uri as (typeof NATIVE_UNSERVED_URIS)[number])) {
+    return {
+      code: 'RESOURCE_UNAVAILABLE',
+      uri,
+      message: `RESOURCE_UNAVAILABLE: ${uri} is live editor state that only the game thread can read, so the `
+        + 'native /mcp transport does not advertise or serve it; read it over the stdio transport',
+      jsonRpcCode: NATIVE_INVALID_REQUEST,
+    };
+  }
+  if (matchesTemplate(uri)) {
     return {
       code: 'RESOURCE_UNAVAILABLE',
       uri,

@@ -265,6 +265,16 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		return;
 	}
 
+	// `ping` is an MCP base-protocol utility: an empty result proves liveness.
+	// The stdio transport answers it through the SDK; without this the native
+	// surface returned -32601 and a liveness client saw the server as broken.
+	if (Rpc.Method == TEXT("ping"))
+	{
+		SendAndClose(ClientSocket, 200, TEXT("application/json"),
+			FMcpJsonRpc::BuildResponse(Rpc.Id, MakeShared<FJsonObject>()), {}, HttpReq.Origin);
+		return;
+	}
+
 	if (Rpc.Method == TEXT("tools/list"))
 	{
 		FString ResponseBody = HandleToolsList(Rpc.Id, HttpReq.SessionId);

@@ -159,12 +159,21 @@ describe('Task 47 native telemetry exports real counters', () => {
 
 describe('Task 47 native telemetry is client-readable through ue://health', () => {
   it('classifies ue://health as socket-readable instead of refusing it as editor state', () => {
+    const catalog = code(read(RESOURCE_CATALOG));
+    // ue://health is socket-readable because it is ADVERTISED and Classify sends
+    // every advertised uri down the SocketReadable branch. Asserting that
+    // generalised property, rather than grepping Classify for the literal
+    // HealthUri(), keeps this contract true through the refactor that made the
+    // advertised set and the readable set one and the same list.
+    const unserved = catalog.slice(catalog.indexOf('NativeUnservedUris'), catalog.indexOf('IsNativeUnservedUri'));
+    expect(unserved).not.toContain('ue://health');
+    expect(catalog.slice(catalog.indexOf('LegacyStaticResources'))).toContain('HealthUri()');
+
     const source = code(read(READ_CONTENT));
-    const classify = source.slice(source.indexOf('EReadKind Classify'), source.indexOf('FReadBody BuildReadBody'));
-    expect(classify).toContain('McpResourceCatalog::HealthUri()');
-    // The health uri must be reached in the SocketReadable branch, i.e. before
-    // the IsListedResourceUri branch that returns EditorUnavailable.
-    expect(classify.indexOf('HealthUri')).toBeLessThan(classify.indexOf('EditorUnavailable'));
+    const classify = source.slice(source.indexOf('EReadKind Classify'), source.indexOf('FString UnavailableMessage'));
+    expect(classify).toContain('IsListedResourceUri');
+    expect(classify.indexOf('IsListedResourceUri')).toBeLessThan(classify.indexOf('EditorUnavailable'));
+    expect(classify.indexOf('SocketReadable')).toBeLessThan(classify.indexOf('EditorUnavailable'));
   });
 
   it('routes the health read to the telemetry-backed body builder', () => {

@@ -14,10 +14,15 @@
 // structuredContent and fall back to parsing the text, because a transport that
 // only fills one of the two must still be judged, not skipped.
 
-/** Setup, cleanup and oracle steps always use the LEGACY form. It is the form
- * every prior live probe drove on both transports, so a scaffolding failure can
- * never be the canonical form being unsupported somewhere — that is what the
- * scenario under test is for.
+/** Setup, cleanup and oracle steps always use the LEGACY REQUEST form, so a
+ * scaffolding failure can never be the canonical form being unsupported
+ * somewhere — that is what the scenario under test is for.
+ *
+ * The step's `consent.capability` is a separate matter and must name the
+ * CANONICAL capability id. The plugin's CheckConsent compares the grant against
+ * the id it resolved, and over stdio an alias is canonicalised before that
+ * check; a cleanup grant naming the alias is therefore refused, which is how
+ * destructive fixtures were silently left on disk.
  *
  * Scenario and step values are intentionally typed loose: they are already frozen
  * and closed by live-corpus-schema.mjs, so restating their shape here would be a

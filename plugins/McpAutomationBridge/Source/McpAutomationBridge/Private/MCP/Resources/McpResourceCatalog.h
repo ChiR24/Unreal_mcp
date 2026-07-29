@@ -108,10 +108,12 @@ namespace McpResourceCatalog
 		return Defs;
 	}
 
-	// The complete resources/list surface: the six legacy resources followed by
-	// the five additive resources, matching the TypeScript order
-	// [...RESOURCE_DEFINITIONS, ...NEW_RESOURCE_DEFINITIONS].
-	inline const TArray<FMcpResourceDefinition>& AllListedResources()
+	// The complete TypeScript resources/list surface: the six legacy resources
+	// followed by the five additive resources, matching the TypeScript order
+	// [...RESOURCE_DEFINITIONS, ...NEW_RESOURCE_DEFINITIONS]. This is the
+	// stdio transport's set, mirrored here so native can tell a resource it
+	// deliberately does not serve from one it has never heard of.
+	inline const TArray<FMcpResourceDefinition>& TypeScriptListedResources()
 	{
 		static const TArray<FMcpResourceDefinition> All = []()
 		{
@@ -123,7 +125,63 @@ namespace McpResourceCatalog
 		return All;
 	}
 
-	// True when Uri is one of the listed static resources (any of the eleven).
+	// The resources the stdio transport serves and native /mcp deliberately does
+	// NOT advertise.
+	//
+	// Each one's content is live editor state that is only valid on the GAME
+	// thread: the asset registry (ue://assets), a world actor iteration
+	// (ue://actors), the open map (ue://level), PIE status (ue://editor) and the
+	// editor selection (ue://selection). The stdio transport can serve them
+	// because it is a separate process that round-trips every read through the
+	// automation bridge onto the game thread. The native transport answers
+	// resources/read ON THE SOCKET THREAD, where it may do neither of the only
+	// two things that would produce this data:
+	//
+	//   * block the socket thread on editor work - forbidden by this plugin's
+	//     own transport contract ("Do not block socket threads on Unreal work");
+	//   * publish a transport-thread cache and serve that - rejected in writing
+	//     by Foundation/McpLiveStateRevisions.h, because a cached view of live
+	//     editor state is stale by the time it is read.
+	//
+	// So native does not advertise them. Listing a resource in resources/list
+	// and then refusing every resources/read for it is a broken contract; a
+	// smaller honest catalogue is not. A client that needs these reads them over
+	// the stdio transport, which can.
+	inline const TArray<FString>& NativeUnservedUris()
+	{
+		static const TArray<FString> Uris = {
+			TEXT("ue://assets"), TEXT("ue://actors"), TEXT("ue://level"),
+			TEXT("ue://editor"), TEXT("ue://selection"),
+		};
+		return Uris;
+	}
+
+	inline bool IsNativeUnservedUri(const FString& Uri)
+	{
+		return NativeUnservedUris().Contains(Uri);
+	}
+
+	// The native resources/list surface: every TypeScript resource this
+	// transport can actually READ. Advertised set == servable set, by
+	// construction - the two cannot drift apart because the same filter builds
+	// this list and gates the read classifier.
+	inline const TArray<FMcpResourceDefinition>& AllListedResources()
+	{
+		static const TArray<FMcpResourceDefinition> Served = []()
+		{
+			TArray<FMcpResourceDefinition> Out;
+			for (const FMcpResourceDefinition& Def : TypeScriptListedResources())
+			{
+				if (!IsNativeUnservedUri(Def.Uri))
+				{
+					Out.Add(Def);
+				}
+			}
+			return Out;
+		}();
+		return Served;
+	}
+
 	inline bool IsListedResourceUri(const FString& Uri)
 	{
 		for (const FMcpResourceDefinition& Def : AllListedResources())

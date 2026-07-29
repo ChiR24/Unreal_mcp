@@ -57,6 +57,27 @@ Reads are bounded and revisioned. `ue://capability/catalog` carries its revision
 *inside* the returned text rather than as a top-level field — asserted by
 `tests/unit/task-38/resources-baseline.test.ts`.
 
+### The two transports advertise different resource sets, on purpose
+
+The stdio transport advertises and serves eleven static resources. The native
+`/mcp` transport advertises and serves **six**: it omits `ue://assets`,
+`ue://actors`, `ue://level`, `ue://editor` and `ue://selection`.
+
+Those five are live editor state — the asset registry, a world actor iteration,
+the open map, PIE status and the editor selection — and are only valid to read on
+the game thread. stdio can serve them because it is a separate process that
+round-trips each read through the automation bridge; the native transport answers
+`resources/read` on the socket thread, where it may neither block on editor work
+nor serve a transport-thread cache of state that is stale by the time it is read.
+
+The set native advertises is therefore exactly the set it can read, and it is
+built by one filter shared with the read classifier
+(`McpResourceCatalog::AllListedResources` / `IsNativeUnservedUri`) so the two
+cannot drift. Asking native for one of the five returns a typed
+`RESOURCE_UNAVAILABLE` naming the stdio transport as the surface that serves it.
+
+Both transports answer the base-protocol `ping` method with an empty result.
+
 The resource list is **profile-independent**: a minimal-capability client
 observes the identical list (same test file). Resource listing does not shrink
 to flatter clients.

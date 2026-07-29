@@ -140,10 +140,19 @@ describe('Task 38 parity - GREEN guards (comparator soundness + real agreement)'
 // ---------------------------------------------------------------------------
 
 describe('Task 38 parity - normalized semantics agree (divergences closed)', () => {
-  it('resources/list membership matches across transports', () => {
-    // Native resources/list now loops AllListedResources() (six legacy + four new
-    // = 10), the SAME public set the TS transport serves.
-    expect(normalizeList(tsFull.list)).toEqual(normalizeList(NATIVE_LIST.resources));
+  it('resources/list membership agrees on every entry the two transports share', () => {
+    // NOT plain list equality any more. Native deliberately advertises a SUBSET:
+    // it drops the five live-editor-state uris it cannot read from the socket
+    // thread instead of listing them and refusing every read. What must still
+    // hold exactly is that a shared entry is byte-identical on both surfaces,
+    // and that native invents nothing.
+    const nativeList = normalizeList(NATIVE_LIST.resources);
+    const nativeUris = new Set(nativeList.map((entry) => entry.uri));
+    const shared = normalizeList(tsFull.list).filter((entry) => nativeUris.has(entry.uri));
+    expect(shared).toEqual(nativeList);
+
+    const tsUris = new Set(normalizeList(tsFull.list).map((entry) => entry.uri));
+    expect(nativeList.filter((entry) => !tsUris.has(entry.uri))).toEqual([]);
   });
 
   it('resources/read ue://capability/catalog returns equal bounded data', () => {

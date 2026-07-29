@@ -36,30 +36,53 @@ import { observeProcess } from '../task-50/state-oracles.mjs';
  * both polarities of the same oracle so neither reading can be explained away.
  */
 /**
- * Scenarios whose cleanup DELETES something, which is native-only.
+ * Scenarios excluded from stdio because their cleanup deletes something.
  *
- * Task 49 finding F2: `asset.delete_asset` is unreachable over stdio. The
- * TypeScript gateway validates the consent grant against the alias record while
- * the plugin normalises to canonical `asset.delete`, so no client-supplied grant
- * satisfies both layers and every stdio delete is refused. Task 50 reached the
- * same conclusion and routes destructive work over native for this reason.
- *
- * Running the mutation on stdio anyway does not test the product harder — it
- * re-fails one known, already-filed cross-transport defect on every engine
- * certified, which drowns the per-engine signal this run exists to produce. The
- * defect is recorded in the report instead of being re-discovered nine times.
+ * EMPTY, and it must stay empty unless a LIVE measurement refills it. The entry
+ * that used to be here excluded every destructive scenario from stdio on the
+ * strength of a diagnosis that live QA has since disproved (see F2_SUPERSEDED
+ * below). Its real effect was that a stdio-driven fixture created an asset and
+ * never deleted it, so each certification left .uasset bytes on disk while
+ * reporting green on a set chosen to exclude the failing case.
  */
-export const DESTRUCTIVE_CLEANUP_NATIVE_ONLY = Object.freeze(['task49.execute.canonical-mutation']);
+export const DESTRUCTIVE_CLEANUP_NATIVE_ONLY = Object.freeze(/** @type {readonly string[]} */ ([]));
 
-/** The known cross-transport defect the line above encodes, carried into evidence. */
+/**
+ * The corrected record of what is actually true across transports here, kept as
+ * a superseding entry rather than a deletion so the earlier claim stays legible.
+ *
+ * Measured live on UE 5.7.4, both transports, with the same asset fixture:
+ *   canonical `asset.delete` + consent naming `asset.delete`
+ *     -> stdio SUCCESS (file removed from disk), native SUCCESS
+ *   alias `asset.delete_asset` + consent naming `asset.delete_asset`
+ *     -> stdio refused, native SUCCESS (file removed)
+ *
+ * So the capability IS reachable over stdio and destructive scenarios can and do
+ * clean up after themselves. What genuinely diverges is narrower: which NAME a
+ * consent grant must use for the ALIAS request form. The plugin's CheckConsent
+ * (Foundation/McpCapabilityAuthorization.cpp) demands the grant name the exact
+ * capability id it resolved; over stdio the alias is canonicalised to
+ * `asset.delete` before that check while the TypeScript layer
+ * (gateway-execute-policy.ts) validated the grant against the alias record id,
+ * so the alias form alone is caught between two different required names. Over
+ * native the alias is not canonicalised before the same check, so the alias
+ * grant matches. The canonical form is unambiguous on both.
+ */
 export const KNOWN_TRANSPORT_DEFECTS = Object.freeze([{
-  id: 'F2',
+  id: 'F2_SUPERSEDED',
+  supersedes: 'F2',
   capability: 'asset.delete_asset',
   transport: 'stdio',
-  summary: 'the TypeScript gateway checks consent against the alias record while the plugin '
-    + 'normalises to canonical asset.delete, so no client-supplied grant satisfies both layers',
-  effect: 'a stdio-driven destructive fixture cannot clean up after itself',
-  source: 'Task 49 finding F2; Task 50 routes destructive cleanup over native for the same reason',
+  supersededClaim: 'asset.delete_asset is unreachable over stdio, so no client-supplied grant '
+    + 'satisfies both layers and destructive cleanup must be native-only',
+  summary: 'the ALIAS request form asset.delete_asset is the only unsatisfiable shape over stdio: '
+    + 'TypeScript validates the grant against the alias record id while the plugin canonicalises '
+    + 'to asset.delete before its own consent check, so the two layers demand different names. '
+    + 'The CANONICAL form asset.delete is accepted by both layers and deletes over stdio.',
+  effect: 'a stdio-driven destructive fixture cleans up correctly when its consent grant names the '
+    + 'canonical capability; the earlier blanket exclusion was broader than the evidence supported '
+    + 'and left real .uasset bytes on disk',
+  source: 'live UE 5.7.4 two-transport measurement; supersedes Task 49 finding F2',
 }]);
 
 export const CERTIFICATION_SUBSET = Object.freeze([
@@ -74,6 +97,11 @@ export const CERTIFICATION_SUBSET = Object.freeze([
   'task49.execute.canonical-read',
   'task49.execute.legacy-read',
   'task49.execute.canonical-mutation',
+  // Added once destructive scenarios stopped being excluded from stdio: this is
+  // the ONLY case that drives the legacy execute form through a real mutation
+  // AND its delete, on both transports. While it sat outside the subset the
+  // certification could report green without ever deleting anything over stdio.
+  'task49.execute.legacy-mutation',
   'task49.execute.consent-refused',
   'task49.progress.token-not-invented',
   'task49.task.search-checkpoint',
@@ -86,7 +114,6 @@ export const CERTIFICATION_SUBSET = Object.freeze([
  * reconstruct from the diff.
  */
 export const SUBSET_OMISSIONS = Object.freeze([
-  { namespace: 'task49.execute.legacy-mutation', reason: 'a second real mutation with the same semantics as the canonical one; the legacy FORM is already exercised by task49.execute.legacy-read, so this only doubles the per-engine fixture cost' },
   { namespace: 'task49.task.execute-refused', reason: 'declared for stdio only, and the task protocol kind is already covered by task49.task.search-checkpoint on both transports' },
 ]);
 
@@ -177,7 +204,7 @@ export async function runCertificationDrivers(spec) {
         if (driver.kind !== 'native' && DESTRUCTIVE_CLEANUP_NATIVE_ONLY.includes(scenario.namespace)) {
           rows.push({
             namespace: scenario.namespace, driver: driver.kind, status: 'SKIPPED',
-            detail: 'destructive cleanup is native-only (Task 49 finding F2); running it here would leave a fixture behind',
+            detail: 'excluded from this transport by DESTRUCTIVE_CLEANUP_NATIVE_ONLY',
           });
           continue;
         }

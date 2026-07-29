@@ -18,7 +18,9 @@ import {
   unavailableRouter,
   type NormEntry,
 } from './resources-harness.js';
-import { NATIVE_LIST, NATIVE_TEMPLATES, nativeRead, isNativeError } from './resources-native-fixture.js';
+import {
+  NATIVE_LIST, NATIVE_TEMPLATES, NATIVE_UNSERVED_URIS, nativeRead, isNativeError,
+} from './resources-native-fixture.js';
 
 // Each captureTsTransport boots a real MCP SDK server; under the full parallel unit
 // suite that can exceed the 10s default. Raise the ceiling only (assertions unchanged).
@@ -115,8 +117,31 @@ describe('Task 38 baseline - TS transport observable (executed via MCP SDK)', ()
 });
 
 describe('Task 38 baseline - native `/mcp` fixture oracle (independent stand-in)', () => {
-  it('native resources/list defines the same eleven resources as the TS transport (six legacy + five new)', () => {
-    expect(normalizeList(NATIVE_LIST.resources).map((entry) => entry.uri)).toEqual([...TS_LIST_URIS]);
+  // The old assertion here was "native lists the same eleven as TS". That was
+  // TRUE while native could only READ four of them, so it passed throughout the
+  // defect it was supposed to catch. Advertising is only worth asserting
+  // together with servability, so both halves are asserted below.
+  it('native advertises no resource the TS transport does not', () => {
+    const nativeUris = normalizeList(NATIVE_LIST.resources).map((entry) => entry.uri);
+    const tsUris = new Set<string>(TS_LIST_URIS);
+    expect(nativeUris.filter((uri) => !tsUris.has(uri))).toEqual([]);
+  });
+
+  it('every uri native ADVERTISES is one native can READ, and the difference from TS is exactly the unserved set', () => {
+    const nativeUris = normalizeList(NATIVE_LIST.resources).map((entry) => entry.uri);
+    const unreadable = nativeUris.filter((uri) => isNativeError(nativeRead(uri)));
+    expect(unreadable).toEqual([]);
+
+    const missing = TS_LIST_URIS.filter((uri) => !nativeUris.includes(uri));
+    expect(missing.slice().sort()).toEqual([...NATIVE_UNSERVED_URIS].slice().sort());
+
+    for (const uri of NATIVE_UNSERVED_URIS) {
+      const refusal = nativeRead(uri);
+      expect(isNativeError(refusal)).toBe(true);
+      if (isNativeError(refusal)) {
+        expect(refusal.code).toBe('RESOURCE_UNAVAILABLE');
+      }
+    }
   });
 
   it('native resources/templates/list mirrors the four TS templates', () => {

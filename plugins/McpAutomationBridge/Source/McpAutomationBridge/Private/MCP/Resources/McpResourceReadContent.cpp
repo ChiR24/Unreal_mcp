@@ -1,5 +1,6 @@
 #include "MCP/Resources/McpResourceReadContent.h"
 #include "MCP/Resources/McpResourceCatalog.h"
+#include "MCP/Resources/McpResourceBridgeContent.h"
 #include "MCP/Resources/McpResourceHealthContent.h"
 #include "MCP/Resources/McpResourceUri.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
@@ -14,6 +15,8 @@ namespace
 {
 	const TCHAR* CatalogUri = TEXT("ue://capability/catalog");
 	const TCHAR* ProjectUri = TEXT("ue://project");
+	const TCHAR* VersionUri = TEXT("ue://version");
+	const TCHAR* AutomationBridgeUri = TEXT("ue://automation-bridge");
 	constexpr int32 MaxCatalogCapabilities = 50;
 
 	FString SerializeCompact(const TSharedRef<FJsonObject>& Object)
@@ -62,16 +65,30 @@ namespace McpResourceRead
 {
 	EReadKind Classify(const FString& Uri)
 	{
-		if (Uri == CatalogUri || Uri == ProjectUri || Uri == McpResourceCatalog::LiveStateRevisionUri() ||
-			Uri == McpResourceCatalog::HealthUri())
+		// Advertised implies readable. IsListedResourceUri is the SAME filter
+		// resources/list loops, so a resource cannot be advertised without
+		// landing in this branch, and BuildReadBody below must handle it.
+		if (McpResourceCatalog::IsListedResourceUri(Uri))
 		{
 			return EReadKind::SocketReadable;
 		}
-		if (McpResourceCatalog::IsListedResourceUri(Uri) || McpResourceCatalog::MatchesKnownTemplate(Uri))
+		if (McpResourceCatalog::IsNativeUnservedUri(Uri) || McpResourceCatalog::MatchesKnownTemplate(Uri))
 		{
 			return EReadKind::EditorUnavailable;
 		}
 		return EReadKind::Unknown;
+	}
+
+	FString UnavailableMessage(const FString& Uri)
+	{
+		if (McpResourceCatalog::IsNativeUnservedUri(Uri))
+		{
+			return FString::Printf(
+				TEXT("RESOURCE_UNAVAILABLE: %s is live editor state that only the game thread can read, so the "
+				     "native /mcp transport does not advertise or serve it; read it over the stdio transport"),
+				*Uri);
+		}
+		return TEXT("RESOURCE_UNAVAILABLE: editor-state resource is not readable from the transport thread");
 	}
 
 	FReadBody BuildReadBody(const FString& Uri, FMcpResourceRevision Revision)
@@ -85,6 +102,14 @@ namespace McpResourceRead
 		else if (Uri == McpResourceCatalog::HealthUri())
 		{
 			Data = McpResourceHealth::BuildHealthData();
+		}
+		else if (Uri == VersionUri)
+		{
+			Data = McpResourceBridge::BuildEngineVersionData();
+		}
+		else if (Uri == AutomationBridgeUri)
+		{
+			Data = McpResourceBridge::BuildAutomationBridgeData();
 		}
 		else if (Uri == McpResourceCatalog::LiveStateRevisionUri())
 		{

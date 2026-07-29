@@ -87,8 +87,34 @@ describe('CERTIFICATION_SUBSET', () => {
 });
 
 describe('the native-only destructive rule', () => {
+  // The rule is now EMPTY, so the old `length > 0` guard would pin the very
+  // exclusion that was removed on evidence. What replaces it is strictly
+  // stronger: every destructive scenario in the subset must actually RUN on both
+  // transports and must carry a cleanup step, which is what the exclusion broke.
+  it('leaves no destructive scenario excluded from a transport it is declared for', () => {
+    const destructive = CERTIFICATION_SUBSET
+      .map((namespace) => byNamespace.get(namespace))
+      .filter((scenario) => (scenario?.cleanup ?? []).some((step) => /delete/u.test(step.capability)));
+    expect(destructive.length).toBeGreaterThan(0);
+    for (const scenario of destructive) {
+      expect(scenario?.requires.clients, scenario?.namespace).toContain('native');
+      expect(scenario?.requires.clients, scenario?.namespace).toContain('stdio');
+      expect(DESTRUCTIVE_CLEANUP_NATIVE_ONLY, scenario?.namespace).not.toContain(scenario?.namespace);
+    }
+  });
+
+  it('a cleanup grant names the CANONICAL capability, which is the shape both transports accept', () => {
+    for (const namespace of CERTIFICATION_SUBSET) {
+      for (const step of byNamespace.get(namespace)?.cleanup ?? []) {
+        if (!/delete/u.test(step.capability)) continue;
+        const grant = /** @type {any} */ (step as unknown as { consent?: { capability?: string } }).consent;
+        expect(grant?.capability, `${namespace} cleanup grant`).toBe(step.capability);
+        expect(step.capability, `${namespace} cleanup capability`).not.toMatch(/_asset[s]?$/u);
+      }
+    }
+  });
+
   it('skips only scenarios that are in the subset and really delete something', () => {
-    expect(DESTRUCTIVE_CLEANUP_NATIVE_ONLY.length).toBeGreaterThan(0);
     for (const namespace of DESTRUCTIVE_CLEANUP_NATIVE_ONLY) {
       const scenario = byNamespace.get(namespace);
       expect(scenario, namespace).toBeTruthy();
@@ -103,20 +129,24 @@ describe('the native-only destructive rule', () => {
     }
   });
 
-  it('keeps the recorded defect pointed at the capability the rule actually skips', () => {
-    // The skip and its justification are two statements about the same thing. If
-    // they drift, the report explains a skip that is no longer happening — or
-    // hides one that is.
-    const skippedCapabilities = new Set(
-      DESTRUCTIVE_CLEANUP_NATIVE_ONLY
-        .flatMap((namespace) => byNamespace.get(namespace)?.cleanup ?? [])
-        .map((step) => step.capability),
-    );
+  it('carries the corrected defect record as a SUPERSEDING entry, not a deletion', () => {
+    // The record no longer justifies a skip, so it cannot be validated against
+    // one. It must still stay legible: name its capability and transport, KEEP
+    // the claim it replaces so the earlier conclusion is not quietly erased, and
+    // never be the justification for an exclusion that is still active.
     expect(KNOWN_TRANSPORT_DEFECTS.length).toBeGreaterThan(0);
     for (const defect of KNOWN_TRANSPORT_DEFECTS) {
-      expect(skippedCapabilities).toContain(defect.capability);
       expect(defect.transport).toBe('stdio');
       expect(defect.source).toMatch(/Task 49/u);
+      expect(defect.capability).toBeTruthy();
+      expect(defect.supersedes, 'a record that justifies no skip must name what it supersedes').toBeTruthy();
+      expect(defect.supersededClaim, 'the replaced claim must stay on the record').toBeTruthy();
+      const stillSkipped = new Set(
+        DESTRUCTIVE_CLEANUP_NATIVE_ONLY
+          .flatMap((namespace) => byNamespace.get(namespace)?.cleanup ?? [])
+          .map((step) => step.capability),
+      );
+      expect(stillSkipped).not.toContain(defect.capability);
     }
   });
 });
