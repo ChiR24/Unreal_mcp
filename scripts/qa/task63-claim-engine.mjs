@@ -97,8 +97,74 @@ const DISCLOSED_FINDINGS = Object.freeze([
   },
 ]);
 
+/**
+ * A rule this engine ONCE GATED ON AND NO LONGER DOES. Kept in the program, not
+ * deleted from it: a withdrawn claim that vanishes is indistinguishable from one
+ * that was never made, and the next reader needs to know the engine asserted a
+ * product defect on data that could not carry it.
+ */
+const WITHDRAWN_RULES = Object.freeze([
+  {
+    id: 'R6',
+    requirement: 'the two public transports are equivalent in what they NAME',
+    withdrawnAt: '2026-07-29',
+    whatWasClaimed: 'R6 gated the status on .omo/evidence/task-59/run3/capability-probe.json totals — toolsDiverging 8, declaredActionsUnnamedByNative 207, namesNativeEmitsThatAreNotDeclaredCapabilities 29 — and emitted an owned-defect blocker asserting the native /mcp describe surface does not name the action list the TypeScript surface names. That is an assertion that a plan SUCCESS CRITERION (line 638, "transport-equivalent") is violated.',
+    whatTheDataShowed: [
+      'PAGING: the run2 probe was paging-limited — 19 of 23 tools pinned at exactly runtimeCount 20, and the predicate "declaredCount<=20 implies runtimeCount==declaredCount" held for every tool below the ceiling. run3 FIXED that (censusMethod "actions-array-paged", per-page offset/returned/hasMore logs). In run3 only ONE tool reports 20 (inspect), and native itself answered actionCount 20 with hasMore false, so run3 is NOT paging-limited. The paging objection is correct for run2 and refuted for run3.',
+      'HARVEST LEVEL: the defect that survives into run3 is that the probe compares two different levels of the describe tree. ZERO of the 29 "extra" names is a canonical action of its own parent tool, and SIX of them are TOOL names harvested into an action list: control_actor under inspect; manage_audio under manage_audio; manage_level_structure under manage_level; manage_networking under manage_networking; control_editor and system_control under system_control. Native is not inventing capabilities; the probe is reading a dispatch-group list and scoring it against the flat canonical action list.',
+      'CONCENTRATION: 160 of the 207 "unnamed" actions come from the three tools whose native reply is that dispatch-group list — manage_audio (50, native reported actionCount 1 = its own name), manage_networking (77, actionCount 4 = four group names), system_control (33, actionCount 30 including two tool names).',
+      'DECLARED SIDE IS ALSO WRONG: manage_asset reports 7 "missing" actions of which ZERO exist in src/tools/catalog/capabilities/generated/canonical-registry.generated.json, so the probe\'s DECLARED list carries non-canonical (legacy/alias) names too.',
+      'THE AUTHORITATIVE CONTRACT GATE DISAGREES: npm run test:native-parity exits 0 — "Native canonical tools: 23", "Tools with action mismatches: 0", "Tools with schema property mismatches: 0". That gate compares the TypeScript definitions against the native canonical registry, which is the contract BOTH transports serve.',
+      'THE PROBE\'S OWN EXECUTE ORACLE DISAGREES: task-62 executableButNotDiscoverable records manage_networking.check_has_authority and check_is_locally_controlled as namedByNativeDescribe false but reachedEditorOnExecute TRUE, verdict REACHED. Two of the supposedly-missing capabilities were executed on native in the same session.',
+    ],
+    whyWithdrawn: 'The instrument measured the HARNESS, not the product: a describe-tree level mismatch on the runtime side and an alias mismatch on the declared side. A probe limitation is not a product defect, and asserting a success-criterion violation on this data would put a false positive claim into the final readiness record — the exact thing F1 and F4 exist to reject. The rule is removed from the gating ladder. It is NOT converted into a pass: see notProven, which records that the native runtime describe surface was never successfully censused, so transport naming equivalence is unproven in BOTH directions.',
+    statusImpact: 'NONE. R1, R2, R4 and R5 remain unmet on the real input, so the emitted status is unchanged. This is recorded because a verdict that survives removing its weakest rule is stronger than the original, not because the withdrawal is harmless in general.',
+    citations: {
+      supersededProbe: '.omo/evidence/task-59/run2/capability-probe.json',
+      probeR6Read: '.omo/evidence/task-59/run3/capability-probe.json',
+      aggregatedInto: `${EVIDENCE_FILES.matrix}/environment/transports/liveDivergence/totals`,
+      contractGate: 'npm run test:native-parity (tests/native-mcp-parity-audit.mjs), exit 0',
+      executeOracle: `${EVIDENCE_FILES.matrix}/environment/transports/liveDivergence/executableButNotDiscoverable`,
+    },
+  },
+]);
+
+/**
+ * For each gating rule: WHAT instrument produced its verdict, and does that
+ * instrument measure THE PRODUCT or THE HARNESS? R6 was withdrawn for failing
+ * exactly this test, so every surviving rule is asked the same question in the
+ * same place rather than only when someone challenges it.
+ */
+const INSTRUMENT_AUDIT = Object.freeze([
+  {
+    rule: 'R1',
+    instrument: "Task 55's serial gate runner: 18 recorded process exit codes, each cross-linked to one sourceTreeHash re-verified before the first gate and after the last.",
+    measures: 'PRODUCT',
+    verdict: "Real exit codes from the repository's own gates on the real tree. The one unexcused failure (npm audit exit 1) is a genuine advisory in the installed tree; its SUBJECT is a dependency rather than our code, which is why it is classed supply-chain and not owned-defect.",
+  },
+  {
+    rule: 'R2',
+    instrument: "Task 62's aggregated per-engine stage tables, plus an independent filesystem re-stat of every engine root (rootProbes.allAgree = true), plus certificationDrift file-mtime counts.",
+    measures: 'PRODUCT for 5.8; HOST for the seven blocked minors; BOOKKEEPING for the 5.7 staleness',
+    verdict: 'UE 5.8 is a real product failure — UnrealBuildTool exit 6 with 35 compiler errors is our code not compiling, not an instrument limit. The seven blocked minors are an environment fact (root absent / editor never built) and are explicitly NOT turned into a product conclusion in either direction. The 5.7 staleness sub-check asserts only "this certification does not cover this tree", which is a statement about coverage, not about the product failing.',
+  },
+  {
+    rule: 'R4',
+    instrument: 'Task 51 load/soak/fuzz/residue counters against real dist/cli.js children, plus the status strings of its four blocked-gate entries.',
+    measures: 'PRODUCT for the counters; ABSENCE OF MEASUREMENT for the three entries that actually make R4 unmet',
+    verdict: 'STATED PLAINLY: R4 is unmet because three measurements COULD NOT BE MADE, not because the product misbehaved. EDITOR_RSS_DELTA_DOMINATED_BY_ENGINE_RECLAIM is the editor reclaiming 129-1795 MiB against a 64 MiB gate, which the harness correctly scored INVALID_VACUOUS_BASELINE rather than PASS; NO_DELEGATE_INSTRUMENT has no instrument at all; FULL_PARITY_CORPUS_NOT_RUN is a coverage gap. This is the same shape as R6 with one decisive difference: R6 asserted a POSITIVE product defect the data could not carry, whereas R4 asserts an ABSENCE and fails closed. A false positive must be withdrawn; a truthful "unproven" on a memory and leak gate must not be relaxed into a pass.',
+  },
+  {
+    rule: 'R5',
+    instrument: "npm audit's advisory database plus the recorded dependency-path string for each finding.",
+    measures: 'THE SHIPPED DEPENDENCY TREE, not our code and not its exploitability',
+    verdict: 'The advisory and the production path are real, so the shipped-risk claim stands. Task 55 records that exploitability was never assessed, so this is "an advisory reaches users through a dependency we ship", NOT "this product is exploitable".',
+  },
+]);
+
 /** What this task did NOT do, stated before anyone can infer it did. */
 const NOT_PROVEN = Object.freeze([
+  'THE NATIVE RUNTIME DESCRIBE SURFACE WAS NOT SUCCESSFULLY CENSUSED. run2 of the capability probe was paging-limited (19 of 23 tools pinned at exactly 20 names); run3 fixed paging but still harvests dispatch-group and TOOL names into the action list on 5 of 23 tools, and its DECLARED side carries non-canonical alias names on a 6th. So this plan has NO trustworthy measurement of what the native /mcp describe surface names at runtime. Nothing is claimed in EITHER direction: not that the two transports diverge, and not that they agree. What IS proven is contract-level parity (npm run test:native-parity: 23 native canonical tools, 0 action mismatches, 0 schema property mismatches) and that two actions the probe called missing were executed on native.',
   'NO ENGINE, EDITOR, PLUGIN BUILD OR RunUAT WAS RUN BY THIS TASK. Every engine fact here is re-read from the Tasks 56-62 records. This task adds zero new live coverage and its status is a decision about existing measurements, not a new measurement.',
   'NO MODEL WAS CONTACTED. Task 48 records the model arm as BLOCKED_EXTERNAL / NOT_ENABLED. The absence of a model accuracy is carried as a blocker and is NOT converted into a qualitative claim in either direction.',
   'SEVEN OF NINE ADVERTISED MINORS HAVE NO PLUGIN COMPILE RESULT AT ALL, so for those minors nothing is proven about whether the plugin works — only that it could not be tried on this host.',
@@ -516,20 +582,23 @@ function evaluateRules(log, docs, reading) {
   const toolsDiverging = readField(log, 'task-62', docs.matrix, `${totalsAt}/toolsDiverging`);
   const unnamed = readField(log, 'task-62', docs.matrix, `${totalsAt}/declaredActionsUnnamedByNative`);
   const undeclared = readField(log, 'task-62', docs.matrix, `${totalsAt}/namesNativeEmitsThatAreNotDeclaredCapabilities`);
-  if (toolsDiverging !== 0 || unnamed !== 0 || undeclared !== 0) {
-    blockers.push({
-      id: 'transport-divergence',
-      class: BLOCKER_CLASS.OWNED_DEFECT,
-      remediationOwner: 'us: the native describe surface does not name the declared action list the TypeScript surface names',
-      statement: `${String(toolsDiverging)} tool(s) diverge live; ${String(unnamed)} declared actions are unnamed by native describe; ${String(undeclared)} names native emits are not declared capabilities`,
-      citation: { evidenceFile: EVIDENCE_FILES.matrix, pointer: totalsAt, value: { toolsDiverging, unnamed, undeclared } },
-    });
-  }
+  // WITHDRAWN — see WITHDRAWN_RULES.R6. Still computed and still reported, but it
+  // no longer gates and it no longer emits a blocker, because its instrument was
+  // measuring the harness. It is kept visible so the withdrawal is auditable
+  // rather than a rule that quietly disappeared.
   rules.push({
     id: 'R6',
     requirement: 'the two public transports are equivalent in what they NAME (plan line 638 "transport-equivalent"; line 635 "exact drift/parity checks")',
     satisfied: toolsDiverging === 0 && unnamed === 0 && undeclared === 0,
-    observed: { toolsDiverging, declaredActionsUnnamedByNative: unnamed, namesNativeEmitsThatAreNotDeclaredCapabilities: undeclared },
+    gating: false,
+    withdrawn: true,
+    withdrawalRef: 'environment.withdrawnRules[0]',
+    observed: {
+      toolsDiverging,
+      declaredActionsUnnamedByNative: unnamed,
+      namesNativeEmitsThatAreNotDeclaredCapabilities: undeclared,
+      instrument: 'HARNESS, not product: the probe compares a native dispatch-group list against the flat canonical action list, and its declared side carries alias names. Contract parity (npm run test:native-parity) exits 0 with 0 action and 0 schema mismatches.',
+    },
   });
 
   // ── R7 configured real-model accuracy (best-in-class only) ─────────────────
@@ -581,7 +650,9 @@ function evaluateRules(log, docs, reading) {
  */
 export function decide(rules) {
   const by = (/** @type {string} */ id) => rules.find((rule) => rule.id === id);
-  const implementation = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'];
+  // R6 is computed but NOT gated on: it was withdrawn after its instrument was
+  // shown to measure the harness. See WITHDRAWN_RULES.
+  const implementation = ['R1', 'R2', 'R3', 'R4', 'R5'];
   const bestInClass = [...implementation, 'R7', 'R8'];
   const unmet = (/** @type {string[]} */ ids) => ids.filter((id) => by(id)?.satisfied !== true);
 
@@ -920,7 +991,7 @@ export function buildControls(spec) {
   drive({ label: 'DOWNGRADE — one static gate failing', kind: 'downgrade', omit: 'static-gate', prose: null, base: 'perfect', expected: STATUS.BLOCKED_EXTERNAL });
   drive({ label: 'DOWNGRADE — one production-path advisory', kind: 'downgrade', omit: 'supply-chain', prose: null, base: 'perfect', expected: STATUS.BLOCKED_EXTERNAL });
   drive({ label: 'DOWNGRADE — a PASS row certified against a stale tree', kind: 'downgrade', omit: 'stale-certification', prose: null, base: 'perfect', expected: STATUS.BLOCKED_EXTERNAL });
-  drive({ label: 'DOWNGRADE — the two transports name different action sets', kind: 'downgrade', omit: 'transport-divergence', prose: null, base: 'perfect', expected: STATUS.BLOCKED_EXTERNAL });
+  drive({ label: 'WITHDRAWN-RULE CONTROL — transports name different action sets; R6 no longer gates, so the status must NOT move', kind: 'withdrawn-rule', omit: 'transport-divergence', prose: null, base: 'perfect', expected: STATUS.BEST_IN_CLASS_VERIFIED });
   drive({ label: 'DOWNGRADE — one adversarial gate STILL BLOCKED', kind: 'downgrade', omit: 'adversarial', prose: null, base: 'perfect', expected: STATUS.BLOCKED_EXTERNAL });
   drive({ label: 'PROSE — perfect input, narrative rewritten to assert everything is blocked', kind: 'prose', omit: null, prose: 'blocked', base: 'perfect', expected: STATUS.BEST_IN_CLASS_VERIFIED });
   drive({ label: 'PROSE — real input, narrative rewritten to assert best-in-class', kind: 'prose', omit: null, prose: 'claim', base: 'real', expected: STATUS.BLOCKED_EXTERNAL });
@@ -1095,6 +1166,8 @@ export function buildEvidence(spec) {
         acc[entry.class] = (acc[entry.class] ?? 0) + 1;
         return acc;
       }, {}),
+      withdrawnRules: WITHDRAWN_RULES,
+      instrumentAudit: INSTRUMENT_AUDIT,
       disclosedFindings: {
         note: 'these do NOT gate the status. The status is already BLOCKED_EXTERNAL without any of them and would be unchanged if every one were struck out. They are listed so a reader is not left to discover them elsewhere.',
         findings: DISCLOSED_FINDINGS,
@@ -1176,6 +1249,7 @@ export function buildEvidence(spec) {
       `STATUS ${result.status} by rule ${result.rule}. Unmet: ${result.unmet.join(', ') || 'none'}.`,
       `THE VERDICT SURVIVES THE ARGUMENT ABOUT "AVAILABLE": under the primary reading (root present AND editor compiled) and under the plan's success-criteria reading (root present alone, line 640) the engine emits ${result.alternateReading.status} either way, so no ruling on that word had to be won to reach this status.`,
       `THE ENGINE CAN EMIT ALL THREE DOCUMENTED STATUSES: ${controls.statusesReached.join(', ')} were each reached by a control run in this pass, ${String(controls.runs.filter((/** @type {any} */ entry) => entry.matchesExpectation).length)}/${String(controls.runs.length)} matching their documented expectation.`,
+      'R6 WAS WITHDRAWN, AND THE VERDICT DID NOT MOVE. It gated on a native describe census whose instrument measured the harness (dispatch-group names harvested as action names; alias names on the declared side), contradicted by npm run test:native-parity at exit 0 and by two of the supposedly-missing actions executing on native. R1/R2/R4/R5 still block, so the status is unchanged — a verdict that survives removing its weakest rule is stronger than the one that needed it. See environment.withdrawnRules.',
       'A DECLARED EXCEPTION IS NOT A RUBBER STAMP: EXC-1 (test:unit) is excused because all four predicates hold and both failures are attributable to a path the plan itself protects; EXC-2 (npm audit) is NOT excused, because it has no machine-checkable attribution to a protected path and it carries a production-path advisory. The same predicate answered differently for the two exceptions in the same run.',
     ],
   };
@@ -1226,7 +1300,8 @@ function main() {
   process.stdout.write(`STATUS: ${result.status}\n`);
   process.stdout.write(`RULE: ${result.rule} ${result.ruleText}\n`);
   for (const rule of result.rules) {
-    process.stdout.write(`  ${rule.satisfied ? 'MET   ' : 'UNMET '} ${rule.id}${rule.bestInClassOnly ? '  (best-in-class only)' : ''}\n`);
+    const tag = rule.withdrawn ? '  (WITHDRAWN — does not gate)' : rule.bestInClassOnly ? '  (best-in-class only)' : '';
+    process.stdout.write(`  ${rule.satisfied ? 'MET   ' : 'UNMET '} ${rule.id}${tag}\n`);
   }
   process.stdout.write(`ALTERNATE READING OF AVAILABLE: ${result.alternateReading.status} (agrees=${String(result.alternateReading.agreesWithPrimary)})\n`);
   process.stdout.write(`PROSE GUARD: ${result.proseGuard.guardHeld ? 'HELD' : 'BROKEN'}\n`);
