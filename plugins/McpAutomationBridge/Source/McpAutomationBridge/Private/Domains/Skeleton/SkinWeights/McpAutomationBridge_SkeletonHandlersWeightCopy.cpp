@@ -20,9 +20,9 @@ namespace McpSkeletonHandlers {
 
 bool HandleCopyWeightsAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-FString SourceMeshPath = GetStringFieldSkel(Payload, TEXT("sourceMeshPath"));
-        FString TargetMeshPath = GetStringFieldSkel(Payload, TEXT("targetMeshPath"));
-        FString ProfileName = GetStringFieldSkel(Payload, TEXT("profileName"));
+FString SourceMeshPath = GetJsonStringField(Payload, TEXT("sourceMeshPath"));
+        FString TargetMeshPath = GetJsonStringField(Payload, TEXT("targetMeshPath"));
+        FString ProfileName = GetJsonStringField(Payload, TEXT("profileName"));
         if (ProfileName.IsEmpty())
         {
             ProfileName = TEXT("CopiedWeights");
@@ -38,7 +38,7 @@ FString SourceMeshPath = GetStringFieldSkel(Payload, TEXT("sourceMeshPath"));
 
         // CRITICAL: Validate any extra path parameters for security and existence
         // This prevents false negatives where unused parameters contain invalid paths
-        FString ExtraSkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+        FString ExtraSkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
         if (!ExtraSkeletalMeshPath.IsEmpty())
         {
             FString SanitizedExtraPath = SanitizeProjectRelativePath(ExtraSkeletalMeshPath);

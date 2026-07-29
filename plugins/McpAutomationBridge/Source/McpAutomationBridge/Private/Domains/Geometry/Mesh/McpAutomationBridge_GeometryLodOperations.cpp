@@ -7,9 +7,9 @@ namespace McpGeometryHandlers
 bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 LODCount = GetIntFieldGeom(Payload, TEXT("lodCount"), 4);
-    FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"), TEXT(""));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 LODCount = GetJsonIntField(Payload, TEXT("lodCount"), 4);
+    FString AssetPath = GetJsonStringField(Payload, TEXT("assetPath"), TEXT(""));
 
     if (ActorName.IsEmpty() && AssetPath.IsEmpty())
     {
@@ -139,11 +139,11 @@ bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, const FStri
 bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"));
-    int32 LODIndex = GetIntFieldGeom(Payload, TEXT("lodIndex"), 1);
-    double TrianglePercent = GetNumberFieldGeom(Payload, TEXT("trianglePercent"), 50.0);
-    bool bRecomputeNormals = GetBoolFieldGeom(Payload, TEXT("recomputeNormals"), false);
-    bool bRecomputeTangents = GetBoolFieldGeom(Payload, TEXT("recomputeTangents"), false);
+    FString AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));
+    int32 LODIndex = GetJsonIntField(Payload, TEXT("lodIndex"), 1);
+    double TrianglePercent = GetJsonNumberField(Payload, TEXT("trianglePercent"), 50.0);
+    bool bRecomputeNormals = GetJsonBoolField(Payload, TEXT("recomputeNormals"), false);
+    bool bRecomputeTangents = GetJsonBoolField(Payload, TEXT("recomputeTangents"), false);
 
     if (AssetPath.IsEmpty())
     {
@@ -211,7 +211,7 @@ bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"));
+    FString AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));
 
     // Parse screen sizes (can be array or object)
     TArray<float> ScreenSizes;

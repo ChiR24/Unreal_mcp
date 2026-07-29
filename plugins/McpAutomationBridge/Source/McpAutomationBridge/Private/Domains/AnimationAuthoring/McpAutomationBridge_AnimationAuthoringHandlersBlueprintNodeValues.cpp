@@ -8,10 +8,10 @@ TSharedPtr<FJsonObject> HandleBlueprintNodeValueActions(const FString& SubAction
 {
     if (SubAction == TEXT("set_anim_graph_node_value"))
     {
-        FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
-        FString NodeName = GetStringFieldAnimAuth(Params, TEXT("nodeName"), TEXT(""));
-        FString PropertyName = GetStringFieldAnimAuth(Params, TEXT("propertyName"), TEXT(""));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString BlueprintPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("blueprintPath"), TEXT("")));
+        FString NodeName = GetJsonStringField(Params, TEXT("nodeName"), TEXT(""));
+        FString PropertyName = GetJsonStringField(Params, TEXT("propertyName"), TEXT(""));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (NodeName.IsEmpty() || PropertyName.IsEmpty())
         {

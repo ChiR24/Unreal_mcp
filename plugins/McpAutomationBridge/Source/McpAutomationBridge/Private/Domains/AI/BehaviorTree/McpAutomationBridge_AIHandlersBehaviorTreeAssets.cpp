@@ -66,8 +66,8 @@ bool HandleCreateBehaviorTree(UMcpAutomationBridgeSubsystem* Self, const FString
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("create_behavior_tree"))
     {
-        FString Name = GetStringFieldAI(Payload, TEXT("name"));
-        FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/BehaviorTrees"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/BehaviorTrees"));
 
         if (Name.IsEmpty())
         {
@@ -101,8 +101,8 @@ bool HandleAddCompositeNode(UMcpAutomationBridgeSubsystem* Self, const FString& 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("add_composite_node"))
     {
-        FString BTPath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
-        FString CompositeType = GetStringFieldAI(Payload, TEXT("compositeType"));
+        FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
+        FString CompositeType = GetJsonStringField(Payload, TEXT("compositeType"));
 
         UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
         if (!BT)
@@ -159,8 +159,8 @@ bool HandleAddTaskNode(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("add_task_node"))
     {
-        FString BTPath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
-        FString TaskType = GetStringFieldAI(Payload, TEXT("taskType"));
+        FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
+        FString TaskType = GetJsonStringField(Payload, TEXT("taskType"));
 
         UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
         if (!BT)

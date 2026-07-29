@@ -23,7 +23,7 @@ bool HandleCreateNavModifier(UMcpAutomationBridgeSubsystem* Self, const FString&
     const FString SubAction = TEXT("create_nav_modifier");
     if (SubAction == TEXT("create_nav_modifier"))
     {
-        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
+        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
         if (BlueprintPath.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_ARGUMENT"));
@@ -44,7 +44,7 @@ bool HandleCreateNavModifier(UMcpAutomationBridgeSubsystem* Self, const FString&
             return true;
         }
 
-        FString ComponentName = GetStringFieldAI(Payload, TEXT("componentName"));
+        FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
         if (ComponentName.IsEmpty())
         {
             ComponentName = TEXT("NavModifierComponent");
@@ -65,11 +65,11 @@ bool HandleCreateNavModifier(UMcpAutomationBridgeSubsystem* Self, const FString&
         if (NavModComp)
         {
             // Configure fail-safe defaults
-            bool bFailsafe = GetBoolFieldAI(Payload, TEXT("failsafeToDefaultNavmesh"));
+            bool bFailsafe = GetJsonBoolField(Payload, TEXT("failsafeToDefaultNavmesh"));
             NavModComp->SetAreaClass(bFailsafe ? UNavArea_Default::StaticClass() : UNavArea_Obstacle::StaticClass());
 
             // Set area class if specified
-            FString AreaClassName = GetStringFieldAI(Payload, TEXT("areaClass"));
+            FString AreaClassName = GetJsonStringField(Payload, TEXT("areaClass"));
             if (!AreaClassName.IsEmpty())
             {
                 UClass* AreaClass = FindObject<UClass>(nullptr, *AreaClassName);
@@ -124,13 +124,13 @@ bool HandleCreateNavLinkProxy(UMcpAutomationBridgeSubsystem* Self, const FString
     const FString SubAction = TEXT("create_nav_link_proxy");
     if (SubAction == TEXT("create_nav_link_proxy"))
     {
-        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
+        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
         if (BlueprintPath.IsEmpty())
         {
-            BlueprintPath = GetStringFieldAI(Payload, TEXT("name"));
+            BlueprintPath = GetJsonStringField(Payload, TEXT("name"));
             if (!BlueprintPath.IsEmpty())
             {
-                FString Path = GetStringFieldAI(Payload, TEXT("path"));
+                FString Path = GetJsonStringField(Payload, TEXT("path"));
                 if (Path.IsEmpty()) Path = TEXT("/Game/AI");
                 BlueprintPath = Path / BlueprintPath;
             }

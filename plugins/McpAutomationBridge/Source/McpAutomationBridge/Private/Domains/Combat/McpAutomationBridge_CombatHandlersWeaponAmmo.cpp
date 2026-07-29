@@ -22,9 +22,9 @@ bool FCombatActionContext::HandleWeaponAmmo() const
             return true;
         }
 
-        int32 MagazineSize = static_cast<int32>(GetNumberFieldCombat(Payload, TEXT("magazineSize"), 30));
-        double ReloadTime = GetNumberFieldCombat(Payload, TEXT("reloadTime"), 2.0);
-        FString ReloadAnimPath = GetStringFieldCombat(Payload, TEXT("reloadAnimationPath"));
+        int32 MagazineSize = static_cast<int32>(GetJsonNumberField(Payload, TEXT("magazineSize"), 30));
+        double ReloadTime = GetJsonNumberField(Payload, TEXT("reloadTime"), 2.0);
+        FString ReloadAnimPath = GetJsonStringField(Payload, TEXT("reloadAnimationPath"));
 
         // Add integer variable: MagazineSize
         AddBlueprintVariableCombat(Blueprint, TEXT("MagazineSize"), MakeIntPinType());
@@ -115,11 +115,11 @@ bool FCombatActionContext::HandleWeaponAmmo() const
             return true;
         }
 
-        FString AmmoType = GetStringFieldCombat(Payload, TEXT("ammoType"), TEXT("Default"));
-        int32 MaxAmmo = static_cast<int32>(GetNumberFieldCombat(Payload, TEXT("maxAmmo"), 150));
-        int32 StartingAmmo = static_cast<int32>(GetNumberFieldCombat(Payload, TEXT("startingAmmo"), 60));
-        int32 AmmoPerShot = static_cast<int32>(GetNumberFieldCombat(Payload, TEXT("ammoPerShot"), 1));
-        bool bInfiniteAmmo = GetBoolFieldCombat(Payload, TEXT("infiniteAmmo"), false);
+        FString AmmoType = GetJsonStringField(Payload, TEXT("ammoType"), TEXT("Default"));
+        int32 MaxAmmo = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxAmmo"), 150));
+        int32 StartingAmmo = static_cast<int32>(GetJsonNumberField(Payload, TEXT("startingAmmo"), 60));
+        int32 AmmoPerShot = static_cast<int32>(GetJsonNumberField(Payload, TEXT("ammoPerShot"), 1));
+        bool bInfiniteAmmo = GetJsonBoolField(Payload, TEXT("infiniteAmmo"), false);
 
         // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("MaxAmmo"), MakeIntPinType());

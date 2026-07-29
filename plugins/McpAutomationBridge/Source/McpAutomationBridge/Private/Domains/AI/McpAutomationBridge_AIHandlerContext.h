@@ -10,10 +10,6 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpAIHandlers, Log, All);
 
-#define GetStringFieldAI GetJsonStringField
-#define GetNumberFieldAI GetJsonNumberField
-#define GetBoolFieldAI GetJsonBoolField
-
 namespace McpAIHandlers
 {
 inline bool SanitizeAIAssetPath(const FString& InputPath, FString& OutSanitizedPath, FString& OutError)

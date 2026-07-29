@@ -16,8 +16,8 @@ bool HandleAddDecorator(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("add_decorator"))
     {
-        FString BTPath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
-        FString DecoratorType = GetStringFieldAI(Payload, TEXT("decoratorType"));
+        FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
+        FString DecoratorType = GetJsonStringField(Payload, TEXT("decoratorType"));
 
         UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
         if (!BT)
@@ -74,8 +74,8 @@ bool HandleAddService(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("add_service"))
     {
-        FString BTPath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
-        FString ServiceType = GetStringFieldAI(Payload, TEXT("serviceType"));
+        FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
+        FString ServiceType = GetJsonStringField(Payload, TEXT("serviceType"));
 
         UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
         if (!BT)

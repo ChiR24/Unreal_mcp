@@ -8,9 +8,9 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
 {
     if (SubAction == TEXT("add_bone_track"))
     {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString BoneName = GetStringFieldAnimAuth(Params, TEXT("boneName"), TEXT(""));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString BoneName = GetJsonStringField(Params, TEXT("boneName"), TEXT(""));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (BoneName.IsEmpty())
         {
@@ -137,10 +137,10 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
 
     if (SubAction == TEXT("set_bone_key"))
     {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString BoneName = GetStringFieldAnimAuth(Params, TEXT("boneName"), TEXT(""));
-        int32 Frame = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("frame"), 0));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString BoneName = GetJsonStringField(Params, TEXT("boneName"), TEXT(""));
+        int32 Frame = static_cast<int32>(GetJsonNumberField(Params, TEXT("frame"), 0));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         TSharedPtr<FJsonObject> LocationObj = Params->HasField(TEXT("location")) ? Params->GetObjectField(TEXT("location")) : nullptr;
         TSharedPtr<FJsonObject> RotationObj = Params->HasField(TEXT("rotation")) ? Params->GetObjectField(TEXT("rotation")) : nullptr;

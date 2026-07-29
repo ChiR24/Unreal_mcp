@@ -7,10 +7,10 @@ namespace McpGeometryHandlers
 bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 Subdivisions = GetIntFieldGeom(Payload, TEXT("subdivisions"), 8);
-    bool bSmooth = GetBoolFieldGeom(Payload, TEXT("smooth"), true);
-    bool bCap = GetBoolFieldGeom(Payload, TEXT("cap"), true);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 Subdivisions = GetJsonIntField(Payload, TEXT("subdivisions"), 8);
+    bool bSmooth = GetJsonBoolField(Payload, TEXT("smooth"), true);
+    bool bCap = GetJsonBoolField(Payload, TEXT("cap"), true);
 
     // Get profile actor names if provided
     TArray<FString> ProfileActors;

@@ -7,7 +7,7 @@ namespace McpGeometryHandlers
 bool HandleAppendVertex(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -69,8 +69,8 @@ bool HandleAppendVertex(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 bool HandleDeleteVertex(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 VertexIndex = GetIntFieldGeom(Payload, TEXT("vertexIndex"), -1);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 VertexIndex = GetJsonIntField(Payload, TEXT("vertexIndex"), -1);
 
     if (ActorName.IsEmpty() || VertexIndex < 0)
     {
@@ -140,8 +140,8 @@ bool HandleDeleteVertex(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 bool HandleGetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 VertexIndex = GetIntFieldGeom(Payload, TEXT("vertexIndex"), -1);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 VertexIndex = GetJsonIntField(Payload, TEXT("vertexIndex"), -1);
 
     if (ActorName.IsEmpty() || VertexIndex < 0)
     {
@@ -207,8 +207,8 @@ bool HandleGetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const FString&
 bool HandleSetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 VertexIndex = GetIntFieldGeom(Payload, TEXT("vertexIndex"), -1);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 VertexIndex = GetJsonIntField(Payload, TEXT("vertexIndex"), -1);
     FVector Position = ReadVectorFromPayload(Payload, TEXT("position"), FVector::ZeroVector);
 
     if (ActorName.IsEmpty() || VertexIndex < 0)

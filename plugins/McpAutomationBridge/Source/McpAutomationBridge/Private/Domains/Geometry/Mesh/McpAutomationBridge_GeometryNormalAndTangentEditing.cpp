@@ -7,7 +7,7 @@ namespace McpGeometryHandlers
 bool HandleRecomputeTangents(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -61,8 +61,8 @@ bool HandleRecomputeTangents(UMcpAutomationBridgeSubsystem* Self, const FString&
 bool HandleSplitNormals(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double SplitAngle = GetNumberFieldGeom(Payload, TEXT("splitAngle"), 60.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double SplitAngle = GetJsonNumberField(Payload, TEXT("splitAngle"), 60.0);
 
     if (ActorName.IsEmpty())
     {

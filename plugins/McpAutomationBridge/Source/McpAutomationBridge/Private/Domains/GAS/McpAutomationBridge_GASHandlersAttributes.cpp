@@ -73,7 +73,7 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
             return true;
         }
 
-        FString AttributeName = GetStringFieldGAS(Payload, TEXT("attributeName"));
+        FString AttributeName = GetJsonStringField(Payload, TEXT("attributeName"));
         if (AttributeName.IsEmpty())
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing attributeName."), TEXT("INVALID_ARGUMENT"));
@@ -88,7 +88,7 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
             return true;
         }
 
-        float DefaultValue = static_cast<float>(GetNumberFieldGAS(Payload, TEXT("defaultValue"), 0.0));
+        float DefaultValue = static_cast<float>(GetJsonNumberField(Payload, TEXT("defaultValue"), 0.0));
 
         // Add FGameplayAttributeData member variable
         FEdGraphPinType PinType;
@@ -121,14 +121,14 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
             return true;
         }
 
-        FString AttributeName = GetStringFieldGAS(Payload, TEXT("attributeName"));
+        FString AttributeName = GetJsonStringField(Payload, TEXT("attributeName"));
         if (AttributeName.IsEmpty())
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing attributeName."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
-        float BaseValue = static_cast<float>(GetNumberFieldGAS(Payload, TEXT("baseValue"), 0.0));
+        float BaseValue = static_cast<float>(GetJsonNumberField(Payload, TEXT("baseValue"), 0.0));
 
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint || !Blueprint->GeneratedClass)
@@ -218,15 +218,15 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
             return true;
         }
 
-        FString AttributeName = GetStringFieldGAS(Payload, TEXT("attributeName"));
+        FString AttributeName = GetJsonStringField(Payload, TEXT("attributeName"));
         if (AttributeName.IsEmpty())
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing attributeName."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
-        float MinValue = static_cast<float>(GetNumberFieldGAS(Payload, TEXT("minValue"), 0.0));
-        float MaxValue = static_cast<float>(GetNumberFieldGAS(Payload, TEXT("maxValue"), 100.0));
+        float MinValue = static_cast<float>(GetJsonNumberField(Payload, TEXT("minValue"), 0.0));
+        float MaxValue = static_cast<float>(GetJsonNumberField(Payload, TEXT("maxValue"), 100.0));
 
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)

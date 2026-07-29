@@ -34,10 +34,10 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
 
     if (SubAction == TEXT("create_ability_set"))
     {
-        FString SetPath = GetStringFieldGAS(Payload, TEXT("setPath"));
+        FString SetPath = GetJsonStringField(Payload, TEXT("setPath"));
         if (SetPath.IsEmpty())
         {
-            SetPath = GetStringFieldGAS(Payload, TEXT("assetPath"));
+            SetPath = GetJsonStringField(Payload, TEXT("assetPath"));
         }
         if (SetPath.IsEmpty())
         {
@@ -142,7 +142,7 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
         StringType.PinCategory = UEdGraphSchema_K2::PC_String;
         FBlueprintEditorUtils::AddMemberVariable(SetBlueprint, TEXT("SetDisplayName"), StringType);
 
-        FString SetName = GetStringFieldGAS(Payload, TEXT("setName"));
+        FString SetName = GetJsonStringField(Payload, TEXT("setName"));
         if (SetName.IsEmpty())
         {
             SetName = AssetName;
@@ -172,17 +172,17 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
     // add_ability - Add ability class reference to ability set
     if (SubAction == TEXT("add_ability"))
     {
-        FString SetPath = GetStringFieldGAS(Payload, TEXT("setPath"));
+        FString SetPath = GetJsonStringField(Payload, TEXT("setPath"));
         if (SetPath.IsEmpty())
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing setPath"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
-        FString AbilityPath = GetStringFieldGAS(Payload, TEXT("abilityPath"));
+        FString AbilityPath = GetJsonStringField(Payload, TEXT("abilityPath"));
         if (AbilityPath.IsEmpty())
         {
-            AbilityPath = GetStringFieldGAS(Payload, TEXT("abilityClass"));
+            AbilityPath = GetJsonStringField(Payload, TEXT("abilityClass"));
         }
         if (AbilityPath.IsEmpty())
         {

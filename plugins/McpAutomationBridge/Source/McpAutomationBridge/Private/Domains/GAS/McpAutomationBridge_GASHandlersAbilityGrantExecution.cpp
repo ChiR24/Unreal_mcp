@@ -36,10 +36,10 @@ bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const 
 
     if (SubAction == TEXT("grant_ability"))
     {
-        FString ActorPath = GetStringFieldGAS(Payload, TEXT("actorPath"));
+        FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"));
         if (ActorPath.IsEmpty())
         {
-            ActorPath = GetStringFieldGAS(Payload, TEXT("blueprintPath"));
+            ActorPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
         }
         if (ActorPath.IsEmpty())
         {
@@ -47,10 +47,10 @@ bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const 
             return true;
         }
 
-        FString AbilityPath = GetStringFieldGAS(Payload, TEXT("abilityPath"));
+        FString AbilityPath = GetJsonStringField(Payload, TEXT("abilityPath"));
         if (AbilityPath.IsEmpty())
         {
-            AbilityPath = GetStringFieldGAS(Payload, TEXT("abilityClass"));
+            AbilityPath = GetJsonStringField(Payload, TEXT("abilityClass"));
         }
         if (AbilityPath.IsEmpty())
         {
@@ -152,8 +152,8 @@ bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const 
                 FText::FromString(TEXT("GAS")));
         }
 
-        int32 AbilityLevel = static_cast<int32>(GetNumberFieldGAS(Payload, TEXT("abilityLevel"), 1.0));
-        int32 InputID = static_cast<int32>(GetNumberFieldGAS(Payload, TEXT("inputID"), -1.0));
+        int32 AbilityLevel = static_cast<int32>(GetJsonNumberField(Payload, TEXT("abilityLevel"), 1.0));
+        int32 InputID = static_cast<int32>(GetJsonNumberField(Payload, TEXT("inputID"), -1.0));
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(ActorBlueprint);
         McpSafeAssetSave(ActorBlueprint);

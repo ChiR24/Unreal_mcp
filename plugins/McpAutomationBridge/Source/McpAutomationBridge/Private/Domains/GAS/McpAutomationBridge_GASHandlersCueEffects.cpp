@@ -35,7 +35,7 @@ bool HandleGASCueEffects(const FGASRequestContext& Context, const FString& SubAc
         FString ParticleSystem = GetGASStringFieldWithFallback(Payload, TEXT("particleSystem"), TEXT("particleSystemPath"));
         FString Sound = GetGASStringFieldWithFallback(Payload, TEXT("sound"), TEXT("soundPath"));
         FString CameraShake = GetGASStringFieldWithFallback(Payload, TEXT("cameraShake"), TEXT("cameraShakePath"));
-        FString Decal = GetStringFieldGAS(Payload, TEXT("decalPath"));
+        FString Decal = GetJsonStringField(Payload, TEXT("decalPath"));
 
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint || !Blueprint->GeneratedClass)

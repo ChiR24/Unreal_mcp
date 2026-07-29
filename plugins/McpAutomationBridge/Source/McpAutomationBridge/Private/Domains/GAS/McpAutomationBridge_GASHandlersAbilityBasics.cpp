@@ -206,7 +206,7 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
             return true;
         }
 
-        FString CostEffectPath = GetStringFieldGAS(Payload, TEXT("costEffectPath"));
+        FString CostEffectPath = GetJsonStringField(Payload, TEXT("costEffectPath"));
 
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint || !Blueprint->GeneratedClass)
@@ -258,7 +258,7 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
             return true;
         }
 
-        FString CooldownEffectPath = GetStringFieldGAS(Payload, TEXT("cooldownEffectPath"));
+        FString CooldownEffectPath = GetJsonStringField(Payload, TEXT("cooldownEffectPath"));
 
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint || !Blueprint->GeneratedClass)

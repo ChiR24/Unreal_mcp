@@ -18,8 +18,8 @@ bool HandleConfigureBehaviorTreeNode(UMcpAutomationBridgeSubsystem* Self, const 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("configure_bt_node"))
     {
-        FString BTPath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
-        FString NodeId = GetStringFieldAI(Payload, TEXT("nodeId"));
+        FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
+        FString NodeId = GetJsonStringField(Payload, TEXT("nodeId"));
 
         if (NodeId.IsEmpty())
         {

@@ -18,9 +18,9 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteSocket(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 #if WITH_EDITOR
-    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
-    FString SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
-    FString SocketName = GetStringFieldSkel(Payload, TEXT("socketName"));
+    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
+    FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
+    FString SocketName = GetJsonStringField(Payload, TEXT("socketName"));
 
     if (SocketName.IsEmpty())
     {

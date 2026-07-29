@@ -4,10 +4,6 @@
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
-#define GetStringFieldSkel GetJsonStringField
-#define GetNumberFieldSkel GetJsonNumberField
-#define GetBoolFieldSkel GetJsonBoolField
-
 namespace McpSkeletonHandlers
 {
 int32 GetIntFieldSkel(const TSharedPtr<FJsonObject>& JsonObject, const FString& FieldName, int32 DefaultValue);

@@ -20,7 +20,7 @@ bool HandleSetAIPerception(UMcpAutomationBridgeSubsystem* Self, const FString& R
     const FString SubAction = TEXT("set_ai_perception");
     if (SubAction == TEXT("set_ai_perception"))
     {
-        FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
+        FString ControllerPath = GetJsonStringField(Payload, TEXT("controllerPath"));
         if (ControllerPath.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing controllerPath"), TEXT("INVALID_ARGUMENT"));
@@ -88,12 +88,12 @@ bool HandleSetAIPerception(UMcpAutomationBridgeSubsystem* Self, const FString& R
         TArray<FString> SensesConfigured;
 
         // Configure sight sense
-        bool bEnableSight = GetBoolFieldAI(Payload, TEXT("enableSight"));
+        bool bEnableSight = GetJsonBoolField(Payload, TEXT("enableSight"));
         if (bEnableSight)
         {
-            float SightRadius = GetNumberFieldAI(Payload, TEXT("sightRadius"), 3000.0f);
-            float LoseSightRadius = GetNumberFieldAI(Payload, TEXT("loseSightRadius"), SightRadius + 500.0f);
-            float PeripheralVisionAngle = GetNumberFieldAI(Payload, TEXT("peripheralVisionAngle"), 90.0f);
+            float SightRadius = GetJsonNumberField(Payload, TEXT("sightRadius"), 3000.0f);
+            float LoseSightRadius = GetJsonNumberField(Payload, TEXT("loseSightRadius"), SightRadius + 500.0f);
+            float PeripheralVisionAngle = GetJsonNumberField(Payload, TEXT("peripheralVisionAngle"), 90.0f);
 
             UAISenseConfig_Sight* SightConfig = NewObject<UAISenseConfig_Sight>(PerceptionComp);
             SightConfig->SightRadius = SightRadius;
@@ -109,10 +109,10 @@ bool HandleSetAIPerception(UMcpAutomationBridgeSubsystem* Self, const FString& R
         }
 
         // Configure hearing sense
-        bool bEnableHearing = GetBoolFieldAI(Payload, TEXT("enableHearing"));
+        bool bEnableHearing = GetJsonBoolField(Payload, TEXT("enableHearing"));
         if (bEnableHearing)
         {
-            float HearingRange = GetNumberFieldAI(Payload, TEXT("hearingRange"), 3000.0f);
+            float HearingRange = GetJsonNumberField(Payload, TEXT("hearingRange"), 3000.0f);
 
             UAISenseConfig_Hearing* HearingConfig = NewObject<UAISenseConfig_Hearing>(PerceptionComp);
             HearingConfig->HearingRange = HearingRange;
@@ -126,7 +126,7 @@ bool HandleSetAIPerception(UMcpAutomationBridgeSubsystem* Self, const FString& R
         }
 
         // Configure damage sense
-        bool bEnableDamage = GetBoolFieldAI(Payload, TEXT("enableDamage"));
+        bool bEnableDamage = GetJsonBoolField(Payload, TEXT("enableDamage"));
         if (bEnableDamage)
         {
             UAISenseConfig_Damage* DamageConfig = NewObject<UAISenseConfig_Damage>(PerceptionComp);
@@ -137,7 +137,7 @@ bool HandleSetAIPerception(UMcpAutomationBridgeSubsystem* Self, const FString& R
         }
 
         // Set dominant sense if specified
-        FString DominantSense = GetStringFieldAI(Payload, TEXT("dominantSense"));
+        FString DominantSense = GetJsonStringField(Payload, TEXT("dominantSense"));
         if (!DominantSense.IsEmpty())
         {
             if (DominantSense.Equals(TEXT("Sight"), ESearchCase::IgnoreCase))

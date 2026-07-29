@@ -7,10 +7,10 @@ namespace McpGeometryHandlers
 bool HandleQuadrangulate(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double TargetQuadSize = GetNumberFieldGeom(Payload, TEXT("targetQuadSize"), 50.0);
-    bool bPreserveFeatures = GetBoolFieldGeom(Payload, TEXT("preserveFeatures"), true);
-    double FeatureAngleThreshold = GetNumberFieldGeom(Payload, TEXT("featureAngleThreshold"), 30.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double TargetQuadSize = GetJsonNumberField(Payload, TEXT("targetQuadSize"), 50.0);
+    bool bPreserveFeatures = GetJsonBoolField(Payload, TEXT("preserveFeatures"), true);
+    double FeatureAngleThreshold = GetJsonNumberField(Payload, TEXT("featureAngleThreshold"), 30.0);
 
     if (ActorName.IsEmpty())
     {
@@ -91,10 +91,10 @@ bool HandleQuadrangulate(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 bool HandleRemeshVoxel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double VoxelSize = GetNumberFieldGeom(Payload, TEXT("voxelSize"), 10.0);
-    double SurfaceDistance = GetNumberFieldGeom(Payload, TEXT("surfaceDistance"), 0.0);
-    bool bFillHoles = GetBoolFieldGeom(Payload, TEXT("fillHoles"), true);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double VoxelSize = GetJsonNumberField(Payload, TEXT("voxelSize"), 10.0);
+    double SurfaceDistance = GetJsonNumberField(Payload, TEXT("surfaceDistance"), 0.0);
+    bool bFillHoles = GetJsonBoolField(Payload, TEXT("fillHoles"), true);
 
     if (ActorName.IsEmpty())
     {

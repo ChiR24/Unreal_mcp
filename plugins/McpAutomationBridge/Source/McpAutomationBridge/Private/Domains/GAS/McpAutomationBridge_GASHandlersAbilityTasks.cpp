@@ -36,14 +36,14 @@ bool HandleGASAbilityTasks(const FGASRequestContext& Context, const FString& Sub
             return true;
         }
 
-        FString TaskType = GetStringFieldGAS(Payload, TEXT("taskType"));
+        FString TaskType = GetJsonStringField(Payload, TEXT("taskType"));
         if (TaskType.IsEmpty())
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing taskType."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
-        FString TaskClassName = GetStringFieldGAS(Payload, TEXT("taskClassName"));
+        FString TaskClassName = GetJsonStringField(Payload, TEXT("taskClassName"));
 
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint || !Blueprint->GeneratedClass)

@@ -7,8 +7,8 @@ namespace McpGeometryHandlers
 bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                       const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));
 
     if (ActorName.IsEmpty())
     {
@@ -95,8 +95,8 @@ bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
 bool HandleConvertToNanite(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                   const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));
 
     if (ActorName.IsEmpty())
     {

@@ -22,8 +22,8 @@ bool FCombatActionContext::HandleMeleeDefense() const
             return true;
         }
 
-        FString HitReactionMontage = GetStringFieldCombat(Payload, TEXT("hitReactionMontage"));
-        double StunTime = GetNumberFieldCombat(Payload, TEXT("hitReactionStunTime"), 0.5);
+        FString HitReactionMontage = GetJsonStringField(Payload, TEXT("hitReactionMontage"));
+        double StunTime = GetJsonNumberField(Payload, TEXT("hitReactionStunTime"), 0.5);
 
         // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("HitReactionMontagePath"), MakeStringPinType());
@@ -94,11 +94,11 @@ bool FCombatActionContext::HandleMeleeDefense() const
             return true;
         }
 
-        double ParryWindowStart = GetNumberFieldCombat(Payload, TEXT("parryWindowStart"), 0.0);
-        double ParryWindowEnd = GetNumberFieldCombat(Payload, TEXT("parryWindowEnd"), 0.15);
-        FString ParryAnimPath = GetStringFieldCombat(Payload, TEXT("parryAnimationPath"));
-        double BlockDamageReduction = GetNumberFieldCombat(Payload, TEXT("blockDamageReduction"), 0.8);
-        double BlockStaminaCost = GetNumberFieldCombat(Payload, TEXT("blockStaminaCost"), 10.0);
+        double ParryWindowStart = GetJsonNumberField(Payload, TEXT("parryWindowStart"), 0.0);
+        double ParryWindowEnd = GetJsonNumberField(Payload, TEXT("parryWindowEnd"), 0.15);
+        FString ParryAnimPath = GetJsonStringField(Payload, TEXT("parryAnimationPath"));
+        double BlockDamageReduction = GetJsonNumberField(Payload, TEXT("blockDamageReduction"), 0.8);
+        double BlockStaminaCost = GetJsonNumberField(Payload, TEXT("blockStaminaCost"), 10.0);
 
         // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("ParryWindowStart"), MakeFloatPinType());

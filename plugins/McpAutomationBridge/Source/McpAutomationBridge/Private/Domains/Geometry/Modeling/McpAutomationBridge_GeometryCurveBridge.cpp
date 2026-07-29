@@ -7,10 +7,10 @@ namespace McpGeometryHandlers
 bool HandleBridge(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
-    int32 EdgeGroupB = GetIntFieldGeom(Payload, TEXT("edgeGroupB"), 1);
-    int32 Subdivisions = GetIntFieldGeom(Payload, TEXT("subdivisions"), 1);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+int32 EdgeGroupA = GetJsonIntField(Payload, TEXT("edgeGroupA"), 0);
+    int32 EdgeGroupB = GetJsonIntField(Payload, TEXT("edgeGroupB"), 1);
+    int32 Subdivisions = GetJsonIntField(Payload, TEXT("subdivisions"), 1);
 
     if (ActorName.IsEmpty())
     {
@@ -186,11 +186,11 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
 bool HandleDuplicateAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"));
-int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 10);
-    bool bAlignToSpline = GetBoolFieldGeom(Payload, TEXT("alignToSpline"), true);
-    double ScaleVariation = GetNumberFieldGeom(Payload, TEXT("scaleVariation"), 0.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"));
+int32 Count = GetJsonIntField(Payload, TEXT("count"), 10);
+    bool bAlignToSpline = GetJsonBoolField(Payload, TEXT("alignToSpline"), true);
+    double ScaleVariation = GetJsonNumberField(Payload, TEXT("scaleVariation"), 0.0);
 
     if (ActorName.IsEmpty() || SplineActorName.IsEmpty())
     {

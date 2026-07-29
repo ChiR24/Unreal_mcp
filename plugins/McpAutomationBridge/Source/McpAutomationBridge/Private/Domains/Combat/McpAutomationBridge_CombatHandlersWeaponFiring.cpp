@@ -22,9 +22,9 @@ bool FCombatActionContext::HandleWeaponFiring() const
             return true;
         }
 
-        bool bHitscanEnabled = GetBoolFieldCombat(Payload, TEXT("hitscanEnabled"), true);
-        FString TraceChannel = GetStringFieldCombat(Payload, TEXT("traceChannel"), TEXT("Visibility"));
-        double Range = GetNumberFieldCombat(Payload, TEXT("range"), 10000.0);
+        bool bHitscanEnabled = GetJsonBoolField(Payload, TEXT("hitscanEnabled"), true);
+        FString TraceChannel = GetJsonStringField(Payload, TEXT("traceChannel"), TEXT("Visibility"));
+        double Range = GetJsonNumberField(Payload, TEXT("range"), 10000.0);
 
         // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("bIsHitscan"), MakeBoolPinType());
@@ -84,8 +84,8 @@ bool FCombatActionContext::HandleWeaponFiring() const
             return true;
         }
 
-        FString ProjectileClass = GetStringFieldCombat(Payload, TEXT("projectileClass"));
-        double ProjectileSpeed = GetNumberFieldCombat(Payload, TEXT("projectileSpeed"), 5000.0);
+        FString ProjectileClass = GetJsonStringField(Payload, TEXT("projectileClass"));
+        double ProjectileSpeed = GetJsonNumberField(Payload, TEXT("projectileSpeed"), 5000.0);
 
         // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("ProjectileClassPath"), MakeStringPinType());
@@ -139,9 +139,9 @@ bool FCombatActionContext::HandleWeaponFiring() const
             return true;
         }
 
-        FString PatternType = GetStringFieldCombat(Payload, TEXT("spreadPattern"), TEXT("Random"));
-        double SpreadIncrease = GetNumberFieldCombat(Payload, TEXT("spreadIncrease"), 0.5);
-        double SpreadRecovery = GetNumberFieldCombat(Payload, TEXT("spreadRecovery"), 2.0);
+        FString PatternType = GetJsonStringField(Payload, TEXT("spreadPattern"), TEXT("Random"));
+        double SpreadIncrease = GetJsonNumberField(Payload, TEXT("spreadIncrease"), 0.5);
+        double SpreadRecovery = GetJsonNumberField(Payload, TEXT("spreadRecovery"), 2.0);
 
         // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("SpreadPatternType"), MakeStringPinType());

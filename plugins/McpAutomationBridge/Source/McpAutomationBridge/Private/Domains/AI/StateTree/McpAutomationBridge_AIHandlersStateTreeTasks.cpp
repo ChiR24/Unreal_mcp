@@ -12,9 +12,9 @@ bool HandleConfigureStateTreeTask(UMcpAutomationBridgeSubsystem* Self, const FSt
     if (SubAction == TEXT("configure_state_tree_task"))
     {
 #if MCP_HAS_STATE_TREE && MCP_STATE_TREE_HEADERS_AVAILABLE
-        FString StateTreePath = GetStringFieldAI(Payload, TEXT("stateTreePath"));
-        FString StateName = GetStringFieldAI(Payload, TEXT("stateName"));
-        FString TaskType = GetStringFieldAI(Payload, TEXT("taskType"), TEXT(""));
+        FString StateTreePath = GetJsonStringField(Payload, TEXT("stateTreePath"));
+        FString StateName = GetJsonStringField(Payload, TEXT("stateName"));
+        FString TaskType = GetJsonStringField(Payload, TEXT("taskType"), TEXT(""));
 
         if (StateTreePath.IsEmpty() || StateName.IsEmpty())
         {
@@ -73,7 +73,7 @@ bool HandleConfigureStateTreeTask(UMcpAutomationBridgeSubsystem* Self, const FSt
         // Configure state properties from payload
         if (Payload->HasField(TEXT("selectionBehavior")))
         {
-            FString Behavior = GetStringFieldAI(Payload, TEXT("selectionBehavior"));
+            FString Behavior = GetJsonStringField(Payload, TEXT("selectionBehavior"));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 7
             if (Behavior.Equals(TEXT("TryEnterState"), ESearchCase::IgnoreCase))
             {
@@ -120,8 +120,8 @@ bool HandleConfigureStateTreeTask(UMcpAutomationBridgeSubsystem* Self, const FSt
         Result->SetStringField(TEXT("message"), TEXT("State task configuration updated"));
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Task configured"), Result);
 #elif MCP_HAS_STATE_TREE
-        FString StateTreePath = GetStringFieldAI(Payload, TEXT("stateTreePath"));
-        FString StateName = GetStringFieldAI(Payload, TEXT("stateName"));
+        FString StateTreePath = GetJsonStringField(Payload, TEXT("stateTreePath"));
+        FString StateName = GetJsonStringField(Payload, TEXT("stateName"));
         Result->SetStringField(TEXT("stateName"), StateName);
         Result->SetStringField(TEXT("message"), TEXT("Task configuration registered (headers unavailable)"));
         Result->SetBoolField(TEXT("headersUnavailable"), true);

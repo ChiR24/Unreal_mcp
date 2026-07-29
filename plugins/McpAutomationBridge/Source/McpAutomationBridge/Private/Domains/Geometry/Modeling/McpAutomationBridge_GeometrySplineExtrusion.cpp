@@ -7,13 +7,13 @@ namespace McpGeometryHandlers
 bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"));
-    int32 Segments = GetIntFieldGeom(Payload, TEXT("segments"), 16);
-    bool bCap = GetBoolFieldGeom(Payload, TEXT("cap"), true);
-    double ScaleStart = GetNumberFieldGeom(Payload, TEXT("scaleStart"), 1.0);
-    double ScaleEnd = GetNumberFieldGeom(Payload, TEXT("scaleEnd"), 1.0);
-    double Twist = GetNumberFieldGeom(Payload, TEXT("twist"), 0.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"));
+    int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 16);
+    bool bCap = GetJsonBoolField(Payload, TEXT("cap"), true);
+    double ScaleStart = GetJsonNumberField(Payload, TEXT("scaleStart"), 1.0);
+    double ScaleEnd = GetJsonNumberField(Payload, TEXT("scaleEnd"), 1.0);
+    double Twist = GetJsonNumberField(Payload, TEXT("twist"), 0.0);
 
     if (ActorName.IsEmpty())
     {

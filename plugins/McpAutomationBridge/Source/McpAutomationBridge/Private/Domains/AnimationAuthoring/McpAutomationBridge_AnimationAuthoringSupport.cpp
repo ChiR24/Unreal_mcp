@@ -77,9 +77,9 @@ FVector GetVectorFromJsonAnim(const TSharedPtr<FJsonObject>& Obj)
         return FVector::ZeroVector;
     }
     return FVector(
-        GetNumberFieldAnimAuth(Obj, TEXT("x"), 0.0),
-        GetNumberFieldAnimAuth(Obj, TEXT("y"), 0.0),
-        GetNumberFieldAnimAuth(Obj, TEXT("z"), 0.0)
+        GetJsonNumberField(Obj, TEXT("x"), 0.0),
+        GetJsonNumberField(Obj, TEXT("y"), 0.0),
+        GetJsonNumberField(Obj, TEXT("z"), 0.0)
     );
 }
 
@@ -94,18 +94,18 @@ FRotator GetRotatorFromJsonAnim(const TSharedPtr<FJsonObject>& Obj)
     if (Obj->HasField(TEXT("pitch")) || Obj->HasField(TEXT("yaw")) || Obj->HasField(TEXT("roll")))
     {
         return FRotator(
-            GetNumberFieldAnimAuth(Obj, TEXT("pitch"), 0.0),
-            GetNumberFieldAnimAuth(Obj, TEXT("yaw"), 0.0),
-            GetNumberFieldAnimAuth(Obj, TEXT("roll"), 0.0)
+            GetJsonNumberField(Obj, TEXT("pitch"), 0.0),
+            GetJsonNumberField(Obj, TEXT("yaw"), 0.0),
+            GetJsonNumberField(Obj, TEXT("roll"), 0.0)
         );
     }
     else if (Obj->HasField(TEXT("w")))
     {
         FQuat Quat(
-            GetNumberFieldAnimAuth(Obj, TEXT("x"), 0.0),
-            GetNumberFieldAnimAuth(Obj, TEXT("y"), 0.0),
-            GetNumberFieldAnimAuth(Obj, TEXT("z"), 0.0),
-            GetNumberFieldAnimAuth(Obj, TEXT("w"), 1.0)
+            GetJsonNumberField(Obj, TEXT("x"), 0.0),
+            GetJsonNumberField(Obj, TEXT("y"), 0.0),
+            GetJsonNumberField(Obj, TEXT("z"), 0.0),
+            GetJsonNumberField(Obj, TEXT("w"), 1.0)
         );
         return Quat.Rotator();
     }

@@ -22,9 +22,9 @@ bool FCombatActionContext::HandleWeaponHandling() const
             return true;
         }
 
-        double RecoilPitch = GetNumberFieldCombat(Payload, TEXT("recoilPitch"), 1.0);
-        double RecoilYaw = GetNumberFieldCombat(Payload, TEXT("recoilYaw"), 0.3);
-        double RecoilRecovery = GetNumberFieldCombat(Payload, TEXT("recoilRecovery"), 5.0);
+        double RecoilPitch = GetJsonNumberField(Payload, TEXT("recoilPitch"), 1.0);
+        double RecoilYaw = GetJsonNumberField(Payload, TEXT("recoilYaw"), 0.3);
+        double RecoilRecovery = GetJsonNumberField(Payload, TEXT("recoilRecovery"), 5.0);
 
         // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("RecoilPitch"), MakeFloatPinType());
@@ -84,10 +84,10 @@ bool FCombatActionContext::HandleWeaponHandling() const
             return true;
         }
 
-        bool bAdsEnabled = GetBoolFieldCombat(Payload, TEXT("adsEnabled"), true);
-        double AdsFov = GetNumberFieldCombat(Payload, TEXT("adsFov"), 60.0);
-        double AdsSpeed = GetNumberFieldCombat(Payload, TEXT("adsSpeed"), 0.2);
-        double AdsSpreadMultiplier = GetNumberFieldCombat(Payload, TEXT("adsSpreadMultiplier"), 0.5);
+        bool bAdsEnabled = GetJsonBoolField(Payload, TEXT("adsEnabled"), true);
+        double AdsFov = GetJsonNumberField(Payload, TEXT("adsFov"), 60.0);
+        double AdsSpeed = GetJsonNumberField(Payload, TEXT("adsSpeed"), 0.2);
+        double AdsSpreadMultiplier = GetJsonNumberField(Payload, TEXT("adsSpreadMultiplier"), 0.5);
 
         // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("bADSEnabled"), MakeBoolPinType());

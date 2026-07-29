@@ -7,8 +7,8 @@ namespace McpGeometryHandlers
 bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                            const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double Factor = GetNumberFieldGeom(Payload, TEXT("factor"), 1.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double Factor = GetJsonNumberField(Payload, TEXT("factor"), 1.0);
 
     if (ActorName.IsEmpty())
     {
@@ -113,9 +113,9 @@ bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& RequestI
 bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    FString Axis = GetStringFieldGeom(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
-    double Factor = GetNumberFieldGeom(Payload, TEXT("factor"), 1.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString Axis = GetJsonStringField(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
+    double Factor = GetJsonNumberField(Payload, TEXT("factor"), 1.0);
 
     if (ActorName.IsEmpty())
     {

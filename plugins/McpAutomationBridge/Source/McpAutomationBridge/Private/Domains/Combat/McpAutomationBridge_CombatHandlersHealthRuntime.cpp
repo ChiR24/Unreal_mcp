@@ -23,9 +23,9 @@ bool FCombatActionContext::HandleHealthRuntime() const
             return true;
         }
 
-        double Duration = GetNumberFieldCombat(Payload, TEXT("duration"), 5.0);
-        double DamagePerSecond = GetNumberFieldCombat(Payload, TEXT("damagePerSecond"), 10.0);
-        FString EffectType = GetStringFieldCombat(Payload, TEXT("effectType"), TEXT("DamageOverTime"));
+        double Duration = GetJsonNumberField(Payload, TEXT("duration"), 5.0);
+        double DamagePerSecond = GetJsonNumberField(Payload, TEXT("damagePerSecond"), 10.0);
+        FString EffectType = GetJsonStringField(Payload, TEXT("effectType"), TEXT("DamageOverTime"));
 
         AddBlueprintVariableCombat(Blueprint, TEXT("EffectDuration"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("DamagePerSecond"), MakeFloatPinType());
@@ -76,8 +76,8 @@ bool FCombatActionContext::HandleHealthRuntime() const
             return true;
         }
 
-        double DamageAmount = GetNumberFieldCombat(Payload, TEXT("damageAmount"), 25.0);
-        FString DamageTypeName = GetStringFieldCombat(Payload, TEXT("damageType"), TEXT("Default"));
+        double DamageAmount = GetJsonNumberField(Payload, TEXT("damageAmount"), 25.0);
+        FString DamageTypeName = GetJsonStringField(Payload, TEXT("damageType"), TEXT("Default"));
 
         AddBlueprintVariableCombat(Blueprint, TEXT("AppliedDamageAmount"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("AppliedDamageType"), MakeStringPinType());
@@ -123,8 +123,8 @@ bool FCombatActionContext::HandleHealthRuntime() const
             return true;
         }
 
-        double HealAmount = GetNumberFieldCombat(Payload, TEXT("healAmount"), 25.0);
-        double MaxHealth = GetNumberFieldCombat(Payload, TEXT("maxHealth"), 100.0);
+        double HealAmount = GetJsonNumberField(Payload, TEXT("healAmount"), 25.0);
+        double MaxHealth = GetJsonNumberField(Payload, TEXT("maxHealth"), 100.0);
 
         AddBlueprintVariableCombat(Blueprint, TEXT("CurrentHealth"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("MaxHealth"), MakeFloatPinType());

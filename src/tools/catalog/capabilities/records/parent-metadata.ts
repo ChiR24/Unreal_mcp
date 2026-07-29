@@ -11,8 +11,8 @@
  * validated by `parent-metadata.test.ts`; the records are the sole registration
  * metadata source, so this table is the only hand-maintained parent metadata.
  */
-import type { LegacyToolName } from '../index.js';
-import { LegacyToolNameSchema } from '../index.js';
+import type { LegacyToolName } from '../identifiers.js';
+import { LegacyToolNameSchema } from '../identifiers.js';
 
 export type ParentToolMetadata = {
   /** Canonical parent tool name (matches `routing.parentTool`). */

@@ -7,14 +7,14 @@ namespace McpGeometryHandlers
 bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedBox");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
 
-    double Width = GetNumberFieldGeom(Payload, TEXT("width"), 100.0);
-    double Height = GetNumberFieldGeom(Payload, TEXT("height"), 100.0);
-    double Depth = GetNumberFieldGeom(Payload, TEXT("depth"), 100.0);
+    double Width = GetJsonNumberField(Payload, TEXT("width"), 100.0);
+    double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
+    double Depth = GetJsonNumberField(Payload, TEXT("depth"), 100.0);
 
     const TSharedPtr<FJsonObject>* DimensionsObject = nullptr;
     if (Payload.IsValid() && Payload->TryGetObjectField(TEXT("dimensions"), DimensionsObject) && DimensionsObject && DimensionsObject->IsValid())
@@ -43,9 +43,9 @@ bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     Height = ClampDimension(Height);
     Depth = ClampDimension(Depth);
 
-    int32 WidthSegments = ClampSegments(GetIntFieldGeom(Payload, TEXT("widthSegments"), 1));
-    int32 HeightSegments = ClampSegments(GetIntFieldGeom(Payload, TEXT("heightSegments"), 1));
-    int32 DepthSegments = ClampSegments(GetIntFieldGeom(Payload, TEXT("depthSegments"), 1));
+    int32 WidthSegments = ClampSegments(GetJsonIntField(Payload, TEXT("widthSegments"), 1));
+    int32 HeightSegments = ClampSegments(GetJsonIntField(Payload, TEXT("heightSegments"), 1));
+    int32 DepthSegments = ClampSegments(GetJsonIntField(Payload, TEXT("depthSegments"), 1));
 
     const int64 EstimatedTriangles = 2LL * (static_cast<int64>(WidthSegments) * HeightSegments +
                                             static_cast<int64>(WidthSegments) * DepthSegments +
@@ -113,12 +113,12 @@ bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& Request
 bool HandleCreateSphere(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedSphere");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double Radius = GetNumberFieldGeom(Payload, TEXT("radius"), 50.0);
-    int32 Subdivisions = ClampSegments(GetIntFieldGeom(Payload, TEXT("subdivisions"), 16), 16);
+    double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
+    int32 Subdivisions = ClampSegments(GetJsonIntField(Payload, TEXT("subdivisions"), 16), 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -158,13 +158,13 @@ bool HandleCreateSphere(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 bool HandleCreateCylinder(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedCylinder");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double Radius = GetNumberFieldGeom(Payload, TEXT("radius"), 50.0);
-    double Height = GetNumberFieldGeom(Payload, TEXT("height"), 100.0);
-    int32 Segments = GetIntFieldGeom(Payload, TEXT("segments"), 16);
+    double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
+    double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
+    int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -204,14 +204,14 @@ bool HandleCreateCylinder(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 bool HandleCreateCone(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedCone");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double BaseRadius = GetNumberFieldGeom(Payload, TEXT("baseRadius"), 50.0);
-    double TopRadius = GetNumberFieldGeom(Payload, TEXT("topRadius"), 0.0);
-    double Height = GetNumberFieldGeom(Payload, TEXT("height"), 100.0);
-    int32 Segments = GetIntFieldGeom(Payload, TEXT("segments"), 16);
+double BaseRadius = GetJsonNumberField(Payload, TEXT("baseRadius"), 50.0);
+    double TopRadius = GetJsonNumberField(Payload, TEXT("topRadius"), 0.0);
+    double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
+    int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -251,14 +251,14 @@ double BaseRadius = GetNumberFieldGeom(Payload, TEXT("baseRadius"), 50.0);
 bool HandleCreateCapsule(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedCapsule");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double Radius = GetNumberFieldGeom(Payload, TEXT("radius"), 50.0);
-double Length = GetNumberFieldGeom(Payload, TEXT("length"), 100.0);
-    int32 HemisphereSteps = GetIntFieldGeom(Payload, TEXT("hemisphereSteps"), 4);
-    int32 Segments = GetIntFieldGeom(Payload, TEXT("segments"), 16);
+    double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
+double Length = GetJsonNumberField(Payload, TEXT("length"), 100.0);
+    int32 HemisphereSteps = GetJsonIntField(Payload, TEXT("hemisphereSteps"), 4);
+    int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;

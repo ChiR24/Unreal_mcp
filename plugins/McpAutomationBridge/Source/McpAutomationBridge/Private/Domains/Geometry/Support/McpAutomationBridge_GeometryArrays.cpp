@@ -7,8 +7,8 @@ namespace McpGeometryHandlers
 bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 3);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 Count = GetJsonIntField(Payload, TEXT("count"), 3);
     FVector Offset = ReadVectorFromPayload(Payload, TEXT("offset"), FVector(100, 0, 0));
 
     if (ActorName.IsEmpty())
@@ -97,11 +97,11 @@ bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 6);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 Count = GetJsonIntField(Payload, TEXT("count"), 6);
     FVector Center = ReadVectorFromPayload(Payload, TEXT("center"), FVector::ZeroVector);
-    FString Axis = GetStringFieldGeom(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
-    double TotalAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 360.0);
+    FString Axis = GetJsonStringField(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
+    double TotalAngle = GetJsonNumberField(Payload, TEXT("angle"), 360.0);
 
     if (ActorName.IsEmpty())
     {

@@ -8,12 +8,12 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
 {
     if (SubAction == TEXT("set_curve_key"))
     {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString CurveName = GetStringFieldAnimAuth(Params, TEXT("curveName"), TEXT(""));
-        int32 Frame = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("frame"), 0));
-        float Value = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("value"), 0.0));
-        bool bCreateIfMissing = GetBoolFieldAnimAuth(Params, TEXT("createIfMissing"), true);
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString CurveName = GetJsonStringField(Params, TEXT("curveName"), TEXT(""));
+        int32 Frame = static_cast<int32>(GetJsonNumberField(Params, TEXT("frame"), 0));
+        float Value = static_cast<float>(GetJsonNumberField(Params, TEXT("value"), 0.0));
+        bool bCreateIfMissing = GetJsonBoolField(Params, TEXT("createIfMissing"), true);
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (CurveName.IsEmpty())
         {
@@ -60,12 +60,12 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
 
 if (SubAction == TEXT("add_notify"))
 {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-    FString NotifyClass = GetStringFieldAnimAuth(Params, TEXT("notifyClass"), TEXT(""));
-    int32 Frame = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("frame"), 0));
-    int32 TrackIndex = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("trackIndex"), 0));
-    FString NotifyName = GetStringFieldAnimAuth(Params, TEXT("notifyName"), TEXT(""));
-    bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+    FString NotifyClass = GetJsonStringField(Params, TEXT("notifyClass"), TEXT(""));
+    int32 Frame = static_cast<int32>(GetJsonNumberField(Params, TEXT("frame"), 0));
+    int32 TrackIndex = static_cast<int32>(GetJsonNumberField(Params, TEXT("trackIndex"), 0));
+    FString NotifyName = GetJsonStringField(Params, TEXT("notifyName"), TEXT(""));
+    bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (NotifyClass.IsEmpty() && NotifyName.IsEmpty())
     {
@@ -162,13 +162,13 @@ if (SubAction == TEXT("add_notify"))
 
 if (SubAction == TEXT("add_notify_state"))
 {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-    FString NotifyClass = GetStringFieldAnimAuth(Params, TEXT("notifyClass"), TEXT(""));
-    int32 StartFrame = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("startFrame"), 0));
-    int32 EndFrame = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("endFrame"), 10));
-    int32 TrackIndex = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("trackIndex"), 0));
-    FString NotifyName = GetStringFieldAnimAuth(Params, TEXT("notifyName"), TEXT(""));
-    bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+    FString NotifyClass = GetJsonStringField(Params, TEXT("notifyClass"), TEXT(""));
+    int32 StartFrame = static_cast<int32>(GetJsonNumberField(Params, TEXT("startFrame"), 0));
+    int32 EndFrame = static_cast<int32>(GetJsonNumberField(Params, TEXT("endFrame"), 10));
+    int32 TrackIndex = static_cast<int32>(GetJsonNumberField(Params, TEXT("trackIndex"), 0));
+    FString NotifyName = GetJsonStringField(Params, TEXT("notifyName"), TEXT(""));
+    bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (EndFrame < StartFrame)
     {

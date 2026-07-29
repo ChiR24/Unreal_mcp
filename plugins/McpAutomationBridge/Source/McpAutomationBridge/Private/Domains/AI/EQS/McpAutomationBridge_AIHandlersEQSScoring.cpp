@@ -29,8 +29,8 @@ bool HandleConfigureEQSTestScoring(UMcpAutomationBridgeSubsystem* Self, const FS
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("configure_test_scoring"))
     {
-        FString QueryPath = GetStringFieldAI(Payload, TEXT("queryPath"));
-        int32 TestIndex = static_cast<int32>(GetNumberFieldAI(Payload, TEXT("testIndex"), 0));
+        FString QueryPath = GetJsonStringField(Payload, TEXT("queryPath"));
+        int32 TestIndex = static_cast<int32>(GetJsonNumberField(Payload, TEXT("testIndex"), 0));
 
         if (TestIndex < 0)
         {

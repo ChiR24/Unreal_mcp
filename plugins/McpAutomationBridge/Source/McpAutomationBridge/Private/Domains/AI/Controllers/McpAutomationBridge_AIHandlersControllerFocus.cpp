@@ -14,17 +14,17 @@ bool HandleSetFocus(UMcpAutomationBridgeSubsystem* Self, const FString& RequestI
     const FString SubAction = TEXT("set_focus");
     if (SubAction == TEXT("set_focus"))
     {
-        FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
+        FString ControllerPath = GetJsonStringField(Payload, TEXT("controllerPath"));
         if (ControllerPath.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing controllerPath"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
-        FString FocusActorName = GetStringFieldAI(Payload, TEXT("focusActorName"));
+        FString FocusActorName = GetJsonStringField(Payload, TEXT("focusActorName"));
         if (FocusActorName.IsEmpty())
         {
-            FocusActorName = GetStringFieldAI(Payload, TEXT("targetActor"));
+            FocusActorName = GetJsonStringField(Payload, TEXT("targetActor"));
         }
 
         // Load the blueprint - LoadObject handles path resolution
@@ -62,7 +62,7 @@ bool HandleClearFocus(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     const FString SubAction = TEXT("clear_focus");
     if (SubAction == TEXT("clear_focus"))
     {
-        FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
+        FString ControllerPath = GetJsonStringField(Payload, TEXT("controllerPath"));
         if (ControllerPath.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing controllerPath"), TEXT("INVALID_ARGUMENT"));
@@ -99,14 +99,14 @@ bool HandleRunBehaviorTree(UMcpAutomationBridgeSubsystem* Self, const FString& R
     const FString SubAction = TEXT("run_behavior_tree");
     if (SubAction == TEXT("run_behavior_tree"))
     {
-        FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
+        FString ControllerPath = GetJsonStringField(Payload, TEXT("controllerPath"));
         if (ControllerPath.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing controllerPath"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
-        FString BTPath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
+        FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
         if (BTPath.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing behaviorTreePath"), TEXT("INVALID_ARGUMENT"));
@@ -156,7 +156,7 @@ bool HandleStopBehaviorTree(UMcpAutomationBridgeSubsystem* Self, const FString& 
     const FString SubAction = TEXT("stop_behavior_tree");
     if (SubAction == TEXT("stop_behavior_tree"))
     {
-        FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
+        FString ControllerPath = GetJsonStringField(Payload, TEXT("controllerPath"));
         if (ControllerPath.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing controllerPath"), TEXT("INVALID_ARGUMENT"));

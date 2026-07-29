@@ -22,9 +22,9 @@ bool FCombatActionContext::HandleMeleeCore() const
             return true;
         }
 
-        FString TraceStartSocket = GetStringFieldCombat(Payload, TEXT("meleeTraceStartSocket"), TEXT("WeaponBase"));
-        FString TraceEndSocket = GetStringFieldCombat(Payload, TEXT("meleeTraceEndSocket"), TEXT("WeaponTip"));
-        double TraceRadius = GetNumberFieldCombat(Payload, TEXT("meleeTraceRadius"), 10.0);
+        FString TraceStartSocket = GetJsonStringField(Payload, TEXT("meleeTraceStartSocket"), TEXT("WeaponBase"));
+        FString TraceEndSocket = GetJsonStringField(Payload, TEXT("meleeTraceEndSocket"), TEXT("WeaponTip"));
+        double TraceRadius = GetJsonNumberField(Payload, TEXT("meleeTraceRadius"), 10.0);
 
         // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("MeleeTraceStartSocket"), MakeNamePinType());
@@ -88,8 +88,8 @@ bool FCombatActionContext::HandleMeleeCore() const
             return true;
         }
 
-        double ComboWindowTime = GetNumberFieldCombat(Payload, TEXT("comboWindowTime"), 0.5);
-        int32 MaxComboCount = static_cast<int32>(GetNumberFieldCombat(Payload, TEXT("maxComboCount"), 3));
+        double ComboWindowTime = GetJsonNumberField(Payload, TEXT("comboWindowTime"), 0.5);
+        int32 MaxComboCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxComboCount"), 3));
 
         // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("ComboWindowTime"), MakeFloatPinType());
@@ -152,8 +152,8 @@ bool FCombatActionContext::HandleMeleeCore() const
             return true;
         }
 
-        double HitPauseDuration = GetNumberFieldCombat(Payload, TEXT("hitPauseDuration"), 0.05);
-        double TimeDilation = GetNumberFieldCombat(Payload, TEXT("hitPauseTimeDilation"), 0.1);
+        double HitPauseDuration = GetJsonNumberField(Payload, TEXT("hitPauseDuration"), 0.05);
+        double TimeDilation = GetJsonNumberField(Payload, TEXT("hitPauseTimeDilation"), 0.1);
 
         // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("HitPauseDuration"), MakeFloatPinType());

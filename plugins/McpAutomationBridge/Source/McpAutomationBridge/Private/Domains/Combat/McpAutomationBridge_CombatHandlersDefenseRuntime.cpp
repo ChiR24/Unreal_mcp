@@ -22,10 +22,10 @@ bool FCombatActionContext::HandleDefenseRuntime() const
             return true;
         }
 
-        double ShieldAmount = GetNumberFieldCombat(Payload, TEXT("shieldAmount"), 50.0);
-        double MaxShield = GetNumberFieldCombat(Payload, TEXT("maxShield"), 100.0);
-        double ShieldRegenRate = GetNumberFieldCombat(Payload, TEXT("shieldRegenRate"), 5.0);
-        double ShieldRegenDelay = GetNumberFieldCombat(Payload, TEXT("shieldRegenDelay"), 3.0);
+        double ShieldAmount = GetJsonNumberField(Payload, TEXT("shieldAmount"), 50.0);
+        double MaxShield = GetJsonNumberField(Payload, TEXT("maxShield"), 100.0);
+        double ShieldRegenRate = GetJsonNumberField(Payload, TEXT("shieldRegenRate"), 5.0);
+        double ShieldRegenDelay = GetJsonNumberField(Payload, TEXT("shieldRegenDelay"), 3.0);
 
         AddBlueprintVariableCombat(Blueprint, TEXT("CurrentShield"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("MaxShield"), MakeFloatPinType());
@@ -82,8 +82,8 @@ bool FCombatActionContext::HandleDefenseRuntime() const
             return true;
         }
 
-        double ArmorValue = GetNumberFieldCombat(Payload, TEXT("armorValue"), 50.0);
-        double DamageReduction = GetNumberFieldCombat(Payload, TEXT("damageReduction"), 0.25);
+        double ArmorValue = GetJsonNumberField(Payload, TEXT("armorValue"), 50.0);
+        double DamageReduction = GetJsonNumberField(Payload, TEXT("damageReduction"), 0.25);
 
         AddBlueprintVariableCombat(Blueprint, TEXT("ArmorValue"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("ArmorDamageReduction"), MakeFloatPinType());

@@ -36,9 +36,9 @@ bool HandleGASCueNotify(const FGASRequestContext& Context, const FString& SubAct
             return true;
         }
 
-        FString CueType = GetStringFieldGAS(Payload, TEXT("cueType"), TEXT("Static"));
+        FString CueType = GetJsonStringField(Payload, TEXT("cueType"), TEXT("Static"));
         const FString CueTypeToken = NormalizeGASToken(CueType);
-        FString CueTag = GetStringFieldGAS(Payload, TEXT("cueTag"));
+        FString CueTag = GetJsonStringField(Payload, TEXT("cueTag"));
 
         UClass* ParentClass = (CueTypeToken == TEXT("actor"))
             ? AGameplayCueNotify_Actor::StaticClass()
@@ -106,7 +106,7 @@ bool HandleGASCueNotify(const FGASRequestContext& Context, const FString& SubAct
             return true;
         }
 
-        FString TriggerType = GetStringFieldGAS(Payload, TEXT("triggerType"), TEXT("Executed"));
+        FString TriggerType = GetJsonStringField(Payload, TEXT("triggerType"), TEXT("Executed"));
         const FString TriggerTypeToken = NormalizeGASToken(TriggerType);
 
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);

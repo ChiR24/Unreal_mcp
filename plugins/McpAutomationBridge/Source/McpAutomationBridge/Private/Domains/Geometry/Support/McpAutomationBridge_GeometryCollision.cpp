@@ -7,8 +7,8 @@ namespace McpGeometryHandlers
 bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    FString CollisionType = GetStringFieldGeom(Payload, TEXT("collisionType"), TEXT("convex"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString CollisionType = GetJsonStringField(Payload, TEXT("collisionType"), TEXT("convex"));
 
     if (ActorName.IsEmpty())
     {
@@ -146,10 +146,10 @@ bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const FString&
 bool HandleGenerateComplexCollision(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                            const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 MaxHullCount = GetIntFieldGeom(Payload, TEXT("maxHullCount"), 8);
-    int32 MaxHullVerts = GetIntFieldGeom(Payload, TEXT("maxHullVerts"), 32);
-    double HullPrecision = GetNumberFieldGeom(Payload, TEXT("hullPrecision"), 100.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 MaxHullCount = GetJsonIntField(Payload, TEXT("maxHullCount"), 8);
+    int32 MaxHullVerts = GetJsonIntField(Payload, TEXT("maxHullVerts"), 32);
+    double HullPrecision = GetJsonNumberField(Payload, TEXT("hullPrecision"), 100.0);
 
     if (ActorName.IsEmpty())
     {
@@ -224,9 +224,9 @@ bool HandleGenerateComplexCollision(UMcpAutomationBridgeSubsystem* Self, const F
 bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double SimplificationFactor = GetNumberFieldGeom(Payload, TEXT("simplificationFactor"), 0.5);
-    int32 TargetHullCount = GetIntFieldGeom(Payload, TEXT("targetHullCount"), 4);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double SimplificationFactor = GetJsonNumberField(Payload, TEXT("simplificationFactor"), 0.5);
+    int32 TargetHullCount = GetJsonIntField(Payload, TEXT("targetHullCount"), 4);
 
     if (ActorName.IsEmpty())
     {

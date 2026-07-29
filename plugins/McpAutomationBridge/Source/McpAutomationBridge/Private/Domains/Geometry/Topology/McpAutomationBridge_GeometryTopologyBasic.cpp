@@ -7,7 +7,7 @@ namespace McpGeometryHandlers
 bool HandleTriangulate(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -79,8 +79,8 @@ bool HandleTriangulate(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double PokeOffset = GetNumberFieldGeom(Payload, TEXT("offset"), 0.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double PokeOffset = GetJsonNumberField(Payload, TEXT("offset"), 0.0);
 
     if (ActorName.IsEmpty())
     {

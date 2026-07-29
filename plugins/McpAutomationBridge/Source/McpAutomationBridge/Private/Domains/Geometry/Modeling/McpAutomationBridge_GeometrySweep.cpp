@@ -7,13 +7,13 @@ namespace McpGeometryHandlers
 bool HandleSweep(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"), TEXT(""));
-    int32 Steps = GetIntFieldGeom(Payload, TEXT("steps"), 16);
-    double Twist = GetNumberFieldGeom(Payload, TEXT("twist"), 0.0);
-    double ScaleStart = GetNumberFieldGeom(Payload, TEXT("scaleStart"), 1.0);
-    double ScaleEnd = GetNumberFieldGeom(Payload, TEXT("scaleEnd"), 1.0);
-    bool bCap = GetBoolFieldGeom(Payload, TEXT("cap"), true);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"), TEXT(""));
+    int32 Steps = GetJsonIntField(Payload, TEXT("steps"), 16);
+    double Twist = GetJsonNumberField(Payload, TEXT("twist"), 0.0);
+    double ScaleStart = GetJsonNumberField(Payload, TEXT("scaleStart"), 1.0);
+    double ScaleEnd = GetJsonNumberField(Payload, TEXT("scaleEnd"), 1.0);
+    bool bCap = GetJsonBoolField(Payload, TEXT("cap"), true);
 
     if (ActorName.IsEmpty())
     {

@@ -27,12 +27,12 @@ bool FCombatActionContext::HandleProjectileActions() const
         USphereComponent* CollisionComp = GetOrCreateSCSComponent<USphereComponent>(Blueprint, TEXT("CollisionComponent"));
         if (CollisionComp)
         {
-            double CollisionRadius = GetNumberFieldCombat(Payload, TEXT("collisionRadius"), 5.0);
+            double CollisionRadius = GetJsonNumberField(Payload, TEXT("collisionRadius"), 5.0);
             CollisionComp->SetSphereRadius(static_cast<float>(CollisionRadius));
             CollisionComp->SetCollisionProfileName(TEXT("Projectile"));
         }
 
-        FString ProjectileMeshPath = GetStringFieldCombat(Payload, TEXT("projectileMeshPath"));
+        FString ProjectileMeshPath = GetJsonStringField(Payload, TEXT("projectileMeshPath"));
         bool bProjectileMeshLoaded = false;
 
         // Add static mesh for visual
@@ -54,8 +54,8 @@ bool FCombatActionContext::HandleProjectileActions() const
         UProjectileMovementComponent* MovementComp = GetOrCreateSCSComponent<UProjectileMovementComponent>(Blueprint, TEXT("ProjectileMovement"));
         if (MovementComp)
         {
-            double Speed = GetNumberFieldCombat(Payload, TEXT("projectileSpeed"), 5000.0);
-            double GravityScale = GetNumberFieldCombat(Payload, TEXT("projectileGravityScale"), 0.0);
+            double Speed = GetJsonNumberField(Payload, TEXT("projectileSpeed"), 5000.0);
+            double GravityScale = GetJsonNumberField(Payload, TEXT("projectileGravityScale"), 0.0);
 
             MovementComp->InitialSpeed = static_cast<float>(Speed);
             MovementComp->MaxSpeed = static_cast<float>(Speed);
@@ -95,9 +95,9 @@ bool FCombatActionContext::HandleProjectileActions() const
         UProjectileMovementComponent* MovementComp = GetOrCreateSCSComponent<UProjectileMovementComponent>(Blueprint, TEXT("ProjectileMovement"));
         if (MovementComp)
         {
-            double Speed = GetNumberFieldCombat(Payload, TEXT("projectileSpeed"), 5000.0);
-            double GravityScale = GetNumberFieldCombat(Payload, TEXT("projectileGravityScale"), 0.0);
-            double Lifespan = GetNumberFieldCombat(Payload, TEXT("projectileLifespan"), 5.0);
+            double Speed = GetJsonNumberField(Payload, TEXT("projectileSpeed"), 5000.0);
+            double GravityScale = GetJsonNumberField(Payload, TEXT("projectileGravityScale"), 0.0);
+            double Lifespan = GetJsonNumberField(Payload, TEXT("projectileLifespan"), 5.0);
 
             MovementComp->InitialSpeed = static_cast<float>(Speed);
             MovementComp->MaxSpeed = static_cast<float>(Speed);
@@ -135,10 +135,10 @@ bool FCombatActionContext::HandleProjectileActions() const
         USphereComponent* CollisionComp = GetOrCreateSCSComponent<USphereComponent>(Blueprint, TEXT("CollisionComponent"));
         if (CollisionComp)
         {
-            double CollisionRadius = GetNumberFieldCombat(Payload, TEXT("collisionRadius"), 5.0);
+            double CollisionRadius = GetJsonNumberField(Payload, TEXT("collisionRadius"), 5.0);
             CollisionComp->SetSphereRadius(static_cast<float>(CollisionRadius));
 
-            bool bBounceEnabled = GetBoolFieldCombat(Payload, TEXT("bounceEnabled"), false);
+            bool bBounceEnabled = GetJsonBoolField(Payload, TEXT("bounceEnabled"), false);
             // Bounce settings would be on the movement component
             UProjectileMovementComponent* MovementComp = GetOrCreateSCSComponent<UProjectileMovementComponent>(Blueprint, TEXT("ProjectileMovement"));
             if (MovementComp)
@@ -146,7 +146,7 @@ bool FCombatActionContext::HandleProjectileActions() const
                 MovementComp->bShouldBounce = bBounceEnabled;
                 if (bBounceEnabled)
                 {
-                    double BounceRatio = GetNumberFieldCombat(Payload, TEXT("bounceVelocityRatio"), 0.6);
+                    double BounceRatio = GetJsonNumberField(Payload, TEXT("bounceVelocityRatio"), 0.6);
                     MovementComp->Bounciness = static_cast<float>(BounceRatio);
                 }
             }
@@ -182,8 +182,8 @@ bool FCombatActionContext::HandleProjectileActions() const
         UProjectileMovementComponent* MovementComp = GetOrCreateSCSComponent<UProjectileMovementComponent>(Blueprint, TEXT("ProjectileMovement"));
         if (MovementComp)
         {
-            bool bHomingEnabled = GetBoolFieldCombat(Payload, TEXT("homingEnabled"), true);
-            double HomingAcceleration = GetNumberFieldCombat(Payload, TEXT("homingAcceleration"), 20000.0);
+            bool bHomingEnabled = GetJsonBoolField(Payload, TEXT("homingEnabled"), true);
+            double HomingAcceleration = GetJsonNumberField(Payload, TEXT("homingAcceleration"), 20000.0);
 
             MovementComp->bIsHomingProjectile = bHomingEnabled;
             MovementComp->HomingAccelerationMagnitude = static_cast<float>(HomingAcceleration);

@@ -37,8 +37,8 @@ bool FCombatActionContext::HandleWeaponEquipment() const
                     if (SlotValue->Type == EJson::Object)
                     {
                         auto SlotObj = SlotValue->AsObject();
-                        FString SlotName = GetStringFieldCombat(SlotObj, TEXT("slotName"));
-                        FString SlotType = GetStringFieldCombat(SlotObj, TEXT("slotType"), TEXT("Optic"));
+                        FString SlotName = GetJsonStringField(SlotObj, TEXT("slotName"));
+                        FString SlotType = GetJsonStringField(SlotObj, TEXT("slotType"), TEXT("Optic"));
 
                         if (!SlotName.IsEmpty())
                         {
@@ -115,10 +115,10 @@ bool FCombatActionContext::HandleWeaponEquipment() const
             return true;
         }
 
-        double SwitchInTime = GetNumberFieldCombat(Payload, TEXT("switchInTime"), 0.3);
-        double SwitchOutTime = GetNumberFieldCombat(Payload, TEXT("switchOutTime"), 0.2);
-        FString EquipAnimPath = GetStringFieldCombat(Payload, TEXT("equipAnimationPath"));
-        FString UnequipAnimPath = GetStringFieldCombat(Payload, TEXT("unequipAnimationPath"));
+        double SwitchInTime = GetJsonNumberField(Payload, TEXT("switchInTime"), 0.3);
+        double SwitchOutTime = GetJsonNumberField(Payload, TEXT("switchOutTime"), 0.2);
+        FString EquipAnimPath = GetJsonStringField(Payload, TEXT("equipAnimationPath"));
+        FString UnequipAnimPath = GetJsonStringField(Payload, TEXT("unequipAnimationPath"));
 
         // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("SwitchInTime"), MakeFloatPinType());

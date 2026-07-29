@@ -7,14 +7,14 @@ namespace McpGeometryHandlers
 bool HandleCreateTorus(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedTorus");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double MajorRadius = GetNumberFieldGeom(Payload, TEXT("majorRadius"), 50.0);
-    double MinorRadius = GetNumberFieldGeom(Payload, TEXT("minorRadius"), 20.0);
-    int32 MajorSegments = GetIntFieldGeom(Payload, TEXT("majorSegments"), 16);
-    int32 MinorSegments = GetIntFieldGeom(Payload, TEXT("minorSegments"), 8);
+double MajorRadius = GetJsonNumberField(Payload, TEXT("majorRadius"), 50.0);
+    double MinorRadius = GetJsonNumberField(Payload, TEXT("minorRadius"), 20.0);
+    int32 MajorSegments = GetJsonIntField(Payload, TEXT("majorSegments"), 16);
+    int32 MinorSegments = GetJsonIntField(Payload, TEXT("minorSegments"), 8);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -59,17 +59,14 @@ double MajorRadius = GetNumberFieldGeom(Payload, TEXT("majorRadius"), 50.0);
 bool HandleCreatePlane(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedPlane");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double Width = ClampDimension(GetNumberFieldGeom(Payload, TEXT("width"), 100.0));
-    double Height = ClampDimension(GetNumberFieldGeom(
-        Payload, TEXT("height"), GetNumberFieldGeom(Payload, TEXT("depth"), 100.0)));
-    int32 WidthSubdivisions = ClampSegments(GetIntFieldGeom(
-        Payload, TEXT("widthSegments"), GetIntFieldGeom(Payload, TEXT("widthSubdivisions"), 1)));
-    int32 HeightSubdivisions = ClampSegments(GetIntFieldGeom(
-        Payload, TEXT("heightSegments"), GetIntFieldGeom(Payload, TEXT("depthSubdivisions"), 1)));
+    double Width = ClampDimension(GetJsonNumberField(Payload, TEXT("width"), 100.0));
+    double Height = ClampDimension(GetJsonNumberField(Payload, TEXT("height"), GetJsonNumberField(Payload, TEXT("depth"), 100.0)));
+    int32 WidthSubdivisions = ClampSegments(GetJsonIntField(Payload, TEXT("widthSegments"), GetJsonIntField(Payload, TEXT("widthSubdivisions"), 1)));
+    int32 HeightSubdivisions = ClampSegments(GetJsonIntField(Payload, TEXT("heightSegments"), GetJsonIntField(Payload, TEXT("depthSubdivisions"), 1)));
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -111,12 +108,12 @@ bool HandleCreatePlane(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 bool HandleCreateDisc(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedDisc");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double Radius = GetNumberFieldGeom(Payload, TEXT("radius"), 50.0);
-    int32 Segments = GetIntFieldGeom(Payload, TEXT("segments"), 16);
+    double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
+    int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -163,15 +160,15 @@ bool HandleCreateDisc(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
 bool HandleCreateStairs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedStairs");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-float StepWidth = GetNumberFieldGeom(Payload, TEXT("stepWidth"), 100.0f);
-    float StepHeight = GetNumberFieldGeom(Payload, TEXT("stepHeight"), 20.0f);
-    float StepDepth = GetNumberFieldGeom(Payload, TEXT("stepDepth"), 30.0f);
-    int32 NumSteps = GetIntFieldGeom(Payload, TEXT("numSteps"), 8);
-    bool bFloating = GetBoolFieldGeom(Payload, TEXT("floating"), false);
+float StepWidth = GetJsonNumberField(Payload, TEXT("stepWidth"), 100.0f);
+    float StepHeight = GetJsonNumberField(Payload, TEXT("stepHeight"), 20.0f);
+    float StepDepth = GetJsonNumberField(Payload, TEXT("stepDepth"), 30.0f);
+    int32 NumSteps = GetJsonIntField(Payload, TEXT("numSteps"), 8);
+    bool bFloating = GetJsonBoolField(Payload, TEXT("floating"), false);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -203,16 +200,16 @@ float StepWidth = GetNumberFieldGeom(Payload, TEXT("stepWidth"), 100.0f);
 bool HandleCreateSpiralStairs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedSpiralStairs");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-float StepWidth = GetNumberFieldGeom(Payload, TEXT("stepWidth"), 100.0f);
-    float StepHeight = GetNumberFieldGeom(Payload, TEXT("stepHeight"), 20.0f);
-    float InnerRadius = GetNumberFieldGeom(Payload, TEXT("innerRadius"), 150.0f);
-    float CurveAngle = GetNumberFieldGeom(Payload, TEXT("curveAngle"), 90.0f);
-    int32 NumSteps = GetIntFieldGeom(Payload, TEXT("numSteps"), 8);
-    bool bFloating = GetBoolFieldGeom(Payload, TEXT("floating"), false);
+float StepWidth = GetJsonNumberField(Payload, TEXT("stepWidth"), 100.0f);
+    float StepHeight = GetJsonNumberField(Payload, TEXT("stepHeight"), 20.0f);
+    float InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), 150.0f);
+    float CurveAngle = GetJsonNumberField(Payload, TEXT("curveAngle"), 90.0f);
+    int32 NumSteps = GetJsonIntField(Payload, TEXT("numSteps"), 8);
+    bool bFloating = GetJsonBoolField(Payload, TEXT("floating"), false);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -241,13 +238,13 @@ float StepWidth = GetNumberFieldGeom(Payload, TEXT("stepWidth"), 100.0f);
 bool HandleCreateRing(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedRing");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double OuterRadius = GetNumberFieldGeom(Payload, TEXT("outerRadius"), 50.0);
-    double InnerRadius = GetNumberFieldGeom(Payload, TEXT("innerRadius"), 25.0);
-    int32 Segments = GetIntFieldGeom(Payload, TEXT("segments"), 32);
+double OuterRadius = GetJsonNumberField(Payload, TEXT("outerRadius"), 50.0);
+    double InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), 25.0);
+    int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 32);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;

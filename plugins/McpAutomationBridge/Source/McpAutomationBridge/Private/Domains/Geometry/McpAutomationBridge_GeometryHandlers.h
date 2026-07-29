@@ -64,11 +64,6 @@
 #define MCP_HAS_FULL_GEOMETRY_SCRIPT 0
 #endif
 
-#define GetStringFieldGeom GetJsonStringField
-#define GetNumberFieldGeom GetJsonNumberField
-#define GetBoolFieldGeom GetJsonBoolField
-#define GetIntFieldGeom GetJsonIntField
-
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpGeometryHandlers, Log, All);
 
 namespace McpGeometryHandlers

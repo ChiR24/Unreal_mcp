@@ -39,8 +39,8 @@ bool HandleCreateSmartObjectDefinition(UMcpAutomationBridgeSubsystem* Self, cons
             return true;
         }
 
-        FString Name = GetStringFieldAI(Payload, TEXT("name"));
-        FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/SmartObjects"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/SmartObjects"));
 
         if (Name.IsEmpty())
         {
@@ -73,8 +73,8 @@ bool HandleCreateSmartObjectDefinition(UMcpAutomationBridgeSubsystem* Self, cons
         Result->SetStringField(TEXT("message"), TEXT("Smart Object Definition created"));
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Definition created"), Result);
 #elif MCP_HAS_SMART_OBJECTS
-        FString Name = GetStringFieldAI(Payload, TEXT("name"));
-        FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/SmartObjects"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/SmartObjects"));
         Result->SetStringField(TEXT("definitionPath"), Path / Name);
         Result->SetStringField(TEXT("message"), TEXT("Smart Object Definition registered (headers unavailable - enable SmartObjects plugin)"));
         Result->SetBoolField(TEXT("headersUnavailable"), true);
@@ -97,10 +97,10 @@ bool HandleAddSmartObjectSlot(UMcpAutomationBridgeSubsystem* Self, const FString
     if (SubAction == TEXT("add_smart_object_slot"))
     {
 #if MCP_HAS_SMART_OBJECTS && MCP_SMART_OBJECTS_HEADERS_AVAILABLE
-        FString DefinitionPath = GetStringFieldAI(Payload, TEXT("definitionPath"));
+        FString DefinitionPath = GetJsonStringField(Payload, TEXT("definitionPath"));
         FVector Offset = ExtractVectorField(Payload, TEXT("offset"), FVector::ZeroVector);
         FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
-        bool bEnabled = GetBoolFieldAI(Payload, TEXT("enabled"), true);
+        bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
 
         if (DefinitionPath.IsEmpty())
         {
@@ -153,7 +153,7 @@ bool HandleAddSmartObjectSlot(UMcpAutomationBridgeSubsystem* Self, const FString
         Result->SetStringField(TEXT("message"), TEXT("Slot added to Smart Object Definition"));
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Slot added"), Result);
 #elif MCP_HAS_SMART_OBJECTS
-        FString DefinitionPath = GetStringFieldAI(Payload, TEXT("definitionPath"));
+        FString DefinitionPath = GetJsonStringField(Payload, TEXT("definitionPath"));
         Result->SetNumberField(TEXT("slotIndex"), 0);
         Result->SetStringField(TEXT("message"), TEXT("Slot addition registered (headers unavailable)"));
         Result->SetBoolField(TEXT("headersUnavailable"), true);

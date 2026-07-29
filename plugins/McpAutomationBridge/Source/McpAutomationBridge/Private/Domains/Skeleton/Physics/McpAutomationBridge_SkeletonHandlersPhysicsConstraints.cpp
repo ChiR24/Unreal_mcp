@@ -17,10 +17,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString PhysicsAssetPath = GetStringFieldSkel(Payload, TEXT("physicsAssetPath"));
-    FString BodyA = GetStringFieldSkel(Payload, TEXT("bodyA"));
-    FString BodyB = GetStringFieldSkel(Payload, TEXT("bodyB"));
-    FString ConstraintName = GetStringFieldSkel(Payload, TEXT("constraintName"));
+    FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
+    FString BodyA = GetJsonStringField(Payload, TEXT("bodyA"));
+    FString BodyB = GetJsonStringField(Payload, TEXT("bodyB"));
+    FString ConstraintName = GetJsonStringField(Payload, TEXT("constraintName"));
 
     if (PhysicsAssetPath.IsEmpty())
     {
@@ -135,9 +135,9 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString PhysicsAssetPath = GetStringFieldSkel(Payload, TEXT("physicsAssetPath"));
-    FString BodyA = GetStringFieldSkel(Payload, TEXT("bodyA"));
-    FString BodyB = GetStringFieldSkel(Payload, TEXT("bodyB"));
+    FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
+    FString BodyA = GetJsonStringField(Payload, TEXT("bodyA"));
+    FString BodyB = GetJsonStringField(Payload, TEXT("bodyB"));
 
     if (PhysicsAssetPath.IsEmpty())
     {

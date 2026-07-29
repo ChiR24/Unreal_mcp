@@ -22,11 +22,11 @@ bool UMcpAutomationBridgeSubsystem::HandleImportMorphTargets(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
-    FString SourceFilePath = GetStringFieldSkel(Payload, TEXT("morphTargetPath"));
+    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
+    FString SourceFilePath = GetJsonStringField(Payload, TEXT("morphTargetPath"));
     if (SourceFilePath.IsEmpty())
     {
-        SourceFilePath = GetStringFieldSkel(Payload, TEXT("sourcePath"));
+        SourceFilePath = GetJsonStringField(Payload, TEXT("sourcePath"));
     }
 
     if (SkeletalMeshPath.IsEmpty())
@@ -80,10 +80,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetValue(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 #if WITH_EDITOR
-    FString ActorName = GetStringFieldSkel(Payload, TEXT("actorName"));
-    FString MorphTargetName = GetStringFieldSkel(Payload, TEXT("morphTargetName"));
-    double Value = GetNumberFieldSkel(Payload, TEXT("value"), 0.0);
-    bool bAddMissing = GetBoolFieldSkel(Payload, TEXT("addMissing"), false);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString MorphTargetName = GetJsonStringField(Payload, TEXT("morphTargetName"));
+    double Value = GetJsonNumberField(Payload, TEXT("value"), 0.0);
+    bool bAddMissing = GetJsonBoolField(Payload, TEXT("addMissing"), false);
 
     if (ActorName.IsEmpty() || MorphTargetName.IsEmpty())
     {
@@ -195,10 +195,10 @@ bool UMcpAutomationBridgeSubsystem::HandleListMorphTargets(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 #if WITH_EDITOR
-    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
     if (SkeletalMeshPath.IsEmpty())
     {
-        SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("meshPath"));
+        SkeletalMeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
     }
 
     if (SkeletalMeshPath.IsEmpty())
@@ -248,8 +248,8 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteMorphTarget(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 #if WITH_EDITOR
-    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
-    FString MorphTargetName = GetStringFieldSkel(Payload, TEXT("morphTargetName"));
+    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
+    FString MorphTargetName = GetJsonStringField(Payload, TEXT("morphTargetName"));
 
     if (SkeletalMeshPath.IsEmpty() || MorphTargetName.IsEmpty())
     {

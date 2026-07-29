@@ -91,8 +91,8 @@ bool HandleCreateAIController(UMcpAutomationBridgeSubsystem* Self, const FString
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("create_ai_controller"))
     {
-        FString Name = GetStringFieldAI(Payload, TEXT("name"));
-        FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/Controllers"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/Controllers"));
 
         if (Name.IsEmpty())
         {
@@ -126,8 +126,8 @@ bool HandleAssignBehaviorTree(UMcpAutomationBridgeSubsystem* Self, const FString
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("assign_behavior_tree"))
     {
-        FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
-        FString BehaviorTreePath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
+        FString ControllerPath = GetJsonStringField(Payload, TEXT("controllerPath"));
+        FString BehaviorTreePath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
 
         // CRITICAL: Remove DoesAssetExist pre-check - newly created assets may not yet be
         // indexed in the asset registry. Rely on LoadObject null-check instead.

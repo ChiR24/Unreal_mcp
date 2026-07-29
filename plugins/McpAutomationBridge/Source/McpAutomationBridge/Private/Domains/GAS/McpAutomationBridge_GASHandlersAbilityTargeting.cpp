@@ -37,9 +37,9 @@ bool HandleGASAbilityTargeting(const FGASRequestContext& Context, const FString&
 
         FString TargetingType = GetGASStringFieldWithFallback(Payload, TEXT("targetingType"), TEXT("targetingMode"), TEXT("self"));
         float TargetingRange = static_cast<float>(GetGASNumberFieldWithFallback(Payload, TEXT("targetingRange"), TEXT("targetRange"), 1000.0));
-        float AOERadius = static_cast<float>(GetNumberFieldGAS(Payload, TEXT("aoeRadius"), 0.0));
-        bool bRequiresLineOfSight = GetBoolFieldGAS(Payload, TEXT("requiresLineOfSight"), false);
-        float TargetingAngle = static_cast<float>(GetNumberFieldGAS(Payload, TEXT("targetingAngle"), 360.0));
+        float AOERadius = static_cast<float>(GetJsonNumberField(Payload, TEXT("aoeRadius"), 0.0));
+        bool bRequiresLineOfSight = GetJsonBoolField(Payload, TEXT("requiresLineOfSight"), false);
+        float TargetingAngle = static_cast<float>(GetJsonNumberField(Payload, TEXT("targetingAngle"), 360.0));
 
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint || !Blueprint->GeneratedClass)

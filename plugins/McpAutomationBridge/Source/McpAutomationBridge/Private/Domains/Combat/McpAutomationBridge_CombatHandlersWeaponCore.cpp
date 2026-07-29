@@ -27,7 +27,7 @@ bool FCombatActionContext::HandleWeaponCore() const
         UStaticMeshComponent* WeaponMesh = GetOrCreateSCSComponent<UStaticMeshComponent>(Blueprint, TEXT("WeaponMesh"));
         if (WeaponMesh)
         {
-            FString MeshPath = GetStringFieldCombat(Payload, TEXT("weaponMeshPath"));
+            FString MeshPath = GetJsonStringField(Payload, TEXT("weaponMeshPath"));
             if (!MeshPath.IsEmpty())
             {
                 UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
@@ -39,10 +39,10 @@ bool FCombatActionContext::HandleWeaponCore() const
         }
 
         // Set base damage as default variable if needed
-        double BaseDamage = GetNumberFieldCombat(Payload, TEXT("baseDamage"), 25.0);
-        double FireRate = GetNumberFieldCombat(Payload, TEXT("fireRate"), 600.0);
-        double Range = GetNumberFieldCombat(Payload, TEXT("range"), 10000.0);
-        double Spread = GetNumberFieldCombat(Payload, TEXT("spread"), 2.0);
+        double BaseDamage = GetJsonNumberField(Payload, TEXT("baseDamage"), 25.0);
+        double FireRate = GetJsonNumberField(Payload, TEXT("fireRate"), 600.0);
+        double Range = GetJsonNumberField(Payload, TEXT("range"), 10000.0);
+        double Spread = GetJsonNumberField(Payload, TEXT("spread"), 2.0);
 
         // Apply weapon stats as Blueprint variables using FBlueprintEditorUtils
         AddBlueprintVariableCombat(Blueprint, TEXT("BaseDamage"), MakeFloatPinType());
@@ -109,7 +109,7 @@ bool FCombatActionContext::HandleWeaponCore() const
             return true;
         }
 
-        FString MeshPath = GetStringFieldCombat(Payload, TEXT("weaponMeshPath"));
+        FString MeshPath = GetJsonStringField(Payload, TEXT("weaponMeshPath"));
         if (!MeshPath.IsEmpty())
         {
             UStaticMeshComponent* WeaponMesh = GetOrCreateSCSComponent<UStaticMeshComponent>(Blueprint, TEXT("WeaponMesh"));
@@ -153,8 +153,8 @@ bool FCombatActionContext::HandleWeaponCore() const
         }
 
         // Add socket name variables to Blueprint
-        FString MuzzleSocket = GetStringFieldCombat(Payload, TEXT("muzzleSocketName"), TEXT("Muzzle"));
-        FString EjectionSocket = GetStringFieldCombat(Payload, TEXT("ejectionSocketName"), TEXT("ShellEject"));
+        FString MuzzleSocket = GetJsonStringField(Payload, TEXT("muzzleSocketName"), TEXT("Muzzle"));
+        FString EjectionSocket = GetJsonStringField(Payload, TEXT("ejectionSocketName"), TEXT("ShellEject"));
 
         AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleSocketName"), MakeNamePinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("EjectionSocketName"), MakeNamePinType());

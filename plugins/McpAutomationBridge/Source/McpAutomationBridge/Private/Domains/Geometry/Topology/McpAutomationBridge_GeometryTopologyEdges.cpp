@@ -7,9 +7,9 @@ namespace McpGeometryHandlers
 bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 NumCuts = GetIntFieldGeom(Payload, TEXT("numCuts"), 1);
-    double Offset = GetNumberFieldGeom(Payload, TEXT("offset"), 0.5);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 NumCuts = GetJsonIntField(Payload, TEXT("numCuts"), 1);
+    double Offset = GetJsonNumberField(Payload, TEXT("offset"), 0.5);
 
     if (ActorName.IsEmpty())
     {
@@ -46,7 +46,7 @@ bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
     int32 TrisBefore = Mesh->GetTriangleCount();
 
     // Get optional axis parameter (default to Z for horizontal cuts)
-    FString Axis = GetStringFieldGeom(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
+    FString Axis = GetJsonStringField(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
 
     // Real loop cut implementation using plane cutting
     // Unlike PN tessellation which subdivides ALL faces uniformly,
@@ -159,7 +159,7 @@ bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
 bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
     // Parse edge indices to split (can be array or single number)
     TArray<int32> EdgeIndices;
@@ -177,16 +177,16 @@ bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     else
     {
         // Single edge index
-        int32 EdgeIndex = GetIntFieldGeom(Payload, TEXT("edgeIndex"), -1);
+        int32 EdgeIndex = GetJsonIntField(Payload, TEXT("edgeIndex"), -1);
         if (EdgeIndex >= 0)
         {
             EdgeIndices.Add(EdgeIndex);
         }
     }
 
-    double SplitFactor = GetNumberFieldGeom(Payload, TEXT("splitFactor"), 0.5);
-    bool bWeldVertices = GetBoolFieldGeom(Payload, TEXT("weldVertices"), true);
-    double WeldTolerance = GetNumberFieldGeom(Payload, TEXT("weldTolerance"), 0.0001);
+    double SplitFactor = GetJsonNumberField(Payload, TEXT("splitFactor"), 0.5);
+    bool bWeldVertices = GetJsonBoolField(Payload, TEXT("weldVertices"), true);
+    double WeldTolerance = GetJsonNumberField(Payload, TEXT("weldTolerance"), 0.0001);
 
     if (ActorName.IsEmpty())
     {

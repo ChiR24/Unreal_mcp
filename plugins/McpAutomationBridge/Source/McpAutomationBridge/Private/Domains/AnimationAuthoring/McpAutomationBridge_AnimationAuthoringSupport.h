@@ -242,24 +242,6 @@
 
 namespace McpAnimationAuthoring {
 
-inline FString GetStringFieldAnimAuth(const TSharedPtr<FJsonObject>& Obj, const FString& Field,
-    const FString& Default = TEXT(""))
-{
-    return GetJsonStringField(Obj, Field, Default);
-}
-
-inline double GetNumberFieldAnimAuth(const TSharedPtr<FJsonObject>& Obj, const FString& Field,
-    double Default = 0.0)
-{
-    return GetJsonNumberField(Obj, Field, Default);
-}
-
-inline bool GetBoolFieldAnimAuth(const TSharedPtr<FJsonObject>& Obj, const FString& Field,
-    bool Default = false)
-{
-    return GetJsonBoolField(Obj, Field, Default);
-}
-
 FString NormalizeAnimPath(const FString& Path);
 USkeleton* LoadSkeletonFromPathAnim(const FString& SkeletonPath);
 USkeletalMesh* LoadSkeletalMeshFromPathAnim(const FString& MeshPath);

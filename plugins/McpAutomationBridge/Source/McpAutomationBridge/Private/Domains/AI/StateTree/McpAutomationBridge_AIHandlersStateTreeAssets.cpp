@@ -41,9 +41,9 @@ bool HandleCreateStateTree(UMcpAutomationBridgeSubsystem* Self, const FString& R
             return true;
         }
 
-        FString Name = GetStringFieldAI(Payload, TEXT("name"));
-        FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/StateTrees"));
-        FString SchemaType = GetStringFieldAI(Payload, TEXT("schemaType"), TEXT("Component"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/StateTrees"));
+        FString SchemaType = GetJsonStringField(Payload, TEXT("schemaType"), TEXT("Component"));
 
         if (Name.IsEmpty())
         {
@@ -101,8 +101,8 @@ bool HandleCreateStateTree(UMcpAutomationBridgeSubsystem* Self, const FString& R
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State Tree created"), Result);
 #elif MCP_HAS_STATE_TREE
         // Headers not available but version supports it
-        FString Name = GetStringFieldAI(Payload, TEXT("name"));
-        FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/StateTrees"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/StateTrees"));
         Result->SetStringField(TEXT("stateTreePath"), Path / Name);
         Result->SetStringField(TEXT("message"), TEXT("State Tree creation registered (headers unavailable - enable StateTree plugin)"));
         Result->SetBoolField(TEXT("headersUnavailable"), true);
@@ -126,10 +126,10 @@ bool HandleAddStateTreeState(UMcpAutomationBridgeSubsystem* Self, const FString&
     if (SubAction == TEXT("add_state_tree_state"))
     {
 #if MCP_HAS_STATE_TREE && MCP_STATE_TREE_HEADERS_AVAILABLE
-        FString StateTreePath = GetStringFieldAI(Payload, TEXT("stateTreePath"));
-        FString StateName = GetStringFieldAI(Payload, TEXT("stateName"));
-        FString ParentStateName = GetStringFieldAI(Payload, TEXT("parentStateName"), TEXT("Root"));
-        FString StateType = GetStringFieldAI(Payload, TEXT("stateType"), TEXT("State"));
+        FString StateTreePath = GetJsonStringField(Payload, TEXT("stateTreePath"));
+        FString StateName = GetJsonStringField(Payload, TEXT("stateName"));
+        FString ParentStateName = GetJsonStringField(Payload, TEXT("parentStateName"), TEXT("Root"));
+        FString StateType = GetJsonStringField(Payload, TEXT("stateType"), TEXT("State"));
 
         if (StateTreePath.IsEmpty() || StateName.IsEmpty())
         {
@@ -216,8 +216,8 @@ bool HandleAddStateTreeState(UMcpAutomationBridgeSubsystem* Self, const FString&
         McpHandlerUtils::AddVerification(Result, StateTree);
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State added"), Result);
 #elif MCP_HAS_STATE_TREE
-        FString StateTreePath = GetStringFieldAI(Payload, TEXT("stateTreePath"));
-        FString StateName = GetStringFieldAI(Payload, TEXT("stateName"));
+        FString StateTreePath = GetJsonStringField(Payload, TEXT("stateTreePath"));
+        FString StateName = GetJsonStringField(Payload, TEXT("stateName"));
         Result->SetStringField(TEXT("stateName"), StateName);
         Result->SetStringField(TEXT("message"), TEXT("State addition registered (headers unavailable)"));
         Result->SetBoolField(TEXT("headersUnavailable"), true);

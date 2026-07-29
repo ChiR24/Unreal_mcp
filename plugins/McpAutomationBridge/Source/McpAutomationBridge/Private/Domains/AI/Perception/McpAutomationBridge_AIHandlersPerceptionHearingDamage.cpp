@@ -18,7 +18,7 @@ bool HandleConfigureHearingConfig(UMcpAutomationBridgeSubsystem* Self, const FSt
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("configure_hearing_config"))
     {
-        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
+        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
 
         // CRITICAL: Explicitly check if asset exists before LoadObject
         // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
@@ -38,11 +38,11 @@ bool HandleConfigureHearingConfig(UMcpAutomationBridgeSubsystem* Self, const FSt
             return true;
         }
 
-        double HearingRange = GetNumberFieldAI(Payload, TEXT("hearingRange"), 3000.0);
+        double HearingRange = GetJsonNumberField(Payload, TEXT("hearingRange"), 3000.0);
         const TSharedPtr<FJsonObject>* HearingConfigObj = nullptr;
         if (Payload->TryGetObjectField(TEXT("hearingConfig"), HearingConfigObj) && HearingConfigObj->IsValid())
         {
-            HearingRange = GetNumberFieldAI(*HearingConfigObj, TEXT("hearingRange"), HearingRange);
+            HearingRange = GetJsonNumberField(*HearingConfigObj, TEXT("hearingRange"), HearingRange);
         }
 
         if (!Blueprint->SimpleConstructionScript)
@@ -109,7 +109,7 @@ bool HandleConfigureDamageSenseConfig(UMcpAutomationBridgeSubsystem* Self, const
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("configure_damage_sense_config"))
     {
-        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
+        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
 
         // CRITICAL: Explicitly check if asset exists before LoadObject
         // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
@@ -133,7 +133,7 @@ bool HandleConfigureDamageSenseConfig(UMcpAutomationBridgeSubsystem* Self, const
         const TSharedPtr<FJsonObject>* DamageConfigObj = nullptr;
         if (Payload->TryGetObjectField(TEXT("damageConfig"), DamageConfigObj) && DamageConfigObj->IsValid())
         {
-            MaxAge = GetNumberFieldAI(*DamageConfigObj, TEXT("maxAge"), MaxAge);
+            MaxAge = GetJsonNumberField(*DamageConfigObj, TEXT("maxAge"), MaxAge);
         }
 
         if (!Blueprint->SimpleConstructionScript)

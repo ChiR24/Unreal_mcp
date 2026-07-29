@@ -19,13 +19,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSetBoneTransform(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
     // Also accept skeletonPath for backward compatibility
     if (SkeletalMeshPath.IsEmpty())
     {
-        SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
+        SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
     }
-    FString BoneName = GetStringFieldSkel(Payload, TEXT("boneName"));
+    FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
 
     if (SkeletalMeshPath.IsEmpty() || BoneName.IsEmpty())
     {

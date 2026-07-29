@@ -25,9 +25,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsBody(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString PhysicsAssetPath = GetStringFieldSkel(Payload, TEXT("physicsAssetPath"));
-    FString BoneName = GetStringFieldSkel(Payload, TEXT("boneName"));
-    FString BodyType = GetStringFieldSkel(Payload, TEXT("bodyType"));
+    FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
+    FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
+    FString BodyType = GetJsonStringField(Payload, TEXT("bodyType"));
 
     if (PhysicsAssetPath.IsEmpty())
     {
@@ -184,8 +184,8 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigurePhysicsBody(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString PhysicsAssetPath = GetStringFieldSkel(Payload, TEXT("physicsAssetPath"));
-    FString BoneName = GetStringFieldSkel(Payload, TEXT("boneName"));
+    FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
+    FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
 
     if (PhysicsAssetPath.IsEmpty())
     {

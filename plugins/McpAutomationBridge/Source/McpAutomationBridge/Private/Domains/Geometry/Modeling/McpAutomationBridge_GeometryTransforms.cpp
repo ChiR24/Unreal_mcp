@@ -7,9 +7,9 @@ namespace McpGeometryHandlers
 bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    FString Axis = GetStringFieldGeom(Payload, TEXT("axis"), TEXT("X")).ToUpper();
-    bool bWeld = GetBoolFieldGeom(Payload, TEXT("weld"), true);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString Axis = GetJsonStringField(Payload, TEXT("axis"), TEXT("X")).ToUpper();
+    bool bWeld = GetJsonBoolField(Payload, TEXT("weld"), true);
 
     if (ActorName.IsEmpty())
     {
@@ -97,7 +97,7 @@ bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 bool HandleTranslateMesh(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     FVector Translation = ReadVectorFromPayload(Payload, TEXT("translation"), FVector::ZeroVector);
 
     if (ActorName.IsEmpty())

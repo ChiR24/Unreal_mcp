@@ -22,9 +22,9 @@ bool HandleAddBlackboardKey(UMcpAutomationBridgeSubsystem* Self, const FString& 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("add_blackboard_key"))
     {
-        FString BlackboardPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
-        FString KeyName = GetStringFieldAI(Payload, TEXT("keyName"));
-        FString KeyType = GetStringFieldAI(Payload, TEXT("keyType"));
+        FString BlackboardPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
+        FString KeyName = GetJsonStringField(Payload, TEXT("keyName"));
+        FString KeyType = GetJsonStringField(Payload, TEXT("keyType"));
 
         // CRITICAL: Explicitly check if asset exists before LoadObject
         if (!UEditorAssetLibrary::DoesAssetExist(BlackboardPath))
@@ -70,7 +70,7 @@ bool HandleAddBlackboardKey(UMcpAutomationBridgeSubsystem* Self, const FString& 
         else if (KeyType.Equals(TEXT("Object"), ESearchCase::IgnoreCase))
         {
             UBlackboardKeyType_Object* ObjectKey = NewObject<UBlackboardKeyType_Object>(Blackboard);
-            FString BaseClass = GetStringFieldAI(Payload, TEXT("baseObjectClass"), TEXT("Actor"));
+            FString BaseClass = GetJsonStringField(Payload, TEXT("baseObjectClass"), TEXT("Actor"));
             // Could set base class here
             NewEntry.KeyType = ObjectKey;
         }
@@ -96,7 +96,7 @@ bool HandleAddBlackboardKey(UMcpAutomationBridgeSubsystem* Self, const FString& 
             NewEntry.KeyType = NewObject<UBlackboardKeyType_Object>(Blackboard);
         }
 
-        NewEntry.bInstanceSynced = GetBoolFieldAI(Payload, TEXT("isInstanceSynced"), false);
+        NewEntry.bInstanceSynced = GetJsonBoolField(Payload, TEXT("isInstanceSynced"), false);
 
         Blackboard->Keys.Add(NewEntry);
         Blackboard->MarkPackageDirty();
@@ -119,9 +119,9 @@ bool HandleSetKeyInstanceSynced(UMcpAutomationBridgeSubsystem* Self, const FStri
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("set_key_instance_synced"))
     {
-        FString BlackboardPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
-        FString KeyName = GetStringFieldAI(Payload, TEXT("keyName"));
-        bool bInstanceSynced = GetBoolFieldAI(Payload, TEXT("isInstanceSynced"), true);
+        FString BlackboardPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
+        FString KeyName = GetJsonStringField(Payload, TEXT("keyName"));
+        bool bInstanceSynced = GetJsonBoolField(Payload, TEXT("isInstanceSynced"), true);
 
         UBlackboardData* Blackboard = LoadObject<UBlackboardData>(nullptr, *BlackboardPath);
         if (!Blackboard)

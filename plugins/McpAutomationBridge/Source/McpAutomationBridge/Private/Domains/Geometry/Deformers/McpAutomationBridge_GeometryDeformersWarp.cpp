@@ -7,9 +7,9 @@ namespace McpGeometryHandlers
 bool HandleBend(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-double BendAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 45.0);
-    double BendExtent = GetNumberFieldGeom(Payload, TEXT("extent"), 50.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+double BendAngle = GetJsonNumberField(Payload, TEXT("angle"), 45.0);
+    double BendExtent = GetJsonNumberField(Payload, TEXT("extent"), 50.0);
 
     if (ActorName.IsEmpty())
     {
@@ -63,9 +63,9 @@ double BendAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 45.0);
 bool HandleTwist(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-double TwistAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 45.0);
-    double TwistExtent = GetNumberFieldGeom(Payload, TEXT("extent"), 50.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+double TwistAngle = GetJsonNumberField(Payload, TEXT("angle"), 45.0);
+    double TwistExtent = GetJsonNumberField(Payload, TEXT("extent"), 50.0);
 
     if (ActorName.IsEmpty())
     {
@@ -119,10 +119,10 @@ double TwistAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 45.0);
 bool HandleTaper(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-double FlarePercentX = GetNumberFieldGeom(Payload, TEXT("flareX"), 50.0);
-    double FlarePercentY = GetNumberFieldGeom(Payload, TEXT("flareY"), 50.0);
-    double FlareExtent = GetNumberFieldGeom(Payload, TEXT("extent"), 50.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+double FlarePercentX = GetJsonNumberField(Payload, TEXT("flareX"), 50.0);
+    double FlarePercentY = GetJsonNumberField(Payload, TEXT("flareY"), 50.0);
+    double FlareExtent = GetJsonNumberField(Payload, TEXT("extent"), 50.0);
 
     if (ActorName.IsEmpty())
     {
@@ -174,9 +174,9 @@ double FlarePercentX = GetNumberFieldGeom(Payload, TEXT("flareX"), 50.0);
 bool HandleNoiseDeform(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-double Magnitude = GetNumberFieldGeom(Payload, TEXT("magnitude"), 5.0);
-    double Frequency = GetNumberFieldGeom(Payload, TEXT("frequency"), 0.25);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+double Magnitude = GetJsonNumberField(Payload, TEXT("magnitude"), 5.0);
+    double Frequency = GetJsonNumberField(Payload, TEXT("frequency"), 0.25);
 
     if (ActorName.IsEmpty())
     {

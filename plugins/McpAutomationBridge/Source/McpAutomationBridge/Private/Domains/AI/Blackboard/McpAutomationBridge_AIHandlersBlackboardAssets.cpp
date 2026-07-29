@@ -62,8 +62,8 @@ bool HandleCreateBlackboardAsset(UMcpAutomationBridgeSubsystem* Self, const FStr
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("create_blackboard_asset"))
     {
-        FString Name = GetStringFieldAI(Payload, TEXT("name"));
-        FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/Blackboards"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/Blackboards"));
 
         if (Name.IsEmpty())
         {
@@ -97,14 +97,14 @@ bool HandleCreateBlackboard(UMcpAutomationBridgeSubsystem* Self, const FString& 
     if (SubAction == TEXT("create_blackboard"))
     {
         // Redirect to existing create_blackboard_asset handler
-        FString Name = GetStringFieldAI(Payload, TEXT("name"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
         if (Name.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing name"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
-        FString Path = GetStringFieldAI(Payload, TEXT("path"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"));
         if (Path.IsEmpty())
         {
             Path = TEXT("/Game/AI/Blackboards");

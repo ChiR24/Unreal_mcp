@@ -7,9 +7,9 @@ namespace McpGeometryHandlers
 bool HandleSmooth(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-int32 Iterations = GetIntFieldGeom(Payload, TEXT("iterations"), 10);
-    double Alpha = GetNumberFieldGeom(Payload, TEXT("alpha"), 0.2);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+int32 Iterations = GetJsonIntField(Payload, TEXT("iterations"), 10);
+    double Alpha = GetJsonNumberField(Payload, TEXT("alpha"), 0.2);
 
     if (ActorName.IsEmpty())
     {
@@ -69,9 +69,9 @@ int32 Iterations = GetIntFieldGeom(Payload, TEXT("iterations"), 10);
 bool HandleRelax(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 Iterations = GetIntFieldGeom(Payload, TEXT("iterations"), 3);
-    double Strength = GetNumberFieldGeom(Payload, TEXT("strength"), 0.5);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 Iterations = GetJsonIntField(Payload, TEXT("iterations"), 3);
+    double Strength = GetJsonNumberField(Payload, TEXT("strength"), 0.5);
 
     if (ActorName.IsEmpty())
     {
@@ -129,9 +129,9 @@ bool HandleRelax(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 bool HandleStretch(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    FString Axis = GetStringFieldGeom(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
-    double Factor = GetNumberFieldGeom(Payload, TEXT("factor"), 1.5);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString Axis = GetJsonStringField(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
+    double Factor = GetJsonNumberField(Payload, TEXT("factor"), 1.5);
 
     if (ActorName.IsEmpty())
     {

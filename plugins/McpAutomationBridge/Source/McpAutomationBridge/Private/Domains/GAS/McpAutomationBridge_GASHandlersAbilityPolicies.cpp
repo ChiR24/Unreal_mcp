@@ -32,9 +32,9 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
             return true;
         }
 
-        FString ActivationPolicy = GetStringFieldGAS(Payload, TEXT("activationPolicy"));
+        FString ActivationPolicy = GetJsonStringField(Payload, TEXT("activationPolicy"));
         const FString PolicyDefault = ActivationPolicy.IsEmpty() ? FString(TEXT("local_predicted")) : ActivationPolicy;
-        FString Policy = GetStringFieldGAS(Payload, TEXT("policy"), PolicyDefault);
+        FString Policy = GetJsonStringField(Payload, TEXT("policy"), PolicyDefault);
         const FString PolicyToken = NormalizeGASToken(Policy);
 
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);

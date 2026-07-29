@@ -8,15 +8,15 @@ TSharedPtr<FJsonObject> HandleBlueprintTransitionRuleActions(const FString& SubA
 {
     if (SubAction == TEXT("set_transition_rules"))
     {
-        FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
-        FString StateMachineName = GetStringFieldAnimAuth(Params, TEXT("stateMachineName"), TEXT(""));
-        FString FromState = GetStringFieldAnimAuth(Params, TEXT("fromState"), TEXT(""));
-        FString ToState = GetStringFieldAnimAuth(Params, TEXT("toState"), TEXT(""));
-        float CrossfadeDuration = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("crossfadeDuration"), -1.0));
-        int32 PriorityOrder = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("priorityOrder"), -1));
-        bool bAutomatic = GetBoolFieldAnimAuth(Params, TEXT("automaticRule"), false);
-        bool bBidirectional = GetBoolFieldAnimAuth(Params, TEXT("bidirectional"), false);
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString BlueprintPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("blueprintPath"), TEXT("")));
+        FString StateMachineName = GetJsonStringField(Params, TEXT("stateMachineName"), TEXT(""));
+        FString FromState = GetJsonStringField(Params, TEXT("fromState"), TEXT(""));
+        FString ToState = GetJsonStringField(Params, TEXT("toState"), TEXT(""));
+        float CrossfadeDuration = static_cast<float>(GetJsonNumberField(Params, TEXT("crossfadeDuration"), -1.0));
+        int32 PriorityOrder = static_cast<int32>(GetJsonNumberField(Params, TEXT("priorityOrder"), -1));
+        bool bAutomatic = GetJsonBoolField(Params, TEXT("automaticRule"), false);
+        bool bBidirectional = GetJsonBoolField(Params, TEXT("bidirectional"), false);
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         // Try to find in-memory version first (may have unsaved changes)
         UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);

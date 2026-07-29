@@ -8,12 +8,12 @@ TSharedPtr<FJsonObject> HandleMontageNotifyBlendActions(const FString& SubAction
 {
 if (SubAction == TEXT("add_montage_notify"))
 {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-    FString NotifyClass = GetStringFieldAnimAuth(Params, TEXT("notifyClass"), TEXT(""));
-    float Time = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("time"), 0.0));
-    int32 TrackIndex = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("trackIndex"), 0));
-    FString NotifyName = GetStringFieldAnimAuth(Params, TEXT("notifyName"), TEXT(""));
-    bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+    FString NotifyClass = GetJsonStringField(Params, TEXT("notifyClass"), TEXT(""));
+    float Time = static_cast<float>(GetJsonNumberField(Params, TEXT("time"), 0.0));
+    int32 TrackIndex = static_cast<int32>(GetJsonNumberField(Params, TEXT("trackIndex"), 0));
+    FString NotifyName = GetJsonStringField(Params, TEXT("notifyName"), TEXT(""));
+    bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (NotifyClass.IsEmpty() && NotifyName.IsEmpty())
     {
@@ -112,10 +112,10 @@ if (SubAction == TEXT("add_montage_notify"))
 
     if (SubAction == TEXT("set_blend_in"))
     {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        float BlendTime = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("blendTime"), 0.25));
-        FString BlendOption = GetStringFieldAnimAuth(Params, TEXT("blendOption"), TEXT("Linear"));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        float BlendTime = static_cast<float>(GetJsonNumberField(Params, TEXT("blendTime"), 0.25));
+        FString BlendOption = GetJsonStringField(Params, TEXT("blendOption"), TEXT("Linear"));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
         if (!Montage)
@@ -148,10 +148,10 @@ if (SubAction == TEXT("add_montage_notify"))
 
     if (SubAction == TEXT("set_blend_out"))
     {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        float BlendTime = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("blendTime"), 0.25));
-        FString BlendOption = GetStringFieldAnimAuth(Params, TEXT("blendOption"), TEXT("Linear"));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        float BlendTime = static_cast<float>(GetJsonNumberField(Params, TEXT("blendTime"), 0.25));
+        FString BlendOption = GetJsonStringField(Params, TEXT("blendOption"), TEXT("Linear"));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
         if (!Montage)
@@ -184,10 +184,10 @@ if (SubAction == TEXT("add_montage_notify"))
 
     if (SubAction == TEXT("link_sections"))
     {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString FromSection = GetStringFieldAnimAuth(Params, TEXT("fromSection"), TEXT(""));
-        FString ToSection = GetStringFieldAnimAuth(Params, TEXT("toSection"), TEXT(""));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString FromSection = GetJsonStringField(Params, TEXT("fromSection"), TEXT(""));
+        FString ToSection = GetJsonStringField(Params, TEXT("toSection"), TEXT(""));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (FromSection.IsEmpty() || ToSection.IsEmpty())
         {

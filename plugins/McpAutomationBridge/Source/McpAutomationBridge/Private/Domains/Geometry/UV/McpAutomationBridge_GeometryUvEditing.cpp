@@ -7,11 +7,11 @@ namespace McpGeometryHandlers
 bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 VertexIndex = GetIntFieldGeom(Payload, TEXT("vertexIndex"), -1);
-    double U = GetNumberFieldGeom(Payload, TEXT("u"), 0.0);
-    double V = GetNumberFieldGeom(Payload, TEXT("v"), 0.0);
-    int32 UVChannel = GetIntFieldGeom(Payload, TEXT("uvChannel"), 0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 VertexIndex = GetJsonIntField(Payload, TEXT("vertexIndex"), -1);
+    double U = GetJsonNumberField(Payload, TEXT("u"), 0.0);
+    double V = GetJsonNumberField(Payload, TEXT("v"), 0.0);
+    int32 UVChannel = GetJsonIntField(Payload, TEXT("uvChannel"), 0);
 
     if (ActorName.IsEmpty())
     {
@@ -128,8 +128,8 @@ bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 bool HandleUnwrapUV(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                            const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 UVChannel = GetIntFieldGeom(Payload, TEXT("uvChannel"), 0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 UVChannel = GetJsonIntField(Payload, TEXT("uvChannel"), 0);
 
     if (ActorName.IsEmpty())
     {
@@ -188,9 +188,9 @@ bool HandleUnwrapUV(UMcpAutomationBridgeSubsystem* Self, const FString& RequestI
 bool HandlePackUVIslands(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 UVChannel = GetIntFieldGeom(Payload, TEXT("uvChannel"), 0);
-    int32 TextureResolution = GetIntFieldGeom(Payload, TEXT("textureResolution"), 1024);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 UVChannel = GetJsonIntField(Payload, TEXT("uvChannel"), 0);
+    int32 TextureResolution = GetJsonIntField(Payload, TEXT("textureResolution"), 1024);
 
     if (ActorName.IsEmpty())
     {

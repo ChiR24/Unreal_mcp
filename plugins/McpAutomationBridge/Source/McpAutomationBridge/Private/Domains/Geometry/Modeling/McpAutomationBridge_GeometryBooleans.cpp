@@ -8,9 +8,9 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
                                    const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket,
                                    EGeometryScriptBooleanOperation BoolOp, const FString& OpName)
 {
-    FString TargetActorName = GetStringFieldGeom(Payload, TEXT("targetActor"));
-    FString ToolActorName = GetStringFieldGeom(Payload, TEXT("toolActor"));
-    bool bKeepTool = GetBoolFieldGeom(Payload, TEXT("keepTool"), true);  // Default to true to prevent cascade test failures
+    FString TargetActorName = GetJsonStringField(Payload, TEXT("targetActor"));
+    FString ToolActorName = GetJsonStringField(Payload, TEXT("toolActor"));
+    bool bKeepTool = GetJsonBoolField(Payload, TEXT("keepTool"), true);  // Default to true to prevent cascade test failures
 
     if (TargetActorName.IsEmpty() || ToolActorName.IsEmpty())
     {

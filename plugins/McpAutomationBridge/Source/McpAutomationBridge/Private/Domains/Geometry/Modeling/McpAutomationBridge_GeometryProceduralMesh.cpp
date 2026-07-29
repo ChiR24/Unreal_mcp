@@ -7,11 +7,11 @@ namespace McpGeometryHandlers
 bool HandleCreateProceduralMesh(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("ProceduralMesh");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    bool bEnableCollision = GetBoolFieldGeom(Payload, TEXT("enableCollision"), false);
+    bool bEnableCollision = GetJsonBoolField(Payload, TEXT("enableCollision"), false);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FString SpawnError;
@@ -49,7 +49,7 @@ bool HandleCreateProceduralMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
 bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -61,7 +61,7 @@ bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     FVector V0 = ReadVectorFromPayload(Payload, TEXT("v0"), FVector(0, 0, 0));
     FVector V1 = ReadVectorFromPayload(Payload, TEXT("v1"), FVector(100, 0, 0));
     FVector V2 = ReadVectorFromPayload(Payload, TEXT("v2"), FVector(50, 100, 0));
-    int32 GroupID = GetIntFieldGeom(Payload, TEXT("groupID"), 0);
+    int32 GroupID = GetJsonIntField(Payload, TEXT("groupID"), 0);
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
@@ -126,8 +126,8 @@ bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 bool HandleDeleteTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 TriangleIndex = GetIntFieldGeom(Payload, TEXT("triangleIndex"), -1);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 TriangleIndex = GetJsonIntField(Payload, TEXT("triangleIndex"), -1);
 
     if (ActorName.IsEmpty() || TriangleIndex < 0)
     {
@@ -196,13 +196,13 @@ bool HandleDeleteTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 VertexIndex = GetIntFieldGeom(Payload, TEXT("vertexIndex"), -1);
-    double R = GetNumberFieldGeom(Payload, TEXT("r"), 1.0);
-    double G = GetNumberFieldGeom(Payload, TEXT("g"), 1.0);
-    double B = GetNumberFieldGeom(Payload, TEXT("b"), 1.0);
-    double A = GetNumberFieldGeom(Payload, TEXT("a"), 1.0);
-    bool bSetAll = GetBoolFieldGeom(Payload, TEXT("setAll"), false);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 VertexIndex = GetJsonIntField(Payload, TEXT("vertexIndex"), -1);
+    double R = GetJsonNumberField(Payload, TEXT("r"), 1.0);
+    double G = GetJsonNumberField(Payload, TEXT("g"), 1.0);
+    double B = GetJsonNumberField(Payload, TEXT("b"), 1.0);
+    double A = GetJsonNumberField(Payload, TEXT("a"), 1.0);
+    bool bSetAll = GetJsonBoolField(Payload, TEXT("setAll"), false);
 
     if (ActorName.IsEmpty())
     {

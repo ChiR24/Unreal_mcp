@@ -7,9 +7,9 @@ namespace McpGeometryHandlers
 bool HandleBooleanTrim(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    FString TrimActorName = GetStringFieldGeom(Payload, TEXT("trimActorName"));
-    bool bKeepInside = GetBoolFieldGeom(Payload, TEXT("keepInside"), false);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString TrimActorName = GetJsonStringField(Payload, TEXT("trimActorName"));
+    bool bKeepInside = GetJsonBoolField(Payload, TEXT("keepInside"), false);
 
     if (ActorName.IsEmpty() || TrimActorName.IsEmpty())
     {
@@ -80,8 +80,8 @@ bool HandleBooleanTrim(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 bool HandleSelfUnion(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    bool bFillHoles = GetBoolFieldGeom(Payload, TEXT("fillHoles"), true);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    bool bFillHoles = GetJsonBoolField(Payload, TEXT("fillHoles"), true);
 
     if (ActorName.IsEmpty())
     {

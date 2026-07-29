@@ -54,8 +54,8 @@ bool HandleCreateMassEntityConfig(UMcpAutomationBridgeSubsystem* Self, const FSt
             return true;
         }
 
-        FString Name = GetStringFieldAI(Payload, TEXT("name"));
-        FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/Mass"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/Mass"));
 
         if (Name.IsEmpty())
         {
@@ -88,8 +88,8 @@ bool HandleCreateMassEntityConfig(UMcpAutomationBridgeSubsystem* Self, const FSt
         Result->SetStringField(TEXT("message"), TEXT("Mass Entity Config created"));
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Config created"), Result);
 #elif MCP_HAS_MASS_AI
-        FString Name = GetStringFieldAI(Payload, TEXT("name"));
-        FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/Mass"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/Mass"));
         Result->SetStringField(TEXT("configPath"), Path / Name);
         Result->SetStringField(TEXT("message"), TEXT("Mass Entity Config registered (headers unavailable - enable MassEntity plugin)"));
         Result->SetBoolField(TEXT("headersUnavailable"), true);
@@ -112,8 +112,8 @@ bool HandleConfigureMassEntity(UMcpAutomationBridgeSubsystem* Self, const FStrin
     if (SubAction == TEXT("configure_mass_entity"))
     {
 #if MCP_HAS_MASS_AI && MCP_MASS_AI_HEADERS_AVAILABLE
-        FString ConfigPath = GetStringFieldAI(Payload, TEXT("configPath"));
-        FString ParentConfigPath = GetStringFieldAI(Payload, TEXT("parentConfigPath"), TEXT(""));
+        FString ConfigPath = GetJsonStringField(Payload, TEXT("configPath"));
+        FString ParentConfigPath = GetJsonStringField(Payload, TEXT("parentConfigPath"), TEXT(""));
 
         if (ConfigPath.IsEmpty())
         {
@@ -180,7 +180,7 @@ bool HandleConfigureMassEntity(UMcpAutomationBridgeSubsystem* Self, const FStrin
         Result->SetStringField(TEXT("message"), TEXT("Mass Entity configured"));
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Entity configured"), Result);
 #elif MCP_HAS_MASS_AI
-        FString ConfigPath = GetStringFieldAI(Payload, TEXT("configPath"));
+        FString ConfigPath = GetJsonStringField(Payload, TEXT("configPath"));
         Result->SetStringField(TEXT("configPath"), ConfigPath);
         Result->SetStringField(TEXT("message"), TEXT("Mass Entity configuration registered (headers unavailable)"));
         Result->SetBoolField(TEXT("headersUnavailable"), true);
@@ -203,10 +203,10 @@ bool HandleAddMassSpawner(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     if (SubAction == TEXT("add_mass_spawner"))
     {
 #if MCP_HAS_MASS_AI
-        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
-        FString ConfigPath = GetStringFieldAI(Payload, TEXT("configPath"), TEXT(""));
-        FString ComponentName = GetStringFieldAI(Payload, TEXT("componentName"), TEXT("MassSpawner"));
-        int32 SpawnCount = static_cast<int32>(GetNumberFieldAI(Payload, TEXT("spawnCount"), 100));
+        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+        FString ConfigPath = GetJsonStringField(Payload, TEXT("configPath"), TEXT(""));
+        FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("MassSpawner"));
+        int32 SpawnCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("spawnCount"), 100));
 
         if (BlueprintPath.IsEmpty())
         {

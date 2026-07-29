@@ -22,10 +22,10 @@ bool FCombatActionContext::HandleWeaponStats() const
             return true;
         }
 
-        double BaseDamage = GetNumberFieldCombat(Payload, TEXT("baseDamage"), 25.0);
-        double FireRate = GetNumberFieldCombat(Payload, TEXT("fireRate"), 600.0);
-        double Range = GetNumberFieldCombat(Payload, TEXT("range"), 10000.0);
-        double Spread = GetNumberFieldCombat(Payload, TEXT("spread"), 2.0);
+        double BaseDamage = GetJsonNumberField(Payload, TEXT("baseDamage"), 25.0);
+        double FireRate = GetJsonNumberField(Payload, TEXT("fireRate"), 600.0);
+        double Range = GetJsonNumberField(Payload, TEXT("range"), 10000.0);
+        double Spread = GetJsonNumberField(Payload, TEXT("spread"), 2.0);
 
         // Add/update variables
         AddBlueprintVariableCombat(Blueprint, TEXT("BaseDamage"), MakeFloatPinType());

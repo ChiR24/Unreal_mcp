@@ -7,7 +7,7 @@ namespace McpGeometryHandlers
 bool HandleLatticeDeform(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    const FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     ADynamicMeshActor* TargetActor = nullptr;
     UDynamicMeshComponent* DMC = nullptr;
     UDynamicMesh* Mesh = nullptr;
@@ -16,8 +16,8 @@ bool HandleLatticeDeform(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         return true;
     }
 
-    const int32 LatticeResolution = FMath::Clamp(GetIntFieldGeom(Payload, TEXT("latticeResolution"), 3), 2, 16);
-    const double Weight = FMath::Clamp(GetNumberFieldGeom(Payload, TEXT("weight"), GetNumberFieldGeom(Payload, TEXT("strength"), 0.25)), -2.0, 2.0);
+    const int32 LatticeResolution = FMath::Clamp(GetJsonIntField(Payload, TEXT("latticeResolution"), 3), 2, 16);
+    const double Weight = FMath::Clamp(GetJsonNumberField(Payload, TEXT("weight"), GetJsonNumberField(Payload, TEXT("strength"), 0.25)), -2.0, 2.0);
     const FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
     if (!BBox.IsValid)
     {
@@ -30,7 +30,7 @@ bool HandleLatticeDeform(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     const FVector Center = Payload->HasField(TEXT("position"))
         ? ReadVectorFromPayload(Payload, TEXT("position"), BBox.GetCenter())
         : BBox.GetCenter();
-    const double Radius = FMath::Max(GetNumberFieldGeom(Payload, TEXT("radius"), MaxExtent * 0.75), KINDA_SMALL_NUMBER);
+    const double Radius = FMath::Max(GetJsonNumberField(Payload, TEXT("radius"), MaxExtent * 0.75), KINDA_SMALL_NUMBER);
     const FVector DisplacementAxis = AxisVectorFromPayload(Payload);
     const double Amplitude = MaxExtent * 0.25 * Weight;
 
@@ -91,8 +91,8 @@ bool HandleLatticeDeform(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 bool HandleDisplaceByTexture(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    const FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    const FString TexturePath = GetStringFieldGeom(Payload, TEXT("texturePath"));
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    const FString TexturePath = GetJsonStringField(Payload, TEXT("texturePath"));
     if (TexturePath.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("texturePath required"), TEXT("INVALID_ARGUMENT"));
@@ -122,8 +122,8 @@ bool HandleDisplaceByTexture(UMcpAutomationBridgeSubsystem* Self, const FString&
         return true;
     }
 
-    const double HeightScale = GetNumberFieldGeom(Payload, TEXT("heightScale"), GetNumberFieldGeom(Payload, TEXT("strength"), 10.0));
-    const double Midpoint = FMath::Clamp(GetNumberFieldGeom(Payload, TEXT("midpoint"), 0.5), 0.0, 1.0);
+    const double HeightScale = GetJsonNumberField(Payload, TEXT("heightScale"), GetJsonNumberField(Payload, TEXT("strength"), 10.0));
+    const double Midpoint = FMath::Clamp(GetJsonNumberField(Payload, TEXT("midpoint"), 0.5), 0.0, 1.0);
     const FVector DisplacementAxis = AxisVectorFromPayload(Payload);
     const FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
     if (!BBox.IsValid)
