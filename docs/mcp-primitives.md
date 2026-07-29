@@ -166,3 +166,27 @@ different name/version but identical capabilities resolve to the same profile â€
 asserted by `tests/unit/server/task-37-primitive-wiring.test.ts`. The profile is
 surfaced through `configure`'s `get_status` result, hoisted to the gateway
 envelope top level so a caller reads it without unwrapping `result`.
+
+## What transport parity does and does not cover
+
+Parity between the TypeScript and native surfaces is proven at the **contract**
+level: `npm run test:native-parity` exits 0 over 23 native canonical tools with
+0 action mismatches and 0 schema property mismatches, and the primitive mirrors
+are gated by `tests/unit/task-38/*-parity.test.ts`.
+
+> **The native runtime `describe` surface has never been successfully
+> censused.** Two probe runs were attempted. The first was paging-limited (19
+> of 23 tools pinned at exactly 20 names). The second fixed paging but still
+> harvested dispatch-group names and tool names into the action list on 5 of 23
+> tools, and carried non-canonical alias names on its declared side. Both runs
+> measured the probe, not the product.
+
+The consequence is symmetric and is stated in both directions: there is **no**
+trustworthy measurement of what the native surface names at run time, so this
+project claims neither that the two surfaces diverge nor that they agree. What
+is proven is the contract-level parity above, plus the fact that two actions
+the probe reported as missing were executed successfully on the native surface.
+
+Building a trustworthy runtime census is an open item recorded in
+`.omo/evidence/task-64-pure-unreal-mcp-implementation.json`. Until it exists, do
+not cite either surface's runtime name set as verified.
