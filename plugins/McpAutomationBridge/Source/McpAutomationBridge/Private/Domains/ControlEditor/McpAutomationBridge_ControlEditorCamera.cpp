@@ -176,33 +176,85 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorFocusActor(
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   if (ActorName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("name"), ActorName);
+  }
+  if (ActorName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("objectPath"), ActorName);
+  }
+  if (ActorName.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
   }
 
+  if (!GEditor) {
+    SendStandardErrorResponse(this, Socket, RequestId,
+                              TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
+    return true;
+  }
+
+  AActor *Target = nullptr;
   if (UEditorActorSubsystem *ActorSS =
           GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
     TArray<AActor *> Actors = ActorSS->GetAllLevelActors();
     for (AActor *Actor : Actors) {
       if (!Actor)
         continue;
-      if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase)) {
-        GEditor->SelectNone(true, true, false);
-        GEditor->SelectActor(Actor, true, true, true);
-        GEditor->Exec(nullptr, TEXT("EDITORTEMPVIEWPORT"));
-        GEditor->MoveViewportCamerasToActor(*Actor, false);
-        SendAutomationResponse(Socket, RequestId, true,
-                               TEXT("Viewport focused on actor"), nullptr,
-                               FString());
-        return true;
+      if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
+          Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase)) {
+        Target = Actor;
+        break;
       }
     }
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                              TEXT("Actor not found"), nullptr);
+  }
+
+  if (!Target) {
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+        FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr);
     return true;
   }
-  return false;
+
+  GEditor->SelectNone(true, true, false);
+  GEditor->SelectActor(Target, true, true, true);
+  GEditor->MoveViewportCamerasToActor(*Target, false);
+
+  // MoveViewportCamerasToActor ANIMATES the camera: it ends in FocusViewportOnBox,
+  // whose bInstant parameter defaults to false. A screenshot taken straight after
+  // this call therefore catches the camera in flight, and an automation client has
+  // no way to observe when the flight is over. Land the viewport we actually
+  // capture on the target immediately so "focus then screenshot" is deterministic.
+  FEditorViewportClient *ViewportClient = GetActiveEditorViewportClientForMcp();
+  const FBox FocusBox = Target->GetComponentsBoundingBox(true);
+  const bool bBoundsValid = FocusBox.IsValid != 0;
+  if (ViewportClient && bBoundsValid) {
+    ViewportClient->FocusViewportOnBox(FocusBox, /*bInstant=*/true);
+    ViewportClient->Invalidate();
+  }
+
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("actorName"), Target->GetActorLabel());
+  Resp->SetStringField(TEXT("actorPath"), Target->GetPathName());
+  Resp->SetBoolField(TEXT("boundsValid"), bBoundsValid);
+  Resp->SetBoolField(TEXT("focusedInstantly"), ViewportClient && bBoundsValid);
+  if (bBoundsValid) {
+    Resp->SetObjectField(TEXT("focusCenter"),
+                         MakeVectorObjectForMcp(FocusBox.GetCenter()));
+    Resp->SetObjectField(TEXT("focusExtent"),
+                         MakeVectorObjectForMcp(FocusBox.GetExtent()));
+  }
+  if (ViewportClient) {
+    Resp->SetObjectField(TEXT("cameraLocation"),
+                         MakeVectorObjectForMcp(ViewportClient->GetViewLocation()));
+    Resp->SetObjectField(TEXT("cameraRotation"),
+                         MakeRotatorObjectForMcp(ViewportClient->GetViewRotation()));
+  }
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Viewport focused on actor"), Resp, FString());
+  return true;
 #else
   return false;
 #endif
@@ -212,47 +264,80 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
-  const TSharedPtr<FJsonObject> *Loc = nullptr;
-  FVector Location(0, 0, 0);
-  FRotator Rotation(0, 0, 0);
-  if (Payload->TryGetObjectField(TEXT("location"), Loc) && Loc &&
-      (*Loc).IsValid())
-    ReadVectorField(*Loc, TEXT(""), Location, Location);
-  if (Payload->TryGetObjectField(TEXT("rotation"), Loc) && Loc &&
-      (*Loc).IsValid())
-    ReadRotatorField(*Loc, TEXT(""), Rotation, Rotation);
+  // Move the SAME viewport client the screenshot handler captures. Routing the
+  // camera through UUnrealEditorSubsystem::SetLevelViewportCameraInfo used to
+  // target the first PERSPECTIVE client in GEditor->GetLevelViewportClients(),
+  // which is not necessarily the client that gets drawn and read back, so
+  // "set the camera, then take a picture" could address two different viewports.
+  FEditorViewportClient *ViewportClient = GetActiveEditorViewportClientForMcp();
+  if (!ViewportClient) {
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("VIEWPORT_NOT_AVAILABLE"),
+        TEXT("No active level editor viewport to move the camera in"), nullptr);
+    return true;
+  }
 
-#if defined(MCP_HAS_UNREALEDITOR_SUBSYSTEM)
-  if (UUnrealEditorSubsystem *UES =
-          GEditor->GetEditorSubsystem<UUnrealEditorSubsystem>()) {
-    UES->SetLevelViewportCameraInfo(Location, Rotation);
-#if defined(MCP_HAS_LEVELEDITOR_SUBSYSTEM)
-    if (ULevelEditorSubsystem *LES =
-            GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
-      LES->EditorInvalidateViewports();
-#endif
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Camera set"), Resp,
-                           FString());
+  // The vector lives in a NAMED field of the payload, so it has to be read from
+  // the payload. Reading it out of the already-extracted sub-object under an
+  // EMPTY field name matched nothing and fell back to the default on every call,
+  // which parked the camera at the world origin whatever the caller asked for --
+  // and the handler still answered {"success":true}.
+  const bool bHasLocation = Payload->HasField(TEXT("location"));
+  const bool bHasRotation = Payload->HasField(TEXT("rotation"));
+  if (!bHasLocation && !bHasRotation) {
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+        TEXT("location and/or rotation required (object {x,y,z} / {pitch,yaw,roll}, or a 3-number array)"),
+        nullptr);
     return true;
   }
-#endif
-  if (FEditorViewportClient *ViewportClient =
-          GEditor->GetActiveViewport()
-              ? (FEditorViewportClient *)GEditor->GetActiveViewport()
-                    ->GetClient()
-              : nullptr) {
-    ViewportClient->SetViewLocation(Location);
-    ViewportClient->SetViewRotation(Rotation);
-    ViewportClient->Invalidate();
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Camera set"), Resp,
-                           FString());
+
+  const FVector RequestedLocation = ExtractVectorField(
+      Payload, TEXT("location"), ViewportClient->GetViewLocation());
+  const FRotator RequestedRotation = ExtractRotatorField(
+      Payload, TEXT("rotation"), ViewportClient->GetViewRotation());
+
+  ViewportClient->SetViewLocation(RequestedLocation);
+  ViewportClient->SetViewRotation(RequestedRotation);
+  ViewportClient->Invalidate();
+
+  // Report where the camera ENDED UP rather than echoing the request. A viewport
+  // that refuses to move -- locked to an actor, piloting, orthographic -- is then
+  // visible to the caller instead of being reported as a success.
+  const FVector AppliedLocation = ViewportClient->GetViewLocation();
+  const FRotator AppliedRotation = ViewportClient->GetViewRotation();
+  const bool bLocationApplied = AppliedLocation.Equals(RequestedLocation, 1.0);
+  const bool bRotationApplied = AppliedRotation.Equals(RequestedRotation, 1.0);
+
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetBoolField(TEXT("success"), bLocationApplied && bRotationApplied);
+  Resp->SetObjectField(TEXT("requestedLocation"),
+                       MakeVectorObjectForMcp(RequestedLocation));
+  Resp->SetObjectField(TEXT("requestedRotation"),
+                       MakeRotatorObjectForMcp(RequestedRotation));
+  Resp->SetObjectField(TEXT("cameraLocation"),
+                       MakeVectorObjectForMcp(AppliedLocation));
+  Resp->SetObjectField(TEXT("cameraRotation"),
+                       MakeRotatorObjectForMcp(AppliedRotation));
+  Resp->SetBoolField(TEXT("locationApplied"), bLocationApplied);
+  Resp->SetBoolField(TEXT("rotationApplied"), bRotationApplied);
+  Resp->SetBoolField(TEXT("perspective"), ViewportClient->IsPerspective());
+
+  if (!bLocationApplied || !bRotationApplied) {
+    const FString Message =
+        TEXT("Viewport did not take the requested camera. It may be locked to an "
+             "actor, piloting, or orthographic; cameraLocation/cameraRotation "
+             "report where it actually is.");
+    Resp->SetStringField(TEXT("error"), Message);
+    Resp->SetStringField(TEXT("message"), Message);
+    SendAutomationResponse(Socket, RequestId, false, Message, Resp,
+                           TEXT("CAMERA_NOT_APPLIED"));
     return true;
   }
-  return false;
+
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Camera set"), Resp,
+                         FString());
+  return true;
 #else
   return false;
 #endif
