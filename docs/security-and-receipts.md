@@ -186,3 +186,42 @@ Hazardous operations go through the wrappers in `Private/Safety/`
 (`McpSafeAssetSave`, `McpSafeLevelSave`, `McpSafeLoadMap`). Direct
 `UPackage::SavePackage()` calls are forbidden and a source-contract test fails
 the build if one appears.
+
+## Known security posture gaps
+
+Two gaps are carried openly rather than closed, because closing either one
+requires a decision this project is not authorized to take alone. Both are
+recorded in `.omo/evidence/task-64-pure-unreal-mcp-implementation.json`.
+
+### A shipped dependency carries an advisory
+
+`npm audit --audit-level=moderate` exits **1** against this tree: 7 advisories,
+2 moderate and 5 high.
+
+| Advisory | Path | Reaches users |
+| --- | --- | --- |
+| `GHSA-frvp-7c67-39w9` — path traversal in `serve-static` on Windows via an encoded backslash (`%5C`) | production: `@modelcontextprotocol/sdk` (pinned at exactly 1.29.0) → `@hono/node-server` | **yes** |
+| `GHSA-mh99-v99m-4gvg` — unbounded expansion in `brace-expansion` | dev only: the ESLint `minimatch` chain | no |
+
+The 5 high-severity findings are all the ESLint development chain and are never
+installed by a consumer of this package. The moderate one is different: it sits
+on the production path, so it ships in the bytes a user installs. **Its
+exploitability in this product has not been assessed** — no lane audited
+whether the vulnerable `serve-static` route is reachable here, and absence of
+an assessment is not evidence of safety.
+
+Clearing it requires moving off the pinned SDK version, which is a breaking
+dependency change. That decision is not taken here.
+
+### The plugin authorization stack was not exercised end-to-end live
+
+Scope, consent and revision refusals are exercised as corpus shapes and through
+the TypeScript envelope. They are **not** driven end-to-end through the
+plugin's own authorization stack against a running editor, because that lane is
+blocked on engine availability — see
+[`performance-and-evidence.md`](performance-and-evidence.md).
+
+Native accept/reject parity is likewise decided against a *mirror* of the
+plugin gate — its generated header parsed at run time, plus a source contract
+on `IsBlockedCommand` — not against the compiled binary. Treat the refusal-code
+parity above as a contract-level guarantee, not as a live one.
