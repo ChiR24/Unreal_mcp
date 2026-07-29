@@ -11,6 +11,10 @@ describe('test runner gateway adapter', () => {
         name: 'NestedName',
       },
       name: 'FlatName',
+      operation: 'Multiply',
+      options: ['Primary', 'Fallback'],
+      preview: true,
+      savePolicy: 'save',
       timeoutMs: 12_000,
     };
     const original = structuredClone(args);
@@ -24,8 +28,14 @@ describe('test runner gateway adapter', () => {
         params: {
           actorClass: '/Script/Engine.StaticMeshActor',
           name: 'FlatName',
+          operation: 'Multiply',
+          options: ['Primary', 'Fallback'],
         },
-        options: { timeoutMs: 12_000 },
+        options: {
+          preview: true,
+          savePolicy: 'save',
+          timeoutMs: 12_000,
+        },
       },
     });
     expect(args).toEqual(original);
@@ -80,6 +90,36 @@ describe('test runner gateway adapter', () => {
     await callToolOnce(gatewayCall);
 
     expect(callTool).toHaveBeenCalledWith(gatewayCall, undefined, { timeout: 7_000 });
+  });
+
+  it('clamps the configured harness timeout to the gateway option maximum', async () => {
+    vi.stubEnv('UNREAL_MCP_TEST_CALL_TIMEOUT_MS', '900000');
+    try {
+      const callTool = vi.fn(async () => ({ structuredContent: { success: true } }));
+      const callToolOnce = createToolCaller({ callTool });
+
+      await callToolOnce({
+        name: 'control_actor',
+        arguments: { action: 'spawn_actor' },
+      });
+
+      expect(callTool).toHaveBeenCalledWith(
+        {
+          name: 'unreal',
+          arguments: {
+            operation: 'execute',
+            tool: 'control_actor',
+            action: 'spawn_actor',
+            params: {},
+            options: { timeoutMs: 600_000 },
+          },
+        },
+        undefined,
+        { timeout: 600_000 },
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('rejects a direct call that has no action selector', () => {

@@ -44,7 +44,18 @@ const serverEnv = Object.assign({}, process.env);
 
 const DEFAULT_RESPONSE_LOG_MAX_CHARS = 6000; // default max chars
 const RESPONSE_LOGGING_ENABLED = process.env.UNREAL_MCP_TEST_LOG_RESPONSES !== '0';
-const GATEWAY_CONTROL_FIELDS = ['action', 'subAction', 'params', 'operation', 'options', 'timeoutMs'];
+const GATEWAY_CONTROL_FIELDS = ['action', 'subAction', 'params'];
+const GATEWAY_OPTION_FIELDS = [
+  'idempotencyKey',
+  'expectedCatalogRevision',
+  'expectedRevisions',
+  'preview',
+  'savePolicy',
+  'timeoutMs',
+  'validationLevel',
+  'taskPreference'
+];
+const MAX_GATEWAY_TIMEOUT_MS = 600_000;
 
 export function toGatewayCall(toolName, args) {
   const action = typeof args?.action === 'string'
@@ -64,14 +75,12 @@ export function toGatewayCall(toolName, args) {
   const params = { ...nested, ...args };
   for (const field of GATEWAY_CONTROL_FIELDS) delete params[field];
 
-  const existingOptions = args?.options !== null
-    && typeof args?.options === 'object'
-    && !Array.isArray(args.options)
-    ? args.options
-    : {};
-  const options = typeof args?.timeoutMs === 'number'
-    ? { ...existingOptions, timeoutMs: args.timeoutMs }
-    : { ...existingOptions };
+  const options = {};
+  for (const field of GATEWAY_OPTION_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(params, field)) continue;
+    options[field] = params[field];
+    delete params[field];
+  }
 
   return {
     name: 'unreal',
@@ -740,13 +749,21 @@ export function summarizeResponseForReport(response) {
 
 export function createToolCaller(client, { useProgressTimeouts = false } = {}) {
   return async function callToolOnce(callOptions, baseTimeoutMs) {
-    const envDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000') || 60000;
+    const configuredDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000');
+    const envDefault = Number.isFinite(configuredDefault) && configuredDefault > 0
+      ? Math.min(Math.trunc(configuredDefault), MAX_GATEWAY_TIMEOUT_MS)
+      : 60_000;
     const explicitTimeout = callOptions?.name === 'unreal'
       ? callOptions?.arguments?.options?.timeoutMs
-      : callOptions?.arguments?.timeoutMs;
-    const perCall = Number(explicitTimeout) || undefined;
-    const base = typeof baseTimeoutMs === 'number' && baseTimeoutMs > 0 ? baseTimeoutMs : (perCall || envDefault);
-    const serverTimeoutMs = base;
+      : callOptions?.arguments?.timeoutMs ?? callOptions?.arguments?.params?.timeoutMs;
+    const parsedTimeout = Number(explicitTimeout);
+    const perCall = Number.isFinite(parsedTimeout) && parsedTimeout > 0
+      ? Math.trunc(parsedTimeout)
+      : undefined;
+    const base = typeof baseTimeoutMs === 'number' && Number.isFinite(baseTimeoutMs) && baseTimeoutMs > 0
+      ? baseTimeoutMs
+      : (perCall ?? envDefault);
+    const serverTimeoutMs = Math.min(Math.trunc(base), MAX_GATEWAY_TIMEOUT_MS);
     const clientTimeoutMs = useProgressTimeouts
       ? Number(process.env.UNREAL_MCP_TEST_CLIENT_TIMEOUT_MS ?? '300000') || 300000
       : serverTimeoutMs;
@@ -759,7 +776,10 @@ export function createToolCaller(client, { useProgressTimeouts = false } = {}) {
         ? callOptions
         : toGatewayCall(callOptions.name, callOptions.arguments ?? {});
       const outgoing = withServerTimeout(gatewayCall, serverTimeoutMs);
-      console.log(`[CALL] ${outgoing.name} (${timeoutLabel})`);
+      const callTarget = outgoing.name === 'unreal' && typeof outgoing.arguments?.tool === 'string'
+        ? `${outgoing.name}:${outgoing.arguments.tool}`
+        : outgoing.name;
+      console.log(`[CALL] ${callTarget} (${timeoutLabel})`);
       let callPromise;
       try {
         callPromise = client.callTool(outgoing, undefined, { timeout: clientTimeoutMs });
