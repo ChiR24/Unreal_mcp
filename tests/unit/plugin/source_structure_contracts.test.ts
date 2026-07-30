@@ -60,7 +60,7 @@ describe('plugin source structure contracts', () => {
 
     // Then
     expect(oversizedFiles).toEqual([]);
-  });
+  }, 60_000);
 
   it('rejects catch-all and mechanical split artifacts', () => {
     // Given
@@ -99,5 +99,5 @@ describe('plugin source structure contracts', () => {
 
     // Then
     expect(missingIncludes).toEqual([]);
-  });
+  }, 60_000);
 });

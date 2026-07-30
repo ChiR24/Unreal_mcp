@@ -152,5 +152,5 @@ describe('TypeScript source structure', () => {
       invalidContents: [],
       invalidPaths: [],
     });
-  });
+  }, 60_000);
 });

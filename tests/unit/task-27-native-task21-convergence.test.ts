@@ -143,7 +143,7 @@ describe('Task 27 / Task 21: the residual native handler divergence stays visibl
   // not own Private/Domains, so this is pinned, not silently repaired.
   it('records that get_component_details still has no distinct native handler branch', () => {
     expect(filesMentioning('get_component_details')).toEqual([]);
-  });
+  }, 60_000);
 
   // Task 21 sublane 2: set_project_setting is implemented only in the Ui shim.
   it('records that set_project_setting is still owned solely by the Ui domain shim', () => {

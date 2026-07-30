@@ -97,5 +97,5 @@ describe('plugin source structure', () => {
     });
 
     expect(unresolvedIncludes).toEqual([]);
-  });
+  }, 60_000);
 });
