@@ -61,7 +61,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 ### Prerequisites
 
 - **Unreal Engine 5.0–5.8 (Preview) compatibility target.** The MCP Automation
-  Bridge plugin is scoped to build and run across UE 5.0 through 5.8 Preview.
+  Bridge plugin is scoped to build and run across UE 5.0 through 5.8 Preview, but that range is not certified: zero of the nine advertised minors are certified.
 
 ### Unreal Engine Certification
 
@@ -193,7 +193,7 @@ Enable via **Edit → Plugins**, then restart the editor.
 </details>
 
 > 💡 Optional plugins are auto-enabled by the MCP Automation Bridge plugin when needed.
-> PCG support is compiled for source projects when the project explicitly enables PCG. Versioned release packages for UE 5.2+ include PCG support.
+> PCG support is compiled for source projects when the project explicitly enables PCG. Versioned release packages for UE 5.2+ include PCG support; that packaging is not certified on any engine minor.
 
 ### Step 4: Configure MCP Client
 

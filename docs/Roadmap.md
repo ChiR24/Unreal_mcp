@@ -36,7 +36,7 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 - [x] **Pipeline Integration**: Direct UBT execution with output streaming.
 - [x] **Documentation**: Comprehensive handler mappings and API references.
 - [x] **Metrics Dashboard**: `ue://health` view backed by bridge/server metrics.
-- [x] **UE 5.7 Support**: Full compatibility with Unreal Engine 5.7 (Control Rig, Subobject Data).
+- [x] **UE 5.7 Support**: Full compatibility with Unreal Engine 5.7 (Control Rig, Subobject Data); implemented but not certified.
 
 ## Infrastructure Improvements (Completed)
 
