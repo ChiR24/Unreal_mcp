@@ -341,3 +341,57 @@ describe('receipt redaction — a secret-named KEY masks its value whatever its 
     expect(masked.keep).toBe('/Game/Meshes/SM_Rock');
   });
 });
+
+// A head-word rule alone once un-masked every one of these: the head (`key`,
+// `hash`, `header`, `bytes`) is not itself a secret word, yet each compound
+// names the credential rather than a fact about it. Masking must therefore be
+// fail-closed, and these shapes pin that direction so the two failure modes
+// cannot be traded for one another again.
+describe('receipt redaction — compounds whose head is a carrier, not a secret word', () => {
+  const SECRET = 'sk-supersecret-abcdef0123456789';
+
+  const CREDENTIAL_KEYS = [
+    'secretKey', 'secret_key', 'SecretAccessKey', 'secretAccessKey',
+    'accessKey', 'ACCESS_KEY', 'privateKey', 'private_key', 'signingKey',
+    'passwordHash', 'PASSWORD_HASH', 'passwordDigest', 'passwordBytes',
+    'authorizationHeader', 'apiKeyHash', 'credentialBytes', 'tokenPayload',
+    'tokenBase64', 'secretBlob', 'privateKeyBytes',
+  ] as const;
+
+  for (const key of CREDENTIAL_KEYS) {
+    it(`masks \`${key}\``, () => {
+      const masked = maskSecretsDeep({ [key]: SECRET }) as Record<string, unknown>;
+
+      expect(JSON.stringify(masked)).not.toContain(SECRET);
+      expect(masked[key]).toBe('[REDACTED]');
+    });
+  }
+
+  const MEASUREMENT_KEYS = [
+    'tokenCount', 'tokenLimit', 'tokenTotal', 'tokenIndex', 'tokenBudget',
+    'secretsFound', 'secretStatus', 'secretName', 'secretVersion',
+    'authorizationRequired', 'authorizationScheme', 'credentialType',
+    'passwordPolicy', 'passwordMinLength', 'accessKeyCount',
+  ] as const;
+
+  for (const key of MEASUREMENT_KEYS) {
+    it(`leaves \`${key}\` intact`, () => {
+      const masked = maskSecretsDeep({ [key]: 'PLAIN' }) as Record<string, unknown>;
+
+      expect(masked[key]).toBe('PLAIN');
+    });
+  }
+
+  it('still peels a transparent head to reach the secret beneath it', () => {
+    const masked = maskSecretsDeep({
+      secretValue: SECRET,
+      tokenString: SECRET,
+      passwordData: SECRET,
+    }) as Record<string, unknown>;
+
+    expect(JSON.stringify(masked)).not.toContain(SECRET);
+    expect(masked.secretValue).toBe('[REDACTED]');
+    expect(masked.tokenString).toBe('[REDACTED]');
+    expect(masked.passwordData).toBe('[REDACTED]');
+  });
+});

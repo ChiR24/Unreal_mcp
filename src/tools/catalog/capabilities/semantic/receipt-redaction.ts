@@ -51,37 +51,74 @@ const SECRET_KEY_WORDS = new Set([
   'apikey',
   'authorization',
   'credential',
+  'privatekey',
+  'accesskey',
+  'signingkey',
 ]);
 
 // Heads that carry no meaning of their own, so the real head sits one word to
 // their left: `secretValue` is still a secret, `tokenString` is still a token.
 const TRANSPARENT_HEADS = new Set(['value', 'data', 'string', 'text', 'raw', 'plain']);
 
-// Split on camelCase and any non-alphanumeric run, drop a plural `s`. Matching
-// WHOLE words (not substrings) is what keeps `tokenizer`, `passwordless` and
-// `unauthorized` out of the secret set.
+// Heads that make a compound a MEASUREMENT or a STATUS rather than a credential:
+// `tokenCount` is a count, `secretsFound` is a finding. This list is the ONLY
+// thing that suppresses masking once a secret word is present, so the default is
+// to mask - `secretKey`, `passwordHash` and `authorizationHeader` all name real
+// credentials, and an unrecognised head must never be assumed harmless.
+const MEASUREMENT_HEADS = new Set([
+  'count', 'budget', 'length', 'size', 'limit', 'total', 'max', 'min',
+  'index', 'order', 'position', 'offset', 'depth', 'age', 'ttl',
+  'found', 'required', 'enabled', 'disabled', 'expired', 'valid', 'present',
+  'missing', 'used', 'remaining', 'supported', 'allowed',
+  'name', 'id', 'type', 'kind', 'label', 'status', 'state', 'mode', 'policy',
+  'rule', 'scheme', 'algorithm', 'format', 'source', 'reason', 'message',
+  'error', 'version', 'timestamp', 'time', 'date', 'duration', 'at',
+]);
+
+// Split on camelCase and any non-alphanumeric run. Matching WHOLE words (not
+// substrings) is what keeps `tokenizer`, `passwordless` and `unauthorized` out
+// of the secret set.
 function keyWords(key: string): readonly string[] {
   return key
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .split(/[^A-Za-z0-9]+/)
     .filter((word) => word.length > 0)
-    .map((word) => word.toLowerCase())
-    .map((word) => (word.length > 1 && word.endsWith('s') ? word.slice(0, -1) : word));
+    .map((word) => word.toLowerCase());
 }
 
-// An English compound names its HEAD, and the head is last: `accessToken` IS a
-// token, `apiKey` IS a key - but `tokenCount` is a count, `secretsFound` is a
-// finding and `authorizationRequired` is a requirement. Judging the head rather
-// than any word is what stops an ordinary UObject property whose name merely
-// mentions a credential from having its value silently replaced. The joined pair
-// is still consulted so apiKey / api_key / X-Api-Keys all reduce to `apikey`.
+// Depluralisation is tried as an ALTERNATIVE rather than applied up front,
+// because stripping unconditionally mangles words that merely end in `s`:
+// `status` became `statu` and stopped matching, which silently masked
+// `secretStatus`.
+const singular = (word: string): string =>
+  word.length > 1 && word.endsWith('s') ? word.slice(0, -1) : word;
+
+const inSet = (set: ReadonlySet<string>, word: string): boolean =>
+  set.has(word) || set.has(singular(word));
+
+function namesCredential(words: readonly string[]): boolean {
+  return words.some((word, index) => {
+    if (inSet(SECRET_KEY_WORDS, word)) return true;
+    const next = words[index + 1];
+    if (next === undefined) return false;
+    return (
+      inSet(SECRET_KEY_WORDS, `${word}${next}`) ||
+      inSet(SECRET_KEY_WORDS, `${singular(word)}${singular(next)}`)
+    );
+  });
+}
+
+// Masking is FAIL-CLOSED: once any whole word names a credential, the value is
+// masked unless the head word proves the compound measures or describes it.
+// `secretKey`, `passwordHash`, `authorizationHeader` and `credentialBytes` all
+// carry the credential itself, so an unrecognised head must never suppress the
+// mask; only MEASUREMENT_HEADS may, which is what spares `tokenCount`.
 function isSecretKey(key: string): boolean {
   const words = keyWords(key);
+  if (!namesCredential(words)) return false;
   let end = words.length;
-  while (end > 1 && TRANSPARENT_HEADS.has(words[end - 1] ?? '')) end -= 1;
-  if (end === 0) return false;
-  if (SECRET_KEY_WORDS.has(words[end - 1] ?? '')) return true;
-  return end >= 2 && SECRET_KEY_WORDS.has(`${words[end - 2]}${words[end - 1]}`);
+  while (end > 1 && inSet(TRANSPARENT_HEADS, words[end - 1] ?? '')) end -= 1;
+  return !inSet(MEASUREMENT_HEADS, words[end - 1] ?? '');
 }
 
 // Deep secret masking for the outer legacy envelope. Masks secret-looking string
