@@ -1,4 +1,4 @@
-// SECURITY PoC HARNESS — poc-engineer-a (security-research team, Phase 2)
+// SECURITY PoC HARNESS — poc-engineer-a (security-research team)
 //
 // Minimal, SAFE, local-only proofs for candidate findings F9, C1, C2, F3, C3.
 // - No live Unreal editor. Every bridge is mocked (isConnected()=true,
@@ -245,14 +245,14 @@ describe('C3 — receipt redaction only covers warnings/changes, not data/error'
     expect(msg).not.toContain('SUPERSECRET');
   });
 
-  it('CONFIRMS regex gaps: URL creds and bare JWTs are NOT masked by redactText', () => {
+  it('CONFIRMS the residual regex gap is keyword-less creds only; the JSON-key form is now masked', () => {
     // No token=/secret:/Bearer keyword -> untouched.
     expect(redactText('https://admin:hunter2@internal.example.com/api')).toBe('https://admin:hunter2@internal.example.com/api');
     const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.abc123signature';
     expect(redactText(jwt)).toBe(jwt);
-    // JSON-key form: the quote between the keyword and ':' defeats SECRET_ASSIGNMENT
-    // (it requires keyword + optional-ws + [:=]); "token":"..." is never masked.
-    expect(redactText('{"token":"aB3xY9zz"}')).toBe('{"token":"aB3xY9zz"}');
+    // SECRET_ASSIGNMENT takes an optional quote on each side of the separator, so
+    // the key and both quotes form the preserved prefix and only the value is masked.
+    expect(redactText('{"token":"aB3xY9zz"}')).toBe('{"token":"[REDACTED]"}');
     expect(redactText('db=postgres://u:p4ss@h')).toBe('db=postgres://u:p4ss@h');
   });
 
