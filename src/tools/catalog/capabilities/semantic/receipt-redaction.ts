@@ -53,23 +53,35 @@ const SECRET_KEY_WORDS = new Set([
   'credential',
 ]);
 
-// Split on camelCase and any non-alphanumeric run, drop a plural `s`, and also
-// offer each adjacent pair joined, so apiKey / api_key / X-Api-Keys all reduce to
-// `apikey`. Matching WHOLE words (not substrings) is what keeps `tokenizer`,
-// `passwordless` and `unauthorized` out of the secret set.
+// Heads that carry no meaning of their own, so the real head sits one word to
+// their left: `secretValue` is still a secret, `tokenString` is still a token.
+const TRANSPARENT_HEADS = new Set(['value', 'data', 'string', 'text', 'raw', 'plain']);
+
+// Split on camelCase and any non-alphanumeric run, drop a plural `s`. Matching
+// WHOLE words (not substrings) is what keeps `tokenizer`, `passwordless` and
+// `unauthorized` out of the secret set.
 function keyWords(key: string): readonly string[] {
-  const words = key
+  return key
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .split(/[^A-Za-z0-9]+/)
     .filter((word) => word.length > 0)
     .map((word) => word.toLowerCase())
     .map((word) => (word.length > 1 && word.endsWith('s') ? word.slice(0, -1) : word));
-  const pairs = words.slice(0, -1).map((word, index) => `${word}${words[index + 1] ?? ''}`);
-  return [...words, ...pairs];
 }
 
+// An English compound names its HEAD, and the head is last: `accessToken` IS a
+// token, `apiKey` IS a key - but `tokenCount` is a count, `secretsFound` is a
+// finding and `authorizationRequired` is a requirement. Judging the head rather
+// than any word is what stops an ordinary UObject property whose name merely
+// mentions a credential from having its value silently replaced. The joined pair
+// is still consulted so apiKey / api_key / X-Api-Keys all reduce to `apikey`.
 function isSecretKey(key: string): boolean {
-  return keyWords(key).some((word) => SECRET_KEY_WORDS.has(word));
+  const words = keyWords(key);
+  let end = words.length;
+  while (end > 1 && TRANSPARENT_HEADS.has(words[end - 1] ?? '')) end -= 1;
+  if (end === 0) return false;
+  if (SECRET_KEY_WORDS.has(words[end - 1] ?? '')) return true;
+  return end >= 2 && SECRET_KEY_WORDS.has(`${words[end - 2]}${words[end - 1]}`);
 }
 
 // Deep secret masking for the outer legacy envelope. Masks secret-looking string
@@ -83,13 +95,24 @@ function isSecretKey(key: string): boolean {
 // object, an array and a number are all just as capable of carrying a credential
 // as a string, and recursing into them would only find leaves that no longer
 // carry the keyword context the string masker needs.
-export function maskSecretsDeep(value: unknown): unknown {
+// The size gate cannot substitute for a depth gate: 5,000 levels of nesting is
+// only ~10,000 chars, well inside MAX_EXECUTION_RESULT_CHARS, so the stack
+// overflows before any size check runs. Only CONTAINERS are capped, and the cap
+// fails closed - a subtree too deep to inspect is masked, since returning it
+// unread would emit exactly the content this function exists to scrub.
+export const MAX_RECEIPT_DEPTH = 100;
+
+export function maskSecretsDeep(value: unknown, depth = 0): unknown {
   if (typeof value === 'string') return maskSecrets(value);
-  if (Array.isArray(value)) return value.map(maskSecretsDeep);
+  if (Array.isArray(value)) {
+    if (depth >= MAX_RECEIPT_DEPTH) return REDACTED;
+    return value.map((entry) => maskSecretsDeep(entry, depth + 1));
+  }
   if (value !== null && typeof value === 'object') {
+    if (depth >= MAX_RECEIPT_DEPTH) return REDACTED;
     const out: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value)) {
-      out[key] = isSecretKey(key) ? REDACTED : maskSecretsDeep(entry);
+      out[key] = isSecretKey(key) ? REDACTED : maskSecretsDeep(entry, depth + 1);
     }
     return out;
   }
