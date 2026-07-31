@@ -16,7 +16,7 @@ const CANONICAL_VERSION = JSON.parse(
 ).version as string;
 
 const nativeSchemaScenario = (): string => readFileSync(
-  resolve(process.cwd(), 'scripts', 'sequence-native-direct-schema.mjs'),
+  resolve(process.cwd(), 'tests', 'fixtures', 'sequence-render-security', 'sequence-native-direct-schema.mjs'),
   'utf8',
 );
 
@@ -223,7 +223,7 @@ describe('sequence render and native security contracts', () => {
       'sequence-native-direct-queue-restore.mjs',
     ].map((fileName) =>
       readFileSync(
-        resolve(process.cwd(), 'scripts', fileName),
+        resolve(process.cwd(), 'tests', 'fixtures', 'sequence-render-security', fileName),
         'utf8',
       ),
     ).join('\n');
@@ -242,7 +242,9 @@ describe('sequence render and native security contracts', () => {
     const nativeScenario = readFileSync(
       resolve(
         process.cwd(),
-        'scripts',
+        'tests',
+        'fixtures',
+        'sequence-render-security',
         'sequence-native-direct-render-job.mjs',
       ),
       'utf8',
@@ -373,7 +375,9 @@ describe('sequence render and native security contracts', () => {
     const nativeCases = readFileSync(
       resolve(
         process.cwd(),
-        'scripts',
+        'tests',
+        'fixtures',
+        'sequence-render-security',
         'sequence-native-direct-render-job.mjs',
       ),
       'utf8',
@@ -809,7 +813,9 @@ describe('sequence render and native security contracts', () => {
     const nativeRender = readFileSync(
       resolve(
         process.cwd(),
-        'scripts',
+        'tests',
+        'fixtures',
+        'sequence-render-security',
         'sequence-native-direct-render-sequence.mjs',
       ),
       'utf8',
