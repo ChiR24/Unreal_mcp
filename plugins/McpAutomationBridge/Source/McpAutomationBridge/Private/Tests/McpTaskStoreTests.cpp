@@ -1,6 +1,6 @@
 // McpTaskStoreTests.cpp — Task 44: the native half of the bounded task store.
 //
-// Mirrors tests/unit/task-44/bounded-task-store.test.ts. Every temporal
+// Mirrors tests/unit/progress/bounded-task-store.test.ts. Every temporal
 // assertion advances an injected fake clock; nothing here sleeps, so an expiry
 // case cannot pass by being slow or fail by being fast.
 

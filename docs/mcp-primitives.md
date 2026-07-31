@@ -5,7 +5,7 @@ and what a client that lacks a primitive gets instead.
 
 TypeScript implementation lives in `src/server/mcp-primitives/`. The native
 mirror lives in `plugins/.../Private/MCP/Primitives/`. Parity between them is
-gated by `tests/unit/task-38/*-parity.test.ts`.
+gated by `tests/unit/mcp-primitives/*-parity.test.ts`.
 
 ## Advertised capabilities
 
@@ -55,7 +55,7 @@ Four read-only templates are published:
 
 Reads are bounded and revisioned. `ue://capability/catalog` carries its revision
 *inside* the returned text rather than as a top-level field — asserted by
-`tests/unit/task-38/resources-baseline.test.ts`.
+`tests/unit/mcp-primitives/resources-baseline.test.ts`.
 
 ### The two transports advertise different resource sets, on purpose
 
@@ -184,7 +184,7 @@ bounded task store made that method answer instead of returning `-32601`;
 `session-capability-profile.ts` derives a **structural** profile from the
 client's declared capabilities, not from its name or version. Two clients with
 different name/version but identical capabilities resolve to the same profile —
-asserted by `tests/unit/server/task-37-primitive-wiring.test.ts`. The profile is
+asserted by `tests/unit/server/primitive-wiring.test.ts`. The profile is
 surfaced through `configure`'s `get_status` result, hoisted to the gateway
 envelope top level so a caller reads it without unwrapping `result`.
 
@@ -193,7 +193,7 @@ envelope top level so a caller reads it without unwrapping `result`.
 Parity between the TypeScript and native surfaces is proven at the **contract**
 level: `npm run test:native-parity` exits 0 over 23 native canonical tools with
 0 action mismatches and 0 schema property mismatches, and the primitive mirrors
-are gated by `tests/unit/task-38/*-parity.test.ts`.
+are gated by `tests/unit/mcp-primitives/*-parity.test.ts`.
 
 > **The native runtime `describe` surface has never been successfully
 > censused.** Two probe runs were attempted. The first was paging-limited (19

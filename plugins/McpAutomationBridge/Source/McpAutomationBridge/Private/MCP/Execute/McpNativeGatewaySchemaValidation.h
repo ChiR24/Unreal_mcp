@@ -2,7 +2,7 @@
 //
 // Implements the Draft-2020-12 keyword subset the canonical capability records
 // actually use, and nothing else. The matching TypeScript specification is
-// tests/unit/task-27-suite/schema-subset.ts; both surfaces must produce the same
+// tests/unit/gateway-discovery-suite/schema-subset.ts; both surfaces must produce the same
 // violation reason for the same input.
 //
 // Unsupported keywords fail CLOSED. If a record ever grows a keyword this

@@ -4,7 +4,7 @@
 // Every metric family name, label name, bounded label value set, histogram
 // bucket bound and reported quantile lives here. The native mirror is
 // `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Foundation/McpTelemetrySchema.h`
-// and `tests/unit/task-47/telemetry-schema-parity.test.ts` reads BOTH files and
+// and `tests/unit/telemetry/telemetry-schema-parity.test.ts` reads BOTH files and
 // fails on any drift.
 //
 // Cardinality is a security boundary, not housekeeping: a Prometheus label is a

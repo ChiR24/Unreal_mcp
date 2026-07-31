@@ -18,7 +18,7 @@ import { handleUnrealGatewayCall } from '../../../src/server/tool-registry-gatew
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 import { dynamicToolManager } from '../../../src/tools/dynamic/dynamic-tool-manager.js';
 import { capabilityIndex, legacyPairKey } from '../../../src/server/gateway/gateway-capability-index.js';
-import { minimalValidOutput } from './support/task26-capability-fixtures.js';
+import { minimalValidOutput } from './support/capability-fixtures.js';
 
 const dispatched: Array<{ tool: string; args: Record<string, unknown> }> = [];
 

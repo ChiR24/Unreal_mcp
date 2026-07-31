@@ -1,7 +1,7 @@
 // McpNativeGatewayValidation.h — canonical execute validation for the unreal gateway
 //
 // Stage order is normative and matches the TypeScript reference
-// (tests/unit/task-27-suite/execute-reference.ts): resolve form and alias ->
+// (tests/unit/gateway-discovery-suite/execute-reference.ts): resolve form and alias ->
 // registry -> dynamic enabled state -> options -> defaults -> exact per-action
 // input schema. Nothing reaches the subsystem queue until every stage passes.
 

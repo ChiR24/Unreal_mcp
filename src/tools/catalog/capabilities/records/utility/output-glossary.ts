@@ -59,8 +59,8 @@ export const OUTPUT_HEADER: Readonly<Record<string, JsonObject>> = Object.freeze
  * transport ever sent. The plugin nests the GameMode payload under
  * `gameFrameworkInfo`, nests session state under a `sessionsInfo` OBJECT, and
  * writes the audio and Enhanced Input payloads FLAT with no wrapper at all.
- * The flat scalars below are those payloads; `tests/unit/task-29/
- * task-29-utility-wire-contract.test.ts` re-derives every name and type from
+ * The flat scalars below are those payloads; `tests/unit/capability-records/
+ * utility-wire-contract.test.ts` re-derives every name and type from
  * the shipping C++ and fails if either side drifts.
  */
 export const UTILITY_OUTPUT_FIELDS: Readonly<Record<string, JsonObject>> = Object.freeze({
@@ -102,7 +102,7 @@ export const UTILITY_OUTPUT_FIELDS: Readonly<Record<string, JsonObject>> = Objec
 /**
  * Resolve one output property. Unknown names fall back to a string with prose
  * rather than throwing, so a new data-file field can never break module load;
- * `task-29-utility-contract-honesty.test.ts` is what fails instead, naming the
+ * `utility-contract-honesty.test.ts` is what fails instead, naming the
  * field so it gets a real entry above.
  */
 export function outputProperty(name: string): JsonObject {

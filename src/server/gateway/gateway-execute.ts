@@ -5,7 +5,7 @@
 // tool-union checks with the generated per-action capability contracts.
 //
 // Stage order is normative and shared with the native `/mcp` surface (the
-// executable specification is `tests/unit/task-27-suite/execute-reference.ts`):
+// executable specification is `tests/unit/gateway-discovery-suite/execute-reference.ts`):
 //
 //   resolve form + alias -> availability -> params envelope -> reserved and
 //   gateway-control keys -> options -> declared defaults -> exact per-action

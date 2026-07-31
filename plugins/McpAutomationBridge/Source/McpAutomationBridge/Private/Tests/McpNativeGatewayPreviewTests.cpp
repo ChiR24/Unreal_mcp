@@ -1,6 +1,6 @@
 // McpNativeGatewayPreviewTests.cpp — in-editor run of the Task 43 preview rule
 //
-// tests/unit/task-43/preview-is-not-a-fake-dry-run.test.ts pins the same rule on
+// tests/unit/preview-compensation/preview-is-not-a-fake-dry-run.test.ts pins the same rule on
 // the TypeScript surface, and asserts native equivalence by reading this
 // plugin's source text. Source text cannot prove the gate actually fires, so
 // this exercises McpValidateExecuteOptionsForCapability in the editor: the

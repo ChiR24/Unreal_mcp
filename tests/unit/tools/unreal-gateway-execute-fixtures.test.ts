@@ -2,7 +2,7 @@
 //
 // The acceptance criterion is "run one minimal valid request per action and
 // rule-invalid fixtures". Both fixture families are DERIVED from each record's
-// own generated schema (tests/unit/tools/support/task26-capability-fixtures.ts),
+// own generated schema (tests/unit/tools/support/capability-fixtures.ts),
 // so this suite stays exhaustive across all 1,335 actions without a hand list
 // that would rot the moment the catalog is regenerated.
 //
@@ -26,7 +26,7 @@ import {
   minimalValidOutput,
   minimalValidParams,
   type InvalidVariant
-} from './support/task26-capability-fixtures.js';
+} from './support/capability-fixtures.js';
 
 const dispatched: Array<{ tool: string; args: Record<string, unknown> }> = [];
 

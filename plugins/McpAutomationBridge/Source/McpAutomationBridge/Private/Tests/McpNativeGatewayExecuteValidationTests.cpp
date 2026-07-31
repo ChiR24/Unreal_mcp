@@ -1,7 +1,7 @@
 // McpNativeGatewayExecuteValidationTests.cpp — in-editor run of the Task 27 suite
 //
 // The TypeScript side runs the same generated suite in
-// tests/unit/task-27-native-execute-suite.test.ts. Both build their cases from
+// tests/unit/native-execute-suite.test.ts. Both build their cases from
 // the same canonical records with the same algorithm, so a rule that changes on
 // one surface and not the other fails here.
 //

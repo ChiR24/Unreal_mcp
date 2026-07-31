@@ -1,0 +1,33 @@
+{
+  "id": "native-protocol-capture-requirement",
+  "kind": "requirement",
+  "status": "RED",
+  "reason": "NATIVE_CAPTURE_ABSENT",
+  "note": "This file is NOT a capture and is NOT run through validateCapture. It is the explicit RED requirement that stands in for the absent EXECUTED native-protocol capture. The runtime mirror is NATIVE_CAPTURE_REQUIREMENT in parity-harness-native-requirement.mjs; assertParityReady() refuses any native side that is not a genuine, transcript-backed 'native-protocol' capture, so this requirement can never be mistaken for a passing native side.",
+  "whyBlocked": "The producer is a compiled C++ automation test (NativeProtocolCaptureTests.cpp) that executes the native primitive handlers in a live UE editor. Building and running the editor is deferred to the integration lane (no UBT/editor in this lane), so no capture artifact exists on disk yet and cross-transport parity cannot be GREEN.",
+  "requiredProducer": {
+    "name": "McpAutomationBridge.Task38.NativeProtocolCapture",
+    "kind": "cpp-automation-test",
+    "mechanism": "native-automation-inprocess",
+    "source": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Tests/NativeProtocolCaptureTests.cpp",
+    "runner": "scripts/qa/native-capture.mjs",
+    "captureKind": "native-protocol",
+    "mustEmitDomains": ["result", "error", "revision", "profile", "session", "pointer"],
+    "emits": "Runs the compiled McpResourceCatalog / McpResourceUri / McpSessionCapabilityProfile / McpSubscriptionStore / McpSessionConfigureStore / McpPromptCatalog / McpCompletionProvider handlers in-process and writes task38-native-capture.json { transcript[], captures[] } to $MCP_TASK38_CAPTURE_DIR.",
+    "provenance": {
+      "transcriptRef": "<relative path to the emitted native-transcript.jsonl>",
+      "transcriptSha256": "<sha-256 of the transcript bytes each capture re-derives from>",
+      "sourceHash": "<sha-256 of the plugin sources that produced the behavior>",
+      "packageHash": "<sha-256 of the built plugin package/manifest>",
+      "capturedAt": "<ISO-8601 capture time (freshness anchor)>",
+      "protocolVersion": "2025-11-25"
+    },
+    "groundTruth": "verifyGroundTruth requires each capture value to re-derive from a transcript entry it cites; verifyNativeCaptureProvenance re-hashes the transcript and checks freshness/source/package — a fabricated or stale capture cannot pass."
+  },
+  "forbiddenSubstitutes": [
+    "A hand-authored native oracle (captureKind 'native-model') — admissible for characterization ONLY, never for a completion claim.",
+    "A grep/source snapshot (captureKind 'source-text') — rejected outright by validateCapture with SOURCE_TEXT_CAPTURE.",
+    "A native-protocol capture missing its transcript provenance block, or one whose transcript sha / source hash / freshness no longer verifies."
+  ],
+  "unblocksWhen": "The integration lane builds the plugin, runs scripts/qa/native-capture.mjs --execute against a serialized UE5.7 editor, and the emitted native-protocol captures pass ground-truth + provenance verification; assertParityReady then opens and compareCaptures runs the exact framing-neutral diff."
+}

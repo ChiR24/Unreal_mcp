@@ -5,7 +5,7 @@
 // The schema rules implemented here are the Draft-2020-12 keyword subset the
 // generated capability records actually use. The same subset is implemented by
 // the native `/mcp` validator, and the shared executable specification lives in
-// `tests/unit/task-27-suite/{schema-subset,execute-reference}.ts`. Any keyword
+// `tests/unit/gateway-discovery-suite/{schema-subset,execute-reference}.ts`. Any keyword
 // outside the supported set is rejected fail-closed on both surfaces, so a
 // record that later grows an unimplemented keyword can never be silently
 // under-validated.

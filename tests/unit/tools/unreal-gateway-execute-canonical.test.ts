@@ -4,7 +4,7 @@
 // which at that point still carried the pre-extraction manifest-driven behavior.
 //
 // The stage order asserted here is the one the native `/mcp` surface implements
-// (`tests/unit/task-27-suite/execute-reference.ts` is the shared normative spec):
+// (`tests/unit/gateway-discovery-suite/execute-reference.ts` is the shared normative spec):
 //   form/alias -> availability -> params object -> reserved+control keys ->
 //   options -> defaults -> exact per-action input schema -> connection ->
 //   dispatch -> output schema -> receipt.
@@ -35,7 +35,7 @@ import {
   firstRecordWithVariant,
   minimalValidOutput,
   minimalValidParams
-} from './support/task26-capability-fixtures.js';
+} from './support/capability-fixtures.js';
 
 type Dispatch = { tool: string; args: Record<string, unknown> };
 

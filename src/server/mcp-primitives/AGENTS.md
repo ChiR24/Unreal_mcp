@@ -37,7 +37,7 @@ All three `index.ts` barrels add **no behavior and no import side effects** — 
 
 ## ANTI-PATTERNS
 
-- **Native parity is enforced.** `plugins/.../Private/MCP/Primitives/` (20 files) and `Private/MCP/Resources/` mirror this directory. Changing a primitive here without the native side fails `tests/unit/task-38/*-parity.test.ts` — the fixtures (`*-native-fixture.ts`, `*-native-oracle.json`) encode the expected native answer.
+- **Native parity is enforced.** `plugins/.../Private/MCP/Primitives/` (20 files) and `Private/MCP/Resources/` mirror this directory. Changing a primitive here without the native side fails `tests/unit/mcp-primitives/*-parity.test.ts` — the fixtures (`*-native-fixture.ts`, `*-native-oracle.json`) encode the expected native answer.
 - Never advertise a capability whose handler was not registered — derive it, do not hardcode it.
 - Never execute a tool from a prompt path. `prompts/get` returns messages only.
 - Never emit unbounded completion/prompt payloads; the `MAX_*` caps are the contract, and exceeding one must return typed guidance rather than a truncated result.

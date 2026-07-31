@@ -5,7 +5,7 @@
 // Task 47 native mirror of the TypeScript telemetry schema
 // (`src/services/telemetry-schema.ts`). Both surfaces export the SAME metric
 // family names, label names, bounded label value sets, histogram bucket bounds
-// and quantiles; `tests/unit/task-47/telemetry-schema-parity.test.ts` reads this
+// and quantiles; `tests/unit/telemetry/telemetry-schema-parity.test.ts` reads this
 // file as TEXT and fails on any drift, so a metric added on one surface without
 // the other cannot ship.
 //
