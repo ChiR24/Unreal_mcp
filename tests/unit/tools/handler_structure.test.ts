@@ -35,7 +35,10 @@ describe('tool handler source structure', () => {
       .sort();
 
     // Then
-    expect(rootTypeScriptFiles).toEqual(['index.ts']);
+    // Every handler lives under a responsibility folder. The root previously
+    // held a re-export barrel; it had no importers, so the root is now empty of
+    // TypeScript entirely and any new file here is a layering regression.
+    expect(rootTypeScriptFiles).toEqual([]);
   });
 
   it('keeps each responsibility folder within a reviewable file count', () => {
