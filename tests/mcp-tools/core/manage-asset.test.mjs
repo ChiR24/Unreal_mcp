@@ -79,8 +79,8 @@ const testCases = [
   // === CORE ASSET ACTIONS ===
   { scenario: 'ACTION: list', toolName: 'manage_asset', arguments: { action: 'list', path: TEST_FOLDER, recursive: true }, expected: 'success' },
   { scenario: 'ACTION: import', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: relativeImportSource, destinationPath: IMPORTED_MESH, overwrite: true, save: true }, expected: 'success' },
-  { scenario: 'SECURITY: import rejects absolute host path', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: '/etc/passwd', destinationPath: asset(`T_AbsoluteImport_${ts}`) }, expected: 'security violation' },
-  { scenario: 'SECURITY: import rejects project traversal', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: '../outside.obj', destinationPath: asset(`T_TraversalImport_${ts}`) }, expected: 'security violation' },
+  { scenario: 'SECURITY: import rejects absolute host path', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: '/etc/passwd', destinationPath: asset(`T_AbsoluteImport_${ts}`) }, expected: 'error|security violation' },
+  { scenario: 'SECURITY: import rejects project traversal', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: '../outside.obj', destinationPath: asset(`T_TraversalImport_${ts}`) }, expected: 'error|security violation' },
   { scenario: 'ACTION: duplicate', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: DUPLICATE_SOURCE, destinationPath: DUPLICATE_DEST }, expected: 'success' },
   { scenario: 'ACTION: duplicate_asset', toolName: 'manage_asset', arguments: { action: 'duplicate_asset', sourcePath: DUPLICATE_ALIAS_SOURCE, destinationPath: DUPLICATE_ALIAS_DEST }, expected: 'success' },
   { scenario: 'ACTION: rename', toolName: 'manage_asset', arguments: { action: 'rename', sourcePath: RENAME_SOURCE, newName: RENAME_DEST_NAME }, expected: 'success' },

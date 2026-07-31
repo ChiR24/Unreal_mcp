@@ -159,7 +159,7 @@ const testCases = [
 
 // === CLEANUP ===
 // In-memory assets may not unload properly — DELETE_FAILED is acceptable
-{ scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'DELETE_FAILED|success|not found' },
+{ scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found|DELETE_FAILED' },
 ];
 
 runToolTests('manage-audio', testCases);

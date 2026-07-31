@@ -640,7 +640,7 @@ const testCases = [
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete test blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: `${TEST_FOLDER}/BP_Test_${ts}`, force: true }, expected: 'success|not found' },
-    { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'DELETE_FAILED|success|not found' },
+    { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found|DELETE_FAILED' },
   );
 }
 
