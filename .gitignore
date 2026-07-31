@@ -15,10 +15,6 @@ build/
 .tsbuildinfo
 *.tsbuildinfo
 
-# WASM build outputs (Rust/wasm-pack)
-wasm/target/
-src/wasm/pkg/
-
 # Unreal Plugin build artifacts
 Plugins/**/Binaries/
 Plugins/**/Intermediate/

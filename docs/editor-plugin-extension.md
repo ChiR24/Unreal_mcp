@@ -39,9 +39,9 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 - **Timeout Management**: Configurable timeouts for long-running operations
 
 ## Server Integration (0.5.30)
-- `src/automation-bridge.ts` spins up a lightweight WebSocket server (default `ws://127.0.0.1:8091`) guarded by an optional capability token.
-- Handshake flow: editor sends `bridge_hello` → server validates capability token → server responds with `bridge_ack` and caches the socket for future elevated commands.
-- Environment flags: `MCP_AUTOMATION_HOST`, `MCP_AUTOMATION_PORT`, `MCP_AUTOMATION_CAPABILITY_TOKEN`, and `MCP_AUTOMATION_CLIENT_MODE` allow operators to relocate or disable the listener without code changes.
+- `src/automation/` connects **out** as a WebSocket client (default `ws://127.0.0.1:8091`) to the listen socket the plugin opens; the TypeScript side never binds a server socket of its own.
+- Handshake flow: the client sends `bridge_hello` carrying the optional capability token → the plugin validates it → the plugin replies `bridge_ack` and the socket is cached for subsequent automation requests.
+- Environment flags: `MCP_AUTOMATION_HOST` and `MCP_AUTOMATION_PORT` relocate the target the client dials, and `MCP_AUTOMATION_CAPABILITY_TOKEN` supplies the handshake token — all without code changes.
 - Health endpoint (`ue://health`) now surfaces bridge connectivity status so MCP clients can confirm when the plugin is online.
 
 ## Implemented Actions (Current)

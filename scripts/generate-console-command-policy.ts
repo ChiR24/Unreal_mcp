@@ -4,17 +4,20 @@
 // Source of truth: src/utils/commands/console-command-policy-rules.ts
 // (typed rule data from Task 6). It emits two generated artifacts from the
 // SAME in-memory rule set so TypeScript and native transports share one policy:
-//   - src/utils/commands/console-command-policy.generated.ts  (runtime import)
+//   - src/utils/commands/console-command-policy.generated.ts  (serialized mirror)
 //   - plugins/.../ConsoleCommand/McpAutomationBridge_ConsoleCommandPolicy.generated.h
 //
 // Run:
 //   node --loader ts-node/esm scripts/generate-console-command-policy.ts        (generate)
 //   node --loader ts-node/esm scripts/generate-console-command-policy.ts --check (CI gate)
 //
-// The generated TS file is imported by src/utils/commands/command-validator.ts
-// (Task 22 wiring). Handwritten block lists were removed from the validator.
-// This file is deterministic: repeated runs produce byte-identical output, and
-// --check fails (non-zero exit) when an on-disk artifact drifts.
+// The native header is what the C++ surface compiles against. The TypeScript
+// artifact is a drift-detection mirror, NOT a runtime import: the validator
+// (src/utils/commands/command-validator.ts) evaluates the typed rules through
+// console-command-policy-generated.ts instead. Handwritten block lists were
+// removed from the validator. This generator is deterministic: repeated runs
+// produce byte-identical output, and --check fails (non-zero exit) when an
+// on-disk artifact drifts.
 
 import { existsSync, readFileSync, writeFileSync, renameSync, rmSync, mkdirSync, chmodSync, lstatSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';

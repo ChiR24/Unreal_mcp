@@ -1,12 +1,12 @@
 /**
  * Validates console commands before execution to prevent dangerous operations.
  *
- * The authoritative block lists are generated from the canonical typed policy
- * (src/utils/commands/console-command-policy-rules.ts) by
- * scripts/generate-console-command-policy.ts into
- * console-command-policy.generated.ts (Task 22). This module no longer
- * hand-maintains duplicated rule arrays; it delegates to the shared generated
- * policy so TypeScript and native transports stay in lockstep.
+ * The authoritative rules live in the canonical typed policy
+ * (src/utils/commands/console-command-policy-rules.ts). This module no longer
+ * hand-maintains duplicated rule arrays; it evaluates that rule set through
+ * console-command-policy-generated.ts so TypeScript and native transports stay
+ * in lockstep. scripts/generate-console-command-policy.ts serializes the same
+ * rules into the native header (and a TypeScript mirror) for the C++ surface.
  *
  * Runtime behavior (blocked commands, tokens, separators, Python) is unchanged.
  */

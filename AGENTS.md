@@ -40,7 +40,7 @@ NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-
 - `src/gateway/` (manifest **data**, generated) vs `src/server/gateway/` (25-file request **routing engine**, incl. the idempotency ledger).
 - `src/server/mcp-primitives/` (MCP resources/prompts/completions/subscriptions **protocol primitives**) vs `src/resources/` (the resource **providers** those primitives read) vs `src/handlers/` (the 2-file resource request **handlers**).
 - `src/config.ts` (env Zod schema) vs `src/config/` (UE class aliases only).
-- `src/wasm/` is an **empty stub directory** (0 files, only an empty `pkg/`) and `src/tools/definitions/` holds only 2 shared files — neither is a source of truth.
+- `src/wasm/` no longer exists (the empty stub directory is gone); `src/tools/definitions/` holds only 2 shared files and is not a source of truth.
 - The experimental in-editor assistant panel (formerly shipped as a separate plugin subtree) was **removed from this tree** in `c5caab21` and is excluded from 0.5.30. It survives only on feature branches (`agent-guide`, `AgentPanel`). Do not document or import it as a shipping surface; external consumers that previously drove the editor through it must target the native `/mcp` or TypeScript stdio `unreal` gateway instead.
 
 ## WHERE TO LOOK
