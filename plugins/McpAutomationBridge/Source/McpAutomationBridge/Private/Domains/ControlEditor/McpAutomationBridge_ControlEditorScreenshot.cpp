@@ -108,8 +108,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   }
 
   FViewport* Viewport = nullptr;
+  FEditorViewportClient* CaptureClient = nullptr;
   if (GEditor->PlayWorld != nullptr && GEditor->GetPIEViewport() != nullptr) {
     Viewport = GEditor->GetPIEViewport();
+  }
+  if (!Viewport) {
+    // Resolve through the same helper the camera handlers use, so the viewport
+    // that gets moved is provably the viewport that gets photographed.
+    CaptureClient = GetActiveEditorViewportClientForMcp();
+    if (CaptureClient) {
+      Viewport = CaptureClient->Viewport;
+      CaptureClient->Invalidate();
+    }
   }
   if (!Viewport) {
     Viewport = GEditor->GetActiveViewport();
@@ -172,6 +182,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   if (bSaved) {
     Resp->SetStringField(TEXT("path"), FullPath);
     Resp->SetStringField(TEXT("screenshotPath"), FullPath);
+  }
+  // Ship the camera with the picture. Without it a caller cannot tell a correct
+  // frame from a frame taken somewhere else entirely, which is exactly how a
+  // camera handler that silently ignored its arguments stayed hidden.
+  if (CaptureClient) {
+    Resp->SetObjectField(TEXT("cameraLocation"),
+                         MakeVectorObjectForMcp(CaptureClient->GetViewLocation()));
+    Resp->SetObjectField(TEXT("cameraRotation"),
+                         MakeRotatorObjectForMcp(CaptureClient->GetViewRotation()));
   }
   AddScreenshotMetadataForMcp(Resp, Payload);
 
