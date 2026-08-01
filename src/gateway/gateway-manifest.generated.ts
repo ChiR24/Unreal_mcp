@@ -1103,7 +1103,6 @@ export const gatewayManifest = {
         "threshold",
         "tileSize",
         "time",
-        "timeoutMs",
         "tool",
         "transforms",
         "updateNormals",
@@ -1994,10 +1993,6 @@ export const gatewayManifest = {
           "time": {
             "type": "number",
             "description": "Time of day in hours (0-24)."
-          },
-          "timeoutMs": {
-            "type": "number",
-            "description": "Client-side request deadline in milliseconds."
           },
           "tool": {
             "type": "string",
@@ -6132,7 +6127,6 @@ export const gatewayManifest = {
         "text",
         "texturePath",
         "time",
-        "timeoutMs",
         "title",
         "toNodeId",
         "toPinName",
@@ -6803,10 +6797,6 @@ export const gatewayManifest = {
           "time": {
             "type": "number",
             "description": "Keyframe time."
-          },
-          "timeoutMs": {
-            "type": "number",
-            "description": "Request timeout in milliseconds."
           },
           "title": {
             "type": "string",
@@ -8232,7 +8222,6 @@ export const gatewayManifest = {
         "systemName",
         "systemPath",
         "targetNodeId",
-        "timeoutMs",
         "uniformSize",
         "value",
         "velocityMode"
@@ -8556,10 +8545,6 @@ export const gatewayManifest = {
           "targetNodeId": {
             "type": "string",
             "description": "Niagara graph node the dynamic input is attached to."
-          },
-          "timeoutMs": {
-            "type": "number",
-            "description": "Per-request timeout in milliseconds applied by the bridge dispatcher."
           },
           "uniformSize": {
             "type": "number",
@@ -10495,7 +10480,6 @@ export const gatewayManifest = {
         "sublevelPath",
         "targetPath",
         "template",
-        "timeoutMs",
         "useWorldPartition"
       ],
       "inputSchema": {
@@ -10636,10 +10620,6 @@ export const gatewayManifest = {
           "template": {
             "type": "string",
             "description": "Level template path accepted for compatibility; create_level dispatch does not apply it."
-          },
-          "timeoutMs": {
-            "type": "number",
-            "description": "Operation timeout in milliseconds."
           },
           "useWorldPartition": {
             "type": "boolean",
@@ -11622,7 +11602,6 @@ export const gatewayManifest = {
         "targetPlayerId",
         "teamIndex",
         "teamSize",
-        "timeoutMs",
         "travelOptions",
         "triggerType",
         "useOwnerNetRelevancy",
@@ -12094,10 +12073,6 @@ export const gatewayManifest = {
             "type": "number",
             "description": "teamSize"
           },
-          "timeoutMs": {
-            "type": "number",
-            "description": "timeoutMs"
-          },
           "travelOptions": {
             "type": "string",
             "description": "travelOptions"
@@ -12305,7 +12280,6 @@ export const gatewayManifest = {
         "targetNodeId",
         "targetPin",
         "texturePath",
-        "timeoutMs",
         "title",
         "x",
         "y"
@@ -12442,10 +12416,6 @@ export const gatewayManifest = {
           "texturePath": {
             "type": "string",
             "description": "Canonical /Game texture asset path."
-          },
-          "timeoutMs": {
-            "type": "number",
-            "description": "Client-side request deadline in milliseconds."
           },
           "title": {
             "type": "string",
@@ -12741,7 +12711,6 @@ export const gatewayManifest = {
         "temporalSampleCount",
         "time",
         "timeSeconds",
-        "timeoutMs",
         "to",
         "trackName",
         "trackNames",
@@ -13508,10 +13477,6 @@ export const gatewayManifest = {
           "timeSeconds": {
             "type": "number",
             "description": "Seek time in seconds (<=86400)."
-          },
-          "timeoutMs": {
-            "type": "number",
-            "description": "Render timeout in milliseconds (max 3600000)."
           },
           "to": {
             "type": "number",

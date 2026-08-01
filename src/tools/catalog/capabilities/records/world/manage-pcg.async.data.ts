@@ -25,7 +25,6 @@ export const PCG_ASYNC_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       graphPath: P.graphPath, actorName: P.actorName, componentName: P.componentName,
       componentPath: P.componentPath, createComponent: P.createComponent, force: P.force, save: P.save,
-      timeoutMs: P.timeoutMs,
     }, required: ['graphPath'], effect: 'write',
     behavior: { longRunning: true, safeToRetry: false }, costLatency: 'long-running', costResources: 'high',
     exampleInput: { action: 'execute_pcg_graph', graphPath: '/Game/PCG/PCG_MyGraph', createComponent: true, save: true },

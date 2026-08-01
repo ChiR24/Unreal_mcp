@@ -24,7 +24,7 @@ export const SPLINE_RECORDS: readonly CapabilityRecordSource[] = [
     id: 'build_environment.create_spline_actor', action: 'create_spline_actor', family: F,
     summary: 'Create a spline actor in the level.',
     whenToUse: WU, whenNotToUse: ['A static mesh path should be used instead.'],
-    inputProps: { initialPoints: P.initialPoints, timeoutMs: P.timeoutMs, action: P.action, name: P.name, location: P.location, rotation: P.rotation, points: P.points, bClosedLoop: P.bClosedLoop },
+    inputProps: { initialPoints: P.initialPoints, action: P.action, name: P.name, location: P.location, rotation: P.rotation, points: P.points, bClosedLoop: P.bClosedLoop },
     required: ['action'], effect: 'write', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'create_spline_actor', name: 'Spline_1', location: { x: 0, y: 0, z: 0 } },
     exampleOutput: { success: true, message: 'Spline actor created' },

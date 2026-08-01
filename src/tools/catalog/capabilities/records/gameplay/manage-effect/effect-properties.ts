@@ -95,5 +95,4 @@ export const E: PropertyMap = {
   density: num('Volumetric fog density.'),
   scattering: num('Volumetric fog scattering distribution.'),
   extinction: num('Volumetric fog extinction scale.'),
-  timeoutMs: num('Per-request timeout in milliseconds applied by the bridge dispatcher.'),
 };

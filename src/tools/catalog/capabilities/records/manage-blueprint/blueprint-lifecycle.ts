@@ -82,7 +82,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Read a property value from a Blueprint asset or its CDO.',
     whenToUse: ['A single property must be read from the Blueprint CDO.'],
     whenNotToUse: ['The entire Blueprint metadata is needed (use get_blueprint).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, propertyName: P.propertyName, timeoutMs: P.timeoutMs },
+    inputProps: { action: P.action, blueprintPath: P.blueprintPath, propertyName: P.propertyName },
     required: ['action', 'blueprintPath', 'propertyName'],
     outputProps: { propertyValue: P.propertyValue },
     outputRequired: ['propertyValue'],

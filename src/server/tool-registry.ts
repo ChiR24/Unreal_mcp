@@ -167,7 +167,13 @@ export class ToolRegistry {
             if (mcpRequestId) this.progressSinks.register(mcpRequestId, progress);
             // Closing before the response leaves is what guarantees no progress
             // frame can trail the terminal result for this request.
+            // Idempotent: the task-checkpoint path below may have to close the
+            // sink on a throw that happens BEFORE runGateway (and its own
+            // finally) is ever reached, and calling it twice must be harmless.
+            let progressEnded = false;
             const endProgress = (): void => {
+                if (progressEnded) return;
+                progressEnded = true;
                 progress.close();
                 if (mcpRequestId) this.progressSinks.unregister(mcpRequestId);
             };
@@ -263,11 +269,21 @@ export class ToolRegistry {
             // would have returned, so tasks/result and a plain tools/call can
             // never disagree about what the operation did.
             if (taskCreation !== undefined && extra.taskStore !== undefined) {
-                return await runTaskCheckpoint({
-                    taskStore: extra.taskStore,
-                    taskCreation,
-                    run: runGateway
-                });
+                try {
+                    return await runTaskCheckpoint({
+                        taskStore: extra.taskStore,
+                        taskCreation,
+                        run: runGateway
+                    });
+                } catch (error) {
+                    // createTask runs BEFORE `run`, so a capacity refusal throws
+                    // without runGateway (and its finally) ever executing. The
+                    // sink would then stay registered until evicted 256 requests
+                    // later. endProgress is idempotent, so the normal path where
+                    // runGateway already closed it is unaffected.
+                    endProgress();
+                    throw error;
+                }
             }
             return await runGateway();
         });

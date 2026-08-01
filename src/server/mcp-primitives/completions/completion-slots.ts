@@ -1,3 +1,4 @@
+import { HOST_PATH_PATTERN, SECRET_NAME_PATTERN, isTraversalPath } from '../../../utils/paths/content-path-policy.js';
 // src/server/mcp-primitives/completions/completion-slots.ts
 // Task 33: the closed registry of completable slots and the safety gate. A slot
 // ties one (ref, argument) pair to a bounded candidate pool kind; anything not
@@ -48,21 +49,11 @@ export function resolveSlot(ref: CompletionReference, argumentName: string): Com
 
 // --- Safety classification ---
 
-// Argument names that name a secret. Mirrors the Task 32 prompt secret guard.
-const SECRET_NAME_PATTERN =
-  /(token|secret|password|passwd|api[_-]?key|apikey|credential|private[_-]?key|privatekey|bearer|auth)/;
-
 // Argument names that gate a destructive action; a confirmation is typed by the
 // user, never auto-completed.
 const DESTRUCTIVE_NAME_PATTERN = /(confirm|force|overwrite|purge|wipe|destroy)/;
 
-// Values that look like a raw host filesystem path; completion stays inside UE
-// content roots and cached handles and never suggests a host path.
-const HOST_PATH_PATTERN = /^[a-zA-Z]:[\\/]|\\|^~|^\/(?:home|users|etc|var|root|tmp|bin|opt|usr)\b/i;
-
-function isTraversal(value: string): boolean {
-  return value.split(/[\\/]/u).includes('..');
-}
+const isTraversal = isTraversalPath;
 
 /**
  * Classify an argument name+value as unsafe to complete, or undefined when it is

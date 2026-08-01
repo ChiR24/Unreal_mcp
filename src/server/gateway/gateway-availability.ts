@@ -10,6 +10,7 @@
 
 import { dynamicToolManager } from '../../tools/dynamic/dynamic-tool-manager.js';
 import type { CapabilityRecord } from '../../tools/catalog/capabilities/model.js';
+import { compareAscii } from '../../utils/serialization/ordering.js';
 
 export type AvailabilityStatus = 'available' | 'disabled' | 'unavailable';
 
@@ -20,12 +21,6 @@ export type CapabilityAvailability = {
   readonly requiredPlugins: readonly string[];
   readonly editorStates: readonly string[];
 };
-
-function compareAscii(left: string, right: string): number {
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
-}
 
 function statusReasons(record: CapabilityRecord): readonly string[] {
   const reasons: string[] = [];

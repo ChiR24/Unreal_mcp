@@ -168,7 +168,6 @@ export const P = {
   channels: arr('Lighting channel indices (0, 1, or 2).', int('Lighting channel index.')),
   rotationRange: num('Random rotation range in degrees.'),
   useRandomOffset: bool('Apply a random offset to scattered meshes.'),
-  timeoutMs: num('Client-side request deadline in milliseconds.'),
   initialPoints: arr('Initial spline points (alias of points).', {
     type: 'object', description: 'Spline point with a world location.',
     properties: { location: vec3('Point location.') },

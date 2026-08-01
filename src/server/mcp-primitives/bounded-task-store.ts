@@ -57,9 +57,19 @@ export const TASK_STORE_DEFAULTS = {
   maxTtlMs: 30 * 60_000,
 } as const;
 
-/** Refused because the session is full of tasks that are still running. */
+/**
+ * Refused because the session is full of tasks that are still running.
+ *
+ * `code` must be a JSON-RPC integer: the SDK maps a thrown error with
+ * `Number.isSafeInteger(error.code)` onto the wire and otherwise substitutes
+ * InternalError, so the string code this used to carry turned an actionable
+ * capacity refusal into an opaque -32603. The string survives as `reason` for
+ * callers that switch on it.
+ */
 export class TaskStoreCapacityError extends Error {
-  readonly code = 'TASK_STORE_AT_CAPACITY';
+  /** JSON-RPC InvalidRequest: the request cannot be served in this state. */
+  readonly code = -32600;
+  readonly reason = 'TASK_STORE_AT_CAPACITY';
   constructor(limit: number) {
     super(
       `Task store is at its per-session capacity of ${limit} and every retained task is still running. ` +

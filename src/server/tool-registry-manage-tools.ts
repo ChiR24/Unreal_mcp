@@ -58,6 +58,20 @@ export function setClientProfileResolver(resolver: (sessionId: string) => Client
     clientProfileResolver = resolver;
 }
 
+/**
+ * Uninstall both Task 37 seams, restoring the pre-wiring defaults.
+ *
+ * These are module-level singletons with last-writer-wins setters, so a second
+ * wirePrimitives() silently took ownership of the first server's configure hook
+ * and profile resolver — and tearing a server down left both pointing at its
+ * disposed driver. `createServer` is public API and server-factory.test.ts
+ * already builds two in one process, so this is reachable today.
+ */
+export function resetManageToolsHooks(): void {
+    onConfigureVisibilityChanged = () => undefined;
+    clientProfileResolver = () => undefined;
+}
+
 // The uniform visibility surface both targets expose. The global manager already
 // satisfies it structurally (no session arg); the store is bound to a session id.
 interface ConfigureTarget {

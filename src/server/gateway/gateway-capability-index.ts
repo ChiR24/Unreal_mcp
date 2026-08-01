@@ -19,6 +19,7 @@ import {
   createCapabilitySearchIndex,
   type CapabilitySearchIndex
 } from '../../tools/catalog/capabilities/retrieval/scoring.js';
+import { compareAscii } from '../../utils/serialization/ordering.js';
 
 export type CapabilityIndex = {
   readonly records: readonly CapabilityRecord[];
@@ -33,12 +34,6 @@ export type CapabilityIndex = {
 
 export function legacyPairKey(tool: string, action: string): string {
   return `${tool}::${action}`;
-}
-
-function compareAscii(left: string, right: string): number {
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
 }
 
 function groupBy(

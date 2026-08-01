@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { stableJsonStringify } from '../hashing.js';
+import { stableJsonStringify, stripUndefined } from '../hashing.js';
 
 import { type CapabilityId, CapabilityIdSchema } from '../identifiers.js';
 import { type NextCall, NextCallSchema, type SemanticError, SemanticErrorSchema, type TaskStatus, TaskStatusSchema } from './errors.js';
@@ -41,17 +41,6 @@ export type ValidationEvidence = z.infer<typeof ValidationEvidenceSchema>;
 // object insertion order (used for hashing / equality / diffing across transports).
 // Undefined-valued optional fields are omitted so the shared capability serializer
 // (which rejects `undefined`) stays byte-stable across transports.
-function stripUndefined(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(stripUndefined);
-  if (value !== null && typeof value === 'object') {
-    const out: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(value)) {
-      if (entry !== undefined) out[key] = stripUndefined(entry);
-    }
-    return out;
-  }
-  return value;
-}
 
 // The `Receipt` type is derived directly from `ReceiptSchema` (with Readonly
 // composition for immutable fields) so the wire envelope can never drift from

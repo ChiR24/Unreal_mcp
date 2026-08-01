@@ -92,6 +92,23 @@ function stableStringify(value: unknown): string {
 }
 
 /**
+ * A replayed receipt is the FIRST call's, so its correlation ids describe that
+ * call and not this one. Returned unchanged, a client correlating on the
+ * envelope saw a mismatch indistinguishable from a bug. The envelope now names
+ * this call, `replayed` says why the nested receipt still names the original,
+ * and `replayedFrom` keeps the first call's id joinable. The recorded receipt
+ * itself is never rewritten — it is the evidence of the execution that ran.
+ */
+export function markReplayed(recorded: Receipt, correlationId: string): Receipt {
+  return {
+    ...recorded,
+    ...(typeof recorded.correlationId === 'string' ? { replayedFrom: recorded.correlationId } : {}),
+    replayed: true,
+    correlationId
+  };
+}
+
+/**
  * Run one dispatch under the ledger.
  *
  * `isCacheable` decides what may be replayed later. An error receipt is NOT
@@ -104,7 +121,8 @@ export async function runWithIdempotency(
   ledger: IdempotencyLedger,
   dispatch: () => Promise<Receipt>,
   isCacheable: (receipt: Receipt) => boolean,
-  conflict: (reason: ConflictReason) => Receipt
+  conflict: (reason: ConflictReason) => Receipt,
+  onReplay: (recorded: Receipt) => Receipt = (recorded) => recorded
 ): Promise<Receipt> {
   const key = request.idempotencyKey;
   if (key === undefined || key.length === 0) {
@@ -118,7 +136,7 @@ export async function runWithIdempotency(
   );
 
   if (outcome.kind === 'replay') {
-    return outcome.receipt;
+    return onReplay(outcome.receipt);
   }
   if (outcome.kind === 'in-flight') {
     return conflict('IN_FLIGHT');

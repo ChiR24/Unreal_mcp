@@ -33,10 +33,22 @@ export function capabilityNextCall(
   if (availability.status === 'unavailable') {
     return { operation: 'search', domain: record.discovery.domain };
   }
+  // `routing.dispatchAction` is the NATIVE dispatch verb, not an execute
+  // address: execute resolves a tool+action pair through `byLegacyPair`, which
+  // is built from `record.legacyIds`. Publishing the dispatch action produced a
+  // nextCall that either failed UNKNOWN_ACTION or - worse - resolved to a
+  // DIFFERENT capability, silently running the wrong action on replay.
+  //
+  // `capability` is the one selector guaranteed to resolve (`index.byId`), so it
+  // leads. The legacy pair is emitted only when the record actually declares
+  // one for this parent tool, which by construction is a key in `byLegacyPair`.
+  const legacy =
+    record.legacyIds.find((entry) => entry.tool === record.routing.parentTool)
+    ?? record.legacyIds[0];
   return {
     operation: 'execute',
-    tool: record.routing.parentTool,
-    action: record.routing.dispatchAction,
+    capability: record.id,
+    ...(legacy === undefined ? {} : { tool: legacy.tool, action: legacy.action }),
     params: {}
   };
 }
@@ -55,12 +67,37 @@ export function searchNextCall(
   return capabilityNextCall(record, availability);
 }
 
+// Supplied at the gateway level, never inside `params` - `execute` refuses a
+// params object carrying either (gateway-execute.ts: "params must not override
+// action or subAction"). The canonical records still declare `action` in their
+// input schema because that is the shape the parent tool validates against, so
+// the params-facing projection has to drop them here. Publishing them as
+// declared - and for 821 records as REQUIRED - made every schema-driven client
+// fill in a field that execute then rejected as INVALID_PARAMS.
+const GATEWAY_CONTROL_PARAMS: ReadonlySet<string> = new Set(['action', 'subAction']);
+
+/** The input schema as it applies to `params`, without the gateway-level controls. */
+export function paramsInputSchema(record: CapabilityRecord): Record<string, unknown> {
+  const input = record.schemas.input;
+  const properties: Record<string, unknown> = {};
+  for (const [name, schema] of Object.entries(input.properties)) {
+    if (!GATEWAY_CONTROL_PARAMS.has(name)) properties[name] = schema;
+  }
+  return {
+    ...input,
+    properties,
+    required: input.required.filter((name) => !GATEWAY_CONTROL_PARAMS.has(name))
+  };
+}
+
 export function declaredParameterNames(record: CapabilityRecord): readonly string[] {
-  return Object.keys(record.schemas.input.properties).sort();
+  return Object.keys(record.schemas.input.properties)
+    .filter((name) => !GATEWAY_CONTROL_PARAMS.has(name))
+    .sort();
 }
 
 function requiredSet(record: CapabilityRecord): ReadonlySet<string> {
-  return new Set(record.schemas.input.required);
+  return new Set(record.schemas.input.required.filter((name) => !GATEWAY_CONTROL_PARAMS.has(name)));
 }
 
 export function parameterSchema(
@@ -137,7 +174,7 @@ export function capabilityContract(record: CapabilityRecord): Record<string, unk
     aliases: record.aliases,
     legacyIds: record.legacyIds,
     perActionSchemas: true,
-    inputSchema: record.schemas.input,
+    inputSchema: paramsInputSchema(record),
     outputSchema: record.schemas.output,
     parameters,
     parameterCount: parameters.length,

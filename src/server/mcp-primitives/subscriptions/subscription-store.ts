@@ -14,6 +14,7 @@ import {
   DEFAULT_MAX_SUBSCRIPTIONS_PER_SESSION,
   type SubscriptionReleaseHook,
 } from './subscription-types.js';
+import { evictOldestUntilUnder } from '../../../utils/collections/bounded.js';
 
 /** Why a subscribe request was rejected without mutating any session state. */
 export type SubscribeRejectReason = 'NOT_SUBSCRIBABLE' | 'INVALID_SESSION';
@@ -68,13 +69,10 @@ export class SubscriptionStore {
       return { accepted: true, alreadySubscribed: true, evicted: null, reason: null };
     }
     let evicted: SubscribableUri | null = null;
-    if (set.size >= this.maxPerSession) {
-      evicted = set.values().next().value ?? null;
-      if (evicted !== null) {
-        set.delete(evicted);
-        this.release(sessionId, evicted);
-      }
-    }
+    evictOldestUntilUnder(set, this.maxPerSession, (uriEvicted) => {
+      evicted = uriEvicted;
+      this.release(sessionId, uriEvicted);
+    });
     set.add(uri);
     return { accepted: true, alreadySubscribed: false, evicted, reason: null };
   }

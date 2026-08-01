@@ -214,7 +214,6 @@ export const P = {
     type: 'object', description: 'UPCGSettings property key-value pairs applied by reflection.',
     additionalProperties: true, 'x-unreal-reflection-boundary': true,
   } as JsonObject,
-  timeoutMs: num('Client-side request deadline in milliseconds.'),
   // shared
   success: bool('Whether the action succeeded.'),
   message: str('Human-readable result message.'),

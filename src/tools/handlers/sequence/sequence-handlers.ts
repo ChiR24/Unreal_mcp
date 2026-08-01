@@ -1,4 +1,5 @@
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
+import { getGatewayTimeoutMs } from '../../../automation/gateway-timeout-context.js';
 import { executeAutomationRequest, normalizePathFields } from '../foundation/dispatch/common-handlers.js';
 import { handleSequenceAssetAction } from './sequence-asset-actions.js';
 import { handleSequenceCoreAction } from './sequence-core-actions.js';
@@ -67,7 +68,11 @@ export async function handleSequenceTools(action: string, args: Record<string, u
     payload.subAction = payload.action;
   }
   if (seqAction === 'start_render') {
-    const requestedTimeoutMs = payload.timeoutMs;
+    // start_render is the one action whose deadline Unreal itself enforces, so
+    // the value has to reach the payload. The gateway refuses `timeoutMs` in
+    // action params, which left `options.timeoutMs` as the only client route to
+    // it; taking it here is what keeps a client-set render deadline reachable.
+    const requestedTimeoutMs = payload.timeoutMs ?? getGatewayTimeoutMs();
     const validRequestedTimeout =
       typeof requestedTimeoutMs === 'number' &&
       Number.isFinite(requestedTimeoutMs) &&
@@ -76,8 +81,8 @@ export async function handleSequenceTools(action: string, args: Record<string, u
         ? requestedTimeoutMs
         : undefined;
     const renderTimeoutMs = validRequestedTimeout ?? DEFAULT_MRQ_TIMEOUT_MS;
-    if (requestedTimeoutMs === undefined) {
-      payload.timeoutMs = DEFAULT_MRQ_TIMEOUT_MS;
+    if (payload.timeoutMs === undefined) {
+      payload.timeoutMs = renderTimeoutMs;
     }
     return await executeAutomationRequest(tools, 'manage_sequence', payload, undefined, {
       timeoutMs: renderTimeoutMs + MRQ_TRANSPORT_GRACE_MS,

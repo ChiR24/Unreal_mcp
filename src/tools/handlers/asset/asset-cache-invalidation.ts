@@ -1,4 +1,5 @@
 import { sanitizePath } from '../../../utils/paths/path-security.js';
+import { mapContentAlias } from '../foundation/normalization/ue-path-normalization.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
 
@@ -84,7 +85,18 @@ export function listingNeutralAssetActions(): readonly string[] {
 function toContentPath(value: unknown): string | undefined {
   if (typeof value !== 'string' || value.trim().length === 0) return undefined;
   try {
-    return sanitizePath(value);
+    // Map the `/Content` alias FIRST, then let sanitizePath judge the result.
+    // `/Content/...` is a spelling the listing side accepts
+    // (AssetResources.normalizeDir maps it to `/Game`) and that a delete
+    // executes happily, but sanitizePath's root set has no `/Content`, so it
+    // threw, the catch swallowed it, and the mutation produced no invalidation
+    // key — leaving the deleted asset in the listing cache for the full TTL.
+    //
+    // Deliberately the alias mapping ONLY, not the root-anchoring normalizer:
+    // that one rewrites any unrooted string to `/Game/<value>`, which would turn
+    // `Sword.fbx` and other non-paths into invalidation keys instead of dropping
+    // them. Anything still unrooted after the alias map is not a content path.
+    return sanitizePath(mapContentAlias(value));
   } catch {
     return undefined;
   }

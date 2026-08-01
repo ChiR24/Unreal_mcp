@@ -1598,10 +1598,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Time of day in hours (0-24)."
         },
-        "timeoutMs": {
-          "type": "number",
-          "description": "Client-side request deadline in milliseconds."
-        },
         "tool": {
           "type": "string",
           "description": "Sculpt tool name (e.g. Raise, Lower, Smooth)."
@@ -5932,10 +5928,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Keyframe time."
         },
-        "timeoutMs": {
-          "type": "number",
-          "description": "Request timeout in milliseconds."
-        },
         "title": {
           "type": "string",
           "description": "Title text for a menu template."
@@ -7837,10 +7829,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Niagara graph node the dynamic input is attached to."
         },
-        "timeoutMs": {
-          "type": "number",
-          "description": "Per-request timeout in milliseconds applied by the bridge dispatcher."
-        },
         "uniformSize": {
           "type": "number",
           "description": "Uniform sprite size."
@@ -9566,10 +9554,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Level template path accepted for compatibility; create_level dispatch does not apply it."
         },
-        "timeoutMs": {
-          "type": "number",
-          "description": "Operation timeout in milliseconds."
-        },
         "useWorldPartition": {
           "type": "boolean",
           "description": "Create the level with World Partition enabled."
@@ -10737,10 +10721,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "teamSize"
         },
-        "timeoutMs": {
-          "type": "number",
-          "description": "timeoutMs"
-        },
         "travelOptions": {
           "type": "string",
           "description": "travelOptions"
@@ -11105,10 +11085,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "texturePath": {
           "type": "string",
           "description": "Canonical /Game texture asset path."
-        },
-        "timeoutMs": {
-          "type": "number",
-          "description": "Client-side request deadline in milliseconds."
         },
         "title": {
           "type": "string",
@@ -11965,10 +11941,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "timeSeconds": {
           "type": "number",
           "description": "Seek time in seconds (<=86400)."
-        },
-        "timeoutMs": {
-          "type": "number",
-          "description": "Render timeout in milliseconds (max 3600000)."
         },
         "to": {
           "type": "number",

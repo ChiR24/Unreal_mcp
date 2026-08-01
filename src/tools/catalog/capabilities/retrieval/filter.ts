@@ -1,6 +1,7 @@
 import type { CapabilityRecord } from '../model.js';
 import { compareUnrealVersion } from '../version.js';
 import type { CapabilityCategory, CapabilityRuntimeProfile } from './types.js';
+import { compareById } from '../../../../utils/serialization/ordering.js';
 
 export const PILOT_PARENT_CATEGORIES: Readonly<Record<string, CapabilityCategory>> =
   Object.freeze({
@@ -74,9 +75,5 @@ export function filterCapabilityRecords(
 ): readonly CapabilityRecord[] {
   return records
     .filter((record) => isCapabilityAvailable(record, profile))
-    .sort((left, right) => {
-      if (left.id < right.id) return -1;
-      if (left.id > right.id) return 1;
-      return 0;
-    });
+    .sort(compareById);
 }

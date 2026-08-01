@@ -8,6 +8,7 @@ import { LevelResources } from './resources/levels.js';
 import { ResourceRegistry } from './server/resource-registry.js';
 import { ToolRegistry } from './server/tool-registry.js';
 import fs from 'node:fs';
+import { parseDefaultCategories } from './server/tool-registry-client.js';
 
 type McpServer = ConstructorParameters<typeof ToolRegistry>[0];
 
@@ -82,6 +83,27 @@ export class ServerSetup {
       'UE_PROJECT_PATH is not set. Offline project settings fallback will be disabled.'
     );
     this.validateConfiguredPath('UE_ENGINE_PATH', enginePath);
+    this.warnOnInertCategoryFilter();
+  }
+
+  /**
+   * MCP_DEFAULT_CATEGORIES no longer narrows the exposed surface.
+   *
+   * The single-tool gateway advertises exactly one tool (`unreal`), so there is
+   * nothing left to filter by category — the listing path that consumed this
+   * setting was removed with the multi-tool surface. The variable is still
+   * schema-validated and still documented in .env.example, so an operator who
+   * sets it to narrow exposure would otherwise get the full surface with no
+   * indication their setting was ignored. Say so rather than fail silently.
+   */
+  private warnOnInertCategoryFilter(): void {
+    const configured = parseDefaultCategories();
+    if (configured.includes('all')) return;
+    this.logger.warn(
+      `MCP_DEFAULT_CATEGORIES is set to '${configured.join(',')}' but no longer restricts anything: `
+      + 'the gateway exposes a single `unreal` tool, and capability visibility is controlled at runtime '
+      + 'through `unreal {operation:"configure"}` instead.'
+    );
   }
 
   private validateConfiguredPath(envName: string, configuredPath: string | undefined, notSetMessage?: string): void {

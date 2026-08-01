@@ -150,43 +150,24 @@ export function validateInventoryData(input: unknown): NormalizationInventory {
     }
   }
 
+  // Compared field-by-field against one list instead of two hand-mirrored object
+  // literals. The mirrors had to be edited together to stay meaningful, and
+  // missing one silently dropped that metric from the check while the gate
+  // stayed green. Iterating also lets the error name the offending metric.
+  //
+  // Deliberately NOT METRICS_KEYS: that set also carries
+  // `actualCanonicalReductions`, which the mirrors did not compare, so reusing
+  // it would widen the check rather than preserve it.
   const recomputed = recomputeMetrics(occurrences, routeDispositions);
-  const expected = {
-    occurrenceCount: recomputed.occurrenceCount,
-    toolCount: recomputed.toolCount,
-    distinctActionNames: recomputed.distinctActionNames,
-    duplicateNames: recomputed.duplicateNames,
-    duplicateNameOccurrences: recomputed.duplicateNameOccurrences,
-    maxExactNameReductions: recomputed.maxExactNameReductions,
-    verbFamilyAddCreateSetConfigure: recomputed.verbFamilyAddCreateSetConfigure,
-    unclassifiedOccurrences: recomputed.unclassifiedOccurrences,
-    canonicalCollisions: recomputed.canonicalCollisions,
-    classificationCounts: recomputed.classificationCounts,
-    dispositionCounts: recomputed.dispositionCounts,
-    routeDispositionTotal: recomputed.routeDispositionTotal,
-    routeDispositionUnresolved: recomputed.routeDispositionUnresolved,
-    routeStatusCounts: recomputed.routeStatusCounts,
-    routeDispositionCounts: recomputed.routeDispositionCounts,
-  };
-  const actual = {
-    occurrenceCount: metricsRaw.occurrenceCount,
-    toolCount: metricsRaw.toolCount,
-    distinctActionNames: metricsRaw.distinctActionNames,
-    duplicateNames: metricsRaw.duplicateNames,
-    duplicateNameOccurrences: metricsRaw.duplicateNameOccurrences,
-    maxExactNameReductions: metricsRaw.maxExactNameReductions,
-    verbFamilyAddCreateSetConfigure: metricsRaw.verbFamilyAddCreateSetConfigure,
-    unclassifiedOccurrences: metricsRaw.unclassifiedOccurrences,
-    canonicalCollisions: metricsRaw.canonicalCollisions,
-    classificationCounts: metricsRaw.classificationCounts,
-    dispositionCounts: metricsRaw.dispositionCounts,
-    routeDispositionTotal: metricsRaw.routeDispositionTotal,
-    routeDispositionUnresolved: metricsRaw.routeDispositionUnresolved,
-    routeStatusCounts: metricsRaw.routeStatusCounts,
-    routeDispositionCounts: metricsRaw.routeDispositionCounts,
-  };
-  if (JSON.stringify(expected) !== JSON.stringify(actual)) {
-    throw new InventoryValidationError('metrics block is inconsistent with occurrences');
+  const compared = [...METRICS_KEYS].filter((key) => key !== 'actualCanonicalReductions');
+  const recomputedRecord = recomputed as unknown as Record<string, unknown>;
+  for (const key of compared) {
+    if (JSON.stringify(recomputedRecord[key]) !== JSON.stringify(metricsRaw[key])) {
+      throw new InventoryValidationError(
+        `metrics.${key} is inconsistent with occurrences `
+        + `(recomputed ${JSON.stringify(recomputedRecord[key])}, artifact ${JSON.stringify(metricsRaw[key])})`
+      );
+    }
   }
 
   return {

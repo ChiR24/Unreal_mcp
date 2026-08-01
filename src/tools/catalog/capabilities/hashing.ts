@@ -81,3 +81,37 @@ export function computeCapabilityHashes(source: unknown): CapabilityHashBundle {
 export function jsonValueIsDeepEqual(a: JsonValue, b: JsonValue): boolean {
   return stableJsonStringify(a) === stableJsonStringify(b);
 }
+
+/**
+ * Drop `undefined`-valued properties so a value can be handed to
+ * `stableJsonStringify`, which rejects `undefined` outright.
+ *
+ * Lives here beside the serializer it feeds, because the pair
+ * `stableJsonStringify(stripUndefined(x))` IS the project's canonical
+ * deterministic encoding — it was written out privately in the receipt envelope
+ * and again in the migration artifact, and the second copy had already dropped
+ * the number validation the first one relies on.
+ *
+ * Uses `defineProperty` for `__proto__`: `JSON.parse` creates that key as a real
+ * own property, and a plain assignment would hand it to `Object.prototype`'s
+ * setter, silently dropping the field and changing the hash.
+ */
+export function stripUndefined(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripUndefined);
+  if (value !== null && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      if (entry === undefined) continue;
+      const shaped = stripUndefined(entry);
+      if (key === '__proto__') {
+        Object.defineProperty(out, key, {
+          value: shaped, enumerable: true, writable: true, configurable: true,
+        });
+      } else {
+        out[key] = shaped;
+      }
+    }
+    return out;
+  }
+  return value;
+}

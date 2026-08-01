@@ -4,7 +4,7 @@ import { utilityRecord } from '../utility/helpers.js';
 const T = 'manage_networking' as const;
 const ENHANCED = ['EnhancedInput'] as const;
 const i = (action: string, summary: string, params: readonly string[], required: readonly string[], outputs: readonly string[] = [], outputRequired: readonly string[] = [], enhanced = true, effect: 'read' | 'write' | 'destructive' = 'write'): CapabilityRecordSource => utilityRecord({
-  tool: T, action, family: 'input', summary, params: [...params, 'timeoutMs'], required,
+  tool: T, action, family: 'input', summary, params, required,
   outputs, outputRequired, plugins: enhanced ? ENHANCED : [], effect,
   safeToRetry: effect === 'read', dispatchAction: 'manage_input',
 });

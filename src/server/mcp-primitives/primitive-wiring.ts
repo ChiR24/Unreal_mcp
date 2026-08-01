@@ -17,6 +17,7 @@ import { deriveClientCapabilityProfile } from '../tool-registry-client.js';
 import {
   STDIO_SESSION_ID,
   clearManageToolsSession,
+  resetManageToolsHooks,
   setClientProfileResolver,
   setConfigureVisibilityHook,
 } from '../tool-registry-manage-tools.js';
@@ -30,7 +31,7 @@ import {
   buildEnabledCapabilityProvider,
   buildPromptReferenceValidator,
 } from './primitive-sources.js';
-import { InMemoryRevisionProvider } from './resource-revision.js';
+import { sharedRevisionProvider } from './resource-revision.js';
 import { SessionCapabilityProfile } from './session-capability-profile.js';
 
 // The read-only resource + tools methods registered by ResourceRegistry and
@@ -58,13 +59,19 @@ export interface WiredPrimitives {
 }
 
 export function wirePrimitives(server: Server): WiredPrimitives {
-  const revisions = new InMemoryRevisionProvider();
+  // The SAME provider the resource readers stamp with (resource-registry.ts).
+  // Two independent instances cannot agree on what changed.
+  const revisions = sharedRevisionProvider();
+  const catalog = buildCatalogRevisionReader();
+  // Give the catalog URI a revision that actually advances. The stdio session is
+  // the one this server serves, and its configure target is the global manager.
+  revisions.bindCatalogRevision(() => catalog.getCatalogStateRevision(STDIO_SESSION_ID));
   const clientProfileStore = new ClientProfileStore();
   const enabledCapabilities = buildEnabledCapabilityProvider();
   const driver = new PrimitiveNotificationDriver({
     server,
     revisions,
-    catalog: buildCatalogRevisionReader(),
+    catalog,
   });
 
   const deriveProfile = (sessionId: string): SessionCapabilityProfile => {
@@ -126,6 +133,9 @@ export function wirePrimitives(server: Server): WiredPrimitives {
     driver.releaseSession(STDIO_SESSION_ID);
     clientProfileStore.clearSession(STDIO_SESSION_ID);
     clearManageToolsSession(STDIO_SESSION_ID);
+    // Uninstall the process-global seams this wiring installed. Leaving them
+    // bound kept a disposed driver reachable from any later configure call.
+    resetManageToolsHooks();
     driver.dispose();
   };
 

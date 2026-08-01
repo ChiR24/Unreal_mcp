@@ -12,7 +12,6 @@ import { getParentToolMetadata } from '../parent-metadata.js';
 import type {
   CapabilityAvailability,
   CapabilityBehaviorSource,
-  CapabilityPolicy,
   CapabilityRecordSource,
   CapabilityRouting,
   Draft202012ObjectSchema,
@@ -24,6 +23,7 @@ import {
   LegacyActionNameSchema,
   LegacyToolNameSchema,
 } from '../../index.js';
+import { policy } from '../shared/record-presets.js';
 
 const SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema';
 
@@ -95,7 +95,6 @@ export const P = {
   jobId: strProp('Render job identifier.'),
   renderJobName: strProp('Name for the render job.'),
   outputDirectory: strProp('Output directory for rendered frames.'),
-  timeoutMs: numProp('Render timeout in milliseconds (max 3600000).'),
   fileNameFormat: strProp('Output file name format string.'),
   mrqResolution: strProp('Output resolution in WIDTHxHEIGHT format, such as 1920x1080.'),
   width: intProp('Output width in pixels (positive; paired with height).'),
@@ -206,13 +205,6 @@ function behavior(
   };
 }
 
-function policy(effect: EffectType): CapabilityPolicy {
-  return {
-    requiredScope: effect,
-    consent: effect === 'destructive' ? 'explicit' : 'none',
-    dataAccess: effect === 'read' ? 'project-read' : 'project-write',
-  };
-}
 
 function cost(
   latency: 'instant' | 'interactive' | 'long-running',

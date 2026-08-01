@@ -2,41 +2,22 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 import { CapabilityAliasSchema, LegacyActionNameSchema, LegacyToolNameSchema } from '../identifiers.js';
+import { stableJsonStringify, stripUndefined } from '../hashing.js';
 import { migrationMap } from './migration-map.js';
 import { generateAliases } from './alias-generation.js';
 import type { MigrationEntry } from './types.js';
 
 /**
- * Deterministic, undefined-free JSON stringify for hashing. Mirrors the
- * capability hashing convention (sorted keys) but tolerates optional fields
- * that are absent (omitted rather than serialized as `null`/`undefined`).
+ * Deterministic, undefined-free JSON stringify for hashing.
+ *
+ * The canonical encoding: `stableJsonStringify` sorts keys and REFUSES NaN,
+ * Infinity, bigint and undefined; `stripUndefined` removes absent optional
+ * fields first. This module used to re-implement both, and its copy silently
+ * accepted the numbers the canonical one rejects — so the artifact could hash
+ * under looser rules than the records it describes.
  */
 function deterministicStringify(value: unknown): string {
-  return JSON.stringify(sortKeys(stripUndefined(value)));
-}
-
-function stripUndefined(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(stripUndefined);
-  if (value !== null && typeof value === 'object') {
-    const out: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-      if (val !== undefined) out[key] = stripUndefined(val);
-    }
-    return out;
-  }
-  return value;
-}
-
-function sortKeys(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sortKeys);
-  if (value !== null && typeof value === 'object') {
-    const out: Record<string, unknown> = {};
-    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
-      out[key] = sortKeys((value as Record<string, unknown>)[key]);
-    }
-    return out;
-  }
-  return value;
+  return stableJsonStringify(stripUndefined(value));
 }
 
 /**

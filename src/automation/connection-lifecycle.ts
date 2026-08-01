@@ -29,6 +29,8 @@ export class ConnectionLifecycle {
     private connectionLock = false;
     private connectionAttemptCleanup?: () => void;
     private connectionAttemptReject?: (reason: Error) => void;
+    /** Set by cleanup() so a synchronous settle is visible to the code that publishes the handle. */
+    private connectionAttemptSettled = false;
 
     constructor(private readonly deps: ConnectionLifecycleDependencies) { }
 
@@ -38,13 +40,26 @@ export class ConnectionLifecycle {
         }
 
         this.deps.log.info('Automation bridge not connected, attempting lazy connection...');
-        if (!this.connectionPromise && !this.connectionLock) {
+        let attempt = this.connectionPromise;
+        if (!attempt && !this.connectionLock) {
             this.connectionLock = true;
-            this.connectionPromise = this.createConnectionPromise();
+            this.connectionAttemptSettled = false;
+            attempt = this.createConnectionPromise();
+            // `cleanup()` can run SYNCHRONOUSLY inside the executor: the error
+            // listener is registered before `startClient()`, and a WebSocket
+            // constructor throw (malformed subprotocol, a token with a newline
+            // in a header) is re-emitted synchronously. cleanup() clears
+            // `connectionPromise`, so publishing the handle unconditionally here
+            // resurrected an already-rejected promise and pinned it for the
+            // process lifetime - every later ensureConnected() re-awaited the
+            // same dead rejection and never called startClient() again.
+            // Only publish a handle that is still in flight; the local `attempt`
+            // still carries the rejection to this caller either way.
+            if (!this.connectionAttemptSettled) this.connectionPromise = attempt;
         }
 
         try {
-            await this.waitForConnection();
+            await this.waitForConnection(attempt);
         } catch (error) {
             const message = getErrorMessage(error);
             if (message === 'Lazy connection timeout') {
@@ -90,6 +105,7 @@ export class ConnectionLifecycle {
                 this.deps.off('connected', onConnect);
                 this.deps.off('error', onError);
                 this.deps.off('handshakeFailed', onHandshakeFail);
+                this.connectionAttemptSettled = true;
                 this.connectionLock = false;
                 this.connectionPromise = undefined;
                 if (this.connectionAttemptCleanup === cleanup) {
@@ -112,14 +128,22 @@ export class ConnectionLifecycle {
         });
     }
 
-    private async waitForConnection(): Promise<void> {
+    private async waitForConnection(attempt: Promise<void> | undefined): Promise<void> {
+        // Awaiting the attempt handed in by the caller, not `this.connectionPromise`:
+        // the field can be cleared by a synchronous cleanup() before we get here,
+        // and `Promise.race([undefined, timeout])` resolves IMMEDIATELY - which
+        // would report a successful connection that never happened.
+        if (!attempt) {
+            throw new Error('No connection attempt in flight');
+        }
+
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
         const timeoutPromise = new Promise<never>((_, reject) => {
             timeoutId = setTimeout(() => reject(new Error('Lazy connection timeout')), this.deps.connectionTimeoutMs);
         });
 
         try {
-            await Promise.race([this.connectionPromise, timeoutPromise]);
+            await Promise.race([attempt, timeoutPromise]);
         } finally {
             if (timeoutId) clearTimeout(timeoutId);
         }

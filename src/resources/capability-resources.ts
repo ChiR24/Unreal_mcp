@@ -9,6 +9,7 @@
 
 import { getGatewayManifest } from '../gateway/gateway-manifest.js';
 import type { GatewayManifest } from '../gateway/gateway-manifest-types.js';
+import { capabilityIndex, legacyPairKey } from '../server/gateway/gateway-capability-index.js';
 import {
   type ResourceRevision,
   type RevisionProvider,
@@ -66,7 +67,13 @@ export class GatewayManifestCapabilitySource implements CapabilitySource {
   record(id: string): CapabilityRecordData | undefined {
     const tool = this.manifest.tools.find((candidate) => candidate.name === id);
     if (tool === undefined) {
-      return undefined;
+      // The template is `ue://capability/{capabilityId}` and completion offers
+      // canonical capability ids, but the manifest is keyed by PARENT TOOL name
+      // — so every one of the ~1.7k completion values resolved to NOT_FOUND
+      // while only the 23 tool names worked. Both id spaces are legitimate
+      // addresses for this resource, so fall back to the canonical registry
+      // rather than narrowing what completion may suggest.
+      return this.canonicalRecord(id);
     }
     const actions = tool.actions.slice(0, MAX_RECORD_ACTIONS);
     return {
@@ -76,6 +83,34 @@ export class GatewayManifestCapabilitySource implements CapabilitySource {
       parameterCount: tool.parameterNames.length,
       truncated: tool.actions.length > actions.length,
       actions,
+    };
+  }
+
+  /**
+   * One canonical capability addressed by its canonical id. A capability is a
+   * single action, so `actionCount` is 1 and `actions` names the dispatch verb.
+   * Stays bounded like the parent-tool record: identifiers and action names
+   * only, never an input schema body.
+   */
+  private canonicalRecord(id: string): CapabilityRecordData | undefined {
+    const index = capabilityIndex();
+    // Every address the completion pool can emit: the canonical id, a declared
+    // alias, and the dot-joined legacy `tool.action` pair. Resolving only the
+    // canonical id would still leave the alias and legacy suggestions dead.
+    const dot = id.indexOf('.');
+    const record = index.byId.get(id)
+      ?? index.byAlias.get(id)
+      ?? (dot > 0 ? index.byLegacyPair.get(legacyPairKey(id.slice(0, dot), id.slice(dot + 1))) : undefined);
+    if (record === undefined) {
+      return undefined;
+    }
+    return {
+      id: record.id,
+      category: record.parent.category ?? null,
+      actionCount: 1,
+      parameterCount: Object.keys(record.schemas.input.properties).length,
+      truncated: false,
+      actions: [record.routing.dispatchAction],
     };
   }
 }

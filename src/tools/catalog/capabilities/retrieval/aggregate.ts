@@ -14,6 +14,7 @@ import { MANAGE_LEVEL_RECORDS } from '../records/manage-level/index.js';
 import { MANAGE_SEQUENCE_RECORDS } from '../records/manage-sequence/index.js';
 import { MANAGE_TOOLS_RECORDS } from '../records/manage-tools/index.js';
 import { SYSTEM_CONTROL_RECORDS } from '../records/system-control/index.js';
+import { compareById as compareCanonicalIds } from '../../../../utils/serialization/ordering.js';
 
 export const PILOT_CAPABILITY_RECORD_COUNT = 493 as const;
 export const CORE_CAPABILITY_RECORD_COUNT = 470 as const;
@@ -103,12 +104,6 @@ export function createCoreCapabilityCatalog(
   return Object.freeze(
     [...createCoreCapabilitySourceView(sources)].sort(compareCanonicalIds),
   );
-}
-
-function compareCanonicalIds(left: CapabilityRecord, right: CapabilityRecord): number {
-  if (left.id < right.id) return -1;
-  if (left.id > right.id) return 1;
-  return 0;
 }
 
 export function createPilotCapabilityCatalog(

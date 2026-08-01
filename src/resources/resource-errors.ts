@@ -1,3 +1,12 @@
+import {
+  HOST_PATH_PATTERN,
+  MAX_BOUNDED_BYTES,
+  UE_CONTENT_ROOTS,
+  isTraversalPath,
+  isUnderContentRoot,
+  utf8ByteLength,
+} from '../utils/paths/content-path-policy.js';
+
 // src/resources/resource-errors.ts
 // Task 31: typed errors, byte budget, path guards, and redaction shared by the
 // version-aware read-only resource providers. Every failure path (traversal,
@@ -30,11 +39,11 @@ export class ResourceError extends Error {
 }
 
 /** Maximum serialized byte size for a single bounded resource read (64 KiB). */
-export const MAX_RESOURCE_BYTES = 65536;
+export const MAX_RESOURCE_BYTES = MAX_BOUNDED_BYTES;
 
 /** Reject a serialized payload that exceeds the bounded read budget. */
 export function enforceByteBudget(uri: string, text: string): void {
-  const bytes = Buffer.byteLength(text, 'utf8');
+  const bytes = utf8ByteLength(text);
   if (bytes > MAX_RESOURCE_BYTES) {
     throw new ResourceError(
       RESOURCE_ERROR_CODES.TOO_LARGE,
@@ -44,10 +53,11 @@ export function enforceByteBudget(uri: string, text: string): void {
   }
 }
 
-/** UE content mount roots a normalized object/asset handle may reference. */
-export const UE_CONTENT_ROOTS = ['/Game', '/Engine', '/Script', '/Temp', '/Niagara'] as const;
-
-const HOST_PATH_PATTERN = /^[a-zA-Z]:[\\/]|\\|^~|^\/(?:home|users|etc|var|root|tmp)\b/iu;
+// Re-exported: callers already import UE_CONTENT_ROOTS from this module, and the
+// list itself now lives in the shared content-path policy alongside the
+// host-path pattern and the root predicate, so the resource, prompt and
+// completion surfaces cannot drift apart again.
+export { UE_CONTENT_ROOTS };
 
 /**
  * Decode and normalize a template path parameter into a safe UE content handle.
@@ -80,17 +90,14 @@ export function normalizeContentPath(uri: string, rawPath: string): string {
   if (!normalized.startsWith('/')) {
     normalized = '/' + normalized;
   }
-  if (normalized.split('/').includes('..')) {
+  if (isTraversalPath(normalized)) {
     throw new ResourceError(RESOURCE_ERROR_CODES.TRAVERSAL, uri, 'Path traversal segments are not permitted');
   }
   if (normalized.length > 1) {
     normalized = normalized.replace(/\/$/u, '');
   }
 
-  const underRoot = UE_CONTENT_ROOTS.some(
-    (root) => normalized === root || normalized.startsWith(`${root}/`),
-  );
-  if (!underRoot) {
+  if (!isUnderContentRoot(normalized)) {
     throw new ResourceError(
       RESOURCE_ERROR_CODES.INVALID_URI,
       uri,

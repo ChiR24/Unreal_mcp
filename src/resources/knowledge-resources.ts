@@ -42,6 +42,14 @@ interface KnowledgeEntry {
   readonly references: readonly string[];
 }
 
+/**
+ * The knowledge topics that actually resolve. Exported so the completion source
+ * derives its suggestions from this table instead of restating them: the two
+ * lists had drifted to ZERO overlap, so every suggested topic answered
+ * RESOURCE_NOT_FOUND. Deriving makes that divergence unrepresentable.
+ */
+export const knowledgeTopics = (): readonly string[] => Object.keys(KNOWLEDGE).sort();
+
 const KNOWLEDGE: Readonly<Record<string, KnowledgeEntry>> = {
   paths: {
     title: 'Content Paths',

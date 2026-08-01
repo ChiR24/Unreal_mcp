@@ -1,3 +1,13 @@
+import {
+  HOST_PATH_PATTERN,
+  MAX_BOUNDED_BYTES,
+  SECRET_NAME_PATTERN,
+  UE_CONTENT_ROOTS,
+  isTraversalPath,
+  isUnderContentRoot,
+  utf8ByteLength,
+} from '../../../utils/paths/content-path-policy.js';
+
 // src/server/mcp-primitives/prompts/prompt-errors.ts
 // Task 32: typed prompt errors, the byte/length budgets, the secret guard, and
 // strict per-kind argument validation shared by the prompt catalog. Every
@@ -35,23 +45,19 @@ export class PromptError extends Error {
 }
 
 /** Maximum serialized byte size for a single rendered prompt body (64 KiB). */
-export const MAX_PROMPT_BYTES = 65536;
+export const MAX_PROMPT_BYTES = MAX_BOUNDED_BYTES;
 
 /** Maximum length of a single interpolated argument value. */
 export const MAX_ARGUMENT_LENGTH = 512;
 
-/** UE content mount roots a content/object path argument may reference. */
-export const PROMPT_CONTENT_ROOTS = ['/Game', '/Engine', '/Script', '/Temp', '/Niagara'] as const;
-
-// Argument names that name a secret. Compared against the lower-cased name.
-const SECRET_NAME_PATTERN =
-  /(token|secret|password|passwd|api[_-]?key|apikey|credential|private[_-]?key|privatekey|bearer|auth)/;
+// The content roots and the secret-name vocabulary now live in the shared
+// content-path policy; re-exported here because callers import the prompt name.
+export { UE_CONTENT_ROOTS as PROMPT_CONTENT_ROOTS };
 
 // Values that look like a credential: PEM blocks, bearer tokens, JWTs, long hex.
 const SECRET_VALUE_PATTERN =
   /-----BEGIN|\bBearer\s+\S{8,}|\beyJ[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}|\b[A-Fa-f0-9]{40,}\b/;
 
-const HOST_PATH_PATTERN = /^[a-zA-Z]:[\\/]|\\|^~|^\/(?:home|users|etc|var|root|tmp)\b/i;
 const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const ENGINE_VERSION_PATTERN = /^\d+\.\d+$/;
 
@@ -97,15 +103,14 @@ function assertContentPath(promptName: string, argName: string, value: string): 
   if (HOST_PATH_PATTERN.test(value)) {
     throw new PromptError(PROMPT_ERROR_CODES.INVALID_ARGUMENT, promptName, `Argument "${argName}" is a host filesystem path`);
   }
-  if (value.split('/').includes('..')) {
+  if (isTraversalPath(value)) {
     throw new PromptError(PROMPT_ERROR_CODES.INVALID_ARGUMENT, promptName, `Argument "${argName}" contains path traversal`);
   }
-  const underRoot = PROMPT_CONTENT_ROOTS.some((root) => value === root || value.startsWith(`${root}/`));
-  if (!underRoot) {
+  if (!isUnderContentRoot(value)) {
     throw new PromptError(
       PROMPT_ERROR_CODES.INVALID_ARGUMENT,
       promptName,
-      `Argument "${argName}" must resolve under a UE content root (${PROMPT_CONTENT_ROOTS.join(', ')})`,
+      `Argument "${argName}" must resolve under a UE content root (${UE_CONTENT_ROOTS.join(', ')})`,
     );
   }
 }
@@ -165,7 +170,7 @@ export function validateArgumentValue(promptName: string, spec: PromptArgumentSp
 
 /** Reject a rendered prompt body that exceeds the bounded byte budget. */
 export function enforcePromptByteBudget(promptName: string, text: string): void {
-  const bytes = Buffer.byteLength(text, 'utf8');
+  const bytes = utf8ByteLength(text);
   if (bytes > MAX_PROMPT_BYTES) {
     throw new PromptError(
       PROMPT_ERROR_CODES.TOO_LARGE,

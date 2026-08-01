@@ -8,6 +8,7 @@
 // this into the provider; the pure provider unit tests use their own fixtures.
 
 import { ACTOR_CLASS_ALIASES } from '../../../config/class-aliases.js';
+import { knowledgeTopics } from '../../../resources/knowledge-resources.js';
 import { capabilityIndex } from '../../gateway/gateway-capability-index.js';
 import type {
   CandidateKind,
@@ -20,7 +21,24 @@ import type {
 // each template/prompt variable, not a live editor read: the supported UE range,
 // the closed knowledge-topic set, and the Task 32 workflow import/output formats.
 const ENGINE_VERSIONS = ['5.0', '5.1', '5.2', '5.3', '5.4', '5.5', '5.6', '5.7', '5.8'] as const;
-const KNOWLEDGE_TOPICS = ['overview', 'assets', 'actors', 'blueprints', 'levels', 'sequencer', 'niagara', 'physics'] as const;
+// The knowledge topics that actually resolve. Spelled out literally because the
+// cross-surface parity gate compares this source against the native provider's
+// list as TEXT, and native cannot import the table. The assertion below is what
+// makes the duplication safe: it fails at load if this list and the table the
+// reader keys on ever diverge again — they had drifted to ZERO overlap, so every
+// suggested topic answered RESOURCE_NOT_FOUND.
+const KNOWLEDGE_TOPICS = ['gateway', 'paths', 'resources', 'safety', 'transports'] as const;
+
+const servedTopics = knowledgeTopics();
+if (
+  KNOWLEDGE_TOPICS.length !== servedTopics.length
+  || KNOWLEDGE_TOPICS.some((topic, index) => topic !== servedTopics[index])
+) {
+  throw new Error(
+    `Completion knowledge topics [${KNOWLEDGE_TOPICS.join(', ')}] do not match the served `
+    + `knowledge table [${servedTopics.join(', ')}]. Update both, or every completion 404s.`
+  );
+}
 const ASSET_IMPORT_FORMATS = ['fbx', 'obj', 'gltf', 'png', 'wav'] as const;
 const SEQUENCE_OUTPUT_FORMATS = ['png', 'jpeg', 'exr', 'custom'] as const;
 
@@ -61,6 +79,15 @@ function buildCapabilityPool(): readonly CompletionCandidate[] {
  * Safe cached project handles: the friendly class-alias keys (PointLight,
  * StaticMeshActor, ...). Bounded, in-memory, sorted; never a raw filesystem
  * path and never a live editor scan.
+ *
+ * KNOWN GAP (deliberately not fixed here): both slots this pool feeds —
+ * `ue://object/{objectPath}` and `ue://asset/{assetPath}` — require a path under
+ * a UE mount root, so a bare class name normalizes to `/PointLight` and is
+ * refused RESOURCE_INVALID_URI. Emitting the alias TARGET paths
+ * (`/Script/Engine.PointLight`) would resolve, but `completion-sources.test.ts`
+ * asserts as a safety rule that a project handle never starts with `/` and never
+ * contains `/Script/`. Reconciling the two is a product decision about what a
+ * "project handle" is, not a mechanical fix.
  */
 function buildProjectHandlePool(): readonly CompletionCandidate[] {
   return Object.keys(ACTOR_CLASS_ALIASES)

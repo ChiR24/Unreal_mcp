@@ -17,12 +17,7 @@ import type {
   CapabilityRetriever,
   CapabilitySelection,
 } from './types.js';
-
-function compareAscii(left: string, right: string): number {
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
-}
+import { compareAscii } from '../../../../utils/serialization/ordering.js';
 
 function toMatch(ranked: RankedCapability): CapabilityRetrievalMatch {
   const record = ranked.record;

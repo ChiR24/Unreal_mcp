@@ -158,5 +158,17 @@ export function selectCandidates(filters: SearchFilters): readonly CapabilityRec
   }
   const candidates = capabilityIndex().records.filter((record) => matchesFilters(record, filters));
   if (filters.action === undefined) return candidates;
-  return candidates.filter((record) => record.routing.dispatchAction === filters.action);
+  // Match the action against BOTH id spaces a caller can legitimately mean: the
+  // native dispatch verb and the legacy `tool::action` verbs the record declares.
+  // Matching only `routing.dispatchAction` made the same argument mean different
+  // things depending on whether `tool` was also supplied — `search {action:
+  // 'find_by_tag'}` returned one capability while `search {tool:'manage_asset',
+  // action:'find_by_tag'}` returned a different one, and the other two records
+  // carrying that legacy action were silently omitted with no error.
+  const action = filters.action;
+  return candidates.filter(
+    (record) =>
+      record.routing.dispatchAction === action
+      || record.legacyIds.some((legacy) => legacy.action === action)
+  );
 }

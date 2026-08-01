@@ -58,6 +58,8 @@ export type ExecuteFailure = {
   readonly migratedFrom?: { readonly tool: string; readonly action: string };
   /** Whatever Unreal actually reported, preserved verbatim beside the typed error. */
   readonly detail?: unknown;
+  /** Set when `detail` was withheld for size, so "no detail" reads apart from "detail dropped". */
+  readonly detailOmitted?: boolean;
   readonly resultChars?: number;
   /** Present only on a STALE_STATE refusal from the pre-dispatch policy seam. */
   readonly currentRevision?: string;
@@ -66,100 +68,117 @@ export type ExecuteFailure = {
   readonly grantedScopes?: readonly string[];
 };
 
-const OPTION_CODES = new Set(['UNSUPPORTED_OPTION']);
-const RANGE_CODES = new Set(['OUT_OF_RANGE']);
-const DISPATCH_CODES = new Set(['NOT_CONNECTED', 'ROUTING_ERROR', 'DISPATCH_ERROR']);
-const CAPABILITY_DISABLED_CODES = new Set(['TOOL_DISABLED', 'CAPABILITY_DISABLED']);
-const CAPABILITY_UNAVAILABLE_CODES = new Set(['CAPABILITY_REMOVED', 'CAPABILITY_UNAVAILABLE']);
-const CONFLICT_CODES = new Set(['FORM_CONFLICT', 'ALIAS_CONFLICT']);
-const OUTPUT_VIOLATION_CODES = new Set(['OUTPUT_SCHEMA_VIOLATION']);
-const OUTPUT_SIZE_CODES = new Set(['RESULT_TOO_LARGE']);
-const UNREAL_CODES = new Set(['UNREAL_EXECUTION_ERROR']);
+// Reported when a producer omits a field the receipt schema requires. An
+// explicit marker beats a plausible-looking default: the schema demands a
+// non-empty string, and substituting a real-looking value (a catalog digest, an
+// 'admin' scope) makes an unreported field indistinguishable from a stated one.
+const UNREPORTED_REVISION = 'unreported';
+const UNREPORTED_SCOPE = 'unreported';
 
-// Map one gateway error code onto the typed semantic error algebra. The mapping
-// is additive: output-contract failures, disabled/missing capabilities, stale
-// revisions, conflicts and dispatch/routing each classify to their own plan
-// kind, and anything unmatched stays a validation error (the legacy default).
+// Map one gateway error code onto the typed semantic error algebra.
+//
+// One switch, not nine module-level Sets behind a thirteen-branch if-chain:
+// five of those Sets held a single string, four codes were matched with `===`
+// instead, and a reader had to check both mechanisms to know whether a code was
+// handled. Grouped case labels keep the multi-code classes explicit, and the
+// codes now sit next to the branch that consumes them rather than 80 lines away.
+//
+// The mapping is additive: output-contract failures, disabled/missing
+// capabilities, stale revisions, conflicts and dispatch/routing each classify to
+// their own plan kind, and anything unmatched stays a validation error.
 export function toSemanticError(failure: ExecuteFailure): SemanticError {
   const { errorCode, message } = failure;
-  if (errorCode === 'STALE_STATE') {
-    return {
-      kind: 'staleState',
-      code: 'STALE_STATE',
-      message,
-      currentRevision: failure.currentRevision ?? catalogRevision(),
-      expectedRevision: failure.expectedRevision ?? catalogRevision()
-    };
+  switch (errorCode) {
+    case 'STALE_STATE':
+      return {
+        kind: 'staleState',
+        code: 'STALE_STATE',
+        message,
+        // An explicit sentinel, never `catalogRevision()`. The plugin owns the
+        // live-state comparison and may report STALE_STATE without the pair; the
+        // old fallback substituted the CATALOG content digest for both, so the
+        // receipt claimed current === expected on a refusal whose whole point is
+        // that they differ, and mixed a catalog digest into a live-state error.
+        // The schema requires both fields, so they are marked unreported rather
+        // than omitted.
+        currentRevision: failure.currentRevision ?? UNREPORTED_REVISION,
+        expectedRevision: failure.expectedRevision ?? UNREPORTED_REVISION
+      };
+    // UNSUPPORTED_PREVIEW is an option refusal too: checkPreviewSupport emits it
+    // with `option: 'preview'`. It was absent from the classification, so it
+    // fell through to the trailing `validation` default, its `option` field was
+    // dropped, and the client saw a generic VALIDATION_ERROR for a refusal that
+    // names exactly which option is unsupported.
+    case 'UNSUPPORTED_OPTION':
+    case 'UNSUPPORTED_PREVIEW':
+      return {
+        kind: 'option',
+        code: 'UNSUPPORTED_OPTION',
+        option: failure.option ?? '',
+        supported: [...EXECUTION_OPTION_KEYS],
+        message
+      };
+    case 'OUT_OF_RANGE':
+      return { kind: 'range', code: 'OUT_OF_RANGE', field: failure.field ?? failure.pointer ?? '', message };
+    case 'NOT_CONNECTED':
+    case 'ROUTING_ERROR':
+    case 'DISPATCH_ERROR':
+      return {
+        kind: 'dispatch',
+        code: errorCode === 'NOT_CONNECTED' ? 'NOT_CONNECTED' : 'DISPATCH_ERROR',
+        message,
+        retryable: true
+      };
+    case 'TOOL_DISABLED':
+    case 'CAPABILITY_DISABLED':
+      return { kind: 'capability', code: 'CAPABILITY_DISABLED', message, retryable: false };
+    case 'CAPABILITY_REMOVED':
+    case 'CAPABILITY_UNAVAILABLE':
+      return { kind: 'capability', code: 'CAPABILITY_UNAVAILABLE', message, retryable: false };
+    case IDEMPOTENCY_CONFLICT_CODE:
+      return { kind: 'conflict', code: IDEMPOTENCY_CONFLICT_CODE, message };
+    case 'FORM_CONFLICT':
+    case 'ALIAS_CONFLICT':
+      return { kind: 'conflict', code: 'STATE_CONFLICT', message };
+    case 'OUTPUT_SCHEMA_VIOLATION':
+      return {
+        kind: 'output',
+        code: 'OUTPUT_SCHEMA_VIOLATION',
+        message,
+        ...(failure.pointer === undefined ? {} : { pointer: failure.pointer })
+      };
+    case 'RESULT_TOO_LARGE':
+      return {
+        kind: 'output',
+        code: 'RESULT_TOO_LARGE',
+        message,
+        ...(failure.resultChars === undefined ? {} : { resultChars: failure.resultChars })
+      };
+    case 'UNREAL_EXECUTION_ERROR':
+      return { kind: 'execution', code: 'UNREAL_ENGINE_ERROR', message, retryable: false };
+    case 'SCOPE_NOT_GRANTED':
+      return {
+        kind: 'authorization',
+        code: 'SCOPE_NOT_GRANTED',
+        message,
+        // Sentinel, not an invented 'admin'. Claiming a scope the producer
+        // never stated tells the caller to obtain a grant that may not be the
+        // one actually required.
+        requiredScope: failure.requiredScope ?? UNREPORTED_SCOPE,
+        grantedScopes: failure.grantedScopes ?? []
+      };
+    case 'CONSENT_REQUIRED':
+      // Sentinel, not an invented 'destructive': the consent strength a caller
+      // must acknowledge is the producer's to state.
+      return { kind: 'consent', code: 'CONSENT_REQUIRED', message, scope: failure.requiredScope ?? UNREPORTED_SCOPE };
+    default:
+      return {
+        kind: 'validation',
+        code: 'VALIDATION_ERROR',
+        message,
+        ...(failure.pointer === undefined ? {} : { pointer: failure.pointer })
+      };
   }
-  if (OPTION_CODES.has(errorCode)) {
-    return {
-      kind: 'option',
-      code: 'UNSUPPORTED_OPTION',
-      option: failure.option ?? '',
-      supported: [...EXECUTION_OPTION_KEYS],
-      message
-    };
-  }
-  if (RANGE_CODES.has(errorCode)) {
-    return { kind: 'range', code: 'OUT_OF_RANGE', field: failure.field ?? failure.pointer ?? '', message };
-  }
-  if (DISPATCH_CODES.has(errorCode)) {
-    return {
-      kind: 'dispatch',
-      code: errorCode === 'NOT_CONNECTED' ? 'NOT_CONNECTED' : 'DISPATCH_ERROR',
-      message,
-      retryable: true
-    };
-  }
-  if (CAPABILITY_DISABLED_CODES.has(errorCode)) {
-    return { kind: 'capability', code: 'CAPABILITY_DISABLED', message, retryable: false };
-  }
-  if (CAPABILITY_UNAVAILABLE_CODES.has(errorCode)) {
-    return { kind: 'capability', code: 'CAPABILITY_UNAVAILABLE', message, retryable: false };
-  }
-  if (errorCode === IDEMPOTENCY_CONFLICT_CODE) {
-    return { kind: 'conflict', code: IDEMPOTENCY_CONFLICT_CODE, message };
-  }
-  if (CONFLICT_CODES.has(errorCode)) {
-    return { kind: 'conflict', code: 'STATE_CONFLICT', message };
-  }
-  if (OUTPUT_VIOLATION_CODES.has(errorCode)) {
-    return {
-      kind: 'output',
-      code: 'OUTPUT_SCHEMA_VIOLATION',
-      message,
-      ...(failure.pointer === undefined ? {} : { pointer: failure.pointer })
-    };
-  }
-  if (OUTPUT_SIZE_CODES.has(errorCode)) {
-    return {
-      kind: 'output',
-      code: 'RESULT_TOO_LARGE',
-      message,
-      ...(failure.resultChars === undefined ? {} : { resultChars: failure.resultChars })
-    };
-  }
-  if (UNREAL_CODES.has(errorCode)) {
-    return { kind: 'execution', code: 'UNREAL_ENGINE_ERROR', message, retryable: false };
-  }
-  if (errorCode === 'SCOPE_NOT_GRANTED') {
-    return {
-      kind: 'authorization',
-      code: 'SCOPE_NOT_GRANTED',
-      message,
-      requiredScope: failure.requiredScope ?? 'admin',
-      grantedScopes: failure.grantedScopes ?? []
-    };
-  }
-  if (errorCode === 'CONSENT_REQUIRED') {
-    return { kind: 'consent', code: 'CONSENT_REQUIRED', message, scope: failure.requiredScope ?? 'destructive' };
-  }
-  return {
-    kind: 'validation',
-    code: 'VALIDATION_ERROR',
-    message,
-    ...(failure.pointer === undefined ? {} : { pointer: failure.pointer })
-  };
 }
 
 // The legacy `tool`/`action` echo is part of the guided-error contract both
@@ -236,6 +255,7 @@ export function executeErrorEnvelope(
     allowedParameters: failure.allowedParameters,
     pointer: failure.pointer,
     resultChars: failure.resultChars,
+    detailOmitted: failure.detailOmitted,
     liveRevisions,
     result: maskSecretsDeep(failure.detail),
     receipt

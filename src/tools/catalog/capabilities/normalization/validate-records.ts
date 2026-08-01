@@ -20,15 +20,10 @@ import {
   type RouteDispositionStatus,
   type RouteStatus,
 } from './types.js';
+export { compareAscii as compareKeys } from '../../../../utils/serialization/ordering.js';
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export function compareKeys(a: string, b: string): number {
-  if (a < b) return -1;
-  if (a > b) return 1;
-  return 0;
 }
 
 const EVIDENCE_KEYS = new Set(['source', 'symbol', 'tool', 'citations']);

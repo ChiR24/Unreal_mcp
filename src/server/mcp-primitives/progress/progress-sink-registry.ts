@@ -14,6 +14,7 @@
 // transport or resurrecting a closed reporter.
 
 import type { ProgressReporter, ProgressUpdate } from './progress-reporter.js';
+import { evictOldestUntilUnder } from '../../../utils/collections/bounded.js';
 
 /** Maximum concurrently tracked in-flight requests. */
 export const MAX_TRACKED_PROGRESS_REQUESTS = 256;
@@ -36,11 +37,7 @@ export class ProgressSinkRegistry {
     this.sinks.delete(mcpRequestId);
     // Map iteration is insertion-ordered, so the first key is the oldest
     // tracked request and eviction is deterministic rather than arbitrary.
-    while (this.sinks.size >= this.max) {
-      const oldest = this.sinks.keys().next();
-      if (oldest.done === true) break;
-      this.sinks.delete(oldest.value);
-    }
+    evictOldestUntilUnder(this.sinks, this.max);
     this.sinks.set(mcpRequestId, reporter);
   }
 

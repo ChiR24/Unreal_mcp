@@ -42,6 +42,7 @@ import {
   type Role,
   VERB_FAMILY,
 } from './types.js';
+import { compareAscii as compareKeys } from '../../../../utils/serialization/ordering.js';
 
 export class InventoryBuildError extends Error {
   constructor(message: string) {
@@ -51,12 +52,6 @@ export class InventoryBuildError extends Error {
 }
 
 const VERB_SET = new Set<string>(VERB_FAMILY);
-
-function compareKeys(a: string, b: string): number {
-  if (a < b) return -1;
-  if (a > b) return 1;
-  return 0;
-}
 
 interface Decision {
   readonly classification: Classification;

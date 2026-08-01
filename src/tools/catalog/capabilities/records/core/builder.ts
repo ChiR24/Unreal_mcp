@@ -11,7 +11,6 @@
 import type {
   CapabilityAvailability,
   CapabilityBehaviorSource,
-  CapabilityPolicy,
   CapabilityRecordSource,
   CapabilityRouting,
   Draft202012ObjectSchema,
@@ -24,6 +23,7 @@ import {
   LegacyToolNameSchema,
 } from '../../index.js';
 import { getParentToolMetadata } from '../parent-metadata.js';
+import { policy, behavior } from '../shared/record-presets.js';
 
 const SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema' as const;
 
@@ -99,25 +99,7 @@ function availability(
   };
 }
 
-function behavior(effect: EffectType, opts: Partial<CapabilityBehaviorSource> = {}): CapabilityBehaviorSource {
-  const isWrite = effect !== 'read';
-  return {
-    effect,
-    idempotency: opts.idempotency ?? (effect === 'read' ? 'idempotent' : 'non-idempotent'),
-    longRunning: opts.longRunning ?? false,
-    safeToRetry: opts.safeToRetry ?? effect === 'read',
-    supportsPreview: opts.supportsPreview ?? false,
-    supportsUndo: opts.supportsUndo ?? isWrite,
-  };
-}
 
-function policy(effect: EffectType): CapabilityPolicy {
-  return {
-    requiredScope: effect,
-    consent: effect === 'destructive' ? 'explicit' : 'none',
-    dataAccess: effect === 'read' ? 'project-read' : 'project-write',
-  };
-}
 
 function routing(
   parentTool: string,

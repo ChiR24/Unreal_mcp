@@ -88,6 +88,14 @@ export async function dispatchAndValidate(
     await handleConsolidatedToolCall(record.routing.parentTool, targetArgs, context.tools)
   );
 
+  // Computed BEFORE the failure branch. The guard used to sit only on the
+  // success path, so a `success:false` result echoed an unbounded `detail`
+  // straight into the error envelope (measured: a 2.2 MB envelope) while the
+  // same bytes with `success:true` were refused. Size is a transport concern and
+  // does not care which way the handler reported.
+  const serialized = JSON.stringify(result);
+  const oversized = serialized !== undefined && serialized.length > MAX_EXECUTION_RESULT_CHARS;
+
   if (handlerReportedFailure(result)) {
     // The plugin owns the live-state comparison (it must happen on the game
     // thread), so a Task 42 precondition refusal reaches us as a handler
@@ -110,16 +118,20 @@ export async function dispatchAndValidate(
       message: failureMessage(result),
       ...(staleState && currentRevision !== undefined ? { currentRevision } : {}),
       ...(staleState && expectedRevision !== undefined ? { expectedRevision } : {}),
-      detail: result
+      // The code and message stay - they are small and are the actionable part.
+      // Only the unbounded payload is withheld, with the size named so the
+      // caller can tell "no detail" from "detail dropped".
+      ...(oversized
+        ? { detailOmitted: true, resultChars: serialized?.length ?? 0 }
+        : { detail: result })
     }, receiptContext);
   }
 
-  const serialized = JSON.stringify(result);
-  if (serialized !== undefined && serialized.length > MAX_EXECUTION_RESULT_CHARS) {
+  if (oversized) {
     return refuseWithTarget(target, {
       errorCode: 'RESULT_TOO_LARGE',
       message: 'Result exceeded the gateway safety limit. Retry with the action pagination or filtering parameters described by this capability.',
-      resultChars: serialized.length
+      resultChars: serialized?.length ?? 0
     }, receiptContext);
   }
 

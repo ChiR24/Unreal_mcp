@@ -42,6 +42,7 @@ import { checkConsentAuthorization, checkPreDispatchPolicy, checkScopeAuthorizat
 import { ConsentGrantSchema, type ConsentGrant } from '../../tools/catalog/capabilities/semantic/authorization.js';
 import { runWithGatewayConsent } from '../../automation/gateway-consent-context.js';
 import { runWithGatewayExpectedRevisions } from '../../automation/gateway-expected-revisions-context.js';
+import { runWithGatewayTimeout } from '../../automation/gateway-timeout-context.js';
 import {
   ExpectedRevisionsSchema,
   type ExpectedRevisions
@@ -51,6 +52,7 @@ import {
   conflictMessage,
   IDEMPOTENCY_CONFLICT_CODE,
   LOCAL_PRINCIPAL,
+  markReplayed,
   runWithIdempotency,
   sharedExecuteLedger,
   type ConflictReason
@@ -58,6 +60,19 @@ import {
 import type { CorrelationId } from '../../tools/catalog/capabilities/semantic/ids.js';
 
 export type { GatewayContext };
+
+// Keyed on the ACTION, not one hard-coded capability id. Two records dispatch
+// `get_project_settings` (system_control.* and inspect.*, the one
+// workflow-prompts.ts:89 tells clients to call), and pinning the literal id
+// refused the documented path with NOT_CONNECTED while its twin succeeded —
+// for a reason nothing in either record explained. Restricted to read effects
+// at the use site so this can never widen into a mutation running without a
+// connection. Matched on the capability id's ACTION SEGMENT, which is
+// `get_project_settings` for both records. Deliberately not
+// `routing.dispatchAction`: that is the native dispatch verb and is
+// `system_control` for the system_control record, so keying on it would have
+// broken the very path this gate was written for.
+const OFFLINE_READABLE_ACTIONS: ReadonlySet<string> = new Set(['get_project_settings']);
 
 function declaredParameterNames(schema: Draft202012ObjectSchema): string[] {
   return isRecord(schema.properties)
@@ -125,6 +140,7 @@ type StaticCheck =
   | {
     readonly params: Record<string, unknown>;
     readonly expectedRevisions?: ExpectedRevisions;
+    readonly timeoutMs?: number;
   };
 
 function checkStaticRequest(target: ExecuteTarget, args: Record<string, unknown>): StaticCheck {
@@ -197,12 +213,18 @@ function checkStaticRequest(target: ExecuteTarget, args: Record<string, unknown>
     ? undefined
     : ExpectedRevisionsSchema.parse(args.options.expectedRevisions);
 
+  // Already bounded to an integer in 1..MAX_TIMEOUT_MS by validateExecutionOptions.
+  const timeoutMs = isRecord(args.options) && typeof args.options.timeoutMs === 'number'
+    ? args.options.timeoutMs
+    : undefined;
+
   const withDefaults = applyDeclaredDefaults(params, record.schemas.input);
   const inputFailure = validateInput(target, withDefaults);
   return inputFailure === undefined
     ? {
       params: withDefaults,
-      ...(expectedRevisions === undefined ? {} : { expectedRevisions })
+      ...(expectedRevisions === undefined ? {} : { expectedRevisions }),
+      ...(timeoutMs === undefined ? {} : { timeoutMs })
     }
     : { failure: inputFailure };
 }
@@ -251,7 +273,11 @@ export async function executeGatewayCall(
   // plugin's authority descriptor is present before any protected/offline action.
   // With no token configured, the loopback offline path is preserved unchanged.
   const tokenConfigured = context.tools.automationBridge?.isCapabilityTokenConfigured?.() ?? false;
-  const canRunWithoutConnection = target.record.id === 'system_control.get_project_settings' && !tokenConfigured;
+  const actionSegment = target.record.id.slice(target.record.id.indexOf('.') + 1);
+  const canRunWithoutConnection =
+    OFFLINE_READABLE_ACTIONS.has(actionSegment)
+    && target.record.behavior.effect === 'read'
+    && !tokenConfigured;
   if (!canRunWithoutConnection && !await context.ensureConnected()) {
     return refuseWithTarget(target, {
       errorCode: 'NOT_CONNECTED',
@@ -305,11 +331,18 @@ export async function executeGatewayCall(
           tool: target.record.routing.parentTool,
           action: target.legacy.action
         })
-      }, receiptContext)
+      }, receiptContext),
+      (recorded: Record<string, unknown>) => markReplayed(recorded, receiptContext.correlationId)
     );
   const withConsent = (): Promise<Record<string, unknown>> =>
     consentGrant === undefined ? guarded() : runWithGatewayConsent(consentGrant, guarded);
-  return checked.expectedRevisions === undefined
-    ? await withConsent()
-    : await runWithGatewayExpectedRevisions(checked.expectedRevisions, withConsent);
+  const withRevisions = (): Promise<Record<string, unknown>> =>
+    checked.expectedRevisions === undefined
+      ? withConsent()
+      : runWithGatewayExpectedRevisions(checked.expectedRevisions, withConsent);
+  // Outermost, so the deadline covers the ledger claim and the dispatch it
+  // guards; `executeAutomationRequest` reads it back at the bridge boundary.
+  return checked.timeoutMs === undefined
+    ? await withRevisions()
+    : await runWithGatewayTimeout(checked.timeoutMs, withRevisions);
 }

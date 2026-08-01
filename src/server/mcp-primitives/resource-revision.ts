@@ -88,12 +88,46 @@ export interface RevisionProvider {
  */
 export class InMemoryRevisionProvider implements RevisionProvider {
   private readonly revisions = new Map<SubscribableUri, ResourceRevision>();
+  private catalogRevision?: () => number;
+
+  /**
+   * Bind the live catalog-state source so `ue://capability/catalog` reports a
+   * revision that actually MOVES. Without this the provider had no runtime
+   * writer at all — `set` has no production caller — so every read reported
+   * INITIAL_REVISION forever and a client that re-read after a
+   * `notifications/resources/updated` saw the same revision and concluded
+   * nothing had changed, making the subscribe -> notify -> re-read loop inert.
+   */
+  bindCatalogRevision(read: () => number): void {
+    this.catalogRevision = read;
+  }
 
   currentRevision(uri: SubscribableUri): ResourceRevision {
+    if (uri === 'ue://capability/catalog' && this.catalogRevision !== undefined) {
+      // Catalog state counts from 0; a resource revision is >= 1, so the
+      // baseline maps onto INITIAL_REVISION and every advance carries through.
+      return asResourceRevision(this.catalogRevision() + INITIAL_REVISION);
+    }
     return this.revisions.get(uri) ?? INITIAL_REVISION;
   }
 
   set(uri: SubscribableUri, revision: ResourceRevision): void {
     this.revisions.set(uri, revision);
   }
+}
+
+// One provider per process. The resource READERS stamp payloads with it and the
+// notification driver reads it to decide what changed; two independent
+// instances (which is what shipped) can never agree, so a notification and the
+// subsequent read were answered by different counters.
+let shared: InMemoryRevisionProvider | undefined;
+
+export function sharedRevisionProvider(): InMemoryRevisionProvider {
+  shared ??= new InMemoryRevisionProvider();
+  return shared;
+}
+
+/** Test-only reset so a suite can start from a clean provider. */
+export function resetSharedRevisionProvider(): void {
+  shared = undefined;
 }

@@ -5,8 +5,8 @@ import {
   type ConsoleCommandPolicyBlockReason,
   type ConsoleCommandPolicyRule,
   type ConsoleCommandPolicySurface,
-  type ConsoleCommandRuleMatcher,
 } from './console-command-policy-rules.js';
+import { matchesRule } from './console-command-policy-matching.js';
 
 export type ConsoleCommandPolicyDecision =
   | {
@@ -79,31 +79,6 @@ const ConsoleCommandInputSchema = z.string();
 
 function assertNever(value: never): never {
   throw new Error(`Unhandled console-command policy variant: ${String(value)}`);
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function firstToken(command: string): string {
-  return command.split(/\s+/u).filter(Boolean)[0] ?? '';
-}
-
-function matchesRule(command: string, matcher: ConsoleCommandRuleMatcher): boolean {
-  switch (matcher.kind) {
-    case 'contains-any':
-      return matcher.values.some((value) => command.includes(value));
-    case 'first-token':
-      return matcher.values.includes(firstToken(command));
-    case 'whitespace-bounded-anywhere':
-      return matcher.values.some((value) =>
-        new RegExp(`(?:^|\\s)${escapeRegExp(value)}(?:\\s|$)`, 'i').test(command),
-      );
-    case 'pattern':
-      return new RegExp(matcher.source, matcher.flags).test(command);
-    default:
-      return assertNever(matcher);
-  }
 }
 
 function appliesToSurface(

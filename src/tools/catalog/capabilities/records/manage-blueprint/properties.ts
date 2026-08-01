@@ -80,7 +80,6 @@ export const P = {
   inputActionPath: S('Enhanced Input action asset path for an EnhancedInputAction node.'),
   inputActionAssetPath: S('Enhanced Input action asset path accepted in place of inputActionPath.'),
   actionPath: S('Enhanced Input action asset path accepted in place of inputActionPath.'),
-  timeoutMs: N('Request timeout in milliseconds.'),
   fromNodeId: S('Source node identifier for a pin connection.'),
   fromPinName: S('Source pin name for a pin connection.'),
   toNodeId: S('Target node identifier for a pin connection.'),

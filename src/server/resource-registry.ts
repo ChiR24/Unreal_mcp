@@ -7,7 +7,7 @@ import { AssetResources } from '../resources/assets.js';
 import { ActorResources } from '../resources/actors.js';
 import { LevelResources } from '../resources/levels.js';
 import { config } from '../config.js';
-import { InMemoryRevisionProvider } from './mcp-primitives/resource-revision.js';
+import { sharedRevisionProvider } from './mcp-primitives/resource-revision.js';
 import {
     NEW_RESOURCE_DEFINITIONS,
     RESOURCE_TEMPLATES,
@@ -86,7 +86,10 @@ export class ResourceRegistry {
 
     // Built here (not server-setup) to keep the constructor signature stable; revisions injected, Task 34 swaps the default.
     private buildExtendedReader(): ResourceReadRouter {
-        const revisions = new InMemoryRevisionProvider();
+        // Shared with the notification driver (primitive-wiring.ts) so a
+        // `resources/updated` and the read that follows it report the same
+        // revision. A private instance here made the two permanently disagree.
+        const revisions = sharedRevisionProvider();
         const capability = new CapabilityResources(new GatewayManifestCapabilitySource(), revisions);
         const editorSource = new BridgeEditorStateSource(
             this.automationBridge,

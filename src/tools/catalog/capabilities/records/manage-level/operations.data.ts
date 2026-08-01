@@ -94,7 +94,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['Baked lighting must be (re)computed for the level.'],
     whenNotToUse: ['Dynamic lighting is in use and no bake is required.'],
     inputProps: {
-      quality: P.quality, timeoutMs: P.timeoutMs,
+      quality: P.quality,
     },
     required: [],
     effect: 'write', behavior: { longRunning: true, safeToRetry: false },
@@ -182,7 +182,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Export a level asset to a file.',
     whenToUse: ['A level must be serialized to an external file.'],
     whenNotToUse: ['The level should be saved as a new asset; use save_as.'],
-    inputProps: { levelPath: P.levelPath, exportPath: P.exportPath, destinationPath: P.destinationPath, timeoutMs: P.timeoutMs },
+    inputProps: { levelPath: P.levelPath, exportPath: P.exportPath, destinationPath: P.destinationPath },
     required: ['levelPath'],
     effect: 'read', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'export_level', levelPath: '/Game/Maps/Demo', exportPath: '/Temp/Demo.export' },
@@ -198,7 +198,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       packagePath: P.packagePath, sourcePath: P.sourcePath,
       destinationPath: P.destinationPath, targetPath: P.targetPath,
-      overwrite: P.overwrite, timeoutMs: P.timeoutMs,
+      overwrite: P.overwrite,
     },
     required: ['packagePath'],
     effect: 'write', costLatency: 'interactive', costResources: 'medium',

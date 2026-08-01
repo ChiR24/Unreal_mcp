@@ -96,6 +96,18 @@ function withinByteBudget(
     kept = kept.slice(0, kept.length - 1);
     response = envelope(filters, page, kept, true);
   }
+  // Not even one row fits. `envelope` would still advertise hasMore with a
+  // nextCursor equal to the offset the caller just used, so a client following
+  // the cursor spins on identical empty pages forever. The page genuinely
+  // cannot advance at this budget, so say that instead of implying otherwise:
+  // drop the cursor and tell the caller the only thing that will help.
+  if (kept.length === 0 && rows.length > 0) {
+    delete response.nextCursor;
+    response.budgetExceeded = true;
+    response.message =
+      `No result fits maxBytes=${page.maxBytes}. Raise maxBytes and retry; `
+      + 'this page cannot advance at the current budget.';
+  }
   return response;
 }
 

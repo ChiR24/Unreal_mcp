@@ -9,6 +9,7 @@ import { MANAGE_EFFECT_SOURCES } from './manage-effect/index.js';
 import { MANAGE_GAS_SOURCES } from './manage-gas/index.js';
 import { MANAGE_INTERACTION_SOURCES } from './manage-interaction/index.js';
 import { MANAGE_INVENTORY_SOURCES } from './manage-inventory/index.js';
+import { compareById as compareCanonicalIds } from '../../../../../utils/serialization/ordering.js';
 
 export { GAMEPLAY_HIDDEN_ROUTE_DISPOSITIONS };
 
@@ -35,10 +36,6 @@ export const GAMEPLAY_SOURCE_RECORDS: readonly CapabilityRecordSource[] = Object
   ...MANAGE_INVENTORY_SOURCES,
   ...MANAGE_INTERACTION_SOURCES,
 ]);
-
-function compareCanonicalIds(left: CapabilityRecord, right: CapabilityRecord): number {
-  return left.id.localeCompare(right.id);
-}
 
 const GAMEPLAY_BUILT_RECORDS: readonly CapabilityRecord[] = (() => {
   const parsed = parseCapabilityCatalog(GAMEPLAY_SOURCE_RECORDS.map(createCapabilityRecord));

@@ -16,16 +16,11 @@ import { BUILD_ENVIRONMENT_RECORDS } from '../build-environment/index.js';
 import { MANAGE_LEVEL_STRUCTURE_RECORDS } from './manage-level-structure.index.js';
 import { MANAGE_GEOMETRY_RECORDS } from './manage-geometry.index.js';
 import { MANAGE_PCG_RECORDS } from './manage-pcg.index.js';
+import { compareById as compareCanonicalIds } from '../../../../../utils/serialization/ordering.js';
 
 export const WORLD_NET_NEW_COUNT = 151 as const;
 export const WORLD_REUSED_BUILD_ENVIRONMENT_COUNT = 150 as const;
 export const WORLD_AGGREGATE_COUNT = 301 as const;
-
-function compareCanonicalIds(left: CapabilityRecord, right: CapabilityRecord): number {
-  if (left.id < right.id) return -1;
-  if (left.id > right.id) return 1;
-  return 0;
-}
 
 /**
  * Raw source records (build_environment is reused by object identity; the 151

@@ -11,6 +11,7 @@
 // under-validated.
 
 import { isRecord } from '../../utils/validation/type-guards.js';
+import { IdempotencyKeySchema } from '../../tools/catalog/capabilities/semantic/ids.js';
 import {
   EXECUTION_OPTION_KEYS,
   LIVE_STATE_REVISION_KEYS
@@ -70,9 +71,31 @@ export type OptionViolation = {
   readonly pointer?: string;
 };
 
-/** The accepted options that a dispatch path actually reads. `preview` is not one. */
+/**
+ * Accepted option keys no dispatch path reads. `dispatchAndValidate` builds
+ * `{ ...params, action, subAction }` and passes `options` to the envelope builder
+ * alone, so each was validated, echoed on a success receipt, then dropped: a
+ * client pinning `savePolicy: 'none'` got the capability's own save behaviour and
+ * a receipt naming the policy it asked for. `preview` is the same defect but
+ * keeps its own gate and code because its silent failure is destructive.
+ */
+export const UNIMPLEMENTED_EXECUTION_OPTION_KEYS: readonly string[] = [
+  'savePolicy',
+  'validationLevel',
+  'taskPreference'
+];
+
+/**
+ * Derived from both refused sets, not listed, because this is what a refused
+ * caller is redirected to — naming an option that does nothing would send them
+ * into a second refusal. It previously claimed all seven non-preview keys were
+ * honored when only `idempotencyKey`, `expectedCatalogRevision`,
+ * `expectedRevisions` and `timeoutMs` are.
+ */
 export const HONORED_EXECUTION_OPTION_KEYS: readonly string[] =
-  EXECUTION_OPTION_KEYS.filter((key) => key !== 'preview');
+  EXECUTION_OPTION_KEYS.filter(
+    (key) => key !== 'preview' && !UNIMPLEMENTED_EXECUTION_OPTION_KEYS.includes(key)
+  );
 
 function typeMatches(value: unknown, declared: string): boolean {
   switch (declared) {
@@ -276,6 +299,16 @@ export function validateExecutionOptions(raw: unknown): OptionViolation | undefi
     }
   }
 
+  const unimplemented = UNIMPLEMENTED_EXECUTION_OPTION_KEYS.find((key) => hasOwn(raw, key));
+  if (unimplemented !== undefined) {
+    return {
+      errorCode: 'UNSUPPORTED_OPTION',
+      option: unimplemented,
+      pointer: `/options/${unimplemented}`,
+      message: unimplementedOptionMessage(unimplemented)
+    };
+  }
+
   const timeout = raw.timeoutMs;
   if (timeout !== undefined
     && (typeof timeout !== 'number' || !Number.isInteger(timeout) || timeout <= 0 || timeout > MAX_TIMEOUT_MS)) {
@@ -292,6 +325,22 @@ export function validateExecutionOptions(raw: unknown): OptionViolation | undefi
       errorCode: 'INVALID_OPTIONS',
       pointer: '/options/preview',
       message: 'options.preview must be a boolean.'
+    };
+  }
+
+  // Validated with the SAME schema `buildReceiptContext` parses with, so the two
+  // can never disagree. Previously only the key NAME was checked here, and a
+  // malformed value was dropped silently downstream: `runWithIdempotency` then
+  // took the no-ledger path and the receipt omitted `idempotencyId`, so a retry
+  // re-ran the mutation with nothing on the wire reporting that dedup was off.
+  // A dedup guard that cannot be honoured must refuse, not proceed unprotected.
+  const idempotencyKey = raw.idempotencyKey;
+  if (idempotencyKey !== undefined && !IdempotencyKeySchema.safeParse(idempotencyKey).success) {
+    return {
+      errorCode: 'INVALID_OPTIONS',
+      option: 'idempotencyKey',
+      pointer: '/options/idempotencyKey',
+      message: 'options.idempotencyKey must be a string of 1..128 characters.'
     };
   }
 
@@ -338,6 +387,17 @@ function validateExpectedRevisions(raw: unknown): OptionViolation | undefined {
 /** A gateway control smuggled into action params is refused, never forwarded. */
 export function findControlKeyInParams(params: Record<string, unknown>): string | undefined {
   return EXECUTION_OPTION_KEYS.find((control) => hasOwn(params, control));
+}
+
+/**
+ * Shared refusal text for an accepted-but-unread option, emitted verbatim by
+ * both transports so the same request is refused with the same sentence over
+ * stdio and native `/mcp`.
+ */
+export function unimplementedOptionMessage(option: string): string {
+  return `Execution option '${option}' is accepted by the options schema but no dispatch path reads it. `
+    + 'Honoring it would run the operation with different behaviour than requested and report success. '
+    + `Re-send without options.${option}.`;
 }
 
 /**

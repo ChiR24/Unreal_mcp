@@ -34,7 +34,7 @@ const NUMBER_FIELDS = new Set([
   'priority', 'playerIndex', 'controllerId', 'serverPort', 'attenuationRadius',
   'attenuationFalloff', 'numRounds', 'roundTime', 'intermissionTime', 'numTeams',
   'teamSize', 'scorePerKill', 'scorePerAssist', 'scorePerObjective', 'winScore',
-  'respawnDelay', 'teamIndex', 'scale', 'timeoutMs',
+  'respawnDelay', 'teamIndex', 'scale',
   'lowPassFilterFrequency', 'maxRespawns', 'localPlayerNum',
 ]);
 const OBJECT_FIELDS = new Set(['location', 'rotation', 'size', 'properties', 'settings', 'voiceSettings']);

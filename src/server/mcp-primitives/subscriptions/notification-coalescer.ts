@@ -24,7 +24,10 @@ import {
 } from './subscription-types.js';
 
 /** Why a change signal did not produce (or coalesce into) a pending entry. */
-export type RecordSkipReason = 'NOT_SUBSCRIBED' | 'INVALID_CHANGE_KIND';
+// UNCHANGED is distinct from NOT_SUBSCRIBED: the catalog cursor simply has not
+// moved, which is the normal no-op path. Reporting that as NOT_SUBSCRIBED made a
+// quiet catalog indistinguishable from a session that could not receive it.
+export type RecordSkipReason = 'NOT_SUBSCRIBED' | 'INVALID_CHANGE_KIND' | 'UNCHANGED';
 
 export interface RecordResult {
   readonly recorded: boolean;
@@ -112,10 +115,21 @@ export class NotificationCoalescer {
     const current = this.catalog.getCatalogStateRevision(sessionId);
     const last = this.catalogCursor.get(sessionId) ?? BASELINE_CATALOG_STATE_REVISION;
     if (current <= last) {
-      return { recorded: false, reason: 'NOT_SUBSCRIBED' };
+      // The cursor has not moved — a different condition from "not subscribed",
+      // and reporting it as such made an unchanged catalog indistinguishable
+      // from a dropped notification.
+      return { recorded: false, reason: 'UNCHANGED' };
     }
-    this.catalogCursor.set(sessionId, current);
-    return this.recordChange(sessionId, CATALOG_SUBSCRIPTION_URI, 'updated');
+    // Record FIRST, advance the cursor only if the change was actually queued.
+    // Advancing first consumed the edge: a session not yet subscribed had its
+    // cursor moved to `current` and the change dropped, so when it later
+    // subscribed no further sync could re-report that transition and it kept a
+    // stale view until some unrelated change happened to move the revision again.
+    const result = this.recordChange(sessionId, CATALOG_SUBSCRIPTION_URI, 'updated');
+    if (result.recorded) {
+      this.catalogCursor.set(sessionId, current);
+    }
+    return result;
   }
 
   /** Fan a global content change out to every subscribed session (Task 42 helper). */

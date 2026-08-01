@@ -6,17 +6,8 @@
  * model, schema, generator, or any aggregate code.
  */
 import type { JsonObject } from '../../index.js';
+import { bool, num, str, vec3 } from '../shared/schema-props.js';
 
-const str = (desc: string): JsonObject => ({ type: 'string', description: desc });
-const num = (desc: string): JsonObject => ({ type: 'number', description: desc });
-const bool = (desc: string): JsonObject => ({ type: 'boolean', description: desc });
-const vec3 = (desc: string): JsonObject => ({
-  type: 'array',
-  items: { type: 'number' },
-  minItems: 3,
-  maxItems: 3,
-  description: desc,
-});
 
 export const P: PropertyMap = {
   action: str('The action to execute on the parent tool.'),

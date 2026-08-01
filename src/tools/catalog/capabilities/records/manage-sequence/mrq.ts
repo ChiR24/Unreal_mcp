@@ -135,7 +135,7 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Start MRQ render execution. Blocks until completion, fatal error, or timeout. Supports advisory cancellation. Default timeout 300000ms, max 3600000ms, transport grace 35000ms.',
     whenToUse: ['The MRQ queue must be executed to produce rendered output files.'],
     whenNotToUse: ['A render is already in progress (MRQ_ALREADY_RENDERING).'],
-    inputProps: { action: P.action, jobId: P.jobId, timeoutMs: P.timeoutMs, executorClass: P.executorClass, useCurrentLevel: P.useCurrentLevel },
+    inputProps: { action: P.action, jobId: P.jobId, executorClass: P.executorClass, useCurrentLevel: P.useCurrentLevel },
     required: ['action', 'jobId'],
     outputProps: {
       outputDirectory: P.outputDirectory,
@@ -146,7 +146,7 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write',
     behavior: { longRunning: true, safeToRetry: false, supportsUndo: false, supportsPreview: false },
     latency: 'long-running', resources: 'high', plugins: MRQ_PLUGINS,
-    exampleInput: { action: 'start_render', jobId: 'render-job-1', timeoutMs: 300000 },
+    exampleInput: { action: 'start_render', jobId: 'render-job-1' },
     exampleOutput: { success: true, outputDirectory: '/tmp/renders', renderContinuesAsynchronously: false, bCancellationDeadlineExpired: false },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
     normalizationRationale: 'start_render is the separable MRQ execution operation with advisory cancellation and timeout tiers; enqueue (queue_render) does not complete it.',

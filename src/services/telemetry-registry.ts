@@ -28,6 +28,8 @@ import {
   type TelemetryFailureClass,
   type TelemetrySurface,
 } from './telemetry-schema.js';
+import { evictOldestUntilUnder } from '../utils/collections/bounded.js';
+import { compareEntryKey } from '../utils/serialization/ordering.js';
 
 export type TelemetryTimingFamily = 'request' | 'queue';
 
@@ -150,10 +152,7 @@ export class TelemetryRegistry {
    */
   beginRequest(id: string, meta: { actionClass?: unknown; surface?: unknown } = {}): void {
     if (!id) return;
-    if (this.inFlight.size >= MAX_IN_FLIGHT) {
-      const oldest = this.inFlight.keys().next();
-      if (!oldest.done) this.inFlight.delete(oldest.value);
-    }
+    evictOldestUntilUnder(this.inFlight, MAX_IN_FLIGHT);
     this.inFlight.set(id, {
       actionClass: coerceActionClass(meta.actionClass),
       surface: coerceSurface(meta.surface, this.surface),
@@ -194,9 +193,7 @@ export class TelemetryRegistry {
   ): number | null {
     const state = this.histograms.get(this.seriesKey(family, selector));
     if (!state || state.samples.length === 0) return null;
-    const sorted = [...state.samples].sort((a, b) => a - b);
-    const rank = Math.min(sorted.length, Math.max(1, Math.ceil(quantile * sorted.length)));
-    return sorted[rank - 1] ?? null;
+    return nearestRank(state.samples, quantile);
   }
 
   retainedSampleCount(family: TelemetryTimingFamily, selector: TelemetrySeriesSelector): number {
@@ -389,13 +386,27 @@ export class TelemetryRegistry {
     for (const [key, state] of this.histograms) {
       if (key.startsWith(`${family}\u0000`)) samples.push(...state.samples);
     }
-    if (samples.length === 0) return null;
-    samples.sort((a, b) => a - b);
-    const rank = Math.min(samples.length, Math.max(1, Math.ceil(quantile * samples.length)));
-    return samples[rank - 1] ?? null;
+    return nearestRank(samples, quantile);
   }
 }
 
-function sortByKey(a: [string, unknown], b: [string, unknown]): number {
-  return a[0].localeCompare(b[0]);
+// Byte order, not localeCompare: these keys are NUL-joined
+// `surface actionClass outcome` tuples, and U+0000 carries no collation
+// weight, so localeCompare compares the CONCATENATION rather than the fields and
+// can report two structurally different series as equal. It is also locale- and
+// ICU-build dependent, which a scrape ordering must never be.
+const sortByKey = compareEntryKey;
+
+/**
+ * Nearest-rank percentile over an unsorted sample window.
+ *
+ * One implementation for both the per-series and the aggregate percentile; they
+ * carried the same four lines and had to be kept in step by hand. Copies the
+ * input before sorting so a caller's retained window is never reordered.
+ */
+function nearestRank(samples: readonly number[], quantile: number): number | null {
+  if (samples.length === 0) return null;
+  const sorted = [...samples].sort((a, b) => a - b);
+  const rank = Math.min(sorted.length, Math.max(1, Math.ceil(quantile * sorted.length)));
+  return sorted[rank - 1] ?? null;
 }

@@ -17,7 +17,7 @@ const NIAGARA = ['Niagara'];
 export const EFFECT_1: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.particle`, action: 'particle', family: F,
     summary: 'Author a particle effect (Cascade/Niagara).', whenToUse: W, whenNotToUse: ['Use niagara.'],
-    inputProps: { action: P.action, name: P.name, path: P.path, preset: E.preset, shapeType: E.shapeType, color: E.color, duration: P.duration, location: P.location, radius: P.radius, timeoutMs: E.timeoutMs }, required: ['action'],
+    inputProps: { action: P.action, name: P.name, path: P.path, preset: E.preset, shapeType: E.shapeType, color: E.color, duration: P.duration, location: P.location, radius: P.radius }, required: ['action'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: NIAGARA,
     exampleInput: { action: 'particle', preset: 'Default', shapeType: 'sphere', radius: 30 }, exampleOutput: { success: true, message: 'Particle effect created' } }),
   buildRecord({ parentTool: T, id: `${T}.niagara`, action: 'niagara', family: F,

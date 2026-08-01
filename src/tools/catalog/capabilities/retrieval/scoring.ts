@@ -11,6 +11,8 @@ import {
 import { type AliasFold, canonicalCapabilityId, deriveAliasFold } from './alias-fold.js';
 import { tokenizeCapabilityText, uniqueCapabilityTokens } from './tokenize.js';
 import type { CapabilityMatchField, CapabilityMatchReason } from './types.js';
+import { compareAscii as compareCanonicalCapabilityIds } from '../../../../utils/serialization/ordering.js';
+export { compareAscii as compareCanonicalCapabilityIds } from '../../../../utils/serialization/ordering.js';
 
 type IndexedField = {
   readonly field: CapabilityMatchField;
@@ -133,12 +135,6 @@ function outranks(candidate: IndexedField, held: IndexedField): boolean {
   const difference = RETRIEVAL_FIELD_WEIGHTS[candidate.field] - RETRIEVAL_FIELD_WEIGHTS[held.field];
   if (difference !== 0) return difference > 0;
   return compareCanonicalCapabilityIds(candidate.field, held.field) < 0;
-}
-
-export function compareCanonicalCapabilityIds(left: string, right: string): number {
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
 }
 
 export function isNearTieScore(topScore: number, candidateScore: number): boolean {

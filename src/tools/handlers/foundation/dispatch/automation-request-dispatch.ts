@@ -7,6 +7,7 @@ import { getMcpRequestContext } from '../../../../automation/request-context.js'
 import { getGatewayCorrelationId } from '../../../../automation/gateway-correlation-context.js';
 import { getGatewayConsent } from '../../../../automation/gateway-consent-context.js';
 import { getGatewayExpectedRevisions } from '../../../../automation/gateway-expected-revisions-context.js';
+import { getGatewayTimeoutMs } from '../../../../automation/gateway-timeout-context.js';
 import type { ExpectedRevisions } from '../../../catalog/capabilities/semantic/execution-options.js';
 import { resolveActionTimeoutMs } from './handler-timeout.js';
 import { normalizePathFields } from '../normalization/ue-path-normalization.js';
@@ -84,7 +85,15 @@ export async function executeAutomationRequest(
   // No explicit budget: derive one from what this capability declares it costs.
   // Leaving it undefined would hand a metadata read and a full asset import the
   // same flat bridge default.
+  //
+  // The gateway's `options.timeoutMs` outranks that derived tier because it is
+  // the client stating its own deadline, and it is the only route left: the
+  // execute pipeline refuses `timeoutMs` in action params, so `args.timeoutMs`
+  // is now reachable only from handler-internal payloads. A call-site option
+  // still wins, since those encode a relationship a flat number would break
+  // (MRQ adds transport grace on top of the render deadline).
   const timeoutMs = options.timeoutMs
+    ?? getGatewayTimeoutMs()
     ?? (typeof args.timeoutMs === 'number'
       ? args.timeoutMs
       : resolveActionTimeoutMs(toolName, typeof args.action === 'string' ? args.action : undefined));

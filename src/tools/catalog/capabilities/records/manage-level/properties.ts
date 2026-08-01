@@ -46,7 +46,6 @@ export const P = {
   location: { type: 'object', description: 'Actor world location {x, y, z}.', additionalProperties: true, 'x-unreal-reflection-boundary': true } as Prop,
   rotation: { type: 'object', description: 'Actor rotation {pitch, yaw, roll} or {x, y, z, w}.', additionalProperties: true, 'x-unreal-reflection-boundary': true } as Prop,
   quality: str('Lighting build quality: Preview, Medium, High, or Production.'),
-  timeoutMs: num('Operation timeout in milliseconds.'),
   useWorldPartition: bool('Create the level with World Partition enabled.'),
   metadata: { type: 'object', description: 'Metadata key/value pairs to write.', additionalProperties: true, 'x-unreal-reflection-boundary': true } as Prop,
 } as const;
