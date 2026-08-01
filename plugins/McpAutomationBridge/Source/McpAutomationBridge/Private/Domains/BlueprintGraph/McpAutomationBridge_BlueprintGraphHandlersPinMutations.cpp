@@ -6,6 +6,27 @@
 
 namespace McpBlueprintGraphHandlers
 {
+// Accept the documented node/pin field-name aliases. These were added to
+// HandleBlueprintConnectPins, but that is not the handler connect_pins
+// reaches: the action routes to ConnectPins below, and this path read only
+// the from*/to* names — so every documented sourceNodeId/sourceNode/nodeId
+// call failed with NODE_NOT_FOUND. break_pin_links had the same gap against
+// its own nodeId/pinName pair. In every case the canonical name is listed
+// first, so existing callers keep their exact precedence.
+static FString PickFirstNonEmpty(const TSharedPtr<FJsonObject>& Payload,
+                                 const TArray<const TCHAR*>& Keys)
+{
+    FString Value;
+    for (const TCHAR* Key : Keys)
+    {
+        if (Payload->TryGetStringField(Key, Value) && !Value.IsEmpty())
+        {
+            return Value;
+        }
+    }
+    return FString();
+}
+
 static bool ConnectPins(FActionContext& Context)
 {
     if (Context.SubAction != TEXT("connect_pins"))
@@ -18,14 +39,23 @@ static bool ConnectPins(FActionContext& Context)
     Context.Blueprint->Modify();
     Context.TargetGraph->Modify();
 
-    FString FromNodeId;
-    FString FromPinName;
-    FString ToNodeId;
-    FString ToPinName;
-    Context.Payload->TryGetStringField(TEXT("fromNodeId"), FromNodeId);
-    Context.Payload->TryGetStringField(TEXT("fromPinName"), FromPinName);
-    Context.Payload->TryGetStringField(TEXT("toNodeId"), ToNodeId);
-    Context.Payload->TryGetStringField(TEXT("toPinName"), ToPinName);
+    const FString FromNodeId = PickFirstNonEmpty(
+        Context.Payload, {TEXT("fromNodeId"), TEXT("fromNode"),
+                          TEXT("sourceNodeGuid"), TEXT("sourceNodeId"),
+                          TEXT("sourceNode"), TEXT("nodeId")});
+    const FString FromPinName = PickFirstNonEmpty(
+        Context.Payload, {TEXT("fromPinName"), TEXT("fromPin"),
+                          TEXT("sourcePinName"), TEXT("sourcePin"),
+                          TEXT("outputPin"), TEXT("sourceOutputPin"),
+                          TEXT("pinName")});
+    const FString ToNodeId = PickFirstNonEmpty(
+        Context.Payload, {TEXT("toNodeId"), TEXT("toNode"),
+                          TEXT("targetNodeGuid"), TEXT("targetNodeId"),
+                          TEXT("targetNode")});
+    const FString ToPinName = PickFirstNonEmpty(
+        Context.Payload, {TEXT("toPinName"), TEXT("toPin"),
+                          TEXT("targetPinName"), TEXT("targetPin"),
+                          TEXT("inputPin")});
 
     UEdGraphNode* FromNode = Context.FindNode(FromNodeId);
     UEdGraphNode* ToNode = Context.FindNode(ToNodeId);
@@ -126,10 +156,14 @@ static bool BreakPinLinks(FActionContext& Context)
     Context.Blueprint->Modify();
     Context.TargetGraph->Modify();
 
-    FString NodeId;
-    FString PinName;
-    Context.Payload->TryGetStringField(TEXT("nodeId"), NodeId);
-    Context.Payload->TryGetStringField(TEXT("pinName"), PinName);
+    const FString NodeId = PickFirstNonEmpty(
+        Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid"), TEXT("fromNodeId"),
+                          TEXT("fromNode"), TEXT("sourceNodeGuid"),
+                          TEXT("sourceNodeId"), TEXT("sourceNode")});
+    const FString PinName = PickFirstNonEmpty(
+        Context.Payload, {TEXT("pinName"), TEXT("pin"), TEXT("fromPinName"),
+                          TEXT("fromPin"), TEXT("sourcePinName"),
+                          TEXT("sourcePin"), TEXT("sourceOutputPin")});
     UEdGraphNode* TargetNode = Context.FindNode(NodeId);
     if (!TargetNode)
     {
@@ -162,11 +196,14 @@ static bool SetPinDefaultValue(FActionContext& Context)
         return false;
     }
 
-    FString NodeId;
-    FString PinName;
+    const FString NodeId = PickFirstNonEmpty(
+        Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid"), TEXT("toNodeId"),
+                          TEXT("toNode"), TEXT("targetNodeGuid"),
+                          TEXT("targetNodeId"), TEXT("targetNode")});
+    const FString PinName = PickFirstNonEmpty(
+        Context.Payload, {TEXT("pinName"), TEXT("pin"), TEXT("targetPinName"),
+                          TEXT("targetPin"), TEXT("inputPin")});
     FString Value;
-    Context.Payload->TryGetStringField(TEXT("nodeId"), NodeId);
-    Context.Payload->TryGetStringField(TEXT("pinName"), PinName);
     Context.Payload->TryGetStringField(TEXT("value"), Value);
 
     UEdGraphNode* TargetNode = Context.FindNode(NodeId);
