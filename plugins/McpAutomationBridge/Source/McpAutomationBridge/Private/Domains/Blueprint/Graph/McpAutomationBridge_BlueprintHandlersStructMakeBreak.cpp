@@ -1,6 +1,7 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 
 #include "Engine/Blueprint.h"

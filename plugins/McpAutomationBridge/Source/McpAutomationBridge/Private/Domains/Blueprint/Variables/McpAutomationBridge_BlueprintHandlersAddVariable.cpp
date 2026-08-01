@@ -197,7 +197,7 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
       case EJson::Number: {
         const double Num = DefaultVal->AsNumber();
         const bool bIsIntLike =
-            PinType.PinCategory == MCP_PC_Int ||
+            PinType.PinCategory == UEdGraphSchema_K2::PC_Int ||
             PinType.PinCategory == UEdGraphSchema_K2::PC_Byte;
         if (bIsIntLike && FMath::Frac(Num) == 0.0) {
           DefaultStr = FString::Printf(TEXT("%lld"), static_cast<int64>(Num));
