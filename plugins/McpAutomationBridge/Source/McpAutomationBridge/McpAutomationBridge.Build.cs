@@ -29,6 +29,7 @@ public class McpAutomationBridge : ModuleRules {
         PCHUsage = PCHUsageMode.NoPCHs;
         bUseUnity = true;
         TrySetIntMember(this, "NumIncludedBytesPerUnityCPPOverride", 256 * 1024);
+        DisableAdaptiveUnityBuild(Target);
         PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
 
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Json", "JsonUtilities", "LevelSequence", "MovieScene", "MovieSceneTracks", "GameplayTags", "AIModule", "Landscape" });
@@ -121,6 +122,24 @@ public class McpAutomationBridge : ModuleRules {
         }
 
         Console.WriteLine(string.Format("McpAutomationBridge: Applied MSVC __has_feature compatibility for UE 5.{0}", Target.Version.MinorVersion));
+    }
+
+    // Adaptive unity ejects every file UBT thinks you are editing from the unity blobs. Installed
+    // engines classify by the read-only flag, so all 1100+ shipped sources qualify and unity is
+    // defeated entirely - a ~10x build-time cost. bUseAdaptiveUnityBuild is target-scope only.
+    private static void DisableAdaptiveUnityBuild(ReadOnlyTargetRules Target) {
+        try {
+            var innerField = typeof(ReadOnlyTargetRules).GetField("Inner", InstanceFlags);
+            TargetRules targetRules = innerField?.GetValue(Target) as TargetRules;
+            if (targetRules == null) return;
+
+            if (TrySetBooleanMember(targetRules, "bUseAdaptiveUnityBuild", false, true)) {
+                Console.WriteLine("McpAutomationBridge: Disabled adaptive unity build so module sources stay in unity blobs");
+            }
+        }
+        catch (Exception Ex) {
+            Console.WriteLine(string.Format("McpAutomationBridge: WARNING: Could not disable adaptive unity build: {0}", Ex.Message));
+        }
     }
 
     private static bool TrySetBooleanMember(object target, string memberName, bool value, bool onlyIfCurrentlyTrue = false) =>

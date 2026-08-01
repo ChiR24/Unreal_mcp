@@ -151,6 +151,10 @@ with open(path, 'w') as handle:
 " "$SOURCE_PLUGIN_FILE"
 fi
 
+# Without this every staged (writable) source is ejected from the unity blobs.
+# UBT reads UnrealBuildTool_<Category>__<Field>, scoping it to this build only.
+export UnrealBuildTool_BuildConfiguration__bUseAdaptiveUnityBuild=false
+
 "$RUN_UAT" BuildPlugin \
     -Plugin="$SOURCE_PLUGIN_FILE" \
     -Package="$PACKAGE_DIR" \

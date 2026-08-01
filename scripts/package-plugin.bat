@@ -141,6 +141,10 @@ if "!UE_MAJOR!"=="5" if !UE_MINOR! GEQ 2 (
     )
 )
 
+REM Without this every staged (writable) source is ejected from the unity blobs.
+REM UBT reads UnrealBuildTool_<Category>__<Field>, scoping it to this build only.
+set "UnrealBuildTool_BuildConfiguration__bUseAdaptiveUnityBuild=false"
+
 call "%RUN_UAT%" BuildPlugin -Plugin="%SOURCE_PLUGIN_FILE%" -Package="%PACKAGE_DIR%" -TargetPlatforms=Win64 -Rocket %EXTRA_ARGS%
 if errorlevel 1 (
     echo ERROR: Build failed.
