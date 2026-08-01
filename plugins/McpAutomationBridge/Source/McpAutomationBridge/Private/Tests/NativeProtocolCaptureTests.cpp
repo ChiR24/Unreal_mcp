@@ -11,13 +11,14 @@
 //
 // Output (single file, written to $MCP_TASK38_CAPTURE_DIR or <Project>/Saved/Task38):
 //   task38-native-capture.json = { schemaVersion, mechanism, testName, engineVersion,
-//     protocolVersion, capturedAt, transcript[], captures[] }. The owned runner
-//   scripts/qa/native-capture.mjs stitches transcript-sha / source-hash /
-//   package-hash provenance onto each capture, tags captureKind "native-protocol",
-//   and feeds them to the harness. captures[] carries the six parity domains
-//   (result/error/revision/profile/session/pointer); transcript[] additionally
-//   records the prompts/completions/subscriptions/configure handler runs, so a
-//   fabricated capture cannot pass the runner's ground-truth re-derivation.
+//     protocolVersion, capturedAt, transcript[], captures[] }. This test is its
+//   own runner: the parity harness
+//   (tests/unit/mcp-primitives/parity-harness-native-capture.mjs) verifies the
+//   transcript-sha / source-hash / package-hash provenance and re-derives every
+//   capture from the transcript entry it cites. captures[] carries the six parity
+//   domains (result/error/revision/profile/session/pointer); transcript[]
+//   additionally records the prompts/completions/subscriptions/configure handler
+//   runs, so a fabricated capture cannot pass ground-truth re-derivation.
 //
 // It writes only a JSON artifact (no package saves, no editor mutation) and
 // runs entirely off pure primitives, so it is safe from the automation thread.
