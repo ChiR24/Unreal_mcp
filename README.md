@@ -60,9 +60,6 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 ### Prerequisites
 
-- **Unreal Engine 5.0–5.8 (Preview) compatibility target.** The MCP Automation
-  Bridge plugin is scoped to build and run across UE 5.0 through 5.8 Preview, but that range is not certified: zero of the nine advertised minors are certified.
-
 ### Step 1: Install MCP Server (Option B only — skip for Native MCP)
 
 > Skip this step if using **Option A: Native MCP Transport** ([Step 4A](#option-a-native-mcp-transport-direct-http--no-bridge-needed) below).
