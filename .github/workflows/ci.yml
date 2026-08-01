@@ -105,7 +105,27 @@ jobs:
       - name: Workflow contract gate
         run: npm run workflow:check
 
-      - name: Dependency audit
+      # Blocking scope is what ships: runtime dependencies at high or above.
+      # BOTH narrowings are load-bearing, and the second one tolerates a real
+      # advisory rather than proving none exists:
+      #   --omit=dev  the eslint -> @eslint/config-array -> minimatch ->
+      #               brace-expansion chain is dev-only, cannot be cleared
+      #               without a breaking eslint major, and took this whole job
+      #               -- every gate above included -- red on every run.
+      #   =high       `--omit=dev --audit-level=moderate` ALSO exits 1 today:
+      #               GHSA-frvp-7c67-39w9 sits on the PRODUCTION path under the
+      #               pinned @modelcontextprotocol/sdk 1.29.0, and clearing it
+      #               means a breaking SDK bump. A runtime moderate is therefore
+      #               tolerated here, not absent; it is carried openly in
+      #               docs/security-and-receipts.md. Lowering this back to
+      #               moderate without moving off the pinned SDK re-reds the job.
+      - name: Dependency audit (runtime deps, blocking)
+        run: npm audit --omit=dev --audit-level=high
+
+      # Dev-tree advisories stay visible without gating. Never let this one fail
+      # the job: it reports on tooling that does not ship.
+      - name: Dependency audit (full tree, informational)
+        continue-on-error: true
         run: npm audit --audit-level=moderate
 
   unreal-optional-status:
@@ -146,7 +166,11 @@ jobs:
 
   package-plugin:
     name: Package Plugin (opt-in, requires UE source root)
-    runs-on: ubuntu-latest
+    # The label is supplied by the repository owner rather than hardcoded, for
+    # the same reason as live-matrix below: RunUAT BuildPlugin needs an engine
+    # root, which a hosted runner never has. Pinning ubuntu-latest here meant
+    # that switching the job on could only ever fail its own preflight.
+    runs-on: ${{ vars.UNREAL_RUNNER_LABEL || 'ubuntu-latest' }}
     timeout-minutes: 60
     needs: lint
     # Opt-in gate: only runs when the UNREAL_ENGINE_ROOT repository variable is set.

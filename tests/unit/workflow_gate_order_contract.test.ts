@@ -106,7 +106,8 @@ const DETERMINISTIC_GATES: ReadonlyArray<{ id: string; cmd: string }> = [
   { id: 'eval-budgets', cmd: 'npm run eval:check' },
   { id: 'version', cmd: 'npm run version:check' },
   { id: 'workflow', cmd: 'npm run workflow:check' },
-  { id: 'audit', cmd: 'npm audit --audit-level=moderate' },
+  { id: 'audit-runtime', cmd: 'npm audit --omit=dev --audit-level=high' },
+  { id: 'audit-full', cmd: 'npm audit --audit-level=moderate' },
 ];
 
 describe('deterministic CI gate order (ci.yml lint job)', () => {
