@@ -69,6 +69,39 @@ UEdGraphNode* FActionContext::FindNode(const FString& Id) const
             return Node;
         }
     }
+
+    // QoL: callers often quote a shortened GUID. Accept an UNAMBIGUOUS
+    // GUID-prefix of at least 8 hex chars; anything ambiguous stays
+    // not-found (the full 32-hex id is always available via
+    // get_graph_details). Non-hex ids keep exact-name-only semantics.
+    if (Id.Len() >= 8 && Id.Len() < 32)
+    {
+        bool bHexLike = true;
+        for (const TCHAR C : Id)
+        {
+            if (!FChar::IsHexDigit(C))
+            {
+                bHexLike = false;
+                break;
+            }
+        }
+        if (bHexLike)
+        {
+            UEdGraphNode* UniqueMatch = nullptr;
+            for (UEdGraphNode* Node : TargetGraph->Nodes)
+            {
+                if (Node && Node->NodeGuid.ToString().StartsWith(Id, ESearchCase::IgnoreCase))
+                {
+                    if (UniqueMatch)
+                    {
+                        return nullptr;
+                    }
+                    UniqueMatch = Node;
+                }
+            }
+            return UniqueMatch;
+        }
+    }
     return nullptr;
 }
 
