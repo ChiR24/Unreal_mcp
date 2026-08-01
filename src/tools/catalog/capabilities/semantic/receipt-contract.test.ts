@@ -395,3 +395,39 @@ describe('receipt redaction — compounds whose head is a carrier, not a secret 
     expect(masked.passwordData).toBe('[REDACTED]');
   });
 });
+
+// A run that lost its separators is the case the compound splitter exists for:
+// `secretKey` and `SECRET_KEY` were always masked while `SECRETKEY` escaped.
+// Three-part runs and carrier tails are pinned here because a two-way split
+// over the old vocabulary could reach neither.
+describe('receipt redaction — separator-less credential runs', () => {
+  const SECRET = 'sk-supersecret-abcdef0123456789';
+
+  const CONCATENATED_KEYS = [
+    'SECRETKEY', 'ACCESSTOKEN', 'PASSWORDHASH', 'passwordhash',
+    'SECRETBYTES', 'secretdigest', 'PRIVATEKEYBYTES', 'APIACCESSTOKEN',
+  ] as const;
+
+  for (const key of CONCATENATED_KEYS) {
+    it(`masks \`${key}\``, () => {
+      const masked = maskSecretsDeep({ [key]: SECRET }) as Record<string, unknown>;
+
+      expect(JSON.stringify(masked)).not.toContain(SECRET);
+      expect(masked[key]).toBe('[REDACTED]');
+    });
+  }
+
+  // The closed vocabulary and the measurement head are the only things standing
+  // between a wider split and over-masking, so both directions are pinned.
+  const SPARED_KEYS = [
+    'TOKENCOUNT', 'tokencount', 'tokenizer', 'passwordless', 'unauthorized',
+  ] as const;
+
+  for (const key of SPARED_KEYS) {
+    it(`leaves \`${key}\` intact`, () => {
+      const masked = maskSecretsDeep({ [key]: 'PLAIN' }) as Record<string, unknown>;
+
+      expect(masked[key]).toBe('PLAIN');
+    });
+  }
+});

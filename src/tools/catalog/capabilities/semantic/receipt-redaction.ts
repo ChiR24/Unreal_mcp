@@ -75,6 +75,68 @@ const MEASUREMENT_HEADS = new Set([
   'error', 'version', 'timestamp', 'time', 'date', 'duration', 'at',
 ]);
 
+// Qualifiers that precede a credential noun. They name no secret alone, so they
+// only matter when reuniting a compound that carried no separator.
+const SECRET_QUALIFIERS = new Set([
+  'api', 'access', 'auth', 'private', 'public', 'client', 'server', 'session',
+  'user', 'admin', 'root', 'master', 'signing', 'refresh', 'bearer', 'oauth',
+  'app', 'service', 'encryption', 'shared', 'secret',
+]);
+
+// Credential nouns that can close a compound. `secret` + `key` is a credential
+// even though `key` alone is far too generic to live in SECRET_KEY_WORDS.
+const CREDENTIAL_TAILS = new Set([
+  'key', 'token', 'secret', 'password', 'passwd', 'pwd', 'credential',
+  'authorization', 'signature', 'cert', 'certificate',
+  'hash', 'bytes', 'digest', 'header', 'blob',
+]);
+
+// Every word the splitter is allowed to recognise. Restricting the halves to a
+// closed vocabulary is what stops `tokenizer` becoming `token` + `izer`.
+const SPLITTABLE_WORDS: ReadonlySet<string> = new Set([
+  ...SECRET_KEY_WORDS, ...SECRET_QUALIFIERS, ...CREDENTIAL_TAILS,
+  ...MEASUREMENT_HEADS, ...TRANSPARENT_HEADS,
+]);
+
+// `SECRETKEY` and `ACCESSTOKEN` carry no camelCase boundary and no separator, so
+// the splitter above sees one unrecognised word and the key escapes masking
+// entirely - while `SECRET_KEY` and `secretKey` are both masked. Recover the
+// boundary by splitting a single run into known words, at least one of which
+// names a credential. EVERY part must be in the closed vocabulary, so
+// `tokenizer` and `passwordless` still refuse to split and stay unmasked.
+// Returning the WORDS (rather than a boolean) keeps the head logic below intact:
+// `TOKENCOUNT` decomposes to token + count and is spared as a measurement,
+// exactly as `tokenCount` already was.
+//
+// Two parts cannot reach `APIACCESSTOKEN`, so the search runs to three - fewest
+// parts first, since a coarser split is the likelier reading of a real key.
+const MAX_COMPOUND_PARTS = 3;
+
+// Leftmost cut first at every level, so one word always yields the same split.
+function segmentations(word: string, parts: number): readonly (readonly string[])[] {
+  if (parts === 1) return SPLITTABLE_WORDS.has(word) ? [[word]] : [];
+  const found: (readonly string[])[] = [];
+  for (let cut = 2; cut <= word.length - 2; cut += 1) {
+    const head = word.slice(0, cut);
+    if (!SPLITTABLE_WORDS.has(head)) continue;
+    for (const rest of segmentations(word.slice(cut), parts - 1)) found.push([head, ...rest]);
+  }
+  return found;
+}
+
+const splitNamesCredential = (parts: readonly string[]): boolean =>
+  parts.some((part) => SECRET_KEY_WORDS.has(part)) ||
+  CREDENTIAL_TAILS.has(parts[parts.length - 1] ?? '');
+
+function splitCompound(word: string): readonly string[] {
+  if (word.length < 6 || SPLITTABLE_WORDS.has(word)) return [word];
+  for (let parts = 2; parts <= MAX_COMPOUND_PARTS; parts += 1) {
+    const split = segmentations(word, parts).find(splitNamesCredential);
+    if (split !== undefined) return split;
+  }
+  return [word];
+}
+
 // Split on camelCase and any non-alphanumeric run. Matching WHOLE words (not
 // substrings) is what keeps `tokenizer`, `passwordless` and `unauthorized` out
 // of the secret set.
@@ -83,7 +145,7 @@ function keyWords(key: string): readonly string[] {
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .split(/[^A-Za-z0-9]+/)
     .filter((word) => word.length > 0)
-    .map((word) => word.toLowerCase());
+    .flatMap((word) => splitCompound(word.toLowerCase()));
 }
 
 // Depluralisation is tried as an ALTERNATIVE rather than applied up front,
@@ -139,6 +201,29 @@ function isSecretKey(key: string): boolean {
 // unread would emit exactly the content this function exists to scrub.
 export const MAX_RECEIPT_DEPTH = 100;
 
+// `JSON.parse` creates `__proto__` as a REAL own property, so any rebuild that
+// does `out[key] = ...` on a plain object hands that key to Object.prototype's
+// setter: the field is silently dropped from the rebuilt object and the object's
+// prototype is replaced with whatever the bridge sent. Defining the property
+// keeps the value where it belongs and leaves the prototype alone. Only
+// `__proto__` needs the slow path; every other key is an ordinary assignment.
+export function assignJsonKey(
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown
+): void {
+  if (key === '__proto__') {
+    Object.defineProperty(target, key, {
+      value,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+    return;
+  }
+  target[key] = value;
+}
+
 export function maskSecretsDeep(value: unknown, depth = 0): unknown {
   if (typeof value === 'string') return maskSecrets(value);
   if (Array.isArray(value)) {
@@ -149,7 +234,7 @@ export function maskSecretsDeep(value: unknown, depth = 0): unknown {
     if (depth >= MAX_RECEIPT_DEPTH) return REDACTED;
     const out: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value)) {
-      out[key] = isSecretKey(key) ? REDACTED : maskSecretsDeep(entry, depth + 1);
+      assignJsonKey(out, key, isSecretKey(key) ? REDACTED : maskSecretsDeep(entry, depth + 1));
     }
     return out;
   }
