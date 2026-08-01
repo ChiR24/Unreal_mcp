@@ -103,6 +103,24 @@ describe('normalizePathFields', () => {
     expect(normalized.barePath).toBe('/Game/Foo/Bar');
   });
 
+  it('maps a bare root alias with no subpath', () => {
+    const normalized = normalizePathFields({
+      contentRoot: '/Content',
+      windowsContentRoot: '\\Content'
+    }, ['contentRoot', 'windowsContentRoot']);
+
+    expect(normalized.contentRoot).toBe('/Game');
+    expect(normalized.windowsContentRoot).toBe('/Game');
+  });
+
+  it('leaves a folder that merely starts with Content alone', () => {
+    const normalized = normalizePathFields({
+      siblingPath: '/ContentOther/Foo'
+    }, ['siblingPath']);
+
+    expect(normalized.siblingPath).toBe('/ContentOther/Foo');
+  });
+
   it('blocks parent-directory path segments after alias normalization', () => {
     for (const value of ['..', 'Foo/..', 'Foo\\..', '/Game/..', '/Game/Foo/../Bar']) {
       const normalized = normalizePathFields({ assetPath: value }, ['assetPath']);
