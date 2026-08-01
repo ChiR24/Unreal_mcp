@@ -84,7 +84,13 @@ bool McpValidateExecutionOptions(
 			TEXT("options.preview must be a boolean."), TEXT("/options/preview"));
 		return false;
 	}
-	return true;
+	// Mirrors the 1..128 bound in gateway-execute-validate.ts. Only the key NAME
+	// was checked here, so a malformed value fell through to TryGetStringField in
+	// McpNativeTransportGatewayExecute, left Context.IdempotencyId empty and took
+	// the no-ledger path: a retry re-ran the mutation that the stdio surface had
+	// already refused. A dedup guard that cannot be honoured must refuse. It lives
+	// in McpNativeGatewayIdempotency.cpp because this file is at the line ceiling.
+	return McpValidateIdempotencyKeyOption(Options, OutError);
 }
 
 namespace

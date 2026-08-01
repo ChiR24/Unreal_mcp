@@ -46,6 +46,14 @@ bool McpValidateExecutionOptions(
 	const TSharedPtr<FJsonObject>& Options, FMcpSemanticError& OutError);
 
 /**
+ * Validate `options.idempotencyKey` alone: absent, or a string of 1..128
+ * characters, mirroring IdempotencyKeySchema in TypeScript. Implemented in
+ * McpNativeGatewayIdempotency.cpp, beside the ledger the key addresses.
+ */
+bool McpValidateIdempotencyKeyOption(
+	const TSharedPtr<FJsonObject>& Options, FMcpSemanticError& OutError);
+
+/**
  * Validate `options` for one resolved capability: the envelope rules above,
  * then the fail-closed `preview` gate. Implemented in McpNativeGatewayPreview.cpp.
  *

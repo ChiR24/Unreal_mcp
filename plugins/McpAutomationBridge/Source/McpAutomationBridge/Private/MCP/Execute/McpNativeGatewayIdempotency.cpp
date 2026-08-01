@@ -3,6 +3,7 @@
 #include "Containers/StringConv.h"
 #include "Dom/JsonValue.h"
 #include "Foundation/McpIdempotencyLedger.h"
+#include "MCP/Execute/McpNativeGatewayExecuteRequest.h"
 #include "Policies/CondensedJsonPrintPolicy.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
@@ -111,6 +112,32 @@ FString McpCanonicalFingerprint(const FString& CapabilityId, const TSharedPtr<FJ
 		Digest += FString::Printf(TEXT("%02x"), Hash[Index]);
 	}
 	return Digest;
+}
+
+bool McpValidateIdempotencyKeyOption(
+	const TSharedPtr<FJsonObject>& Options, FMcpSemanticError& OutError)
+{
+	if (!Options.IsValid())
+	{
+		return true;
+	}
+	const TSharedPtr<FJsonValue> Key = Options->TryGetField(TEXT("idempotencyKey"));
+	if (!Key.IsValid())
+	{
+		return true;
+	}
+	FString Value;
+	const bool bBoundedString = Key->Type == EJson::String && Key->TryGetString(Value) &&
+		Value.Len() >= 1 && Value.Len() <= 128;
+	if (bBoundedString)
+	{
+		return true;
+	}
+	OutError = McpValidationError(TEXT("INVALID_OPTIONS"),
+		TEXT("options.idempotencyKey must be a string of 1..128 characters."),
+		TEXT("/options/idempotencyKey"));
+	OutError.Option = TEXT("idempotencyKey");
+	return false;
 }
 
 void McpSettleIdempotency(const FString& Slot, bool bSuccess, const TSharedPtr<FJsonObject>& Receipt)
