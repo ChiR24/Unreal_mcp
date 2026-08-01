@@ -6,7 +6,7 @@
 // captures: an `executable-ts` capture AND a `native-protocol` capture. The
 // native-protocol side is now PRODUCIBLE — the compiled C++ automation test
 // NativeProtocolCaptureTests.cpp runs the native primitive handlers in a
-// live editor and the owned runner scripts/qa/native-capture.mjs stamps
+// live editor and the native capture seam (NativeProtocolCaptureTests.cpp) stamps
 // its output with ground-truth + transcript/source/package provenance. But that
 // producer has NOT been run against a built editor here (no UBT/editor), so no
 // native-protocol capture artifact exists on disk yet. Therefore this module:
@@ -41,7 +41,7 @@ export const NATIVE_CAPTURE_REQUIREMENT = Object.freeze({
     kind: 'cpp-automation-test',
     mechanism: 'native-automation-inprocess',
     source: 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Tests/NativeProtocolCaptureTests.cpp',
-    runner: 'scripts/qa/native-capture.mjs',
+    runner: 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Tests/NativeProtocolCaptureTests.cpp',
     captureKind: 'native-protocol',
     mustEmitDomains: Object.freeze(['result', 'error', 'revision', 'profile', 'session', 'pointer']),
     emits:
@@ -63,7 +63,7 @@ export const NATIVE_CAPTURE_REQUIREMENT = Object.freeze({
     'A native-protocol capture missing its transcript provenance block, or one whose transcript sha / source hash / freshness no longer verifies.',
   ]),
   unblocksWhen:
-    'The integration lane builds the plugin, runs scripts/qa/native-capture.mjs --execute against a serialized UE5.7 editor, and the emitted native-protocol captures pass ground-truth + provenance verification; assertParityReady then opens and compareCaptures runs the exact diff.',
+    'The integration lane builds the plugin, runs the native capture seam against a serialized UE5.7 editor, and the emitted native-protocol captures pass ground-truth + provenance verification; assertParityReady then opens and compareCaptures runs the exact diff.',
 });
 
 /**

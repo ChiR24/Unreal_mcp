@@ -413,7 +413,7 @@ export function buildPresentButUnbuiltBlocker(spec) {
       handWrittenFileIsRefused: `creating ${READINESS_FILES.editorCmd} by hand does NOT satisfy this record: the `
         + 'certification launches it, waits for its ports and reads its automation log. The input is a real completed '
         + 'engine build.',
-      acceptanceCommand: `node scripts/qa/certify-engine.mjs --engine-version ${spec.minorKey}`,
+      acceptanceCommand: `certify UE ${spec.minorKey} end to end (certification runner is not bundled in this repository)`,
       acceptanceCriterion: 'the acceptance command must get past its inventory.resolve stage; while that stage reports '
         + `${READINESS.NO_COMPILED_EDITOR}, this record stands.`,
     },
@@ -426,7 +426,7 @@ export function buildPresentButUnbuiltBlocker(spec) {
         progress: primary.progress,
       }),
       thenReRun: [
-        `6. node scripts/qa/certify-engine.mjs --engine-version ${spec.minorKey} — confirm it advances past `
+        `6. Re-run the UE ${spec.minorKey} certification — confirm it advances past `
           + 'inventory.resolve.',
         `7. Re-run the full Task ${spec.task} certification against the now-runnable root.`,
       ],

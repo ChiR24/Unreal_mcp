@@ -343,7 +343,7 @@ describe('Task 38 lane E — the requirement names the executable producer and s
     expect(producer.captureKind).toBe('native-protocol');
     expect(NATIVE_MECHANISMS).toContain(producer.mechanism);
     expect(producer.source).toContain('NativeProtocolCaptureTests.cpp');
-    expect(producer.runner).toBe('scripts/qa/native-capture.mjs');
+    expect(producer.runner).toBe('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Tests/NativeProtocolCaptureTests.cpp');
     expect(NATIVE_PROTOCOL_VERSIONS).toContain(producer.provenance.protocolVersion);
   });
 });

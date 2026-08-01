@@ -30,9 +30,15 @@ import {
   retrieveCapabilities,
 } from '../../../src/tools/catalog/capabilities/retrieval/index.js';
 
-const FROZEN_JSON_HASH = '3f9fc255af92691fb855e4fd92f748df8ff969e5f4b617688493de7ebe1bf66a';
-const FROZEN_TS_HASH = 'ed5ab8498e9e10720544dcdc44ab7cf3e7afb5abfc065066abe8fcc5d1b2f5fd';
-const FROZEN_NATIVE_HASH = '2da381eec4c4136a3b278cf0ea986823d38314925dbee58261dde57ebfa714c5';
+// Re-frozen when `timeoutMs` was withdrawn as a declared input property. The
+// gateway refuses every EXECUTION_OPTION_KEYS name found in action params, so a
+// record publishing `timeoutMs` advertised a parameter that could never be sent;
+// it is supplied as options.timeoutMs instead. Three of the four pilot exports
+// (build-environment, manage-blueprint, manage-sequence) carried it, so all
+// three emitter hashes move. The 493-record structure is unchanged.
+const FROZEN_JSON_HASH = '8491c8e9e6263839d058d9d3b3c1debf45d556b08a4a35104b51c900eca895cd';
+const FROZEN_TS_HASH = 'ddc7b866d7150a0d49506cdafa98b379ec8132568b3c2d30b5e51fda160b92b1';
+const FROZEN_NATIVE_HASH = '8a0c79889a9c6056f7304ddd23c19def339dbe8badf016d828e05b57e8099ae7';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

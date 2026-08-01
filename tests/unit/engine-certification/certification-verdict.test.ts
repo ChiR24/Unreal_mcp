@@ -258,7 +258,7 @@ describe('judgeCleanupAgreement', () => {
 describe('judgeTreeStability — the shared-worktree injection', () => {
   const recorded = [
     { path: 'tests/unit/engine-certification/engine-inventory.mjs', sha256: 'aaa' },
-    { path: 'scripts/qa/certify-engine.mjs', sha256: 'bbb' },
+    { path: 'scripts/qa/adversarial.mjs', sha256: 'bbb' },
   ];
 
   it('passes when every recorded file is byte-identical to what the run started from', () => {
@@ -273,7 +273,7 @@ describe('judgeTreeStability — the shared-worktree injection', () => {
       hash: (file) => (file.endsWith('engine-inventory.mjs') ? 'aaa' : 'REGENERATED'),
     });
     expect(verdict.stable).toBe(false);
-    expect(verdict.moved.map((entry) => entry.path)).toEqual(['scripts/qa/certify-engine.mjs']);
+    expect(verdict.moved.map((entry) => entry.path)).toEqual(['scripts/qa/adversarial.mjs']);
     expect(verdict.detail).toContain('by drivers');
     expect(verdict.detail).toContain('no longer certifies one tree');
   });

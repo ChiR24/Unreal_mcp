@@ -19,7 +19,7 @@
 //      capture whose source/package hash no longer matches the current plugin.
 //
 // Pure ESM so the Vitest offline tests and the plain-node runner
-// (scripts/qa/native-capture.mjs) share exactly one implementation.
+// (the native capture seam, NativeProtocolCaptureTests.cpp) share exactly one implementation.
 
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';

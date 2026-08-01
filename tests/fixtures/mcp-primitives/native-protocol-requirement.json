@@ -10,7 +10,7 @@
     "kind": "cpp-automation-test",
     "mechanism": "native-automation-inprocess",
     "source": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Tests/NativeProtocolCaptureTests.cpp",
-    "runner": "scripts/qa/native-capture.mjs",
+    "runner": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Tests/NativeProtocolCaptureTests.cpp",
     "captureKind": "native-protocol",
     "mustEmitDomains": ["result", "error", "revision", "profile", "session", "pointer"],
     "emits": "Runs the compiled McpResourceCatalog / McpResourceUri / McpSessionCapabilityProfile / McpSubscriptionStore / McpSessionConfigureStore / McpPromptCatalog / McpCompletionProvider handlers in-process and writes task38-native-capture.json { transcript[], captures[] } to $MCP_TASK38_CAPTURE_DIR.",
@@ -29,5 +29,5 @@
     "A grep/source snapshot (captureKind 'source-text') — rejected outright by validateCapture with SOURCE_TEXT_CAPTURE.",
     "A native-protocol capture missing its transcript provenance block, or one whose transcript sha / source hash / freshness no longer verifies."
   ],
-  "unblocksWhen": "The integration lane builds the plugin, runs scripts/qa/native-capture.mjs --execute against a serialized UE5.7 editor, and the emitted native-protocol captures pass ground-truth + provenance verification; assertParityReady then opens and compareCaptures runs the exact framing-neutral diff."
+  "unblocksWhen": "The integration lane builds the plugin, runs the native capture seam against a serialized UE5.7 editor, and the emitted native-protocol captures pass ground-truth + provenance verification; assertParityReady then opens and compareCaptures runs the exact framing-neutral diff."
 }

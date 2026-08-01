@@ -15,7 +15,12 @@ const uriHeader = readFileSync(resolve(nativeRoot, 'Resources/McpResourceUri.h')
 
 const tsRevision = readFileSync(resolve(root, 'src/server/mcp-primitives/resource-revision.ts'), 'utf8');
 const tsCatalog = readFileSync(resolve(root, 'src/resources/resource-catalog.ts'), 'utf8');
-const tsErrors = readFileSync(resolve(root, 'src/resources/resource-errors.ts'), 'utf8');
+// The path/secret vocabulary these contracts compare against the native side
+// now lives in one shared policy module, so it is appended to the TS text
+// under test: the parity assertion is about what the TS SURFACE enforces,
+// not about which file happens to hold the literal.
+const tsPathPolicy = readFileSync(resolve(root, 'src/utils/paths/content-path-policy.ts'), 'utf8');
+const tsErrors = readFileSync(resolve(root, 'src/resources/resource-errors.ts'), 'utf8') + tsPathPolicy;
 
 const SUBSCRIBABLE_URIS = [
   'ue://capability/catalog',

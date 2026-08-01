@@ -237,8 +237,8 @@ describe('Task 51 D3 — a cycle counts only if it opened, and closes only what 
 
 describe('Task 51 D3 — the soak reports cycles it completed, not cycles it planned', () => {
   const workingSoakResponder: Responder = (args) => {
-    if (args.action === 'enable_tools') return configureOk('enable_tools', 'enabled', (args.params as any).tools);
-    if (args.action === 'disable_tools') return configureOk('disable_tools', 'disabled', (args.params as any).tools);
+    if (args.action === 'enable_tools') return configureOk('enable_tools', 'enabled', args.params.tools);
+    if (args.action === 'disable_tools') return configureOk('disable_tools', 'disabled', args.params.tools);
     return describeOk();
   };
 
@@ -276,9 +276,9 @@ describe('Task 51 D3 — the soak reports cycles it completed, not cycles it pla
     const result = await runSoak({
       cycles: 6, seed: 'd3-partial', warmupCycles: 1, ...FAST,
       driverFactory: () => new ScriptedDriver((args) => {
-        if (args.action === 'enable_tools') { enables += 1; return configureOk('enable_tools', 'enabled', (args.params as any).tools); }
+        if (args.action === 'enable_tools') { enables += 1; return configureOk('enable_tools', 'enabled', args.params.tools); }
         // Every third teardown fails, leaving the capability enabled.
-        if (args.action === 'disable_tools') return enables % 3 === 0 ? null : configureOk('disable_tools', 'disabled', (args.params as any).tools);
+        if (args.action === 'disable_tools') return enables % 3 === 0 ? null : configureOk('disable_tools', 'disabled', args.params.tools);
         return describeOk();
       }),
     });

@@ -282,7 +282,7 @@ export function buildUnbuiltRootBlocker(spec) {
       ],
       handWrittenFileIsRefused: `creating ${READINESS_FILES.editorCmd} by hand does NOT satisfy this record: the `
         + 'certification launches it and reads its automation log. The input is a real completed engine build.',
-      acceptanceCommand: `node scripts/qa/certify-engine.mjs --engine-version ${spec.minorKey}`,
+      acceptanceCommand: `certify UE ${spec.minorKey} end to end (certification runner is not bundled in this repository)`,
       acceptanceCriterion: `the acceptance command must get past its inventory.resolve stage; while that stage reports `
         + `${READINESS.NO_COMPILED_EDITOR}, this record stands.`,
     },

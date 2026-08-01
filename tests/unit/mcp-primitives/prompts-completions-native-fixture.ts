@@ -91,7 +91,9 @@ export type NativeCompletionGuidanceCode =
 /** McpCompletionProvider.cpp:38-57 — the bounded enum value sets. */
 export const NATIVE_ENUM_SETS: Readonly<Record<string, readonly string[]>> = {
   engineVersion: ['5.0', '5.1', '5.2', '5.3', '5.4', '5.5', '5.6', '5.7', '5.8'],
-  topic: ['overview', 'assets', 'actors', 'blueprints', 'levels', 'sequencer', 'niagara', 'physics'],
+  // The keys the knowledge table actually serves. The previous list shared zero
+  // values with it, so every completed topic answered RESOURCE_NOT_FOUND.
+  topic: ['gateway', 'paths', 'resources', 'safety', 'transports'],
   sourceFormat: ['fbx', 'obj', 'gltf', 'png', 'wav'],
   outputFormat: ['png', 'jpeg', 'exr', 'custom'],
 };

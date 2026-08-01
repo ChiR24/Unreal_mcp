@@ -229,7 +229,7 @@ describe('buildPresentButUnbuiltBlocker', () => {
     minorKey: '5.3',
     versionString: '5.3.2',
     advertisedBy: ['README.md "Unreal Engine 5.0-5.8"'],
-    detection: { command: 'node scripts/qa/certify-engine.mjs --engine-version 5.3', detectedAt: '2026-07-28T00:00:00.000Z' },
+    detection: { command: 'certify UE 5.3 end to end', detectedAt: '2026-07-28T00:00:00.000Z' },
     rootReports: [{
       identity: identityOf('5.3.2'),
       toolchain: bootstrappableToolchain,
@@ -291,7 +291,7 @@ describe('buildPresentButUnbuiltBlocker', () => {
   });
 
   it('names an acceptance command that would falsify it', () => {
-    expect(record.requiredOperatorInput.acceptanceCommand).toBe('node scripts/qa/certify-engine.mjs --engine-version 5.3');
+    expect(record.requiredOperatorInput.acceptanceCommand).toBe('certify UE 5.3 end to end (certification runner is not bundled in this repository)');
     expect(record.requiredOperatorInput.requiredFileAbsolutePaths).toEqual([`${ROOT}/${READINESS_FILES.editorCmd}`]);
     expect(record.requiredOperatorInput.handWrittenFileIsRefused).toContain('real completed');
   });

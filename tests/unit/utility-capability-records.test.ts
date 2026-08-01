@@ -101,12 +101,17 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
     expect(ids(UTILITY_CAPABILITY_CATALOG)).toEqual([...ids(UTILITY_CAPABILITY_CATALOG)].sort());
   });
 
+  // Re-pinned when `timeoutMs` was withdrawn as a declared input property. The
+  // gateway refuses any EXECUTION_OPTION_KEYS name found in action params, so the
+  // 14 manage_networking input records advertised a parameter no client could
+  // send; it travels as options.timeoutMs now. Only those 14 schema hashes move,
+  // and the 208-record membership above is unchanged.
   it('matches the pinned canonical ID/schema/content hash', () => {
     const body = UTILITY_CAPABILITY_CATALOG.map(
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('ae7ae9f213aa5c8f266242a1aa48912d880c17f3e1170770202ebed630bce322');
+      .toBe('327afc45834f48b0171b6feaf36f0adee9a2be351fcc8eed2f68ac595a0d3fad');
   });
 
   it('retains stable record hashes after recomputation', () => {

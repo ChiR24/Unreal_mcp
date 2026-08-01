@@ -12,7 +12,12 @@ const cpp = readFileSync(resolve(nativeRoot, 'Primitives/McpCompletionProvider.c
 const nativeText = `${header}\n${cpp}`;
 
 const tsTypes = readFileSync(resolve(completionsRoot, 'completion-types.ts'), 'utf8');
-const tsSlots = readFileSync(resolve(completionsRoot, 'completion-slots.ts'), 'utf8');
+// The path/secret vocabulary these contracts compare against the native side
+// now lives in one shared policy module, so it is appended to the TS text
+// under test: the parity assertion is about what the TS SURFACE enforces,
+// not about which file happens to hold the literal.
+const tsPathPolicy = readFileSync(resolve(root, 'src/utils/paths/content-path-policy.ts'), 'utf8');
+const tsSlots = readFileSync(resolve(completionsRoot, 'completion-slots.ts'), 'utf8') + tsPathPolicy;
 const tsRanking = readFileSync(resolve(completionsRoot, 'completion-ranking.ts'), 'utf8');
 const tsSources = readFileSync(resolve(completionsRoot, 'completion-sources.ts'), 'utf8');
 const tsText = `${tsTypes}\n${tsSlots}\n${tsRanking}\n${tsSources}`;

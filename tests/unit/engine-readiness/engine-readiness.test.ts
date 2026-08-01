@@ -146,7 +146,7 @@ describe('buildUnbuiltRootBlocker', () => {
   const record = buildUnbuiltRootBlocker({
     minorKey: '5.0',
     versionString: '5.0.3',
-    detection: { command: 'node scripts/qa/evidence.mjs', detectedAt: '2026-07-28T00:00:00.000Z' },
+    detection: { command: 'emit the certification evidence record', detectedAt: '2026-07-28T00:00:00.000Z' },
     rootReports: [{
       identity: identityOf('5.0.3'),
       toolchain: { bootstrappable: false, reason: 'CANNOT_COMPILE_TOOLCHAIN', detail: 'no SDK' },
@@ -183,7 +183,10 @@ describe('buildUnbuiltRootBlocker', () => {
   });
 
   it('names an acceptance command that would falsify it', () => {
-    expect(record.requiredOperatorInput.acceptanceCommand).toContain('certify-engine.mjs');
+    // The certification runner is no longer bundled, so the record names the
+    // acceptance OPERATION rather than an in-repo script path. The assertion
+    // still holds the record to naming something falsifiable.
+    expect(record.requiredOperatorInput.acceptanceCommand).toContain('certify UE');
     expect(record.requiredOperatorInput.requiredFileAbsolutePaths).toEqual([`${ROOT}/${READINESS_FILES.editorCmd}`]);
   });
 });

@@ -14,7 +14,12 @@ const promptCpp = readFileSync(resolve(nativeRoot, 'Primitives/McpPromptCatalog.
 const nativeText = `${promptHeader}\n${promptCpp}`;
 
 const tsTypes = readFileSync(resolve(root, 'src/server/mcp-primitives/prompts/prompt-types.ts'), 'utf8');
-const tsErrors = readFileSync(resolve(root, 'src/server/mcp-primitives/prompts/prompt-errors.ts'), 'utf8');
+// The path/secret vocabulary these contracts compare against the native side
+// now lives in one shared policy module, so it is appended to the TS text
+// under test: the parity assertion is about what the TS SURFACE enforces,
+// not about which file happens to hold the literal.
+const tsPathPolicy = readFileSync(resolve(root, 'src/utils/paths/content-path-policy.ts'), 'utf8');
+const tsErrors = readFileSync(resolve(root, 'src/server/mcp-primitives/prompts/prompt-errors.ts'), 'utf8') + tsPathPolicy;
 const tsWorkflows = readFileSync(resolve(root, 'src/server/mcp-primitives/prompts/workflow-prompts.ts'), 'utf8');
 
 const WORKFLOW_IDS = ['inspect-fix', 'asset-import', 'level-build', 'blueprint-edit', 'validation', 'sequence-render'];

@@ -30,9 +30,16 @@ import {
 const REPO = process.cwd();
 const PLUGIN_ROOT = resolve(REPO, 'plugins/McpAutomationBridge');
 
-const records = JSON.parse(readFileSync(
+// Structurally typed rather than `as any[]`: only the fields this suite reads
+// are declared, so a registry shape change surfaces here as a type error.
+type RegistryRecord = {
+  readonly id: string;
+  readonly availability?: { readonly requiredPlugins?: readonly string[] };
+};
+
+const records: readonly RegistryRecord[] = (JSON.parse(readFileSync(
   resolve(REPO, 'src/tools/catalog/capabilities/generated/canonical-registry.generated.json'), 'utf8',
-)).records as any[];
+)) as { readonly records: readonly RegistryRecord[] }).records;
 
 const recordOf = (id: string) => {
   const found = records.find((entry) => entry.id === id);
@@ -41,7 +48,7 @@ const recordOf = (id: string) => {
 };
 
 /** Every plugin the .uplugin can enable, so "everything on" is a real profile. */
-const ALL_PLUGINS = [...new Set(records.flatMap((entry) => entry.availability?.requiredPlugins ?? []))] as string[];
+const ALL_PLUGINS: string[] = [...new Set(records.flatMap((entry) => entry.availability?.requiredPlugins ?? []))];
 
 const profileFor = (minor: number, overrides: Record<string, unknown> = {}) => defineProfile({
   id: `ue5.${minor}`,

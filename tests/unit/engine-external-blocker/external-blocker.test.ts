@@ -96,7 +96,7 @@ const fleetIo = {
 const DETECTOR_FILES = [
   { path: 'tests/unit/engine-external-blocker/external-blocker.mjs', sha256: sha256('external-blocker.mjs@fixture') },
   { path: 'tests/unit/engine-external-blocker/external-blocker-validator.mjs', sha256: sha256('external-blocker-validator.mjs@fixture') },
-  { path: 'scripts/qa/detect-missing-engines.mjs', sha256: sha256('detect-missing-engines.mjs@fixture') },
+  { path: 'tests/unit/engine-external-blocker/external-blocker-validator.mjs', sha256: sha256('external-blocker-validator.mjs@fixture') },
 ];
 
 /**
@@ -124,7 +124,7 @@ const blockerIo = {
 const inventory = buildEngineInventory({ roots: Object.keys(FLEET), io: fleetIo });
 
 const detection = describeDetection({
-  command: 'node scripts/qa/detect-missing-engines.mjs --search-dir /data',
+  command: 'detect installed UE minors under /data',
   commandExitCode: 3,
   reproducibleShellCommand: 'grep -H -o \'"\\(Major\\|Minor\\|Patch\\)Version": *[0-9]*\' /data/*/Engine/Build/Build.version',
   searchDirs: ['/data'],
@@ -139,7 +139,7 @@ const buildRecord = (minorKey: string) => buildMissingMinorBlocker({
   minorKey,
   inventory,
   detection,
-  projectRelativeDetector: 'scripts/qa/detect-missing-engines.mjs',
+  projectRelativeDetector: 'tests/unit/engine-external-blocker/external-blocker-validator.mjs',
   advertisedBy: ['plugins/McpAutomationBridge/McpAutomationBridge.uplugin: "UE 5.0-5.8 Preview"'],
   observedTagExample: '5.3.2-release',
 });

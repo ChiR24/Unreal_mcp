@@ -311,8 +311,15 @@ describe('describe returns one capability contract with its EXACT action schema'
 
   it('marks an available capability runnable with an executable execute nextCall', () => {
     expect(result.runnable).toBe(true);
+    // `capability` leads because it is the ONLY selector guaranteed to resolve:
+    // execute matches a tool+action pair against the legacy-pair index, so a
+    // nextCall built from `routing.dispatchAction` was unresolvable for 181
+    // capabilities and resolved to the WRONG capability for 26 more. The legacy
+    // pair is still published for callers that address by tool+action, but it
+    // now comes from `record.legacyIds` rather than the native dispatch verb.
     expect(result.nextCall).toEqual({
       operation: 'execute',
+      capability: ASSET_IMPORT,
       tool: 'manage_asset',
       action: 'import',
       params: {}
