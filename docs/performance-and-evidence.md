@@ -222,13 +222,18 @@ The published tables derived from this map are
 ## Gates that are NOT in CI
 
 CI runs, in order: `eslint --max-warnings=0`, `type-check`, `test:unit`,
-`manifest:check`, `test:params`, `npm audit --audit-level=moderate`; a second
-matrix job adds `build` + `test:smoke`.
+`registry:check`, `normalization:check`, `manifest:check`, `policy:check`,
+`test:params`, `migration:check`, `primitives:check`, `security:check`,
+`eval:check`, `version:check`, `workflow:check`,
+`npm audit --omit=dev --audit-level=high` (blocking), then
+`npm audit --audit-level=moderate` (`continue-on-error`, informational); a
+second matrix job adds `build` + `test:smoke`.
+
+The blocking audit is runtime-only at `high`, so it does not prove the tree is
+advisory-free: `--omit=dev --audit-level=moderate` exits 1 against this
+lockfile today. See
+[`security-and-receipts.md`](security-and-receipts.md#a-shipped-dependency-carries-an-advisory).
 
 Not in CI, and therefore not proven by a green run:
-`npm test` (integration — needs a live editor), `registry:check`,
-`normalization:check`, `policy:check`, `version:check`, `lint:cpp`,
+`npm test` (integration — needs a live editor), `lint:c`, `lint:cpp`,
 `lint:csharp`. Plugin packaging runs only when `UNREAL_ENGINE_ROOT` is set.
-
-A green CI badge does not mean the canonical registry is fresh. Run
-`registry:check` locally.

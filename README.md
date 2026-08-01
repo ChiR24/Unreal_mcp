@@ -524,7 +524,7 @@ node --loader ts-node/esm scripts/generate-gateway-manifest.ts --check  # CI gat
 
 ### CI gates
 
-CI runs, in order: ESLint 9 (`npx eslint . --max-warnings=0`), TypeScript type-check, unit tests, `manifest:check`, native parity, parameter audit, and `npm audit --audit-level=moderate`. A plugin packaging job runs `scripts/package-plugin.sh` only when an Unreal Engine source root secret is provided (opt-in), because CI runners do not ship an engine. Release archives exclude `Binaries/`, `Intermediate/`, and `Saved/` so generated build dirs never leak.
+CI runs, in order: ESLint 9 (`npx eslint . --max-warnings=0`), TypeScript type-check, unit tests, `registry:check`, `normalization:check`, `manifest:check`, `policy:check`, native parity + parameter audit (`test:params`), `migration:check`, `primitives:check`, `security:check`, `eval:check`, `version:check`, `workflow:check`, then a blocking runtime-only dependency audit (`npm audit --omit=dev --audit-level=high`) followed by an informational full-tree `npm audit --audit-level=moderate`. A plugin packaging job runs `scripts/package-plugin.sh` only when an Unreal Engine source root secret is provided (opt-in), because CI runners do not ship an engine. Release archives exclude `Binaries/`, `Intermediate/`, and `Saved/` so generated build dirs never leak.
 
 ---
 
