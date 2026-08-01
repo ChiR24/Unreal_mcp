@@ -5,7 +5,8 @@
 // produce identical JSON/TS/H output regardless of input file ordering.
 
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
+import { sortById } from '../../src/utils/serialization/ordering.js';
 
 export function sortPilotRecords(records: readonly CapabilityRecord[]): readonly CapabilityRecord[] {
-  return [...records].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return sortById(records);
 }

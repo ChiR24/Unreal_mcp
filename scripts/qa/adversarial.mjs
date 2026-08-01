@@ -409,7 +409,12 @@ async function main() {
 
   const written = writeRedactedEvidence(resolve(ROOT, options.out), report);
   process.stderr.write(`${report.verdict}: ${written}\n`);
-  if (failed.length > 0) process.stderr.write(`failed gates: ${failedGates.join(', ')}\n`);
+  if (failed.length > 0) {
+    process.stderr.write(`failed gates: ${failedGates.join(', ')}\n`);
+    // A FAIL verdict must be observable to the shell. Without this, a run that
+    // failed every gate still exits 0 and `adversarial.mjs && promote` promotes.
+    process.exitCode = 1;
+  }
 }
 
 main().catch((error) => {

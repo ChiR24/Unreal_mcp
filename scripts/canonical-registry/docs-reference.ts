@@ -13,6 +13,7 @@
 // that on the emitted bytes.
 
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
+import { sortById as byId } from '../../src/utils/serialization/ordering.js';
 
 /**
  * The migration-map projection this module consumes. Deliberately structural
@@ -42,9 +43,6 @@ export interface MigrationReferenceInput extends DocsReferenceInput {
 // pipe or newline would silently corrupt the table it lands in.
 const cell = (value: string): string =>
   value.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim();
-
-const byId = (records: readonly CapabilityRecord[]): readonly CapabilityRecord[] =>
-  [...records].sort((l, r) => (l.id < r.id ? -1 : l.id > r.id ? 1 : 0));
 
 const GENERATED_HEADER = (source: string): readonly string[] => [
   '<!-- GENERATED FILE - DO NOT EDIT.',

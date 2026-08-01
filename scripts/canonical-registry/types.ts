@@ -6,6 +6,8 @@
 import { createHash } from 'node:crypto';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
 import type { ToolDefinition } from '../../src/tools/definitions/shared/tool-definition.js';
+import { sortById } from '../../src/utils/serialization/ordering.js';
+export { sortById } from '../../src/utils/serialization/ordering.js';
 
 export type JsonSchemaNode = Record<string, unknown>;
 
@@ -39,9 +41,6 @@ export const pascalCase = (name: string): string =>
     .split(/[_-]/)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join('');
-
-export const sortById = <T extends { id: string }>(items: readonly T[]): T[] =>
-  [...items].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
 export const buildRecordSummaries = (
   records: readonly CapabilityRecord[],

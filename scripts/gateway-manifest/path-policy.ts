@@ -109,6 +109,49 @@ function physicalAncestorRealpath(
   }
 }
 
+
+/**
+ * Physical containment: a symlinked ancestor under an allowed root must not
+ * resolve outside it.
+ *
+ * The output-dir and catalog-path validators wrapped the identical
+ * `physicalAncestorRealpath` call in the identical pair of inline error
+ * factories, differing only in two codes and the prose. A new containment rule
+ * had to be added twice, and the four codes were a 2x2 table maintained by hand.
+ * The message text is reproduced exactly, so no caller sees a changed error.
+ */
+function guardPhysicalContainment(
+  requested: string,
+  allowed: readonly string[],
+  spec: {
+    readonly subject: string;
+    readonly escapeCode: 'PILOT_OUTPUT_DIR_SYMLINK_ESCAPE' | 'PILOT_CATALOG_PATH_SYMLINK_ESCAPE';
+    readonly forbiddenCode: 'PILOT_OUTPUT_DIR_FORBIDDEN' | 'PILOT_CATALOG_PATH_FORBIDDEN';
+    readonly escapeRoots: string;
+    readonly forbiddenRoots: string;
+  },
+): void {
+  physicalAncestorRealpath(
+    requested,
+    allowed,
+    (req, real) =>
+      new PilotPathError({
+        code: spec.escapeCode,
+        requested: req,
+        realpath: real,
+        message:
+          `${spec.subject} ${req} resolves (via symlink) to ${real}, which is ` +
+          `outside ${spec.escapeRoots}. Symlink escape is not permitted.`,
+      }),
+    (req) =>
+      new PilotPathError({
+        code: spec.forbiddenCode,
+        requested: req,
+        message: `${spec.subject} ${req} could not be validated against ${spec.forbiddenRoots}.`,
+      }),
+  );
+}
+
 /**
  * Validate and resolve the pilot OUTPUT directory. The directory does not
  * need to exist; its nearest existing ancestor is validated for physical
@@ -148,26 +191,13 @@ export function resolvePilotOutputDir(envPath: string | undefined, repoRoot: str
 
   // Physical containment: a symlinked ancestor under an allowed root must not
   // resolve outside.
-  physicalAncestorRealpath(
-    requested,
-    allowed,
-    (req, real) =>
-      new PilotPathError({
-        code: 'PILOT_OUTPUT_DIR_SYMLINK_ESCAPE',
-        requested: req,
-        realpath: real,
-        message:
-          `Pilot output dir ${req} resolves (via symlink) to ${real}, which is ` +
-          'outside the allowed scratch roots. Symlink escape is not permitted.',
-      }),
-    (req) =>
-      new PilotPathError({
-        code: 'PILOT_OUTPUT_DIR_FORBIDDEN',
-        requested: req,
-        message:
-          `Pilot output dir ${req} could not be validated against the allowed scratch roots.`,
-      }),
-  );
+  guardPhysicalContainment(requested, allowed, {
+    subject: 'Pilot output dir',
+    escapeCode: 'PILOT_OUTPUT_DIR_SYMLINK_ESCAPE',
+    forbiddenCode: 'PILOT_OUTPUT_DIR_FORBIDDEN',
+    escapeRoots: 'the allowed scratch roots',
+    forbiddenRoots: 'the allowed scratch roots',
+  });
 
   return requested;
 }
@@ -192,26 +222,13 @@ export function validatePilotCatalogPath(path: string, repoRoot: string): string
     });
   }
 
-  physicalAncestorRealpath(
-    requested,
-    allowed,
-    (req, real) =>
-      new PilotPathError({
-        code: 'PILOT_CATALOG_PATH_SYMLINK_ESCAPE',
-        requested: req,
-        realpath: real,
-        message:
-          `Pilot catalog path ${req} resolves (via symlink) to ${real}, which is ` +
-          'outside the repo root or the OS temp directory. Symlink escape is not permitted.',
-      }),
-    (req) =>
-      new PilotPathError({
-        code: 'PILOT_CATALOG_PATH_FORBIDDEN',
-        requested: req,
-        message:
-          `Pilot catalog path ${req} could not be validated against the allowed roots.`,
-      }),
-  );
+  guardPhysicalContainment(requested, allowed, {
+    subject: 'Pilot catalog path',
+    escapeCode: 'PILOT_CATALOG_PATH_SYMLINK_ESCAPE',
+    forbiddenCode: 'PILOT_CATALOG_PATH_FORBIDDEN',
+    escapeRoots: 'the repo root or the OS temp directory',
+    forbiddenRoots: 'the allowed roots',
+  });
 
   return requested;
 }

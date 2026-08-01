@@ -7,6 +7,7 @@
 // without the published matrix changing with it.
 
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
+import { sortById } from '../../src/utils/serialization/ordering.js';
 
 const MATRIX_DOC = 'docs/capability-support-matrix.md';
 
@@ -53,9 +54,6 @@ const countSupported = (records: readonly CapabilityRecord[]): AxisCounts => ({
   undo: records.filter((r) => r.behavior.semantics.undo.mode !== 'none').length,
   compensation: records.filter((r) => r.behavior.semantics.compensation.mode !== 'none').length
 });
-
-const sortById = (records: readonly CapabilityRecord[]): readonly CapabilityRecord[] =>
-  [...records].sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
 
 function buildParentRows(records: readonly CapabilityRecord[]): readonly string[] {
   const parents = [...new Set(records.map((r) => r.routing.parentTool))].sort();
