@@ -17,7 +17,15 @@ FString McpMaskSecrets(const FString& Value);
 /** Mask secrets then truncate to the receipt free-text bound, mirroring TS redactText. */
 FString McpRedactText(const FString& Value);
 
-/** Recursively mask secret string leaves in a JSON object tree in place. */
+/** True when an object KEY names a credential, mirroring isSecretKey() in
+ *  receipt-redaction.ts. Defined in McpNativeReceiptSecretKeys.cpp. Value-only
+ *  masking cannot see a credential that arrives as a real JSON value, because
+ *  no `keyword<sep>value` context survives — the key name is the only signal. */
+bool McpIsSecretKey(const FString& Key);
+
+/** Recursively mask secret string leaves in a JSON object tree in place, and
+ *  mask a secret-NAMED key's entire value whatever its shape. Bounded by the
+ *  shared receipt depth cap so a deeply nested tree cannot overflow the stack. */
 void McpMaskSecretsDeep(const TSharedPtr<FJsonObject>& Object);
 
 /** Cap a receipt array to the shared max entry count, mirroring TS boundArray. */

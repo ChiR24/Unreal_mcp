@@ -111,7 +111,6 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.Number(TEXT("threshold"), TEXT("Effect threshold."));
 			Schema.Number(TEXT("tileSize"), TEXT("Procedural foliage tile size."));
 			Schema.Number(TEXT("time"), TEXT("Time of day in hours (0-24)."));
-			Schema.Number(TEXT("timeoutMs"), TEXT("Client-side request deadline in milliseconds."));
 			Schema.String(TEXT("tool"), TEXT("Sculpt tool name (e.g. Raise, Lower, Smooth)."));
 			Schema.Bool(TEXT("updateNormals"), TEXT("Recompute normals after modification."));
 			Schema.Bool(TEXT("useRandomOffset"), TEXT("Apply a random offset to scattered meshes."));

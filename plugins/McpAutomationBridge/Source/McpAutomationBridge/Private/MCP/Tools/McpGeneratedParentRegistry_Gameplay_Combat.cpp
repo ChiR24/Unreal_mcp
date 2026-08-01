@@ -211,7 +211,6 @@ public:
 			Schema.String(TEXT("systemName"), TEXT("Runtime Niagara system/component name on the target actor."));
 			Schema.String(TEXT("systemPath"), TEXT("Canonical /Game Niagara System asset path."));
 			Schema.String(TEXT("targetNodeId"), TEXT("Niagara graph node the dynamic input is attached to."));
-			Schema.Number(TEXT("timeoutMs"), TEXT("Per-request timeout in milliseconds applied by the bridge dispatcher."));
 			Schema.Number(TEXT("uniformSize"), TEXT("Uniform sprite size."));
 			Schema.AnyValue(TEXT("value"), TEXT("Property value (any type)."));
 			Schema.String(TEXT("velocityMode"), TEXT("Velocity module mode (Linear, Cone, FromPoint)."));

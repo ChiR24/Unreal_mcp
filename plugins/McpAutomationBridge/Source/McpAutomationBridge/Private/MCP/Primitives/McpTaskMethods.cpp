@@ -205,8 +205,15 @@ bool FMcpTaskSurface::HandleMethod(
 		Related->SetStringField(TEXT("taskId"), TaskId);
 		auto Meta = MakeShared<FJsonObject>();
 		Meta->SetObjectField(TEXT("io.modelcontextprotocol/related-task"), Related);
-		Result->SetObjectField(TEXT("_meta"), Meta);
-		OutBody = FMcpJsonRpc::BuildResponse(Id, Result);
+		// Stamp `_meta` on a COPY. GetResult hands back the TSharedPtr the store
+		// RETAINS, and the store lock is already released here, so mutating it
+		// in place would both race another connection running tasks/result for
+		// the same session (two unsynchronized TMap::Add on one FJsonObject) and
+		// permanently alter state the store documents as write-once.
+		TSharedPtr<FJsonObject> Response = MakeShared<FJsonObject>();
+		Response->Values = Result->Values;
+		Response->SetObjectField(TEXT("_meta"), Meta);
+		OutBody = FMcpJsonRpc::BuildResponse(Id, Response);
 		return true;
 	}
 

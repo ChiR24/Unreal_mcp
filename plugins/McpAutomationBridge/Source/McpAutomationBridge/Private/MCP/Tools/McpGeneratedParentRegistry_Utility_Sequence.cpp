@@ -190,7 +190,6 @@ public:
 			Schema.Integer(TEXT("temporalSampleCount"), TEXT("Sample count per render sample pass."));
 			Schema.Number(TEXT("time"), TEXT("Seek time in seconds (alias of timeSeconds)."));
 			Schema.Number(TEXT("timeSeconds"), TEXT("Seek time in seconds (<=86400)."));
-			Schema.Number(TEXT("timeoutMs"), TEXT("Render timeout in milliseconds (max 3600000)."));
 			Schema.Number(TEXT("to"), TEXT("Fade end opacity value."));
 			Schema.String(TEXT("trackName"), TEXT("Name of the track to modify."));
 			Schema.Array(TEXT("trackNames"), TEXT("Recorded track names (alias of tracks)."), TEXT("string"));

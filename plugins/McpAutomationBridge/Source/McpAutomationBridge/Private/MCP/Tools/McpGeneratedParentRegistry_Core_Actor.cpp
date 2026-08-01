@@ -186,7 +186,6 @@ public:
 			Schema.String(TEXT("sublevelPath"), TEXT("Alias of subLevelPath resolved by the manage_level argument normalizer."));
 			Schema.String(TEXT("targetPath"), TEXT("Alias of destinationPath resolved by the manage_level argument normalizer."));
 			Schema.String(TEXT("template"), TEXT("Level template path accepted for compatibility; create_level dispatch does not apply it."));
-			Schema.Number(TEXT("timeoutMs"), TEXT("Operation timeout in milliseconds."));
 			Schema.Bool(TEXT("useWorldPartition"), TEXT("Create the level with World Partition enabled."));
 			Schema.StringEnum(TEXT("action"), { TEXT("load"), TEXT("load_level"), TEXT("save"), TEXT("save_level"), TEXT("save_as"), TEXT("save_level_as"), TEXT("create_level"), TEXT("delete"), TEXT("delete_level"), TEXT("rename_level"), TEXT("duplicate_level"), TEXT("stream"), TEXT("unload"), TEXT("unload_level"), TEXT("create_light"), TEXT("build_lighting"), TEXT("set_metadata"), TEXT("list_levels"), TEXT("get_current_level"), TEXT("get_summary"), TEXT("validate_level"), TEXT("export_level"), TEXT("import_level"), TEXT("add_sublevel") }, TEXT("Action to invoke on manage_level."));
 			Schema.Required({ TEXT("action") });

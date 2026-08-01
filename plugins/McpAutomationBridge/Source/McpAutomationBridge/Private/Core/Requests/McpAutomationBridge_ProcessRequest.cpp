@@ -36,7 +36,9 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    ERequestOrigin Origin) {
+    ERequestOrigin Origin,
+    const TMap<EMcpStateKind, int64> &ExpectedRevisions,
+    const FString &SessionKey) {
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT(">>> ProcessAutomationRequest ENTRY: RequestId=%s action='%s' "
               "(thread=%s)"),
@@ -51,7 +53,8 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
                                      : 0);
   if (!IsInGameThread()) {
     const EAutomationQueueRejection Reason = QueueAutomationRequest(
-        RequestId, Action, Payload, RequestingSocket, Origin);
+        RequestId, Action, Payload, RequestingSocket, Origin,
+        ExpectedRevisions, SessionKey);
     if (Reason != EAutomationQueueRejection::None) {
       SendAutomationRejection(RequestingSocket, RequestId, Reason);
     }
@@ -68,7 +71,8 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
            *RequestId, *Action);
 
     const EAutomationQueueRejection Reason = QueueAutomationRequest(
-        RequestId, Action, Payload, RequestingSocket, Origin);
+        RequestId, Action, Payload, RequestingSocket, Origin,
+        ExpectedRevisions, SessionKey);
     if (Reason != EAutomationQueueRejection::None) {
       SendAutomationRejection(RequestingSocket, RequestId, Reason);
     }
@@ -90,7 +94,8 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
   // Reentrancy guard / enqueue
   if (bProcessingAutomationRequest) {
     const EAutomationQueueRejection Reason = QueueAutomationRequest(
-        RequestId, Action, Payload, RequestingSocket, Origin);
+        RequestId, Action, Payload, RequestingSocket, Origin,
+        ExpectedRevisions, SessionKey);
     if (Reason != EAutomationQueueRejection::None) {
       SendAutomationRejection(RequestingSocket, RequestId, Reason);
     }

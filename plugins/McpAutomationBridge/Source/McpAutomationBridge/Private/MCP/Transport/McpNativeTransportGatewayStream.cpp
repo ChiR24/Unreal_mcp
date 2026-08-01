@@ -71,6 +71,12 @@ void FMcpNativeTransport::StreamToolCall(
 	}
 	if (bSessionInvalid)
 	{
+		// Every exit that abandons the request must also release the ledger slot
+		// claimed for it. The ledger evicts only COMPLETED entries, so a slot
+		// left in-flight here is never reclaimed and that idempotency key
+		// answers IDEMPOTENCY_CONFLICT for the rest of the process lifetime.
+		McpSettleIdempotency(Conn->IdempotencySlot, false, nullptr);
+		Conn->IdempotencySlot.Reset();
 		const FString Body = FMcpJsonRpc::BuildError(
 			Id, FMcpJsonRpc::ErrorInvalidRequest,
 			TEXT("Invalid or expired session ID"));
@@ -82,6 +88,11 @@ void FMcpNativeTransport::StreamToolCall(
 	}
 	if (bPendingLimitReached)
 	{
+		// Reached by a 5th concurrent keyed execute on one session
+		// (MaxPendingToolCallsPerSession = 4). Refusing with 429 and keeping the
+		// slot would wedge that key permanently for a call that never ran.
+		McpSettleIdempotency(Conn->IdempotencySlot, false, nullptr);
+		Conn->IdempotencySlot.Reset();
 		TSharedPtr<FJsonObject> ToolResult =
 			FMcpJsonRpc::BuildToolResult(
 				false, TEXT("Native MCP pending tool-call limit reached"),
@@ -115,6 +126,10 @@ void FMcpNativeTransport::StreamToolCall(
 			FScopeLock Lock(&SSEConnectionsMutex);
 			SSEConnections.Remove(RequestId);
 		}
+		// The client closed its socket after POSTing. Nothing was dispatched, so
+		// the slot must go back rather than pin the key forever.
+		McpSettleIdempotency(Conn->IdempotencySlot, false, nullptr);
+		Conn->IdempotencySlot.Reset();
 		UE_LOG(LogMcpNativeTransport, Warning,
 			TEXT("Failed to send SSE headers for tool %s"), *ToolName);
 		return;

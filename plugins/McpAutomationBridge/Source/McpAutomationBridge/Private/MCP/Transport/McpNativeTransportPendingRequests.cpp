@@ -59,6 +59,15 @@ bool FMcpNativeTransport::CompletePendingRequest(
 
 	if (bCancelled)
 	{
+		// A claimed slot MUST be released on every exit, not just the one that
+		// builds a receipt. The ledger only ever evicts completed entries, so an
+		// orphaned in-flight slot is immortal: every later execute with that key
+		// answers IDEMPOTENCY_CONFLICT for the life of the editor process.
+		// Abandon (not Complete) is correct here - a cancelled call recorded
+		// nothing, so the key must stay free for a genuine retry.
+		McpSettleIdempotency(Conn->IdempotencySlot, false, nullptr);
+		Conn->IdempotencySlot.Reset();
+
 		FScopeLock WriteLock(&Conn->WriteMutex);
 		if (Conn->Socket)
 		{
@@ -93,6 +102,14 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		ReportedResult->TryGetStringField(TEXT("errorCode"), ReportedErrorCode);
 		McpSettleIdempotency(Conn->IdempotencySlot, bReportedSuccess, ReportedResult);
 	}
+	else
+	{
+		// No capability id means no receipt was built, so there is nothing to
+		// record - but a slot may still have been claimed upstream and would
+		// otherwise leak exactly as the cancel path did.
+		McpSettleIdempotency(Conn->IdempotencySlot, false, nullptr);
+	}
+	Conn->IdempotencySlot.Reset();
 	TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
 		bReportedSuccess, ReportedMessage, ReportedResult, ReportedErrorCode);
 	FString ResponseBody = FMcpJsonRpc::BuildResponse(Conn->JsonRpcId, ToolResult);

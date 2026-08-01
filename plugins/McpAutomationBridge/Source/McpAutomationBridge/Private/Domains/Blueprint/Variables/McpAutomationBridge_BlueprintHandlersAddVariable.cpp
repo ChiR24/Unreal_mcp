@@ -1,4 +1,9 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+// Supplies MCP_BLUEPRINT_ACTION_LOCALS, which declares RequestId /
+// RequestingSocket / LocalPayload / Bridge for every handler in this file. Every
+// other Blueprint handler that uses the macro includes this; omitting it here
+// compiled only by transitive luck and fails outright under an installed engine.
+#include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintAssetLoad.h"

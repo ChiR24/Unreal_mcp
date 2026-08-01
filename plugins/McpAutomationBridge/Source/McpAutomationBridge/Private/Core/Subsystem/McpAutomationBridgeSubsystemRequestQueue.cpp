@@ -253,12 +253,19 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests()
                 TEXT("MCP editor mutation lane violated: depth=%d gameThread=%d"),
                 QueueFairness.DispatchDepth,
                 IsInGameThread() ? 1 : 0);
+            // The pins and the session lane travel WITH the request. If the
+            // dispatch below defers again (GC / async load) or hits the
+            // reentrancy guard, ProcessAutomationRequest re-queues, and passing
+            // these through is what stops that second hop from silently
+            // dropping the live-state precondition and the session identity.
             ProcessAutomationRequest(
                 Req.RequestId,
                 Req.Action,
                 Req.Payload,
                 Req.RequestingSocket,
-                Req.Origin);
+                Req.Origin,
+                Req.ExpectedRevisions,
+                Req.SessionKey);
         }
         {
             FScopeLock Lock(&PendingAutomationRequestsMutex);

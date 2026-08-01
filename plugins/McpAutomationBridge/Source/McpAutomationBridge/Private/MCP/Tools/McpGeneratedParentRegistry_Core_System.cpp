@@ -210,7 +210,6 @@ public:
 			Schema.String(TEXT("targetPlayerId"), TEXT("targetPlayerId"));
 			Schema.Number(TEXT("teamIndex"), TEXT("teamIndex"));
 			Schema.Number(TEXT("teamSize"), TEXT("teamSize"));
-			Schema.Number(TEXT("timeoutMs"), TEXT("timeoutMs"));
 			Schema.String(TEXT("travelOptions"), TEXT("travelOptions"));
 			Schema.String(TEXT("triggerType"), TEXT("triggerType"));
 			Schema.String(TEXT("useOwnerNetRelevancy"), TEXT("useOwnerNetRelevancy"));

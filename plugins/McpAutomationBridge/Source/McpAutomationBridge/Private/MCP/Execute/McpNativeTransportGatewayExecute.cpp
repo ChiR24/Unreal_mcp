@@ -129,6 +129,19 @@ void FMcpNativeTransport::HandleGatewayExecute(
 			const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ReplayReceiptJson);
 			if (FJsonSerializer::Deserialize(Reader, Recorded) && Recorded.IsValid())
 			{
+				// The recorded receipt describes the FIRST call, so its correlation
+				// id names an exchange this client never made. Sent unchanged, a
+				// client joining on correlationId saw a mismatch it could not tell
+				// from a bug. The envelope names THIS call, `replayed` says why the
+				// body is the earlier one, and `replayedFrom` keeps the original
+				// joinable. Mirrors markReplayed in gateway-execute-idempotency.ts.
+				FString RecordedCorrelation;
+				if (Recorded->TryGetStringField(TEXT("correlationId"), RecordedCorrelation))
+				{
+					Recorded->SetStringField(TEXT("replayedFrom"), RecordedCorrelation);
+				}
+				Recorded->SetBoolField(TEXT("replayed"), true);
+				Recorded->SetStringField(TEXT("correlationId"), Context.CorrelationId);
 				SendReceipt(Recorded);
 				return;
 			}

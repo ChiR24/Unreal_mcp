@@ -196,7 +196,6 @@ public:
 			Schema.String(TEXT("targetNodeId"), TEXT("Target node identifier for pin connection."));
 			Schema.String(TEXT("targetPin"), TEXT("Target pin name."));
 			Schema.String(TEXT("texturePath"), TEXT("Canonical /Game texture asset path."));
-			Schema.Number(TEXT("timeoutMs"), TEXT("Client-side request deadline in milliseconds."));
 			Schema.String(TEXT("title"), TEXT("Node title (alias of nodeName)."));
 			Schema.Number(TEXT("x"), TEXT("Node graph X position (alias of posX)."));
 			Schema.Number(TEXT("y"), TEXT("Node graph Y position (alias of posY)."));

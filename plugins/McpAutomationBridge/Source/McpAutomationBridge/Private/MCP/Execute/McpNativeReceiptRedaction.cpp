@@ -10,8 +10,14 @@ namespace
 // Mirror of MAX_RECEIPT_ARRAY / MAX_RECEIPT_TEXT in receipt-redaction.ts.
 constexpr int32 McpMaxReceiptArray = 200;
 constexpr int32 McpMaxReceiptText = 2048;
+// Mirror of MAX_RECEIPT_DEPTH. The size gate cannot substitute for a depth gate:
+// thousands of nesting levels are only a few KB, so the stack overflows before
+// any size check runs. A subtree too deep to inspect is MASKED, not returned.
+constexpr int32 McpMaxReceiptDepth = 100;
 
-TSharedPtr<FJsonValue> MaskValue(const TSharedPtr<FJsonValue>& Value);
+TSharedPtr<FJsonValue> MaskValue(const TSharedPtr<FJsonValue>& Value, int32 Depth);
+
+void MaskSecretsDeepInternal(const TSharedPtr<FJsonObject>& Object, int32 Depth);
 
 // Skip a single optional surrounding quote so JSON-like `"token":"x"` is masked.
 void SkipOptionalQuote(const FString& Text, int32& Cursor)
@@ -106,7 +112,7 @@ void MaskAfterMarker(FString& Text, const FString& Marker, bool bAssignment)
 	}
 }
 
-TSharedPtr<FJsonValue> MaskValue(const TSharedPtr<FJsonValue>& Value)
+TSharedPtr<FJsonValue> MaskValue(const TSharedPtr<FJsonValue>& Value, int32 Depth)
 {
 	if (!Value.IsValid())
 	{
@@ -120,27 +126,56 @@ TSharedPtr<FJsonValue> MaskValue(const TSharedPtr<FJsonValue>& Value)
 	}
 	if (Value->Type == EJson::Object)
 	{
+		if (Depth >= McpMaxReceiptDepth)
+		{
+			return MakeShared<FJsonValueString>(TEXT("[REDACTED]"));
+		}
 		const TSharedPtr<FJsonObject>* Object = nullptr;
 		if (Value->TryGetObject(Object) && Object)
 		{
-			McpMaskSecretsDeep(*Object);
+			MaskSecretsDeepInternal(*Object, Depth + 1);
 		}
 		return Value;
 	}
 	if (Value->Type == EJson::Array)
 	{
+		if (Depth >= McpMaxReceiptDepth)
+		{
+			return MakeShared<FJsonValueString>(TEXT("[REDACTED]"));
+		}
 		const TArray<TSharedPtr<FJsonValue>>* Array = nullptr;
 		if (Value->TryGetArray(Array) && Array)
 		{
 			TArray<TSharedPtr<FJsonValue>> Masked;
 			for (const TSharedPtr<FJsonValue>& Element : *Array)
 			{
-				Masked.Add(MaskValue(Element));
+				Masked.Add(MaskValue(Element, Depth + 1));
 			}
 			return MakeShared<FJsonValueArray>(Masked);
 		}
 	}
 	return Value;
+}
+
+void MaskSecretsDeepInternal(const TSharedPtr<FJsonObject>& Object, int32 Depth)
+{
+	if (!Object.IsValid())
+	{
+		return;
+	}
+	for (TPair<FString, TSharedPtr<FJsonValue>>& Pair : Object->Values)
+	{
+		// A secret-named KEY masks its ENTIRE value whatever the value's shape:
+		// an object, an array and a number can each carry a credential just as
+		// well as a string, and recursing would only find leaves that no longer
+		// carry the keyword context the string masker needs.
+		if (McpIsSecretKey(Pair.Key))
+		{
+			Pair.Value = MakeShared<FJsonValueString>(TEXT("[REDACTED]"));
+			continue;
+		}
+		Pair.Value = MaskValue(Pair.Value, Depth);
+	}
 }
 }  // namespace
 
@@ -164,14 +199,7 @@ FString McpMaskSecrets(const FString& Value)
 
 void McpMaskSecretsDeep(const TSharedPtr<FJsonObject>& Object)
 {
-	if (!Object.IsValid())
-	{
-		return;
-	}
-	for (TPair<FString, TSharedPtr<FJsonValue>>& Pair : Object->Values)
-	{
-		Pair.Value = MaskValue(Pair.Value);
-	}
+	MaskSecretsDeepInternal(Object, 0);
 }
 
 FString McpRedactText(const FString& Value)

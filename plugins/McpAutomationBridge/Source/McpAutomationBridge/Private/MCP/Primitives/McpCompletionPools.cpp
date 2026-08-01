@@ -5,6 +5,12 @@ namespace
 {
 	// Mirror the ACTOR_CLASS_ALIASES keys (src/config/class-aliases.ts), the safe
 	// cached project handles the TS projectHandleCandidates draws from.
+	//
+	// KNOWN GAP mirrored from TS: these bare class names do not satisfy the
+	// mount-root rule the object/asset resource templates enforce, so every
+	// suggestion is refused on read. Emitting the alias target paths would
+	// resolve, but the TS safety test forbids a project handle that looks like a
+	// path. Both surfaces stay wrong the SAME way rather than diverging.
 	const TArray<FString>& ClassAliasHandles()
 	{
 		static const TArray<FString> Handles = {

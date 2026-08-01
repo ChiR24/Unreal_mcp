@@ -43,7 +43,10 @@ TArray<FString> McpCompletionEnumValues(const FMcpCompletionSlot& Slot)
 	}
 	if (Slot.RefType == TEXT("ref/resource") && Slot.ArgumentName == TEXT("topic"))
 	{
-		return { TEXT("overview"), TEXT("assets"), TEXT("actors"), TEXT("blueprints"), TEXT("levels"), TEXT("sequencer"), TEXT("niagara"), TEXT("physics") };
+		// The keys the knowledge table actually serves (src/resources/knowledge-resources.ts
+		// KNOWLEDGE). The previous list (overview/assets/actors/...) shared ZERO
+		// values with it, so every suggested topic answered RESOURCE_NOT_FOUND.
+		return { TEXT("gateway"), TEXT("paths"), TEXT("resources"), TEXT("safety"), TEXT("transports") };
 	}
 	if (Slot.RefType == TEXT("ref/prompt") && Slot.RefId == TEXT("asset-import") && Slot.ArgumentName == TEXT("sourceFormat"))
 	{

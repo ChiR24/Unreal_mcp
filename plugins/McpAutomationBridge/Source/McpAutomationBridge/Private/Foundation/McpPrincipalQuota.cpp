@@ -38,7 +38,10 @@ void FMcpPrincipalQuotaLedger::EvictOldestIfFull()
 	}
 	if (OldestKey)
 	{
-		Windows.Remove(*OldestKey);
+		// Copy before removing: OldestKey points INTO the map element that
+		// Remove is about to destroy.
+		const FString EvictKey = *OldestKey;
+		Windows.Remove(EvictKey);
 	}
 }
 

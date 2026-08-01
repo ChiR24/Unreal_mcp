@@ -140,7 +140,6 @@ public:
 			Schema.String(TEXT("text"), TEXT("Text content for a text block or button."));
 			Schema.String(TEXT("texturePath"), TEXT("Texture asset path for an image or brush."));
 			Schema.Number(TEXT("time"), TEXT("Keyframe time."));
-			Schema.Number(TEXT("timeoutMs"), TEXT("Request timeout in milliseconds."));
 			Schema.String(TEXT("title"), TEXT("Title text for a menu template."));
 			Schema.String(TEXT("toNodeId"), TEXT("Target node identifier for a pin connection."));
 			Schema.String(TEXT("toPinName"), TEXT("Target pin name for a pin connection."));

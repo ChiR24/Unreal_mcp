@@ -7,6 +7,11 @@
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 #include "Safety/McpSafeOperationsAssetSave.h"
+// Supplies `using McpSafeOperations::McpSafeAssetSave`, so the handlers below
+// can call it unqualified. Enums/Shared.h already pulls this in; these two
+// siblings did not, and only compiled where a transitive include happened to
+// provide it -- which an installed-engine build does not.
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Kismet2/StructureEditorUtils.h"
 #include "UserDefinedStructure/UserDefinedStructEditorData.h"

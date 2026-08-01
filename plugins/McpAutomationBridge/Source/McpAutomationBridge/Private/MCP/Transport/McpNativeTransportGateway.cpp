@@ -55,9 +55,16 @@ void McpApplyConfigureVisibility(
 	{
 		const FMcpToolRegistry& Registry = FMcpToolRegistry::Get();
 		TArray<FString> InCategory;
+		// `all` is a wildcard, not a category name. DisableCategory already
+		// special-cases it in the store, but the mirror here only matched exact
+		// category names -- so `enable_category all` re-enabled everything in the
+		// global manager while leaving the session overlay fully disabled, and
+		// because the overlay fingerprint never moved, no resources/updated
+		// announced the divergence.
+		const bool bAll = Category == TEXT("all");
 		for (const FString& ToolName : Registry.GetToolNames())
 		{
-			if (Registry.GetToolCategory(ToolName) == Category) InCategory.Add(ToolName);
+			if (bAll || Registry.GetToolCategory(ToolName) == Category) InCategory.Add(ToolName);
 		}
 		Store.EnableTools(SessionId, InCategory);
 	}

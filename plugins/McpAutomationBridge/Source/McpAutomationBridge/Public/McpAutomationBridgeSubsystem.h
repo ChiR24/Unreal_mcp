@@ -332,12 +332,20 @@ private:
   TMap<FString, FTransform> CachedActorSnapshots;
   bool bProcessingAutomationRequest = false;
 
+  // ExpectedRevisions and SessionKey are carried so the deferral and reentrancy
+  // re-queues below can hand them back to QueueAutomationRequest. Without them
+  // a re-queued request silently reverted to the parameter defaults: the
+  // live-state pins vanished (so the stale-state precondition gate was skipped
+  // entirely on the second drain) and the request fell into the anonymous
+  // session lane, which is also exempt from the per-session admission cap.
   void ProcessAutomationRequest(
       const FString& RequestId,
       const FString& Action,
       const TSharedPtr<FJsonObject>& Payload,
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-      ERequestOrigin Origin = ERequestOrigin::WebSocket);
+      ERequestOrigin Origin = ERequestOrigin::WebSocket,
+      const TMap<EMcpStateKind, int64>& ExpectedRevisions = TMap<EMcpStateKind, int64>(),
+      const FString& SessionKey = FString());
 
   friend struct FMcpLevelHandlerAccess;
   friend struct FMcpEditorFunctionHandlerAccess;

@@ -192,7 +192,11 @@ void FMcpIdempotencyLedger::EvictCompletedOverCap()
 		{
 			return;
 		}
-		Entries.Remove(*OldestKey);
+		// Copy before removing: OldestKey aliases the FString owned BY the map
+		// element, and TMap::Remove destroys that element (freeing the string's
+		// buffer) while still holding the reference it was handed.
+		const FString EvictKey = *OldestKey;
+		Entries.Remove(EvictKey);
 		--CompletedCount;
 	}
 }

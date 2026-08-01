@@ -84,7 +84,15 @@ bool ScanForBlockedCommand(
 	--State.NodeBudget;
 
 	const FString LowerKey = Key.ToLower();
-	const bool bCommandKey = LowerKey == TEXT("command") || LowerKey == TEXT("commands");
+	// Every key the executors actually read. `cmd` is the per-entry key the batch
+	// executor accepts (McpAutomationBridge_ConsoleCommandBatch.cpp reads
+	// TryGetStringField(TEXT("cmd"))), so omitting it here let a blocked command
+	// wrapped as {"commands":[{"cmd":"..."}]} pass the PRE-queue gate and consume
+	// editor-thread work. The post-queue check still refused execution, so this
+	// closes a defence-in-depth gap rather than an execution hole -- but the gate
+	// exists precisely so such a request never reaches the queue.
+	const bool bCommandKey = LowerKey == TEXT("command") || LowerKey == TEXT("commands")
+		|| LowerKey == TEXT("cmd");
 
 	if (Value->Type == EJson::String)
 	{

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
+#include "Async/Async.h"  // AsyncTask, used below
 #include "UObject/ObjectRedirector.h"
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
