@@ -4251,7 +4251,6 @@
         "direction",
         "directory",
         "directoryPath",
-        "domain",
         "downstream",
         "endPin",
         "enumPath",
@@ -4537,10 +4536,6 @@
             "type": "string",
             "description": "Directory path to fix up."
           },
-          "domain": {
-            "type": "string",
-            "description": "Material domain."
-          },
           "downstream": {
             "type": "boolean",
             "description": "Report downstream connections instead of upstream."
@@ -4619,7 +4614,7 @@
           },
           "inputName": {
             "type": "string",
-            "description": "Input pin name."
+            "description": "Input name."
           },
           "inputType": {
             "type": "string",

@@ -3894,10 +3894,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Directory path to fix up."
         },
-        "domain": {
-          "type": "string",
-          "description": "Material domain."
-        },
         "downstream": {
           "type": "boolean",
           "description": "Report downstream connections instead of upstream."
@@ -3976,7 +3972,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "inputName": {
           "type": "string",
-          "description": "Input pin name."
+          "description": "Input name."
         },
         "inputType": {
           "type": "string",

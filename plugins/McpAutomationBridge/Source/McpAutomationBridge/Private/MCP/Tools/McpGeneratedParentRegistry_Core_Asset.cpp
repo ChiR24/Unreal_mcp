@@ -40,7 +40,6 @@ public:
 			Schema.String(TEXT("direction"), TEXT("Connection direction to report (inputs or outputs)."));
 			Schema.String(TEXT("directory"), TEXT("Directory to report on."));
 			Schema.String(TEXT("directoryPath"), TEXT("Directory path to fix up."));
-			Schema.String(TEXT("domain"), TEXT("Material domain."));
 			Schema.Bool(TEXT("downstream"), TEXT("Report downstream connections instead of upstream."));
 			Schema.String(TEXT("endPin"), TEXT("Terminal pin name to stop the chain walk at."));
 			Schema.String(TEXT("enumPath"), TEXT("Asset path of the UserDefinedEnum (e.g. /Game/Enums/E_MyEnum)."));
@@ -60,7 +59,7 @@ public:
 			Schema.Number(TEXT("inWhite"), TEXT("Input white point."));
 			Schema.Bool(TEXT("includeTags"), TEXT("When true, include asset tags in the listing response."));
 			Schema.Number(TEXT("index"), TEXT("Split index."));
-			Schema.String(TEXT("inputName"), TEXT("Input pin name."));
+			Schema.String(TEXT("inputName"), TEXT("Input name."));
 			Schema.String(TEXT("inputType"), TEXT("Input type."));
 			Schema.ArrayOfObjects(TEXT("inputs"), TEXT("Input definitions."));
 			Schema.String(TEXT("instancePath"), TEXT("Material instance /Game path."));

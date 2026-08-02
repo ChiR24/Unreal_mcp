@@ -4254,7 +4254,6 @@ export const gatewayManifest = {
         "direction",
         "directory",
         "directoryPath",
-        "domain",
         "downstream",
         "endPin",
         "enumPath",
@@ -4540,10 +4539,6 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Directory path to fix up."
           },
-          "domain": {
-            "type": "string",
-            "description": "Material domain."
-          },
           "downstream": {
             "type": "boolean",
             "description": "Report downstream connections instead of upstream."
@@ -4622,7 +4617,7 @@ export const gatewayManifest = {
           },
           "inputName": {
             "type": "string",
-            "description": "Input pin name."
+            "description": "Input name."
           },
           "inputType": {
             "type": "string",

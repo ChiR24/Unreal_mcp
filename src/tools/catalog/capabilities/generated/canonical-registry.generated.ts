@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 1335;
-export const CATALOG_REVISION = "35598882aa8ee036";
+export const CATALOG_REVISION = "0f32bd1be0687f12";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -201489,11 +201489,11 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "functionPath": {
+          "assetPath": {
             "type": "string",
-            "description": "Material function /Game path."
+            "description": "Material function /Game asset path."
           },
-          "name": {
+          "inputName": {
             "type": "string",
             "description": "Input name."
           },
@@ -201511,8 +201511,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "functionPath",
-          "name"
+          "assetPath",
+          "inputName"
         ],
         "additionalProperties": false
       },
@@ -201540,8 +201540,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Add a scalar height input",
         "input": {
-          "functionPath": "/Game/Materials/Functions/MF_HeightBlend",
-          "name": "Height",
+          "assetPath": "/Game/Materials/Functions/MF_HeightBlend",
+          "inputName": "Height",
           "inputType": "Scalar",
           "x": -400,
           "y": 0
@@ -201638,8 +201638,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "dd857c63b52db88b0c327c5c0d2073830ecd09f42122e800bae91dbb46500ee1",
-      "content": "f8a546e5ea311578f8d1e1b5da9a29f8662a95b97bc8609cbe58627296de4034"
+      "schema": "50e2565b8881028ef9128f15a88f20d65d3cfa2c6589f7a114a4d0500053a9ae",
+      "content": "1b5f8f97fb5d1dba58ab5baae6e48751571d5c2ca072c2fcdb99477967e2ffc7"
     }
   },
   {
@@ -201670,11 +201670,11 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "functionPath": {
+          "assetPath": {
             "type": "string",
-            "description": "Material function /Game path."
+            "description": "Material function /Game asset path."
           },
-          "name": {
+          "inputName": {
             "type": "string",
             "description": "Output name."
           },
@@ -201692,8 +201692,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "functionPath",
-          "name"
+          "assetPath",
+          "inputName"
         ],
         "additionalProperties": false
       },
@@ -201721,8 +201721,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Add the blended result output",
         "input": {
-          "functionPath": "/Game/Materials/Functions/MF_HeightBlend",
-          "name": "Result",
+          "assetPath": "/Game/Materials/Functions/MF_HeightBlend",
+          "inputName": "Result",
           "inputType": "Scalar",
           "x": 400,
           "y": 0
@@ -201819,8 +201819,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "9403fd659743bf3faf8d98c0bcb83455c937f08130e4b6b781e3edb7ef2bcbae",
-      "content": "3f906e0e2d0c38bba1a72c79070887b116d589bd71c09bcb78064b4a61b355f0"
+      "schema": "df53c9baea2a8a8310298319d3255bf65e0f83c9d407dcaab499be035646f9db",
+      "content": "80f282b2c705e0d909a1f6c792ee2da5ddf1af2fd118f4e76706aac2587b289c"
     }
   },
   {
@@ -205412,13 +205412,13 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "materialPath": {
+          "assetPath": {
             "type": "string",
             "description": "Material /Game asset path."
           }
         },
         "required": [
-          "materialPath"
+          "assetPath"
         ],
         "additionalProperties": false
       },
@@ -205446,7 +205446,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Compile after editing the graph",
         "input": {
-          "materialPath": "/Game/Materials/M_Base"
+          "assetPath": "/Game/Materials/M_Base"
         },
         "output": {
           "success": true
@@ -205540,8 +205540,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7e44435b56e28b261708e0cbcd5f065543a8b5960b599ce84f184da7364a64ec",
-      "content": "613d379dcd42fdedf130837bdb55db4ca8b9eec881d6ee7910da757e32b08197"
+      "schema": "1d03c3f1ed21254b68fba8d79b6600488c565564b5276b14bbb34efe739efc01",
+      "content": "4b626ec73cbbe3938c77af3b729885c4104695f3d899f4edd6f5e5e6a41d227b"
     }
   },
   {
@@ -207815,13 +207815,13 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "functionPath": {
+          "assetPath": {
             "type": "string",
-            "description": "Material function /Game path."
+            "description": "Material function /Game asset path."
           }
         },
         "required": [
-          "functionPath"
+          "assetPath"
         ],
         "additionalProperties": false
       },
@@ -207849,7 +207849,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Read a function's inputs and outputs",
         "input": {
-          "functionPath": "/Game/Materials/Functions/MF_HeightBlend"
+          "assetPath": "/Game/Materials/Functions/MF_HeightBlend"
         },
         "output": {
           "success": true
@@ -207943,8 +207943,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "0799194790be99281da6396ef57ee8dc1f6fc48972ffb1ff180fd6e414fc37da",
-      "content": "1f76ea0ce5a54bffef7001b1cbff56a5175d9176a6ab73266f5cb953d9a7a6c2"
+      "schema": "1bbf787390b239ed0e2cf89256920e0408791b163f314b57dc10e53e4d1b8450",
+      "content": "40acc83c8baac657a232eb6774799626b7826916ec500655fb553f2845b2d3cb"
     }
   },
   {
@@ -207975,13 +207975,13 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "materialPath": {
+          "assetPath": {
             "type": "string",
             "description": "Material /Game asset path."
           }
         },
         "required": [
-          "materialPath"
+          "assetPath"
         ],
         "additionalProperties": false
       },
@@ -208009,7 +208009,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Read a material's configuration",
         "input": {
-          "materialPath": "/Game/Materials/M_Base"
+          "assetPath": "/Game/Materials/M_Base"
         },
         "output": {
           "success": true
@@ -208103,8 +208103,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7e44435b56e28b261708e0cbcd5f065543a8b5960b599ce84f184da7364a64ec",
-      "content": "3ac4e82784a69b03c4ed979c72b670ed5308add98f17fc2d9eb8891a708871dd"
+      "schema": "1d03c3f1ed21254b68fba8d79b6600488c565564b5276b14bbb34efe739efc01",
+      "content": "330d54f4e01d7309d775e0e93a06e673790948334fd37d3d6a17d1543910e109"
     }
   },
   {
@@ -209316,18 +209316,18 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "materialPath": {
+          "assetPath": {
             "type": "string",
             "description": "Material /Game asset path."
           },
-          "domain": {
+          "materialDomain": {
             "type": "string",
             "description": "Material domain."
           }
         },
         "required": [
-          "materialPath",
-          "domain"
+          "assetPath",
+          "materialDomain"
         ],
         "additionalProperties": false
       },
@@ -209355,8 +209355,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Keep a material in the surface domain",
         "input": {
-          "materialPath": "/Game/Materials/M_Base",
-          "domain": "Surface"
+          "assetPath": "/Game/Materials/M_Base",
+          "materialDomain": "Surface"
         },
         "output": {
           "success": true
@@ -209450,8 +209450,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "167aec7bb032d7f37655c903f1d5a9532ca266a87e83287b72e3301100fd32eb",
-      "content": "4e10343e130a362a586b0268d9e38822395ff8145d1585b37d71ab3339f89506"
+      "schema": "95aed1334afa8c146f5854997257d6f0881d77342feefcc77dacb4695b817720",
+      "content": "54de31157c809545428bac724a8ec9f13b1350d5e02e942d6d70aa0d03ff8431"
     }
   },
   {
@@ -210334,7 +210334,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "materialPath": {
+          "assetPath": {
             "type": "string",
             "description": "Material /Game asset path."
           },
@@ -210344,7 +210344,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "materialPath",
+          "assetPath",
           "value"
         ],
         "additionalProperties": false
@@ -210373,7 +210373,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Render a material from both sides",
         "input": {
-          "materialPath": "/Game/Materials/M_Base",
+          "assetPath": "/Game/Materials/M_Base",
           "value": true
         },
         "output": {
@@ -210468,8 +210468,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "600deea356e9ff0428d6ff450e40f0a64f12af58394b902ce8e88e40aa556bb6",
-      "content": "c7b9649f131001784141c24ae8d299d0d999f3554588af19c78b5cdfc826efbd"
+      "schema": "575a1d1fb5cee2225bc830b031a3bda3fdc377c6bfc08501b82bac7049126972",
+      "content": "2e48041666992aed8cd03830b22a78f35dd637bc7a17218c4ea0d9beea6174da"
     }
   },
   {
@@ -251261,16 +251261,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "add_function_input",
     "domain": "material",
-    "schemaHash": "dd857c63b52db88b0c327c5c0d2073830ecd09f42122e800bae91dbb46500ee1",
-    "contentHash": "f8a546e5ea311578f8d1e1b5da9a29f8662a95b97bc8609cbe58627296de4034"
+    "schemaHash": "50e2565b8881028ef9128f15a88f20d65d3cfa2c6589f7a114a4d0500053a9ae",
+    "contentHash": "1b5f8f97fb5d1dba58ab5baae6e48751571d5c2ca072c2fcdb99477967e2ffc7"
   },
   {
     "id": "material.add_function_output",
     "parentTool": "manage_asset",
     "dispatchAction": "add_function_output",
     "domain": "material",
-    "schemaHash": "9403fd659743bf3faf8d98c0bcb83455c937f08130e4b6b781e3edb7ef2bcbae",
-    "contentHash": "3f906e0e2d0c38bba1a72c79070887b116d589bd71c09bcb78064b4a61b355f0"
+    "schemaHash": "df53c9baea2a8a8310298319d3255bf65e0f83c9d407dcaab499be035646f9db",
+    "contentHash": "80f282b2c705e0d909a1f6c792ee2da5ddf1af2fd118f4e76706aac2587b289c"
   },
   {
     "id": "material.add_if",
@@ -251429,8 +251429,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "compile_material",
     "domain": "material",
-    "schemaHash": "7e44435b56e28b261708e0cbcd5f065543a8b5960b599ce84f184da7364a64ec",
-    "contentHash": "613d379dcd42fdedf130837bdb55db4ca8b9eec881d6ee7910da757e32b08197"
+    "schemaHash": "1d03c3f1ed21254b68fba8d79b6600488c565564b5276b14bbb34efe739efc01",
+    "contentHash": "4b626ec73cbbe3938c77af3b729885c4104695f3d899f4edd6f5e5e6a41d227b"
   },
   {
     "id": "material.configure_layer_blend",
@@ -251541,16 +251541,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "get_material_function_info",
     "domain": "material",
-    "schemaHash": "0799194790be99281da6396ef57ee8dc1f6fc48972ffb1ff180fd6e414fc37da",
-    "contentHash": "1f76ea0ce5a54bffef7001b1cbff56a5175d9176a6ab73266f5cb953d9a7a6c2"
+    "schemaHash": "1bbf787390b239ed0e2cf89256920e0408791b163f314b57dc10e53e4d1b8450",
+    "contentHash": "40acc83c8baac657a232eb6774799626b7826916ec500655fb553f2845b2d3cb"
   },
   {
     "id": "material.get_material_info",
     "parentTool": "manage_asset",
     "dispatchAction": "get_material_info",
     "domain": "material",
-    "schemaHash": "7e44435b56e28b261708e0cbcd5f065543a8b5960b599ce84f184da7364a64ec",
-    "contentHash": "3ac4e82784a69b03c4ed979c72b670ed5308add98f17fc2d9eb8891a708871dd"
+    "schemaHash": "1d03c3f1ed21254b68fba8d79b6600488c565564b5276b14bbb34efe739efc01",
+    "contentHash": "330d54f4e01d7309d775e0e93a06e673790948334fd37d3d6a17d1543910e109"
   },
   {
     "id": "material.get_material_node_details",
@@ -251613,8 +251613,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "set_material_domain",
     "domain": "material",
-    "schemaHash": "167aec7bb032d7f37655c903f1d5a9532ca266a87e83287b72e3301100fd32eb",
-    "contentHash": "4e10343e130a362a586b0268d9e38822395ff8145d1585b37d71ab3339f89506"
+    "schemaHash": "95aed1334afa8c146f5854997257d6f0881d77342feefcc77dacb4695b817720",
+    "contentHash": "54de31157c809545428bac724a8ec9f13b1350d5e02e942d6d70aa0d03ff8431"
   },
   {
     "id": "material.set_material_parameter",
@@ -251661,8 +251661,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "set_two_sided",
     "domain": "material",
-    "schemaHash": "600deea356e9ff0428d6ff450e40f0a64f12af58394b902ce8e88e40aa556bb6",
-    "contentHash": "c7b9649f131001784141c24ae8d299d0d999f3554588af19c78b5cdfc826efbd"
+    "schemaHash": "575a1d1fb5cee2225bc830b031a3bda3fdc377c6bfc08501b82bac7049126972",
+    "contentHash": "2e48041666992aed8cd03830b22a78f35dd637bc7a17218c4ea0d9beea6174da"
   },
   {
     "id": "material.set_vector_parameter_value",
@@ -280795,12 +280795,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "02736ae3254f95ee4f42b0f3d6aedbcd9b350bb27e5cebad62915131ddc2de86"
   },
   "material.add_function_input": {
-    "schema": "dd857c63b52db88b0c327c5c0d2073830ecd09f42122e800bae91dbb46500ee1",
-    "content": "f8a546e5ea311578f8d1e1b5da9a29f8662a95b97bc8609cbe58627296de4034"
+    "schema": "50e2565b8881028ef9128f15a88f20d65d3cfa2c6589f7a114a4d0500053a9ae",
+    "content": "1b5f8f97fb5d1dba58ab5baae6e48751571d5c2ca072c2fcdb99477967e2ffc7"
   },
   "material.add_function_output": {
-    "schema": "9403fd659743bf3faf8d98c0bcb83455c937f08130e4b6b781e3edb7ef2bcbae",
-    "content": "3f906e0e2d0c38bba1a72c79070887b116d589bd71c09bcb78064b4a61b355f0"
+    "schema": "df53c9baea2a8a8310298319d3255bf65e0f83c9d407dcaab499be035646f9db",
+    "content": "80f282b2c705e0d909a1f6c792ee2da5ddf1af2fd118f4e76706aac2587b289c"
   },
   "material.add_if": {
     "schema": "bba69d9ec7d4140a6f6b831fe648426dad863aecd45077631c2ee9007231c845",
@@ -280879,8 +280879,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "2f363ad107c3cad54cdf5d8d4ed4e2ebce4feafcb26a9ca3f7d6e4fd084203d5"
   },
   "material.compile_material": {
-    "schema": "7e44435b56e28b261708e0cbcd5f065543a8b5960b599ce84f184da7364a64ec",
-    "content": "613d379dcd42fdedf130837bdb55db4ca8b9eec881d6ee7910da757e32b08197"
+    "schema": "1d03c3f1ed21254b68fba8d79b6600488c565564b5276b14bbb34efe739efc01",
+    "content": "4b626ec73cbbe3938c77af3b729885c4104695f3d899f4edd6f5e5e6a41d227b"
   },
   "material.configure_layer_blend": {
     "schema": "087aae5aa028fbfb4f53d76612a3f0deb3865dc03bdac353229095c0288b4ef0",
@@ -280935,12 +280935,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "4abe65a90aaca2333963a7c9717ae742d498417aeb5af27d0f487c2ad80b14a1"
   },
   "material.get_material_function_info": {
-    "schema": "0799194790be99281da6396ef57ee8dc1f6fc48972ffb1ff180fd6e414fc37da",
-    "content": "1f76ea0ce5a54bffef7001b1cbff56a5175d9176a6ab73266f5cb953d9a7a6c2"
+    "schema": "1bbf787390b239ed0e2cf89256920e0408791b163f314b57dc10e53e4d1b8450",
+    "content": "40acc83c8baac657a232eb6774799626b7826916ec500655fb553f2845b2d3cb"
   },
   "material.get_material_info": {
-    "schema": "7e44435b56e28b261708e0cbcd5f065543a8b5960b599ce84f184da7364a64ec",
-    "content": "3ac4e82784a69b03c4ed979c72b670ed5308add98f17fc2d9eb8891a708871dd"
+    "schema": "1d03c3f1ed21254b68fba8d79b6600488c565564b5276b14bbb34efe739efc01",
+    "content": "330d54f4e01d7309d775e0e93a06e673790948334fd37d3d6a17d1543910e109"
   },
   "material.get_material_node_details": {
     "schema": "fb12ff735f29f57efbceb2587fd46aef20bee08833b137e30e4df28e4e0626a9",
@@ -280971,8 +280971,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "47040eb2b40f2e6ce55b1e7bdba56a7491655f9c85fed2241c2b132149a06dad"
   },
   "material.set_material_domain": {
-    "schema": "167aec7bb032d7f37655c903f1d5a9532ca266a87e83287b72e3301100fd32eb",
-    "content": "4e10343e130a362a586b0268d9e38822395ff8145d1585b37d71ab3339f89506"
+    "schema": "95aed1334afa8c146f5854997257d6f0881d77342feefcc77dacb4695b817720",
+    "content": "54de31157c809545428bac724a8ec9f13b1350d5e02e942d6d70aa0d03ff8431"
   },
   "material.set_material_parameter": {
     "schema": "035dcd6f082c7b77f5d99ad7c092f6eb91e3e7e4a29a1dc096d39f744926ec5d",
@@ -280995,8 +280995,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "2985e79302ceb8006c8a6855290fa07f67ea2e49f7ec5d665f656d0eb747b679"
   },
   "material.set_two_sided": {
-    "schema": "600deea356e9ff0428d6ff450e40f0a64f12af58394b902ce8e88e40aa556bb6",
-    "content": "c7b9649f131001784141c24ae8d299d0d999f3554588af19c78b5cdfc826efbd"
+    "schema": "575a1d1fb5cee2225bc830b031a3bda3fdc377c6bfc08501b82bac7049126972",
+    "content": "2e48041666992aed8cd03830b22a78f35dd637bc7a17218c4ea0d9beea6174da"
   },
   "material.set_vector_parameter_value": {
     "schema": "794e13b4094361e1cc47dff26cc8be1f1e39196b37923c544798ec981f5831c2",
