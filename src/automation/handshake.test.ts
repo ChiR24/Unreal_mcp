@@ -5,9 +5,11 @@ import { Logger } from '../utils/logging/logger.js';
 import { HandshakeHandler } from './handshake.js';
 
 class FakeSocket extends EventEmitter {
+    protocol = 'ws';
     readyState = WebSocket.OPEN;
     sent: string[] = [];
     close = vi.fn();
+    ping = vi.fn();
 
     send(payload: string): void {
         this.sent.push(payload);

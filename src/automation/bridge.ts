@@ -4,6 +4,7 @@ import { type AutomationBridgeResolvedConfig, resolveAutomationBridgeConfig } fr
 import { AutomationRequestDispatcher } from './bridge-request-dispatcher.js';
 import type { AutomationBridgeRuntimeState } from './bridge-state.js';
 import { buildAutomationBridgeStatus } from './bridge-status.js';
+import { CapabilityTokenProvider } from './capability-token-provider.js';
 import { ConnectionManager } from './connection-manager.js';
 import { HandshakeHandler } from './handshake.js';
 import { AutomationLogger } from './log-redaction.js';
@@ -26,6 +27,7 @@ export class AutomationBridge extends EventEmitter {
     private readonly state: AutomationBridgeRuntimeState = {};
     private readonly connectionManager: ConnectionManager;
     private readonly requestTracker: RequestTracker;
+    private readonly capabilityTokenProvider: CapabilityTokenProvider;
     private readonly handshakeHandler: HandshakeHandler;
     private readonly messageHandler: MessageHandler;
     private readonly client: AutomationBridgeClient;
@@ -44,7 +46,11 @@ export class AutomationBridge extends EventEmitter {
             this.config.maxInboundAutomationRequestsPerMinute
         );
         this.requestTracker = new RequestTracker(this.config.maxPendingRequests);
-        this.handshakeHandler = new HandshakeHandler(this.config.capabilityToken);
+        this.capabilityTokenProvider = new CapabilityTokenProvider(this.config.capabilityToken, this.log);
+        this.handshakeHandler = new HandshakeHandler(
+            this.config.capabilityToken,
+            () => this.capabilityTokenProvider.resolve()
+        );
         this.messageHandler = new MessageHandler(
             this.requestTracker,
             (event) => this.emitAutomation('automationEvent', event),
@@ -178,8 +184,15 @@ export class AutomationBridge extends EventEmitter {
         return readBridgeAuthority(this.state.lastHandshakeMetadata);
     }
 
-    isCapabilityTokenConfigured(): boolean {
-        return Boolean(this.config.capabilityToken);
+    /**
+     * True when an EFFECTIVE capability token is available (explicit option,
+     * `MCP_AUTOMATION_CAPABILITY_TOKEN`, or the persisted token file). Routes
+     * through the provider so a file-backed token is seen, not just the
+     * explicit config option — a token the plugin auto-generated must close
+     * the offline admin path on this side too.
+     */
+    async isCapabilityTokenConfigured(): Promise<boolean> {
+        return (await this.capabilityTokenProvider.resolve()) !== undefined;
     }
 
     async sendAutomationRequest<T = AutomationBridgeResponseMessage>(
