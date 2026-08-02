@@ -195,11 +195,12 @@ function behavior(
   opts: Partial<CapabilityBehaviorSource> = {},
 ): CapabilityBehaviorSource {
   const isWrite = effect !== 'read';
+  const idempotency = opts.idempotency ?? (effect === 'read' ? 'idempotent' : 'non-idempotent');
   return {
     effect,
-    idempotency: opts.idempotency ?? (effect === 'read' ? 'idempotent' : 'non-idempotent'),
+    idempotency,
     longRunning: opts.longRunning ?? false,
-    safeToRetry: opts.safeToRetry ?? (effect === 'read'),
+    safeToRetry: opts.safeToRetry ?? (idempotency === 'idempotent' && effect !== 'destructive'),
     supportsPreview: opts.supportsPreview ?? false,
     supportsUndo: opts.supportsUndo ?? isWrite,
   };

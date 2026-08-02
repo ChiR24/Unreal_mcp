@@ -100,4 +100,17 @@ describe('capability metadata audit — GREEN universe passes', () => {
     });
     expect(flagged).toHaveLength(0);
   });
+
+  it('never declares an idempotent non-destructive capability unsafe to retry', () => {
+    const records = loadAllCapabilityRecords();
+    const contradictory = records
+      .filter(
+        (r) =>
+          r.behavior.idempotency === 'idempotent'
+          && r.behavior.effect !== 'destructive'
+          && r.behavior.safeToRetry === false,
+      )
+      .map((r) => `${r.id} (${r.behavior.effect})`);
+    expect(contradictory).toHaveLength(0);
+  });
 });

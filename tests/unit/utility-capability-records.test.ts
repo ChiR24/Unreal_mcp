@@ -101,17 +101,18 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
     expect(ids(UTILITY_CAPABILITY_CATALOG)).toEqual([...ids(UTILITY_CAPABILITY_CATALOG)].sort());
   });
 
-  // Re-pinned when `timeoutMs` was withdrawn as a declared input property. The
-  // gateway refuses any EXECUTION_OPTION_KEYS name found in action params, so the
-  // 14 manage_networking input records advertised a parameter no client could
-  // send; it travels as options.timeoutMs now. Only those 14 schema hashes move,
-  // and the 208-record membership above is unchanged.
+  // Re-pinned when retry safety started following declared idempotency instead
+  // of the effect class, so the 23 manage_sequence records that declare
+  // `idempotency: 'idempotent'` no longer publish `safeToRetry: false` while
+  // calling themselves idempotent. Only those 23 content hashes move; the
+  // manage_audio and manage_networking records and the 208-record membership
+  // above are unchanged.
   it('matches the pinned canonical ID/schema/content hash', () => {
     const body = UTILITY_CAPABILITY_CATALOG.map(
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('327afc45834f48b0171b6feaf36f0adee9a2be351fcc8eed2f68ac595a0d3fad');
+      .toBe('8760cd06345f062fddd29401fae5b1d81b8827311b35deb1d938900fd90ec873');
   });
 
   it('retains stable record hashes after recomputation', () => {

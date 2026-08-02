@@ -31,19 +31,21 @@ export function policy(effect: EffectType): CapabilityPolicy {
 
 /**
  * Retry/undo/preview defaults derived from the effect class, with per-record
- * overrides. A read is idempotent and safe to retry; a write is neither, and
- * gains undo support.
+ * overrides. Retry safety follows the resolved idempotency rather than the
+ * effect, so a record that declares itself idempotent is not also published as
+ * unsafe to retry; destructive stays opt-in.
  */
 export function behavior(
   effect: EffectType,
   opts: Partial<CapabilityBehaviorSource> = {}
 ): CapabilityBehaviorSource {
   const isWrite = effect !== 'read';
+  const idempotency = opts.idempotency ?? (effect === 'read' ? 'idempotent' : 'non-idempotent');
   return {
     effect,
-    idempotency: opts.idempotency ?? (effect === 'read' ? 'idempotent' : 'non-idempotent'),
+    idempotency,
     longRunning: opts.longRunning ?? false,
-    safeToRetry: opts.safeToRetry ?? effect === 'read',
+    safeToRetry: opts.safeToRetry ?? (idempotency === 'idempotent' && effect !== 'destructive'),
     supportsPreview: opts.supportsPreview ?? false,
     supportsUndo: opts.supportsUndo ?? isWrite,
   };

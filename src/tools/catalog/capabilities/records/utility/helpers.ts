@@ -104,11 +104,12 @@ export type UtilityRecordSpec = {
 
 function behavior(spec: UtilityRecordSpec): CapabilityBehaviorSource {
   const effect = spec.effect ?? 'write';
+  const idempotency = effect === 'read' ? 'idempotent' : 'non-idempotent';
   return {
     effect,
-    idempotency: effect === 'read' ? 'idempotent' : 'non-idempotent',
+    idempotency,
     longRunning: false,
-    safeToRetry: spec.safeToRetry ?? effect === 'read',
+    safeToRetry: spec.safeToRetry ?? (idempotency === 'idempotent' && effect !== 'destructive'),
     supportsPreview: false,
     supportsUndo: spec.supportsUndo ?? (effect === 'write' && (spec.states ?? ['edit']).includes('edit')),
   };

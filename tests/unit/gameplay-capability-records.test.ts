@@ -109,7 +109,8 @@ describe('Task 17 honest behavior metadata', () => {
       expect(record.availability.editorStates).toEqual(['edit']);
       expect(record.discovery.summary).toContain('Blueprint asset');
       expect(record.behavior.effect).toBe('write');
-      expect(record.behavior.safeToRetry).toBe(false);
+      expect(record.behavior.idempotency).toBe('idempotent');
+      expect(record.behavior.safeToRetry).toBe(true);
     }
   });
 
