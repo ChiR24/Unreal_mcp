@@ -37,7 +37,6 @@ export function validateStdioReplayEvidenceDocument(evidence, context) {
     (label) => !records.find((record) => record.label === label),
   );
   if (missingLabels.length > 0) {
-    const normalized = missingLabels.map((l) => l.replace(/\s+/g, '')).join(', ');
     throw new Error(
       `Replayed evidence is missing delegated action seek_demo:: ${missingLabels.join(', ')}`,
     );

@@ -2,7 +2,6 @@
 
 import { runToolTests } from '../../test-runner.mjs';
 
-const TEST_FOLDER = '/Game/MCPTest/CoreAssets';
 const ts = Date.now();
 
 // These scenarios require a live Unreal Editor with the bridge plugin loaded.
