@@ -3986,10 +3986,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Input definitions."
         },
-        "instancePath": {
-          "type": "string",
-          "description": "Material instance /Game path."
-        },
         "key": {
           "type": "string",
           "description": "Metadata key."

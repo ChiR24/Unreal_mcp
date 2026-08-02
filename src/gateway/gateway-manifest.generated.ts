@@ -4276,7 +4276,6 @@ export const gatewayManifest = {
         "inputName",
         "inputType",
         "inputs",
-        "instancePath",
         "key",
         "layerName",
         "layers",
@@ -4630,10 +4629,6 @@ export const gatewayManifest = {
               "x-unreal-reflection-boundary": true
             },
             "description": "Input definitions."
-          },
-          "instancePath": {
-            "type": "string",
-            "description": "Material instance /Game path."
           },
           "key": {
             "type": "string",

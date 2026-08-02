@@ -62,7 +62,6 @@ public:
 			Schema.String(TEXT("inputName"), TEXT("Input name."));
 			Schema.String(TEXT("inputType"), TEXT("Input type."));
 			Schema.ArrayOfObjects(TEXT("inputs"), TEXT("Input definitions."));
-			Schema.String(TEXT("instancePath"), TEXT("Material instance /Game path."));
 			Schema.String(TEXT("key"), TEXT("Metadata key."));
 			Schema.String(TEXT("layerName"), TEXT("Layer name."));
 			Schema.ArrayOfObjects(TEXT("layers"), TEXT("Layer blend definitions."));

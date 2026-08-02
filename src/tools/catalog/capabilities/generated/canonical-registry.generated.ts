@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 1335;
-export const CATALOG_REVISION = "0f32bd1be0687f12";
+export const CATALOG_REVISION = "763bfe3277aaa254";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -209150,7 +209150,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "materialPath": {
+          "assetPath": {
             "type": "string",
             "description": "Material /Game asset path."
           },
@@ -209160,7 +209160,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "materialPath",
+          "assetPath",
           "blendMode"
         ],
         "additionalProperties": false
@@ -209189,7 +209189,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Switch a material to masked blending",
         "input": {
-          "materialPath": "/Game/Materials/M_Base",
+          "assetPath": "/Game/Materials/M_Base",
           "blendMode": "Masked"
         },
         "output": {
@@ -209284,8 +209284,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6c8d053ec155c6ea3e7343e8f00c9c228627bd69288aeb28fa0687c5d0bd2f3d",
-      "content": "47040eb2b40f2e6ce55b1e7bdba56a7491655f9c85fed2241c2b132149a06dad"
+      "schema": "a1aabcbf2e9e14b7d254c97b4f83163c800b8d869bcacdd3953e984556170a03",
+      "content": "54725458bef76266a8db3fdd7c8201d2447de54b2ac16bedae8475d20a6ef6ec"
     }
   },
   {
@@ -209482,7 +209482,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "materialPath": {
+          "assetPath": {
             "type": "string",
             "description": "Material /Game asset path."
           },
@@ -209495,7 +209495,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "materialPath",
+          "assetPath",
           "parameterName"
         ],
         "additionalProperties": false
@@ -209524,7 +209524,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Set a roughness parameter",
         "input": {
-          "materialPath": "/Game/Materials/M_Base",
+          "assetPath": "/Game/Materials/M_Base",
           "parameterName": "Roughness",
           "value": 0.35
         },
@@ -209620,8 +209620,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "035dcd6f082c7b77f5d99ad7c092f6eb91e3e7e4a29a1dc096d39f744926ec5d",
-      "content": "34c77f6fb3a5b6e58911637a1c67914506c6779e3be946ffcf25023743555d61"
+      "schema": "7db41d06ff51b67aacc4ec7749da47ff69eb94ddca38f3e125180d5c50bcaac4",
+      "content": "d5569bc008bc9a467b6c28f7b445e00d890ecfd9565d14bbe011a50bff4b0467"
     }
   },
   {
@@ -209652,9 +209652,9 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "instancePath": {
+          "assetPath": {
             "type": "string",
-            "description": "Material instance /Game path."
+            "description": "Material instance /Game asset path."
           },
           "parameterName": {
             "type": "string",
@@ -209666,7 +209666,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "instancePath",
+          "assetPath",
           "parameterName",
           "value"
         ],
@@ -209696,7 +209696,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Override roughness on an instance",
         "input": {
-          "instancePath": "/Game/Materials/MI_Base_Rusty",
+          "assetPath": "/Game/Materials/MI_Base_Rusty",
           "parameterName": "Roughness",
           "value": 0.8
         },
@@ -209792,8 +209792,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "a1de716fb7186a0539a2bcc4b8a70d676591a39a04c15f1f12aa064ed24e8797",
-      "content": "8a9ddb33719dd899a3dd9542ba63bd544ae8cbde3f8d21fffd0d9b08895e5775"
+      "schema": "9425f6b3283c75d15cf7abc4c605ac1b2c28761024971d52c11c7d83e99214c2",
+      "content": "ab45c7fa8f6f49a3440b94392dbf66b95662987d71ab5a0e8959c63ce2507d60"
     }
   },
   {
@@ -209824,7 +209824,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "materialPath": {
+          "assetPath": {
             "type": "string",
             "description": "Material /Game asset path."
           },
@@ -209834,7 +209834,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "materialPath",
+          "assetPath",
           "shadingModel"
         ],
         "additionalProperties": false
@@ -209863,7 +209863,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Use the default lit shading model",
         "input": {
-          "materialPath": "/Game/Materials/M_Base",
+          "assetPath": "/Game/Materials/M_Base",
           "shadingModel": "DefaultLit"
         },
         "output": {
@@ -209958,8 +209958,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6a192503fded16bac4067eb58bfce6e900669bde713e4273f5a8098f95c8dd43",
-      "content": "8b741e8f734ff5bc05d31abf120fd3df017d29358c0b5c3282e76ba1de6b69e9"
+      "schema": "1c565f302fa50dddf63a109b89a480b4b5f4d0f61a519d709941d72466acdf1b",
+      "content": "f7004900fd59c090fa46fde69a9407fcb76d55c94734f571f4d044879284dbc7"
     }
   },
   {
@@ -209990,9 +209990,9 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "instancePath": {
+          "assetPath": {
             "type": "string",
-            "description": "Material instance /Game path."
+            "description": "Material instance /Game asset path."
           },
           "parameterName": {
             "type": "string",
@@ -210004,7 +210004,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "instancePath",
+          "assetPath",
           "parameterName",
           "value"
         ],
@@ -210034,7 +210034,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Enable a detail-map switch on an instance",
         "input": {
-          "instancePath": "/Game/Materials/MI_Base_Rusty",
+          "assetPath": "/Game/Materials/MI_Base_Rusty",
           "parameterName": "UseDetailMap",
           "value": true
         },
@@ -210130,8 +210130,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "4cf5a44553644cd42284a0f802972a451e92c698de9913e05c79feeadd0e27eb",
-      "content": "594c5cc80a8d8f54d85cb8723aeaa2fe06b6995235b7f743f91f015475b98d19"
+      "schema": "8af69eccee593b87031671fab44b1c30a3ad806ff6d93b599ac08cf626e376e8",
+      "content": "63a44fcde0bb7b6c3f04dd990d7a852ed2cc7c4ed6a40b4af02f59200fa1cf95"
     }
   },
   {
@@ -210162,9 +210162,9 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "instancePath": {
+          "assetPath": {
             "type": "string",
-            "description": "Material instance /Game path."
+            "description": "Material instance /Game asset path."
           },
           "parameterName": {
             "type": "string",
@@ -210176,7 +210176,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "instancePath",
+          "assetPath",
           "parameterName",
           "texturePath"
         ],
@@ -210206,7 +210206,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Swap the base colour texture",
         "input": {
-          "instancePath": "/Game/Materials/MI_Base_Rusty",
+          "assetPath": "/Game/Materials/MI_Base_Rusty",
           "parameterName": "BaseColor",
           "texturePath": "/Game/Textures/T_Rust"
         },
@@ -210302,8 +210302,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "d34ea1720cddbe5e0eda881f984c218222e1592fd1ab37ed63b6a2848d7a541a",
-      "content": "2985e79302ceb8006c8a6855290fa07f67ea2e49f7ec5d665f656d0eb747b679"
+      "schema": "23890819754ebe502f16934b9c331d6d768a997a31343f1bc309598e8d00bad0",
+      "content": "513a0354cf509c3b7d09f3c1ba5163edc8778c73d1af8c6185ed4dcc23fb1be2"
     }
   },
   {
@@ -210500,9 +210500,9 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "instancePath": {
+          "assetPath": {
             "type": "string",
-            "description": "Material instance /Game path."
+            "description": "Material instance /Game asset path."
           },
           "parameterName": {
             "type": "string",
@@ -210513,7 +210513,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "instancePath",
+          "assetPath",
           "parameterName",
           "value"
         ],
@@ -210543,7 +210543,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Tint an instance rust-orange",
         "input": {
-          "instancePath": "/Game/Materials/MI_Base_Rusty",
+          "assetPath": "/Game/Materials/MI_Base_Rusty",
           "parameterName": "BaseTint",
           "value": [
             0.55,
@@ -210644,8 +210644,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "794e13b4094361e1cc47dff26cc8be1f1e39196b37923c544798ec981f5831c2",
-      "content": "287257010c5879a35a0a2b410887de66abb53781180cce4689eb27004f7632e4"
+      "schema": "1657f7106b8034e1b3d89730716d4eef81168dabc0ecaf9b9d47139297a37576",
+      "content": "5c7147079c758a5e778f3a92d2eacbdc3df3dd6439ac652f2a2957b884c5ad70"
     }
   },
   {
@@ -251605,8 +251605,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "set_blend_mode",
     "domain": "material",
-    "schemaHash": "6c8d053ec155c6ea3e7343e8f00c9c228627bd69288aeb28fa0687c5d0bd2f3d",
-    "contentHash": "47040eb2b40f2e6ce55b1e7bdba56a7491655f9c85fed2241c2b132149a06dad"
+    "schemaHash": "a1aabcbf2e9e14b7d254c97b4f83163c800b8d869bcacdd3953e984556170a03",
+    "contentHash": "54725458bef76266a8db3fdd7c8201d2447de54b2ac16bedae8475d20a6ef6ec"
   },
   {
     "id": "material.set_material_domain",
@@ -251621,40 +251621,40 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "set_material_parameter",
     "domain": "material",
-    "schemaHash": "035dcd6f082c7b77f5d99ad7c092f6eb91e3e7e4a29a1dc096d39f744926ec5d",
-    "contentHash": "34c77f6fb3a5b6e58911637a1c67914506c6779e3be946ffcf25023743555d61"
+    "schemaHash": "7db41d06ff51b67aacc4ec7749da47ff69eb94ddca38f3e125180d5c50bcaac4",
+    "contentHash": "d5569bc008bc9a467b6c28f7b445e00d890ecfd9565d14bbe011a50bff4b0467"
   },
   {
     "id": "material.set_scalar_parameter_value",
     "parentTool": "manage_asset",
     "dispatchAction": "set_scalar_parameter_value",
     "domain": "material",
-    "schemaHash": "a1de716fb7186a0539a2bcc4b8a70d676591a39a04c15f1f12aa064ed24e8797",
-    "contentHash": "8a9ddb33719dd899a3dd9542ba63bd544ae8cbde3f8d21fffd0d9b08895e5775"
+    "schemaHash": "9425f6b3283c75d15cf7abc4c605ac1b2c28761024971d52c11c7d83e99214c2",
+    "contentHash": "ab45c7fa8f6f49a3440b94392dbf66b95662987d71ab5a0e8959c63ce2507d60"
   },
   {
     "id": "material.set_shading_model",
     "parentTool": "manage_asset",
     "dispatchAction": "set_shading_model",
     "domain": "material",
-    "schemaHash": "6a192503fded16bac4067eb58bfce6e900669bde713e4273f5a8098f95c8dd43",
-    "contentHash": "8b741e8f734ff5bc05d31abf120fd3df017d29358c0b5c3282e76ba1de6b69e9"
+    "schemaHash": "1c565f302fa50dddf63a109b89a480b4b5f4d0f61a519d709941d72466acdf1b",
+    "contentHash": "f7004900fd59c090fa46fde69a9407fcb76d55c94734f571f4d044879284dbc7"
   },
   {
     "id": "material.set_static_switch_parameter_value",
     "parentTool": "manage_asset",
     "dispatchAction": "set_static_switch_parameter_value",
     "domain": "material",
-    "schemaHash": "4cf5a44553644cd42284a0f802972a451e92c698de9913e05c79feeadd0e27eb",
-    "contentHash": "594c5cc80a8d8f54d85cb8723aeaa2fe06b6995235b7f743f91f015475b98d19"
+    "schemaHash": "8af69eccee593b87031671fab44b1c30a3ad806ff6d93b599ac08cf626e376e8",
+    "contentHash": "63a44fcde0bb7b6c3f04dd990d7a852ed2cc7c4ed6a40b4af02f59200fa1cf95"
   },
   {
     "id": "material.set_texture_parameter_value",
     "parentTool": "manage_asset",
     "dispatchAction": "set_texture_parameter_value",
     "domain": "material",
-    "schemaHash": "d34ea1720cddbe5e0eda881f984c218222e1592fd1ab37ed63b6a2848d7a541a",
-    "contentHash": "2985e79302ceb8006c8a6855290fa07f67ea2e49f7ec5d665f656d0eb747b679"
+    "schemaHash": "23890819754ebe502f16934b9c331d6d768a997a31343f1bc309598e8d00bad0",
+    "contentHash": "513a0354cf509c3b7d09f3c1ba5163edc8778c73d1af8c6185ed4dcc23fb1be2"
   },
   {
     "id": "material.set_two_sided",
@@ -251669,8 +251669,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "set_vector_parameter_value",
     "domain": "material",
-    "schemaHash": "794e13b4094361e1cc47dff26cc8be1f1e39196b37923c544798ec981f5831c2",
-    "contentHash": "287257010c5879a35a0a2b410887de66abb53781180cce4689eb27004f7632e4"
+    "schemaHash": "1657f7106b8034e1b3d89730716d4eef81168dabc0ecaf9b9d47139297a37576",
+    "contentHash": "5c7147079c758a5e778f3a92d2eacbdc3df3dd6439ac652f2a2957b884c5ad70"
   },
   {
     "id": "material.update_custom_expression",
@@ -280967,40 +280967,40 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "ecd50769c28c3d816d9e0a67bb046c11b0025feba2cf8711134c5b84258feed8"
   },
   "material.set_blend_mode": {
-    "schema": "6c8d053ec155c6ea3e7343e8f00c9c228627bd69288aeb28fa0687c5d0bd2f3d",
-    "content": "47040eb2b40f2e6ce55b1e7bdba56a7491655f9c85fed2241c2b132149a06dad"
+    "schema": "a1aabcbf2e9e14b7d254c97b4f83163c800b8d869bcacdd3953e984556170a03",
+    "content": "54725458bef76266a8db3fdd7c8201d2447de54b2ac16bedae8475d20a6ef6ec"
   },
   "material.set_material_domain": {
     "schema": "95aed1334afa8c146f5854997257d6f0881d77342feefcc77dacb4695b817720",
     "content": "54de31157c809545428bac724a8ec9f13b1350d5e02e942d6d70aa0d03ff8431"
   },
   "material.set_material_parameter": {
-    "schema": "035dcd6f082c7b77f5d99ad7c092f6eb91e3e7e4a29a1dc096d39f744926ec5d",
-    "content": "34c77f6fb3a5b6e58911637a1c67914506c6779e3be946ffcf25023743555d61"
+    "schema": "7db41d06ff51b67aacc4ec7749da47ff69eb94ddca38f3e125180d5c50bcaac4",
+    "content": "d5569bc008bc9a467b6c28f7b445e00d890ecfd9565d14bbe011a50bff4b0467"
   },
   "material.set_scalar_parameter_value": {
-    "schema": "a1de716fb7186a0539a2bcc4b8a70d676591a39a04c15f1f12aa064ed24e8797",
-    "content": "8a9ddb33719dd899a3dd9542ba63bd544ae8cbde3f8d21fffd0d9b08895e5775"
+    "schema": "9425f6b3283c75d15cf7abc4c605ac1b2c28761024971d52c11c7d83e99214c2",
+    "content": "ab45c7fa8f6f49a3440b94392dbf66b95662987d71ab5a0e8959c63ce2507d60"
   },
   "material.set_shading_model": {
-    "schema": "6a192503fded16bac4067eb58bfce6e900669bde713e4273f5a8098f95c8dd43",
-    "content": "8b741e8f734ff5bc05d31abf120fd3df017d29358c0b5c3282e76ba1de6b69e9"
+    "schema": "1c565f302fa50dddf63a109b89a480b4b5f4d0f61a519d709941d72466acdf1b",
+    "content": "f7004900fd59c090fa46fde69a9407fcb76d55c94734f571f4d044879284dbc7"
   },
   "material.set_static_switch_parameter_value": {
-    "schema": "4cf5a44553644cd42284a0f802972a451e92c698de9913e05c79feeadd0e27eb",
-    "content": "594c5cc80a8d8f54d85cb8723aeaa2fe06b6995235b7f743f91f015475b98d19"
+    "schema": "8af69eccee593b87031671fab44b1c30a3ad806ff6d93b599ac08cf626e376e8",
+    "content": "63a44fcde0bb7b6c3f04dd990d7a852ed2cc7c4ed6a40b4af02f59200fa1cf95"
   },
   "material.set_texture_parameter_value": {
-    "schema": "d34ea1720cddbe5e0eda881f984c218222e1592fd1ab37ed63b6a2848d7a541a",
-    "content": "2985e79302ceb8006c8a6855290fa07f67ea2e49f7ec5d665f656d0eb747b679"
+    "schema": "23890819754ebe502f16934b9c331d6d768a997a31343f1bc309598e8d00bad0",
+    "content": "513a0354cf509c3b7d09f3c1ba5163edc8778c73d1af8c6185ed4dcc23fb1be2"
   },
   "material.set_two_sided": {
     "schema": "575a1d1fb5cee2225bc830b031a3bda3fdc377c6bfc08501b82bac7049126972",
     "content": "2e48041666992aed8cd03830b22a78f35dd637bc7a17218c4ea0d9beea6174da"
   },
   "material.set_vector_parameter_value": {
-    "schema": "794e13b4094361e1cc47dff26cc8be1f1e39196b37923c544798ec981f5831c2",
-    "content": "287257010c5879a35a0a2b410887de66abb53781180cce4689eb27004f7632e4"
+    "schema": "1657f7106b8034e1b3d89730716d4eef81168dabc0ecaf9b9d47139297a37576",
+    "content": "5c7147079c758a5e778f3a92d2eacbdc3df3dd6439ac652f2a2957b884c5ad70"
   },
   "material.update_custom_expression": {
     "schema": "5d93e4bee2c308f6945ac8e233940b59c4804d06ce7e25a7633ec8a1e9c5fe97",
