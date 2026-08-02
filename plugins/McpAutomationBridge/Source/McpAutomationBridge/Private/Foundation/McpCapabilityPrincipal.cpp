@@ -1,4 +1,5 @@
 #include "Foundation/McpCapabilityPrincipal.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersCapabilityToken.h"
 
 #include "McpAutomationBridgeLog.h"
 #include "McpAutomationBridgeSettings.h"
@@ -89,6 +90,25 @@ TArray<FCandidate> BuildCandidates(const UMcpAutomationBridgeSettings& Settings)
 		Legacy.bAuthenticated = true;
 		Legacy.bDeprecated = true;
 		Candidates.Add({ Settings.CapabilityToken, MoveTemp(Legacy) });
+	}
+
+	// Also add the effective token from the store (auto-generated + persisted if
+	// needed) as a legacy candidate so that Resolve can match against it.
+	// This ensures the native /mcp transport uses the same effective token as the
+	// store-generated token, not just Settings->CapabilityToken.
+	// NOTE: This is idempotent. GetCandidateTable caches this table per settings
+	// revision, so the token file is read at most once per revision — not on
+	// every request. The first run may auto-generate and persist the token, and
+	// the store re-reads the file so concurrent first-run writers converge.
+	const FString EffectiveToken = McpCapabilityTokenStore::ResolveEffectiveToken(&Settings);
+	if (!EffectiveToken.IsEmpty() && !SeenTokens.Contains(EffectiveToken))
+	{
+		FMcpCapabilityPrincipal LegacyStore;
+		LegacyStore.Identity = TEXT("legacy-store");
+		LegacyStore.Scopes = { EMcpCapabilityScope::Admin };
+		LegacyStore.bAuthenticated = true;
+		LegacyStore.bDeprecated = true;
+		Candidates.Add({ EffectiveToken, MoveTemp(LegacyStore) });
 	}
 
 	return Candidates;

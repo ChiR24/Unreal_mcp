@@ -21,7 +21,7 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
     ListenHost = TEXT("127.0.0.1");
     ListenPorts = TEXT("8090,8091");
     bMultiListen = true;
-    bRequireCapabilityToken = false;
+    bRequireCapabilityToken = true;
     bAllowNonLoopback = false; // Security: default to loopback-only binding
     bAllowLoopbackMediaUrls = false;
     AllowedLoopbackMediaUrlPrefix = TEXT("");

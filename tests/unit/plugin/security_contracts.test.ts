@@ -63,7 +63,9 @@ describe('plugin security contracts', () => {
       'Transport',
       'McpNativeTransportConnection.cpp',
     );
-    expect(nativeConn).toContain('McpConstantTimeTokenEquals(HttpReq.CapabilityToken, Settings->CapabilityToken)');
+    expect(nativeConn).toContain('McpConstantTimeTokenEquals(HttpReq.CapabilityToken, EffectiveToken)');
+    // The effective token is resolved from the store (auto-generated + file-backed).
+    expect(nativeConn).toContain('McpCapabilityTokenStore::ResolveEffectiveToken');
 
     // WebSocket bridge_hello uses it for the capabilityToken check.
     const wsMessages = privateSource(
@@ -72,6 +74,24 @@ describe('plugin security contracts', () => {
       'McpConnectionManagerMessages.cpp',
     );
     expect(wsMessages).toContain('McpConstantTimeTokenEquals(ReceivedToken, CapabilityToken)');
+  });
+
+  it('stores the capability token through a shared header-only store', () => {
+    const store = privateSource(
+      'Foundation',
+      'BridgeHelpers',
+      'Security',
+      'McpAutomationBridgeHelpersCapabilityToken.h',
+    );
+    // The store exists and exposes the shared resolution function.
+    expect(store).toContain('ResolveEffectiveToken');
+    // Token path: <ProjectRoot>/Saved/MCP/capability-token
+    expect(store).toContain('TEXT("MCP")');
+    expect(store).toContain('TEXT("capability-token")');
+    // 32 random bytes → 64 lowercase hex chars, no trailing newline.
+    expect(store).toMatch(/TEXT\("%02x"\)/); // hex encoding via TEXT("%02x")
+    // SECRET HYGIENE: token value is never logged; file path may appear on error.
+    expect(store).not.toMatch(/\*Token\b.*UE_LOG|UE_LOG.*\bToken\b/);
   });
 
   it('refuses non-loopback native startup unless capability token is required (fail-closed)', () => {
