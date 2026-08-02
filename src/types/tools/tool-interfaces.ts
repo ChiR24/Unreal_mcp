@@ -7,7 +7,7 @@ export interface AutomationRequestBridge {
     isConnected(): boolean;
     sendAutomationRequest(action: string, payload: Record<string, unknown>, options?: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' }; expectedRevisions?: ExpectedRevisions }): Promise<unknown>;
     getAuthority?(): BridgeAuthority | undefined;
-    isCapabilityTokenConfigured?(): boolean;
+    isCapabilityTokenConfigured?(): Promise<boolean>;
 }
 
 export interface AutomationStatusBridge {

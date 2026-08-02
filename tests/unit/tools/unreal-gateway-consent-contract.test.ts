@@ -35,7 +35,7 @@ function makeContext(scopes: readonly string[] | undefined): GatewayContext {
     {
       isConnected: () => true,
       sendAutomationRequest: async () => ({ success: true }),
-      isCapabilityTokenConfigured: () => false,
+      isCapabilityTokenConfigured: async () => false,
       getAuthority: () => (scopes === undefined ? undefined : { scopes: [...scopes] })
     },
     'consent-contract'

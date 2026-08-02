@@ -14,7 +14,7 @@ function makeContext(tokenConfigured: boolean): GatewayContext {
     automationBridge: {
       isConnected: () => false,
       sendAutomationRequest: async () => ({ success: true }),
-      isCapabilityTokenConfigured: () => tokenConfigured
+      isCapabilityTokenConfigured: async () => tokenConfigured
     }
   } as unknown as ITools;
 

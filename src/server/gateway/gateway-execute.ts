@@ -272,7 +272,9 @@ export async function executeGatewayCall(
   // path is no longer available — the client must complete a handshake so the
   // plugin's authority descriptor is present before any protected/offline action.
   // With no token configured, the loopback offline path is preserved unchanged.
-  const tokenConfigured = context.tools.automationBridge?.isCapabilityTokenConfigured?.() ?? false;
+  // The check resolves the EFFECTIVE token (explicit option, env, or token
+  // file), so a file-backed token closes the offline path too.
+  const tokenConfigured = (await context.tools.automationBridge?.isCapabilityTokenConfigured?.()) ?? false;
   const actionSegment = target.record.id.slice(target.record.id.indexOf('.') + 1);
   const canRunWithoutConnection =
     OFFLINE_READABLE_ACTIONS.has(actionSegment)
