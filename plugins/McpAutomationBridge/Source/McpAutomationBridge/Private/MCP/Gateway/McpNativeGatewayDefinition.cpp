@@ -50,6 +50,13 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 			{
 				(*ConsentProp)->SetBoolField(TEXT("additionalProperties"), false);
 			}
+			// Open on purpose, unlike consent above: params keys are per-action and
+			// unenumerable here, so closing it would reject every execute.
+			const TSharedPtr<FJsonObject>* ParamsProp = nullptr;
+			if (Props->TryGetObjectField(TEXT("params"), ParamsProp) && ParamsProp && (*ParamsProp).IsValid())
+			{
+				(*ParamsProp)->SetBoolField(TEXT("additionalProperties"), true);
+			}
 			const TSharedPtr<FJsonObject>* LimitProp = nullptr;
 			const TSharedPtr<FJsonObject>* OffsetProp = nullptr;
 			if (Props->TryGetObjectField(TEXT("limit"), LimitProp) && LimitProp && (*LimitProp).IsValid())

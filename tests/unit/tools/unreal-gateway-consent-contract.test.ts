@@ -90,6 +90,40 @@ describe('Task 40 — consent has a legal input channel on the `unreal` tool', (
   });
 });
 
+describe('`params` is declared as an open object map, not an underspecified object', () => {
+  const paramsSchema = (unrealGatewayToolDefinition.inputSchema as {
+    properties: Record<string, Record<string, unknown>>;
+  }).properties.params;
+
+  it('declares an object that explicitly admits arbitrary action-specific keys', () => {
+    expect(paramsSchema.type).toBe('object');
+    expect(
+      paramsSchema.additionalProperties,
+      'params carries per-action keys the gateway cannot enumerate, so the schema must say so explicitly'
+    ).toBe(true);
+  });
+
+  it('accepts a nested object value under a key no gateway schema enumerates', () => {
+    const { valid, errors } = validateGatewayArgs({
+      operation: 'execute',
+      tool: 'control_actor',
+      action: 'spawn',
+      params: { classPath: '/Script/Engine.StaticMeshActor', location: { x: 0, y: 0, z: 500 } }
+    });
+    expect(valid, `declared contract rejected a normal execute payload: ${errors}`).toBe(true);
+  });
+
+  it('the native /mcp gateway declares params open too, or the surfaces disagree', () => {
+    const cpp = readFileSync(nativeGatewayDefinitionPath, 'utf8');
+    expect(cpp.includes('.Object(TEXT("params")')).toBe(true);
+    const paramsBlock = cpp.slice(cpp.indexOf('TryGetObjectField(TEXT("params")'));
+    expect(
+      /ParamsProp\)->SetBoolField\(TEXT\("additionalProperties"\), true\)/.test(paramsBlock),
+      'native params must publish additionalProperties: true like the TypeScript surface'
+    ).toBe(true);
+  });
+});
+
 describe('Task 40 — consent driven through the real `unreal` tool arguments', () => {
   it('refuses a consent-requiring action when no grant is supplied (positive control)', async () => {
     const result = await handleUnrealGatewayCall(

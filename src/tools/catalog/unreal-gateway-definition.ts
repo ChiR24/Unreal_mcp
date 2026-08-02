@@ -19,7 +19,7 @@ export const unrealGatewayToolDefinition: ToolDefinition = {
       tool: { type: 'string', description: 'Exact canonical parent tool name returned by search or describe.' },
       action: { type: 'string', description: 'Exact action name returned by describe. For configure, this is a manage_tools action.' },
       param: { type: 'string', description: 'Exact parameter name (tool-union catalog) to inspect. Requires tool and action for full drill-down; resolves the single parameter schema. Use with describe only.' },
-      params: { type: 'object', description: 'Parameters for execute or configure. Never include action or subAction here.' },
+      params: { type: 'object', additionalProperties: true, description: 'Parameters for execute or configure. Keys are the action-specific parameter names returned by describe. Never include action or subAction here.' },
       consent: {
         type: 'object',
         properties: {
