@@ -49,7 +49,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - **Graceful Degradation** — Server starts even without an active Unreal connection
 - **On-Demand Connection** — Retries automation handshakes with exponential backoff
 - **Command Safety** — Blocks dangerous console commands with pattern-based validation
-- **Capability Token Auth** — Optional token-based authentication for both WS and HTTP transports
+- **Capability Token Auth** — On-by-default token authentication (auto-generated 32-byte secret at `<Project>/Saved/MCP/capability-token`) for both WS and HTTP transports; manual `CapabilityToken` in Project Settings overrides the file
 - **Asset Caching** — 10-second TTL for improved performance
 - **Metrics Rate Limiting** — Per-IP rate limiting (60 req/min) on Prometheus endpoint
 - **Centralized Configuration** — Unified class aliases and type definitions
@@ -182,7 +182,7 @@ Enable via **Edit → Plugins**, then restart the editor.
 #### Option A: Native MCP Transport (Direct HTTP — no bridge needed)
 
 The plugin includes a built-in MCP Streamable HTTP server. AI clients connect directly to the plugin over HTTP — no TypeScript bridge, no Node.js, no npm.
-**Note:** the `bAllowNonLoopback` setting now applies to **both** the WebSocket bridge and the native MCP transport. Enabling it binds both surfaces to non-loopback addresses. If you only need LAN access for the WebSocket bridge, do not enable `bAllowNonLoopback` and instead expose the bridge via a reverse proxy. When `bAllowNonLoopback` is enabled, **always also enable `bRequireCapabilityToken`** — the default-allow loopback posture means any LAN client can otherwise call any tool without authentication.
+**Note:** the `bAllowNonLoopback` setting now applies to **both** the WebSocket bridge and the native MCP transport. Enabling it binds both surfaces to non-loopback addresses. If you only need LAN access for the WebSocket bridge, do not enable `bAllowNonLoopback` and instead expose the bridge via a reverse proxy. Capability token auth is on by default (0.5.31+) — both transports require authentication automatically. A manually configured `CapabilityToken` in Project Settings or the auto-generated token at `<Project>/Saved/MCP/capability-token` is used automatically.
 
 **Enable in Unreal:**
 1. **Edit > Project Settings > Plugins > MCP Automation Bridge**
@@ -239,7 +239,7 @@ Features:
 - Multiple concurrent sessions (Cursor + Claude Code + others simultaneously)
 - Dynamic tool management — core tools load by default, enable more via `manage_tools`
 - Python execution via `execute_python` action (inline code or .py files)
-- Capability token authentication — enable in project settings for network security
+- Capability token authentication — on by default (auto-generated secret at `<Project>/Saved/MCP/capability-token`; manual `CapabilityToken` in Project Settings overrides)
 
 #### Option B: TypeScript Bridge (stdio — classic setup)
 
@@ -528,3 +528,4 @@ Contributions welcome! Please:
 ## License
 
 MIT — See [LICENSE](LICENSE)
+
