@@ -76,6 +76,8 @@ bool PrepareBlueprintAndGraph(FActionContext& Context);
 bool HandleListNodeTypes(FActionContext& Context);
 bool HandleNodeCreationAction(FActionContext& Context);
 bool HandlePinMutationAction(FActionContext& Context);
+bool SetPinDefaultValue(FActionContext& Context);
+FString PickFirstNonEmpty(const TSharedPtr<FJsonObject>& Payload, const TArray<const TCHAR*>& Keys);
 bool HandleNodeMutationAction(FActionContext& Context);
 bool HandleNodeQueryAction(FActionContext& Context);
 bool HandleNodeDetailAction(FActionContext& Context);
