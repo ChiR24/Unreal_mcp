@@ -113,4 +113,20 @@ describe('capability metadata audit — GREEN universe passes', () => {
       .map((r) => `${r.id} (${r.behavior.effect})`);
     expect(contradictory).toHaveLength(0);
   });
+
+  it('does not grow the set of capabilities whose output schema promises nothing', () => {
+    const records = loadAllCapabilityRecords();
+    const sealedStubs = records
+      .filter((r) => {
+        const declared = Object.keys(r.schemas.output.properties);
+        const envelopeOnly = declared.length === 2
+          && declared.includes('success')
+          && declared.includes('message');
+        return envelopeOnly && r.schemas.output.additionalProperties === false;
+      })
+      .map((r) => r.id);
+    // Ratchet, not a target: `additionalProperties: false` on a `{success, message}` schema
+    // forbids the payload the summary promises. Clearing it is per-record output authoring.
+    expect(sealedStubs.length).toBeLessThanOrEqual(827);
+  });
 });
