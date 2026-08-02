@@ -48,7 +48,7 @@ public class McpAutomationBridge : ModuleRules {
 
             ProjectDescriptor Project = Target.ProjectFile == null ? null : ProjectDescriptor.FromFile(Target.ProjectFile);
             PluginDescriptor Bridge = PluginDescriptor.FromFile(new FileReference(Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "McpAutomationBridge.uplugin"))));
-            bool bHasPCG = ((Project?.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled) ?? false) || (Bridge.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled && !Reference.bOptional) ?? false)) && AddOptionalModule(Target, EngineDir, "PCG", "PCG", true);
+            bool bHasPCG = ((Project?.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled) ?? false) || (Bridge.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled && !Reference.bOptional) ?? false)) && AddOptionalDynamicModule(Target, EngineDir, "PCG", "PCG");
             PublicDefinitions.Add(bHasPCG ? "MCP_HAS_PCG=1" : "MCP_HAS_PCG=0");
             bool bHasCinematicCamera = AddOptionalModuleGroup(EngineDir, "CinematicCamera", new string[] { "CinematicCamera" });
             bool bHasMediaAssets = AddOptionalModuleGroup(EngineDir, "MediaAssets", new string[] { "MediaAssets" });
@@ -247,6 +247,9 @@ public class McpAutomationBridge : ModuleRules {
         Console.WriteLine(string.Format("McpAutomationBridge: Added optional module '{0}'{1}", ModuleName, bDelayLoad ? " with delay-load" : " (conditional)"));
         return true;
     }
+
+    private bool AddOptionalDynamicModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName)
+        => AddOptionalModule(Target, EngineDir, ModuleName, SearchName, true);
 
     private bool AddOptionalModuleGroup(string EngineDir, string FeatureName, string[] ModuleNames) {
         string[] MissingModules = ModuleNames.Where(
