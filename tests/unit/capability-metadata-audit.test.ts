@@ -129,4 +129,23 @@ describe('capability metadata audit — GREEN universe passes', () => {
     // forbids the payload the summary promises. Clearing it is per-record output authoring.
     expect(sealedStubs.length).toBeLessThanOrEqual(827);
   });
+
+  it('declares the path parameter each material handler actually reads', () => {
+    // These native handlers read assetPath with no fallback branch, and the native transport
+    // has no alias layer, so declaring any other spelling is unsatisfiable there.
+    const readsAssetPath = [
+      'material.set_blend_mode', 'material.set_shading_model', 'material.set_material_domain',
+      'material.compile_material', 'material.get_material_info', 'material.set_two_sided',
+      'material.add_function_input', 'material.add_function_output',
+      'material.get_material_function_info', 'material.set_material_parameter',
+      'material.set_scalar_parameter_value', 'material.set_vector_parameter_value',
+      'material.set_texture_parameter_value', 'material.set_static_switch_parameter_value',
+    ];
+    const byId = new Map(loadAllCapabilityRecords().map((r) => [String(r.id), r]));
+    const undeclared = readsAssetPath.filter((id) => {
+      const record = byId.get(id);
+      return record === undefined || !Object.keys(record.schemas.input.properties).includes('assetPath');
+    });
+    expect(undeclared).toEqual([]);
+  });
 });
