@@ -1,6 +1,7 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersCapabilityToken.h"
 
 void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 {
@@ -49,16 +50,22 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		// to an accepted session and every later request failed as a scope error.
 		if (Settings && (bTokenRequired || !HttpReq.CapabilityToken.IsEmpty()))
 		{
+			// Route through the store so auto-generation and token-file persistence
+			// are handled consistently and the effective token is fail-closed.
+			const FString EffectiveToken = McpCapabilityTokenStore::ResolveEffectiveToken(Settings);
+
 			// Empty client token is rejected outright; the remaining comparison
 			// is constant-time so a timing oracle cannot leak how much of the
 			// token matched. The legacy compare is a compat input only — the
 			// resolver scans every configured candidate, also in constant time,
 			// so a scoped token authenticates here with narrower authority.
+			// CRITICAL: EffectiveToken.IsEmpty() is checked FIRST so an empty
+			// store (e.g. write-failed) rejects before empty-vs-empty could pass.
 			const bool bLegacyTokenMatch =
-				McpConstantTimeTokenEquals(HttpReq.CapabilityToken, Settings->CapabilityToken);
+				McpConstantTimeTokenEquals(HttpReq.CapabilityToken, EffectiveToken);
 			const FMcpCapabilityPrincipal Principal =
 				McpResolveNativePrincipal(HttpReq.CapabilityToken);
-			if (HttpReq.CapabilityToken.IsEmpty() || !Principal.bAuthenticated)
+			if (EffectiveToken.IsEmpty() || HttpReq.CapabilityToken.IsEmpty() || !Principal.bAuthenticated)
 			{
 				UE_LOG(LogMcpNativeTransport, Warning, TEXT("Capability token mismatch - rejecting connection"));
 				SendAndClose(ClientSocket, 401, TEXT("application/json"), FMcpJsonRpc::BuildError(MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest, TEXT("Invalid capability token")), {}, HttpReq.Origin);
