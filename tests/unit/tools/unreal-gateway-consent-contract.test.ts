@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { handleUnrealGatewayCall, type GatewayContext } from '../../../src/server/tool-registry-gateway.js';
 import { unrealGatewayToolDefinition } from '../../../src/tools/catalog/unreal-gateway-definition.js';
+import { resolveCapability } from '../../../src/server/gateway/gateway-capability-index.js';
 import { gatewayContext } from './support/gateway-context-fixture.js';
 import { EXECUTION_OPTION_KEYS } from '../../../src/tools/catalog/capabilities/semantic/execution-options.js';
 
@@ -111,6 +112,35 @@ describe('`params` is declared as an open object map, not an underspecified obje
       params: { classPath: '/Script/Engine.StaticMeshActor', location: { x: 0, y: 0, z: 500 } }
     });
     expect(valid, `declared contract rejected a normal execute payload: ${errors}`).toBe(true);
+  });
+
+  it('no described capability makes the client send a control key execute refuses', async () => {
+    const offenders: string[] = [];
+    for (const [tool, action] of [
+      ['control_actor', 'spawn'],
+      ['manage_level', 'get_summary'],
+      ['build_environment', 'add_trigger_volume'],
+      ['manage_asset', 'list_assets'],
+      ['manage_audio', 'get_audio_info']
+    ] as const) {
+      const described = await handleUnrealGatewayCall(
+        { operation: 'describe', tool, action },
+        makeContext(['admin'])
+      );
+      const schema = described.inputSchema as { required?: string[]; properties?: object } | undefined;
+      for (const control of ['action', 'subAction']) {
+        if (schema?.required?.includes(control)) offenders.push(`${tool}.${action} requires ${control}`);
+        if (schema?.properties && control in schema.properties) offenders.push(`${tool}.${action} declares ${control}`);
+      }
+    }
+    expect(offenders, 'execute rejects these keys inside params, so describe must not publish them').toEqual([]);
+  });
+
+  it('the raw record still declares action, so the projection is doing the work', () => {
+    const resolution = resolveCapability('control_actor.spawn');
+    const raw = resolution.kind === 'canonical' ? resolution.record.schemas.input : undefined;
+    expect(raw?.required).toContain('action');
+    expect(Object.keys(raw?.properties ?? {})).toContain('action');
   });
 
   it('the native /mcp gateway declares params open too, or the surfaces disagree', () => {
