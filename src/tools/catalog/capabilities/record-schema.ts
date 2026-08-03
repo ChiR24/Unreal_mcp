@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isRecord } from '../../../utils/validation/type-guards.js';
 
 import {
   BEHAVIOR_EFFECTS,
@@ -31,10 +32,6 @@ import { getParentToolMetadata, type ParentToolMetadata } from './records/parent
 import { compareUnrealVersion } from './version.js';
 
 const HEX64 = /^[0-9a-f]{64}$/;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 const hashesSchema = z.strictObject({
   algorithm: z.literal('sha256'),

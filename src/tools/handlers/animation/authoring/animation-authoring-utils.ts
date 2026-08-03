@@ -4,6 +4,7 @@ import { ResponseFactory } from '../../../../utils/responses/response-factory.js
 import { sanitizePath } from '../../../../utils/paths/path-security.js';
 import { executeAutomationRequest } from '../../foundation/dispatch/common-handlers.js';
 import { extractOptionalString, extractString } from '../../foundation/arguments/argument-helper.js';
+import { isRecord } from '../../../../utils/validation/type-guards.js';
 
 export type AnimationAuthoringResult = Record<string, unknown>;
 
@@ -37,10 +38,6 @@ export const ANIMATION_AUTHORING_PATH_PARAMS = [
   'blendSpacePath',
   'rigPath',
 ] as const;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
 
 function isAutomationFailure(value: unknown): value is AutomationFailure {
   if (!isRecord(value)) {

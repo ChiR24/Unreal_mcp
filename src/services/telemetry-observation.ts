@@ -17,14 +17,11 @@ import {
   type TelemetryActionClass,
   type TelemetryFailureClass,
 } from './telemetry-schema.js';
+import { isRecord } from '../utils/validation/type-guards.js';
 
 function stringField(source: Record<string, unknown>, key: string): string | undefined {
   const value = source[key];
   return typeof value === 'string' && value.length > 0 ? value : undefined;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }
 
 /**

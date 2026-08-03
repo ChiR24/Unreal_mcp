@@ -2,6 +2,7 @@ import type { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { ActorArgs, ComponentInfo } from '../../../types/handlers/handler-types.js';
 import { executeAutomationRequest } from '../foundation/dispatch/common-handlers.js';
 import { TOOL_ACTIONS } from '../../../utils/commands/action-constants.js';
+import { isRecord } from '../../../utils/validation/type-guards.js';
 
 export type ActorActionHandler = (args: ActorArgs, tools: ITools) => Promise<Record<string, unknown>>;
 
@@ -47,9 +48,7 @@ const ACTOR_ACTION_ALIASES: Record<string, string> = {
     'set_actor_collision': 'set_collision',
 };
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+export { isRecord };
 
 export function normalizeActorAction(action: string): string {
     return ACTOR_ACTION_ALIASES[action] ?? action;

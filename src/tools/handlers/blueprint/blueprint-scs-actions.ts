@@ -7,6 +7,7 @@ import {
   optionalString
 } from './blueprint-action-context.js';
 import type { BlueprintActionContext, BlueprintActionHandler } from './blueprint-action-context.js';
+import { isRecord } from '../../../utils/validation/type-guards.js';
 
 export const blueprintScsHandlers: Readonly<Record<string, BlueprintActionHandler>> = {
   add_component: async (context) => await executeBlueprintRequest(context, 'blueprint_modify_scs', {
@@ -104,8 +105,4 @@ function rotationPayload(value: unknown): readonly [number, number, number] | un
 
 function numberOrFallback(value: unknown, fallback: number): number {
   return typeof value === 'number' ? value : fallback;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

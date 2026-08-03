@@ -1,4 +1,5 @@
 import { cleanObject } from '../../utils/serialization/safe-json.js';
+import { isRecord } from '../../utils/validation/type-guards.js';
 
 type NormalizedToolCall = {
   name: string;
@@ -18,10 +19,6 @@ export function normalizeToolCall(
     action,
     args
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export function mergeActionParams(args: Record<string, unknown>): Record<string, unknown> {

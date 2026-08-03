@@ -1,9 +1,8 @@
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import { ResponseFactory } from '../../../utils/responses/response-factory.js';
+import { isRecord } from '../../../utils/validation/type-guards.js';
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
+export { isRecord };
 
 export function findAutomationFailure(response: unknown): Record<string, unknown> | null {
   if (!isRecord(response)) return null;

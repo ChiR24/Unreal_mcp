@@ -21,10 +21,8 @@ import {
   type RouteStatus,
 } from './types.js';
 export { compareAscii as compareKeys } from '../../../../utils/serialization/ordering.js';
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+import { isRecord } from '../../../../utils/validation/type-guards.js';
+export { isRecord };
 
 const EVIDENCE_KEYS = new Set(['source', 'symbol', 'tool', 'citations']);
 const CITATION_KEYS = new Set(['source', 'symbol']);

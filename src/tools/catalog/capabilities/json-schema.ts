@@ -2,12 +2,9 @@ import { z } from 'zod';
 
 import { DRAFT_2020_12_SCHEMA_URI } from './constants.js';
 import type { JsonValue } from './model.js';
+import { isRecord } from '../../../utils/validation/type-guards.js';
 
 const REFLECTION_MARKER = 'x-unreal-reflection-boundary';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
   z.union([

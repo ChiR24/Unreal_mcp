@@ -1,5 +1,6 @@
 import type { EnvironmentArgs, Vector3 } from '../../../types/handlers/handler-types.js';
 import { normalizePathFields } from '../foundation/dispatch/common-handlers.js';
+import { isRecord } from '../../../utils/validation/type-guards.js';
 
 /** Location item in foliage locations array */
 export interface LocationItem {
@@ -84,10 +85,6 @@ const ENVIRONMENT_PATH_FIELDS_BY_ACTION: Record<string, readonly string[]> = {
   configure_water_material: ['materialPath'],
   create_buoyancy_component: ['actorPath']
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function normalizePathValue(value: unknown): unknown {
   if (typeof value !== 'string' || value.length === 0) return value;
