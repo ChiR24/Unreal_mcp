@@ -31,6 +31,35 @@ export function getOptionalBoundedInteger(value: unknown, minimum: number, maxim
     : undefined;
 }
 
+export type ParameterCoercion = {
+  readonly parameter: string;
+  readonly requested: number;
+  readonly applied: number;
+  readonly reason: string;
+};
+
+// Reports what getBoundedInteger silently did to an out-of-range argument, so a
+// caller who asked for limit=0 can tell the response describes a different
+// request. Describes the clamp without performing it: one clamp, one reporter.
+export function integerCoercion(
+  parameter: string,
+  value: unknown,
+  minimum: number,
+  maximum: number
+): ParameterCoercion | undefined {
+  if (typeof value !== 'number' || !Number.isInteger(value)) return undefined;
+  const applied = Math.min(Math.max(value, minimum), maximum);
+  if (applied === value) return undefined;
+  return {
+    parameter,
+    requested: value,
+    applied,
+    reason: value < minimum
+      ? `${parameter}=${value} is below the minimum of ${minimum}.`
+      : `${parameter}=${value} is above the maximum of ${maximum}.`
+  };
+}
+
 export function gatewayError(operation: string, errorCode: string, message: string): Record<string, unknown> {
   return { success: false, operation, errorCode, error: message, message };
 }

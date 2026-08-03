@@ -30,7 +30,9 @@ import {
   MAX_SEARCH_LIMIT,
   gatewayError,
   getBoundedInteger,
-  getString
+  getString,
+  integerCoercion,
+  type ParameterCoercion
 } from './gateway-shared.js';
 
 type ScoredCandidate = { readonly record: CapabilityRecord; readonly reasons: readonly unknown[] };
@@ -58,7 +60,8 @@ function envelope(
   filters: SearchFilters,
   page: { offset: number; limit: number; total: number; maxBytes: number },
   rows: Array<Record<string, unknown>>,
-  truncated: boolean
+  truncated: boolean,
+  coercions: readonly ParameterCoercion[]
 ): Record<string, unknown> {
   const hasMore = page.offset + rows.length < page.total;
   const result: Record<string, unknown> = {
@@ -71,12 +74,14 @@ function envelope(
     total: page.total,
     offset: page.offset,
     limit: page.limit,
+    servedCount: rows.length,
     maxBytes: page.maxBytes,
     hasMore,
     truncated,
     message: 'Results are compact. Call describe with an exact capability before execute.'
   };
   if (hasMore) result.nextCursor = encodeCursor(page.offset + rows.length);
+  if (coercions.length > 0) result.coercions = coercions;
   return result;
 }
 
@@ -88,13 +93,14 @@ function envelope(
 function withinByteBudget(
   filters: SearchFilters,
   page: { offset: number; limit: number; total: number; maxBytes: number },
-  rows: Array<Record<string, unknown>>
+  rows: Array<Record<string, unknown>>,
+  coercions: readonly ParameterCoercion[]
 ): Record<string, unknown> {
   let kept = rows;
-  let response = envelope(filters, page, kept, false);
+  let response = envelope(filters, page, kept, false, coercions);
   while (kept.length > 0 && JSON.stringify(response).length > page.maxBytes) {
     kept = kept.slice(0, kept.length - 1);
-    response = envelope(filters, page, kept, true);
+    response = envelope(filters, page, kept, true, coercions);
   }
   // Not even one row fits. `envelope` would still advertise hasMore with a
   // nextCursor equal to the offset the caller just used, so a client following
@@ -124,6 +130,19 @@ function resolveOffset(args: Record<string, unknown>): number | Record<string, u
   return decoded;
 }
 
+// A cursor supersedes `offset` entirely, so an offset clamp is only something
+// the caller experienced when no cursor was supplied.
+function pageCoercions(args: Record<string, unknown>): readonly ParameterCoercion[] {
+  const candidates = [
+    getString(args, 'cursor') === undefined
+      ? integerCoercion('offset', args.offset, 0, Number.MAX_SAFE_INTEGER)
+      : undefined,
+    integerCoercion('limit', args.limit, 1, MAX_SEARCH_LIMIT),
+    integerCoercion('maxBytes', args.maxBytes, MIN_SEARCH_MAX_BYTES, MAX_SEARCH_MAX_BYTES)
+  ];
+  return candidates.filter((entry): entry is ParameterCoercion => entry !== undefined);
+}
+
 export function searchGatewayCapabilities(args: Record<string, unknown>): Record<string, unknown> {
   const filters = readFilters(args);
   const invalidFilter = validateFilters(filters);
@@ -145,5 +164,10 @@ export function searchGatewayCapabilities(args: Record<string, unknown>): Record
     .slice(offset, offset + limit)
     .map((entry) => capabilitySearchRow(entry.record, entry.reasons));
 
-  return withinByteBudget(filters, { offset, limit, total: ordered.length, maxBytes }, rows);
+  return withinByteBudget(
+    filters,
+    { offset, limit, total: ordered.length, maxBytes },
+    rows,
+    pageCoercions(args)
+  );
 }

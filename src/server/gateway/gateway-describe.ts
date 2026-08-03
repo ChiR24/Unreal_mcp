@@ -147,6 +147,18 @@ function describeBrowse(
   return describeCatalog(page);
 }
 
+function paramWithoutCapabilityError(toolArg: string | undefined): Record<string, unknown> {
+  const error = gatewayError(
+    'describe',
+    'MISSING_ACTION',
+    'param selects one parameter of one capability, so it needs a capability, or a tool with an action.'
+  );
+  const nextCall = toolArg === undefined
+    ? buildNextCall({ operation: 'search' })
+    : buildNextCall({ operation: 'describe', tool: toolArg });
+  return { ...error, nextCall };
+}
+
 export function describeGatewayCapability(args: Record<string, unknown>): Record<string, unknown> {
   const query = (getString(args, 'query') ?? '').toLowerCase();
   const offset = getBoundedInteger(args.offset, 0, 0, Number.MAX_SAFE_INTEGER);
@@ -157,6 +169,11 @@ export function describeGatewayCapability(args: Record<string, unknown>): Record
   if (capability !== undefined) return describeCapabilityReference(capability, getString(args, 'param'));
 
   const toolArg = getString(args, 'tool');
+  // Every level below this point ignores `param`, so answering them would return
+  // a broader view than the caller asked for while looking like a success.
+  if (getString(args, 'param') !== undefined && getString(args, 'action') === undefined) {
+    return paramWithoutCapabilityError(toolArg);
+  }
   if (toolArg !== undefined) return describeLegacyTool(toolArg, args, page, query);
 
   return describeBrowse(getString(args, 'domain'), getString(args, 'family'), page);
