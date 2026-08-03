@@ -50,7 +50,7 @@ bool HandleEnumValueActions(
         const FString FullNameStr = Enum->GenerateFullEnumName(*ValueName);
         Names.Emplace(*FullNameStr, 0);
         for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
-        Enum->SetEnums(Names, Enum->GetCppForm());
+        MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
         FinalizeEnum(Enum, GetPayloadBool(Params, TEXT("save"), false));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -82,7 +82,7 @@ bool HandleEnumValueActions(
             return true;
         }
         for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
-        Enum->SetEnums(Names, Enum->GetCppForm());
+        MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
         FinalizeEnum(Enum, GetPayloadBool(Params, TEXT("save"), false));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -122,7 +122,7 @@ bool HandleEnumValueActions(
             return true;
         }
         for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
-        Enum->SetEnums(Names, Enum->GetCppForm());
+        MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
         FinalizeEnum(Enum, GetPayloadBool(Params, TEXT("save"), false));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -183,7 +183,7 @@ bool HandleEnumValueActions(
         }
 
         for (int32 i = 0; i < NewNames.Num(); ++i) { NewNames[i].Value = i; }
-        Enum->SetEnums(NewNames, Enum->GetCppForm());
+        MCP_SET_ENUMS(Enum, NewNames, Enum->GetCppForm());
         FinalizeEnum(Enum, GetPayloadBool(Params, TEXT("save"), false));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -255,7 +255,7 @@ bool HandleEnumValueActions(
         {
             NewNames.Emplace(*NewEnum->GenerateFullEnumName(*KeepShortNames[i]), static_cast<int64>(i));
         }
-        NewEnum->SetEnums(NewNames, NewEnum->GetCppForm());
+        MCP_SET_ENUMS(NewEnum, NewNames, NewEnum->GetCppForm());
         FinalizeEnum(NewEnum, GetPayloadBool(Params, TEXT("save"), false));
         FAssetRegistryModule::AssetCreated(NewEnum);
 
