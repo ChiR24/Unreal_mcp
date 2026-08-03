@@ -163,7 +163,7 @@ export async function runCertificationDrivers(spec) {
   }));
   stdio.kind = 'stdio';
   /** @type {any} */
-  let started = { ok: false, reason: 'NOT_STARTED', pid: null };
+  let started;
   try {
     started = await stdio.start();
   } catch (error) {

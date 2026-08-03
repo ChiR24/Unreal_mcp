@@ -78,7 +78,7 @@ describe('Task 50 — containment is a real-path check, not a prefix match', () 
     const outside = join(SANDBOX, 'not-mine');
     mkdirSync(owned, { recursive: true });
     mkdirSync(outside, { recursive: true });
-    writeFileSync(join(outside, 'precious.uasset'), 'someone else work');
+    writeFileSync(join(outside, 'precious.uasset'), 'someone else work', { mode: 0o600 });
     symlinkSync(outside, join(owned, 'escape'));
     const verdict = isStrictlyInside(owned, join(owned, 'escape'));
     expect(verdict.owned).toBe(false);
@@ -121,7 +121,7 @@ describe('Task 50 — a fixture that cannot be declared cannot be deleted', () =
     const namespace = makeNamespace();
     namespace.open();
     const foreign = join(SANDBOX, 'foreign.json');
-    writeFileSync(foreign, 'not mine');
+    writeFileSync(foreign, 'not mine', { mode: 0o600 });
     const receipt = namespace.removeOwnedFile(foreign);
     expect(receipt.removed).toBe(false);
     expect(receipt.reason).toContain('REFUSED');
@@ -132,7 +132,7 @@ describe('Task 50 — a fixture that cannot be declared cannot be deleted', () =
     const namespace = makeNamespace();
     namespace.open();
     const mine = join(namespace.tempRoot, 'mine.json');
-    writeFileSync(mine, '{}');
+    writeFileSync(mine, '{}', { mode: 0o600 });
     expect(namespace.removeOwnedFile(mine).removed).toBe(true);
     expect(existsSync(mine)).toBe(false);
   });
@@ -149,7 +149,7 @@ describe('Task 50 — the baseline is taken BEFORE anything is created', () => {
   it('a namespace that ALREADY holds content records that fact rather than assuming empty', () => {
     const namespace = makeNamespace('run-dirty');
     mkdirSync(namespace.diskRoot, { recursive: true });
-    writeFileSync(join(namespace.diskRoot, 'Leftover.uasset'), 'from an interrupted run');
+    writeFileSync(join(namespace.diskRoot, 'Leftover.uasset'), 'from an interrupted run', { mode: 0o600 });
     const manifest = namespace.open();
     expect(manifest.baselineFileCount).toBe(1);
     expect(residualContent(namespace).map((entry) => entry.objectPath)).toEqual([`${namespace.gameRoot}/Leftover`]);
@@ -161,7 +161,7 @@ describe('Task 50 — cleanup is VERIFIED, and double cleanup is a no-op', () =>
     const namespace = makeNamespace();
     namespace.open();
     mkdirSync(namespace.diskRoot, { recursive: true });
-    writeFileSync(join(namespace.diskRoot, 'M_Leaked.uasset'), 'still here');
+    writeFileSync(join(namespace.diskRoot, 'M_Leaked.uasset'), 'still here', { mode: 0o600 });
     const receipt = namespace.close();
     expect(receipt.contentRestored).toBe(false);
     expect(receipt.residualContentFiles).toBe(1);
@@ -172,7 +172,7 @@ describe('Task 50 — cleanup is VERIFIED, and double cleanup is a no-op', () =>
     namespace.open();
     mkdirSync(namespace.diskRoot, { recursive: true });
     const made = join(namespace.diskRoot, 'M_Temp.uasset');
-    writeFileSync(made, 'transient');
+    writeFileSync(made, 'transient', { mode: 0o600 });
     rmSync(made);
     const receipt = namespace.close();
     expect(receipt.contentRestored).toBe(true);
@@ -184,7 +184,7 @@ describe('Task 50 — cleanup is VERIFIED, and double cleanup is a no-op', () =>
     namespace.open();
     mkdirSync(namespace.diskRoot, { recursive: true });
     const made = join(namespace.diskRoot, 'M_Temp.uasset');
-    writeFileSync(made, 'transient');
+    writeFileSync(made, 'transient', { mode: 0o600 });
     rmSync(made);
     const receipt = namespace.close();
     expect(receipt.emptyDirectoriesRemoved).toBe(1);
@@ -196,7 +196,7 @@ describe('Task 50 — cleanup is VERIFIED, and double cleanup is a no-op', () =>
     const namespace = makeNamespace();
     namespace.open();
     mkdirSync(namespace.diskRoot, { recursive: true });
-    writeFileSync(join(namespace.diskRoot, 'M_Leaked.uasset'), 'survivor');
+    writeFileSync(join(namespace.diskRoot, 'M_Leaked.uasset'), 'survivor', { mode: 0o600 });
     const receipt = namespace.close();
     expect(receipt.emptyDirectoriesRemoved).toBe(0);
     expect(receipt.contentDirectoryRemains).toBe(true);
@@ -206,7 +206,7 @@ describe('Task 50 — cleanup is VERIFIED, and double cleanup is a no-op', () =>
   it('releases the owned temp namespace and says so from an independent existence check', () => {
     const namespace = makeNamespace();
     namespace.open();
-    writeFileSync(join(namespace.tempRoot, 'scratch.json'), '{}');
+    writeFileSync(join(namespace.tempRoot, 'scratch.json'), '{}', { mode: 0o600 });
     const receipt = namespace.close();
     expect(receipt.tempReleased).toBe(true);
     expect(existsSync(namespace.tempRoot)).toBe(false);
@@ -215,7 +215,7 @@ describe('Task 50 — cleanup is VERIFIED, and double cleanup is a no-op', () =>
   it('DOUBLE CLEANUP is idempotent: the second close removes nothing and still reports honestly', () => {
     const namespace = makeNamespace();
     namespace.open();
-    writeFileSync(join(namespace.tempRoot, 'scratch.json'), '{}');
+    writeFileSync(join(namespace.tempRoot, 'scratch.json'), '{}', { mode: 0o600 });
     const first = namespace.close();
     const second = namespace.close();
     expect(first.tempReleased).toBe(true);
@@ -231,7 +231,7 @@ describe('Task 50 — cleanup is VERIFIED, and double cleanup is a no-op', () =>
     // Somebody else takes the name after we released it. The manifest is the
     // ownership token and it is gone, so this directory is no longer ours.
     mkdirSync(namespace.tempRoot, { recursive: true });
-    writeFileSync(join(namespace.tempRoot, 'someone-elses.json'), 'not ours');
+    writeFileSync(join(namespace.tempRoot, 'someone-elses.json'), 'not ours', { mode: 0o600 });
     const second = namespace.close();
     expect(existsSync(join(namespace.tempRoot, 'someone-elses.json'))).toBe(true);
     expect(second.alreadyClosed).toBe(true);
@@ -246,7 +246,7 @@ describe('Task 50 — interruption recovery reclaims ONLY provably dead runs', (
   it('finds an abandoned namespace whose owner is gone', () => {
     const namespace = new FixtureNamespace({ runId: 'run-dead', projectRoot: PROJECT, tempRoot: TEMP_PARENT, pid: 999_999 });
     namespace.open();
-    writeFileSync(join(namespace.tempRoot, 'half-written.json'), '{"interrupted":true}');
+    writeFileSync(join(namespace.tempRoot, 'half-written.json'), '{"interrupted":true}', { mode: 0o600 });
     const scan = findInterruptedRuns({ root: TEMP_PARENT });
     expect(scan.reclaimable.map((entry) => entry.runId)).toEqual(['run-dead']);
     expect(scan.active).toHaveLength(0);
@@ -266,7 +266,7 @@ describe('Task 50 — interruption recovery reclaims ONLY provably dead runs', (
     // Rewrite the manifest as an OLDER process that happened to hold this pid.
     const manifest = JSON.parse(readFileSync(join(namespace.tempRoot, MANIFEST_FILE), 'utf8'));
     manifest.pidStartTicks = Number(manifest.pidStartTicks) - 1;
-    writeFileSync(join(namespace.tempRoot, MANIFEST_FILE), JSON.stringify(manifest));
+    writeFileSync(join(namespace.tempRoot, MANIFEST_FILE), JSON.stringify(manifest), { mode: 0o600 });
     const scan = findInterruptedRuns({ root: TEMP_PARENT, selfPid: -1 });
     expect(scan.reclaimable.map((entry) => entry.runId)).toEqual(['run-recycled']);
   });
@@ -274,7 +274,7 @@ describe('Task 50 — interruption recovery reclaims ONLY provably dead runs', (
   it('a directory with NO manifest is never touched — it is not ours to reason about', () => {
     const stranger = join(TEMP_PARENT, 'someone-elses-work');
     mkdirSync(stranger, { recursive: true });
-    writeFileSync(join(stranger, 'data.json'), 'precious');
+    writeFileSync(join(stranger, 'data.json'), 'precious', { mode: 0o600 });
     const scan = findInterruptedRuns({ root: TEMP_PARENT });
     expect(scan.reclaimable).toHaveLength(0);
     expect(scan.unreadable).toContain(stranger);
@@ -284,14 +284,14 @@ describe('Task 50 — interruption recovery reclaims ONLY provably dead runs', (
   it('a manifest from a DIFFERENT suite is not reclaimable', () => {
     const foreign = join(TEMP_PARENT, 'other-suite');
     mkdirSync(foreign, { recursive: true });
-    writeFileSync(join(foreign, MANIFEST_FILE), JSON.stringify({ suite: 'task-51', runId: 'x', pid: 999_999 }));
+    writeFileSync(join(foreign, MANIFEST_FILE), JSON.stringify({ suite: 'task-51', runId: 'x', pid: 999_999 }), { mode: 0o600 });
     expect(findInterruptedRuns({ root: TEMP_PARENT }).reclaimable).toHaveLength(0);
   });
 
   it('reclaim removes exactly the tempRoot the manifest names', () => {
     const namespace = new FixtureNamespace({ runId: 'run-reclaim', projectRoot: PROJECT, tempRoot: TEMP_PARENT, pid: 999_998 });
     namespace.open();
-    writeFileSync(join(namespace.tempRoot, 'stale.json'), '{}');
+    writeFileSync(join(namespace.tempRoot, 'stale.json'), '{}', { mode: 0o600 });
     const [manifest] = findInterruptedRuns({ root: TEMP_PARENT }).reclaimable;
     const receipt = reclaimInterruptedRun(manifest, { root: TEMP_PARENT });
     expect(receipt).toMatchObject({ reclaimed: true, runId: 'run-reclaim' });
@@ -302,7 +302,7 @@ describe('Task 50 — interruption recovery reclaims ONLY provably dead runs', (
   it('reclaim REFUSES a manifest that points outside the shared root — a tampered manifest is not authority', () => {
     const outside = join(SANDBOX, 'critical');
     mkdirSync(outside, { recursive: true });
-    writeFileSync(join(outside, 'keep.txt'), 'keep');
+    writeFileSync(join(outside, 'keep.txt'), 'keep', { mode: 0o600 });
     const receipt = reclaimInterruptedRun(
       { runId: 'evil', pid: 1, pidStartTicks: null, tempRoot: outside, diskRoot: '', gameRoot: '', openedAt: '', manifestPath: '' },
       { root: TEMP_PARENT },
@@ -316,7 +316,7 @@ describe('Task 50 — interruption recovery reclaims ONLY provably dead runs', (
     const namespace = new FixtureNamespace({ runId: 'run-resume', projectRoot: PROJECT, tempRoot: TEMP_PARENT, pid: 999_997 });
     namespace.open();
     mkdirSync(namespace.diskRoot, { recursive: true });
-    writeFileSync(join(namespace.diskRoot, 'M_Orphan.uasset'), 'made before the kill');
+    writeFileSync(join(namespace.diskRoot, 'M_Orphan.uasset'), 'made before the kill', { mode: 0o600 });
     const [manifest] = findInterruptedRuns({ root: TEMP_PARENT }).reclaimable;
     // The recovery path knows WHICH content to ask the editor to delete, and it
     // is exactly what that manifest declared — never a wildcard sweep.

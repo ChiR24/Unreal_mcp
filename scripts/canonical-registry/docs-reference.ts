@@ -42,7 +42,7 @@ export interface MigrationReferenceInput extends DocsReferenceInput {
 // Authored prose reaches markdown cells (guidance, summaries), so an unescaped
 // pipe or newline would silently corrupt the table it lands in.
 const cell = (value: string): string =>
-  value.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim();
+  value.replace(/\|/g, '&#124;').replace(/\r?\n/g, ' ').trim();
 
 const GENERATED_HEADER = (source: string): readonly string[] => [
   '<!-- GENERATED FILE - DO NOT EDIT.',

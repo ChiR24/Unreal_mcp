@@ -58,7 +58,7 @@ function writePackage(gameRelative: string, names: readonly string[], extension 
     length.writeInt32LE(name.length + 1);
     chunks.push(length, Buffer.from(`${name}\0`, 'latin1'));
   }
-  writeFileSync(file, Buffer.concat(chunks));
+  writeFileSync(file, Buffer.concat(chunks), { mode: 0o600 });
   return file;
 }
 
@@ -109,7 +109,7 @@ describe('Task 50 — the asset oracle reads packages, not responses', () => {
   it('a file that exists but is NOT a UE package reads absent, with the reason', () => {
     const file = join(CONTENT, 'MCPTest/ctl/M_Corrupt.uasset');
     mkdirSync(join(file, '..'), { recursive: true });
-    writeFileSync(file, Buffer.from('this is not a package'));
+    writeFileSync(file, Buffer.from('this is not a package'), { mode: 0o600 });
     const seen = observeAssetPackage({ projectRoot: PROJECT, objectPath: '/Game/MCPTest/ctl/M_Corrupt' });
     expect(seen.present).toBe(false);
     expect(seen.detail.magicOk).toBe(false);
@@ -267,9 +267,9 @@ describe('Task 50 — the rules that stop a green run proving nothing', () => {
   it('a read-only claim that moved the world is UNCLAIMED_MUTATION', () => {
     const root = join(ROOT, 'readonly');
     mkdirSync(root, { recursive: true });
-    writeFileSync(join(root, 'a.txt'), 'one');
+    writeFileSync(join(root, 'a.txt'), 'one', { mode: 0o600 });
     const before = observeTree({ root });
-    writeFileSync(join(root, 'a.txt'), 'two');
+    writeFileSync(join(root, 'a.txt'), 'two', { mode: 0o600 });
     const after = observeTree({ root });
     expect(judgeClaim({ claim: { outcome: 'success', effect: 'unchanged' }, before, after }).verdict).toBe(VERDICTS.UNCLAIMED_MUTATION);
   });
@@ -277,7 +277,7 @@ describe('Task 50 — the rules that stop a green run proving nothing', () => {
   it('POSITIVE CONTROL: a genuinely read-only claim is PROVEN', () => {
     const root = join(ROOT, 'readonly-ok');
     mkdirSync(root, { recursive: true });
-    writeFileSync(join(root, 'a.txt'), 'stable');
+    writeFileSync(join(root, 'a.txt'), 'stable', { mode: 0o600 });
     const before = observeTree({ root });
     const after = observeTree({ root });
     expect(judgeClaim({ claim: { outcome: 'success', effect: 'unchanged' }, before, after }).verdict).toBe(VERDICTS.PROVEN);
@@ -290,7 +290,7 @@ describe('Task 50 — CHANGED and RESIDUE, via tree digests', () => {
   it('POSITIVE CONTROL: an empty namespace and a populated one have different digests', () => {
     mkdirSync(root, { recursive: true });
     const empty = observeTree({ root });
-    writeFileSync(join(root, 'made.uasset'), 'x');
+    writeFileSync(join(root, 'made.uasset'), 'x', { mode: 0o600 });
     const filled = observeTree({ root });
     expect(empty.present).toBe(false);
     expect(filled.present).toBe(true);
@@ -298,9 +298,9 @@ describe('Task 50 — CHANGED and RESIDUE, via tree digests', () => {
   });
 
   it('the digest is content-addressed: same names, different bytes, different digest', () => {
-    writeFileSync(join(root, 'made.uasset'), 'y');
+    writeFileSync(join(root, 'made.uasset'), 'y', { mode: 0o600 });
     const changed = observeTree({ root });
-    writeFileSync(join(root, 'made.uasset'), 'z');
+    writeFileSync(join(root, 'made.uasset'), 'z', { mode: 0o600 });
     expect(observeTree({ root }).digest).not.toBe(changed.digest);
   });
 
@@ -308,7 +308,7 @@ describe('Task 50 — CHANGED and RESIDUE, via tree digests', () => {
     const owned = join(ROOT, 'residue');
     mkdirSync(owned, { recursive: true });
     const baseline = observeTree({ root: owned });
-    writeFileSync(join(owned, 'leaked.uasset'), 'still here');
+    writeFileSync(join(owned, 'leaked.uasset'), 'still here', { mode: 0o600 });
     const afterCleanup = observeTree({ root: owned });
     const verdict = judgeCleanup({ baseline, afterCleanup, owned });
     expect(verdict.verdict).toBe(VERDICTS.RESIDUE);
@@ -319,7 +319,7 @@ describe('Task 50 — CHANGED and RESIDUE, via tree digests', () => {
     const owned = join(ROOT, 'residue-ok');
     mkdirSync(owned, { recursive: true });
     const baseline = observeTree({ root: owned });
-    writeFileSync(join(owned, 'temp.uasset'), 'transient');
+    writeFileSync(join(owned, 'temp.uasset'), 'transient', { mode: 0o600 });
     rmSync(join(owned, 'temp.uasset'));
     const verdict = judgeCleanup({ baseline, afterCleanup: observeTree({ root: owned }), owned });
     expect(verdict.verdict).toBe(VERDICTS.PROVEN);
@@ -329,9 +329,9 @@ describe('Task 50 — CHANGED and RESIDUE, via tree digests', () => {
   it('a NON-EMPTY baseline restored exactly is PROVEN — presence alone would call it residue', () => {
     const owned = join(ROOT, 'residue-preexisting');
     mkdirSync(owned, { recursive: true });
-    writeFileSync(join(owned, 'PreExisting.uasset'), 'was here before this run');
+    writeFileSync(join(owned, 'PreExisting.uasset'), 'was here before this run', { mode: 0o600 });
     const baseline = observeTree({ root: owned });
-    writeFileSync(join(owned, 'M_Mine.uasset'), 'made by this run');
+    writeFileSync(join(owned, 'M_Mine.uasset'), 'made by this run', { mode: 0o600 });
     rmSync(join(owned, 'M_Mine.uasset'));
     const afterCleanup = observeTree({ root: owned });
     expect(afterCleanup.present).toBe(true);
@@ -343,7 +343,7 @@ describe('Task 50 — CHANGED and RESIDUE, via tree digests', () => {
   it('OVER-DELETION is caught: cleanup that also removed pre-existing content is NOT clean', () => {
     const owned = join(ROOT, 'residue-overdelete');
     mkdirSync(owned, { recursive: true });
-    writeFileSync(join(owned, 'SomebodyElses.uasset'), 'not ours');
+    writeFileSync(join(owned, 'SomebodyElses.uasset'), 'not ours', { mode: 0o600 });
     const baseline = observeTree({ root: owned });
     // A cleanup that swept the folder instead of removing only what it created.
     rmSync(join(owned, 'SomebodyElses.uasset'));
@@ -376,7 +376,7 @@ describe('Task 50 — actors, settings, renders, processes, ports, sessions, log
     mkdirSync(external, { recursive: true });
     const length = Buffer.alloc(4);
     length.writeInt32LE('BP_Partitioned_C_1'.length + 1);
-    writeFileSync(join(external, 'A1.uasset'), Buffer.concat([UE_PACKAGE_MAGIC, length, Buffer.from('BP_Partitioned_C_1\0', 'latin1')]));
+    writeFileSync(join(external, 'A1.uasset'), Buffer.concat([UE_PACKAGE_MAGIC, length, Buffer.from('BP_Partitioned_C_1\0', 'latin1')]), { mode: 0o600 });
     const seen = observeLevelActor({
       projectRoot: PROJECT, levelPath: '/Game/MCPTest/ctl/L_Missing',
       actorName: 'BP_Partitioned_C_1', externalActorsRoot: external,
@@ -387,11 +387,11 @@ describe('Task 50 — actors, settings, renders, processes, ports, sessions, log
 
   it('SETTINGS read from the ini, with a changed value producing a changed digest', () => {
     const ini = join(ROOT, 'DefaultEngine.ini');
-    writeFileSync(ini, '[/Script/McpAutomationBridge.Settings]\nbEnableNativeMcp=True\nNativeMcpPort=3000\n');
+    writeFileSync(ini, '[/Script/McpAutomationBridge.Settings]\nbEnableNativeMcp=True\nNativeMcpPort=3000\n', { mode: 0o600 });
     const before = observeIniSetting({ file: ini, section: '/Script/McpAutomationBridge.Settings', key: 'NativeMcpPort' });
     expect(before.present).toBe(true);
     expect(before.detail.value).toBe('3000');
-    writeFileSync(ini, '[/Script/McpAutomationBridge.Settings]\nbEnableNativeMcp=True\nNativeMcpPort=3001\n');
+    writeFileSync(ini, '[/Script/McpAutomationBridge.Settings]\nbEnableNativeMcp=True\nNativeMcpPort=3001\n', { mode: 0o600 });
     const after = observeIniSetting({ file: ini, section: '/Script/McpAutomationBridge.Settings', key: 'NativeMcpPort' });
     expect(after.digest).not.toBe(before.digest);
     expect(judgeClaim({ claim: { outcome: 'success', effect: 'modified' }, before, after }).verdict).toBe(VERDICTS.PROVEN);
@@ -399,14 +399,14 @@ describe('Task 50 — actors, settings, renders, processes, ports, sessions, log
 
   it('SETTINGS: a key in a DIFFERENT section is absent, not accidentally matched', () => {
     const ini = join(ROOT, 'Sections.ini');
-    writeFileSync(ini, '[A]\nPort=1\n[B]\nOther=2\n');
+    writeFileSync(ini, '[A]\nPort=1\n[B]\nOther=2\n', { mode: 0o600 });
     expect(observeIniSetting({ file: ini, section: 'B', key: 'Port' }).present).toBe(false);
     expect(observeIniSetting({ file: ini, section: 'A', key: 'Port' }).present).toBe(true);
   });
 
   it('RENDER: a real PNG reports its true dimensions', () => {
     const file = join(ROOT, 'shot.png');
-    writeFileSync(file, png(1920, 1080));
+    writeFileSync(file, png(1920, 1080), { mode: 0o600 });
     const seen = observeRenderOutput({ file });
     expect(seen.present).toBe(true);
     expect(seen.detail).toMatchObject({ format: 'png', width: 1920, height: 1080 });
@@ -414,7 +414,7 @@ describe('Task 50 — actors, settings, renders, processes, ports, sessions, log
 
   it('RENDER: a 0x0 PNG is reported ABSENT — a render that claims success and wrote nothing usable', () => {
     const file = join(ROOT, 'degenerate.png');
-    writeFileSync(file, png(0, 0));
+    writeFileSync(file, png(0, 0), { mode: 0o600 });
     const seen = observeRenderOutput({ file });
     expect(seen.present).toBe(false);
     expect(seen.detail.areaOk).toBe(false);
@@ -422,7 +422,7 @@ describe('Task 50 — actors, settings, renders, processes, ports, sessions, log
 
   it('RENDER: an empty file that a receipt calls a frame is refused', () => {
     const file = join(ROOT, 'empty.png');
-    writeFileSync(file, Buffer.alloc(0));
+    writeFileSync(file, Buffer.alloc(0), { mode: 0o600 });
     expect(observeRenderOutput({ file }).present).toBe(false);
   });
 
@@ -477,7 +477,7 @@ describe('Task 50 — actors, settings, renders, processes, ports, sessions, log
 
   it('LOG: a marker present in the editor log is found; a missing log is INCONCLUSIVE, not absent', () => {
     const log = join(ROOT, 'Editor.log');
-    writeFileSync(log, 'LogMcpNativeTransport: Native MCP server started on http://localhost:3000/mcp\n');
+    writeFileSync(log, 'LogMcpNativeTransport: Native MCP server started on http://localhost:3000/mcp\n', { mode: 0o600 });
     expect(observeEditorLog({ file: log, pattern: /Native MCP server started/u }).present).toBe(true);
     expect(observeEditorLog({ file: log, pattern: /NeverLoggedThis/u }).present).toBe(false);
     const missing = observeEditorLog({ file: join(ROOT, 'nope.log'), pattern: /x/u });

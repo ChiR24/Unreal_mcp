@@ -29,7 +29,7 @@
 //                  assumption is exactly the bug that distinction prevents.
 
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync, readlinkSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, readlinkSync } from 'node:fs';
 import { request as httpRequest } from 'node:http';
 import { join, posix, relative, resolve, sep } from 'node:path';
 
@@ -614,14 +614,14 @@ export function observeEditorLog(spec) {
       present: null, conclusive: false, now: spec.now, detail: { reason: 'LOG_ABSENT' },
     });
   }
-  const size = statSync(file).size;
   const maxBytes = spec.maxBytes ?? 2 * 1024 * 1024;
-  const text = readFileSync(file, 'utf8').slice(Math.max(0, size - maxBytes));
-  const hit = spec.pattern.exec(text);
+  const text = readFileSync(file, 'utf8');
+  const tail = text.slice(Math.max(0, text.length - maxBytes));
+  const hit = spec.pattern.exec(tail);
   return observation({
     kind: 'log', mechanism: 'fs:editor-log', target: `${file}::${spec.pattern.source}`,
     present: hit !== null, now: spec.now,
-    detail: { file, scannedBytes: Math.min(size, maxBytes), match: hit === null ? null : hit[0].slice(0, 300) },
+    detail: { file, scannedBytes: Math.min(text.length, maxBytes), match: hit === null ? null : hit[0].slice(0, 300) },
   });
 }
 

@@ -172,9 +172,9 @@ describe('gateway-manifest writeManifestTargets symlink final rejection', () => 
 
       expect(() => writeManifestTargets([[link, 'new-content']])).toThrow();
 
-      expect(lstatSync(link).isSymbolicLink()).toBe(true);
       expect(readFileSync(link, 'utf8')).toBe('real-content');
       expect(readFileSync(target, 'utf8')).toBe('real-content');
+      expect(lstatSync(link).isSymbolicLink()).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

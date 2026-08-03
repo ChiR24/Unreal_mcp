@@ -23,7 +23,7 @@
  * 12. manual cloth (manual-only)
  * 13. branch-shadow create_nav_link_proxy (mapped)
  */
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { RAW_ROUTE_DISPOSITIONS, type RawRouteDisposition } from '../../src/tools/catalog/capabilities/normalization/routedispositions.data.js';
 import { GAMEPLAY_HIDDEN_ROUTE_DISPOSITIONS } from '../../src/tools/catalog/capabilities/records/gameplay/hidden-routes.js';
@@ -38,8 +38,8 @@ function requireDisposition(key: string): RawRouteDisposition {
 }
 
 function assertEvidenceFile(row: RawRouteDisposition): void {
-  // Evidence path must be a concrete .cpp file that exists and is readable.
-  expect(statSync(row.evidenceSource).isFile(), `evidence file missing: ${row.evidenceSource}`).toBe(true);
+  // Evidence path must be a concrete .cpp file that exists and is readable;
+  // readFileSync throws ENOENT/EISDIR on a missing or directory path.
   const src = readFileSync(row.evidenceSource, 'utf8');
   // The evidence symbol token (the literal SubAction / handler name) must
   // literally appear in the cited source file.

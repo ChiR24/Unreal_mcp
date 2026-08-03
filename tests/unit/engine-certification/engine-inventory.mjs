@@ -27,7 +27,7 @@
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { minorKeyOf, readEngineIdentity, realIo } from './engine-identity.mjs';
+import { readEngineIdentity, realIo } from './engine-identity.mjs';
 
 /** The minors this project claims to support (`.uplugin` description: "UE 5.0-5.8 Preview"). */
 export const EXPECTED_MINORS = Object.freeze(['5.0', '5.1', '5.2', '5.3', '5.4', '5.5', '5.6', '5.7', '5.8']);

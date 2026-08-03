@@ -17,7 +17,6 @@
 // emit a grant for a different capability id, which must never be accepted — that
 // is the case the generator exists for.
 
-import { Rng } from './fuzz-random.mjs';
 import { fuzzString, fuzzNumeric, ADVERSARIAL_TEXT } from './fuzz-generators.mjs';
 
 /** Versions the native `/mcp` surface accepts. Anything else must be refused there. */
@@ -45,7 +44,7 @@ function protocolCase(frame, shape, legal) {
 /**
  * One JSON-RPC frame. `legal` states whether the frame is well-formed BY THE
  * SPEC — not whether the server should succeed, which depends on the method.
- * @param {Rng} rng
+ * @param {import('./fuzz-random.mjs').Rng} rng
  * @returns {ProtocolCase}
  */
 export function fuzzJsonRpcFrame(rng) {
@@ -80,7 +79,7 @@ export function fuzzJsonRpcFrame(rng) {
   return rng.weighted(table)();
 }
 
-/** A nested object `depth` levels deep — the shape that finds unbounded recursion. @param {Rng} rng @param {number} depth */
+/** A nested object `depth` levels deep — the shape that finds unbounded recursion. @param {import('./fuzz-random.mjs').Rng} rng @param {number} depth */
 export function deepNest(rng, depth) {
   /** @type {Record<string, unknown>} */
   let node = { leaf: fuzzString(rng) };
@@ -93,7 +92,7 @@ export function deepNest(rng, depth) {
  * the point: a reader that splits a buffered body on "data: " passes this only when
  * every event happens to arrive whole, which is exactly the assumption the Task 49
  * SseReader was written to remove.
- * @param {Rng} rng @param {{ data: string, event?: string, id?: string }} spec
+ * @param {import('./fuzz-random.mjs').Rng} rng @param {{ data: string, event?: string, id?: string }} spec
  * @returns {{ chunks: string[], expected: string }}
  */
 export function fragmentSse(rng, spec) {
@@ -117,7 +116,7 @@ export function fragmentSse(rng, spec) {
 /**
  * Auth/session header sets. `authorized` is TRUE only when a correct token is
  * presented; every other row is a fail-closed expectation.
- * @param {Rng} rng @param {{ token: string, sessionId: string }} valid
+ * @param {import('./fuzz-random.mjs').Rng} rng @param {{ token: string, sessionId: string }} valid
  * @returns {{ headers: Record<string, string>, shape: string, authorized: boolean }}
  */
 export function fuzzAuthHeaders(rng, valid) {
@@ -135,7 +134,7 @@ export function fuzzAuthHeaders(rng, valid) {
   return rng.weighted(table)();
 }
 
-/** Near-miss tokens: prefixes, one-character edits, case flips, appended NUL. @param {Rng} rng @param {string} token */
+/** Near-miss tokens: prefixes, one-character edits, case flips, appended NUL. @param {import('./fuzz-random.mjs').Rng} rng @param {string} token */
 export function mutateToken(rng, token) {
   if (token.length === 0) return rng.pick(['x', '\u0000']);
   return rng.weighted([
@@ -152,7 +151,7 @@ export function mutateToken(rng, token) {
  * cancellation are generated together because their interactions are where the
  * interesting races live: a replayed key with a moved revision, a consent grant
  * for a different capability, a cancel for an id that already settled.
- * @param {Rng} rng @param {{ capabilityId: string, otherCapabilityId: string }} ids
+ * @param {import('./fuzz-random.mjs').Rng} rng @param {{ capabilityId: string, otherCapabilityId: string }} ids
  */
 export function fuzzExecuteEnvelope(rng, ids) {
   /** @type {readonly (readonly [number, () => unknown])[]} */

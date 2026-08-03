@@ -166,7 +166,7 @@ export class FixtureNamespace {
       baselineDigest: this.baseline.digest,
       baselineFileCount: this.baseline.detail.fileCount ?? 0,
     };
-    writeFileSync(this.manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    writeFileSync(this.manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 });
     return manifest;
   }
 

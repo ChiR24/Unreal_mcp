@@ -25,8 +25,6 @@
 // in the property files; a generator that also asserted would hide the cases it
 // chose not to emit.
 
-import { Rng } from './fuzz-random.mjs';
-
 /** Text fragments that have historically defeated normalize-then-compare gates. */
 export const ADVERSARIAL_TEXT = Object.freeze([
   '\uD800',                    // lone high surrogate
@@ -122,7 +120,7 @@ export const COMMAND_ATOMS = Object.freeze({
   ]),
 });
 
-/** @param {Rng} rng @returns {string} one adversarial text fragment */
+/** @param {import('./fuzz-random.mjs').Rng} rng @returns {string} one adversarial text fragment */
 export function adversarialFragment(rng) {
   return rng.pick(ADVERSARIAL_TEXT);
 }
@@ -130,7 +128,7 @@ export function adversarialFragment(rng) {
 /**
  * A string built from benign runs and adversarial fragments. Bounded at 64 units:
  * an unbounded generator turns a shrink loop into a timeout and buries the finding.
- * @param {Rng} rng
+ * @param {import('./fuzz-random.mjs').Rng} rng
  */
 export function fuzzString(rng) {
   const parts = rng.list(rng.int(0, 5), (stream) => stream.weighted([
@@ -141,7 +139,7 @@ export function fuzzString(rng) {
   return parts.join('').slice(0, 64);
 }
 
-/** @param {Rng} rng @returns {unknown} a number OR a numeric string, deliberately mixed */
+/** @param {import('./fuzz-random.mjs').Rng} rng @returns {unknown} a number OR a numeric string, deliberately mixed */
 export function fuzzNumeric(rng) {
   return rng.bool(0.5) ? rng.pick(ADVERSARIAL_NUMBERS) : rng.pick(ADVERSARIAL_NUMERIC_STRINGS);
 }
@@ -160,7 +158,7 @@ function pathCase(path, intent) {
  * `intent` records why the generator BUILT it, never the expected verdict —
  * deciding the verdict is the property's job, and a generator that pre-judged
  * would only ever confirm itself.
- * @param {Rng} rng
+ * @param {import('./fuzz-random.mjs').Rng} rng
  * @returns {PathCase}
  */
 export function fuzzAssetPath(rng) {
@@ -181,7 +179,7 @@ export function fuzzAssetPath(rng) {
  * A console command assembled from atoms, plus a declared reason it was built.
  * `class` names WHY the command was generated so a divergence can be attributed
  * to a rule family instead of a mystery string.
- * @param {Rng} rng
+ * @param {import('./fuzz-random.mjs').Rng} rng
  * @returns {{ command: string, class: string }}
  */
 export function fuzzConsoleCommand(rng) {
@@ -207,7 +205,7 @@ export function fuzzConsoleCommand(rng) {
   ])();
 }
 
-/** Case and homoglyph mutations aimed at lowercase-then-compare gates. @param {Rng} rng @param {string} word */
+/** Case and homoglyph mutations aimed at lowercase-then-compare gates. @param {import('./fuzz-random.mjs').Rng} rng @param {string} word */
 export function casingMutation(rng, word) {
   return rng.weighted([
     [3, () => word.toUpperCase()],
@@ -218,7 +216,7 @@ export function casingMutation(rng, word) {
   ])();
 }
 
-/** Leading/trailing whitespace variants, including the ones `trim()` does not remove. @param {Rng} rng */
+/** Leading/trailing whitespace variants, including the ones `trim()` does not remove. @param {import('./fuzz-random.mjs').Rng} rng */
 export function whitespaceMutation(rng) {
   return rng.pick(['', ' ', '  ', '\t', '\u3000', '\u00A0', '\u2007', '\u200B']);
 }

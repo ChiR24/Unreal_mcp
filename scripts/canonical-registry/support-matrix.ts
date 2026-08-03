@@ -26,7 +26,7 @@ const isMutation = (record: CapabilityRecord): boolean => record.behavior.effect
 
 // Markdown cell content is authored data (guidance / citations), so a stray
 // pipe or newline would silently corrupt the table.
-const cell = (value: string): string => value.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+const cell = (value: string): string => value.replace(/\|/g, '&#124;').replace(/\r?\n/g, ' ');
 
 const previewCell = (record: CapabilityRecord): string => {
   const { preview } = record.behavior.semantics;

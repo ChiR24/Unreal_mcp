@@ -38,10 +38,10 @@ const codes = (result: ReturnType<typeof validateEvidence>) => result.rejections
 function validDocument(): Record<string, unknown> {
   const source = join(ROOT, 'src/module.ts');
   mkdirSync(join(ROOT, 'src'), { recursive: true });
-  writeFileSync(source, 'export const answer = 42;\n');
+  writeFileSync(source, 'export const answer = 42;\n', { mode: 0o600 });
   const artifact = join(ROOT, 'dist/module.js');
   mkdirSync(join(ROOT, 'dist'), { recursive: true });
-  writeFileSync(artifact, 'export const answer = 42;\n');
+  writeFileSync(artifact, 'export const answer = 42;\n', { mode: 0o600 });
   // The build is NEWER than its input, as a fresh build is.
   const built = Date.now() / 1000 + 60;
   utimesSync(artifact, built, built);
@@ -112,7 +112,7 @@ describe('Task 50 — POSITIVE CONTROL: a well-formed document validates', () =>
 describe('Task 50 — REQUIRED REJECTION 1: a stale tree', () => {
   it('REJECTS when a recorded source file no longer hashes the same', () => {
     const document = validDocument();
-    writeFileSync(join(ROOT, 'src/module.ts'), 'export const answer = 43; // edited after the run\n');
+    writeFileSync(join(ROOT, 'src/module.ts'), 'export const answer = 43; // edited after the run\n', { mode: 0o600 });
     const result = validateEvidence(document, { projectRoot: ROOT });
     expect(codes(result)).toContain(REJECTIONS.STALE_TREE);
     expect(describeRejections(result)).toContain('cannot be reported as observations of this one');
@@ -192,7 +192,7 @@ describe('Task 50 — REQUIRED REJECTION 3: a stale PID', () => {
 describe('Task 50 — REQUIRED REJECTION 4: a bad hash', () => {
   it('REJECTS an artifact whose bytes no longer match the recorded hash', () => {
     const document = validDocument();
-    writeFileSync(join(ROOT, 'dist/module.js'), 'export const answer = 999; // replaced\n');
+    writeFileSync(join(ROOT, 'dist/module.js'), 'export const answer = 999; // replaced\n', { mode: 0o600 });
     const result = validateEvidence(document, { projectRoot: ROOT });
     expect(codes(result)).toContain(REJECTIONS.BAD_HASH);
   });

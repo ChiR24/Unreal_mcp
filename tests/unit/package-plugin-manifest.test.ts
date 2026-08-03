@@ -21,7 +21,7 @@ afterEach(() => {
 describe('plugin package manifest', () => {
   it('hashes an archive with lowercase SHA-256', async () => {
     // Given
-    writeFileSync(fixturePath, 'abc');
+    writeFileSync(fixturePath, 'abc', { mode: 0o600 });
 
     // When
     const sha256 = await sha256File(fixturePath);

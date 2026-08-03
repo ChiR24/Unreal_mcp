@@ -143,7 +143,7 @@ describe('DisposableWorkspace', () => {
   it('removes everything it made and PROVES the tree is gone', () => {
     const space = workspace();
     space.open();
-    writeFileSync(join(space.dir('proj/Content'), 'thing.uasset'), 'x');
+    writeFileSync(join(space.dir('proj/Content'), 'thing.uasset'), 'x', { mode: 0o600 });
     const receipt = space.close();
     expect(receipt.removed).toBe(true);
     expect(receipt.entriesBefore).toBeGreaterThan(2);
@@ -198,7 +198,7 @@ describe('surveyOwnedParent', () => {
     const orphan = join(OWNED_PARENT, 'task52-unit-orphan');
     mkdirSync(orphan, { recursive: true });
     writeFileSync(join(orphan, 'OWNED-BY-TASK-52.json'),
-      JSON.stringify({ runId: 'task52-unit-orphan', ownerPid: 2 ** 22, openedAt: new Date().toISOString() }));
+      JSON.stringify({ runId: 'task52-unit-orphan', ownerPid: 2 ** 22, openedAt: new Date().toISOString() }), { mode: 0o600 });
     try {
       const found = surveyOwnedParent().runs.find((entry) => entry.runId === 'task52-unit-orphan');
       expect(found?.ownerAlive).toBe(false);

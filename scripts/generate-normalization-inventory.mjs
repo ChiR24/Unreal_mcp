@@ -3,7 +3,6 @@
 // --check: fail if the committed artifact would drift (no write).
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { existsSync } from 'node:fs';
 import { generateInventory } from '../src/tools/catalog/capabilities/normalization/generate.ts';
 import {
   artifactExists,

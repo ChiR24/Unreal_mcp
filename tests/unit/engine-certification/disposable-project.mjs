@@ -184,7 +184,7 @@ export class DisposableWorkspace {
   }
 
   writeManifest() {
-    writeFileSync(this.manifestPath, `${JSON.stringify(this.manifest(), null, 2)}\n`);
+    writeFileSync(this.manifestPath, `${JSON.stringify(this.manifest(), null, 2)}\n`, { mode: 0o600 });
   }
 
   /** @param {string} relative */

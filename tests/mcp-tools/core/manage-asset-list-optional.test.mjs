@@ -20,7 +20,6 @@ import { runToolTests } from '../../test-runner.mjs';
 
 const TEST_FOLDER = '/Game/MCPTest/AssetListOptional';
 const ts = Date.now();
-const asset = (name) => `${TEST_FOLDER}/${name}`;
 
 const testCases = [
   // === SETUP ===

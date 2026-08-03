@@ -208,9 +208,9 @@ describe('route dispositions: group-row citations (every constituent symbol sour
     expect(citations, 'citations must be present').toBeDefined();
     for (const c of citations ?? []) {
       const abs = resolve(repoRoot, c.source);
+      const content = readFileSync(abs, 'utf8');
       const stat = statSync(abs);
       expect(stat.isFile(), `citation source must be a file: ${c.source}`).toBe(true);
-      const content = readFileSync(abs, 'utf8');
       expect(
         content,
         `citation full symbol not literal in ${c.source}: "${c.symbol}"`,
