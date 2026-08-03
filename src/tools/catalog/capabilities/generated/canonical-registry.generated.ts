@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 1335;
-export const CATALOG_REVISION = "763bfe3277aaa254";
+export const CATALOG_REVISION = "aeb961581bec2906";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -136298,7 +136298,9 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
             "description": "World or relative location as [x, y, z]."
           }
         },
-        "required": [],
+        "required": [
+          "systemPath"
+        ],
         "additionalProperties": false
       },
       "output": {
@@ -136421,8 +136423,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "4b27e668a9adbdb55fdb7f9c4e44a34bc9b736155e197fec3ca3b0fc6c415505",
-      "content": "e9c42887d0a58e50a6836d43c4b4e08c2cb70600a9bdccc263a514dc11e892c7"
+      "schema": "995eda848eac7e8875f4ed37f62177bc169118128c3858ac9961d9c9c07c1d3e",
+      "content": "a324975d787559bd5a804660ec1938f41efba80b0f6f6e69d4de06fecad3c4a6"
     }
   },
   {
@@ -171265,6 +171267,10 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             },
             "additionalProperties": false
           },
+          "actorPath": {
+            "type": "string",
+            "description": "Actor path in the level."
+          },
           "save": {
             "type": "boolean",
             "description": "Whether to save the level after the operation."
@@ -171272,7 +171278,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "location"
+          "location",
+          "actorPath"
         ],
         "additionalProperties": false
       },
@@ -171304,7 +171311,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             "x": 0,
             "y": 0,
             "z": 0
-          }
+          },
+          "actorPath": "/Game/Maps/Demo.Demo:PersistentLevel.SM_House"
         },
         "output": {
           "success": true,
@@ -171397,8 +171405,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-      "content": "7bb23d8bfc9fa73cb2989f217acb94e0a174444db946be73a21f5c7c4e04f0b2"
+      "schema": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+      "content": "cb0292b5ef55e07fdc4ba87f92bd8995a29c5f05bb4e9cfd4dba380a6a72bf05"
     }
   },
   {
@@ -171493,6 +171501,10 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             },
             "description": "Size/distance pairs for cull distance volumes."
           },
+          "actorPath": {
+            "type": "string",
+            "description": "Actor path in the level."
+          },
           "save": {
             "type": "boolean",
             "description": "Whether to save the level after the operation."
@@ -171500,7 +171512,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "location"
+          "location",
+          "actorPath"
         ],
         "additionalProperties": false
       },
@@ -171532,7 +171545,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             "x": 0,
             "y": 0,
             "z": 0
-          }
+          },
+          "actorPath": "/Game/Maps/Demo.Demo:PersistentLevel.SM_House"
         },
         "output": {
           "success": true,
@@ -171625,8 +171639,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "42d376ac9e655684e762dcdfd3b4205b6098e7b243b6a8be82baeac0df776be6",
-      "content": "020561ec4e0dbb95e4a7029f939d09830124b806c32774689b9888c57e430b57"
+      "schema": "945f16ba4266ab9d81032b9e2f100cf98f5ce14ca3d6589de637cd0600dada8d",
+      "content": "8475d274b242b573e0d00d048bc0ea15fd662490fd41dbbb7a43828eb703e8b8"
     }
   },
   {
@@ -171703,6 +171717,10 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             },
             "additionalProperties": false
           },
+          "actorPath": {
+            "type": "string",
+            "description": "Actor path in the level."
+          },
           "save": {
             "type": "boolean",
             "description": "Whether to save the level after the operation."
@@ -171710,7 +171728,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "location"
+          "location",
+          "actorPath"
         ],
         "additionalProperties": false
       },
@@ -171742,7 +171761,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             "x": 0,
             "y": 0,
             "z": -1000
-          }
+          },
+          "actorPath": "/Game/Maps/Demo.Demo:PersistentLevel.SM_House"
         },
         "output": {
           "success": true,
@@ -171835,8 +171855,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-      "content": "7e7aadf473e7ff1d25952585e2c9a0d6393280dc51d6a68b0538f74b769a3c32"
+      "schema": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+      "content": "cfbeaf3219df1ce97dd3a825341ca15cec4a4a49c5f52983d87d76ddfd804661"
     }
   },
   {
@@ -172101,6 +172121,10 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             },
             "additionalProperties": false
           },
+          "actorPath": {
+            "type": "string",
+            "description": "Actor path in the level."
+          },
           "save": {
             "type": "boolean",
             "description": "Whether to save the level after the operation."
@@ -172108,7 +172132,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "location"
+          "location",
+          "actorPath"
         ],
         "additionalProperties": false
       },
@@ -172140,7 +172165,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             "x": 0,
             "y": 0,
             "z": 0
-          }
+          },
+          "actorPath": "/Game/Maps/Demo.Demo:PersistentLevel.SM_House"
         },
         "output": {
           "success": true,
@@ -172233,8 +172259,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-      "content": "426867257e01decb7dcebdc73eaea9169310cab1a2cce7e26881a24e899349a6"
+      "schema": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+      "content": "7a8d388c54d72f08c1992fafa46d2e2684c9a30fbb97866e95a9c7016e7c1e8c"
     }
   },
   {
@@ -172311,6 +172337,10 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             },
             "additionalProperties": false
           },
+          "actorPath": {
+            "type": "string",
+            "description": "Actor path in the level."
+          },
           "save": {
             "type": "boolean",
             "description": "Whether to save the level after the operation."
@@ -172318,7 +172348,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "location"
+          "location",
+          "actorPath"
         ],
         "additionalProperties": false
       },
@@ -172350,7 +172381,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             "x": 0,
             "y": 0,
             "z": 0
-          }
+          },
+          "actorPath": "/Game/Maps/Demo.Demo:PersistentLevel.SM_House"
         },
         "output": {
           "success": true,
@@ -172443,8 +172475,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-      "content": "1d017ab5f4990d736b6c285c5226db3c712fad4043b3412ad5bb87eb953b1639"
+      "schema": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+      "content": "e7357d0c3bfaea43d9fea5dc8fcd03b71d46d011356a22d442008544c91c85be"
     }
   },
   {
@@ -172521,6 +172553,10 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             },
             "additionalProperties": false
           },
+          "actorPath": {
+            "type": "string",
+            "description": "Actor path in the level."
+          },
           "save": {
             "type": "boolean",
             "description": "Whether to save the level after the operation."
@@ -172528,7 +172564,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "location"
+          "location",
+          "actorPath"
         ],
         "additionalProperties": false
       },
@@ -172560,7 +172597,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             "x": 0,
             "y": 0,
             "z": 0
-          }
+          },
+          "actorPath": "/Game/Maps/Demo.Demo:PersistentLevel.SM_House"
         },
         "output": {
           "success": true,
@@ -172653,8 +172691,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-      "content": "14cec4a7d5fd7e90800b811028f665e030584cab2305575171f11da13803fdef"
+      "schema": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+      "content": "2fa94def6c0ef49dcb6b7b40690794fb671471d757740a2d6cf53dff9b9f82a0"
     }
   },
   {
@@ -173454,9 +173492,9 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             "type": "string",
             "description": "The action to execute on the parent tool."
           },
-          "sublevelPath": {
+          "levelName": {
             "type": "string",
-            "description": "Sub-level asset path."
+            "description": "Level asset name."
           },
           "streamingMethod": {
             "type": "string",
@@ -173481,7 +173519,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "sublevelPath"
+          "levelName"
         ],
         "additionalProperties": false
       },
@@ -173509,7 +173547,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         "title": "Configure streaming settings for a sub-level (method, visibility, blocking).",
         "input": {
           "action": "configure_level_streaming",
-          "sublevelPath": "/Game/Maps/Sub01",
+          "levelName": "Sub01",
           "streamingMethod": "Blueprint"
         },
         "output": {
@@ -173603,8 +173641,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "8679de2ab521993c3b846c6e10445c8604d0872a6b3ee5e6020915d0e975ee49",
-      "content": "7b54b67ee87223a8e9e4121186e8ad5798f718cf7f8b8c65583d840122c42a6c"
+      "schema": "da7d4e8208494d825e84957e1e1cc39c69b84f2304f08c12b6689c973d39b2d1",
+      "content": "4919c46f4c938f1d1ae41cbd61a00ffa9e62a93b6e1ce362c8d96b2131825ae6"
     }
   },
   {
@@ -179546,9 +179584,9 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             },
             "additionalProperties": false
           },
-          "sublevelPath": {
+          "levelName": {
             "type": "string",
-            "description": "Sub-level asset path."
+            "description": "Level asset name."
           },
           "streamingDistance": {
             "type": "number",
@@ -179569,7 +179607,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "sublevelPath",
+          "levelName",
           "streamingDistance"
         ],
         "additionalProperties": false
@@ -179598,7 +179636,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         "title": "Set the distance-based streaming radius for a sub-level via a streaming volume.",
         "input": {
           "action": "set_streaming_distance",
-          "sublevelPath": "/Game/Maps/Sub01",
+          "levelName": "Sub01",
           "streamingDistance": 5000
         },
         "output": {
@@ -179692,8 +179730,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "2ec5ec3e1335e901c4bc5f48f13cb96a9a9f4ed4c72234601627fbafde13108d",
-      "content": "0632e9735070d5871893d867bb1f9501590473e3be0f4211956aade08b35b9e0"
+      "schema": "22a8831b185011cafd58b3fcea58fecfaeef356da8398a3bcd502668f6156b1f",
+      "content": "407823d4a1ba232fc4dc4516baa62f341cb66124305f84b6b4e2157993241bd3"
     }
   },
   {
@@ -179711,9 +179749,9 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "topics": [
         "set_volume_bounds"
       ],
-      "summary": "Set the bounds (origin/extent) of an existing volume.",
+      "summary": "Set the bounds (min/max) of an existing volume.",
       "whenToUse": [
-        "A volume must be repositioned/resized via bounds."
+        "A volume must be repositioned/resized via min/max bounds."
       ],
       "whenNotToUse": [
         "Only the extent must change; use set_volume_extent."
@@ -179733,49 +179771,13 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             "description": "Volume actor name."
           },
           "bounds": {
-            "type": "object",
-            "description": "Bounds {origin, extent}.",
-            "properties": {
-              "origin": {
-                "type": "object",
-                "description": "Origin.",
-                "properties": {
-                  "x": {
-                    "type": "number",
-                    "description": "X"
-                  },
-                  "y": {
-                    "type": "number",
-                    "description": "Y"
-                  },
-                  "z": {
-                    "type": "number",
-                    "description": "Z"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "extent": {
-                "type": "object",
-                "description": "Extent.",
-                "properties": {
-                  "x": {
-                    "type": "number",
-                    "description": "X"
-                  },
-                  "y": {
-                    "type": "number",
-                    "description": "Y"
-                  },
-                  "z": {
-                    "type": "number",
-                    "description": "Z"
-                  }
-                },
-                "additionalProperties": false
-              }
+            "type": "array",
+            "description": "Volume bounds as a six-number array [minX, minY, minZ, maxX, maxY, maxZ].",
+            "items": {
+              "type": "number"
             },
-            "additionalProperties": false
+            "minItems": 6,
+            "maxItems": 6
           },
           "save": {
             "type": "boolean",
@@ -179810,22 +179812,18 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Set the bounds (origin/extent) of an existing volume.",
+        "title": "Set the bounds (min/max) of an existing volume.",
         "input": {
           "action": "set_volume_bounds",
           "volumeName": "PP_01",
-          "bounds": {
-            "origin": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            },
-            "extent": {
-              "x": 1000,
-              "y": 1000,
-              "z": 500
-            }
-          }
+          "bounds": [
+            -1000,
+            -1000,
+            -500,
+            1000,
+            1000,
+            500
+          ]
         },
         "output": {
           "success": true,
@@ -179918,8 +179916,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "275221e7a67ba953b99746e8554a695a74a17ba39ba185a7eff73004baa8c5e5",
-      "content": "4f0b262720f844a63ced1f3e98bb45392fa0d4ca10b89a98d11ebb22f1180758"
+      "schema": "436ebcd9320740b0082e8d7f206a6e89dcda39e7dd0b38253c7872908bbda333",
+      "content": "a955ac987a434dbf0085583a29936ef0f9a233122df61196f167c391e2e9c222"
     }
   },
   {
@@ -248429,8 +248427,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_effect",
     "dispatchAction": "niagara",
     "domain": "manage effect",
-    "schemaHash": "4b27e668a9adbdb55fdb7f9c4e44a34bc9b736155e197fec3ca3b0fc6c415505",
-    "contentHash": "e9c42887d0a58e50a6836d43c4b4e08c2cb70600a9bdccc263a514dc11e892c7"
+    "schemaHash": "995eda848eac7e8875f4ed37f62177bc169118128c3858ac9961d9c9c07c1d3e",
+    "contentHash": "a324975d787559bd5a804660ec1938f41efba80b0f6f6e69d4de06fecad3c4a6"
   },
   {
     "id": "manage_effect.particle",
@@ -249965,24 +249963,24 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_level_structure",
     "dispatchAction": "add_blocking_volume",
     "domain": "world",
-    "schemaHash": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-    "contentHash": "7bb23d8bfc9fa73cb2989f217acb94e0a174444db946be73a21f5c7c4e04f0b2"
+    "schemaHash": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+    "contentHash": "cb0292b5ef55e07fdc4ba87f92bd8995a29c5f05bb4e9cfd4dba380a6a72bf05"
   },
   {
     "id": "manage_level_structure.add_cull_distance_volume",
     "parentTool": "manage_level_structure",
     "dispatchAction": "add_cull_distance_volume",
     "domain": "world",
-    "schemaHash": "42d376ac9e655684e762dcdfd3b4205b6098e7b243b6a8be82baeac0df776be6",
-    "contentHash": "020561ec4e0dbb95e4a7029f939d09830124b806c32774689b9888c57e430b57"
+    "schemaHash": "945f16ba4266ab9d81032b9e2f100cf98f5ce14ca3d6589de637cd0600dada8d",
+    "contentHash": "8475d274b242b573e0d00d048bc0ea15fd662490fd41dbbb7a43828eb703e8b8"
   },
   {
     "id": "manage_level_structure.add_kill_z_volume",
     "parentTool": "manage_level_structure",
     "dispatchAction": "add_kill_z_volume",
     "domain": "world",
-    "schemaHash": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-    "contentHash": "7e7aadf473e7ff1d25952585e2c9a0d6393280dc51d6a68b0538f74b769a3c32"
+    "schemaHash": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+    "contentHash": "cfbeaf3219df1ce97dd3a825341ca15cec4a4a49c5f52983d87d76ddfd804661"
   },
   {
     "id": "manage_level_structure.add_level_blueprint_node",
@@ -249997,24 +249995,24 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_level_structure",
     "dispatchAction": "add_physics_volume",
     "domain": "world",
-    "schemaHash": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-    "contentHash": "426867257e01decb7dcebdc73eaea9169310cab1a2cce7e26881a24e899349a6"
+    "schemaHash": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+    "contentHash": "7a8d388c54d72f08c1992fafa46d2e2684c9a30fbb97866e95a9c7016e7c1e8c"
   },
   {
     "id": "manage_level_structure.add_post_process_volume",
     "parentTool": "manage_level_structure",
     "dispatchAction": "add_post_process_volume",
     "domain": "world",
-    "schemaHash": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-    "contentHash": "1d017ab5f4990d736b6c285c5226db3c712fad4043b3412ad5bb87eb953b1639"
+    "schemaHash": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+    "contentHash": "e7357d0c3bfaea43d9fea5dc8fcd03b71d46d011356a22d442008544c91c85be"
   },
   {
     "id": "manage_level_structure.add_trigger_volume",
     "parentTool": "manage_level_structure",
     "dispatchAction": "add_trigger_volume",
     "domain": "world",
-    "schemaHash": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-    "contentHash": "14cec4a7d5fd7e90800b811028f665e030584cab2305575171f11da13803fdef"
+    "schemaHash": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+    "contentHash": "2fa94def6c0ef49dcb6b7b40690794fb671471d757740a2d6cf53dff9b9f82a0"
   },
   {
     "id": "manage_level_structure.assign_actor_to_data_layer",
@@ -250053,8 +250051,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_level_structure",
     "dispatchAction": "configure_level_streaming",
     "domain": "world",
-    "schemaHash": "8679de2ab521993c3b846c6e10445c8604d0872a6b3ee5e6020915d0e975ee49",
-    "contentHash": "7b54b67ee87223a8e9e4121186e8ad5798f718cf7f8b8c65583d840122c42a6c"
+    "schemaHash": "da7d4e8208494d825e84957e1e1cc39c69b84f2304f08c12b6689c973d39b2d1",
+    "contentHash": "4919c46f4c938f1d1ae41cbd61a00ffa9e62a93b6e1ce362c8d96b2131825ae6"
   },
   {
     "id": "manage_level_structure.connect_level_blueprint_nodes",
@@ -250293,16 +250291,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_level_structure",
     "dispatchAction": "set_streaming_distance",
     "domain": "world",
-    "schemaHash": "2ec5ec3e1335e901c4bc5f48f13cb96a9a9f4ed4c72234601627fbafde13108d",
-    "contentHash": "0632e9735070d5871893d867bb1f9501590473e3be0f4211956aade08b35b9e0"
+    "schemaHash": "22a8831b185011cafd58b3fcea58fecfaeef356da8398a3bcd502668f6156b1f",
+    "contentHash": "407823d4a1ba232fc4dc4516baa62f341cb66124305f84b6b4e2157993241bd3"
   },
   {
     "id": "manage_level_structure.set_volume_bounds",
     "parentTool": "manage_level_structure",
     "dispatchAction": "set_volume_bounds",
     "domain": "world",
-    "schemaHash": "275221e7a67ba953b99746e8554a695a74a17ba39ba185a7eff73004baa8c5e5",
-    "contentHash": "4f0b262720f844a63ced1f3e98bb45392fa0d4ca10b89a98d11ebb22f1180758"
+    "schemaHash": "436ebcd9320740b0082e8d7f206a6e89dcda39e7dd0b38253c7872908bbda333",
+    "contentHash": "a955ac987a434dbf0085583a29936ef0f9a233122df61196f167c391e2e9c222"
   },
   {
     "id": "manage_level_structure.set_volume_extent",
@@ -265099,7 +265097,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "existing",
     "manage_level_structure",
     "manage_level_structure.set_volume_bounds",
-    "originextent",
+    "minmax",
     "set",
     "set_volume_bounds",
     "the",
@@ -279379,8 +279377,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "bc06306c582771f524f5635851941e156b0e5c3424387060486e1dbcf6cd364b"
   },
   "manage_effect.niagara": {
-    "schema": "4b27e668a9adbdb55fdb7f9c4e44a34bc9b736155e197fec3ca3b0fc6c415505",
-    "content": "e9c42887d0a58e50a6836d43c4b4e08c2cb70600a9bdccc263a514dc11e892c7"
+    "schema": "995eda848eac7e8875f4ed37f62177bc169118128c3858ac9961d9c9c07c1d3e",
+    "content": "a324975d787559bd5a804660ec1938f41efba80b0f6f6e69d4de06fecad3c4a6"
   },
   "manage_effect.particle": {
     "schema": "c115b1a34b4dcf836f0d88db572e88d375afd7c61e1f92fd27037c6b896f0b28",
@@ -280147,32 +280145,32 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "9a4ee8f0e7d336d1a7d676c68c6cc1aeacc97c574b70a6dcece2bc21bf51288c"
   },
   "manage_level_structure.add_blocking_volume": {
-    "schema": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-    "content": "7bb23d8bfc9fa73cb2989f217acb94e0a174444db946be73a21f5c7c4e04f0b2"
+    "schema": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+    "content": "cb0292b5ef55e07fdc4ba87f92bd8995a29c5f05bb4e9cfd4dba380a6a72bf05"
   },
   "manage_level_structure.add_cull_distance_volume": {
-    "schema": "42d376ac9e655684e762dcdfd3b4205b6098e7b243b6a8be82baeac0df776be6",
-    "content": "020561ec4e0dbb95e4a7029f939d09830124b806c32774689b9888c57e430b57"
+    "schema": "945f16ba4266ab9d81032b9e2f100cf98f5ce14ca3d6589de637cd0600dada8d",
+    "content": "8475d274b242b573e0d00d048bc0ea15fd662490fd41dbbb7a43828eb703e8b8"
   },
   "manage_level_structure.add_kill_z_volume": {
-    "schema": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-    "content": "7e7aadf473e7ff1d25952585e2c9a0d6393280dc51d6a68b0538f74b769a3c32"
+    "schema": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+    "content": "cfbeaf3219df1ce97dd3a825341ca15cec4a4a49c5f52983d87d76ddfd804661"
   },
   "manage_level_structure.add_level_blueprint_node": {
     "schema": "eec052c0ea632bc0948ba6bc7a94768b99cce46ff3eb4a17a0862171fffa2c9a",
     "content": "ba7b3c74531b67eb1ec7df3856a07599212d737544747f6f0c5bd035fa0680d5"
   },
   "manage_level_structure.add_physics_volume": {
-    "schema": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-    "content": "426867257e01decb7dcebdc73eaea9169310cab1a2cce7e26881a24e899349a6"
+    "schema": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+    "content": "7a8d388c54d72f08c1992fafa46d2e2684c9a30fbb97866e95a9c7016e7c1e8c"
   },
   "manage_level_structure.add_post_process_volume": {
-    "schema": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-    "content": "1d017ab5f4990d736b6c285c5226db3c712fad4043b3412ad5bb87eb953b1639"
+    "schema": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+    "content": "e7357d0c3bfaea43d9fea5dc8fcd03b71d46d011356a22d442008544c91c85be"
   },
   "manage_level_structure.add_trigger_volume": {
-    "schema": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
-    "content": "14cec4a7d5fd7e90800b811028f665e030584cab2305575171f11da13803fdef"
+    "schema": "f0c3eafd3445f282e634f9450f98bfb183104b252b70a4fbd492161af50e6674",
+    "content": "2fa94def6c0ef49dcb6b7b40690794fb671471d757740a2d6cf53dff9b9f82a0"
   },
   "manage_level_structure.assign_actor_to_data_layer": {
     "schema": "69f1b9412d29865f25fc1cb8ee9db296331733ffbbfa6bd47cfe669d6b7423ef",
@@ -280191,8 +280189,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "8d5e00887970acd0db1b58638b1a22623b7983bccad7fd4e2690d5df6cb4d476"
   },
   "manage_level_structure.configure_level_streaming": {
-    "schema": "8679de2ab521993c3b846c6e10445c8604d0872a6b3ee5e6020915d0e975ee49",
-    "content": "7b54b67ee87223a8e9e4121186e8ad5798f718cf7f8b8c65583d840122c42a6c"
+    "schema": "da7d4e8208494d825e84957e1e1cc39c69b84f2304f08c12b6689c973d39b2d1",
+    "content": "4919c46f4c938f1d1ae41cbd61a00ffa9e62a93b6e1ce362c8d96b2131825ae6"
   },
   "manage_level_structure.connect_level_blueprint_nodes": {
     "schema": "df1d43f1e328782c77f2a1476f4c40419bbdb7479e868cdaf4c48c55069900cd",
@@ -280311,12 +280309,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "7bc3fb596197fffb658e80131691eaec69dec39fffd85e288e109d3fb3831d9c"
   },
   "manage_level_structure.set_streaming_distance": {
-    "schema": "2ec5ec3e1335e901c4bc5f48f13cb96a9a9f4ed4c72234601627fbafde13108d",
-    "content": "0632e9735070d5871893d867bb1f9501590473e3be0f4211956aade08b35b9e0"
+    "schema": "22a8831b185011cafd58b3fcea58fecfaeef356da8398a3bcd502668f6156b1f",
+    "content": "407823d4a1ba232fc4dc4516baa62f341cb66124305f84b6b4e2157993241bd3"
   },
   "manage_level_structure.set_volume_bounds": {
-    "schema": "275221e7a67ba953b99746e8554a695a74a17ba39ba185a7eff73004baa8c5e5",
-    "content": "4f0b262720f844a63ced1f3e98bb45392fa0d4ca10b89a98d11ebb22f1180758"
+    "schema": "436ebcd9320740b0082e8d7f206a6e89dcda39e7dd0b38253c7872908bbda333",
+    "content": "a955ac987a434dbf0085583a29936ef0f9a233122df61196f167c391e2e9c222"
   },
   "manage_level_structure.set_volume_extent": {
     "schema": "2cc756c5db37c01a80957af42bdad263293b72a020c85e6b9965bf6df228306d",

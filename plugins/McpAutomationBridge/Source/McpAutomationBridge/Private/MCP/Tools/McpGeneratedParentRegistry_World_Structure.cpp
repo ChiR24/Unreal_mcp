@@ -32,18 +32,7 @@ public:
 			Schema.Bool(TEXT("bWaterVolume"), TEXT("Whether this is a water volume."));
 			Schema.Number(TEXT("blendRadius"), TEXT("Blend radius for post process volume."));
 			Schema.Number(TEXT("blendWeight"), TEXT("Blend weight (0.0-1.0) for post process."));
-			Schema.Object(TEXT("bounds"), TEXT("Bounds {origin, extent}."), [](FMcpSchemaBuilder& S) {
-				  S.Object(TEXT("origin"), TEXT("Origin."), [](FMcpSchemaBuilder& S) {
-				  	  S.Number(TEXT("x"), TEXT("X"));
-				  	  S.Number(TEXT("y"), TEXT("Y"));
-				  	  S.Number(TEXT("z"), TEXT("Z"));
-				  });
-				  S.Object(TEXT("extent"), TEXT("Extent."), [](FMcpSchemaBuilder& S) {
-				  	  S.Number(TEXT("x"), TEXT("X"));
-				  	  S.Number(TEXT("y"), TEXT("Y"));
-				  	  S.Number(TEXT("z"), TEXT("Z"));
-				  });
-			});
+			Schema.Array(TEXT("bounds"), TEXT("Volume bounds as a six-number array [minX, minY, minZ, maxX, maxY, maxZ]."), TEXT("number"));
 			Schema.Object(TEXT("boundsExtent"), TEXT("Extent of level bounds."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("x"), TEXT("X"));
 				  S.Number(TEXT("y"), TEXT("Y"));

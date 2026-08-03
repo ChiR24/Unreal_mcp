@@ -9712,49 +9712,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Blend weight (0.0-1.0) for post process."
         },
         "bounds": {
-          "type": "object",
-          "description": "Bounds {origin, extent}.",
-          "properties": {
-            "origin": {
-              "type": "object",
-              "description": "Origin.",
-              "properties": {
-                "x": {
-                  "type": "number",
-                  "description": "X"
-                },
-                "y": {
-                  "type": "number",
-                  "description": "Y"
-                },
-                "z": {
-                  "type": "number",
-                  "description": "Z"
-                }
-              },
-              "additionalProperties": false
-            },
-            "extent": {
-              "type": "object",
-              "description": "Extent.",
-              "properties": {
-                "x": {
-                  "type": "number",
-                  "description": "X"
-                },
-                "y": {
-                  "type": "number",
-                  "description": "Y"
-                },
-                "z": {
-                  "type": "number",
-                  "description": "Z"
-                }
-              },
-              "additionalProperties": false
-            }
+          "type": "array",
+          "description": "Volume bounds as a six-number array [minX, minY, minZ, maxX, maxY, maxZ].",
+          "items": {
+            "type": "number"
           },
-          "additionalProperties": false
+          "minItems": 6,
+          "maxItems": 6
         },
         "boundsExtent": {
           "type": "object",
