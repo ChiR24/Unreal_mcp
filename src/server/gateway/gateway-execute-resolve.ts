@@ -16,7 +16,7 @@ import type { CapabilityRecord } from '../../tools/catalog/capabilities/model.js
 import { resolveMigrationEntry } from '../../tools/catalog/capabilities/migration/migration-map.js';
 import { buildReplacementGuidance, findLossyRule } from '../../tools/catalog/capabilities/migration/lossy-translations.js';
 import type { LegacyKey } from '../../tools/catalog/capabilities/migration/types.js';
-import { capabilityIndex, legacyPairKey } from './gateway-capability-index.js';
+import { capabilityIndex, deriveNamespaceAliases, legacyPairKey } from './gateway-capability-index.js';
 import { closestMatches, buildNextCall, MAX_SUGGESTIONS } from './gateway-guidance.js';
 
 export type LegacyPair = { readonly tool: string; readonly action: string };
@@ -29,6 +29,8 @@ export type ExecuteTargetIndex = {
   readonly aliasOwners: ReadonlyMap<string, readonly string[]>;
   readonly byLegacyPair: ReadonlyMap<string, CapabilityRecord>;
   readonly actionsByParentTool: ReadonlyMap<string, readonly string[]>;
+  /** Capability ID namespace -> the parent tool that dispatches it. */
+  readonly parentToolByNamespace: ReadonlyMap<string, string>;
 };
 
 export type ExecuteTarget = {
@@ -78,7 +80,8 @@ export function buildExecuteTargetIndex(records: readonly CapabilityRecord[]): E
     byId,
     aliasOwners,
     byLegacyPair,
-    actionsByParentTool
+    actionsByParentTool,
+    parentToolByNamespace: deriveNamespaceAliases(records)
   };
 }
 
@@ -146,11 +149,18 @@ type LegacyLookup =
   | { readonly kind: 'failed'; readonly failure: ExecuteResolutionFailure };
 
 function lookupByLegacyPair(
-  tool: string | undefined,
+  requestedTool: string | undefined,
   action: string | undefined,
   index: ExecuteTargetIndex
 ): LegacyLookup {
-  if (tool === undefined && action === undefined) return { kind: 'absent' };
+  if (requestedTool === undefined && action === undefined) return { kind: 'absent' };
+
+  // A capability ID's namespace is not always a parent tool name, so the prefix
+  // a caller reads off a search row resolves here before any lookup. Resolution
+  // is second: a real tool name always wins over a namespace of the same text.
+  const tool = requestedTool !== undefined && !index.actionsByParentTool.has(requestedTool)
+    ? index.parentToolByNamespace.get(requestedTool) ?? requestedTool
+    : requestedTool;
 
   if (tool === undefined || !index.actionsByParentTool.has(tool)) {
     const suggestions = closestMatches(tool ?? '', [...index.parentTools], MAX_SUGGESTIONS);

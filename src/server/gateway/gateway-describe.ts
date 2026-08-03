@@ -17,7 +17,7 @@
 
 import { dynamicToolManager } from '../../tools/dynamic/dynamic-tool-manager.js';
 import type { ToolDefinition } from '../../tools/definitions/shared/tool-definition.js';
-import { resolveLegacyPair } from './gateway-capability-index.js';
+import { resolveLegacyPair, resolveToolNamespace } from './gateway-capability-index.js';
 import {
   describeCapabilityParameter,
   describeCapabilityRecord,
@@ -125,12 +125,15 @@ function describeLegacyTool(
   page: Page,
   query: string
 ): Record<string, unknown> {
+  const namespaceOwner = findTool(toolName) === undefined ? resolveToolNamespace(toolName) : undefined;
+  const resolvedName = namespaceOwner ?? toolName;
   const action = getString(args, 'action');
-  if (action !== undefined) return describeLegacyPair(toolName, action, getString(args, 'param'));
-  const tool = findTool(toolName);
+  if (action !== undefined) return describeLegacyPair(resolvedName, action, getString(args, 'param'));
+  const tool = findTool(resolvedName);
   if (tool === undefined) return unknownToolError(toolName);
   const requestedLimit = getOptionalBoundedInteger(args.limit, 1, MAX_DESCRIBE_LIMIT);
-  return describeToolSummary(tool, query, requestedLimit, page.offset);
+  const summary = describeToolSummary(tool, query, requestedLimit, page.offset);
+  return namespaceOwner === undefined ? summary : { ...summary, resolvedFromNamespace: toolName };
 }
 
 function describeBrowse(

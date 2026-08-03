@@ -27,10 +27,45 @@ export type CapabilityIndex = {
   readonly byAlias: ReadonlyMap<string, CapabilityRecord>;
   readonly byLegacyPair: ReadonlyMap<string, CapabilityRecord>;
   readonly byParentTool: ReadonlyMap<string, readonly CapabilityRecord[]>;
+  readonly parentToolByNamespace: ReadonlyMap<string, string>;
   readonly domains: readonly string[];
   readonly familiesByDomain: ReadonlyMap<string, readonly string[]>;
   readonly search: CapabilitySearchIndex;
 };
+
+// A capability ID is `<namespace>.<action>`, and for 343 of them that namespace
+// is not the name of any parent tool - `blueprint.*` is dispatched by
+// `manage_blueprint`, `material.*` by `manage_asset`. A caller who reads an ID
+// out of a search row and uses its namespace as `tool` was refused UNKNOWN_TOOL.
+//
+// Derived rather than tabulated: a namespace is an alias only when every record
+// carrying it agrees on one parent tool, so a future record that splits a
+// namespace across two parents silently withdraws the alias instead of routing
+// half the calls to the wrong dispatcher.
+export function deriveNamespaceAliases(
+  records: readonly CapabilityRecord[]
+): ReadonlyMap<string, string> {
+  const parentTools = new Set<string>(records.map((record) => record.routing.parentTool));
+  const ownersByNamespace = new Map<string, Set<string>>();
+  for (const record of records) {
+    const namespace = record.id.split('.')[0];
+    if (namespace === undefined || namespace.length === 0 || parentTools.has(namespace)) continue;
+    const owners = ownersByNamespace.get(namespace) ?? new Set<string>();
+    owners.add(record.routing.parentTool);
+    ownersByNamespace.set(namespace, owners);
+  }
+
+  const aliases = new Map<string, string>();
+  for (const [namespace, owners] of ownersByNamespace) {
+    const [only] = [...owners];
+    if (owners.size === 1 && only !== undefined) aliases.set(namespace, only);
+  }
+  return aliases;
+}
+
+export function resolveToolNamespace(name: string): string | undefined {
+  return capabilityIndex().parentToolByNamespace.get(name);
+}
 
 export function legacyPairKey(tool: string, action: string): string {
   return `${tool}::${action}`;
@@ -78,6 +113,7 @@ function buildIndex(): CapabilityIndex {
     byAlias,
     byLegacyPair,
     byParentTool: groupBy(records, (record) => record.routing.parentTool),
+    parentToolByNamespace: deriveNamespaceAliases(records),
     domains: Object.freeze([...byDomain.keys()].sort(compareAscii)),
     familiesByDomain,
     search: createCapabilitySearchIndex(records)
