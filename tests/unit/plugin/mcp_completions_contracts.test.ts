@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { countPureLines } from './plugin-contract-fixtures.js';
+
 const root = process.cwd();
 const nativeRoot = resolve(root, 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP');
 const completionsRoot = resolve(root, 'src/server/mcp-primitives/completions');
@@ -35,9 +37,6 @@ interface ParityFixture {
 const fixture = JSON.parse(
   readFileSync(resolve(completionsRoot, 'completion-parity.fixture.json'), 'utf8'),
 ) as ParityFixture;
-
-const countPureLines = (source: string): number =>
-  source.split(/\r?\n/u).filter((line) => !/^\s*$/u.test(line) && !/^\s*(?:#|\/\/)/u.test(line)).length;
 
 describe('mcp completions native source contracts', () => {
   it('mirrors the bounded budgets on both surfaces', () => {

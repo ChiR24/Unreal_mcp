@@ -3,8 +3,8 @@ import { describeGatewayCapability, searchGatewayCatalog, handleUnrealGatewayCal
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 import { Logger } from '../../../src/utils/logging/logger.js';
 import type { ITools } from '../../../src/types/tools/tool-interfaces.js';
-import { consolidatedToolDefinitions } from '../../../src/tools/catalog/consolidated-tool-definitions.js';
 import { dynamicToolManager } from '../../../src/tools/dynamic/dynamic-tool-manager.js';
+import { firstAction } from './support/action-fixtures.js';
 
 function makeExecuteContext(): { tools: ITools; logger: Logger; elicitationTimeoutMs: number; ensureConnected: () => Promise<boolean> } {
   const tools = {
@@ -244,15 +244,6 @@ describe('execute guided errors cover the remaining named branches', () => {
   afterEach(() => {
     dynamicToolManager.reset();
   });
-
-  function firstAction(toolName: string): string {
-    const def = consolidatedToolDefinitions.find((tool) => tool.name === toolName);
-    const props = isRecord(def?.inputSchema) && isRecord(def.inputSchema.properties) ? def.inputSchema.properties : undefined;
-    const action = isRecord(props) ? props.action : undefined;
-    const enumArr = isRecord(action) && Array.isArray(action.enum) ? action.enum : [];
-    const first = enumArr.find((value) => typeof value === 'string');
-    return typeof first === 'string' ? first : 'x';
-  }
 
   it('TOOL_DISABLED returns tool + suggestions + a configure nextCall', async () => {
     dynamicToolManager.disableTools(['manage_asset']);

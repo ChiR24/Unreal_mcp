@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { countPureLines } from './plugin-contract-fixtures.js';
+
 const pluginRoot = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge');
 const listingPath = resolve(
     pluginRoot,
@@ -12,12 +14,6 @@ const cursorHeaderPath = resolve(
     pluginRoot,
     'Private/Domains/AssetWorkflow/Operations/McpAutomationBridgeAssetListCursor.h'
 );
-
-const countPureLines = (source: string): number =>
-    source
-        .split(/\r?\n/u)
-        .filter((line) => !/^\s*$/u.test(line) && !/^\s*(?:\/\/|#)/u.test(line))
-        .length;
 
 describe('asset list pagination contracts (T4)', () => {
     const listing = readFileSync(listingPath, 'utf8');

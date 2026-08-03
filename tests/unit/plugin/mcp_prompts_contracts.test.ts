@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { countPureLines } from './plugin-contract-fixtures.js';
+
 const root = process.cwd();
 const nativeRoot = resolve(
   root,
@@ -46,12 +48,6 @@ const ERROR_CODES = [
 
 const FORBIDDEN_BODY_PATTERNS =
   /\b(automatically|autonomously|without asking|on your behalf|remember this|conversation memory|silently)\b/i;
-
-const countPureLines = (source: string): number =>
-  source
-    .split(/\r?\n/u)
-    .filter((line) => !/^\s*$/u.test(line) && !/^\s*(?:#|\/\/)/u.test(line))
-    .length;
 
 describe('mcp prompts native source contracts', () => {
   it('mirrors the six workflow ids on both surfaces', () => {

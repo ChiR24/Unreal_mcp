@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { countPureLines, sliceBetween } from './plugin-contract-fixtures.js';
+
 // Source-contract lane for Task 36: the explicit-session, policy-bounded,
 // revisioned configure overlay and its C1 catalog-revision read contract. Like
 // the other plugin contract suites this reads C++/TS source text because no
@@ -19,15 +21,6 @@ const storeSource = readFileSync(resolve(nativeRoot, 'DynamicTools/McpSessionCon
 const tsReader = readFileSync(resolve(root, 'src/server/mcp-primitives/catalog-revision-reader.ts'), 'utf8');
 const tsStore = readFileSync(resolve(root, 'src/server/mcp-primitives/session-configure-store.ts'), 'utf8');
 const tsSeam = readFileSync(resolve(root, 'src/server/tool-registry-manage-tools.ts'), 'utf8');
-
-const countPureLines = (source: string): number =>
-  source.split(/\r?\n/u).filter((line) => !/^\s*$/u.test(line) && !/^\s*(?:#|\/\/)/u.test(line)).length;
-
-const sliceBetween = (source: string, start: string, end: string): string => {
-  const from = source.indexOf(start);
-  const to = source.indexOf(end, from + start.length);
-  return source.slice(from, to === -1 ? undefined : to);
-};
 
 describe('Task 36 C1 catalog-revision contract mirrors on both surfaces', () => {
   it('declares an explicit-session read contract with no global fallback', () => {

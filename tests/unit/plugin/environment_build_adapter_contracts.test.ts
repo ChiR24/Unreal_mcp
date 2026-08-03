@@ -5,6 +5,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { countPureLines } from './plugin-contract-fixtures.js';
+
 const environmentSource = (filename: string): string =>
   readFileSync(
     resolve(
@@ -17,12 +19,6 @@ const environmentSource = (filename: string): string =>
 
 const repositorySource = (filename: string): string =>
   readFileSync(resolve(process.cwd(), filename), 'utf8');
-
-const countPureLines = (source: string): number =>
-  source
-    .split(/\r?\n/u)
-    .filter((line) => !/^\s*$/u.test(line) && !/^\s*(?:#|\/\/)/u.test(line))
-    .length;
 
 const adapterFiles = [
   'McpAutomationBridge_EnvironmentHandlersBuildAdapters.cpp',

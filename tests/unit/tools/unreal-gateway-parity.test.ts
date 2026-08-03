@@ -2,13 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '../../../src/utils/logging/logger.js';
 import type { GatewayContext } from '../../../src/server/tool-registry-gateway.js';
 import type { ITools } from '../../../src/types/tools/tool-interfaces.js';
-import { consolidatedToolDefinitions } from '../../../src/tools/catalog/consolidated-tool-definitions.js';
 import {
   describeGatewayCapability,
   handleUnrealGatewayCall
 } from '../../../src/server/tool-registry-gateway.js';
-import { isRecord } from '../../../src/utils/validation/type-guards.js';
 import { dynamicToolManager } from '../../../src/tools/dynamic/dynamic-tool-manager.js';
+import { firstAction } from './support/action-fixtures.js';
 
 // Mock the consolidated tool handler so execute can reach the RESULT_TOO_LARGE gate
 // without a live Unreal connection or a real dispatch.
@@ -30,15 +29,6 @@ function makeContext(logger: Logger): GatewayContext {
     elicitationTimeoutMs: 1000,
     ensureConnected: async () => true
   };
-}
-
-function firstAction(toolName: string): string {
-  const def = consolidatedToolDefinitions.find((tool) => tool.name === toolName);
-  const props = isRecord(def?.inputSchema) && isRecord(def.inputSchema.properties) ? def.inputSchema.properties : undefined;
-  const action = isRecord(props) ? props.action : undefined;
-  const enumArr = isRecord(action) && Array.isArray(action.enum) ? action.enum : [];
-  const first = enumArr.find((value) => typeof value === 'string');
-  return typeof first === 'string' ? first : 'x';
 }
 
 afterEach(() => {

@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { countPureLines } from './plugin-contract-fixtures.js';
+
 const root = process.cwd();
 const nativeRoot = resolve(root, 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP');
 
@@ -20,9 +22,6 @@ const NATIVE_BOOLS = ['bHasResources', 'bHasPrompts', 'bHasCompletions', 'bHasSu
 const TS_BOOLS = ['hasResources', 'hasPrompts', 'hasCompletions', 'hasSubscriptions', 'hasElicitation', 'hasTasks'];
 const CAPABILITY_KEYS = ['resources', 'prompts', 'completions', 'subscriptions', 'elicitation', 'tasks', 'experimental'];
 const NATIVE_METHODS = ['resources/list', 'prompts/list', 'completion/complete', 'resources/subscribe'];
-
-const countPureLines = (source: string): number =>
-  source.split(/\r?\n/u).filter((line) => !/^\s*$/u.test(line) && !/^\s*(?:#|\/\/)/u.test(line)).length;
 
 describe('mcp client-profile C3 source contracts', () => {
   it('mirrors the six structural capability booleans on both surfaces', () => {

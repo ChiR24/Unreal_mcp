@@ -13,6 +13,8 @@ import {
   it,
 } from 'vitest';
 
+import { countPureLines } from './plugin-contract-fixtures.js';
+
 const pluginSourceRoot = resolve(
   process.cwd(),
   'plugins/McpAutomationBridge/Source/McpAutomationBridge',
@@ -35,12 +37,6 @@ const listFiles = (directory: string): readonly string[] => {
 
   return files;
 };
-
-const countPureLines = (source: string): number =>
-  source
-    .split(/\r?\n/u)
-    .filter((line) => !/^\s*$/u.test(line) && !/^\s*(?:#|\/\/)/u.test(line))
-    .length;
 
 describe('plugin source structure contracts', () => {
   it('keeps handwritten C++ and C# files within 250 pure lines', () => {

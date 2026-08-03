@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { countPureLines, sliceBetween } from './plugin-contract-fixtures.js';
+
 // Source-contract lane for plan Task 34: the revisioned per-session subscription
 // store and the bounded debounced/coalesced notification engine, on both the
 // TypeScript and native surfaces. Like the other plugin contract suites it reads
@@ -33,15 +35,6 @@ const serverFactory = readFileSync(resolve(root, 'src/server/server-factory.ts')
 const discovery = transport('McpNativeTransportToolDiscovery.cpp');
 const sessions = transport('McpNativeTransportSessions.cpp');
 const lifecycle = transport('McpNativeTransportLifecycle.cpp');
-
-const countPureLines = (source: string): number =>
-  source.split(/\r?\n/u).filter((line) => !/^\s*$/u.test(line) && !/^\s*(?:#|\/\/)/u.test(line)).length;
-
-const sliceBetween = (source: string, start: string, end: string): string => {
-  const from = source.indexOf(start);
-  const to = source.indexOf(end, from + start.length);
-  return source.slice(from, to === -1 ? undefined : to);
-};
 
 describe('Task 34 BASELINE: subscriptions stay unadvertised/unwired and Task 30 list-changed suppressed', () => {
   it('advertises the Task 37 wired primitives on the TS surface (tools + resources.subscribe + prompts + completions), never logging/tasks', () => {

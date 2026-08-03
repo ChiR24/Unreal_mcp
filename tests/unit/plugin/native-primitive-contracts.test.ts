@@ -4,6 +4,8 @@ import { basename, resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { countPureLines, sliceBetween } from './plugin-contract-fixtures.js';
+
 // Source-contract lane for plan Task 37, "Wire MCP primitive handlers and
 // advertise only the implemented session profile", on the native `/mcp` surface.
 //
@@ -53,23 +55,6 @@ const readMaybe = (absPath: string): string => {
 
 const sha256 = (text: string): string =>
   createHash('sha256').update(text, 'utf8').digest('hex');
-
-// Repo-canonical pure-line measure (identical to source_structure_contracts):
-// non-blank lines that are not a `//` or `#` comment/directive.
-const countPureLines = (source: string): number =>
-  source
-    .split(/\r?\n/u)
-    .filter((line) => !/^\s*$/u.test(line) && !/^\s*(?:#|\/\/)/u.test(line))
-    .length;
-
-const sliceBetween = (source: string, start: string, end: string): string => {
-  const from = source.indexOf(start);
-  if (from === -1) {
-    return '';
-  }
-  const to = source.indexOf(end, from + start.length);
-  return source.slice(from, to === -1 ? undefined : to);
-};
 
 const splitArtifactPattern =
   /Common.*\.(?:cpp|cs|h)$|(?:^|[_-])Part(?:[_-]?\d+)?\.(?:cpp|cs|h)$|(?:^|[_-])\d+\.(?:cpp|cs|h)$|\.in[cl]$/u;
