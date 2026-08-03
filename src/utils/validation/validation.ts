@@ -2,14 +2,7 @@
  * Validation and sanitization utilities for Unreal Engine assets
  */
 
-import { toRotTuple, toVec3Tuple } from './normalize.js';
-import { resolveNormalizedSkeletalMeshPath } from '../paths/skeletal-mesh-paths.js';
 import { getAdditionalPathPrefixes } from '../../config.js';
-
-/**
- * Maximum path length allowed in Unreal Engine
- */
-const MAX_PATH_LENGTH = 260;
 
 /**
  * Maximum asset name length
@@ -195,77 +188,4 @@ export function normalizeAndSanitizeAssetPath(path: string): string {
 
   // Reconstruct path
   return '/' + sanitizedSegments.join('/');
-}
-
-/**
- * Validate path length
- * @param path The full path to validate
- * @returns Object with validation result
- */
-export function validatePathLength(path: string): { valid: boolean; error?: string } {
-  if (path.length > MAX_PATH_LENGTH) {
-    return {
-      valid: false,
-      error: `Path too long (${path.length} characters). Maximum allowed is ${MAX_PATH_LENGTH} characters.`
-    };
-  }
-  return { valid: true };
-}
-
-/**
- * Validate an array (tuple) of finite numbers, preserving the original shape.
- * @throws if the tuple has the wrong length or contains invalid values
- */
-export function ensureVector3(value: unknown, label: string): [number, number, number] {
-  const tuple = toVec3Tuple(value);
-  if (!tuple) {
-    throw new Error(`Invalid ${label}: expected an object with x,y,z or an array of 3 numbers`);
-  }
-  return tuple;
-}
-
-/**
- * Concurrency delay to prevent race conditions
- * @param ms Milliseconds to delay
- */
-export async function concurrencyDelay(ms: number = 20): Promise<void> {
-  // Reduce the default per-operation delay to speed up test runs while
-  // allowing a small pause for the editor to process changes. Tests
-  // previously used 100ms which accumulates across 100+ test cases.
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-export function ensureColorRGB(value: unknown, label: string): [number, number, number] {
-  return ensureVector3(value, label);
-}
-
-export function ensureRotation(value: unknown, label: string): [number, number, number] {
-  const tuple = toRotTuple(value);
-  if (!tuple) {
-    throw new Error(`Invalid ${label}: expected an object with pitch,yaw,roll or an array of 3 numbers`);
-  }
-  return tuple;
-}
-
-/**
- * Resolve a skeletal mesh path from a skeleton path or mesh name.
- * Maps common UE skeleton paths to their corresponding mesh paths.
- */
-export function resolveSkeletalMeshPath(input: string): string | null {
-  if (!input || typeof input !== 'string') {
-    return null;
-  }
-
-  // Sanitize path if it contains slashes (indicates it's a path, not just a name)
-  let normalizedInput = input;
-  if (input.includes('/')) {
-    try {
-      normalizedInput = normalizeAndSanitizeAssetPath(input);
-    } catch {
-      // If sanitization fails, return null (invalid path)
-      return null;
-    }
-  }
-
-  return resolveNormalizedSkeletalMeshPath(normalizedInput);
 }

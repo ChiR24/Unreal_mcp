@@ -4,11 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     sanitizeAssetName,
-    normalizeAndSanitizeAssetPath,
-    validatePathLength,
-    ensureVector3,
-    ensureRotation,
-    resolveSkeletalMeshPath
+    normalizeAndSanitizeAssetPath
 } from './validation.js';
 import { sanitizePath } from '../paths/path-security.js';
 
@@ -77,84 +73,5 @@ describe('sanitizePath', () => {
 
     it('preserves Niagara root paths', () => {
         expect(normalizeAndSanitizeAssetPath('/Niagara/Modules/EmitterState')).toBe('/Niagara/Modules/EmitterState');
-    });
-});
-
-describe('validatePathLength', () => {
-    it('accepts valid short paths', () => {
-        const result = validatePathLength('/Game/MyAsset');
-        expect(result.valid).toBe(true);
-    });
-
-    it('accepts empty paths (length 0 < 260)', () => {
-        const result = validatePathLength('');
-        // Empty string has length 0, which is < 260, so it's valid
-        expect(result.valid).toBe(true);
-    });
-
-    it('rejects excessively long paths', () => {
-        const longPath = '/Game/' + 'a'.repeat(300);
-        const result = validatePathLength(longPath);
-        expect(result.valid).toBe(false);
-        expect(result.error).toBeDefined();
-    });
-});
-
-
-describe('ensureVector3', () => {
-    it('accepts object format with x, y, z', () => {
-        const result = ensureVector3({ x: 1, y: 2, z: 3 }, 'location');
-        expect(result).toEqual([1, 2, 3]);
-    });
-
-    it('accepts array format', () => {
-        const result = ensureVector3([1, 2, 3], 'location');
-        expect(result).toEqual([1, 2, 3]);
-    });
-
-    it('throws on invalid object', () => {
-        expect(() => ensureVector3({ x: 1 }, 'location')).toThrow();
-    });
-
-    it('throws on wrong array length', () => {
-        expect(() => ensureVector3([1, 2], 'location')).toThrow();
-    });
-
-    it('throws on non-number values', () => {
-        expect(() => ensureVector3({ x: 'a', y: 2, z: 3 }, 'location')).toThrow();
-    });
-});
-
-describe('ensureRotation', () => {
-    it('accepts object format with pitch, yaw, roll', () => {
-        const result = ensureRotation({ pitch: 0, yaw: 90, roll: 0 }, 'rotation');
-        expect(result).toEqual([0, 90, 0]);
-    });
-
-    it('accepts array format', () => {
-        const result = ensureRotation([0, 90, 0], 'rotation');
-        expect(result).toEqual([0, 90, 0]);
-    });
-
-    it('throws on invalid input', () => {
-        expect(() => ensureRotation('invalid', 'rotation')).toThrow();
-    });
-});
-
-describe('resolveSkeletalMeshPath', () => {
-    it('maps known skeleton paths to their mesh paths', () => {
-        expect(resolveSkeletalMeshPath('/Game/Mannequin/Character/Mesh/UE4_Mannequin_Skeleton')).toBe(
-            '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple'
-        );
-    });
-
-    it('converts common skeleton names to skeletal mesh names', () => {
-        expect(resolveSkeletalMeshPath('/Game/Characters/UE5_Quinn_Skeleton')).toBe(
-            '/Game/Characters/SKM_Quinn'
-        );
-    });
-
-    it('returns null for path traversal attempts', () => {
-        expect(resolveSkeletalMeshPath('/Game/../Bad_Skeleton')).toBeNull();
     });
 });
