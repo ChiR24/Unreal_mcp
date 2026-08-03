@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 1335;
-export const CATALOG_REVISION = "0282afbefc82546c";
+export const CATALOG_REVISION = "bb09d0811d99833d";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -4100,7 +4100,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "description": "Canonical /Game asset paths to delete during cleanup."
           }
         },
-        "required": [],
+        "required": [
+          "artifacts"
+        ],
         "additionalProperties": false
       },
       "output": {
@@ -4224,8 +4226,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "503e47aaed3e1f060e61adbfbd0fb10ffd79850c4da911626a74ab4343fd6318",
-      "content": "e83b14ff3fb19227e193e57df2ed6d03e015437f8b70df68f6063ec3100f77a1"
+      "schema": "4bf1fd723c81d6b8bd996411f02ab1e74e0929352823a0b1c0d722feb8845fc6",
+      "content": "a4c5548901f2cac16e4be43fed42c00410ddcdd0d0d05fc2a8146047c4fb77fb"
     }
   },
   {
@@ -242843,8 +242845,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "cleanup",
     "domain": "animation physics",
-    "schemaHash": "503e47aaed3e1f060e61adbfbd0fb10ffd79850c4da911626a74ab4343fd6318",
-    "contentHash": "e83b14ff3fb19227e193e57df2ed6d03e015437f8b70df68f6063ec3100f77a1"
+    "schemaHash": "4bf1fd723c81d6b8bd996411f02ab1e74e0929352823a0b1c0d722feb8845fc6",
+    "contentHash": "a4c5548901f2cac16e4be43fed42c00410ddcdd0d0d05fc2a8146047c4fb77fb"
   },
   {
     "id": "animation_physics.configure_constraint_limits",
@@ -276701,8 +276703,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "785cf0246ae54f7543c7a4cf36fbfb768b66bcee8285c85af534c61d31d0e388"
   },
   "animation_physics.cleanup": {
-    "schema": "503e47aaed3e1f060e61adbfbd0fb10ffd79850c4da911626a74ab4343fd6318",
-    "content": "e83b14ff3fb19227e193e57df2ed6d03e015437f8b70df68f6063ec3100f77a1"
+    "schema": "4bf1fd723c81d6b8bd996411f02ab1e74e0929352823a0b1c0d722feb8845fc6",
+    "content": "a4c5548901f2cac16e4be43fed42c00410ddcdd0d0d05fc2a8146047c4fb77fb"
   },
   "animation_physics.configure_constraint_limits": {
     "schema": "a80ac725aff15d2dcc0cf7da586a2ae653b43b2a58b586ada3a2391b2885c9f2",

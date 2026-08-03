@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "0282afbefc82546c",
+  "catalogRevision": "bb09d0811d99833d",
   "recordCount": 1335,
   "records": [
     {
@@ -4089,7 +4089,9 @@
               "description": "Canonical /Game asset paths to delete during cleanup."
             }
           },
-          "required": [],
+          "required": [
+            "artifacts"
+          ],
           "additionalProperties": false
         },
         "output": {
@@ -4213,8 +4215,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "503e47aaed3e1f060e61adbfbd0fb10ffd79850c4da911626a74ab4343fd6318",
-        "content": "e83b14ff3fb19227e193e57df2ed6d03e015437f8b70df68f6063ec3100f77a1"
+        "schema": "4bf1fd723c81d6b8bd996411f02ab1e74e0929352823a0b1c0d722feb8845fc6",
+        "content": "a4c5548901f2cac16e4be43fed42c00410ddcdd0d0d05fc2a8146047c4fb77fb"
       }
     },
     {
@@ -242801,8 +242803,8 @@
       "parentTool": "animation_physics",
       "dispatchAction": "cleanup",
       "domain": "animation physics",
-      "schemaHash": "503e47aaed3e1f060e61adbfbd0fb10ffd79850c4da911626a74ab4343fd6318",
-      "contentHash": "e83b14ff3fb19227e193e57df2ed6d03e015437f8b70df68f6063ec3100f77a1"
+      "schemaHash": "4bf1fd723c81d6b8bd996411f02ab1e74e0929352823a0b1c0d722feb8845fc6",
+      "contentHash": "a4c5548901f2cac16e4be43fed42c00410ddcdd0d0d05fc2a8146047c4fb77fb"
     },
     {
       "id": "animation_physics.configure_constraint_limits",
