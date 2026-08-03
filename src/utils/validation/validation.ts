@@ -198,12 +198,6 @@ export function normalizeAndSanitizeAssetPath(path: string): string {
 }
 
 /**
- * @deprecated Use normalizeAndSanitizeAssetPath for lenient asset path normalization,
- * or import sanitizePath from path-security.ts for strict security validation.
- */
-export const sanitizePath = normalizeAndSanitizeAssetPath;
-
-/**
  * Validate path length
  * @param path The full path to validate
  * @returns Object with validation result

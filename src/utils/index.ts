@@ -76,7 +76,6 @@ export {
   sanitizeCommandArgument,
   sanitizeAssetName,
   normalizeAndSanitizeAssetPath,
-  sanitizePath,
   validatePathLength,
   validateAssetParams,
   ensureVector3,
