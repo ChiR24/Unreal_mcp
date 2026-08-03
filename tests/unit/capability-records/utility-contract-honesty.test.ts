@@ -29,15 +29,13 @@ import {
   applyDeclaredDefaults,
   validateAgainstCapabilitySchema,
 } from '../../../src/server/gateway/gateway-execute-validate.js';
+import { isRecord as isRecordObject } from '../../../src/utils/validation/type-guards.js';
 
 const UTILITY_RECORDS = [...MANAGE_AUDIO_RECORDS, ...MANAGE_NETWORKING_RECORDS];
 const EXPECTED_UTILITY_RECORDS = 127;
 
 /** Round-trip so branded/readonly values compare and validate as plain data. */
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
-
-const isRecordObject = (v: unknown): v is Record<string, unknown> =>
-  typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /**
  * The exact wording the five already-correct builders use (see

@@ -6,6 +6,8 @@
 // rejected fail-closed on BOTH surfaces, so a record that later grows an
 // unimplemented keyword can never be silently under-validated.
 
+import { isRecord } from '../../../src/utils/validation/type-guards.js';
+
 export const SUPPORTED_SCHEMA_KEYWORDS = [
   '$schema',
   'type',
@@ -59,9 +61,6 @@ export type SchemaViolation = {
 };
 
 type JsonRecord = Record<string, unknown>;
-
-const isRecord = (value: unknown): value is JsonRecord =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const supported = new Set<string>(SUPPORTED_SCHEMA_KEYWORDS);
 

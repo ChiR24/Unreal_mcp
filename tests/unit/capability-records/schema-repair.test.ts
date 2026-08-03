@@ -28,12 +28,10 @@
 import { describe, expect, it } from 'vitest';
 import { jsonSchemaToCppCalls } from '../../../scripts/canonical-registry/cpp-schema.js';
 import { compareToolSchemas } from '../../audits/schema-contract.mjs';
+import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 const emit = (properties: Record<string, unknown>): string[] =>
   jsonSchemaToCppCalls({ type: 'object', properties }).lines;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
 
 const propertyOf = (schema: unknown, name: string): Record<string, unknown> | undefined => {
   if (!isRecord(schema) || !isRecord(schema.properties)) return undefined;

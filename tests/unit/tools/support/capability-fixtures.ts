@@ -9,11 +9,9 @@
 // each variant starts from a minimal VALID payload and breaks exactly one rule.
 
 import type { CapabilityRecord, Draft202012ObjectSchema } from '../../../../src/tools/catalog/capabilities/model.js';
+import { isRecord } from '../../../../src/utils/validation/type-guards.js';
 
 type JsonRecord = Record<string, unknown>;
-
-const isRecord = (value: unknown): value is JsonRecord =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const REFLECTION_BOUNDARY = 'x-unreal-reflection-boundary';
 

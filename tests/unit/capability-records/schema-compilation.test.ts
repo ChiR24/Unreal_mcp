@@ -5,14 +5,12 @@ import {
   applyDeclaredDefaults,
   validateAgainstCapabilitySchema,
 } from '../../../src/server/gateway/gateway-execute-validate.js';
+import { isRecord as isRecordObject } from '../../../src/utils/validation/type-guards.js';
 
 const EXPECTED_RECORDS = 1335;
 const EXPECTED_SCHEMAS = EXPECTED_RECORDS * 2;
 
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
-
-const isRecordObject = (v: unknown): v is Record<string, unknown> =>
-  typeof v === 'object' && v !== null && !Array.isArray(v);
 
 describe('Task 29 - every schema compiles under the production validation boundary', () => {
   it('all 2,670 input and output schemas parse under the shipped Zod schema contract', () => {

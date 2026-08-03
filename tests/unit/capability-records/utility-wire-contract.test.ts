@@ -29,14 +29,12 @@ import {
   provenanceFragment,
   type WireObservation,
 } from './utility-wire-observations.js';
+import { isRecord as isRecordObject } from '../../../src/utils/validation/type-guards.js';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const RECORDS = [...MANAGE_AUDIO_RECORDS, ...MANAGE_NETWORKING_RECORDS];
 
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
-
-const isRecordObject = (v: unknown): v is Record<string, unknown> =>
-  typeof v === 'object' && v !== null && !Array.isArray(v);
 
 function readPluginSource(relativePath: string): string {
   return readFileSync(resolve(REPO_ROOT, relativePath), 'utf8');

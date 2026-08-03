@@ -29,6 +29,7 @@ import type { CapabilityRecordSource } from '../../../src/tools/catalog/capabili
 import { MANAGE_ASSET_RECORDS } from '../../../src/tools/catalog/capabilities/records/manage-asset/index.js';
 import { MANAGE_BLUEPRINT_RECORDS } from '../../../src/tools/catalog/capabilities/records/manage-blueprint/index.js';
 import { validateAgainstSubset } from '../gateway-discovery-suite/schema-subset.js';
+import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const PLUGIN = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private';
@@ -38,8 +39,6 @@ const VALIDATION_H = `${PLUGIN}/MCP/Execute/McpNativeGatewayValidation.h`;
 
 type JsonRecord = Record<string, unknown>;
 
-const isRecord = (v: unknown): v is JsonRecord =>
-  typeof v === 'object' && v !== null && !Array.isArray(v);
 const plain = (v: unknown): JsonRecord => JSON.parse(JSON.stringify(v)) as JsonRecord;
 const read = (relativePath: string): string => readFileSync(resolve(REPO_ROOT, relativePath), 'utf8');
 

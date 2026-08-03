@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { consolidatedToolDefinitions } from '../catalog/consolidated-tool-definitions.js';
 import { generatedParentToolDefinitions } from '../catalog/capabilities/generated/parent-tool-definitions.generated.js';
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
+import { isRecord } from '../../utils/validation/type-guards.js';
 
 function schemaProperties(inputSchema: Record<string, unknown>, label: string): Record<string, unknown> {
   const properties = inputSchema.properties;

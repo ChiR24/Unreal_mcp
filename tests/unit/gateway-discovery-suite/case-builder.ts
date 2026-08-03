@@ -5,6 +5,7 @@
 // record declares no enum, it contributes no enum case.
 
 import type { CapabilityLike } from './execute-reference.js';
+import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 export const EXECUTE_RULES = [
   'valid',
@@ -38,9 +39,6 @@ export type ExecuteCase = {
 };
 
 type JsonRecord = Record<string, unknown>;
-
-const isRecord = (value: unknown): value is JsonRecord =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const propertiesOf = (schema: unknown): JsonRecord =>
   isRecord(schema) && isRecord(schema.properties) ? schema.properties : {};

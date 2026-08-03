@@ -14,6 +14,8 @@ import {
   type SchemaViolation
 } from './schema-subset.js';
 
+import { isRecord } from '../../../src/utils/validation/type-guards.js';
+
 // Mirrors src/tools/catalog/capabilities/semantic/execution-options.ts (Task 3).
 export const EXECUTION_OPTION_KEYS = [
   'idempotencyKey',
@@ -96,9 +98,6 @@ const fail = (
   message: string,
   extra: { pointer?: string; option?: string; field?: string } = {}
 ): SemanticFailure => ({ kind, code, gatewayCode, message, ...extra });
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const declaresProperty = (schema: unknown, name: string): boolean =>
   isRecord(schema) && isRecord(schema.properties) && name in schema.properties;
