@@ -36,7 +36,7 @@ const testCases = [
   { scenario: 'INFO: get_blueprint', toolName: 'manage_blueprint', arguments: { action: 'get_blueprint', blueprintPath: BP_PATH }, expected: 'success' },
 
   // === ACTION: get (uses blueprintPath via name fallback) ===
-  { scenario: 'ACTION: get', toolName: 'manage_blueprint', arguments: { action: 'get', blueprintPath: BP_PATH, timeoutMs: 5000 }, expected: 'success' },
+  { scenario: 'ACTION: get', toolName: 'manage_blueprint', arguments: { action: 'get', blueprintPath: BP_PATH }, expected: 'success', timeoutMs: 5000 },
 
   // === ACTION: compile (uses blueprintPath) ===
   { scenario: 'ACTION: compile', toolName: 'manage_blueprint', arguments: { action: 'compile', blueprintPath: BP_PATH, saveAfterCompile: false }, expected: 'success' },

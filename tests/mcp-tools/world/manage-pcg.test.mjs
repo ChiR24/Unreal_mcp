@@ -311,8 +311,9 @@ const realWorldCoverageCases = [
   {
     scenario: 'EXECUTE: create PCG component and generate on mesh actor',
     toolName: 'manage_pcg',
-    arguments: { action: 'execute_pcg_graph', graphPath: REAL_GRAPH_PATH, actorName: EXEC_ACTOR, componentName: COMPONENT_NAME, createComponent: true, force: true, timeoutMs: 120000, save: false },
+    arguments: { action: 'execute_pcg_graph', graphPath: REAL_GRAPH_PATH, actorName: EXEC_ACTOR, componentName: COMPONENT_NAME, createComponent: true, force: true, save: false },
     expected: pcgExpected,
+    timeoutMs: 120000,
     captureResult: { key: 'pcgComponentPath', fromField: 'result.componentPath' },
     assertions: [
       { path: 'structuredContent.result.componentName', equals: COMPONENT_NAME, label: 'PCG component created with requested name' },

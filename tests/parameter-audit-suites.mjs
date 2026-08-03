@@ -69,7 +69,7 @@ function auditRequire(specifier) {
 export async function captureTestSuites() {
   const suites = [];
   for (const filePath of testSuiteFiles()) {
-    let code = fs.readFileSync(filePath, 'utf8').replace(/^#!.*\n/, '');
+    let code = fs.readFileSync(filePath, 'utf8').replace(/^#![^\r\n]*\r?\n/, '');
     code = code.replace(
       /import \{ runToolTests \} from ['"](?:\.\.\/\.\.\/test-runner|\.\/test-runner)\.mjs['"];?/g,
       'const runToolTests = (name, cases) => { __captured.push({ name, cases }); };'

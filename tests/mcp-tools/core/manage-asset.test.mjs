@@ -178,7 +178,7 @@ const testCases = [
     // === CONFIG ===
     { scenario: 'CONFIG: set_blend_mode', toolName: 'manage_asset', arguments: { action: 'set_blend_mode', assetPath: MATERIAL_PATH, blendMode: 'Masked' }, expected: 'success' },
     { scenario: 'CONFIG: set_shading_model', toolName: 'manage_asset', arguments: { action: 'set_shading_model', assetPath: MATERIAL_PATH, shadingModel: 'DefaultLit' }, expected: 'success' },
-    { scenario: 'CONFIG: set_material_domain', toolName: 'manage_asset', arguments: { action: 'set_material_domain', assetPath: MATERIAL_PATH, domain: 'Surface' }, expected: 'success' },
+    { scenario: 'CONFIG: set_material_domain', toolName: 'manage_asset', arguments: { action: 'set_material_domain', assetPath: MATERIAL_PATH, materialDomain: 'Surface' }, expected: 'success' },
     { scenario: 'CONFIG: set_two_sided', toolName: 'manage_asset', arguments: { action: 'set_two_sided', assetPath: MATERIAL_PATH, twoSided: true, save: false }, expected: 'success' },
 
     // === ADD ===
@@ -222,11 +222,11 @@ const testCases = [
 
     // === MATERIAL INSTANCES ===
     { scenario: 'CREATE: create_material_instance', toolName: 'manage_asset', arguments: { action: 'create_material_instance', name: INSTANCE_NAME, path: TEST_FOLDER, parentMaterial: MATERIAL_PATH }, expected: 'success|already exists' },
-    { scenario: 'CONFIG: set_static_switch_parameter_value', toolName: 'manage_asset', arguments: { action: 'set_static_switch_parameter_value', instancePath: INSTANCE_PATH, parameterName: 'UseDetailParam', value: false, save: false }, expected: 'success' },
-    { scenario: 'CONFIG: set_scalar_parameter_value', toolName: 'manage_asset', arguments: { action: 'set_scalar_parameter_value', instancePath: INSTANCE_PATH, parameterName: 'RoughnessParam', value: 0.35 }, expected: 'success' },
-    { scenario: 'CONFIG: set_vector_parameter_value', toolName: 'manage_asset', arguments: { action: 'set_vector_parameter_value', instancePath: INSTANCE_PATH, parameterName: 'TintParam', value: { r: 0.8, g: 0.2, b: 0.1, a: 1 } }, expected: 'success' },
-    { scenario: 'CONFIG: set_texture_parameter_value', toolName: 'manage_asset', arguments: { action: 'set_texture_parameter_value', instancePath: INSTANCE_PATH, parameterName: 'AlbedoTex', texturePath: TEXTURE_PATH }, expected: 'success' },
-    { scenario: 'CONFIG: set_material_parameter ambiguous', toolName: 'manage_asset', arguments: { action: 'set_material_parameter', instancePath: INSTANCE_PATH, parameterName: 'RoughnessParam', parameterType: 'scalar', value: 0.5 }, expected: 'error|AMBIGUOUS_ACTION' },
+    { scenario: 'CONFIG: set_static_switch_parameter_value', toolName: 'manage_asset', arguments: { action: 'set_static_switch_parameter_value', assetPath: INSTANCE_PATH, parameterName: 'UseDetailParam', value: false, save: false }, expected: 'success' },
+    { scenario: 'CONFIG: set_scalar_parameter_value', toolName: 'manage_asset', arguments: { action: 'set_scalar_parameter_value', assetPath: INSTANCE_PATH, parameterName: 'RoughnessParam', value: 0.35 }, expected: 'success' },
+    { scenario: 'CONFIG: set_vector_parameter_value', toolName: 'manage_asset', arguments: { action: 'set_vector_parameter_value', assetPath: INSTANCE_PATH, parameterName: 'TintParam', value: { r: 0.8, g: 0.2, b: 0.1, a: 1 } }, expected: 'success' },
+    { scenario: 'CONFIG: set_texture_parameter_value', toolName: 'manage_asset', arguments: { action: 'set_texture_parameter_value', assetPath: INSTANCE_PATH, parameterName: 'AlbedoTex', texturePath: TEXTURE_PATH }, expected: 'success' },
+    { scenario: 'CONFIG: set_material_parameter ambiguous', toolName: 'manage_asset', arguments: { action: 'set_material_parameter', assetPath: INSTANCE_PATH, parameterName: 'RoughnessParam', parameterType: 'scalar', value: 0.5 }, expected: 'error|AMBIGUOUS_ACTION' },
 
     // === SPECIALIZED MATERIALS ===
     { scenario: 'CREATE: create_landscape_material', toolName: 'manage_asset', arguments: { action: 'create_landscape_material', name: LANDSCAPE_MATERIAL_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },

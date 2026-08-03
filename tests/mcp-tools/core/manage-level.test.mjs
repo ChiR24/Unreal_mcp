@@ -49,9 +49,9 @@ const testCases = [
   { scenario: 'CONFIG: set_metadata', toolName: 'manage_level', arguments: { action: 'set_metadata', assetPath: MAIN_LEVEL, metadata: { suite: 'manage_level', timestamp: ts } }, expected: 'success' },
 
   // === IMPORT / EXPORT / INFO ===
-  { scenario: 'ACTION: export_level', toolName: 'manage_level', arguments: { action: 'export_level', levelPath: MAIN_LEVEL, exportPath: EXPORTED_LEVEL, timeoutMs: 45000 }, expected: 'success' },
-  { scenario: 'ACTION: import_level', toolName: 'manage_level', arguments: { action: 'import_level', packagePath: MAIN_LEVEL, destinationPath: IMPORTED_LEVEL, timeoutMs: 45000 }, expected: 'success|already exists' },
-  { scenario: 'ACTION: import_level targetPath alias', toolName: 'manage_level', arguments: { action: 'import_level', packagePath: MAIN_LEVEL, targetPath: `${TEST_FOLDER}/LevelImportedAlias_${ts}`, timeoutMs: 45000 }, expected: 'success|already exists' },
+  { scenario: 'ACTION: export_level', toolName: 'manage_level', arguments: { action: 'export_level', levelPath: MAIN_LEVEL, exportPath: EXPORTED_LEVEL }, expected: 'success', timeoutMs: 45000 },
+  { scenario: 'ACTION: import_level', toolName: 'manage_level', arguments: { action: 'import_level', packagePath: MAIN_LEVEL, destinationPath: IMPORTED_LEVEL }, expected: 'success|already exists', timeoutMs: 45000 },
+  { scenario: 'ACTION: import_level targetPath alias', toolName: 'manage_level', arguments: { action: 'import_level', packagePath: MAIN_LEVEL, targetPath: `${TEST_FOLDER}/LevelImportedAlias_${ts}` }, expected: 'success|already exists', timeoutMs: 45000 },
   { scenario: 'INFO: list_levels', toolName: 'manage_level', arguments: { action: 'list_levels' }, expected: 'success' },
   { scenario: 'INFO: get_summary', toolName: 'manage_level', arguments: { action: 'get_summary', levelPath: MAIN_LEVEL }, expected: 'success' },
   { scenario: 'ACTION: validate_level', toolName: 'manage_level', arguments: { action: 'validate_level', levelPath: MAIN_LEVEL }, expected: 'success' },

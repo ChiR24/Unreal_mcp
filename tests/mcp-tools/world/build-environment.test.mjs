@@ -230,7 +230,7 @@ const testCases = [
     { scenario: 'Setup: create spline mesh blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: SPLINE_MESH_BP, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
 
     // === CREATE ===
-    { scenario: 'CREATE: create_spline_actor', toolName: 'build_environment', arguments: { action: 'create_spline_actor', actorName: SPLINE_ACTOR, location: { x: 0, y: 0, z: 0 }, initialPoints: [{ location: { x: 0, y: 0, z: 0 } }, { location: { x: 300, y: 0, z: 0 } }], splineType: 'Curve', timeoutMs: 120000 }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_spline_actor', toolName: 'build_environment', arguments: { action: 'create_spline_actor', actorName: SPLINE_ACTOR, location: { x: 0, y: 0, z: 0 }, initialPoints: [{ location: { x: 0, y: 0, z: 0 } }, { location: { x: 300, y: 0, z: 0 } }], splineType: 'Curve' }, expected: 'success|already exists', timeoutMs: 120000 },
     // === ADD ===
     { scenario: 'ADD: add_spline_point', toolName: 'build_environment', arguments: { action: 'add_spline_point', actorName: SPLINE_ACTOR, position: { x: 600, y: 120, z: 0 }, pointType: 'Curve' }, expected: 'success|already exists' },
     // === DELETE ===
