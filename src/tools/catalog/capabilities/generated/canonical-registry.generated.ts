@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 1335;
-export const CATALOG_REVISION = "aeb961581bec2906";
+export const CATALOG_REVISION = "0282afbefc82546c";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -91490,6 +91490,38 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "mouseSensitivity": {
+            "type": "number",
+            "description": "Viewport mouse sensitivity."
+          },
+          "mouseScrollCameraSpeed": {
+            "type": "number",
+            "description": "Mouse scroll camera speed."
+          },
+          "useDistanceScaledCamera": {
+            "type": "boolean",
+            "description": "Whether distance-scaled camera speed is used."
+          },
+          "isSimulating": {
+            "type": "boolean",
+            "description": "Whether the editor is simulating."
+          },
+          "isPIEActive": {
+            "type": "boolean",
+            "description": "Whether a PIE session is active."
+          },
+          "gameAgnosticSavedFPS": {
+            "type": "number",
+            "description": "Saved game-agnostic max FPS."
+          },
+          "isEditor": {
+            "type": "boolean",
+            "description": "Whether running in the editor."
+          },
+          "gRunningCommandlet": {
+            "type": "number",
+            "description": "1 when running as a commandlet, else 0."
           }
         },
         "required": [
@@ -91506,7 +91538,15 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Editor settings"
+          "message": "Editor settings",
+          "mouseSensitivity": 1,
+          "mouseScrollCameraSpeed": 1,
+          "useDistanceScaledCamera": false,
+          "isSimulating": false,
+          "isPIEActive": false,
+          "gameAgnosticSavedFPS": 60,
+          "isEditor": true,
+          "gRunningCommandlet": 0
         }
       }
     ],
@@ -91595,8 +91635,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-      "content": "04c961166bad0cbe9f523045fe8a6b02596ae6541d2f7db3e760027ca8868fc3"
+      "schema": "b5a4188f508cb36c656a3514204255bdbd224ac7095b039393f72de70dc3ad3f",
+      "content": "a7292aacbdb3edd53fabb3778031ab41f06fb41785ed09815ef89c8e7ce6b14e"
     }
   },
   {
@@ -91994,6 +92034,70 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "totalPhysicalBytes": {
+            "type": "number",
+            "description": "Total physical memory in bytes."
+          },
+          "availablePhysicalBytes": {
+            "type": "number",
+            "description": "Available physical memory in bytes."
+          },
+          "usedPhysicalBytes": {
+            "type": "number",
+            "description": "Used physical memory in bytes."
+          },
+          "peakUsedPhysicalBytes": {
+            "type": "number",
+            "description": "Peak used physical memory in bytes."
+          },
+          "totalVirtualBytes": {
+            "type": "number",
+            "description": "Total virtual memory in bytes."
+          },
+          "availableVirtualBytes": {
+            "type": "number",
+            "description": "Available virtual memory in bytes."
+          },
+          "usedVirtualBytes": {
+            "type": "number",
+            "description": "Used virtual memory in bytes."
+          },
+          "peakUsedVirtualBytes": {
+            "type": "number",
+            "description": "Peak used virtual memory in bytes."
+          },
+          "totalPhysicalMB": {
+            "type": "number",
+            "description": "Total physical memory in megabytes."
+          },
+          "totalVirtualMB": {
+            "type": "number",
+            "description": "Total virtual memory in megabytes."
+          },
+          "availablePhysicalMB": {
+            "type": "number",
+            "description": "Available physical memory in megabytes."
+          },
+          "availableVirtualMB": {
+            "type": "number",
+            "description": "Available virtual memory in megabytes."
+          },
+          "usedPhysicalMB": {
+            "type": "number",
+            "description": "Used physical memory in megabytes."
+          },
+          "usedVirtualMB": {
+            "type": "number",
+            "description": "Used virtual memory in megabytes."
+          },
+          "peakUsedPhysicalMB": {
+            "type": "number",
+            "description": "Peak used physical memory in megabytes."
+          },
+          "peakUsedVirtualMB": {
+            "type": "number",
+            "description": "Peak used virtual memory in megabytes."
           }
         },
         "required": [
@@ -92010,7 +92114,23 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Memory stats"
+          "message": "Memory stats",
+          "totalPhysicalBytes": 17179869184,
+          "availablePhysicalBytes": 8589934592,
+          "usedPhysicalBytes": 8589934592,
+          "peakUsedPhysicalBytes": 10737418240,
+          "totalVirtualBytes": 140737488355328,
+          "availableVirtualBytes": 137438953472,
+          "usedVirtualBytes": 3298534883328,
+          "peakUsedVirtualBytes": 35184372088832,
+          "totalPhysicalMB": 16384,
+          "totalVirtualMB": 134217728,
+          "availablePhysicalMB": 8192,
+          "availableVirtualMB": 131072,
+          "usedPhysicalMB": 8192,
+          "usedVirtualMB": 3145728,
+          "peakUsedPhysicalMB": 10240,
+          "peakUsedVirtualMB": 33554432
         }
       }
     ],
@@ -92099,8 +92219,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-      "content": "c8efe21678d53b64a16b22d6c1b9bfec516e3dbf386add45d6226a3aca005f4c"
+      "schema": "027cde7024cf458f569efdf17a2ab3a189d14e0414172f695044982e67dd3822",
+      "content": "2d3f0e6d7127adcc6928de9ac5167adec6e6acdf3091de385087d74b140f61a4"
     }
   },
   {
@@ -92494,6 +92614,58 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "worldType": {
+            "type": "string",
+            "description": "World measured: \"Editor\", \"PIE\", or \"None\"."
+          },
+          "threadTimersAreProcessGlobal": {
+            "type": "boolean",
+            "description": "Thread timers are process-global, not per-world."
+          },
+          "deltaSeconds": {
+            "type": "number",
+            "description": "Frame delta time in seconds."
+          },
+          "frameTimeMs": {
+            "type": "number",
+            "description": "Frame time in milliseconds."
+          },
+          "estimatedFps": {
+            "type": "number",
+            "description": "Estimated frames per second from delta time."
+          },
+          "fps": {
+            "type": "number",
+            "description": "Reported frames per second (same as estimatedFps)."
+          },
+          "gameThreadMs": {
+            "type": "number",
+            "description": "Game thread time in milliseconds."
+          },
+          "renderThreadMs": {
+            "type": "number",
+            "description": "Render thread time in milliseconds."
+          },
+          "rhiThreadMs": {
+            "type": "number",
+            "description": "RHI thread time in milliseconds."
+          },
+          "gpuMs": {
+            "type": "number",
+            "description": "GPU frame time in milliseconds."
+          },
+          "actorCount": {
+            "type": "number",
+            "description": "Actor count of the measured world."
+          },
+          "isBenchmarking": {
+            "type": "boolean",
+            "description": "Whether the engine is in benchmarking mode."
+          },
+          "useFixedTimeStep": {
+            "type": "boolean",
+            "description": "Whether a fixed time step is active."
           }
         },
         "required": [
@@ -92510,7 +92682,20 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Performance stats"
+          "message": "Performance stats",
+          "worldType": "Editor",
+          "threadTimersAreProcessGlobal": true,
+          "deltaSeconds": 0.0166,
+          "frameTimeMs": 16.6,
+          "estimatedFps": 60,
+          "fps": 60,
+          "gameThreadMs": 4.2,
+          "renderThreadMs": 3.1,
+          "rhiThreadMs": 1.8,
+          "gpuMs": 5.5,
+          "actorCount": 42,
+          "isBenchmarking": false,
+          "useFixedTimeStep": false
         }
       }
     ],
@@ -92599,8 +92784,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-      "content": "b3a837782559f0f76846c012c52e4ca6f344f73803d267af64259bbf92f988ef"
+      "schema": "f963fd0f5612fee0c0d0c87362f174c33eec81037b30fc057d2d8514c5a70bc9",
+      "content": "3b3faf5a3a77cc8a8aaa1aca5398444ec2e1e20a6aa2a27591b62c5c312e6b46"
     }
   },
   {
@@ -92999,6 +93184,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "actorCount": {
+            "type": "number",
+            "description": "Number of actors in the editor world."
           }
         },
         "required": [
@@ -93015,7 +93204,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Scene stats"
+          "message": "Scene stats",
+          "actorCount": 42
         }
       }
     ],
@@ -93104,8 +93294,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-      "content": "412efea0bf263e00531d572f76d6f8fbb5d9f68b8984b7598187a71e19e4b0bb"
+      "schema": "c7374bdcab5ca82b56ca197d4af222c9fcded4fe82f219b22ca63042551be72f",
+      "content": "736432d386582cfd0a66b96cb19ac35649f83e33169282e33b1da9c6c48bb493"
     }
   },
   {
@@ -168654,6 +168844,44 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "levelPath": {
+            "type": "string",
+            "description": "Level asset path (e.g. /Game/Maps/Demo)."
+          },
+          "levelName": {
+            "type": "string",
+            "description": "Level asset name."
+          },
+          "actorCount": {
+            "type": "number",
+            "description": "Actor count when the level is loaded."
+          },
+          "loaded": {
+            "type": "boolean",
+            "description": "Whether the level is loaded in the editor."
+          },
+          "packageName": {
+            "type": "string",
+            "description": "Package name (asset-registry lookup)."
+          },
+          "assetName": {
+            "type": "string",
+            "description": "Asset name (asset-registry lookup)."
+          },
+          "objectPath": {
+            "type": "string",
+            "description": "Object path (asset-registry lookup)."
+          },
+          "assetClass": {
+            "type": "string",
+            "description": "Asset class path (asset-registry lookup)."
+          },
+          "tagsAndValues": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Asset-registry tag/value pairs (asset-registry lookup)."
           }
         },
         "required": [
@@ -168671,7 +168899,11 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Level summary"
+          "message": "Level summary",
+          "levelPath": "/Game/Maps/Demo",
+          "levelName": "Demo",
+          "actorCount": 42,
+          "loaded": true
         }
       }
     ],
@@ -168760,8 +168992,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "9e7266ae0dff9c085fd03b975955ec6b80928f18210decd2b6f6225bb6c5cd59",
-      "content": "6efc0192545fda4c8b75a2abebfd5bcfa40267d94865a3c02dfd1d8ae7c1831d"
+      "schema": "e6d26cce13951af44a78cd962deed16c0ee8b6297c69021faf750810a3fce848",
+      "content": "3dd628fea4a0ddbe093c80d6087004759087a9aeb508c870c5c033249b29200a"
     }
   },
   {
@@ -246419,8 +246651,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "get_editor_settings",
     "domain": "inspect",
-    "schemaHash": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-    "contentHash": "04c961166bad0cbe9f523045fe8a6b02596ae6541d2f7db3e760027ca8868fc3"
+    "schemaHash": "b5a4188f508cb36c656a3514204255bdbd224ac7095b039393f72de70dc3ad3f",
+    "contentHash": "a7292aacbdb3edd53fabb3778031ab41f06fb41785ed09815ef89c8e7ce6b14e"
   },
   {
     "id": "inspect.get_level_details",
@@ -246443,8 +246675,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "get_memory_stats",
     "domain": "inspect",
-    "schemaHash": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-    "contentHash": "c8efe21678d53b64a16b22d6c1b9bfec516e3dbf386add45d6226a3aca005f4c"
+    "schemaHash": "027cde7024cf458f569efdf17a2ab3a189d14e0414172f695044982e67dd3822",
+    "contentHash": "2d3f0e6d7127adcc6928de9ac5167adec6e6acdf3091de385087d74b140f61a4"
   },
   {
     "id": "inspect.get_mesh_details",
@@ -246467,8 +246699,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "get_performance_stats",
     "domain": "inspect",
-    "schemaHash": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-    "contentHash": "b3a837782559f0f76846c012c52e4ca6f344f73803d267af64259bbf92f988ef"
+    "schemaHash": "f963fd0f5612fee0c0d0c87362f174c33eec81037b30fc057d2d8514c5a70bc9",
+    "contentHash": "3b3faf5a3a77cc8a8aaa1aca5398444ec2e1e20a6aa2a27591b62c5c312e6b46"
   },
   {
     "id": "inspect.get_project_settings",
@@ -246491,8 +246723,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "get_scene_stats",
     "domain": "inspect",
-    "schemaHash": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-    "contentHash": "412efea0bf263e00531d572f76d6f8fbb5d9f68b8984b7598187a71e19e4b0bb"
+    "schemaHash": "c7374bdcab5ca82b56ca197d4af222c9fcded4fe82f219b22ca63042551be72f",
+    "contentHash": "736432d386582cfd0a66b96cb19ac35649f83e33169282e33b1da9c6c48bb493"
   },
   {
     "id": "inspect.get_selected_actors",
@@ -249843,8 +250075,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_level",
     "dispatchAction": "get_summary",
     "domain": "level",
-    "schemaHash": "9e7266ae0dff9c085fd03b975955ec6b80928f18210decd2b6f6225bb6c5cd59",
-    "contentHash": "6efc0192545fda4c8b75a2abebfd5bcfa40267d94865a3c02dfd1d8ae7c1831d"
+    "schemaHash": "e6d26cce13951af44a78cd962deed16c0ee8b6297c69021faf750810a3fce848",
+    "contentHash": "3dd628fea4a0ddbe093c80d6087004759087a9aeb508c870c5c033249b29200a"
   },
   {
     "id": "manage_level.import_level",
@@ -278373,8 +278605,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "f68ee74dae46b34b2235f2a7ffcb8073dd5b75e819eabfc58aba1851120aebbb"
   },
   "inspect.get_editor_settings": {
-    "schema": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-    "content": "04c961166bad0cbe9f523045fe8a6b02596ae6541d2f7db3e760027ca8868fc3"
+    "schema": "b5a4188f508cb36c656a3514204255bdbd224ac7095b039393f72de70dc3ad3f",
+    "content": "a7292aacbdb3edd53fabb3778031ab41f06fb41785ed09815ef89c8e7ce6b14e"
   },
   "inspect.get_level_details": {
     "schema": "c2653abf58ceedbb9b8f21c44144b4aacb7d1cf72c7d1fb15e5c4986d3659b87",
@@ -278385,8 +278617,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c4314d03306e4b563145895221094c7a0e3c7655aefae3491ba963ebed63a335"
   },
   "inspect.get_memory_stats": {
-    "schema": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-    "content": "c8efe21678d53b64a16b22d6c1b9bfec516e3dbf386add45d6226a3aca005f4c"
+    "schema": "027cde7024cf458f569efdf17a2ab3a189d14e0414172f695044982e67dd3822",
+    "content": "2d3f0e6d7127adcc6928de9ac5167adec6e6acdf3091de385087d74b140f61a4"
   },
   "inspect.get_mesh_details": {
     "schema": "2570be3607db146debd2b3653b7b72b3750cc9496a3109b1610d286207c8aece",
@@ -278397,8 +278629,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "a6ddc530098ad193ca65fd96d96fb36b5a34d151fbc23d44defe0347a530cde1"
   },
   "inspect.get_performance_stats": {
-    "schema": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-    "content": "b3a837782559f0f76846c012c52e4ca6f344f73803d267af64259bbf92f988ef"
+    "schema": "f963fd0f5612fee0c0d0c87362f174c33eec81037b30fc057d2d8514c5a70bc9",
+    "content": "3b3faf5a3a77cc8a8aaa1aca5398444ec2e1e20a6aa2a27591b62c5c312e6b46"
   },
   "inspect.get_project_settings": {
     "schema": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
@@ -278409,8 +278641,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "46bc747a64af79fb5e1416d743bc5b97d820051327f0fec0a80e30ece2084ac1"
   },
   "inspect.get_scene_stats": {
-    "schema": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-    "content": "412efea0bf263e00531d572f76d6f8fbb5d9f68b8984b7598187a71e19e4b0bb"
+    "schema": "c7374bdcab5ca82b56ca197d4af222c9fcded4fe82f219b22ca63042551be72f",
+    "content": "736432d386582cfd0a66b96cb19ac35649f83e33169282e33b1da9c6c48bb493"
   },
   "inspect.get_selected_actors": {
     "schema": "a537c188e57f7d86baf01f0fb60d70e5d0e00fa2f5374979c97483125d513c47",
@@ -280085,8 +280317,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "bee5874a93b8b057e21c20eb44d1c4494d17c5c9165e2c0ba90c61146b4e5725"
   },
   "manage_level.get_summary": {
-    "schema": "9e7266ae0dff9c085fd03b975955ec6b80928f18210decd2b6f6225bb6c5cd59",
-    "content": "6efc0192545fda4c8b75a2abebfd5bcfa40267d94865a3c02dfd1d8ae7c1831d"
+    "schema": "e6d26cce13951af44a78cd962deed16c0ee8b6297c69021faf750810a3fce848",
+    "content": "3dd628fea4a0ddbe093c80d6087004759087a9aeb508c870c5c033249b29200a"
   },
   "manage_level.import_level": {
     "schema": "575d3c25533b47469bdb636a99b9fd22828c269363de1f3990f0be174fd2f6d5",

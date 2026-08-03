@@ -2841,6 +2841,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "actorCount": {
+          "type": "number",
+          "description": "Actor count of the measured world."
+        },
         "actors": {
           "oneOf": [
             {
@@ -2873,6 +2877,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Actor info objects."
         },
+        "availablePhysicalBytes": {
+          "type": "number",
+          "description": "Available physical memory in bytes."
+        },
+        "availablePhysicalMB": {
+          "type": "number",
+          "description": "Available physical memory in megabytes."
+        },
+        "availableVirtualBytes": {
+          "type": "number",
+          "description": "Available virtual memory in bytes."
+        },
+        "availableVirtualMB": {
+          "type": "number",
+          "description": "Available virtual memory in megabytes."
+        },
         "className": {
           "type": "string",
           "description": "Class name or /Script/ class path to inspect."
@@ -2894,9 +2914,65 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name of the deleted actor."
         },
+        "deltaSeconds": {
+          "type": "number",
+          "description": "Frame delta time in seconds."
+        },
+        "estimatedFps": {
+          "type": "number",
+          "description": "Estimated frames per second from delta time."
+        },
+        "fps": {
+          "type": "number",
+          "description": "Reported frames per second (same as estimatedFps)."
+        },
+        "frameTimeMs": {
+          "type": "number",
+          "description": "Frame time in milliseconds."
+        },
+        "gRunningCommandlet": {
+          "type": "number",
+          "description": "1 when running as a commandlet, else 0."
+        },
+        "gameAgnosticSavedFPS": {
+          "type": "number",
+          "description": "Saved game-agnostic max FPS."
+        },
+        "gameThreadMs": {
+          "type": "number",
+          "description": "Game thread time in milliseconds."
+        },
+        "gpuMs": {
+          "type": "number",
+          "description": "GPU frame time in milliseconds."
+        },
+        "isBenchmarking": {
+          "type": "boolean",
+          "description": "Whether the engine is in benchmarking mode."
+        },
+        "isEditor": {
+          "type": "boolean",
+          "description": "Whether running in the editor."
+        },
+        "isPIEActive": {
+          "type": "boolean",
+          "description": "Whether a PIE session is active."
+        },
+        "isSimulating": {
+          "type": "boolean",
+          "description": "Whether the editor is simulating."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "mouseScrollCameraSpeed": {
+          "type": "number",
+          "description": "Mouse scroll camera speed."
+        },
+        "mouseSensitivity": {
+          "type": "number",
+          "description": "Viewport mouse sensitivity."
         },
         "objects": {
           "type": "array",
@@ -2907,9 +2983,77 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Matching object info."
         },
+        "peakUsedPhysicalBytes": {
+          "type": "number",
+          "description": "Peak used physical memory in bytes."
+        },
+        "peakUsedPhysicalMB": {
+          "type": "number",
+          "description": "Peak used physical memory in megabytes."
+        },
+        "peakUsedVirtualBytes": {
+          "type": "number",
+          "description": "Peak used virtual memory in bytes."
+        },
+        "peakUsedVirtualMB": {
+          "type": "number",
+          "description": "Peak used virtual memory in megabytes."
+        },
+        "renderThreadMs": {
+          "type": "number",
+          "description": "Render thread time in milliseconds."
+        },
+        "rhiThreadMs": {
+          "type": "number",
+          "description": "RHI thread time in milliseconds."
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "threadTimersAreProcessGlobal": {
+          "type": "boolean",
+          "description": "Thread timers are process-global, not per-world."
+        },
+        "totalPhysicalBytes": {
+          "type": "number",
+          "description": "Total physical memory in bytes."
+        },
+        "totalPhysicalMB": {
+          "type": "number",
+          "description": "Total physical memory in megabytes."
+        },
+        "totalVirtualBytes": {
+          "type": "number",
+          "description": "Total virtual memory in bytes."
+        },
+        "totalVirtualMB": {
+          "type": "number",
+          "description": "Total virtual memory in megabytes."
+        },
+        "useDistanceScaledCamera": {
+          "type": "boolean",
+          "description": "Whether distance-scaled camera speed is used."
+        },
+        "useFixedTimeStep": {
+          "type": "boolean",
+          "description": "Whether a fixed time step is active."
+        },
+        "usedPhysicalBytes": {
+          "type": "number",
+          "description": "Used physical memory in bytes."
+        },
+        "usedPhysicalMB": {
+          "type": "number",
+          "description": "Used physical memory in megabytes."
+        },
+        "usedVirtualBytes": {
+          "type": "number",
+          "description": "Used virtual memory in bytes."
+        },
+        "usedVirtualMB": {
+          "type": "number",
+          "description": "Used virtual memory in megabytes."
         },
         "value": {
           "description": "Property value to set (type depends on the target property)."
@@ -2917,6 +3061,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "worldName": {
           "type": "string",
           "description": "Current world name."
+        },
+        "worldType": {
+          "type": "string",
+          "description": "World measured: \"Editor\", \"PIE\", or \"None\"."
         }
       },
       "additionalProperties": true
@@ -9589,6 +9737,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "actorCount": {
+          "type": "number",
+          "description": "Actor count when the level is loaded."
+        },
+        "assetClass": {
+          "type": "string",
+          "description": "Asset class path (asset-registry lookup)."
+        },
+        "assetName": {
+          "type": "string",
+          "description": "Asset name (asset-registry lookup)."
+        },
         "deletedCount": {
           "type": "number",
           "description": "Number of levels successfully deleted."
@@ -9596,6 +9756,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "exists": {
           "type": "boolean",
           "description": "Whether the level asset exists."
+        },
+        "levelName": {
+          "type": "string",
+          "description": "Level asset name."
         },
         "levelPath": {
           "type": "string",
@@ -9608,13 +9772,31 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Available level asset paths."
         },
+        "loaded": {
+          "type": "boolean",
+          "description": "Whether the level is loaded in the editor."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
         },
+        "objectPath": {
+          "type": "string",
+          "description": "Object path (asset-registry lookup)."
+        },
+        "packageName": {
+          "type": "string",
+          "description": "Package name (asset-registry lookup)."
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "tagsAndValues": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Asset-registry tag/value pairs (asset-registry lookup)."
         }
       },
       "additionalProperties": true
