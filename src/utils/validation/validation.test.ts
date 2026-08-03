@@ -6,7 +6,6 @@ import {
     sanitizeAssetName,
     normalizeAndSanitizeAssetPath,
     validatePathLength,
-    validateAssetParams,
     ensureVector3,
     ensureRotation,
     resolveSkeletalMeshPath
@@ -98,34 +97,6 @@ describe('validatePathLength', () => {
         const result = validatePathLength(longPath);
         expect(result.valid).toBe(false);
         expect(result.error).toBeDefined();
-    });
-});
-
-describe('validateAssetParams', () => {
-    it('validates correct create params', () => {
-        const result = validateAssetParams({
-            action: 'create',
-            name: 'MyAsset',
-            path: '/Game/Assets'
-        });
-        expect(result.valid).toBe(true);
-    });
-
-    it('handles names that need sanitization', () => {
-        const result = validateAssetParams({
-            name: '',
-            savePath: '/Game'
-        });
-        // Empty name gets sanitized to 'Asset', so this should be valid
-        expect(result.valid).toBe(true);
-    });
-
-    it('validates path params', () => {
-        const result = validateAssetParams({
-            name: 'Target',
-            savePath: '/Game/Source'
-        });
-        expect(result.valid).toBe(true);
     });
 });
 

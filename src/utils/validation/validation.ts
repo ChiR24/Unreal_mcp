@@ -213,54 +213,6 @@ export function validatePathLength(path: string): { valid: boolean; error?: stri
 }
 
 /**
- * Validate and sanitize asset parameters
- * @param params Object containing name and optionally savePath
- * @returns Sanitized parameters with validation result
- */
-export function validateAssetParams(params: {
-  name: string;
-  savePath?: string;
-  [key: string]: unknown;
-}): {
-  valid: boolean;
-  sanitized: typeof params;
-  error?: string;
-} {
-  // Sanitize name
-  const sanitizedName = sanitizeAssetName(params.name);
-
-  // Sanitize path if provided
-  const sanitizedPath = params.savePath
-    ? normalizeAndSanitizeAssetPath(params.savePath)
-    : params.savePath;
-
-  // Construct full path for validation
-  const fullPath = sanitizedPath
-    ? `${sanitizedPath}/${sanitizedName}`
-    : `/Game/${sanitizedName}`;
-
-  // Validate path length
-  const pathValidation = validatePathLength(fullPath);
-
-  if (!pathValidation.valid) {
-    return {
-      valid: false,
-      sanitized: params,
-      error: pathValidation.error
-    };
-  }
-
-  return {
-    valid: true,
-    sanitized: {
-      ...params,
-      name: sanitizedName,
-      ...(sanitizedPath && { savePath: sanitizedPath })
-    }
-  };
-}
-
-/**
  * Validate an array (tuple) of finite numbers, preserving the original shape.
  * @throws if the tuple has the wrong length or contains invalid values
  */

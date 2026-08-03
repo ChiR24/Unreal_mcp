@@ -77,7 +77,6 @@ export {
   sanitizeAssetName,
   normalizeAndSanitizeAssetPath,
   validatePathLength,
-  validateAssetParams,
   ensureVector3,
   concurrencyDelay,
   ensureColorRGB,
