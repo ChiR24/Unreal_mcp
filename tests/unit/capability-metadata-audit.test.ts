@@ -130,6 +130,31 @@ describe('capability metadata audit — GREEN universe passes', () => {
     expect(sealedStubs.length).toBeLessThanOrEqual(827);
   });
 
+  it('MCPBB-079: named read capabilities publish the data their summaries promise', () => {
+    // Ground truth for the field contracts lives in the native handlers
+    // (EnvironmentHandlersInspectSettings.cpp, LevelHandlersInfo.cpp).
+    // generate_memory_report is deliberately excluded: PerformanceHandlersProfiling.cpp
+    // replies envelope-only, so its stub is correct and the defect is handler-side (C++).
+    const byId = new Map(loadAllCapabilityRecords().map((r) => [String(r.id), r]));
+    const namedReadStubs = [
+      'inspect.get_scene_stats',
+      'inspect.get_performance_stats',
+      'inspect.get_memory_stats',
+      'inspect.get_editor_settings',
+      'manage_level.get_summary',
+    ];
+    const stillSealed = namedReadStubs.filter((id) => {
+      const record = byId.get(id);
+      if (record === undefined) return true; // a missing record is itself a failure
+      const declared = Object.keys(record.schemas.output.properties);
+      const envelopeOnly = declared.length === 2
+        && declared.includes('success')
+        && declared.includes('message');
+      return envelopeOnly && record.schemas.output.additionalProperties === false;
+    });
+    expect(stillSealed).toEqual([]);
+  });
+
   it('declares the path parameter each material handler actually reads', () => {
     // These native handlers read assetPath with no fallback branch, and the native transport
     // has no alias layer, so declaring any other spelling is unsatisfiable there.

@@ -155,7 +155,21 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['levelPath'],
     effect: 'read', costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'get_summary', levelPath: '/Game/Maps/Demo' },
-    exampleOutput: { success: true, message: 'Level summary' },
+    exampleOutput: {
+      success: true, message: 'Level summary', levelPath: '/Game/Maps/Demo',
+      levelName: 'Demo', actorCount: 42, loaded: true,
+    },
+    outputProps: {
+      levelPath: P.levelPath,
+      levelName: { type: 'string', description: 'Level asset name.' },
+      actorCount: { type: 'number', description: 'Actor count when the level is loaded.' },
+      loaded: { type: 'boolean', description: 'Whether the level is loaded in the editor.' },
+      packageName: { type: 'string', description: 'Package name (asset-registry lookup).' },
+      assetName: { type: 'string', description: 'Asset name (asset-registry lookup).' },
+      objectPath: { type: 'string', description: 'Object path (asset-registry lookup).' },
+      assetClass: { type: 'string', description: 'Asset class path (asset-registry lookup).' },
+      tagsAndValues: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Asset-registry tag/value pairs (asset-registry lookup).' },
+    },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
