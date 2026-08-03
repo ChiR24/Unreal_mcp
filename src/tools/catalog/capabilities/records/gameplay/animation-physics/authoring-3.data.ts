@@ -123,7 +123,7 @@ export const ANIM_AUTHORED_3: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'get_animation_info', assetPath: '/Game/A_Run' }, exampleOutput: { success: true, message: 'Animation info', length: 1.0, frameRate: 30 } }),
   buildRecord({ parentTool: T, id: `${T}.cleanup`, action: 'cleanup', family: F,
     summary: 'Delete the listed transient animation authoring assets.', whenToUse: ['Reset authoring session.'], whenNotToUse: ['Persist work.'],
-    inputProps: { action: P.action, artifacts: A.artifacts }, required: ['action'],
+    inputProps: { action: P.action, artifacts: A.artifacts }, required: ['action', 'artifacts'],
     effect: 'destructive', behavior: { safeToRetry: true, supportsUndo: false }, latency: 'instant', resources: 'low',
     plugins: ESU, exampleInput: { action: 'cleanup', artifacts: ['/Game/MCPTest/ABP_Temp'] }, exampleOutput: { success: true, message: 'Cleanup done' } }),
 ];
