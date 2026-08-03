@@ -22,7 +22,7 @@ export const EFFECT_1: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'particle', preset: 'Default', shapeType: 'sphere', radius: 30 }, exampleOutput: { success: true, message: 'Particle effect created' } }),
   buildRecord({ parentTool: T, id: `${T}.niagara`, action: 'niagara', family: F,
     summary: 'Author a Niagara system.', whenToUse: W, whenNotToUse: ['Use particle.'],
-    inputProps: { action: P.action, name: P.name, path: P.path, actorName: P.actorName, systemPath: E.systemPath, attachToActor: E.attachToActor, location: P.location }, required: ['action'],
+    inputProps: { action: P.action, name: P.name, path: P.path, actorName: P.actorName, systemPath: E.systemPath, attachToActor: E.attachToActor, location: P.location }, required: ['action', 'systemPath'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: NIAGARA,
     exampleInput: { action: 'niagara', systemPath: '/Game/NS_Explosion', actorName: 'FX_1' }, exampleOutput: { success: true, message: 'Niagara system authored' } }),
   buildRecord({ parentTool: T, id: `${T}.debug_shape`, action: 'debug_shape', family: F,

@@ -91,6 +91,13 @@ export const P = {
     properties: { origin: vec3('Origin.'), extent: vec3('Extent.') },
     additionalProperties: false,
   } as JsonObject,
+  boundsArray: {
+    type: 'array',
+    description: 'Volume bounds as a six-number array [minX, minY, minZ, maxX, maxY, maxZ].',
+    items: { type: 'number' },
+    minItems: 6,
+    maxItems: 6,
+  } as JsonObject,
   createIfMissing: bool('Create the grid if missing.'),
   layerType: str('Layer type for runtime hash set grid.'),
   nodeClass: str('Level blueprint graph node class.'),
