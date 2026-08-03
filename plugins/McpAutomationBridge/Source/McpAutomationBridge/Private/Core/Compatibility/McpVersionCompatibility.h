@@ -421,3 +421,28 @@
 #else
 #define MCP_ASSET_DATA_GET_OBJECT_PATH(AssetData) (AssetData).ObjectPath.ToString()
 #endif
+
+// =============================================================================
+// UUserDefinedEnum::SetEnums Compatibility (UE 5.8 signature change)
+// =============================================================================
+// UE 5.8: UUserDefinedEnum overrides SetEnums with a 5-parameter signature
+//         (Names, CppForm, UnderlyingType, Flags, AddMaxKeyIfMissing). The
+//         2/4-argument UEnum overload is deprecated AND final, and the override
+//         hides it, so a 2-argument call no longer compiles.
+// UE 5.0-5.7: the 2-argument UEnum::SetEnums(Names, CppForm) is the way.
+//
+// On 5.8 the underlying type is read back with GetUnderlyingType() so the
+// enum keeps its own type. Note this is deliberately NOT what the deprecated
+// 2-argument overload does -- that one forwards EUnderlyingType::int64
+// unconditionally. Reading the type back matches Engine's own
+// FEnumEditorUtils, which is the behaviour you want when editing an existing
+// user-defined enum (creating one uses uint8, so int64 would rewrite it).
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8
+  #define MCP_SET_ENUMS(EnumPtr, Names, CppForm)                                \
+    (EnumPtr)->SetEnums((Names), (CppForm), (EnumPtr)->GetUnderlyingType(),     \
+                        EEnumFlags::None, UEnum::EAddMaxKeyIfMissing::Yes)
+#else
+  #define MCP_SET_ENUMS(EnumPtr, Names, CppForm)                                \
+    (EnumPtr)->SetEnums((Names), (CppForm))
+#endif
