@@ -15,7 +15,7 @@
 
 import { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
-import { createSubActionDispatcher, requireNonEmptyString } from '../foundation/dispatch/common-handlers.js';
+import { createSubActionDispatcher, createUnknownActionResponse, requireNonEmptyString } from '../foundation/dispatch/common-handlers.js';
 
 
 /**
@@ -274,10 +274,6 @@ export async function handleNetworkingTools(
     // =========================================================================
 
     default:
-      return {
-        success: false,
-        error: 'UNKNOWN_ACTION',
-        message: `Unknown manage_networking action: ${action}`
-      };
+      return createUnknownActionResponse(action, `Unknown manage_networking action: ${action}`);
   }
 }

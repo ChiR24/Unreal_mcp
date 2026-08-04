@@ -11,7 +11,7 @@
  */
 
 import { ITools } from '../../../types/tools/tool-interfaces.js';
-import { cleanObject } from '../../../utils/serialization/safe-json.js';
+import { createUnknownActionResponse } from '../foundation/dispatch/handler-error-context.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import { createSubActionDispatcher, requireNonEmptyString } from '../foundation/dispatch/common-handlers.js';
 
@@ -225,10 +225,6 @@ export async function handleGameFrameworkTools(
     // =========================================================================
 
     default:
-      return cleanObject({
-        success: false,
-        error: 'UNKNOWN_ACTION',
-        message: `Unknown manage_game_framework action: ${action}`
-      });
+      return createUnknownActionResponse(action, `Unknown manage_game_framework action: ${action}`);
   }
 }

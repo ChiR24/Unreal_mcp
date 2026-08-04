@@ -11,9 +11,8 @@
  */
 
 import { ITools } from '../../../../types/tools/tool-interfaces.js';
-import { cleanObject } from '../../../../utils/serialization/safe-json.js';
 import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
-import { createSubActionDispatcher, normalizePathFields } from '../../foundation/dispatch/common-handlers.js';
+import { createSubActionDispatcher, createUnknownActionResponse, normalizePathFields } from '../../foundation/dispatch/common-handlers.js';
 
 
 /**
@@ -156,10 +155,6 @@ export async function handleLevelStructureTools(
       return sendRequest('get_level_structure_info');
 
     default:
-      return cleanObject({
-        success: false,
-        error: 'UNKNOWN_ACTION',
-        message: `Unknown level structure action: ${action}`
-      });
+      return createUnknownActionResponse(action, `Unknown level structure action: ${action}`);
   }
 }

@@ -13,6 +13,7 @@
  */
 
 import { ITools } from '../../../types/tools/tool-interfaces.js';
+import { createUnknownActionResponse } from '../foundation/dispatch/handler-error-context.js';
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import { createSubActionDispatcher, requireNonEmptyString, requireAssetName } from '../foundation/dispatch/common-handlers.js';
@@ -291,10 +292,6 @@ export async function handleInventoryTools(
     // =========================================================================
 
     default:
-      return cleanObject({
-        success: false,
-        error: 'UNKNOWN_ACTION',
-        message: `Unknown inventory action: ${action}`
-      });
+      return createUnknownActionResponse(action, `Unknown inventory action: ${action}`);
   }
 }

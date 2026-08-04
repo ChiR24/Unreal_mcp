@@ -1,6 +1,7 @@
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import { executeAutomationRequest, requireNonEmptyString } from '../foundation/dispatch/common-handlers.js';
+import { validateRequiredFields } from '../foundation/arguments/batch-validation.js';
 import {
   getErrorString,
   getMessageString,
@@ -30,8 +31,7 @@ export async function handleSequenceAssetAction(
       return cleanObject(res);
     }
     case 'rename': {
-      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
-      const newName = requireNonEmptyString(args.newName, 'newName', 'Missing required parameter: newName');
+      const { path, newName } = validateRequiredFields(args, ['path', 'newName']);
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
         path,

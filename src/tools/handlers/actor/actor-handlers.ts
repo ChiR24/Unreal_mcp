@@ -1,8 +1,7 @@
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs, ActorArgs } from '../../../types/handlers/handler-types.js';
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
-import { ResponseFactory } from '../../../utils/responses/response-factory.js';
-import { executeAutomationRequest } from '../foundation/dispatch/common-handlers.js';
+import { executeAutomationRequest, withHandlerContext } from '../foundation/dispatch/common-handlers.js';
 import { TOOL_ACTIONS } from '../../../utils/commands/action-constants.js';
 import { basicActorHandlers } from './actor-basic-handlers.js';
 import { componentActorHandlers } from './actor-component-handlers.js';
@@ -16,7 +15,7 @@ const handlers: Record<string, ActorActionHandler> = {
 };
 
 export async function handleActorTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
-    try {
+    return withHandlerContext(async () => {
         const normalizedAction = normalizeActorAction(action);
         const handler = handlers[normalizedAction];
         if (handler) {
@@ -25,10 +24,5 @@ export async function handleActorTools(action: string, args: HandlerArgs, tools:
         }
         const res = await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, { ...args, action: normalizedAction });
         return cleanObject(res) as Record<string, unknown>;
-    } catch (error) {
-        if (error instanceof Error) {
-            return ResponseFactory.error(error);
-        }
-        return ResponseFactory.error(error);
-    }
+    });
 }

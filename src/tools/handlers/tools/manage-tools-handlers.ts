@@ -6,6 +6,7 @@
 
 import { ITools } from '../../../types/tools/tool-interfaces.js';
 import { ResponseFactory } from '../../../utils/responses/response-factory.js';
+import { createUnknownActionResponse } from '../foundation/dispatch/handler-error-context.js';
 import { CATALOG_REVISION } from '../../catalog/capabilities/generated/canonical-registry.generated.js';
 import { dynamicToolManager, type ToolCategory } from '../../dynamic/dynamic-tool-manager.js';
 
@@ -219,9 +220,9 @@ export async function handleManageToolsTools(
       }
 
       default:
-        return ResponseFactory.error(
-          `Unknown action: ${action}. Available: list_tools, list_categories, enable_tools, disable_tools, enable_category, disable_category, get_status, reset`,
-          'UNKNOWN_ACTION'
+        return createUnknownActionResponse(
+          action,
+          `Unknown action: ${action}. Available: list_tools, list_categories, enable_tools, disable_tools, enable_category, disable_category, get_status, reset`
         );
     }
   } catch (error) {

@@ -1,6 +1,7 @@
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import { executeAutomationRequest, requireNonEmptyString } from '../foundation/dispatch/common-handlers.js';
+import { validateRequiredFields } from '../foundation/arguments/batch-validation.js';
 import {
   getErrorString,
   getMessageString,
@@ -179,8 +180,7 @@ export async function handleSequenceCoreAction(
       return cleanObject(res);
     }
     case 'add_keyframe': {
-      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
-      const actorName = requireNonEmptyString(args.actorName, 'actorName', 'Missing required parameter: actorName');
+      const { path, actorName } = validateRequiredFields(args, ['path', 'actorName']);
       const property = typeof args.property === 'string' ? args.property : 'Transform';
       const frame = typeof args.frame === 'number' ? args.frame : Number(args.frame);
       if (!Number.isFinite(frame)) {
@@ -241,8 +241,7 @@ export async function handleSequenceCoreAction(
       return cleanObject(res);
     }
     case 'add_spawnable_from_class': {
-      const className = requireNonEmptyString(args.className, 'className', 'Missing required parameter: className');
-      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const { className, path } = validateRequiredFields(args, ['className', 'path']);
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
         className,

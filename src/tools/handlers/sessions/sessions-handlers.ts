@@ -12,7 +12,7 @@
 
 import { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
-import { createSubActionDispatcher } from '../foundation/dispatch/common-handlers.js';
+import { createSubActionDispatcher, createUnknownActionResponse } from '../foundation/dispatch/common-handlers.js';
 
 
 /**
@@ -93,10 +93,6 @@ export async function handleSessionsTools(
       return sendRequest('get_sessions_info');
 
     default:
-      return {
-        success: false,
-        error: 'UNKNOWN_ACTION',
-        message: `Unknown sessions action: ${action}`
-      };
+      return createUnknownActionResponse(action, `Unknown sessions action: ${action}`);
   }
 }

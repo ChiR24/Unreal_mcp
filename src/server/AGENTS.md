@@ -14,7 +14,7 @@ server/
 |-- tool-registry-elicitation.ts   # missing primitive argument prefill
 |-- tool-registry-gateway.ts       # single-tool gateway ENTRY: handleUnrealGatewayCall() operation switch
 |-- resource-registry.ts           # resource listing and handler registration
-`-- gateway/                 (16)  # gateway ROUTING ENGINE: search/describe/execute pipeline
+`-- gateway/                 (25)  # gateway ROUTING ENGINE: search/describe/execute pipeline
 ```
 `gateway/` has its own `AGENTS.md`. Do not confuse it with `src/gateway/` (the generated manifest data + loader) — this directory is request routing, that one is the catalog artifact.
 

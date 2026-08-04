@@ -1,5 +1,6 @@
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
+import { createUnknownActionResponse } from '../foundation/dispatch/handler-error-context.js';
 import { createGASActionContext, sendGASRequest, validateGASRequiredFields } from './gas-action-context.js';
 import { getGASActionRoute } from './gas-action-routes.js';
 import { handleAddTagToAsset, handleCreateGameplayEffect } from './gas-special-actions.js';
@@ -13,11 +14,7 @@ export async function handleGASTools(
   const route = getGASActionRoute(action);
 
   if (!route) {
-    return {
-      success: false,
-      error: 'UNKNOWN_ACTION',
-      message: `Unknown GAS action: ${action}`
-    };
+    return createUnknownActionResponse(action, `Unknown GAS action: ${action}`);
   }
 
   const existingAssetPath = context.argsRecord.assetPath;

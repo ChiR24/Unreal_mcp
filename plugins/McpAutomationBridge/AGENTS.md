@@ -8,12 +8,13 @@ Editor-only UE 5.0-5.8 Preview plugin. It owns the WebSocket automation bridge a
 | Manifest/config/docs | plugin root | `.uplugin`, `Config/`, plugin `README.md` and `CHANGELOG.md` |
 | Module dependencies | `Source/McpAutomationBridge/McpAutomationBridge.Build.cs` | Preserve UE-version probes and optional-module detection |
 | Public API/settings | `Source/McpAutomationBridge/Public/` | Subsystem contract, settings, connection manager API |
-| Core lifecycle/routing | `Private/Core/` (30) | Queue, game-thread dispatch, registration shards, settings, responses — **nested `AGENTS.md`** |
-| Automation domains | `Private/Domains/` (1097 / 66 domains) | Domain handlers grouped by responsibility — **nested `AGENTS.md`** |
-| Shared helpers | `Private/Foundation/` (55) | Reflection, Blueprint, path, response, handler primitives — **nested `AGENTS.md`** |
-| Native MCP | `Private/MCP/` (114) | **Nested `AGENTS.md`**; separate registry/session/transport lifecycle |
-| Hazardous UE operations | `Private/Safety/` (18) | Save/load/delete/material wrappers and verification — **nested `AGENTS.md`** |
-| WebSocket transport | `Private/Transport/` (21) | Connection auth, sockets, framing, TLS, rate limits, telemetry — **nested `AGENTS.md`** |
+| Core lifecycle/routing | `Private/Core/` (36) | Queue, game-thread dispatch, registration shards, settings, responses — **nested `AGENTS.md`** |
+| Automation domains | `Private/Domains/` (1103 / 66 domains) | Domain handlers grouped by responsibility — **nested `AGENTS.md`** |
+| Shared helpers | `Private/Foundation/` (81) | Reflection, Blueprint, path, response, handler primitives — **nested `AGENTS.md`** |
+| Native MCP | `Private/MCP/` (164) | **Nested `AGENTS.md`**; separate registry/session/transport lifecycle |
+| Hazardous UE operations | `Private/Safety/` (19) | Save/load/delete/material wrappers and verification — **nested `AGENTS.md`** |
+| WebSocket transport | `Private/Transport/` (23) | Connection auth, sockets, framing, TLS, rate limits, telemetry — **nested `AGENTS.md`** |
+| Native C++ tests | `Private/Tests/` (25) | Contract/unit tests read by Vitest source-contract gates; see `tests/AGENTS.md` |
 | Status UI | `Private/UI/` | Keep Slate presentation thin; do not move transport work here |
 
 ## CROSS-SURFACE RULES
@@ -21,6 +22,8 @@ Editor-only UE 5.0-5.8 Preview plugin. It owns the WebSocket automation bridge a
 - Native MCP metadata does not implement editor behavior; accepted tools dispatch back through the same subsystem queue.
 - A new behavior normally needs a domain implementation, Core registration, the TypeScript parent-tool/action contract, and tests. Add native metadata only when the native surface should expose it.
 - Keep editor API work off socket threads. Preserve deferral during package save, garbage collection, async load, and unsafe map transitions.
+- Preserve the single-game-thread queue invariant in `Public/McpQueueFairness.h`: exactly ONE game-thread dequeuer drains the subsystem queue; never introduce a second drain path or bypass the queue.
+- A capability id must never become a metric label (`Private/Core/Security/McpPrequeueGate.h`); never populate a label from a client-supplied field.
 - Optional engine features must compile away or fail clearly when their module/plugin is unavailable; retain the compatibility macros in `Build.cs`.
 - Keep action dispatchers thin. Put behavior in the matching `Private/Domains/<Domain>/<Responsibility>/` implementation and register it through the appropriate `Private/Core/Subsystem/*Registration.cpp` shard.
 - Reuse `Private/Foundation/` for shared reflection, path, Blueprint, JSON, response, and object-resolution behavior; do not grow domain-local copies.

@@ -15,7 +15,7 @@
  */
 
 import { ITools } from '../../../types/tools/tool-interfaces.js';
-import { cleanObject } from '../../../utils/serialization/safe-json.js';
+import { createUnknownActionResponse } from '../foundation/dispatch/handler-error-context.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import { createSubActionDispatcher, requireNonEmptyString } from '../foundation/dispatch/common-handlers.js';
 import { handleAIUtilityAction } from './ai-utility-actions.js';
@@ -279,10 +279,6 @@ export async function handleAITools(
     // =========================================================================
 
     default:
-      return cleanObject({
-        success: false,
-        error: 'UNKNOWN_ACTION',
-        message: `Unknown AI action: ${action}`
-      });
+      return createUnknownActionResponse(action, `Unknown AI action: ${action}`);
   }
 }

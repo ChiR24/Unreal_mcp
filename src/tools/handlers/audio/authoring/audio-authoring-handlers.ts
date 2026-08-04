@@ -2,15 +2,12 @@ import type { ITools } from '../../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import { cleanObject } from '../../../../utils/serialization/safe-json.js';
 import { executeAutomationRequest, getTimeoutMs } from '../../foundation/dispatch/common-handlers.js';
+import { createUnknownActionResponse } from '../../foundation/dispatch/handler-error-context.js';
 import { prepareAudioAuthoringPayload } from './audio-authoring-payload.js';
 import { validateAudioAuthoringAction } from './audio-authoring-action-validation.js';
 
 function unknownAudioAuthoringAction(action: string): Record<string, unknown> {
-  return cleanObject({
-    success: false,
-    error: 'UNKNOWN_ACTION',
-    message: `Unknown audio authoring action: ${action}`
-  });
+  return createUnknownActionResponse(action, `Unknown audio authoring action: ${action}`);
 }
 
 export async function handleAudioAuthoringTools(

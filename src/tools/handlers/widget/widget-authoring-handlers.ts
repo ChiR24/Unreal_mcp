@@ -1,5 +1,6 @@
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
+import { createUnknownActionResponse } from '../foundation/dispatch/handler-error-context.js';
 import { getWidgetActionRequiredFields } from './widget-authoring-action-requirements.js';
 import {
   createWidgetAuthoringContext,
@@ -14,11 +15,7 @@ export async function handleWidgetAuthoringTools(
 ): Promise<Record<string, unknown>> {
   const requiredFields = getWidgetActionRequiredFields(action);
   if (!requiredFields) {
-    return {
-      success: false,
-      error: 'UNKNOWN_ACTION',
-      message: `Unknown widget authoring action: ${action}`
-    };
+    return createUnknownActionResponse(action, `Unknown widget authoring action: ${action}`);
   }
 
   const context = createWidgetAuthoringContext(args, tools);

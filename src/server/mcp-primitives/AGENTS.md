@@ -1,6 +1,6 @@
 # `src/server/mcp-primitives/` — MCP Protocol Primitives
 
-43 files: 16 at top level + `completions/` (12), `prompts/` (9), `subscriptions/` (6). Everything MCP exposes **besides tools**: resources, prompts, completions, subscriptions, plus client profiles and the session `configure` store.
+48 files: 18 at top level (13 impl + 5 test) + `completions/` (12), `prompts/` (9), `subscriptions/` (5), `progress/` (3). Everything MCP exposes **besides tools**: resources, prompts, completions, subscriptions, progress, plus client profiles and the session `configure` store.
 
 ## Wiring order (top level)
 
@@ -20,10 +20,11 @@
 
 ## Subdirectory barrels
 
-All three `index.ts` barrels add **no behavior and no import side effects** — keep them that way.
+All `index.ts` barrels add **no behavior and no import side effects** — keep them that way.
 - `completions/` — `complete()`, `rankCandidates`/`applyBudget`, `COMPLETION_SLOTS`, `classifyUnsafe`. Bounded by `MAX_COMPLETION_ITEMS`, `MAX_COMPLETION_BYTES`, `MAX_PREFIX_LENGTH`; over-long prefixes return a `COMPLETION_GUIDANCE_CODES` reason, not a truncated guess.
 - `prompts/` — `listPrompts()`, `getPrompt()`, `getWorkflowPrompt()`, `WORKFLOW_PROMPTS`. Pure catalog returning text messages. **Getting a prompt never executes anything**; bounded by `MAX_PROMPT_BYTES` / `MAX_ARGUMENT_LENGTH`, rooted at `PROMPT_CONTENT_ROOTS`, failing with typed `PromptError`.
 - `subscriptions/` — `SubscriptionStore` (`DEFAULT_MAX_SUBSCRIPTIONS_PER_SESSION`) + `NotificationCoalescer` (`DEFAULT_COALESCE_WINDOW_MS`, `RESOURCE_CHANGE_KINDS`).
+- `progress/` — `progress-reporter.ts` / `progress-sink-registry.ts` / `progress-token.ts`: bounded progress emission correlated by `progressToken`; keep sinks registered and token lifecycle paired.
 
 ## WHERE TO LOOK
 
@@ -37,7 +38,7 @@ All three `index.ts` barrels add **no behavior and no import side effects** — 
 
 ## ANTI-PATTERNS
 
-- **Native parity is enforced.** `plugins/.../Private/MCP/Primitives/` (20 files) and `Private/MCP/Resources/` mirror this directory. Changing a primitive here without the native side fails `tests/unit/mcp-primitives/*-parity.test.ts` — the fixtures (`*-native-fixture.ts`, `*-native-oracle.json`) encode the expected native answer.
+- **Native parity is enforced.** `plugins/.../Private/MCP/Primitives/` (24 files) and `Private/MCP/Resources/` mirror this directory. Changing a primitive here without the native side fails `tests/unit/mcp-primitives/*-parity.test.ts` — the fixtures (`*-native-fixture.ts`, `*-native-oracle.json`) encode the expected native answer.
 - Never advertise a capability whose handler was not registered — derive it, do not hardcode it.
 - Never execute a tool from a prompt path. `prompts/get` returns messages only.
 - Never emit unbounded completion/prompt payloads; the `MAX_*` caps are the contract, and exceeding one must return typed guidance rather than a truncated result.

@@ -135,3 +135,9 @@ function normalizeArgsInternal(args: HandlerArgs, configs: ArgConfig[]): Record<
 
   return normalized;
 }
+
+export function createActionNormalizer(aliases: Record<string, string>): (action: string) => string {
+  return (action: string): string => {
+    return aliases[action] ?? aliases[action.toLowerCase()] ?? action;
+  };
+}

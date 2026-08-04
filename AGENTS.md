@@ -10,22 +10,22 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |-- src/                         # TypeScript MCP server, NodeNext ESM (strict)
 |   |-- cli.ts index.ts config.ts constants.ts server-setup.ts   # entry + facades
 |   |-- unreal-bridge*.ts        # UnrealBridge (connection/console/properties/system) at src root
-|   |-- automation/         (34) # WebSocket CLIENT: handshake, request tracking/correlation, frames
+|   |-- automation/         (38) # WebSocket CLIENT: handshake, request tracking/correlation, frames
 |   |-- config/              (1) # class-aliases.ts ONLY (DIR; env schema is src/config.ts — name collision)
 |   |-- gateway/             (4) # gateway manifest DATA + loader; 2 of 4 are *.generated.*
 |   |-- handlers/            (2) # MCP RESOURCE handlers — NOT tool logic (see tools/handlers)
-|   |-- resources/          (17) # resource providers behind handlers/ (actors, assets, levels, editor state)
+|   |-- resources/          (18) # resource providers behind handlers/ (actors, assets, levels, editor state)
 |   |-- server/             (13) # SDK construction, stdio lifecycle, tool/resource registry shards
 |   |   |-- gateway/        (25) # gateway search/describe/execute ROUTING — NOT src/gateway
-|   |   `-- mcp-primitives/ (43) # resources/prompts/completions/subscriptions + client profiles, configure store
-|   |-- services/            (4) # health-monitor, metrics-server (Prometheus)
+|   |   `-- mcp-primitives/ (48) # resources/prompts/completions/subscriptions/progress + client profiles, configure store
+|   |-- services/            (8) # health-monitor, metrics-server (Prometheus), readiness, telemetry
 |   |-- tools/                   # catalog/ (contracts), handlers/<38 domains>/ (action logic),
 |   |                            #   orchestration/, dynamic/, editor/, level/, schemas/
 |   |   `-- definitions/shared/  # ONLY 2 files (tool-definition.ts, action-sets.ts) — NOT a contract source
 |   |-- types/ utils/            # utils: commands config interaction logging paths responses serialization validation
 |-- plugins/McpAutomationBridge/ # the ONLY plugin; editor-only UE (bridge + native MCP)
 |   `-- Source/McpAutomationBridge/{Public (17), Private/}
-|       Private/: Core(34) Domains(1098 / 66 domains) Foundation(70) MCP(152) Safety(19) Transport(23) Tests(13) UI(2)
+|       Private/: Core(36) Domains(1103 / 66 domains) Foundation(81) MCP(164) Safety(19) Transport(23) Tests(25) UI(2)
 |       Core/: Compatibility Errors Module Requests Security Settings Subsystem
 |       MCP/:  DynamicTools Execute Gateway Generated Primitives Protocol Registry Resources Routing Tools Transport
 |-- tests/                       # Vitest unit tests + custom MCP integration runner
@@ -50,7 +50,7 @@ NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-
 | Add/change a TS tool contract | `src/tools/catalog/capabilities/records/<tool>/` + `records/parent-metadata.ts` | **THE source of truth.** `consolidated-tool-definitions.ts` and every `*.generated.*` are OUTPUTS — editing them is overwritten on next generate. See `src/tools/catalog/AGENTS.md` |
 | Regenerate contract artifacts | `npm run registry:generate`, then `registry:check` / `manifest:check` | Records -> TS facades + routing index + gateway manifest + native C++ registry/shards |
 | Change gateway routing (search/describe/execute) | `src/server/gateway/` (25 files) | Its own AGENTS.md. `src/gateway/` is only the generated manifest + loader |
-| Change MCP protocol primitives (resources/prompts/completions/subscriptions) | `src/server/mcp-primitives/` (43 files) | Its own AGENTS.md. Native mirror in `Private/MCP/Primitives/`; parity gated by `tests/unit/mcp-primitives/*-parity.test.ts` |
+| Change MCP protocol primitives (resources/prompts/completions/subscriptions/progress) | `src/server/mcp-primitives/` (48 files) | Its own AGENTS.md. Native mirror in `Private/MCP/Primitives/`; parity gated by `tests/unit/mcp-primitives/*-parity.test.ts` |
 | Change capability auth (scopes/consent/paths/quota) | `.../Private/Foundation/McpCapabilityAuthorization.h` (predicates), `.../Private/Core/Security/` (composition) | Predicates are pure + transport-shared; the plugin is the sole authority and re-enforces every request |
 | Change execute idempotency | `src/server/gateway/idempotency-ledger.ts`, `.../Private/Foundation/McpIdempotencyLedger.{h,cpp}` | Two mirrors, different caps (TS 1024 / native 4096). Change both |
 | Register TS tool behavior | `src/tools/orchestration/consolidated-handler-registration.ts`, `src/server/tool-registry.ts` | `consolidated-tool-handlers.ts` is the bootstrap/export facade |
@@ -148,6 +148,8 @@ Every automation request is gated **before it reaches the editor queue**. The Ty
 - **Folder-budget headroom is GONE in two places**: the ≤25 files-per-folder gate is already satisfied at exactly 25 by `Private/MCP/Transport/` and `Private/Domains/Sequence/` (`Private/MCP/Generated/`, `Private/Domains/GAS/`, `Private/Domains/AnimationAuthoring/` sit at 24). Adding ONE file to any of those breaks CI — split into a subdirectory instead.
 - **Automated source-contract gates** (Vitest reads C++/C# text — these fail CI): 250 pure-line ceiling per plugin file (measured on *pure* lines, so a 380-line file with comments can still pass); ≤25 files per folder; no split artifacts (`Common`/`Part\d+`/`.incl`); every local `Mcp*` include must resolve; no `UPackage::SavePackage`; constant-time token compare only; no non-loopback bind without `bRequireCapabilityToken`; no browser-origin WS upgrade; no raw Python source in logs.
 - **Convention-only, NOT lint-enforced**: `no-explicit-any` and `no-console` are both `off` in `eslint.config.mjs`. `as any` / `@ts-ignore` / runtime `console.log` are still forbidden by project rule — nothing will catch them for you.
+- **Never `localeCompare`** for ordering: use byte-order (ASCII/UTF-16 code unit) comparison so generated shards agree byte-for-byte across machines (`src/utils/serialization/ordering.ts` exists for this).
+- **Never solicit a secret/token/credential field** during argument elicitation: `src/server/tool-registry-elicitation.ts` refuses any field matching its `SECRET_FIELD` regex.
 
 ## UNIQUE STYLES
 - 23 canonical parent tools hide hundreds of actions behind action enums to reduce client context.
@@ -171,9 +173,9 @@ npm test               # tests/integration.mjs — Unreal-dependent
 npm run test:all       # identical to npm test
 npm run test:native-parity
 npm run test:params    # parity + strict parameter audit
-# contract generation + drift gates (only manifest:check runs in CI)
+# contract generation + drift gates (registry:check and manifest:check run in CI)
 npm run registry:generate  # capability records -> TS facades, routing index, native registry/shards
-npm run registry:check     # drift gate for the above (RUN LOCALLY — not in CI)
+npm run registry:check     # drift gate for the above (in CI)
 npm run manifest:check     # gateway manifest drift gate (in CI)
 npm run version:check      # assert all 7 version sources agree
 npm run normalization:check
@@ -191,7 +193,6 @@ npm run test:unit:coverage
 - **Version sources**: `package.json` (`version`) is the canonical source. `npm version` rewrites it together with `package-lock.json`, so both stay in lockstep. `server.json` versions the npm package distribution (top-level `version` plus the npm package `version`). The bridge version lives in its `.uplugin` `VersionName`. The native HTTP/SSE transport advertises `server-info.json` (`version`) and the `McpNativeTransport.h` `ServerVersion` `TEXT` fallback; the TS server advertises the `SERVER_VERSION` fallback in `src/server/server-factory.ts` when `package.json` cannot be read. Coordinated release bumps must resync all of: `package.json` (+`package-lock.json`), `server.json`, the McpAutomationBridge `.uplugin`, `server-info.json`, `src/server/server-factory.ts`, and `McpNativeTransport.h`. The `bump-version.yml` workflow already rewrites every one of these (via `npm version`, `jq`, and `perl`), so a coordinated bump is a single workflow run. Verify with `npm run version:check` (`tests/unit/version-consistency.test.ts`), which asserts agreement across all seven sources. For a manual audit, grep the canonical version across `package.json server.json plugins/*/*.uplugin plugins/*/Resources/MCP/server-info.json` rather than a hardcoded literal.
 - **Engine reference path**: `/data/UnrealEngine/Engine/`.
 - **External GitHub Actions** are pinned to full commit SHAs.
-- **`GEMINI.md` is stale and not authoritative** — it references `src/unreal-bridge.ts` (now split into `src/unreal-bridge*.ts`), uppercase `Plugins/`, non-existent Rust modules, and `npm run test:control_actor`. Prefer this file and the nested AGENTS.
 - Not instruction targets: `tests/reports/`, root `build/`, `tmp/`, `Public/`, uppercase `Plugins/`, `.cache/`, `.opencode/node_modules/`, and package/plugin build outputs.
 
 ## AREA GUIDES (read the closest one)

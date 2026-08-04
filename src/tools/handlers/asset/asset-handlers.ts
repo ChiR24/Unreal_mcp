@@ -1,7 +1,7 @@
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
-import { executeAutomationRequest } from '../foundation/dispatch/common-handlers.js';
+import { executeAutomationRequest, withHandlerContext, createUnknownActionResponse } from '../foundation/dispatch/common-handlers.js';
 import { ResponseFactory } from '../../../utils/responses/response-factory.js';
 import {
   handleCreateFolder,
@@ -21,16 +21,9 @@ import { isValidAssetAction, validAssetActionMessage } from './asset-validation.
 
 export async function handleAssetTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const context = createAssetContext(args, tools);
-  try {
-    const result = await routeAssetAction(action, context);
-    invalidateAssetCacheForMutation(tools, action, args, result);
-    return result;
-  } catch (error) {
-    if (error instanceof Error) {
-      return ResponseFactory.error(error);
-    }
-    return ResponseFactory.error(error);
-  }
+  const result = await withHandlerContext(async () => routeAssetAction(action, context));
+  invalidateAssetCacheForMutation(tools, action, args, result);
+  return result;
 }
 
 async function routeAssetAction(
@@ -77,13 +70,11 @@ async function handleDefaultAssetAction(
   context: ReturnType<typeof createAssetContext>
 ): Promise<Record<string, unknown>> {
   if (!isValidAssetAction(action)) {
-    return cleanObject({
-      success: false,
-      error: 'UNKNOWN_ACTION',
-      message: `Unknown asset action: ${action}. Valid actions are: ${validAssetActionMessage()}`,
-      action: action || 'manage_asset',
-      assetPath: context.assetArgs.assetPath ?? context.assetArgs.path
-    });
+    return createUnknownActionResponse(
+      action,
+      `Unknown asset action: ${action}. Valid actions are: ${validAssetActionMessage()}`,
+      { action: action || 'manage_asset', assetPath: context.assetArgs.assetPath ?? context.assetArgs.path }
+    );
   }
 
   const res = await executeAutomationRequest(
@@ -96,13 +87,11 @@ async function handleDefaultAssetAction(
 
   if (errorCode === 'UNKNOWN_ACTION' || errorCode === 'INVALID_SUBACTION' ||
       message.toLowerCase().includes('unknown action') || message.toLowerCase().includes('unknown subaction')) {
-    return cleanObject({
-      success: false,
-      error: 'UNKNOWN_ACTION',
-      message: `Unknown asset action: ${action}`,
-      action: action || 'manage_asset',
-      assetPath: context.assetArgs.assetPath ?? context.assetArgs.path
-    });
+    return createUnknownActionResponse(
+      action,
+      `Unknown asset action: ${action}`,
+      { action: action || 'manage_asset', assetPath: context.assetArgs.assetPath ?? context.assetArgs.path }
+    );
   }
 
   if (res.success === false) {
