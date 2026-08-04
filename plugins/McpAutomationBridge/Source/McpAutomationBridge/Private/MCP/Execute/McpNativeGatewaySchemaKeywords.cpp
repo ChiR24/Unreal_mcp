@@ -22,6 +22,7 @@ const TCHAR* const SupportedKeywords[] = {
 	TEXT("maximum"),
 	TEXT("maxLength"),
 	TEXT("x-unreal-reflection-boundary"),
+	TEXT("requiredOneOf"),
 };
 
 bool IsSupportedKeyword(const FString& Keyword)
@@ -179,6 +180,38 @@ bool CheckBounds(
 				FString::Printf(TEXT("%s must have at most %d item(s)"), *Pointer, static_cast<int32>(Bound)));
 			return false;
 		}
+	}
+	return true;
+}
+
+bool CheckRequiredOneOf(
+	const TSharedPtr<FJsonObject>& Object, const TSharedPtr<FJsonObject>& Schema,
+	const FString& Pointer, FMcpSchemaViolationDetail& OutViolation)
+{
+	const TArray<TSharedPtr<FJsonValue>>* RequiredOneOf = nullptr;
+	if (!Schema.IsValid() ||
+		!Schema->TryGetArrayField(TEXT("requiredOneOf"), RequiredOneOf) || !RequiredOneOf)
+	{
+		return true;
+	}
+	TArray<FString> GroupNames;
+	bool bAnyPresent = false;
+	for (const TSharedPtr<FJsonValue>& GroupValue : *RequiredOneOf)
+	{
+		FString Name;
+		if (GroupValue.IsValid() && GroupValue->TryGetString(Name))
+		{
+			GroupNames.Add(Name);
+			bAnyPresent = bAnyPresent || Object->HasField(Name);
+		}
+	}
+	if (!bAnyPresent)
+	{
+		OutViolation = MakeViolation(EMcpSchemaViolation::RequiredOneOf,
+			JoinPointer(Pointer, TEXT("requiredOneOf")),
+			FString::Printf(TEXT("At least one of [%s] must be provided"),
+				*FString::Join(GroupNames, TEXT(", "))));
+		return false;
 	}
 	return true;
 }

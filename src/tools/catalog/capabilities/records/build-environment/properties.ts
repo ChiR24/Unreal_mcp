@@ -87,6 +87,7 @@ export const P = {
   intensity: num('Light intensity.'),
   skyLightIntensity: num('Sky light intensity.'),
   lightType: str('Light type string.'),
+  lightClass: str('Light class string.'),
   cubemapPath: str('Canonical /Game cubemap asset path.'),
   directionalLightActorPath: str('Directional light actor path. As input, selects the light to snapshot; the first directional light in the level is used when omitted. As output, the resolved actor path.'),
   skyLightActorPath: str('Sky light actor path. As input, selects the light to snapshot; the first sky light in the level is used when omitted. As output, the resolved actor path.'),

@@ -167,6 +167,7 @@ const testCases = [
 
     // === CREATE ===
     { scenario: 'CREATE: spawn_light', toolName: 'build_environment', arguments: {"action": "spawn_light", "lightType": "Point", "location": {"x": 0, "y": 0, "z": 100}}, expected: 'success|already exists' },
+    { scenario: 'CREATE: spawn_light by class', toolName: 'build_environment', arguments: {"action": "spawn_light", "lightClass": "PointLight", "location": {"x": 0, "y": 0, "z": 200}}, expected: 'success|already exists' },
     { scenario: 'CREATE: create_light', toolName: 'build_environment', arguments: {"action": "create_light", "name": "Testlight", "path": "/Game/MCPTest"}, expected: 'success|already exists' },
     { scenario: 'CREATE: spawn_sky_light', toolName: 'build_environment', arguments: {"action": "spawn_sky_light", "location": {"x": 0, "y": 0, "z": 100}}, expected: 'success|already exists' },
     { scenario: 'CREATE: create_sky_light', toolName: 'build_environment', arguments: {"action": "create_sky_light", "name": "Testsky_light", "path": "/Game/MCPTest"}, expected: 'success|already exists' },

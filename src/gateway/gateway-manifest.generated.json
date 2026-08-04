@@ -1032,6 +1032,7 @@
         "layerInfoPath",
         "layerName",
         "leaveTangent",
+        "lightClass",
         "lightType",
         "location",
         "locations",
@@ -1497,6 +1498,10 @@
               }
             },
             "additionalProperties": false
+          },
+          "lightClass": {
+            "type": "string",
+            "description": "Light class string."
           },
           "lightType": {
             "type": "string",

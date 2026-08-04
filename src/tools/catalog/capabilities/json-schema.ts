@@ -58,7 +58,8 @@ export const Draft202012ObjectSchemaSchema = z
     type: z.literal('object'),
     properties: jsonObjectSchema,
     required: z.array(z.string()),
-    additionalProperties: z.union([z.boolean(), jsonObjectSchema])
+    additionalProperties: z.union([z.boolean(), jsonObjectSchema]),
+    requiredOneOf: z.array(z.string()).optional()
   })
   .superRefine((schema, ctx) => {
     walk(schema, [], ctx);

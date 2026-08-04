@@ -67,6 +67,12 @@ function minimalValidObject(schema: JsonRecord): JsonRecord {
     if (typeof name !== 'string' || name === 'action') continue;
     out[name] = validValueFor(properties[name]);
   }
+  // `requiredOneOf` is at-least-one-of: a minimal valid payload must carry one
+  // member of the group, or the fixture would fail MISSING_REQUIRED_ONEOF.
+  if (Array.isArray(schema.requiredOneOf)) {
+    const first = schema.requiredOneOf.find((name) => typeof name === 'string' && name !== 'action');
+    if (first !== undefined && !(first in out)) out[first] = validValueFor(properties[first]);
+  }
   return out;
 }
 

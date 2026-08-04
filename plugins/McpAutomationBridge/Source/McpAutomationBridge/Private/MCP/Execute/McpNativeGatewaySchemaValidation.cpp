@@ -16,6 +16,7 @@ const TCHAR* McpSchemaViolationCode(EMcpSchemaViolation Reason)
 	switch (Reason)
 	{
 	case EMcpSchemaViolation::MissingRequired: return TEXT("MISSING_REQUIRED_PARAMETER");
+	case EMcpSchemaViolation::RequiredOneOf: return TEXT("MISSING_REQUIRED_ONEOF");
 	case EMcpSchemaViolation::Undeclared: return TEXT("UNDECLARED_PARAMETER");
 	case EMcpSchemaViolation::Type: return TEXT("INVALID_PARAMETER_TYPE");
 	case EMcpSchemaViolation::Enum: return TEXT("INVALID_PARAMETER_VALUE");
@@ -169,6 +170,11 @@ bool ValidateObjectBody(
 				return false;
 			}
 		}
+	}
+
+	if (!McpSchemaKeywords::CheckRequiredOneOf(Object, Schema, Pointer, OutViolation))
+	{
+		return false;
 	}
 
 	bool bAdditionalProperties = true;

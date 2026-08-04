@@ -37,6 +37,14 @@ export type Draft202012ObjectSchema = JsonObject & {
   readonly properties: JsonObject;
   readonly required: readonly string[];
   readonly additionalProperties: boolean | JsonObject;
+  /**
+   * At-least-one-of: at least one of the listed property names must be
+   * present in a validated value. NOT true XOR - supplying more than one
+   * listed property is valid at the schema level (a native handler may
+   * still reject the combination, which is a handler contract, not a
+   * schema keyword). Names must reference declared `properties` entries.
+   */
+  readonly requiredOneOf?: readonly string[];
 };
 
 export type LegacyCapabilityId = {

@@ -19,6 +19,7 @@ enum class EMcpSchemaViolation : uint8
 {
 	None,
 	MissingRequired,
+	RequiredOneOf,
 	Undeclared,
 	Type,
 	Enum,

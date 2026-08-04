@@ -23,7 +23,8 @@ export const SUPPORTED_SCHEMA_KEYWORDS = [
   'minimum',
   'maximum',
   'maxLength',
-  'x-unreal-reflection-boundary'
+  'x-unreal-reflection-boundary',
+  'requiredOneOf'
 ] as const;
 
 export type SupportedSchemaKeyword = (typeof SUPPORTED_SCHEMA_KEYWORDS)[number];
@@ -36,6 +37,7 @@ export const REFLECTION_BOUNDARY_KEYWORD = 'x-unreal-reflection-boundary';
 // Named per rule so TS and native emit the same precise code, not one catch-all.
 export const VIOLATION_REASONS = [
   'missing-required',
+  'required-one-of',
   'undeclared',
   'type',
   'enum',
@@ -47,6 +49,7 @@ export type ViolationReason = (typeof VIOLATION_REASONS)[number];
 
 export const VIOLATION_GATEWAY_CODES: Readonly<Record<ViolationReason, string>> = {
   'missing-required': 'MISSING_REQUIRED_PARAMETER',
+  'required-one-of': 'MISSING_REQUIRED_ONEOF',
   undeclared: 'UNDECLARED_PARAMETER',
   type: 'INVALID_PARAMETER_TYPE',
   enum: 'INVALID_PARAMETER_VALUE',
@@ -188,6 +191,18 @@ function validateObject(value: JsonRecord, schema: JsonRecord, pointer: string):
           message: `Missing required parameter '${name}'`
         };
       }
+    }
+  }
+
+  // At-least-one-of: mirrors CheckRequiredOneOf in McpNativeGatewaySchemaKeywords.cpp.
+  if (Array.isArray(schema.requiredOneOf)) {
+    const group = schema.requiredOneOf.filter((name): name is string => typeof name === 'string');
+    if (group.length > 0 && !group.some((name) => name in value)) {
+      return {
+        reason: 'required-one-of',
+        pointer: `${pointer}/requiredOneOf`,
+        message: `At least one of [${group.join(', ')}] must be provided`
+      };
     }
   }
 

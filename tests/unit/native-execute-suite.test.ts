@@ -12,7 +12,7 @@ import {
   CATALOG_REVISION
 } from '../../src/tools/catalog/capabilities/generated/canonical-registry.generated.js';
 
-import { buildCasesForRecord, EXECUTE_RULES, minimalValidParams, type ExecuteCase } from './gateway-discovery-suite/case-builder.js';
+import { buildCasesForRecord, EXECUTE_RULES, minimalValidParams, type ExecuteCase, type ExecuteRule } from './gateway-discovery-suite/case-builder.js';
 import {
   buildResolverIndex,
   executeReference,
@@ -374,20 +374,18 @@ describe('Task 27: receipts and error envelopes are semantic', () => {
 
 describe('Task 27: the rule-outcome matrix is the cross-surface contract', () => {
   it('publishes one expected kind/code per rule and records the suite digest', () => {
-    const matrix = new Map<string, string>();
-    for (const record of records) {
-      for (const testCase of buildCasesForRecord(record)) {
-        const expected = testCase.expect.status === 'success'
-          ? 'success'
-          : `${testCase.expect.kind}/${testCase.expect.gatewayCode}`;
-        const seen = matrix.get(testCase.rule);
-        expect(seen ?? expected, `rule '${testCase.rule}' must map to one outcome`).toBe(expected);
-        matrix.set(testCase.rule, expected);
-      }
+    const cases = records.flatMap(buildCasesForRecord);
+    const matrix = new Map<ExecuteRule, string>();
+    for (const testCase of cases) {
+      const expected = testCase.expect.status === 'success'
+        ? 'success'
+        : `${testCase.expect.kind}/${testCase.expect.gatewayCode}`;
+      const seen = matrix.get(testCase.rule);
+      expect(seen ?? expected, `rule '${testCase.rule}' must map to one outcome`).toBe(expected);
+      matrix.set(testCase.rule, expected);
     }
     expect([...matrix.keys()].sort()).toEqual([...EXECUTE_RULES].sort());
 
-    const cases = records.flatMap(buildCasesForRecord);
     const digest = createHash('sha256')
       .update(JSON.stringify(cases.map((entry) => [entry.caseId, entry.rule, entry.expect])))
       .digest('hex');

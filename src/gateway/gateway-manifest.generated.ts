@@ -1035,6 +1035,7 @@ export const gatewayManifest = {
         "layerInfoPath",
         "layerName",
         "leaveTangent",
+        "lightClass",
         "lightType",
         "location",
         "locations",
@@ -1500,6 +1501,10 @@ export const gatewayManifest = {
               }
             },
             "additionalProperties": false
+          },
+          "lightClass": {
+            "type": "string",
+            "description": "Light class string."
           },
           "lightType": {
             "type": "string",

@@ -120,12 +120,14 @@ describe('Task 27: native execute owns a canonical validation pipeline', () => {
     const implemented = [...(table ?? '').matchAll(/TEXT\("([^"]+)"\)/gu)].map((m) => m[1]);
 
     // Keywords the 1,335 records use, per baseline.json canonicalRecordSchemaKeywords,
-    // plus the Task 2 reflection boundary that stays open by contract.
+    // plus the Task 2 reflection boundary that stays open by contract and the
+    // at-least-one-of keyword requiredOneOf (at-least-one-of groups on light,
+    // landscape, delete/destroy_actor and execute_python records).
     expect([...implemented].sort()).toEqual(
       [
         '$schema', 'additionalProperties', 'default', 'description', 'enum',
         'items', 'maxItems', 'maxLength', 'maximum', 'minItems', 'minimum',
-        'properties', 'required', 'type', 'x-unreal-reflection-boundary',
+        'properties', 'required', 'requiredOneOf', 'type', 'x-unreal-reflection-boundary',
       ].sort(),
     );
 

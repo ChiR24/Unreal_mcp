@@ -144,6 +144,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
       file: { type: 'string', description: 'Path to a .py file to execute.', maxLength: 4096 },
     },
     required: [],
+    requiredOneOf: ['code', 'file'],
     effect: 'write',
     behavior: { longRunning: true },
     costLatency: 'long-running',

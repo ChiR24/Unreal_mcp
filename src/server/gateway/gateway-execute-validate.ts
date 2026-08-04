@@ -23,6 +23,7 @@ const SUPPORTED_SCHEMA_KEYWORDS = new Set([
   'description',
   'properties',
   'required',
+  'requiredOneOf',
   'additionalProperties',
   'items',
   'minItems',
@@ -42,6 +43,7 @@ export const MAX_TIMEOUT_MS = 600_000;
 
 export type ViolationReason =
   | 'missing-required'
+  | 'required-one-of'
   | 'undeclared'
   | 'type'
   | 'enum'
@@ -51,6 +53,7 @@ export type ViolationReason =
 /** Named per rule so the two surfaces emit the same precise code, not a catch-all. */
 export const VIOLATION_GATEWAY_CODES: Readonly<Record<ViolationReason, string>> = {
   'missing-required': 'MISSING_REQUIRED_PARAMETER',
+  'required-one-of': 'MISSING_REQUIRED_ONEOF',
   undeclared: 'UNDECLARED_PARAMETER',
   type: 'INVALID_PARAMETER_TYPE',
   enum: 'INVALID_PARAMETER_VALUE',
@@ -187,6 +190,18 @@ function validateObject(
           message: `Missing required parameter '${name}'`
         };
       }
+    }
+  }
+
+  // At-least-one-of: mirrors CheckRequiredOneOf in McpNativeGatewaySchemaKeywords.cpp.
+  if (Array.isArray(schema.requiredOneOf)) {
+    const group = schema.requiredOneOf.filter((name): name is string => typeof name === 'string');
+    if (group.length > 0 && !group.some((name) => hasOwn(value, name))) {
+      return {
+        reason: 'required-one-of',
+        pointer: `${pointer}/requiredOneOf`,
+        message: `At least one of [${group.join(', ')}] must be provided`
+      };
     }
   }
 

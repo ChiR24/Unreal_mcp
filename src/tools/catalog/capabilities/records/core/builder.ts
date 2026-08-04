@@ -45,6 +45,7 @@ export type CoreRecordSpec = {
   readonly whenNotToUse: readonly string[];
   readonly inputProps: JsonObject;
   readonly required: readonly string[];
+  readonly requiredOneOf?: readonly string[];
   readonly outputProps?: JsonObject;
   readonly outputRequired?: readonly string[];
   readonly effect: EffectType;
@@ -67,13 +68,18 @@ const ACTION_PROP: JsonObject = {
   description: 'The action to execute on the parent tool.',
 };
 
-function schema(properties: JsonObject, required: readonly string[]): Draft202012ObjectSchema {
+function schema(
+  properties: JsonObject,
+  required: readonly string[],
+  requiredOneOf?: readonly string[],
+): Draft202012ObjectSchema {
   return {
     $schema: SCHEMA_URI,
     type: 'object',
     properties,
     required: [...required],
     additionalProperties: false,
+    ...(requiredOneOf === undefined ? {} : { requiredOneOf: [...requiredOneOf] }),
   };
 }
 
@@ -125,7 +131,7 @@ export function buildCoreRecord(
   spec: CoreRecordSpec,
 ): CapabilityRecordSource {
   const required = [...new Set(['action', ...spec.required])];
-  const input = schema({ action: ACTION_PROP, ...spec.inputProps }, required);
+  const input = schema({ action: ACTION_PROP, ...spec.inputProps }, required, spec.requiredOneOf);
   const output = spec.outputProps
     ? outputSchema(spec.outputProps, spec.outputRequired ?? [])
     : EMPTY_OUTPUT;

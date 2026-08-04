@@ -51,6 +51,7 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.String(TEXT("landscapePath"), TEXT("Canonical /Game landscape asset path."));
 			Schema.String(TEXT("layerInfoPath"), TEXT("Canonical /Game landscape layer info asset path."));
 			Schema.String(TEXT("layerName"), TEXT("Landscape layer name."));
+			Schema.String(TEXT("lightClass"), TEXT("Light class string."));
 			Schema.String(TEXT("lightType"), TEXT("Light type string."));
 			Schema.String(TEXT("lutPath"), TEXT("Canonical /Game LUT texture path."));
 			Schema.String(TEXT("material"), TEXT("Canonical /Game material asset path."));

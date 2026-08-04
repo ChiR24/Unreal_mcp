@@ -1105,6 +1105,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "additionalProperties": false
         },
+        "lightClass": {
+          "type": "string",
+          "description": "Light class string."
+        },
         "lightType": {
           "type": "string",
           "description": "Light type string."

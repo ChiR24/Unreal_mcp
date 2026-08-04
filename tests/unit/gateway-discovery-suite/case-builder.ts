@@ -11,6 +11,7 @@ export const EXECUTE_RULES = [
   'valid',
   'undeclared-param',
   'missing-required',
+  'required-one-of',
   'wrong-type',
   'enum',
   'range',
@@ -46,6 +47,11 @@ const propertiesOf = (schema: unknown): JsonRecord =>
 const requiredOf = (schema: unknown): readonly string[] =>
   isRecord(schema) && Array.isArray(schema.required)
     ? schema.required.filter((name): name is string => typeof name === 'string' && name !== 'action')
+    : [];
+
+const requiredOneOfOf = (schema: unknown): readonly string[] =>
+  isRecord(schema) && Array.isArray(schema.requiredOneOf)
+    ? schema.requiredOneOf.filter((name): name is string => typeof name === 'string')
     : [];
 
 const firstType = (propertySchema: unknown): string | undefined => {
@@ -101,6 +107,13 @@ export function minimalValidParams(record: CapabilityLike): JsonRecord {
   const params: JsonRecord = {};
   for (const name of requiredOf(record.schemas.input)) {
     params[name] = sampleValue(properties[name]);
+  }
+  // `requiredOneOf` means at least one of the listed properties must be present,
+  // so a valid request must carry one; otherwise the valid case would fail.
+  const group = requiredOneOfOf(record.schemas.input);
+  if (group.length > 0) {
+    const first = group[0] as string;
+    params[first] = sampleValue(properties[first]);
   }
   return params;
 }
@@ -207,6 +220,20 @@ export function buildCasesForRecord(record: CapabilityLike): readonly ExecuteCas
       params: dropped,
       toolEnabled: true,
       expect: { status: 'error', kind: 'validation', gatewayCode: 'MISSING_REQUIRED_PARAMETER' }
+    });
+  }
+
+  const group = requiredOneOfOf(record.schemas.input);
+  if (group.length > 0) {
+    const emptied = { ...valid };
+    for (const name of group) delete emptied[name];
+    cases.push({
+      caseId: `${record.id}#required-one-of`,
+      rule: 'required-one-of',
+      capabilityId: record.id,
+      params: emptied,
+      toolEnabled: true,
+      expect: { status: 'error', kind: 'validation', gatewayCode: 'MISSING_REQUIRED_ONEOF' }
     });
   }
 

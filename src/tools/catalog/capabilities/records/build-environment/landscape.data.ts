@@ -30,6 +30,7 @@ export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
       quadsPerSection: P.quadsPerSection, sectionSize: P.sectionSize, sectionsPerComponent: P.sectionsPerComponent,
       componentCount: P.componentCount, materialPath: P.materialPath },
     required: ['action'],
+    requiredOneOf: ['name', 'landscapeName'],
     effect: 'write', latency: 'interactive', resources: 'medium',
     dispatchAction: 'create_landscape', dispatchMode: 'action',
     exampleInput: { action: 'create_landscape', name: 'Landscape_1', sizeX: 1009, sizeY: 1009 },

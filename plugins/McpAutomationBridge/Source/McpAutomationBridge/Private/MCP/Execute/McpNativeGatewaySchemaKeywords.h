@@ -30,4 +30,9 @@ FMcpSchemaViolationDetail MakeViolation(
 bool CheckBounds(
 	const TSharedPtr<FJsonValue>& Value, const TSharedPtr<FJsonObject>& Schema,
 	const FString& Pointer, FMcpSchemaViolationDetail& OutViolation);
+
+/** At-least-one enforcement for the requiredOneOf keyword. */
+bool CheckRequiredOneOf(
+	const TSharedPtr<FJsonObject>& Object, const TSharedPtr<FJsonObject>& Schema,
+	const FString& Pointer, FMcpSchemaViolationDetail& OutViolation);
 }
