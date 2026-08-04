@@ -207,39 +207,85 @@ public class McpAutomationBridge : ModuleRules {
     }
 
     private bool FindOptionalModule(string EngineDir, string SearchName) {
+        return FindOptionalModuleDir(EngineDir, SearchName) != null;
+    }
+
+    /** Returns the directory the optional module's source lives in, or null when it is not present. */
+    private string FindOptionalModuleDir(string EngineDir, string SearchName) {
         try {
             string[] directPaths = { Path.Combine(EngineDir, "Source", "Runtime", SearchName), Path.Combine(EngineDir, "Source", "Editor", SearchName) };
-            foreach (string path in directPaths) if (Directory.Exists(path)) return true;
+            foreach (string path in directPaths) if (Directory.Exists(path)) return path;
 
             string PluginsDir = Path.Combine(EngineDir, "Plugins");
-            if (!Directory.Exists(PluginsDir)) return false;
+            if (!Directory.Exists(PluginsDir)) return null;
 
             string OptionalEnginePluginDir = string.Concat("Exper", "imental");
             string[] pluginRoots = { "AI", "Runtime", OptionalEnginePluginDir, "Developer", "Animation", "Online" };
-            foreach (string root in pluginRoots) if (Directory.Exists(Path.Combine(PluginsDir, root, SearchName))) return true;
+            foreach (string root in pluginRoots) {
+                string candidate = Path.Combine(PluginsDir, root, SearchName);
+                if (Directory.Exists(candidate)) return candidate;
+            }
 
             string[] pluginSourceRoots = { Path.Combine("Animation", "IKRig"), Path.Combine("Animation", "ControlRig"), Path.Combine("Runtime", "MassEntity"), Path.Combine("Runtime", "MassGameplay"), Path.Combine("Runtime", "SmartObjects"), Path.Combine("Runtime", "StateTree"), Path.Combine(OptionalEnginePluginDir, "ChaosVehiclesPlugin") };
-            foreach (string root in pluginSourceRoots) if (Directory.Exists(Path.Combine(PluginsDir, root, "Source", SearchName))) return true;
+            foreach (string root in pluginSourceRoots) {
+                string candidate = Path.Combine(PluginsDir, root, "Source", SearchName);
+                if (Directory.Exists(candidate)) return candidate;
+            }
 
             return SearchDirectoryBounded(PluginsDir, SearchName, 4);
         }
-        catch { return false; }
+        catch { return null; }
     }
 
-    private bool SearchDirectoryBounded(string rootDir, string targetName, int maxDepth) {
-        if (maxDepth < 0 || !Directory.Exists(rootDir)) return false;
+    private string SearchDirectoryBounded(string rootDir, string targetName, int maxDepth) {
+        if (maxDepth < 0 || !Directory.Exists(rootDir)) return null;
         try {
             foreach (string subDir in Directory.GetDirectories(rootDir)) {
-                if (string.Equals(Path.GetFileName(subDir), targetName, StringComparison.OrdinalIgnoreCase)) return true;
-                if (maxDepth > 0 && SearchDirectoryBounded(subDir, targetName, maxDepth - 1)) return true;
+                if (string.Equals(Path.GetFileName(subDir), targetName, StringComparison.OrdinalIgnoreCase)) return subDir;
+                if (maxDepth > 0) {
+                    string found = SearchDirectoryBounded(subDir, targetName, maxDepth - 1);
+                    if (found != null) return found;
+                }
             }
         }
         catch { }
-        return false;
+        return null;
+    }
+
+    /**
+     * Walks up from a module's source directory to the .uplugin that owns it and returns that
+     * plugin's name, or null for modules that live directly under Engine/Source.
+     */
+    private static string FindOwningPluginName(string ModuleDir, string EngineDir) {
+        try {
+            string EngineFull = Path.GetFullPath(EngineDir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            DirectoryInfo Dir = new DirectoryInfo(Path.GetFullPath(ModuleDir));
+            for (int Depth = 0; Dir != null && Depth < 8; Depth++) {
+                string Current = Dir.FullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                if (string.Equals(Current, EngineFull, StringComparison.OrdinalIgnoreCase)) break;
+                string[] Descriptors = Directory.GetFiles(Dir.FullName, "*.uplugin");
+                if (Descriptors.Length > 0) return Path.GetFileNameWithoutExtension(Descriptors[0]);
+                Dir = Dir.Parent;
+            }
+        }
+        catch { }
+        return null;
     }
 
     private bool AddOptionalModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName, bool bDelayLoad) {
-        if (!FindOptionalModule(EngineDir, SearchName)) return false;
+        string ModuleDir = FindOptionalModuleDir(EngineDir, SearchName);
+        if (ModuleDir == null) return false;
+
+        // A module whose source is present on disk is not necessarily a module this target wants.
+        // If the host target explicitly disabled the plugin that owns it, linking it anyway produces
+        // binaries the runtime will never load -- and, on projects under source control, stray build
+        // artifacts that get committed and then fail to load on everyone else's sync.
+        string OwningPlugin = FindOwningPluginName(ModuleDir, EngineDir);
+        if (OwningPlugin != null && Target.DisablePlugins.Any(Name => string.Equals(Name, OwningPlugin, StringComparison.OrdinalIgnoreCase))) {
+            Console.WriteLine(string.Format("McpAutomationBridge: Skipped optional module '{0}' (owning plugin '{1}' is in Target.DisablePlugins)", ModuleName, OwningPlugin));
+            return false;
+        }
+
         PrivateDependencyModuleNames.Add(ModuleName);
         if (bDelayLoad && Target.Platform == UnrealTargetPlatform.Win64) {
             PublicDelayLoadDLLs.Add(string.Format("UnrealEditor-{0}.dll", ModuleName));
