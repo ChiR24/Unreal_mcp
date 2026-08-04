@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 1335;
-export const CATALOG_REVISION = "89d0a1c4a172b4e6";
+export const CATALOG_REVISION = "7f13839629e24dd7";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -54381,6 +54381,10 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             "type": "string",
             "description": "Name for the new actor, asset, or volume."
           },
+          "landscapeName": {
+            "type": "string",
+            "description": "Target landscape actor name."
+          },
           "location": {
             "type": "object",
             "description": "World-space location {x, y, z}.",
@@ -54574,8 +54578,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "97a7ce4c0a34483b47aed556e7405f40ebc79d63c4dd235ea2ac5731a05339f3",
-      "content": "c7c801b8a45514d458c3497115c61c79847ddd744660027aa3609f32efe3951f"
+      "schema": "9479149eccd70d296e53dcc70e0bb396d1ca4fecc3596324b6f4543f177fe040",
+      "content": "2246df82bd421f49975c3bc4d46f52a1a83f70cf3a45286e60830f72936b4f83"
     }
   },
   {
@@ -245091,8 +245095,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "build_environment",
     "dispatchAction": "create_landscape",
     "domain": "environment",
-    "schemaHash": "97a7ce4c0a34483b47aed556e7405f40ebc79d63c4dd235ea2ac5731a05339f3",
-    "contentHash": "c7c801b8a45514d458c3497115c61c79847ddd744660027aa3609f32efe3951f"
+    "schemaHash": "9479149eccd70d296e53dcc70e0bb396d1ca4fecc3596324b6f4543f177fe040",
+    "contentHash": "2246df82bd421f49975c3bc4d46f52a1a83f70cf3a45286e60830f72936b4f83"
   },
   {
     "id": "build_environment.create_landscape_grass_type",
@@ -277849,8 +277853,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "ca657fa9d59b62e4177bc5ff1b98fab9b56dd784d4a2458b2fd4363c2af84b05"
   },
   "build_environment.create_landscape": {
-    "schema": "97a7ce4c0a34483b47aed556e7405f40ebc79d63c4dd235ea2ac5731a05339f3",
-    "content": "c7c801b8a45514d458c3497115c61c79847ddd744660027aa3609f32efe3951f"
+    "schema": "9479149eccd70d296e53dcc70e0bb396d1ca4fecc3596324b6f4543f177fe040",
+    "content": "2246df82bd421f49975c3bc4d46f52a1a83f70cf3a45286e60830f72936b4f83"
   },
   "build_environment.create_landscape_grass_type": {
     "schema": "7654ce56033f2eafb96279498b6310f4dff25c159480ce05ec09bc0b853e2513",

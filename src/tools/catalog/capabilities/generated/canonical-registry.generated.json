@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "89d0a1c4a172b4e6",
+  "catalogRevision": "7f13839629e24dd7",
   "recordCount": 1335,
   "records": [
     {
@@ -54368,6 +54368,10 @@
               "type": "string",
               "description": "Name for the new actor, asset, or volume."
             },
+            "landscapeName": {
+              "type": "string",
+              "description": "Target landscape actor name."
+            },
             "location": {
               "type": "object",
               "description": "World-space location {x, y, z}.",
@@ -54561,8 +54565,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "97a7ce4c0a34483b47aed556e7405f40ebc79d63c4dd235ea2ac5731a05339f3",
-        "content": "c7c801b8a45514d458c3497115c61c79847ddd744660027aa3609f32efe3951f"
+        "schema": "9479149eccd70d296e53dcc70e0bb396d1ca4fecc3596324b6f4543f177fe040",
+        "content": "2246df82bd421f49975c3bc4d46f52a1a83f70cf3a45286e60830f72936b4f83"
       }
     },
     {
@@ -245049,8 +245053,8 @@
       "parentTool": "build_environment",
       "dispatchAction": "create_landscape",
       "domain": "environment",
-      "schemaHash": "97a7ce4c0a34483b47aed556e7405f40ebc79d63c4dd235ea2ac5731a05339f3",
-      "contentHash": "c7c801b8a45514d458c3497115c61c79847ddd744660027aa3609f32efe3951f"
+      "schemaHash": "9479149eccd70d296e53dcc70e0bb396d1ca4fecc3596324b6f4543f177fe040",
+      "contentHash": "2246df82bd421f49975c3bc4d46f52a1a83f70cf3a45286e60830f72936b4f83"
     },
     {
       "id": "build_environment.create_landscape_grass_type",
