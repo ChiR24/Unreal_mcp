@@ -53,23 +53,27 @@ bool AppendObject(const TSharedPtr<FJsonObject>& Object, FString& Out)
 		Out.Append(TEXT("{}"));
 		return true;
 	}
-	TArray<FString> Keys;
-	Keys.Reserve(Object->Values.Num());
+	// Carry the value along with the key: FJsonObject's key type is FString before
+	// UE 5.8 and UE::FSharedString from 5.8 on, so a TArray<FString> of keys can no
+	// longer be used to index back into the map.
+	TArray<TPair<FString, TSharedPtr<FJsonValue>>> Entries;
+	Entries.Reserve(Object->Values.Num());
 	for (const auto& Pair : Object->Values)
 	{
-		Keys.Add(Pair.Key);
+		Entries.Emplace(FString(*Pair.Key), Pair.Value);
 	}
 	// UE FString relational operators are case-INsensitive; discovery output is
 	// diffed against JSON.stringify key order, which is by code unit.
-	Keys.Sort([](const FString& L, const FString& R) { return L.Compare(R, ESearchCase::CaseSensitive) < 0; });
+	Entries.Sort([](const TPair<FString, TSharedPtr<FJsonValue>>& L, const TPair<FString, TSharedPtr<FJsonValue>>& R)
+		{ return L.Key.Compare(R.Key, ESearchCase::CaseSensitive) < 0; });
 
 	Out.AppendChar(TEXT('{'));
-	for (int32 Index = 0; Index < Keys.Num(); ++Index)
+	for (int32 Index = 0; Index < Entries.Num(); ++Index)
 	{
 		if (Index > 0) Out.AppendChar(TEXT(','));
-		AppendEscaped(Keys[Index], Out);
+		AppendEscaped(Entries[Index].Key, Out);
 		Out.AppendChar(TEXT(':'));
-		if (!AppendValue(Object->Values[Keys[Index]], Out)) return false;
+		if (!AppendValue(Entries[Index].Value, Out)) return false;
 	}
 	Out.AppendChar(TEXT('}'));
 	return true;

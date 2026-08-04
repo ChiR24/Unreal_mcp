@@ -20,7 +20,7 @@ TSharedPtr<FJsonObject> MigratedParams(const TSharedPtr<FJsonObject>& Arguments)
 		{
 			Merged->Values = (*Nested)->Values;
 		}
-		for (const TPair<FString, TSharedPtr<FJsonValue>>& Field : Arguments->Values)
+		for (const auto& Field : Arguments->Values)
 		{
 			Merged->Values.Add(Field.Key, Field.Value);
 		}

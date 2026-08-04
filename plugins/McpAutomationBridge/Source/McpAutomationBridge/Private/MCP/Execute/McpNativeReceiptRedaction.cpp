@@ -163,13 +163,13 @@ void MaskSecretsDeepInternal(const TSharedPtr<FJsonObject>& Object, int32 Depth)
 	{
 		return;
 	}
-	for (TPair<FString, TSharedPtr<FJsonValue>>& Pair : Object->Values)
+	for (auto& Pair : Object->Values)
 	{
 		// A secret-named KEY masks its ENTIRE value whatever the value's shape:
 		// an object, an array and a number can each carry a credential just as
 		// well as a string, and recursing would only find leaves that no longer
 		// carry the keyword context the string masker needs.
-		if (McpIsSecretKey(Pair.Key))
+		if (McpIsSecretKey(FString(*Pair.Key)))
 		{
 			Pair.Value = MakeShared<FJsonValueString>(TEXT("[REDACTED]"));
 			continue;
