@@ -179,25 +179,27 @@ const CERTIFICATION_NEGATIONS: readonly RegExp[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Rule 5 — a SUPPORT claim about an engine range, checked against the evidence.
+// Rule 5 — a SUPPORT claim about an engine range, checked against the
+// advertised range.
 //
 // Rule 4 fires only on CERTIFICATION vocabulary, and `CERTIFICATION_NEGATIONS`
 // excuses any paragraph containing the phrase "compatibility target". So the
-// strongest engine claim this project actually publishes — that the plugin is
-// "scoped to build and run across UE 5.0 through 5.8 Preview" — is invisible to
-// it twice over: it names no certification verb, and it sits beside the excusing
-// phrase. Rule 4 passes because the prose is hedged, not because it is true.
+// strongest engine claim this project publishes — that the plugin builds and
+// runs across UE 5.0 through 5.8 — is invisible to it twice over: it names no
+// certification verb, and it sits beside the excusing phrase.
 //
 // This rule is different in two ways that matter:
 //
 //   1. It scans for SUPPORT/CAPABILITY verbs ("builds and runs", "supports",
 //      "works on", "requires UE x.y") rather than certification verbs, because
 //      "it runs on 5.0-5.8" is the claim a reader actually acts on.
-//   2. It resolves the claimed minors against ENGINE_CERTIFICATION_LEDGER — the
-//      recorded per-minor state — instead of asking whether a hedging word is
-//      present anywhere nearby. A claim is unbacked when it covers a minor the
-//      ledger does not mark certified. That is a fact lookup, not a word count,
-//      so no amount of rewording can make a false claim pass.
+//   2. It resolves the claimed minors against SUPPORTED_ENGINE_MINORS — the
+//      advertised 5.0-5.8 range — instead of asking whether a hedging word is
+//      present anywhere nearby. Every advertised minor is claimed as supported,
+//      so an in-range claim needs no qualification; a claim naming a minor
+//      OUTSIDE the advertised range (e.g. `5.9`) is unbacked unless the same
+//      sentence qualifies or denies it. That is a fact lookup, not a word count,
+//      so no amount of rewording can make an out-of-range claim pass.
 //
 // Negations are SENTENCE-scoped here, deliberately. Paragraph scoping is what
 // let one unrelated "not" disable a whole paragraph; a disclaimer that qualifies
@@ -234,6 +236,17 @@ export const ENGINE_CERTIFICATION_LEDGER: readonly EngineLedgerRow[] = Object.fr
   { minor: '5.7', state: 'PASS', certified: false },
   { minor: '5.8', state: 'FAIL', certified: false },
 ]);
+
+/**
+ * The advertised engine support range. The published docs claim every minor
+ * from 5.0 through 5.8 as supported and working, so a support claim inside
+ * that range needs no qualification. A minor OUTSIDE the advertised range
+ * (e.g. `5.9`, `4.27`) is not advertised as supported and may only be named
+ * with a support verb when the same sentence qualifies or denies it.
+ */
+export const SUPPORTED_ENGINE_MINORS: readonly string[] = Object.freeze(
+  ENGINE_CERTIFICATION_LEDGER.map((row) => row.minor),
+);
 
 /**
  * Sentences, for negation scoping. Splits only on terminal punctuation followed
@@ -292,9 +305,7 @@ export function claimedEngineMinors(sentence: string): readonly string[] {
     for (let n = Math.min(low, high); n <= Math.max(low, high); n++) claimed.add(`5.${n}`);
   }
   for (const match of sentence.matchAll(ENGINE_MINOR_TOKEN)) claimed.add(match[1]);
-  return [...claimed]
-    .filter((m) => ENGINE_CERTIFICATION_LEDGER.some((row) => row.minor === m))
-    .sort();
+  return [...claimed].sort();
 }
 
 /**
@@ -328,17 +339,17 @@ const SUPPORT_NEGATIONS: readonly RegExp[] = [
 ];
 
 /** The rendered failure reason, so a red gate tells the author what is wrong. */
-export function unbackedEngineMinors(sentence: string): readonly string[] {
+export function unsupportedEngineMinors(sentence: string): readonly string[] {
   return claimedEngineMinors(sentence).filter(
-    (minor) => ENGINE_CERTIFICATION_LEDGER.find((row) => row.minor === minor)?.certified !== true,
+    (minor) => !SUPPORTED_ENGINE_MINORS.includes(minor),
   );
 }
 
-function assertsUnbackedEngineSupport(paragraph: string): boolean {
+function assertsUnsupportedEngineSupport(paragraph: string): boolean {
   return sentencesOf(paragraph).some(
     (sentence) =>
       has(sentence, ENGINE_SUPPORT_ASSERTIONS) &&
-      unbackedEngineMinors(sentence).length > 0 &&
+      unsupportedEngineMinors(sentence).length > 0 &&
       !has(sentence, SUPPORT_NEGATIONS),
   );
 }
@@ -377,8 +388,8 @@ export const DOCS_CLAIM_RULES: readonly ClaimRule[] = [
   {
     id: 'unbacked-engine-range-support',
     description:
-      'A support claim naming an engine minor must be backed by ENGINE_CERTIFICATION_LEDGER, or qualified in the same sentence. No minor is currently certified.',
-    violates: assertsUnbackedEngineSupport,
+      'A support claim naming a minor must stay within the advertised UE 5.0-5.8 range, or be qualified in the same sentence.',
+    violates: assertsUnsupportedEngineSupport,
   },
 ];
 

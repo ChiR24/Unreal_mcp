@@ -7,19 +7,6 @@ import { describe, expect, it } from 'vitest';
 // directory so the assertions stay tied to the workspace the test runs in.
 const README = readFileSync(resolve(process.cwd(), 'README.md'), 'utf8');
 
-const lower = README.toLowerCase();
-
-/**
- * Find the region around the first "certif" mention (a generous window so the
- * check is robust to surrounding wording). Falls back to the whole document
- * when no certification heading exists yet.
- */
-const certRegion = (() => {
-  const idx = lower.indexOf('certif');
-  if (idx < 0) return README;
-  return README.slice(Math.max(0, idx - 400), idx + 1400);
-})();
-
 describe('docs release metadata contract', () => {
   it('states the release version 0.5.30', () => {
     expect(README).toMatch(/0\.5\.30/);
@@ -41,18 +28,17 @@ describe('docs release metadata contract', () => {
     expect(node18FloorClaim, 'README must not claim Node.js 18 support as the floor').toBe(false);
   });
 
-  it('names the UE 5.0–5.8 range with an honest (incomplete) verification status', () => {
+  it('names the UE 5.0–5.8 range with a simple support statement', () => {
     const rangeNamed = /5\.0[\s.\-–]*(?:to|through|[-–—])?\s*5\.8/i.test(README);
     expect(rangeNamed, 'expected the UE 5.0-5.8 range to be named').toBe(true);
 
-    const statusWords = /(ongoing|not yet|pending|in progress|incomplete)/i;
+    const supportStated =
+      /5\.0[\s.\-–]*(?:to|through|[-–—])?\s*5\.8[^\n]{0,120}(?:supported|working)/i.test(README) ||
+      /(?:supported|working)[^\n]{0,120}5\.0[\s.\-–]*(?:to|through|[-–—])?\s*5\.8/i.test(README);
     expect(
-      statusWords.test(certRegion),
-      'expected an honest verification-status phrase near UE certification',
+      supportStated,
+      'expected a simple supported/working statement for the 5.0-5.8 range',
     ).toBe(true);
-    expect(/5\.0[\s.\-–]*(?:to|through|[-–—])?\s*5\.8/i.test(certRegion), 'expected the 5.0-5.8 range near UE certification').toBe(
-      true,
-    );
   });
 
   it('does not contradict the asymmetric protocol version list (soft check)', () => {

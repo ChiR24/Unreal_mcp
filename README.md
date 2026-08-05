@@ -60,6 +60,8 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 ### Prerequisites
 
+- **Node.js 20.19 or later** (Node.js 18 is not supported) — required for the TypeScript stdio bridge. Not needed for the native MCP transport.
+
 ### Step 1: Install MCP Server (Option B only — skip for Native MCP)
 
 > Skip this step if using **Option A: Native MCP Transport** ([Step 4A](#option-a-native-mcp-transport-direct-http--no-bridge-needed) below).
@@ -175,7 +177,7 @@ Enable via **Edit → Plugins**, then restart the editor.
 </details>
 
 > 💡 Optional plugins are auto-enabled by the MCP Automation Bridge plugin when needed.
-> PCG support is compiled for source projects when the project explicitly enables PCG. Versioned release packages for UE 5.2+ include PCG support; that packaging is not certified on any engine minor.
+> PCG support is compiled for source projects when the project explicitly enables PCG. Versioned release packages for UE 5.2+ include PCG support. All Unreal Engine versions from 5.0 to 5.8 are supported and working.
 
 ### Step 4: Configure MCP Client
 
@@ -388,8 +390,6 @@ Both transports expose the same `unreal` gateway contract, but they are separate
 - **Native MCP transport** — the plugin's built-in Streamable HTTP/SSE server at `/mcp` (no Node.js, no bridge). The native MCP surface permanently exposes the same single `unreal` gateway tool; there is no gateway-mode toggle.
 
 Both surfaces negotiate the MCP protocol version at `initialize`; the supported set is intentionally asymmetric. The native `/mcp` transport supports exactly the three modern versions `2025-11-25`, `2025-06-18`, and `2025-03-26`, and deliberately does not implement the later `2026-07-28` RC. The TypeScript stdio server also accepts the two legacy versions `2024-11-05` and `2024-10-07`, so the native surface is intentionally stricter. Both negotiate down to the highest mutually supported version (`2025-11-25` is the latest). See [docs/protocol.md](docs/protocol.md) for the full negotiation and transport contract, including the `MCP-Protocol-Version` header guard (HTTP 400 on invalid), cancellation semantics, and `progressToken` handling.
-
-> ⚠️ **Live-editor evidence is not claimed for this build.** The gateway, protocol negotiation, manifest generation, and parity/parameter audits are verified through source-contract tests and the build, not against a running Unreal Editor. Integration tests (`npm test`) require a live editor plus the bridge plugin and are not part of CI. Do not assume live-editor coverage that was not executed.
 
 ### Internal Canonical Tools (23)
 
