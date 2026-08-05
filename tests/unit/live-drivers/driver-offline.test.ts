@@ -243,9 +243,16 @@ function stdioHarness(env: Record<string, string> = {}) {
 
 /** Read every JSON frame the driver wrote to the child's stdin. */
 function sent(child: FakeChild): Record<string, unknown>[] {
-  const raw = child.stdin.read();
-  if (raw === null) return [];
-  return String(raw).split('\n').filter((line) => line.trim().length > 0).map((line) => JSON.parse(line));
+  // PassThrough.read() returns ONE buffered chunk per call, and the driver
+  // writes each frame as its own write. Drain until null so every frame the
+  // driver produced is observed, not just the first chunk.
+  const frames: Record<string, unknown>[] = [];
+  for (let raw = child.stdin.read(); raw !== null; raw = child.stdin.read()) {
+    frames.push(
+      ...String(raw).split('\n').filter((line) => line.trim().length > 0).map((line) => JSON.parse(line)),
+    );
+  }
+  return frames;
 }
 
 describe('stdio driver — handshake, correlation, auth', () => {

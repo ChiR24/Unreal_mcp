@@ -107,12 +107,17 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
   // calling themselves idempotent. Only those 23 content hashes move; the
   // manage_audio and manage_networking records and the 208-record membership
   // above are unchanged.
+  //
+  // Re-pinned by the requiredOneOf audit: utility records now declare
+  // at-least-one-of groups (e.g. mute_player, add_metasound_node), which moves
+  // their schema hashes, and the example synthesizer satisfies those groups so
+  // the first example of every utility record survives its own input schema.
   it('matches the pinned canonical ID/schema/content hash', () => {
     const body = UTILITY_CAPABILITY_CATALOG.map(
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('8760cd06345f062fddd29401fae5b1d81b8827311b35deb1d938900fd90ec873');
+      .toBe('df25616a1f26553cabb9e99a9eeb67c77e05d98da0189fc5d79fc40f4858552a');
   });
 
   it('retains stable record hashes after recomputation', () => {

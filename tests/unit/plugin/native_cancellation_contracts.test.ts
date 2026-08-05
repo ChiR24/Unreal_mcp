@@ -32,7 +32,7 @@ const pluginRoot = resolve(
 );
 
 const read = (rel: string): string =>
-  readFileSync(resolve(pluginRoot, rel), 'utf8');
+  readFileSync(resolve(pluginRoot, rel), 'utf8').replace(/\r\n/g, '\n');
 
 const header = read('MCP/Transport/McpNativeTransport.h');
 const privateH = read('MCP/Transport/McpNativeTransportPrivate.h');

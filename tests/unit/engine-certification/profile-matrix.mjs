@@ -176,7 +176,7 @@ export function collectNativeGates(spec) {
   for (const file of sourceFiles(join(moduleRoot, 'Private'))) {
     const text = readFileSync(file, 'utf8');
     if (!text.includes('ENGINE_MINOR_VERSION')) continue;
-    for (const [index, line] of text.split('\n').entries()) {
+    for (const [index, line] of text.split(/\r?\n/u).entries()) {
       const match = /^\s*#\s*(?:if|elif)\s+(.*ENGINE_(?:MAJOR|MINOR)_VERSION.*)$/u.exec(line);
       if (match === null) continue;
       conditions.push({ file: relative(spec.pluginRoot, file), line: index + 1, condition: String(match[1]).split('//')[0].trim() });

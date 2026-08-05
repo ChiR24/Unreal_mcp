@@ -200,7 +200,10 @@ export function evaluateCompatibilityMacros(text, defines) {
   const inside = () => stack.every((frame) => frame.active === true);
   const blocked = () => stack.some((frame) => frame.active === false);
 
-  const lines = text.split('\n');
+  // Windows checkouts may carry CRLF. `$` never matches before a trailing `\r`
+  // (`.` excludes line terminators), which would silently drop every directive
+  // on a CRLF line, so normalize the separator before walking the file.
+  const lines = text.split(/\r?\n/u);
   for (const [index, line] of lines.entries()) {
     const directive = DIRECTIVE.exec(line);
     if (directive === null) continue;
