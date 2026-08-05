@@ -12,6 +12,7 @@ public:
 	{
 		FMcpSchemaBuilder Schema;
 			Schema.ArrayOfObjects(TEXT("additionalOutputs"), TEXT("Additional named output definitions."));
+			Schema.String(TEXT("alphaTexture"), TEXT("Alpha channel source."));
 			Schema.Number(TEXT("amount"), TEXT("Desaturation amount (0-1)."));
 			Schema.String(TEXT("assetPath"), TEXT("Asset /Game path."));
 			Schema.AnyValue(TEXT("assetPaths"), TEXT("Explicit asset paths to delete."));

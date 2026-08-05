@@ -155,6 +155,7 @@ export const gatewayManifest = {
         "name",
         "newBoneName",
         "nodeName",
+        "notifyClass",
         "notifyName",
         "numFrames",
         "outputPath",
@@ -471,6 +472,10 @@ export const gatewayManifest = {
           "nodeName": {
             "type": "string",
             "description": "Graph node name."
+          },
+          "notifyClass": {
+            "type": "string",
+            "description": "AnimNotify (or AnimNotifyState) class name; prefixed with AnimNotify_/AnimNotifyState_ automatically when missing."
           },
           "notifyName": {
             "type": "string",
@@ -2328,6 +2333,7 @@ export const gatewayManifest = {
         "arguments",
         "blueprintPath",
         "childActor",
+        "class",
         "className",
         "classPath",
         "collisionEnabled",
@@ -2389,6 +2395,10 @@ export const gatewayManifest = {
           "childActor": {
             "type": "string",
             "description": "Child actor name to attach."
+          },
+          "class": {
+            "type": "string",
+            "description": "Unreal class name or path (alias of className)."
           },
           "className": {
             "type": "string",
@@ -4231,6 +4241,7 @@ export const gatewayManifest = {
       ],
       "parameterNames": [
         "additionalOutputs",
+        "alphaTexture",
         "amount",
         "assetPath",
         "assetPaths",
@@ -4400,6 +4411,10 @@ export const gatewayManifest = {
               "x-unreal-reflection-boundary": true
             },
             "description": "Additional named output definitions."
+          },
+          "alphaTexture": {
+            "type": "string",
+            "description": "Alpha channel source."
           },
           "amount": {
             "type": "number",
@@ -5490,6 +5505,7 @@ export const gatewayManifest = {
         "lowPassFilterFrequency",
         "mixName",
         "name",
+        "nodeClassName",
         "nodeType",
         "occlusionFilterScale",
         "occlusionInterpolationTime",
@@ -5650,6 +5666,10 @@ export const gatewayManifest = {
           "name": {
             "type": "string",
             "description": "name"
+          },
+          "nodeClassName": {
+            "type": "string",
+            "description": "nodeClassName"
           },
           "nodeType": {
             "type": "string",

@@ -276,6 +276,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Graph node name."
         },
+        "notifyClass": {
+          "type": "string",
+          "description": "AnimNotify (or AnimNotifyState) class name; prefixed with AnimNotify_/AnimNotifyState_ automatically when missing."
+        },
         "notifyName": {
           "type": "string",
           "description": "Animation notify name."
@@ -1942,6 +1946,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "childActor": {
           "type": "string",
           "description": "Child actor name to attach."
+        },
+        "class": {
+          "type": "string",
+          "description": "Unreal class name or path (alias of className)."
         },
         "className": {
           "type": "string",
@@ -3904,6 +3912,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Additional named output definitions."
         },
+        "alphaTexture": {
+          "type": "string",
+          "description": "Alpha channel source."
+        },
         "amount": {
           "type": "number",
           "description": "Desaturation amount (0-1)."
@@ -5107,6 +5119,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "name": {
           "type": "string",
           "description": "name"
+        },
+        "nodeClassName": {
+          "type": "string",
+          "description": "nodeClassName"
         },
         "nodeType": {
           "type": "string",

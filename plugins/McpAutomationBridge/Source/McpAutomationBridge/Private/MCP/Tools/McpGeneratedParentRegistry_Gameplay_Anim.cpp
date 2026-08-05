@@ -67,6 +67,7 @@ public:
 			Schema.String(TEXT("name"), TEXT("Name for the created asset or actor."));
 			Schema.String(TEXT("newBoneName"), TEXT("Replacement bone name."));
 			Schema.String(TEXT("nodeName"), TEXT("Graph node name."));
+			Schema.String(TEXT("notifyClass"), TEXT("AnimNotify (or AnimNotifyState) class name; prefixed with AnimNotify_/AnimNotifyState_ automatically when missing."));
 			Schema.String(TEXT("notifyName"), TEXT("Animation notify name."));
 			Schema.Number(TEXT("numFrames"), TEXT("Numeric parameter."));
 			Schema.String(TEXT("outputPath"), TEXT("Canonical /Game path for the generated Physics Asset."));

@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 1335;
-export const CATALOG_REVISION = "7f13839629e24dd7";
+export const CATALOG_REVISION = "fc1c618f8c1b249d";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -1470,6 +1470,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Canonical /Game asset path."
           },
+          "notifyClass": {
+            "type": "string",
+            "description": "AnimNotify (or AnimNotifyState) class name; prefixed with AnimNotify_/AnimNotifyState_ automatically when missing."
+          },
           "notifyName": {
             "type": "string",
             "description": "Animation notify name."
@@ -1480,7 +1484,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "notifyClass",
+          "notifyName"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1603,8 +1611,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "af74870f9a775063b57081a058ff971df21fb651260c4930d8f5c1cffdf34ab6",
-      "content": "7a3d71690022ceadbf04751ee80dcf779692852124f3d8d0f8cc29516579329b"
+      "schema": "b58943ca8514cc8ca97cbe28240829e15d41f668c600aabd07fa051101f56d10",
+      "content": "fc8edc3614253ae7719e0b520a3ecfef57f4cd263e94942fc7c47a6356328153"
     }
   },
   {
@@ -1995,6 +2003,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Canonical /Game Animation asset path."
           },
+          "notifyClass": {
+            "type": "string",
+            "description": "AnimNotify (or AnimNotifyState) class name; prefixed with AnimNotify_/AnimNotifyState_ automatically when missing."
+          },
           "notifyName": {
             "type": "string",
             "description": "Animation notify name."
@@ -2005,7 +2017,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "notifyClass",
+          "notifyName"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -2128,8 +2144,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "9fc10f575e7bc530a8289502ad7fe633ec11727fe58f5b6026ff30ed1102fce5",
-      "content": "eb26fe578b0bed857719726a885bf233eac80a0021bc8d85bee1e8ec57ed2fe6"
+      "schema": "544288ff23959a5f47affea7ea121289edeeba0342431efe75e798c89991d7dd",
+      "content": "328c7eab992f1ef3262d9ffc84106c7977d84646b57f458434fad0fae8e72dab"
     }
   },
   {
@@ -2168,6 +2184,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Canonical /Game Animation asset path."
           },
+          "notifyClass": {
+            "type": "string",
+            "description": "AnimNotify (or AnimNotifyState) class name; prefixed with AnimNotify_/AnimNotifyState_ automatically when missing."
+          },
           "notifyName": {
             "type": "string",
             "description": "Animation notify name."
@@ -2190,7 +2210,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "notifyClass",
+          "notifyName"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -2315,8 +2339,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "3371113425ebf185190f26cd1b712580135fc47953e9b2f7b688cd9b1a93abc6",
-      "content": "85fdd1bcf4f9e34c0781b94b5b77db6be272c7557ce22a72ac73a280fd32bacd"
+      "schema": "b2a2f9f8a84a480b164178fa8d6e51e3b06167291e1b53171587b3ad802c9fcf",
+      "content": "ab3193730440ed039b9fbfb700c3504f4d999ad783cce13e64a023f0bf7b7d50"
     }
   },
   {
@@ -15915,7 +15939,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "assetPaths",
+          "folderPath"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -16040,8 +16068,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "45edb8841a3411a73bcbf30ccf27fcb43a986e7904e2e1bb0d781f58b96b838c",
-      "content": "fdcf311a270f863732de8902ff306fd2c20d4ea91ccba3b8a26ba8c507655d6d"
+      "schema": "29a35500820781b00684faadfba5b62d96c414ec1580444e6ca4719366b3b487",
+      "content": "8c58a8bd4bb372f4f488756a07212fc579575e9fe384c5136dfc055988810973"
     }
   },
   {
@@ -16113,7 +16141,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "assetPaths",
+          "folderPath"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -16236,8 +16268,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "d6693082f5e12aa69567cf1741ea4821f193dded3dccd1f7effa944fdf80a120",
-      "content": "7e75eb0fc1c59a9e655b44ed6e6178e1a9b8903cb699cd49e4442e400008ce13"
+      "schema": "c9d3d74d47d41c2733b69d55bc983e8d6df379f8dd04ef9daef8853bc40c0d7f",
+      "content": "a3126f13bbb61c7df209c53a090dc32d7bd718eb95ede797d779a00ac168e8b0"
     }
   },
   {
@@ -17972,7 +18004,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "directoryPath",
+          "path"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -18092,8 +18128,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b521ae76c39589ff9c333a2cde46c3368e969a9ec8d7e2d91dcf5e773f7187e0",
-      "content": "b7e9097ae91c7d1803d47a16a0560db2760c2039ddbb0330b3aacbb252871d39"
+      "schema": "062d6e3621bfc18bb8f6b9b66f3473f15bbb36c72cbf0444c5c579d64a80ae2b",
+      "content": "1d0dfeb116c39c94a1f949a987118d290be6aa1a3cb2afd59f53683477210fe2"
     }
   },
   {
@@ -72155,13 +72191,25 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "className": {
             "type": "string",
             "description": "Unreal class name or path to find actors by class."
+          },
+          "class": {
+            "type": "string",
+            "description": "Unreal class name or path (alias of className)."
+          },
+          "classPath": {
+            "type": "string",
+            "description": "Unreal class path (e.g. /Script/Engine.PointLight) for the actor to spawn."
           }
         },
         "required": [
-          "action",
-          "className"
+          "action"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "className",
+          "class",
+          "classPath"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -72319,8 +72367,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "10c4e15804cd3d5c44efcb8f9c201801c7a07ca1ace1feda7a8691490608a5ea",
-      "content": "12aab16c5cee55de534e27f456eac024c0e9b2b5c8cc030fc0fe017d1d405be4"
+      "schema": "733b4afeafa396f1db73068a1cc37944c3ad29f2f19841582c5a68bc5e039cfb",
+      "content": "87ca24c7621b0c4f7a347ee8b7a56d0e9a346e75639296b8f1c4d3cdc8c6c667"
     }
   },
   {
@@ -72763,13 +72811,25 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "className": {
             "type": "string",
             "description": "Unreal class name or path to find actors by class."
+          },
+          "class": {
+            "type": "string",
+            "description": "Unreal class name or path (alias of className)."
+          },
+          "classPath": {
+            "type": "string",
+            "description": "Unreal class path (e.g. /Script/Engine.PointLight) for the actor to spawn."
           }
         },
         "required": [
-          "action",
-          "className"
+          "action"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "className",
+          "class",
+          "classPath"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -72926,8 +72986,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "10c4e15804cd3d5c44efcb8f9c201801c7a07ca1ace1feda7a8691490608a5ea",
-      "content": "35aca0f29f32b7ef0b34c2f851efa4c9613819ea2df9b58b9d793f794d1b30ee"
+      "schema": "733b4afeafa396f1db73068a1cc37944c3ad29f2f19841582c5a68bc5e039cfb",
+      "content": "6982da5e325c407ed1ef856e1f87ae901261030750def8254a6d990436b09e4d"
     }
   },
   {
@@ -88031,6 +88091,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
             "type": "string",
             "description": "Package path."
           },
+          "enumPath": {
+            "type": "string",
+            "description": "Asset path of the UserDefinedEnum (e.g. /Game/Enums/E_MyEnum)."
+          },
           "values": {
             "type": "array",
             "items": {
@@ -88039,10 +88103,12 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
             "description": "Initial enum value names."
           }
         },
-        "required": [
-          "name"
-        ],
-        "additionalProperties": false
+        "required": [],
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "name",
+          "enumPath"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -88168,8 +88234,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "ae574fcd19c96e73c5ef9791453751942ac821625ba7c17cad1378bdcd69bc06",
-      "content": "0f865aecdea083ed928da0619177f4365c8310904d02a40d240ff7c4c4cc036a"
+      "schema": "2cca4b7bfc11423a49d275e72c9f81e6fd1dc85b03cdc133effee90aac238f1a",
+      "content": "0f98a8d06f2690c70f2b619b77b2703dbd9a0713c9c5f2507e2d9ff49424cd13"
     }
   },
   {
@@ -93055,7 +93121,13 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "action",
           "propertyName"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "objectPath",
+          "blueprintPath",
+          "actorName",
+          "name"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -93179,8 +93251,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "ab389a783de4ff15eac1e95de660e64c0de419449cd8b11404b822334d4e65d7",
-      "content": "46bc747a64af79fb5e1416d743bc5b97d820051327f0fec0a80e30ece2084ac1"
+      "schema": "023d4dc7173f111c70e1c974d1710cf4c4fa9a691da0f2015d43fd2bce260005",
+      "content": "3d46e2e2c054118b4574d33f3bf41919109b48dd2032eb53b939e9d9708d71b5"
     }
   },
   {
@@ -95708,7 +95780,13 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "action",
           "propertyName"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "objectPath",
+          "blueprintPath",
+          "actorName",
+          "name"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -95829,8 +95907,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "43e69d53c03e9e0ad7c8ed8f516772b405ddc5cfb77ae0767f4fce73e7f54a88",
-      "content": "cf355fa48caddb1b2f9c44c7ee99bf9c591296ab5f9b6280254633f6809b974e"
+      "schema": "21bb8f074013f8242b386da1adde1807dd91201649d46f77adb54b3bb0116eab",
+      "content": "bf6341562a47790bc2c2b3fd2af09e451249bee8e1d73ce86176a7895dbc78a9"
     }
   },
   {
@@ -107397,6 +107475,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
             "type": "string",
             "description": "assetPath"
           },
+          "nodeClassName": {
+            "type": "string",
+            "description": "nodeClassName"
+          },
           "nodeType": {
             "type": "string",
             "description": "nodeType"
@@ -107404,10 +107486,13 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "assetPath",
-          "nodeType"
+          "assetPath"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "nodeClassName",
+          "nodeType"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -107439,7 +107524,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
         "input": {
           "action": "add_metasound_node",
           "assetPath": "/Game/Audio/MetaSounds/MS_EngineTone",
-          "nodeType": "WavePlayer"
+          "nodeClassName": "UE.Sine.Audio"
         },
         "output": {
           "success": true,
@@ -107535,8 +107620,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "597e2ce1ce6991873797dc815bb99fb824096a1afac3dfbed1c289b6f885ecf0",
-      "content": "4d4b6585cc13d65c44132b40d3470da75949ffd318c2ae0c41f756b9770e509a"
+      "schema": "aa22be4a88f83d8c2a433dc612f2d64d71f41903f1968a5f43482e057eb21690",
+      "content": "ad8e48142580d6ddaf92fc9808b869b9c586992cad52c5e5a6d1261fbacd6742"
     }
   },
   {
@@ -166387,7 +166472,11 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         "required": [
           "lootTablePath"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "entryIndex",
+          "itemPath"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -166511,8 +166600,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "21c65722a5bf211062421aa0e019e255f4d662c9d8c79f326f32ab921373bc14",
-      "content": "cd0037e48fa5f93b97b145f8570fa9e27cf2ae7d7e8280af65a702b6224c0763"
+      "schema": "f82fde0528e04f91c5056890f75f2f32e031ddcecd17aa616528750203b4ff90",
+      "content": "c9813a129d7c20f0b5d572bf00f694cdbb07e7ec8211bde7d8f94c131677ca90"
     }
   },
   {
@@ -189747,7 +189836,11 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "required": [
           "action"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "playerName",
+          "targetPlayerId"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -189772,7 +189865,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       {
         "title": "Set mute state for an online player.",
         "input": {
-          "action": "mute_player"
+          "action": "mute_player",
+          "playerName": "PlayerOne"
         },
         "output": {
           "success": true,
@@ -189869,8 +189963,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "4a1f751901bbc25866b656ed25bdc08e15f5261ccc8899da0660508e9b1b62c1",
-      "content": "cfe8667dc6c4d5f301e2d3284a896d56fbebb67f56098d55343f3e8d0b316d63"
+      "schema": "1c3ff0336569c2735b1ffaf891f9f4d7d360eccce2e8668bb98a53bf9af4016f",
+      "content": "62c1ee67235d081cb200523d0f752ceac117f4d0358ad102e4f98e82fd79220a"
     }
   },
   {
@@ -206027,6 +206121,10 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
             "type": "string",
             "description": "Material /Game asset path."
           },
+          "assetPath": {
+            "type": "string",
+            "description": "Material asset path (accepted in place of materialPath)."
+          },
           "sourceNodeId": {
             "type": "string",
             "description": "Source node ID."
@@ -206045,11 +206143,14 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "materialPath",
           "sourceNodeId",
           "targetNodeId"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "materialPath",
+          "assetPath"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -206174,8 +206275,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "32f1dd6186296880e7e9a02a90c408d39e357e8e8f36208a22aceedb56ccb99a",
-      "content": "7b8226b9a9bec41a492c049f73c624d435de2265a6e7fb1fbcc6cbd31ec3709d"
+      "schema": "73d94d85607a69fba5ab6e39cbe32f5eaedc6a1c88c4e493efe5adc55fe1e32f",
+      "content": "588a657338c9158510e9d2446b54fa57e98c6f5d81da03822c4a76e5348858c2"
     }
   },
   {
@@ -206210,6 +206311,10 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
             "type": "string",
             "description": "Material /Game asset path."
           },
+          "assetPath": {
+            "type": "string",
+            "description": "Material asset path (accepted in place of materialPath)."
+          },
           "sourceNodeId": {
             "type": "string",
             "description": "Source node ID."
@@ -206232,11 +206337,14 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "materialPath",
           "sourceNodeId",
           "targetNodeId"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "materialPath",
+          "assetPath"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -206360,8 +206468,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "192d8bd744e3626231d946b8f255d25a6d7bd0b20246da02e6602fe36f2c2477",
-      "content": "8fea03c9540864a46adb95b6a549fa070d5a5363fa45430b05c9faa5b58aad33"
+      "schema": "19d1b123d3c8db007982d0c4effbac8f3da0870f6fc02ef1be6c6c25b75678be",
+      "content": "b5bd4028b8e41626b9bec41a85b4d6325d8477756cc7cdc2c9b8bbcc25cd8f43"
     }
   },
   {
@@ -211870,10 +211978,13 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "required": [
           "action",
           "path",
-          "actorName",
           "frame"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "bindingId",
+          "actorName"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -212004,8 +212115,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "9fec3fd9baf9065b7df7b91fb26086ab444bb031695daa19378311f61b0ee6ae",
-      "content": "8e3eed4647d44e9a0357a09a83f54c846e878263a96be8fcde9bfc1094016df5"
+      "schema": "698fb4bd451fa6e918754f76778f7a732c33c978097abff53452bf2014b15fc3",
+      "content": "44545e210d9bf7288a75555f22e6c6948506f91145a9edbe6fcf1e0aaa60417f"
     }
   },
   {
@@ -239734,18 +239845,25 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
             "type": "string",
             "description": "Blue channel source."
           },
+          "alphaTexture": {
+            "type": "string",
+            "description": "Alpha channel source."
+          },
           "outputPath": {
             "type": "string",
             "description": "Output texture path."
           }
         },
         "required": [
+          "outputPath"
+        ],
+        "additionalProperties": false,
+        "requiredOneOf": [
           "redTexture",
           "greenTexture",
           "blueTexture",
-          "outputPath"
-        ],
-        "additionalProperties": false
+          "alphaTexture"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -239868,8 +239986,8 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "51c86c3efab0511552dcf48f911ed1796f56f5d9283bafa01932acf0a757c534",
-      "content": "238d6482bf98cc8e17a4f4543c0187a1ac66b2373791b226a86afe88510e75d3"
+      "schema": "8defa55b5cea00a86e57adfc03321a55382e96287dbe721c0ed2bd27e34b409a",
+      "content": "c8fc05598bef0f815479cada23015e5215bf0846223c5616005ea77f9c1d3e72"
     }
   },
   {
@@ -242775,8 +242893,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "add_montage_notify",
     "domain": "animation physics",
-    "schemaHash": "af74870f9a775063b57081a058ff971df21fb651260c4930d8f5c1cffdf34ab6",
-    "contentHash": "7a3d71690022ceadbf04751ee80dcf779692852124f3d8d0f8cc29516579329b"
+    "schemaHash": "b58943ca8514cc8ca97cbe28240829e15d41f668c600aabd07fa051101f56d10",
+    "contentHash": "fc8edc3614253ae7719e0b520a3ecfef57f4cd263e94942fc7c47a6356328153"
   },
   {
     "id": "animation_physics.add_montage_section",
@@ -242799,16 +242917,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "add_notify",
     "domain": "animation physics",
-    "schemaHash": "9fc10f575e7bc530a8289502ad7fe633ec11727fe58f5b6026ff30ed1102fce5",
-    "contentHash": "eb26fe578b0bed857719726a885bf233eac80a0021bc8d85bee1e8ec57ed2fe6"
+    "schemaHash": "544288ff23959a5f47affea7ea121289edeeba0342431efe75e798c89991d7dd",
+    "contentHash": "328c7eab992f1ef3262d9ffc84106c7977d84646b57f458434fad0fae8e72dab"
   },
   {
     "id": "animation_physics.add_notify_state",
     "parentTool": "animation_physics",
     "dispatchAction": "add_notify_state",
     "domain": "animation physics",
-    "schemaHash": "3371113425ebf185190f26cd1b712580135fc47953e9b2f7b688cd9b1a93abc6",
-    "contentHash": "85fdd1bcf4f9e34c0781b94b5b77db6be272c7557ce22a72ac73a280fd32bacd"
+    "schemaHash": "b2a2f9f8a84a480b164178fa8d6e51e3b06167291e1b53171587b3ad802c9fcf",
+    "contentHash": "ab3193730440ed039b9fbfb700c3504f4d999ad783cce13e64a023f0bf7b7d50"
   },
   {
     "id": "animation_physics.add_physics_body",
@@ -243423,16 +243541,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "bulk_delete",
     "domain": "asset",
-    "schemaHash": "45edb8841a3411a73bcbf30ccf27fcb43a986e7904e2e1bb0d781f58b96b838c",
-    "contentHash": "fdcf311a270f863732de8902ff306fd2c20d4ea91ccba3b8a26ba8c507655d6d"
+    "schemaHash": "29a35500820781b00684faadfba5b62d96c414ec1580444e6ca4719366b3b487",
+    "contentHash": "8c58a8bd4bb372f4f488756a07212fc579575e9fe384c5136dfc055988810973"
   },
   {
     "id": "asset.bulk_rename",
     "parentTool": "manage_asset",
     "dispatchAction": "bulk_rename",
     "domain": "asset",
-    "schemaHash": "d6693082f5e12aa69567cf1741ea4821f193dded3dccd1f7effa944fdf80a120",
-    "contentHash": "7e75eb0fc1c59a9e655b44ed6e6178e1a9b8903cb699cd49e4442e400008ce13"
+    "schemaHash": "c9d3d74d47d41c2733b69d55bc983e8d6df379f8dd04ef9daef8853bc40c0d7f",
+    "contentHash": "a3126f13bbb61c7df209c53a090dc32d7bd718eb95ede797d779a00ac168e8b0"
   },
   {
     "id": "asset.create_folder",
@@ -243519,8 +243637,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "fixup_redirectors",
     "domain": "asset",
-    "schemaHash": "b521ae76c39589ff9c333a2cde46c3368e969a9ec8d7e2d91dcf5e773f7187e0",
-    "contentHash": "b7e9097ae91c7d1803d47a16a0560db2760c2039ddbb0330b3aacbb252871d39"
+    "schemaHash": "062d6e3621bfc18bb8f6b9b66f3473f15bbb36c72cbf0444c5c579d64a80ae2b",
+    "contentHash": "1d0dfeb116c39c94a1f949a987118d290be6aa1a3cb2afd59f53683477210fe2"
   },
   {
     "id": "asset.generate_lods",
@@ -245847,8 +245965,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "find_actors_by_class",
     "domain": "actor",
-    "schemaHash": "10c4e15804cd3d5c44efcb8f9c201801c7a07ca1ace1feda7a8691490608a5ea",
-    "contentHash": "12aab16c5cee55de534e27f456eac024c0e9b2b5c8cc030fc0fe017d1d405be4"
+    "schemaHash": "733b4afeafa396f1db73068a1cc37944c3ad29f2f19841582c5a68bc5e039cfb",
+    "contentHash": "87ca24c7621b0c4f7a347ee8b7a56d0e9a346e75639296b8f1c4d3cdc8c6c667"
   },
   {
     "id": "control_actor.find_actors_by_name",
@@ -245871,8 +245989,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "find_by_class",
     "domain": "actor",
-    "schemaHash": "10c4e15804cd3d5c44efcb8f9c201801c7a07ca1ace1feda7a8691490608a5ea",
-    "contentHash": "35aca0f29f32b7ef0b34c2f851efa4c9613819ea2df9b58b9d793f794d1b30ee"
+    "schemaHash": "733b4afeafa396f1db73068a1cc37944c3ad29f2f19841582c5a68bc5e039cfb",
+    "contentHash": "6982da5e325c407ed1ef856e1f87ae901261030750def8254a6d990436b09e4d"
   },
   {
     "id": "control_actor.find_by_name",
@@ -246543,8 +246661,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "create_enum",
     "domain": "enum",
-    "schemaHash": "ae574fcd19c96e73c5ef9791453751942ac821625ba7c17cad1378bdcd69bc06",
-    "contentHash": "0f865aecdea083ed928da0619177f4365c8310904d02a40d240ff7c4c4cc036a"
+    "schemaHash": "2cca4b7bfc11423a49d275e72c9f81e6fd1dc85b03cdc133effee90aac238f1a",
+    "contentHash": "0f98a8d06f2690c70f2b619b77b2703dbd9a0713c9c5f2507e2d9ff49424cd13"
   },
   {
     "id": "enum.delete_enum",
@@ -246767,8 +246885,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "get_property",
     "domain": "inspect",
-    "schemaHash": "ab389a783de4ff15eac1e95de660e64c0de419449cd8b11404b822334d4e65d7",
-    "contentHash": "46bc747a64af79fb5e1416d743bc5b97d820051327f0fec0a80e30ece2084ac1"
+    "schemaHash": "023d4dc7173f111c70e1c974d1710cf4c4fa9a691da0f2015d43fd2bce260005",
+    "contentHash": "3d46e2e2c054118b4574d33f3bf41919109b48dd2032eb53b939e9d9708d71b5"
   },
   {
     "id": "inspect.get_scene_stats",
@@ -246887,8 +247005,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "set_property",
     "domain": "inspect",
-    "schemaHash": "43e69d53c03e9e0ad7c8ed8f516772b405ddc5cfb77ae0767f4fce73e7f54a88",
-    "contentHash": "cf355fa48caddb1b2f9c44c7ee99bf9c591296ab5f9b6280254633f6809b974e"
+    "schemaHash": "21bb8f074013f8242b386da1adde1807dd91201649d46f77adb54b3bb0116eab",
+    "contentHash": "bf6341562a47790bc2c2b3fd2af09e451249bee8e1d73ce86176a7895dbc78a9"
   },
   {
     "id": "manage_ai.add_ai_perception_component",
@@ -247407,8 +247525,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "597e2ce1ce6991873797dc815bb99fb824096a1afac3dfbed1c289b6f885ecf0",
-    "contentHash": "4d4b6585cc13d65c44132b40d3470da75949ffd318c2ae0c41f756b9770e509a"
+    "schemaHash": "aa22be4a88f83d8c2a433dc612f2d64d71f41903f1968a5f43482e057eb21690",
+    "contentHash": "ad8e48142580d6ddaf92fc9808b869b9c586992cad52c5e5a6d1261fbacd6742"
   },
   {
     "id": "manage_audio.add_metasound_output",
@@ -250015,8 +250133,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_inventory",
     "dispatchAction": "remove_loot_entry",
     "domain": "manage inventory",
-    "schemaHash": "21c65722a5bf211062421aa0e019e255f4d662c9d8c79f326f32ab921373bc14",
-    "contentHash": "cd0037e48fa5f93b97b145f8570fa9e27cf2ae7d7e8280af65a702b6224c0763"
+    "schemaHash": "f82fde0528e04f91c5056890f75f2f32e031ddcecd17aa616528750203b4ff90",
+    "contentHash": "c9813a129d7c20f0b5d572bf00f694cdbb07e7ec8211bde7d8f94c131677ca90"
   },
   {
     "id": "manage_inventory.set_inventory_replication",
@@ -251015,8 +251133,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_networking",
     "dispatchAction": "manage_sessions",
     "domain": "networking",
-    "schemaHash": "4a1f751901bbc25866b656ed25bdc08e15f5261ccc8899da0660508e9b1b62c1",
-    "contentHash": "cfe8667dc6c4d5f301e2d3284a896d56fbebb67f56098d55343f3e8d0b316d63"
+    "schemaHash": "1c3ff0336569c2735b1ffaf891f9f4d7d360eccce2e8668bb98a53bf9af4016f",
+    "contentHash": "62c1ee67235d081cb200523d0f752ceac117f4d0358ad102e4f98e82fd79220a"
   },
   {
     "id": "manage_networking.remove_legacy_action_mapping",
@@ -251727,16 +251845,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "connect_material_pins",
     "domain": "material",
-    "schemaHash": "32f1dd6186296880e7e9a02a90c408d39e357e8e8f36208a22aceedb56ccb99a",
-    "contentHash": "7b8226b9a9bec41a492c049f73c624d435de2265a6e7fb1fbcc6cbd31ec3709d"
+    "schemaHash": "73d94d85607a69fba5ab6e39cbe32f5eaedc6a1c88c4e493efe5adc55fe1e32f",
+    "contentHash": "588a657338c9158510e9d2446b54fa57e98c6f5d81da03822c4a76e5348858c2"
   },
   {
     "id": "material.connect_nodes",
     "parentTool": "manage_asset",
     "dispatchAction": "connect_nodes",
     "domain": "material",
-    "schemaHash": "192d8bd744e3626231d946b8f255d25a6d7bd0b20246da02e6602fe36f2c2477",
-    "contentHash": "8fea03c9540864a46adb95b6a549fa070d5a5363fa45430b05c9faa5b58aad33"
+    "schemaHash": "19d1b123d3c8db007982d0c4effbac8f3da0870f6fc02ef1be6c6c25b75678be",
+    "contentHash": "b5bd4028b8e41626b9bec41a85b4d6325d8477756cc7cdc2c9b8bbcc25cd8f43"
   },
   {
     "id": "material.create_decal_material",
@@ -251999,8 +252117,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_sequence",
     "dispatchAction": "add_keyframe",
     "domain": "sequence",
-    "schemaHash": "9fec3fd9baf9065b7df7b91fb26086ab444bb031695daa19378311f61b0ee6ae",
-    "contentHash": "8e3eed4647d44e9a0357a09a83f54c846e878263a96be8fcde9bfc1094016df5"
+    "schemaHash": "698fb4bd451fa6e918754f76778f7a732c33c978097abff53452bf2014b15fc3",
+    "contentHash": "44545e210d9bf7288a75555f22e6c6948506f91145a9edbe6fcf1e0aaa60417f"
   },
   {
     "id": "sequence.add_section",
@@ -253255,8 +253373,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "channel_pack",
     "domain": "texture",
-    "schemaHash": "51c86c3efab0511552dcf48f911ed1796f56f5d9283bafa01932acf0a757c534",
-    "contentHash": "238d6482bf98cc8e17a4f4543c0187a1ac66b2373791b226a86afe88510e75d3"
+    "schemaHash": "8defa55b5cea00a86e57adfc03321a55382e96287dbe721c0ed2bd27e34b409a",
+    "contentHash": "c8fc05598bef0f815479cada23015e5215bf0846223c5616005ea77f9c1d3e72"
   },
   {
     "id": "texture.combine_textures",
@@ -276693,8 +276811,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "622bcff6b2a86c2623c2ab46bec72f8569b82702ffbc81a2cd8c9c7350134f91"
   },
   "animation_physics.add_montage_notify": {
-    "schema": "af74870f9a775063b57081a058ff971df21fb651260c4930d8f5c1cffdf34ab6",
-    "content": "7a3d71690022ceadbf04751ee80dcf779692852124f3d8d0f8cc29516579329b"
+    "schema": "b58943ca8514cc8ca97cbe28240829e15d41f668c600aabd07fa051101f56d10",
+    "content": "fc8edc3614253ae7719e0b520a3ecfef57f4cd263e94942fc7c47a6356328153"
   },
   "animation_physics.add_montage_section": {
     "schema": "a1d8d451a444de10f9b346dd27216e620ad7b82716d93c199d8c44c72cbdce29",
@@ -276705,12 +276823,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "02233129e68ab7e07bde426127ff2c8e5e73f5df4904e1045126319a7a0fb6fe"
   },
   "animation_physics.add_notify": {
-    "schema": "9fc10f575e7bc530a8289502ad7fe633ec11727fe58f5b6026ff30ed1102fce5",
-    "content": "eb26fe578b0bed857719726a885bf233eac80a0021bc8d85bee1e8ec57ed2fe6"
+    "schema": "544288ff23959a5f47affea7ea121289edeeba0342431efe75e798c89991d7dd",
+    "content": "328c7eab992f1ef3262d9ffc84106c7977d84646b57f458434fad0fae8e72dab"
   },
   "animation_physics.add_notify_state": {
-    "schema": "3371113425ebf185190f26cd1b712580135fc47953e9b2f7b688cd9b1a93abc6",
-    "content": "85fdd1bcf4f9e34c0781b94b5b77db6be272c7557ce22a72ac73a280fd32bacd"
+    "schema": "b2a2f9f8a84a480b164178fa8d6e51e3b06167291e1b53171587b3ad802c9fcf",
+    "content": "ab3193730440ed039b9fbfb700c3504f4d999ad783cce13e64a023f0bf7b7d50"
   },
   "animation_physics.add_physics_body": {
     "schema": "0cba45759d90ae7bf55e42aff7d85ab94702fa8cecc3f3443e4cb6b941e17c43",
@@ -277017,12 +277135,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c6808cfd1adfe28d903f3949aa24ba57b1bd06448e7c7198bfdc72cb011c018a"
   },
   "asset.bulk_delete": {
-    "schema": "45edb8841a3411a73bcbf30ccf27fcb43a986e7904e2e1bb0d781f58b96b838c",
-    "content": "fdcf311a270f863732de8902ff306fd2c20d4ea91ccba3b8a26ba8c507655d6d"
+    "schema": "29a35500820781b00684faadfba5b62d96c414ec1580444e6ca4719366b3b487",
+    "content": "8c58a8bd4bb372f4f488756a07212fc579575e9fe384c5136dfc055988810973"
   },
   "asset.bulk_rename": {
-    "schema": "d6693082f5e12aa69567cf1741ea4821f193dded3dccd1f7effa944fdf80a120",
-    "content": "7e75eb0fc1c59a9e655b44ed6e6178e1a9b8903cb699cd49e4442e400008ce13"
+    "schema": "c9d3d74d47d41c2733b69d55bc983e8d6df379f8dd04ef9daef8853bc40c0d7f",
+    "content": "a3126f13bbb61c7df209c53a090dc32d7bd718eb95ede797d779a00ac168e8b0"
   },
   "asset.create_folder": {
     "schema": "df22aa27611628e6998c307909134f119a053dfc73c20b553e88e7a8c016a2a8",
@@ -277065,8 +277183,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "0ec9185999738c577f6e072a396d42ffc4578814b45bcdaf5b7c78446b0797fd"
   },
   "asset.fixup_redirectors": {
-    "schema": "b521ae76c39589ff9c333a2cde46c3368e969a9ec8d7e2d91dcf5e773f7187e0",
-    "content": "b7e9097ae91c7d1803d47a16a0560db2760c2039ddbb0330b3aacbb252871d39"
+    "schema": "062d6e3621bfc18bb8f6b9b66f3473f15bbb36c72cbf0444c5c579d64a80ae2b",
+    "content": "1d0dfeb116c39c94a1f949a987118d290be6aa1a3cb2afd59f53683477210fe2"
   },
   "asset.generate_lods": {
     "schema": "2fd4e269a96f755ce6ce911960bdf7f5e8b688574fdf2b0711f3546ebc228e6f",
@@ -278229,8 +278347,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "d7129898d2d1862b80e9777be7685d4b3dd96867465ef346846fd3a15abc4819"
   },
   "control_actor.find_actors_by_class": {
-    "schema": "10c4e15804cd3d5c44efcb8f9c201801c7a07ca1ace1feda7a8691490608a5ea",
-    "content": "12aab16c5cee55de534e27f456eac024c0e9b2b5c8cc030fc0fe017d1d405be4"
+    "schema": "733b4afeafa396f1db73068a1cc37944c3ad29f2f19841582c5a68bc5e039cfb",
+    "content": "87ca24c7621b0c4f7a347ee8b7a56d0e9a346e75639296b8f1c4d3cdc8c6c667"
   },
   "control_actor.find_actors_by_name": {
     "schema": "1638940307922a417b94dcf23987c8892d0b65fdcbe8011776cda3de794406f0",
@@ -278241,8 +278359,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "605d58883377a960ed80a5b8a3cbe8e8eeeeeaac9f8807a61a0bf838ee9662ce"
   },
   "control_actor.find_by_class": {
-    "schema": "10c4e15804cd3d5c44efcb8f9c201801c7a07ca1ace1feda7a8691490608a5ea",
-    "content": "35aca0f29f32b7ef0b34c2f851efa4c9613819ea2df9b58b9d793f794d1b30ee"
+    "schema": "733b4afeafa396f1db73068a1cc37944c3ad29f2f19841582c5a68bc5e039cfb",
+    "content": "6982da5e325c407ed1ef856e1f87ae901261030750def8254a6d990436b09e4d"
   },
   "control_actor.find_by_name": {
     "schema": "1638940307922a417b94dcf23987c8892d0b65fdcbe8011776cda3de794406f0",
@@ -278577,8 +278695,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "919a323df94219a65c8c72154a0fcacf66c258162bdf009e30a54a9685cfec04"
   },
   "enum.create_enum": {
-    "schema": "ae574fcd19c96e73c5ef9791453751942ac821625ba7c17cad1378bdcd69bc06",
-    "content": "0f865aecdea083ed928da0619177f4365c8310904d02a40d240ff7c4c4cc036a"
+    "schema": "2cca4b7bfc11423a49d275e72c9f81e6fd1dc85b03cdc133effee90aac238f1a",
+    "content": "0f98a8d06f2690c70f2b619b77b2703dbd9a0713c9c5f2507e2d9ff49424cd13"
   },
   "enum.delete_enum": {
     "schema": "7c29d6fda67438a93c70057c205ad77742d03234f471cb0e01170f065585c3da",
@@ -278689,8 +278807,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "76201c78c998f8fdf8449922558fbaf18eda331233db7c1cac981f91cdcf0db8"
   },
   "inspect.get_property": {
-    "schema": "ab389a783de4ff15eac1e95de660e64c0de419449cd8b11404b822334d4e65d7",
-    "content": "46bc747a64af79fb5e1416d743bc5b97d820051327f0fec0a80e30ece2084ac1"
+    "schema": "023d4dc7173f111c70e1c974d1710cf4c4fa9a691da0f2015d43fd2bce260005",
+    "content": "3d46e2e2c054118b4574d33f3bf41919109b48dd2032eb53b939e9d9708d71b5"
   },
   "inspect.get_scene_stats": {
     "schema": "c7374bdcab5ca82b56ca197d4af222c9fcded4fe82f219b22ca63042551be72f",
@@ -278749,8 +278867,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "b53b20499a8fb104e930630f16c8846c8f14d242cd4e3bb524836d747aef1b69"
   },
   "inspect.set_property": {
-    "schema": "43e69d53c03e9e0ad7c8ed8f516772b405ddc5cfb77ae0767f4fce73e7f54a88",
-    "content": "cf355fa48caddb1b2f9c44c7ee99bf9c591296ab5f9b6280254633f6809b974e"
+    "schema": "21bb8f074013f8242b386da1adde1807dd91201649d46f77adb54b3bb0116eab",
+    "content": "bf6341562a47790bc2c2b3fd2af09e451249bee8e1d73ce86176a7895dbc78a9"
   },
   "manage_ai.add_ai_perception_component": {
     "schema": "81ccd1d8d8758a55999daf887a3c920166ffb0e594c65d8157bd6b671381535e",
@@ -279009,8 +279127,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "6f150d365c0066a6927b7aa956fca6028cf3dc89826cafe57670f889d9191a76"
   },
   "manage_audio.add_metasound_node": {
-    "schema": "597e2ce1ce6991873797dc815bb99fb824096a1afac3dfbed1c289b6f885ecf0",
-    "content": "4d4b6585cc13d65c44132b40d3470da75949ffd318c2ae0c41f756b9770e509a"
+    "schema": "aa22be4a88f83d8c2a433dc612f2d64d71f41903f1968a5f43482e057eb21690",
+    "content": "ad8e48142580d6ddaf92fc9808b869b9c586992cad52c5e5a6d1261fbacd6742"
   },
   "manage_audio.add_metasound_output": {
     "schema": "68c805813d131e6b04a5dd1763ec316647d3f6d25c6238015c778aa4d4826fe2",
@@ -280313,8 +280431,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "51213e254d5eeef8ebf3cffc7ce8cdb3aa81a0e71e26613366fee2309af7fb4f"
   },
   "manage_inventory.remove_loot_entry": {
-    "schema": "21c65722a5bf211062421aa0e019e255f4d662c9d8c79f326f32ab921373bc14",
-    "content": "cd0037e48fa5f93b97b145f8570fa9e27cf2ae7d7e8280af65a702b6224c0763"
+    "schema": "f82fde0528e04f91c5056890f75f2f32e031ddcecd17aa616528750203b4ff90",
+    "content": "c9813a129d7c20f0b5d572bf00f694cdbb07e7ec8211bde7d8f94c131677ca90"
   },
   "manage_inventory.set_inventory_replication": {
     "schema": "6f3ed06b18bbd1bae1aa3bff6b4bc18dd31da7bcce43aa2b52a02a46bc267e32",
@@ -280813,8 +280931,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "ea947761a79660eff5dc3d335d7883e79a04c7b287b1fedd43bca6b198745361"
   },
   "manage_networking.mute_player": {
-    "schema": "4a1f751901bbc25866b656ed25bdc08e15f5261ccc8899da0660508e9b1b62c1",
-    "content": "cfe8667dc6c4d5f301e2d3284a896d56fbebb67f56098d55343f3e8d0b316d63"
+    "schema": "1c3ff0336569c2735b1ffaf891f9f4d7d360eccce2e8668bb98a53bf9af4016f",
+    "content": "62c1ee67235d081cb200523d0f752ceac117f4d0358ad102e4f98e82fd79220a"
   },
   "manage_networking.remove_legacy_action_mapping": {
     "schema": "86186ec7f10dbf538d0a536da30d94e5e652f81241b84737c89a3423cbbdf61a",
@@ -281169,12 +281287,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "0b76c78cea3729bf21537e1574e5c7077b2d4cb898cc96382671e72db8bc8e92"
   },
   "material.connect_material_pins": {
-    "schema": "32f1dd6186296880e7e9a02a90c408d39e357e8e8f36208a22aceedb56ccb99a",
-    "content": "7b8226b9a9bec41a492c049f73c624d435de2265a6e7fb1fbcc6cbd31ec3709d"
+    "schema": "73d94d85607a69fba5ab6e39cbe32f5eaedc6a1c88c4e493efe5adc55fe1e32f",
+    "content": "588a657338c9158510e9d2446b54fa57e98c6f5d81da03822c4a76e5348858c2"
   },
   "material.connect_nodes": {
-    "schema": "192d8bd744e3626231d946b8f255d25a6d7bd0b20246da02e6602fe36f2c2477",
-    "content": "8fea03c9540864a46adb95b6a549fa070d5a5363fa45430b05c9faa5b58aad33"
+    "schema": "19d1b123d3c8db007982d0c4effbac8f3da0870f6fc02ef1be6c6c25b75678be",
+    "content": "b5bd4028b8e41626b9bec41a85b4d6325d8477756cc7cdc2c9b8bbcc25cd8f43"
   },
   "material.create_decal_material": {
     "schema": "20fd882d6d7675481647171a8f3bebc4ba2ff3ec2ac3c4d8ae6510cae0b4933f",
@@ -281305,8 +281423,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "cd5a232ce27cfa474b7168031e0732798b5e69858d3ffbf9e384273889243ccf"
   },
   "sequence.add_keyframe": {
-    "schema": "9fec3fd9baf9065b7df7b91fb26086ab444bb031695daa19378311f61b0ee6ae",
-    "content": "8e3eed4647d44e9a0357a09a83f54c846e878263a96be8fcde9bfc1094016df5"
+    "schema": "698fb4bd451fa6e918754f76778f7a732c33c978097abff53452bf2014b15fc3",
+    "content": "44545e210d9bf7288a75555f22e6c6948506f91145a9edbe6fcf1e0aaa60417f"
   },
   "sequence.add_section": {
     "schema": "2dd8f5344ef4b2af87d9ddfb4731781895724edca5cdaea1003824c7e1686f22",
@@ -281933,8 +282051,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "5ea8d0a23131eaa9123d6a87c2bf5165401c079541ac620d266425d0f6d0f421"
   },
   "texture.channel_pack": {
-    "schema": "51c86c3efab0511552dcf48f911ed1796f56f5d9283bafa01932acf0a757c534",
-    "content": "238d6482bf98cc8e17a4f4543c0187a1ac66b2373791b226a86afe88510e75d3"
+    "schema": "8defa55b5cea00a86e57adfc03321a55382e96287dbe721c0ed2bd27e34b409a",
+    "content": "c8fc05598bef0f815479cada23015e5215bf0846223c5616005ea77f9c1d3e72"
   },
   "texture.combine_textures": {
     "schema": "f10c6b973c3dbfa4190505ccddeed4a5731c1f8762c90f8277d6dcf68c80347d",

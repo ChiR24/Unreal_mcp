@@ -40,6 +40,7 @@ public:
 			Schema.Number(TEXT("lowPassFilterFrequency"), TEXT("lowPassFilterFrequency"));
 			Schema.String(TEXT("mixName"), TEXT("mixName"));
 			Schema.String(TEXT("name"), TEXT("name"));
+			Schema.String(TEXT("nodeClassName"), TEXT("nodeClassName"));
 			Schema.String(TEXT("nodeType"), TEXT("nodeType"));
 			Schema.Number(TEXT("occlusionFilterScale"), TEXT("occlusionFilterScale"));
 			Schema.Number(TEXT("occlusionInterpolationTime"), TEXT("occlusionInterpolationTime"));

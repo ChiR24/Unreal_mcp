@@ -18,6 +18,7 @@ public:
 			Schema.AnyValue(TEXT("arguments"), TEXT("Function arguments (any type)."));
 			Schema.String(TEXT("blueprintPath"), TEXT("Canonical /Game Blueprint asset path to spawn from."));
 			Schema.String(TEXT("childActor"), TEXT("Child actor name to attach."));
+			Schema.String(TEXT("class"), TEXT("Unreal class name or path (alias of className)."));
 			Schema.String(TEXT("className"), TEXT("Unreal class name or path to find actors by class."));
 			Schema.String(TEXT("classPath"), TEXT("Unreal class path (e.g. /Script/Engine.PointLight) for the actor to spawn."));
 			Schema.Bool(TEXT("collisionEnabled"), TEXT("Desired collision enabled state."));
