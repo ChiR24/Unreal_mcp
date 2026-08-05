@@ -30,7 +30,7 @@ const AUDIO_AUTHORING_REQUIRED_FIELDS: Readonly<Record<string, readonly AudioAut
   create_metasound: nameRequired,
   add_metasound_node: [
     ...assetPathRequired,
-    { field: 'nodeType', message: 'Missing required parameter: nodeType' }
+    { field: 'nodeType', message: 'Missing required parameter: nodeType or nodeClassName', value: args => args.nodeType ?? args.nodeClassName }
   ],
   connect_metasound_nodes: [
     ...assetPathRequired,
