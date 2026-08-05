@@ -19,8 +19,19 @@ import { getParentToolMetadata } from '../parent-metadata.js';
 
 // --- Schema helpers ---
 
-export function schema(properties: JsonObject, required: readonly string[] = []): Draft202012ObjectSchema {
-  return { $schema: DRAFT_2020_12_SCHEMA_URI, type: 'object', properties, required, additionalProperties: false };
+export function schema(
+  properties: JsonObject,
+  required: readonly string[] = [],
+  requiredOneOf?: readonly string[],
+): Draft202012ObjectSchema {
+  return {
+    $schema: DRAFT_2020_12_SCHEMA_URI,
+    type: 'object',
+    properties,
+    required,
+    ...(requiredOneOf === undefined ? {} : { requiredOneOf: [...requiredOneOf] }),
+    additionalProperties: false,
+  };
 }
 
 export const str = (desc: string): JsonObject => ({ type: 'string', description: desc });

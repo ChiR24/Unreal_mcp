@@ -158,6 +158,7 @@ export const INVENTORY_2: readonly CapabilityRecordSource[] = [
       save: IP.save,
     },
     required: ['lootTablePath'],
+    requiredOneOf: ['entryIndex', 'itemPath'],
     exampleInput: {
       action: 'remove_loot_entry',
       lootTablePath: '/Game/Data/LootTables/LT_Common',

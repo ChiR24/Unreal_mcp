@@ -77,7 +77,7 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('fixup_redirectors', 'asset', 'Fix up redirector assets in a directory.',
-    schema({ directoryPath: str('Directory path to fix up.'), path: str('Alternative directory path.') }, []),
+    schema({ directoryPath: str('Directory path to fix up.'), path: str('Alternative directory path.') }, [], ['directoryPath', 'path']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'fixup_redirectors', dispatchMode: 'action',
       examples: [ex('Clean up redirectors left by a move', { directoryPath: '/Game/Meshes' }, { success: true })] }

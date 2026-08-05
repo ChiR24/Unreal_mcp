@@ -3,15 +3,15 @@ import { utilityRecord } from '../utility/helpers.js';
 
 const T = 'manage_audio' as const;
 const META = ['MetaSound'] as const;
-const a = (action: string, summary: string, params: readonly string[], required: readonly string[], outputs: readonly string[] = [], outputRequired: readonly string[] = [], plugins: readonly string[] = []): CapabilityRecordSource => utilityRecord({
+const a = (action: string, summary: string, params: readonly string[], required: readonly string[], outputs: readonly string[] = [], outputRequired: readonly string[] = [], plugins: readonly string[] = [], requiredOneOf?: readonly string[]): CapabilityRecordSource => utilityRecord({
   tool: T, action, family: plugins.length > 0 ? 'metasound' : 'authoring', summary,
-  params, required, outputs, outputRequired, plugins,
+  params, required, requiredOneOf, outputs, outputRequired, plugins,
 });
 
 export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
   a('add_cue_node', 'Add a node to a Sound Cue graph.', ['assetPath', 'nodeType', 'properties'], ['assetPath', 'nodeType'], ['nodeId'], ['nodeId']),
   a('add_metasound_input', 'Add an input to a MetaSound graph.', ['assetPath', 'inputName', 'inputType', 'defaultValue'], ['assetPath', 'inputName', 'inputType'], [], [], META),
-  a('add_metasound_node', 'Add a node to a MetaSound graph.', ['assetPath', 'nodeType'], ['assetPath', 'nodeType'], ['nodeId'], ['nodeId'], META),
+  a('add_metasound_node', 'Add a node to a MetaSound graph.', ['assetPath', 'nodeClassName', 'nodeType'], ['assetPath'], ['nodeId'], ['nodeId'], META, ['nodeClassName', 'nodeType']),
   a('add_metasound_output', 'Add an output to a MetaSound graph.', ['assetPath', 'outputName', 'outputType'], ['assetPath', 'outputName', 'outputType'], [], [], META),
   a('set_metasound_default', 'Set a MetaSound input default value.', ['assetPath', 'inputName', 'defaultValue'], ['assetPath', 'inputName'], [], [], META),
   a('add_mix_modifier', 'Add a Sound Class modifier to a Sound Mix.', ['assetPath', 'soundClassPath', 'volumeAdjuster'], ['assetPath', 'soundClassPath']),

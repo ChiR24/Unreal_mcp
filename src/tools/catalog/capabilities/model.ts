@@ -43,6 +43,9 @@ export type Draft202012ObjectSchema = JsonObject & {
    * listed property is valid at the schema level (a native handler may
    * still reject the combination, which is a handler contract, not a
    * schema keyword). Names must reference declared `properties` entries.
+   * The keyword is presence-only: an empty-string value (or `null`) still
+   * satisfies the group at the schema level; handlers enforce non-empty
+   * values separately.
    */
   readonly requiredOneOf?: readonly string[];
 };

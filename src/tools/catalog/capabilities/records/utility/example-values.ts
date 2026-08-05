@@ -44,6 +44,7 @@ const FIELD_EXAMPLES: Readonly<Record<string, JsonValue>> = {
   dormancy: 'DORM_DormantAll',
   effectType: 'SourceEffectFilter',
   enabled: true,
+  entryIndex: 0,
   existsAfter: true,
   functionName: 'ServerFireWeapon',
   gameModeBlueprint: '/Game/Blueprints/Framework/BP_ArenaGameMode',
@@ -58,6 +59,7 @@ const FIELD_EXAMPLES: Readonly<Record<string, JsonValue>> = {
   mapName: '/Game/Maps/Arena',
   mixName: 'CombatMix',
   modifierType: 'DeadZone',
+  nodeClassName: 'UE.Sine.Audio',
   nodeId: 'Node_0',
   nodeType: 'WavePlayer',
   outputName: 'Out',
@@ -65,6 +67,7 @@ const FIELD_EXAMPLES: Readonly<Record<string, JsonValue>> = {
   pawnClass: '/Game/Blueprints/BP_PlayerCharacter',
   playerControllerClass: '/Game/Blueprints/Framework/BP_ArenaPlayerController',
   playerIndex: 1,
+  playerName: 'PlayerOne',
   playerStateClass: '/Game/Blueprints/Framework/BP_ArenaPlayerState',
   propertyName: 'Health',
   pushToTalkEnabled: true,
@@ -194,11 +197,20 @@ export function buildExampleInput(
   action: string,
   family: string,
   required: readonly string[],
+  requiredOneOf?: readonly string[],
 ): JsonObject {
   const input: Record<string, JsonValue> = { action };
   for (const field of required) {
     if (field === 'action') continue;
     input[field] = valueFor(action, field, family);
+  }
+  // A requiredOneOf group is part of the contract, so the first example must
+  // satisfy it. Include the first declared member unless a required field (or
+  // the routed action) already covers the group.
+  for (const field of requiredOneOf ?? []) {
+    if (field === 'action' || Object.hasOwn(input, field)) continue;
+    input[field] = valueFor(action, field, family);
+    break;
   }
   return input;
 }

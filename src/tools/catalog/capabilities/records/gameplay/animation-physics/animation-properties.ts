@@ -38,6 +38,7 @@ export const A: PropertyMap = {
   startFrame: num('First frame of the notify state range.'),
   endFrame: num('Last frame of the notify state range.'),
   trackIndex: num('Notify track index within the animation sequence.'),
+  notifyClass: str('AnimNotify (or AnimNotifyState) class name; prefixed with AnimNotify_/AnimNotifyState_ automatically when missing.'),
   basePoseType: str('Additive base pose type (RefPose, AnimScaled, AnimFrame).'),
   basePoseFrame: num('Frame used as the additive base pose.'),
   forceRootLock: bool('Whether root motion is force-locked to the reference pose.'),

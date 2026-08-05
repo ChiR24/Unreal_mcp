@@ -58,7 +58,11 @@ function property(name: string): JsonObject {
   return { type: 'string', description: name };
 }
 
-function schema(fields: readonly string[], required: readonly string[]): Draft202012ObjectSchema {
+function schema(
+  fields: readonly string[],
+  required: readonly string[],
+  requiredOneOf?: readonly string[],
+): Draft202012ObjectSchema {
   const properties: Record<string, JsonObject> = {};
   for (const field of fields) properties[field] = property(field);
   return {
@@ -66,6 +70,7 @@ function schema(fields: readonly string[], required: readonly string[]): Draft20
     type: 'object',
     properties,
     required: [...required],
+    ...(requiredOneOf === undefined ? {} : { requiredOneOf: [...requiredOneOf] }),
     additionalProperties: false,
   };
 }
@@ -91,6 +96,7 @@ export type UtilityRecordSpec = {
   readonly summary: string;
   readonly params?: readonly string[];
   readonly required?: readonly string[];
+  readonly requiredOneOf?: readonly string[];
   readonly outputs?: readonly string[];
   readonly outputRequired?: readonly string[];
   readonly plugins?: readonly string[];
@@ -137,12 +143,12 @@ export function utilityRecord(spec: UtilityRecordSpec): CapabilityRecordSource {
       whenNotToUse: ['Do not use when the required Unreal capability or target is unavailable.'],
     },
     schemas: {
-      input: schema(inputFields, required),
+      input: schema(inputFields, required, spec.requiredOneOf),
       output: outputSchema(outputFields, outputRequired),
     },
     examples: [{
       title: spec.summary,
-      input: buildExampleInput(spec.action, spec.family, required),
+      input: buildExampleInput(spec.action, spec.family, required, spec.requiredOneOf),
       output: buildExampleOutput(spec.action, spec.family, outputRequired),
     }],
     availability: {

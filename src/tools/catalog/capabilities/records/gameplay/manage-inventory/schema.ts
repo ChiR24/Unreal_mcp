@@ -97,6 +97,7 @@ export interface InventoryActionSpec {
   readonly summary: string;
   readonly inputProps: PropertyMap;
   readonly required?: readonly string[];
+  readonly requiredOneOf?: readonly string[];
   readonly exampleInput: JsonObject;
   /** Only get_inventory_info reads without writing. */
   readonly read?: boolean;
@@ -119,6 +120,7 @@ export function inventoryRecord(spec: InventoryActionSpec): CapabilityRecordSour
     whenNotToUse: ['Do not substitute a similarly named action with different semantics.'],
     inputProps: { action: P.action, ...spec.inputProps },
     required: ['action', ...(spec.required ?? [])],
+    requiredOneOf: spec.requiredOneOf,
     outputProps: { assetPath: P.assetPath },
     outputRequired: [],
     effect: spec.read === true ? 'read' : 'write',

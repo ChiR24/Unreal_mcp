@@ -3,8 +3,8 @@ import { utilityRecord } from '../utility/helpers.js';
 
 const T = 'manage_networking' as const;
 const ONLINE = ['OnlineSubsystem', 'OnlineSubsystemUtils'] as const;
-const s = (action: string, summary: string, params: readonly string[] = [], required: readonly string[] = [], outputs: readonly string[] = [], outputRequired: readonly string[] = [], effect: 'read' | 'write' | 'destructive' = 'write'): CapabilityRecordSource => utilityRecord({
-  tool: T, action, family: 'session', summary, params, required, outputs, outputRequired,
+const s = (action: string, summary: string, params: readonly string[] = [], required: readonly string[] = [], outputs: readonly string[] = [], outputRequired: readonly string[] = [], effect: 'read' | 'write' | 'destructive' = 'write', requiredOneOf?: readonly string[]): CapabilityRecordSource => utilityRecord({
+  tool: T, action, family: 'session', summary, params, required, requiredOneOf, outputs, outputRequired,
   plugins: ONLINE, states: ['edit', 'pie'], effect, supportsUndo: false,
   safeToRetry: effect === 'read', dispatchAction: 'manage_sessions',
 });
@@ -22,7 +22,7 @@ export const NETWORKING_SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   s('enable_voice_chat', 'Enable or disable online voice chat.', ['voiceEnabled'], ['voiceEnabled']),
   s('configure_voice_settings', 'Configure online voice processing.', ['voiceSettings'], ['voiceSettings']),
   s('set_voice_channel', 'Set the active voice channel.', ['channelName', 'channelType'], ['channelName']),
-  s('mute_player', 'Set mute state for an online player.', ['playerName', 'targetPlayerId', 'muted', 'localPlayerNum', 'systemWide'], []),
+  s('mute_player', 'Set mute state for an online player.', ['playerName', 'targetPlayerId', 'muted', 'localPlayerNum', 'systemWide'], [], undefined, undefined, undefined, ['playerName', 'targetPlayerId']),
   s('set_voice_attenuation', 'Configure proximity voice attenuation.', ['attenuationRadius', 'attenuationFalloff'], ['attenuationRadius']),
   s('configure_push_to_talk', 'Configure push-to-talk input.', ['pushToTalkEnabled', 'pushToTalkKey'], ['pushToTalkEnabled']),
   s('get_sessions_info', 'Read identifiable online-session state.', [], [], ['sessionsInfo'], ['sessionsInfo'], 'read'),

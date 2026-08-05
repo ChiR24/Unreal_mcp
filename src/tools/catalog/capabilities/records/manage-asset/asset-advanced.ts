@@ -61,13 +61,13 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Rebuild Nanite data after a mesh edit', { assetPath: '/Game/Meshes/SM_Rock' }, { success: true })] }
   ),
   r('bulk_rename', 'asset', 'Rename multiple assets by pattern or explicit paths.',
-    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths.'), searchText: str('Search pattern.'), pattern: str('Search pattern (used when searchText is absent).'), replaceText: str('Replacement text.'), replacement: str('Replacement text (used when replaceText is absent).'), prefix: str('Name prefix.'), suffix: str('Name suffix.'), checkoutFiles: bool('Check out files in source control.') }, []),
+    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths.'), searchText: str('Search pattern.'), pattern: str('Search pattern (used when searchText is absent).'), replaceText: str('Replacement text.'), replacement: str('Replacement text (used when replaceText is absent).'), prefix: str('Name prefix.'), suffix: str('Name suffix.'), checkoutFiles: bool('Check out files in source control.') }, [], ['assetPaths', 'folderPath']),
     OK, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'bulk_rename', dispatchMode: 'action',
       examples: [ex('Re-prefix every mesh in a folder', { folderPath: '/Game/Meshes', searchText: 'Mesh_', replaceText: 'SM_', checkoutFiles: true }, { success: true })] }
   ),
   r('bulk_delete', 'asset', 'Delete multiple assets by folder or explicit paths.',
-    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths to delete.'), showConfirmation: bool('Show confirmation prompt.'), fixupRedirectors: bool('Fix up redirectors left behind by the deletion.') }, []),
+    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths to delete.'), showConfirmation: bool('Show confirmation prompt.'), fixupRedirectors: bool('Fix up redirectors left behind by the deletion.') }, [], ['assetPaths', 'folderPath']),
     OK, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { dispatchAction: 'bulk_delete', dispatchMode: 'action',
       examples: [ex('Delete two obsolete assets and clean redirectors', { assetPaths: ['/Game/MCPTest/OldA', '/Game/MCPTest/OldB'], showConfirmation: false, fixupRedirectors: true }, { success: true })] }

@@ -12,7 +12,7 @@ const E = '/Game/Enums/E_WeaponType';
 const DONE = { success: true };
 
 export const ENUM_RECORDS: readonly RecordSpec[] = [
-  r('create_enum', 'enum', 'Create a new UserDefinedEnum asset.', schema({ name: str('Enum name.'), path: str('Package path.'), values: arr('Initial enum value names.') }, ['name']), OK, WRITE, WRITE_POLICY, MEDIUM,
+  r('create_enum', 'enum', 'Create a new UserDefinedEnum asset.', schema({ name: str('Enum name.'), path: str('Package path.'), enumPath: ENUM_PATH, values: arr('Initial enum value names.') }, [], ['name', 'enumPath']), OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchMode: 'tool', examples: [ex('Create a weapon-type enum', { name: 'E_WeaponType', path: '/Game/Enums', values: ['Melee', 'Ranged', 'Thrown'] }, DONE)] }),
   r('delete_enum', 'enum', 'Delete a UserDefinedEnum asset.', schema({ enumPath: ENUM_PATH }, ['enumPath']), OK, { ...DESTRUCTIVE, longRunning: false }, DESTRUCTIVE_POLICY, LOW,
     { dispatchMode: 'tool', examples: [ex('Delete an obsolete enum', { enumPath: '/Game/Enums/E_Deprecated' }, DONE)] }),

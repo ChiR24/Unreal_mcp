@@ -131,6 +131,11 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     normalizationClass: NC,
     normalizationRationale: 'Distinct debug-category spawn routed to the manage_debug bridge action; categoryName is regex-validated by the orchestrator before dispatch.',
   }),
+  // execute_python XOR contract: the native handler
+  // (plugins/McpAutomationBridge/.../Private/Domains/SystemControl/McpAutomationBridge_SystemControlHandlersPython.cpp)
+  // rejects supplying BOTH code and file ("Provide either 'code' or 'file', not both").
+  // The schema keyword is at-least-one, the handler is XOR, so a both-supplied
+  // request passes gateway validation and fails at the handler with INVALID_ARGUMENT.
   buildCoreRecord({
     parentTool: PT,
     action: 'execute_python',

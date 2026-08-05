@@ -59,8 +59,19 @@ export const Draft202012ObjectSchemaSchema = z
     properties: jsonObjectSchema,
     required: z.array(z.string()),
     additionalProperties: z.union([z.boolean(), jsonObjectSchema]),
-    requiredOneOf: z.array(z.string()).optional()
+    requiredOneOf: z.array(z.string()).min(1).optional()
   })
   .superRefine((schema, ctx) => {
+    if (schema.requiredOneOf !== undefined) {
+      schema.requiredOneOf.forEach((name, index) => {
+        if (!Object.prototype.hasOwnProperty.call(schema.properties, name)) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['requiredOneOf', index],
+            message: `requiredOneOf member '${name}' must reference a declared property`
+          });
+        }
+      });
+    }
     walk(schema, [], ctx);
   });

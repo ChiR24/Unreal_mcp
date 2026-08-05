@@ -35,12 +35,14 @@ export type PropertyMap = JsonObject;
 function schema(
   properties: PropertyMap,
   required: readonly string[],
+  requiredOneOf?: readonly string[],
 ): Draft202012ObjectSchema {
   return {
     $schema: SCHEMA_URI,
     type: 'object',
     properties,
     required: [...required],
+    ...(requiredOneOf === undefined ? {} : { requiredOneOf: [...requiredOneOf] }),
     additionalProperties: false,
   };
 }
@@ -235,6 +237,7 @@ export interface RecordSpec {
   readonly whenNotToUse: readonly string[];
   readonly inputProps: PropertyMap;
   readonly required: readonly string[];
+  readonly requiredOneOf?: readonly string[];
   readonly outputProps?: PropertyMap;
   readonly outputRequired?: readonly string[];
   readonly effect: EffectType;
@@ -252,7 +255,7 @@ export interface RecordSpec {
 }
 
 export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
-  const input = schema(spec.inputProps, spec.required);
+  const input = schema(spec.inputProps, spec.required, spec.requiredOneOf);
   const output = spec.outputProps
     ? outputSchema(spec.outputProps, spec.outputRequired ?? [])
     : EMPTY_OUTPUT;

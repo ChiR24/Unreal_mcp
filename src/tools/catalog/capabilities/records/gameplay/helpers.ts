@@ -38,13 +38,18 @@ const SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema';
 const V5_0 = { major: 5 as const, minor: 0, patch: 0, channel: 'stable' as const };
 const V5_8_P1 = { major: 5 as const, minor: 8, patch: 0, channel: 'preview' as const, preview: 1 };
 
-export function schema(properties: PropertyMap, required: readonly string[]): Draft202012ObjectSchema {
+export function schema(
+  properties: PropertyMap,
+  required: readonly string[],
+  requiredOneOf?: readonly string[],
+): Draft202012ObjectSchema {
   return {
     $schema: SCHEMA_URI,
     type: 'object',
     properties,
     required: [...required],
     additionalProperties: false,
+    ...(requiredOneOf === undefined ? {} : { requiredOneOf: [...requiredOneOf] }),
   };
 }
 
@@ -96,6 +101,7 @@ export interface RecordSpec {
   readonly whenNotToUse: readonly string[];
   readonly inputProps: PropertyMap;
   readonly required: readonly string[];
+  readonly requiredOneOf?: readonly string[];
   readonly outputProps?: PropertyMap;
   readonly outputRequired?: readonly string[];
   readonly effect: EffectType;
@@ -120,7 +126,7 @@ export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
   const inputProperties: PropertyMap = Object.fromEntries(
     Object.entries(spec.inputProps).filter(([name]) => name !== 'action'),
   );
-  const input = schema(inputProperties, spec.required.filter((name) => name !== 'action'));
+  const input = schema(inputProperties, spec.required.filter((name) => name !== 'action'), spec.requiredOneOf);
   const output = spec.outputProps
     ? outputSchema(spec.outputProps, spec.outputRequired ?? [])
     : EMPTY_OUTPUT;
