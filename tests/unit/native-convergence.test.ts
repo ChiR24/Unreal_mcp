@@ -47,7 +47,7 @@ const handlerSources = sourceFilesUnder('Domains', 'Core', 'Foundation');
 const filesMentioning = (token: string): readonly string[] =>
   handlerSources
     .filter((file) => readFileSync(file, 'utf8').includes(token))
-    .map((file) => file.slice(pluginPrivate.length + 1))
+    .map((file) => file.slice(pluginPrivate.length + 1).replaceAll('\\', '/'))
     .sort();
 
 const TASK_21_CAPABILITIES = [

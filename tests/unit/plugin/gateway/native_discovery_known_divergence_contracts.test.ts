@@ -40,7 +40,9 @@ const parameterNames = (line: string): readonly string[] =>
   (JSON.parse(line) as DescribeResult).parameters.map((entry) => entry.name);
 
 describe('Task 25: known native/TypeScript divergence from case-colliding schema keys', () => {
-  it('drops the case-variant alias natively while TypeScript keeps both', () => {
+  // Windows cannot execute the .sh harness, so this case runs on POSIX (CI
+  // included).
+  it.runIf(process.platform !== 'win32')('drops the case-variant alias natively while TypeScript keeps both', () => {
     execFileSync(resolve(harnessDir, 'build.sh'), { encoding: 'utf8', timeout: 240_000 });
     const nativeLine = execFileSync(harnessBinary, [casesPath], {
       encoding: 'utf8',

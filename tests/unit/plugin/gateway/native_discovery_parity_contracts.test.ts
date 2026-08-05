@@ -84,7 +84,11 @@ const walkCaseCollidingKeys = (value: JsonValue, path: string, out: string[]): v
 };
 
 describe('Task 25: native and TypeScript discovery are byte-identical', () => {
-  it('renders every fixture case identically on both surfaces', () => {
+  // The two harness-spawning cases below compile and run the native harness
+  // through build.sh/corrupt-probe.sh; Windows cannot execute the shell
+  // harness, so those cases run on POSIX (CI included). The pure-TypeScript
+  // cases above them still run everywhere.
+  it.runIf(process.platform !== 'win32')('renders every fixture case identically on both surfaces', () => {
     const native = runNativeHarness();
     const reference = referenceLines();
     expect(native.length).toBe(fixtureCases.length);
@@ -154,7 +158,7 @@ describe('Task 25: native and TypeScript discovery are byte-identical', () => {
     expect(badIds, 'ordinal and case-insensitive ordering only agree for lowercase ASCII ids').toEqual([]);
   });
 
-  it('refuses discovery when a generated shard is corrupted', () => {
+  it.runIf(process.platform !== 'win32')('refuses discovery when a generated shard is corrupted', () => {
     const output = execFileSync(resolve(harnessDir, 'corrupt-probe.sh'), ['truncate-json'], {
       encoding: 'utf8',
       timeout: 300_000,
