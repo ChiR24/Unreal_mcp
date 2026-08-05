@@ -37,6 +37,7 @@ plugins/**/Intermediate/
 coverage/
 .nyc_output/
 tests/reports/
+tests/eval/evidence/
 
 # Temporary files
 *.tmp
@@ -48,6 +49,7 @@ tests/reports/
 *_backup.*
 *_old.*
 tmp/
+/tmp-vitest-snapshot.json
 .research/
 .lcm/
 .omo/

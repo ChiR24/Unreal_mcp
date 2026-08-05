@@ -44,6 +44,7 @@ const ignoredDirectoryNames = new Set([
   'Intermediate',
   'node_modules',
   'reports',
+  'evidence',
 ]);
 const activeCodeExtensions = new Set([
   '.c',
