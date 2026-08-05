@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+// No #! shebang: vitest's module evaluator rejects shebangs in CRLF checkouts.
 // Live evidence generator for the cinematics/media verification harness.
 // Provides the surface contract that the stdio replay evidence tests in
 // tests/unit/test_runner_expectation_errors.test.ts assert against.

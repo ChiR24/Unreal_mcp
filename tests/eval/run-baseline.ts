@@ -4,6 +4,10 @@
 // scores the corpus with the deterministic offline scorer, and writes a
 // machine-readable baseline report. Exit code reflects the machine result:
 // 0 only when 23-parent coverage, collision coverage, and all validations pass.
+//
+// The default output is the COMMITTED reviewed baseline the eval gate reads
+// (see report.ts). Re-recording overwrites that artifact, so run this
+// deliberately, review the diff, and commit it as the new reviewed baseline.
 
 import { writeFileSync } from 'node:fs';
 import { assertCollisionCoverage, assertFullParentCoverage, corpus, validateCorpus } from './corpus.js';
@@ -13,7 +17,7 @@ import { scoreCorpus } from './scorer.js';
 
 function parseArgs(argv: readonly string[]): { manifest: string; output: string } {
   let manifest = 'src/gateway/gateway-manifest.generated.json';
-  let output = '.omo/evidence/task-4-baseline.json';
+  let output = 'tests/eval/evidence/task-4-baseline.json';
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--manifest') {

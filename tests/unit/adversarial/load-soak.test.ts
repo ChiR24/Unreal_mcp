@@ -104,7 +104,9 @@ describe('Task 51 — the retained-RSS measurement can actually detect a leak', 
     expect(processAlive(pid)).toBe(false);
   }, 60_000);
 
-  it('takes the settled trough, not the instantaneous sample', async () => {
+  // The RSS reader is /proc-based, so the sampler itself is Linux-only; the
+  // sibling controls are gated the same way.
+  it.runIf(onLinux)('takes the settled trough, not the instantaneous sample', async () => {
     const settled = await sampleSettledRss(process.pid, { samples: 4, windowMs: 200 });
     expect(settled.samples).toBe(4);
     expect(settled.min).toBeLessThanOrEqual(settled.max as number);

@@ -1,5 +1,5 @@
-#!/usr/bin/env node
-
+// No #! shebang: vitest's module evaluator rejects shebangs in CRLF checkouts.
+// Invoke directly with: node tests/native-mcp-parity-audit.mjs
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

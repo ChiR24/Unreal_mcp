@@ -7,6 +7,12 @@
 // footprint are enforced exactly as hard, but folding a machine-dependent
 // microsecond into a content hash would produce a hash that changes under CPU
 // load, which proves nothing about the artifact.
+//
+// The Task-4 baseline is a REVIEWED, COMMITTED artifact (tests/eval/evidence/),
+// not something regenerated at gate time: recording the baseline inside the
+// same run that is evaluated against it would make "no worse than baseline"
+// trivially satisfiable. Refresh it deliberately with
+// `node --loader ts-node/esm tests/eval/run-baseline.ts` and review the diff.
 
 import { readFileSync } from 'node:fs';
 import { corpus, validateCorpus } from './corpus.js';
@@ -39,7 +45,7 @@ import { measureRuntime, type RuntimeMeasurement } from './measure-runtime.js';
 import { type ModelEnv, type ModelInvoker, type ModelReport, runModelEvaluation } from './model-runner.js';
 
 export const DEFAULT_MANIFEST_PATH = 'src/gateway/gateway-manifest.generated.json';
-export const DEFAULT_BASELINE_PATH = '.omo/evidence/task-4-baseline.json';
+export const DEFAULT_BASELINE_PATH = 'tests/eval/evidence/task-4-baseline.json';
 export const TASK48_REPORT_SCHEMA = 'omo.task48.budget-report.v1' as const;
 
 export type RecordedBaseline = {

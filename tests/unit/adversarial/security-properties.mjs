@@ -78,10 +78,14 @@ export function makeSymlinkFixture() {
   mkdirSync(outside, { recursive: true });
   writeFileSync(join(outside, 'secret.txt'), 'not yours\n');
   writeFileSync(join(owned, 'mine.txt'), 'ok\n');
+  // Windows has no unprivileged directory symlinks; a directory junction needs no
+  // elevation and realpathSync resolves it exactly like a symlink, so the
+  // containment predicate sees the identical escape on both platforms.
+  const linkType = process.platform === 'win32' ? 'junction' : 'dir';
   const escapeLink = join(owned, 'escape');
-  symlinkSync(outside, escapeLink, 'dir');
+  symlinkSync(outside, escapeLink, linkType);
   const selfLink = join(owned, 'self');
-  symlinkSync(owned, selfLink, 'dir');
+  symlinkSync(owned, selfLink, linkType);
   return {
     base,
     owned,
