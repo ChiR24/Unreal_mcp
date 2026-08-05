@@ -9,6 +9,6 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
       return await handleRunUbt(args, tools);
 
     default:
-      return createUnknownActionResponse(action, `Unknown system_control pipeline action: ${action}`);
+      return createUnknownActionResponse(`Unknown system_control pipeline action: ${action}`);
   }
 }

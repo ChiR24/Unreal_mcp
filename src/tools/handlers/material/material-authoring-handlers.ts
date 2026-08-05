@@ -45,7 +45,6 @@ export async function handleMaterialAuthoringTools(
     if (nodeGenericResult !== undefined) return nodeGenericResult;
 
     return createUnknownActionResponse(
-      action,
       `Unknown material authoring action: ${action}. Available actions: ${MATERIAL_AUTHORING_ACTIONS.join(', ')}`
     );
   } catch (error) {

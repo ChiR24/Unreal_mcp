@@ -204,6 +204,6 @@ export async function handleCharacterTools(
     // =========================================================================
 
     default:
-      return createUnknownActionResponse(action, `Unknown character action: ${action}`);
+      return createUnknownActionResponse(`Unknown character action: ${action}`);
   }
 }

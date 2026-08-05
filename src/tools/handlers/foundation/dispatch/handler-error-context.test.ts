@@ -44,8 +44,8 @@ describe('withHandlerContext', () => {
 });
 
 describe('createUnknownActionResponse', () => {
-  it('base shape { success:false, error:"UNKNOWN_ACTION", message } for action+message', () => {
-    const result = createUnknownActionResponse('do_something', 'Action not found');
+  it('base shape { success:false, error:"UNKNOWN_ACTION", message } for message+extra', () => {
+    const result = createUnknownActionResponse('Action not found');
     expect(result).toEqual({
       success: false,
       error: 'UNKNOWN_ACTION',
@@ -54,7 +54,7 @@ describe('createUnknownActionResponse', () => {
   });
 
   it('extra fields are spread in', () => {
-    const result = createUnknownActionResponse('do_something', 'Action not found', {
+    const result = createUnknownActionResponse('Action not found', {
       action: 'do_something',
       assetPath: '/Game/Foo'
     });
@@ -68,13 +68,13 @@ describe('createUnknownActionResponse', () => {
   });
 
   it('extra omitted → no undefined keys', () => {
-    const result = createUnknownActionResponse('do_something', 'Action not found');
+    const result = createUnknownActionResponse('Action not found');
     expect(result).not.toHaveProperty('extra');
     expect(Object.values(result)).not.toContain(undefined);
   });
 
   it('cleanObject applied (undefined-valued extra field is stripped)', () => {
-    const result = createUnknownActionResponse('do_something', 'Action not found', {
+    const result = createUnknownActionResponse('Action not found', {
       action: 'do_something',
       maybeUndefined: undefined
     });

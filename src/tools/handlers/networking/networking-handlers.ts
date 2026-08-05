@@ -274,6 +274,6 @@ export async function handleNetworkingTools(
     // =========================================================================
 
     default:
-      return createUnknownActionResponse(action, `Unknown manage_networking action: ${action}`);
+      return createUnknownActionResponse(`Unknown manage_networking action: ${action}`);
   }
 }

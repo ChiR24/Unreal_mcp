@@ -82,6 +82,6 @@ export async function handleNavigationTools(
       return sendRequest('get_navigation_info');
 
     default:
-      return createUnknownActionResponse(action, `Unknown navigation action: ${action}`);
+      return createUnknownActionResponse(`Unknown navigation action: ${action}`);
   }
 }

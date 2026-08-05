@@ -93,6 +93,6 @@ export async function handleSessionsTools(
       return sendRequest('get_sessions_info');
 
     default:
-      return createUnknownActionResponse(action, `Unknown sessions action: ${action}`);
+      return createUnknownActionResponse(`Unknown sessions action: ${action}`);
   }
 }

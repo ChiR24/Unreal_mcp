@@ -105,6 +105,6 @@ export async function handlePCGTools(
       return sendRequest('set_pcg_partition_grid_size');
 
     default:
-      return createUnknownActionResponse(action, `Unknown PCG action: ${action}`);
+      return createUnknownActionResponse(`Unknown PCG action: ${action}`);
   }
 }

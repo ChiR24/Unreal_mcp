@@ -319,6 +319,6 @@ export async function handleNiagaraAuthoringTools(
     // =========================================================================
 
     default:
-      return createUnknownActionResponse(action, `Unknown Niagara authoring action: ${action}`);
+      return createUnknownActionResponse(`Unknown Niagara authoring action: ${action}`);
   }
 }

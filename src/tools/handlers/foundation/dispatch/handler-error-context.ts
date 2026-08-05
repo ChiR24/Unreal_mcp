@@ -15,11 +15,9 @@ export async function withHandlerContext<T>(handler: () => Promise<T>): Promise<
 }
 
 export function createUnknownActionResponse(
-  action: string,
   message: string,
   extra?: Record<string, unknown>
 ): Record<string, unknown> {
-  void action; // accepted for API compatibility; callers pass equivalent via extra
   return cleanObject({
     success: false,
     error: 'UNKNOWN_ACTION',

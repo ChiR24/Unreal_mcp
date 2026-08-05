@@ -88,6 +88,6 @@ export async function handleAudioTools(
     case 'add_source_effect':
       return cleanObject(await addSourceEffect(tools, args)) as Record<string, unknown>;
     default:
-      return createUnknownActionResponse(action, `Unknown audio action: ${action}`, { isError: true });
+      return createUnknownActionResponse(`Unknown audio action: ${action}`, { isError: true });
   }
 }

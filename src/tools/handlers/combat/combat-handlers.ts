@@ -280,6 +280,6 @@ export async function handleCombatTools(
     // =========================================================================
 
     default:
-      return createUnknownActionResponse(action, `Unknown combat action: ${action}`);
+      return createUnknownActionResponse(`Unknown combat action: ${action}`);
   }
 }

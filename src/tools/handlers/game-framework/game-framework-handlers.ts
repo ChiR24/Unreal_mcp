@@ -225,6 +225,6 @@ export async function handleGameFrameworkTools(
     // =========================================================================
 
     default:
-      return createUnknownActionResponse(action, `Unknown manage_game_framework action: ${action}`);
+      return createUnknownActionResponse(`Unknown manage_game_framework action: ${action}`);
   }
 }

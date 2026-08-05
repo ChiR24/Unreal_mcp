@@ -279,6 +279,6 @@ export async function handleAITools(
     // =========================================================================
 
     default:
-      return createUnknownActionResponse(action, `Unknown AI action: ${action}`);
+      return createUnknownActionResponse(`Unknown AI action: ${action}`);
   }
 }

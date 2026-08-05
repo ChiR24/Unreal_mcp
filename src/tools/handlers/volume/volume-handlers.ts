@@ -171,6 +171,6 @@ export async function handleVolumeTools(
       return sendRequest('get_volumes_info');
 
     default:
-      return createUnknownActionResponse(action, `Unknown volume action: ${action}`);
+      return createUnknownActionResponse(`Unknown volume action: ${action}`);
   }
 }

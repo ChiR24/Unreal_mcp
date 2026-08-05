@@ -116,6 +116,6 @@ export async function handleSplineTools(
       return sendRequest('get_splines_info');
 
     default:
-      return createUnknownActionResponse(action, `Unknown spline action: ${action}`);
+      return createUnknownActionResponse(`Unknown spline action: ${action}`);
   }
 }

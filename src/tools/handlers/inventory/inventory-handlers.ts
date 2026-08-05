@@ -292,6 +292,6 @@ export async function handleInventoryTools(
     // =========================================================================
 
     default:
-      return createUnknownActionResponse(action, `Unknown inventory action: ${action}`);
+      return createUnknownActionResponse(`Unknown inventory action: ${action}`);
   }
 }

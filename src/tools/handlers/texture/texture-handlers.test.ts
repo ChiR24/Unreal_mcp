@@ -114,8 +114,8 @@ describe('handleTextureTools dispatch', () => {
     expect(sendAutomationRequest).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       success: false,
-      message: 'Unknown texture action: unknown_texture_action',
-      data: null
+      error: 'UNKNOWN_ACTION',
+      message: 'Unknown texture action: unknown_texture_action'
     });
   });
 });

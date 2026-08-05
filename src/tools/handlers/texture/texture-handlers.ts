@@ -42,7 +42,7 @@ export async function handleTextureTools(
       await handleTextureSettingsAction(normalizedAction, context) ??
       await handleTextureCompatAction(normalizedAction, context);
 
-    return result ?? createUnknownActionResponse(action, `Unknown texture action: ${action}`);
+    return result ?? createUnknownActionResponse(`Unknown texture action: ${action}`);
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     return ResponseFactory.error(`Texture operation failed: ${err.message}`, 'TEXTURE_ERROR');

@@ -14,7 +14,7 @@ export async function handleGASTools(
   const route = getGASActionRoute(action);
 
   if (!route) {
-    return createUnknownActionResponse(action, `Unknown GAS action: ${action}`);
+    return createUnknownActionResponse(`Unknown GAS action: ${action}`);
   }
 
   const existingAssetPath = context.argsRecord.assetPath;

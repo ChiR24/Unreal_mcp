@@ -15,7 +15,7 @@ export async function handleWidgetAuthoringTools(
 ): Promise<Record<string, unknown>> {
   const requiredFields = getWidgetActionRequiredFields(action);
   if (!requiredFields) {
-    return createUnknownActionResponse(action, `Unknown widget authoring action: ${action}`);
+    return createUnknownActionResponse(`Unknown widget authoring action: ${action}`);
   }
 
   const context = createWidgetAuthoringContext(args, tools);

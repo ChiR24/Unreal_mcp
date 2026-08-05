@@ -71,7 +71,6 @@ async function handleDefaultAssetAction(
 ): Promise<Record<string, unknown>> {
   if (!isValidAssetAction(action)) {
     return createUnknownActionResponse(
-      action,
       `Unknown asset action: ${action}. Valid actions are: ${validAssetActionMessage()}`,
       { action: action || 'manage_asset', assetPath: context.assetArgs.assetPath ?? context.assetArgs.path }
     );
@@ -88,7 +87,6 @@ async function handleDefaultAssetAction(
   if (errorCode === 'UNKNOWN_ACTION' || errorCode === 'INVALID_SUBACTION' ||
       message.toLowerCase().includes('unknown action') || message.toLowerCase().includes('unknown subaction')) {
     return createUnknownActionResponse(
-      action,
       `Unknown asset action: ${action}`,
       { action: action || 'manage_asset', assetPath: context.assetArgs.assetPath ?? context.assetArgs.path }
     );

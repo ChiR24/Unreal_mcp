@@ -213,6 +213,6 @@ export async function handleInteractionTools(
     // =========================================================================
 
     default:
-      return createUnknownActionResponse(action, `Unknown interaction action: ${action}`);
+      return createUnknownActionResponse(`Unknown interaction action: ${action}`);
   }
 }

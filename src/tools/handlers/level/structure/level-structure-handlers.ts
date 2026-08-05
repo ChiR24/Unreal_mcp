@@ -155,6 +155,6 @@ export async function handleLevelStructureTools(
       return sendRequest('get_level_structure_info');
 
     default:
-      return createUnknownActionResponse(action, `Unknown level structure action: ${action}`);
+      return createUnknownActionResponse(`Unknown level structure action: ${action}`);
   }
 }

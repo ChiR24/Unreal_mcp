@@ -7,7 +7,7 @@ import { prepareAudioAuthoringPayload } from './audio-authoring-payload.js';
 import { validateAudioAuthoringAction } from './audio-authoring-action-validation.js';
 
 function unknownAudioAuthoringAction(action: string): Record<string, unknown> {
-  return createUnknownActionResponse(action, `Unknown audio authoring action: ${action}`);
+  return createUnknownActionResponse(`Unknown audio authoring action: ${action}`);
 }
 
 export async function handleAudioAuthoringTools(

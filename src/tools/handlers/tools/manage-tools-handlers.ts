@@ -221,7 +221,6 @@ export async function handleManageToolsTools(
 
       default:
         return createUnknownActionResponse(
-          action,
           `Unknown action: ${action}. Available: list_tools, list_categories, enable_tools, disable_tools, enable_category, disable_category, get_status, reset`
         );
     }
