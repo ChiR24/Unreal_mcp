@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 
 import {
   DisposableWorkspace,
@@ -25,7 +25,9 @@ import {
   surveyOwnedParent,
 } from './disposable-project.mjs';
 
-/** A throwaway /proc, so the orphan scan is tested without spawning anything. */
+/** A throwaway /proc, so the orphan scan is tested without spawning anything.
+ *  /proc is Linux-shaped, so cmdlines carry forward slashes on every host — the
+ *  module's task-52 needle is `/tmp/opencode/task52-`, not a join-built path. */
 function fakeProc(entries: { pid: number; cmdline: string; ppid?: number }[]) {
   const root = mkdtempSync(join(tmpdir(), 'task52-proc-'));
   for (const entry of entries) {
@@ -74,7 +76,7 @@ describe('judgeOwnership', () => {
     expect(verdict.reason).toBe(OWNERSHIP_REASONS.NOT_UNDER_OWNED_PARENT);
   });
 
-  it('refuses a path that stays inside by STRING but escapes through a symlink', () => {
+  it.runIf(process.platform !== 'win32')('refuses a path that stays inside by STRING but escapes through a symlink', () => {
     const root = join(OWNED_PARENT, 'task52-unit-symlink');
     const outside = join(OWNED_PARENT, 'task52-unit-symlink-target');
     mkdirSync(root, { recursive: true });
@@ -131,7 +133,7 @@ describe('DisposableWorkspace', () => {
     const space = workspace();
     space.open();
     expect(existsSync(space.manifestPath)).toBe(true);
-    expect(space.root.startsWith(`${OWNED_PARENT}/`)).toBe(true);
+    expect(resolve(space.root).startsWith(resolve(OWNED_PARENT) + sep)).toBe(true);
   });
 
   it('refuses to address a path outside itself', () => {
@@ -165,12 +167,12 @@ describe('findOrphanedProcesses', () => {
   it('ignores a process whose workspace still exists', () => {
     const space = workspace();
     space.open();
-    const seen = findOrphanedProcesses({ procRoot: fakeProc([{ pid: 4242, cmdline: `/bin/UnrealEditor-Cmd ${space.root}/project/X.uproject` }]) });
+    const seen = findOrphanedProcesses({ procRoot: fakeProc([{ pid: 4242, cmdline: `/bin/UnrealEditor-Cmd ${space.root.replaceAll('\\', '/')}/project/X.uproject` }]) });
     expect(seen).toEqual([]);
   });
 
   it('finds a process still running against a workspace that was already removed', () => {
-    const gone = join(OWNED_PARENT, 'task52-already-removed');
+    const gone = `${OWNED_PARENT}/task52-already-removed`;
     const seen = findOrphanedProcesses({ procRoot: fakeProc([{ pid: 4242, cmdline: `/bin/UnrealEditor-Cmd ${gone}/project/X.uproject` }]) });
     expect(seen.map((entry: { pid: number }) => entry.pid)).toEqual([4242]);
     expect(seen[0]?.workspace).toBe(gone);

@@ -141,10 +141,13 @@ describe('parseAutomationLog — the truncated-run injection', () => {
 describe('the wrong-root injection', () => {
   const io = {
     readFile: (path: string) => {
-      if (path.endsWith('Engine/Build/Build.version')) {
+      // The inventory builds candidate paths with node:path, so Windows delivers
+      // backslashes; normalize before matching the POSIX suffixes below.
+      const normalized = path.replaceAll('\\', '/');
+      if (normalized.endsWith('Engine/Build/Build.version')) {
         return JSON.stringify({ MajorVersion: 5, MinorVersion: 3, PatchVersion: 2, BranchName: 'UE5' });
       }
-      if (path.endsWith('Version.h')) {
+      if (normalized.endsWith('Version.h')) {
         return '#define ENGINE_MAJOR_VERSION\t5\n#define ENGINE_MINOR_VERSION\t3\n#define ENGINE_PATCH_VERSION\t2\n';
       }
       return '#!/bin/sh\n';

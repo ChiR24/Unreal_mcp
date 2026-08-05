@@ -9,6 +9,7 @@
 // keep them apart on synthetic inputs, with no engine present.
 
 import { describe, expect, it } from 'vitest';
+import { join } from 'node:path';
 
 import {
   BLOCKER_SEVERITY, BLOCKER_STATUS, READINESS, READINESS_FILES,
@@ -18,12 +19,15 @@ import {
 
 /** A filesystem that exists only as a set of paths. */
 function fakeIo(present: readonly string[], executable: readonly string[] = [], files: Record<string, string> = {}) {
+  // The modules probe with node:path, so on Windows candidates arrive with
+  // backslashes; normalize before matching the POSIX-concatenated fixture keys.
+  const norm = (path: string) => path.replaceAll('\\', '/');
   return {
-    exists: (path: string) => present.includes(path),
-    isExecutable: (path: string) => executable.includes(path),
+    exists: (path: string) => present.includes(norm(path)),
+    isExecutable: (path: string) => executable.includes(norm(path)),
     readFile: (path: string) => {
-      if (files[path] === undefined) throw new Error(`ENOENT ${path}`);
-      return files[path];
+      if (files[norm(path)] === undefined) throw new Error(`ENOENT ${path}`);
+      return files[norm(path)];
     },
     describe: () => null
   };
@@ -187,7 +191,7 @@ describe('buildUnbuiltRootBlocker', () => {
     // acceptance OPERATION rather than an in-repo script path. The assertion
     // still holds the record to naming something falsifiable.
     expect(record.requiredOperatorInput.acceptanceCommand).toContain('certify UE');
-    expect(record.requiredOperatorInput.requiredFileAbsolutePaths).toEqual([`${ROOT}/${READINESS_FILES.editorCmd}`]);
+    expect(record.requiredOperatorInput.requiredFileAbsolutePaths).toEqual([join(ROOT, READINESS_FILES.editorCmd)]);
   });
 });
 

@@ -30,15 +30,18 @@ import {
   retrieveCapabilities,
 } from '../../../src/tools/catalog/capabilities/retrieval/index.js';
 
-// Re-frozen when `timeoutMs` was withdrawn as a declared input property. The
-// gateway refuses every EXECUTION_OPTION_KEYS name found in action params, so a
-// record publishing `timeoutMs` advertised a parameter that could never be sent;
-// it is supplied as options.timeoutMs instead. Three of the four pilot exports
-// (build-environment, manage-blueprint, manage-sequence) carried it, so all
-// three emitter hashes move. The 493-record structure is unchanged.
-const FROZEN_JSON_HASH = '8491c8e9e6263839d058d9d3b3c1debf45d556b08a4a35104b51c900eca895cd';
-const FROZEN_TS_HASH = 'ddc7b866d7150a0d49506cdafa98b379ec8132568b3c2d30b5e51fda160b92b1';
-const FROZEN_NATIVE_HASH = '8a0c79889a9c6056f7304ddd23c19def339dbe8badf016d828e05b57e8099ae7';
+// Re-frozen twice. First when `create_landscape` gained `landscapeName` in
+// inputProps (the record declared requiredOneOf ['name','landscapeName'] naming
+// a property that inputProps did not publish, so the at-least-one-of group
+// advertised a parameter that could never be sent; the property is now
+// published). Then again after the requiredOneOf coverage audit added
+// at-least-one-of groups to manage-asset (channel_pack, create_enum,
+// connect_nodes/connect_material_pins) and manage-sequence (add_keyframe),
+// removing the group members from `required` so the groups actually enforce
+// the native alternatives. The 493-record structure is unchanged.
+const FROZEN_JSON_HASH = '13727126b155eff2f5c93df72146731b4a0a79ecea206e7e8f61cd9d726f81a7';
+const FROZEN_TS_HASH = '6dca013b78ec4e25b44ef16bd28cfe88d59c80f0cf0eacf5860a5e9b407bc236';
+const FROZEN_NATIVE_HASH = '93836993d57397a86e15f7dade51a339b6c3dd365e01cd8cdf140c543bbd8f89';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

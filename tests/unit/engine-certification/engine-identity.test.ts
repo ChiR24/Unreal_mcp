@@ -47,14 +47,18 @@ const RUNUAT = 'Engine/Build/BatchFiles/RunUAT.sh';
 /** An offline engine root: a map of relative path to contents. */
 function fakeIo(files: Record<string, string>, options: { executable?: string[]; describe?: string | null } = {}) {
   const executable = new Set(options.executable ?? []);
+  // Engine roots are built with node:path, so on Windows the candidate paths
+  // arrive with backslashes; normalize before matching so the POSIX fixture
+  // keys stay readable on every host.
+  const norm = (path: string) => path.replaceAll('\\', '/');
   return {
     readFile: (path: string) => {
-      const key = Object.keys(files).find((entry) => path.endsWith(entry));
+      const key = Object.keys(files).find((entry) => norm(path).endsWith(entry));
       if (key === undefined) throw new Error(`ENOENT ${path}`);
       return files[key] as string;
     },
-    exists: (path: string) => Object.keys(files).some((entry) => path.endsWith(entry)),
-    isExecutable: (path: string) => [...executable].some((entry) => path.endsWith(entry)),
+    exists: (path: string) => Object.keys(files).some((entry) => norm(path).endsWith(entry)),
+    isExecutable: (path: string) => [...executable].some((entry) => norm(path).endsWith(entry)),
     describe: () => options.describe ?? null,
   };
 }

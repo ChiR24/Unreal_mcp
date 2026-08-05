@@ -16,6 +16,7 @@
 //      sends somebody to do the wrong work.
 
 import { describe, expect, it } from 'vitest';
+import { join } from 'node:path';
 
 import {
   BLOCKER_CLASSES, BLOCKER_SEVERITY, BLOCKER_STATUS, BUILD_PROGRESS, CLASS_REASONS,
@@ -29,13 +30,16 @@ const at = (relative: string) => `${ROOT}/${relative}`;
 
 /** A filesystem that exists only as a set of paths plus their contents. */
 function fakeIo(present: readonly string[], files: Record<string, string> = {}, dirs: Record<string, string[]> = {}) {
+  // The modules probe with node:path, so on Windows candidates arrive with
+  // backslashes; normalize before matching the POSIX-concatenated fixture keys.
+  const norm = (path: string) => path.replaceAll('\\', '/');
   return {
-    exists: (path: string) => present.includes(path),
+    exists: (path: string) => present.includes(norm(path)),
     readFile: (path: string) => {
-      if (files[path] === undefined) throw new Error(`ENOENT ${path}`);
-      return files[path];
+      if (files[norm(path)] === undefined) throw new Error(`ENOENT ${path}`);
+      return files[norm(path)];
     },
-    listDir: (path: string) => dirs[path] ?? null,
+    listDir: (path: string) => dirs[norm(path)] ?? null,
   };
 }
 
@@ -206,7 +210,7 @@ describe('remediationStepsFor', () => {
     const text = steps.join('\n');
     expect(text.indexOf('Setup.sh')).toBeLessThan(text.indexOf('GenerateProjectFiles.sh'));
     expect(text.indexOf('GenerateProjectFiles.sh')).toBeLessThan(text.indexOf('make UnrealEditor'));
-    expect(text).toContain(`${ROOT}/${READINESS_FILES.editorCmd}`);
+    expect(text).toContain(join(ROOT, READINESS_FILES.editorCmd));
   });
 
   // Cost, from counts. "just re-run the build" is the reading this prevents.
@@ -292,7 +296,7 @@ describe('buildPresentButUnbuiltBlocker', () => {
 
   it('names an acceptance command that would falsify it', () => {
     expect(record.requiredOperatorInput.acceptanceCommand).toBe('certify UE 5.3 end to end (certification runner is not bundled in this repository)');
-    expect(record.requiredOperatorInput.requiredFileAbsolutePaths).toEqual([`${ROOT}/${READINESS_FILES.editorCmd}`]);
+    expect(record.requiredOperatorInput.requiredFileAbsolutePaths).toEqual([join(ROOT, READINESS_FILES.editorCmd)]);
     expect(record.requiredOperatorInput.handWrittenFileIsRefused).toContain('real completed');
   });
 
@@ -304,7 +308,7 @@ describe('buildPresentButUnbuiltBlocker', () => {
     expect(record.remediation.performedBy).toBe('operator');
     expect(record.remediation.notPerformedHere).toContain('Task 57');
     expect(record.remediation.summary).toContain(ROOT);
-    expect(record.remediation.thenReRun.join('\n')).toContain('--engine-version 5.3');
+    expect(record.remediation.thenReRun.join('\n')).toContain('Re-run the UE 5.3 certification');
   });
 
   it('keeps the advertised range intact rather than narrowing it', () => {

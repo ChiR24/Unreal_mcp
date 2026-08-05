@@ -27,8 +27,11 @@ type RootSpec = { version: [number, number, number]; editor?: boolean; describe?
 
 /** An offline fleet of engine roots, keyed by root path. */
 function fakeFleet(fleet: Record<string, RootSpec>) {
+  // The inventory builds candidate paths with node:path, so Windows delivers
+  // backslashes; normalize before prefix/suffix matching against the POSIX keys.
+  const norm = (path: string) => path.replaceAll('\\', '/');
   const owner = (path: string) => Object.keys(fleet)
-    .filter((root) => path.startsWith(`${root}/`))
+    .filter((root) => norm(path).startsWith(`${root}/`))
     .sort((a, b) => b.length - a.length)[0];
   const contentsOf = (root: string, relative: string) => {
     const spec = fleet[root] as RootSpec;
@@ -49,7 +52,7 @@ function fakeFleet(fleet: Record<string, RootSpec>) {
   const lookup = (path: string) => {
     const root = owner(path);
     if (root === undefined) return null;
-    return contentsOf(root, path.slice(root.length + 1));
+    return contentsOf(root, norm(path).slice(root.length + 1));
   };
   return {
     readFile: (path: string) => {
@@ -58,7 +61,7 @@ function fakeFleet(fleet: Record<string, RootSpec>) {
       return found;
     },
     exists: (path: string) => lookup(path) !== null,
-    isExecutable: (path: string) => path.endsWith(EDITOR) && lookup(path) !== null,
+    isExecutable: (path: string) => norm(path).endsWith(EDITOR) && lookup(path) !== null,
     describe: (root: string) => fleet[root]?.describe ?? null,
   };
 }

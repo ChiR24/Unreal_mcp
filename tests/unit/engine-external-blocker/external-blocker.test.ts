@@ -71,14 +71,17 @@ function contentsOf(root: string, relative: string): string | null {
 }
 
 /** Which fake root owns an absolute path — longest prefix, so `-5.0.3` never swallows `-5.0-branch`. */
+// The inventory builds candidate paths with node:path, so Windows delivers
+// backslashes; normalize before prefix/suffix matching against the POSIX keys.
+const norm = (path: string) => path.replaceAll('\\', '/');
 const ownerOf = (path: string) => Object.keys(FLEET)
-  .filter((root) => path.startsWith(`${root}/`))
+  .filter((root) => norm(path).startsWith(`${root}/`))
   .sort((a, b) => b.length - a.length)[0];
 
 function lookup(path: string): string | null {
   const root = ownerOf(path);
   if (root === undefined) return null;
-  return contentsOf(root, path.slice(root.length + 1));
+  return contentsOf(root, norm(path).slice(root.length + 1));
 }
 
 const fleetIo = {
@@ -88,7 +91,7 @@ const fleetIo = {
     return found;
   },
   exists: (path: string) => lookup(path) !== null,
-  isExecutable: (path: string) => lookup(path) !== null && path.endsWith(EDITOR),
+  isExecutable: (path: string) => lookup(path) !== null && norm(path).endsWith(EDITOR),
   describe: (root: string) => FLEET[root]?.describe ?? null,
 };
 
@@ -114,7 +117,7 @@ const blockerIo = {
   },
   minorAt: (buildVersionFile: string) => {
     const root = ownerOf(buildVersionFile);
-    if (root === undefined || !buildVersionFile.endsWith(BUILD)) return null;
+    if (root === undefined || !norm(buildVersionFile).endsWith(BUILD)) return null;
     const [major, minor] = FLEET[root].version;
     return `${major}.${minor}`;
   },
