@@ -162,7 +162,10 @@ describe('gateway-manifest checkManifestDrift', () => {
 });
 
 describe('gateway-manifest writeManifestTargets symlink final rejection', () => {
-  it('rejects an existing symlink final target and leaves the symlink unchanged', () => {
+  // A FILE symlink fixture is impossible on Windows without elevation (junctions
+  // are directory-only), so the reject-symlink contract is exercised on POSIX,
+  // where CI also runs it. Same idiom as disposable-project.test.ts.
+  it.runIf(process.platform !== 'win32')('rejects an existing symlink final target and leaves the symlink unchanged', () => {
     const dir = makeTempDir();
     try {
       const target = join(dir, 'real.json');
@@ -180,7 +183,7 @@ describe('gateway-manifest writeManifestTargets symlink final rejection', () => 
     }
   });
 
-  it('rejects a symlink final even when other targets are valid', () => {
+  it.runIf(process.platform !== 'win32')('rejects a symlink final even when other targets are valid', () => {
     const dir = makeTempDir();
     try {
       const valid = join(dir, 'valid.json');
@@ -257,7 +260,15 @@ describe('gateway-manifest writeManifestTargets random and exclusive temp', () =
       const file = join(dir, 'a.json');
       writeManifestTargets([[file, '{"ok": true}']]);
       const mode = statSync(file).mode & 0o777;
-      expect(mode).toBe(0o644);
+      if (process.platform === 'win32') {
+        // Windows chmod maps only the read-only attribute: a 0o644 file
+        // reports as 0o666. The contract that still exists there: writable
+        // (not read-only) and not executable.
+        expect(mode & 0o222).not.toBe(0);
+        expect(mode & 0o111).toBe(0);
+      } else {
+        expect(mode).toBe(0o644);
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

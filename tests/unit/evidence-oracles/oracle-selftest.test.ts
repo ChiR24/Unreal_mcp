@@ -78,11 +78,11 @@ afterAll(() => { rmSync(ROOT, { recursive: true, force: true }); });
 
 describe('Task 50 — path mapping is a pure transform, never a question to the subject', () => {
   it('maps an Unreal object path to the package that would hold it', () => {
-    expect(packageBasePath('/proj', '/Game/MCPTest/run/M_Thing')).toBe('/proj/Content/MCPTest/run/M_Thing');
+    expect(packageBasePath('/proj', '/Game/MCPTest/run/M_Thing')).toBe(join('/proj', 'Content', 'MCPTest', 'run', 'M_Thing'));
   });
 
   it('strips the object suffix so /Game/A/B.B resolves to the B package', () => {
-    expect(packageBasePath('/proj', '/Game/A/B.B')).toBe('/proj/Content/A/B');
+    expect(packageBasePath('/proj', '/Game/A/B.B')).toBe(join('/proj', 'Content', 'A', 'B'));
   });
 
   it('refuses a path outside /Game rather than inventing a location for it', () => {
@@ -451,18 +451,24 @@ describe('Task 50 — actors, settings, renders, processes, ports, sessions, log
   it('PROCESS: this process is observed alive with a start time; a dead pid is absent', () => {
     const alive = observeProcess({ pid: process.pid });
     expect(alive.present).toBe(true);
-    expect(typeof alive.detail.startTicks).toBe('number');
+    if (process.platform === 'win32') {
+      // No /proc on win32: the kill(0) fallback proves liveness but cannot read
+      // a start time, so it reports null rather than inventing one.
+      expect(alive.detail.startTicks).toBeNull();
+    } else {
+      expect(typeof alive.detail.startTicks).toBe('number');
+    }
     // pid 0 is never a userspace process, so /proc/0 never exists.
     expect(observeProcess({ pid: 0 }).present).toBe(false);
   });
 
-  it('PORT: an unbound high port is absent; the listener check is conclusive either way', () => {
+  it.runIf(process.platform !== 'win32')('PORT: an unbound high port is absent; the listener check is conclusive either way', () => {
     const seen = observeListener({ port: 65_530 });
     expect(seen.conclusive).toBe(true);
     expect(seen.present).toBe(false);
   });
 
-  it('PORT: a real listener this test opens is observed present', async () => {
+  it.runIf(process.platform !== 'win32')('PORT: a real listener this test opens is observed present', async () => {
     const { createServer } = await import('node:net');
     const server = createServer();
     await new Promise<void>((settle) => server.listen(0, '127.0.0.1', settle));

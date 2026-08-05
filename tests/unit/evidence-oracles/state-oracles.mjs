@@ -452,6 +452,32 @@ export function observeProcess(spec) {
   const procRoot = spec.procRoot ?? '/proc';
   const dir = join(procRoot, String(spec.pid));
   if (!existsSync(dir)) {
+    // Windows has no /proc, so the directory probe can never see a live pid
+    // there. signal 0 is the portable existence probe: it throws ESRCH when no
+    // such process exists, and succeeds (or throws EPERM for a process this
+    // caller may not signal, which still means it exists) otherwise. pid 0 is
+    // never a userspace process on any platform, and kill(0, 0) succeeds on
+    // win32, so it is special-cased to stay absent.
+    if (process.platform === 'win32') {
+      let present = false;
+      if (spec.pid !== 0) {
+        try {
+          process.kill(spec.pid, 0);
+          present = true;
+        } catch (error) {
+          present = (/** @type {NodeJS.ErrnoException} */ (error))?.code === 'EPERM';
+        }
+      }
+      return observation({
+        kind: 'process', mechanism: 'win32:kill-0', target: `pid:${spec.pid}`,
+        present, now: spec.now,
+        detail: {
+          pid: spec.pid,
+          startTicks: null,
+          note: 'no /proc on win32; existence probed via kill(pid, 0) and startTicks is unavailable',
+        },
+      });
+    }
     return observation({
       kind: 'process', mechanism: 'procfs:stat', target: `pid:${spec.pid}`,
       present: false, now: spec.now, detail: { reason: 'NO_SUCH_PID' },

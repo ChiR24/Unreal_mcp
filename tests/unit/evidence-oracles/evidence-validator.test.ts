@@ -11,11 +11,11 @@
 // Real files, real hashes, real pids. A mocked fs would let a "stale package"
 // check pass against timestamps no build system ever produces.
 
-import { mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { INDEPENDENCE } from './state-oracles.mjs';
+import { INDEPENDENCE, observeProcess } from './state-oracles.mjs';
 import {
   REJECTIONS,
   describeRejections,
@@ -88,8 +88,10 @@ function validDocument(): Record<string, unknown> {
 
 /** Read this process's own start time the same way the validator will re-read it. */
 function currentStartTicks(): number {
-  const stat = readFileSync(`/proc/${process.pid}/stat`, 'utf8');
-  return Number(stat.slice(stat.lastIndexOf(')') + 2).split(' ')[19]);
+  // observeProcess has a win32 fallback (kill(pid, 0)) that reports no start
+  // ticks; Number(null) === 0 matches the validator's own re-read of the same
+  // record, so the positive control stays consistent on both platforms.
+  return Number(observeProcess({ pid: process.pid }).detail.startTicks) || 0;
 }
 
 beforeAll(() => { mkdirSync(ROOT, { recursive: true }); });

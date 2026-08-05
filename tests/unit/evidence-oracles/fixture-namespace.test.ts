@@ -79,7 +79,9 @@ describe('Task 50 — containment is a real-path check, not a prefix match', () 
     mkdirSync(owned, { recursive: true });
     mkdirSync(outside, { recursive: true });
     writeFileSync(join(outside, 'precious.uasset'), 'someone else work', { mode: 0o600 });
-    symlinkSync(outside, join(owned, 'escape'));
+    // Windows has no unprivileged directory symlinks; a junction needs no
+    // elevation and realpathSync resolves it exactly like a symlink.
+    symlinkSync(outside, join(owned, 'escape'), process.platform === 'win32' ? 'junction' : 'dir');
     const verdict = isStrictlyInside(owned, join(owned, 'escape'));
     expect(verdict.owned).toBe(false);
     expect(existsSync(join(outside, 'precious.uasset'))).toBe(true);

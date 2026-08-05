@@ -39,6 +39,16 @@ function expectPathErrorCode(fn: () => void, code: PilotPathErrorDetail['code'])
   }
 }
 
+/**
+ * Symlink whose real target is outside the repo and OS temp dir, so the escape
+ * detection fires. Windows has no unprivileged directory symlinks; a junction
+ * needs no elevation and realpathSync resolves it exactly like a symlink.
+ */
+function symlinkExternalEscape(linkPath: string): void {
+  const target = process.platform === 'win32' ? (process.env.WINDIR ?? 'C:\\Windows') : '/etc';
+  symlinkSync(target, linkPath, process.platform === 'win32' ? 'junction' : 'dir');
+}
+
 describe('gateway-manifest pilot OUTPUT path policy', () => {
   it('accepts the default .omo/pilot-manifest output dir (no env)', () => {
     const root = makeNonTempRepo();
@@ -136,7 +146,7 @@ describe('gateway-manifest pilot OUTPUT path policy', () => {
     try {
       mkdirSync(join(root, '.omo'), { recursive: true });
       const linkPath = join(root, '.omo', 'escape-link');
-      symlinkSync('/etc', linkPath);
+      symlinkExternalEscape(linkPath);
       expectPathErrorCode(() => resolvePilotOutputDir('.omo/escape-link/sub', root), 'PILOT_OUTPUT_DIR_SYMLINK_ESCAPE');
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -147,7 +157,7 @@ describe('gateway-manifest pilot OUTPUT path policy', () => {
     const root = makeNonTempRepo();
     const tempLink = join(tmpdir(), `gw-temp-escape-${process.pid}-${Date.now()}`);
     try {
-      symlinkSync('/etc', tempLink);
+      symlinkExternalEscape(tempLink);
       expectPathErrorCode(() => resolvePilotOutputDir(tempLink, root), 'PILOT_OUTPUT_DIR_SYMLINK_ESCAPE');
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -192,7 +202,7 @@ describe('gateway-manifest catalog INPUT path policy', () => {
     try {
       mkdirSync(join(root, 'src'), { recursive: true });
       const linkPath = join(root, 'src', 'catalog-link.json');
-      symlinkSync('/etc/passwd', linkPath);
+      symlinkExternalEscape(linkPath);
       expectPathErrorCode(() => validatePilotCatalogPath('src/catalog-link.json', root), 'PILOT_CATALOG_PATH_SYMLINK_ESCAPE');
     } finally {
       rmSync(root, { recursive: true, force: true });
