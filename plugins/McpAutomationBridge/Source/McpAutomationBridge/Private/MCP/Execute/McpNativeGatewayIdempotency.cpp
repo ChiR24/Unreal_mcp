@@ -15,8 +15,14 @@ void AppendCanonical(FString& Out, const TSharedPtr<FJsonValue>& Value);
 
 void AppendCanonicalObject(FString& Out, const TSharedPtr<FJsonObject>& Object)
 {
+	// FJsonObject's key type is FString before UE 5.8 and UE::FSharedString from
+	// 5.8 on, so the keys are copied out rather than read into a TArray<FString>.
 	TArray<FString> Keys;
-	Object->Values.GetKeys(Keys);
+	Keys.Reserve(Object->Values.Num());
+	for (const auto& Pair : Object->Values)
+	{
+		Keys.Add(FString(*Pair.Key));
+	}
 	// Sorting the keys is what makes the digest order-independent: two payloads
 	// that differ only in key order produce the same fingerprint.
 	Keys.Sort();
@@ -34,7 +40,7 @@ void AppendCanonicalObject(FString& Out, const TSharedPtr<FJsonObject>& Object)
 		KeyWriter->Close();
 		Out += EncodedKey;
 		Out += TEXT(":");
-		AppendCanonical(Out, Object->Values[Keys[Index]]);
+		AppendCanonical(Out, Object->Values.FindChecked(*Keys[Index]));
 	}
 	Out += TEXT("}");
 }

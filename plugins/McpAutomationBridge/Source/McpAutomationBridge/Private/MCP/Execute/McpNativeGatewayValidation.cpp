@@ -200,7 +200,7 @@ TSharedPtr<FJsonObject> McpProjectCanonicalOutput(
 	const TSharedPtr<FJsonObject>* Payload = nullptr;
 	const bool bHasPayload = Result->TryGetObjectField(TEXT("data"), Payload) && Payload;
 	TSharedPtr<FJsonObject> Projected = MakeShared<FJsonObject>();
-	for (const TPair<FString, TSharedPtr<FJsonValue>>& Property : (*Properties)->Values)
+	for (const auto& Property : (*Properties)->Values)
 	{
 		if (const TSharedPtr<FJsonValue>* Field = Result->Values.Find(Property.Key))
 		{
