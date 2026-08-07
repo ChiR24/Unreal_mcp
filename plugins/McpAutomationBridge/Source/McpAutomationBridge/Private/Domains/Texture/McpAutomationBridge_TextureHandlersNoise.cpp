@@ -6,7 +6,11 @@ TSharedPtr<FJsonObject> HandleCreateNoiseTexture(const TSharedPtr<FJsonObject>& 
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     TSet<FString> ValidParams = {
-        TEXT("subAction"), TEXT("name"), TEXT("path"), TEXT("noiseType"),
+        // `action` is injected by the consolidated routing layer
+        // (WithPayloadSubAction) as the legacy dispatch verb; it is not a client
+        // parameter, so it must be accepted here or every schema-valid texture
+        // call fails TEXTURE_ERROR: Invalid parameter: action (MCPBB-060).
+        TEXT("action"), TEXT("subAction"), TEXT("name"), TEXT("path"), TEXT("noiseType"),
         TEXT("width"), TEXT("height"), TEXT("scale"), TEXT("octaves"),
         TEXT("persistence"), TEXT("lacunarity"), TEXT("seed"),
         TEXT("seamless"), TEXT("hdr"), TEXT("save")
