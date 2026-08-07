@@ -127,7 +127,11 @@ bool FMcpTask38NativeProtocolCaptureTest::RunTest(const FString& Parameters)
 			{
 				bDataPresent = true;
 				TArray<FString> Keys;
-				(*DataObj)->Values.GetKeys(Keys);
+				Keys.Reserve((*DataObj)->Values.Num());
+				for (const auto& Pair : (*DataObj)->Values)
+				{
+					Keys.Add(FString(*Pair.Key));
+				}
 				Keys.Sort();
 				for (const FString& Key : Keys) { DataKeys.Add(MakeShared<FJsonValueString>(Key)); }
 			}

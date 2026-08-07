@@ -44,9 +44,12 @@ TArray<FString> ParameterNames(const TSharedPtr<FJsonObject>& Schema)
 	TArray<FString> Names;
 	for (const auto& Pair : SchemaProperties(Schema)->Values)
 	{
-		if (Pair.Key.Equals(TEXT("action"), ESearchCase::CaseSensitive)) continue;
-		if (Pair.Key.Equals(TEXT("subAction"), ESearchCase::CaseSensitive)) continue;
-		Names.Add(Pair.Key);
+		// Both key types dereference to a null-terminated TCHAR buffer, so a view
+		// compares without allocating on every supported engine version.
+		const FStringView KeyView(*Pair.Key);
+		if (KeyView.Equals(TEXT("action"), ESearchCase::CaseSensitive)) continue;
+		if (KeyView.Equals(TEXT("subAction"), ESearchCase::CaseSensitive)) continue;
+		Names.Add(FString(*Pair.Key));
 	}
 	Names.Sort([](const FString& L, const FString& R) { return L.Compare(R, ESearchCase::CaseSensitive) < 0; });
 	return Names;
