@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 // ============================================================================
@@ -34,21 +34,46 @@ const UPLUGIN = `plugins/${UA}/${UA}.uplugin`;
 const isIntentionalStatement = (line: string): boolean =>
   line.includes(UA) && /removed/i.test(line) && /external consumer/i.test(line);
 
-// ripgrep needs an explicit path under `execFileSync` (the no-path form searches
-// nothing when stdin is not a TTY). `.` searches the repo root recursively; the
-// hidden `.omo` directory is skipped by default, mirroring the acceptance
-// command's `--glob '!.omo/**'` intent.
-const runRgRepoOwned = (): string => {
-  try {
-    return execFileSync(
-      'rg',
-      ['-n', PATTERN, '.'],
-      { encoding: 'utf8' },
-    ).trim();
-  } catch {
-    // rg exits non-zero when there are zero matches; treat that as empty.
-    return '';
+// "Repository-owned" is exactly the set of TRACKED files, so the scan enumerates
+// them with `git ls-files` and reads them in process. `.omo` is untracked, so it
+// is excluded for free — no glob needed.
+//
+// This replaced a `rg` shell-out that could never pass in CI. ripgrep is not
+// installed on GitHub runners and nothing in the workflow installs it, so
+// `execFileSync` threw ENOENT; the catch treated that exactly like ripgrep's
+// "no matches" exit code and returned an empty string. A MISSING TOOL therefore
+// reported as a MISSING MIGRATION STATEMENT, and the contract only passed on
+// machines that happened to have rg on PATH. Reading the files here removes the
+// external dependency, so the contract means the same thing everywhere.
+const isBinary = (contents: Buffer): boolean => contents.subarray(0, 8192).includes(0);
+
+const runRepoOwnedScan = (): string => {
+  const tracked = execFileSync('git', ['ls-files', '-z'], {
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  })
+    .split('\0')
+    .filter(Boolean);
+
+  const matcher = new RegExp(PATTERN);
+  const hits: string[] = [];
+  for (const file of tracked) {
+    let contents: Buffer;
+    try {
+      contents = readFileSync(file);
+    } catch {
+      // Listed but unreadable: a submodule entry, or deleted mid-scan.
+      continue;
+    }
+    if (isBinary(contents)) continue;
+    contents
+      .toString('utf8')
+      .split(/\r?\n/u)
+      .forEach((line, index) => {
+        if (matcher.test(line)) hits.push(`${file}:${index + 1}:${line}`);
+      });
   }
+  return hits.join('\n');
 };
 
 describe('Task 7 — ACP panel plugin removal contract', () => {
@@ -67,7 +92,7 @@ describe('Task 7 — ACP panel plugin removal contract', () => {
   });
 
   it('rg over repo-owned files returns only the intentional migration statement', () => {
-    const raw = runRgRepoOwned();
+    const raw = runRepoOwnedScan();
     const lines = raw.split('\n').filter(Boolean);
     expect(
       lines.length,
