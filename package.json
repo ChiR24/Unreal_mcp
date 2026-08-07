@@ -71,7 +71,7 @@
   "author": "Unreal Engine MCP Team",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.29.0",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "ajv": "^8.17.1",
     "dotenv": "^17.2.3",
     "mcp-client-capabilities": "^0.0.14",
