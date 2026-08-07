@@ -19,11 +19,16 @@ permissions:
 # indistinguishable from a job that passed, so the skip is announced rather
 # than left as a grey badge.
 
+# `dev` is the DEFAULT branch and where every PR lands; `main` only receives
+# release merges. Gating on `main` alone left the gates below dormant for the
+# whole of a release cycle while work accumulated on `dev`, so a PR could carry a
+# full set of green checks without a single test, type-check or drift gate having
+# run against it. Both integration branches are named here for that reason.
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
