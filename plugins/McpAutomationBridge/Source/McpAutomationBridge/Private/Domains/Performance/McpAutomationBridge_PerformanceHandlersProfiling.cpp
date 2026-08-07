@@ -58,8 +58,6 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
     {
         bool bDetailed = false;
         Context.Payload->TryGetBoolField(TEXT("detailed"), bDetailed);
-        FString OutputPath;
-        Context.Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
 
         if (!RequireEditor(Context))
         {
@@ -73,7 +71,10 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
         const FString ReportDirectory = FPaths::ProfilingDir() / TEXT("MemReports");
         Resp->SetStringField(TEXT("reportDirectory"), ReportDirectory);
         TArray<FString> ReportFiles;
-        IFileManager::Get().FindFilesRecursive(ReportFiles, *ReportDirectory, TEXT("*.memreport"), true, false);
+        // Bound the scan: the newest-file decision only needs a ceiling, and the
+        // engine-owned directory must not become an unbounded cost.
+        IFileManager::Get().FindFilesRecursive(
+            ReportFiles, *ReportDirectory, TEXT("*.memreport"), true, false, true, 256);
         FString NewestReport;
         FDateTime NewestStamp = FDateTime::MinValue();
         for (const FString& File : ReportFiles)

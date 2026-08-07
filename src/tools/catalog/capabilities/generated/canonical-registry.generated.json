@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "036a1612ed43ddf0",
+  "catalogRevision": "eba0be2d104f7510",
   "recordCount": 1335,
   "records": [
     {
@@ -233845,7 +233845,7 @@
         "topics": [
           "generate_memory_report"
         ],
-        "summary": "Generate an engine memory report, optionally detailed and written to an output path.",
+        "summary": "Generate an engine memory report, optionally detailed.",
         "whenToUse": [
           "A snapshot of engine memory usage must be generated."
         ],
@@ -233865,10 +233865,6 @@
             "detailed": {
               "type": "boolean",
               "description": "Produce a detailed report."
-            },
-            "outputPath": {
-              "type": "string",
-              "description": "Optional output path for the report."
             }
           },
           "required": [
@@ -233905,7 +233901,7 @@
       },
       "examples": [
         {
-          "title": "Generate an engine memory report, optionally detailed and written to an output path.",
+          "title": "Generate an engine memory report, optionally detailed.",
           "input": {
             "action": "generate_memory_report",
             "detailed": true
@@ -233940,10 +233936,10 @@
         ]
       },
       "behavior": {
-        "effect": "read",
-        "idempotency": "idempotent",
+        "effect": "write",
+        "idempotency": "non-idempotent",
         "longRunning": false,
-        "safeToRetry": true,
+        "safeToRetry": false,
         "supportsPreview": false,
         "supportsUndo": false,
         "semantics": {
@@ -233975,9 +233971,9 @@
         }
       },
       "policy": {
-        "requiredScope": "read",
+        "requiredScope": "write",
         "consent": "none",
-        "dataAccess": "project-read"
+        "dataAccess": "project-write"
       },
       "cost": {
         "latency": "interactive",
@@ -234003,8 +233999,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6f8287fc5b2e9e01609e17852f958fcebc1c9874ababa7f43081a86f655c7dcc",
-        "content": "78db8abec5725ce462848728abfb5a8babee6139e24ae6062c491b9b639a2321"
+        "schema": "735bef794013510b3627d75c74c0077e61cd61668a683d22b8f019e4f7007283",
+        "content": "1656548ebd3afcf70f1489c9eacbca0be50c4ab46e6538d25b0fa0f095a245ae"
       }
     },
     {
@@ -254203,8 +254199,8 @@
       "parentTool": "system_control",
       "dispatchAction": "generate_memory_report",
       "domain": "performance",
-      "schemaHash": "6f8287fc5b2e9e01609e17852f958fcebc1c9874ababa7f43081a86f655c7dcc",
-      "contentHash": "78db8abec5725ce462848728abfb5a8babee6139e24ae6062c491b9b639a2321"
+      "schemaHash": "735bef794013510b3627d75c74c0077e61cd61668a683d22b8f019e4f7007283",
+      "contentHash": "1656548ebd3afcf70f1489c9eacbca0be50c4ab46e6538d25b0fa0f095a245ae"
     },
     {
       "id": "system_control.get_project_settings",
@@ -270278,20 +270274,16 @@
       "via"
     ],
     "system_control.generate_memory_report": [
-      "and",
       "detailed",
       "engine",
       "generate",
       "generate_memory_report",
       "memory",
       "optionally",
-      "output",
-      "path",
       "performance",
       "report",
       "system_control",
-      "system_control.generate_memory_report",
-      "written"
+      "system_control.generate_memory_report"
     ],
     "system_control.get_project_settings": [
       "for",

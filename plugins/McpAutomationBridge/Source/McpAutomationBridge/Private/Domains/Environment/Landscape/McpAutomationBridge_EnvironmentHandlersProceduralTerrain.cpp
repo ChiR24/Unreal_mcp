@@ -249,14 +249,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
         }
     }
 
-    // Calculate normals and tangents
-    UKismetProceduralMeshLibrary::CalculateTangentsForMesh(Vertices, Triangles, UVs, Normals, Tangents);
-
-    // Create the mesh section
-    ProcMesh->CreateMeshSection(0, Vertices, Triangles, Normals, UVs, TArray<FColor>(), Tangents, true);
-
     // -------------------------------------------------------------------------
-    // Validate generated geometry is non-empty before reporting success
+    // Validate generated geometry is non-empty before building the mesh
     // -------------------------------------------------------------------------
     FBox TerrainBounds(ForceInit);
     for (const FVector& Vertex : Vertices)
@@ -272,6 +266,12 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
                             TEXT("EMPTY_GEOMETRY"));
         return true;
     }
+
+    // Calculate normals and tangents
+    UKismetProceduralMeshLibrary::CalculateTangentsForMesh(Vertices, Triangles, UVs, Normals, Tangents);
+
+    // Create the mesh section
+    ProcMesh->CreateMeshSection(0, Vertices, Triangles, Normals, UVs, TArray<FColor>(), Tangents, true);
 
     // -------------------------------------------------------------------------
     // Apply material if specified

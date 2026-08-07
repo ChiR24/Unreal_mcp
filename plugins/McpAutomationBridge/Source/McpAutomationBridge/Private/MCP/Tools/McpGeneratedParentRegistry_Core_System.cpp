@@ -47,7 +47,7 @@ public:
 			Schema.FreeformObject(TEXT("metadata"), TEXT("Optional metadata payload."));
 			Schema.TypeUnion(TEXT("mode"), { TEXT("string") }, TEXT("Optimization mode."));
 			Schema.String(TEXT("name"), TEXT("Alternate widget path selector."));
-			Schema.String(TEXT("outputPath"), TEXT("Optional output path for the report."));
+			Schema.String(TEXT("outputPath"), TEXT("Output /Game folder for the merged asset."));
 			Schema.Bool(TEXT("overwrite"), TEXT("Overwrite existing trace files."));
 			Schema.String(TEXT("packageName"), TEXT("Package name for the merged asset."));
 			Schema.String(TEXT("parentName"), TEXT("Optional parent panel name."));

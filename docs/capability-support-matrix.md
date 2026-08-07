@@ -5,7 +5,7 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `036a1612ed43ddf0`
+Catalog revision: `eba0be2d104f7510`
 
 Every one of the 1335 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
@@ -17,10 +17,10 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 1335 | 0 / 1175 |
-| Undoable | 0 / 1335 | 0 / 1175 |
-| Compensatable | 21 / 1335 | 20 / 1175 |
-| Fully pessimistic | 1314 / 1335 | 1155 / 1175 |
+| Previewable | 0 / 1335 | 0 / 1176 |
+| Undoable | 0 / 1335 | 0 / 1176 |
+| Compensatable | 21 / 1335 | 20 / 1176 |
+| Fully pessimistic | 1314 / 1335 | 1156 / 1176 |
 
 ## By parent tool
 
@@ -48,7 +48,7 @@ truthful result, not a gap in coverage.
 | `manage_pcg` | 30 | 30 | 0 | 0 | 0 |
 | `manage_sequence` | 81 | 74 | 0 | 0 | 3 |
 | `manage_tools` | 8 | 5 | 0 | 0 | 2 |
-| `system_control` | 52 | 46 | 0 | 0 | 2 |
+| `system_control` | 52 | 47 | 0 | 0 | 2 |
 
 ## Capabilities with an earned (non-pessimistic) declaration
 
@@ -1356,7 +1356,7 @@ truthful result, not a gap in coverage.
 | `system_control.enable_gpu_timing` | write | none | none | none |
 | `system_control.execute_command` | write | none | none | none |
 | `system_control.execute_python` | write | none | none | none |
-| `system_control.generate_memory_report` | read | none | none | none |
+| `system_control.generate_memory_report` | write | none | none | none |
 | `system_control.get_project_settings` | read | none | none | none |
 | `system_control.get_trace_status` | read | none | none | none |
 | `system_control.lumen_update_scene` | write | none | none | none |

@@ -611,22 +611,38 @@ describe('sequence render and native security contracts', () => {
       'McpNativeTransportToolDiscovery.cpp',
     );
 
-    expect(discovery).toContain('EvictedSessionId');
-    expect(discovery).toContain('!RateState->bHasClientActivity');
-    expect(discovery).toContain('InitializationCompletedAt');
-    expect(discovery).toContain('AbandonedSessionGraceSeconds');
-    expect(discovery).toContain('ActiveSessions.Remove(EvictedSessionId)');
-    expect(discovery).toContain('TEXT("Native MCP session limit reached');
-    expect(discovery).not.toContain('EvictedSessionId = OldestSessionId');
+    // Slice the HandleInitialize body so the ordering assertions below prove
+    // same-function scope (a whole-file [\s\S]* regex would match across
+    // unrelated functions). The function body ends at the first column-0 '}'.
+    const initializeStart = discovery.indexOf(
+      'FString FMcpNativeTransport::HandleInitialize(',
+    );
+    expect(initializeStart).toBeGreaterThanOrEqual(0);
+    const initializeBody = discovery.slice(
+      initializeStart,
+      discovery.indexOf('\n}\n', initializeStart),
+    );
+
+    expect(initializeBody).toContain('EvictedSessionId');
+    expect(initializeBody).toContain('!RateState->bHasClientActivity');
+    expect(initializeBody).toContain('InitializationCompletedAt');
+    expect(initializeBody).toContain('AbandonedSessionGraceSeconds');
+    expect(initializeBody).toContain('ActiveSessions.Remove(EvictedSessionId)');
+    expect(initializeBody).toContain('TEXT("Native MCP session limit reached');
+    expect(initializeBody).not.toContain('EvictedSessionId = OldestSessionId');
 
     // Second tier: idle-threshold gated, and live streams are excluded.
-    expect(discovery).toContain('IdleSessionReclaimSeconds');
-    expect(discovery).toContain('SessionsWithLiveConnections.Contains');
+    expect(initializeBody).toContain('IdleSessionReclaimSeconds');
+    expect(initializeBody).toContain('SessionsWithLiveConnections.Contains');
     // Gathered before the session lock — the collection mutexes must never be
     // taken while SessionMutex is held.
-    expect(discovery).toMatch(
-      /CollectSessionsWithLiveConnections\(SessionsWithLiveConnections\);[\s\S]*FScopeLock Lock\(&SessionMutex\)/,
+    const collectIndex = initializeBody.indexOf(
+      'CollectSessionsWithLiveConnections(SessionsWithLiveConnections);',
     );
+    const lockIndex = initializeBody.indexOf('FScopeLock Lock(&SessionMutex)');
+    expect(collectIndex).toBeGreaterThanOrEqual(0);
+    expect(lockIndex).toBeGreaterThanOrEqual(0);
+    expect(collectIndex).toBeLessThan(lockIndex);
   });
 
   it('atomically reserves notification streams and tears down sessions', () => {

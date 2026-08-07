@@ -116,12 +116,11 @@ export const PERFORMANCE_A_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'generate_memory_report',
     domain: DOM,
     family: FAM,
-    summary: 'Generate an engine memory report, optionally detailed and written to an output path.',
+    summary: 'Generate an engine memory report, optionally detailed.',
     whenToUse: ['A snapshot of engine memory usage must be generated.'],
     whenNotToUse: ['Live HUD memory stats are sufficient (use show_stats with memory).'],
     inputProps: {
       detailed: { type: 'boolean', description: 'Produce a detailed report.' },
-      outputPath: { type: 'string', description: 'Optional output path for the report.' },
     },
     required: [],
     outputProps: {
@@ -129,7 +128,7 @@ export const PERFORMANCE_A_RECORDS: readonly CapabilityRecordSource[] = [
       reportDirectory: { type: 'string', description: 'Directory where memory reports are written.' },
     },
     outputRequired: [],
-    effect: 'read',
+    effect: 'write',
     costLatency: 'interactive',
     costResources: 'medium',
     dispatchAction: 'generate_memory_report',

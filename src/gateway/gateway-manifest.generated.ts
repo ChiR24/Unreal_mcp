@@ -14020,7 +14020,7 @@ export const gatewayManifest = {
           },
           "outputPath": {
             "type": "string",
-            "description": "Optional output path for the report."
+            "description": "Output /Game folder for the merged asset."
           },
           "overwrite": {
             "type": "boolean",

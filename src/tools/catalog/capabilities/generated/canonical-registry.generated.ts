@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 1335;
-export const CATALOG_REVISION = "036a1612ed43ddf0";
+export const CATALOG_REVISION = "eba0be2d104f7510";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -233868,7 +233868,7 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
       "topics": [
         "generate_memory_report"
       ],
-      "summary": "Generate an engine memory report, optionally detailed and written to an output path.",
+      "summary": "Generate an engine memory report, optionally detailed.",
       "whenToUse": [
         "A snapshot of engine memory usage must be generated."
       ],
@@ -233888,10 +233888,6 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
           "detailed": {
             "type": "boolean",
             "description": "Produce a detailed report."
-          },
-          "outputPath": {
-            "type": "string",
-            "description": "Optional output path for the report."
           }
         },
         "required": [
@@ -233928,7 +233924,7 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Generate an engine memory report, optionally detailed and written to an output path.",
+        "title": "Generate an engine memory report, optionally detailed.",
         "input": {
           "action": "generate_memory_report",
           "detailed": true
@@ -233963,10 +233959,10 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
       ]
     },
     "behavior": {
-      "effect": "read",
-      "idempotency": "idempotent",
+      "effect": "write",
+      "idempotency": "non-idempotent",
       "longRunning": false,
-      "safeToRetry": true,
+      "safeToRetry": false,
       "supportsPreview": false,
       "supportsUndo": false,
       "semantics": {
@@ -233998,9 +233994,9 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
       }
     },
     "policy": {
-      "requiredScope": "read",
+      "requiredScope": "write",
       "consent": "none",
-      "dataAccess": "project-read"
+      "dataAccess": "project-write"
     },
     "cost": {
       "latency": "interactive",
@@ -234026,8 +234022,8 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6f8287fc5b2e9e01609e17852f958fcebc1c9874ababa7f43081a86f655c7dcc",
-      "content": "78db8abec5725ce462848728abfb5a8babee6139e24ae6062c491b9b639a2321"
+      "schema": "735bef794013510b3627d75c74c0077e61cd61668a683d22b8f019e4f7007283",
+      "content": "1656548ebd3afcf70f1489c9eacbca0be50c4ab46e6538d25b0fa0f095a245ae"
     }
   },
   {
@@ -254245,8 +254241,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "system_control",
     "dispatchAction": "generate_memory_report",
     "domain": "performance",
-    "schemaHash": "6f8287fc5b2e9e01609e17852f958fcebc1c9874ababa7f43081a86f655c7dcc",
-    "contentHash": "78db8abec5725ce462848728abfb5a8babee6139e24ae6062c491b9b639a2321"
+    "schemaHash": "735bef794013510b3627d75c74c0077e61cd61668a683d22b8f019e4f7007283",
+    "contentHash": "1656548ebd3afcf70f1489c9eacbca0be50c4ab46e6538d25b0fa0f095a245ae"
   },
   {
     "id": "system_control.get_project_settings",
@@ -270321,20 +270317,16 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "via"
   ],
   "system_control.generate_memory_report": [
-    "and",
     "detailed",
     "engine",
     "generate",
     "generate_memory_report",
     "memory",
     "optionally",
-    "output",
-    "path",
     "performance",
     "report",
     "system_control",
-    "system_control.generate_memory_report",
-    "written"
+    "system_control.generate_memory_report"
   ],
   "system_control.get_project_settings": [
     "for",
@@ -283091,8 +283083,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "2257e937313c4b74b68086b0bcf8ea8ed82864f94b4311ee3c844cdba168f3f3"
   },
   "system_control.generate_memory_report": {
-    "schema": "6f8287fc5b2e9e01609e17852f958fcebc1c9874ababa7f43081a86f655c7dcc",
-    "content": "78db8abec5725ce462848728abfb5a8babee6139e24ae6062c491b9b639a2321"
+    "schema": "735bef794013510b3627d75c74c0077e61cd61668a683d22b8f019e4f7007283",
+    "content": "1656548ebd3afcf70f1489c9eacbca0be50c4ab46e6538d25b0fa0f095a245ae"
   },
   "system_control.get_project_settings": {
     "schema": "a3e97a08f35b44a1042c496b0c2d67c9415423a5127aa536cccbe202a0faee97",

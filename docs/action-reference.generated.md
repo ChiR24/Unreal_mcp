@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `036a1612ed43ddf0`
+Catalog revision: `eba0be2d104f7510`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -58,7 +58,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_pcg` | 30 | 0 | 30 | 0 | world |
 | `manage_sequence` | 81 | 7 | 72 | 2 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 8 | 3 | 5 | 0 | tools |
-| `system_control` | 52 | 6 | 46 | 0 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
+| `system_control` | 52 | 5 | 47 | 0 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
 
 ## Capabilities requiring consent
 
@@ -1505,7 +1505,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.enable_gpu_timing` | `system_control` | `manage_performance` | write | write | none | `system_control.enable_gpu_timing` |
 | `system_control.execute_command` | `system_control` | `console_command` | write | write | none | `system_control.execute_command` |
 | `system_control.execute_python` | `system_control` | `system_control` | write | write | none | `system_control.execute_python` |
-| `system_control.generate_memory_report` | `system_control` | `generate_memory_report` | read | read | none | `system_control.generate_memory_report` |
+| `system_control.generate_memory_report` | `system_control` | `generate_memory_report` | write | write | none | `system_control.generate_memory_report` |
 | `system_control.get_project_settings` | `system_control` | `system_control` | read | read | none | `system_control.get_project_settings` |
 | `system_control.get_trace_status` | `system_control` | `manage_insights` | read | read | none | `system_control.get_trace_status` |
 | `system_control.lumen_update_scene` | `system_control` | `manage_render` | write | write | none | `system_control.lumen_update_scene` |

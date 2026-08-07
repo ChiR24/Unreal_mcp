@@ -1,8 +1,8 @@
 {
   "generator": "docs/capability-support-matrix.md",
-  "catalogRevision": "036a1612ed43ddf0",
+  "catalogRevision": "eba0be2d104f7510",
   "recordCount": 1335,
-  "mutationCount": 1175,
+  "mutationCount": 1176,
   "summary": {
     "all": {
       "preview": 0,
@@ -39611,7 +39611,7 @@
     {
       "id": "system_control.generate_memory_report",
       "parentTool": "system_control",
-      "effect": "read",
+      "effect": "write",
       "longRunning": false,
       "preview": {
         "mode": "none",
