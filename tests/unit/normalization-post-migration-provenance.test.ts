@@ -138,7 +138,9 @@ describe('S5 legacyIds is the live routing identity, not optional history', () =
       legacyIds: [],
     });
 
-    expect(() => createCapabilityRecord(source)).toThrow(/legacyIds/);
+    expect(() => createCapabilityRecord(source)).toThrow(
+      /must declare the legacyIds pair it is reachable through/,
+    );
   });
 
   it('S5: the same capability is accepted once it declares its pair', () => {
