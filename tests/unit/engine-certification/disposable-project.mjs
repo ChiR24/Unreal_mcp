@@ -176,10 +176,14 @@ export class DisposableWorkspace {
    */
   #createdRoot = null;
 
+  /** True when the tree was HANDED to this instance rather than made by it. */
+  #adopted = false;
+
   /** @param {{ runId?: string, parent?: string, root?: string, purpose?: string }} [spec] */
   constructor(spec = {}) {
     this.runId = spec.runId ?? `task52-${Date.now().toString(36)}-${randomBytes(3).toString('hex')}`;
     this.parent = spec.parent ?? OWNED_PARENT;
+    this.#adopted = spec.root !== undefined;
     /**
      * Null until this workspace either CREATES its tree (`open()`) or ADOPTS an
      * existing one (`{ root }`, which is how reclaim addresses an abandoned run).
@@ -201,6 +205,15 @@ export class DisposableWorkspace {
 
   /** Create the root and stamp it, BEFORE anything else is written into it. */
   open() {
+    // An ADOPTED tree belongs to somebody else's run and was taken over only to
+    // reclaim it. Opening one would stamp OUR manifest into it, and because
+    // `#createdRoot` starts null it would also mint a fresh mkdtemp directory and
+    // reassign `this.root` to it — silently abandoning the very tree the caller
+    // named, which is the opposite of what reclaim asked for. Refusing keeps
+    // `close()` pointed at that tree.
+    if (this.#adopted) {
+      throw new Error(`refusing to open an adopted workspace at ${this.root}: adopt is for reclaiming a tree this run did not create`);
+    }
     // IDEMPOTENT. A second open() must reuse the tree this run already made, not
     // mint another one: the stranded directory would keep a manifest naming a
     // LIVE pid, so `surveyOwnedParent` would report it forever and
