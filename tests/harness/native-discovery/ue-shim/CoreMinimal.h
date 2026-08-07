@@ -23,6 +23,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 using int32 = std::int32_t;
@@ -30,6 +31,10 @@ using int64 = std::int64_t;
 using uint8 = std::uint8_t;
 using uint32 = std::uint32_t;
 using TCHAR = wchar_t;
+
+// UE's "not found" sentinel. FString::FindLastChar below reports it on failure,
+// so it has to be declared before FString.
+constexpr int32 INDEX_NONE = -1;
 
 #define TEXT(x) L##x
 #define check(expr) assert(expr)
@@ -41,6 +46,29 @@ enum class ESearchCase : uint8 { CaseSensitive, IgnoreCase };
 template <typename T> using TFunctionRef = std::function<T>;
 template <typename T> constexpr T&& MoveTemp(T& value) { return static_cast<T&&>(value); }
 template <typename T> void Swap(T& a, T& b) { std::swap(a, b); }
+
+// UE's TPair spells its members `.Key` / `.Value`, not std::pair's `.first` /
+// `.second`, and the canonical-JSON writer carries key/value together in a
+// TArray<TPair<...>> because FJsonObject's key type changed in UE 5.8.
+//
+// The two-argument constructor forwards rather than taking `const&`, so an
+// rvalue key and an lvalue value bind in the same call. Being a TWO-parameter
+// template it can never hijack the one-parameter copy or move constructor.
+template <typename K, typename V>
+struct TPair
+{
+	K Key{};
+	V Value{};
+
+	TPair() = default;
+
+	template <typename InKeyType, typename InValueType>
+	TPair(InKeyType&& InKey, InValueType&& InValue)
+		: Key(std::forward<InKeyType>(InKey))
+		, Value(std::forward<InValueType>(InValue))
+	{
+	}
+};
 
 class FString
 {
@@ -86,6 +114,29 @@ public:
 	{
 		if (Case == ESearchCase::CaseSensitive) return Data == Other.Data;
 		return ToLower().Data == Other.ToLower().Data;
+	}
+
+	// UE reports INDEX_NONE in the out-parameter when the character is absent, so
+	// a caller that checks only the out-parameter behaves the same here.
+	bool FindLastChar(TCHAR Ch, int32& OutIndex) const
+	{
+		const size_t Found = Data.rfind(Ch);
+		if (Found == std::wstring::npos)
+		{
+			OutIndex = INDEX_NONE;
+			return false;
+		}
+		OutIndex = static_cast<int32>(Found);
+		return true;
+	}
+
+	// Drops the FIRST `Count` characters. UE clamps rather than throwing: a count
+	// at or past the end yields an empty string, a non-positive count the whole one.
+	FString RightChop(int32 Count) const
+	{
+		if (Count <= 0) return *this;
+		if (Count >= Len()) return FString();
+		return FString(Data.substr(static_cast<size_t>(Count)));
 	}
 
 	int32 Compare(const FString& Other, ESearchCase Case = ESearchCase::IgnoreCase) const
@@ -148,6 +199,15 @@ public:
 	void Empty() { Items.clear(); }
 	void Add(const T& Value) { Items.push_back(Value); }
 	void Add(T&& Value) { Items.push_back(std::move(Value)); }
+
+	// UE's TArray::Emplace constructs in place and returns the new INDEX (it is
+	// Emplace_GetRef that hands back a reference).
+	template <typename... ArgTypes>
+	int32 Emplace(ArgTypes&&... Args)
+	{
+		Items.emplace_back(std::forward<ArgTypes>(Args)...);
+		return static_cast<int32>(Items.size()) - 1;
+	}
 	void AddUnique(const T& Value) { if (!Contains(Value)) Items.push_back(Value); }
 	void SetNumUninitialized(int32 Count) { Items.resize(static_cast<size_t>(Count)); }
 	T& operator[](int32 Index) { return Items[static_cast<size_t>(Index)]; }
