@@ -14,14 +14,18 @@
  * omit it and lose the action enum that `deriveParents()` builds from exactly
  * that field. `normalization.provenance` resolves the ambiguity as data.
  *
- * These tests pin all four edges of that contract, including the two
- * fail-closed directions: an unmarked addition still trips the gate, and a
- * marked-in-error existing record trips it too.
+ * These tests pin every edge of that contract: both fail-closed directions (an
+ * unmarked addition still trips the gate, a marked-in-error migrated record
+ * trips it too), that routing survives the skip, and that being skipped by the
+ * audit buys no licence to claim a pair another capability already owns.
  */
 
 import { describe, expect, it } from 'vitest';
 import { ALL_CAPABILITY_RECORDS } from '../../src/tools/catalog/capabilities/records/aggregate.js';
-import { createCapabilityRecord } from '../../src/tools/catalog/capabilities/parser.js';
+import {
+  createCapabilityRecord,
+  parseCapabilityCatalog,
+} from '../../src/tools/catalog/capabilities/parser.js';
 import { buildInventory } from '../../src/tools/catalog/capabilities/normalization/build.js';
 import { REVIEWED_METRICS } from '../../src/tools/catalog/capabilities/normalization/adjudicate.js';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
@@ -90,6 +94,10 @@ describe('S1 a post-migration capability is skipped by the audit yet stays routa
   it('S1: the audited occurrence total does not move', () => {
     const inventory = buildInventory([...ALL_CAPABILITY_RECORDS, authoredCapability('post-migration')]);
 
+    // Anchored to the literal as well as the constant: rebasing the reviewed
+    // baseline would otherwise move both sides of the comparison together and
+    // let a counted addition pass as a skipped one.
+    expect(REVIEWED_METRICS.occurrenceCount).toBe(1335);
     expect(inventory.metrics.occurrenceCount).toBe(REVIEWED_METRICS.occurrenceCount);
     expect(inventory.occurrences).toHaveLength(REVIEWED_METRICS.occurrenceCount);
     expect(inventory.occurrences.some((entry) => entry.action === NEW_ACTION)).toBe(false);
@@ -153,5 +161,42 @@ describe('S5 legacyIds is the live routing identity, not optional history', () =
     const minted: CapabilityRecord = createCapabilityRecord(source);
     expect(minted.legacyIds).toHaveLength(1);
     expect(minted.legacyIds[0].action).toBe('audit_exec_fan_in');
+  });
+});
+
+describe('S6 being skipped by the audit does not relax pair ownership', () => {
+  it('S6: a post-migration capability may not claim a pair another record owns', () => {
+    const taken = (BASE as CapabilityRecord).legacyIds[0];
+    const shadowing = createCapabilityRecord(
+      authoringSource({
+        id: 'blueprint.shadowing_probe',
+        aliases: [],
+        legacyIds: [{ tool: taken.tool, action: taken.action }],
+        normalization: {
+          ...(BASE as CapabilityRecord).normalization,
+          provenance: 'post-migration' as const,
+        },
+      }),
+    );
+
+    expect(() => parseCapabilityCatalog([...ALL_CAPABILITY_RECORDS, shadowing])).toThrow(
+      /duplicate legacy capability id across records/,
+    );
+  });
+
+  it('S6: the same capability is accepted once it claims a pair of its own', () => {
+    const owned = createCapabilityRecord(
+      authoringSource({
+        id: 'blueprint.shadowing_probe',
+        aliases: [],
+        legacyIds: [{ tool: PARENT, action: NEW_ACTION }],
+        normalization: {
+          ...(BASE as CapabilityRecord).normalization,
+          provenance: 'post-migration' as const,
+        },
+      }),
+    );
+
+    expect(() => parseCapabilityCatalog([...ALL_CAPABILITY_RECORDS, owned])).not.toThrow();
   });
 });

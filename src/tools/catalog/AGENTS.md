@@ -61,6 +61,11 @@ Generator scripts: `scripts/generate-canonical-registry.ts`, `scripts/generate-g
        rationale: 'Authored after the gateway migration; no pre-gateway occurrence to audit.',
        provenance: 'post-migration' } }
    ```
+   Write the key only when it is `post-migration`. A computed `undefined` stays
+   an own property and dies in `computeCapabilityHashes` as `Capability hash
+   input must be JSON-compatible`, which names no field; and an explicit
+   `'legacy-surface'` is not the same as absence — it changes the record's
+   content hash. Absence IS `legacy-surface`.
 6. Run `npm run registry:generate` to rebuild all generated artifacts.
 7. Run `npm run registry:check` (the `--check` drift gate). **It is NOT in CI** see CRITICAL DRIFT GAP.
 
