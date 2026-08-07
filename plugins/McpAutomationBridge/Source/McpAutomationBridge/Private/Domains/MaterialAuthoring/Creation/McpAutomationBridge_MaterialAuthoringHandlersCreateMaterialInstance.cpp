@@ -34,7 +34,14 @@ bool HandleCreateMaterialInstance(UMcpAutomationBridgeSubsystem* Bridge, const F
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    Path = GetJsonStringField(Payload, TEXT("path"));
+    // The published schema names this parameter `savePath`. Reading only `path`
+    // meant a contract-correct savePath was ignored and creation silently fell
+    // through to the /Game/Materials default below — the asset was reported as
+    // created (success), just not where the caller asked for it.
+    Path = GetJsonStringField(Payload, TEXT("savePath"));
+    if (Path.IsEmpty()) {
+      Path = GetJsonStringField(Payload, TEXT("path"));
+    }
     if (Path.IsEmpty()) {
       Path = TEXT("/Game/Materials");
     }

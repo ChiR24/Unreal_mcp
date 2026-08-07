@@ -148,8 +148,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
     return true;
   }
 
+  // Accept both documented spellings. Reading only `realtime` made a schema-
+  // valid {enabled: false} behave as absent/default-true on the native surface
+  // while the TypeScript bridge normalized the same call correctly (MCPBB-046).
   bool bRealtime = true;
-  Payload->TryGetBoolField(TEXT("realtime"), bRealtime);
+  if (!Payload->TryGetBoolField(TEXT("realtime"), bRealtime))
+  {
+    Payload->TryGetBoolField(TEXT("enabled"), bRealtime);
+  }
 
 #if MCP_HAS_LEVEL_EDITOR_MODULE
   // Get the level editor module and active viewport

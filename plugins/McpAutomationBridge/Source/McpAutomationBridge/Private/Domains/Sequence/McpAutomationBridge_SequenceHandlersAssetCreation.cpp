@@ -45,6 +45,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
   if (UEditorAssetLibrary::DoesAssetExist(FullPath)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     VerifyAssetExists(Resp, FullPath);
+    // sequence.create declares `sequencePath` as a REQUIRED output field. The
+    // gateway projects the result to schema-declared names, so omitting it
+    // projected to an empty payload and reported OUTPUT_SCHEMA_VIOLATION for a
+    // sequence that had already been written to disk.
+    Resp->SetStringField(TEXT("sequencePath"), FullPath);
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("HandleSequenceCreate: Sequence exists, sending response for "
                 "RequestID=%s"),
@@ -74,6 +79,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
       GCurrentSequencePath = FullPath;
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       McpHandlerUtils::AddVerification(Resp, NewObj);
+      // Required output field on sequence.create; see the note above.
+      Resp->SetStringField(TEXT("sequencePath"), FullPath);
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("HandleSequenceCreate: Created sequence, sending response "
                   "for RequestID=%s"),

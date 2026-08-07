@@ -256,6 +256,24 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
     ProcMesh->CreateMeshSection(0, Vertices, Triangles, Normals, UVs, TArray<FColor>(), Tangents, true);
 
     // -------------------------------------------------------------------------
+    // Validate generated geometry is non-empty before reporting success
+    // -------------------------------------------------------------------------
+    FBox TerrainBounds(ForceInit);
+    for (const FVector& Vertex : Vertices)
+    {
+        TerrainBounds += Vertex;
+    }
+    if (Vertices.Num() < 3 || Triangles.Num() < 3 ||
+        TerrainBounds.GetExtent().IsNearlyZero())
+    {
+        TerrainActor->Destroy();
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Generated terrain geometry is empty"),
+                            TEXT("EMPTY_GEOMETRY"));
+        return true;
+    }
+
+    // -------------------------------------------------------------------------
     // Apply material if specified
     // -------------------------------------------------------------------------
     FString MaterialPath;

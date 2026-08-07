@@ -25,10 +25,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddCamera(
 
 #if MCP_HAS_EDITOR_ACTOR_SUBSYSTEM
   if (GEditor) {
+    FString CameraLabel;
+    LocalPayload->TryGetStringField(TEXT("actorName"), CameraLabel);
+    if (CameraLabel.IsEmpty()) {
+      CameraLabel = TEXT("SequenceCamera");
+    }
     UClass *CameraClass = ACameraActor::StaticClass();
     AActor *Spawned = SpawnActorInActiveWorld<AActor>(
         CameraClass, FVector::ZeroVector, FRotator::ZeroRotator,
-        TEXT("SequenceCamera"));
+        CameraLabel);
     if (Spawned) {
       if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
         if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {

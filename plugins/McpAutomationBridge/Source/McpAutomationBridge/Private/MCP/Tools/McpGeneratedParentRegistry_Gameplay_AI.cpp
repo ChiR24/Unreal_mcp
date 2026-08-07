@@ -94,6 +94,7 @@ public:
 			Schema.String(TEXT("name"), TEXT("Name for the created asset or actor."));
 			Schema.String(TEXT("nodeClass"), TEXT("Node class path."));
 			Schema.String(TEXT("nodeId"), TEXT("ID of the node."));
+			Schema.String(TEXT("nodeName"), TEXT("Name for the created composite node."));
 			Schema.String(TEXT("nodeType"), TEXT("Behavior Tree graph node type."));
 			Schema.String(TEXT("obstacleAreaClass"), TEXT("Area class for the box obstacle."));
 			Schema.Object(TEXT("obstacleExtent"), TEXT("Extent of the simple box obstacle."), [](FMcpSchemaBuilder& S) {

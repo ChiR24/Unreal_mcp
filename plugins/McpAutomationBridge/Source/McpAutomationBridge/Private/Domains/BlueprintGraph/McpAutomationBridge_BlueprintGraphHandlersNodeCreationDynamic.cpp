@@ -289,6 +289,9 @@ void CreateDynamicNode(
     SaveLoadedAssetThrottled(Context.Blueprint);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    // `nodeGuid` is the required output field on blueprint.create_node; see the
+    // note in McpAutomationBridge_BlueprintGraphHandlersPrivate.h.
+    Result->SetStringField(TEXT("nodeGuid"), NewNode->NodeGuid.ToString());
     Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
     Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
     Result->SetStringField(TEXT("nodeClass"), NodeClass->GetName());

@@ -226,8 +226,10 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 	}
 
 	const TArray<const FMcpCapabilityRecord*> Siblings = Store.GetRecordsForParent(Input.Tool);
-	const TArray<FString> Actions = DistinctSortedOf(
-		Siblings, [](const FMcpCapabilityRecord& R) -> const FString& { return R.DispatchAction; });
+	// PUBLIC action names, not internal DispatchAction: all 50 manage_audio
+	// capabilities share one DispatchAction, so this listed 1 action for 50.
+	const TArray<FString> Actions = McpDistinctSortedComputed(
+		Siblings, [](const FMcpCapabilityRecord& R) -> FString { return McpCapabilityPublicAction(R); });
 
 	if (!Input.bHasAction)
 	{

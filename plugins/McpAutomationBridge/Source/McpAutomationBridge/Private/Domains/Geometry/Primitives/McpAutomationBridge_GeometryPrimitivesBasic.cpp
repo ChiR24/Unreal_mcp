@@ -19,9 +19,17 @@ bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     const TSharedPtr<FJsonObject>* DimensionsObject = nullptr;
     if (Payload.IsValid() && Payload->TryGetObjectField(TEXT("dimensions"), DimensionsObject) && DimensionsObject && DimensionsObject->IsValid())
     {
+        // The published schema documents `dimensions` as {x, y, z} — reading
+        // only width/height/depth meant a contract-correct call was ACCEPTED and
+        // then silently ignored, leaving the default 100-unit primitive. Nothing
+        // reported the discard, and get_actor_bounds returned no bounds, so the
+        // wrong size was undetectable through the API. Accept both spellings.
         (*DimensionsObject)->TryGetNumberField(TEXT("width"), Width);
         (*DimensionsObject)->TryGetNumberField(TEXT("height"), Height);
         (*DimensionsObject)->TryGetNumberField(TEXT("depth"), Depth);
+        (*DimensionsObject)->TryGetNumberField(TEXT("x"), Width);
+        (*DimensionsObject)->TryGetNumberField(TEXT("y"), Height);
+        (*DimensionsObject)->TryGetNumberField(TEXT("z"), Depth);
     }
 
     const TArray<TSharedPtr<FJsonValue>>* Dimensions = nullptr;
@@ -208,7 +216,13 @@ bool HandleCreateCone(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     if (Name.IsEmpty()) Name = TEXT("GeneratedCone");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double BaseRadius = GetJsonNumberField(Payload, TEXT("baseRadius"), 50.0);
+    // `radius` is the spelling every other round primitive here uses (and the
+    // one callers reach for); reading only `baseRadius` meant a `radius` on a
+    // cone was accepted and silently discarded, leaving the 50-unit default.
+    const double DefaultBaseRadius =
+        GetJsonNumberField(Payload, TEXT("radius"), 50.0);
+    double BaseRadius =
+        GetJsonNumberField(Payload, TEXT("baseRadius"), DefaultBaseRadius);
     double TopRadius = GetJsonNumberField(Payload, TEXT("topRadius"), 0.0);
     double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
     int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 16);

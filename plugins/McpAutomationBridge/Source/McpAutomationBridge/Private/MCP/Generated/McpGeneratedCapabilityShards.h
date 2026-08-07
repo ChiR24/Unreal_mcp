@@ -57,13 +57,13 @@ inline int32 Num() { return 23; }
 inline const FMcpCapabilityShard& At(int32 Index)
 {
 	static const FMcpCapabilityShard Table[] = {
-		{ TEXT("animation_physics"), Detail::MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS, 72, 87 },
+		{ TEXT("animation_physics"), Detail::MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS, 73, 87 },
 		{ TEXT("build_environment"), Detail::MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS, 128, 150 },
 		{ TEXT("control_actor"), Detail::MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS, 40, 46 },
 		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 34, 42 },
-		{ TEXT("inspect"), Detail::MCP_CAP_SHARD_INSPECT_CHUNKS, 35, 36 },
+		{ TEXT("inspect"), Detail::MCP_CAP_SHARD_INSPECT_CHUNKS, 37, 36 },
 		{ TEXT("manage_ai"), Detail::MCP_CAP_SHARD_MANAGE_AI_CHUNKS, 52, 62 },
-		{ TEXT("manage_asset"), Detail::MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS, 126, 158 },
+		{ TEXT("manage_asset"), Detail::MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS, 127, 158 },
 		{ TEXT("manage_audio"), Detail::MCP_CAP_SHARD_MANAGE_AUDIO_CHUNKS, 41, 50 },
 		{ TEXT("manage_blueprint"), Detail::MCP_CAP_SHARD_MANAGE_BLUEPRINT_CHUNKS, 95, 104 },
 		{ TEXT("manage_character"), Detail::MCP_CAP_SHARD_MANAGE_CHARACTER_CHUNKS, 22, 27 },
@@ -77,7 +77,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 		{ TEXT("manage_level_structure"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_STRUCTURE_CHUNKS, 42, 45 },
 		{ TEXT("manage_networking"), Detail::MCP_CAP_SHARD_MANAGE_NETWORKING_CHUNKS, 65, 77 },
 		{ TEXT("manage_pcg"), Detail::MCP_CAP_SHARD_MANAGE_PCG_CHUNKS, 26, 30 },
-		{ TEXT("manage_sequence"), Detail::MCP_CAP_SHARD_MANAGE_SEQUENCE_CHUNKS, 70, 81 },
+		{ TEXT("manage_sequence"), Detail::MCP_CAP_SHARD_MANAGE_SEQUENCE_CHUNKS, 71, 81 },
 		{ TEXT("manage_tools"), Detail::MCP_CAP_SHARD_MANAGE_TOOLS_CHUNKS, 7, 8 },
 		{ TEXT("system_control"), Detail::MCP_CAP_SHARD_SYSTEM_CONTROL_CHUNKS, 43, 52 },
 	};
@@ -87,5 +87,5 @@ inline const FMcpCapabilityShard& At(int32 Index)
 
 inline int32 TotalRecordCount() { return 1335; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("fc1c618f8c1b249d"); }
+inline const TCHAR* CatalogRevision() { return TEXT("036a1612ed43ddf0"); }
 }

@@ -227,6 +227,18 @@ bool HandleInspectSettingsAction(
             Resp->SetNumberField(TEXT("frameTimeMs"), FrameTimeMs);
             Resp->SetNumberField(TEXT("estimatedFps"), EstimatedFps);
             Resp->SetNumberField(TEXT("fps"), EstimatedFps);
+            // `fps` comes from the frame delta, which an idle/unfocused editor
+            // throttles hard — it read 3 FPS while the viewport showed 60 and
+            // the thread timings implied ~84. Publish the busiest thread and a
+            // throttle flag so a consumer can tell a real stall from an idle
+            // editor instead of reading `fps` as a performance verdict.
+            const double BusiestThreadMs = FMath::Max(
+                FMath::Max(GameThreadMs, RenderThreadMs), GPUFrameMs);
+            Resp->SetNumberField(TEXT("busiestThreadMs"), BusiestThreadMs);
+            Resp->SetNumberField(TEXT("threadTimeDerivedFps"),
+                                 BusiestThreadMs > 0.0 ? 1000.0 / BusiestThreadMs : 0.0);
+            Resp->SetBoolField(TEXT("frameDeltaMayBeEditorThrottled"),
+                               WorldType != TEXT("PIE"));
             Resp->SetNumberField(TEXT("gameThreadMs"), GameThreadMs);
             Resp->SetNumberField(TEXT("renderThreadMs"), RenderThreadMs);
             Resp->SetNumberField(TEXT("rhiThreadMs"), RHIThreadMs);

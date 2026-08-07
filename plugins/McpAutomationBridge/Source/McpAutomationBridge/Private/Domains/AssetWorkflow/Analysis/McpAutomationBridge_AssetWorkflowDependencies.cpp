@@ -101,12 +101,40 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
     return true;
   }
 
+  // Bounds. The traversal below is a breadth-first walk of the dependency
+  // graph; without a cap it is unbounded work on the game thread. `maxDepth`
+  // was caller-controlled with no clamp and there was no limit on nodes
+  // visited, so a single hub dependency (a shared material function, a level)
+  // fans out to thousands of registry queries and the handler never reaches its
+  // SendAutomationResponse — the request produced NO reply at all until the
+  // transport gave up after 300 s, with no error to explain it.
+  constexpr int32 MaxDepthCeiling = 8;
+  constexpr int32 MaxVisitedNodes = 2000;
   int32 MaxDepth = 3;
   Payload->TryGetNumberField(TEXT("maxDepth"), MaxDepth);
+  const int32 RequestedDepth = MaxDepth;
+  MaxDepth = FMath::Clamp(MaxDepth, 0, MaxDepthCeiling);
+  bool bTruncated = RequestedDepth > MaxDepthCeiling;
 
   FAssetRegistryModule &AssetRegistryModule =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
   IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+
+  // Refuse FAST while the registry is still scanning. This handler runs on the
+  // game thread and every GetDependencies() call against an incomplete registry
+  // can block on the in-progress scan; combined with the traversal below that
+  // produced NO response at all until the transport gave up after 300 seconds,
+  // with nothing logged to explain the silence. A retryable error is strictly
+  // better than an unbounded stall: the caller learns why and when to retry.
+  if (AssetRegistry.IsLoadingAssets()) {
+    SendAutomationError(
+        Socket, RequestId,
+        TEXT("Asset Registry is still scanning; the dependency graph would be "
+             "incomplete and the query would block the game thread. Retry once "
+             "the editor finishes loading assets."),
+        TEXT("ASSET_REGISTRY_SCANNING"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> GraphObj = McpHandlerUtils::CreateResultObject();
 
@@ -137,6 +165,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
 
       if (CurrentDepth < MaxDepth) {
         if (!Visited.Contains(DepStr)) {
+          if (Visited.Num() >= MaxVisitedNodes) {
+            // Stop expanding rather than run unbounded. The edges already
+            // collected are still reported; `truncated` tells the caller the
+            // graph is partial instead of silently implying completeness.
+            bTruncated = true;
+            continue;
+          }
           Visited.Add(DepStr);
           Depths.Add(DepStr, CurrentDepth + 1);
           Queue.Add(DepStr);
@@ -149,6 +184,9 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetObjectField(TEXT("graph"), GraphObj);
+  Resp->SetNumberField(TEXT("nodeCount"), Visited.Num());
+  Resp->SetNumberField(TEXT("maxDepth"), MaxDepth);
+  Resp->SetBoolField(TEXT("truncated"), bTruncated);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Asset graph retrieved"),
                          Resp, FString());
   return true;

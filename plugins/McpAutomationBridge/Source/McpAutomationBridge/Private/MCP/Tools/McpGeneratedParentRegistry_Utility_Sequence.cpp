@@ -15,6 +15,7 @@ public:
 			Schema.Bool(TEXT("activate"), TEXT("Whether the key activates (true) or deactivates (false)."));
 			Schema.String(TEXT("actorName"), TEXT("Actor name in the current level."));
 			Schema.Array(TEXT("actorNames"), TEXT("Actor names."), TEXT("string"));
+			Schema.String(TEXT("actorPath"), TEXT("Actor path (alias of actorName)."));
 			Schema.Array(TEXT("actors"), TEXT("Actor names to record (alias of actorNames)."), TEXT("string"));
 			Schema.Array(TEXT("additionalOptions"), TEXT("Additional replay streamer options."), TEXT("string"));
 			Schema.String(TEXT("animationPath"), TEXT("Animation sequence asset path (alias of animationSequencePath)."));

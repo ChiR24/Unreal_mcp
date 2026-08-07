@@ -245,7 +245,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   TArray<TSharedPtr<FJsonValue>> ActorsArray;
 
-  if (UWorld* World = GEditor->GetEditorWorldContext().World()) {
+  // Prefer the PIE world while a play session is active, matching spawn,
+  // spawn_blueprint, list and the lookup helpers. Reading the editor world here
+  // meant find_by_class returned EDITOR actors during PIE while control_actor.list
+  // returned UEDPIE_0 ones — two queries disagreeing about which world they
+  // describe, with nothing on either response to say which. Any mutation driven
+  // off these paths hit the editor originals instead of the live instances.
+  UWorld* QueryWorld = GEditor->PlayWorld
+                           ? GEditor->PlayWorld.Get()
+                           : GEditor->GetEditorWorldContext().World();
+  if (UWorld* World = QueryWorld) {
     UClass* ClassToFind = nullptr;
 
     // CRITICAL FIX: Use ResolveClassByName for proper engine class resolution

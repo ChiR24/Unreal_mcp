@@ -14,7 +14,7 @@ public:
 			Schema.ArrayOfObjects(TEXT("additionalOutputs"), TEXT("Additional named output definitions."));
 			Schema.String(TEXT("alphaTexture"), TEXT("Alpha channel source."));
 			Schema.Number(TEXT("amount"), TEXT("Desaturation amount (0-1)."));
-			Schema.String(TEXT("assetPath"), TEXT("Asset /Game path."));
+			Schema.String(TEXT("assetPath"), TEXT("Alias for path (accepted for compatibility)."));
 			Schema.AnyValue(TEXT("assetPaths"), TEXT("Explicit asset paths to delete."));
 			Schema.String(TEXT("baseTexture"), TEXT("Base texture path."));
 			Schema.String(TEXT("blendMode"), TEXT("Blend mode."));
@@ -72,7 +72,7 @@ public:
 			Schema.Number(TEXT("lodCount"), TEXT("Number of LOD levels to generate."));
 			Schema.String(TEXT("materialDomain"), TEXT("Material domain."));
 			Schema.String(TEXT("materialPath"), TEXT("Material /Game asset path."));
-			Schema.Number(TEXT("maxDepth"), TEXT("Maximum traversal depth."));
+			Schema.Number(TEXT("maxDepth"), TEXT("Maximum traversal depth (clamped to 8)."));
 			Schema.String(TEXT("memberName"), TEXT("Member (variable) name."));
 			Schema.String(TEXT("memberType"), TEXT("Unreal property type: Bool, Int, Float, String, Name, Text, Vector, Rotator, Transform, Object, SoftObject, Class, SoftClass, Enum:<Name>, Struct:<Path>, or with container prefix Array:..., Set:..., Map:<K>,<V>:"));
 			Schema.ArrayOfObjects(TEXT("members"), TEXT("Member definitions."));

@@ -44,6 +44,48 @@ struct FMcpCapabilityRecord
 	int32 ExampleCount = 0;
 };
 
+/**
+ * The action name this capability is addressed by on its parent tool — the
+ * capability id's last dotted segment (e.g. "manage_audio.create_metasound" ->
+ * "create_metasound").
+ *
+ * This is the name `execute` accepts and `search` advertises. `DispatchAction`
+ * is INTERNAL routing and is not unique per capability (every manage_audio
+ * capability dispatches through "manage_audio"), so it cannot identify one.
+ */
+inline FString McpCapabilityPublicAction(const FMcpCapabilityRecord& Record)
+{
+	int32 LastDot = INDEX_NONE;
+	if (Record.Id.FindLastChar(TEXT('.'), LastDot) && LastDot != INDEX_NONE)
+	{
+		return Record.Id.RightChop(LastDot + 1);
+	}
+	return Record.DispatchAction;
+}
+
+/**
+ * Distinct, byte-order-sorted projection over records, for projections that
+ * COMPUTE a string. The reference-returning variant in the describe unit cannot
+ * be used for those: binding a temporary to `const FString&` would dangle.
+ */
+inline TArray<FString> McpDistinctSortedComputed(
+	const TArray<const FMcpCapabilityRecord*>& Records,
+	TFunctionRef<FString(const FMcpCapabilityRecord&)> Project)
+{
+	TArray<FString> Values;
+	for (const FMcpCapabilityRecord* Record : Records)
+	{
+		const FString Value = Project(*Record);
+		if (!Values.ContainsByPredicate(
+				[&Value](const FString& E) { return E.Equals(Value, ESearchCase::CaseSensitive); }))
+		{
+			Values.Add(Value);
+		}
+	}
+	Values.Sort([](const FString& L, const FString& R) { return L.Compare(R, ESearchCase::CaseSensitive) < 0; });
+	return Values;
+}
+
 class FMcpCapabilityStore
 {
 public:

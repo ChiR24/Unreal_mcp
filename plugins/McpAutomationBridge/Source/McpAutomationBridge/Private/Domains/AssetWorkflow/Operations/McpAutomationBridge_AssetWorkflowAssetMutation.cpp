@@ -132,20 +132,29 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
-  // Support both single 'path' and array 'paths'
+  // Accept the canonical schema spellings (`assetPath` / `assetPaths`) as well
+  // as the legacy `path` / `paths`. Reading only the legacy pair made
+  // asset.delete uncallable through the gateway: the schema declares
+  // `assetPath`, so a contract-correct call reached here with nothing this
+  // handler recognised ("No paths provided"), while sending `assetPaths` was
+  // rejected upstream as an undeclared parameter.
   TArray<FString> PathsToDelete;
   const TArray<TSharedPtr<FJsonValue>> *PathsArray = nullptr;
-  if (Payload->TryGetArrayField(TEXT("paths"), PathsArray) && PathsArray) {
-    for (const auto &Val : *PathsArray) {
-      if (Val.IsValid() && Val->Type == EJson::String)
-        PathsToDelete.Add(Val->AsString());
+  for (const TCHAR *ArrayField : {TEXT("paths"), TEXT("assetPaths")}) {
+    if (Payload->TryGetArrayField(ArrayField, PathsArray) && PathsArray) {
+      for (const auto &Val : *PathsArray) {
+        if (Val.IsValid() && Val->Type == EJson::String)
+          PathsToDelete.Add(Val->AsString());
+      }
     }
   }
 
-  FString SinglePath;
-  if (Payload->TryGetStringField(TEXT("path"), SinglePath) &&
-      !SinglePath.IsEmpty()) {
-    PathsToDelete.Add(SinglePath);
+  for (const TCHAR *StringField : {TEXT("path"), TEXT("assetPath")}) {
+    FString SinglePath;
+    if (Payload->TryGetStringField(StringField, SinglePath) &&
+        !SinglePath.IsEmpty()) {
+      PathsToDelete.AddUnique(SinglePath);
+    }
   }
 
   if (PathsToDelete.Num() == 0) {

@@ -37,6 +37,14 @@ struct FMcpDiscoveryQuery
 /** Search default/maximum budgets, shared with the gateway tool schema. */
 constexpr int32 McpSearchDefaultLimit = 12;
 constexpr int32 McpSearchMaxLimit = 25;
+
+/**
+ * Per-matched-word score bonus for multi-word queries. Ranks a record that
+ * covers more of the query above one that covers less, so a natural phrase
+ * ("create new level map") surfaces the capability matching the most words
+ * rather than returning nothing at all.
+ */
+constexpr int32 McpSearchWordCoverageBonus = 5;
 constexpr int32 McpDescribeDefaultLimit = 20;
 constexpr int32 McpDescribeMaxLimit = 50;
 // Genuinely binding: the widest 25 results the catalog can produce total 10,263

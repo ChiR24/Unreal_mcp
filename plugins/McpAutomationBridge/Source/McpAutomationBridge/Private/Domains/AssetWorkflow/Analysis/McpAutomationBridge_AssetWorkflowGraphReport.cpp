@@ -4,6 +4,8 @@
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetRegistry/IAssetRegistry.h"
 #include "Dom/JsonObject.h"
 #include "Misc/EngineVersionComparison.h"
 
@@ -58,14 +60,60 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
     return true;
   }
 
-  // Load the asset
-  UObject *Asset = LoadObject<UObject>(nullptr, *AssetPath);
-  if (!Asset) {
+  // This resolved with a bare synchronous LoadObject, which is both unbounded
+  // and unobservable: a path naming no real asset paid for a full load miss,
+  // and a cold Blueprint pulled its whole dependency closure (parent class,
+  // component templates, compile-on-load) onto the game thread. Witnessed
+  // returning NOTHING until the 300 s transport timeout with no log line to
+  // attribute it to. The registry answers existence without loading anything,
+  // so a bad path now fails in microseconds and a still-scanning registry is
+  // refused rather than raced; the Display logs make any remaining stall name
+  // the asset that caused it. Every path below sends a response — a silent
+  // stall was the defect, not merely a slow one.
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+         TEXT("analyze_graph: resolving '%s'"), *AssetPath);
+
+  IAssetRegistry &AssetRegistry =
+      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+  if (AssetRegistry.IsLoadingAssets()) {
+    SendAutomationError(
+        Socket, RequestId,
+        TEXT("Asset registry is still scanning; retry once the initial scan completes."),
+        TEXT("ASSET_REGISTRY_BUSY"));
+    return true;
+  }
+
+  FString PackageName = AssetPath;
+  int32 DotIndex = INDEX_NONE;
+  if (PackageName.FindChar(TEXT('.'), DotIndex)) {
+    PackageName = PackageName.Left(DotIndex);
+  }
+
+  TArray<FAssetData> PackageAssets;
+  AssetRegistry.GetAssetsByPackageName(FName(*PackageName), PackageAssets);
+  if (PackageAssets.Num() == 0) {
     SendAutomationError(Socket, RequestId,
                         FString::Printf(TEXT("Asset not found: %s"), *AssetPath),
                         TEXT("ASSET_NOT_FOUND"));
     return true;
   }
+
+  // Analysis needs the live object, but only a cold asset should pay for a
+  // load, and by here it is known to exist.
+  UObject *Asset = PackageAssets[0].FastGetAsset(/*bLoad=*/false);
+  if (!Asset) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+           TEXT("analyze_graph: '%s' is not resident; loading synchronously"), *AssetPath);
+    Asset = PackageAssets[0].FastGetAsset(/*bLoad=*/true);
+  }
+  if (!Asset) {
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("Asset could not be loaded: %s"), *AssetPath),
+                        TEXT("ASSET_LOAD_FAILED"));
+    return true;
+  }
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+         TEXT("analyze_graph: resolved '%s' as %s"), *AssetPath, *Asset->GetClass()->GetName());
 
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   McpHandlerUtils::AddVerification(Result, Asset);

@@ -62,7 +62,7 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.Number(TEXT("maxX"), TEXT("Region max X."));
 			Schema.Number(TEXT("maxY"), TEXT("Region max Y."));
 			Schema.String(TEXT("meshPath"), TEXT("Canonical /Game static mesh asset path."));
-			Schema.String(TEXT("method"), TEXT("Method string."));
+			Schema.TypeUnion(TEXT("method"), { TEXT("string") }, TEXT("Global illumination method. Matches the handler-enforced value set."));
 			Schema.Number(TEXT("minBrightness"), TEXT("Minimum brightness."));
 			Schema.Number(TEXT("minScale"), TEXT("Minimum foliage scale."));
 			Schema.Number(TEXT("minX"), TEXT("Region min X."));

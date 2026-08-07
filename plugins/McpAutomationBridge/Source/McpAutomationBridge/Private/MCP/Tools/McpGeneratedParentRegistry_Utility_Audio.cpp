@@ -39,7 +39,7 @@ public:
 			Schema.Bool(TEXT("looping"), TEXT("looping"));
 			Schema.Number(TEXT("lowPassFilterFrequency"), TEXT("lowPassFilterFrequency"));
 			Schema.String(TEXT("mixName"), TEXT("mixName"));
-			Schema.String(TEXT("name"), TEXT("name"));
+			Schema.String(TEXT("name"), TEXT("Name of the asset or mapping to create or remove."));
 			Schema.String(TEXT("nodeClassName"), TEXT("nodeClassName"));
 			Schema.String(TEXT("nodeType"), TEXT("nodeType"));
 			Schema.Number(TEXT("occlusionFilterScale"), TEXT("occlusionFilterScale"));

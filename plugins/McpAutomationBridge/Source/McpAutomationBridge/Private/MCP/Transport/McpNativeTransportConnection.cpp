@@ -71,11 +71,16 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 				SendAndClose(ClientSocket, 401, TEXT("application/json"), FMcpJsonRpc::BuildError(MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest, TEXT("Invalid capability token")), {}, HttpReq.Origin);
 				return;
 			}
-			if (bLegacyTokenMatch && Principal.bDeprecated)
+			// Warn ONCE per process: HandleConnection runs for EVERY HTTP request
+			// (each SSE poll included), so a per-call warning buried the log under
+			// hundreds of identical lines. This is a standing configuration fact.
+			static FThreadSafeCounter DeprecatedTokenWarned;
+			if (bLegacyTokenMatch && Principal.bDeprecated && DeprecatedTokenWarned.Increment() == 1)
 			{
 				UE_LOG(LogMcpNativeTransport, Warning,
 					TEXT("Native /mcp authenticated with the deprecated all-or-nothing "
-					     "capability token; migrate to a scoped token."));
+					     "capability token; migrate to a scoped token. "
+					     "(repeat occurrences suppressed)"));
 			}
 		}
 	}

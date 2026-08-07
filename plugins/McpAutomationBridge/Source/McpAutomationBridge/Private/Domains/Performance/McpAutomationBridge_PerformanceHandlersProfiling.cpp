@@ -6,7 +6,10 @@
 
 #include "Containers/Ticker.h"
 #include "Engine/Engine.h"
+#include "HAL/FileManager.h"
 #include "HAL/IConsoleManager.h"
+#include "Misc/DateTime.h"
+#include "Misc/Paths.h"
 
 #if WITH_EDITOR
 #include "Editor/UnrealEd/Public/Editor.h"
@@ -65,9 +68,30 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
 
         const FString Command = bDetailed ? TEXT("memreport -full") : TEXT("memreport");
         GEngine->Exec(GEditor->GetEditorWorldContext().World(), *Command);
+
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        const FString ReportDirectory = FPaths::ProfilingDir() / TEXT("MemReports");
+        Resp->SetStringField(TEXT("reportDirectory"), ReportDirectory);
+        TArray<FString> ReportFiles;
+        IFileManager::Get().FindFilesRecursive(ReportFiles, *ReportDirectory, TEXT("*.memreport"), true, false);
+        FString NewestReport;
+        FDateTime NewestStamp = FDateTime::MinValue();
+        for (const FString& File : ReportFiles)
+        {
+            const FDateTime Stamp = IFileManager::Get().GetTimeStamp(*File);
+            if (Stamp > NewestStamp)
+            {
+                NewestStamp = Stamp;
+                NewestReport = File;
+            }
+        }
+        if (!NewestReport.IsEmpty())
+        {
+            Resp->SetStringField(TEXT("reportPath"), NewestReport);
+        }
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
-            TEXT("Memory report generated"), nullptr);
+            TEXT("Memory report generated"), Resp);
         return true;
     }
 

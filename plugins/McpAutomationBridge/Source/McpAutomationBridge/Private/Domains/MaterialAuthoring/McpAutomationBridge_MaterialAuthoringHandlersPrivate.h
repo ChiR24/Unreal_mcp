@@ -166,9 +166,11 @@ bool HandleSetCastShadows(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
 // Helper macro for expression creation - validates path BEFORE loading
 #define LOAD_MATERIAL_OR_RETURN()                                              \
   FString AssetPath;                                                           \
-  if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||             \
-      AssetPath.IsEmpty()) {                                                   \
-    Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),       \
+  if ((!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||            \
+       AssetPath.IsEmpty()) &&                                                 \
+      (!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) ||         \
+       AssetPath.IsEmpty())) {                                                 \
+    Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."), \
                         TEXT("INVALID_ARGUMENT"));                             \
     return true;                                                               \
   }                                                                            \
@@ -196,9 +198,11 @@ bool HandleSetCastShadows(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
 // Exactly one of {Material, Function} will be non-null on success.
 #define LOAD_MATERIAL_OR_FUNCTION_OR_RETURN()                                  \
   FString AssetPath;                                                           \
-  if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||             \
-      AssetPath.IsEmpty()) {                                                   \
-    Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),       \
+  if ((!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||            \
+       AssetPath.IsEmpty()) &&                                                 \
+      (!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) ||         \
+       AssetPath.IsEmpty())) {                                                 \
+    Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."), \
                         TEXT("INVALID_ARGUMENT"));                             \
     return true;                                                               \
   }                                                                            \

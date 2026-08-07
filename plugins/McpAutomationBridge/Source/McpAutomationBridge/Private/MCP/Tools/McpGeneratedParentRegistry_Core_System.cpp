@@ -96,17 +96,17 @@ public:
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		FMcpSchemaBuilder Schema;
-			Schema.String(TEXT("actionName"), TEXT("actionName"));
+			Schema.String(TEXT("actionName"), TEXT("Legacy input action name. Overrides name when both are supplied."));
 			Schema.String(TEXT("actionPath"), TEXT("actionPath"));
 			Schema.String(TEXT("actorName"), TEXT("actorName"));
 			Schema.String(TEXT("allowSpectating"), TEXT("allowSpectating"));
-			Schema.String(TEXT("alt"), TEXT("alt"));
+			Schema.Bool(TEXT("alt"), TEXT("Whether the Alt modifier must be held."));
 			Schema.Bool(TEXT("alwaysRelevant"), TEXT("alwaysRelevant"));
 			Schema.String(TEXT("assetPath"), TEXT("assetPath"));
 			Schema.Number(TEXT("attenuationFalloff"), TEXT("attenuationFalloff"));
 			Schema.Number(TEXT("attenuationRadius"), TEXT("attenuationRadius"));
 			Schema.String(TEXT("autoBalance"), TEXT("autoBalance"));
-			Schema.String(TEXT("axisName"), TEXT("axisName"));
+			Schema.String(TEXT("axisName"), TEXT("Legacy input axis name. Overrides name when both are supplied."));
 			Schema.Bool(TEXT("bAllowInvites"), TEXT("bAllowInvites"));
 			Schema.Bool(TEXT("bAllowJoinInProgress"), TEXT("bAllowJoinInProgress"));
 			Schema.String(TEXT("bDelayedStart"), TEXT("bDelayedStart"));
@@ -118,12 +118,12 @@ public:
 			Schema.Bool(TEXT("canRespawn"), TEXT("canRespawn"));
 			Schema.String(TEXT("channelName"), TEXT("channelName"));
 			Schema.String(TEXT("channelType"), TEXT("channelType"));
-			Schema.String(TEXT("cmd"), TEXT("cmd"));
+			Schema.Bool(TEXT("cmd"), TEXT("Whether the Cmd modifier must be held."));
 			Schema.String(TEXT("condition"), TEXT("condition"));
 			Schema.String(TEXT("contextPath"), TEXT("contextPath"));
 			Schema.Number(TEXT("controllerId"), TEXT("controllerId"));
 			Schema.Number(TEXT("correctionThreshold"), TEXT("correctionThreshold"));
-			Schema.String(TEXT("ctrl"), TEXT("ctrl"));
+			Schema.Bool(TEXT("ctrl"), TEXT("Whether the Ctrl modifier must be held."));
 			Schema.String(TEXT("customSerialization"), TEXT("customSerialization"));
 			Schema.String(TEXT("dataType"), TEXT("dataType"));
 			Schema.String(TEXT("defaultPawnClass"), TEXT("defaultPawnClass"));
@@ -140,7 +140,7 @@ public:
 			Schema.String(TEXT("interfaceType"), TEXT("interfaceType"));
 			Schema.Number(TEXT("intermissionTime"), TEXT("intermissionTime"));
 			Schema.String(TEXT("isAutonomousProxy"), TEXT("isAutonomousProxy"));
-			Schema.String(TEXT("key"), TEXT("key"));
+			Schema.String(TEXT("key"), TEXT("Input key name, e.g. SpaceBar, W, LeftMouseButton."));
 			Schema.Number(TEXT("localPlayerNum"), TEXT("localPlayerNum"));
 			Schema.String(TEXT("mapName"), TEXT("mapName"));
 			Schema.String(TEXT("maxClientRate"), TEXT("maxClientRate"));
@@ -150,7 +150,7 @@ public:
 			Schema.Number(TEXT("minNetUpdateFrequency"), TEXT("minNetUpdateFrequency"));
 			Schema.String(TEXT("modifierType"), TEXT("modifierType"));
 			Schema.Bool(TEXT("muted"), TEXT("muted"));
-			Schema.String(TEXT("name"), TEXT("name"));
+			Schema.String(TEXT("name"), TEXT("Name of the asset or mapping to create or remove."));
 			Schema.Number(TEXT("netCullDistanceSquared"), TEXT("netCullDistanceSquared"));
 			Schema.String(TEXT("netLoadOnClient"), TEXT("netLoadOnClient"));
 			Schema.Number(TEXT("netPriority"), TEXT("netPriority"));
@@ -187,7 +187,7 @@ public:
 			Schema.Number(TEXT("roundTime"), TEXT("roundTime"));
 			Schema.String(TEXT("rpcType"), TEXT("rpcType"));
 			Schema.Bool(TEXT("save"), TEXT("save"));
-			Schema.Number(TEXT("scale"), TEXT("scale"));
+			Schema.Number(TEXT("scale"), TEXT("Axis scale value."));
 			Schema.Number(TEXT("scorePerAssist"), TEXT("scorePerAssist"));
 			Schema.String(TEXT("scorePerDeath"), TEXT("scorePerDeath"));
 			Schema.Number(TEXT("scorePerKill"), TEXT("scorePerKill"));
@@ -197,7 +197,7 @@ public:
 			Schema.String(TEXT("serverPassword"), TEXT("serverPassword"));
 			Schema.Number(TEXT("serverPort"), TEXT("serverPort"));
 			Schema.String(TEXT("sessionName"), TEXT("sessionName"));
-			Schema.String(TEXT("shift"), TEXT("shift"));
+			Schema.Bool(TEXT("shift"), TEXT("Whether the Shift modifier must be held."));
 			Schema.Number(TEXT("smoothingRate"), TEXT("smoothingRate"));
 			Schema.String(TEXT("spatiallyLoaded"), TEXT("spatiallyLoaded"));
 			Schema.String(TEXT("spawnSelectionMethod"), TEXT("spawnSelectionMethod"));

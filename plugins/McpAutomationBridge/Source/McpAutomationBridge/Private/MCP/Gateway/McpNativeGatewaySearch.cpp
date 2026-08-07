@@ -102,6 +102,15 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 		}
 	}
 
+	// Split on whitespace once; single-word queries yield one word and behave
+	// exactly as before apart from the coverage bonus.
+	TArray<FString> QueryWords;
+	if (!Query.IsEmpty())
+	{
+		Query.ParseIntoArrayWS(QueryWords);
+		if (QueryWords.Num() == 1) QueryWords.Reset();
+	}
+
 	TArray<FScoredRecord> Scored;
 	for (const FMcpCapabilityRecord& Record : Store.GetRecords())
 	{
@@ -115,6 +124,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 			Scored.Add(MoveTemp(Entry));
 			continue;
 		}
+		// The whole query is scored first, so an exact phrase still ranks highest.
 		bool Hits[MatchRuleCount] = {};
 		EvaluateRules(Record, Query, Hits);
 		for (int32 Rule = 0; Rule < MatchRuleCount; ++Rule)
@@ -123,6 +133,29 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 			Entry.Reasons.Add(MatchRules[Rule].Reason);
 			Entry.Score += MatchRules[Rule].Weight;
 		}
+		// Then each word separately. Matching the whole query as ONE literal
+		// substring meant every ordinary phrase returned zero results — "create
+		// new level map" found nothing while "create_level" found three — even
+		// though the tool's own instruction is to search first. Per-word scoring
+		// keeps a record that matches ANY word and ranks by how many it matched,
+		// so adding a word can now refine a result set instead of emptying it.
+		int32 MatchedWords = 0;
+		for (const FString& Word : QueryWords)
+		{
+			bool WordHits[MatchRuleCount] = {};
+			EvaluateRules(Record, Word, WordHits);
+			bool bWordMatched = false;
+			for (int32 Rule = 0; Rule < MatchRuleCount; ++Rule)
+			{
+				if (!WordHits[Rule]) continue;
+				bWordMatched = true;
+				Entry.Reasons.AddUnique(MatchRules[Rule].Reason);
+				Entry.Score += MatchRules[Rule].Weight;
+			}
+			if (bWordMatched) ++MatchedWords;
+		}
+		// Favour records covering more of the query than records covering fewer.
+		Entry.Score += MatchedWords * McpSearchWordCoverageBonus;
 		if (Entry.Reasons.Num() == 0) continue;
 		Scored.Add(MoveTemp(Entry));
 	}

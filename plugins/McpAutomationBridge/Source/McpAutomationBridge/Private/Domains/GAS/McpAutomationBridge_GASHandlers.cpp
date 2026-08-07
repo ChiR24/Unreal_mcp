@@ -47,6 +47,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         return true;
     }
 
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    for (const TCHAR* PathField : { TEXT("abilityPath"), TEXT("effectPath"),
+                                    TEXT("cuePath"), TEXT("attributeSetPath") })
+    {
+        if (!BlueprintPath.IsEmpty())
+        {
+            break;
+        }
+        BlueprintPath = GetJsonStringField(Payload, PathField);
+    }
+
     McpGASHandlers::FGASRequestContext Context{
         this,
         RequestId,
@@ -54,7 +65,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         Payload,
         GetJsonStringField(Payload, TEXT("name")),
         GetJsonStringField(Payload, TEXT("path"), TEXT("/Game")),
-        GetJsonStringField(Payload, TEXT("blueprintPath")),
+        BlueprintPath,
         GetJsonStringField(Payload, TEXT("assetPath"))
     };
 

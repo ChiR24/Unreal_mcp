@@ -197,8 +197,25 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
 #if WITH_EDITOR
           RemoveCreatedInheritedOverride();
 #endif
-          SendAutomationError(RequestingSocket, RequestId,
-              FString::Printf(TEXT("Property '%s' not found on object '%s'."), *PropertyName, *ObjectPath),
+          // Name the object that was ACTUALLY resolved, not just the path the
+          // caller sent. When a sub-object path (…:PersistentLevel.Foo) fails to
+          // resolve, resolution falls back to an outer object and this error
+          // then blamed the property — sending callers to hunt for a property
+          // that exists, on an object they never addressed. Showing both makes
+          // the real fault (the path didn't resolve to what you meant) visible.
+          const FString ResolvedPathName = RootObject->GetPathName();
+          const FString Detail =
+              ResolvedPathName.Equals(ObjectPath)
+                  ? FString::Printf(TEXT("Property '%s' not found on object '%s'."),
+                                    *PropertyName, *ObjectPath)
+                  : FString::Printf(
+                        TEXT("Property '%s' not found. Requested object '%s' did not "
+                             "resolve; the request was applied to '%s' (class '%s') "
+                             "instead. For a sub-object such as an actor in a level, "
+                             "address it with actorName rather than objectPath."),
+                        *PropertyName, *ObjectPath, *ResolvedPathName,
+                        *RootObject->GetClass()->GetName());
+          SendAutomationError(RequestingSocket, RequestId, Detail,
               TEXT("PROPERTY_NOT_FOUND"));
           return true;
       }

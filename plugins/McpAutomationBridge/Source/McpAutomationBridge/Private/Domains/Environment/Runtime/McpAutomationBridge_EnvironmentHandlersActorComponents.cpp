@@ -157,11 +157,10 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
         ComponentApplied = McpApplyPayloadSettings(Component, Payload, Applied, Failed);
         Component->MarkRenderStateDirty();
     }
+    const int32 TotalApplied = ActorApplied + ComponentApplied;
 
-    Resp->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
-    Resp->SetStringField(TEXT("actorPath"), Actor->GetPathName());
     Resp->SetStringField(TEXT("classPath"), ActorClassPath);
-    Resp->SetNumberField(TEXT("configuredPropertyCount"), ActorApplied + ComponentApplied);
+    Resp->SetNumberField(TEXT("configuredPropertyCount"), TotalApplied);
     if (Component)
     {
         Resp->SetStringField(TEXT("componentName"), Component->GetName());
@@ -169,6 +168,21 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
     }
     McpAddStringArrayField(Resp, TEXT("configuredProperties"), Applied);
     McpAddStringArrayField(Resp, TEXT("configurationErrors"), Failed);
+
+    if (TotalApplied == 0)
+    {
+        // A find-or-configure with nothing to configure is a true no-op: the
+        // receipt must not claim changed objects (MCPBB-085). The gateway
+        // derives receipt changes[] from actorPath/actorName, so leave those
+        // absent and disclose the no-op in the message instead.
+        OutMessage = FString::Printf(
+            TEXT("Environment actor %s found with nothing to configure; no changes applied"),
+            *Actor->GetActorLabel());
+        return true;
+    }
+
+    Resp->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+    Resp->SetStringField(TEXT("actorPath"), Actor->GetPathName());
     McpHandlerUtils::AddVerification(Resp, Actor);
     if (ConfigTarget)
     {

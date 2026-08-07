@@ -103,6 +103,11 @@ bool HandleAddCompositeNode(UMcpAutomationBridgeSubsystem* Self, const FString& 
     {
         FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
         FString CompositeType = GetJsonStringField(Payload, TEXT("compositeType"));
+        // Composite nodes were created unnamed and the response carried no
+        // identifier, so a caller had nothing to hand to add_decorator /
+        // add_service / add_task_node afterwards — the tree could be created
+        // but never assembled.
+        const FString RequestedNodeName = GetJsonStringField(Payload, TEXT("nodeName"));
 
         UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
         if (!BT)
@@ -126,6 +131,12 @@ bool HandleAddCompositeNode(UMcpAutomationBridgeSubsystem* Self, const FString& 
 
         if (NewNode)
         {
+#if WITH_EDITORONLY_DATA
+            if (!RequestedNodeName.IsEmpty())
+            {
+                NewNode->NodeName = RequestedNodeName;
+            }
+#endif
             // For adding to root, we'd need to access the internal structure
             // The BT needs a root node set
             if (!BT->RootNode)
@@ -135,6 +146,10 @@ bool HandleAddCompositeNode(UMcpAutomationBridgeSubsystem* Self, const FString& 
             BT->MarkPackageDirty();
             McpSafeAssetSave(BT);
 
+            // Return an addressable identifier so the node can be referenced by
+            // the decorator/service/task actions that follow.
+            Result->SetStringField(TEXT("nodeName"), NewNode->GetNodeName());
+            Result->SetBoolField(TEXT("isRoot"), BT->RootNode == NewNode);
             Result->SetStringField(TEXT("compositeType"), CompositeType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s node"), *CompositeType));
             McpHandlerUtils::AddVerification(Result, BT);

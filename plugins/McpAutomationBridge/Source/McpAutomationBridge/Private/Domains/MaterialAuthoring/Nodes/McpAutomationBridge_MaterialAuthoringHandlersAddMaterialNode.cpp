@@ -7,8 +7,15 @@ bool HandleAddMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString&
 {
   if (SubAction == TEXT("add_material_node")) {
     FString AssetPath, NodeType;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+    // The published capability schema declares `materialPath` (and marks it
+    // required, with additionalProperties:false so `assetPath` cannot be sent).
+    // Reading only `assetPath` here made the contract unsatisfiable: the
+    // schema-correct call was refused by the handler and the handler-correct
+    // call was refused by the gateway. Accept both, matching
+    // LOAD_MATERIAL_OR_RETURN in the private header.
+    if ((!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) &&
+        (!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) || AssetPath.IsEmpty())) {
+      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'materialPath' (or 'assetPath')."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
     if (!Payload->TryGetStringField(TEXT("nodeType"), NodeType) || NodeType.IsEmpty()) {
