@@ -53,8 +53,14 @@ Generator scripts: `scripts/generate-canonical-registry.ts`, `scripts/generate-g
 1. Edit only files in the SOURCE OF TRUTH list above.
 2. Author records via `buildCoreRecord(spec)` in `records/core/builder.ts`; declare deltas only.
 3. Export the new record from its `<parent>/` index and into `records/aggregate.ts`.
-4. Keep `ALL_CAPABILITY_RECORD_COUNT` accurate; the aggregate throws on mismatch. It counts RECORDS and is the single source for that count (`scripts/canonical-registry/targets.ts` reads it). Do NOT confuse it with `REVIEWED_METRICS.occurrenceCount`, which counts audited LEGACY occurrences and is permanently 1,335 — the two agree today only because the migration was 1:1.
-5. A record authored AFTER the migration must declare `normalization.provenance: 'post-migration'`. Keep its `legacyIds` pair: the action enum, `describe`, and `execute {tool,action}` are all derived from that field and nothing else. `extractOccurrences()` skips a marked record, so `occurrenceCount` stays 1,335 and the audit keeps describing only what shipped pre-gateway. Omitting the marker is fail-closed — the record is counted, the reviewed total stops reproducing, and the normalization build throws.
+4. Bump every record-count constant the new record lands in — there are THREE, and each throws at module load: `ALL_CAPABILITY_RECORD_COUNT` (`records/aggregate.ts`, all records), plus `PILOT_CAPABILITY_RECORD_COUNT` and `CORE_CAPABILITY_RECORD_COUNT` (`retrieval/aggregate.ts`) when the parent belongs to those catalogs. `scripts/canonical-registry/targets.ts` reads `ALL_CAPABILITY_RECORD_COUNT`, so that count has one source. Do NOT confuse any of them with `REVIEWED_METRICS.occurrenceCount`, which counts audited LEGACY occurrences and is permanently 1,335 — record counts and the audit total agree today only because the migration was 1:1. Expect ~28 unit files pinning a count or a freeze hash to need updating with the record.
+5. A record authored AFTER the migration must declare `normalization.provenance: 'post-migration'`. Keep its `legacyIds` pair: the action enum, `describe`, and `execute {tool,action}` are all derived from that field and nothing else. `extractOccurrences()` skips a marked record, so `occurrenceCount` stays 1,335 and the audit keeps describing only what shipped pre-gateway. Omitting the marker is fail-closed — the record is counted, the reviewed total stops reproducing, and the normalization build throws. Every per-parent `buildRecord`/`buildCoreRecord` stamps `normalization` itself, so declare the whole object beside the spread rather than adding a builder parameter — a post-migration record wants its own rationale anyway:
+   ```ts
+   { ...buildRecord({ /* ... */ }),
+     normalization: { class: 'C_SAME_VERB_DIFFERENT_TARGET', disposition: 'retain',
+       rationale: 'Authored after the gateway migration; no pre-gateway occurrence to audit.',
+       provenance: 'post-migration' } }
+   ```
 6. Run `npm run registry:generate` to rebuild all generated artifacts.
 7. Run `npm run registry:check` (the `--check` drift gate). **It is NOT in CI** see CRITICAL DRIFT GAP.
 
