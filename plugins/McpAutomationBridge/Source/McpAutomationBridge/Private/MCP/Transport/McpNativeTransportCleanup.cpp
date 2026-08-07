@@ -1,5 +1,32 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 
+// Lives beside the reclaim paths rather than in Sessions.cpp: it is only ever
+// used to decide what may be recycled, and Sessions.cpp is at its line ceiling.
+void FMcpNativeTransport::CollectSessionsWithLiveConnections(
+	TSet<FString>& OutSessionIds) const
+{
+	// Both collection mutexes are taken in SEQUENTIAL (non-nested) scopes:
+	// Notification first, then SSE, matching the CloseSessionConnections
+	// relative order. SessionMutex is deliberately NOT taken here — callers
+	// gather this set before locking the session map, so the two never nest.
+	const auto Collect = [&OutSessionIds](const auto& Streams)
+	{
+		for (const auto& [Key, Stream] : Streams)
+		{
+			if (Stream.IsValid() && !Stream->SessionId.IsEmpty())
+			{
+				OutSessionIds.Add(Stream->SessionId);
+			}
+		}
+	};
+	{
+		FScopeLock Lock(&NotificationStreamsMutex);
+		Collect(NotificationStreams);
+	}
+	FScopeLock Lock(&SSEConnectionsMutex);
+	Collect(SSEConnections);
+}
+
 void FMcpNativeTransport::CleanupStaleRequests()
 {
 	const double Now = FPlatformTime::Seconds();

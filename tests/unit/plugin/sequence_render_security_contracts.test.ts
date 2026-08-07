@@ -599,7 +599,12 @@ describe('sequence render and native security contracts', () => {
     }
   });
 
-  it('recycles only unused native sessions and protects active clients', () => {
+  // Recycling used to accept ONLY never-used sessions, so a client that made
+  // one request and then vanished without DELETE held its slot until the 1-hour
+  // inactivity timer — and once every slot was held that way, initialize
+  // hard-failed for every new client. A second tier now reclaims idle sessions
+  // too, but must never take one that still owns a live stream.
+  it('prefers unused native sessions, then idle ones, and never evicts a streaming client', () => {
     const discovery = privateSource(
       'MCP',
       'Transport',
@@ -611,8 +616,17 @@ describe('sequence render and native security contracts', () => {
     expect(discovery).toContain('InitializationCompletedAt');
     expect(discovery).toContain('AbandonedSessionGraceSeconds');
     expect(discovery).toContain('ActiveSessions.Remove(EvictedSessionId)');
-    expect(discovery).toContain('TEXT("Native MCP session limit reached")');
+    expect(discovery).toContain('TEXT("Native MCP session limit reached');
     expect(discovery).not.toContain('EvictedSessionId = OldestSessionId');
+
+    // Second tier: idle-threshold gated, and live streams are excluded.
+    expect(discovery).toContain('IdleSessionReclaimSeconds');
+    expect(discovery).toContain('SessionsWithLiveConnections.Contains');
+    // Gathered before the session lock — the collection mutexes must never be
+    // taken while SessionMutex is held.
+    expect(discovery).toMatch(
+      /CollectSessionsWithLiveConnections\(SessionsWithLiveConnections\);[\s\S]*FScopeLock Lock\(&SessionMutex\)/,
+    );
   });
 
   it('atomically reserves notification streams and tears down sessions', () => {

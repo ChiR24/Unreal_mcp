@@ -207,6 +207,12 @@ private:
 		const TMap<EMcpStateKind, int64>& ExpectedRevisions =
 			TMap<EMcpStateKind, int64>());
 	void CloseSessionConnections(const FString& SessionId);
+	// Sessions holding an SSE call or a notification stream. MUST be called
+	// WITHOUT SessionMutex held: its two collection-mutex scopes are sequential
+	// (Notification, then SSE — same relative order as CloseSessionConnections),
+	// and no path in this file takes a collection mutex while holding
+	// SessionMutex.
+	void CollectSessionsWithLiveConnections(TSet<FString>& OutSessionIds) const;
 
 	// ─── MCP protocol-version negotiation (spec 2025-11-25 lifecycle) ───
 	// Negotiate the initialize protocolVersion: echo a supported version, or
@@ -326,6 +332,14 @@ private:
 
 	static constexpr double SessionTimeoutSeconds = 3600.0;  // 1 hour
 	static constexpr double AbandonedSessionGraceSeconds = 5.0;
+	// Second-tier reclaim threshold at the session cap. Eviction used to accept
+	// ONLY never-used sessions, so once MaxActiveSessions clients had each made
+	// a single request, initialize hard-failed for every new client until the
+	// 1-hour inactivity timer reclaimed a slot — a client that exits without
+	// DELETE (crash, Ctrl-C, container stop) held its slot for the full hour.
+	// A session idle this long with no live SSE or notification stream has no
+	// work to lose, so it is reclaimable well before the inactivity timeout.
+	static constexpr double IdleSessionReclaimSeconds = 120.0;
 	static constexpr double SessionRateWindowSeconds = 60.0;
 	static constexpr int32 MaxClientRequestsPerMinute = 600;
 	static constexpr int32 MaxClientToolCallsPerMinute = 120;
@@ -377,10 +391,12 @@ private:
 	//     sets and is never held while acquiring SSEConnectionsMutex,
 	//     NotificationStreamsMutex, or SessionMutex — so it cannot participate in
 	//     a lock-order cycle. See HandleCancelledNotification / CompletePendingRequest.
-	//   * CloseSessionConnections is the only function that takes multiple
-	//     collection mutexes (Log → Notification → SSE). It does not take
-	//     SessionMutex and is safe because it operates after the session has
-	//     already been removed from ActiveSessions by the caller.
+	//   * CloseSessionConnections and CollectSessionsWithLiveConnections are the
+	//     only functions that take multiple collection mutexes, always in
+	//     sequential non-nested scopes in the same relative order (Notification
+	//     → SSE); never combine them with SessionMutex. They are safe because
+	//     they run after the session has already been removed from ActiveSessions
+	//     by the caller, or (for the collector) before any session lock is taken.
 
 	static constexpr int32 MaxNotificationStreamsPerSession = 4;
 	static constexpr int32 MaxTotalNotificationStreams = 16;

@@ -79,6 +79,12 @@ FString FMcpNativeTransport::HandleInitialize(
 	const FString ClientRateKey = BuildClientRateKey(
 		ConnectionRemoteAddr, ClientName, ClientVersion);
 
+	// Gathered BEFORE SessionMutex: the second-tier reclaim below must not
+	// evict a session that still owns an SSE call or a notification stream, and
+	// the collection mutexes are never taken while the session map is locked.
+	TSet<FString> SessionsWithLiveConnections;
+	CollectSessionsWithLiveConnections(SessionsWithLiveConnections);
+
 	int32 CurrentSessionCount;
 	FString EvictedSessionId;
 	{
@@ -103,6 +109,7 @@ FString FMcpNativeTransport::HandleInitialize(
 					RateState->InitializationCompletedAt > 0.0 &&
 					Now - RateState->InitializationCompletedAt >=
 						AbandonedSessionGraceSeconds &&
+					!SessionsWithLiveConnections.Contains(Entry.Key) &&
 					Entry.Value < OldestUnusedActivity)
 				{
 					EvictedSessionId = Entry.Key;
@@ -111,10 +118,36 @@ FString FMcpNativeTransport::HandleInitialize(
 			}
 			if (EvictedSessionId.IsEmpty())
 			{
+				// Second tier. The abandoned-session pass above also excludes
+				// live streams, but it only accepts sessions that NEVER made a
+				// request, so a client that issued even one call and then
+				// vanished without DELETE (crash, Ctrl-C, container stop) kept
+				// its slot until the 1-hour inactivity timer — and once every
+				// slot was held that way, initialize hard-failed for everyone.
+				// Reclaim the least-recently-active session that is meaningfully
+				// idle AND owns no live stream, so nothing in flight is ever
+				// cancelled to make room.
+				double OldestIdleActivity = TNumericLimits<double>::Max();
+				for (const TPair<FString, double>& Entry : ActiveSessions)
+				{
+					if (SessionsWithLiveConnections.Contains(Entry.Key) ||
+						Now - Entry.Value < IdleSessionReclaimSeconds ||
+						Entry.Value >= OldestIdleActivity)
+					{
+						continue;
+					}
+					EvictedSessionId = Entry.Key;
+					OldestIdleActivity = Entry.Value;
+				}
+			}
+			if (EvictedSessionId.IsEmpty())
+			{
 				OutSessionId.Reset();
 				return FMcpJsonRpc::BuildError(
 					Id, FMcpJsonRpc::ErrorInvalidRequest,
-					TEXT("Native MCP session limit reached"));
+					TEXT("Native MCP session limit reached: every session is "
+						"active or streaming. Close a session with HTTP DELETE "
+						"and its Mcp-Session-Id, or retry shortly."));
 			}
 		ActiveSessions.Remove(EvictedSessionId);
 		SessionRateStates.Remove(EvictedSessionId);
