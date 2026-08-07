@@ -136,6 +136,13 @@ export class FixtureNamespace {
   #createdTempRoot = null;
 
   /**
+   * The manifest exactly as first written. A re-open returns this rather than
+   * re-stamping, so the recorded baseline can never be restated.
+   * @type {Record<string, unknown>|null}
+   */
+  #manifest = null;
+
+  /**
    * @param {{ runId?: string, projectRoot: string, contentRoot?: string, tempRoot?: string,
    *   pid?: number, now?: () => Date }} spec
    */
@@ -186,13 +193,19 @@ export class FixtureNamespace {
       error.name = 'UnownedFixture';
       throw error;
     }
+    // IDEMPOTENT, and deliberately INERT on a second call. Re-running the
+    // observation below would fold anything created since the first open into the
+    // PRE-state, and `close()` compares against that recorded baseline — so a
+    // fixture that survived cleanup would come back reported as `contentRestored`.
+    // That is Task 49's leak exactly: a leftover scored as proof. The directory is
+    // reused rather than stranded, and the manifest is written once.
+    if (this.#createdTempRoot !== null) return this.#manifest;
+
     // The parent is shared and predictable by design (recovery has to find it);
     // the run's own directory must not be. mkdtemp creates it exclusively at mode
     // 0700, so it is provably ours the instant it exists and no earlier process
-    // could have parked a directory on the name we were going to use. IDEMPOTENT:
-    // a second open() reuses this run's tree rather than stranding the first with
-    // a manifest no later pass will ever reclaim.
-    const tempRoot = this.#createdTempRoot ?? mkdtempSync(join(this.tempParent, `${this.runId}-`));
+    // could have parked a directory on the name we were going to use.
+    const tempRoot = mkdtempSync(join(this.tempParent, `${this.runId}-`));
     this.#createdTempRoot = tempRoot;
     this.tempRoot = tempRoot;
     this.manifestPath = join(tempRoot, MANIFEST_FILE);
@@ -211,6 +224,7 @@ export class FixtureNamespace {
       baselineDigest: this.baseline.digest,
       baselineFileCount: this.baseline.detail.fileCount ?? 0,
     };
+    this.#manifest = manifest;
     writeFileSync(join(tempRoot, MANIFEST_FILE), `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 });
     return manifest;
   }

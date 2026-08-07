@@ -229,6 +229,21 @@ describe('Task 50 — cleanup is VERIFIED, and double cleanup is a no-op', () =>
     expect(existsSync(namespace.tempRoot)).toBe(false);
   });
 
+  it('a REPEATED open() does not re-baseline: content made in between still reads as residue', () => {
+    const namespace = makeNamespace();
+    namespace.open();
+    // Somebody re-enters setup after a fixture already exists. If the second open
+    // re-observed the namespace, this file would become part of the "pre-state"
+    // and close() would call the run restored while the asset is still on disk.
+    mkdirSync(namespace.diskRoot, { recursive: true });
+    writeFileSync(join(namespace.diskRoot, 'M_Between.uasset'), 'made after the first open', { mode: 0o600 });
+    const second = namespace.open();
+    const receipt = namespace.close();
+    expect(second.baselineFileCount).toBe(0);
+    expect(receipt.contentRestored).toBe(false);
+    expect(receipt.residualContentFiles).toBe(1);
+  });
+
   it('DOUBLE CLEANUP is idempotent: the second close removes nothing and still reports honestly', () => {
     const namespace = makeNamespace();
     namespace.open();
