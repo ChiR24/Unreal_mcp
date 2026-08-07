@@ -1,8 +1,8 @@
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import {
@@ -11,11 +11,19 @@ import {
   sha256File,
 } from '../../scripts/lib/package-manifest.mjs';
 
-const fixturePath = join(tmpdir(), `unreal-mcp-package-manifest-${process.pid}.zip`);
+// `mkdtempSync` rather than a pid-derived name in the shared temp dir: the pid is
+// predictable, so a name built from it can already exist — planted by anyone else
+// with write access there — and the archive we hash would then be theirs.
+const fixtureDir = mkdtempSync(join(tmpdir(), 'unreal-mcp-package-manifest-'));
+const fixturePath = join(fixtureDir, 'plugin.zip');
 const pluginDescriptorSchema = z.object({ VersionName: z.string() });
 
 afterEach(() => {
   rmSync(fixturePath, { force: true });
+});
+
+afterAll(() => {
+  rmSync(fixtureDir, { recursive: true, force: true });
 });
 
 describe('plugin package manifest', () => {

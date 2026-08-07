@@ -15,7 +15,8 @@
 // project evidence of parity. The real captures exist only after the integration lane
 // runs the C++ test against a built editor, so cross-transport parity stays RED.
 
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -73,7 +74,10 @@ function freshEmitted(whenIso: string): Record<string, unknown> {
 
 const tempDirs: string[] = [];
 function ownedTempDir(): string {
-  const dir = mkdtempSync('/tmp/opencode/task38-nativecap-');
+  // Rooted at the OS temp dir, which always exists: mkdtemp cannot create its
+  // parent, so a hardcoded `/tmp/opencode` made this suite silently depend on some
+  // other suite having run first and made that directory.
+  const dir = mkdtempSync(join(realpathSync(tmpdir()), 'task38-nativecap-'));
   tempDirs.push(dir);
   return dir;
 }

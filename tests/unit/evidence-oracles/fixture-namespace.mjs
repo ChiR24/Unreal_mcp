@@ -15,8 +15,8 @@
 // So ownership is a PREDICATE, checked before every removal, and it is not
 // "the path starts with my prefix" — that string test is defeated by `..`, by a
 // symlink, and by a sibling whose name merely begins the same way
-// (`/tmp/opencode/evidence-oracles/run-1` vs `/tmp/opencode/evidence-oracles/run-11`). It resolves
-// real paths and demands strict containment.
+// (`<scratch>/run-1` vs `<scratch>/run-11`). It resolves real paths and demands
+// strict containment.
 //
 // THE MANIFEST is the interruption-recovery mechanism. A run that is killed
 // between "created the fixture" and "removed it" leaves no in-memory ledger, so
@@ -24,8 +24,9 @@
 // confirm the owning process is dead, and reclaim EXACTLY what that manifest
 // names — never a wildcard sweep.
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
+import { tmpdir } from 'node:os';
 import { join, relative, resolve, sep } from 'node:path';
 
 import { observeProcess, observeTree, walkFiles } from './state-oracles.mjs';
@@ -33,8 +34,17 @@ import { observeProcess, observeTree, walkFiles } from './state-oracles.mjs';
 /** The one content root this suite is allowed to touch, under a per-run child. */
 export const CONTENT_ROOT = '/Game/MCPTest';
 
-/** The one host directory this suite is allowed to touch, under a per-run child. */
-export const TEMP_ROOT = '/tmp/opencode/task-50';
+/**
+ * The one host directory this suite is allowed to touch, under a per-run child.
+ *
+ * Rooted at the OS temp dir rather than a hardcoded `/tmp`, so it follows TMPDIR
+ * and names a real place on Windows. It stays a STABLE, well-known parent on
+ * purpose: interruption recovery is a LATER process reading an earlier run's
+ * manifest, so a per-process scratch root would silently delete that capability.
+ * Unpredictability belongs to the per-run child underneath it, and `open()` is
+ * where that is enforced.
+ */
+export const TEMP_ROOT = join(realpathSync(tmpdir()), 'opencode', 'task-50');
 
 export const MANIFEST_FILE = 'ownership.json';
 
@@ -118,6 +128,14 @@ export function isInsideGamePath(root, candidate) {
  */
 export class FixtureNamespace {
   /**
+   * The scratch directory THIS instance created. Only `open()` assigns it, and
+   * only from `mkdtempSync`, so a re-open reuses the run's own tree instead of
+   * stranding it.
+   * @type {string|null}
+   */
+  #createdTempRoot = null;
+
+  /**
    * @param {{ runId?: string, projectRoot: string, contentRoot?: string, tempRoot?: string,
    *   pid?: number, now?: () => Date }} spec
    */
@@ -130,8 +148,15 @@ export class FixtureNamespace {
     this.gameRoot = `${spec.contentRoot ?? CONTENT_ROOT}/${this.runId}`;
     /** Where that namespace lands on disk. */
     this.diskRoot = join(this.projectRoot, 'Content', ...this.gameRoot.replace(/^\/Game\//u, '').split('/'));
-    /** The owned host scratch namespace: `/tmp/opencode/evidence-oracles/<run-id>`. */
-    this.tempRoot = join(spec.tempRoot ?? TEMP_ROOT, this.runId);
+    /** The stable parent this suite's runs share, so recovery can enumerate them. */
+    this.tempParent = resolve(spec.tempRoot ?? TEMP_ROOT);
+    /**
+     * The owned host scratch namespace. PROVISIONAL until `open()`, which replaces
+     * it with the directory mkdtemp actually created. `runId` remains the logical
+     * identity of the run — the manifest, not the directory name, is what recovery
+     * reads — so the content namespace above is unaffected.
+     */
+    this.tempRoot = join(this.tempParent, this.runId);
     /** @type {Array<{ kind: string, path: string, declaredAt: string }>} */
     this.declared = [];
     /** @type {import('./state-oracles.mjs').Observation|null} */
@@ -150,7 +175,27 @@ export class FixtureNamespace {
    * learned by scoring a leftover as proof.
    */
   open() {
-    mkdirSync(this.tempRoot, { recursive: true });
+    mkdirSync(this.tempParent, { recursive: true, mode: 0o700 });
+    // The shared parent lives in a world-writable temp dir, so prove it is a real
+    // directory rather than a symlink somebody planted BEFORE writing under it.
+    // `isStrictlyInside` cannot see this: a symlinked parent resolves the root and
+    // its children through the same link, so containment still agrees.
+    const realParent = realpathSync(this.tempParent);
+    if (realParent !== this.tempParent) {
+      const error = new Error(`REFUSING to open ${this.tempParent}: it resolves to ${realParent}, which is not where it claims to be.`);
+      error.name = 'UnownedFixture';
+      throw error;
+    }
+    // The parent is shared and predictable by design (recovery has to find it);
+    // the run's own directory must not be. mkdtemp creates it exclusively at mode
+    // 0700, so it is provably ours the instant it exists and no earlier process
+    // could have parked a directory on the name we were going to use. IDEMPOTENT:
+    // a second open() reuses this run's tree rather than stranding the first with
+    // a manifest no later pass will ever reclaim.
+    const tempRoot = this.#createdTempRoot ?? mkdtempSync(join(this.tempParent, `${this.runId}-`));
+    this.#createdTempRoot = tempRoot;
+    this.tempRoot = tempRoot;
+    this.manifestPath = join(tempRoot, MANIFEST_FILE);
     this.baseline = observeTree({ root: this.diskRoot, kind: 'namespace' });
     const manifest = {
       runId: this.runId,
@@ -162,11 +207,11 @@ export class FixtureNamespace {
       openedAt: this.now().toISOString(),
       gameRoot: this.gameRoot,
       diskRoot: this.diskRoot,
-      tempRoot: this.tempRoot,
+      tempRoot,
       baselineDigest: this.baseline.digest,
       baselineFileCount: this.baseline.detail.fileCount ?? 0,
     };
-    writeFileSync(this.manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 });
+    writeFileSync(join(tempRoot, MANIFEST_FILE), `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 });
     return manifest;
   }
 

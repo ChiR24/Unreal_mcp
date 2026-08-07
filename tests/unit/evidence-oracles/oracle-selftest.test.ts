@@ -13,7 +13,8 @@
 // oracle that reports "absent" for everything, every negative here is paired with
 // a POSITIVE CONTROL that watches the same mechanism read the other way.
 
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -43,8 +44,15 @@ import {
   judgeCleanup,
 } from './oracle-judgement.mjs';
 
-/** Owned scratch. Under /tmp/opencode as the task requires, in a suite-specific child. */
-const ROOT = join('/tmp/opencode/task-50', `selftest-${process.pid}`);
+/**
+ * Owned scratch, created by `mkdtempSync`: exclusive creation, mode 0700, and a
+ * name nobody could have pre-empted. That matters more here than anywhere else in
+ * the suite — every case works on REAL bytes, so an oracle reading a file some
+ * other process planted would be reporting on somebody else's world while
+ * claiming to have watched ours. `realpathSync` first because the oracles resolve
+ * paths before comparing them, and macOS hands out a `/var/...` symlink here.
+ */
+const ROOT = mkdtempSync(join(realpathSync(tmpdir()), 'task50-selftest-'));
 const PROJECT = join(ROOT, 'Project');
 const CONTENT = join(PROJECT, 'Content');
 
