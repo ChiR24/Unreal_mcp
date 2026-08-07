@@ -15,6 +15,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
+import { ALL_CAPABILITY_RECORD_COUNT } from '../../src/tools/catalog/capabilities/records/aggregate.js';
 import {
   buildRecordSummaries,
   buildLexicalIndex,
@@ -105,8 +106,11 @@ const docsDir = (): string => resolve(ROOT, 'docs');
 
 export const buildTargets = (input: BuildTargetsInput): ManifestTarget[] => {
   const { records, migrationMap, generateAliases } = input;
-  if (records.length !== 1335) {
-    throw new Error(`FATAL: expected 1335 capability records, received ${records.length}. Refusing to generate.`);
+  if (records.length !== ALL_CAPABILITY_RECORD_COUNT) {
+    throw new Error(
+      `FATAL: expected ${ALL_CAPABILITY_RECORD_COUNT} capability records, `
+      + `received ${records.length}. Refusing to generate.`,
+    );
   }
 
   // Single deterministic sort by canonical id; shared by TS module, neutral
