@@ -53,12 +53,13 @@ Generator scripts: `scripts/generate-canonical-registry.ts`, `scripts/generate-g
 1. Edit only files in the SOURCE OF TRUTH list above.
 2. Author records via `buildCoreRecord(spec)` in `records/core/builder.ts`; declare deltas only.
 3. Export the new record from its `<parent>/` index and into `records/aggregate.ts`.
-4. Keep `ALL_CAPABILITY_RECORD_COUNT` (1,335) accurate; the aggregate throws on mismatch.
-5. Run `npm run registry:generate` to rebuild all generated artifacts.
-6. Run `npm run registry:check` (the `--check` drift gate). **It is NOT in CI** see CRITICAL DRIFT GAP.
+4. Keep `ALL_CAPABILITY_RECORD_COUNT` accurate; the aggregate throws on mismatch. It counts RECORDS and is the single source for that count (`scripts/canonical-registry/targets.ts` reads it). Do NOT confuse it with `REVIEWED_METRICS.occurrenceCount`, which counts audited LEGACY occurrences and is permanently 1,335 — the two agree today only because the migration was 1:1.
+5. A record authored AFTER the migration must declare `normalization.provenance: 'post-migration'`. Keep its `legacyIds` pair: the action enum, `describe`, and `execute {tool,action}` are all derived from that field and nothing else. `extractOccurrences()` skips a marked record, so `occurrenceCount` stays 1,335 and the audit keeps describing only what shipped pre-gateway. Omitting the marker is fail-closed — the record is counted, the reviewed total stops reproducing, and the normalization build throws.
+6. Run `npm run registry:generate` to rebuild all generated artifacts.
+7. Run `npm run registry:check` (the `--check` drift gate). **It is NOT in CI** see CRITICAL DRIFT GAP.
 
 ## CONVENTIONS
-- `CapabilityRecord` (`model.ts`): `CapabilityRecordSource & { hashes }`. Required source fields: id, aliases, legacyIds, discovery (domain/family/topics/summary/whenToUse/whenNotToUse), schemas (input+output Draft-2020-12), examples, availability (unreal min/max, requiredPlugins, editorStates), behavior (effect, idempotency, longRunning, safeToRetry, supportsPreview, supportsUndo), policy (requiredScope, consent, dataAccess), cost (latency, resources), routing (parentTool, dispatchAction, dispatchMode), normalization (class, disposition, rationale), deprecation, parent. `hashes` {algorithm, schema, content} added by `createCapabilityRecord`.
+- `CapabilityRecord` (`model.ts`): `CapabilityRecordSource & { hashes }`. Required source fields: id, aliases, legacyIds, discovery (domain/family/topics/summary/whenToUse/whenNotToUse), schemas (input+output Draft-2020-12), examples, availability (unreal min/max, requiredPlugins, editorStates), behavior (effect, idempotency, longRunning, safeToRetry, supportsPreview, supportsUndo), policy (requiredScope, consent, dataAccess), cost (latency, resources), routing (parentTool, dispatchAction, dispatchMode), normalization (class, disposition, rationale; optional aliasOf, provenance), deprecation, parent. `hashes` {algorithm, schema, content} added by `createCapabilityRecord`.
 - `normalization/` is build/audit time: `generate.ts#generateInventory()` builds+validates an **in-memory** inventory from the hand-authored, committed `routedispositions*.data.ts` ledgers; `assertRouteDispositionsComplete` fails on an unreviewed route. The ledgers are committed; the derived inventory is not.
 - `semantic/` is runtime: envelope.ts (stable key-sorted serialization for cross-transport hashing), ids.ts (CatalogRevision/CorrelationId/IdempotencyKey), handles/paths/pagination/errors/execution-options/save-policy/frame-time/geometry/property-assignment.
 - Native shards are MSVC-chunked at 4,000-char string literals.
@@ -74,7 +75,8 @@ Generator scripts: `scripts/generate-canonical-registry.ts`, `scripts/generate-g
 ## GUARD TESTS
 - `tests/unit/plugin/gateway/generated_shard_source_contracts.test.ts` (shards MSVC-safe, ≤4,000-char literals, 23 .cpp, no orphan .h)
 - `tests/unit/canonical-registry-parent-derivation.test.ts`
-- The 1,335 count assertion in `records/aggregate.ts`
+- `tests/unit/normalization-post-migration-provenance.test.ts` (the provenance skip, both fail-closed directions, and the non-empty `legacyIds` invariant)
+- The record-count assertion in `records/aggregate.ts`
 
 ## ANTI-PATTERNS
 - Editing any `*.generated.*`, `capabilities/generated/`, `gateway-manifest.generated.*`, or plugin `McpGenerated*` / `McpNativeGatewayManifest.h` by hand. Regenerate instead.
@@ -82,3 +84,5 @@ Generator scripts: `scripts/generate-canonical-registry.ts`, `scripts/generate-g
 - Authoring a record without `buildCoreRecord` boilerplate filling (declares only deltas).
 - Skipping `assertRouteDispositionsComplete` when adding a route (unreviewed routes fail the audit).
 - Bumping `ALL_CAPABILITY_RECORD_COUNT` to silence a mismatch instead of fixing the records.
+- Touching `REVIEWED_METRICS.occurrenceCount` or `normalization-inventory.json` to make room for a new record. That artifact records what shipped pre-gateway; raising it would make it assert something untrue. Mark the record `post-migration` instead.
+- Emptying `legacyIds` to dodge the audit. The schema refuses it, because a record with no pair is absent from the parent action enum and from the gateway's legacy-pair index — it would ship searchable and callable by canonical id while `describe` never names its action.
