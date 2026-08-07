@@ -43,10 +43,22 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_composite_node', summary: 'Add a composite node to a Behavior Tree asset.',
     use: 'A Behavior Tree needs a Selector or Sequence branch.',
     avoid: 'Use add_task_node for leaf behavior.',
-    props: { action: A.action, behaviorTreePath: A.behaviorTreePath, compositeType: A.compositeType },
+    // `nodeName` names the created node, and the response now returns the
+    // resolved name plus isRoot. Without them a composite was created unnamed
+    // and unaddressable, so add_decorator/add_service/add_task_node had no
+    // handle to attach to and a tree could be created but never assembled.
+    props: {
+      action: A.action, behaviorTreePath: A.behaviorTreePath,
+      compositeType: A.compositeType,
+      nodeName: { type: 'string', description: 'Name for the created composite node.' },
+    },
     required: ['behaviorTreePath', 'compositeType'], plugins: BT,
-    out: { assetPath: A.assetPath },
-    example: { behaviorTreePath: '/Game/AI/BT_Enemy', compositeType: 'Sequence' },
+    out: {
+      assetPath: A.assetPath,
+      nodeName: { type: 'string', description: 'Resolved name of the created composite node.' },
+      isRoot: { type: 'boolean', description: 'Whether this node became the tree root.' },
+    },
+    example: { behaviorTreePath: '/Game/AI/BT_Enemy', compositeType: 'Sequence', nodeName: 'RootSelector' },
     result: 'Composite node added',
   }),
   aiRecord({

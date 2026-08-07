@@ -1,8 +1,8 @@
 {
   "generator": "docs/capability-support-matrix.md",
-  "catalogRevision": "fc1c618f8c1b249d",
+  "catalogRevision": "036a1612ed43ddf0",
   "recordCount": 1335,
-  "mutationCount": 1174,
+  "mutationCount": 1175,
   "summary": {
     "all": {
       "preview": 0,
@@ -6256,7 +6256,7 @@
     {
       "id": "blueprint.preview_widget",
       "parentTool": "manage_blueprint",
-      "effect": "read",
+      "effect": "write",
       "longRunning": false,
       "preview": {
         "mode": "none",

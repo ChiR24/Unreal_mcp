@@ -25,13 +25,33 @@ export const MEDIA_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a MediaPlayer asset for media playback.',
     whenToUse: ['A media player asset must be created for video/audio playback.'],
     whenNotToUse: ['An existing media player should be reused.'],
-    inputProps: { action: P.action, name: P.name, path: P.path, autoPlay: A.autoPlay, playOnOpen: A.playOnOpen, loop: A.loop, looping: A.looping },
+    inputProps: { action: P.action, name: P.name, path: P.path, assetPath: P.assetPath, mediaSourcePath: P.mediaSourcePath, sourcePath: P.sourcePath, autoPlay: A.autoPlay, playOnOpen: A.playOnOpen, loop: A.loop, looping: A.looping },
     required: ['action', 'name', 'path'],
-    outputProps: { mediaPlayerPath: P.mediaPlayerPath },
-    outputRequired: ['mediaPlayerPath'],
+    // Native HandleCreateMediaPlayer (Media/MediaAssets.cpp:63-156) emits
+    // assetType/assetPath/packageName/created/saved/classPath (+verification)
+    // via BuildAssetResponse (MediaReflection.cpp:242-257) plus looping and
+    // playOnOpen (:143-144); mediaSourcePath/openRequested/openStatus appear
+    // only when a source was supplied. mediaPlayerPath is never emitted.
+    outputProps: {
+      assetType: { type: 'string', description: 'Created asset type (MediaPlayer).' },
+      assetPath: { type: 'string', description: 'Created media player asset path.' },
+      packageName: { type: 'string', description: 'Package name of the created asset.' },
+      classPath: { type: 'string', description: 'Class path of the created asset.' },
+      assetName: { type: 'string', description: 'Created asset name (verification).' },
+      assetClass: { type: 'string', description: 'Created asset class (verification).' },
+      created: { type: 'boolean', description: 'Whether the asset was created.' },
+      saved: { type: 'boolean', description: 'Whether the asset was saved.' },
+      existsAfter: { type: 'boolean', description: 'Whether the asset existed after the call.' },
+      looping: { type: 'boolean', description: 'Whether the player loops.' },
+      playOnOpen: { type: 'boolean', description: 'Whether the player starts on open.' },
+      mediaSourcePath: { type: 'string', description: 'Resolved media source path (when a source was supplied).' },
+      openRequested: { type: 'boolean', description: 'Whether opening the source was requested (when a source was supplied).' },
+      openStatus: { type: 'string', description: 'Open status (pending) when a source was supplied.' },
+    },
+    outputRequired: [],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: MEDIA_PLUGINS,
     exampleInput: { action: 'create_media_player', name: 'MP_Cinematics', path: '/Game/Media' },
-    exampleOutput: { success: true, mediaPlayerPath: '/Game/Media/MP_Cinematics' },
+    exampleOutput: { success: true, assetType: 'MediaPlayer', assetPath: '/Game/Media/MP_Cinematics', created: true, saved: true, looping: false, playOnOpen: true },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildRecord({

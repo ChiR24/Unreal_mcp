@@ -23,6 +23,28 @@ import { P } from './properties.js';
 const D = 'inspect';
 const NR = 'Distinct inspect verb and target; no cross-tool duplicate.';
 
+// runtime_report and pie_report share one handler
+// (McpAutomationBridge_EnvironmentHandlersInspectRuntime.cpp) which emits every
+// field below. Neither record declared ANY of them, and the gateway projects a
+// result to schema-declared names only, so both answered "Runtime inspection
+// report generated" carrying nothing — with the two capabilities returning the
+// byte-identical empty payload that made them look like duplicates.
+const RUNTIME_REPORT_OUTPUT = {
+  worldName: { type: 'string', description: 'Name of the world the report describes.' },
+  worldPath: { type: 'string', description: 'Package path of that world.' },
+  worldType: { type: 'string', description: 'World type, e.g. PIE or Editor.' },
+  isPIE: { type: 'boolean', description: 'Whether a PIE session is active.' },
+  actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Matching runtime actors and their inspected components/properties.' },
+  count: { type: 'number', description: 'Number of actors returned after filtering.' },
+  totalActorCount: { type: 'number', description: 'Total actors in the inspected world.' },
+  playerController: { type: 'string', description: 'Active PlayerController path.' },
+  pawn: { type: 'string', description: 'Possessed pawn path.' },
+  viewTarget: { type: 'string', description: 'Current view target path.' },
+  playerCameraManager: { type: 'string', description: 'PlayerCameraManager path.' },
+  cameraLocation: { type: 'array', items: { type: 'number' }, description: 'Camera location as [x, y, z].' },
+  cameraRotation: { type: 'array', items: { type: 'number' }, description: 'Camera rotation as [pitch, yaw, roll].' },
+} as const;
+
 export const GLOBAL_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'runtime_report', dispatchAction: 'runtime_report', domain: D, family: 'runtime',
@@ -36,8 +58,10 @@ export const GLOBAL_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     effect: 'read', costLatency: 'instant', costResources: 'low',
+    outputProps: { ...RUNTIME_REPORT_OUTPUT },
+    outputRequired: [],
     exampleInput: { action: 'runtime_report', actorName: 'PlayerStart_1' },
-    exampleOutput: { success: true, message: 'Runtime report' },
+    exampleOutput: { success: true, message: 'Runtime report', worldName: 'Demo', worldType: 'PIE', isPIE: true, count: 1, totalActorCount: 39 },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
@@ -52,8 +76,10 @@ export const GLOBAL_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     effect: 'read', costLatency: 'instant', costResources: 'low',
+    outputProps: { ...RUNTIME_REPORT_OUTPUT },
+    outputRequired: [],
     exampleInput: { action: 'pie_report' },
-    exampleOutput: { success: true, message: 'PIE report' },
+    exampleOutput: { success: true, message: 'PIE report', worldName: 'Demo', worldType: 'PIE', isPIE: true, count: 0, totalActorCount: 39 },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
     normalizationRationale: 'inspect-actions.ts aliases pie_report to runtime_report for switch routing, but inspect-global-actions.ts re-dispatches the original pie_report action; the record preserves the canonical pie_report dispatch rather than collapsing it into runtime_report.',
   }),
@@ -66,7 +92,29 @@ export const GLOBAL_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     effect: 'read', costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'get_project_settings' },
-    exampleOutput: { success: true, message: 'Project settings' },
+    exampleOutput: {
+      success: true, message: 'Project settings', projectName: 'Demo',
+      engineVersion: '5.6.0-0+++UE5', buildConfig: 'Development',
+      projectDir: '../../../Demo/', projectVersion: '1.0.0.0', companyName: 'Acme',
+    },
+    // Every field below is already produced by the handler
+    // (McpAutomationBridge_EnvironmentHandlersInspectSettings.cpp,
+    // get_project_settings). Undeclared here, output projection discarded all
+    // of it and the capability answered with {success, message} only.
+    outputProps: {
+      projectName: { type: 'string', description: 'Project name.' },
+      engineVersion: { type: 'string', description: 'Unreal Engine version string.' },
+      buildConfig: { type: 'string', description: 'Build configuration, e.g. Development.' },
+      projectDir: { type: 'string', description: 'Project directory on disk.' },
+      description: { type: 'string', description: 'Project description.' },
+      homepage: { type: 'string', description: 'Project homepage URL.' },
+      supportContact: { type: 'string', description: 'Project support contact.' },
+      projectVersion: { type: 'string', description: 'Project version string.' },
+      companyName: { type: 'string', description: 'Company name.' },
+      copyrightNotice: { type: 'string', description: 'Copyright notice.' },
+      projectID: { type: 'string', description: 'Project GUID.' },
+      startInVR: { type: 'boolean', description: 'Whether the project starts in VR.' },
+    },
     normalizationClass: 'A_TRUE_DUPLICATE',
     normalizationRationale: 'True duplicate (cap:shared:get_project_settings) shared with system_control; inspect is the primary canonical occurrence per the normalization inventory (class A, keep). Implemented in both TS (inspect-global-actions.ts GLOBAL_INSPECT_ACTIONS) and native (bIsGlobalAction).',
   }),
@@ -79,8 +127,33 @@ export const GLOBAL_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     effect: 'read', costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'get_world_settings' },
-    exampleOutput: { success: true, message: 'World settings', worldName: 'Demo' },
-    outputProps: { worldName: { type: 'string', description: 'Current world name.' } },
+    exampleOutput: {
+      success: true, message: 'World settings', worldName: 'Demo', levelName: 'Demo',
+      packageName: '/Game/Maps/Demo', timeSeconds: 12.5, realTimeSeconds: 30.2,
+      deltaTimeSeconds: 0.0166, hasBegunPlay: false, isPlayInEditor: false,
+      killZ: -1048575, worldGravityZ: -980, timeDilation: 1, enableWorldBoundsChecks: true,
+      defaultGameMode: '/Game/Blueprints/BP_GameMode.BP_GameMode_C',
+    },
+    // The handler (McpAutomationBridge_EnvironmentHandlersInspectSettings.cpp,
+    // get_world_settings) already emits every field below. They were absent
+    // here, and the gateway projects a result to schema-declared names ONLY, so
+    // the entire payload was discarded and callers received `worldName` alone —
+    // while this record's own summary promised gravity, killZ and time.
+    outputProps: {
+      worldName: { type: 'string', description: 'Current world name.' },
+      levelName: { type: 'string', description: 'Current level name.' },
+      packageName: { type: 'string', description: 'Package name of the world asset.' },
+      timeSeconds: { type: 'number', description: 'World time in seconds.' },
+      realTimeSeconds: { type: 'number', description: 'Real (unpaused) time in seconds.' },
+      deltaTimeSeconds: { type: 'number', description: 'Last frame delta in seconds.' },
+      hasBegunPlay: { type: 'boolean', description: 'Whether the world has begun play.' },
+      isPlayInEditor: { type: 'boolean', description: 'Whether this world is a PIE world.' },
+      killZ: { type: 'number', description: 'Z height below which actors are killed.' },
+      worldGravityZ: { type: 'number', description: 'World gravity along Z.' },
+      timeDilation: { type: 'number', description: 'Global time dilation multiplier.' },
+      enableWorldBoundsChecks: { type: 'boolean', description: 'Whether world bounds checks are enabled.' },
+      defaultGameMode: { type: 'string', description: 'Default GameMode class path set on WorldSettings.' },
+    },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
@@ -92,7 +165,14 @@ export const GLOBAL_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     effect: 'read', costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'get_viewport_info' },
-    exampleOutput: { success: true, message: 'Viewport info' },
+    exampleOutput: { success: true, message: 'Viewport info', width: 1920, height: 1080 },
+    // Declared so the handler's viewport size survives output projection; with
+    // no outputProps at all the response projected to {success, message} and
+    // reported "Viewport info retrieved" carrying nothing.
+    outputProps: {
+      width: { type: 'number', description: 'Active viewport width in pixels.' },
+      height: { type: 'number', description: 'Active viewport height in pixels.' },
+    },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
@@ -139,6 +219,11 @@ export const GLOBAL_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: {
       worldType: { type: 'string', description: 'World measured: "Editor", "PIE", or "None".' },
       threadTimersAreProcessGlobal: { type: 'boolean', description: 'Thread timers are process-global, not per-world.' },
+      // `fps` is frame-delta derived and an idle editor throttles that delta
+      // hard (observed: fps 3 while the viewport showed 60). These qualify it.
+      busiestThreadMs: { type: 'number', description: 'Slowest of game/render/GPU thread times, in milliseconds.' },
+      threadTimeDerivedFps: { type: 'number', description: 'FPS implied by busiestThreadMs; unaffected by editor idle throttling.' },
+      frameDeltaMayBeEditorThrottled: { type: 'boolean', description: 'True outside PIE, where an idle editor throttles the frame delta and makes fps read far lower than actual.' },
       deltaSeconds: { type: 'number', description: 'Frame delta time in seconds.' },
       frameTimeMs: { type: 'number', description: 'Frame time in milliseconds.' },
       estimatedFps: { type: 'number', description: 'Estimated frames per second from delta time.' },

@@ -44,6 +44,7 @@ const testCases = [
 // MetaSound nodes — C++ maps nodeType to 3-part class names:
 // 'sine' → {UE, Sine, Audio}, 'multiply'/'gain' → {UE, Multiply, Float}
 { scenario: 'Setup: add sine node to metasound', toolName: 'manage_audio', arguments: { action: 'add_metasound_node', assetPath: METASOUND, nodeType: 'sine' }, expected: 'success', captureResult: { key: 'sineNodeId', fromField: 'result.nodeId' } },
+{ scenario: 'Setup: add sine node to metasound via nodeClassName', toolName: 'manage_audio', arguments: { action: 'add_metasound_node', assetPath: METASOUND, nodeClassName: 'UE.Sine.Audio' }, expected: 'success', captureResult: { key: 'classNameSineNodeId', fromField: 'result.nodeId' } },
 { scenario: 'Setup: add gain node to metasound', toolName: 'manage_audio', arguments: { action: 'add_metasound_node', assetPath: METASOUND, nodeType: 'gain' }, expected: 'success', captureResult: { key: 'gainNodeId', fromField: 'result.nodeId' } },
 { scenario: 'Setup: add alias add node to metasound', toolName: 'manage_audio', arguments: { action: 'add_metasound_node', assetPath: METASOUND, nodeType: 'add' }, expected: 'success', captureResult: { key: 'aliasAddNodeId', fromField: 'result.nodeId' } },
 { scenario: 'Setup: add alias gain node to metasound', toolName: 'manage_audio', arguments: { action: 'add_metasound_node', assetPath: METASOUND, nodeType: 'gain' }, expected: 'success', captureResult: { key: 'aliasGainNodeId', fromField: 'result.nodeId' } },

@@ -102,11 +102,18 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
 			'Spawn an actor instance from a Blueprint asset path into the current level.',
 		whenToUse: ['A Blueprint instance must be placed in the scene.'],
 		whenNotToUse: ['A native class instance is needed (use spawn).'],
+		// `scale` is read and applied by the native handler
+		// (McpAutomationBridge_ControlActorBlueprintSpawn.cpp: bHasScale ->
+		// SetActorScale3D) and echoed in its response, but was undeclared here.
+		// With additionalProperties:false the gateway rejected it as an
+		// UNDECLARED_PARAMETER, so spawning a scaled Blueprint actor needed a
+		// second set_transform round-trip while `spawn` accepted scale directly.
 		inputProps: {
 			blueprintPath: P.blueprintPath,
 			actorName: P.actorName,
 			location: P.location,
 			rotation: P.rotation,
+			scale: P.scale,
 		},
 		required: ['blueprintPath'],
 		outputProps: { name: P.actorName },

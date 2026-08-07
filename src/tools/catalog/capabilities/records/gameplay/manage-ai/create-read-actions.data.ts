@@ -44,7 +44,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'An AI needs a new Behavior Tree asset.',
     avoid: 'Use create for the graph compatibility route.',
     props: createProps, required: ['name'], plugins: BT,
-    out: { assetPath: A.assetPath },
+    out: { behaviorTreePath: A.behaviorTreePath },
     example: { name: 'BT_Enemy', path: '/Game/AI' }, result: 'Behavior Tree created',
   }),
   aiRecord({
@@ -52,7 +52,10 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'A caller uses the short create_blackboard verb.',
     avoid: 'Use create_blackboard_asset for the canonical route.',
     props: createProps, required: ['name'], plugins: BT,
-    out: { blackboardPath: A.blackboardPath },
+    out: {
+      blackboardPath: A.blackboardPath,
+      alreadyExisted: { type: 'boolean', description: 'Whether the Blackboard already existed and was reused.' },
+    },
     example: { name: 'BB_Enemy', path: '/Game/AI' }, result: 'Blackboard created',
   }),
   aiRecord({
@@ -60,7 +63,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'A Behavior Tree needs a backing Blackboard asset.',
     avoid: 'Use add_blackboard_key to populate it.',
     props: createProps, required: ['name'], plugins: BT,
-    out: { assetPath: A.assetPath },
+    out: { blackboardPath: A.blackboardPath },
     example: { name: 'BB_Enemy', path: '/Game/AI' }, result: 'Blackboard created',
   }),
   aiRecord({
@@ -142,7 +145,22 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
       stateTreePath: A.stateTreePath, blueprintPath: A.blueprintPath,
     },
     effect: 'read',
-    out: { assetPath: A.assetPath },
+    out: {
+      aiInfo: {
+        type: 'object',
+        description: 'AI asset state reported by the native AI domain (HandleGetAIInfo).',
+        properties: {
+          controllerClass: { type: 'string', description: 'AIController class path.' },
+          assignedBehaviorTree: { type: 'string', description: 'Behavior Tree asset path assigned to the controller.' },
+          assignedBlackboard: { type: 'string', description: 'Blackboard asset path assigned to the tree/controller.' },
+          hasRootNode: { type: 'boolean', description: 'Whether the Behavior Tree has a root node.' },
+          rootDecoratorCount: { type: 'number', description: 'Number of root decorators.' },
+          btNodeCount: { type: 'number', description: 'Number of Behavior Tree nodes.' },
+          queryName: { type: 'string', description: 'Environment Query asset name.' },
+        },
+        additionalProperties: false,
+      },
+    },
     example: { controllerPath: '/Game/AI/AIC_Enemy' }, result: 'AI info read',
   }),
   aiRecord({
@@ -160,6 +178,21 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'A caller needs current NavMesh and agent settings.',
     avoid: 'Use get_ai_info for AI asset state.',
     props: { action: A.action }, effect: 'read',
+    out: {
+      navMeshInfo: {
+        type: 'object',
+        description: 'Navigation mesh and agent settings reported by the native Navigation domain (HandleGetNavigationInfo).',
+        properties: {
+          agentRadius: N.agentRadius, agentHeight: N.agentHeight, agentMaxSlope: N.agentMaxSlope,
+          tileSizeUU: N.tileSizeUU, cellSize: N.cellSize, cellHeight: N.cellHeight,
+          agentStepHeight: N.agentStepHeight,
+          navLinkCount: { type: 'number', description: 'Number of navigation links.' },
+          boundsVolumes: { type: 'number', description: 'Number of navigation bounds volumes.' },
+          isNavigationBuildInProgress: { type: 'boolean', description: 'Whether a navigation build is running.' },
+        },
+        additionalProperties: false,
+      },
+    },
     example: {}, result: 'Navigation info read',
   }),
   aiRecord({

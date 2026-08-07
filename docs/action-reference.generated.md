@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `fc1c618f8c1b249d`
+Catalog revision: `036a1612ed43ddf0`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -44,7 +44,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai` | 62 | 4 | 58 | 0 | manage ai |
 | `manage_asset` | 158 | 34 | 114 | 10 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 50 | 0 | 50 | 0 | audio |
-| `manage_blueprint` | 104 | 10 | 88 | 6 | blueprint, widget |
+| `manage_blueprint` | 104 | 9 | 89 | 6 | blueprint, widget |
 | `manage_character` | 27 | 1 | 26 | 0 | manage character |
 | `manage_combat` | 39 | 2 | 37 | 0 | manage combat |
 | `manage_effect` | 59 | 3 | 55 | 1 | manage effect |
@@ -430,7 +430,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.get_widget_info` | `manage_blueprint` | `get_widget_info` | read | read | none | `manage_blueprint.get_widget_info` |
 | `blueprint.list_node_types` | `manage_blueprint` | `list_node_types` | read | read | none | `manage_blueprint.list_node_types` |
 | `blueprint.modify_scs` | `manage_blueprint` | `modify_scs` | write | write | none | `manage_blueprint.modify_scs` |
-| `blueprint.preview_widget` | `manage_blueprint` | `preview_widget` | read | read | none | `manage_blueprint.preview_widget` |
+| `blueprint.preview_widget` | `manage_blueprint` | `preview_widget` | write | write | none | `manage_blueprint.preview_widget` |
 | `blueprint.probe_handle` | `manage_blueprint` | `probe_handle` | read | read | none | `manage_blueprint.probe_handle` |
 | `blueprint.remove_event` | `manage_blueprint` | `remove_event` | destructive | destructive | explicit | `manage_blueprint.remove_event` |
 | `blueprint.remove_function` | `manage_blueprint` | `remove_function` | destructive | destructive | explicit | `manage_blueprint.remove_function` |

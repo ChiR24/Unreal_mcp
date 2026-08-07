@@ -3,10 +3,49 @@
 // analyze_graph/get_asset_graph transport divergence.
 
 import type { RecordSpec } from './builder.js';
-import { arr, bool, divergence, ex, LOW, MEDIUM, num, READ, READ_POLICY, r, schema, str, WRITE, WRITE_POLICY } from './builder.js';
+import { arr, arrObj, bool, divergence, ex, LOW, MEDIUM, num, READ, READ_POLICY, r, schema, str, WRITE, WRITE_POLICY } from './builder.js';
 
 const ASSET_PATH = str('Canonical /Game asset path.');
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
+
+// The graph walk is bounded (depth clamped, total nodes capped) so it always
+// returns instead of running unbounded on the game thread — previously it could
+// produce NO response at all until the transport timed out after 300 s. These
+// fields carry the graph and say plainly when the result was cut short; without
+// declaring them, output projection would drop the graph itself.
+const GRAPH_OK = schema({
+  success: bool('Operation succeeded.'),
+  graph: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Adjacency map of asset path -> array of dependency paths.' },
+  nodeCount: num('Number of distinct assets visited.'),
+  maxDepth: num('Traversal depth actually used after clamping.'),
+  truncated: bool('True when the walk hit the depth or node ceiling and the graph is partial.'),
+}, ['success']);
+
+// analyze_graph does NOT share GRAPH_OK. Despite the adjacent name it runs a
+// different handler (…/Analysis/…GraphReport.cpp) that inspects the node graph
+// INSIDE one material or Blueprint, and emits none of GRAPH_OK's fields but
+// `nodeCount`. Under GRAPH_OK, output projection therefore discarded the whole
+// analysis and left a bare success — the report the capability exists to give.
+const ANALYZE_GRAPH_OK = schema({
+  success: bool('Operation succeeded.'),
+  assetPath: ASSET_PATH,
+  assetClass: str('Concrete UClass name of the analyzed asset.'),
+  graphType: str('Graph kind analyzed: Material, Blueprint, or None.'),
+  nodeCount: num('Material expression nodes in the graph.'),
+  parameterCount: num('Material parameter expressions in the graph.'),
+  textureSampleCount: num('Texture sample expressions in the graph.'),
+  parameters: arr('Material parameter names.'),
+  isMaterialInstance: bool('True when the asset is a material instance.'),
+  isTwoSided: bool('True when the material renders two-sided.'),
+  isMasked: bool('True when the material uses masked blending.'),
+  blendMode: str('Material blend mode enum name.'),
+  shadingModel: str('First matching shading model name.'),
+  blueprintType: str('Blueprint kind: Class, Interface, MacroLibrary, or FunctionLibrary.'),
+  totalNodes: num('Total nodes across every Blueprint graph.'),
+  graphCount: num('Number of graphs in the Blueprint.'),
+  graphs: arrObj('Per-graph breakdown (name, nodeCount).'),
+  message: str('Explanation when the asset type carries no graph.'),
+}, ['success']);
 
 export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
   r('get_dependencies', 'asset', 'Retrieve the dependency graph for an asset.',
@@ -24,17 +63,18 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Check whether a mesh is checked out', { assetPath: '/Game/Meshes/SM_Crate' }, { success: true })] }
   ),
 
-  r('analyze_graph', 'asset', 'Analyze the asset reference graph starting from an asset path.',
-    schema({ assetPath: ASSET_PATH, maxDepth: num('Maximum traversal depth.') }, ['assetPath']),
-    OK, READ, READ_POLICY, MEDIUM,
+  r('analyze_graph', 'asset', 'Analyze the node graph inside a material or Blueprint asset.',
+    schema({ assetPath: ASSET_PATH, maxDepth: num('Maximum traversal depth (clamped to 8).') }, ['assetPath']),
+    ANALYZE_GRAPH_OK, READ, READ_POLICY, MEDIUM,
     { dispatchAction: 'get_asset_graph', dispatchMode: 'action',
       normalization: divergence('Transport divergence: TS routes analyze_graph to the get_asset_graph bridge action. analyze_graph and get_asset_graph are distinct capabilities sharing a graph-analysis domain.'),
-      examples: [ex('Analyze the reference graph around a material', { assetPath: '/Game/Materials/M_Base', maxDepth: 2 }, { success: true })] }
+      examples: [ex('Inspect a material\'s expression graph', { assetPath: '/Game/Materials/M_Base', maxDepth: 2 },
+        { success: true, graphType: 'Material', nodeCount: 4, parameterCount: 2, blendMode: 'BLEND_Opaque' })] }
   ),
 
   r('get_asset_graph', 'asset', 'Retrieve the asset reference graph directly via the get_asset_graph bridge action.',
-    schema({ assetPath: ASSET_PATH, maxDepth: num('Maximum traversal depth.') }, ['assetPath']),
-    OK, READ, READ_POLICY, MEDIUM,
+    schema({ assetPath: ASSET_PATH, maxDepth: num('Maximum traversal depth (clamped to 8).') }, ['assetPath']),
+    GRAPH_OK, READ, READ_POLICY, MEDIUM,
     { dispatchMode: 'tool',
       normalization: divergence('Direct bridge dispatch via get_asset_graph subAction. Distinct from analyze_graph which routes here as a transport alias.'),
       examples: [ex('Read the reference graph through the direct bridge route', { assetPath: '/Game/Materials/M_Base', maxDepth: 2 }, { success: true })] }
@@ -57,9 +97,10 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
 
   r('get_metadata', 'asset', 'Retrieve metadata and tags for an asset.',
     schema({ assetPath: ASSET_PATH }, ['assetPath']),
-    OK, READ, READ_POLICY, LOW,
+    schema({ success: bool('Operation succeeded.'), assetPath: ASSET_PATH, tags: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Asset Registry tags (key-value).' }, metadata: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Custom package metadata (key-value).' } }, ['success']),
+    READ, READ_POLICY, LOW,
     { dispatchMode: 'tool',
-      examples: [ex('Read metadata for a mesh', { assetPath: '/Game/Meshes/SM_Crate' }, { success: true })] }
+      examples: [ex('Read metadata for a mesh', { assetPath: '/Game/Meshes/SM_Crate' }, { success: true, assetPath: '/Game/Meshes/SM_Crate', metadata: { Author: 'ArtTeam' } })] }
   ),
 
   r('set_metadata', 'asset', 'Set metadata key-value pairs on an asset.',

@@ -181,15 +181,28 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { action: P.action, blueprintPath: P.blueprintPath },
     required: ['action'],
     outputProps: {
-      nodeTypes: { type: 'array', items: { type: 'string' }, description: 'Available node type strings.' },
+      nodeTypes: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            className: { type: 'string', description: 'Blueprint node class name (e.g. UK2Node_CallFunction).' },
+            displayName: { type: 'string', description: 'Localized node display name shown in the Blueprint palette.' },
+          },
+          required: ['className', 'displayName'],
+        },
+        description: 'Available Blueprint node types, each an object with className and displayName.',
+      },
+      count: { type: 'number', description: 'Total number of node types listed.' },
     },
-    outputRequired: ['nodeTypes'],
+    outputRequired: ['nodeTypes', 'count'],
     effect: 'read',
     latency: 'instant',
     resources: 'low',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'list_node_types', blueprintPath: '/Game/Blueprints/BP_Test' },
-    exampleOutput: { success: true, nodeTypes: ['CallFunction', 'Event', 'Branch', 'VariableGet'] },
+    exampleOutput: { success: true, nodeTypes: [{ className: 'UK2Node_CallFunction', displayName: 'Call Function' }], count: 1 },
   }),
   buildRecord({
     id: 'blueprint.create_struct_make_break_nodes',

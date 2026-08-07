@@ -112,12 +112,20 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
   // at-least-one-of groups (e.g. mute_player, add_metasound_node), which moves
   // their schema hashes, and the example synthesizer satisfies those groups so
   // the first example of every utility record survives its own input schema.
+  //
+  // Re-pinned after the MCP black-box ledger remediation: the manage_sequence
+  // records reused by identity moved (cinematic/media/timeline parity), and
+  // utility/helpers.ts retyped the legacy input-mapping modifier flags
+  // (shift/ctrl/alt/cmd) to boolean per the native TryGetBoolField reader and
+  // replaced placeholder field-name descriptions with real ones, moving the
+  // manage_audio/manage_networking schema hashes. The 208-record membership,
+  // identity reuse, and partition counts are unchanged.
   it('matches the pinned canonical ID/schema/content hash', () => {
     const body = UTILITY_CAPABILITY_CATALOG.map(
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('df25616a1f26553cabb9e99a9eeb67c77e05d98da0189fc5d79fc40f4858552a');
+      .toBe('7e59369819ce81e3f81721c05fd3229864b35f6619740d40a2e775c8bfb71300');
   });
 
   it('retains stable record hashes after recomputation', () => {

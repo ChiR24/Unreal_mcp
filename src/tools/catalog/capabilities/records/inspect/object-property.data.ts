@@ -159,8 +159,23 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { blueprintPath: P.blueprintPath, objectPath: P.objectPath, componentName: P.componentName, propertyNames: P.propertyNames, detailed: P.detailed },
     required: ['blueprintPath'],
     effect: 'read', costLatency: 'instant', costResources: 'low',
+    // The handler (McpAutomationBridge_PropertyHandlersCdoInspection.cpp) emits
+    // every field below. With NO outputProps declared, output projection kept
+    // only {success, message} and the capability answered "CDO inspection
+    // completed" carrying nothing — leaving Blueprint defaults unreadable.
+    outputProps: {
+      className: { type: 'string', description: 'Generated class name of the inspected CDO.' },
+      classPath: { type: 'string', description: 'Full path of the generated class.' },
+      blueprintPath: P.blueprintPath,
+      parentClass: { type: 'string', description: 'Parent class name.' },
+      componentCount: { type: 'number', description: 'Number of default components on the CDO.' },
+      cdoProperties: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Default property values on the Class Default Object.' },
+      properties: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Requested property values.' },
+      components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Default component descriptors (name, class, attachParent).' },
+    },
+    outputRequired: [],
     exampleInput: { action: 'inspect_cdo', blueprintPath: '/Game/Blueprints/BP_Test' },
-    exampleOutput: { success: true, message: 'CDO inspected' },
+    exampleOutput: { success: true, message: 'CDO inspected', className: 'BP_Test_C', componentCount: 3 },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({

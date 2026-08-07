@@ -67,6 +67,7 @@ const testCases = [
 
   // === BEHAVIOR TREE ===
   { scenario: 'ADD: add_composite_node', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'Sequence' }, expected: 'success' },
+  { scenario: 'ADD: add_composite_node named', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'Selector', nodeName: 'RootSelector' }, expected: 'success' },
   { scenario: 'ADD: add_task_node', toolName: 'manage_ai', arguments: { action: 'add_task_node', behaviorTreePath: '${captured:behaviorTreePath}', taskType: 'Wait' }, expected: 'success' },
   { scenario: 'ADD: add_decorator', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Blackboard' }, expected: 'success' },
   { scenario: 'ADD: add_service', toolName: 'manage_ai', arguments: { action: 'add_service', behaviorTreePath: '${captured:behaviorTreePath}', serviceType: 'DefaultFocus' }, expected: 'success' },

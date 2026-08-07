@@ -22,11 +22,17 @@ export const METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Metadata is being written rather than read.'],
     inputProps: { action: P.action, path: P.path },
     required: ['action', 'path'],
-    outputProps: { metadata: P.metadata },
-    outputRequired: ['metadata'],
+    // Native HandleSequenceGetMetadata (SequenceHandlersAssetLibrary.cpp:196-229)
+    // emits path/name/class on success — NOT a metadata object. Declared exactly.
+    outputProps: {
+      path: { type: 'string', description: 'Resolved sequence asset path.' },
+      name: { type: 'string', description: 'Sequence asset name.' },
+      class: { type: 'string', description: 'Sequence asset class name.' },
+    },
+    outputRequired: ['path', 'name', 'class'],
     effect: 'read', latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'get_metadata', path: '/Game/Cinematics/SEQ_Master' },
-    exampleOutput: { success: true, metadata: { author: 'MCP' } },
+    exampleOutput: { success: true, path: '/Game/Cinematics/SEQ_Master', name: 'SEQ_Master', class: 'LevelSequence' },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
     normalizationRationale: 'Metadata read is a distinct Sequencer query with unique asset target.',
   }),

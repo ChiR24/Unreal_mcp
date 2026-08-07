@@ -27,12 +27,17 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     summary: 'Create a master cinematic sequence with sub-sequence and shot track structure.',
     whenToUse: ['A new cinematic with shots must be scaffolded.'],
     whenNotToUse: ['A flat sequence without shots is sufficient.'],
-    inputProps: { action: P.action, masterSequencePath: P.masterSequencePath, mapPath: P.mapPath, save: A.save },
-    required: ['action', 'masterSequencePath'],
+    // Native HandleCreateMasterSequence (Cinematics/Assets.cpp:45-141) resolves
+    // the target from sequencePath/assetPath (ResolveAssetTarget :22-40) plus
+    // name/path(folder); reads frameRate (:101), startFrame/durationFrames
+    // (:120-121). masterSequencePath and mapPath are never read; the sequence
+    // is saved unconditionally (McpSafeAssetSave :122), so save is dead too.
+    inputProps: { action: P.action, name: P.name, sequencePath: P.sequencePath, path: P.path, assetPath: P.assetPath, frameRate: P.frameRate, startFrame: P.startFrame, durationFrames: A.durationFrames },
+    required: ['action', 'name', 'sequencePath'],
     outputProps: { sequencePath: P.sequencePath },
     outputRequired: ['sequencePath'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: SEQ_PLUGINS,
-    exampleInput: { action: 'create_master_sequence', masterSequencePath: '/Game/Cinematics/SEQ_Master', mapPath: '/Game/Maps/M_Cinematics' },
+    exampleInput: { action: 'create_master_sequence', name: 'SEQ_Master', sequencePath: '/Game/Cinematics/SEQ_Master' },
     exampleOutput: { success: true, sequencePath: '/Game/Cinematics/SEQ_Master' },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
@@ -81,11 +86,23 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     summary: 'Create a CineCameraActor in the level and bind it to the sequence.',
     whenToUse: ['A cinematic camera actor must be created for a shot.'],
     whenNotToUse: ['An existing camera should be used.'],
-    inputProps: { action: P.action, path: P.path, cameraName: P.actorName, location: { type: 'object', description: 'Camera location.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] }, rotation: { type: 'object', description: 'Camera rotation.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] }, cameraActorName: P.actorName, label: A.label, save: A.save },
+    // Native HandleCreateCineCameraActor (Cinematics/Cameras.cpp:93-156) reads
+    // actorName/label (:126, passed to SpawnActorInActiveWorld which honors it)
+    // and location/rotation (:122-125). cameraName/cameraActorName/save are
+    // never read. Emits actorName/actorPath (+bindingGuid when a sequence is
+    // supplied) on success, so they are declared as receipt-visible outputs.
+    inputProps: { action: P.action, path: P.path, actorName: P.actorName, label: A.label, location: { type: 'object', description: 'Camera location.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] }, rotation: { type: 'object', description: 'Camera rotation.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] } },
     required: ['action', 'path'],
+    outputProps: {
+      actorName: { type: 'string', description: 'Label of the created camera actor.' },
+      actorPath: { type: 'string', description: 'Path to the created camera actor.' },
+      bindingGuid: { type: 'string', description: 'Sequencer binding GUID (present when a sequence path was supplied).' },
+      appliedProperties: { type: 'array', items: { type: 'string' }, description: 'Camera properties applied to the created actor.' },
+    },
+    outputRequired: [],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
-    exampleInput: { action: 'create_cine_camera_actor', path: '/Game/Cinematics/SEQ_Master', cameraName: 'CineCam_01' },
-    exampleOutput: { success: true, message: 'Cine camera created' },
+    exampleInput: { action: 'create_cine_camera_actor', path: '/Game/Cinematics/SEQ_Master', actorName: 'CineCam_01' },
+    exampleOutput: { success: true, actorName: 'CineCam_01', actorPath: '/Game/Level/SUB_01.CineCam_01' },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildRecord({
@@ -105,11 +122,18 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     summary: 'Add a camera cut track to a cinematic sequence.',
     whenToUse: ['A camera cut track must be added for shot transitions.'],
     whenNotToUse: ['The sequence already has a camera cut track.'],
-    inputProps: { action: P.action, path: P.path, cameraActorName: P.actorName, rowIndex: A.rowIndex, durationFrames: A.durationFrames, save: A.save },
+    // Native HandleAddCameraCutTrack (Cinematics/CameraTracks.cpp:44-105) reads
+    // bindingGuid/bindingId (ReadBindingGuid Cinematics.cpp:112-115) or an
+    // actor resolved by actorName/cameraName/actorPath/cameraActorPath
+    // (ResolveActor Cinematics.cpp:117-124) plus rowIndex/durationFrames/save.
+    // cameraActorName is never read, so it is dropped.
+    inputProps: { action: P.action, path: P.path, actorName: P.actorName, cameraName: P.actorName, actorPath: { type: 'string', description: 'Actor path (alias of actorName).' }, bindingGuid: A.bindingGuid, startFrame: P.startFrame, rowIndex: A.rowIndex, durationFrames: A.durationFrames, save: A.save },
     required: ['action', 'path'],
+    outputProps: { bindingGuid: { type: 'string', description: 'Binding GUID of the targeted camera or created cut.' } },
+    outputRequired: [],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'add_camera_cut_track', path: '/Game/Cinematics/SEQ_Master' },
-    exampleOutput: { success: true, message: 'Camera cut track added' },
+    exampleOutput: { success: true, bindingGuid: 'ABC-123' },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildRecord({

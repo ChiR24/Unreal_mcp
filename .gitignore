@@ -37,7 +37,8 @@ plugins/**/Intermediate/
 coverage/
 .nyc_output/
 tests/reports/
-tests/eval/evidence/
+tests/eval/evidence/*
+!tests/eval/evidence/task-4-baseline.json
 
 # Temporary files
 *.tmp

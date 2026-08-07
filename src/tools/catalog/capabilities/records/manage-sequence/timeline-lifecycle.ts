@@ -22,14 +22,24 @@ export const TIMELINE_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['An existing sequence should be opened instead.'],
     inputProps: { action: P.action, name: P.name, path: P.path },
     required: ['action', 'name'],
-    outputProps: { sequencePath: P.sequencePath },
-    outputRequired: ['sequencePath'],
+    // Native HandleSequenceCreate (SequenceHandlersAssetCreation.cpp:5-109)
+    // never emits sequencePath: it verifies with assetPath/assetName/assetClass/
+    // existsAfter (AddAssetVerification) on create, or verifiedPath/existsAfter
+    // (VerifyAssetExists) when the asset already exists. Declared exactly.
+    outputProps: {
+      assetPath: { type: 'string', description: 'Created sequence asset path (verification).' },
+      assetName: { type: 'string', description: 'Created sequence asset name (verification).' },
+      assetClass: { type: 'string', description: 'Created sequence asset class (verification).' },
+      verifiedPath: { type: 'string', description: 'Verified existing asset path.' },
+      existsAfter: { type: 'boolean', description: 'Whether the asset existed after the call.' },
+    },
+    outputRequired: [],
     effect: 'write',
     latency: 'interactive',
     resources: 'low',
     plugins: SEQ_PLUGINS,
     exampleInput: { action: 'create', name: 'SEQ_Master', path: '/Game/Cinematics' },
-    exampleOutput: { success: true, sequencePath: '/Game/Cinematics/SEQ_Master' },
+    exampleOutput: { success: true, assetPath: '/Game/Cinematics/SEQ_Master', assetName: 'SEQ_Master', existsAfter: true },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
     normalizationRationale: NR,
   }),

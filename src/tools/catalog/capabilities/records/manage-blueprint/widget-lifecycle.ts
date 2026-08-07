@@ -63,11 +63,20 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Full PIE testing is needed.'],
     inputProps: { action: P.action, widgetPath: P.widgetPath, previewSize: P.previewSize, width: P.width, height: P.height, duration: P.duration },
     required: ['action', 'widgetPath'],
-    effect: 'read',
+    // Native handler (WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringPreview.cpp)
+    // calls MarkBlueprintAsStructurallyModified — a real mutation (package
+    // revision increases) — so the effect is `write`, not `read`. It returns
+    // only success/message/widgetPath: no preview artifact is produced, so the
+    // output schema declares only the widgetPath handle; a genuine preview
+    // image would require a C++-side change (MCPBB-045).
+    outputProps: { widgetPath: P.widgetPath },
+    outputRequired: ['widgetPath'],
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
     latency: 'interactive',
     resources: 'medium',
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'preview_widget', widgetPath: '/Game/UI/WBP_MainUI', previewSize: '1080p' },
-    exampleOutput: { success: true, message: 'Widget previewed at 1080p' },
+    exampleOutput: { success: true, message: 'Widget blueprint marked for recompilation. Open in Widget Blueprint Editor to see preview.', widgetPath: '/Game/UI/WBP_MainUI' },
   }),
 ];

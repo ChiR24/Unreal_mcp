@@ -88,19 +88,19 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('delete', 'asset', 'Permanently delete one or more assets after explicit confirmation.',
-    schema({ paths: arr('Asset paths to delete.'), assetPath: str('Single asset path (alternative to paths).'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
+    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path (alternative to paths).'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { normalization: aliasCanonical('delete_asset/delete_assets'),
       examples: [ex('Delete one asset', { paths: ['/Game/MCPTest/Disposable'] }, { success: true })] }
   ),
   r('delete_asset', 'asset', 'Long-form alias for delete.',
-    schema({ paths: arr('Asset paths to delete.'), assetPath: str('Single asset path.'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
+    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { normalization: aliasOf('asset.delete'),
-      examples: [ex('Delete a single asset by path', { assetPath: '/Game/MCPTest/Disposable' }, { success: true })] }
+      examples: [ex('Delete a single asset by path', { path: '/Game/MCPTest/Disposable' }, { success: true })] }
   ),
   r('delete_assets', 'asset', 'Plural-form alias for delete.',
-    schema({ paths: arr('Asset paths to delete.'), assetPath: str('Single asset path.'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
+    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { normalization: aliasOf('asset.delete'),
       examples: [ex('Delete several assets in one call', { paths: ['/Game/MCPTest/DisposableA', '/Game/MCPTest/DisposableB'] }, { success: true })] }

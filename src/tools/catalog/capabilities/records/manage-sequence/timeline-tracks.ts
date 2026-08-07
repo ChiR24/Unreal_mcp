@@ -56,11 +56,28 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A specific track name is already known.'],
     inputProps: { action: P.action, path: P.path },
     required: ['action', 'path'],
-    outputProps: { tracks: { type: 'array', items: { type: 'string', description: 'Track name.' }, description: 'Track names.' } },
+    // Native HandleListTracks (SequenceHandlersTrackDiscovery.cpp:37-126) emits
+    // tracks as OBJECTS: master rows carry trackName/trackType/displayName/
+    // isMasterTrack(=true)/sectionCount (:71-79); binding rows add
+    // bindingName/bindingGuid and isMasterTrack=false (:96-107). Also emits
+    // trackCount and sequencePath at top level. Declared exactly.
+    outputProps: {
+      tracks: { type: 'array', items: { type: 'object', description: 'Track info.', additionalProperties: false, properties: {
+        trackName: { type: 'string', description: 'Track name.' },
+        trackType: { type: 'string', description: 'MovieScene track class name.' },
+        displayName: { type: 'string', description: 'Track display name.' },
+        isMasterTrack: { type: 'boolean', description: 'Whether the track belongs to the master (unbound) row.' },
+        bindingName: { type: 'string', description: 'Bound actor name (binding tracks only).' },
+        bindingGuid: { type: 'string', description: 'Bound object guid string (binding tracks only).' },
+        sectionCount: { type: 'integer', description: 'Number of sections on the track.' },
+      }, required: ['trackName', 'trackType', 'displayName', 'isMasterTrack', 'sectionCount'] }, description: 'Sequence tracks.' },
+      trackCount: { type: 'integer', description: 'Total number of tracks reported.' },
+      sequencePath: { type: 'string', description: 'Resolved sequence asset path.' },
+    },
     outputRequired: ['tracks'],
     effect: 'read', latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'list_tracks', path: '/Game/Cinematics/SEQ_Master' },
-    exampleOutput: { success: true, tracks: ['Transform', 'CameraCut'] },
+    exampleOutput: { success: true, tracks: [{ trackName: 'CameraCut', trackType: 'MovieSceneCameraCutTrack', displayName: 'CameraCut', isMasterTrack: true, sectionCount: 1 }], trackCount: 1 },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildRecord({

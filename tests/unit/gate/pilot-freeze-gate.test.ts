@@ -39,9 +39,24 @@ import {
 // connect_nodes/connect_material_pins) and manage-sequence (add_keyframe),
 // removing the group members from `required` so the groups actually enforce
 // the native alternatives. The 493-record structure is unchanged.
-const FROZEN_JSON_HASH = '13727126b155eff2f5c93df72146731b4a0a79ecea206e7e8f61cd9d726f81a7';
-const FROZEN_TS_HASH = '6dca013b78ec4e25b44ef16bd28cfe88d59c80f0cf0eacf5860a5e9b407bc236';
-const FROZEN_NATIVE_HASH = '93836993d57397a86e15f7dade51a339b6c3dd365e01cd8cdf140c543bbd8f89';
+//
+// Re-frozen a third time after the record-vs-native field parity audit:
+// asset delete/delete_asset/delete_assets now declare `path` (native reads
+// `path`+`paths`) alongside the `assetPath` compatibility alias and the
+// bridge-delete `force` flag the live suite exercises; enable_world_partition
+// and configure_grid_size no longer require the native-ignored `levelPath`
+// (configure_grid_size also gained `priority`); list_light_types output is
+// `types` (native emits `types`). The 493-record structure is unchanged.
+//
+// Re-frozen a fourth time after the MCP black-box ledger remediation: the
+// record-vs-native parity fixes across all four pilot parents moved their
+// schema and content hashes — build-environment lighting (light type/count
+// outputs), manage-asset (asset lifecycle/query/enum parity), manage-blueprint
+// (graph node and widget parity), and manage-sequence (cinematic/media/
+// timeline parity). The 493-record structure and exact ID set are unchanged.
+const FROZEN_JSON_HASH = '12ed1b1390a9b3fde2c23ca81447c858bb95c2c33ce2dc3f302c361b66727672';
+const FROZEN_TS_HASH = 'a063248ef311d92e77cacce6f8dfe368001cfc7c79332d944187294db84de6f8';
+const FROZEN_NATIVE_HASH = '93a3b13f703e52125b0c8b4c856987cf904bfbf522a8053ee8d099e106fbb093';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

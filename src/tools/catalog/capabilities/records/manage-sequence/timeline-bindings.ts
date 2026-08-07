@@ -71,11 +71,14 @@ export const TIMELINE_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A specific binding GUID is already known.'],
     inputProps: { action: P.action, path: P.path },
     required: ['action', 'path'],
-    outputProps: { bindings: { type: 'array', items: { type: 'object', description: 'Binding info.', additionalProperties: false, properties: { name: P.actorName, guid: { type: 'string', description: 'Binding GUID.' } }, required: ['name'] }, description: 'Sequence bindings.' } },
+    // Native HandleSequenceGetBindings (SequenceHandlersSpawnables.cpp:89-147)
+    // emits per binding {id, name} — id is the object-guid string at :117, the
+    // former guid field is never emitted. Declared exactly.
+    outputProps: { bindings: { type: 'array', items: { type: 'object', description: 'Binding info.', additionalProperties: false, properties: { id: { type: 'string', description: 'Binding GUID (object guid string).' }, name: P.actorName }, required: ['id', 'name'] }, description: 'Sequence bindings.' } },
     outputRequired: ['bindings'],
     effect: 'read', latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'get_bindings', path: '/Game/Cinematics/SEQ_Master' },
-    exampleOutput: { success: true, bindings: [{ name: 'Camera1', guid: 'ABC-123' }] },
+    exampleOutput: { success: true, bindings: [{ id: 'ABC-123', name: 'Camera1' }] },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildRecord({

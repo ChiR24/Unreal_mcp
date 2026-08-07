@@ -126,9 +126,49 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     effect: 'read', costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'list_levels' },
-    exampleOutput: { success: true, message: 'Levels listed', levels: ['/Game/Maps/Demo'] },
-    outputProps: { levels: { type: 'array', items: { type: 'string' }, description: 'Available level asset paths.' } },
-    outputRequired: ['levels'],
+    exampleOutput: {
+      success: true, message: 'Levels listed',
+      currentWorldLevels: [{ name: 'Demo', path: '/Game/Maps/Demo', isPersistent: true, isLoaded: true, isVisible: true }],
+      currentWorldLevelCount: 1,
+      allMaps: [{ name: 'Demo', path: '/Game/Maps/Demo', objectPath: '/Game/Maps/Demo.Demo' }],
+      allMapsCount: 1,
+      currentMap: 'Demo', currentMapPath: '/Game/Maps/Demo',
+    },
+    outputProps: {
+      currentWorldLevels: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            name: { type: 'string', description: 'Level name.' },
+            path: { type: 'string', description: 'Level package path.' },
+            isPersistent: { type: 'boolean', description: 'Whether this is the persistent level.' },
+            isLoaded: { type: 'boolean', description: 'Whether the level is loaded.' },
+            isVisible: { type: 'boolean', description: 'Whether the level is visible.' },
+            streamingState: { type: 'string', description: 'Streaming state for streaming levels.' },
+          },
+        },
+        description: 'Levels in the current world (persistent level plus streaming levels).',
+      },
+      currentWorldLevelCount: { type: 'number', description: 'Number of current-world level entries.' },
+      allMaps: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            name: { type: 'string', description: 'Map asset name.' },
+            path: { type: 'string', description: 'Map package path.' },
+            objectPath: { type: 'string', description: 'Full object path of the map asset.' },
+          },
+        },
+        description: 'All World assets discovered in the asset registry.',
+      },
+      allMapsCount: { type: 'number', description: 'Number of map assets in the asset registry.' },
+      currentMap: { type: 'string', description: 'Name of the current persistent map.' },
+      currentMapPath: { type: 'string', description: 'Package path of the current persistent map.' },
+    },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({

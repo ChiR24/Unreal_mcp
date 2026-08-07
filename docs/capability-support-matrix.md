@@ -5,7 +5,7 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `fc1c618f8c1b249d`
+Catalog revision: `036a1612ed43ddf0`
 
 Every one of the 1335 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
@@ -17,10 +17,10 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 1335 | 0 / 1174 |
-| Undoable | 0 / 1335 | 0 / 1174 |
-| Compensatable | 21 / 1335 | 20 / 1174 |
-| Fully pessimistic | 1314 / 1335 | 1154 / 1174 |
+| Previewable | 0 / 1335 | 0 / 1175 |
+| Undoable | 0 / 1335 | 0 / 1175 |
+| Compensatable | 21 / 1335 | 20 / 1175 |
+| Fully pessimistic | 1314 / 1335 | 1155 / 1175 |
 
 ## By parent tool
 
@@ -34,7 +34,7 @@ truthful result, not a gap in coverage.
 | `manage_ai` | 62 | 58 | 0 | 0 | 0 |
 | `manage_asset` | 158 | 124 | 0 | 0 | 1 |
 | `manage_audio` | 50 | 50 | 0 | 0 | 1 |
-| `manage_blueprint` | 104 | 94 | 0 | 0 | 3 |
+| `manage_blueprint` | 104 | 95 | 0 | 0 | 3 |
 | `manage_character` | 27 | 26 | 0 | 0 | 0 |
 | `manage_combat` | 39 | 37 | 0 | 0 | 0 |
 | `manage_effect` | 59 | 56 | 0 | 0 | 0 |
@@ -281,7 +281,7 @@ truthful result, not a gap in coverage.
 | `blueprint.get_widget_info` | read | none | none | none |
 | `blueprint.list_node_types` | read | none | none | none |
 | `blueprint.modify_scs` | write | none | none | none |
-| `blueprint.preview_widget` | read | none | none | none |
+| `blueprint.preview_widget` | write | none | none | none |
 | `blueprint.probe_handle` | read | none | none | none |
 | `blueprint.remove_event` | destructive | none | none | none |
 | `blueprint.remove_function` | destructive | none | none | none |

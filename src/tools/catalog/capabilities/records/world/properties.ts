@@ -45,6 +45,7 @@ export const P = {
   gridCellSize: num('World Partition grid cell size.'),
   loadingRange: num('Loading range for grid cells.'),
   gridName: str('World Partition runtime hash set grid name.'),
+  gridPriority: num('World Partition grid priority (higher wins when grids overlap).'),
   dataLayerName: str('Data layer name.'),
   bIsInitiallyVisible: bool('Data layer initially visible.'),
   bIsInitiallyLoaded: bool('Data layer initially loaded.'),

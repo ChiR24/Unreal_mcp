@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 1335;
-export const CATALOG_REVISION = "fc1c618f8c1b249d";
+export const CATALOG_REVISION = "036a1612ed43ddf0";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -2947,6 +2947,18 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "machineName": {
+            "type": "string",
+            "description": "State machine name."
+          },
+          "stateName": {
+            "type": "string",
+            "description": "State name."
           }
         },
         "required": [
@@ -2966,7 +2978,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "State added"
+          "message": "State added",
+          "stateName": "Idle"
         }
       }
     ],
@@ -3057,8 +3070,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "dc09dcb68304b2ada6b8b49b88667cf18e41102f77bc99c3a28417bc9a8cdddd",
-      "content": "af9d876d01cac9d622042724e9368148683be1d2b0a4b4b259b5d9e9a97d8e0f"
+      "schema": "5fdb7c69e7bcb31f271eef7bc259d0c4ea8a63dafe245fc4b8414fbf7a8089e0",
+      "content": "e7e49199c3d7e30f88124fa423110cd43c0b52844d23ed80f99fb7e59afb0cb1"
     }
   },
   {
@@ -3120,6 +3133,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "machineName": {
+            "type": "string",
+            "description": "State machine name."
           }
         },
         "required": [
@@ -3138,7 +3159,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "State machine node added"
+          "message": "State machine node added",
+          "machineName": "SM_Loco"
         }
       }
     ],
@@ -3229,8 +3251,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "d541c51f629e6664e9e7c9312ea77e789963dec803c8dba1cfe6fdfcf535247e",
-      "content": "d802f2d17d18829cbd3999147360a0e83bf88f71656c1fc7129bf43a8756ad8e"
+      "schema": "41f40809a2fb8ca0a88e806cd75d3f6b8afb3a7887e91d04999170533a39f5fc",
+      "content": "5e8ed92e93fdddfd8e5ccbb900abd013feaa3c01b88d7f54310165ee1fc81a5c"
     }
   },
   {
@@ -4721,6 +4743,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "socketName": {
+            "type": "string",
+            "description": "Target socket name."
+          },
+          "skeletonPath": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
           }
         },
         "required": [
@@ -4836,8 +4866,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "f9c0381806ba2de703f6aab2674cd2925889a1f16bb7e6857f7f5f9a7b6a7034",
-      "content": "8cd03ba6e21c71d1b88d2e11f69f594d307c580eed24d405309c18c711781cfc"
+      "schema": "cc98d4f5ad9f3716493cedccafeeb3a06a484a93225771f23fdcdd26e8e2e4e4",
+      "content": "1ac09a3eff9b6ecfb0846030e63364e1252e498a670241ee277e4ab532087afb"
     }
   },
   {
@@ -5253,6 +5283,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
           }
         },
         "required": [
@@ -5271,7 +5305,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Aim Offset created"
+          "message": "Aim Offset created",
+          "assetPath": "/Game/AO_Aim"
         }
       }
     ],
@@ -5362,8 +5397,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "8abf2f7a50512f327cccf7dd12d520f021650c6305b75874bbc6a4fcedc101c5",
-      "content": "ed34d7238f310c83990e121c7e6e68defccde2d240b4cb36b908c322f27894e2"
+      "schema": "9c361f63d735d90a87a1ed9072580353c2d8967cba92bae9fd399bb3f4ab174e",
+      "content": "5249044341fce5884127ca00fe338bb71eabf73cd9ee5af3c9971dcceeae3909"
     }
   },
   {
@@ -6331,6 +6366,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
           }
         },
         "required": [
@@ -6349,7 +6388,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Blend Space created"
+          "message": "Blend Space created",
+          "assetPath": "/Game/BS_Locomotion"
         }
       }
     ],
@@ -6440,8 +6480,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "8abf2f7a50512f327cccf7dd12d520f021650c6305b75874bbc6a4fcedc101c5",
-      "content": "f034e900dc121e94a1675471aca88af6a72150eb1afb6173fbd4cad009adff78"
+      "schema": "9c361f63d735d90a87a1ed9072580353c2d8967cba92bae9fd399bb3f4ab174e",
+      "content": "1b074260a5e8db486ca37935cdc970b20ce0ffd99d3e0e84637f74b1453f2cb7"
     }
   },
   {
@@ -6505,6 +6545,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
           }
         },
         "required": [
@@ -6523,7 +6567,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Blend Space 1D created"
+          "message": "Blend Space 1D created",
+          "assetPath": "/Game/BS1D_Speed"
         }
       }
     ],
@@ -6614,8 +6659,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "8abf2f7a50512f327cccf7dd12d520f021650c6305b75874bbc6a4fcedc101c5",
-      "content": "dfc4cdb2cba4cd5384f727b70d801ad55694ac3c256c968459ab237a0572fb52"
+      "schema": "9c361f63d735d90a87a1ed9072580353c2d8967cba92bae9fd399bb3f4ab174e",
+      "content": "65be75058cb46b56b77ac5d0c272eb42e1f3ce341aaec181cbcaea5f638f693c"
     }
   },
   {
@@ -6679,6 +6724,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
           }
         },
         "required": [
@@ -6697,7 +6746,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Blend Space 2D created"
+          "message": "Blend Space 2D created",
+          "assetPath": "/Game/BS2D_DirSpeed"
         }
       }
     ],
@@ -6788,8 +6838,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "8abf2f7a50512f327cccf7dd12d520f021650c6305b75874bbc6a4fcedc101c5",
-      "content": "efabfc1ac55d8887a927aec01165d4af39db324e118e573b31f5db4393d10b19"
+      "schema": "9c361f63d735d90a87a1ed9072580353c2d8967cba92bae9fd399bb3f4ab174e",
+      "content": "3ded25f19ecf3b5f14a327fb5caf23e7562633343d2c694718bd4e3fcb4b2196"
     }
   },
   {
@@ -7923,6 +7973,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "physicsAssetPath": {
+            "type": "string",
+            "description": "Canonical /Game PhysicsAsset path."
           }
         },
         "required": [
@@ -7942,7 +8000,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "PhysicsAsset created"
+          "message": "PhysicsAsset created",
+          "assetPath": "/Game/PA_Char"
         }
       }
     ],
@@ -8033,8 +8092,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b7fabdc9bc75d6b8fa54a5be02317c62bfeb656a783ace152659cec820b248e7",
-      "content": "6b0eb6a9f63fab1085a1cff8c3a9eb2b363c55173ff529f9637875a835f12e5d"
+      "schema": "1d13f8e7d7fba01b4b4e1b64229a1159acc7e8175293f82cb7e77251ff859a94",
+      "content": "e374b255930899ca427f99abe5a9504ce32530a2a7b156a53f0374e815dbf083"
     }
   },
   {
@@ -8657,6 +8716,18 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "socketName": {
+            "type": "string",
+            "description": "Target socket name."
+          },
+          "boneName": {
+            "type": "string",
+            "description": "Target bone name."
+          },
+          "skeletonPath": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
           }
         },
         "required": [
@@ -8773,8 +8844,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "f9c0381806ba2de703f6aab2674cd2925889a1f16bb7e6857f7f5f9a7b6a7034",
-      "content": "47a4620be6f81efeafe9cf8c1dca967f4774ad3ed82e068ad19a23ec795f5d57"
+      "schema": "e500d6659d53372d5885c4c45e6528fd2b746714acffc996d6a6fe8afcd6ce7a",
+      "content": "aae5659dd285f5206e3d4d0f3c2b078b95c8e968c752f5851f737d56d01b6bf7"
     }
   },
   {
@@ -8832,6 +8903,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "machineName": {
+            "type": "string",
+            "description": "State machine name."
           }
         },
         "required": [
@@ -8850,7 +8929,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "State machine created"
+          "message": "State machine created",
+          "machineName": "SM_Locomotion"
         }
       }
     ],
@@ -8941,8 +9021,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "e118d4ac29bd758fd59b8a5aee054efda8947d0bb19550205dc083412546d412",
-      "content": "6f966f60f25ac68418c24fa869bfaa1a0da169c5b3f34be79456cf61c70662e3"
+      "schema": "dd33d3c055963087732dc0f7c0d347670e31de73da12f58224e085b5047b5e95",
+      "content": "75806535d1999b4451feacc756604ba15c3016276774c572bc148bdd1858886b"
     }
   },
   {
@@ -9543,6 +9623,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "number",
             "description": "Numeric parameter."
           },
+          "virtualBoneCount": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
           "socketCount": {
             "type": "number",
             "description": "Numeric parameter."
@@ -9656,8 +9740,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "9f7eb0e84dc28ad135e39ba4318e113078edbffb663ce654070eb9c8fc6b7ca0",
-      "content": "237f4d99c14e6629c4a936674ad5bdcbbbf7920f03e5cdf1dd7a3de0b56b5edc"
+      "schema": "6583a441073827641cea408ee99e39345f534b9676510ae9c13885af0b6197c8",
+      "content": "c388c76b215bde8d7d72949ef36cd4fb090d2c5c12ef29bf157fb91c10c9e9a3"
     }
   },
   {
@@ -15740,9 +15824,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "topics": [
         "analyze_graph"
       ],
-      "summary": "Analyze the asset reference graph starting from an asset path.",
+      "summary": "Analyze the node graph inside a material or Blueprint asset.",
       "whenToUse": [
-        "Use when: Analyze the asset reference graph starting from an asset path."
+        "Use when: Analyze the node graph inside a material or Blueprint asset."
       ],
       "whenNotToUse": [
         "Do not use when a different manage_asset action is more specific."
@@ -15759,7 +15843,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "maxDepth": {
             "type": "number",
-            "description": "Maximum traversal depth."
+            "description": "Maximum traversal depth (clamped to 8)."
           }
         },
         "required": [
@@ -15775,10 +15859,80 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "boolean",
             "description": "Operation succeeded."
           },
-          "details": {
-            "type": "object",
-            "x-unreal-reflection-boundary": true,
-            "description": "Operation details."
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "assetClass": {
+            "type": "string",
+            "description": "Concrete UClass name of the analyzed asset."
+          },
+          "graphType": {
+            "type": "string",
+            "description": "Graph kind analyzed: Material, Blueprint, or None."
+          },
+          "nodeCount": {
+            "type": "number",
+            "description": "Material expression nodes in the graph."
+          },
+          "parameterCount": {
+            "type": "number",
+            "description": "Material parameter expressions in the graph."
+          },
+          "textureSampleCount": {
+            "type": "number",
+            "description": "Texture sample expressions in the graph."
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Material parameter names."
+          },
+          "isMaterialInstance": {
+            "type": "boolean",
+            "description": "True when the asset is a material instance."
+          },
+          "isTwoSided": {
+            "type": "boolean",
+            "description": "True when the material renders two-sided."
+          },
+          "isMasked": {
+            "type": "boolean",
+            "description": "True when the material uses masked blending."
+          },
+          "blendMode": {
+            "type": "string",
+            "description": "Material blend mode enum name."
+          },
+          "shadingModel": {
+            "type": "string",
+            "description": "First matching shading model name."
+          },
+          "blueprintType": {
+            "type": "string",
+            "description": "Blueprint kind: Class, Interface, MacroLibrary, or FunctionLibrary."
+          },
+          "totalNodes": {
+            "type": "number",
+            "description": "Total nodes across every Blueprint graph."
+          },
+          "graphCount": {
+            "type": "number",
+            "description": "Number of graphs in the Blueprint."
+          },
+          "graphs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Per-graph breakdown (name, nodeCount)."
+          },
+          "message": {
+            "type": "string",
+            "description": "Explanation when the asset type carries no graph."
           }
         },
         "required": [
@@ -15789,13 +15943,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Analyze the reference graph around a material",
+        "title": "Inspect a material's expression graph",
         "input": {
           "assetPath": "/Game/Materials/M_Base",
           "maxDepth": 2
         },
         "output": {
-          "success": true
+          "success": true,
+          "graphType": "Material",
+          "nodeCount": 4,
+          "parameterCount": 2,
+          "blendMode": "BLEND_Opaque"
         }
       }
     ],
@@ -15886,8 +16044,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "27091e8d9b3bcc434e80580fd2847e681bf98e85c494b6b5861bb3c4001bcbeb",
-      "content": "c6808cfd1adfe28d903f3949aa24ba57b1bd06448e7c7198bfdc72cb011c018a"
+      "schema": "98a22596a176e0c29acf7cd4f5351f11b74081ab88089b65c57998bdafa1b01e",
+      "content": "d340ef9957a9369610f0133bcbe982da25a50f4922d6a9b65205602fcb54401e"
     }
   },
   {
@@ -16822,9 +16980,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             },
             "description": "Asset paths to delete."
           },
-          "assetPath": {
+          "path": {
             "type": "string",
             "description": "Single asset path (alternative to paths)."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Alias for path (accepted for compatibility)."
           },
           "force": {
             "type": "boolean",
@@ -16954,8 +17116,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "0c711c40fbefd27ff5f3bb95a617eb18eaf7d8aef4912354b290aca4860321e9",
-      "content": "c4d96206898d3849bd239f02dea9c120ea5d792043ae803fd7975003199c6a8d"
+      "schema": "daff894a48037c8719e163131d850cd2e46bdc9a6369dbe4422873a222a4fffc",
+      "content": "5d577f55be88ef398bdf94cc909294ecca5d4d961f3fcb36e05c64125de1cb6d"
     }
   },
   {
@@ -16993,9 +17155,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             },
             "description": "Asset paths to delete."
           },
-          "assetPath": {
+          "path": {
             "type": "string",
             "description": "Single asset path."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Alias for path (accepted for compatibility)."
           },
           "force": {
             "type": "boolean",
@@ -17029,7 +17195,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       {
         "title": "Delete a single asset by path",
         "input": {
-          "assetPath": "/Game/MCPTest/Disposable"
+          "path": "/Game/MCPTest/Disposable"
         },
         "output": {
           "success": true
@@ -17124,8 +17290,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "475aab8e125d7dec714ef5641bb5a5079f26d007bf8e87b9c7c3e8a2140716c4",
-      "content": "62fd3f4854b2aa98a715586917c5dd344ed5a3b72385dd739297639f57c6c928"
+      "schema": "8a36a165858b7a3d6721c4888b6604d9d4bedfd1f62f31b8cd0bff557ea6f90a",
+      "content": "6513c7063ffd8f91d598f33f3623bb275f57e6f046f07d11de99a6cd14b7b13a"
     }
   },
   {
@@ -17163,9 +17329,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             },
             "description": "Asset paths to delete."
           },
-          "assetPath": {
+          "path": {
             "type": "string",
             "description": "Single asset path."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Alias for path (accepted for compatibility)."
           },
           "force": {
             "type": "boolean",
@@ -17297,8 +17467,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "475aab8e125d7dec714ef5641bb5a5079f26d007bf8e87b9c7c3e8a2140716c4",
-      "content": "90642e732fa0ffae4ee72b9c60142ea0fb20add690081eb977db0ed3c93678a0"
+      "schema": "8a36a165858b7a3d6721c4888b6604d9d4bedfd1f62f31b8cd0bff557ea6f90a",
+      "content": "3c5a6fedea63f7605a245de8012419da872f7680167259a874ccade1e2fab051"
     }
   },
   {
@@ -18500,7 +18670,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "maxDepth": {
             "type": "number",
-            "description": "Maximum traversal depth."
+            "description": "Maximum traversal depth (clamped to 8)."
           }
         },
         "required": [
@@ -18516,10 +18686,22 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "boolean",
             "description": "Operation succeeded."
           },
-          "details": {
+          "graph": {
             "type": "object",
             "x-unreal-reflection-boundary": true,
-            "description": "Operation details."
+            "description": "Adjacency map of asset path -> array of dependency paths."
+          },
+          "nodeCount": {
+            "type": "number",
+            "description": "Number of distinct assets visited."
+          },
+          "maxDepth": {
+            "type": "number",
+            "description": "Traversal depth actually used after clamping."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "True when the walk hit the depth or node ceiling and the graph is partial."
           }
         },
         "required": [
@@ -18627,8 +18809,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "27091e8d9b3bcc434e80580fd2847e681bf98e85c494b6b5861bb3c4001bcbeb",
-      "content": "21323a3d97f6295adab43be39ac5c367059e611de90ef5c9ad370ac216b81a9f"
+      "schema": "de720679d0fd56d6021c6fbe054e2380a648846a37bd4fdac22598137ad6fef1",
+      "content": "685ae685a36d57eb172412172276821a969a6991568767bb471435829271d43f"
     }
   },
   {
@@ -19007,10 +19189,19 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "boolean",
             "description": "Operation succeeded."
           },
-          "details": {
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "tags": {
             "type": "object",
             "x-unreal-reflection-boundary": true,
-            "description": "Operation details."
+            "description": "Asset Registry tags (key-value)."
+          },
+          "metadata": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true,
+            "description": "Custom package metadata (key-value)."
           }
         },
         "required": [
@@ -19026,7 +19217,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "assetPath": "/Game/Meshes/SM_Crate"
         },
         "output": {
-          "success": true
+          "success": true,
+          "assetPath": "/Game/Meshes/SM_Crate",
+          "metadata": {
+            "Author": "ArtTeam"
+          }
         }
       }
     ],
@@ -19117,8 +19312,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "556fb3d05526b844fde83744346e790c5540f760ac2d61c34e45a06b6b57d139",
-      "content": "6662475e16f3b91ce263515618ac6b9628ebef6fa10978e82e95743c4a2de13e"
+      "schema": "b77b357b40454b705aad5b944b8f9e5d97a0b3a63e0453efa94a071d76cbe12b",
+      "content": "cf96725a020d38d76a864dd6569d2fddc82aed6959b5f8f39e0119f11dd684df"
     }
   },
   {
@@ -32227,22 +32422,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "The manage_blueprint action to execute."
           },
-          "name": {
+          "widgetPath": {
             "type": "string",
-            "description": "Name for the new Blueprint or asset."
-          },
-          "path": {
-            "type": "string",
-            "description": "Destination /Game folder for a new Widget Blueprint."
-          },
-          "folder": {
-            "type": "string",
-            "description": "Destination /Game folder for a Widget Blueprint."
+            "description": "Canonical /Game Widget Blueprint asset path."
           }
         },
         "required": [
           "action",
-          "name"
+          "widgetPath"
         ],
         "additionalProperties": false
       },
@@ -32261,6 +32448,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "widgetPath": {
             "type": "string",
             "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "note": {
+            "type": "string",
+            "description": "Guidance on follow-up HUD element actions (add_health_bar, add_crosshair, add_ammo_counter)."
           }
         },
         "required": [
@@ -32275,12 +32466,12 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "title": "Create a HUD Widget Blueprint from a standard template.",
         "input": {
           "action": "create_hud_widget",
-          "name": "WBP_hudwidget",
-          "path": "/Game/UI"
+          "widgetPath": "/Game/UI/WBP_hudwidget"
         },
         "output": {
           "success": true,
-          "widgetPath": "/Game/UI/WBP_hudwidget"
+          "widgetPath": "/Game/UI/WBP_hudwidget",
+          "note": "HUD canvas created. Use add_health_bar, add_crosshair, add_ammo_counter to add HUD elements."
         }
       }
     ],
@@ -32372,8 +32563,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "c9e83ba1bb2e6c437570e787cced94099ccd61ec30f08c494e52b5298aa9ac51",
-      "content": "072be541386c282e04418c64887256bcda0e85b1aabd7244e578aa8304ad20ef"
+      "schema": "68b2f981234a5acc54dfb3b6622ea5b4a3bc860e8607caedd11d25c99673d93a",
+      "content": "cf7724453f952c5990662c6710abf88917a79105fbf1c565e00440fc9eecbc91"
     }
   },
   {
@@ -32784,17 +32975,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "The manage_blueprint action to execute."
           },
-          "name": {
+          "widgetPath": {
             "type": "string",
-            "description": "Name for the new Blueprint or asset."
-          },
-          "path": {
-            "type": "string",
-            "description": "Destination /Game folder for a new Widget Blueprint."
-          },
-          "folder": {
-            "type": "string",
-            "description": "Destination /Game folder for a Widget Blueprint."
+            "description": "Canonical /Game Widget Blueprint asset path."
           },
           "title": {
             "type": "string",
@@ -32803,7 +32986,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "name"
+          "widgetPath"
         ],
         "additionalProperties": false
       },
@@ -32822,6 +33005,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "widgetPath": {
             "type": "string",
             "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title text for a menu template."
           }
         },
         "required": [
@@ -32836,12 +33023,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "title": "Create a main menu Widget Blueprint from a standard template.",
         "input": {
           "action": "create_main_menu",
-          "name": "WBP_mainmenu",
-          "path": "/Game/UI"
+          "widgetPath": "/Game/UI/WBP_mainmenu",
+          "title": "Main Menu"
         },
         "output": {
           "success": true,
-          "widgetPath": "/Game/UI/WBP_mainmenu"
+          "widgetPath": "/Game/UI/WBP_mainmenu",
+          "title": "Main Menu"
         }
       }
     ],
@@ -32933,8 +33121,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "5c1ee103dd81d1233a13cfee0bfbd4e1c5bf99fd1b036976d487125d3e4b45c2",
-      "content": "653527fff529cdc66d109b65232c5f0c68e8c4e6f62e8b39646a493bfb059f90"
+      "schema": "929d2d5f163b5e63bc5a14e495237f4264dbb6f44f407e404d2ad1dd861e5410",
+      "content": "e1de4dcfe762b5a420c7200ec149f91a7333ef402194af0ce7b5b8bed8afb578"
     }
   },
   {
@@ -33221,22 +33409,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "The manage_blueprint action to execute."
           },
-          "name": {
+          "widgetPath": {
             "type": "string",
-            "description": "Name for the new Blueprint or asset."
-          },
-          "path": {
-            "type": "string",
-            "description": "Destination /Game folder for a new Widget Blueprint."
-          },
-          "folder": {
-            "type": "string",
-            "description": "Destination /Game folder for a Widget Blueprint."
+            "description": "Canonical /Game Widget Blueprint asset path."
           }
         },
         "required": [
           "action",
-          "name"
+          "widgetPath"
         ],
         "additionalProperties": false
       },
@@ -33269,8 +33449,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "title": "Create a pause menu Widget Blueprint from a standard template.",
         "input": {
           "action": "create_pause_menu",
-          "name": "WBP_pausemenu",
-          "path": "/Game/UI"
+          "widgetPath": "/Game/UI/WBP_pausemenu"
         },
         "output": {
           "success": true,
@@ -33366,8 +33545,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "c9e83ba1bb2e6c437570e787cced94099ccd61ec30f08c494e52b5298aa9ac51",
-      "content": "93c8ec1a91c401c1889e5630ce21f3fb9666f5dc747f2e9cc60e191c3826692e"
+      "schema": "3b87fc44c81f926d1e292b0f7e43aa44f86fcabdf042738189c8887af03e8856",
+      "content": "102462c996bc18cd673c6a409b194bd61927c69bf562b0363e57ab30027f7193"
     }
   },
   {
@@ -36323,20 +36502,59 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Human-readable result message."
           },
-          "widgets": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": true,
-              "x-unreal-reflection-boundary": true
+          "widgetInfo": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "widgetClass": {
+                "type": "string",
+                "description": "Widget Blueprint class name."
+              },
+              "parentClass": {
+                "type": "string",
+                "description": "Native parent class name (omitted when the Widget Blueprint has no parent class)."
+              },
+              "slots": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Names of every widget in the widget tree."
+              },
+              "animations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Names of the Widget Blueprint animations."
+              }
             },
-            "description": "Widget descriptors with slotName, type, and parent.",
-            "x-unreal-reflection-boundary": true
+            "required": [
+              "widgetClass",
+              "slots",
+              "animations"
+            ]
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Asset path of the inspected Widget Blueprint (verification)."
+          },
+          "assetName": {
+            "type": "string",
+            "description": "Asset name of the inspected Widget Blueprint (verification)."
+          },
+          "existsAfter": {
+            "type": "boolean",
+            "description": "Whether the Widget Blueprint exists after inspection (verification)."
+          },
+          "assetClass": {
+            "type": "string",
+            "description": "Class of the inspected Widget Blueprint (verification)."
           }
         },
         "required": [
           "success",
-          "widgets"
+          "widgetInfo"
         ],
         "additionalProperties": false
       }
@@ -36350,12 +36568,15 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "widgets": [
-            {
-              "slotName": "CanvasPanel_0",
-              "type": "CanvasPanel"
-            }
-          ]
+          "widgetInfo": {
+            "widgetClass": "WBP_MainUI",
+            "parentClass": "UserWidget",
+            "slots": [
+              "CanvasPanel_0",
+              "TitleText"
+            ],
+            "animations": []
+          }
         }
       }
     ],
@@ -36447,8 +36668,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "df5524247ed747b03a00b55981077a244571b6f3f5bb80342223e34cd2d08d1e",
-      "content": "598905a9b83296cf350cf813a50df5b0ed571645e4db1fbfbf398e6ee5557e77"
+      "schema": "8e8e036d6f5f0c4cf79b1f9b78cd8c41bccbcff6773cc05d0362c7cf5cd02f57",
+      "content": "510e92917ae1c9a06d1bd8c55c468a0f5e8a1b37f8b3915d338bc4aafdd8aac9"
     }
   },
   {
@@ -36508,14 +36729,34 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "nodeTypes": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "className": {
+                  "type": "string",
+                  "description": "Blueprint node class name (e.g. UK2Node_CallFunction)."
+                },
+                "displayName": {
+                  "type": "string",
+                  "description": "Localized node display name shown in the Blueprint palette."
+                }
+              },
+              "required": [
+                "className",
+                "displayName"
+              ]
             },
-            "description": "Available node type strings."
+            "description": "Available Blueprint node types, each an object with className and displayName."
+          },
+          "count": {
+            "type": "number",
+            "description": "Total number of node types listed."
           }
         },
         "required": [
           "success",
-          "nodeTypes"
+          "nodeTypes",
+          "count"
         ],
         "additionalProperties": false
       }
@@ -36530,11 +36771,12 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "output": {
           "success": true,
           "nodeTypes": [
-            "CallFunction",
-            "Event",
-            "Branch",
-            "VariableGet"
-          ]
+            {
+              "className": "UK2Node_CallFunction",
+              "displayName": "Call Function"
+            }
+          ],
+          "count": 1
         }
       }
     ],
@@ -36625,8 +36867,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "e8c5e68291cf513dce998079f853eefb97c87fae8be658e8ff0f924a33272571",
-      "content": "99c878ae0e4d4c5e3180cf94a99e63b1fc7c119d549f832e8a1da48ecc6685af"
+      "schema": "6f165f71b51b6e1fb5ae785ad934115562c2c9095f176cab9875a0a9c18c3b99",
+      "content": "8a7bbd7b176c061a4e42f314ed0715ef494e746b644c1304b76d7c0e24ec8243"
     }
   }
 ]);
@@ -36893,10 +37135,15 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
           }
         },
         "required": [
-          "success"
+          "success",
+          "widgetPath"
         ],
         "additionalProperties": false
       }
@@ -36911,7 +37158,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Widget previewed at 1080p"
+          "message": "Widget blueprint marked for recompilation. Open in Widget Blueprint Editor to see preview.",
+          "widgetPath": "/Game/UI/WBP_MainUI"
         }
       }
     ],
@@ -36940,7 +37188,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ]
     },
     "behavior": {
-      "effect": "read",
+      "effect": "write",
       "idempotency": "idempotent",
       "longRunning": false,
       "safeToRetry": true,
@@ -36975,9 +37223,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       }
     },
     "policy": {
-      "requiredScope": "read",
+      "requiredScope": "write",
       "consent": "none",
-      "dataAccess": "project-read"
+      "dataAccess": "project-write"
     },
     "cost": {
       "latency": "interactive",
@@ -37003,8 +37251,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "3721fd8f8ba33c47ad01725815ea3674f40ee5ae9aeb057c259167b5758af79e",
-      "content": "5ced23ca8228e27b6ddfa539cbc27039d4a42eba0a9be3e9c419ce90135896b9"
+      "schema": "2ac1170f26a46d0b3988cf07f026af1f1ddc6be02f457d6e0127fd9387dc36d2",
+      "content": "dc890db3cb6ed90c5639d69af1376caa24e7c634449c8186ed1847f0daa433e2"
     }
   },
   {
@@ -61838,18 +62086,22 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             "type": "string",
             "description": "Human-readable result message."
           },
-          "lightTypes": {
+          "types": {
             "type": "array",
             "items": {
               "type": "string",
               "description": "Light type."
             },
             "description": "Available light types."
+          },
+          "count": {
+            "type": "number",
+            "description": "Number of available light types."
           }
         },
         "required": [
           "success",
-          "lightTypes"
+          "types"
         ],
         "additionalProperties": false
       }
@@ -61862,11 +62114,12 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "lightTypes": [
+          "types": [
             "PointLight",
             "SpotLight",
             "DirectionalLight"
-          ]
+          ],
+          "count": 3
         }
       }
     ],
@@ -61955,8 +62208,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "a158c3e431305d7676e9d5b8cd0cd10799dd98fe8060c02a5800108930193559",
-      "content": "1da894e294d66a258e2fd5afe3f1317673c1467cdb2ed64a12be9340aba1aadc"
+      "schema": "7d85faf11a8c6ee805f4b7a56b1d00d09557b00dcc8dade046908dc958cb74aa",
+      "content": "57f3f3f18771c819d4184548e4bbf042db774f5b4f02fedf4a7b8ed6c695392e"
     }
   },
   {
@@ -69004,11 +69257,19 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           },
           "method": {
             "type": "string",
-            "description": "Method string."
+            "enum": [
+              "LumenGI",
+              "ScreenSpace",
+              "None",
+              "RayTraced",
+              "Lightmass"
+            ],
+            "description": "Global illumination method. Matches the handler-enforced value set."
           }
         },
         "required": [
-          "action"
+          "action",
+          "method"
         ],
         "additionalProperties": false
       },
@@ -69036,7 +69297,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "title": "Configure global illumination settings.",
         "input": {
           "action": "setup_global_illumination",
-          "method": "Lumen"
+          "method": "LumenGI"
         },
         "output": {
           "success": true,
@@ -69129,8 +69390,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "0955231ba8b063e0a3350ef8a8b9fe3db21519a677087acd58f3f73f3bc1ec50",
-      "content": "e5d4702a36e235a1751da7f5e969b62ba247fb02c796e4aaa40c0867dd3b5e72"
+      "schema": "63ba9c1e0a2b1fcd92d8615526724d80ad9c58b451490a26dfb38c10de3b98dc",
+      "content": "73bdaecc9f5249ad49b3163041e10dca25c0bca01be1fdfbf5e753ef3d516b8c"
     }
   },
   {
@@ -73448,23 +73709,23 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             "type": "string",
             "description": "Human-readable result message."
           },
-          "location": {
+          "origin": {
             "type": "array",
             "items": {
               "type": "number"
             },
             "minItems": 3,
             "maxItems": 3,
-            "description": "World or relative location as [x, y, z]."
+            "description": "World-space centre of the bounding box as [x, y, z]."
           },
-          "scale": {
+          "extent": {
             "type": "array",
             "items": {
               "type": "number"
             },
             "minItems": 3,
             "maxItems": 3,
-            "description": "Scale as [x, y, z]."
+            "description": "Half-size of the bounding box along each axis as [x, y, z]."
           }
         },
         "required": [
@@ -73483,15 +73744,15 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "output": {
           "success": true,
           "message": "Bounds for Cube1",
-          "location": [
+          "origin": [
             0,
             0,
-            0
+            50
           ],
-          "scale": [
-            1,
-            1,
-            1
+          "extent": [
+            50,
+            50,
+            50
           ]
         }
       }
@@ -73581,8 +73842,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "86dd5db0cfc8a67e9f6200a92162e385ea7dfeaf93bb2b41ceea152cfcdb72fe",
-      "content": "ec0ac494eb003b41ba333e77aa04c7be55a710bab3d727ae6444897412e177c3"
+      "schema": "6e556f967a2687a75c19a6cb99c1e1eee93a5cbe60a138967b2f4c4ffa1f8a39",
+      "content": "1629918252c80a8f925ea4beab0c009af0108f330c57067ad9ed17450867edfa"
     }
   },
   {
@@ -78083,6 +78344,15 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
             "minItems": 3,
             "maxItems": 3,
             "description": "Rotation as [pitch, yaw, roll] in degrees."
+          },
+          "scale": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Scale as [x, y, z]."
           }
         },
         "required": [
@@ -78216,8 +78486,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "ebe84de2dc97bbb69a9f605a002224dd247128fe481fae9429d4bd9dc20c87e0",
-      "content": "557fa7346c5cd427d233dac516f1112a86c9eaa03d80daebde781b4983ff6e3c"
+      "schema": "f8b6f880bb7e70ee84d88a1d8ef6df1bea9795b9ca0b61fc83838c0bf8da7e37",
+      "content": "10d6769e55a55acdc26462022473aebd5da47f3ae952d72c6a9a693197ccc379"
     }
   },
   {
@@ -87924,6 +88194,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "valueName": {
             "type": "string",
             "description": "Enum value (entry) name."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Save the enum asset after the operation."
           }
         },
         "required": [
@@ -88051,8 +88325,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "ac92a1f62dfedf01efa0968adef6a7f2b3fa520d93d49ca1123bc2f089973e9d",
-      "content": "919a323df94219a65c8c72154a0fcacf66c258162bdf009e30a54a9685cfec04"
+      "schema": "d38a35ff87dcd5736250a0acebf538df2f7f1de3fc818f53cc59911be27ee059",
+      "content": "1c31ec0bbe3308cbac3a34e83090997921e66b75df1a266d8f8267f8da68c019"
     }
   },
   {
@@ -88101,6 +88375,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
               "type": "string"
             },
             "description": "Initial enum value names."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Save the enum asset after the operation."
           }
         },
         "required": [],
@@ -88234,8 +88512,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "2cca4b7bfc11423a49d275e72c9f81e6fd1dc85b03cdc133effee90aac238f1a",
-      "content": "0f98a8d06f2690c70f2b619b77b2703dbd9a0713c9c5f2507e2d9ff49424cd13"
+      "schema": "3bdeb421df096652cd39a07d6a1ddcb2ee275e6f8a4377ae5ddd5f6b183a028a",
+      "content": "be66f0f508b2b3ca8c55aca33235ce643b74cde87dbbcaf881b68a61eac87833"
     }
   },
   {
@@ -88593,6 +88871,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "valueName": {
             "type": "string",
             "description": "Enum value (entry) name."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Save the enum asset after the operation."
           }
         },
         "required": [
@@ -88720,8 +89002,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "ac92a1f62dfedf01efa0968adef6a7f2b3fa520d93d49ca1123bc2f089973e9d",
-      "content": "dcae3116afb2ef16d526405fcb3f52feb938e1193510c0534a8be16dc1111c03"
+      "schema": "d38a35ff87dcd5736250a0acebf538df2f7f1de3fc818f53cc59911be27ee059",
+      "content": "af311baf376b66ac0b22213a5f4a346e41fc8ec85fb8141bbc5f5b3427cbb5ff"
     }
   },
   {
@@ -88763,6 +89045,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "newValueName": {
             "type": "string",
             "description": "New enum value name."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Save the enum asset after the operation."
           }
         },
         "required": [
@@ -88892,8 +89178,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "2b2580260ba70bdd2a59dfe3cf5fa71b79ae5e50612346e4655d721e4883aed0",
-      "content": "31f1ea8055c6230cee752437ac833d244ec10423a8af8e48b4370d589ffdcba5"
+      "schema": "b09d9c6d472e5e165233b9b0e4f0181a55da50854e50e285198ec26394192920",
+      "content": "613797a5a6a5c12ccdfe078a8e6f6bf1e19663b253d2fee2cecade4d4a430f8e"
     }
   },
   {
@@ -88934,6 +89220,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
               "type": "string"
             },
             "description": "Desired value name order."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Save the enum asset after the operation."
           }
         },
         "required": [
@@ -89065,8 +89355,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "0dcd3e828dc4cb03db621ae2758d69d32ae2c40c59e1d9336d027cf36cded1b4",
-      "content": "fab95c89d55e7a52f1e7b1b9548aa563fc2aeed96bd5fe051b38c75f7bc77ecc"
+      "schema": "17c9bca3ed640beca59135f7e2e1084589745214ff25c0b10077c7a84c958093",
+      "content": "45f76e18402a35615d862779604dbf383c35d087a7613f9c647d4fa39fac096f"
     }
   },
   {
@@ -89111,6 +89401,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           },
           "value": {
             "description": "Metadata value."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Save the enum asset after the operation."
           }
         },
         "required": [
@@ -89241,8 +89535,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b7c5109935702925176b5de856fc171c00db8cac06ef6a95411d38a340efa1d2",
-      "content": "6c59f36b3ca0c303123bb922e50eee932780f2e3db03d04b1a1517f1b0be3614"
+      "schema": "89440c1caddf15edb6310063a10eb6413c1072ab08364980480dee9fd6bdb331",
+      "content": "af5d6b16be01a964acadf5cdad63761d6d884b45bad2057d5e91b030b342a044"
     }
   },
   {
@@ -89291,6 +89585,14 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "index": {
             "type": "number",
             "description": "Split index."
+          },
+          "path": {
+            "type": "string",
+            "description": "Package path for the new enum."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Save the enum asset after the operation."
           }
         },
         "required": [
@@ -89421,8 +89723,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "c3755f9c9fcfd4e1892c33144380f36fcf92ee4cc918d093b3605c3f5f1aae3f",
-      "content": "c2eaa5507896b2240cf631bd3764b3b3829df4e7b25027f9b50e63a12196ca51"
+      "schema": "1adc6178e1c9192851095174d141f7b7a51670cd2f9aed6f1642c926fb7b3d08",
+      "content": "b8320f05aeb27db10ab71050a481215e63404b96dc194a639cf3cdfd6a4c7bb8"
     }
   },
   {
@@ -92737,6 +93039,18 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
             "type": "boolean",
             "description": "Thread timers are process-global, not per-world."
           },
+          "busiestThreadMs": {
+            "type": "number",
+            "description": "Slowest of game/render/GPU thread times, in milliseconds."
+          },
+          "threadTimeDerivedFps": {
+            "type": "number",
+            "description": "FPS implied by busiestThreadMs; unaffected by editor idle throttling."
+          },
+          "frameDeltaMayBeEditorThrottled": {
+            "type": "boolean",
+            "description": "True outside PIE, where an idle editor throttles the frame delta and makes fps read far lower than actual."
+          },
           "deltaSeconds": {
             "type": "number",
             "description": "Frame delta time in seconds."
@@ -92898,8 +93212,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "f963fd0f5612fee0c0d0c87362f174c33eec81037b30fc057d2d8514c5a70bc9",
-      "content": "3b3faf5a3a77cc8a8aaa1aca5398444ec2e1e20a6aa2a27591b62c5c312e6b46"
+      "schema": "f41320f1d627cacc92a18af9ea8af953ca0c7b49ad8ce4405a131a0239c17cfd",
+      "content": "75a838ffdd647bc869a606c59d3c9b0e2bef187232168a38948ed7516dd309a4"
     }
   },
   {
@@ -92951,6 +93265,54 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "projectName": {
+            "type": "string",
+            "description": "Project name."
+          },
+          "engineVersion": {
+            "type": "string",
+            "description": "Unreal Engine version string."
+          },
+          "buildConfig": {
+            "type": "string",
+            "description": "Build configuration, e.g. Development."
+          },
+          "projectDir": {
+            "type": "string",
+            "description": "Project directory on disk."
+          },
+          "description": {
+            "type": "string",
+            "description": "Project description."
+          },
+          "homepage": {
+            "type": "string",
+            "description": "Project homepage URL."
+          },
+          "supportContact": {
+            "type": "string",
+            "description": "Project support contact."
+          },
+          "projectVersion": {
+            "type": "string",
+            "description": "Project version string."
+          },
+          "companyName": {
+            "type": "string",
+            "description": "Company name."
+          },
+          "copyrightNotice": {
+            "type": "string",
+            "description": "Copyright notice."
+          },
+          "projectID": {
+            "type": "string",
+            "description": "Project GUID."
+          },
+          "startInVR": {
+            "type": "boolean",
+            "description": "Whether the project starts in VR."
           }
         },
         "required": [
@@ -92967,7 +93329,13 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Project settings"
+          "message": "Project settings",
+          "projectName": "Demo",
+          "engineVersion": "5.6.0-0+++UE5",
+          "buildConfig": "Development",
+          "projectDir": "../../../Demo/",
+          "projectVersion": "1.0.0.0",
+          "companyName": "Acme"
         }
       }
     ],
@@ -93056,8 +93424,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-      "content": "76201c78c998f8fdf8449922558fbaf18eda331233db7c1cac981f91cdcf0db8"
+      "schema": "a886474042568d78fd8551100bd63b96983a893a6ee8e1cf16e37374165d70f8",
+      "content": "12c1dd6f413ec225969d72f6fa663d25bf3d04a9b727e4ad032499e51e50a344"
     }
   },
   {
@@ -93806,6 +94174,14 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "width": {
+            "type": "number",
+            "description": "Active viewport width in pixels."
+          },
+          "height": {
+            "type": "number",
+            "description": "Active viewport height in pixels."
           }
         },
         "required": [
@@ -93822,7 +94198,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Viewport info"
+          "message": "Viewport info",
+          "width": 1920,
+          "height": 1080
         }
       }
     ],
@@ -93911,8 +94289,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-      "content": "c2441fe62f221501e1fb3378435dd4c6d5505d4f6705f2bbe26eff8056b59d43"
+      "schema": "dad5295fd14c0b03f20a2125b392f2ac0b20f7ed810d2695540a4300bf10e494",
+      "content": "ed3d87ca38de921942ba0ed93a81dc868ba109e817d8417c8d4e518ee474e70f"
     }
   },
   {
@@ -93968,6 +94346,54 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "worldName": {
             "type": "string",
             "description": "Current world name."
+          },
+          "levelName": {
+            "type": "string",
+            "description": "Current level name."
+          },
+          "packageName": {
+            "type": "string",
+            "description": "Package name of the world asset."
+          },
+          "timeSeconds": {
+            "type": "number",
+            "description": "World time in seconds."
+          },
+          "realTimeSeconds": {
+            "type": "number",
+            "description": "Real (unpaused) time in seconds."
+          },
+          "deltaTimeSeconds": {
+            "type": "number",
+            "description": "Last frame delta in seconds."
+          },
+          "hasBegunPlay": {
+            "type": "boolean",
+            "description": "Whether the world has begun play."
+          },
+          "isPlayInEditor": {
+            "type": "boolean",
+            "description": "Whether this world is a PIE world."
+          },
+          "killZ": {
+            "type": "number",
+            "description": "Z height below which actors are killed."
+          },
+          "worldGravityZ": {
+            "type": "number",
+            "description": "World gravity along Z."
+          },
+          "timeDilation": {
+            "type": "number",
+            "description": "Global time dilation multiplier."
+          },
+          "enableWorldBoundsChecks": {
+            "type": "boolean",
+            "description": "Whether world bounds checks are enabled."
+          },
+          "defaultGameMode": {
+            "type": "string",
+            "description": "Default GameMode class path set on WorldSettings."
           }
         },
         "required": [
@@ -93985,7 +94411,19 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
         "output": {
           "success": true,
           "message": "World settings",
-          "worldName": "Demo"
+          "worldName": "Demo",
+          "levelName": "Demo",
+          "packageName": "/Game/Maps/Demo",
+          "timeSeconds": 12.5,
+          "realTimeSeconds": 30.2,
+          "deltaTimeSeconds": 0.0166,
+          "hasBegunPlay": false,
+          "isPlayInEditor": false,
+          "killZ": -1048575,
+          "worldGravityZ": -980,
+          "timeDilation": 1,
+          "enableWorldBoundsChecks": true,
+          "defaultGameMode": "/Game/Blueprints/BP_GameMode.BP_GameMode_C"
         }
       }
     ],
@@ -94074,8 +94512,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "53941b0b1d3ac147f8617660c723b49948f9573915f5b7ea899a56421187d565",
-      "content": "2fd964aac69ce25aa02059b4c99b6295c987531370ddbd8fb585d494104d1fd0"
+      "schema": "aacc7c4c0da6480fc82cc5f939da512b499523937febfcf2e7d2cbeff5c82762",
+      "content": "f362ca1c169688c6e5c800803326054e1d923f1585c8fd0c959eb61e4ac9ed9a"
     }
   },
   {
@@ -94151,6 +94589,47 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "className": {
+            "type": "string",
+            "description": "Generated class name of the inspected CDO."
+          },
+          "classPath": {
+            "type": "string",
+            "description": "Full path of the generated class."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
+          },
+          "parentClass": {
+            "type": "string",
+            "description": "Parent class name."
+          },
+          "componentCount": {
+            "type": "number",
+            "description": "Number of default components on the CDO."
+          },
+          "cdoProperties": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Default property values on the Class Default Object."
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Requested property values."
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Default component descriptors (name, class, attachParent)."
           }
         },
         "required": [
@@ -94168,7 +94647,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "CDO inspected"
+          "message": "CDO inspected",
+          "className": "BP_Test_C",
+          "componentCount": 3
         }
       }
     ],
@@ -94257,8 +94738,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "2a2ca34668cac4d0c212e2d011f836b1deb90eb71e139c4c83ec12b8544f019d",
-      "content": "a79e933c4dc7a43c75fee47c79108cd3cdb2fb7698f6da611e4da5a56c30904f"
+      "schema": "b0b84e32007caa477f2c53d94b64e626730d839684b7813852db825dbae5a493",
+      "content": "07a52c763c539c858100414fedd253a205d48bbd730bcb172210be95a89a2843"
     }
   },
   {
@@ -95043,6 +95524,69 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "worldName": {
+            "type": "string",
+            "description": "Name of the world the report describes."
+          },
+          "worldPath": {
+            "type": "string",
+            "description": "Package path of that world."
+          },
+          "worldType": {
+            "type": "string",
+            "description": "World type, e.g. PIE or Editor."
+          },
+          "isPIE": {
+            "type": "boolean",
+            "description": "Whether a PIE session is active."
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Matching runtime actors and their inspected components/properties."
+          },
+          "count": {
+            "type": "number",
+            "description": "Number of actors returned after filtering."
+          },
+          "totalActorCount": {
+            "type": "number",
+            "description": "Total actors in the inspected world."
+          },
+          "playerController": {
+            "type": "string",
+            "description": "Active PlayerController path."
+          },
+          "pawn": {
+            "type": "string",
+            "description": "Possessed pawn path."
+          },
+          "viewTarget": {
+            "type": "string",
+            "description": "Current view target path."
+          },
+          "playerCameraManager": {
+            "type": "string",
+            "description": "PlayerCameraManager path."
+          },
+          "cameraLocation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Camera location as [x, y, z]."
+          },
+          "cameraRotation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Camera rotation as [pitch, yaw, roll]."
           }
         },
         "required": [
@@ -95059,7 +95603,12 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "PIE report"
+          "message": "PIE report",
+          "worldName": "Demo",
+          "worldType": "PIE",
+          "isPIE": true,
+          "count": 0,
+          "totalActorCount": 39
         }
       }
     ],
@@ -95148,8 +95697,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7fba20d3628c83090bdde1d44856653e40dd6f34e36fc72a31c31734aeff7dd8",
-      "content": "810d2926006047e5560a69dc3644bc397b9dc6410e3b9ea8dfb3dc8084255e5c"
+      "schema": "83d991fb397baec3a4f696c0a9dd3c8fb2e5dd15d02de0e9c3931345af5d1da1",
+      "content": "d2ba4f1d9eaf2ad62096ca440bad9b61614fdc8a7b49d9b9aed2f748130ca14c"
     }
   },
   {
@@ -95415,6 +95964,69 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "worldName": {
+            "type": "string",
+            "description": "Name of the world the report describes."
+          },
+          "worldPath": {
+            "type": "string",
+            "description": "Package path of that world."
+          },
+          "worldType": {
+            "type": "string",
+            "description": "World type, e.g. PIE or Editor."
+          },
+          "isPIE": {
+            "type": "boolean",
+            "description": "Whether a PIE session is active."
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Matching runtime actors and their inspected components/properties."
+          },
+          "count": {
+            "type": "number",
+            "description": "Number of actors returned after filtering."
+          },
+          "totalActorCount": {
+            "type": "number",
+            "description": "Total actors in the inspected world."
+          },
+          "playerController": {
+            "type": "string",
+            "description": "Active PlayerController path."
+          },
+          "pawn": {
+            "type": "string",
+            "description": "Possessed pawn path."
+          },
+          "viewTarget": {
+            "type": "string",
+            "description": "Current view target path."
+          },
+          "playerCameraManager": {
+            "type": "string",
+            "description": "PlayerCameraManager path."
+          },
+          "cameraLocation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Camera location as [x, y, z]."
+          },
+          "cameraRotation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Camera rotation as [pitch, yaw, roll]."
           }
         },
         "required": [
@@ -95432,7 +96044,12 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Runtime report"
+          "message": "Runtime report",
+          "worldName": "Demo",
+          "worldType": "PIE",
+          "isPIE": true,
+          "count": 1,
+          "totalActorCount": 39
         }
       }
     ],
@@ -95521,8 +96138,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7fba20d3628c83090bdde1d44856653e40dd6f34e36fc72a31c31734aeff7dd8",
-      "content": "5499077522a4c628ac43d3dd1b8192248da4ae75d147ce3336e796a25558e6ef"
+      "schema": "83d991fb397baec3a4f696c0a9dd3c8fb2e5dd15d02de0e9c3931345af5d1da1",
+      "content": "98c511aea0fcf6feb8b8df9c7ef0332f7a4d81f387ca0e6a6966e4db49f3f613"
     }
   },
   {
@@ -96312,6 +96929,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
               "SimpleParallel"
             ],
             "description": "Composite node type."
+          },
+          "nodeName": {
+            "type": "string",
+            "description": "Name for the created composite node."
           }
         },
         "required": [
@@ -96335,6 +96956,14 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "assetPath": {
             "type": "string",
             "description": "Canonical /Game asset path."
+          },
+          "nodeName": {
+            "type": "string",
+            "description": "Resolved name of the created composite node."
+          },
+          "isRoot": {
+            "type": "boolean",
+            "description": "Whether this node became the tree root."
           }
         },
         "required": [
@@ -96349,7 +96978,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
         "input": {
           "action": "add_composite_node",
           "behaviorTreePath": "/Game/AI/BT_Enemy",
-          "compositeType": "Sequence"
+          "compositeType": "Sequence",
+          "nodeName": "RootSelector"
         },
         "output": {
           "success": true,
@@ -96444,8 +97074,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "85f7d98f7c868fb0f714182944c7650c79044a1b25d0772363f63fc1080cba4c",
-      "content": "36fde762ce861061d479ae6f24ed9274ad406f0c516184da5aad182ab75d89a4"
+      "schema": "55a65cce9bde3a163f91890062075cc64baa939f7a61091f78546cc1280d2341",
+      "content": "72968fdeb46811862eb7cd1b2f23df247f81bab5a962577e3b8e137ef98b65a1"
     }
   },
   {
@@ -102360,9 +102990,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
             "type": "string",
             "description": "Human-readable result message."
           },
-          "assetPath": {
+          "behaviorTreePath": {
             "type": "string",
-            "description": "Canonical /Game asset path."
+            "description": "Canonical /Game Behavior Tree asset path."
           }
         },
         "required": [
@@ -102472,8 +103102,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "10855d3c931e8647b9215876b56a4369f142d6d0ee8bb67f4c4b8d5d0cd4240e",
-      "content": "74dc5c84f08cac32b2e7e9eed7d64f6c84c7e08f6a94d87bfe8d2088031e200e"
+      "schema": "3cc118acb8f5cb43d85d4fc12cb299c3df214ba68f86b1b4823efc1d85382017",
+      "content": "59ca55f231224d709b21af0c5f66de02a9043745031522cc1a08aa29a87c5710"
     }
   },
   {
@@ -102533,6 +103163,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "blackboardPath": {
             "type": "string",
             "description": "Canonical /Game Blackboard asset path."
+          },
+          "alreadyExisted": {
+            "type": "boolean",
+            "description": "Whether the Blackboard already existed and was reused."
           }
         },
         "required": [
@@ -102642,8 +103276,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "82ab72d9b47d73ae4fcf02b29df7f59bbda1d2ee90c14c86871d64a46cd32e49",
-      "content": "9f17a63801dae7fd80a2927f99eb8211b55dabbaa13fa2b54d506f91833684c1"
+      "schema": "e4b324ec6e095de41ea01827fdb02a0ae7b10bbf49af4f06341e7fca3149ac23",
+      "content": "f18a53f7a08d5167b7e4cecc74fc7ef2b554c5b5e5ac188d98239b23511ecc6a"
     }
   },
   {
@@ -102700,9 +103334,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
             "type": "string",
             "description": "Human-readable result message."
           },
-          "assetPath": {
+          "blackboardPath": {
             "type": "string",
-            "description": "Canonical /Game asset path."
+            "description": "Canonical /Game Blackboard asset path."
           }
         },
         "required": [
@@ -102812,8 +103446,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "10855d3c931e8647b9215876b56a4369f142d6d0ee8bb67f4c4b8d5d0cd4240e",
-      "content": "342db81a74b73c08b936aea69f2eae4479c7513eb40b8503bba6b7f16e16cf2d"
+      "schema": "82ab72d9b47d73ae4fcf02b29df7f59bbda1d2ee90c14c86871d64a46cd32e49",
+      "content": "2a51b269b2db7e2ef061736eb5158c0096a7ec4ab0f42d057c21958620de040c"
     }
   },
   {
@@ -104234,9 +104868,40 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
             "type": "string",
             "description": "Human-readable result message."
           },
-          "assetPath": {
-            "type": "string",
-            "description": "Canonical /Game asset path."
+          "aiInfo": {
+            "type": "object",
+            "description": "AI asset state reported by the native AI domain (HandleGetAIInfo).",
+            "properties": {
+              "controllerClass": {
+                "type": "string",
+                "description": "AIController class path."
+              },
+              "assignedBehaviorTree": {
+                "type": "string",
+                "description": "Behavior Tree asset path assigned to the controller."
+              },
+              "assignedBlackboard": {
+                "type": "string",
+                "description": "Blackboard asset path assigned to the tree/controller."
+              },
+              "hasRootNode": {
+                "type": "boolean",
+                "description": "Whether the Behavior Tree has a root node."
+              },
+              "rootDecoratorCount": {
+                "type": "number",
+                "description": "Number of root decorators."
+              },
+              "btNodeCount": {
+                "type": "number",
+                "description": "Number of Behavior Tree nodes."
+              },
+              "queryName": {
+                "type": "string",
+                "description": "Environment Query asset name."
+              }
+            },
+            "additionalProperties": false
           }
         },
         "required": [
@@ -104343,8 +105008,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "9efe6c5b91db0417dcc94a756a33df24ea57e2e4afe414b37bf7ec032f4fddb9",
-      "content": "ae1961745bc72bbfd56fc4ac5261194e255afb15c1690268b62f75e22a0dbfb4"
+      "schema": "91352502407848a3c7d0b960ddaf5608abde4f5a5784e23401d8c2d830c14780",
+      "content": "ab2ce5006b51907183c4947dccd6c39071f83ec30e533c3bd93cce4fc6197bef"
     }
   },
   {
@@ -104559,6 +105224,53 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "navMeshInfo": {
+            "type": "object",
+            "description": "Navigation mesh and agent settings reported by the native Navigation domain (HandleGetNavigationInfo).",
+            "properties": {
+              "agentRadius": {
+                "type": "number",
+                "description": "Navigation agent radius (default: 35)."
+              },
+              "agentHeight": {
+                "type": "number",
+                "description": "Navigation agent height (default: 144)."
+              },
+              "agentMaxSlope": {
+                "type": "number",
+                "description": "Maximum slope angle in degrees (default: 44)."
+              },
+              "tileSizeUU": {
+                "type": "number",
+                "description": "NavMesh tile size in Unreal units (default: 1000)."
+              },
+              "cellSize": {
+                "type": "number",
+                "description": "NavMesh cell size (default: 19)."
+              },
+              "cellHeight": {
+                "type": "number",
+                "description": "NavMesh cell height (default: 10)."
+              },
+              "agentStepHeight": {
+                "type": "number",
+                "description": "Maximum step height the agent can climb (default: 35)."
+              },
+              "navLinkCount": {
+                "type": "number",
+                "description": "Number of navigation links."
+              },
+              "boundsVolumes": {
+                "type": "number",
+                "description": "Number of navigation bounds volumes."
+              },
+              "isNavigationBuildInProgress": {
+                "type": "boolean",
+                "description": "Whether a navigation build is running."
+              }
+            },
+            "additionalProperties": false
           }
         },
         "required": [
@@ -104664,8 +105376,8 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "fa179db3b415c43b2d9e83b740afe423cc9933282b5ce4f173652b4afcc54629",
-      "content": "416748bfaf8dbd8d912443510543e393f2b7645d5d4369c19073a9589c6846d1"
+      "schema": "8733bfd07a3338b1b54d2a3b22eab32babc7464c024ad97a320a9062647599c8",
+      "content": "870a215e7566d1ed993b493434ef718b35d6b0e764ce5cb172cb58fa85fc2f44"
     }
   },
   {
@@ -109802,7 +110514,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -109938,8 +110650,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6b73c5b6f8fe72db62bf31308badc434ab795f8a679e88639b751e8cf70282f0",
-      "content": "081d4304629be1cb6789bc2d8e14222dc0f075c471c5ad567542d2b9e49c2818"
+      "schema": "9f4bcfb572ba23cf7ecfc22a432e57c9b4a0d4f340cc2345619634743c732d98",
+      "content": "aa25d47ca4af5ce6aa2bf82d26b808bc943b0129a625ec1779afafa6c354e7c0"
     }
   },
   {
@@ -110160,7 +110872,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -110296,8 +111008,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6b73c5b6f8fe72db62bf31308badc434ab795f8a679e88639b751e8cf70282f0",
-      "content": "7f21055ff139aff267bb814a3430819726544bcee8c0c91bb003b72a421c92c0"
+      "schema": "9f4bcfb572ba23cf7ecfc22a432e57c9b4a0d4f340cc2345619634743c732d98",
+      "content": "e8d04675fc27f29526d7b959292101dbbf411aa80a53a7d12005411cdd62f46d"
     }
   },
   {
@@ -110334,7 +111046,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -110478,8 +111190,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "0d2bc96b43c730ef70aa0ce4886961853bb881dedd057e67ea88625b64770773",
-      "content": "b9b97bcd029428444c29ac05089617d4151ee6a3f2d2077a5697c3a2f526f9aa"
+      "schema": "17316bcb6d5fdeff84681c5fdd10cc99e0afe05bd6f243564a399b6c0ff55f92",
+      "content": "aa56ae3f58079c0bf559fbcd5e8a3194a9a9a9ca5e4561980cca40eba95ee902"
     }
   },
   {
@@ -110516,7 +111228,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -110654,8 +111366,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6b73c5b6f8fe72db62bf31308badc434ab795f8a679e88639b751e8cf70282f0",
-      "content": "3a1245ea43596f62a61c52e8a91bf313a1a6b6292336febe3a814e808aec70e0"
+      "schema": "9f4bcfb572ba23cf7ecfc22a432e57c9b4a0d4f340cc2345619634743c732d98",
+      "content": "75bae6c7601977ce36472edfccfe124d1573971021e717c448fc17de29bc35fe"
     }
   },
   {
@@ -110692,7 +111404,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -110834,8 +111546,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "17ccc3e694c6bdd220c61273fc46081f5e1bcddb3363e27408250e8c82599a1c",
-      "content": "5ac9dd81c1482ae6b0cdb80acf9591fb14c6098a01d3152b1f55e6815668098c"
+      "schema": "775859e53c46470908302e010ff93ba2bbcf51921bf4476c9f2f6ab0d1d62180",
+      "content": "6b851cf216559ddf4424abbb9a6117ea24428bdd441a3055a6f3fc1156484590"
     }
   },
   {
@@ -110872,7 +111584,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "location": {
             "type": "object",
@@ -111030,8 +111742,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "0389784cdc3f617872e8bbd83b8e4f2867db351efbedf3f6ce828db37db8b955",
-      "content": "542ad32cba3dc97bef142da610140be84bc3906e4e9e30c88ff4fce01698fd27"
+      "schema": "4366d7a345d85a2fed6cfbf6a21ce8b8959ba29be6df10e40707da71bdd2dd93",
+      "content": "b9853f237394a4d0b20dfd2c8a705bff137d0159575e077a8c0e81b117caad7b"
     }
   },
   {
@@ -111068,7 +111780,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -111214,8 +111926,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "0c4554588b5295a334eba6a483094c832f9ade2b42e9b3c6ebc99615f57b5659",
-      "content": "05b5f718585064266272e3ba636ee34899d09cc8edb497fd68a50f82bbc7046c"
+      "schema": "dfee47a66eebe3448fa7ae61e2f6312637076fc2fc4725a803d57c08d49107e5",
+      "content": "16e45c7cd8e0c1696f89d42930bcabc9a7b6fa961b5043b5d5037d64a8dacdc2"
     }
   },
   {
@@ -111252,7 +111964,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -111396,8 +112108,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "db5812c209effc004a81e1bf97836067ed1fb6a0ea285547eda0a7e64c4632b1",
-      "content": "7a59d95fe1b5d7c3a8dee803fdb730b2329343309e68c6ef8aa65e50b003b599"
+      "schema": "4a75fe3d402e47405e66960eab3b0e395a7abb2e54e40ec6be14afd2014dbb4c",
+      "content": "0b419fea5101aef36165010901ea012d6072f9b3771a56da034781c39898225b"
     }
   },
   {
@@ -111434,7 +112146,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -111576,8 +112288,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "17ccc3e694c6bdd220c61273fc46081f5e1bcddb3363e27408250e8c82599a1c",
-      "content": "057f13f54f99501f42ad1d6f4f2b39a96e0c62b2b2af50cbae5627aa3e2582d5"
+      "schema": "775859e53c46470908302e010ff93ba2bbcf51921bf4476c9f2f6ab0d1d62180",
+      "content": "568964b70a067fd09b7e005a3f7b92b6beb7797eaa3352a2d8efcaf51214cf0a"
     }
   },
   {
@@ -111614,7 +112326,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -111750,8 +112462,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6b73c5b6f8fe72db62bf31308badc434ab795f8a679e88639b751e8cf70282f0",
-      "content": "cc345b2411d48811400896e26aa7f9a40aa5a9a10abc3ac19f9fc95af6b59137"
+      "schema": "9f4bcfb572ba23cf7ecfc22a432e57c9b4a0d4f340cc2345619634743c732d98",
+      "content": "9b8fe793b8b19c9271e980f218c91e62250db1d22556b888065bc866fc5f846a"
     }
   },
   {
@@ -111788,7 +112500,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -111930,8 +112642,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "69b095f21685dc360d75456a7176f08dd3f4cc53304ae00434b5ead8bd854380",
-      "content": "7750b75cb1bc502cbdb963d4e9c97cc880a44614237a2a7e3474de834dc7a18f"
+      "schema": "34e659ce1108e1a62abcbece10ff63f7584c4df359c4319c51716ac7505d8211",
+      "content": "5039824aac3e24ce86ec46e320bdc3ad73749e307be3fe9de1a3161b2c3a49e2"
     }
   },
   {
@@ -115520,7 +116232,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -115676,8 +116388,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "8eff04f1d90e93a12ec9aa77c61968df3714c612461d59dc75256c7c7a50a641",
-      "content": "a8de1bacb47cc5c00f5f8f838d339f01ada9ede21191d04ac71d3500845fd415"
+      "schema": "661c7b0a497187c78f340b876bedebf50f6ed58805c2ea2923d7be67a271ce74",
+      "content": "99ea8db7dfc67e3f927fdf8020bd279d0143b90ae1b92ddd569ea162d46e2a05"
     }
   },
   {
@@ -118246,9 +118958,110 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
             "type": "string",
             "description": "Human-readable result message."
           },
-          "hasMesh": {
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "assetName": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "capsuleRadius": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "capsuleHalfHeight": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "walkSpeed": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "jumpZVelocity": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "airControl": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "orientToMovement": {
             "type": "boolean",
             "description": "Boolean parameter."
+          },
+          "gravityScale": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "maxJumpCount": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "useControllerRotationYaw": {
+            "type": "boolean",
+            "description": "Boolean parameter."
+          },
+          "hasSpringArm": {
+            "type": "boolean",
+            "description": "Boolean parameter."
+          },
+          "hasCamera": {
+            "type": "boolean",
+            "description": "Boolean parameter."
+          },
+          "playerViewState": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true,
+            "description": "Player camera/view state."
+          },
+          "customMovementSpeed": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "targetArmLength": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "usePawnControlRotation": {
+            "type": "boolean",
+            "description": "Boolean parameter."
+          },
+          "enableCameraLag": {
+            "type": "boolean",
+            "description": "Boolean parameter."
+          },
+          "cameraLagSpeed": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "fieldOfView": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "springArmTemplates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Spring-arm component templates found on the Blueprint."
+          },
+          "cameraTemplates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Camera component templates found on the Blueprint."
+          },
+          "movementVariables": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "CharacterMovement values read from the Blueprint CDO."
           }
         },
         "required": [
@@ -118267,7 +119080,9 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
         "output": {
           "success": true,
           "message": "Character info",
-          "hasMesh": true
+          "blueprintPath": "/Game/BP_Char",
+          "capsuleRadius": 42,
+          "hasSpringArm": true
         }
       }
     ],
@@ -118356,8 +119171,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6f593c37f5fa37faf5b0fefad76d13f64bd58a1644bd95509034d5e826d372ed",
-      "content": "9c757182aae9bec8309b260cccd988655a6f49d3ff35d9a5566b14b082628259"
+      "schema": "c04ccb3938c422ff3ebee3a3d9a3a2624a9ab93e4da32bae72496860589eafce",
+      "content": "c151b33d72d0a05ab62bde74b79334e716e7c3f70bf051bbe90e6bba3393bdcb"
     }
   },
   {
@@ -136637,6 +137452,26 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "actorPath": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Target actor name in the current level."
+          },
+          "actorGuid": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "existsAfter": {
+            "type": "boolean",
+            "description": "Boolean parameter."
+          },
+          "actorClass": {
+            "type": "string",
+            "description": "String parameter."
           }
         },
         "required": [
@@ -136655,7 +137490,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Niagara system authored"
+          "message": "Niagara system authored",
+          "actorName": "FX_1"
         }
       }
     ],
@@ -136746,8 +137582,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "995eda848eac7e8875f4ed37f62177bc169118128c3858ac9961d9c9c07c1d3e",
-      "content": "a324975d787559bd5a804660ec1938f41efba80b0f6f6e69d4de06fecad3c4a6"
+      "schema": "6bf5b5a44b7aeea7925f61c05f9d1c681814ef32151d4ce41a8ebe7303aa58a2",
+      "content": "9d7c6089fb7398e975ce81f520e91496c7201b44cf9c5104fa9091251dc18f6d"
     }
   },
   {
@@ -140669,7 +141505,51 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
             "type": "string",
             "description": "Human-readable result message."
           },
-          "abilityCount": {
+          "gasType": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "assetName": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "class": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "parentClass": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "generatedClass": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "durationPolicy": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "instancingPolicy": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "netExecutionPolicy": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "stackingType": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "modifierCount": {
+            "type": "number",
+            "description": "Numeric parameter."
+          },
+          "cueCount": {
             "type": "number",
             "description": "Numeric parameter."
           }
@@ -140690,7 +141570,9 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
         "output": {
           "success": true,
           "message": "GAS info",
-          "abilityCount": 3
+          "gasType": "GameplayAbility",
+          "assetName": "GA_Dash",
+          "instancingPolicy": "InstancedPerActor"
         }
       }
     ],
@@ -140781,8 +141663,8 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "d9a7df0101fa6a178fb88a4d45641f3d01daf4c498957b025750ec2b839dade1",
-      "content": "5840737a9a99d1a7ba45e763a19bad83da134cdbd4100aa307cede0df6912560"
+      "schema": "1bc888e8e369ab850d5c2c695dac8b99891fca38b947ac4b47018e86d94620f0",
+      "content": "a238dfd8400c8831c424e31d4a9bd2595721914fab93eb31c58f37e16acdb05d"
     }
   },
   {
@@ -169364,17 +170246,81 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             "type": "string",
             "description": "Human-readable result message."
           },
-          "levels": {
+          "currentWorldLevels": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Level name."
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Level package path."
+                },
+                "isPersistent": {
+                  "type": "boolean",
+                  "description": "Whether this is the persistent level."
+                },
+                "isLoaded": {
+                  "type": "boolean",
+                  "description": "Whether the level is loaded."
+                },
+                "isVisible": {
+                  "type": "boolean",
+                  "description": "Whether the level is visible."
+                },
+                "streamingState": {
+                  "type": "string",
+                  "description": "Streaming state for streaming levels."
+                }
+              }
             },
-            "description": "Available level asset paths."
+            "description": "Levels in the current world (persistent level plus streaming levels)."
+          },
+          "currentWorldLevelCount": {
+            "type": "number",
+            "description": "Number of current-world level entries."
+          },
+          "allMaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Map asset name."
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Map package path."
+                },
+                "objectPath": {
+                  "type": "string",
+                  "description": "Full object path of the map asset."
+                }
+              }
+            },
+            "description": "All World assets discovered in the asset registry."
+          },
+          "allMapsCount": {
+            "type": "number",
+            "description": "Number of map assets in the asset registry."
+          },
+          "currentMap": {
+            "type": "string",
+            "description": "Name of the current persistent map."
+          },
+          "currentMapPath": {
+            "type": "string",
+            "description": "Package path of the current persistent map."
           }
         },
         "required": [
-          "success",
-          "levels"
+          "success"
         ],
         "additionalProperties": false
       }
@@ -169388,9 +170334,26 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         "output": {
           "success": true,
           "message": "Levels listed",
-          "levels": [
-            "/Game/Maps/Demo"
-          ]
+          "currentWorldLevels": [
+            {
+              "name": "Demo",
+              "path": "/Game/Maps/Demo",
+              "isPersistent": true,
+              "isLoaded": true,
+              "isVisible": true
+            }
+          ],
+          "currentWorldLevelCount": 1,
+          "allMaps": [
+            {
+              "name": "Demo",
+              "path": "/Game/Maps/Demo",
+              "objectPath": "/Game/Maps/Demo.Demo"
+            }
+          ],
+          "allMapsCount": 1,
+          "currentMap": "Demo",
+          "currentMapPath": "/Game/Maps/Demo"
         }
       }
     ],
@@ -169479,8 +170442,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "058eeb44cb2fe4239c84a9f6db1c9af2d20a69c91d642d149776f8aad50a2c51",
-      "content": "3e740b8da14b5bd88e52e9b56aeaf9f62625f5bf590b183e54f4ce96eff966cb"
+      "schema": "ea8b61947eb93d2d5d440671cfd263d0611ae63ae1e7a55f6f0429894745d268",
+      "content": "aed4421df00294b89d6cb22dd166ed5654ab18f79e684bd69f554f9c8d33dec6"
     }
   },
   {
@@ -173286,10 +174249,6 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             "type": "boolean",
             "description": "Block on slow streaming."
           },
-          "levelPath": {
-            "type": "string",
-            "description": "Canonical /Game level asset path."
-          },
           "gridCellSize": {
             "type": "number",
             "description": "World Partition grid cell size."
@@ -173298,14 +174257,17 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             "type": "number",
             "description": "Loading range for grid cells."
           },
+          "priority": {
+            "type": "number",
+            "description": "World Partition grid priority (higher wins when grids overlap)."
+          },
           "save": {
             "type": "boolean",
             "description": "Whether to save the level after the operation."
           }
         },
         "required": [
-          "action",
-          "levelPath"
+          "action"
         ],
         "additionalProperties": false
       },
@@ -173333,7 +174295,6 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         "title": "Configure the World Partition grid cell size and loading range.",
         "input": {
           "action": "configure_grid_size",
-          "levelPath": "/Game/Maps/Demo",
           "gridCellSize": 12800
         },
         "output": {
@@ -173427,8 +174388,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b8b7136fd8bb53cc021537ba1b09e4cf8e34a7e10b77d05ba3d4eab23a7b3aa3",
-      "content": "dd336b00f7056a9b24cccd1e94b74c240dcbe89019e7138c77f358021c5b237f"
+      "schema": "36163b0ac7bc14697af04052750df37963d466b4e8cb56f3d9297944456821f9",
+      "content": "c9a2ac4153fcc0703eb6c60769b4ec2cf569c1c9f1365e72fc74ab686b4f9b6a"
     }
   },
   {
@@ -179079,10 +180040,6 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
             "type": "string",
             "description": "The action to execute on the parent tool."
           },
-          "levelPath": {
-            "type": "string",
-            "description": "Canonical /Game level asset path."
-          },
           "bEnableWorldPartition": {
             "type": "boolean",
             "description": "Enable World Partition for level."
@@ -179097,8 +180054,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "action",
-          "levelPath"
+          "action"
         ],
         "additionalProperties": false
       },
@@ -179126,7 +180082,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
         "title": "Enable World Partition for a level (requires editor, one-time conversion).",
         "input": {
           "action": "enable_world_partition",
-          "levelPath": "/Game/Maps/Demo"
+          "bEnableWorldPartition": true
         },
         "output": {
           "success": true,
@@ -179219,8 +180175,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "f900c4b7f93867b85aaec7dd49d0fa09f6f72e9a78cd39243fb4c4f6f545ece9",
-      "content": "4bc5f3c7a400ea5269921020f23f9cd07ca4de9882ac9838626f22ce5f4fa2d2"
+      "schema": "f0b3221df0358674f2caa5a2c7221e5aa9859a22e2575321c2712a8d63ff72b1",
+      "content": "6c3e2302527a4b3fd8e715c92645646daf07c39fef2387f934d9706086ab6a78"
     }
   },
   {
@@ -180697,31 +181653,31 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "actionName": {
             "type": "string",
-            "description": "actionName"
+            "description": "Legacy input action name. Overrides name when both are supplied."
           },
           "key": {
             "type": "string",
-            "description": "key"
+            "description": "Input key name, e.g. SpaceBar, W, LeftMouseButton."
           },
           "shift": {
-            "type": "string",
-            "description": "shift"
+            "type": "boolean",
+            "description": "Whether the Shift modifier must be held."
           },
           "ctrl": {
-            "type": "string",
-            "description": "ctrl"
+            "type": "boolean",
+            "description": "Whether the Ctrl modifier must be held."
           },
           "alt": {
-            "type": "string",
-            "description": "alt"
+            "type": "boolean",
+            "description": "Whether the Alt modifier must be held."
           },
           "cmd": {
-            "type": "string",
-            "description": "cmd"
+            "type": "boolean",
+            "description": "Whether the Cmd modifier must be held."
           }
         },
         "required": [
@@ -180847,8 +181803,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "86186ec7f10dbf538d0a536da30d94e5e652f81241b84737c89a3423cbbdf61a",
-      "content": "586329d4877aae5df662013be330cf0a881ba435b193c006fef209a336b547b3"
+      "schema": "4e4262771f2067543636671296d69125b740ab13f2a7b5190b88ebef5e2b0722",
+      "content": "ad341dfabe8ffc66826520945339690424bc9231b5e687ce5fae7ddf8588705c"
     }
   },
   {
@@ -180885,19 +181841,19 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "axisName": {
             "type": "string",
-            "description": "axisName"
+            "description": "Legacy input axis name. Overrides name when both are supplied."
           },
           "key": {
             "type": "string",
-            "description": "key"
+            "description": "Input key name, e.g. SpaceBar, W, LeftMouseButton."
           },
           "scale": {
             "type": "number",
-            "description": "scale"
+            "description": "Axis scale value."
           }
         },
         "required": [
@@ -181023,8 +181979,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "96f3f4b98fb28e67fd473e81caf445877f9c0e4da90e3f1563c8338d9521157e",
-      "content": "86059a300927704af07daed722576820a027fc773144ad88d13ec30ba28ed887"
+      "schema": "c5b0536dac5ca242009e94b59ceb16897fd4120c8bc82ef6ab02e5b5dde616f7",
+      "content": "70f01f46f2b187490d700c02f45785121f32115162f0235ccaa78d69492b2f9c"
     }
   },
   {
@@ -181243,7 +182199,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
           },
           "key": {
             "type": "string",
-            "description": "key"
+            "description": "Input key name, e.g. SpaceBar, W, LeftMouseButton."
           },
           "triggerType": {
             "type": "string",
@@ -181383,8 +182339,8 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "27903ce3a9f3e09022059e8be6864e31f4fad0a8c45282c6af604d2680742184",
-      "content": "35ce476b8bccd2a67b8003bc24aa169801c87db4da66c66d093d7f160402c866"
+      "schema": "2ecb3ef112b94f76e083cef8506d382b2f1f7a0deed258113edf608aeb9ed084",
+      "content": "ab3d1c2a2a9171d0e13fb5e0de8eb8115a62dfb2deea41f9fe58173917a03886"
     }
   },
   {
@@ -186324,7 +187280,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -186470,8 +187426,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-      "content": "873f0178d8d303931c174675617a9bac7ecb33fc0361ac18042a2b6598997794"
+      "schema": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+      "content": "3bb396b75cb241166f38776ce721afabdbb0d35192d3f61e4b88d4eab88df77b"
     }
   },
   {
@@ -186508,7 +187464,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -186674,8 +187630,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b938a5b4fe2399e646eb0bf7b6be6296502c56ec1cb8107402b59e2fd0b34452",
-      "content": "068ce5981be0ace1da109ae7083f6634b41c0507570f3cf82735abe3943ed206"
+      "schema": "8a72ac3461c479e56d5a70752b0bcd3c4adfc304f5c6c92a40896be0f09925e3",
+      "content": "0cdfe71731b891a1e345ba4d6aef9e760b5e46a4cf0c2578fb2c65f5db8cf6b7"
     }
   },
   {
@@ -186712,7 +187668,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -186858,8 +187814,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-      "content": "c8cafa57fa1f6d591bc98ab82812f8c57b44fc247242e2090db95f344dbb2f78"
+      "schema": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+      "content": "94e707e497bd5a1b9f2e241d9bd98a7a909d22d4908e01af202532398ed5b6b9"
     }
   },
   {
@@ -186896,7 +187852,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -187042,8 +187998,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-      "content": "5417c514c90533997bc5f6a1d81851e3a381e6ffc439fbbd59d5d2e91b292a6d"
+      "schema": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+      "content": "c0276431d42cb2977d613a20c54e3a04d589a1b0a4db143572e541faeb18803b"
     }
   },
   {
@@ -187080,7 +188036,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -187220,8 +188176,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "f2667afa3b366dc0bb5ad96f600cd0a3498aa9dc6400e95e02a3bdd0308df3b6",
-      "content": "7bf47f63fafdd45f35bdb5ceac6fb6a9357ffcc882bc111abac6f8a3ff59e952"
+      "schema": "281a9d677a28eaa31ce41203108001f783937fff8873d807c9877717b359a58f",
+      "content": "ac09f35e469882388589149eb89916e1120382090f30f8f9f0607c381d77cb95"
     }
   },
   {
@@ -187258,7 +188214,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -187402,8 +188358,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "175f88807e43db77fc4136226b6ce2d82cb4594c1d14747b6a278f755e5227f5",
-      "content": "87bfe95d1f80b01d192a2eb5fcf77454f7edc226fc23073669cba386eb7a6d5e"
+      "schema": "be002972025e6fb5629bd071c7720212e4147b8c1eb5788fc782456ed895eef6",
+      "content": "6786485148145dd5d640e514ee318cc9497b7ad1bbc2e4c125e13b07a7cdbb43"
     }
   },
   {
@@ -187440,7 +188396,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -187586,8 +188542,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-      "content": "f0966cb9bce0209c5df79cdaf72aff04e4db9729cd77d5be8c557af8d61b8131"
+      "schema": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+      "content": "3dddacdb11bc784d1c8a71b1ff5b97d9d3d31fa1c7393c6088641b6b0922dc1c"
     }
   },
   {
@@ -187624,7 +188580,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "path": {
             "type": "string",
@@ -187770,8 +188726,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-      "content": "69e30d304fffd7fb3010e0110453b9b6792340903151a2763e401dab38ddd12c"
+      "schema": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+      "content": "9eace950fc1cc111025713ef622ed0ffdb2cd1507d9a4dae5d8606c924b954ca"
     }
   },
   {
@@ -189644,7 +190600,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           },
           "key": {
             "type": "string",
-            "description": "key"
+            "description": "Input key name, e.g. SpaceBar, W, LeftMouseButton."
           }
         },
         "required": [
@@ -189776,8 +190732,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "ee17dc615718f28b93f1fefeb076710c300bf6511d7d6e36e1e686b502134e08",
-      "content": "ea947761a79660eff5dc3d335d7883e79a04c7b287b1fedd43bca6b198745361"
+      "schema": "d569b88d4430ac539fa64e7197f626c5505647ee1005d5f8c61ac0a6b52974a9",
+      "content": "89da44f3c6aaec9ef369b95f77e8ddd8719c32689cb1a180a4d0eb20ad241ca9"
     }
   },
   {
@@ -190001,31 +190957,31 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "actionName": {
             "type": "string",
-            "description": "actionName"
+            "description": "Legacy input action name. Overrides name when both are supplied."
           },
           "key": {
             "type": "string",
-            "description": "key"
+            "description": "Input key name, e.g. SpaceBar, W, LeftMouseButton."
           },
           "shift": {
-            "type": "string",
-            "description": "shift"
+            "type": "boolean",
+            "description": "Whether the Shift modifier must be held."
           },
           "ctrl": {
-            "type": "string",
-            "description": "ctrl"
+            "type": "boolean",
+            "description": "Whether the Ctrl modifier must be held."
           },
           "alt": {
-            "type": "string",
-            "description": "alt"
+            "type": "boolean",
+            "description": "Whether the Alt modifier must be held."
           },
           "cmd": {
-            "type": "string",
-            "description": "cmd"
+            "type": "boolean",
+            "description": "Whether the Cmd modifier must be held."
           }
         },
         "required": [
@@ -190151,8 +191107,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "86186ec7f10dbf538d0a536da30d94e5e652f81241b84737c89a3423cbbdf61a",
-      "content": "6073ceacf79d4e9d31479b462c211b0b7eff7c051015da3a572b3408d0dd72cd"
+      "schema": "4e4262771f2067543636671296d69125b740ab13f2a7b5190b88ebef5e2b0722",
+      "content": "b03e84aebe30571591f5c46fd9fd71d6af1f61a35fa45577249f1fec39e68b71"
     }
   },
   {
@@ -190189,19 +191145,19 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "axisName": {
             "type": "string",
-            "description": "axisName"
+            "description": "Legacy input axis name. Overrides name when both are supplied."
           },
           "key": {
             "type": "string",
-            "description": "key"
+            "description": "Input key name, e.g. SpaceBar, W, LeftMouseButton."
           },
           "scale": {
             "type": "number",
-            "description": "scale"
+            "description": "Axis scale value."
           }
         },
         "required": [
@@ -190327,8 +191283,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "96f3f4b98fb28e67fd473e81caf445877f9c0e4da90e3f1563c8338d9521157e",
-      "content": "e71b711e57a7ba3ea941772caf91dd0e0bffa441941521da682f05763902cb98"
+      "schema": "c5b0536dac5ca242009e94b59ceb16897fd4120c8bc82ef6ab02e5b5dde616f7",
+      "content": "0c210d1b3aa5d00e27e32275701a9c37e1c15351139742a91c3547571944c8bb"
     }
   },
   {
@@ -190541,7 +191497,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           },
           "key": {
             "type": "string",
-            "description": "key"
+            "description": "Input key name, e.g. SpaceBar, W, LeftMouseButton."
           }
         },
         "required": [
@@ -190671,8 +191627,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "46143f93e89ce560b09f78b58ba707c3529604f3fbe53f7d2ad36e29b133ee21",
-      "content": "062718679c5a7ee7c57b4374962da2e5ccdfaa5dd286ac8c845e2234d82a2581"
+      "schema": "fae3c7af75a38de61a6bb9625d6f60bd4bab7b3658e14780358bac88f7721e5d",
+      "content": "a814d1a4b7705b4cfd0298a132b42b4479b05ba2b8f9f42df4431272c1bed6dc"
     }
   },
   {
@@ -191405,7 +192361,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           },
           "key": {
             "type": "string",
-            "description": "key"
+            "description": "Input key name, e.g. SpaceBar, W, LeftMouseButton."
           },
           "modifierType": {
             "type": "string",
@@ -191539,8 +192495,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "71db9e338a8d8587cf656a27cbbc97ae82fb88fb86fec6a213d2b3e5538fc2a2",
-      "content": "da8a98c83b155960c93e53b6180a62be9501a7bf2592b23ecca8215a3d298c4d"
+      "schema": "601f3b4ec5093ffa10e8d35df6068d4d93051fad064bf9bde86ca29009dfd720",
+      "content": "9b66a56c9e3d8b7f515dd7630636c1449cb21f75bfbc7282a30aebe0c9c77e8c"
     }
   },
   {
@@ -208379,10 +209335,49 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
             "type": "boolean",
             "description": "Operation succeeded."
           },
-          "details": {
-            "type": "object",
-            "x-unreal-reflection-boundary": true,
-            "description": "Operation details."
+          "assetType": {
+            "type": "string",
+            "description": "Asset type: Material or MaterialFunction."
+          },
+          "nodeCount": {
+            "type": "number",
+            "description": "Number of expression nodes in the graph."
+          },
+          "domain": {
+            "type": "string",
+            "description": "Material domain, e.g. Surface, PostProcess, UI."
+          },
+          "blendMode": {
+            "type": "string",
+            "description": "Blend mode, e.g. Opaque, Masked, Translucent."
+          },
+          "twoSided": {
+            "type": "boolean",
+            "description": "Whether the material renders two-sided."
+          },
+          "description": {
+            "type": "string",
+            "description": "Material function description."
+          },
+          "exposeToLibrary": {
+            "type": "boolean",
+            "description": "Whether a material function is exposed to the library."
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Material parameters (name, type, nodeId)."
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Material function inputs (name, type, nodeId)."
           }
         },
         "required": [
@@ -208398,7 +209393,12 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           "assetPath": "/Game/Materials/M_Base"
         },
         "output": {
-          "success": true
+          "success": true,
+          "assetType": "Material",
+          "nodeCount": 4,
+          "domain": "Surface",
+          "blendMode": "Opaque",
+          "twoSided": false
         }
       }
     ],
@@ -208489,8 +209489,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "1d03c3f1ed21254b68fba8d79b6600488c565564b5276b14bbb34efe739efc01",
-      "content": "330d54f4e01d7309d775e0e93a06e673790948334fd37d3d6a17d1543910e109"
+      "schema": "30a7115c5dfc8c0042e595b02e365ec0182553e593255eea262f573d9d6ddf16",
+      "content": "2d2715a77f2df6b0c75a59afac4c69cee274b8d71aca88e2c4750d5d9a7384da"
     }
   },
   {
@@ -212689,9 +213689,25 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
             "type": "string",
             "description": "Canonical /Game sequence asset path."
           },
-          "cameraActorName": {
+          "actorName": {
             "type": "string",
             "description": "Actor name in the current level."
+          },
+          "cameraName": {
+            "type": "string",
+            "description": "Actor name in the current level."
+          },
+          "actorPath": {
+            "type": "string",
+            "description": "Actor path (alias of actorName)."
+          },
+          "bindingGuid": {
+            "type": "string",
+            "description": "Sequencer binding GUID (alias of bindingId)."
+          },
+          "startFrame": {
+            "type": "integer",
+            "description": "Custom playback range start frame (paired with endFrame)."
           },
           "rowIndex": {
             "type": "integer",
@@ -212723,6 +213739,10 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "bindingGuid": {
+            "type": "string",
+            "description": "Binding GUID of the targeted camera or created cut."
           }
         },
         "required": [
@@ -212740,7 +213760,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Camera cut track added"
+          "bindingGuid": "ABC-123"
         }
       }
     ],
@@ -212831,8 +213851,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "204fcb4abefffedd14dd05a6994a0b2e5cb9366bbebd68ac53d637840bf0d8aa",
-      "content": "d7c3ec2540c6d6ec1712e9740484396e3f6cd13c56292620ab04b406e0aca731"
+      "schema": "b1bbdae8f7d71069726f28f8763a5b32fece05724efd0cdc6e07d6a8c5830fd6",
+      "content": "17f9e4196e14ad18cb953d5382318f229f252101b3b6fc146386ada1b4c0d02d"
     }
   },
   {
@@ -215742,9 +216762,13 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
             "type": "string",
             "description": "Canonical /Game sequence asset path."
           },
-          "cameraName": {
+          "actorName": {
             "type": "string",
             "description": "Actor name in the current level."
+          },
+          "label": {
+            "type": "string",
+            "description": "Actor label alias for the camera or rig actor (alias of actorName)."
           },
           "location": {
             "type": "object",
@@ -215787,18 +216811,6 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
               "y",
               "z"
             ]
-          },
-          "cameraActorName": {
-            "type": "string",
-            "description": "Actor name in the current level."
-          },
-          "label": {
-            "type": "string",
-            "description": "Actor label alias for the camera or rig actor (alias of actorName)."
-          },
-          "save": {
-            "type": "boolean",
-            "description": "Whether to save the sequence asset after the mutation."
           }
         },
         "required": [
@@ -215818,6 +216830,25 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Label of the created camera actor."
+          },
+          "actorPath": {
+            "type": "string",
+            "description": "Path to the created camera actor."
+          },
+          "bindingGuid": {
+            "type": "string",
+            "description": "Sequencer binding GUID (present when a sequence path was supplied)."
+          },
+          "appliedProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Camera properties applied to the created actor."
           }
         },
         "required": [
@@ -215832,11 +216863,12 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "input": {
           "action": "create_cine_camera_actor",
           "path": "/Game/Cinematics/SEQ_Master",
-          "cameraName": "CineCam_01"
+          "actorName": "CineCam_01"
         },
         "output": {
           "success": true,
-          "message": "Cine camera created"
+          "actorName": "CineCam_01",
+          "actorPath": "/Game/Level/SUB_01.CineCam_01"
         }
       }
     ],
@@ -215927,8 +216959,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "521c9b90a45cb5a4ba20e197dccefd8f05002ca974d0c42c835bb08ca96d33a2",
-      "content": "c1de90960ca8801357941416b6618a68bf055260968fbb0529c7f7c58a81a87b"
+      "schema": "fe71da0f22e6ae5eaaaabd574a3b672b1d4d40ea94252a1ea67f0e040868ccb0",
+      "content": "e4ff2f577eb180fd34ad1639aaac89b3fc878b9f53d86b378a556ce2f343c927"
     }
   },
   {
@@ -215963,22 +216995,42 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
             "type": "string",
             "description": "The manage_sequence action to execute."
           },
-          "masterSequencePath": {
+          "name": {
             "type": "string",
-            "description": "Canonical /Game master sequence path."
+            "description": "Name for the new sequence or asset."
           },
-          "mapPath": {
+          "sequencePath": {
             "type": "string",
-            "description": "Canonical /Game map path."
+            "description": "Canonical /Game sequence asset path."
           },
-          "save": {
-            "type": "boolean",
-            "description": "Whether to save the sequence asset after the mutation."
+          "path": {
+            "type": "string",
+            "description": "Canonical /Game sequence asset path."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "frameRate": {
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Frame rate as fps or a rate string such as 24fps or 24000/1001."
+          },
+          "startFrame": {
+            "type": "integer",
+            "description": "Custom playback range start frame (paired with endFrame)."
+          },
+          "durationFrames": {
+            "type": "integer",
+            "description": "Section duration in display-rate frames."
           }
         },
         "required": [
           "action",
-          "masterSequencePath"
+          "name",
+          "sequencePath"
         ],
         "additionalProperties": false
       },
@@ -216011,8 +217063,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "title": "Create a master cinematic sequence with sub-sequence and shot track structure.",
         "input": {
           "action": "create_master_sequence",
-          "masterSequencePath": "/Game/Cinematics/SEQ_Master",
-          "mapPath": "/Game/Maps/M_Cinematics"
+          "name": "SEQ_Master",
+          "sequencePath": "/Game/Cinematics/SEQ_Master"
         },
         "output": {
           "success": true,
@@ -216107,8 +217159,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "99b62e1665dad0b54724902baae95acbf136374cdeba9112612f90d6d7f85c24",
-      "content": "5adb8bb6a92c1d9cd7b8e368b833c769e3e8aa1f5e3aa4e2ecece04cc3c08005"
+      "schema": "78e8bd50f5f92c394286c1470c0cdf3f94a554785dcbeed996699709ac8bc3e5",
+      "content": "c2307f2c9a2da8d1ef3fc280b98f8eb5e1ac264fc5ca89db16a796a446be2491"
     }
   },
   {
@@ -216170,14 +217222,29 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
             "type": "string",
             "description": "Human-readable result message."
           },
-          "sequencePath": {
+          "assetPath": {
             "type": "string",
-            "description": "Canonical /Game sequence asset path."
+            "description": "Created sequence asset path (verification)."
+          },
+          "assetName": {
+            "type": "string",
+            "description": "Created sequence asset name (verification)."
+          },
+          "assetClass": {
+            "type": "string",
+            "description": "Created sequence asset class (verification)."
+          },
+          "verifiedPath": {
+            "type": "string",
+            "description": "Verified existing asset path."
+          },
+          "existsAfter": {
+            "type": "boolean",
+            "description": "Whether the asset existed after the call."
           }
         },
         "required": [
-          "success",
-          "sequencePath"
+          "success"
         ],
         "additionalProperties": false
       }
@@ -216192,7 +217259,9 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "sequencePath": "/Game/Cinematics/SEQ_Master"
+          "assetPath": "/Game/Cinematics/SEQ_Master",
+          "assetName": "SEQ_Master",
+          "existsAfter": true
         }
       }
     ],
@@ -216283,8 +217352,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "472e94cd3b2d940351f75ee39fabebc80fa79e54738ed528120f4dc46310e1d5",
-      "content": "c061e3103c2cd55bdb27c2fa8a615434752cf9a3ef3669175ee6643829eeffa1"
+      "schema": "5f6190893ba85cadfd8df3862df52bcb7919bfe900dacad686ba4827d729475f",
+      "content": "b3352bdb60cadb729651972c9c179fabf4cf4cd217d9f207eb6ce4742a75ba32"
     }
   },
   {
@@ -216698,16 +217767,17 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
               "description": "Binding info.",
               "additionalProperties": false,
               "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Binding GUID (object guid string)."
+                },
                 "name": {
                   "type": "string",
                   "description": "Actor name in the current level."
-                },
-                "guid": {
-                  "type": "string",
-                  "description": "Binding GUID."
                 }
               },
               "required": [
+                "id",
                 "name"
               ]
             },
@@ -216732,8 +217802,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           "success": true,
           "bindings": [
             {
-              "name": "Camera1",
-              "guid": "ABC-123"
+              "id": "ABC-123",
+              "name": "Camera1"
             }
           ]
         }
@@ -216826,8 +217896,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b03da4f60faee4f24f126e3a60b386ef5023c23c650295fbb351f129315997bd",
-      "content": "09a40fcfe9675c94827784c4d81b73ffb45a7b34c72ea37191734e6818c7bcbc"
+      "schema": "fc6fe5fd008826e2f56b537a833da3174a50d9343e59b2cfe6a367b124d47ebd",
+      "content": "3643ff64da19ac8516836830db5ca47e4f09ef5845a1c4e7c4e4c09fc74e3089"
     }
   },
   {
@@ -216885,16 +217955,24 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
             "type": "string",
             "description": "Human-readable result message."
           },
-          "metadata": {
-            "type": "object",
-            "description": "Arbitrary metadata key-value pairs.",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
+          "path": {
+            "type": "string",
+            "description": "Resolved sequence asset path."
+          },
+          "name": {
+            "type": "string",
+            "description": "Sequence asset name."
+          },
+          "class": {
+            "type": "string",
+            "description": "Sequence asset class name."
           }
         },
         "required": [
           "success",
-          "metadata"
+          "path",
+          "name",
+          "class"
         ],
         "additionalProperties": false
       }
@@ -216908,9 +217986,9 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "metadata": {
-            "author": "MCP"
-          }
+          "path": "/Game/Cinematics/SEQ_Master",
+          "name": "SEQ_Master",
+          "class": "LevelSequence"
         }
       }
     ],
@@ -217001,8 +218079,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b607b67fb458a8d029a8e67e4d510fe81dc4637d936698821ceafe5f3368e384",
-      "content": "718b89f0a18a653bb76cb735a3a334d4e791d97b0a99f5e188348b0b934a4eaf"
+      "schema": "fb35cf57c2357634ae0c862c1e3b39f6659bcd7475aaf7a2f88b3403b486f81c",
+      "content": "b32ca00f851b587befab480f89fd9d91266d0aab303225f811b419d84fb52d30"
     }
   },
   {
@@ -217600,10 +218678,56 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
           "tracks": {
             "type": "array",
             "items": {
-              "type": "string",
-              "description": "Track name."
+              "type": "object",
+              "description": "Track info.",
+              "additionalProperties": false,
+              "properties": {
+                "trackName": {
+                  "type": "string",
+                  "description": "Track name."
+                },
+                "trackType": {
+                  "type": "string",
+                  "description": "MovieScene track class name."
+                },
+                "displayName": {
+                  "type": "string",
+                  "description": "Track display name."
+                },
+                "isMasterTrack": {
+                  "type": "boolean",
+                  "description": "Whether the track belongs to the master (unbound) row."
+                },
+                "bindingName": {
+                  "type": "string",
+                  "description": "Bound actor name (binding tracks only)."
+                },
+                "bindingGuid": {
+                  "type": "string",
+                  "description": "Bound object guid string (binding tracks only)."
+                },
+                "sectionCount": {
+                  "type": "integer",
+                  "description": "Number of sections on the track."
+                }
+              },
+              "required": [
+                "trackName",
+                "trackType",
+                "displayName",
+                "isMasterTrack",
+                "sectionCount"
+              ]
             },
-            "description": "Track names."
+            "description": "Sequence tracks."
+          },
+          "trackCount": {
+            "type": "integer",
+            "description": "Total number of tracks reported."
+          },
+          "sequencePath": {
+            "type": "string",
+            "description": "Resolved sequence asset path."
           }
         },
         "required": [
@@ -217623,9 +218747,15 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         "output": {
           "success": true,
           "tracks": [
-            "Transform",
-            "CameraCut"
-          ]
+            {
+              "trackName": "CameraCut",
+              "trackType": "MovieSceneCameraCutTrack",
+              "displayName": "CameraCut",
+              "isMasterTrack": true,
+              "sectionCount": 1
+            }
+          ],
+          "trackCount": 1
         }
       }
     ],
@@ -217716,8 +218846,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "e2b0617b1083cf6635be6c07c7d1961de7704e18ff52bc2d96a5e5c6c7c3059a",
-      "content": "cf6719581ee8641612e31812c67a62551591184eed4ad09a5ab5938d4197b00f"
+      "schema": "c6c95cd1280b33c5b614168e93c18d04e975caa9ce1a19b4732437243ae2893b",
+      "content": "c6127f1b1e1ef161ee358e6e70b123a118ea37ed0282f5e5e3f778677e48288f"
     }
   },
   {
@@ -217760,6 +218890,18 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
             "type": "string",
             "description": "Canonical /Game sequence asset path."
           },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "mediaSourcePath": {
+            "type": "string",
+            "description": "Canonical /Game media source path."
+          },
+          "sourcePath": {
+            "type": "string",
+            "description": "Source file or asset path."
+          },
           "autoPlay": {
             "type": "boolean",
             "description": "Whether the media player plays automatically on open."
@@ -217796,14 +218938,65 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
             "type": "string",
             "description": "Human-readable result message."
           },
-          "mediaPlayerPath": {
+          "assetType": {
             "type": "string",
-            "description": "Canonical /Game media player path."
+            "description": "Created asset type (MediaPlayer)."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Created media player asset path."
+          },
+          "packageName": {
+            "type": "string",
+            "description": "Package name of the created asset."
+          },
+          "classPath": {
+            "type": "string",
+            "description": "Class path of the created asset."
+          },
+          "assetName": {
+            "type": "string",
+            "description": "Created asset name (verification)."
+          },
+          "assetClass": {
+            "type": "string",
+            "description": "Created asset class (verification)."
+          },
+          "created": {
+            "type": "boolean",
+            "description": "Whether the asset was created."
+          },
+          "saved": {
+            "type": "boolean",
+            "description": "Whether the asset was saved."
+          },
+          "existsAfter": {
+            "type": "boolean",
+            "description": "Whether the asset existed after the call."
+          },
+          "looping": {
+            "type": "boolean",
+            "description": "Whether the player loops."
+          },
+          "playOnOpen": {
+            "type": "boolean",
+            "description": "Whether the player starts on open."
+          },
+          "mediaSourcePath": {
+            "type": "string",
+            "description": "Resolved media source path (when a source was supplied)."
+          },
+          "openRequested": {
+            "type": "boolean",
+            "description": "Whether opening the source was requested (when a source was supplied)."
+          },
+          "openStatus": {
+            "type": "string",
+            "description": "Open status (pending) when a source was supplied."
           }
         },
         "required": [
-          "success",
-          "mediaPlayerPath"
+          "success"
         ],
         "additionalProperties": false
       }
@@ -217818,7 +219011,12 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "mediaPlayerPath": "/Game/Media/MP_Cinematics"
+          "assetType": "MediaPlayer",
+          "assetPath": "/Game/Media/MP_Cinematics",
+          "created": true,
+          "saved": true,
+          "looping": false,
+          "playOnOpen": true
         }
       }
     ],
@@ -217910,8 +219108,8 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "34900ea8bc7fc042f80d4891903bb7b282320f7fefebe0f5142befe5bbd06f81",
-      "content": "a7c3a20f3a30cd00603b78ba762a34bce9d29c8145714aa62f651d31f9b62c29"
+      "schema": "8e5bf10e88dde7964e794a061e4acdf126d56d63b331e7b2bc7e1dc1af9281da",
+      "content": "f06792ad311aa782110a7b6995b94c35fc55e627476fb040297a965eebe8e4a6"
     }
   },
   {
@@ -232712,6 +233910,14 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
           "message": {
             "type": "string",
             "description": "Human-readable result message."
+          },
+          "reportPath": {
+            "type": "string",
+            "description": "Absolute path to the generated .memreport file."
+          },
+          "reportDirectory": {
+            "type": "string",
+            "description": "Directory where memory reports are written."
           }
         },
         "required": [
@@ -232729,7 +233935,9 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Memory report generated"
+          "message": "Memory report generated",
+          "reportPath": "Saved/Profiling/MemReports/Pid1234_12.34.56.memreport",
+          "reportDirectory": "Saved/Profiling/MemReports"
         }
       }
     ],
@@ -232818,8 +234026,8 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "8017f473a8efa8892768d711470958c747251307b6f3e91991579794fbf24b56",
-      "content": "c9ec2c478a96ab463f7b33ece382c5b38d43fdc5a54bc35053117c2cc1dbdd7a"
+      "schema": "6f8287fc5b2e9e01609e17852f958fcebc1c9874ababa7f43081a86f655c7dcc",
+      "content": "78db8abec5725ce462848728abfb5a8babee6139e24ae6062c491b9b639a2321"
     }
   },
   {
@@ -242957,16 +244165,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "add_state",
     "domain": "animation physics",
-    "schemaHash": "dc09dcb68304b2ada6b8b49b88667cf18e41102f77bc99c3a28417bc9a8cdddd",
-    "contentHash": "af9d876d01cac9d622042724e9368148683be1d2b0a4b4b259b5d9e9a97d8e0f"
+    "schemaHash": "5fdb7c69e7bcb31f271eef7bc259d0c4ea8a63dafe245fc4b8414fbf7a8089e0",
+    "contentHash": "e7e49199c3d7e30f88124fa423110cd43c0b52844d23ed80f99fb7e59afb0cb1"
   },
   {
     "id": "animation_physics.add_state_machine",
     "parentTool": "animation_physics",
     "dispatchAction": "add_state_machine",
     "domain": "animation physics",
-    "schemaHash": "d541c51f629e6664e9e7c9312ea77e789963dec803c8dba1cfe6fdfcf535247e",
-    "contentHash": "d802f2d17d18829cbd3999147360a0e83bf88f71656c1fc7129bf43a8756ad8e"
+    "schemaHash": "41f40809a2fb8ca0a88e806cd75d3f6b8afb3a7887e91d04999170533a39f5fc",
+    "contentHash": "5e8ed92e93fdddfd8e5ccbb900abd013feaa3c01b88d7f54310165ee1fc81a5c"
   },
   {
     "id": "animation_physics.add_sync_marker",
@@ -243037,8 +244245,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "configure_socket",
     "domain": "animation physics",
-    "schemaHash": "f9c0381806ba2de703f6aab2674cd2925889a1f16bb7e6857f7f5f9a7b6a7034",
-    "contentHash": "8cd03ba6e21c71d1b88d2e11f69f594d307c580eed24d405309c18c711781cfc"
+    "schemaHash": "cc98d4f5ad9f3716493cedccafeeb3a06a484a93225771f23fdcdd26e8e2e4e4",
+    "contentHash": "1ac09a3eff9b6ecfb0846030e63364e1252e498a670241ee277e4ab532087afb"
   },
   {
     "id": "animation_physics.configure_vehicle",
@@ -243061,8 +244269,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "create_aim_offset",
     "domain": "animation physics",
-    "schemaHash": "8abf2f7a50512f327cccf7dd12d520f021650c6305b75874bbc6a4fcedc101c5",
-    "contentHash": "ed34d7238f310c83990e121c7e6e68defccde2d240b4cb36b908c322f27894e2"
+    "schemaHash": "9c361f63d735d90a87a1ed9072580353c2d8967cba92bae9fd399bb3f4ab174e",
+    "contentHash": "5249044341fce5884127ca00fe338bb71eabf73cd9ee5af3c9971dcceeae3909"
   },
   {
     "id": "animation_physics.create_anim_blueprint",
@@ -243109,24 +244317,24 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "create_blend_space",
     "domain": "animation physics",
-    "schemaHash": "8abf2f7a50512f327cccf7dd12d520f021650c6305b75874bbc6a4fcedc101c5",
-    "contentHash": "f034e900dc121e94a1675471aca88af6a72150eb1afb6173fbd4cad009adff78"
+    "schemaHash": "9c361f63d735d90a87a1ed9072580353c2d8967cba92bae9fd399bb3f4ab174e",
+    "contentHash": "1b074260a5e8db486ca37935cdc970b20ce0ffd99d3e0e84637f74b1453f2cb7"
   },
   {
     "id": "animation_physics.create_blend_space_1d",
     "parentTool": "animation_physics",
     "dispatchAction": "create_blend_space_1d",
     "domain": "animation physics",
-    "schemaHash": "8abf2f7a50512f327cccf7dd12d520f021650c6305b75874bbc6a4fcedc101c5",
-    "contentHash": "dfc4cdb2cba4cd5384f727b70d801ad55694ac3c256c968459ab237a0572fb52"
+    "schemaHash": "9c361f63d735d90a87a1ed9072580353c2d8967cba92bae9fd399bb3f4ab174e",
+    "contentHash": "65be75058cb46b56b77ac5d0c272eb42e1f3ce341aaec181cbcaea5f638f693c"
   },
   {
     "id": "animation_physics.create_blend_space_2d",
     "parentTool": "animation_physics",
     "dispatchAction": "create_blend_space_2d",
     "domain": "animation physics",
-    "schemaHash": "8abf2f7a50512f327cccf7dd12d520f021650c6305b75874bbc6a4fcedc101c5",
-    "contentHash": "efabfc1ac55d8887a927aec01165d4af39db324e118e573b31f5db4393d10b19"
+    "schemaHash": "9c361f63d735d90a87a1ed9072580353c2d8967cba92bae9fd399bb3f4ab174e",
+    "contentHash": "3ded25f19ecf3b5f14a327fb5caf23e7562633343d2c694718bd4e3fcb4b2196"
   },
   {
     "id": "animation_physics.create_blend_tree",
@@ -243181,8 +244389,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "create_physics_asset",
     "domain": "animation physics",
-    "schemaHash": "b7fabdc9bc75d6b8fa54a5be02317c62bfeb656a783ace152659cec820b248e7",
-    "contentHash": "6b0eb6a9f63fab1085a1cff8c3a9eb2b363c55173ff529f9637875a835f12e5d"
+    "schemaHash": "1d13f8e7d7fba01b4b4e1b64229a1159acc7e8175293f82cb7e77251ff859a94",
+    "contentHash": "e374b255930899ca427f99abe5a9504ce32530a2a7b156a53f0374e815dbf083"
   },
   {
     "id": "animation_physics.create_pose_library",
@@ -243213,16 +244421,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "create_socket",
     "domain": "animation physics",
-    "schemaHash": "f9c0381806ba2de703f6aab2674cd2925889a1f16bb7e6857f7f5f9a7b6a7034",
-    "contentHash": "47a4620be6f81efeafe9cf8c1dca967f4774ad3ed82e068ad19a23ec795f5d57"
+    "schemaHash": "e500d6659d53372d5885c4c45e6528fd2b746714acffc996d6a6fe8afcd6ce7a",
+    "contentHash": "aae5659dd285f5206e3d4d0f3c2b078b95c8e968c752f5851f737d56d01b6bf7"
   },
   {
     "id": "animation_physics.create_state_machine",
     "parentTool": "animation_physics",
     "dispatchAction": "create_state_machine",
     "domain": "animation physics",
-    "schemaHash": "e118d4ac29bd758fd59b8a5aee054efda8947d0bb19550205dc083412546d412",
-    "contentHash": "6f966f60f25ac68418c24fa869bfaa1a0da169c5b3f34be79456cf61c70662e3"
+    "schemaHash": "dd33d3c055963087732dc0f7c0d347670e31de73da12f58224e085b5047b5e95",
+    "contentHash": "75806535d1999b4451feacc756604ba15c3016276774c572bc148bdd1858886b"
   },
   {
     "id": "animation_physics.create_virtual_bone",
@@ -243253,8 +244461,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "get_skeleton_info",
     "domain": "animation physics",
-    "schemaHash": "9f7eb0e84dc28ad135e39ba4318e113078edbffb663ce654070eb9c8fc6b7ca0",
-    "contentHash": "237f4d99c14e6629c4a936674ad5bdcbbbf7920f03e5cdf1dd7a3de0b56b5edc"
+    "schemaHash": "6583a441073827641cea408ee99e39345f534b9676510ae9c13885af0b6197c8",
+    "contentHash": "c388c76b215bde8d7d72949ef36cd4fb090d2c5c12ef29bf157fb91c10c9e9a3"
   },
   {
     "id": "animation_physics.import_morph_targets",
@@ -243533,8 +244741,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "get_asset_graph",
     "domain": "asset",
-    "schemaHash": "27091e8d9b3bcc434e80580fd2847e681bf98e85c494b6b5861bb3c4001bcbeb",
-    "contentHash": "c6808cfd1adfe28d903f3949aa24ba57b1bd06448e7c7198bfdc72cb011c018a"
+    "schemaHash": "98a22596a176e0c29acf7cd4f5351f11b74081ab88089b65c57998bdafa1b01e",
+    "contentHash": "d340ef9957a9369610f0133bcbe982da25a50f4922d6a9b65205602fcb54401e"
   },
   {
     "id": "asset.bulk_delete",
@@ -243581,24 +244789,24 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "delete",
     "domain": "asset",
-    "schemaHash": "0c711c40fbefd27ff5f3bb95a617eb18eaf7d8aef4912354b290aca4860321e9",
-    "contentHash": "c4d96206898d3849bd239f02dea9c120ea5d792043ae803fd7975003199c6a8d"
+    "schemaHash": "daff894a48037c8719e163131d850cd2e46bdc9a6369dbe4422873a222a4fffc",
+    "contentHash": "5d577f55be88ef398bdf94cc909294ecca5d4d961f3fcb36e05c64125de1cb6d"
   },
   {
     "id": "asset.delete_asset",
     "parentTool": "manage_asset",
     "dispatchAction": "delete_asset",
     "domain": "asset",
-    "schemaHash": "475aab8e125d7dec714ef5641bb5a5079f26d007bf8e87b9c7c3e8a2140716c4",
-    "contentHash": "62fd3f4854b2aa98a715586917c5dd344ed5a3b72385dd739297639f57c6c928"
+    "schemaHash": "8a36a165858b7a3d6721c4888b6604d9d4bedfd1f62f31b8cd0bff557ea6f90a",
+    "contentHash": "6513c7063ffd8f91d598f33f3623bb275f57e6f046f07d11de99a6cd14b7b13a"
   },
   {
     "id": "asset.delete_assets",
     "parentTool": "manage_asset",
     "dispatchAction": "delete_assets",
     "domain": "asset",
-    "schemaHash": "475aab8e125d7dec714ef5641bb5a5079f26d007bf8e87b9c7c3e8a2140716c4",
-    "contentHash": "90642e732fa0ffae4ee72b9c60142ea0fb20add690081eb977db0ed3c93678a0"
+    "schemaHash": "8a36a165858b7a3d6721c4888b6604d9d4bedfd1f62f31b8cd0bff557ea6f90a",
+    "contentHash": "3c5a6fedea63f7605a245de8012419da872f7680167259a874ccade1e2fab051"
   },
   {
     "id": "asset.duplicate",
@@ -243661,8 +244869,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "get_asset_graph",
     "domain": "asset",
-    "schemaHash": "27091e8d9b3bcc434e80580fd2847e681bf98e85c494b6b5861bb3c4001bcbeb",
-    "contentHash": "21323a3d97f6295adab43be39ac5c367059e611de90ef5c9ad370ac216b81a9f"
+    "schemaHash": "de720679d0fd56d6021c6fbe054e2380a648846a37bd4fdac22598137ad6fef1",
+    "contentHash": "685ae685a36d57eb172412172276821a969a6991568767bb471435829271d43f"
   },
   {
     "id": "asset.get_dependencies",
@@ -243685,8 +244893,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "get_metadata",
     "domain": "asset",
-    "schemaHash": "556fb3d05526b844fde83744346e790c5540f760ac2d61c34e45a06b6b57d139",
-    "contentHash": "6662475e16f3b91ce263515618ac6b9628ebef6fa10978e82e95743c4a2de13e"
+    "schemaHash": "b77b357b40454b705aad5b944b8f9e5d97a0b3a63e0453efa94a071d76cbe12b",
+    "contentHash": "cf96725a020d38d76a864dd6569d2fddc82aed6959b5f8f39e0119f11dd684df"
   },
   {
     "id": "asset.get_source_control_state",
@@ -244245,8 +245453,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "create_hud_widget",
     "domain": "widget",
-    "schemaHash": "c9e83ba1bb2e6c437570e787cced94099ccd61ec30f08c494e52b5298aa9ac51",
-    "contentHash": "072be541386c282e04418c64887256bcda0e85b1aabd7244e578aa8304ad20ef"
+    "schemaHash": "68b2f981234a5acc54dfb3b6622ea5b4a3bc860e8607caedd11d25c99673d93a",
+    "contentHash": "cf7724453f952c5990662c6710abf88917a79105fbf1c565e00440fc9eecbc91"
   },
   {
     "id": "blueprint.create_inventory_ui",
@@ -244269,8 +245477,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "create_main_menu",
     "domain": "widget",
-    "schemaHash": "5c1ee103dd81d1233a13cfee0bfbd4e1c5bf99fd1b036976d487125d3e4b45c2",
-    "contentHash": "653527fff529cdc66d109b65232c5f0c68e8c4e6f62e8b39646a493bfb059f90"
+    "schemaHash": "929d2d5f163b5e63bc5a14e495237f4264dbb6f44f407e404d2ad1dd861e5410",
+    "contentHash": "e1de4dcfe762b5a420c7200ec149f91a7333ef402194af0ce7b5b8bed8afb578"
   },
   {
     "id": "blueprint.create_node",
@@ -244285,8 +245493,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "create_pause_menu",
     "domain": "widget",
-    "schemaHash": "c9e83ba1bb2e6c437570e787cced94099ccd61ec30f08c494e52b5298aa9ac51",
-    "contentHash": "93c8ec1a91c401c1889e5630ce21f3fb9666f5dc747f2e9cc60e191c3826692e"
+    "schemaHash": "3b87fc44c81f926d1e292b0f7e43aa44f86fcabdf042738189c8887af03e8856",
+    "contentHash": "102462c996bc18cd673c6a409b194bd61927c69bf562b0363e57ab30027f7193"
   },
   {
     "id": "blueprint.create_property_binding",
@@ -244413,16 +245621,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "get_widget_info",
     "domain": "widget",
-    "schemaHash": "df5524247ed747b03a00b55981077a244571b6f3f5bb80342223e34cd2d08d1e",
-    "contentHash": "598905a9b83296cf350cf813a50df5b0ed571645e4db1fbfbf398e6ee5557e77"
+    "schemaHash": "8e8e036d6f5f0c4cf79b1f9b78cd8c41bccbcff6773cc05d0362c7cf5cd02f57",
+    "contentHash": "510e92917ae1c9a06d1bd8c55c468a0f5e8a1b37f8b3915d338bc4aafdd8aac9"
   },
   {
     "id": "blueprint.list_node_types",
     "parentTool": "manage_blueprint",
     "dispatchAction": "list_node_types",
     "domain": "blueprint",
-    "schemaHash": "e8c5e68291cf513dce998079f853eefb97c87fae8be658e8ff0f924a33272571",
-    "contentHash": "99c878ae0e4d4c5e3180cf94a99e63b1fc7c119d549f832e8a1da48ecc6685af"
+    "schemaHash": "6f165f71b51b6e1fb5ae785ad934115562c2c9095f176cab9875a0a9c18c3b99",
+    "contentHash": "8a7bbd7b176c061a4e42f314ed0715ef494e746b644c1304b76d7c0e24ec8243"
   },
   {
     "id": "blueprint.modify_scs",
@@ -244437,8 +245645,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "preview_widget",
     "domain": "widget",
-    "schemaHash": "3721fd8f8ba33c47ad01725815ea3674f40ee5ae9aeb057c259167b5758af79e",
-    "contentHash": "5ced23ca8228e27b6ddfa539cbc27039d4a42eba0a9be3e9c419ce90135896b9"
+    "schemaHash": "2ac1170f26a46d0b3988cf07f026af1f1ddc6be02f457d6e0127fd9387dc36d2",
+    "contentHash": "dc890db3cb6ed90c5639d69af1376caa24e7c634449c8186ed1847f0daa433e2"
   },
   {
     "id": "blueprint.probe_handle",
@@ -245501,8 +246709,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "build_environment",
     "dispatchAction": "list_light_types",
     "domain": "environment",
-    "schemaHash": "a158c3e431305d7676e9d5b8cd0cd10799dd98fe8060c02a5800108930193559",
-    "contentHash": "1da894e294d66a258e2fd5afe3f1317673c1467cdb2ed64a12be9340aba1aadc"
+    "schemaHash": "7d85faf11a8c6ee805f4b7a56b1d00d09557b00dcc8dade046908dc958cb74aa",
+    "contentHash": "57f3f3f18771c819d4184548e4bbf042db774f5b4f02fedf4a7b8ed6c695392e"
   },
   {
     "id": "build_environment.modify_heightmap",
@@ -245821,8 +247029,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "build_environment",
     "dispatchAction": "setup_global_illumination",
     "domain": "environment",
-    "schemaHash": "0955231ba8b063e0a3350ef8a8b9fe3db21519a677087acd58f3f73f3bc1ec50",
-    "contentHash": "e5d4702a36e235a1751da7f5e969b62ba247fb02c796e4aaa40c0867dd3b5e72"
+    "schemaHash": "63ba9c1e0a2b1fcd92d8615526724d80ad9c58b451490a26dfb38c10de3b98dc",
+    "contentHash": "73bdaecc9f5249ad49b3163041e10dca25c0bca01be1fdfbf5e753ef3d516b8c"
   },
   {
     "id": "build_environment.setup_volumetric_fog",
@@ -246013,8 +247221,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "get_actor_bounds",
     "domain": "actor",
-    "schemaHash": "86dd5db0cfc8a67e9f6200a92162e385ea7dfeaf93bb2b41ceea152cfcdb72fe",
-    "contentHash": "ec0ac494eb003b41ba333e77aa04c7be55a710bab3d727ae6444897412e177c3"
+    "schemaHash": "6e556f967a2687a75c19a6cb99c1e1eee93a5cbe60a138967b2f4c4ffa1f8a39",
+    "contentHash": "1629918252c80a8f925ea4beab0c009af0108f330c57067ad9ed17450867edfa"
   },
   {
     "id": "control_actor.get_actor_components",
@@ -246205,8 +247413,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "spawn_blueprint",
     "domain": "actor",
-    "schemaHash": "ebe84de2dc97bbb69a9f605a002224dd247128fe481fae9429d4bd9dc20c87e0",
-    "contentHash": "557fa7346c5cd427d233dac516f1112a86c9eaa03d80daebde781b4983ff6e3c"
+    "schemaHash": "f8b6f880bb7e70ee84d88a1d8ef6df1bea9795b9ca0b61fc83838c0bf8da7e37",
+    "contentHash": "10d6769e55a55acdc26462022473aebd5da47f3ae952d72c6a9a693197ccc379"
   },
   {
     "id": "control_actor.teleport_actor",
@@ -246653,16 +247861,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "add_enum_value",
     "domain": "enum",
-    "schemaHash": "ac92a1f62dfedf01efa0968adef6a7f2b3fa520d93d49ca1123bc2f089973e9d",
-    "contentHash": "919a323df94219a65c8c72154a0fcacf66c258162bdf009e30a54a9685cfec04"
+    "schemaHash": "d38a35ff87dcd5736250a0acebf538df2f7f1de3fc818f53cc59911be27ee059",
+    "contentHash": "1c31ec0bbe3308cbac3a34e83090997921e66b75df1a266d8f8267f8da68c019"
   },
   {
     "id": "enum.create_enum",
     "parentTool": "manage_asset",
     "dispatchAction": "create_enum",
     "domain": "enum",
-    "schemaHash": "2cca4b7bfc11423a49d275e72c9f81e6fd1dc85b03cdc133effee90aac238f1a",
-    "contentHash": "0f98a8d06f2690c70f2b619b77b2703dbd9a0713c9c5f2507e2d9ff49424cd13"
+    "schemaHash": "3bdeb421df096652cd39a07d6a1ddcb2ee275e6f8a4377ae5ddd5f6b183a028a",
+    "contentHash": "be66f0f508b2b3ca8c55aca33235ce643b74cde87dbbcaf881b68a61eac87833"
   },
   {
     "id": "enum.delete_enum",
@@ -246685,40 +247893,40 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "remove_enum_value",
     "domain": "enum",
-    "schemaHash": "ac92a1f62dfedf01efa0968adef6a7f2b3fa520d93d49ca1123bc2f089973e9d",
-    "contentHash": "dcae3116afb2ef16d526405fcb3f52feb938e1193510c0534a8be16dc1111c03"
+    "schemaHash": "d38a35ff87dcd5736250a0acebf538df2f7f1de3fc818f53cc59911be27ee059",
+    "contentHash": "af311baf376b66ac0b22213a5f4a346e41fc8ec85fb8141bbc5f5b3427cbb5ff"
   },
   {
     "id": "enum.rename_enum_value",
     "parentTool": "manage_asset",
     "dispatchAction": "rename_enum_value",
     "domain": "enum",
-    "schemaHash": "2b2580260ba70bdd2a59dfe3cf5fa71b79ae5e50612346e4655d721e4883aed0",
-    "contentHash": "31f1ea8055c6230cee752437ac833d244ec10423a8af8e48b4370d589ffdcba5"
+    "schemaHash": "b09d9c6d472e5e165233b9b0e4f0181a55da50854e50e285198ec26394192920",
+    "contentHash": "613797a5a6a5c12ccdfe078a8e6f6bf1e19663b253d2fee2cecade4d4a430f8e"
   },
   {
     "id": "enum.reorder_enum_values",
     "parentTool": "manage_asset",
     "dispatchAction": "reorder_enum_values",
     "domain": "enum",
-    "schemaHash": "0dcd3e828dc4cb03db621ae2758d69d32ae2c40c59e1d9336d027cf36cded1b4",
-    "contentHash": "fab95c89d55e7a52f1e7b1b9548aa563fc2aeed96bd5fe051b38c75f7bc77ecc"
+    "schemaHash": "17c9bca3ed640beca59135f7e2e1084589745214ff25c0b10077c7a84c958093",
+    "contentHash": "45f76e18402a35615d862779604dbf383c35d087a7613f9c647d4fa39fac096f"
   },
   {
     "id": "enum.set_enum_value_metadata",
     "parentTool": "manage_asset",
     "dispatchAction": "set_enum_value_metadata",
     "domain": "enum",
-    "schemaHash": "b7c5109935702925176b5de856fc171c00db8cac06ef6a95411d38a340efa1d2",
-    "contentHash": "6c59f36b3ca0c303123bb922e50eee932780f2e3db03d04b1a1517f1b0be3614"
+    "schemaHash": "89440c1caddf15edb6310063a10eb6413c1072ab08364980480dee9fd6bdb331",
+    "contentHash": "af5d6b16be01a964acadf5cdad63761d6d884b45bad2057d5e91b030b342a044"
   },
   {
     "id": "enum.split_enum",
     "parentTool": "manage_asset",
     "dispatchAction": "split_enum",
     "domain": "enum",
-    "schemaHash": "c3755f9c9fcfd4e1892c33144380f36fcf92ee4cc918d093b3605c3f5f1aae3f",
-    "contentHash": "c2eaa5507896b2240cf631bd3764b3b3829df4e7b25027f9b50e63a12196ca51"
+    "schemaHash": "1adc6178e1c9192851095174d141f7b7a51670cd2f9aed6f1642c926fb7b3d08",
+    "contentHash": "b8320f05aeb27db10ab71050a481215e63404b96dc194a639cf3cdfd6a4c7bb8"
   },
   {
     "id": "inspect.add_tag",
@@ -246869,16 +248077,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "get_performance_stats",
     "domain": "inspect",
-    "schemaHash": "f963fd0f5612fee0c0d0c87362f174c33eec81037b30fc057d2d8514c5a70bc9",
-    "contentHash": "3b3faf5a3a77cc8a8aaa1aca5398444ec2e1e20a6aa2a27591b62c5c312e6b46"
+    "schemaHash": "f41320f1d627cacc92a18af9ea8af953ca0c7b49ad8ce4405a131a0239c17cfd",
+    "contentHash": "75a838ffdd647bc869a606c59d3c9b0e2bef187232168a38948ed7516dd309a4"
   },
   {
     "id": "inspect.get_project_settings",
     "parentTool": "inspect",
     "dispatchAction": "get_project_settings",
     "domain": "inspect",
-    "schemaHash": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-    "contentHash": "76201c78c998f8fdf8449922558fbaf18eda331233db7c1cac981f91cdcf0db8"
+    "schemaHash": "a886474042568d78fd8551100bd63b96983a893a6ee8e1cf16e37374165d70f8",
+    "contentHash": "12c1dd6f413ec225969d72f6fa663d25bf3d04a9b727e4ad032499e51e50a344"
   },
   {
     "id": "inspect.get_property",
@@ -246917,24 +248125,24 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "get_viewport_info",
     "domain": "inspect",
-    "schemaHash": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-    "contentHash": "c2441fe62f221501e1fb3378435dd4c6d5505d4f6705f2bbe26eff8056b59d43"
+    "schemaHash": "dad5295fd14c0b03f20a2125b392f2ac0b20f7ed810d2695540a4300bf10e494",
+    "contentHash": "ed3d87ca38de921942ba0ed93a81dc868ba109e817d8417c8d4e518ee474e70f"
   },
   {
     "id": "inspect.get_world_settings",
     "parentTool": "inspect",
     "dispatchAction": "get_world_settings",
     "domain": "inspect",
-    "schemaHash": "53941b0b1d3ac147f8617660c723b49948f9573915f5b7ea899a56421187d565",
-    "contentHash": "2fd964aac69ce25aa02059b4c99b6295c987531370ddbd8fb585d494104d1fd0"
+    "schemaHash": "aacc7c4c0da6480fc82cc5f939da512b499523937febfcf2e7d2cbeff5c82762",
+    "contentHash": "f362ca1c169688c6e5c800803326054e1d923f1585c8fd0c959eb61e4ac9ed9a"
   },
   {
     "id": "inspect.inspect_cdo",
     "parentTool": "inspect",
     "dispatchAction": "inspect_cdo",
     "domain": "inspect",
-    "schemaHash": "2a2ca34668cac4d0c212e2d011f836b1deb90eb71e139c4c83ec12b8544f019d",
-    "contentHash": "a79e933c4dc7a43c75fee47c79108cd3cdb2fb7698f6da611e4da5a56c30904f"
+    "schemaHash": "b0b84e32007caa477f2c53d94b64e626730d839684b7813852db825dbae5a493",
+    "contentHash": "07a52c763c539c858100414fedd253a205d48bbd730bcb172210be95a89a2843"
   },
   {
     "id": "inspect.inspect_class",
@@ -246973,8 +248181,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "pie_report",
     "domain": "inspect",
-    "schemaHash": "7fba20d3628c83090bdde1d44856653e40dd6f34e36fc72a31c31734aeff7dd8",
-    "contentHash": "810d2926006047e5560a69dc3644bc397b9dc6410e3b9ea8dfb3dc8084255e5c"
+    "schemaHash": "83d991fb397baec3a4f696c0a9dd3c8fb2e5dd15d02de0e9c3931345af5d1da1",
+    "contentHash": "d2ba4f1d9eaf2ad62096ca440bad9b61614fdc8a7b49d9b9aed2f748130ca14c"
   },
   {
     "id": "inspect.restore_snapshot",
@@ -246989,8 +248197,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "runtime_report",
     "domain": "inspect",
-    "schemaHash": "7fba20d3628c83090bdde1d44856653e40dd6f34e36fc72a31c31734aeff7dd8",
-    "contentHash": "5499077522a4c628ac43d3dd1b8192248da4ae75d147ce3336e796a25558e6ef"
+    "schemaHash": "83d991fb397baec3a4f696c0a9dd3c8fb2e5dd15d02de0e9c3931345af5d1da1",
+    "contentHash": "98c511aea0fcf6feb8b8df9c7ef0332f7a4d81f387ca0e6a6966e4db49f3f613"
   },
   {
     "id": "inspect.set_component_property",
@@ -247029,8 +248237,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_ai",
     "dispatchAction": "add_composite_node",
     "domain": "manage ai",
-    "schemaHash": "85f7d98f7c868fb0f714182944c7650c79044a1b25d0772363f63fc1080cba4c",
-    "contentHash": "36fde762ce861061d479ae6f24ed9274ad406f0c516184da5aad182ab75d89a4"
+    "schemaHash": "55a65cce9bde3a163f91890062075cc64baa939f7a61091f78546cc1280d2341",
+    "contentHash": "72968fdeb46811862eb7cd1b2f23df247f81bab5a962577e3b8e137ef98b65a1"
   },
   {
     "id": "manage_ai.add_decorator",
@@ -247293,24 +248501,24 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_ai",
     "dispatchAction": "create_behavior_tree",
     "domain": "manage ai",
-    "schemaHash": "10855d3c931e8647b9215876b56a4369f142d6d0ee8bb67f4c4b8d5d0cd4240e",
-    "contentHash": "74dc5c84f08cac32b2e7e9eed7d64f6c84c7e08f6a94d87bfe8d2088031e200e"
+    "schemaHash": "3cc118acb8f5cb43d85d4fc12cb299c3df214ba68f86b1b4823efc1d85382017",
+    "contentHash": "59ca55f231224d709b21af0c5f66de02a9043745031522cc1a08aa29a87c5710"
   },
   {
     "id": "manage_ai.create_blackboard",
     "parentTool": "manage_ai",
     "dispatchAction": "create_blackboard",
     "domain": "manage ai",
-    "schemaHash": "82ab72d9b47d73ae4fcf02b29df7f59bbda1d2ee90c14c86871d64a46cd32e49",
-    "contentHash": "9f17a63801dae7fd80a2927f99eb8211b55dabbaa13fa2b54d506f91833684c1"
+    "schemaHash": "e4b324ec6e095de41ea01827fdb02a0ae7b10bbf49af4f06341e7fca3149ac23",
+    "contentHash": "f18a53f7a08d5167b7e4cecc74fc7ef2b554c5b5e5ac188d98239b23511ecc6a"
   },
   {
     "id": "manage_ai.create_blackboard_asset",
     "parentTool": "manage_ai",
     "dispatchAction": "create_blackboard_asset",
     "domain": "manage ai",
-    "schemaHash": "10855d3c931e8647b9215876b56a4369f142d6d0ee8bb67f4c4b8d5d0cd4240e",
-    "contentHash": "342db81a74b73c08b936aea69f2eae4479c7513eb40b8503bba6b7f16e16cf2d"
+    "schemaHash": "82ab72d9b47d73ae4fcf02b29df7f59bbda1d2ee90c14c86871d64a46cd32e49",
+    "contentHash": "2a51b269b2db7e2ef061736eb5158c0096a7ec4ab0f42d057c21958620de040c"
   },
   {
     "id": "manage_ai.create_eqs_query",
@@ -247373,8 +248581,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_ai",
     "dispatchAction": "get_ai_info",
     "domain": "manage ai",
-    "schemaHash": "9efe6c5b91db0417dcc94a756a33df24ea57e2e4afe414b37bf7ec032f4fddb9",
-    "contentHash": "ae1961745bc72bbfd56fc4ac5261194e255afb15c1690268b62f75e22a0dbfb4"
+    "schemaHash": "91352502407848a3c7d0b960ddaf5608abde4f5a5784e23401d8c2d830c14780",
+    "contentHash": "ab2ce5006b51907183c4947dccd6c39071f83ec30e533c3bd93cce4fc6197bef"
   },
   {
     "id": "manage_ai.get_blackboard_value",
@@ -247389,8 +248597,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_ai",
     "dispatchAction": "get_navigation_info",
     "domain": "manage ai",
-    "schemaHash": "fa179db3b415c43b2d9e83b740afe423cc9933282b5ce4f173652b4afcc54629",
-    "contentHash": "416748bfaf8dbd8d912443510543e393f2b7645d5d4369c19073a9589c6846d1"
+    "schemaHash": "8733bfd07a3338b1b54d2a3b22eab32babc7464c024ad97a320a9062647599c8",
+    "contentHash": "870a215e7566d1ed993b493434ef718b35d6b0e764ce5cb172cb58fa85fc2f44"
   },
   {
     "id": "manage_ai.get_tree",
@@ -247629,8 +248837,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "6b73c5b6f8fe72db62bf31308badc434ab795f8a679e88639b751e8cf70282f0",
-    "contentHash": "081d4304629be1cb6789bc2d8e14222dc0f075c471c5ad567542d2b9e49c2818"
+    "schemaHash": "9f4bcfb572ba23cf7ecfc22a432e57c9b4a0d4f340cc2345619634743c732d98",
+    "contentHash": "aa25d47ca4af5ce6aa2bf82d26b808bc943b0129a625ec1779afafa6c354e7c0"
   },
   {
     "id": "manage_audio.create_audio_component",
@@ -247645,80 +248853,80 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "6b73c5b6f8fe72db62bf31308badc434ab795f8a679e88639b751e8cf70282f0",
-    "contentHash": "7f21055ff139aff267bb814a3430819726544bcee8c0c91bb003b72a421c92c0"
+    "schemaHash": "9f4bcfb572ba23cf7ecfc22a432e57c9b4a0d4f340cc2345619634743c732d98",
+    "contentHash": "e8d04675fc27f29526d7b959292101dbbf411aa80a53a7d12005411cdd62f46d"
   },
   {
     "id": "manage_audio.create_dialogue_wave",
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "0d2bc96b43c730ef70aa0ce4886961853bb881dedd057e67ea88625b64770773",
-    "contentHash": "b9b97bcd029428444c29ac05089617d4151ee6a3f2d2077a5697c3a2f526f9aa"
+    "schemaHash": "17316bcb6d5fdeff84681c5fdd10cc99e0afe05bd6f243564a399b6c0ff55f92",
+    "contentHash": "aa56ae3f58079c0bf559fbcd5e8a3194a9a9a9ca5e4561980cca40eba95ee902"
   },
   {
     "id": "manage_audio.create_metasound",
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "6b73c5b6f8fe72db62bf31308badc434ab795f8a679e88639b751e8cf70282f0",
-    "contentHash": "3a1245ea43596f62a61c52e8a91bf313a1a6b6292336febe3a814e808aec70e0"
+    "schemaHash": "9f4bcfb572ba23cf7ecfc22a432e57c9b4a0d4f340cc2345619634743c732d98",
+    "contentHash": "75bae6c7601977ce36472edfccfe124d1573971021e717c448fc17de29bc35fe"
   },
   {
     "id": "manage_audio.create_reverb_effect",
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "17ccc3e694c6bdd220c61273fc46081f5e1bcddb3363e27408250e8c82599a1c",
-    "contentHash": "5ac9dd81c1482ae6b0cdb80acf9591fb14c6098a01d3152b1f55e6815668098c"
+    "schemaHash": "775859e53c46470908302e010ff93ba2bbcf51921bf4476c9f2f6ab0d1d62180",
+    "contentHash": "6b851cf216559ddf4424abbb9a6117ea24428bdd441a3055a6f3fc1156484590"
   },
   {
     "id": "manage_audio.create_reverb_zone",
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "0389784cdc3f617872e8bbd83b8e4f2867db351efbedf3f6ce828db37db8b955",
-    "contentHash": "542ad32cba3dc97bef142da610140be84bc3906e4e9e30c88ff4fce01698fd27"
+    "schemaHash": "4366d7a345d85a2fed6cfbf6a21ce8b8959ba29be6df10e40707da71bdd2dd93",
+    "contentHash": "b9853f237394a4d0b20dfd2c8a705bff137d0159575e077a8c0e81b117caad7b"
   },
   {
     "id": "manage_audio.create_sound_class",
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "0c4554588b5295a334eba6a483094c832f9ade2b42e9b3c6ebc99615f57b5659",
-    "contentHash": "05b5f718585064266272e3ba636ee34899d09cc8edb497fd68a50f82bbc7046c"
+    "schemaHash": "dfee47a66eebe3448fa7ae61e2f6312637076fc2fc4725a803d57c08d49107e5",
+    "contentHash": "16e45c7cd8e0c1696f89d42930bcabc9a7b6fa961b5043b5d5037d64a8dacdc2"
   },
   {
     "id": "manage_audio.create_sound_cue",
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "db5812c209effc004a81e1bf97836067ed1fb6a0ea285547eda0a7e64c4632b1",
-    "contentHash": "7a59d95fe1b5d7c3a8dee803fdb730b2329343309e68c6ef8aa65e50b003b599"
+    "schemaHash": "4a75fe3d402e47405e66960eab3b0e395a7abb2e54e40ec6be14afd2014dbb4c",
+    "contentHash": "0b419fea5101aef36165010901ea012d6072f9b3771a56da034781c39898225b"
   },
   {
     "id": "manage_audio.create_sound_mix",
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "17ccc3e694c6bdd220c61273fc46081f5e1bcddb3363e27408250e8c82599a1c",
-    "contentHash": "057f13f54f99501f42ad1d6f4f2b39a96e0c62b2b2af50cbae5627aa3e2582d5"
+    "schemaHash": "775859e53c46470908302e010ff93ba2bbcf51921bf4476c9f2f6ab0d1d62180",
+    "contentHash": "568964b70a067fd09b7e005a3f7b92b6beb7797eaa3352a2d8efcaf51214cf0a"
   },
   {
     "id": "manage_audio.create_source_effect_chain",
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "6b73c5b6f8fe72db62bf31308badc434ab795f8a679e88639b751e8cf70282f0",
-    "contentHash": "cc345b2411d48811400896e26aa7f9a40aa5a9a10abc3ac19f9fc95af6b59137"
+    "schemaHash": "9f4bcfb572ba23cf7ecfc22a432e57c9b4a0d4f340cc2345619634743c732d98",
+    "contentHash": "9b8fe793b8b19c9271e980f218c91e62250db1d22556b888065bc866fc5f846a"
   },
   {
     "id": "manage_audio.create_submix_effect",
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "69b095f21685dc360d75456a7176f08dd3f4cc53304ae00434b5ead8bd854380",
-    "contentHash": "7750b75cb1bc502cbdb963d4e9c97cc880a44614237a2a7e3474de834dc7a18f"
+    "schemaHash": "34e659ce1108e1a62abcbece10ff63f7584c4df359c4319c51716ac7505d8211",
+    "contentHash": "5039824aac3e24ce86ec46e320bdc3ad73749e307be3fe9de1a3161b2c3a49e2"
   },
   {
     "id": "manage_audio.enable_audio_analysis",
@@ -247885,8 +249093,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "8eff04f1d90e93a12ec9aa77c61968df3714c612461d59dc75256c7c7a50a641",
-    "contentHash": "a8de1bacb47cc5c00f5f8f838d339f01ada9ede21191d04ac71d3500845fd415"
+    "schemaHash": "661c7b0a497187c78f340b876bedebf50f6ed58805c2ea2923d7be67a271ce74",
+    "contentHash": "99ea8db7dfc67e3f927fdf8020bd279d0143b90ae1b92ddd569ea162d46e2a05"
   },
   {
     "id": "manage_audio.set_sound_mix_class_override",
@@ -248005,8 +249213,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_character",
     "dispatchAction": "get_character_info",
     "domain": "manage character",
-    "schemaHash": "6f593c37f5fa37faf5b0fefad76d13f64bd58a1644bd95509034d5e826d372ed",
-    "contentHash": "9c757182aae9bec8309b260cccd988655a6f49d3ff35d9a5566b14b082628259"
+    "schemaHash": "c04ccb3938c422ff3ebee3a3d9a3a2624a9ab93e4da32bae72496860589eafce",
+    "contentHash": "c151b33d72d0a05ab62bde74b79334e716e7c3f70bf051bbe90e6bba3393bdcb"
   },
   {
     "id": "manage_character.map_surface_to_sound",
@@ -248829,8 +250037,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_effect",
     "dispatchAction": "niagara",
     "domain": "manage effect",
-    "schemaHash": "995eda848eac7e8875f4ed37f62177bc169118128c3858ac9961d9c9c07c1d3e",
-    "contentHash": "a324975d787559bd5a804660ec1938f41efba80b0f6f6e69d4de06fecad3c4a6"
+    "schemaHash": "6bf5b5a44b7aeea7925f61c05f9d1c681814ef32151d4ce41a8ebe7303aa58a2",
+    "contentHash": "9d7c6089fb7398e975ce81f520e91496c7201b44cf9c5104fa9091251dc18f6d"
   },
   {
     "id": "manage_effect.particle",
@@ -249013,8 +250221,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_gas",
     "dispatchAction": "get_gas_info",
     "domain": "manage gas",
-    "schemaHash": "d9a7df0101fa6a178fb88a4d45641f3d01daf4c498957b025750ec2b839dade1",
-    "contentHash": "5840737a9a99d1a7ba45e763a19bad83da134cdbd4100aa307cede0df6912560"
+    "schemaHash": "1bc888e8e369ab850d5c2c695dac8b99891fca38b947ac4b47018e86d94620f0",
+    "contentHash": "a238dfd8400c8831c424e31d4a9bd2595721914fab93eb31c58f37e16acdb05d"
   },
   {
     "id": "manage_gas.set_ability_cooldown",
@@ -250261,8 +251469,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_level",
     "dispatchAction": "list_levels",
     "domain": "level",
-    "schemaHash": "058eeb44cb2fe4239c84a9f6db1c9af2d20a69c91d642d149776f8aad50a2c51",
-    "contentHash": "3e740b8da14b5bd88e52e9b56aeaf9f62625f5bf590b183e54f4ce96eff966cb"
+    "schemaHash": "ea8b61947eb93d2d5d440671cfd263d0611ae63ae1e7a55f6f0429894745d268",
+    "contentHash": "aed4421df00294b89d6cb22dd166ed5654ab18f79e684bd69f554f9c8d33dec6"
   },
   {
     "id": "manage_level.load",
@@ -250429,8 +251637,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_level_structure",
     "dispatchAction": "configure_grid_size",
     "domain": "world",
-    "schemaHash": "b8b7136fd8bb53cc021537ba1b09e4cf8e34a7e10b77d05ba3d4eab23a7b3aa3",
-    "contentHash": "dd336b00f7056a9b24cccd1e94b74c240dcbe89019e7138c77f358021c5b237f"
+    "schemaHash": "36163b0ac7bc14697af04052750df37963d466b4e8cb56f3d9297944456821f9",
+    "contentHash": "c9a2ac4153fcc0703eb6c60769b4ec2cf569c1c9f1365e72fc74ab686b4f9b6a"
   },
   {
     "id": "manage_level_structure.configure_hlod_layer",
@@ -250653,8 +251861,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_level_structure",
     "dispatchAction": "enable_world_partition",
     "domain": "world",
-    "schemaHash": "f900c4b7f93867b85aaec7dd49d0fa09f6f72e9a78cd39243fb4c4f6f545ece9",
-    "contentHash": "4bc5f3c7a400ea5269921020f23f9cd07ca4de9882ac9838626f22ce5f4fa2d2"
+    "schemaHash": "f0b3221df0358674f2caa5a2c7221e5aa9859a22e2575321c2712a8d63ff72b1",
+    "contentHash": "6c3e2302527a4b3fd8e715c92645646daf07c39fef2387f934d9706086ab6a78"
   },
   {
     "id": "manage_level_structure.get_level_structure_info",
@@ -250725,16 +251933,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_networking",
     "dispatchAction": "manage_input",
     "domain": "networking",
-    "schemaHash": "86186ec7f10dbf538d0a536da30d94e5e652f81241b84737c89a3423cbbdf61a",
-    "contentHash": "586329d4877aae5df662013be330cf0a881ba435b193c006fef209a336b547b3"
+    "schemaHash": "4e4262771f2067543636671296d69125b740ab13f2a7b5190b88ebef5e2b0722",
+    "contentHash": "ad341dfabe8ffc66826520945339690424bc9231b5e687ce5fae7ddf8588705c"
   },
   {
     "id": "manage_networking.add_legacy_axis_mapping",
     "parentTool": "manage_networking",
     "dispatchAction": "manage_input",
     "domain": "networking",
-    "schemaHash": "96f3f4b98fb28e67fd473e81caf445877f9c0e4da90e3f1563c8338d9521157e",
-    "contentHash": "86059a300927704af07daed722576820a027fc773144ad88d13ec30ba28ed887"
+    "schemaHash": "c5b0536dac5ca242009e94b59ceb16897fd4120c8bc82ef6ab02e5b5dde616f7",
+    "contentHash": "70f01f46f2b187490d700c02f45785121f32115162f0235ccaa78d69492b2f9c"
   },
   {
     "id": "manage_networking.add_local_player",
@@ -250749,8 +251957,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_networking",
     "dispatchAction": "manage_input",
     "domain": "networking",
-    "schemaHash": "27903ce3a9f3e09022059e8be6864e31f4fad0a8c45282c6af604d2680742184",
-    "contentHash": "35ce476b8bccd2a67b8003bc24aa169801c87db4da66c66d093d7f160402c866"
+    "schemaHash": "2ecb3ef112b94f76e083cef8506d382b2f1f7a0deed258113edf608aeb9ed084",
+    "contentHash": "ab3d1c2a2a9171d0e13fb5e0de8eb8115a62dfb2deea41f9fe58173917a03886"
   },
   {
     "id": "manage_networking.add_network_prediction_data",
@@ -250981,64 +252189,64 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_networking",
     "dispatchAction": "manage_game_framework",
     "domain": "networking",
-    "schemaHash": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-    "contentHash": "873f0178d8d303931c174675617a9bac7ecb33fc0361ac18042a2b6598997794"
+    "schemaHash": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+    "contentHash": "3bb396b75cb241166f38776ce721afabdbb0d35192d3f61e4b88d4eab88df77b"
   },
   {
     "id": "manage_networking.create_game_mode",
     "parentTool": "manage_networking",
     "dispatchAction": "manage_game_framework",
     "domain": "networking",
-    "schemaHash": "b938a5b4fe2399e646eb0bf7b6be6296502c56ec1cb8107402b59e2fd0b34452",
-    "contentHash": "068ce5981be0ace1da109ae7083f6634b41c0507570f3cf82735abe3943ed206"
+    "schemaHash": "8a72ac3461c479e56d5a70752b0bcd3c4adfc304f5c6c92a40896be0f09925e3",
+    "contentHash": "0cdfe71731b891a1e345ba4d6aef9e760b5e46a4cf0c2578fb2c65f5db8cf6b7"
   },
   {
     "id": "manage_networking.create_game_state",
     "parentTool": "manage_networking",
     "dispatchAction": "manage_game_framework",
     "domain": "networking",
-    "schemaHash": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-    "contentHash": "c8cafa57fa1f6d591bc98ab82812f8c57b44fc247242e2090db95f344dbb2f78"
+    "schemaHash": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+    "contentHash": "94e707e497bd5a1b9f2e241d9bd98a7a909d22d4908e01af202532398ed5b6b9"
   },
   {
     "id": "manage_networking.create_hud_class",
     "parentTool": "manage_networking",
     "dispatchAction": "manage_game_framework",
     "domain": "networking",
-    "schemaHash": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-    "contentHash": "5417c514c90533997bc5f6a1d81851e3a381e6ffc439fbbd59d5d2e91b292a6d"
+    "schemaHash": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+    "contentHash": "c0276431d42cb2977d613a20c54e3a04d589a1b0a4db143572e541faeb18803b"
   },
   {
     "id": "manage_networking.create_input_action",
     "parentTool": "manage_networking",
     "dispatchAction": "manage_input",
     "domain": "networking",
-    "schemaHash": "f2667afa3b366dc0bb5ad96f600cd0a3498aa9dc6400e95e02a3bdd0308df3b6",
-    "contentHash": "7bf47f63fafdd45f35bdb5ceac6fb6a9357ffcc882bc111abac6f8a3ff59e952"
+    "schemaHash": "281a9d677a28eaa31ce41203108001f783937fff8873d807c9877717b359a58f",
+    "contentHash": "ac09f35e469882388589149eb89916e1120382090f30f8f9f0607c381d77cb95"
   },
   {
     "id": "manage_networking.create_input_mapping_context",
     "parentTool": "manage_networking",
     "dispatchAction": "manage_input",
     "domain": "networking",
-    "schemaHash": "175f88807e43db77fc4136226b6ce2d82cb4594c1d14747b6a278f755e5227f5",
-    "contentHash": "87bfe95d1f80b01d192a2eb5fcf77454f7edc226fc23073669cba386eb7a6d5e"
+    "schemaHash": "be002972025e6fb5629bd071c7720212e4147b8c1eb5788fc782456ed895eef6",
+    "contentHash": "6786485148145dd5d640e514ee318cc9497b7ad1bbc2e4c125e13b07a7cdbb43"
   },
   {
     "id": "manage_networking.create_player_controller",
     "parentTool": "manage_networking",
     "dispatchAction": "manage_game_framework",
     "domain": "networking",
-    "schemaHash": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-    "contentHash": "f0966cb9bce0209c5df79cdaf72aff04e4db9729cd77d5be8c557af8d61b8131"
+    "schemaHash": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+    "contentHash": "3dddacdb11bc784d1c8a71b1ff5b97d9d3d31fa1c7393c6088641b6b0922dc1c"
   },
   {
     "id": "manage_networking.create_player_state",
     "parentTool": "manage_networking",
     "dispatchAction": "manage_game_framework",
     "domain": "networking",
-    "schemaHash": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-    "contentHash": "69e30d304fffd7fb3010e0110453b9b6792340903151a2763e401dab38ddd12c"
+    "schemaHash": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+    "contentHash": "9eace950fc1cc111025713ef622ed0ffdb2cd1507d9a4dae5d8606c924b954ca"
   },
   {
     "id": "manage_networking.create_rpc_function",
@@ -251125,8 +252333,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_networking",
     "dispatchAction": "manage_input",
     "domain": "networking",
-    "schemaHash": "ee17dc615718f28b93f1fefeb076710c300bf6511d7d6e36e1e686b502134e08",
-    "contentHash": "ea947761a79660eff5dc3d335d7883e79a04c7b287b1fedd43bca6b198745361"
+    "schemaHash": "d569b88d4430ac539fa64e7197f626c5505647ee1005d5f8c61ac0a6b52974a9",
+    "contentHash": "89da44f3c6aaec9ef369b95f77e8ddd8719c32689cb1a180a4d0eb20ad241ca9"
   },
   {
     "id": "manage_networking.mute_player",
@@ -251141,16 +252349,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_networking",
     "dispatchAction": "manage_input",
     "domain": "networking",
-    "schemaHash": "86186ec7f10dbf538d0a536da30d94e5e652f81241b84737c89a3423cbbdf61a",
-    "contentHash": "6073ceacf79d4e9d31479b462c211b0b7eff7c051015da3a572b3408d0dd72cd"
+    "schemaHash": "4e4262771f2067543636671296d69125b740ab13f2a7b5190b88ebef5e2b0722",
+    "contentHash": "b03e84aebe30571591f5c46fd9fd71d6af1f61a35fa45577249f1fec39e68b71"
   },
   {
     "id": "manage_networking.remove_legacy_axis_mapping",
     "parentTool": "manage_networking",
     "dispatchAction": "manage_input",
     "domain": "networking",
-    "schemaHash": "96f3f4b98fb28e67fd473e81caf445877f9c0e4da90e3f1563c8338d9521157e",
-    "contentHash": "e71b711e57a7ba3ea941772caf91dd0e0bffa441941521da682f05763902cb98"
+    "schemaHash": "c5b0536dac5ca242009e94b59ceb16897fd4120c8bc82ef6ab02e5b5dde616f7",
+    "contentHash": "0c210d1b3aa5d00e27e32275701a9c37e1c15351139742a91c3547571944c8bb"
   },
   {
     "id": "manage_networking.remove_local_player",
@@ -251165,8 +252373,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_networking",
     "dispatchAction": "manage_input",
     "domain": "networking",
-    "schemaHash": "46143f93e89ce560b09f78b58ba707c3529604f3fbe53f7d2ad36e29b133ee21",
-    "contentHash": "062718679c5a7ee7c57b4374962da2e5ccdfaa5dd286ac8c845e2234d82a2581"
+    "schemaHash": "fae3c7af75a38de61a6bb9625d6f60bd4bab7b3658e14780358bac88f7721e5d",
+    "contentHash": "a814d1a4b7705b4cfd0298a132b42b4479b05ba2b8f9f42df4431272c1bed6dc"
   },
   {
     "id": "manage_networking.set_always_relevant",
@@ -251205,8 +252413,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_networking",
     "dispatchAction": "manage_input",
     "domain": "networking",
-    "schemaHash": "71db9e338a8d8587cf656a27cbbc97ae82fb88fb86fec6a213d2b3e5538fc2a2",
-    "contentHash": "da8a98c83b155960c93e53b6180a62be9501a7bf2592b23ecca8215a3d298c4d"
+    "schemaHash": "601f3b4ec5093ffa10e8d35df6068d4d93051fad064bf9bde86ca29009dfd720",
+    "contentHash": "9b66a56c9e3d8b7f515dd7630636c1449cb21f75bfbc7282a30aebe0c9c77e8c"
   },
   {
     "id": "manage_networking.set_input_trigger",
@@ -251949,8 +253157,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "get_material_info",
     "domain": "material",
-    "schemaHash": "1d03c3f1ed21254b68fba8d79b6600488c565564b5276b14bbb34efe739efc01",
-    "contentHash": "330d54f4e01d7309d775e0e93a06e673790948334fd37d3d6a17d1543910e109"
+    "schemaHash": "30a7115c5dfc8c0042e595b02e365ec0182553e593255eea262f573d9d6ddf16",
+    "contentHash": "2d2715a77f2df6b0c75a59afac4c69cee274b8d71aca88e2c4750d5d9a7384da"
   },
   {
     "id": "material.get_material_node_details",
@@ -252149,8 +253357,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_sequence",
     "dispatchAction": "add_camera_cut_track",
     "domain": "cinematics",
-    "schemaHash": "204fcb4abefffedd14dd05a6994a0b2e5cb9366bbebd68ac53d637840bf0d8aa",
-    "contentHash": "d7c3ec2540c6d6ec1712e9740484396e3f6cd13c56292620ab04b406e0aca731"
+    "schemaHash": "b1bbdae8f7d71069726f28f8763a5b32fece05724efd0cdc6e07d6a8c5830fd6",
+    "contentHash": "17f9e4196e14ad18cb953d5382318f229f252101b3b6fc146386ada1b4c0d02d"
   },
   {
     "id": "sequence.cinematic.add_camera_shake_track",
@@ -252277,24 +253485,24 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_sequence",
     "dispatchAction": "create_cine_camera_actor",
     "domain": "cinematics",
-    "schemaHash": "521c9b90a45cb5a4ba20e197dccefd8f05002ca974d0c42c835bb08ca96d33a2",
-    "contentHash": "c1de90960ca8801357941416b6618a68bf055260968fbb0529c7f7c58a81a87b"
+    "schemaHash": "fe71da0f22e6ae5eaaaabd574a3b672b1d4d40ea94252a1ea67f0e040868ccb0",
+    "contentHash": "e4ff2f577eb180fd34ad1639aaac89b3fc878b9f53d86b378a556ce2f343c927"
   },
   {
     "id": "sequence.cinematic.create_master_sequence",
     "parentTool": "manage_sequence",
     "dispatchAction": "create_master_sequence",
     "domain": "cinematics",
-    "schemaHash": "99b62e1665dad0b54724902baae95acbf136374cdeba9112612f90d6d7f85c24",
-    "contentHash": "5adb8bb6a92c1d9cd7b8e368b833c769e3e8aa1f5e3aa4e2ecece04cc3c08005"
+    "schemaHash": "78e8bd50f5f92c394286c1470c0cdf3f94a554785dcbeed996699709ac8bc3e5",
+    "contentHash": "c2307f2c9a2da8d1ef3fc280b98f8eb5e1ac264fc5ca89db16a796a446be2491"
   },
   {
     "id": "sequence.create",
     "parentTool": "manage_sequence",
     "dispatchAction": "create",
     "domain": "sequence",
-    "schemaHash": "472e94cd3b2d940351f75ee39fabebc80fa79e54738ed528120f4dc46310e1d5",
-    "contentHash": "c061e3103c2cd55bdb27c2fa8a615434752cf9a3ef3669175ee6643829eeffa1"
+    "schemaHash": "5f6190893ba85cadfd8df3862df52bcb7919bfe900dacad686ba4827d729475f",
+    "contentHash": "b3352bdb60cadb729651972c9c179fabf4cf4cd217d9f207eb6ce4742a75ba32"
   },
   {
     "id": "sequence.delete",
@@ -252317,16 +253525,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_sequence",
     "dispatchAction": "get_bindings",
     "domain": "sequence",
-    "schemaHash": "b03da4f60faee4f24f126e3a60b386ef5023c23c650295fbb351f129315997bd",
-    "contentHash": "09a40fcfe9675c94827784c4d81b73ffb45a7b34c72ea37191734e6818c7bcbc"
+    "schemaHash": "fc6fe5fd008826e2f56b537a833da3174a50d9343e59b2cfe6a367b124d47ebd",
+    "contentHash": "3643ff64da19ac8516836830db5ca47e4f09ef5845a1c4e7c4e4c09fc74e3089"
   },
   {
     "id": "sequence.get_metadata",
     "parentTool": "manage_sequence",
     "dispatchAction": "get_metadata",
     "domain": "sequence",
-    "schemaHash": "b607b67fb458a8d029a8e67e4d510fe81dc4637d936698821ceafe5f3368e384",
-    "contentHash": "718b89f0a18a653bb76cb735a3a334d4e791d97b0a99f5e188348b0b934a4eaf"
+    "schemaHash": "fb35cf57c2357634ae0c862c1e3b39f6659bcd7475aaf7a2f88b3403b486f81c",
+    "contentHash": "b32ca00f851b587befab480f89fd9d91266d0aab303225f811b419d84fb52d30"
   },
   {
     "id": "sequence.get_properties",
@@ -252357,16 +253565,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_sequence",
     "dispatchAction": "list_tracks",
     "domain": "sequence",
-    "schemaHash": "e2b0617b1083cf6635be6c07c7d1961de7704e18ff52bc2d96a5e5c6c7c3059a",
-    "contentHash": "cf6719581ee8641612e31812c67a62551591184eed4ad09a5ab5938d4197b00f"
+    "schemaHash": "c6c95cd1280b33c5b614168e93c18d04e975caa9ce1a19b4732437243ae2893b",
+    "contentHash": "c6127f1b1e1ef161ee358e6e70b123a118ea37ed0282f5e5e3f778677e48288f"
   },
   {
     "id": "sequence.media.create_media_player",
     "parentTool": "manage_sequence",
     "dispatchAction": "create_media_player",
     "domain": "media",
-    "schemaHash": "34900ea8bc7fc042f80d4891903bb7b282320f7fefebe0f5142befe5bbd06f81",
-    "contentHash": "a7c3a20f3a30cd00603b78ba762a34bce9d29c8145714aa62f651d31f9b62c29"
+    "schemaHash": "8e5bf10e88dde7964e794a061e4acdf126d56d63b331e7b2bc7e1dc1af9281da",
+    "contentHash": "f06792ad311aa782110a7b6995b94c35fc55e627476fb040297a965eebe8e4a6"
   },
   {
     "id": "sequence.media.create_media_playlist",
@@ -253037,8 +254245,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "system_control",
     "dispatchAction": "generate_memory_report",
     "domain": "performance",
-    "schemaHash": "8017f473a8efa8892768d711470958c747251307b6f3e91991579794fbf24b56",
-    "contentHash": "c9ec2c478a96ab463f7b33ece382c5b38d43fdc5a54bc35053117c2cc1dbdd7a"
+    "schemaHash": "6f8287fc5b2e9e01609e17852f958fcebc1c9874ababa7f43081a86f655c7dcc",
+    "contentHash": "78db8abec5725ce462848728abfb5a8babee6139e24ae6062c491b9b639a2321"
   },
   {
     "id": "system_control.get_project_settings",
@@ -254526,14 +255734,14 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "analyze_graph",
     "asset",
     "asset.analyze_graph",
-    "from",
+    "blueprint",
     "get_asset_graph",
     "graph",
+    "inside",
     "lifecycle",
     "manage_asset",
-    "path",
-    "reference",
-    "starting",
+    "material",
+    "node",
     "the"
   ],
   "asset.bulk_delete": [
@@ -276843,12 +278051,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c2113131d3d01b6a59314fd24d591854c6e1eb673398c0505c90716b3cd1df42"
   },
   "animation_physics.add_state": {
-    "schema": "dc09dcb68304b2ada6b8b49b88667cf18e41102f77bc99c3a28417bc9a8cdddd",
-    "content": "af9d876d01cac9d622042724e9368148683be1d2b0a4b4b259b5d9e9a97d8e0f"
+    "schema": "5fdb7c69e7bcb31f271eef7bc259d0c4ea8a63dafe245fc4b8414fbf7a8089e0",
+    "content": "e7e49199c3d7e30f88124fa423110cd43c0b52844d23ed80f99fb7e59afb0cb1"
   },
   "animation_physics.add_state_machine": {
-    "schema": "d541c51f629e6664e9e7c9312ea77e789963dec803c8dba1cfe6fdfcf535247e",
-    "content": "d802f2d17d18829cbd3999147360a0e83bf88f71656c1fc7129bf43a8756ad8e"
+    "schema": "41f40809a2fb8ca0a88e806cd75d3f6b8afb3a7887e91d04999170533a39f5fc",
+    "content": "5e8ed92e93fdddfd8e5ccbb900abd013feaa3c01b88d7f54310165ee1fc81a5c"
   },
   "animation_physics.add_sync_marker": {
     "schema": "2a13a4fd0e408c0c06e0049be26caa8df1aa3ebb37589e180fefd082a77edc2f",
@@ -276883,8 +278091,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "bbb4454ec31c5483355502f23ad2d824f98ce64458544c12427a198c29266f23"
   },
   "animation_physics.configure_socket": {
-    "schema": "f9c0381806ba2de703f6aab2674cd2925889a1f16bb7e6857f7f5f9a7b6a7034",
-    "content": "8cd03ba6e21c71d1b88d2e11f69f594d307c580eed24d405309c18c711781cfc"
+    "schema": "cc98d4f5ad9f3716493cedccafeeb3a06a484a93225771f23fdcdd26e8e2e4e4",
+    "content": "1ac09a3eff9b6ecfb0846030e63364e1252e498a670241ee277e4ab532087afb"
   },
   "animation_physics.configure_vehicle": {
     "schema": "e35f2c9b274e2f4e414ee58c89a7557ddf4473dddf31e4c89706c4729014ecd2",
@@ -276895,8 +278103,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "43258837f1afa27865e88a6ccbe893ecf32c87dd1e7fd69e239a23a831f77a2f"
   },
   "animation_physics.create_aim_offset": {
-    "schema": "8abf2f7a50512f327cccf7dd12d520f021650c6305b75874bbc6a4fcedc101c5",
-    "content": "ed34d7238f310c83990e121c7e6e68defccde2d240b4cb36b908c322f27894e2"
+    "schema": "9c361f63d735d90a87a1ed9072580353c2d8967cba92bae9fd399bb3f4ab174e",
+    "content": "5249044341fce5884127ca00fe338bb71eabf73cd9ee5af3c9971dcceeae3909"
   },
   "animation_physics.create_anim_blueprint": {
     "schema": "1e1815ab27ca9f6029595afdf2f2ae63f540468ec2d3e1916ca1190dcd1ad092",
@@ -276919,16 +278127,16 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "be4d74966a8ca16302998318a9908488e4da8041ff6d970eff248d61bf18c819"
   },
   "animation_physics.create_blend_space": {
-    "schema": "8abf2f7a50512f327cccf7dd12d520f021650c6305b75874bbc6a4fcedc101c5",
-    "content": "f034e900dc121e94a1675471aca88af6a72150eb1afb6173fbd4cad009adff78"
+    "schema": "9c361f63d735d90a87a1ed9072580353c2d8967cba92bae9fd399bb3f4ab174e",
+    "content": "1b074260a5e8db486ca37935cdc970b20ce0ffd99d3e0e84637f74b1453f2cb7"
   },
   "animation_physics.create_blend_space_1d": {
-    "schema": "8abf2f7a50512f327cccf7dd12d520f021650c6305b75874bbc6a4fcedc101c5",
-    "content": "dfc4cdb2cba4cd5384f727b70d801ad55694ac3c256c968459ab237a0572fb52"
+    "schema": "9c361f63d735d90a87a1ed9072580353c2d8967cba92bae9fd399bb3f4ab174e",
+    "content": "65be75058cb46b56b77ac5d0c272eb42e1f3ce341aaec181cbcaea5f638f693c"
   },
   "animation_physics.create_blend_space_2d": {
-    "schema": "8abf2f7a50512f327cccf7dd12d520f021650c6305b75874bbc6a4fcedc101c5",
-    "content": "efabfc1ac55d8887a927aec01165d4af39db324e118e573b31f5db4393d10b19"
+    "schema": "9c361f63d735d90a87a1ed9072580353c2d8967cba92bae9fd399bb3f4ab174e",
+    "content": "3ded25f19ecf3b5f14a327fb5caf23e7562633343d2c694718bd4e3fcb4b2196"
   },
   "animation_physics.create_blend_tree": {
     "schema": "3341671256e97fb896d92ac8443933963f60aba83b538fe93c23a99892c098e5",
@@ -276955,8 +278163,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "a4d50d4bcdf40ffc97df0ad8e34ef9090590a81adf043740708d64dac1ac270a"
   },
   "animation_physics.create_physics_asset": {
-    "schema": "b7fabdc9bc75d6b8fa54a5be02317c62bfeb656a783ace152659cec820b248e7",
-    "content": "6b0eb6a9f63fab1085a1cff8c3a9eb2b363c55173ff529f9637875a835f12e5d"
+    "schema": "1d13f8e7d7fba01b4b4e1b64229a1159acc7e8175293f82cb7e77251ff859a94",
+    "content": "e374b255930899ca427f99abe5a9504ce32530a2a7b156a53f0374e815dbf083"
   },
   "animation_physics.create_pose_library": {
     "schema": "8abf2f7a50512f327cccf7dd12d520f021650c6305b75874bbc6a4fcedc101c5",
@@ -276971,12 +278179,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "3b5c1ca25ab66cf65ca29516aea87eec6fc8b1ec50bd4d16811e54139fd899f4"
   },
   "animation_physics.create_socket": {
-    "schema": "f9c0381806ba2de703f6aab2674cd2925889a1f16bb7e6857f7f5f9a7b6a7034",
-    "content": "47a4620be6f81efeafe9cf8c1dca967f4774ad3ed82e068ad19a23ec795f5d57"
+    "schema": "e500d6659d53372d5885c4c45e6528fd2b746714acffc996d6a6fe8afcd6ce7a",
+    "content": "aae5659dd285f5206e3d4d0f3c2b078b95c8e968c752f5851f737d56d01b6bf7"
   },
   "animation_physics.create_state_machine": {
-    "schema": "e118d4ac29bd758fd59b8a5aee054efda8947d0bb19550205dc083412546d412",
-    "content": "6f966f60f25ac68418c24fa869bfaa1a0da169c5b3f34be79456cf61c70662e3"
+    "schema": "dd33d3c055963087732dc0f7c0d347670e31de73da12f58224e085b5047b5e95",
+    "content": "75806535d1999b4451feacc756604ba15c3016276774c572bc148bdd1858886b"
   },
   "animation_physics.create_virtual_bone": {
     "schema": "a95bf983549483c86024955cf612f94eba0116e6f0daf99a5bac02c46b7ebaa4",
@@ -276991,8 +278199,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "aaf9b3e27c52935ed638f665110258bae13d87d9f2f092eb90fd6d3d4ae49414"
   },
   "animation_physics.get_skeleton_info": {
-    "schema": "9f7eb0e84dc28ad135e39ba4318e113078edbffb663ce654070eb9c8fc6b7ca0",
-    "content": "237f4d99c14e6629c4a936674ad5bdcbbbf7920f03e5cdf1dd7a3de0b56b5edc"
+    "schema": "6583a441073827641cea408ee99e39345f534b9676510ae9c13885af0b6197c8",
+    "content": "c388c76b215bde8d7d72949ef36cd4fb090d2c5c12ef29bf157fb91c10c9e9a3"
   },
   "animation_physics.import_morph_targets": {
     "schema": "96ab495cd9a6bf0dbb4b096a17b006c48f53a2006a4a7a96457474bc8de5800a",
@@ -277131,8 +278339,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "ce5541c4fa6df38424c255ccf649d584c5e8de246c2c95da35f8a31385f5b1ea"
   },
   "asset.analyze_graph": {
-    "schema": "27091e8d9b3bcc434e80580fd2847e681bf98e85c494b6b5861bb3c4001bcbeb",
-    "content": "c6808cfd1adfe28d903f3949aa24ba57b1bd06448e7c7198bfdc72cb011c018a"
+    "schema": "98a22596a176e0c29acf7cd4f5351f11b74081ab88089b65c57998bdafa1b01e",
+    "content": "d340ef9957a9369610f0133bcbe982da25a50f4922d6a9b65205602fcb54401e"
   },
   "asset.bulk_delete": {
     "schema": "29a35500820781b00684faadfba5b62d96c414ec1580444e6ca4719366b3b487",
@@ -277155,16 +278363,16 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "f451fb17147eb0fa19ccb2cf2059ad0549317f772fe61a6327da05c48ee2b976"
   },
   "asset.delete": {
-    "schema": "0c711c40fbefd27ff5f3bb95a617eb18eaf7d8aef4912354b290aca4860321e9",
-    "content": "c4d96206898d3849bd239f02dea9c120ea5d792043ae803fd7975003199c6a8d"
+    "schema": "daff894a48037c8719e163131d850cd2e46bdc9a6369dbe4422873a222a4fffc",
+    "content": "5d577f55be88ef398bdf94cc909294ecca5d4d961f3fcb36e05c64125de1cb6d"
   },
   "asset.delete_asset": {
-    "schema": "475aab8e125d7dec714ef5641bb5a5079f26d007bf8e87b9c7c3e8a2140716c4",
-    "content": "62fd3f4854b2aa98a715586917c5dd344ed5a3b72385dd739297639f57c6c928"
+    "schema": "8a36a165858b7a3d6721c4888b6604d9d4bedfd1f62f31b8cd0bff557ea6f90a",
+    "content": "6513c7063ffd8f91d598f33f3623bb275f57e6f046f07d11de99a6cd14b7b13a"
   },
   "asset.delete_assets": {
-    "schema": "475aab8e125d7dec714ef5641bb5a5079f26d007bf8e87b9c7c3e8a2140716c4",
-    "content": "90642e732fa0ffae4ee72b9c60142ea0fb20add690081eb977db0ed3c93678a0"
+    "schema": "8a36a165858b7a3d6721c4888b6604d9d4bedfd1f62f31b8cd0bff557ea6f90a",
+    "content": "3c5a6fedea63f7605a245de8012419da872f7680167259a874ccade1e2fab051"
   },
   "asset.duplicate": {
     "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
@@ -277195,8 +278403,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c91dc8675d4f73d6175c3da1830981e2d87d45461d2445d2cf8f5c00bfdba226"
   },
   "asset.get_asset_graph": {
-    "schema": "27091e8d9b3bcc434e80580fd2847e681bf98e85c494b6b5861bb3c4001bcbeb",
-    "content": "21323a3d97f6295adab43be39ac5c367059e611de90ef5c9ad370ac216b81a9f"
+    "schema": "de720679d0fd56d6021c6fbe054e2380a648846a37bd4fdac22598137ad6fef1",
+    "content": "685ae685a36d57eb172412172276821a969a6991568767bb471435829271d43f"
   },
   "asset.get_dependencies": {
     "schema": "797b8e55fd742b528d21d0a475c319bbbf4e1be6dd942f98826cae5907880492",
@@ -277207,8 +278415,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "5125fba5326c4e7147501cc7dfd4114a72823191fb2e5b892bf343fb54eb146c"
   },
   "asset.get_metadata": {
-    "schema": "556fb3d05526b844fde83744346e790c5540f760ac2d61c34e45a06b6b57d139",
-    "content": "6662475e16f3b91ce263515618ac6b9628ebef6fa10978e82e95743c4a2de13e"
+    "schema": "b77b357b40454b705aad5b944b8f9e5d97a0b3a63e0453efa94a071d76cbe12b",
+    "content": "cf96725a020d38d76a864dd6569d2fddc82aed6959b5f8f39e0119f11dd684df"
   },
   "asset.get_source_control_state": {
     "schema": "5f81969e8ec8b730a002fba06c30b6c1bbc793907c18723c780fd4b6fda0b267",
@@ -277487,8 +278695,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "565e44a7c4f5fb0fe02670b53ad7ac691995a9b84ce8cf0e31a5df7d653e3307"
   },
   "blueprint.create_hud_widget": {
-    "schema": "c9e83ba1bb2e6c437570e787cced94099ccd61ec30f08c494e52b5298aa9ac51",
-    "content": "072be541386c282e04418c64887256bcda0e85b1aabd7244e578aa8304ad20ef"
+    "schema": "68b2f981234a5acc54dfb3b6622ea5b4a3bc860e8607caedd11d25c99673d93a",
+    "content": "cf7724453f952c5990662c6710abf88917a79105fbf1c565e00440fc9eecbc91"
   },
   "blueprint.create_inventory_ui": {
     "schema": "7d99588c2552c63a26867f6df7173da7eec850b51a5c707719d2ce0b6b6e5237",
@@ -277499,16 +278707,16 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "0e3b20f64c47a4cf023b6c07d2b9853666a65414d2f2544bfac88024b39dc6ea"
   },
   "blueprint.create_main_menu": {
-    "schema": "5c1ee103dd81d1233a13cfee0bfbd4e1c5bf99fd1b036976d487125d3e4b45c2",
-    "content": "653527fff529cdc66d109b65232c5f0c68e8c4e6f62e8b39646a493bfb059f90"
+    "schema": "929d2d5f163b5e63bc5a14e495237f4264dbb6f44f407e404d2ad1dd861e5410",
+    "content": "e1de4dcfe762b5a420c7200ec149f91a7333ef402194af0ce7b5b8bed8afb578"
   },
   "blueprint.create_node": {
     "schema": "b4b032da85014740b4af3af661d1efd9497be37fdf84533e29fb30387f8eab2b",
     "content": "ff199ddb528d270cb44966b9c38e58d2e4649ebb1e10eaa18907f0aced7cc8e4"
   },
   "blueprint.create_pause_menu": {
-    "schema": "c9e83ba1bb2e6c437570e787cced94099ccd61ec30f08c494e52b5298aa9ac51",
-    "content": "93c8ec1a91c401c1889e5630ce21f3fb9666f5dc747f2e9cc60e191c3826692e"
+    "schema": "3b87fc44c81f926d1e292b0f7e43aa44f86fcabdf042738189c8887af03e8856",
+    "content": "102462c996bc18cd673c6a409b194bd61927c69bf562b0363e57ab30027f7193"
   },
   "blueprint.create_property_binding": {
     "schema": "64a3c16a1b0b700d8439877347722336e4976c395c09aa3df32306193211646b",
@@ -277571,20 +278779,20 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "9ea8e4f3630f32fd23528174f193a2a75013c87decd5559f2b622cd46b2ff9ef"
   },
   "blueprint.get_widget_info": {
-    "schema": "df5524247ed747b03a00b55981077a244571b6f3f5bb80342223e34cd2d08d1e",
-    "content": "598905a9b83296cf350cf813a50df5b0ed571645e4db1fbfbf398e6ee5557e77"
+    "schema": "8e8e036d6f5f0c4cf79b1f9b78cd8c41bccbcff6773cc05d0362c7cf5cd02f57",
+    "content": "510e92917ae1c9a06d1bd8c55c468a0f5e8a1b37f8b3915d338bc4aafdd8aac9"
   },
   "blueprint.list_node_types": {
-    "schema": "e8c5e68291cf513dce998079f853eefb97c87fae8be658e8ff0f924a33272571",
-    "content": "99c878ae0e4d4c5e3180cf94a99e63b1fc7c119d549f832e8a1da48ecc6685af"
+    "schema": "6f165f71b51b6e1fb5ae785ad934115562c2c9095f176cab9875a0a9c18c3b99",
+    "content": "8a7bbd7b176c061a4e42f314ed0715ef494e746b644c1304b76d7c0e24ec8243"
   },
   "blueprint.modify_scs": {
     "schema": "c77ebb773c53cc6eec3d56de625f94ea3a83906c2b5e6f5b053cbfd5f17432ca",
     "content": "74d84dc8fc0d8d5143828d4b7c7167d3767a6db2d3bb71b41f0ce3dae33cf9af"
   },
   "blueprint.preview_widget": {
-    "schema": "3721fd8f8ba33c47ad01725815ea3674f40ee5ae9aeb057c259167b5758af79e",
-    "content": "5ced23ca8228e27b6ddfa539cbc27039d4a42eba0a9be3e9c419ce90135896b9"
+    "schema": "2ac1170f26a46d0b3988cf07f026af1f1ddc6be02f457d6e0127fd9387dc36d2",
+    "content": "dc890db3cb6ed90c5639d69af1376caa24e7c634449c8186ed1847f0daa433e2"
   },
   "blueprint.probe_handle": {
     "schema": "b25adfd3df2ca3c0bb412e29468b6922710cb1730f91c22d07d59e44697071b3",
@@ -278115,8 +279323,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "516b62232923207b4331960d75dc32acd080eee2656e3fa88d9b2184434b53cf"
   },
   "build_environment.list_light_types": {
-    "schema": "a158c3e431305d7676e9d5b8cd0cd10799dd98fe8060c02a5800108930193559",
-    "content": "1da894e294d66a258e2fd5afe3f1317673c1467cdb2ed64a12be9340aba1aadc"
+    "schema": "7d85faf11a8c6ee805f4b7a56b1d00d09557b00dcc8dade046908dc958cb74aa",
+    "content": "57f3f3f18771c819d4184548e4bbf042db774f5b4f02fedf4a7b8ed6c695392e"
   },
   "build_environment.modify_heightmap": {
     "schema": "fcddd9be2a5c95870fb0311e17c7a05b0526c9bd3a0cf93901951885ed127625",
@@ -278275,8 +279483,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "1e22d5ea7b1e03b3ab4a19ba9ba173d3233305c30d7abb0cffa5888c6a34bc44"
   },
   "build_environment.setup_global_illumination": {
-    "schema": "0955231ba8b063e0a3350ef8a8b9fe3db21519a677087acd58f3f73f3bc1ec50",
-    "content": "e5d4702a36e235a1751da7f5e969b62ba247fb02c796e4aaa40c0867dd3b5e72"
+    "schema": "63ba9c1e0a2b1fcd92d8615526724d80ad9c58b451490a26dfb38c10de3b98dc",
+    "content": "73bdaecc9f5249ad49b3163041e10dca25c0bca01be1fdfbf5e753ef3d516b8c"
   },
   "build_environment.setup_volumetric_fog": {
     "schema": "850b21969484df6b4af7ae00c20b702dd022df4e02f17a8251dabae751ce3bb2",
@@ -278371,8 +279579,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "b7b218421602f76d88a6b1cfda25ccb18329a7f36b04f7df37cd34d3093a2b89"
   },
   "control_actor.get_actor_bounds": {
-    "schema": "86dd5db0cfc8a67e9f6200a92162e385ea7dfeaf93bb2b41ceea152cfcdb72fe",
-    "content": "ec0ac494eb003b41ba333e77aa04c7be55a710bab3d727ae6444897412e177c3"
+    "schema": "6e556f967a2687a75c19a6cb99c1e1eee93a5cbe60a138967b2f4c4ffa1f8a39",
+    "content": "1629918252c80a8f925ea4beab0c009af0108f330c57067ad9ed17450867edfa"
   },
   "control_actor.get_actor_components": {
     "schema": "85d631a16f661a61a5e29fc254bc4fbf773fd62e813964d52140b5a2ad940e65",
@@ -278467,8 +279675,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "a51ec2d5d0cb069af793ccbb0918fb3068eef68459e4f7b839e1b40846a9aad2"
   },
   "control_actor.spawn_blueprint": {
-    "schema": "ebe84de2dc97bbb69a9f605a002224dd247128fe481fae9429d4bd9dc20c87e0",
-    "content": "557fa7346c5cd427d233dac516f1112a86c9eaa03d80daebde781b4983ff6e3c"
+    "schema": "f8b6f880bb7e70ee84d88a1d8ef6df1bea9795b9ca0b61fc83838c0bf8da7e37",
+    "content": "10d6769e55a55acdc26462022473aebd5da47f3ae952d72c6a9a693197ccc379"
   },
   "control_actor.teleport_actor": {
     "schema": "f93d23f44ef86a48b80c36c8dc5a61646768e4281976c8acbdb959789365bf36",
@@ -278691,12 +279899,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "1ab8f895258ecd5a3b5cb7a2bd367b76340741bc70f27779dee2aaa07c778304"
   },
   "enum.add_enum_value": {
-    "schema": "ac92a1f62dfedf01efa0968adef6a7f2b3fa520d93d49ca1123bc2f089973e9d",
-    "content": "919a323df94219a65c8c72154a0fcacf66c258162bdf009e30a54a9685cfec04"
+    "schema": "d38a35ff87dcd5736250a0acebf538df2f7f1de3fc818f53cc59911be27ee059",
+    "content": "1c31ec0bbe3308cbac3a34e83090997921e66b75df1a266d8f8267f8da68c019"
   },
   "enum.create_enum": {
-    "schema": "2cca4b7bfc11423a49d275e72c9f81e6fd1dc85b03cdc133effee90aac238f1a",
-    "content": "0f98a8d06f2690c70f2b619b77b2703dbd9a0713c9c5f2507e2d9ff49424cd13"
+    "schema": "3bdeb421df096652cd39a07d6a1ddcb2ee275e6f8a4377ae5ddd5f6b183a028a",
+    "content": "be66f0f508b2b3ca8c55aca33235ce643b74cde87dbbcaf881b68a61eac87833"
   },
   "enum.delete_enum": {
     "schema": "7c29d6fda67438a93c70057c205ad77742d03234f471cb0e01170f065585c3da",
@@ -278707,24 +279915,24 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "fb0ccddacd1c0a039363a8191af37fefb988c3932606a056d8e7794a95104f69"
   },
   "enum.remove_enum_value": {
-    "schema": "ac92a1f62dfedf01efa0968adef6a7f2b3fa520d93d49ca1123bc2f089973e9d",
-    "content": "dcae3116afb2ef16d526405fcb3f52feb938e1193510c0534a8be16dc1111c03"
+    "schema": "d38a35ff87dcd5736250a0acebf538df2f7f1de3fc818f53cc59911be27ee059",
+    "content": "af311baf376b66ac0b22213a5f4a346e41fc8ec85fb8141bbc5f5b3427cbb5ff"
   },
   "enum.rename_enum_value": {
-    "schema": "2b2580260ba70bdd2a59dfe3cf5fa71b79ae5e50612346e4655d721e4883aed0",
-    "content": "31f1ea8055c6230cee752437ac833d244ec10423a8af8e48b4370d589ffdcba5"
+    "schema": "b09d9c6d472e5e165233b9b0e4f0181a55da50854e50e285198ec26394192920",
+    "content": "613797a5a6a5c12ccdfe078a8e6f6bf1e19663b253d2fee2cecade4d4a430f8e"
   },
   "enum.reorder_enum_values": {
-    "schema": "0dcd3e828dc4cb03db621ae2758d69d32ae2c40c59e1d9336d027cf36cded1b4",
-    "content": "fab95c89d55e7a52f1e7b1b9548aa563fc2aeed96bd5fe051b38c75f7bc77ecc"
+    "schema": "17c9bca3ed640beca59135f7e2e1084589745214ff25c0b10077c7a84c958093",
+    "content": "45f76e18402a35615d862779604dbf383c35d087a7613f9c647d4fa39fac096f"
   },
   "enum.set_enum_value_metadata": {
-    "schema": "b7c5109935702925176b5de856fc171c00db8cac06ef6a95411d38a340efa1d2",
-    "content": "6c59f36b3ca0c303123bb922e50eee932780f2e3db03d04b1a1517f1b0be3614"
+    "schema": "89440c1caddf15edb6310063a10eb6413c1072ab08364980480dee9fd6bdb331",
+    "content": "af5d6b16be01a964acadf5cdad63761d6d884b45bad2057d5e91b030b342a044"
   },
   "enum.split_enum": {
-    "schema": "c3755f9c9fcfd4e1892c33144380f36fcf92ee4cc918d093b3605c3f5f1aae3f",
-    "content": "c2eaa5507896b2240cf631bd3764b3b3829df4e7b25027f9b50e63a12196ca51"
+    "schema": "1adc6178e1c9192851095174d141f7b7a51670cd2f9aed6f1642c926fb7b3d08",
+    "content": "b8320f05aeb27db10ab71050a481215e63404b96dc194a639cf3cdfd6a4c7bb8"
   },
   "inspect.add_tag": {
     "schema": "f681e00d12c5543224703b829a9d8fa81ce15bf0c42740c2b304c51018815926",
@@ -278799,12 +280007,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "a6ddc530098ad193ca65fd96d96fb36b5a34d151fbc23d44defe0347a530cde1"
   },
   "inspect.get_performance_stats": {
-    "schema": "f963fd0f5612fee0c0d0c87362f174c33eec81037b30fc057d2d8514c5a70bc9",
-    "content": "3b3faf5a3a77cc8a8aaa1aca5398444ec2e1e20a6aa2a27591b62c5c312e6b46"
+    "schema": "f41320f1d627cacc92a18af9ea8af953ca0c7b49ad8ce4405a131a0239c17cfd",
+    "content": "75a838ffdd647bc869a606c59d3c9b0e2bef187232168a38948ed7516dd309a4"
   },
   "inspect.get_project_settings": {
-    "schema": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-    "content": "76201c78c998f8fdf8449922558fbaf18eda331233db7c1cac981f91cdcf0db8"
+    "schema": "a886474042568d78fd8551100bd63b96983a893a6ee8e1cf16e37374165d70f8",
+    "content": "12c1dd6f413ec225969d72f6fa663d25bf3d04a9b727e4ad032499e51e50a344"
   },
   "inspect.get_property": {
     "schema": "023d4dc7173f111c70e1c974d1710cf4c4fa9a691da0f2015d43fd2bce260005",
@@ -278823,16 +280031,16 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "5dc0a1ad482f255a237e2fc57e7eee6868e60242702ca71cbacd09505f2ddda7"
   },
   "inspect.get_viewport_info": {
-    "schema": "bcbf7f463c8d250ea08347c292e3d5d77bdac928d432f48d5dd394c7d2a8896a",
-    "content": "c2441fe62f221501e1fb3378435dd4c6d5505d4f6705f2bbe26eff8056b59d43"
+    "schema": "dad5295fd14c0b03f20a2125b392f2ac0b20f7ed810d2695540a4300bf10e494",
+    "content": "ed3d87ca38de921942ba0ed93a81dc868ba109e817d8417c8d4e518ee474e70f"
   },
   "inspect.get_world_settings": {
-    "schema": "53941b0b1d3ac147f8617660c723b49948f9573915f5b7ea899a56421187d565",
-    "content": "2fd964aac69ce25aa02059b4c99b6295c987531370ddbd8fb585d494104d1fd0"
+    "schema": "aacc7c4c0da6480fc82cc5f939da512b499523937febfcf2e7d2cbeff5c82762",
+    "content": "f362ca1c169688c6e5c800803326054e1d923f1585c8fd0c959eb61e4ac9ed9a"
   },
   "inspect.inspect_cdo": {
-    "schema": "2a2ca34668cac4d0c212e2d011f836b1deb90eb71e139c4c83ec12b8544f019d",
-    "content": "a79e933c4dc7a43c75fee47c79108cd3cdb2fb7698f6da611e4da5a56c30904f"
+    "schema": "b0b84e32007caa477f2c53d94b64e626730d839684b7813852db825dbae5a493",
+    "content": "07a52c763c539c858100414fedd253a205d48bbd730bcb172210be95a89a2843"
   },
   "inspect.inspect_class": {
     "schema": "d425b22586af16d29ac6442c39fddf36bca74e5a4a163511b9c4d159fd1821c9",
@@ -278851,16 +280059,16 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "08ee4ba207e12e503ff76b7c48fa566e9ac15fc32673497f7ba4bcdd940113e2"
   },
   "inspect.pie_report": {
-    "schema": "7fba20d3628c83090bdde1d44856653e40dd6f34e36fc72a31c31734aeff7dd8",
-    "content": "810d2926006047e5560a69dc3644bc397b9dc6410e3b9ea8dfb3dc8084255e5c"
+    "schema": "83d991fb397baec3a4f696c0a9dd3c8fb2e5dd15d02de0e9c3931345af5d1da1",
+    "content": "d2ba4f1d9eaf2ad62096ca440bad9b61614fdc8a7b49d9b9aed2f748130ca14c"
   },
   "inspect.restore_snapshot": {
     "schema": "b57506c59c4245a67abd1145d2672de94c94eb4d7627a7e0c3e58b8c16d519cc",
     "content": "9e8274dad1ce68f74a43e05704c37083a88ca2be796999abf10e2ce6830b8be6"
   },
   "inspect.runtime_report": {
-    "schema": "7fba20d3628c83090bdde1d44856653e40dd6f34e36fc72a31c31734aeff7dd8",
-    "content": "5499077522a4c628ac43d3dd1b8192248da4ae75d147ce3336e796a25558e6ef"
+    "schema": "83d991fb397baec3a4f696c0a9dd3c8fb2e5dd15d02de0e9c3931345af5d1da1",
+    "content": "98c511aea0fcf6feb8b8df9c7ef0332f7a4d81f387ca0e6a6966e4db49f3f613"
   },
   "inspect.set_component_property": {
     "schema": "136c5b128850cb0cf603971a813caf90f35082b95f75237b9e919f77c8e8beef",
@@ -278879,8 +280087,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "899cf269f14f126110a7e7404bd338a0b6f17d5058ecda21d2013e6981ed44f5"
   },
   "manage_ai.add_composite_node": {
-    "schema": "85f7d98f7c868fb0f714182944c7650c79044a1b25d0772363f63fc1080cba4c",
-    "content": "36fde762ce861061d479ae6f24ed9274ad406f0c516184da5aad182ab75d89a4"
+    "schema": "55a65cce9bde3a163f91890062075cc64baa939f7a61091f78546cc1280d2341",
+    "content": "72968fdeb46811862eb7cd1b2f23df247f81bab5a962577e3b8e137ef98b65a1"
   },
   "manage_ai.add_decorator": {
     "schema": "715a4f45d54caae3d73c227c549c3570cf11c745ee0a87909d577209ba7b9db6",
@@ -279011,16 +280219,16 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "80aaaac3691612fb54384f1068422740cd9f236d55cb4d306f5fd0a6f852c9dc"
   },
   "manage_ai.create_behavior_tree": {
-    "schema": "10855d3c931e8647b9215876b56a4369f142d6d0ee8bb67f4c4b8d5d0cd4240e",
-    "content": "74dc5c84f08cac32b2e7e9eed7d64f6c84c7e08f6a94d87bfe8d2088031e200e"
+    "schema": "3cc118acb8f5cb43d85d4fc12cb299c3df214ba68f86b1b4823efc1d85382017",
+    "content": "59ca55f231224d709b21af0c5f66de02a9043745031522cc1a08aa29a87c5710"
   },
   "manage_ai.create_blackboard": {
-    "schema": "82ab72d9b47d73ae4fcf02b29df7f59bbda1d2ee90c14c86871d64a46cd32e49",
-    "content": "9f17a63801dae7fd80a2927f99eb8211b55dabbaa13fa2b54d506f91833684c1"
+    "schema": "e4b324ec6e095de41ea01827fdb02a0ae7b10bbf49af4f06341e7fca3149ac23",
+    "content": "f18a53f7a08d5167b7e4cecc74fc7ef2b554c5b5e5ac188d98239b23511ecc6a"
   },
   "manage_ai.create_blackboard_asset": {
-    "schema": "10855d3c931e8647b9215876b56a4369f142d6d0ee8bb67f4c4b8d5d0cd4240e",
-    "content": "342db81a74b73c08b936aea69f2eae4479c7513eb40b8503bba6b7f16e16cf2d"
+    "schema": "82ab72d9b47d73ae4fcf02b29df7f59bbda1d2ee90c14c86871d64a46cd32e49",
+    "content": "2a51b269b2db7e2ef061736eb5158c0096a7ec4ab0f42d057c21958620de040c"
   },
   "manage_ai.create_eqs_query": {
     "schema": "10855d3c931e8647b9215876b56a4369f142d6d0ee8bb67f4c4b8d5d0cd4240e",
@@ -279051,16 +280259,16 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "f3449bfef9b50be971312294ad0e83836f7c8fd157361561623eb831e9f6ea0d"
   },
   "manage_ai.get_ai_info": {
-    "schema": "9efe6c5b91db0417dcc94a756a33df24ea57e2e4afe414b37bf7ec032f4fddb9",
-    "content": "ae1961745bc72bbfd56fc4ac5261194e255afb15c1690268b62f75e22a0dbfb4"
+    "schema": "91352502407848a3c7d0b960ddaf5608abde4f5a5784e23401d8c2d830c14780",
+    "content": "ab2ce5006b51907183c4947dccd6c39071f83ec30e533c3bd93cce4fc6197bef"
   },
   "manage_ai.get_blackboard_value": {
     "schema": "9eb7c3ee4f9be09508bb253ccf0ac2b268377e7c075c4235e48ce996748b0942",
     "content": "c187e461e80ebdd920d5e6bb5b1fef8e8a4dc60a2d835aaff9298066feb3d22a"
   },
   "manage_ai.get_navigation_info": {
-    "schema": "fa179db3b415c43b2d9e83b740afe423cc9933282b5ce4f173652b4afcc54629",
-    "content": "416748bfaf8dbd8d912443510543e393f2b7645d5d4369c19073a9589c6846d1"
+    "schema": "8733bfd07a3338b1b54d2a3b22eab32babc7464c024ad97a320a9062647599c8",
+    "content": "870a215e7566d1ed993b493434ef718b35d6b0e764ce5cb172cb58fa85fc2f44"
   },
   "manage_ai.get_tree": {
     "schema": "1011067925c9a1046107a9061d32c156cfd9458c658a15374fcb651158ff5af3",
@@ -279179,52 +280387,52 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "7b6aae3caf26e13cb0fa1e0f3d01b584ff9b6035f49281427903096ffa412c5a"
   },
   "manage_audio.create_attenuation_settings": {
-    "schema": "6b73c5b6f8fe72db62bf31308badc434ab795f8a679e88639b751e8cf70282f0",
-    "content": "081d4304629be1cb6789bc2d8e14222dc0f075c471c5ad567542d2b9e49c2818"
+    "schema": "9f4bcfb572ba23cf7ecfc22a432e57c9b4a0d4f340cc2345619634743c732d98",
+    "content": "aa25d47ca4af5ce6aa2bf82d26b808bc943b0129a625ec1779afafa6c354e7c0"
   },
   "manage_audio.create_audio_component": {
     "schema": "303aaaff7637dda7a1715c82c85959f3ae61d129d4d90a3953d94719e57a2961",
     "content": "b930a27b0392bb3cab0b73b9ab7380437e6382896642f3a725780dfff8659336"
   },
   "manage_audio.create_dialogue_voice": {
-    "schema": "6b73c5b6f8fe72db62bf31308badc434ab795f8a679e88639b751e8cf70282f0",
-    "content": "7f21055ff139aff267bb814a3430819726544bcee8c0c91bb003b72a421c92c0"
+    "schema": "9f4bcfb572ba23cf7ecfc22a432e57c9b4a0d4f340cc2345619634743c732d98",
+    "content": "e8d04675fc27f29526d7b959292101dbbf411aa80a53a7d12005411cdd62f46d"
   },
   "manage_audio.create_dialogue_wave": {
-    "schema": "0d2bc96b43c730ef70aa0ce4886961853bb881dedd057e67ea88625b64770773",
-    "content": "b9b97bcd029428444c29ac05089617d4151ee6a3f2d2077a5697c3a2f526f9aa"
+    "schema": "17316bcb6d5fdeff84681c5fdd10cc99e0afe05bd6f243564a399b6c0ff55f92",
+    "content": "aa56ae3f58079c0bf559fbcd5e8a3194a9a9a9ca5e4561980cca40eba95ee902"
   },
   "manage_audio.create_metasound": {
-    "schema": "6b73c5b6f8fe72db62bf31308badc434ab795f8a679e88639b751e8cf70282f0",
-    "content": "3a1245ea43596f62a61c52e8a91bf313a1a6b6292336febe3a814e808aec70e0"
+    "schema": "9f4bcfb572ba23cf7ecfc22a432e57c9b4a0d4f340cc2345619634743c732d98",
+    "content": "75bae6c7601977ce36472edfccfe124d1573971021e717c448fc17de29bc35fe"
   },
   "manage_audio.create_reverb_effect": {
-    "schema": "17ccc3e694c6bdd220c61273fc46081f5e1bcddb3363e27408250e8c82599a1c",
-    "content": "5ac9dd81c1482ae6b0cdb80acf9591fb14c6098a01d3152b1f55e6815668098c"
+    "schema": "775859e53c46470908302e010ff93ba2bbcf51921bf4476c9f2f6ab0d1d62180",
+    "content": "6b851cf216559ddf4424abbb9a6117ea24428bdd441a3055a6f3fc1156484590"
   },
   "manage_audio.create_reverb_zone": {
-    "schema": "0389784cdc3f617872e8bbd83b8e4f2867db351efbedf3f6ce828db37db8b955",
-    "content": "542ad32cba3dc97bef142da610140be84bc3906e4e9e30c88ff4fce01698fd27"
+    "schema": "4366d7a345d85a2fed6cfbf6a21ce8b8959ba29be6df10e40707da71bdd2dd93",
+    "content": "b9853f237394a4d0b20dfd2c8a705bff137d0159575e077a8c0e81b117caad7b"
   },
   "manage_audio.create_sound_class": {
-    "schema": "0c4554588b5295a334eba6a483094c832f9ade2b42e9b3c6ebc99615f57b5659",
-    "content": "05b5f718585064266272e3ba636ee34899d09cc8edb497fd68a50f82bbc7046c"
+    "schema": "dfee47a66eebe3448fa7ae61e2f6312637076fc2fc4725a803d57c08d49107e5",
+    "content": "16e45c7cd8e0c1696f89d42930bcabc9a7b6fa961b5043b5d5037d64a8dacdc2"
   },
   "manage_audio.create_sound_cue": {
-    "schema": "db5812c209effc004a81e1bf97836067ed1fb6a0ea285547eda0a7e64c4632b1",
-    "content": "7a59d95fe1b5d7c3a8dee803fdb730b2329343309e68c6ef8aa65e50b003b599"
+    "schema": "4a75fe3d402e47405e66960eab3b0e395a7abb2e54e40ec6be14afd2014dbb4c",
+    "content": "0b419fea5101aef36165010901ea012d6072f9b3771a56da034781c39898225b"
   },
   "manage_audio.create_sound_mix": {
-    "schema": "17ccc3e694c6bdd220c61273fc46081f5e1bcddb3363e27408250e8c82599a1c",
-    "content": "057f13f54f99501f42ad1d6f4f2b39a96e0c62b2b2af50cbae5627aa3e2582d5"
+    "schema": "775859e53c46470908302e010ff93ba2bbcf51921bf4476c9f2f6ab0d1d62180",
+    "content": "568964b70a067fd09b7e005a3f7b92b6beb7797eaa3352a2d8efcaf51214cf0a"
   },
   "manage_audio.create_source_effect_chain": {
-    "schema": "6b73c5b6f8fe72db62bf31308badc434ab795f8a679e88639b751e8cf70282f0",
-    "content": "cc345b2411d48811400896e26aa7f9a40aa5a9a10abc3ac19f9fc95af6b59137"
+    "schema": "9f4bcfb572ba23cf7ecfc22a432e57c9b4a0d4f340cc2345619634743c732d98",
+    "content": "9b8fe793b8b19c9271e980f218c91e62250db1d22556b888065bc866fc5f846a"
   },
   "manage_audio.create_submix_effect": {
-    "schema": "69b095f21685dc360d75456a7176f08dd3f4cc53304ae00434b5ead8bd854380",
-    "content": "7750b75cb1bc502cbdb963d4e9c97cc880a44614237a2a7e3474de834dc7a18f"
+    "schema": "34e659ce1108e1a62abcbece10ff63f7584c4df359c4319c51716ac7505d8211",
+    "content": "5039824aac3e24ce86ec46e320bdc3ad73749e307be3fe9de1a3161b2c3a49e2"
   },
   "manage_audio.enable_audio_analysis": {
     "schema": "ac8cce2e37fb966b4980ccea65e5d384b5917f52f09f71c643053c2b7239c248",
@@ -279307,8 +280515,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "0b186d9dd7545594593172eabf91fbc61d652da924e01457c558eab8e4d85743"
   },
   "manage_audio.set_sound_attenuation": {
-    "schema": "8eff04f1d90e93a12ec9aa77c61968df3714c612461d59dc75256c7c7a50a641",
-    "content": "a8de1bacb47cc5c00f5f8f838d339f01ada9ede21191d04ac71d3500845fd415"
+    "schema": "661c7b0a497187c78f340b876bedebf50f6ed58805c2ea2923d7be67a271ce74",
+    "content": "99ea8db7dfc67e3f927fdf8020bd279d0143b90ae1b92ddd569ea162d46e2a05"
   },
   "manage_audio.set_sound_mix_class_override": {
     "schema": "561112ef76014c1d743b32a6d13861e149a207ca4b988a6bee76730cb944197e",
@@ -279367,8 +280575,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "b026cf4633ee99e8b198d0676a4425b778e7499b38908ce60edfff735763fdd6"
   },
   "manage_character.get_character_info": {
-    "schema": "6f593c37f5fa37faf5b0fefad76d13f64bd58a1644bd95509034d5e826d372ed",
-    "content": "9c757182aae9bec8309b260cccd988655a6f49d3ff35d9a5566b14b082628259"
+    "schema": "c04ccb3938c422ff3ebee3a3d9a3a2624a9ab93e4da32bae72496860589eafce",
+    "content": "c151b33d72d0a05ab62bde74b79334e716e7c3f70bf051bbe90e6bba3393bdcb"
   },
   "manage_character.map_surface_to_sound": {
     "schema": "b3875a618e2d52063db5eef740f7e2c0a5d893039201150dc1f2af11fc3fe486",
@@ -279779,8 +280987,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "bc06306c582771f524f5635851941e156b0e5c3424387060486e1dbcf6cd364b"
   },
   "manage_effect.niagara": {
-    "schema": "995eda848eac7e8875f4ed37f62177bc169118128c3858ac9961d9c9c07c1d3e",
-    "content": "a324975d787559bd5a804660ec1938f41efba80b0f6f6e69d4de06fecad3c4a6"
+    "schema": "6bf5b5a44b7aeea7925f61c05f9d1c681814ef32151d4ce41a8ebe7303aa58a2",
+    "content": "9d7c6089fb7398e975ce81f520e91496c7201b44cf9c5104fa9091251dc18f6d"
   },
   "manage_effect.particle": {
     "schema": "c115b1a34b4dcf836f0d88db572e88d375afd7c61e1f92fd27037c6b896f0b28",
@@ -279871,8 +281079,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "d9e026548a0ab8616beba886562e4568c8770882a62e233262475d29c85d33ae"
   },
   "manage_gas.get_gas_info": {
-    "schema": "d9a7df0101fa6a178fb88a4d45641f3d01daf4c498957b025750ec2b839dade1",
-    "content": "5840737a9a99d1a7ba45e763a19bad83da134cdbd4100aa307cede0df6912560"
+    "schema": "1bc888e8e369ab850d5c2c695dac8b99891fca38b947ac4b47018e86d94620f0",
+    "content": "a238dfd8400c8831c424e31d4a9bd2595721914fab93eb31c58f37e16acdb05d"
   },
   "manage_gas.set_ability_cooldown": {
     "schema": "6df50695c8206abe892f601b7ba35acc35f42ca7edbbb82b4071ba238ed49c11",
@@ -280495,8 +281703,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "7bca5a613f42c4930c3dd0acba1d8b1a1769c5fdba53c36ba9677f1813a36b53"
   },
   "manage_level.list_levels": {
-    "schema": "058eeb44cb2fe4239c84a9f6db1c9af2d20a69c91d642d149776f8aad50a2c51",
-    "content": "3e740b8da14b5bd88e52e9b56aeaf9f62625f5bf590b183e54f4ce96eff966cb"
+    "schema": "ea8b61947eb93d2d5d440671cfd263d0611ae63ae1e7a55f6f0429894745d268",
+    "content": "aed4421df00294b89d6cb22dd166ed5654ab18f79e684bd69f554f9c8d33dec6"
   },
   "manage_level.load": {
     "schema": "eca5ab9ce7b2ec56f9d911bf4c0e7443b1cdec545a88318db0c6f96588d5974d",
@@ -280579,8 +281787,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "8bc1a076ec2fad574c9987a62aa175b515765bbf59e0ea18a05eeb57888eb71c"
   },
   "manage_level_structure.configure_grid_size": {
-    "schema": "b8b7136fd8bb53cc021537ba1b09e4cf8e34a7e10b77d05ba3d4eab23a7b3aa3",
-    "content": "dd336b00f7056a9b24cccd1e94b74c240dcbe89019e7138c77f358021c5b237f"
+    "schema": "36163b0ac7bc14697af04052750df37963d466b4e8cb56f3d9297944456821f9",
+    "content": "c9a2ac4153fcc0703eb6c60769b4ec2cf569c1c9f1365e72fc74ab686b4f9b6a"
   },
   "manage_level_structure.configure_hlod_layer": {
     "schema": "fb03ef05e8174c51be0c1f7bc5b5c39f0ca92e8bdbd9425ae3992dab5bd6ea0c",
@@ -280691,8 +281899,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "d00358eba890b697d297bb57c5b456b7f2250ea326fb96f9f959836a36b3b57c"
   },
   "manage_level_structure.enable_world_partition": {
-    "schema": "f900c4b7f93867b85aaec7dd49d0fa09f6f72e9a78cd39243fb4c4f6f545ece9",
-    "content": "4bc5f3c7a400ea5269921020f23f9cd07ca4de9882ac9838626f22ce5f4fa2d2"
+    "schema": "f0b3221df0358674f2caa5a2c7221e5aa9859a22e2575321c2712a8d63ff72b1",
+    "content": "6c3e2302527a4b3fd8e715c92645646daf07c39fef2387f934d9706086ab6a78"
   },
   "manage_level_structure.get_level_structure_info": {
     "schema": "56d73fb4a84be7852d04f7fe6269c86a498742bf3e6026395b577690908b1c19",
@@ -280727,20 +281935,20 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "efa814eae367f4f6ef32719331e165b3e0d1239a9863d9d9604dad816f384860"
   },
   "manage_networking.add_legacy_action_mapping": {
-    "schema": "86186ec7f10dbf538d0a536da30d94e5e652f81241b84737c89a3423cbbdf61a",
-    "content": "586329d4877aae5df662013be330cf0a881ba435b193c006fef209a336b547b3"
+    "schema": "4e4262771f2067543636671296d69125b740ab13f2a7b5190b88ebef5e2b0722",
+    "content": "ad341dfabe8ffc66826520945339690424bc9231b5e687ce5fae7ddf8588705c"
   },
   "manage_networking.add_legacy_axis_mapping": {
-    "schema": "96f3f4b98fb28e67fd473e81caf445877f9c0e4da90e3f1563c8338d9521157e",
-    "content": "86059a300927704af07daed722576820a027fc773144ad88d13ec30ba28ed887"
+    "schema": "c5b0536dac5ca242009e94b59ceb16897fd4120c8bc82ef6ab02e5b5dde616f7",
+    "content": "70f01f46f2b187490d700c02f45785121f32115162f0235ccaa78d69492b2f9c"
   },
   "manage_networking.add_local_player": {
     "schema": "2a4bf0c9ce00924f795b66bb3da46bce03e7ca31b5a6144ee45e42b9893ffcd5",
     "content": "f8b67cfddc841567723aa1b7d3ea0a097d28bad969006eb5c38fab8af6c8b2b9"
   },
   "manage_networking.add_mapping": {
-    "schema": "27903ce3a9f3e09022059e8be6864e31f4fad0a8c45282c6af604d2680742184",
-    "content": "35ce476b8bccd2a67b8003bc24aa169801c87db4da66c66d093d7f160402c866"
+    "schema": "2ecb3ef112b94f76e083cef8506d382b2f1f7a0deed258113edf608aeb9ed084",
+    "content": "ab3d1c2a2a9171d0e13fb5e0de8eb8115a62dfb2deea41f9fe58173917a03886"
   },
   "manage_networking.add_network_prediction_data": {
     "schema": "917387d7ac5a45a2f044189026d88a8f7e05b2fab31a65f93c5dc9ba15f90f7c",
@@ -280855,36 +282063,36 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "31daabadfaa994afa532067a45e251d2c257ed4f8ffbf4fb25b62c47d4e7b713"
   },
   "manage_networking.create_game_instance": {
-    "schema": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-    "content": "873f0178d8d303931c174675617a9bac7ecb33fc0361ac18042a2b6598997794"
+    "schema": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+    "content": "3bb396b75cb241166f38776ce721afabdbb0d35192d3f61e4b88d4eab88df77b"
   },
   "manage_networking.create_game_mode": {
-    "schema": "b938a5b4fe2399e646eb0bf7b6be6296502c56ec1cb8107402b59e2fd0b34452",
-    "content": "068ce5981be0ace1da109ae7083f6634b41c0507570f3cf82735abe3943ed206"
+    "schema": "8a72ac3461c479e56d5a70752b0bcd3c4adfc304f5c6c92a40896be0f09925e3",
+    "content": "0cdfe71731b891a1e345ba4d6aef9e760b5e46a4cf0c2578fb2c65f5db8cf6b7"
   },
   "manage_networking.create_game_state": {
-    "schema": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-    "content": "c8cafa57fa1f6d591bc98ab82812f8c57b44fc247242e2090db95f344dbb2f78"
+    "schema": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+    "content": "94e707e497bd5a1b9f2e241d9bd98a7a909d22d4908e01af202532398ed5b6b9"
   },
   "manage_networking.create_hud_class": {
-    "schema": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-    "content": "5417c514c90533997bc5f6a1d81851e3a381e6ffc439fbbd59d5d2e91b292a6d"
+    "schema": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+    "content": "c0276431d42cb2977d613a20c54e3a04d589a1b0a4db143572e541faeb18803b"
   },
   "manage_networking.create_input_action": {
-    "schema": "f2667afa3b366dc0bb5ad96f600cd0a3498aa9dc6400e95e02a3bdd0308df3b6",
-    "content": "7bf47f63fafdd45f35bdb5ceac6fb6a9357ffcc882bc111abac6f8a3ff59e952"
+    "schema": "281a9d677a28eaa31ce41203108001f783937fff8873d807c9877717b359a58f",
+    "content": "ac09f35e469882388589149eb89916e1120382090f30f8f9f0607c381d77cb95"
   },
   "manage_networking.create_input_mapping_context": {
-    "schema": "175f88807e43db77fc4136226b6ce2d82cb4594c1d14747b6a278f755e5227f5",
-    "content": "87bfe95d1f80b01d192a2eb5fcf77454f7edc226fc23073669cba386eb7a6d5e"
+    "schema": "be002972025e6fb5629bd071c7720212e4147b8c1eb5788fc782456ed895eef6",
+    "content": "6786485148145dd5d640e514ee318cc9497b7ad1bbc2e4c125e13b07a7cdbb43"
   },
   "manage_networking.create_player_controller": {
-    "schema": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-    "content": "f0966cb9bce0209c5df79cdaf72aff04e4db9729cd77d5be8c557af8d61b8131"
+    "schema": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+    "content": "3dddacdb11bc784d1c8a71b1ff5b97d9d3d31fa1c7393c6088641b6b0922dc1c"
   },
   "manage_networking.create_player_state": {
-    "schema": "7b1d5da9436aa28c299aea2ef612151b702d13e2c78130d86f6c22c56fc4d5cf",
-    "content": "69e30d304fffd7fb3010e0110453b9b6792340903151a2763e401dab38ddd12c"
+    "schema": "c75c54082ffb48eb848f2c50eed4b6b8402405eddaed7fc7663e99fd68a6f586",
+    "content": "9eace950fc1cc111025713ef622ed0ffdb2cd1507d9a4dae5d8606c924b954ca"
   },
   "manage_networking.create_rpc_function": {
     "schema": "b9f4db9f29ca4e0ef9daff38a71dc64cd1462b58cf2194253365546d58954634",
@@ -280927,28 +282135,28 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "5bc4c9d08e1cf322ee6d2b11d978103503e29c87911f3a32f04f07616aef9491"
   },
   "manage_networking.map_input_action": {
-    "schema": "ee17dc615718f28b93f1fefeb076710c300bf6511d7d6e36e1e686b502134e08",
-    "content": "ea947761a79660eff5dc3d335d7883e79a04c7b287b1fedd43bca6b198745361"
+    "schema": "d569b88d4430ac539fa64e7197f626c5505647ee1005d5f8c61ac0a6b52974a9",
+    "content": "89da44f3c6aaec9ef369b95f77e8ddd8719c32689cb1a180a4d0eb20ad241ca9"
   },
   "manage_networking.mute_player": {
     "schema": "1c3ff0336569c2735b1ffaf891f9f4d7d360eccce2e8668bb98a53bf9af4016f",
     "content": "62c1ee67235d081cb200523d0f752ceac117f4d0358ad102e4f98e82fd79220a"
   },
   "manage_networking.remove_legacy_action_mapping": {
-    "schema": "86186ec7f10dbf538d0a536da30d94e5e652f81241b84737c89a3423cbbdf61a",
-    "content": "6073ceacf79d4e9d31479b462c211b0b7eff7c051015da3a572b3408d0dd72cd"
+    "schema": "4e4262771f2067543636671296d69125b740ab13f2a7b5190b88ebef5e2b0722",
+    "content": "b03e84aebe30571591f5c46fd9fd71d6af1f61a35fa45577249f1fec39e68b71"
   },
   "manage_networking.remove_legacy_axis_mapping": {
-    "schema": "96f3f4b98fb28e67fd473e81caf445877f9c0e4da90e3f1563c8338d9521157e",
-    "content": "e71b711e57a7ba3ea941772caf91dd0e0bffa441941521da682f05763902cb98"
+    "schema": "c5b0536dac5ca242009e94b59ceb16897fd4120c8bc82ef6ab02e5b5dde616f7",
+    "content": "0c210d1b3aa5d00e27e32275701a9c37e1c15351139742a91c3547571944c8bb"
   },
   "manage_networking.remove_local_player": {
     "schema": "52c9e7bc9823c8a2abe9f8c569de63caeff4c2c2a9c295d59033b0911c89191d",
     "content": "449f1ba842ea90dee7ba167d83e8a08b83e2eddd76c886e6e8547194fccdd3eb"
   },
   "manage_networking.remove_mapping": {
-    "schema": "46143f93e89ce560b09f78b58ba707c3529604f3fbe53f7d2ad36e29b133ee21",
-    "content": "062718679c5a7ee7c57b4374962da2e5ccdfaa5dd286ac8c845e2234d82a2581"
+    "schema": "fae3c7af75a38de61a6bb9625d6f60bd4bab7b3658e14780358bac88f7721e5d",
+    "content": "a814d1a4b7705b4cfd0298a132b42b4479b05ba2b8f9f42df4431272c1bed6dc"
   },
   "manage_networking.set_always_relevant": {
     "schema": "94ca0c1424f87a95537fa168af31c2ccd8daff7f48abb91389dc65bc1b5a49d2",
@@ -280967,8 +282175,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "6a21282c235e1b0c8fb740b039731ccb4c51def390a4b242bc85b479e356ca33"
   },
   "manage_networking.set_input_modifier": {
-    "schema": "71db9e338a8d8587cf656a27cbbc97ae82fb88fb86fec6a213d2b3e5538fc2a2",
-    "content": "da8a98c83b155960c93e53b6180a62be9501a7bf2592b23ecca8215a3d298c4d"
+    "schema": "601f3b4ec5093ffa10e8d35df6068d4d93051fad064bf9bde86ca29009dfd720",
+    "content": "9b66a56c9e3d8b7f515dd7630636c1449cb21f75bfbc7282a30aebe0c9c77e8c"
   },
   "manage_networking.set_input_trigger": {
     "schema": "94ccd1d7b90dc587229fede191b84bf9beea0be470099f10d55d9cfe930f43e3",
@@ -281339,8 +282547,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "40acc83c8baac657a232eb6774799626b7826916ec500655fb553f2845b2d3cb"
   },
   "material.get_material_info": {
-    "schema": "1d03c3f1ed21254b68fba8d79b6600488c565564b5276b14bbb34efe739efc01",
-    "content": "330d54f4e01d7309d775e0e93a06e673790948334fd37d3d6a17d1543910e109"
+    "schema": "30a7115c5dfc8c0042e595b02e365ec0182553e593255eea262f573d9d6ddf16",
+    "content": "2d2715a77f2df6b0c75a59afac4c69cee274b8d71aca88e2c4750d5d9a7384da"
   },
   "material.get_material_node_details": {
     "schema": "fb12ff735f29f57efbceb2587fd46aef20bee08833b137e30e4df28e4e0626a9",
@@ -281439,8 +282647,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c84fd54dc1ea8c432de81e2191ed39a86e68c28e8aaf3fca8125bd29b64ae710"
   },
   "sequence.cinematic.add_camera_cut_track": {
-    "schema": "204fcb4abefffedd14dd05a6994a0b2e5cb9366bbebd68ac53d637840bf0d8aa",
-    "content": "d7c3ec2540c6d6ec1712e9740484396e3f6cd13c56292620ab04b406e0aca731"
+    "schema": "b1bbdae8f7d71069726f28f8763a5b32fece05724efd0cdc6e07d6a8c5830fd6",
+    "content": "17f9e4196e14ad18cb953d5382318f229f252101b3b6fc146386ada1b4c0d02d"
   },
   "sequence.cinematic.add_camera_shake_track": {
     "schema": "0f142ccc5bd87d74b60152b045200e3131c5304d0beb2d8ccea646e74aef585d",
@@ -281503,16 +282711,16 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c3e8eb7559a02da414ec012b78e5b12c60c635bcb7fc372c681c2bb6d870add4"
   },
   "sequence.cinematic.create_cine_camera_actor": {
-    "schema": "521c9b90a45cb5a4ba20e197dccefd8f05002ca974d0c42c835bb08ca96d33a2",
-    "content": "c1de90960ca8801357941416b6618a68bf055260968fbb0529c7f7c58a81a87b"
+    "schema": "fe71da0f22e6ae5eaaaabd574a3b672b1d4d40ea94252a1ea67f0e040868ccb0",
+    "content": "e4ff2f577eb180fd34ad1639aaac89b3fc878b9f53d86b378a556ce2f343c927"
   },
   "sequence.cinematic.create_master_sequence": {
-    "schema": "99b62e1665dad0b54724902baae95acbf136374cdeba9112612f90d6d7f85c24",
-    "content": "5adb8bb6a92c1d9cd7b8e368b833c769e3e8aa1f5e3aa4e2ecece04cc3c08005"
+    "schema": "78e8bd50f5f92c394286c1470c0cdf3f94a554785dcbeed996699709ac8bc3e5",
+    "content": "c2307f2c9a2da8d1ef3fc280b98f8eb5e1ac264fc5ca89db16a796a446be2491"
   },
   "sequence.create": {
-    "schema": "472e94cd3b2d940351f75ee39fabebc80fa79e54738ed528120f4dc46310e1d5",
-    "content": "c061e3103c2cd55bdb27c2fa8a615434752cf9a3ef3669175ee6643829eeffa1"
+    "schema": "5f6190893ba85cadfd8df3862df52bcb7919bfe900dacad686ba4827d729475f",
+    "content": "b3352bdb60cadb729651972c9c179fabf4cf4cd217d9f207eb6ce4742a75ba32"
   },
   "sequence.delete": {
     "schema": "aeb6a34e3d545679c526708799bcb140cdbb020b6e5ccb594733cd484745ce03",
@@ -281523,12 +282731,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c36e2bd57fad59735ae7d64140f5032f9952ac07b1ce3b73d643d714c03f4f68"
   },
   "sequence.get_bindings": {
-    "schema": "b03da4f60faee4f24f126e3a60b386ef5023c23c650295fbb351f129315997bd",
-    "content": "09a40fcfe9675c94827784c4d81b73ffb45a7b34c72ea37191734e6818c7bcbc"
+    "schema": "fc6fe5fd008826e2f56b537a833da3174a50d9343e59b2cfe6a367b124d47ebd",
+    "content": "3643ff64da19ac8516836830db5ca47e4f09ef5845a1c4e7c4e4c09fc74e3089"
   },
   "sequence.get_metadata": {
-    "schema": "b607b67fb458a8d029a8e67e4d510fe81dc4637d936698821ceafe5f3368e384",
-    "content": "718b89f0a18a653bb76cb735a3a334d4e791d97b0a99f5e188348b0b934a4eaf"
+    "schema": "fb35cf57c2357634ae0c862c1e3b39f6659bcd7475aaf7a2f88b3403b486f81c",
+    "content": "b32ca00f851b587befab480f89fd9d91266d0aab303225f811b419d84fb52d30"
   },
   "sequence.get_properties": {
     "schema": "b6350540674ce077294ff6d4f845f22e608082c1fa6e9fb7ad113bcc50a16287",
@@ -281543,12 +282751,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "4777bf319d80c294fba57be99b14e6441f70060374b46e49fefe76c0c0d66e3f"
   },
   "sequence.list_tracks": {
-    "schema": "e2b0617b1083cf6635be6c07c7d1961de7704e18ff52bc2d96a5e5c6c7c3059a",
-    "content": "cf6719581ee8641612e31812c67a62551591184eed4ad09a5ab5938d4197b00f"
+    "schema": "c6c95cd1280b33c5b614168e93c18d04e975caa9ce1a19b4732437243ae2893b",
+    "content": "c6127f1b1e1ef161ee358e6e70b123a118ea37ed0282f5e5e3f778677e48288f"
   },
   "sequence.media.create_media_player": {
-    "schema": "34900ea8bc7fc042f80d4891903bb7b282320f7fefebe0f5142befe5bbd06f81",
-    "content": "a7c3a20f3a30cd00603b78ba762a34bce9d29c8145714aa62f651d31f9b62c29"
+    "schema": "8e5bf10e88dde7964e794a061e4acdf126d56d63b331e7b2bc7e1dc1af9281da",
+    "content": "f06792ad311aa782110a7b6995b94c35fc55e627476fb040297a965eebe8e4a6"
   },
   "sequence.media.create_media_playlist": {
     "schema": "bce240ddd595e84643adc71cbca8728e6bf9a7dffb309143784484c6678d7011",
@@ -281883,8 +283091,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "2257e937313c4b74b68086b0bcf8ea8ed82864f94b4311ee3c844cdba168f3f3"
   },
   "system_control.generate_memory_report": {
-    "schema": "8017f473a8efa8892768d711470958c747251307b6f3e91991579794fbf24b56",
-    "content": "c9ec2c478a96ab463f7b33ece382c5b38d43fdc5a54bc35053117c2cc1dbdd7a"
+    "schema": "6f8287fc5b2e9e01609e17852f958fcebc1c9874ababa7f43081a86f655c7dcc",
+    "content": "78db8abec5725ce462848728abfb5a8babee6139e24ae6062c491b9b639a2321"
   },
   "system_control.get_project_settings": {
     "schema": "a3e97a08f35b44a1042c496b0c2d67c9415423a5127aa536cccbe202a0faee97",

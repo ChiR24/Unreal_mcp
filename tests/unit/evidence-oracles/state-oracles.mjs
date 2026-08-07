@@ -453,12 +453,16 @@ export function observeProcess(spec) {
   const dir = join(procRoot, String(spec.pid));
   if (!existsSync(dir)) {
     // Windows has no /proc, so the directory probe can never see a live pid
-    // there. signal 0 is the portable existence probe: it throws ESRCH when no
-    // such process exists, and succeeds (or throws EPERM for a process this
-    // caller may not signal, which still means it exists) otherwise. pid 0 is
-    // never a userspace process on any platform, and kill(0, 0) succeeds on
-    // win32, so it is special-cased to stay absent.
-    if (process.platform === 'win32') {
+    // there. This kill-0 fallback probes the REAL host only when the caller
+    // did not inject a fake procRoot: an injected fake /proc is authoritative
+    // on every platform, so tests that simulate "no such pid" stay
+    // deterministic instead of depending on which host pids are in use. signal
+    // 0 is the portable existence probe: it throws ESRCH when no such process
+    // exists, and succeeds (or throws EPERM for a process this caller may not
+    // signal, which still means it exists) otherwise. pid 0 is never a
+    // userspace process on any platform, and kill(0, 0) succeeds on win32, so
+    // it is special-cased to stay absent.
+    if (process.platform === 'win32' && spec.procRoot === undefined) {
       let present = false;
       if (spec.pid !== 0) {
         try {

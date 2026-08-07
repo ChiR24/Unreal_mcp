@@ -103,7 +103,16 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The actor has no renderable components (bounds are undefined).'],
     inputProps: { actorName: P.actorName },
     required: ['actorName'],
-    outputProps: { location: P.location, scale: P.scale },
+    // The handler (McpAutomationBridge_ControlActorQuery.cpp,
+    // HandleControlActorGetBoundingBox) emits `origin` and `extent`. This record
+    // declared `location`/`scale`, which the handler never sets, so output
+    // projection dropped BOTH and the capability answered "Bounding box
+    // retrieved" with no bounds at all — leaving procedural geometry sizes
+    // unverifiable through the API.
+    outputProps: {
+      origin: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3, description: 'World-space centre of the bounding box as [x, y, z].' },
+      extent: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3, description: 'Half-size of the bounding box along each axis as [x, y, z].' },
+    },
     outputRequired: [],
     effect: 'read',
     costLatency: 'instant',
@@ -111,7 +120,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
     normalizationRationale: internalDispatchNr('get_actor_bounds', 'get_bounding_box'),
     exampleInput: { action: 'get_actor_bounds', actorName: 'Cube1' },
-    exampleOutput: { success: true, message: 'Bounds for Cube1', location: [0, 0, 0], scale: [1, 1, 1] },
+    exampleOutput: { success: true, message: 'Bounds for Cube1', origin: [0, 0, 50], extent: [50, 50, 50] },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',

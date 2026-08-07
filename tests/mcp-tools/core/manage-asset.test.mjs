@@ -289,7 +289,7 @@ const testCases = [
     { scenario: 'ACTION: sharpen', toolName: 'manage_asset', arguments: { action: 'sharpen', assetPath: NOISE_TEXTURE, amount: 0.5 }, expected: 'success' },
     { scenario: 'ACTION: invert', toolName: 'manage_asset', arguments: { action: 'invert', assetPath: NOISE_TEXTURE }, expected: 'success' },
     { scenario: 'ACTION: desaturate', toolName: 'manage_asset', arguments: { action: 'desaturate', assetPath: NOISE_TEXTURE, amount: 0.5 }, expected: 'success' },
-    { scenario: 'ACTION: channel_pack', toolName: 'manage_asset', arguments: { action: 'channel_pack', name: `Testchannel_pack_${ts}`, path: TEST_FOLDER, redTexture: NOISE_TEXTURE, greenTexture: GRADIENT_TEXTURE, blueTexture: PATTERN_TEXTURE, width: 64, height: 64 }, expected: 'success' },
+    { scenario: 'ACTION: channel_pack', toolName: 'manage_asset', arguments: { action: 'channel_pack', name: `Testchannel_pack_${ts}`, path: TEST_FOLDER, redTexture: NOISE_TEXTURE, greenTexture: GRADIENT_TEXTURE, blueTexture: PATTERN_TEXTURE, alphaTexture: NOISE_TEXTURE, width: 64, height: 64 }, expected: 'success' },
     { scenario: 'ACTION: channel_extract', toolName: 'manage_asset', arguments: { action: 'channel_extract', texturePath: NOISE_TEXTURE, channel: 'Red', name: `Testchannel_extract_${ts}` }, expected: 'success' },
     { scenario: 'ACTION: combine_textures', toolName: 'manage_asset', arguments: { action: 'combine_textures', name: `Testcombine_textures_${ts}`, path: TEST_FOLDER, baseTexture: NOISE_TEXTURE, blendTexture: GRADIENT_TEXTURE, blendMode: 'Multiply', opacity: 0.5 }, expected: 'success' },
     // === CONFIG ===

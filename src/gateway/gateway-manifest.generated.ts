@@ -1594,8 +1594,24 @@ export const gatewayManifest = {
             "description": "Canonical /Game static mesh asset path."
           },
           "method": {
-            "type": "string",
-            "description": "Method string."
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Method string."
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "LumenGI",
+                  "ScreenSpace",
+                  "None",
+                  "RayTraced",
+                  "Lightmass"
+                ],
+                "description": "Global illumination method. Matches the handler-enforced value set."
+              }
+            ],
+            "description": "Global illumination method. Matches the handler-enforced value set."
           },
           "minBrightness": {
             "type": "number",
@@ -3266,6 +3282,7 @@ export const gatewayManifest = {
         "name",
         "nodeClass",
         "nodeId",
+        "nodeName",
         "nodeType",
         "obstacleAreaClass",
         "obstacleExtent",
@@ -3678,6 +3695,10 @@ export const gatewayManifest = {
           "nodeId": {
             "type": "string",
             "description": "ID of the node."
+          },
+          "nodeName": {
+            "type": "string",
+            "description": "Name for the created composite node."
           },
           "nodeType": {
             "type": "string",
@@ -4422,7 +4443,7 @@ export const gatewayManifest = {
           },
           "assetPath": {
             "type": "string",
-            "description": "Asset /Game path."
+            "description": "Alias for path (accepted for compatibility)."
           },
           "assetPaths": {
             "oneOf": [
@@ -4695,7 +4716,7 @@ export const gatewayManifest = {
           },
           "maxDepth": {
             "type": "number",
-            "description": "Maximum traversal depth."
+            "description": "Maximum traversal depth (clamped to 8)."
           },
           "memberName": {
             "type": "string",
@@ -4885,11 +4906,23 @@ export const gatewayManifest = {
               },
               {
                 "type": "string",
+                "description": "Package path for the new enum."
+              },
+              {
+                "type": "string",
                 "description": "Package path to search."
               },
               {
                 "type": "string",
                 "description": "Package path."
+              },
+              {
+                "type": "string",
+                "description": "Single asset path (alternative to paths)."
+              },
+              {
+                "type": "string",
+                "description": "Single asset path."
               }
             ],
             "description": "Alternative directory path."
@@ -5665,7 +5698,7 @@ export const gatewayManifest = {
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "nodeClassName": {
             "type": "string",
@@ -11597,7 +11630,7 @@ export const gatewayManifest = {
         "properties": {
           "actionName": {
             "type": "string",
-            "description": "actionName"
+            "description": "Legacy input action name. Overrides name when both are supplied."
           },
           "actionPath": {
             "type": "string",
@@ -11612,8 +11645,8 @@ export const gatewayManifest = {
             "description": "allowSpectating"
           },
           "alt": {
-            "type": "string",
-            "description": "alt"
+            "type": "boolean",
+            "description": "Whether the Alt modifier must be held."
           },
           "alwaysRelevant": {
             "type": "boolean",
@@ -11637,7 +11670,7 @@ export const gatewayManifest = {
           },
           "axisName": {
             "type": "string",
-            "description": "axisName"
+            "description": "Legacy input axis name. Overrides name when both are supplied."
           },
           "bAllowInvites": {
             "type": "boolean",
@@ -11684,8 +11717,8 @@ export const gatewayManifest = {
             "description": "channelType"
           },
           "cmd": {
-            "type": "string",
-            "description": "cmd"
+            "type": "boolean",
+            "description": "Whether the Cmd modifier must be held."
           },
           "condition": {
             "type": "string",
@@ -11704,8 +11737,8 @@ export const gatewayManifest = {
             "description": "correctionThreshold"
           },
           "ctrl": {
-            "type": "string",
-            "description": "ctrl"
+            "type": "boolean",
+            "description": "Whether the Ctrl modifier must be held."
           },
           "customSerialization": {
             "type": "string",
@@ -11773,7 +11806,7 @@ export const gatewayManifest = {
           },
           "key": {
             "type": "string",
-            "description": "key"
+            "description": "Input key name, e.g. SpaceBar, W, LeftMouseButton."
           },
           "localPlayerNum": {
             "type": "number",
@@ -11813,7 +11846,7 @@ export const gatewayManifest = {
           },
           "name": {
             "type": "string",
-            "description": "name"
+            "description": "Name of the asset or mapping to create or remove."
           },
           "netCullDistanceSquared": {
             "type": "number",
@@ -11961,7 +11994,7 @@ export const gatewayManifest = {
           },
           "scale": {
             "type": "number",
-            "description": "scale"
+            "description": "Axis scale value."
           },
           "scorePerAssist": {
             "type": "number",
@@ -12000,8 +12033,8 @@ export const gatewayManifest = {
             "description": "sessionName"
           },
           "shift": {
-            "type": "string",
-            "description": "shift"
+            "type": "boolean",
+            "description": "Whether the Shift modifier must be held."
           },
           "smoothingRate": {
             "type": "number",
@@ -12548,6 +12581,7 @@ export const gatewayManifest = {
         "activate",
         "actorName",
         "actorNames",
+        "actorPath",
         "actors",
         "additionalOptions",
         "animationPath",
@@ -12720,6 +12754,10 @@ export const gatewayManifest = {
               "description": "Actor name."
             },
             "description": "Actor names."
+          },
+          "actorPath": {
+            "type": "string",
+            "description": "Actor path (alias of actorName)."
           },
           "actors": {
             "type": "array",

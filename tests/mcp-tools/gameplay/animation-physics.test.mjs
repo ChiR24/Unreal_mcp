@@ -115,6 +115,7 @@ const testCases = [
 
 // === ADD (Montage Notify - needs assetPath; no notifyClass = simple notify event) ===
 { scenario: 'ADD: add_montage_notify', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 0.5, "notifyName": "Testmontage_notify"}, expected: 'success|already exists' },
+{ scenario: 'ADD: add_montage_notify via notifyClass', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 0.6, "notifyClass": "AnimNotify_PlaySound"}, expected: 'success|already exists' },
 
 // === CONFIG (Blend In - needs assetPath) ===
 { scenario: 'CONFIG: set_blend_in', toolName: 'animation_physics', arguments: {"action": "set_blend_in", "assetPath": `${TEST_FOLDER}/Testmontage`, "blendTime": 0.25}, expected: 'success' },

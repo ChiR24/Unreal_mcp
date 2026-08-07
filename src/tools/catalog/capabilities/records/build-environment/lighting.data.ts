@@ -108,10 +108,17 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Configure global illumination settings.',
     whenToUse: ['GI must be enabled or tuned.'],
     whenNotToUse: ['GI is not needed for the scene.'],
-    inputProps: { action: P.action, settings: P.settings, method: P.method },
-    required: ['action'],
+    inputProps: {
+      action: P.action, settings: P.settings,
+      method: {
+        type: 'string',
+        enum: ['LumenGI', 'ScreenSpace', 'None', 'RayTraced', 'Lightmass'],
+        description: 'Global illumination method. Matches the handler-enforced value set.',
+      },
+    },
+    required: ['action', 'method'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'setup_global_illumination', method: 'Lumen' },
+    exampleInput: { action: 'setup_global_illumination', method: 'LumenGI' },
     exampleOutput: { success: true, message: 'Global illumination configured' },
   }),
   buildRecord({
@@ -177,10 +184,13 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A specific light type is already known.'],
     inputProps: { action: P.action },
     required: ['action'],
-    outputProps: { lightTypes: { type: 'array', items: str('Light type.'), description: 'Available light types.' } },
-    outputRequired: ['lightTypes'],
+    outputProps: {
+      types: { type: 'array', items: str('Light type.'), description: 'Available light types.' },
+      count: { type: 'number', description: 'Number of available light types.' },
+    },
+    outputRequired: ['types'],
     effect: 'read', latency: 'instant', resources: 'low',
     exampleInput: { action: 'list_light_types' },
-    exampleOutput: { success: true, lightTypes: ['PointLight', 'SpotLight', 'DirectionalLight'] },
+    exampleOutput: { success: true, types: ['PointLight', 'SpotLight', 'DirectionalLight'], count: 3 },
   }),
 ];

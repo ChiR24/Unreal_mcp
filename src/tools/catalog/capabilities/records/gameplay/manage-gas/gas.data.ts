@@ -159,6 +159,16 @@ export const GAS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Read GAS asset metadata.', whenToUse: ['Inspect GAS assets.'], whenNotToUse: ['Mutate assets.'],
     inputProps: { action: P.action, assetPath: P.assetPath }, required: ['action', 'assetPath'],
     effect: 'read', latency: 'instant', resources: 'low', plugins: GAS_PLUGIN,
-    outputProps: { abilityCount: P.num_ }, outputRequired: [],
-    exampleInput: { action: 'get_gas_info', assetPath: '/Game/BP_Char' }, exampleOutput: { success: true, message: 'GAS info', abilityCount: 3 } }),
+    // `abilityCount` was declared but is never set by the handler
+    // (McpAutomationBridge_GASHandlersInfo.cpp), so output projection produced
+    // an empty payload and get_gas_info reported success carrying nothing.
+    // Declared below is exactly what the handler emits.
+    outputProps: {
+      gasType: P.string_, assetName: P.string_, assetPath: P.assetPath,
+      class: P.string_, parentClass: P.string_, generatedClass: P.string_,
+      durationPolicy: P.string_, instancingPolicy: P.string_,
+      netExecutionPolicy: P.string_, stackingType: P.string_,
+      modifierCount: P.num_, cueCount: P.num_,
+    }, outputRequired: [],
+    exampleInput: { action: 'get_gas_info', assetPath: '/Game/BP_Char' }, exampleOutput: { success: true, message: 'GAS info', gasType: 'GameplayAbility', assetName: 'GA_Dash', instancingPolicy: 'InstancedPerActor' } }),
 ];

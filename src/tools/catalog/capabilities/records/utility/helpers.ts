@@ -24,6 +24,10 @@ const BOOLEAN_FIELDS = new Set([
   'bIsLANMatch', 'bAllowJoinInProgress', 'bAllowInvites', 'bUsesPresence',
   'bUseLobbiesIfAvailable', 'bShouldAdvertise', 'executeTravel', 'forceRespawn',
   'canRespawn', 'systemWide',
+  // Legacy input-mapping modifier flags. The native handler reads these with
+  // TryGetBoolField (McpAutomationBridge_InputHandlersLegacyMappings.cpp), so
+  // publishing them as strings made a schema-valid boolean unrepresentable.
+  'shift', 'ctrl', 'alt', 'cmd',
 ]);
 const NUMBER_FIELDS = new Set([
   'volume', 'pitch', 'startTime', 'fadeTime', 'fadeInTime', 'fadeOutTime',
@@ -40,22 +44,39 @@ const NUMBER_FIELDS = new Set([
 const OBJECT_FIELDS = new Set(['location', 'rotation', 'size', 'properties', 'settings', 'voiceSettings']);
 const ARRAY_FIELDS = new Set(['states', 'sessions', 'players', 'mappings']);
 
+// Real descriptions for fields whose bare names read as placeholder text.
+// Descriptions are the one place the caller can learn what a value means
+// without reading the native handler, so echoing the field name is content-free
+// (the MCPBB-091 defect class).
+const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
+  name: 'Name of the asset or mapping to create or remove.',
+  actionName: 'Legacy input action name. Overrides name when both are supplied.',
+  key: 'Input key name, e.g. SpaceBar, W, LeftMouseButton.',
+  shift: 'Whether the Shift modifier must be held.',
+  ctrl: 'Whether the Ctrl modifier must be held.',
+  alt: 'Whether the Alt modifier must be held.',
+  cmd: 'Whether the Cmd modifier must be held.',
+  axisName: 'Legacy input axis name. Overrides name when both are supplied.',
+  scale: 'Axis scale value.',
+};
+
 // INPUT-ONLY. Keyed on bare field names, so adding an envelope field such as
 // `success` here would silently retype any input sharing that name. The output
 // envelope is built explicitly in ./output-glossary.js instead.
 function property(name: string): JsonObject {
-  if (BOOLEAN_FIELDS.has(name)) return { type: 'boolean', description: name };
-  if (NUMBER_FIELDS.has(name)) return { type: 'number', description: name };
+  const description = FIELD_DESCRIPTIONS[name] ?? name;
+  if (BOOLEAN_FIELDS.has(name)) return { type: 'boolean', description };
+  if (NUMBER_FIELDS.has(name)) return { type: 'number', description };
   if (OBJECT_FIELDS.has(name)) {
     return {
       type: 'object',
-      description: name,
+      description,
       additionalProperties: true,
       'x-unreal-reflection-boundary': true,
     };
   }
-  if (ARRAY_FIELDS.has(name)) return { type: 'array', description: name, items: {} };
-  return { type: 'string', description: name };
+  if (ARRAY_FIELDS.has(name)) return { type: 'array', description, items: {} };
+  return { type: 'string', description };
 }
 
 function schema(
