@@ -233,9 +233,12 @@ public:
 	using SizeType = int32;
 	int32 Num() const { return static_cast<int32>(Items.size()); }
 	void Reserve(int32 Count) { Items.reserve(static_cast<size_t>(Count)); }
-	void Empty() { Items.clear(); }
-	// UE's Reset() empties the array but KEEPS the allocation; Empty() releases it.
-	// std::vector::clear has exactly that behaviour, so both map onto it here.
+	// UE separates these two: Reset() empties the array but KEEPS the allocation
+	// for reuse, while Empty() releases it. `std::vector::clear()` retains
+	// capacity, so it implements Reset() and NOT Empty(); releasing needs the
+	// swap-with-a-temporary idiom, because `shrink_to_fit()` is only a
+	// non-binding request the implementation may ignore.
+	void Empty() { std::vector<T>().swap(Items); }
 	void Reset() { Items.clear(); }
 	void Add(const T& Value) { Items.push_back(Value); }
 	void Add(T&& Value) { Items.push_back(std::move(Value)); }
