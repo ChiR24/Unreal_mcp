@@ -1,7 +1,8 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "UObject/UnrealType.h"
-#include "StructUtils/InstancedStruct.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include MCP_INSTANCED_STRUCT_HEADER
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Safety/McpSafeOperationsAssetSave.h"
 

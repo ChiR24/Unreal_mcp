@@ -173,9 +173,18 @@ describe('evaluateNativeFeatures — what actually compiles for an engine', () =
     expect(compiledCounts.find((entry) => entry.minor === 7)?.compiled.some((entry) => entry.condition === gate57)).toBe(true);
   });
 
-  it('resolves the discontinuous widget-GUID macro exactly where the header says', () => {
+  // This asserted [0,1,0,0,0,1,1] — on at 5.1, off through 5.6, on again at 5.7
+  // — because it mirrored the compatibility header, and the header was wrong.
+  // WidgetVariableNameToGuidMap was grepped out of
+  // Engine/Source/Editor/UMGEditor/Public/WidgetBlueprint.h at the release tags
+  // in EpicGames/UnrealEngine: absent through 5.5.4, present from 5.6.0 onward.
+  // So the macro is continuous from 5.6, and the old shape was wrong at both
+  // ends: 5.1 named a member that does not exist there (a compile error on the
+  // one version it claimed to serve) and 5.6 dropped GUID registration on an
+  // engine that supports it.
+  it('resolves the widget-GUID macro from 5.6 onward, matching engine source', () => {
     const macroOn = (minor: number) => evaluateNativeFeatures(profileFor(minor), gates).macros.MCP_HAS_WIDGET_VARIABLE_GUID_MAP;
-    expect([0, 1, 2, 5, 6, 7, 8].map(macroOn)).toEqual([0, 1, 0, 0, 0, 1, 1]);
+    expect([0, 1, 2, 5, 6, 7, 8].map(macroOn)).toEqual([0, 0, 0, 0, 1, 1, 1]);
   });
 
   it('turns an optional PLUGIN into a compile-time define, which is the runtime-optional dimension', () => {
