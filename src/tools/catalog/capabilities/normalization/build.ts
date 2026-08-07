@@ -42,6 +42,7 @@ import {
   type Role,
   VERB_FAMILY,
 } from './types.js';
+import type { CapabilityRecord } from '../model.js';
 import { compareAscii as compareKeys } from '../../../../utils/serialization/ordering.js';
 
 export class InventoryBuildError extends Error {
@@ -125,8 +126,10 @@ function emptyDispositionCounts(): Record<Disposition, number> {
   return { keep: 0, alias: 0, map: 0, promote: 0, remove: 0, review: 0 };
 }
 
-export function buildInventory(): NormalizationInventory {
-  const raw = extractOccurrences();
+export function buildInventory(
+  records?: readonly CapabilityRecord[],
+): NormalizationInventory {
+  const raw = extractOccurrences(records);
 
   const groups = new Map<string, RawOccurrence[]>();
   for (const r of raw) {

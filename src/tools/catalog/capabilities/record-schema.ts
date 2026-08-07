@@ -3,6 +3,7 @@ import { isRecord } from '../../../utils/validation/type-guards.js';
 
 import {
   BEHAVIOR_EFFECTS,
+  CAPABILITY_PROVENANCE,
   COMPENSATION_MODES,
   CONSENT_MODES,
   DATA_ACCESS_CLASSES,
@@ -196,7 +197,8 @@ const normalizationSchema = z
     class: z.enum(NORMALIZATION_CLASSES),
     disposition: z.enum(NORMALIZATION_DISPOSITIONS),
     rationale: z.string(),
-    aliasOf: CapabilityIdSchema.optional()
+    aliasOf: CapabilityIdSchema.optional(),
+    provenance: z.enum(CAPABILITY_PROVENANCE).optional()
   })
   .superRefine((candidate, ctx) => {
     if (candidate.aliasOf === undefined) return;
@@ -213,6 +215,14 @@ const legacyIdSchema = z.strictObject({
   tool: LegacyToolNameSchema,
   action: LegacyActionNameSchema
 });
+
+// The parent action enum and the gateway's legacy-pair index are derived from
+// `legacyIds` and from nothing else, so a record declaring none would ship
+// searchable and callable by canonical id while `describe` never names its
+// action. The empty case is refused here rather than discovered at the gateway.
+const legacyIdsSchema = z
+  .array(legacyIdSchema)
+  .min(1, 'a capability must declare the legacyIds pair it is reachable through');
 
 // Canonical parent-tool metadata: shape-checked here, content-checked against
 // the single-source lookup in records/parent-metadata.ts so descriptions and
@@ -254,7 +264,7 @@ const parentSchema = z
 const sourceShape = {
   id: CapabilityIdSchema,
   aliases: z.array(CapabilityAliasSchema),
-  legacyIds: z.array(legacyIdSchema),
+  legacyIds: legacyIdsSchema,
   discovery: discoverySchema,
   schemas: z.strictObject({
     input: Draft202012ObjectSchemaSchema,

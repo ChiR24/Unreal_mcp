@@ -3,11 +3,17 @@
  *
  * The single source of truth is now the canonical capability records
  * (the SAME data the generator derives the 23 parent ToolDefinitions from).
- * Every record's routing.parentTool + legacyIds[].action is an authoritative
- * occurrence, so the inventory is derived from source records, never hardcoded
- * and never from a hand-authored base.
+ * A legacy-surface record's routing.parentTool + legacyIds[].action is an
+ * authoritative occurrence, so the inventory is derived from source records,
+ * never hardcoded and never from a hand-authored base.
+ *
+ * What the inventory audits is the pre-gateway 23-tool surface: the pairs that
+ * actually shipped. A capability authored after that migration reuses legacyIds
+ * to declare the pair it routes under, which is not a pair anything shipped, so
+ * it is excluded here rather than counted into a total describing history.
  */
 
+import type { CapabilityRecord } from '../model.js';
 import { ALL_CAPABILITY_RECORDS } from '../records/aggregate.js';
 import type { Evidence, OccurrenceRecord, RawRoute } from './types.js';
 
@@ -132,11 +138,13 @@ export class ExtractionError extends Error {
   }
 }
 
-/** Extract every {tool,action} occurrence from the authoritative records. */
-export function extractOccurrences(): readonly RawOccurrence[] {
-  const records = ALL_CAPABILITY_RECORDS;
+/** Extract every legacy-surface {tool,action} occurrence from the records. */
+export function extractOccurrences(
+  records: readonly CapabilityRecord[] = ALL_CAPABILITY_RECORDS,
+): readonly RawOccurrence[] {
   const out: RawOccurrence[] = [];
   for (const rec of records) {
+    if (rec.normalization.provenance === 'post-migration') continue;
     const tool = rec.routing.parentTool;
     const src = TOOL_SOURCE[tool];
     if (src === undefined) {

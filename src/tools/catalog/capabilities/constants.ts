@@ -27,6 +27,9 @@ export const NORMALIZATION_DISPOSITIONS = [
   'preset',
   'remove'
 ] as const;
+// The normalization inventory audits the pre-gateway surface, so only a
+// `legacy-surface` capability contributes an occurrence to it.
+export const CAPABILITY_PROVENANCE = ['legacy-surface', 'post-migration'] as const;
 export const DEPRECATION_STATUSES = ['active', 'deprecated', 'removed'] as const;
 export const HASH_ALGORITHM = 'sha256' as const;
 

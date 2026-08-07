@@ -1,5 +1,6 @@
 import type {
   BEHAVIOR_EFFECTS,
+  CAPABILITY_PROVENANCE,
   COMPENSATION_MODES,
   CONSENT_MODES,
   DATA_ACCESS_CLASSES,
@@ -156,6 +157,18 @@ export type CapabilityNormalization = {
    * relation is not a relation.
    */
   readonly aliasOf?: CapabilityId;
+  /**
+   * Whether this capability shipped on the pre-gateway surface. ABSENT means
+   * `legacy-surface`, so every migrated record omits it and no content hash
+   * moves by this field existing.
+   *
+   * For a migrated record `legacyIds` names both the pair the audit counts and
+   * the pair the action enum is built from. A capability authored later has the
+   * second without the first; `post-migration` states that, so the audit skips
+   * the record while routing still resolves it. Omitting the marker is the safe
+   * default — the record is counted and the reviewed total stops reproducing.
+   */
+  readonly provenance?: (typeof CAPABILITY_PROVENANCE)[number];
 };
 
 export type ActiveCapability = {
