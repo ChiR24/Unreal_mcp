@@ -71,10 +71,15 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
         const FString ReportDirectory = FPaths::ProfilingDir() / TEXT("MemReports");
         Resp->SetStringField(TEXT("reportDirectory"), ReportDirectory);
         TArray<FString> ReportFiles;
-        // Bound the scan: the newest-file decision only needs a ceiling, and the
-        // engine-owned directory must not become an unbounded cost.
+        // FindFilesRecursive takes no result ceiling — its last parameter is
+        // bClearFileNames, so a count argument here does not compile. Truncating
+        // the results would also be wrong rather than merely unbounded: picking
+        // the newest of an arbitrary subset can miss the actual newest report.
+        // If this directory ever needs a real traversal bound, that requires a
+        // visitor (IterateDirectoryStatRecursively), which can stop early and
+        // read ModificationTime in the same pass.
         IFileManager::Get().FindFilesRecursive(
-            ReportFiles, *ReportDirectory, TEXT("*.memreport"), true, false, true, 256);
+            ReportFiles, *ReportDirectory, TEXT("*.memreport"), true, false, true);
         FString NewestReport;
         FDateTime NewestStamp = FDateTime::MinValue();
         for (const FString& File : ReportFiles)
