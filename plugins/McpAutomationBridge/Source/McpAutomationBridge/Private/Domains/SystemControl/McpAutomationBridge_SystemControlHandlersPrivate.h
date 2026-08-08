@@ -23,6 +23,9 @@ bool HandleRunTests(UMcpAutomationBridgeSubsystem* Self,
                     const FString& RequestId,
                     const TSharedPtr<FJsonObject>& Payload,
                     FSystemControlSocket RequestingSocket);
+bool HandleCancelTests(UMcpAutomationBridgeSubsystem* Self,
+                       const FString& RequestId,
+                       FSystemControlSocket RequestingSocket);
 bool HandleTestProgressProtocol(UMcpAutomationBridgeSubsystem* Self,
                                 const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload,

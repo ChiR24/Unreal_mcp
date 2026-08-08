@@ -1,4 +1,5 @@
 import { WebSocket } from 'ws';
+import type { DebugCorrelationContext, DebugDiagnostic } from '../debug/types.js';
 
 export interface AutomationBridgeOptions {
     host?: string | null;
@@ -38,6 +39,9 @@ export interface AutomationBridgeAutomationEvent {
     payload?: unknown;
     result?: unknown;
     message?: string;
+    sequence: number;
+    timestamp: string;
+    context: DebugCorrelationContext;
 }
 
 export interface AutomationBridgeResponseMessage extends AutomationBridgeMessage {
@@ -46,6 +50,8 @@ export interface AutomationBridgeResponseMessage extends AutomationBridgeMessage
     message?: string;
     error?: string;
     result?: unknown;
+    context?: DebugCorrelationContext;
+    diagnostic?: DebugDiagnostic;
 }
 
 export type PendingRequestDetail = { requestId: string; action: string; ageMs: number };

@@ -1,4 +1,5 @@
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
+#include "Async/Async.h"
 
 // Deadlock-free tracked delete of a UserDefinedStruct (delete_struct).
 // ObjectTools / UPackageTools must run on the game thread; called directly

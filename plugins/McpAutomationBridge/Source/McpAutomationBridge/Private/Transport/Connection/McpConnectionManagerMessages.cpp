@@ -1,4 +1,5 @@
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
+#include "Transport/Connection/McpAutomationBridgeProtocolNegotiation.h"
 
 void FMcpConnectionManager::HandleMessage(
     TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &Message) {
@@ -195,7 +196,7 @@ void FMcpConnectionManager::HandleMessage(
     if (ActiveSessionId.IsEmpty())
       ActiveSessionId = FGuid::NewGuid().ToString();
     Ack->SetStringField(TEXT("sessionId"), ActiveSessionId);
-    Ack->SetNumberField(TEXT("protocolVersion"), 1);
+    McpConfigureBridgeProtocolAck(RootObj, Ack);
 
     TArray<TSharedPtr<FJsonValue>> SupportedOps;
     SupportedOps.Add(MakeShared<FJsonValueString>(TEXT("automation_request")));
@@ -204,11 +205,6 @@ void FMcpConnectionManager::HandleMessage(
     TArray<TSharedPtr<FJsonValue>> ExpectedOps;
     ExpectedOps.Add(MakeShared<FJsonValueString>(TEXT("automation_response")));
     Ack->SetArrayField(TEXT("expectedResponseOpcodes"), ExpectedOps);
-
-    TArray<TSharedPtr<FJsonValue>> Caps;
-    Caps.Add(MakeShared<FJsonValueString>(TEXT("console_commands")));
-    Caps.Add(MakeShared<FJsonValueString>(TEXT("native_plugin")));
-    Ack->SetArrayField(TEXT("capabilities"), Caps);
 
     Ack->SetNumberField(TEXT("heartbeatIntervalMs"), 0);
 

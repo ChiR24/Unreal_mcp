@@ -5,7 +5,11 @@ bool FMcpNativeTransport::TryHandleLocalToolCall(
 	const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
 	const FString& SessionId, const FString& CorsOrigin)
 {
-	if (ToolName != TEXT("manage_tools"))
+	const bool bDebugTool = ToolName == TEXT("debug_session") ||
+		ToolName == TEXT("debug_breakpoint") ||
+		ToolName == TEXT("debug_inspect") ||
+		ToolName == TEXT("debug_observe");
+	if (ToolName != TEXT("manage_tools") && !bDebugTool)
 	{
 		return false;
 	}
@@ -32,6 +36,35 @@ bool FMcpNativeTransport::TryHandleLocalToolCall(
 			return true;
 		}
 	}
+	if (bDebugTool)
+	{
+		const bool bNativeStatus = ToolName == TEXT("debug_session") &&
+			(Action == TEXT("list_targets") || Action == TEXT("status"));
+		TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+		Result->SetBoolField(TEXT("success"), bNativeStatus);
+		Result->SetStringField(TEXT("transport"), TEXT("native_http"));
+		Result->SetBoolField(TEXT("sidecarRequired"), true);
+		if (bNativeStatus)
+		{
+			Result->SetStringField(TEXT("state"), TEXT("observation_only"));
+			Result->SetNumberField(TEXT("targetPid"), FPlatformProcess::GetCurrentProcessId());
+		}
+		else
+		{
+			Result->SetStringField(TEXT("error"), TEXT("DEBUG_SIDECAR_REQUIRED"));
+			Result->SetStringField(TEXT("message"), TEXT("This operation requires the Node sidecar and the unreal-mcp-debug-host VS Code extension."));
+		}
+		const TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
+			bNativeStatus,
+			bNativeStatus ? TEXT("Native observation endpoint is healthy") : TEXT("DEBUG_SIDECAR_REQUIRED"),
+			Result, bNativeStatus ? FString() : TEXT("DEBUG_SIDECAR_REQUIRED"));
+		const FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
+		SendHttpResponse(ClientSocket, 200, TEXT("application/json"), Body, {}, CorsOrigin);
+		ClientSocket->Close();
+		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+		return true;
+	}
+
 	// HandleAction runs outside the session lock so it cannot stall other
 	// sessions' ValidateSession / rate-limit / progress writes. The
 	// FMcpDynamicToolManager protects its own state with StateMutex, and

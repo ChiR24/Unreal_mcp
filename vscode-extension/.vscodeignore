@@ -1,0 +1,6 @@
+.github/**
+src/**
+tsconfig.json
+node_modules/**
+artifacts/**
+*.map

@@ -8,6 +8,7 @@ import { LevelResources } from './resources/levels.js';
 import { ResourceRegistry } from './server/resource-registry.js';
 import { ToolRegistry } from './server/tool-registry.js';
 import fs from 'node:fs';
+import { DebugService } from './debug/index.js';
 
 type McpServer = ConstructorParameters<typeof ToolRegistry>[0];
 
@@ -26,7 +27,8 @@ export class ServerSetup {
     bridge: UnrealBridge,
     automationBridge: AutomationBridge,
     logger: Logger,
-    healthMonitor: HealthMonitor
+    healthMonitor: HealthMonitor,
+    private debugService: DebugService
   ) {
     this.server = server;
     this.bridge = bridge;
@@ -54,6 +56,7 @@ export class ServerSetup {
       this.actorResources,
       this.levelResources,
       this.healthMonitor,
+      this.debugService,
       ensureConnected
     );
     resourceRegistry.register();
@@ -68,6 +71,7 @@ export class ServerSetup {
       this.assetResources,
       this.actorResources,
       this.levelResources,
+      this.debugService,
       ensureConnected
     );
     toolRegistry.register();

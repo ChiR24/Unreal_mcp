@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
+
 static inline bool IsValidAssetPath(const FString &Path) {
   return !Path.IsEmpty() &&
          Path.StartsWith(TEXT("/")) &&

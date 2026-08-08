@@ -10,6 +10,8 @@ yarn-error.log*
 # Build outputs
 dist/
 build/
+artifacts/
+vscode-extension/artifacts/
 *.js.map
 *.d.ts.map
 .tsbuildinfo

@@ -12,6 +12,27 @@
 
 namespace McpSystemControlHandlers {
 
+bool HandleCancelTests(UMcpAutomationBridgeSubsystem* Self,
+                       const FString& RequestId,
+                       FSystemControlSocket RequestingSocket) {
+#if WITH_EDITOR
+  if (GEngine && GEditor && GEditor->GetEditorWorldContext().World()) {
+    GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("Automation StopTests"));
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("cancelRequested"), true);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true,
+                                 TEXT("Automation test cancellation requested"), Result);
+  } else {
+    Self->SendAutomationError(RequestingSocket, RequestId,
+                              TEXT("Editor world not available for cancelling tests"),
+                              TEXT("EDITOR_NOT_AVAILABLE"));
+  }
+  return true;
+#else
+  return false;
+#endif
+}
+
 bool HandleRunTests(UMcpAutomationBridgeSubsystem* Self,
                     const FString& RequestId,
                     const TSharedPtr<FJsonObject>& Payload,
@@ -42,6 +63,7 @@ bool HandleRunTests(UMcpAutomationBridgeSubsystem* Self,
   }
 
   if (GEngine && GEditor && GEditor->GetEditorWorldContext().World()) {
+    Self->BeginAutomationTestJob(RequestId);
     GEngine->Exec(GEditor->GetEditorWorldContext().World(), *TestCommand);
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();

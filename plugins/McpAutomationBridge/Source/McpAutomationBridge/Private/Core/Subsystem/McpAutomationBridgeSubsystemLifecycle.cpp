@@ -53,6 +53,7 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
             }));
 
     InitializeHandlers();
+    InitializeDebugObservability();
     ConnectionManager->Start();
     StartNativeTransport();
 
@@ -69,6 +70,7 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
 void UMcpAutomationBridgeSubsystem::Deinitialize()
 {
     StopAcceptingAutomationRequests();
+    ShutdownDebugObservability();
 
     if (TickHandle.IsValid())
     {

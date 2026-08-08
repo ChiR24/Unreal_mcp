@@ -113,6 +113,16 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
 
   bProcessingAutomationRequest = true;
   CurrentRequestOrigin = Origin;
+  CurrentRequestId = RequestId;
+  CurrentTraceId.Empty();
+  if (Payload.IsValid())
+  {
+    Payload->TryGetStringField(TEXT("traceId"), CurrentTraceId);
+  }
+  if (CurrentTraceId.IsEmpty())
+  {
+    CurrentTraceId = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphensLower);
+  }
   // force UE unattended-script mode for the duration of handler dispatch so any FMessageDialog / editor
   // confirmation prompt AUTO-ANSWERS its default instead of opening a BLOCKING modal that freezes the game thread
   // (the witnessed force-kill / data-loss class). RAII-restored on every function-scope exit (incl. the early
@@ -164,8 +174,51 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
       }
 
       bProcessingAutomationRequest = false;
+      if (BufferedAutomationResponse.bValid)
+      {
+        if (bHadEngineErrors && BufferedAutomationResponse.bSuccess)
+        {
+          BufferedAutomationResponse.bSuccess = false;
+          BufferedAutomationResponse.ErrorCode = TEXT("ENGINE_ERROR");
+          BufferedAutomationResponse.Message = FString::Printf(
+              TEXT("Unreal emitted an error while handling the request: %s"),
+              CapturedErrors.Num() > 0
+                  ? *CapturedErrors[0]
+                  : TEXT("unknown engine error"));
+          TSharedPtr<FJsonObject> DiagnosticResult = MakeShared<FJsonObject>();
+          if (BufferedAutomationResponse.Result.IsValid())
+          {
+            for (const auto& Pair : BufferedAutomationResponse.Result->Values)
+            {
+              DiagnosticResult->SetField(Pair.Key, Pair.Value);
+            }
+          }
+          DiagnosticResult->SetBoolField(TEXT("engineErrorsObserved"), true);
+          DiagnosticResult->SetNumberField(
+              TEXT("engineErrorCount"), CapturedErrors.Num());
+          TArray<TSharedPtr<FJsonValue>> ErrorValues;
+          for (const FString& CapturedError : CapturedErrors)
+          {
+            ErrorValues.Add(MakeShared<FJsonValueString>(CapturedError));
+          }
+          DiagnosticResult->SetArrayField(TEXT("engineErrors"), ErrorValues);
+          BufferedAutomationResponse.Result = DiagnosticResult;
+        }
+        FBufferedAutomationResponse Response = BufferedAutomationResponse;
+        BufferedAutomationResponse.Reset();
+        SendAutomationResponse(
+            Response.TargetSocket,
+            Response.RequestId,
+            Response.bSuccess,
+            Response.Message,
+            Response.Result,
+            Response.ErrorCode,
+            Response.Origin);
+      }
       McpAutomationBridge::SetInFlightAction(FString()); // clear the in-flight action on every exit path
       CurrentRequestOrigin = ERequestOrigin::WebSocket;
+      CurrentRequestId.Empty();
+      CurrentTraceId.Empty();
       const double DispatchEndSeconds = FPlatformTime::Seconds();
       const double DurationMs =
           (DispatchEndSeconds - DispatchStartSeconds) * 1000.0;

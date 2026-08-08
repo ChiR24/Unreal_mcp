@@ -1,5 +1,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 
+#include "Core/Subsystem/McpAutomationBridgeEventEnvelope.h"
 #include "MCP/Transport/McpNativeTransport.h"
 #include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
@@ -32,6 +33,9 @@ void UMcpAutomationBridgeSubsystem::BroadcastAutomationEvent(
             TEXT("Automation event broadcast skipped because the event object was invalid"));
         return;
     }
+
+    McpPrepareAutomationEventEnvelope(
+        Event, AutomationEventSequence, CurrentRequestId, CurrentTraceId);
 
     FString SerializedEvent;
     const TSharedRef<TJsonWriter<>> Writer =
@@ -73,6 +77,19 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     const FString& ErrorCode,
     ERequestOrigin Origin)
 {
+    if (bProcessingAutomationRequest && RequestId == CurrentRequestId)
+    {
+        BufferedAutomationResponse.TargetSocket = TargetSocket;
+        BufferedAutomationResponse.RequestId = RequestId;
+        BufferedAutomationResponse.bSuccess = bSuccess;
+        BufferedAutomationResponse.Message = Message;
+        BufferedAutomationResponse.Result = Result;
+        BufferedAutomationResponse.ErrorCode = ErrorCode;
+        BufferedAutomationResponse.Origin = Origin;
+        BufferedAutomationResponse.bValid = true;
+        return;
+    }
+
     ClearAutomationRequestCancellation(RequestId);
 
     bool bEffectiveSuccess = bSuccess;
@@ -134,6 +151,11 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
                 AugmentedResult->SetBoolField(TEXT("engineErrorsTruncated"), true);
             }
             EffectiveResult = AugmentedResult;
+            bEffectiveSuccess = false;
+            EffectiveErrorCode = TEXT("ENGINE_ERROR");
+            EffectiveMessage = FString::Printf(
+                TEXT("Unreal emitted an error while handling the request: %s"),
+                *SanitizeEngineErrorForResponse(CapturedErrors[0]));
         }
     }
 

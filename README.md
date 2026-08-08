@@ -10,6 +10,8 @@
 
 A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine through a native C++ Automation Bridge plugin. Built with TypeScript and C++.
 
+This fork also contains [Unreal MCP Debugging v1](docs/DEBUG_PROTOCOL_V1.md): correlated UE diagnostics, asynchronous tests/traces, runtime simulation probes, and native C++ debugging through a companion VS Code host.
+
 ---
 
 ## Table of Contents

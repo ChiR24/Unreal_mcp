@@ -6,6 +6,10 @@
 
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"
+#include "EdGraph/EdGraph.h"
+#include "EdGraph/EdGraphNode.h"
+#include "Kismet2/CompilerResultsLog.h"
+#include "Logging/TokenizedMessage.h"
 #endif
 
 namespace McpBlueprintHandlers {
@@ -45,7 +49,11 @@ bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
     // it (BS_UpToDate / BS_UpToDateWithWarnings) — previously the result was
     // discarded and `compiled` hardcoded to true, so a fatally broken blueprint
     // reported compiled:true (and was even saved to disk below).
-    const bool bCompiled = McpSafeCompileBlueprint(BP);
+    FCompilerResultsLog CompilerResults;
+    const double CompileStart = FPlatformTime::Seconds();
+    const bool bCompiled = McpSafeCompileBlueprint(BP, &CompilerResults);
+    const double CompileDurationMs =
+        (FPlatformTime::Seconds() - CompileStart) * 1000.0;
     bool bSaved = false;
     bool bSaveSkipped = false;
     if (bSaveAfterCompile) {
@@ -79,6 +87,39 @@ bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
                "broken blueprint was NOT written to disk."));
     }
     Out->SetStringField(TEXT("blueprintPath"), Path);
+    Out->SetNumberField(TEXT("compileDurationMs"), CompileDurationMs);
+    for (const TSharedRef<FTokenizedMessage>& CompilerMessage : CompilerResults.Messages)
+    {
+      TSharedRef<FJsonObject> DiagnosticPayload = MakeShared<FJsonObject>();
+      DiagnosticPayload->SetStringField(TEXT("assetPath"), Path);
+      DiagnosticPayload->SetStringField(
+          TEXT("message"), CompilerMessage->ToText().ToString());
+      DiagnosticPayload->SetNumberField(TEXT("compileDurationMs"), CompileDurationMs);
+      const EMessageSeverity::Type Severity = CompilerMessage->GetSeverity();
+      DiagnosticPayload->SetStringField(
+          TEXT("severity"),
+          Severity == EMessageSeverity::Error
+              ? TEXT("error")
+              : Severity == EMessageSeverity::Warning
+                  ? TEXT("warning")
+                  : TEXT("info"));
+      if (CompilerResults.AnnotatedNodes.Num() > 0)
+      {
+        const UEdGraphNode* Node = CompilerResults.AnnotatedNodes.Array()[0].Get();
+        if (Node)
+        {
+          DiagnosticPayload->SetStringField(TEXT("nodeGuid"), Node->NodeGuid.ToString());
+          if (Node->GetGraph())
+          {
+            DiagnosticPayload->SetStringField(TEXT("graph"), Node->GetGraph()->GetName());
+          }
+        }
+      }
+      TSharedRef<FJsonObject> DiagnosticEvent = MakeShared<FJsonObject>();
+      DiagnosticEvent->SetStringField(TEXT("event"), TEXT("blueprint_compile_diagnostic"));
+      DiagnosticEvent->SetObjectField(TEXT("payload"), DiagnosticPayload);
+      Bridge.BroadcastAutomationEvent(DiagnosticEvent);
+    }
     Bridge.SendAutomationResponse(
         RequestingSocket, RequestId, /*bSuccess=*/bCompiled,
         bCompiled ? TEXT("Blueprint compiled")

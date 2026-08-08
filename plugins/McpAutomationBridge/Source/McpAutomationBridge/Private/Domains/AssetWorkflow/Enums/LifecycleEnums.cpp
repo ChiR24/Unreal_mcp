@@ -1,4 +1,5 @@
 #include "Domains/AssetWorkflow/Enums/Shared.h"
+#include "Async/Async.h"
 #include "Kismet2/EnumEditorUtils.h"
 #include "Misc/ScopedEvent.h"
 #include "ObjectTools.h"

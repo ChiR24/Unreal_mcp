@@ -12,6 +12,14 @@ import type { AutomationBridgeMessage } from './types.js';
 export class HandshakeHandler extends EventEmitter {
     private log = new AutomationLogger('HandshakeHandler');
     private readonly DEFAULT_HANDSHAKE_TIMEOUT_MS = 5000;
+    private readonly supportedProtocolVersions = [2, 1];
+    private readonly requestedCapabilities = [
+        'structured_diagnostics',
+        'correlated_events',
+        'async_jobs',
+        'blueprint_diagnostics',
+        'runtime_probes'
+    ];
 
     constructor(
         private capabilityToken?: string
@@ -98,6 +106,8 @@ export class HandshakeHandler extends EventEmitter {
                 if (!settled && socket.readyState === WebSocket.OPEN) {
                     const helloPayload: AutomationBridgeMessage = {
                         type: 'bridge_hello',
+                        supportedProtocolVersions: this.supportedProtocolVersions,
+                        requestedCapabilities: this.requestedCapabilities,
                         capabilityToken: this.capabilityToken || undefined
                     };
                     this.log.debug('Sending bridge_hello (delayed)');

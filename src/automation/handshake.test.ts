@@ -39,6 +39,10 @@ describe('HandshakeHandler', () => {
 
         expect(socket.sent).toHaveLength(1);
         expect(socket.sent[0]).toContain('secret-token');
+        expect(JSON.parse(socket.sent[0] ?? '{}')).toMatchObject({
+            supportedProtocolVersions: [2, 1],
+            requestedCapabilities: expect.arrayContaining(['structured_diagnostics', 'runtime_probes'])
+        });
 
         expect(debugSpy).toHaveBeenCalledWith('Sending bridge_hello (delayed)');
         const debugOutput = debugMessages.join('\n');

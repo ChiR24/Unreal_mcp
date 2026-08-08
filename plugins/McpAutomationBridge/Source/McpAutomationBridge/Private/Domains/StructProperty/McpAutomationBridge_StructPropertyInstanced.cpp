@@ -248,7 +248,7 @@ bool HandleStructPropertyAction(
         // Skip the save (without erroring) when the opt-out is requested.
         if (bSave)
         {
-            if (!McpSafeAssetSave(Asset))
+            if (!McpSafeOperations::McpSafeAssetSave(Asset))
             {
                 OutResult->SetBoolField(TEXT("success"), false);
                 OutResult->SetStringField(TEXT("error"), TEXT("OPERATION_FAILED"));

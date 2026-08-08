@@ -1,6 +1,6 @@
 {
   "name": "unreal-engine-mcp-server",
-  "version": "0.5.30",
+  "version": "0.5.31",
   "mcpName": "io.github.ChiR24/unreal-engine-mcp",
   "description": "A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine via native automation bridge. Built with TypeScript and designed for game development automation.",
   "type": "module",
@@ -39,6 +39,8 @@
     "test:all": "node tests/integration.mjs",
     "test:smoke": "node --loader ts-node/esm scripts/smoke-test.ts",
     "test:native-parity": "node tests/native-mcp-parity-audit.mjs",
+    "test:debug-smoke": "node tests/integration/debug-sidecar-smoke.mjs",
+    "test:debug-live": "node tests/integration/debug-live-smoke.mjs",
     "test:params": "npm run test:native-parity && node tests/parameter-combination-audit.mjs --static --strict --optional-strict",
     "type-check": "tsc --noEmit"
   },
@@ -75,7 +77,7 @@
     "eslint": "^10.0.2",
     "rimraf": "^6.1.2",
     "ts-node": "^10.9.2",
-    "typescript": "^7.0.2",
+    "typescript": "^6.0.2",
     "vitest": "^4.0.16"
   },
   "overrides": {

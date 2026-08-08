@@ -1,0 +1,54 @@
+{
+  "name": "unreal-mcp-debug-host",
+  "displayName": "Unreal MCP Debug Host",
+  "description": "VS Code-hosted cppvsdbg bridge for Unreal MCP debugging.",
+  "version": "0.1.0",
+  "publisher": "unreal-mcp-debug",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ChiR24/Unreal_mcp.git"
+  },
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": ["Debuggers"],
+  "activationEvents": ["onStartupFinished", "onCommand:unrealMcpDebug.restartHost"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "unrealMcpDebug.restartHost",
+        "title": "Unreal MCP: Restart Debug Host"
+      }
+    ],
+    "configuration": {
+      "title": "Unreal MCP Debug",
+      "properties": {
+        "unrealMcpDebug.enginePath": {
+          "type": "string",
+          "default": "",
+          "description": "Unreal Engine installation root, for example C:\\Program Files\\Epic Games\\UE_5.7."
+        },
+        "unrealMcpDebug.requireMatchingSymbols": {
+          "type": "boolean",
+          "default": true,
+          "description": "Reject standalone launch when the project DebugGame Editor DLL/PDB pair is missing or stale."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist",
+    "compile": "tsc -p tsconfig.json",
+    "test": "npm run compile && node --test test/*.test.cjs",
+    "package": "npm run clean && npm run compile && node -e \"require('fs').mkdirSync('artifacts',{recursive:true})\" && vsce package --out artifacts/unreal-mcp-debug-host-0.1.0.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/vscode": "^1.95.0",
+    "@vscode/vsce": "^3.6.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^6.0.2"
+  }
+}

@@ -3,6 +3,30 @@ import { z } from 'zod';
 const stringArray = z.array(z.string());
 const nonNegativeInteger = z.number().int().min(0);
 
+const correlationContextSchema = z.looseObject({
+    requestId: z.string().optional(),
+    traceId: z.string().optional(),
+    debugSessionId: z.string().optional(),
+    targetPid: nonNegativeInteger.optional(),
+    worldInstance: z.string().optional(),
+    frame: nonNegativeInteger.optional(),
+    thread: nonNegativeInteger.optional(),
+    timestamp: z.string().optional(),
+    eventCursor: nonNegativeInteger.optional()
+});
+
+const diagnosticSchema = z.looseObject({
+    code: z.string().min(1),
+    severity: z.enum(['info', 'warning', 'error', 'fatal']),
+    component: z.string().min(1),
+    phase: z.string().min(1),
+    retriable: z.boolean(),
+    message: z.string(),
+    causes: stringArray.optional(),
+    recoveryHints: stringArray.optional(),
+    artifactIds: stringArray.optional()
+});
+
 export const automationResponseSchema = z.looseObject({
     type: z.literal('automation_response'),
     requestId: z.string().min(1),
@@ -10,7 +34,9 @@ export const automationResponseSchema = z.looseObject({
     message: z.string().optional(),
     error: z.string().optional(),
     result: z.unknown().optional(),
-    action: z.string().optional()
+    action: z.string().optional(),
+    context: correlationContextSchema.optional(),
+    diagnostic: diagnosticSchema.optional()
 });
 
 export const automationEventSchema = z.looseObject({
@@ -19,7 +45,11 @@ export const automationEventSchema = z.looseObject({
     event: z.string().optional(),
     payload: z.unknown().optional(),
     result: z.unknown().optional(),
-    message: z.string().optional()
+    message: z.string().optional(),
+    sequence: nonNegativeInteger.optional(),
+    timestamp: z.string().optional(),
+    context: correlationContextSchema.optional(),
+    diagnostic: diagnosticSchema.optional()
 });
 
 export const bridgeAckSchema = z.looseObject({
@@ -29,6 +59,8 @@ export const bridgeAckSchema = z.looseObject({
     serverVersion: z.string().optional(),
     sessionId: z.string().optional(),
     protocolVersion: nonNegativeInteger.optional(),
+    selectedProtocolVersion: nonNegativeInteger.optional(),
+    supportedProtocolVersions: z.array(nonNegativeInteger).optional(),
     supportedOpcodes: stringArray.optional(),
     expectedResponseOpcodes: stringArray.optional(),
     capabilities: stringArray.optional(),

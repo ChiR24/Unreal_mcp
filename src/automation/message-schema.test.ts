@@ -28,4 +28,22 @@ describe('automationMessageSchema', () => {
             protocolVersion: 1.5
         })).toThrow();
     });
+
+    it('accepts protocol v2 correlated diagnostics', () => {
+        expect(automationMessageSchema.parse({
+            type: 'automation_event',
+            event: 'blueprint_exception',
+            sequence: 12,
+            timestamp: '2026-07-28T00:00:00.000Z',
+            context: { traceId: 'trace-1', debugSessionId: 'session-1', frame: 42 },
+            diagnostic: {
+                code: 'BLUEPRINT_EXCEPTION',
+                severity: 'error',
+                component: 'unreal_bridge',
+                phase: 'runtime',
+                retriable: false,
+                message: 'Accessed None'
+            }
+        })).toMatchObject({ event: 'blueprint_exception', sequence: 12 });
+    });
 });

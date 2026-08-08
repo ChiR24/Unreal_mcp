@@ -28,6 +28,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       Lower == TEXT("subscribe") || Lower == TEXT("unsubscribe");
   if (!Lower.StartsWith(TEXT("run_ubt")) &&
       !Lower.StartsWith(TEXT("run_tests")) &&
+      Lower != TEXT("cancel_tests") &&
       !Lower.StartsWith(TEXT("test_progress")) &&
       !Lower.StartsWith(TEXT("test_stale")) &&
       Lower != TEXT("export_asset") &&
@@ -65,6 +66,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
   if (Lower == TEXT("run_tests")) {
     return McpSystemControlHandlers::HandleRunTests(this, RequestId, Payload,
                                                     RequestingSocket);
+  }
+  if (Lower == TEXT("cancel_tests")) {
+    return McpSystemControlHandlers::HandleCancelTests(
+        this, RequestId, RequestingSocket);
   }
   if (Lower == TEXT("test_progress_protocol")) {
     return McpSystemControlHandlers::HandleTestProgressProtocol(

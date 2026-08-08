@@ -4,6 +4,7 @@ import { ActorResources } from '../resources/actors.js';
 import { LevelResources } from '../resources/levels.js';
 import { HealthMonitor } from '../services/health-monitor.js';
 import type { AutomationStatusBridge } from '../types/tools/tool-interfaces.js';
+import { DebugService } from '../debug/index.js';
 
 interface ResourceBridge {
   readonly isConnected: boolean;
@@ -56,12 +57,17 @@ export class ResourceHandler {
     private actorResources: ActorResources,
     private levelResources: LevelResources,
     private healthMonitor: HealthMonitor,
+    private debugService: DebugService,
     private ensureConnected: () => Promise<boolean>
   ) { }
 
   registerHandlers() {
     this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
       const uri = request.params.uri;
+
+      if (uri.startsWith('ue://debug/')) {
+        return jsonResource(uri, this.debugService.readResource(uri));
+      }
 
       if (uri === 'ue://assets') {
         const ok = await this.ensureConnected();

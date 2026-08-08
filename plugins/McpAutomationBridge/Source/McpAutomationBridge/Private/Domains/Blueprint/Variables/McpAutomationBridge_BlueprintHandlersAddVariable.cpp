@@ -1,3 +1,4 @@
+#include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetSaveRegistry.h"
@@ -9,6 +10,7 @@
 #include "Misc/ScopeExit.h"
 
 #if WITH_EDITOR
+#include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UnrealType.h"
@@ -197,7 +199,7 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
       case EJson::Number: {
         const double Num = DefaultVal->AsNumber();
         const bool bIsIntLike =
-            PinType.PinCategory == MCP_PC_Int ||
+            PinType.PinCategory == UEdGraphSchema_K2::PC_Int ||
             PinType.PinCategory == UEdGraphSchema_K2::PC_Byte;
         if (bIsIntLike && FMath::Frac(Num) == 0.0) {
           DefaultStr = FString::Printf(TEXT("%lld"), static_cast<int64>(Num));

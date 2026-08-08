@@ -72,7 +72,31 @@ void FMcpConnectionManager::SendAutomationResponse(
   if (!Message.IsEmpty())
     Response->SetStringField(TEXT("message"), Message);
   // Always include error field as empty string when no error (required by JSON schema: error: { type: 'string' })
-  Response->SetStringField(TEXT("error"), ErrorCode.IsEmpty() ? TEXT("") : ErrorCode);
+    Response->SetStringField(TEXT("error"), ErrorCode.IsEmpty() ? TEXT("") : ErrorCode);
+    TSharedRef<FJsonObject> Context = MakeShared<FJsonObject>();
+    Context->SetStringField(TEXT("requestId"), RequestId);
+    Context->SetStringField(TEXT("traceId"), RequestId);
+    Context->SetNumberField(
+        TEXT("targetPid"),
+        static_cast<double>(FPlatformProcess::GetCurrentProcessId()));
+    Context->SetNumberField(TEXT("frame"), static_cast<double>(GFrameCounter));
+    Context->SetNumberField(
+        TEXT("thread"),
+        static_cast<double>(FPlatformTLS::GetCurrentThreadId()));
+    Context->SetStringField(TEXT("timestamp"), FDateTime::UtcNow().ToIso8601());
+    Response->SetObjectField(TEXT("context"), Context);
+    if (!bSuccess) {
+      TSharedRef<FJsonObject> Diagnostic = MakeShared<FJsonObject>();
+      Diagnostic->SetStringField(
+          TEXT("code"),
+          ErrorCode.IsEmpty() ? TEXT("AUTOMATION_ERROR") : ErrorCode);
+      Diagnostic->SetStringField(TEXT("severity"), TEXT("error"));
+      Diagnostic->SetStringField(TEXT("component"), TEXT("unreal_bridge"));
+      Diagnostic->SetStringField(TEXT("phase"), TEXT("request"));
+      Diagnostic->SetBoolField(TEXT("retriable"), false);
+      Diagnostic->SetStringField(TEXT("message"), Message);
+      Response->SetObjectField(TEXT("diagnostic"), Diagnostic);
+    }
   if (Result.IsValid())
     Response->SetObjectField(TEXT("result"), Result.ToSharedRef());
 

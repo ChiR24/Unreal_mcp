@@ -16,6 +16,9 @@ class AActor;
 class FMcpBridgeWebSocket;
 class FMcpNativeTransport;
 class UBlueprint;
+class FAutomationTestBase;
+struct FBlueprintExceptionInfo;
+struct FFrame;
 class USkeleton;
 class UMcpAutomationBridgeSubsystem;
 
@@ -134,52 +137,30 @@ public:
   UFUNCTION(BlueprintCallable, Category = "MCP Automation")
   bool SendRawMessage(const FString& Message);
 
-  void BroadcastAutomationEvent(
-      const TSharedPtr<FJsonObject>& Event,
-      TSharedPtr<FMcpBridgeWebSocket> TargetSocket = nullptr);
+  void BroadcastAutomationEvent(const TSharedPtr<FJsonObject>& Event, TSharedPtr<FMcpBridgeWebSocket> TargetSocket = nullptr);
 
   UPROPERTY(BlueprintAssignable, Category = "MCP Automation")
   FMcpAutomationMessageReceived OnMessageReceived;
 
-  void SendAutomationResponse(
-      TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
-      const FString& RequestId,
-      bool bSuccess,
-      const FString& Message,
-      const TSharedPtr<FJsonObject>& Result = nullptr,
-      const FString& ErrorCode = FString(),
-      ERequestOrigin Origin = ERequestOrigin::WebSocket);
-  void SendAutomationError(
-      TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
-      const FString& RequestId,
-      const FString& Message, const FString& ErrorCode);
-  void SendAutomationRejection(
-      TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
-      const FString& RequestId, EAutomationQueueRejection Reason);
-  void SendProgressUpdate(
-      const FString& RequestId,
-      float Percent = -1.0f,
-      const FString& Message = TEXT(""),
-      bool bStillWorking = true,
-      ERequestOrigin Origin = ERequestOrigin::WebSocket);
+  void SendAutomationResponse(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId,
+      bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Result = nullptr,
+      const FString& ErrorCode = FString(), ERequestOrigin Origin = ERequestOrigin::WebSocket);
+  void SendAutomationError(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, const FString& Message, const FString& ErrorCode);
+  void SendAutomationRejection(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, EAutomationQueueRejection Reason);
+  void SendProgressUpdate(const FString& RequestId, float Percent = -1.0f, const FString& Message = TEXT(""),
+      bool bStillWorking = true, ERequestOrigin Origin = ERequestOrigin::WebSocket);
 
   bool ExecuteEditorCommands(const TArray<FString>& Commands, FString& OutErrorMessage);
 #if MCP_HAS_CONTROLRIG_FACTORY
-  UBlueprint* CreateControlRigBlueprint(
-      const FString& AssetName,
-      const FString& PackagePath,
-      USkeleton* TargetSkeleton,
-      FString& OutError);
+  UBlueprint* CreateControlRigBlueprint(const FString& AssetName, const FString& PackagePath,
+      USkeleton* TargetSkeleton, FString& OutError);
 #endif
 
-  using FAutomationHandler = TFunction<bool(
-      const FString&,
-      const FString&,
-      const TSharedPtr<FJsonObject>&,
-      TSharedPtr<FMcpBridgeWebSocket>)>;
+  using FAutomationHandler = TFunction<bool(const FString&, const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FMcpBridgeWebSocket>)>;
 
   bool RegisterHandler(const FString& Action, FAutomationHandler Handler);
   bool RegisterActionAlias(const FString& AliasAction, const FString& TargetAction);
+  void BeginAutomationTestJob(const FString& RequestId);
 
   struct FRequestErrorCapture
   {
@@ -217,18 +198,32 @@ public:
 
   friend class FMcpRequestErrorDevice;
 
+  struct FBufferedAutomationResponse
+  {
+    TSharedPtr<FMcpBridgeWebSocket> TargetSocket;
+    FString RequestId, Message, ErrorCode;
+    bool bSuccess = false, bValid = false;
+    TSharedPtr<FJsonObject> Result;
+    ERequestOrigin Origin = ERequestOrigin::WebSocket;
+
+    void Reset()
+    {
+      TargetSocket.Reset(); Result.Reset();
+      RequestId.Empty(); Message.Empty(); ErrorCode.Empty();
+      bSuccess = false; bValid = false; Origin = ERequestOrigin::WebSocket;
+    }
+  };
+
 private:
   FRequestErrorCapture CurrentErrorCapture;
   mutable FCriticalSection ErrorCaptureMutex;
   TSharedPtr<class FMcpRequestErrorDevice> RequestErrorDevice;
+  FBufferedAutomationResponse BufferedAutomationResponse;
 
 public:
   bool Tick(float DeltaTime);
-  EAutomationQueueRejection QueueAutomationRequest(
-      const FString& RequestId,
-      const FString& Action,
-      const TSharedPtr<FJsonObject>& Payload,
-      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+  EAutomationQueueRejection QueueAutomationRequest(const FString& RequestId, const FString& Action,
+      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
       ERequestOrigin Origin = ERequestOrigin::WebSocket);
   // Cancel API contract: best-effort, advisory bool return. The function is
   // idempotent and only operates on QUEUED requests — a request that is
@@ -249,9 +244,7 @@ public:
   bool CancelAutomationRequest(const FString& RequestId);
   bool CancelAutomationRequests(const TArray<FString>& RequestIds);
   bool CancelAllAutomationRequests();
-  bool RegisterAutomationRequestCancellation(
-      const FString& RequestId,
-      TFunction<void()> Callback);
+  bool RegisterAutomationRequestCancellation(const FString& RequestId, TFunction<void()> Callback);
   void ClearAutomationRequestCancellation(const FString& RequestId);
   void DiscardCanceledAutomationRequest(const FString& RequestId);
 
@@ -288,13 +281,14 @@ public:
   void ProcessPendingAutomationRequests();
 
   ERequestOrigin CurrentRequestOrigin = ERequestOrigin::WebSocket;
-  void RecordAutomationTelemetry(
-      const FString& RequestId,
-      bool bSuccess,
-      const FString& Message,
-      const FString& ErrorCode);
+  void RecordAutomationTelemetry(const FString& RequestId, bool bSuccess, const FString& Message, const FString& ErrorCode);
 
   TSharedPtr<FOutputDevice> LogCaptureDevice;
+  std::atomic<uint64> AutomationEventSequence{0};
+  FString CurrentRequestId, CurrentTraceId, ActiveAutomationTestRequestId;
+  FDelegateHandle BlueprintExceptionHandle, AutomationTestStartHandle;
+  FDelegateHandle AutomationTestEndHandle, AutomationTestingCompleteHandle;
+  int32 AutomationTestsPassed = 0, AutomationTestsFailed = 0, AutomationTestWarnings = 0, AutomationTestErrors = 0;
 
 private:
   FTSTicker::FDelegateHandle TickHandle;
@@ -305,13 +299,16 @@ private:
   void LoadConfiguredHandlerAliases();
   void StartAcceptingAutomationRequests();
   void StopAcceptingAutomationRequests();
-  bool RegisterActionAliasInternal(
-      const FString& AliasAction,
-      const FString& TargetAction,
-      bool bAllowPendingTarget);
+  bool RegisterActionAliasInternal(const FString& AliasAction, const FString& TargetAction, bool bAllowPendingTarget);
   void TryActivatePendingActionAliases(const FString& TargetAction);
   void StartNativeTransport();
   void ReconcileLogCaptureDevice();
+  void InitializeDebugObservability();
+  void ShutdownDebugObservability();
+  void HandleBlueprintScriptException(const UObject* ActiveObject, const FFrame& StackFrame, const FBlueprintExceptionInfo& ExceptionInfo);
+  void HandleAutomationTestStart(FAutomationTestBase* Test);
+  void HandleAutomationTestEnd(FAutomationTestBase* Test);
+  void HandleAutomationTestingComplete();
   void RegisterCoreAndAssetHandlers();
   void RegisterEnvironmentMediaHandlers();
   void RegisterSystemAndEditorHandlers();
@@ -336,11 +333,8 @@ private:
   TMap<FString, FTransform> CachedActorSnapshots;
   bool bProcessingAutomationRequest = false;
 
-  void ProcessAutomationRequest(
-      const FString& RequestId,
-      const FString& Action,
-      const TSharedPtr<FJsonObject>& Payload,
-      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+  void ProcessAutomationRequest(const FString& RequestId, const FString& Action,
+      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
       ERequestOrigin Origin = ERequestOrigin::WebSocket);
 
   friend struct FMcpLevelHandlerAccess;
@@ -348,14 +342,9 @@ private:
   friend class FMcpNativeTransport;
   friend class FMcpCustomHandlerAliasDispatchTest;
   friend class FMcpAutomationShutdownCancellationTest;
-  friend bool McpProcessRequestDispatch::DispatchFallbackAutomationRequest(
-      UMcpAutomationBridgeSubsystem* Bridge,
-      const FString& RequestId,
-      const FString& Action,
-      const FString& LowerAction,
-      const TSharedPtr<FJsonObject>& Payload,
-      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-      FString& OutConsumedHandlerLabel);
+  friend bool McpProcessRequestDispatch::DispatchFallbackAutomationRequest(UMcpAutomationBridgeSubsystem* Bridge,
+      const FString& RequestId, const FString& Action, const FString& LowerAction,
+      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, FString& OutConsumedHandlerLabel);
 };
 
 #undef MCP_SUBSYSTEM_ASSET_WORKFLOW_DECLARATIONS

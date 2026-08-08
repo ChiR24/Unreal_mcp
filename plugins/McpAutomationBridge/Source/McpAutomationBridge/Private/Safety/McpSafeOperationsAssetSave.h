@@ -138,3 +138,9 @@ inline bool McpSafeAssetSave(UObject* Asset)
 #endif
 
 }
+
+// Compatibility for legacy handlers that included this header before the
+// operation was moved into McpSafeOperations.
+#if WITH_EDITOR
+using McpSafeOperations::McpSafeAssetSave;
+#endif

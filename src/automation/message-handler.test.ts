@@ -88,15 +88,17 @@ describe('MessageHandler automation events', () => {
         });
 
         // Then
-        expect(events).toEqual([
-            {
+        expect(events).toHaveLength(1);
+        expect(events[0]).toMatchObject({
                 type: 'automation_event',
                 event: 'asset_saved',
                 requestId: 'orphan-request',
                 message: 'Saved /Game/Maps/Arena',
                 payload: { assetPath: '/Game/Maps/Arena' }
-            }
-        ]);
+        });
+        expect(Reflect.get(events[0] ?? {}, 'sequence')).toBe(1);
+        expect(Reflect.get(events[0] ?? {}, 'timestamp')).toEqual(expect.any(String));
+        expect(Reflect.get(events[0] ?? {}, 'context')).toMatchObject({ requestId: 'orphan-request' });
     });
 
     it('drops malformed automation events without an event name', () => {
@@ -118,5 +120,34 @@ describe('MessageHandler automation events', () => {
 
         // Then
         expect(events).toEqual([]);
+    });
+
+    it('keeps test jobs pending until the completion event', async () => {
+        const tracker = new RequestTracker(10);
+        const handler = new MessageHandler(tracker);
+        const { requestId, promise } = tracker.createRequest('manage_tests', { action: 'run_tests' }, 10000);
+        const pending = tracker.getPendingRequest(requestId);
+        expect(pending).toBeDefined();
+        if (!pending) throw new Error('Expected a pending request');
+        pending.waitForEvent = true;
+
+        handler.handleMessage({
+            type: 'automation_response', requestId, success: true,
+            result: { queued: true }
+        });
+        handler.handleMessage({
+            type: 'automation_event', event: 'automation_test_started', requestId,
+            result: { testName: 'Missile.Determinism' }
+        });
+        expect(tracker.getPendingRequest(requestId)).toBeDefined();
+
+        handler.handleMessage({
+            type: 'automation_event', event: 'automation_test_completed', requestId,
+            result: { success: false, errors: ['state hash mismatch'] }
+        });
+        await expect(promise).resolves.toMatchObject({
+            success: false,
+            result: { errors: ['state hash mismatch'] }
+        });
     });
 });

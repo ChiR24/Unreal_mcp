@@ -10,6 +10,7 @@ import { startMetricsServer } from '../services/metrics-server.js';
 import { consolidatedToolDefinitions } from '../tools/catalog/consolidated-tool-definitions.js';
 import { UnrealBridge } from '../unreal-bridge.js';
 import { responseValidator } from '../utils/responses/response-validator.js';
+import { DebugService } from '../debug/index.js';
 
 const require = createRequire(import.meta.url);
 const packageInfo: { name?: string; version?: string } = (() => {
@@ -68,6 +69,7 @@ export function createServer() {
     clientMode: config.MCP_AUTOMATION_CLIENT_MODE,
   });
   bridge.setAutomationBridge(automationBridge);
+  const debugService = new DebugService(automationBridge);
 
   automationBridge.on('connected', ({ metadata, port, protocol }) => {
     log.info(
@@ -128,6 +130,7 @@ export function createServer() {
   );
 
   automationBridge.on('automationEvent', (event) => {
+    debugService.ingestAutomationEvent(event);
     server.notification({
       method: 'notifications/unreal/automation_event',
       params: event,
@@ -145,6 +148,7 @@ export function createServer() {
     automationBridge,
     log,
     healthMonitor,
+    debugService,
   );
   serverSetup.setup();
 
@@ -154,5 +158,6 @@ export function createServer() {
     automationBridge,
     healthMonitor,
     metricsServer,
+    debugService,
   };
 }

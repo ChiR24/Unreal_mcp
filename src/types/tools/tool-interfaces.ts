@@ -1,4 +1,5 @@
 import type { AutomationBridgeStatus } from '../../automation/index.js';
+import type { DebugService } from '../../debug/index.js';
 import type { AutomationErrorDetail } from '../automation/automation-responses.js';
 
 export interface AutomationRequestBridge {
@@ -39,6 +40,7 @@ export interface ITools {
     actorResources?: unknown;
     levelResources?: unknown;
     automationBridge?: AutomationRequestBridge;
+    debugService?: DebugService;
     bridge?: unknown;
     [key: string]: unknown;
 }

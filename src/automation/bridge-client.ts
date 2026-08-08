@@ -224,7 +224,8 @@ export class AutomationBridgeClient {
 
                 const text = rawDataToUtf8String(data, byteLength);
                 this.deps.log.debug(`[AutomationBridge Client] Received message: ${redactImagePayloadTextForLog(text).substring(0, 1000)}`);
-                const parsed = JSON.parse(text);
+                const rawParsed: unknown = JSON.parse(text);
+                const parsed = this.normalizeLegacyEvent(rawParsed);
                 if (!this.deps.connectionManager.recordInboundMessage(socket, false)) {
                     this.deps.log.warn('Inbound message rate limit exceeded; closing connection.');
                     socket.close(4008, 'Rate limit exceeded');
@@ -250,6 +251,15 @@ export class AutomationBridgeClient {
         if (this.pendingConnectionSocket === socket) {
             this.pendingConnectionSocket = undefined;
         }
+    }
+
+    private normalizeLegacyEvent(value: unknown): unknown {
+        if (typeof value !== 'object' || value === null || Array.isArray(value)) return value;
+        const record = value as Record<string, unknown>;
+        if (record.type === undefined && typeof record.event === 'string') {
+            return { ...record, type: 'automation_event' };
+        }
+        return value;
     }
 
     private redactPeerText(value: string): string {

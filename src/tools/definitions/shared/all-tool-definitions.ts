@@ -21,6 +21,10 @@ import { manageInventoryToolDefinition } from '../gameplay/manage-inventory-tool
 import { manageInteractionToolDefinition } from '../gameplay/manage-interaction-tool.js';
 import { manageNetworkingToolDefinition } from '../utility/networking/manage-networking-tool.js';
 import { manageLevelStructureToolDefinition } from '../world/manage-level-structure-tool.js';
+import { debugSessionToolDefinition } from '../core/debug-session-tool.js';
+import { debugBreakpointToolDefinition } from '../core/debug-breakpoint-tool.js';
+import { debugInspectToolDefinition } from '../core/debug-inspect-tool.js';
+import { debugObserveToolDefinition } from '../core/debug-observe-tool.js';
 import type { ToolDefinition } from './tool-definition.js';
 
 export const allToolDefinitions: ToolDefinition[] = [
@@ -47,4 +51,8 @@ export const allToolDefinitions: ToolDefinition[] = [
   manageInteractionToolDefinition,
   manageNetworkingToolDefinition,
   manageLevelStructureToolDefinition,
+  debugSessionToolDefinition,
+  debugBreakpointToolDefinition,
+  debugInspectToolDefinition,
+  debugObserveToolDefinition,
 ];

@@ -6,6 +6,7 @@ import type {
     AutomationBridgeResponseMessage,
     ProgressUpdateMessage
 } from './types.js';
+import { randomUUID } from 'node:crypto';
 
 function FStringSafe(val: unknown): string {
     try {
@@ -34,6 +35,9 @@ interface EventMessage extends AutomationBridgeMessage {
     payload?: unknown;
     result?: ResponseResult;
     message?: string;
+    sequence?: number;
+    timestamp?: string;
+    context?: Record<string, unknown>;
 }
 
 /** Response with optional action field */
@@ -53,6 +57,7 @@ const CONSOLIDATED_TOOL_ACTIONS = new Set([
 
 export class MessageHandler {
     private log = new AutomationLogger('MessageHandler');
+    private nextEventSequence = 1;
 
     constructor(
         private requestTracker: RequestTracker,
@@ -137,6 +142,13 @@ export class MessageHandler {
 
     private handleAutomationEvent(message: AutomationBridgeMessage): void {
         const evt = message as EventMessage;
+        const normalized = this.normalizeAutomationEvent(evt);
+        if (!normalized) {
+            this.log.warn('Dropped automation_event without a valid event name');
+            return;
+        }
+        this.emitAutomationEvent?.(normalized);
+
         const reqId = typeof evt.requestId === 'string' ? evt.requestId : undefined;
 
         if (reqId) {
@@ -144,6 +156,11 @@ export class MessageHandler {
             if (pending) {
                 if (!pending.waitForEvent) {
                     this.log.debug(`Received automation_event for ${reqId} while waiting for automation_response; ignoring event=${String(evt.event || '')}`);
+                    return;
+                }
+
+                if (evt.event === 'automation_test_started') {
+                    this.log.debug(`Received progress event for ${reqId}; still waiting for the test completion event`);
                     return;
                 }
 
@@ -170,13 +187,6 @@ export class MessageHandler {
             }
         }
 
-        const normalized = this.normalizeAutomationEvent(evt);
-        if (!normalized) {
-            this.log.warn('Dropped automation_event without a valid event name');
-            return;
-        }
-
-        this.emitAutomationEvent?.(normalized);
         this.log.debug('Received automation_event (no pending request):', normalized);
     }
 
@@ -187,7 +197,10 @@ export class MessageHandler {
 
         const normalized: AutomationBridgeAutomationEvent = {
             type: 'automation_event',
-            event: evt.event.trim()
+            event: evt.event.trim(),
+            sequence: this.normalizeSequence(evt.sequence),
+            timestamp: typeof evt.timestamp === 'string' && evt.timestamp ? evt.timestamp : new Date().toISOString(),
+            context: this.normalizeContext(evt)
         };
         if (typeof evt.requestId === 'string' && evt.requestId.length > 0) {
             normalized.requestId = evt.requestId;
@@ -202,6 +215,32 @@ export class MessageHandler {
             normalized.message = evt.message;
         }
         return normalized;
+    }
+
+    private normalizeSequence(sequence: number | undefined): number {
+        if (typeof sequence === 'number' && Number.isInteger(sequence) && sequence >= 0) {
+            this.nextEventSequence = Math.max(this.nextEventSequence, sequence + 1);
+            return sequence;
+        }
+        return this.nextEventSequence++;
+    }
+
+    private normalizeContext(evt: EventMessage): AutomationBridgeAutomationEvent['context'] {
+        const source = evt.context && typeof evt.context === 'object' ? evt.context : {};
+        const timestamp = typeof source.timestamp === 'string' ? source.timestamp : new Date().toISOString();
+        const context: AutomationBridgeAutomationEvent['context'] = {
+            traceId: typeof source.traceId === 'string' && source.traceId ? source.traceId : randomUUID(),
+            timestamp
+        };
+        const requestId = typeof source.requestId === 'string' ? source.requestId : evt.requestId;
+        if (requestId) context.requestId = requestId;
+        if (typeof source.debugSessionId === 'string') context.debugSessionId = source.debugSessionId;
+        if (typeof source.targetPid === 'number') context.targetPid = source.targetPid;
+        if (typeof source.worldInstance === 'string') context.worldInstance = source.worldInstance;
+        if (typeof source.frame === 'number') context.frame = source.frame;
+        if (typeof source.thread === 'number') context.thread = source.thread;
+        if (typeof source.eventCursor === 'number') context.eventCursor = source.eventCursor;
+        return context;
     }
 
     /**

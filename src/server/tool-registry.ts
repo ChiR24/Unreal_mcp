@@ -28,6 +28,7 @@ import {
 } from './tool-registry-manage-tools.js';
 import { buildSanitizedToolList } from './tool-registry-listing.js';
 import { maybeElicitMissingArgs } from './tool-registry-elicitation.js';
+import { DebugService } from '../debug/index.js';
 
 export class ToolRegistry {
     private defaultElicitationTimeoutMs = 60000;
@@ -42,6 +43,7 @@ export class ToolRegistry {
         private assetResources: AssetResources,
         private actorResources: ActorResources,
         private levelResources: LevelResources,
+        private debugService: DebugService,
         private ensureConnected: () => Promise<boolean>
     ) { }
 
@@ -191,8 +193,9 @@ export class ToolRegistry {
 
             const startTime = Date.now();
 
-            const connected = await this.ensureConnected();
-            const canRunWithoutConnection = name === 'system_control' && args.action === 'get_project_settings';
+            const canRunWithoutConnection = name.startsWith('debug_')
+                || (name === 'system_control' && args.action === 'get_project_settings');
+            const connected = canRunWithoutConnection || await this.ensureConnected();
             if (!connected && !canRunWithoutConnection) {
                 this.healthMonitor.trackPerformance(startTime, false);
                 return {
@@ -210,7 +213,8 @@ export class ToolRegistry {
                 actorResources: this.actorResources,
                 levelResources: this.levelResources,
                 bridge: this.bridge,
-                automationBridge: this.automationBridge
+                automationBridge: this.automationBridge,
+                debugService: this.debugService
             };
 
             try {

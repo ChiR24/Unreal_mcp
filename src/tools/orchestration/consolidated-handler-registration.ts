@@ -64,6 +64,12 @@ import { handleSystemTools, handleConsoleCommand } from '../handlers/system/syst
 import { handleTextureTools } from '../handlers/texture/texture-handlers.js';
 import { handleVolumeTools } from '../handlers/volume/volume-handlers.js';
 import { handleWidgetAuthoringTools } from '../handlers/widget/widget-authoring-handlers.js';
+import {
+  handleDebugBreakpoint,
+  handleDebugInspect,
+  handleDebugObserve,
+  handleDebugSession
+} from '../handlers/debug/debug-handlers.js';
 
 function mergeAutomationResponse(
   response: unknown,
@@ -86,6 +92,11 @@ const insightsActionSet = new Set<string>([
 ]);
 
 export function registerDefaultHandlers() {
+  toolRegistry.register('debug_session', async (args, tools) => await handleDebugSession(getToolAction(args), args, tools));
+  toolRegistry.register('debug_breakpoint', async (args, tools) => await handleDebugBreakpoint(getToolAction(args), args, tools));
+  toolRegistry.register('debug_inspect', async (args, tools) => await handleDebugInspect(getToolAction(args), args, tools));
+  toolRegistry.register('debug_observe', async (args, tools) => await handleDebugObserve(getToolAction(args), args, tools));
+
   toolRegistry.register('manage_asset', async (args, tools) => {
     const action = getToolAction(args);
     if (materialAuthoringActionSet.has(action)) return await handleMaterialAuthoringTools(action, args, tools);
@@ -150,6 +161,9 @@ export function registerDefaultHandlers() {
     if (action === 'console_command') return await handleConsoleCommand(args, tools);
     if (action === 'run_ubt') return await handlePipelineTools(action, args, tools);
     if (performanceActionSet.has(action)) return await handlePerformanceTools(action, args, tools);
+    if (action === 'run_tests' && tools.debugService) {
+      return cleanObject(await tools.debugService.observe('run_tests', args));
+    }
     if (action === 'run_tests') return cleanObject(await executeAutomationRequest(tools, 'manage_tests', { ...args, subAction: action }, 'Bridge unavailable'));
     if (action === 'subscribe' || action === 'unsubscribe') {
       return cleanObject(await executeAutomationRequest(tools, 'manage_logs', { ...args, subAction: action }, 'Bridge unavailable'));
@@ -165,6 +179,15 @@ export function registerDefaultHandlers() {
       return cleanObject(mergeAutomationResponse(response, { action, categoryName }));
     }
     if (insightsActionSet.has(action)) {
+      if (tools.debugService && ['start_session', 'start_unreal_insights', 'capture_insights_trace'].includes(action)) {
+        return cleanObject(await tools.debugService.observe('start_trace', args));
+      }
+      if (tools.debugService && action === 'stop_session') {
+        return cleanObject(await tools.debugService.observe('stop_trace', args));
+      }
+      if (tools.debugService && action === 'get_trace_status' && typeof args.jobId === 'string') {
+        return cleanObject(await tools.debugService.observe('trace_status', args));
+      }
       const channels = typeof args.channels === 'string' ? args.channels.trim() : '';
       if (channels && !/^[A-Za-z0-9_, -]+$/.test(channels)) {
         return { success: false, error: 'INVALID_CHANNELS', message: 'Trace channels contain unsupported characters.' };
