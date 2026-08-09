@@ -75,7 +75,10 @@ describe('plugin engine-version compatibility contracts', () => {
   it('keeps the UUserDefinedEnum::SetEnums arity split at the 5.8 boundary', () => {
     const compat = pluginSource('Core', 'Compatibility', 'McpVersionCompatibility.h');
 
-    expect(compat).toMatch(/ENGINE_MINOR_VERSION >= 8[\s\S]*?#define MCP_SET_ENUMS/);
+    // Anchored to the adjacent line like the four boundary tests below: the
+    // define must sit directly under the >= 8 guard, not anywhere later in the
+    // file (a lazy [\s\S]*? span would pass even if the 5.8 branch were gutted).
+    expect(compat).toMatch(/ENGINE_MINOR_VERSION >= 8\s*\n\s*#define MCP_SET_ENUMS/);
     expect(compat).toContain('GetUnderlyingType()');
     expect(compat).toContain('UEnum::EAddMaxKeyIfMissing::Yes');
   });
@@ -110,5 +113,18 @@ describe('plugin engine-version compatibility contracts', () => {
     // The pre-5.2 pair must remain reachable — it is what 5.0/5.1 actually have.
     expect(compat).toContain('(Controller)->SetSourceIKRig(Rig)');
     expect(compat).toContain('(Controller)->SetTargetIKRig(Rig)');
+  });
+
+  // MCP_ASSET_DATA_GET_SOFT_PATH hands callers a string fed straight into
+  // FindObject<UObject> in the Safety layer (McpSafeOperationsDeleteCompilation.h),
+  // which needs the object shape "/Game/Foo.Foo". PackageName's "/Game/Foo" would
+  // silently fail that lookup, so the 5.0 fallback must resolve through
+  // ObjectPath, never PackageName.
+  it('keeps the 5.0 soft-path fallback shaped as an object path, not a package path', () => {
+    const compat = pluginSource('Core', 'Compatibility', 'McpVersionCompatibility.h');
+
+    expect(compat).toContain('(AssetData).GetSoftObjectPath().ToString()');
+    expect(compat).toContain('(AssetData).ObjectPath.ToString()');
+    expect(compat).not.toContain('(AssetData).PackageName.ToString()');
   });
 });

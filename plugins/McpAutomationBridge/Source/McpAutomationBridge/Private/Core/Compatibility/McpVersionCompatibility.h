@@ -252,7 +252,12 @@
   #define MCP_HAS_ASSET_SOFT_PATH 1
 #else
   #define MCP_ASSET_DATA_GET_CLASS_PATH(AssetData) (AssetData).AssetClass.ToString()
-  #define MCP_ASSET_DATA_GET_SOFT_PATH(AssetData) (AssetData).PackageName.ToString()
+  // ObjectPath, not PackageName: ObjectPath yields "/Game/Foo.Foo" while
+  // PackageName yields "/Game/Foo", so the old fallback handed callers a package
+  // path where they expected an object path — a different string shape, not just
+  // an older spelling. UE 5.0's FAssetData::ObjectPath is the exact equivalent
+  // of the 5.1+ GetSoftObjectPath() used in the branch above.
+  #define MCP_ASSET_DATA_GET_SOFT_PATH(AssetData) (AssetData).ObjectPath.ToString()
   #define MCP_HAS_ASSET_SOFT_PATH 0
 #endif
 
