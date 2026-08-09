@@ -20,11 +20,12 @@ if (SubAction == TEXT("create_ik_rig"))
         ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
     }
 
-    // Use static factory method to create IK Rig (UE 5.1+) or fallback to NewObject (UE 5.0)
+    // Use the static factory (UE 5.6+, it notifies the asset registry) or fall
+    // back to NewObject on older engines where CreateNewIKRigAsset is absent.
 #if MCP_HAS_IKRIG_CREATE_NEW_ASSET
     UIKRigDefinition* IKRig = MCP_IKRIG_CREATE_NEW_ASSET(Path, Name);
 #else
-    // UE 5.0: Create using NewObject since CreateNewIKRigAsset doesn't exist
+    // UE 5.0-5.5: Create using NewObject since CreateNewIKRigAsset doesn't exist
     UPackage* Package = CreatePackage(*FString(Path / Name));
     if (!Package)
     {
@@ -35,6 +36,11 @@ if (SubAction == TEXT("create_ik_rig"))
     {
         ANIM_ERROR_RESPONSE(TEXT("Failed to create IK Rig asset"), TEXT("CREATION_FAILED"));
     }
+    // CreateNewIKRigAsset notifies the asset registry for us; NewObject does not.
+    // Without this the rig exists on disk but is unregistered, so it does not
+    // appear in the Content Browser until an unrelated rescan happens to pick it
+    // up — the asset looked lost even though creation had reported success.
+    FAssetRegistryModule::AssetCreated(IKRig);
     // Mark the package as needing save
     Package->MarkPackageDirty();
 #endif
