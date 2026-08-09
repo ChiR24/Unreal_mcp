@@ -58,7 +58,6 @@ bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const 
             return true;
         }
 
-        // Load the actor blueprint
         UBlueprint* ActorBlueprint = LoadObject<UBlueprint>(nullptr, *ActorPath);
         if (!ActorBlueprint)
         {
@@ -67,7 +66,6 @@ bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const 
             return true;
         }
 
-        // Verify the ability exists
         UBlueprint* AbilityBlueprint = LoadObject<UBlueprint>(nullptr, *AbilityPath);
         UClass* AbilityClass = nullptr;
 
@@ -87,7 +85,6 @@ bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const 
             return true;
         }
 
-        // Find ASC on the actor blueprint
         UAbilitySystemComponent* ASC = nullptr;
         bool bHasASC = false;
 
@@ -106,7 +103,6 @@ bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const 
             }
         }
 
-        // Check CDO for native ASC
         if (!bHasASC && ActorBlueprint->GeneratedClass)
         {
             if (AActor* CDO = Cast<AActor>(ActorBlueprint->GeneratedClass->GetDefaultObject()))
@@ -128,7 +124,6 @@ bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const 
         // To grant abilities at design time, we need to add them to the ASC's DefaultAbilitiesGranted
         // or use a custom initialization. For now, we'll add a variable to track granted abilities.
 
-        // Check if GrantedAbilities variable exists
         bool bHasGrantedVar = false;
         for (const FBPVariableDescription& VarDesc : ActorBlueprint->NewVariables)
         {
@@ -141,7 +136,6 @@ bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const 
 
         if (!bHasGrantedVar)
         {
-            // Add InitialAbilities array variable
             FEdGraphPinType AbilityArrayType;
             AbilityArrayType.PinCategory = UEdGraphSchema_K2::PC_SoftClass;
             AbilityArrayType.PinSubCategoryObject = UGameplayAbility::StaticClass();
@@ -175,7 +169,6 @@ bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const 
     // 13.7 EXECUTION CALCULATIONS
     // ============================================================
 
-    // create_execution_calculation - Create UGameplayEffectExecutionCalculation blueprint
     if (SubAction == TEXT("create_execution_calculation"))
     {
         if (Name.IsEmpty())
@@ -228,8 +221,6 @@ bool HandleGASAbilityGrantAndExecution(const FGASRequestContext& Context, const 
             FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("OutputModifierAttributes"), StructArrayType);
             FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("OutputModifierAttributes"), nullptr,
                 FText::FromString(TEXT("Execution Calculation")));
-
-
             FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
             McpSafeCompileBlueprint(Blueprint);
             McpSafeAssetSave(Blueprint);

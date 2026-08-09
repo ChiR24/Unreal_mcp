@@ -27,7 +27,6 @@ bool FCombatActionContext::HandleWeaponStats() const
         double Range = GetJsonNumberField(Payload, TEXT("range"), 10000.0);
         double Spread = GetJsonNumberField(Payload, TEXT("spread"), 2.0);
 
-        // Add/update variables
         AddBlueprintVariableCombat(Blueprint, TEXT("BaseDamage"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("FireRate"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("Range"), MakeFloatPinType());
@@ -36,7 +35,6 @@ bool FCombatActionContext::HandleWeaponStats() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values via CDO
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())

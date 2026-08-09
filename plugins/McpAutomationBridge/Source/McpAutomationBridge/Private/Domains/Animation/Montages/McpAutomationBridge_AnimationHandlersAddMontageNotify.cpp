@@ -13,7 +13,6 @@ bool HandleAnimationAddMontageNotifyAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Add a notify to a montage
     FString AssetPath;
     Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
 

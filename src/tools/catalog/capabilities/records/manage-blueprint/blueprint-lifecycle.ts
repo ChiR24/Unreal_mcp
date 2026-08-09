@@ -1,7 +1,4 @@
 /**
- * Blueprint lifecycle records: create, create_blueprint, get_blueprint, get,
- * ensure_exists, compile.
- *
  * Grounded in src/tools/definitions/core/blueprint/manage-blueprint-core-properties.ts
  * and src/tools/handlers/blueprint/ blueprint-core-actions.ts.
  *

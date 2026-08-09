@@ -23,17 +23,11 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"  // MUST be first - UE version compatibility macros
 
-// -----------------------------------------------------------------------------
-// Core Includes
-// -----------------------------------------------------------------------------
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-// -----------------------------------------------------------------------------
-// Engine Includes
-// -----------------------------------------------------------------------------
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformProcess.h"
 #include "Misc/Paths.h"
@@ -52,13 +46,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    // Validate action
     if (Action != TEXT("manage_pipeline"))
     {
         return false;
     }
 
-    // Validate payload
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -74,9 +66,6 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
         SubAction = GetJsonStringField(Payload, TEXT("action"));
     }
 
-    // -------------------------------------------------------------------------
-    // run_ubt: Launch UnrealBuildTool process
-    // -------------------------------------------------------------------------
     if (SubAction == TEXT("run_ubt"))
     {
         FString Target;
@@ -194,11 +183,9 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
             ProjectArg = FString::Printf(TEXT(" -Project=\"%s\""), *ProjectPath);
         }
 
-        // Build command line
         const FString Params = FString::Printf(TEXT("%s %s %s%s %s"),
             *Target, *Platform, *Configuration, *ProjectArg, *ExtraArgs);
 
-        // Spawn UBT as detached process
         FProcHandle ProcHandle = FPlatformProcess::CreateProc(
             *UBTPath,
             *Params,
@@ -232,14 +219,10 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
         return true;
     }
 
-    // -------------------------------------------------------------------------
-    // list_categories: Return all available automation tool categories
-    // -------------------------------------------------------------------------
     if (SubAction == TEXT("list_categories"))
     {
         TArray<TSharedPtr<FJsonValue>> Categories;
 
-        // Canonical public MCP tools
         Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_tools")));
         Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_asset")));
         Categories.Add(MakeShared<FJsonValueString>(TEXT("manage_blueprint")));
@@ -272,40 +255,31 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
         return true;
     }
 
-    // -------------------------------------------------------------------------
-    // get_status: Return automation bridge status information
-    // -------------------------------------------------------------------------
     if (SubAction == TEXT("get_status"))
     {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
-        // Connection status
         Result->SetBoolField(TEXT("connected"), true);
         Result->SetStringField(TEXT("bridgeType"), TEXT("Native C++ WebSocket"));
 
-        // Version info
         Result->SetStringField(TEXT("version"), TEXT("1.0.0"));
         Result->SetStringField(TEXT("engineVersion"), *FEngineVersion::Current().ToString());
         Result->SetNumberField(TEXT("engineMajor"), ENGINE_MAJOR_VERSION);
         Result->SetNumberField(TEXT("engineMinor"), ENGINE_MINOR_VERSION);
 
-        // Capability flags
 #if WITH_EDITOR
         Result->SetBoolField(TEXT("editorMode"), true);
 #else
         Result->SetBoolField(TEXT("editorMode"), false);
 #endif
 
-        // Action statistics
         Result->SetNumberField(TEXT("totalActions"), 1069);
         Result->SetNumberField(TEXT("toolCategories"), 22);
 
-        // Runtime info
         Result->SetStringField(TEXT("platform"), *UGameplayStatics::GetPlatformName());
         Result->SetBoolField(TEXT("isPlayInEditor"),
             GEditor ? GEditor->IsPlaySessionInProgress() : false);
 
-        // Project info
         Result->SetStringField(TEXT("projectName"), FApp::GetProjectName());
 
         SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -313,7 +287,6 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
         return true;
     }
 
-    // Unknown subaction
     SendAutomationError(RequestingSocket, RequestId,
         TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;

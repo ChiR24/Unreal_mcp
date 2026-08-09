@@ -122,7 +122,6 @@ bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, const FStri
     Result->SetNumberField(TEXT("lodCount"), LODCount);
     Result->SetNumberField(TEXT("triangles"), StaticMesh->GetNumTriangles(0));
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, StaticMesh);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LODs generated for geometry"), Result);
@@ -131,10 +130,6 @@ bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, const FStri
 #endif
     return true;
 }
-
-// -------------------------------------------------------------------------
-// Set LOD Settings
-// -------------------------------------------------------------------------
 
 bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -176,11 +171,9 @@ bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 
     FStaticMeshSourceModel& SourceModel = StaticMesh->GetSourceModel(LODIndex);
 
-    // Set reduction settings
     SourceModel.ReductionSettings.PercentTriangles = TrianglePercent / 100.0f;
     SourceModel.ReductionSettings.PercentVertices = TrianglePercent / 100.0f;
 
-    // Set build settings
     SourceModel.BuildSettings.bRecomputeNormals = bRecomputeNormals;
     SourceModel.BuildSettings.bRecomputeTangents = bRecomputeTangents;
 
@@ -194,7 +187,6 @@ bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     Result->SetNumberField(TEXT("lodIndex"), LODIndex);
     Result->SetNumberField(TEXT("trianglePercent"), TrianglePercent);
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, StaticMesh);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LOD settings updated"), Result);
@@ -203,10 +195,6 @@ bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 #endif
     return true;
 }
-
-// -------------------------------------------------------------------------
-// Set LOD Screen Sizes
-// -------------------------------------------------------------------------
 
 bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -284,7 +272,6 @@ bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const FString&
     Result->SetNumberField(TEXT("lodCount"), NumLODs);
     Result->SetNumberField(TEXT("screenSizesSet"), ScreenSizes.Num());
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, StaticMesh);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LOD screen sizes updated"), Result);

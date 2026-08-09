@@ -1,10 +1,6 @@
 /**
  * SCS (Simple Construction Script) component records.
  *
- * SCS-owned component templates: add_scs_component, modify_scs,
- * remove_scs_component, reparent_scs_component, set_scs_transform,
- * set_scs_property, get_scs.
- *
  * add_component is a separate action that adds a component instance to the
  * Blueprint without SCS node ownership (no template). The SCS actions
  * construct component templates through SCS->CreateNode()/AddNode() so the

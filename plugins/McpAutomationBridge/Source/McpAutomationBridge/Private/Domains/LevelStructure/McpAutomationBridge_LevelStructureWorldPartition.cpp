@@ -57,7 +57,6 @@ bool HandleConfigureGridSize(
         return true;
     }
 
-    // Check if we're dealing with RuntimeSpatialHash or RuntimeHashSet
     UWorldPartitionRuntimeSpatialHash* SpatialHash = Cast<UWorldPartitionRuntimeSpatialHash>(RuntimeHash);
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
     UWorldPartitionRuntimeHashSet* HashSet = Cast<UWorldPartitionRuntimeHashSet>(RuntimeHash);
@@ -67,7 +66,6 @@ bool HandleConfigureGridSize(
     if (!SpatialHash)
 #endif
     {
-        // Neither supported hash type
         TSharedPtr<FJsonObject> ErrorJson = McpHandlerUtils::CreateResultObject();
         ErrorJson->SetStringField(TEXT("currentHashType"), RuntimeHash->GetClass()->GetName());
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
@@ -96,7 +94,6 @@ bool HandleConfigureGridSize(
     }
 #endif // ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 
-    // Handle RuntimeSpatialHash (existing code)
     // Access the editor-only Grids array via reflection since it's protected
     // The Grids property is TArray<FSpatialHashRuntimeGrid> which holds the editable grid configuration
     FProperty* GridsProperty = SpatialHash->GetClass()->FindPropertyByName(TEXT("Grids"));
@@ -115,11 +112,9 @@ bool HandleConfigureGridSize(
         return true;
     }
 
-    // Get the array helper
     void* GridsArrayPtr = GridsProperty->ContainerPtrToValuePtr<void>(SpatialHash);
     FScriptArrayHelper ArrayHelper(ArrayProp, GridsArrayPtr);
 
-    // Find the grid by name, or use the first one if no name specified
     bool bFound = false;
     bool bCreated = false;
     int32 ModifiedIndex = -1;
@@ -130,10 +125,8 @@ bool HandleConfigureGridSize(
         FSpatialHashRuntimeGrid* Grid = reinterpret_cast<FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(i));
         if (Grid)
         {
-            // Match by name, or use first grid if no name specified
             if (GridName.IsEmpty() || Grid->GridName == TargetGridName)
             {
-                // Modify the grid settings
                 Grid->CellSize = GridCellSize;
                 Grid->LoadingRange = LoadingRange;
                 Grid->bBlockOnSlowStreaming = bBlockOnSlowStreaming;
@@ -146,7 +139,6 @@ bool HandleConfigureGridSize(
         }
     }
 
-    // If not found and createIfMissing is true, add a new grid
     if (!bFound && bCreateIfMissing && !GridName.IsEmpty())
     {
         int32 NewIndex = ArrayHelper.AddValue();
@@ -172,7 +164,6 @@ bool HandleConfigureGridSize(
 
     if (!bFound && !bCreated)
     {
-        // List available grids
         TArray<FString> AvailableGrids;
         for (int32 i = 0; i < ArrayHelper.Num(); ++i)
         {
@@ -192,12 +183,10 @@ bool HandleConfigureGridSize(
         return true;
     }
 
-    // Mark the object as modified
     SpatialHash->Modify();
     SpatialHash->MarkPackageDirty();
     World->MarkPackageDirty();
 
-    // Build response with current grid configuration
     TArray<TSharedPtr<FJsonValue>> GridsArray;
     for (int32 i = 0; i < ArrayHelper.Num(); ++i)
     {

@@ -24,7 +24,6 @@ bool HandleCreateProceduralMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
         return true;
     }
 
-    // Initialize with an empty dynamic mesh
     if (ADynamicMeshActor* DMActor = Cast<ADynamicMeshActor>(NewActor))
     {
         UDynamicMeshComponent* DMComp = DMActor->GetDynamicMeshComponent();
@@ -42,10 +41,6 @@ bool HandleCreateProceduralMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
     return true;
 }
 
-// -------------------------------------------------------------------------
-// append_triangle - Add single triangle to mesh
-// -------------------------------------------------------------------------
-
 bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
@@ -57,7 +52,6 @@ bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& Re
         return true;
     }
 
-    // Read vertices
     FVector V0 = ReadVectorFromPayload(Payload, TEXT("v0"), FVector(0, 0, 0));
     FVector V1 = ReadVectorFromPayload(Payload, TEXT("v1"), FVector(100, 0, 0));
     FVector V2 = ReadVectorFromPayload(Payload, TEXT("v2"), FVector(50, 100, 0));
@@ -98,12 +92,10 @@ bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     // Use the internal mesh directly to append triangle
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
 
-    // Append vertices
     int32 Idx0 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V0));
     int32 Idx1 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V1));
     int32 Idx2 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V2));
 
-    // Append triangle
     int32 TriIdx = EditMesh.AppendTriangle(Idx0, Idx1, Idx2, GroupID);
 
     DMC->NotifyMeshUpdated();
@@ -118,10 +110,6 @@ bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Triangle appended"), Result);
     return true;
 }
-
-// -------------------------------------------------------------------------
-// set_vertex_color - Set vertex colors on mesh
-// -------------------------------------------------------------------------
 
 bool HandleDeleteTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -189,10 +177,6 @@ bool HandleDeleteTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     return true;
 }
 
-// -------------------------------------------------------------------------
-// get_vertex_position - Get position of a vertex
-// -------------------------------------------------------------------------
-
 bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
@@ -254,7 +238,6 @@ bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 
     if (bSetAll)
     {
-        // Set all vertex colors
         for (int32 VID : EditMesh.VertexIndicesItr())
         {
             EditMesh.SetVertexColor(VID, Color);
@@ -286,9 +269,6 @@ bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     return true;
 }
 
-// -------------------------------------------------------------------------
-// set_uvs - Set UV coordinates on mesh
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

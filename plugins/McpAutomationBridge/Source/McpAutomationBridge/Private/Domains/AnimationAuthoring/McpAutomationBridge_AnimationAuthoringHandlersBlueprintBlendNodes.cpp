@@ -77,7 +77,7 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
         else
 #endif
         {
-            // Default fallback to TwoWayBlend if available
+            // Default fallback
 #if MCP_HAS_TWO_WAY_BLEND
             FGraphNodeCreator<UAnimGraphNode_TwoWayBlend> NodeCreator(*AnimGraph);
             UAnimGraphNode_TwoWayBlend* BlendNode = NodeCreator.CreateNode();

@@ -1,19 +1,3 @@
-// =============================================================================
-// McpAutomationBridge_ConsoleCommandHandlers.cpp
-// =============================================================================
-// Handler implementations for console command execution operations.
-//
-// HANDLERS IMPLEMENTED:
-// ---------------------
-// - batch_console_commands: Execute multiple console commands in batch
-// - console_command: Execute a single console command
-//
-// SECURITY:
-// ---------
-// - Commands are validated against blocked patterns
-// - Path traversal in command arguments is blocked
-// =============================================================================
-
 #include "Core/Compatibility/McpVersionCompatibility.h"  // MUST BE FIRST - Version compatibility macros
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
@@ -28,15 +12,7 @@
 #include "Kismet/GameplayStatics.h"
 #endif
 
-// =============================================================================
-// Logging
-// =============================================================================
-
 DEFINE_LOG_CATEGORY(LogMcpConsoleHandlers);
-
-// =============================================================================
-// Blocked Command Patterns
-// =============================================================================
 
 namespace ConsoleCommandSecurity
 {
@@ -83,7 +59,6 @@ namespace ConsoleCommandSecurity
             return true;
         }
 
-        // Extract command name (first word)
         TArray<FString> CommandParts;
         LowerCommand.ParseIntoArrayWS(CommandParts);
         if (CommandParts.Num() == 0)
@@ -112,10 +87,6 @@ namespace ConsoleCommandSecurity
     }
 }
 
-// =============================================================================
-// Handler Implementation
-// =============================================================================
-
 bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
     const FString& RequestId,
     const FString& Action,
@@ -127,18 +98,12 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
 
     UE_LOG(LogMcpConsoleHandlers, Verbose, TEXT("HandleConsoleCommandAction: %s"), *LowerAction);
 
-    // ===========================================================================
-    // batch_console_commands - Execute multiple console commands
-    // ===========================================================================
     if (LowerAction == TEXT("batch_console_commands"))
     {
         return McpConsoleCommandHandlers::HandleBatchConsoleCommands(
             this, RequestId, Payload, RequestingSocket);
     }
 
-    // ===========================================================================
-    // console_command - Execute a single console command
-    // ===========================================================================
     if (LowerAction == TEXT("console_command"))
     {
         if (!Payload.IsValid())
@@ -158,7 +123,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
 
         Command = Command.TrimStartAndEnd();
 
-        // Security check
         if (ConsoleCommandSecurity::IsBlockedCommand(Command))
         {
             SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -167,7 +131,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
             return true;
         }
 
-        // Get the world context
         UWorld* World = nullptr;
         if (GEditor)
         {

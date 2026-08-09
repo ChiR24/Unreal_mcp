@@ -44,7 +44,6 @@ bool HandleRemoveMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FStri
       return true;
     }
 
-    // Remove the expression from the appropriate container
     if (Material) {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
       Material->GetExpressionCollection().RemoveExpression(Expr);
@@ -70,9 +69,6 @@ bool HandleRemoveMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // set_material_parameter
-  // --------------------------------------------------------------------------
   return false;
 }
 }

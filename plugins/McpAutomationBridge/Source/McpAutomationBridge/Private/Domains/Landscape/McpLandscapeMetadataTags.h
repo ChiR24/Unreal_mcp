@@ -18,8 +18,6 @@ static constexpr const TCHAR* ComponentsYKey = TEXT("MCP_LandscapeComponentsY");
 static constexpr const TCHAR* QuadsPerComponentKey = TEXT("MCP_LandscapeQuadsPerComponent");
 
 /**
- * Replaces a single integer metadata tag on an actor.
- *
  * Landscape dimensions are stored as actor tags so generic actor tools can
  * recover authoring bounds before Unreal has generated landscape components.
  */
@@ -37,7 +35,6 @@ inline void AddIntTag(AActor* Actor, const TCHAR* Key, int32 Value)
   Actor->Tags.Add(FName(*FString::Printf(TEXT("%s%d"), *Prefix, Value)));
 }
 
-/** Encodes MCP landscape authoring dimensions onto an actor's tags. */
 inline void EncodeLandscapeMetadata(AActor* Actor, int32 ComponentsX, int32 ComponentsY, int32 QuadsPerComponent)
 {
   AddIntTag(Actor, ComponentsXKey, ComponentsX);
@@ -45,7 +42,6 @@ inline void EncodeLandscapeMetadata(AActor* Actor, int32 ComponentsX, int32 Comp
   AddIntTag(Actor, QuadsPerComponentKey, QuadsPerComponent);
 }
 
-/** Reads one integer metadata tag from an actor. */
 inline bool TryReadIntTag(const AActor* Actor, const TCHAR* Key, int32& OutValue)
 {
   if (!Actor)
@@ -66,7 +62,6 @@ inline bool TryReadIntTag(const AActor* Actor, const TCHAR* Key, int32& OutValue
   return false;
 }
 
-/** Decodes and validates MCP landscape authoring dimensions from actor tags. */
 inline bool DecodeLandscapeMetadata(const AActor* Actor, FMcpLandscapeMetadata& OutMetadata)
 {
   const bool bHasComponentsX = TryReadIntTag(Actor, ComponentsXKey, OutMetadata.ComponentsX);

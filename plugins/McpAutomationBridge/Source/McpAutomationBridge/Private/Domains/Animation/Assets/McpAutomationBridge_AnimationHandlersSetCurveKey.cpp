@@ -20,7 +20,6 @@ bool HandleAnimationSetCurveKeyAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Set an animation curve key
     FString AssetPath;
     Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
 

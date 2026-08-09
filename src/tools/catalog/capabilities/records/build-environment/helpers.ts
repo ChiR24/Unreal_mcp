@@ -71,8 +71,6 @@ function availability(
 
 type EffectType = 'read' | 'write' | 'destructive';
 
-
-
 function routing(dispatchAction: string, dispatchMode: 'tool' | 'action' | 'local' = 'tool'): CapabilityRouting {
   return {
     parentTool: LegacyToolNameSchema.parse('build_environment'),

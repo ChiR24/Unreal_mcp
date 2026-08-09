@@ -13,7 +13,6 @@ bool HandleCreateMaterialFunction(UMcpAutomationBridgeSubsystem* Bridge, const F
       return true;
     }
 
-    // Validate and sanitize the asset name (same as create_material)
     FString OriginalName = Name;
     FString SanitizedName = SanitizeAssetName(Name);
 
@@ -34,7 +33,6 @@ bool HandleCreateMaterialFunction(UMcpAutomationBridgeSubsystem* Bridge, const F
       Path = TEXT("/Game/Materials/Functions");
     }
 
-    // Validate path doesn't contain traversal sequences (same as create_material)
     FString ValidatedPath;
     FString PathError;
     if (!ValidateAssetCreationPath(Path, Name, ValidatedPath, PathError)) {

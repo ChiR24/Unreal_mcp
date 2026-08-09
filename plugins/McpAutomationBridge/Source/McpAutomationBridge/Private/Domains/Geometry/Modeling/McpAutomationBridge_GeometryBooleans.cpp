@@ -25,7 +25,6 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
         return true;
     }
 
-    // Find target and tool actors
     ADynamicMeshActor* TargetActor = nullptr;
     ADynamicMeshActor* ToolActor = nullptr;
 
@@ -66,7 +65,6 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
         return true;
     }
 
-    // Get triangle counts before operation for validation
     int32 TargetTriCount = TargetMesh->GetTriangleCount();
     int32 ToolTriCount = ToolMesh->GetTriangleCount();
     int64 EstimatedMaxTriangles = static_cast<int64>(TargetTriCount) + static_cast<int64>(ToolTriCount);
@@ -116,7 +114,6 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
     {
         ResultTriCount = ResultMesh->GetTriangleCount();
 
-        // Check if result exceeds limit
         if (ResultTriCount > MAX_TRIANGLES_PER_DYNAMIC_MESH)
         {
             // Log warning but don't fail - the operation already completed
@@ -125,7 +122,6 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
                    *OpName, ResultTriCount, MAX_TRIANGLES_PER_DYNAMIC_MESH);
         }
 
-        // Warning if approaching limit
         if (ResultTriCount > WARNING_TRIANGLE_THRESHOLD)
         {
             UE_LOG(LogMcpGeometryHandlers, Warning,
@@ -141,7 +137,6 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
                TEXT("Boolean %s returned null result - operation may have produced empty geometry"), *OpName);
     }
 
-    // Optionally delete tool actor
     if (!bKeepTool)
     {
         ToolActor->Destroy();
@@ -182,9 +177,6 @@ bool HandleBooleanIntersection(UMcpAutomationBridgeSubsystem* Self, const FStrin
     return HandleBooleanOperation(Self, RequestId, Payload, Socket, EGeometryScriptBooleanOperation::Intersection, TEXT("Intersection"));
 }
 
-// -------------------------------------------------------------------------
-// Mesh Utils
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

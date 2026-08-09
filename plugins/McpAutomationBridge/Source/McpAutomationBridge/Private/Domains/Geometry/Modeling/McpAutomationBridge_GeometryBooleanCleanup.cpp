@@ -73,10 +73,6 @@ bool HandleBooleanTrim(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Self Union Operation
-// -------------------------------------------------------------------------
-
 bool HandleSelfUnion(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
@@ -117,7 +113,6 @@ bool HandleSelfUnion(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     int32 TrisBefore = Mesh->GetTriangleCount();
 
-    // Self-union using mesh self-union function
     FGeometryScriptMeshSelfUnionOptions SelfUnionOptions;
     SelfUnionOptions.bFillHoles = bFillHoles;
     SelfUnionOptions.bTrimFlaps = true;
@@ -134,9 +129,6 @@ bool HandleSelfUnion(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Bridge Operation
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

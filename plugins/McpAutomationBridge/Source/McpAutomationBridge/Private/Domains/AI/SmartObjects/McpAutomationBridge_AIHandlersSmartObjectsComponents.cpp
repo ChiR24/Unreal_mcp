@@ -187,10 +187,6 @@ bool HandleAddSmartObjectComponent(UMcpAutomationBridgeSubsystem* Self, const FS
         return true;
     }
 
-    // =========================================================================
-    // 16.8 Mass AI / Crowds (3 actions)
-    // =========================================================================
-
     return true;
 }
 }

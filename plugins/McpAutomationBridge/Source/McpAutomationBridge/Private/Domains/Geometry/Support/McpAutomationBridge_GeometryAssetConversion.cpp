@@ -88,10 +88,6 @@ bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Additional Primitives
-// -------------------------------------------------------------------------
-
 bool HandleConvertToNanite(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                   const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
@@ -138,7 +134,6 @@ bool HandleConvertToNanite(UMcpAutomationBridgeSubsystem* Self, const FString& R
     FGeometryScriptCreateNewStaticMeshAssetOptions CreateOptions;
     CreateOptions.bEnableRecomputeNormals = true;
     CreateOptions.bEnableRecomputeTangents = true;
-    // Enable Nanite for this conversion
     CreateOptions.bEnableNanite = true;
 
     EGeometryScriptOutcomePins Outcome;
@@ -166,9 +161,6 @@ bool HandleConvertToNanite(UMcpAutomationBridgeSubsystem* Self, const FString& R
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Extrude Along Spline
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

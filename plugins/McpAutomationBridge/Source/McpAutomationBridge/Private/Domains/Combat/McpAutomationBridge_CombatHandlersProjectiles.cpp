@@ -23,7 +23,6 @@ bool FCombatActionContext::HandleProjectileActions() const
             return true;
         }
 
-        // Add collision sphere
         USphereComponent* CollisionComp = GetOrCreateSCSComponent<USphereComponent>(Blueprint, TEXT("CollisionComponent"));
         if (CollisionComp)
         {
@@ -35,7 +34,6 @@ bool FCombatActionContext::HandleProjectileActions() const
         FString ProjectileMeshPath = GetJsonStringField(Payload, TEXT("projectileMeshPath"));
         bool bProjectileMeshLoaded = false;
 
-        // Add static mesh for visual
         UStaticMeshComponent* MeshComp = GetOrCreateSCSComponent<UStaticMeshComponent>(Blueprint, TEXT("ProjectileMesh"), TEXT("CollisionComponent"));
         if (MeshComp)
         {
@@ -50,7 +48,6 @@ bool FCombatActionContext::HandleProjectileActions() const
             }
         }
 
-        // Add projectile movement component
         UProjectileMovementComponent* MovementComp = GetOrCreateSCSComponent<UProjectileMovementComponent>(Blueprint, TEXT("ProjectileMovement"));
         if (MovementComp)
         {
@@ -74,9 +71,6 @@ bool FCombatActionContext::HandleProjectileActions() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile blueprint created successfully."), Result);
         return true;
     }
-
-    // configure_projectile_movement
-
     if (SubAction == TEXT("configure_projectile_movement"))
     {
         if (BlueprintPath.IsEmpty())
@@ -114,9 +108,6 @@ bool FCombatActionContext::HandleProjectileActions() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile movement configured."), Result);
         return true;
     }
-
-    // configure_projectile_collision
-
     if (SubAction == TEXT("configure_projectile_collision"))
     {
         if (BlueprintPath.IsEmpty())
@@ -161,9 +152,6 @@ bool FCombatActionContext::HandleProjectileActions() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile collision configured."), Result);
         return true;
     }
-
-    // configure_projectile_homing
-
     if (SubAction == TEXT("configure_projectile_homing"))
     {
         if (BlueprintPath.IsEmpty())

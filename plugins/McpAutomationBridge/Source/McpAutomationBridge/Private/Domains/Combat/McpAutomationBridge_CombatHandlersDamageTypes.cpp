@@ -31,7 +31,6 @@ bool FCombatActionContext::HandleDamageTypes() const
                 return true;
             }
 
-            // Check if asset already exists
             if (UEditorAssetLibrary::DoesAssetExist(FullPath))
             {
                 SendAutomationError(RequestingSocket, RequestId,

@@ -1,9 +1,3 @@
-// Aggregates the 8 manage_tools capability records in canonical action-enum
-// order (list_tools, list_categories, enable_tools, disable_tools,
-// enable_category, disable_category, get_status, reset), builds
-// CapabilityRecordSource values via buildCoreRecord, validates them through
-// createCapabilityRecord, and exports the hashed records plus the count
-// consumed by the core capability aggregate.
 import { createCapabilityRecord } from '../../index.js';
 import type { CapabilityRecord, CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord, type CoreRecordSpec } from '../core/builder.js';

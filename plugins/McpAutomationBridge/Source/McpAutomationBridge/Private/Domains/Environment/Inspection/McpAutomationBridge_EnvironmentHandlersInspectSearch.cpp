@@ -33,9 +33,6 @@ bool HandleInspectSearchAction(
                                    TEXT("Objects listed"), Resp, FString());
             return true;
         }
-        // ---------------------------------------------------------------------
-        // find_by_class
-        // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("find_by_class")))
         {
             FString ClassName;
@@ -70,9 +67,6 @@ bool HandleInspectSearchAction(
                                    TEXT("Objects found by class"), Resp, FString());
             return true;
         }
-        // ---------------------------------------------------------------------
-        // find_by_tag
-        // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("find_by_tag")))
         {
             FString Tag;
@@ -102,9 +96,6 @@ bool HandleInspectSearchAction(
                                    TEXT("Objects found by tag"), Resp, FString());
             return true;
         }
-        // ---------------------------------------------------------------------
-        // inspect_class
-        // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("inspect_class")))
         {
             FString ClassName;
@@ -115,7 +106,6 @@ bool HandleInspectSearchAction(
             }
             if (!ClassName.IsEmpty())
             {
-                // Try to find the class
                 UClass* TargetClass = FindObject<UClass>(nullptr, *ClassName);
                 if (!TargetClass && !ClassName.Contains(TEXT(".")))
                 {

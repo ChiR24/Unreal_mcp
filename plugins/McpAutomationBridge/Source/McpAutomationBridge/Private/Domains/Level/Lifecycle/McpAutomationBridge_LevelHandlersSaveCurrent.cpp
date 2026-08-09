@@ -67,7 +67,6 @@ bool HandleSaveCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, cons
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Level saved"), Resp, FString());
     } else {
-      // Provide detailed error information
       TSharedPtr<FJsonObject> ErrorDetail = McpHandlerUtils::CreateResultObject();
       ErrorDetail->SetStringField(TEXT("attemptedPath"), PackageName);
 

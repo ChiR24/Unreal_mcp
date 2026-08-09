@@ -23,7 +23,6 @@ bool HandleGetConnectedSubgraph(UMcpAutomationBridgeSubsystem* Bridge, const FSt
         ? MCP_GET_MATERIAL_EXPRESSIONS(Material)
         : MCP_GET_FUNCTION_EXPRESSIONS(Function);
 
-    // Build bidirectional adjacency
     TMultiMap<UMaterialExpression*, UMaterialExpression*> Adj;
     for (UMaterialExpression *Expr : AllExpr) {
       if (!Expr) continue;
@@ -77,7 +76,6 @@ bool HandleGetConnectedSubgraph(UMcpAutomationBridgeSubsystem* Bridge, const FSt
         }
       }
     }
-    // Flood fill from output-connected seeds
     int32 FIdx = 0;
     while (FIdx < FloodQueue.Num()) {
       UMaterialExpression *Cur = FloodQueue[FIdx++];
@@ -92,7 +90,6 @@ bool HandleGetConnectedSubgraph(UMcpAutomationBridgeSubsystem* Bridge, const FSt
     }
 
     if (bOrphansOnly) {
-      // Return all nodes NOT connected to any output
       TArray<TSharedPtr<FJsonValue>> OrphansArr;
       for (UMaterialExpression *Expr : AllExpr) {
         if (!Expr) continue;
@@ -113,7 +110,6 @@ bool HandleGetConnectedSubgraph(UMcpAutomationBridgeSubsystem* Bridge, const FSt
       return true;
     }
 
-    // Flood fill from specified nodeId
     UMaterialExpression *SeedExpr = FIND_EXPR_IN_HOST(NodeId);
     if (!SeedExpr) {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
@@ -156,9 +152,6 @@ bool HandleGetConnectedSubgraph(UMcpAutomationBridgeSubsystem* Bridge, const FSt
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_material_node - Generic node adder
-  // --------------------------------------------------------------------------
   return false;
 }
 }

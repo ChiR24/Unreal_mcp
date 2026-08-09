@@ -26,7 +26,6 @@ bool FCombatActionContext::HandleWeaponHandling() const
         double RecoilYaw = GetJsonNumberField(Payload, TEXT("recoilYaw"), 0.3);
         double RecoilRecovery = GetJsonNumberField(Payload, TEXT("recoilRecovery"), 5.0);
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("RecoilPitch"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("RecoilYaw"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("RecoilRecoverySpeed"), MakeFloatPinType());
@@ -34,7 +33,6 @@ bool FCombatActionContext::HandleWeaponHandling() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -66,9 +64,6 @@ bool FCombatActionContext::HandleWeaponHandling() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Recoil pattern configured."), Result);
         return true;
     }
-
-    // configure_aim_down_sights
-
     if (SubAction == TEXT("configure_aim_down_sights"))
     {
         if (BlueprintPath.IsEmpty())
@@ -89,7 +84,6 @@ bool FCombatActionContext::HandleWeaponHandling() const
         double AdsSpeed = GetJsonNumberField(Payload, TEXT("adsSpeed"), 0.2);
         double AdsSpreadMultiplier = GetJsonNumberField(Payload, TEXT("adsSpreadMultiplier"), 0.5);
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("bADSEnabled"), MakeBoolPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("ADSFieldOfView"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("ADSTransitionSpeed"), MakeFloatPinType());
@@ -99,7 +93,6 @@ bool FCombatActionContext::HandleWeaponHandling() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())

@@ -180,11 +180,6 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         return true;
     }
 
-    // =========================================================================
-    // Aliases & Convenience Actions
-    // =========================================================================
-
-    // Alias: create_blackboard -> create_blackboard_asset
     return true;
 }
 }

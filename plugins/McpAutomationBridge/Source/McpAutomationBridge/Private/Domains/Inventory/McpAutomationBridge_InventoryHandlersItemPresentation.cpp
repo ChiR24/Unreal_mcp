@@ -13,7 +13,6 @@ bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridg
       return true;
     }
 
-    // Load the item asset
     UObject* ItemAsset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *ItemPath);
     if (!ItemAsset) {
       Bridge.SendAutomationError(
@@ -29,7 +28,6 @@ bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridg
 
     TArray<FString> ModifiedProps;
 
-    // Try to set stacking properties via reflection
     FProperty* StackableProp = ItemAsset->GetClass()->FindPropertyByName(TEXT("bStackable"));
     if (!StackableProp) {
       StackableProp = ItemAsset->GetClass()->FindPropertyByName(TEXT("Stackable"));
@@ -113,7 +111,6 @@ bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridg
       return true;
     }
 
-    // Load the item asset
     UObject* ItemAsset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *ItemPath);
     if (!ItemAsset) {
       Bridge.SendAutomationError(

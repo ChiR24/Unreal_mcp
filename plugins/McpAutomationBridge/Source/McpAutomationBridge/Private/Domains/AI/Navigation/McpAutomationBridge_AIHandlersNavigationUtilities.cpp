@@ -115,7 +115,6 @@ bool HandleCreateNavModifier(UMcpAutomationBridgeSubsystem* Self, const FString&
         return true;
     }
 
-    // set_ai_movement - Configure AI movement parameters (speed, acceleration, etc.)
     return true;
 }
 

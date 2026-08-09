@@ -17,7 +17,6 @@ bool HandleAnimationSetSequenceLengthAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Set the length of an animation sequence
     FString AssetPath;
     Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
 

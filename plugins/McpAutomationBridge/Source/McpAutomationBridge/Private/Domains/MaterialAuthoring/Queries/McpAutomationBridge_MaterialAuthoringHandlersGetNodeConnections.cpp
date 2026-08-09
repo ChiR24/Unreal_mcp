@@ -23,7 +23,6 @@ bool HandleGetNodeConnections(UMcpAutomationBridgeSubsystem* Bridge, const FStri
       return true;
     }
 
-    // Parse options
     FString Direction;
     Payload->TryGetStringField(TEXT("direction"), Direction);
     if (Direction.IsEmpty()) Direction = TEXT("both");
@@ -112,7 +111,6 @@ bool HandleGetNodeConnections(UMcpAutomationBridgeSubsystem* Bridge, const FStri
 #endif
     }
 
-    // --- BFS traversal ---
     struct FNodeHop { UMaterialExpression *Expr; int32 Hop; };
     TArray<TSharedPtr<FJsonValue>> ResultConns;
     TSet<FGuid> Visited;

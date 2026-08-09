@@ -45,7 +45,6 @@ bool HandleAddDecorator(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
         {
             NewDecorator = NewObject<UBTDecorator_Loop>(BT);
         }
-        // Add more decorator types as needed
 
         if (NewDecorator)
         {

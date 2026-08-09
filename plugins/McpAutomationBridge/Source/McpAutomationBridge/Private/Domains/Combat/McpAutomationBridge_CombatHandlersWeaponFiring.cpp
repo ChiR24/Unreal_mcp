@@ -26,7 +26,6 @@ bool FCombatActionContext::HandleWeaponFiring() const
         FString TraceChannel = GetJsonStringField(Payload, TEXT("traceChannel"), TEXT("Visibility"));
         double Range = GetJsonNumberField(Payload, TEXT("range"), 10000.0);
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("bIsHitscan"), MakeBoolPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("TraceChannel"), MakeNamePinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("HitscanRange"), MakeFloatPinType());
@@ -34,7 +33,6 @@ bool FCombatActionContext::HandleWeaponFiring() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -66,9 +64,6 @@ bool FCombatActionContext::HandleWeaponFiring() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hitscan configured."), Result);
         return true;
     }
-
-    // configure_projectile
-
     if (SubAction == TEXT("configure_projectile"))
     {
         if (BlueprintPath.IsEmpty())
@@ -87,14 +82,12 @@ bool FCombatActionContext::HandleWeaponFiring() const
         FString ProjectileClass = GetJsonStringField(Payload, TEXT("projectileClass"));
         double ProjectileSpeed = GetJsonNumberField(Payload, TEXT("projectileSpeed"), 5000.0);
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("ProjectileClassPath"), MakeStringPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("ProjectileSpeed"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -121,9 +114,6 @@ bool FCombatActionContext::HandleWeaponFiring() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile firing configured."), Result);
         return true;
     }
-
-    // configure_spread_pattern
-
     if (SubAction == TEXT("configure_spread_pattern"))
     {
         if (BlueprintPath.IsEmpty())
@@ -143,7 +133,6 @@ bool FCombatActionContext::HandleWeaponFiring() const
         double SpreadIncrease = GetJsonNumberField(Payload, TEXT("spreadIncrease"), 0.5);
         double SpreadRecovery = GetJsonNumberField(Payload, TEXT("spreadRecovery"), 2.0);
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("SpreadPatternType"), MakeStringPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("SpreadIncreasePerShot"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("SpreadRecoveryRate"), MakeFloatPinType());
@@ -152,7 +141,6 @@ bool FCombatActionContext::HandleWeaponFiring() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -188,9 +176,6 @@ bool FCombatActionContext::HandleWeaponFiring() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Spread pattern configured."), Result);
         return true;
     }
-
-    // configure_recoil_pattern
-
     return false;
 }
 #endif

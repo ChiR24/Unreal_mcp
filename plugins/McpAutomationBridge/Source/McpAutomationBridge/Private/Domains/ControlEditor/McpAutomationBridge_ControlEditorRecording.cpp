@@ -24,7 +24,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
   }
 
   FString RecordingName;
-  // Accept both 'name' and 'filename' fields for flexibility
   // TS handler sends 'filename', so we check that first
   Payload->TryGetStringField(TEXT("filename"), RecordingName);
   if (RecordingName.IsEmpty()) {
@@ -37,7 +36,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
     RecordingName = MakeSafeConsoleName(RecordingName, TEXT("Recording"));
   }
 
-  // Use console command to start demo recording
   // UE 5.7: TObjectPtr requires explicit cast to UWorld*
   UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
   if (World) {
@@ -70,7 +68,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStopRecording(
     return true;
   }
 
-  // Use console command to stop demo recording
   // UE 5.7: TObjectPtr requires explicit cast to UWorld*
   UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
   if (World) {
@@ -110,7 +107,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCreateBookmark(
   // Clamp to valid bookmark range (0-9)
   BookmarkIndex = FMath::Clamp(BookmarkIndex, 0, 9);
 
-  // Use console command to set bookmark
   FString Command = FString::Printf(TEXT("SetBookmark %d"), BookmarkIndex);
   UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
   GEditor->Exec(World, *Command);
@@ -149,7 +145,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorJumpToBookmark(
   // Clamp to valid bookmark range (0-9)
   BookmarkIndex = FMath::Clamp(BookmarkIndex, 0, 9);
 
-  // Use console command to jump to bookmark
   FString Command = FString::Printf(TEXT("JumpToBookmark %d"), BookmarkIndex);
   UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
   GEditor->Exec(World, *Command);

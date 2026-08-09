@@ -106,7 +106,6 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
         return true;
     }
 
-    // set_instancing_policy
     if (SubAction == TEXT("set_instancing_policy"))
     {
         if (BlueprintPath.IsEmpty())
@@ -168,8 +167,6 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
     // ============================================================
     // 13.3 GAMEPLAY EFFECTS
     // ============================================================
-
-
     return false;
 }
 }

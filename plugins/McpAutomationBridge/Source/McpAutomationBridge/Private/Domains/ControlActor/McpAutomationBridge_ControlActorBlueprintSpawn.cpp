@@ -104,7 +104,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   // { actor: { id, name, path }, actorPath, classPath }
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
 
-  // Actor object with id, name and path
   TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
   ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
   ActorObj->SetStringField(TEXT("name"), Spawned->GetActorLabel());
@@ -123,7 +122,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   };
   Resp->SetArrayField(TEXT("scale"), MakeVectorArray(Spawned->GetActorScale3D()));
 
-  // Add verification data
 	McpHandlerUtils::AddVerification(Resp, Spawned);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Blueprint spawned"),

@@ -98,7 +98,6 @@ bool HandleCreatePlane(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     Result->SetNumberField(TEXT("widthSegments"), WidthSubdivisions);
     Result->SetNumberField(TEXT("heightSegments"), HeightSubdivisions);
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Plane mesh created"), Result);
@@ -146,16 +145,11 @@ bool HandleCreateDisc(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Disc mesh created"), Result);
     return true;
 }
-
-// -------------------------------------------------------------------------
-// Booleans
-// -------------------------------------------------------------------------
 
 bool HandleCreateStairs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -190,7 +184,6 @@ float StepWidth = GetJsonNumberField(Payload, TEXT("stepWidth"), 100.0f);
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetNumberField(TEXT("numSteps"), NumSteps);
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Linear stairs created"), Result);
@@ -250,7 +243,6 @@ double OuterRadius = GetJsonNumberField(Payload, TEXT("outerRadius"), 50.0);
     FGeometryScriptPrimitiveOptions Options;
 
     // Use AppendDisc with HoleRadius to create a ring
-    // UE 5.7 signature: AppendDisc(Mesh, Options, Transform, Radius, AngleSteps, SpokeSteps, StartAngle, EndAngle, HoleRadius, Debug)
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendDisc(
         DynMesh, Options, Transform, OuterRadius, Segments, 0, 0.0f, 360.0f, InnerRadius, nullptr);
 
@@ -272,9 +264,6 @@ double OuterRadius = GetJsonNumberField(Payload, TEXT("outerRadius"), 50.0);
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Modeling Operations
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

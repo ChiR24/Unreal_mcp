@@ -22,7 +22,6 @@ bool McpBlueprintAddEventStandard(
   const FString &RequestId = Context.RequestId;
   TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
 
-  // Standard event logic.
   FString TargetEventName = FinalType;
   static TMap<FString, FString> EventNameAliases = {
       {TEXT("BeginPlay"), TEXT("ReceiveBeginPlay")},
@@ -39,7 +38,6 @@ bool McpBlueprintAddEventStandard(
   UClass *TargetClass = nullptr;
   UFunction *EventFunc = nullptr;
 
-  // Search hierarchy.
   UClass *SearchClass = BP->ParentClass;
   while (SearchClass && !EventFunc) {
     EventFunc = SearchClass->FindFunctionByName(*TargetEventName,

@@ -158,7 +158,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
   }
 
 #if MCP_HAS_LEVEL_EDITOR_MODULE
-  // Get the level editor module and active viewport
   FLevelEditorModule& LevelEditorModule = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
   TSharedPtr<IAssetViewport> ActiveViewport = LevelEditorModule.GetFirstActiveViewport();
 

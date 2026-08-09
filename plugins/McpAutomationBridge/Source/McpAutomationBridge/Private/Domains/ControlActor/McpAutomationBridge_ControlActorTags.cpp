@@ -26,16 +26,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
   FName TagName(*TagValue);
   TArray<TSharedPtr<FJsonValue>> Matches;
 
-  // Log tag search details
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT("HandleControlActorFindByTag: Searching for tag '%s' (FName: %s)"),
          *TagValue, *TagName.ToString());
   UEditorActorSubsystem *ActorSS =
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
-
-
-  // Log total actors being searched
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT("HandleControlActorFindByTag: Searching %d actors in level"), AllActors.Num());
   for (AActor *Actor : AllActors) {
@@ -122,7 +118,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
   Data->SetStringField(TEXT("tag"), TagName.ToString());
   Transaction.DescribeInto(Data);
 
-  // Add verification data
 	McpHandlerUtils::AddVerification(Data, Found);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Tag applied to actor"), Data);
@@ -131,8 +126,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
   return false;
 #endif
 }
-
-
 bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -181,7 +174,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
   Data->SetStringField(TEXT("tag"), TagValue);
   Transaction.DescribeInto(Data);
 
-  // Add verification data
 	McpHandlerUtils::AddVerification(Data, Found);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Tag removed from actor"), Data);
@@ -190,5 +182,3 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
   return false;
 #endif
 }
-
-// Additional handlers for test compatibility

@@ -132,7 +132,6 @@ bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       }
     }
 
-    // Determine streaming class
     UClass *StreamingClass = ULevelStreamingDynamic::StaticClass();
     if (StreamingMethod.Equals(TEXT("AlwaysLoaded"), ESearchCase::IgnoreCase)) {
       StreamingClass = ULevelStreamingAlwaysLoaded::StaticClass();
@@ -172,7 +171,6 @@ bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
             nullptr, TEXT("FILE_NOT_FOUND"));
       }
     } else {
-      // Did we fail because it's already there?
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
           FString::Printf(TEXT("Failed to add sublevel %s (Check logs)"),

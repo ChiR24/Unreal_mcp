@@ -45,18 +45,15 @@ bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     int32 TrisBefore = Mesh->GetTriangleCount();
 
-    // Get optional axis parameter (default to Z for horizontal cuts)
     FString Axis = GetJsonStringField(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
 
     // Real loop cut implementation using plane cutting
     // Unlike PN tessellation which subdivides ALL faces uniformly,
     // plane cutting inserts edges ONLY where the plane intersects the mesh
 
-    // Get mesh bounds from the underlying FDynamicMesh3
     FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
     UE::Geometry::FAxisAlignedBox3d Bounds = EditMesh.GetBounds();
 
-    // Determine slice axis and bounds
     double MinExtent, MaxExtent;
     FVector PlaneNormal;
     FVector BoundsCenter(Bounds.Center().X, Bounds.Center().Y, Bounds.Center().Z);
@@ -73,29 +70,24 @@ bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
         MaxExtent = Bounds.Max.Y;
         PlaneNormal = FVector(0.0, 1.0, 0.0);
     }
-    else // Default to Z
+    else
     {
         MinExtent = Bounds.Min.Z;
         MaxExtent = Bounds.Max.Z;
         PlaneNormal = FVector(0.0, 0.0, 1.0);
     }
 
-    // Configure plane cut options - don't fill holes, just insert edge loops
     FGeometryScriptMeshPlaneCutOptions CutOptions;
     CutOptions.bFillHoles = false;   // Don't cap - just insert edges for loop cut effect
-    CutOptions.bFillSpans = false;   // Don't fill boundary spans
+    CutOptions.bFillSpans = false;
     CutOptions.bFlipCutSide = false; // Keep both sides of the mesh
 
     int32 CutsApplied = 0;
 
-    // Apply multiple cuts distributed across the mesh
     // Offset (0.0-1.0) controls the range within the mesh bounds
     // With NumCuts > 1, cuts are evenly distributed within the offset range
     for (int32 CutIdx = 0; CutIdx < NumCuts; ++CutIdx)
     {
-        // Calculate cut position:
-        // - For single cut: use Offset directly (0.5 = center)
-        // - For multiple cuts: distribute evenly, scaled by Offset from center
         double CutFraction;
         if (NumCuts == 1)
         {
@@ -103,7 +95,6 @@ bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
         }
         else
         {
-            // Distribute cuts evenly within the range [0.5 - Offset/2, 0.5 + Offset/2]
             double RangeStart = 0.5 - (Offset * 0.5);
             double RangeEnd = 0.5 + (Offset * 0.5);
             CutFraction = FMath::Lerp(RangeStart, RangeEnd, (double)(CutIdx + 1) / (double)(NumCuts + 1));
@@ -111,7 +102,6 @@ bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
 
         double PlanePosition = FMath::Lerp(MinExtent, MaxExtent, CutFraction);
 
-        // Build the cut plane transform
         FVector PlaneLocation = BoundsCenter;
         if (Axis == TEXT("X"))
             PlaneLocation.X = PlanePosition;
@@ -120,13 +110,11 @@ bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
         else
             PlaneLocation.Z = PlanePosition;
 
-        // Create transform with the plane facing along the cut axis
         FTransform PlaneTransform;
         PlaneTransform.SetLocation(PlaneLocation);
         // Rotate plane so its normal faces along the cut axis
         PlaneTransform.SetRotation(FQuat::FindBetweenNormals(FVector::UpVector, PlaneNormal));
 
-        // Apply the plane cut
         UGeometryScriptLibrary_MeshBooleanFunctions::ApplyMeshPlaneCut(
             Mesh,
             PlaneTransform,
@@ -152,16 +140,11 @@ bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Split Normals Operation
-// -------------------------------------------------------------------------
-
 bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
-    // Parse edge indices to split (can be array or single number)
     TArray<int32> EdgeIndices;
     const TArray<TSharedPtr<FJsonValue>>* EdgeArray = nullptr;
     if (Payload->TryGetArrayField(TEXT("edges"), EdgeArray))
@@ -176,7 +159,6 @@ bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     }
     else
     {
-        // Single edge index
         int32 EdgeIndex = GetJsonIntField(Payload, TEXT("edgeIndex"), -1);
         if (EdgeIndex >= 0)
         {
@@ -231,18 +213,14 @@ bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     {
         if (DynMesh.IsEdge(EdgeID))
         {
-            // Get edge vertices
             UE::Geometry::FIndex2i EdgeV = DynMesh.GetEdgeV(EdgeID);
 
-            // Compute midpoint position
             FVector3d V0 = DynMesh.GetVertex(EdgeV.A);
             FVector3d V1 = DynMesh.GetVertex(EdgeV.B);
             FVector3d Midpoint = V0 + (V1 - V0) * SplitFactor;
 
-            // Insert new vertex at midpoint
             int32 NewVertexID = DynMesh.AppendVertex(Midpoint);
 
-            // Split triangles connected to this edge
             UE::Geometry::FIndex2i EdgeT = DynMesh.GetEdgeT(EdgeID);
             TArray<int32> TrisToModify;
             if (EdgeT.A >= 0) TrisToModify.Add(EdgeT.A);
@@ -254,7 +232,6 @@ bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& Request
                 {
                     UE::Geometry::FIndex3i Tri = DynMesh.GetTriangle(TriID);
 
-                    // Find which edges to split
                     int32 ReplaceV = -1;
                     int32 KeepV1 = -1, KeepV2 = -1;
 
@@ -267,7 +244,6 @@ bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& Request
 
                     if (ReplaceV >= 0)
                     {
-                        // Remove old triangle and add two new ones
                         DynMesh.RemoveTriangle(TriID);
                         DynMesh.AppendTriangle(KeepV1, NewVertexID, KeepV2);
                         DynMesh.AppendTriangle(NewVertexID, ReplaceV, KeepV2);
@@ -278,7 +254,6 @@ bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         }
     }
 
-    // Weld vertices if requested
     if (bWeldVertices && WeldTolerance > 0)
     {
         FGeometryScriptWeldEdgesOptions WeldOptions;
@@ -297,16 +272,12 @@ bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, TargetActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Edge split applied"), Result);
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Quadrangulate Operations
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

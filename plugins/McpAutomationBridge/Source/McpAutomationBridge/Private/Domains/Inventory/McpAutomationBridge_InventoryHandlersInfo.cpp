@@ -44,7 +44,6 @@ bool HandleInventoryInfoActions(UMcpAutomationBridgeSubsystem& Bridge, const FSt
       Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
       Result->SetStringField(TEXT("className"), Blueprint->GeneratedClass->GetName());
 
-      // Check for inventory/equipment components
       USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
       if (SCS) {
         TArray<TSharedPtr<FJsonValue>> Components;
@@ -112,7 +111,6 @@ bool HandleInventoryInfoActions(UMcpAutomationBridgeSubsystem& Bridge, const FSt
     return true;
   }
 
-  // ===========================================================================
 
   return false;
 }

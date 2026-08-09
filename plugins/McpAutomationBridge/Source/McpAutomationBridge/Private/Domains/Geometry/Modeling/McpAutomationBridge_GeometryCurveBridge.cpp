@@ -73,7 +73,6 @@ int32 EdgeGroupA = GetJsonIntField(Payload, TEXT("edgeGroupA"), 0);
     }
     else
     {
-        // Validate edge group indices
         int32 LoopCount = BoundaryLoops.GetLoopCount();
         int32 LoopIndexA = FMath::Clamp(EdgeGroupA, 0, LoopCount - 1);
         int32 LoopIndexB = FMath::Clamp(EdgeGroupB, 0, LoopCount - 1);
@@ -128,14 +127,12 @@ int32 EdgeGroupA = GetJsonIntField(Payload, TEXT("edgeGroupA"), 0);
                 int32 vB1 = VertsB[iB_Next];
 
                 // Create two triangles forming a quad between the loops
-                // Triangle 1: vA0 -> vA1 -> vB0
                 if (vA0 != vA1 && vA1 != vB0 && vB0 != vA0)
                 {
                     int32 Result = EditMesh.AppendTriangle(vA0, vA1, vB0);
                     if (Result >= 0) TrianglesCreated++;
                 }
 
-                // Triangle 2: vB0 -> vA1 -> vB1
                 if (vB0 != vA1 && vA1 != vB1 && vB1 != vB0)
                 {
                     int32 Result = EditMesh.AppendTriangle(vB0, vA1, vB1);
@@ -178,10 +175,6 @@ int32 EdgeGroupA = GetJsonIntField(Payload, TEXT("edgeGroupA"), 0);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Bridge applied"), Result);
     return true;
 }
-
-// -------------------------------------------------------------------------
-// Loft Operation
-// -------------------------------------------------------------------------
 
 bool HandleDuplicateAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -239,7 +232,6 @@ int32 Count = GetJsonIntField(Payload, TEXT("count"), 10);
         return true;
     }
 
-    // Create duplicates along spline
     float SplineLength = SplineComp->GetSplineLength();
     TArray<FString> CreatedActors;
 
@@ -256,14 +248,12 @@ int32 Count = GetJsonIntField(Payload, TEXT("count"), 10);
         FVector Location = SplineComp->GetLocationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World);
         FRotator Rotation = bAlignToSpline ? SplineComp->GetRotationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World) : FRotator::ZeroRotator;
 
-        // Duplicate the source actor at this location
         AActor* NewActor = ActorSS->DuplicateActor(SourceActor, World);
         if (NewActor)
         {
             NewActor->SetActorLocation(Location);
             NewActor->SetActorRotation(Rotation);
 
-            // Apply scale variation if requested
             if (ScaleVariation > 0.0)
             {
                 double ScaleFactor = 1.0 + FMath::RandRange(-ScaleVariation, ScaleVariation);
@@ -286,9 +276,6 @@ int32 Count = GetJsonIntField(Payload, TEXT("count"), 10);
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Loop Cut Operation
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

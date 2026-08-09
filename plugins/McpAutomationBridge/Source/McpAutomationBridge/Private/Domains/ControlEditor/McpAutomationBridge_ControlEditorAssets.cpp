@@ -258,7 +258,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
   }
   Receipt.DescribeInto(Resp);
 
-  // Only report outer success if the operation actually succeeded
   if (bSuccess || TotalDirty == 0) {
     SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Saved %d world and %d content packages (skipped %d transient/temp)"), SavedWorldCount, SavedContentCount, SkippedCount),

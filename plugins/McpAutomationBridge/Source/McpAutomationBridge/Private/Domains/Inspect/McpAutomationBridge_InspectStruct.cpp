@@ -101,7 +101,6 @@ bool HandleInspectStructAction(
     Result->SetStringField(TEXT("structName"), Struct->GetName());
     Result->SetStringField(TEXT("structPath"), Struct->GetPathName());
 
-    // Parent struct chain.
     UStruct* Super = Struct->GetSuperStruct();
     if (Super && Super != UObject::StaticClass())
     {
@@ -114,7 +113,6 @@ bool HandleInspectStructAction(
         Result->SetStringField(TEXT("parentStructPath"), TEXT(""));
     }
 
-    // Row-struct / instanced-struct compatibility.
     const bool bIsRowStruct = Struct->IsChildOf(FTableRowBase::StaticStruct());
         Result->SetBoolField(TEXT("isRowStruct"), bIsRowStruct);
         Result->SetBoolField(TEXT("isUserDefined"), Struct->IsA<UUserDefinedStruct>());
@@ -160,13 +158,11 @@ bool HandleInspectStructAction(
         Member->SetStringField(TEXT("name"), Prop->GetName());
         Member->SetStringField(TEXT("type"), McpPropertyReflection::GetPropertyTypeName(Prop));
 
-        // Property-level metadata (Tooltip / Category).
         FString Tooltip = Prop->GetMetaData(TEXT("Tooltip"));
         FString Category = Prop->GetMetaData(TEXT("Category"));
         Member->SetStringField(TEXT("tooltip"), Tooltip);
         Member->SetStringField(TEXT("category"), Category);
 
-        // Attach GUID and metadata from UDS VarDesc when available.
         if (const FStructVariableDescription** FoundVar = UDSVarMap.Find(FName(*Prop->GetName())))
         {
             const FStructVariableDescription& VarDesc = **FoundVar;
@@ -184,7 +180,6 @@ bool HandleInspectStructAction(
             Member->SetObjectField(TEXT("metadata"), MakeShared<FJsonObject>());
         }
 
-        // Nested struct member detection.
         FString InnerStructName;
         if (FStructProperty* StructProp = CastField<FStructProperty>(Prop))
         {
@@ -196,7 +191,6 @@ bool HandleInspectStructAction(
         Member->SetStringField(TEXT("innerStruct"), InnerStructName);
         Member->SetBoolField(TEXT("isStruct"), !InnerStructName.IsEmpty());
 
-        // Default value sourced from the struct default instance.
         if (DefaultInstance)
         {
             TSharedPtr<FJsonValue> DefaultValue =

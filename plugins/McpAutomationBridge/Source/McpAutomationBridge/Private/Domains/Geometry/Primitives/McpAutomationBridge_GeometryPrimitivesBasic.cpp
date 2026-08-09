@@ -74,7 +74,6 @@ bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         return true;
     }
 
-    // Create DynamicMesh
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
 
     FGeometryScriptPrimitiveOptions Options;
@@ -111,7 +110,6 @@ bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     Result->SetNumberField(TEXT("estimatedTriangles"), static_cast<double>(EstimatedTriangles));
     Result->SetBoolField(TEXT("dimensionsClamped"), bDimensionsClamped);
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Box mesh created"), Result);
@@ -156,7 +154,6 @@ bool HandleCreateSphere(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Result->SetNumberField(TEXT("radius"), Radius);
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Sphere mesh created"), Result);
@@ -202,7 +199,6 @@ bool HandleCreateCylinder(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Cylinder mesh created"), Result);
@@ -255,7 +251,6 @@ bool HandleCreateCone(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), Name);
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Cone mesh created"), Result);
@@ -304,7 +299,6 @@ double Length = GetJsonNumberField(Payload, TEXT("length"), 100.0);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), Name);
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Capsule mesh created"), Result);

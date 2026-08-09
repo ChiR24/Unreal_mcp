@@ -1,15 +1,3 @@
-/**
- * manage_tools mutating capability-record specs: enable_tools, disable_tools,
- * enable_category, disable_category, reset. These actions change dynamic tool
- * visibility state.
- *
- * Grounded in manageToolsToolDefinition (action enum + I/O schema), the
- * manage-tools handler (local TS dispatch), and dynamic-tool-state-operations
- * (protected tool/category guards). Protected tools (manage_tools, inspect)
- * and the core category cannot be disabled; this is surfaced truthfully in
- * discovery guidance and normalization rationale rather than advertising
- * successful configurability.
- */
 import type { CoreRecordSpec } from '../core/builder.js';
 import { CATEGORY_ENUM, DOMAIN, NORM_CLASS, PARENT, TOOLS_ARRAY } from './shared.js';
 

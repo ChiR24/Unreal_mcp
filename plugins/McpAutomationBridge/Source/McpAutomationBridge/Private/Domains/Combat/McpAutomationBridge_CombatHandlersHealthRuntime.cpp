@@ -58,9 +58,6 @@ bool FCombatActionContext::HandleHealthRuntime() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage effect created."), Result);
         return true;
     }
-
-    // apply_damage - adds damage application variables to a blueprint
-
     if (SubAction == TEXT("apply_damage"))
     {
         if (BlueprintPath.IsEmpty())
@@ -105,9 +102,6 @@ bool FCombatActionContext::HandleHealthRuntime() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage application configured."), Result);
         return true;
     }
-
-    // heal - adds healing variables to a blueprint
-
     if (SubAction == TEXT("heal"))
     {
         if (BlueprintPath.IsEmpty())
@@ -155,9 +149,6 @@ bool FCombatActionContext::HandleHealthRuntime() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Healing configured."), Result);
         return true;
     }
-
-    // create_shield - adds shield/barrier variables to a blueprint
-
     return false;
 }
 #endif

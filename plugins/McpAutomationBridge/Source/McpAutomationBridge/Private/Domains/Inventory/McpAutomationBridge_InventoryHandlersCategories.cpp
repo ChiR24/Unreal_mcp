@@ -14,7 +14,6 @@ bool HandleInventoryCategoryActions(UMcpAutomationBridgeSubsystem& Bridge, const
       return true;
     }
 
-    // Create a data asset for category
     UPackage* Package = CreateInventoryAssetPackage(Path, Name);
     if (!Package) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -81,7 +80,6 @@ bool HandleInventoryCategoryActions(UMcpAutomationBridgeSubsystem& Bridge, const
     }
 
     if (CategoryProp) {
-      // Create a JSON value for the category path
       TSharedPtr<FJsonValue> CategoryValue = MakeShared<FJsonValueString>(CategoryPath);
       if (ApplyJsonValueToProperty(ItemObj, CategoryProp, CategoryValue, AssignError)) {
         bCategoryAssigned = true;

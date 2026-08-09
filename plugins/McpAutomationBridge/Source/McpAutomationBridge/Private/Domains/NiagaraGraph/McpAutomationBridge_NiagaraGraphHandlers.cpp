@@ -70,14 +70,12 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    // Validate action
     if (Action != TEXT("manage_niagara_graph"))
     {
         return false;
     }
 
 #if WITH_EDITOR
-    // Validate payload
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -85,7 +83,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         return true;
     }
 
-    // Extract required asset path
     FString AssetPath;
     if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty())
     {
@@ -94,7 +91,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         return true;
     }
 
-    // Load Niagara System
     UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *AssetPath);
     if (!System)
     {
@@ -103,7 +99,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         return true;
     }
 
-    // Extract subaction and optional emitter name
     const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
     FString EmitterName; Payload->TryGetStringField(TEXT("emitterName"), EmitterName);
 
@@ -138,7 +133,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
                 UNiagaraEmitter* Emitter = Handle.GetInstance().Emitter;
                 if (Emitter)
                 {
-                    // Guard against null emitter data
                     const auto* EmitterData = Emitter->GetLatestEmitterData();
                     if (!EmitterData)
                     {
@@ -147,7 +141,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
                         return true;
                     }
 
-                    // Default to Spawn script
                     TargetScript = EmitterData->SpawnScriptProps.Script;
 
                     FString ScriptType;
@@ -181,7 +174,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         }
     }
 
-    // Get graph from script source
     if (TargetScript)
     {
         if (auto* Source = Cast<UNiagaraScriptSource>(TargetScript->GetLatestSource()))
@@ -317,10 +309,8 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         FString ParamName;
         Payload->TryGetStringField(TEXT("parameterName"), ParamName);
 
-        // Get exposed parameters store
         FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
 
-        // Extract value (numeric or boolean)
         float FloatValue = 0.0f;
         bool BoolValue = false;
 
@@ -338,7 +328,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
             FloatValue = bBoolField ? 1.0f : 0.0f;
         }
 
-        // Try float parameter
         if (UserStore.FindParameterVariable(
             FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName))))
         {
@@ -355,7 +344,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
             return true;
         }
 
-        // Try bool parameter
         if (UserStore.FindParameterVariable(
             FNiagaraVariable(FNiagaraTypeDefinition::GetBoolDef(), FName(*ParamName))))
         {
@@ -378,7 +366,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         return true;
     }
 
-    // Unknown subaction
     SendAutomationError(RequestingSocket, RequestId,
         FString::Printf(TEXT("Unknown subAction: %s"), *SubAction), TEXT("INVALID_SUBACTION"));
     return true;

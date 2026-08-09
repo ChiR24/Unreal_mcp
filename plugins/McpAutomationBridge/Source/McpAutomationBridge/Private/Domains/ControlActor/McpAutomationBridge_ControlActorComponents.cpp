@@ -71,7 +71,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
     }
   }
 
-  // Special handling for StaticMeshComponent meshPath convenience
   if (UStaticMeshComponent *SMC = Cast<UStaticMeshComponent>(NewComponent)) {
     FString MeshPath;
     if (Payload->TryGetStringField(TEXT("meshPath"), MeshPath) &&
@@ -140,8 +139,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
   return false;
 #endif
 }
-
-
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -221,7 +218,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
   Data->SetArrayField(TEXT("components"), ComponentsArray);
   Data->SetNumberField(TEXT("count"), ComponentsArray.Num());
 
-  // Add verification data
   if (Found) {
     McpHandlerUtils::AddVerification(Data, Found);
   }
@@ -233,8 +229,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
   return false;
 #endif
 }
-
-
 bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -277,7 +271,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
     Data->SetStringField(TEXT("actorName"), ActorName);
     Data->SetStringField(TEXT("componentName"), ComponentName);
 
-    // Add verification data for delete operations
     Data->SetBoolField(TEXT("existsAfter"), false);
     Data->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
 

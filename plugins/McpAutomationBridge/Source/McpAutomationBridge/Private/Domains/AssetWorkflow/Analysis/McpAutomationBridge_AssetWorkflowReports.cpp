@@ -141,7 +141,3 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
   return true;
 #endif
 }
-
-// ============================================================================
-// 8. MATERIAL CREATION
-// ============================================================================

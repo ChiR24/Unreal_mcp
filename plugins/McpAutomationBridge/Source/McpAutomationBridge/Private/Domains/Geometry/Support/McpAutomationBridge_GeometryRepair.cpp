@@ -237,9 +237,6 @@ bool HandleMergeVertices(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     return true;
 }
 
-// -------------------------------------------------------------------------
-// UV Transform Operations
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

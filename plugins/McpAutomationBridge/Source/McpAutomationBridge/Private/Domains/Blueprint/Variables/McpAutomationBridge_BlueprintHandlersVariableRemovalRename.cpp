@@ -192,7 +192,6 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
 #endif
   }
 
-  // Add an event to the blueprint (synchronous editor implementation)
   return false;
 }
 #endif

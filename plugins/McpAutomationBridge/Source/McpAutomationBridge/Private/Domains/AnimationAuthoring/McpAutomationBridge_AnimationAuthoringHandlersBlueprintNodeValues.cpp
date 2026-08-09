@@ -139,7 +139,6 @@ TSharedPtr<FJsonObject> HandleBlueprintNodeValueActions(const FString& SubAction
         return Response;
     }
 
-    // ===== 10.5 Control Rig =====
     return nullptr;
 }
 

@@ -243,7 +243,3 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
   return true;
 #endif
 }
-
-// ============================================================================
-// REBUILD MATERIAL
-// ============================================================================

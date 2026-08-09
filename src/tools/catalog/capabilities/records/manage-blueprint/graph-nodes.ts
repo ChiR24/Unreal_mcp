@@ -1,8 +1,4 @@
 /**
- * Blueprint graph node records: create_node, add_node, delete_node,
- * create_reroute_node, get_node_details, get_graph_details, get_pin_details,
- * list_node_types, create_struct_make_break_nodes.
- *
  * Graph handles: create_node returns `nodeGuid` (string) which is the
  * correlation key for subsequent get_node_details, connect_pins, and
  * get_pin_details calls. Pin handles are `pinName` (string) on a given node.

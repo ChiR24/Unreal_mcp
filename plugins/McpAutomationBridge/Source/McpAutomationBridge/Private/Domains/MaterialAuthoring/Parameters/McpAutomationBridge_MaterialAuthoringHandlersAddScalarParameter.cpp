@@ -44,9 +44,6 @@ bool HandleAddScalarParameter(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_vector_parameter
-  // --------------------------------------------------------------------------
   return false;
 }
 }

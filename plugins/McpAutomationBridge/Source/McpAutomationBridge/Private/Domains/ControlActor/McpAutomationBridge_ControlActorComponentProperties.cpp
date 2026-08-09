@@ -85,7 +85,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     if (USceneComponent *SC = Cast<USceneComponent>(TargetComponent)) {
       FString EnumVal;
       if ((*MobilityVal)->TryGetString(EnumVal)) {
-        // Parse enum string
         int64 Val =
             StaticEnum<EComponentMobility::Type>()->GetValueByNameString(
                 EnumVal);
@@ -105,11 +104,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
 
   for (const auto &Pair : PropertiesObject->Values) {
     const FString PropertyName(*Pair.Key);
-    // Skip Mobility as we already handled it
     if (PropertyName.Equals(TEXT("Mobility"), ESearchCase::IgnoreCase))
       continue;
 
-    // Special handling for SimulatePhysics
     if (PropertyName.Equals(TEXT("SimulatePhysics"), ESearchCase::IgnoreCase) ||
         PropertyName.Equals(TEXT("bSimulatePhysics"), ESearchCase::IgnoreCase)) {
       if (UPrimitiveComponent *Prim =
@@ -205,7 +202,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     Data->SetArrayField(TEXT("applied"), PropsArray);
   }
 
-  // Add verification data
 	McpHandlerUtils::AddVerification(Data, Found);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Component properties updated"), Data);
@@ -214,8 +210,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
   return false;
 #endif
 }
-
-
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -249,7 +243,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
     return true;
   }
 
-  // Get property using reflection
   FProperty* Property = Component->GetClass()->FindPropertyByName(*PropertyName);
   if (!Property) {
     SendAutomationError(Socket, RequestId,
@@ -264,7 +257,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
   Data->SetStringField(TEXT("propertyName"), PropertyName);
   Data->SetStringField(TEXT("propertyType"), Property->GetClass()->GetName());
 
-  // Extract property value using the existing helper function
   TSharedPtr<FJsonValue> PropertyValue = ExportPropertyToJsonValue(Component, Property);
   if (PropertyValue.IsValid()) {
     Data->SetField(TEXT("value"), PropertyValue);

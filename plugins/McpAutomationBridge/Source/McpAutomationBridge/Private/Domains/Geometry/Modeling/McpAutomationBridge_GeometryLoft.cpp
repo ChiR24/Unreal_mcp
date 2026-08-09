@@ -12,7 +12,6 @@ bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     bool bSmooth = GetJsonBoolField(Payload, TEXT("smooth"), true);
     bool bCap = GetJsonBoolField(Payload, TEXT("cap"), true);
 
-    // Get profile actor names if provided
     TArray<FString> ProfileActors;
     if (Payload->HasField(TEXT("profileActors")))
     {
@@ -64,7 +63,6 @@ bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 
     if (ProfileActors.Num() > 0)
     {
-        // Multi-profile loft: collect meshes from profile actors and create lofted surface
         TArray<ADynamicMeshActor*> ProfileMeshActors;
 
         for (const FString& ProfileName : ProfileActors)
@@ -91,7 +89,6 @@ bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 
             if (FirstDMC && FirstDMC->GetDynamicMesh() && LastDMC && LastDMC->GetDynamicMesh())
             {
-                // Get positions of profile actors for path
                 FVector StartPos = FirstProfile->GetActorLocation();
                 FVector EndPos = LastProfile->GetActorLocation();
                 FVector Direction = EndPos - StartPos;
@@ -101,13 +98,11 @@ bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                 {
                     Direction.Normalize();
 
-                    // Build polygon from first profile's boundary vertices
                     UDynamicMesh* FirstMesh = FirstDMC->GetDynamicMesh();
                     FBox FirstBBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(FirstMesh);
                     FVector ProfileCenter = FirstBBox.GetCenter();
                     FVector ProfileExtent = FirstBBox.GetExtent();
 
-                    // Create a simple polygon approximating the first profile's cross-section
                     TArray<FVector2D> PolygonVertices;
                     int32 NumPolySides = FMath::Clamp(8 + Subdivisions, 4, 64);
                     double ProfileRadius = FMath::Max(ProfileExtent.X, ProfileExtent.Y);
@@ -121,7 +116,6 @@ bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         ));
                     }
 
-                    // Build path frames for sweeping
                     TArray<FTransform> PathFrames;
                     int32 NumPathSteps = FMath::Clamp(Subdivisions, 2, 64);
 
@@ -130,26 +124,22 @@ bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         double T = (double)Step / NumPathSteps;
                         FVector Pos = StartPos + Direction * PathLength * T;
 
-                        // Create frame at this position
                         FQuat Rotation = FQuat::FindBetweenNormals(FVector::UpVector, Direction);
                         PathFrames.Add(FTransform(Rotation, Pos));
                     }
 
-                    // Use AppendSweepPolygon to create the lofted surface
-                    // Note: FGeometryScriptSimplePolygon was introduced in UE 5.4 but is not needed here
-                    // as AppendSweepPolygon takes TArray<FVector2D> directly
                     FGeometryScriptPrimitiveOptions PrimOptions;
                     PrimOptions.PolygroupMode = EGeometryScriptPrimitivePolygroupMode::PerQuad;
                     PrimOptions.bFlipOrientation = false;
                     FTransform SweepTransform(FRotator::ZeroRotator, StartPos);
+                    // Note: FGeometryScriptSimplePolygon was introduced in UE 5.4 but is not needed here
+                    // as AppendSweepPolygon takes TArray<FVector2D> directly
                     // Use PolygonVertices directly for AppendSweepPolygon (no conversion needed)
 
                     // AppendSweepPolygon signature varies by UE version
                     // UE 5.4+ signature: AppendSweepPolygon(TargetMesh, PrimOptions, Transform, PolygonVertices, SweepPath,
                     //                                         bLoop, bCapped, StartScale, EndScale, RotationAngleDeg, MiterLimit, Debug)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
-    // UE 5.4+ signature: AppendSweepPolygon(TargetMesh, PrimOptions, Transform, PolygonVertices, SweepPath,
-                    //                                         bLoop, bCapped, StartScale, EndScale, RotationAngleDeg, MiterLimit, Debug)
                     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
                         Mesh, PrimOptions, SweepTransform, PolygonVertices, PathFrames,
                         false,    // bLoop
@@ -203,15 +193,12 @@ bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     else
     {
         // No profile actors provided - perform simple Z-axis extrusion
-        // Get mesh bounds and extrude along Z
         FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
         FVector Center = BBox.GetCenter();
         FVector Extent = BBox.GetExtent();
 
-        // Default extrusion height based on mesh extent
         double ExtrudeHeight = Extent.Z > KINDA_SMALL_NUMBER ? Extent.Z : 100.0;
 
-        // Create a simple extruded shape based on the XY bounds
         TArray<FVector2D> PolygonVertices;
         int32 NumPolySides = FMath::Clamp(8 + Subdivisions, 4, 64);
         double Radius = FMath::Max(Extent.X, Extent.Y);
@@ -225,7 +212,6 @@ bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
             ));
         }
 
-        // Build vertical path for extrusion
         TArray<FTransform> PathFrames;
         int32 NumPathSteps = FMath::Clamp(Subdivisions, 2, 32);
 
@@ -268,9 +254,6 @@ bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Sweep Operation
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

@@ -92,7 +92,6 @@ bool HandleGASAbilityTasks(const FGASRequestContext& Context, const FString& Sub
             FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*DurationVarName), FloatPinType);
             FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, FName(*DurationVarName), nullptr, FText::FromString(TEXT("Ability Tasks")));
 
-            // Set default value
             for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
             {
                 if (VarDesc.VarName == FName(*DurationVarName))
@@ -114,7 +113,6 @@ bool HandleGASAbilityTasks(const FGASRequestContext& Context, const FString& Sub
         }
         else if (TaskType == TEXT("PlayMontageAndWait") || TaskType == TEXT("Montage"))
         {
-            // Montage reference
             FEdGraphPinType SoftObjPinType;
             SoftObjPinType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
             SoftObjPinType.PinSubCategoryObject = UObject::StaticClass();
@@ -123,7 +121,6 @@ bool HandleGASAbilityTasks(const FGASRequestContext& Context, const FString& Sub
             FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, FName(*MontageVarName), nullptr, FText::FromString(TEXT("Ability Tasks")));
             VariablesAdded.Add(MontageVarName);
 
-            // Play rate
             FString RateVarName = FString::Printf(TEXT("%s_PlayRate"), *TaskVarPrefix);
             FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*RateVarName), FloatPinType);
             FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, FName(*RateVarName), nullptr, FText::FromString(TEXT("Ability Tasks")));
@@ -139,7 +136,6 @@ bool HandleGASAbilityTasks(const FGASRequestContext& Context, const FString& Sub
         }
         else if (TaskType == TEXT("WaitTargetData") || TaskType == TEXT("TargetData"))
         {
-            // Target data class
             FString TargetActorVarName = FString::Printf(TEXT("%s_TargetActorClass"), *TaskVarPrefix);
             FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*TargetActorVarName), ClassPinType);
             FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, FName(*TargetActorVarName), nullptr, FText::FromString(TEXT("Ability Tasks")));
@@ -147,7 +143,6 @@ bool HandleGASAbilityTasks(const FGASRequestContext& Context, const FString& Sub
         }
         else if (TaskType == TEXT("WaitGameplayEvent") || TaskType == TEXT("GameplayEvent"))
         {
-            // Gameplay tag to wait for
             FEdGraphPinType StructPinType;
             StructPinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
             StructPinType.PinSubCategoryObject = FGameplayTag::StaticStruct();
@@ -164,7 +159,6 @@ bool HandleGASAbilityTasks(const FGASRequestContext& Context, const FString& Sub
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*TaskNameVarName), NamePinType);
         FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, FName(*TaskNameVarName), nullptr, FText::FromString(TEXT("Ability Tasks")));
 
-        // Set default task name
         for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
         {
             if (VarDesc.VarName == FName(*TaskNameVarName))

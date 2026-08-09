@@ -85,7 +85,6 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
 
     const FString RegistryKey = Normalized.IsEmpty() ? Path : Normalized;
 
-    // Find the variable description (case-insensitive)
     FBPVariableDescription *VariableDesc = nullptr;
     for (FBPVariableDescription &Desc : Blueprint->NewVariables) {
       if (Desc.VarName == FName(*VarName)) {

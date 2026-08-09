@@ -64,9 +64,6 @@ bool FCombatActionContext::HandleDefenseRuntime() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Shield system configured."), Result);
         return true;
     }
-
-    // modify_armor - adds armor/damage reduction variables to a blueprint
-
     if (SubAction == TEXT("modify_armor"))
     {
         if (BlueprintPath.IsEmpty())

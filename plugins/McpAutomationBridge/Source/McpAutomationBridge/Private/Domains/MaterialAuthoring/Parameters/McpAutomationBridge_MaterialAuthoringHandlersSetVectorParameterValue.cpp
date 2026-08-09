@@ -69,9 +69,6 @@ bool HandleSetVectorParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const 
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // set_texture_parameter_value
-  // --------------------------------------------------------------------------
   return false;
 }
 }

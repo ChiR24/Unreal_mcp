@@ -141,10 +141,6 @@ double Width = GetJsonNumberField(Payload, TEXT("width"), 100.0);
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Mesh Topology Operations (Triangulate, Poke)
-// -------------------------------------------------------------------------
-
 bool HandleRevolve(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
@@ -156,7 +152,6 @@ double Angle = GetJsonNumberField(Payload, TEXT("angle"), 360.0);
     int32 Steps = GetJsonIntField(Payload, TEXT("steps"), 16);
     bool bCapped = GetJsonBoolField(Payload, TEXT("capped"), true);
 
-    // Get profile points from payload
     TArray<FVector2D> ProfilePoints;
     if (Payload->HasField(TEXT("profile")))
     {
@@ -216,9 +211,6 @@ double X = GetJsonNumberField(PointObj, TEXT("x"), 0.0);
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Additional Deformers (Stretch, Spherify, Cylindrify)
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

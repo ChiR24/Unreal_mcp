@@ -201,10 +201,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
 #endif
 }
 
-// ============================================================================
-// 7. BASIC ASSET OPERATIONS (Import, Duplicate, Rename, Move, etc.)
-// ============================================================================
-
 /**
  * Handles asset import requests.
  *

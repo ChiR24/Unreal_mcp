@@ -216,24 +216,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
     return true;
   }
 
-  // Find and call the function
   UFunction* Function = Actor->FindFunction(*FunctionName);
   if (Function) {
     // Check if function has parameters - passing nullptr to a function expecting
     // parameters can cause crashes or undefined behavior
     if (Function->ParmsSize > 0) {
-      // Function has parameters - we need to provide a buffer
-      // Allocate zeroed memory for parameters
       void* ParmsBuffer = FMemory::Malloc(Function->ParmsSize, 16);
       FMemory::Memzero(ParmsBuffer, Function->ParmsSize);
 
-      // Call with parameter buffer
       Actor->ProcessEvent(Function, ParmsBuffer);
 
-      // Free the buffer
       FMemory::Free(ParmsBuffer);
     } else {
-      // No parameters, safe to pass nullptr
       Actor->ProcessEvent(Function, nullptr);
     }
 

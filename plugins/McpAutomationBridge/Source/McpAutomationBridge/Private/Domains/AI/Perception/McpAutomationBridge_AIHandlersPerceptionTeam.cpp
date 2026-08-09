@@ -123,10 +123,6 @@ bool HandleSetPerceptionTeam(UMcpAutomationBridgeSubsystem* Self, const FString&
         return true;
     }
 
-    // =========================================================================
-    // 16.6 State Trees - UE5.3+ (4 actions)
-    // =========================================================================
-
     return true;
 }
 }

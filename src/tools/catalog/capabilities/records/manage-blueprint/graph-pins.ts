@@ -1,7 +1,4 @@
 /**
- * Blueprint graph pin/link records: connect_pins, break_pin_links,
- * set_node_property, set_pin_default_value, add_construction_script.
- *
  * Pin handles: `fromNodeId`+`fromPinName` and `toNodeId`+`toPinName` are the
  * correlation keys for connect_pins and break_pin_links. connect_pins uses
  * AllocateDefaultPins as a fallback when pins are not yet materialized.

@@ -64,9 +64,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
         return true;
     }
 
-    // -------------------------------------------------------------------------
-    // Extract terrain parameters
-    // -------------------------------------------------------------------------
     int32 SizeX = 100;
     int32 SizeY = 100;
     double Spacing = 100.0;
@@ -81,9 +78,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
     Payload->TryGetNumberField(TEXT("subdivisions"), Subdivisions);
     Payload->TryGetStringField(TEXT("actorName"), ActorName);
 
-    // -------------------------------------------------------------------------
-    // Validate actorName
-    // -------------------------------------------------------------------------
     if (ActorName.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -92,7 +86,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
         return true;
     }
 
-    // Reject invalid characters
     if (ActorName.Contains(TEXT("/")) || ActorName.Contains(TEXT("\\")) ||
         ActorName.Contains(TEXT(":")) || ActorName.Contains(TEXT("*")) ||
         ActorName.Contains(TEXT("?")) || ActorName.Contains(TEXT("\"")) ||
@@ -105,7 +98,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
         return true;
     }
 
-    // Reject excessive length
     if (ActorName.Len() > 128)
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -114,18 +106,12 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
         return true;
     }
 
-    // -------------------------------------------------------------------------
-    // Clamp values to reasonable limits
-    // -------------------------------------------------------------------------
     SizeX = FMath::Clamp(SizeX, 2, 1000);
     SizeY = FMath::Clamp(SizeY, 2, 1000);
     Subdivisions = FMath::Clamp(Subdivisions, 2, 200);
     Spacing = FMath::Max(Spacing, 1.0);
     HeightScale = FMath::Max(HeightScale, 0.0);
 
-    // -------------------------------------------------------------------------
-    // Get world and spawn actor
-    // -------------------------------------------------------------------------
     UWorld *World = GEditor->GetEditorWorldContext().World();
     if (!World)
     {
@@ -135,7 +121,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
         return true;
     }
 
-    // Extract location/rotation
     FVector Location(0, 0, 0);
     const TSharedPtr<FJsonObject> *LocObj = nullptr;
     if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj)
@@ -158,7 +143,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
         Rotation = FRotator(Pitch, Yaw, Roll);
     }
 
-    // Spawn actor with requested name
     FActorSpawnParameters SpawnParams;
     SpawnParams.Name = FName(*ActorName);
     SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
@@ -175,9 +159,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
     TerrainActor->Modify();
     TerrainActor->SetActorLabel(*ActorName);
 
-    // -------------------------------------------------------------------------
-    // Add procedural mesh component
-    // -------------------------------------------------------------------------
     UProceduralMeshComponent *ProcMesh = NewObject<UProceduralMeshComponent>(TerrainActor);
     if (!ProcMesh)
     {
@@ -197,29 +178,22 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
     TerrainActor->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
                                              ETeleportType::TeleportPhysics);
 
-    // -------------------------------------------------------------------------
-    // Generate terrain mesh
-    // -------------------------------------------------------------------------
     TArray<FVector> Vertices;
     TArray<int32> Triangles;
     TArray<FVector> Normals;
     TArray<FVector2D> UVs;
     TArray<FProcMeshTangent> Tangents;
 
-    // Create grid of vertices
     for (int32 Y = 0; Y <= Subdivisions; ++Y)
     {
         for (int32 X = 0; X <= Subdivisions; ++X)
         {
-            // Calculate normalized position (0 to 1)
             double NormX = static_cast<double>(X) / Subdivisions;
             double NormY = static_cast<double>(Y) / Subdivisions;
 
-            // Calculate world position with spacing
             double WorldX = (NormX - 0.5) * SizeX * Spacing;
             double WorldY = (NormY - 0.5) * SizeY * Spacing;
 
-            // Generate height using simple noise/sine combination
             double WorldZ = FMath::Sin(NormX * 4.0 * PI) * FMath::Cos(NormY * 4.0 * PI) * HeightScale * 0.3 +
                             FMath::Sin(NormX * 8.0 * PI) * FMath::Cos(NormY * 8.0 * PI) * HeightScale * 0.15 +
                             FMath::Sin(NormX * 2.0 * PI + NormY * 3.0 * PI) * HeightScale * 0.25;
@@ -229,7 +203,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
         }
     }
 
-    // Generate triangles
     for (int32 Y = 0; Y < Subdivisions; ++Y)
     {
         for (int32 X = 0; X < Subdivisions; ++X)
@@ -237,21 +210,17 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
             int32 Current = Y * (Subdivisions + 1) + X;
             int32 Next = Current + Subdivisions + 1;
 
-            // First triangle
             Triangles.Add(Current);
             Triangles.Add(Next);
             Triangles.Add(Current + 1);
 
-            // Second triangle
             Triangles.Add(Current + 1);
             Triangles.Add(Next);
             Triangles.Add(Next + 1);
         }
     }
 
-    // -------------------------------------------------------------------------
     // Validate generated geometry is non-empty before building the mesh
-    // -------------------------------------------------------------------------
     FBox TerrainBounds(ForceInit);
     for (const FVector& Vertex : Vertices)
     {
@@ -273,9 +242,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
     // Create the mesh section
     ProcMesh->CreateMeshSection(0, Vertices, Triangles, Normals, UVs, TArray<FColor>(), Tangents, true);
 
-    // -------------------------------------------------------------------------
-    // Apply material if specified
-    // -------------------------------------------------------------------------
     FString MaterialPath;
     if (Payload->TryGetStringField(TEXT("material"), MaterialPath) && !MaterialPath.IsEmpty())
     {
@@ -286,12 +252,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
         }
     }
 
-    // Mark the actor as modified
     TerrainActor->MarkPackageDirty();
 
-    // -------------------------------------------------------------------------
-    // Build response
-    // -------------------------------------------------------------------------
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("actorName"), TerrainActor->GetActorLabel());
     Resp->SetStringField(TEXT("actorPath"), TerrainActor->GetPathName());
@@ -302,7 +264,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
     Resp->SetNumberField(TEXT("sizeY"), SizeY);
     Resp->SetNumberField(TEXT("subdivisions"), Subdivisions);
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Resp, TerrainActor);
     Resp->SetStringField(TEXT("actorName"), TerrainActor->GetActorLabel());
     Resp->SetStringField(TEXT("actorPath"), TerrainActor->GetPathName());

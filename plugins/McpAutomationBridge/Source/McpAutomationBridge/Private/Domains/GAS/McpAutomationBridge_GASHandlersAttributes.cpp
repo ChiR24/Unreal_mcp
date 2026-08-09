@@ -90,7 +90,6 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
 
         float DefaultValue = static_cast<float>(GetJsonNumberField(Payload, TEXT("defaultValue"), 0.0));
 
-        // Add FGameplayAttributeData member variable
         FEdGraphPinType PinType;
         PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
         PinType.PinSubCategoryObject = FGameplayAttributeData::StaticStruct();
@@ -243,7 +242,6 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
             return true;
         }
 
-        // Add min/max clamping variables for this attribute
         FString MinVarName = FString::Printf(TEXT("%s_Min"), *AttributeName);
         FString MaxVarName = FString::Printf(TEXT("%s_Max"), *AttributeName);
 
@@ -254,7 +252,6 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*MinVarName), FloatPinType);
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*MaxVarName), FloatPinType);
 
-        // Set the category for organization
         FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, FName(*MinVarName), nullptr, FText::FromString(TEXT("Attribute Clamping")));
         FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, FName(*MaxVarName), nullptr, FText::FromString(TEXT("Attribute Clamping")));
 
@@ -265,7 +262,6 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
             // Use reflection to set the default values for min/max variables after compile
             Blueprint->Modify();
 
-            // Set default values via variable descriptions
             for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
             {
                 if (VarDesc.VarName == FName(*MinVarName))
@@ -279,14 +275,12 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
             }
         }
 
-        // Add a boolean to enable/disable clamping at runtime
         FString EnableClampVarName = FString::Printf(TEXT("bClamp%s"), *AttributeName);
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*EnableClampVarName), BoolPinType);
         FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, FName(*EnableClampVarName), nullptr, FText::FromString(TEXT("Attribute Clamping")));
 
-        // Set default to enabled
         for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
         {
             if (VarDesc.VarName == FName(*EnableClampVarName))

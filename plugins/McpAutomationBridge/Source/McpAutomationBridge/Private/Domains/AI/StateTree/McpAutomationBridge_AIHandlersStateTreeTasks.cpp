@@ -134,10 +134,6 @@ bool HandleConfigureStateTreeTask(UMcpAutomationBridgeSubsystem* Self, const FSt
         return true;
     }
 
-    // =========================================================================
-    // 16.7 Smart Objects (4 actions)
-    // =========================================================================
-
     return true;
 }
 }

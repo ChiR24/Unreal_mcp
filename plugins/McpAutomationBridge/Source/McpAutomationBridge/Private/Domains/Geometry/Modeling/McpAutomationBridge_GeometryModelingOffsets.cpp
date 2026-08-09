@@ -115,10 +115,6 @@ bool HandleShell(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Deformers
-// -------------------------------------------------------------------------
-
 bool HandleChamfer(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
@@ -163,7 +159,6 @@ bool HandleChamfer(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
     // Use bevel with steps=1 for chamfer effect
     FGeometryScriptMeshBevelOptions BevelOptions;
     BevelOptions.BevelDistance = Distance;
-            // BevelOptions.Subdivisions = FMath::Max(0, Steps - 1); // Not available in UE 5.3
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshPolygroupBevel(
         Mesh, BevelOptions, nullptr);
 
@@ -177,9 +172,6 @@ bool HandleChamfer(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Merge Vertices
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

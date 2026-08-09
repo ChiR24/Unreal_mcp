@@ -184,7 +184,3 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
   return true;
 #endif
 }
-
-// ============================================================================
-// 2. SOURCE CONTROL CHECKOUT
-// ============================================================================

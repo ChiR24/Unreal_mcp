@@ -15,7 +15,6 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
       return true;
     }
 
-    // Load the blueprint
     UBlueprint* Blueprint =
         Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
     if (!Blueprint) {
@@ -28,7 +27,6 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
 
     TArray<FString> ReplicatedVariables;
 
-    // Find inventory-related variables and set their replication flags
     TArray<FName> InventoryVarNames = {
       TEXT("InventorySlots"),
       TEXT("MaxSlots"),
@@ -50,7 +48,6 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
           Var.PropertyFlags |= CPF_Net;
           Var.RepNotifyFunc = NAME_None; // Can be set to a custom function name
 
-          // Set replication condition
           if (ReplicationCondition.Equals(TEXT("OwnerOnly"), ESearchCase::IgnoreCase)) {
             Var.ReplicationCondition = COND_OwnerOnly;
           } else if (ReplicationCondition.Equals(TEXT("SkipOwner"), ESearchCase::IgnoreCase)) {
@@ -134,7 +131,6 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
     FEdGraphPinType BoolType;
     BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
 
-    // Weight configuration variables
     TArray<TPair<FName, FEdGraphPinType>> WeightVars = {
       TPair<FName, FEdGraphPinType>(TEXT("MaxCarryWeight"), FloatType),
       TPair<FName, FEdGraphPinType>(TEXT("CurrentCarryWeight"), FloatType),
@@ -160,7 +156,6 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
       }
     }
 
-    // Add weight-related event
     FEdGraphPinType DelegateType;
     DelegateType.PinCategory = UEdGraphSchema_K2::PC_MCDelegate;
 
@@ -176,7 +171,6 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
       AddedVars.Add(MakeShared<FJsonValueString>(TEXT("OnEncumberanceChanged")));
     }
 
-    // Set default values on CDO if available
     if (Blueprint->GeneratedClass) {
       UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject();
       if (CDO) {

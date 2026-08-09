@@ -15,7 +15,6 @@ bool HandleInventoryPickupBehaviorActions(UMcpAutomationBridgeSubsystem& Bridge,
       return true;
     }
 
-    // Load the pickup blueprint
     UBlueprint* Blueprint =
         Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *PickupPath));
     if (!Blueprint) {
@@ -26,7 +25,6 @@ bool HandleInventoryPickupBehaviorActions(UMcpAutomationBridgeSubsystem& Bridge,
       return true;
     }
 
-    // Add respawn-related Blueprint variables
     FEdGraphPinType BoolType;
     BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
 
@@ -34,7 +32,6 @@ bool HandleInventoryPickupBehaviorActions(UMcpAutomationBridgeSubsystem& Bridge,
     FloatType.PinCategory = UEdGraphSchema_K2::PC_Real;
     FloatType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
 
-    // Add bRespawnable variable
     bool bRespawnableExists = false;
     for (FBPVariableDescription& Var : Blueprint->NewVariables) {
       if (Var.VarName == TEXT("bRespawnable")) {
@@ -46,7 +43,6 @@ bool HandleInventoryPickupBehaviorActions(UMcpAutomationBridgeSubsystem& Bridge,
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bRespawnable"), BoolType);
     }
 
-    // Add RespawnTime variable
     bool bRespawnTimeExists = false;
     for (FBPVariableDescription& Var : Blueprint->NewVariables) {
       if (Var.VarName == TEXT("RespawnTime")) {
@@ -58,7 +54,6 @@ bool HandleInventoryPickupBehaviorActions(UMcpAutomationBridgeSubsystem& Bridge,
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("RespawnTime"), FloatType);
     }
 
-    // Set default values on the CDO if available
     if (Blueprint->GeneratedClass) {
       UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject();
       if (CDO) {
@@ -107,7 +102,6 @@ bool HandleInventoryPickupBehaviorActions(UMcpAutomationBridgeSubsystem& Bridge,
       return true;
     }
 
-    // Load the pickup blueprint
     UBlueprint* Blueprint =
         Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *PickupPath));
     if (!Blueprint) {
@@ -118,7 +112,6 @@ bool HandleInventoryPickupBehaviorActions(UMcpAutomationBridgeSubsystem& Bridge,
       return true;
     }
 
-    // Add effect-related Blueprint variables
     FEdGraphPinType BoolType;
     BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
 
@@ -126,7 +119,6 @@ bool HandleInventoryPickupBehaviorActions(UMcpAutomationBridgeSubsystem& Bridge,
     FloatType.PinCategory = UEdGraphSchema_K2::PC_Real;
     FloatType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
 
-    // Add effect control variables
     TArray<TPair<FName, bool>> EffectVars = {
       TPair<FName, bool>(TEXT("bEnableBobbing"), bBobbing),
       TPair<FName, bool>(TEXT("bEnableRotation"), bRotation),
@@ -146,7 +138,6 @@ bool HandleInventoryPickupBehaviorActions(UMcpAutomationBridgeSubsystem& Bridge,
       }
     }
 
-    // Add bobbing/rotation parameters
     TArray<FName> FloatVars = {
       TEXT("BobbingSpeed"),
       TEXT("BobbingHeight"),
@@ -166,7 +157,6 @@ bool HandleInventoryPickupBehaviorActions(UMcpAutomationBridgeSubsystem& Bridge,
       }
     }
 
-    // Set default values on the CDO if available
     if (Blueprint->GeneratedClass) {
       UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject();
       if (CDO) {

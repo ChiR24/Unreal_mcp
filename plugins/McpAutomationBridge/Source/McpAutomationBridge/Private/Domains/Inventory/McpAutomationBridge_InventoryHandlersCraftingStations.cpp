@@ -34,13 +34,11 @@ bool HandleInventoryCraftingStationActions(UMcpAutomationBridgeSubsystem& Bridge
     if (StationBlueprint) {
       USimpleConstructionScript* SCS = StationBlueprint->SimpleConstructionScript;
       if (SCS) {
-        // Add mesh component
         USCS_Node* MeshNode = SCS->CreateNode(UStaticMeshComponent::StaticClass(), TEXT("StationMesh"));
         if (MeshNode) {
           SCS->AddNode(MeshNode);
         }
 
-        // Add interaction component
         USCS_Node* BoxNode = SCS->CreateNode(UBoxComponent::StaticClass(), TEXT("InteractionBox"));
         if (BoxNode) {
           SCS->AddNode(BoxNode);
@@ -87,7 +85,6 @@ bool HandleInventoryCraftingStationActions(UMcpAutomationBridgeSubsystem& Bridge
       return true;
     }
 
-    // Get recipe paths from payload
     TArray<FString> RecipePaths;
     const TArray<TSharedPtr<FJsonValue>>* RecipesArr = nullptr;
     if (Payload->TryGetArrayField(TEXT("recipePaths"), RecipesArr) && RecipesArr) {
@@ -99,7 +96,6 @@ bool HandleInventoryCraftingStationActions(UMcpAutomationBridgeSubsystem& Bridge
     FString StationType = GetPayloadString(Payload, TEXT("stationType"), TEXT("Basic"));
     double CraftingSpeed = GetPayloadNumber(Payload, TEXT("craftingSpeedMultiplier"), 1.0);
 
-    // Add station recipe configuration variables
     FEdGraphPinType SoftObjectArrayType;
     SoftObjectArrayType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
     SoftObjectArrayType.ContainerType = EPinContainerType::Array;
@@ -114,7 +110,6 @@ bool HandleInventoryCraftingStationActions(UMcpAutomationBridgeSubsystem& Bridge
     FEdGraphPinType BoolType;
     BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
 
-    // Station configuration variables
     TArray<TPair<FName, FEdGraphPinType>> StationVars = {
       TPair<FName, FEdGraphPinType>(TEXT("AvailableRecipes"), SoftObjectArrayType),
       TPair<FName, FEdGraphPinType>(TEXT("StationType"), NameType),
@@ -140,7 +135,6 @@ bool HandleInventoryCraftingStationActions(UMcpAutomationBridgeSubsystem& Bridge
       }
     }
 
-    // Add crafting events for station
     FEdGraphPinType DelegateType;
     DelegateType.PinCategory = UEdGraphSchema_K2::PC_MCDelegate;
 

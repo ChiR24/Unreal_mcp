@@ -116,9 +116,6 @@ bool UMcpAutomationBridgeSubsystem::HandleListBlueprints(const FString& RequestI
     TArray<FAssetData> AssetList;
     AssetRegistry.GetAssets(Filter, AssetList);
 
-    // Post-filter if needed (e.g. if ClassPath logic was skipped or ambiguous)
-    // ...
-
     int32 TotalCount = AssetList.Num();
 
     if (Offset > 0)

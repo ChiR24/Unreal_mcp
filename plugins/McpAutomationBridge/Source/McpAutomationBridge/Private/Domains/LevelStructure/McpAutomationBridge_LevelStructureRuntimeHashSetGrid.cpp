@@ -42,17 +42,14 @@ bool HandleConfigureRuntimeHashSetGrid(
         return true;
     }
 
-    // Get the array helper
     void* PartitionsArrayPtr = PartitionsProperty->ContainerPtrToValuePtr<void>(HashSet);
     FScriptArrayHelper ArrayHelper(ArrayProp, PartitionsArrayPtr);
 
-    // Find or create the partition
     bool bFound = false;
     bool bCreated = false;
     int32 ModifiedIndex = -1;
     FName TargetPartitionName = GridName.IsEmpty() ? FName(TEXT("MainPartition")) : FName(*GridName);
 
-    // Get the struct type from the array property
     FStructProperty* StructProp = CastField<FStructProperty>(ArrayProp->Inner);
     if (!StructProp)
     {
@@ -68,7 +65,6 @@ bool HandleConfigureRuntimeHashSetGrid(
         void* PartitionPtr = ArrayHelper.GetRawPtr(i);
         if (!PartitionPtr) continue;
 
-        // Get the Name property from the partition struct
         FProperty* NameProp = PartitionStruct->FindPropertyByName(TEXT("Name"));
         if (NameProp && NameProp->IsA<FNameProperty>())
         {
@@ -103,14 +99,12 @@ bool HandleConfigureRuntimeHashSetGrid(
         }
     }
 
-    // If not found and createIfMissing is true, add a new partition
     if (!bFound && bCreateIfMissing)
     {
         int32 NewIndex = ArrayHelper.AddValue();
         void* NewPartition = ArrayHelper.GetRawPtr(NewIndex);
         if (NewPartition)
         {
-            // Initialize the new partition
             FProperty* NameProp = PartitionStruct->FindPropertyByName(TEXT("Name"));
             if (NameProp && NameProp->IsA<FNameProperty>())
             {
@@ -138,7 +132,6 @@ bool HandleConfigureRuntimeHashSetGrid(
         }
     }
 
-    // Mark package dirty
     HashSet->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();

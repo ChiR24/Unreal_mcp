@@ -44,7 +44,6 @@ bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-    // Create a copy of the mesh
     UDynamicMesh* MirroredMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     MirroredMesh->SetMesh(Mesh->GetMeshRef());
 
@@ -68,16 +67,12 @@ bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
             Pos.Z *= MirrorScale.Z;
             EditMesh.SetVertex(VID, Pos);
         }
-            // EditMesh.UpdateVertexNormals(); // Not available in UE 5.3
-            // MirroredMesh->NotifyMeshUpdated(); // Not available in UE 5.3
     }
 #endif
 
-    // Append mirrored mesh to original
     FGeometryScriptAppendMeshOptions AppendOptions;
     UGeometryScriptLibrary_MeshBasicEditFunctions::AppendMesh(Mesh, MirroredMesh, FTransform::Identity, false, AppendOptions, nullptr);
 
-    // Optionally weld vertices at the mirror plane
     if (bWeld)
     {
         FGeometryScriptWeldEdgesOptions WeldOptions;
@@ -133,9 +128,7 @@ bool HandleTranslateMesh(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-    // Use Geometry Script to translate the mesh
     // UE 5.7+: TranslateMesh is in MeshTransformFunctions
-    // UE 5.5+: TranslateMesh is in MeshTransformFunctions
     UGeometryScriptLibrary_MeshTransformFunctions::TranslateMesh(Mesh, Translation, nullptr);
     DMC->NotifyMeshUpdated();
 
@@ -152,9 +145,6 @@ bool HandleTranslateMesh(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     return true;
 }
 
-// -------------------------------------------------------------------------
-// UV Operations - Unwrap and Pack
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

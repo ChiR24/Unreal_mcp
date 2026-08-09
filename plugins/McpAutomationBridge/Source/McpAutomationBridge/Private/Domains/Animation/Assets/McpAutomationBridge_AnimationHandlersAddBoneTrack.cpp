@@ -18,7 +18,6 @@ bool HandleAnimationAddBoneTrackAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Add a bone animation track to a sequence
     FString AssetPath;
     Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
 

@@ -1,7 +1,4 @@
 /**
- * Widget animation records (4): create_widget_animation, add_animation_track,
- * add_animation_keyframe, set_animation_loop.
- *
  * Widget animations are distinct from Blueprint graph animations: they
  * animate UMG widget properties (transform, color, opacity, material) over
  * time within a Widget Blueprint's animation timeline. The native route

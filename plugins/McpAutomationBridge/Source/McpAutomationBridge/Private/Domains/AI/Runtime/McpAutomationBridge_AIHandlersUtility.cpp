@@ -244,11 +244,6 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         return true;
     }
 
-    // =========================================================================
-    // Configuration Actions (3 new actions)
-    // =========================================================================
-
-    // set_ai_perception - Unified perception configuration (sight/hearing/damage in one call)
     return true;
 }
 }

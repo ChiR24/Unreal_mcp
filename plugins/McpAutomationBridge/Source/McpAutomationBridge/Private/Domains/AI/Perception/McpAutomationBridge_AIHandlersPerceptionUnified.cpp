@@ -177,7 +177,6 @@ bool HandleSetAIPerception(UMcpAutomationBridgeSubsystem* Self, const FString& R
         return true;
     }
 
-    // create_nav_modifier - Create navigation modifier component on actor
     return true;
 }
 }

@@ -23,7 +23,6 @@ bool McpBlueprintAddEventCustom(
   const FString &RequestId = Context.RequestId;
   TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
 
-  // If it's a custom event, use the existing logic.
   FName EventName = CustomName.IsEmpty()
                         ? FName(*FString::Printf(TEXT("Event_%s"),
                                                  *FGuid::NewGuid().ToString()))

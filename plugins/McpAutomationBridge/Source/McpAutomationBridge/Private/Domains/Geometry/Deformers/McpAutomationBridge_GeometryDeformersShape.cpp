@@ -43,15 +43,10 @@ bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& RequestI
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-    // Calculate bounding sphere center and target radius
     FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
     FVector Center = BBox.GetCenter();
     double TargetRadius = BBox.GetExtent().GetMax();
 
-    // Real spherify implementation:
-    // 1. Get all vertex IDs
-    // 2. For each vertex, calculate direction from center
-    // 3. Lerp vertex position toward sphere surface based on Factor
     FGeometryScriptIndexList VertexIDList;
     bool bHasGaps = false;
     UGeometryScriptLibrary_MeshQueryFunctions::GetAllVertexIDs(Mesh, VertexIDList, bHasGaps);
@@ -67,7 +62,6 @@ bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& RequestI
 
         if (bIsValid)
         {
-            // Calculate direction from center to vertex
             FVector Direction = OriginalPos - Center;
             double CurrentDistance = Direction.Size();
 
@@ -75,13 +69,10 @@ bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& RequestI
             {
                 Direction.Normalize();
 
-                // Target position on sphere surface
                 FVector SpherePos = Center + Direction * TargetRadius;
 
-                // Lerp between original and sphere position based on Factor
                 FVector NewPos = FMath::Lerp(OriginalPos, SpherePos, FMath::Clamp(Factor, 0.0, 1.0));
 
-                // Set the new position
                 bool bVertexValid = false;
                 UGeometryScriptLibrary_MeshBasicEditFunctions::SetVertexPosition(Mesh, VertexID, NewPos, bVertexValid, true);
                 if (bVertexValid)
@@ -160,7 +151,6 @@ bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
     FVector Center = BBox.GetCenter();
 
-    // Get all vertex IDs
     FGeometryScriptIndexList VertexIDList;
     bool bHasGaps = false;
     UGeometryScriptLibrary_MeshQueryFunctions::GetAllVertexIDs(Mesh, VertexIDList, bHasGaps);
@@ -179,7 +169,6 @@ bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
 
         if (bIsValid)
         {
-            // Calculate perpendicular distance from axis
             FVector FromCenter = Pos - Center;
             FVector Perpendicular = FromCenter;
             // Zero out the axis component to get perpendicular vector
@@ -207,12 +196,10 @@ bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
 
         if (bIsValid)
         {
-            // Calculate perpendicular vector from axis
             FVector FromCenter = OriginalPos - Center;
             FVector Perpendicular = FromCenter;
             double AxisCoord = 0.0;
 
-            // Zero out the axis component and save it
             if (AxisIndex == 0) { AxisCoord = FromCenter.X; Perpendicular.X = 0; }
             else if (AxisIndex == 1) { AxisCoord = FromCenter.Y; Perpendicular.Y = 0; }
             else { AxisCoord = FromCenter.Z; Perpendicular.Z = 0; }
@@ -221,7 +208,6 @@ bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
 
             if (PerpDist > KINDA_SMALL_NUMBER)
             {
-                // Normalize perpendicular and scale to average radius
                 Perpendicular.Normalize();
                 FVector CylinderPos = Center + Perpendicular * AvgRadius;
 
@@ -230,10 +216,8 @@ bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
                 else if (AxisIndex == 1) CylinderPos.Y = Center.Y + AxisCoord;
                 else CylinderPos.Z = Center.Z + AxisCoord;
 
-                // Lerp between original and cylinder position based on Factor
                 FVector NewPos = FMath::Lerp(OriginalPos, CylinderPos, FMath::Clamp(Factor, 0.0, 1.0));
 
-                // Set the new position
                 bool bVertexValid = false;
                 UGeometryScriptLibrary_MeshBasicEditFunctions::SetVertexPosition(Mesh, VertexID, NewPos, bVertexValid, true);
                 if (bVertexValid)

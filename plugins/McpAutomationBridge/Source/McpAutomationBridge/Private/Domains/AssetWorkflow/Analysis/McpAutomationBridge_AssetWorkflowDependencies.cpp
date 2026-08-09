@@ -31,7 +31,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
     return true;
   }
 
-  // Check if asset exists - return error for non-existent assets
   if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
     SendAutomationError(Socket, RequestId,
                         FString::Printf(TEXT("Asset not found: %s"), *SafeAssetPath),
@@ -93,7 +92,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
     return true;
   }
 
-  // Check if asset exists - return error for non-existent assets
   if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
     SendAutomationError(Socket, RequestId,
                         FString::Printf(TEXT("Asset not found: %s"), *SafeAssetPath),

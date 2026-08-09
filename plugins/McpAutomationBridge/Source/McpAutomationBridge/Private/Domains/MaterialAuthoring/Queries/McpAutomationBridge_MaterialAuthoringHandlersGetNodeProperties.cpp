@@ -32,7 +32,6 @@ bool HandleGetNodeProperties(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
     if (UMaterialExpressionCustom *CE = Cast<UMaterialExpressionCustom>(Expr)) {
       Result->SetStringField(TEXT("code"), CE->Code);
       Result->SetStringField(TEXT("description"), CE->Description);
-      // Output type
       switch (CE->OutputType) {
         case CMOT_Float1: Result->SetStringField(TEXT("outputType"), TEXT("Float1")); break;
         case CMOT_Float2: Result->SetStringField(TEXT("outputType"), TEXT("Float2")); break;

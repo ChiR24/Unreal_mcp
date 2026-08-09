@@ -1,4 +1,3 @@
-// McpAutomationBridge_BehaviorTreeSerializers.cpp
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeSerializers.h"
 

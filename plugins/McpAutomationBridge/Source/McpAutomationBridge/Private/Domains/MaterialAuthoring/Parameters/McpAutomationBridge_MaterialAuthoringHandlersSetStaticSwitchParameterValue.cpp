@@ -32,7 +32,6 @@ bool HandleSetStaticSwitchParameterValue(UMcpAutomationBridgeSubsystem* Bridge, 
       return true;
     }
 
-    // Set the static switch parameter
     FStaticParameterSet StaticParams;
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     Instance->GetStaticParameterValues(StaticParams);
@@ -49,7 +48,6 @@ bool HandleSetStaticSwitchParameterValue(UMcpAutomationBridgeSubsystem* Bridge, 
       }
     }
     if (!bFound) {
-      // Add new entry
       FStaticSwitchParameter NewSwitch;
       NewSwitch.ParameterInfo.Name = FName(*ParamName);
       NewSwitch.Value = Value;
@@ -76,9 +74,6 @@ bool HandleSetStaticSwitchParameterValue(UMcpAutomationBridgeSubsystem* Bridge, 
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // delete_node — batch removal with auto-disconnect
-  // --------------------------------------------------------------------------
   return false;
 }
 }

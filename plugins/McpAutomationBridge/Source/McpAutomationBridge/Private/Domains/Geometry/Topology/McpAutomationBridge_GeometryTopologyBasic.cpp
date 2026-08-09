@@ -42,7 +42,6 @@ bool HandleTriangulate(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-    // Safety: Check memory pressure before triangulation
     if (!IsMemoryPressureSafe())
     {
         Self->SendAutomationError(Socket, RequestId,
@@ -52,7 +51,6 @@ bool HandleTriangulate(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
         return true;
     }
 
-    // Safety: Check triangle count before operation
     int32 TriCountBefore = Mesh->GetTriangleCount();
     if (TriCountBefore > MAX_TRIANGLES_PER_DYNAMIC_MESH)
     {
@@ -115,7 +113,6 @@ bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-    // Safety: Check memory pressure before poke operation
     if (!IsMemoryPressureSafe())
     {
         Self->SendAutomationError(Socket, RequestId,
@@ -125,7 +122,6 @@ bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
         return true;
     }
 
-    // Safety: Check triangle count before operation
     // Poke with PNTessellation roughly triples triangle count (each face gets subdivided)
     int32 TriCountBefore = Mesh->GetTriangleCount();
     int64 EstimatedTriangles = static_cast<int64>(TriCountBefore) * 4;  // 4x safety margin for subdivision
@@ -139,21 +135,18 @@ bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
         return true;
     }
 
-    // Poke faces - offset vertices inward/outward along face normals
     // UE 5.7: FGeometryScriptMeshOffsetFacesOptions uses Distance not OffsetDistance
     FGeometryScriptMeshOffsetFacesOptions PokeOptions;
     PokeOptions.Distance = PokeOffset;
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshOffsetFaces(
         Mesh, PokeOptions, FGeometryScriptMeshSelection(), nullptr);
 
-    // Subdivide to create poked effect (each face gets a center vertex)
     // UE 5.7: ApplyPNTessellation now takes TessellationLevel as separate parameter
     FGeometryScriptPNTessellateOptions TessOptions;
     UGeometryScriptLibrary_MeshSubdivideFunctions::ApplyPNTessellation(Mesh, TessOptions, 1, nullptr);
 
     int32 TriCountAfter = Mesh->GetTriangleCount();
 
-    // Warning if approaching limit
     if (TriCountAfter > WARNING_TRIANGLE_THRESHOLD)
     {
         UE_LOG(LogMcpGeometryHandlers, Warning, TEXT("Poke result has %d triangles (warning threshold: %d)"),
@@ -171,9 +164,6 @@ bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Additional Deformers (Relax)
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

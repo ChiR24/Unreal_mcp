@@ -83,8 +83,6 @@ static UBlueprint* CreateAIControllerBlueprint(const FString& Path, const FStrin
     return Blueprint;
 }
 
-// Helper to create Blackboard asset
-
 bool HandleCreateAIController(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString SubAction = TEXT("create_ai_controller");

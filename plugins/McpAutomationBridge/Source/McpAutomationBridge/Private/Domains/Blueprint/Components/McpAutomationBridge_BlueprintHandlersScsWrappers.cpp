@@ -27,7 +27,6 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  // add_scs_component: add component to SCS
   if (ActionMatchesPattern(TEXT("add_scs_component")) ||
       AlphaNumLower.Contains(TEXT("addscscomponent"))) {
     FString BPPath;
@@ -70,7 +69,6 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  // remove_scs_component: remove component from SCS
   if (ActionMatchesPattern(TEXT("remove_scs_component")) ||
       AlphaNumLower.Contains(TEXT("removescscomponent"))) {
     FString BPPath;
@@ -92,7 +90,6 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  // reparent_scs_component: reparent component in SCS
   if (ActionMatchesPattern(TEXT("reparent_scs_component")) ||
       AlphaNumLower.Contains(TEXT("reparentscscomponent"))) {
     FString BPPath;
@@ -119,7 +116,6 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  // set_scs_component_transform: set component transform in SCS
   if (ActionMatchesPattern(TEXT("set_scs_component_transform")) ||
       ActionMatchesPattern(TEXT("set_scs_transform")) ||
       AlphaNumLower.Contains(TEXT("setscscomponenttransform")) ||
@@ -143,7 +139,6 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  // set_scs_component_property: set component property in SCS
   if (ActionMatchesPattern(TEXT("set_scs_component_property")) ||
       ActionMatchesPattern(TEXT("set_scs_property")) ||
       AlphaNumLower.Contains(TEXT("setscscomponentproperty")) ||

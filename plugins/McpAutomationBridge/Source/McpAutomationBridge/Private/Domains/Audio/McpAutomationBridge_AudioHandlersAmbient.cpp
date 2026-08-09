@@ -108,16 +108,6 @@ bool HandleAmbientActions(
     return true;
   }
 
-  // -------------------------------------------------------------------------
-  // spawn_sound_at_location / audio_spawn_sound_at_location
-  // -------------------------------------------------------------------------
-  // Spawns a UAudioComponent at a world location (similar to create_ambient_sound
-  // but with explicit action name and rotation support).
-  //
-  // Payload:  { "soundPath": string, "location"?: [x,y,z], "rotation"?: [p,y,r],
-  //             "volume"?: number, "pitch"?: number, "startTime"?: number }
-  // Response: { "componentName": string, "componentPath": string }
-  // -------------------------------------------------------------------------
   else if (Lower == TEXT("spawn_sound_at_location") ||
              Lower == TEXT("audio_spawn_sound_at_location")) {
     // Similar to create_ambient_sound but explicit action name

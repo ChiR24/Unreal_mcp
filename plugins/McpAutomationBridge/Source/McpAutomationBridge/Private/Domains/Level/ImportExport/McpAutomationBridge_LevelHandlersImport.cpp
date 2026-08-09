@@ -101,13 +101,9 @@ bool HandleImportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
 
     TArray<FString> Files;
     Files.Add(SourcePath);
-    // FEditorFileUtils::Import(DestPath, DestName); // Ambiguous/Removed
-    // Use GEditor->ImportMap or handle via AssetTools
-    // Simple fallback:
     if (GEditor) {
       // ImportMap is usually for T3D. If SourcePath is .umap, we should
       // Copy/Load. Assuming T3D import or similar:
-      // GEditor->ImportMap(*DestPath, *DestName, *SourcePath);
       // ImportMap is deprecated/removed. For .umap files, manual import or Copy
       // is preferred.
       SendAutomationResponse(RequestingSocket, RequestId, false,

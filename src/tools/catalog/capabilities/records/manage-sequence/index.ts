@@ -14,8 +14,6 @@
  * - media (8): MEDIA_ACTIONS (ElectraPlayer gate)
  * - take (5): Take Recorder (async, no cancel, artifact = LevelSequence)
  * - replay (9): Demo/killcam (async, no cancel, artifact = replay files)
- *
- * Total: 31 + 2 + 18 + 8 + 8 + 5 + 9 = 81
  */
 import { type CapabilityRecord, type CapabilityRecordSource, createCapabilityRecord } from '../../index.js';
 

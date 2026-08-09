@@ -55,7 +55,6 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
             return true;
         }
 
-        // Load the calculation class
         UClass* CalcClass = LoadClass<UGameplayEffectExecutionCalculation>(nullptr, *CalculationClassPath);
         if (!CalcClass)
         {
@@ -64,7 +63,6 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
             return true;
         }
 
-        // Create and add the execution definition
         FGameplayEffectExecutionDefinition ExecDef;
         ExecDef.CalculationClass = CalcClass;
         EffectCDO->Executions.Add(ExecDef);

@@ -44,7 +44,6 @@ bool FCombatActionContext::HandleWeaponEquipment() const
                         {
                             SlotNames.Add(SlotName);
 
-                            // Create actual SceneComponent as attachment point
                             FString ComponentName = FString::Printf(TEXT("AttachPoint_%s"), *SlotName);
                             USceneComponent* AttachPoint = GetOrCreateSCSComponent<USceneComponent>(Blueprint, ComponentName, TEXT("WeaponMesh"));
                             if (AttachPoint)
@@ -97,9 +96,6 @@ bool FCombatActionContext::HandleWeaponEquipment() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Attachment system configured with SceneComponent attach points."), Result);
         return true;
     }
-
-    // setup_weapon_switching
-
     if (SubAction == TEXT("setup_weapon_switching"))
     {
         if (BlueprintPath.IsEmpty())
@@ -120,7 +116,6 @@ bool FCombatActionContext::HandleWeaponEquipment() const
         FString EquipAnimPath = GetJsonStringField(Payload, TEXT("equipAnimationPath"));
         FString UnequipAnimPath = GetJsonStringField(Payload, TEXT("unequipAnimationPath"));
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("SwitchInTime"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("SwitchOutTime"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("bIsSwitching"), MakeBoolPinType());
@@ -151,7 +146,6 @@ bool FCombatActionContext::HandleWeaponEquipment() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())

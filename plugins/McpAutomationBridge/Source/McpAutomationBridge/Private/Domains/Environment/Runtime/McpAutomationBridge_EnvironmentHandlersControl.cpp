@@ -27,9 +27,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(
     const FString LowerSub = SubAction.ToLower();
 
 #if WITH_EDITOR
-    // -------------------------------------------------------------------------
-    // Helper lambda for sending results
-    // -------------------------------------------------------------------------
     auto SendResult = [&](bool bSuccess, const TCHAR *Message,
                           const FString &ErrorCode,
                           const TSharedPtr<FJsonObject> &Result)
@@ -48,7 +45,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(
         }
     };
 
-    // Get editor world
     UWorld *World = nullptr;
     if (GEditor)
     {
@@ -62,9 +58,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(
         return true;
     }
 
-    // -------------------------------------------------------------------------
-    // Helper lambdas for finding lights
-    // -------------------------------------------------------------------------
     auto FindFirstDirectionalLight = [&]() -> ADirectionalLight *
     {
         for (TActorIterator<ADirectionalLight> It(World); It; ++It)
@@ -95,9 +88,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(
         return nullptr;
     };
 
-    // -------------------------------------------------------------------------
-    // set_time_of_day: Adjust sun rotation based on hour
-    // -------------------------------------------------------------------------
     if (LowerSub == TEXT("set_time_of_day"))
     {
         double Hour = 0.0;
@@ -136,16 +126,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(
         Result->SetNumberField(TEXT("pitch"), SolarPitch);
         Result->SetStringField(TEXT("actor"), SunLight->GetPathName());
 
-        // Add verification data
         McpHandlerUtils::AddVerification(Result, SunLight);
 
         SendResult(true, TEXT("Time of day updated"), FString(), Result);
         return true;
     }
 
-    // -------------------------------------------------------------------------
-    // set_sun_intensity: Set directional light intensity
-    // -------------------------------------------------------------------------
     if (LowerSub == TEXT("set_sun_intensity"))
     {
         double Intensity = 0.0;
@@ -178,9 +164,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(
         return true;
     }
 
-    // -------------------------------------------------------------------------
-    // set_skylight_intensity: Set sky light intensity
-    // -------------------------------------------------------------------------
     if (LowerSub == TEXT("set_skylight_intensity"))
     {
         double Intensity = 0.0;
@@ -213,9 +196,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(
         return true;
     }
 
-    // -------------------------------------------------------------------------
-    // Unknown action
-    // -------------------------------------------------------------------------
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("action"), LowerSub);
     SendResult(false, TEXT("Unsupported environment control action"),

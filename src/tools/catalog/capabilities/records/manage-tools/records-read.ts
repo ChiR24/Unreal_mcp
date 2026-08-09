@@ -1,12 +1,3 @@
-/**
- * manage_tools read-only capability-record specs: list_tools, list_categories,
- * get_status. These actions inspect dynamic tool state without mutation.
- *
- * Grounded in manageToolsToolDefinition (action enum + I/O schema) and the
- * manage-tools handler (local TS dispatch via dynamicToolManager). All 8
- * manage_tools actions are handled locally in TypeScript with no Unreal
- * bridge round-trip, so dispatchMode is 'local'.
- */
 import type { CoreRecordSpec } from '../core/builder.js';
 import { DOMAIN, NORM_CLASS, PARENT } from './shared.js';
 

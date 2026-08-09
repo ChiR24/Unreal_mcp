@@ -56,11 +56,10 @@ bool HandleQuadrangulate(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 
     FGeometryScriptUniformRemeshOptions UniformOptions;
     // Use TriangleCount target type since EdgeLength is not available
-    int32 TargetTris = FMath::Max(100, TrisBefore / 2);  // Target half the triangles
+    int32 TargetTris = FMath::Max(100, TrisBefore / 2);
     UniformOptions.TargetType = EGeometryScriptUniformRemeshTargetType::TriangleCount;
     UniformOptions.TargetTriangleCount = TargetTris;
 
-    // Apply uniform remesh to get more regular topology
     UGeometryScriptLibrary_RemeshingFunctions::ApplyUniformRemesh(Mesh, RemeshOptions, UniformOptions, nullptr);
 
     // Note: Full quadrangulation would require external library integration
@@ -77,16 +76,11 @@ bool HandleQuadrangulate(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
     Result->SetStringField(TEXT("note"), TEXT("Partial quadrangulation applied - full quad remesh requires external library"));
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, TargetActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Quadrangulation applied"), Result);
     return true;
 }
-
-// -------------------------------------------------------------------------
-// Voxel Remesh Operations
-// -------------------------------------------------------------------------
 
 bool HandleRemeshVoxel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -137,14 +131,12 @@ bool HandleRemeshVoxel(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     RemeshOptions.bReprojectToInputMesh = true;
 
     FGeometryScriptUniformRemeshOptions UniformOptions;
-    // Calculate target triangle count based on voxel size
     int32 TargetTris = FMath::Max(100, TrisBefore / 2);
     UniformOptions.TargetType = EGeometryScriptUniformRemeshTargetType::TriangleCount;
     UniformOptions.TargetTriangleCount = TargetTris;
 
     UGeometryScriptLibrary_RemeshingFunctions::ApplyUniformRemesh(Mesh, RemeshOptions, UniformOptions, nullptr);
 
-    // Fill holes if requested
     if (bFillHoles)
     {
         FGeometryScriptFillHolesOptions FillOptions;
@@ -164,16 +156,12 @@ bool HandleRemeshVoxel(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, TargetActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Voxel remesh applied"), Result);
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Complex Collision Generation
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

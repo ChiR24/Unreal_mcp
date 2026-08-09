@@ -12,7 +12,6 @@ bool HandleAnimationSetInterpolationSettingsAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Set blend space interpolation settings
     FString AssetPath;
     Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
 

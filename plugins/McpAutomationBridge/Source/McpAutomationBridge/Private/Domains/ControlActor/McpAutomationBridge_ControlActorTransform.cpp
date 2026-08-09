@@ -38,7 +38,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   Found->MarkComponentsRenderStateDirty();
   Found->MarkPackageDirty();
 
-  // Verify transform
   const FVector NewLoc = Found->GetActorLocation();
   const FRotator NewRot = Found->GetActorRotation();
   const FVector NewScale = Found->GetActorScale3D();
@@ -70,7 +69,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
     return true;
   }
 
-  // Add verification data
 	McpHandlerUtils::AddVerification(Data, Found);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor transform updated"), Data);
@@ -181,7 +179,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
   Found->MarkComponentsRenderStateDirty();
   Found->MarkPackageDirty();
 
-  // Verify visibility state
   const bool bIsHidden = Found->IsHidden();
   const bool bStateMatches = (bIsHidden == !bVisible);
 
@@ -197,7 +194,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
     return true;
   }
 
-  // Add verification data
 	McpHandlerUtils::AddVerification(Data, Found);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor visibility updated"), Data);

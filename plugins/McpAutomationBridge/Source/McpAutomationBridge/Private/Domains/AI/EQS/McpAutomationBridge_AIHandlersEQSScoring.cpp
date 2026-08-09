@@ -166,10 +166,6 @@ bool HandleConfigureEQSTestScoring(UMcpAutomationBridgeSubsystem* Self, const FS
         return true;
     }
 
-    // =========================================================================
-    // 16.5 Perception System (5 actions)
-    // =========================================================================
-
     return true;
 }
 }

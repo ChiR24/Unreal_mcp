@@ -26,7 +26,6 @@ bool HandleAddVectorParameter(UMcpAutomationBridgeSubsystem* Bridge, const FStri
       VecParam->Group = FName(*Group);
     }
 
-    // Parse default value
     const TSharedPtr<FJsonObject> *DefaultObj;
     if (Payload->TryGetObjectField(TEXT("defaultValue"), DefaultObj)) {
       double R = 1.0, G = 1.0, B = 1.0, A = 1.0;
@@ -53,9 +52,6 @@ bool HandleAddVectorParameter(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_static_switch_parameter
-  // --------------------------------------------------------------------------
   return false;
 }
 }

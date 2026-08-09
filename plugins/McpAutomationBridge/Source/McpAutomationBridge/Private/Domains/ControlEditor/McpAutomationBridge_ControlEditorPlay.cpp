@@ -125,7 +125,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
       SendAutomationResponse(Socket, RequestId, true, TEXT("Possessed actor"),
                              nullptr);
     } else {
-      // If not in PIE, we can't possess
       SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IN_PIE"),
                               TEXT("Cannot possess actor while not in PIE"), nullptr);
     }
@@ -139,8 +138,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
   return false;
 #endif
 }
-
-
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameSpeed(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -175,8 +172,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameSpeed(
   return false;
 #endif
 }
-
-
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorPause(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -187,14 +182,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPause(
     return true;
   }
 
-  // Check if we're in PIE
   if (!GEditor->PlayWorld) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
                               TEXT("No active PIE session to pause"), nullptr);
     return true;
   }
 
-  // Pause PIE execution
   GEditor->PlayWorld->bDebugPauseExecution = true;
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -222,14 +215,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorResume(
     return true;
   }
 
-  // Check if we're in PIE
   if (!GEditor->PlayWorld) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
                               TEXT("No active PIE session to resume"), nullptr);
     return true;
   }
 
-  // Resume PIE execution
   GEditor->PlayWorld->bDebugPauseExecution = false;
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -246,8 +237,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorResume(
   return true;
 #endif
 }
-
-
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorStepFrame(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -258,7 +247,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStepFrame(
     return true;
   }
 
-  // Check if we're in PIE
   if (!GEditor->PlayWorld) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
                               TEXT("No active PIE session to step"), nullptr);

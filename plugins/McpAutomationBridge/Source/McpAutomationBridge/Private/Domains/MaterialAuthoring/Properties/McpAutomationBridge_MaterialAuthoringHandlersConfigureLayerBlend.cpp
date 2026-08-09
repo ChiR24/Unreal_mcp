@@ -6,13 +6,10 @@ namespace McpMaterialAuthoringHandlers
 bool HandleConfigureLayerBlend(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("configure_layer_blend")) {
-    // Configure layer blend by adding layer weight parameters and blend setup
     FString AssetPath;
     // Accept both assetPath and materialPath as parameter names
     if (Payload->TryGetStringField(TEXT("assetPath"), AssetPath) && !AssetPath.IsEmpty()) {
-      // Use assetPath
     } else if (Payload->TryGetStringField(TEXT("materialPath"), AssetPath) && !AssetPath.IsEmpty()) {
-      // Use materialPath
     } else {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."),
                           TEXT("INVALID_ARGUMENT"));
@@ -36,7 +33,6 @@ bool HandleConfigureLayerBlend(UMcpAutomationBridgeSubsystem* Bridge, const FStr
       return true;
     }
 
-    // Parse layers array
     const TArray<TSharedPtr<FJsonValue>> *LayersArray;
     if (!Payload->TryGetArrayField(TEXT("layers"), LayersArray) ||
         LayersArray->Num() == 0) {
@@ -50,7 +46,6 @@ bool HandleConfigureLayerBlend(UMcpAutomationBridgeSubsystem* Bridge, const FStr
     Payload->TryGetNumberField(TEXT("x"), BaseX);
     Payload->TryGetNumberField(TEXT("y"), BaseY);
 
-    // For each layer, create a scalar parameter for layer weight
     for (int32 i = 0; i < LayersArray->Num(); ++i) {
       const TSharedPtr<FJsonObject> *LayerObj;
       if (!(*LayersArray)[i]->TryGetObject(LayerObj)) {
@@ -66,7 +61,6 @@ bool HandleConfigureLayerBlend(UMcpAutomationBridgeSubsystem* Bridge, const FStr
       FString BlendType;
       (*LayerObj)->TryGetStringField(TEXT("blendType"), BlendType);
 
-      // Create scalar parameter for layer weight
       UMaterialExpressionScalarParameter *WeightParam =
           NewObject<UMaterialExpressionScalarParameter>(
               Material, UMaterialExpressionScalarParameter::StaticClass(),
@@ -87,7 +81,6 @@ bool HandleConfigureLayerBlend(UMcpAutomationBridgeSubsystem* Bridge, const FStr
     Material->PostEditChange();
     Material->MarkPackageDirty();
 
-    // Save if requested
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave) {
@@ -115,9 +108,6 @@ bool HandleConfigureLayerBlend(UMcpAutomationBridgeSubsystem* Bridge, const FStr
   // 8.6 Utilities
   // ==========================================================================
 
-  // --------------------------------------------------------------------------
-  // compile_material
-  // --------------------------------------------------------------------------
   return false;
 }
 }

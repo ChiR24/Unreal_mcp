@@ -15,7 +15,6 @@ bool HandleInventoryComponentActions(UMcpAutomationBridgeSubsystem& Bridge, cons
       return true;
     }
 
-    // Load the blueprint
     UBlueprint* Blueprint =
         Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
     if (!Blueprint) {
@@ -40,27 +39,22 @@ bool HandleInventoryComponentActions(UMcpAutomationBridgeSubsystem& Bridge, cons
     if (NewNode) {
       SCS->AddNode(NewNode);
 
-      // Add Blueprint variables for inventory functionality
       int32 SlotCount = static_cast<int32>(GetPayloadNumber(Payload, TEXT("slotCount"), 20));
 
-      // Add InventorySlots array variable (Array of soft object references)
       FEdGraphPinType SlotArrayType;
       SlotArrayType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
       SlotArrayType.ContainerType = EPinContainerType::Array;
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("InventorySlots"), SlotArrayType);
 
-      // Add MaxSlots integer variable
       FEdGraphPinType IntType;
       IntType.PinCategory = UEdGraphSchema_K2::PC_Int;
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("MaxSlots"), IntType);
 
-      // Add CurrentWeight float variable
       FEdGraphPinType FloatType;
       FloatType.PinCategory = UEdGraphSchema_K2::PC_Real;
       FloatType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CurrentWeight"), FloatType);
 
-      // Add MaxWeight float variable
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("MaxWeight"), FloatType);
 
       FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
@@ -93,7 +87,6 @@ bool HandleInventoryComponentActions(UMcpAutomationBridgeSubsystem& Bridge, cons
       return true;
     }
 
-    // Load the blueprint
     UBlueprint* Blueprint =
         Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
     if (!Blueprint) {
@@ -126,7 +119,6 @@ bool HandleInventoryComponentActions(UMcpAutomationBridgeSubsystem& Bridge, cons
       FEdGraphPinType IntType;
       IntType.PinCategory = UEdGraphSchema_K2::PC_Int;
 
-      // Check if variable already exists
       bool bExists = false;
       for (FBPVariableDescription& Var : Blueprint->NewVariables) {
         if (Var.VarName == TEXT("MaxSlots")) {

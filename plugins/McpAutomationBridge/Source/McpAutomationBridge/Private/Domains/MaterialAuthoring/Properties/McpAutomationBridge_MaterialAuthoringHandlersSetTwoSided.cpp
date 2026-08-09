@@ -41,9 +41,6 @@ bool HandleSetTwoSided(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // set_cast_shadows
-  // --------------------------------------------------------------------------
   return false;
 }
 }

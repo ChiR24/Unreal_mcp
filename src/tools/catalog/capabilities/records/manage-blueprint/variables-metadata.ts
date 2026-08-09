@@ -1,7 +1,4 @@
 /**
- * Variables and metadata records: add_variable, remove_variable,
- * rename_variable, set_variable_metadata, set_metadata, set_default.
- *
  * set_default targets the Class Default Object (CDO) via
  * GeneratedClass->GetDefaultObject(); if the property denotes a component,
  * the handler dereferences the component CDO. This is the only true CDO

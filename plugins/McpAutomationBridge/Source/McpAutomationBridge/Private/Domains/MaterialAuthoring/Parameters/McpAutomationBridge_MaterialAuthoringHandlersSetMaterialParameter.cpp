@@ -33,9 +33,6 @@ bool HandleSetMaterialParameter(UMcpAutomationBridgeSubsystem* Bridge, const FSt
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // get_material_node_details
-  // --------------------------------------------------------------------------
   return false;
 }
 }

@@ -48,7 +48,6 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
         // Only set duration policy on CDO if we created a new blueprint
         if (!bReusedExisting)
         {
-            // Set duration policy on CDO
             if (Blueprint->GeneratedClass)
             {
                 UGameplayEffect* EffectCDO = Cast<UGameplayEffect>(Blueprint->GeneratedClass->GetDefaultObject());

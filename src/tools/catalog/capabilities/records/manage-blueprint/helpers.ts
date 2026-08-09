@@ -5,8 +5,6 @@
  * a CapabilityRecordSource (schemas, availability, behavior, policy, cost,
  * routing, normalization) so each family file declares only what varies.
  *
- * Does NOT touch the shared capability model, schema, or generator.
- *
  * Grounded in: src/tools/definitions/core/blueprint/manage-blueprint-tool.ts,
  * src/tools/handlers/blueprint/, native BlueprintGraph/WidgetAuthoring domains,
  * SCS safety rules (SCS->CreateNode/AddNode template ownership), and the

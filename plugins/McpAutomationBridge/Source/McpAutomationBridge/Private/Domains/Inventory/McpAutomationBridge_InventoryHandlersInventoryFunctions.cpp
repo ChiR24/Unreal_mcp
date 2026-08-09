@@ -13,7 +13,6 @@ bool HandleInventoryFunctionActions(UMcpAutomationBridgeSubsystem& Bridge, const
       return true;
     }
 
-    // Load the blueprint
     UBlueprint* Blueprint =
         Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
     if (!Blueprint) {
@@ -31,7 +30,6 @@ bool HandleInventoryFunctionActions(UMcpAutomationBridgeSubsystem& Bridge, const
     TArray<TSharedPtr<FJsonValue>> FunctionsAdded;
     TArray<TSharedPtr<FJsonValue>> VariablesAdded;
 
-    // Add helper variables for inventory operations
     FEdGraphPinType IntType;
     IntType.PinCategory = UEdGraphSchema_K2::PC_Int;
 
@@ -41,7 +39,6 @@ bool HandleInventoryFunctionActions(UMcpAutomationBridgeSubsystem& Bridge, const
     FEdGraphPinType SoftObjectType;
     SoftObjectType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
 
-    // Add variables that support inventory functions
     TArray<TPair<FName, FEdGraphPinType>> InventoryVars = {
       TPair<FName, FEdGraphPinType>(TEXT("LastAddedItemIndex"), IntType),
       TPair<FName, FEdGraphPinType>(TEXT("LastRemovedItemIndex"), IntType),
@@ -64,7 +61,6 @@ bool HandleInventoryFunctionActions(UMcpAutomationBridgeSubsystem& Bridge, const
       }
     }
 
-    // Add event dispatchers for inventory operations
     FEdGraphPinType DelegateType;
     DelegateType.PinCategory = UEdGraphSchema_K2::PC_MCDelegate;
 
@@ -128,7 +124,6 @@ bool HandleInventoryFunctionActions(UMcpAutomationBridgeSubsystem& Bridge, const
       return true;
     }
 
-    // Load the blueprint
     UBlueprint* Blueprint =
         Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
     if (!Blueprint) {
@@ -139,7 +134,6 @@ bool HandleInventoryFunctionActions(UMcpAutomationBridgeSubsystem& Bridge, const
       return true;
     }
 
-    // Define event dispatchers to add
     TArray<FString> EventNames = {
       TEXT("OnItemAdded"),
       TEXT("OnItemRemoved"),
@@ -149,12 +143,10 @@ bool HandleInventoryFunctionActions(UMcpAutomationBridgeSubsystem& Bridge, const
 
     TArray<TSharedPtr<FJsonValue>> EventsAdded;
 
-    // Add event dispatcher variables for each event
     FEdGraphPinType DelegateType;
     DelegateType.PinCategory = UEdGraphSchema_K2::PC_MCDelegate;
 
     for (const FString& EventName : EventNames) {
-      // Check if variable already exists
       bool bExists = false;
       for (FBPVariableDescription& Var : Blueprint->NewVariables) {
         if (Var.VarName.ToString() == EventName) {

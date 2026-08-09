@@ -80,8 +80,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
           ResolvedClass->IsChildOf(ASkeletalMeshActor::StaticClass());
   }
 
-  // Explicitly use StaticMeshActor class if we have a mesh but no class, or if
-  // we decided to spawn a static mesh actor
   if (bSpawnStaticMeshActor && !ResolvedClass) {
     ResolvedClass = AStaticMeshActor::StaticClass();
   } else if (bSpawnSkeletalMeshActor && !ResolvedClass) {
@@ -256,7 +254,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   };
   Data->SetArrayField(TEXT("scale"), MakeVectorArray(Spawned->GetActorScale3D()));
 
-  // Add verification data
 	McpHandlerUtils::AddVerification(Data, Spawned);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor spawned"), Data);

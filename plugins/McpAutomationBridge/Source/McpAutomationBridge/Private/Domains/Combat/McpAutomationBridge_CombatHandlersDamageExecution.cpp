@@ -26,7 +26,6 @@ bool FCombatActionContext::HandleDamageExecution() const
         double CriticalMultiplier = GetJsonNumberField(Payload, TEXT("criticalMultiplier"), 2.0);
         double HeadshotMultiplier = GetJsonNumberField(Payload, TEXT("headshotMultiplier"), 2.5);
 
-        // Add damage-related variables
         AddBlueprintVariableCombat(Blueprint, TEXT("DamageImpulse"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("CriticalMultiplier"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("HeadshotMultiplier"), MakeFloatPinType());
@@ -34,7 +33,6 @@ bool FCombatActionContext::HandleDamageExecution() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -66,9 +64,6 @@ bool FCombatActionContext::HandleDamageExecution() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage execution configured."), Result);
         return true;
     }
-
-    // setup_hitbox_component
-
     if (SubAction == TEXT("setup_hitbox_component"))
     {
         if (BlueprintPath.IsEmpty())
@@ -90,7 +85,6 @@ bool FCombatActionContext::HandleDamageExecution() const
         double DamageMultiplier = GetJsonNumberField(Payload, TEXT("damageMultiplier"), 1.0);
         TSharedPtr<FJsonObject> AppliedHitboxSize = MakeShared<FJsonObject>();
 
-        // Create appropriate collision component based on type
         if (HitboxType == TEXT("Capsule"))
         {
             UCapsuleComponent* Hitbox = GetOrCreateSCSComponent<UCapsuleComponent>(Blueprint, TEXT("HitboxCapsule"));
@@ -145,14 +139,12 @@ bool FCombatActionContext::HandleDamageExecution() const
             }
         }
 
-        // Add hitbox metadata variables
         AddBlueprintVariableCombat(Blueprint, TEXT("bIsHeadshotZone"), MakeBoolPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("HitboxDamageMultiplier"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -206,7 +198,6 @@ bool FCombatActionContext::HandleDamageExecution() const
         FString HitboxType = GetJsonStringField(Payload, TEXT("hitboxType"), TEXT("Capsule"));
         double DamageMultiplier = GetJsonNumberField(Payload, TEXT("damageMultiplier"), 1.0);
 
-        // Create collision component based on type
         if (HitboxType == TEXT("Capsule"))
         {
             GetOrCreateSCSComponent<UCapsuleComponent>(Blueprint, TEXT("HitboxCapsule"));

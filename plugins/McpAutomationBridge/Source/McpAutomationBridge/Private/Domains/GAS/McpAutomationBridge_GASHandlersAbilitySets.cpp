@@ -45,13 +45,11 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
             return true;
         }
 
-        // Normalize path
         if (!SetPath.StartsWith(TEXT("/Game/")))
         {
             SetPath = TEXT("/Game/") + SetPath;
         }
 
-        // Extract package path and asset name
         FString PackagePath, AssetName;
         int32 LastSlash;
         if (SetPath.FindLastChar('/', LastSlash))
@@ -65,7 +63,6 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
             AssetName = SetPath;
         }
 
-        // Check if asset already exists
         if (UObject* ExistingAsset = LoadObject<UObject>(nullptr, *SetPath))
         {
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -75,7 +72,6 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
             return true;
         }
 
-        // Create the package
         FString PackageName = SetPath;
         UPackage* Package = CreatePackage(*PackageName);
         if (!Package)
@@ -88,7 +84,6 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
         // We'll create a Blueprint-based DataAsset that can hold ability references
         // For GAS, the common pattern is using UAbilitySystemComponent directly or a custom data asset
 
-        // Create a DataAsset subclass blueprint
         UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
         Factory->ParentClass = UPrimaryDataAsset::StaticClass();
 
@@ -107,7 +102,6 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
             return true;
         }
 
-        // Add variables to hold abilities
         // 1. GrantedAbilities - Array of TSubclassOf<UGameplayAbility>
         FEdGraphPinType AbilityArrayType;
         AbilityArrayType.PinCategory = UEdGraphSchema_K2::PC_SoftClass;
@@ -169,7 +163,6 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
         return true;
     }
 
-    // add_ability - Add ability class reference to ability set
     if (SubAction == TEXT("add_ability"))
     {
         FString SetPath = GetJsonStringField(Payload, TEXT("setPath"));
@@ -198,7 +191,6 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
             return true;
         }
 
-        // Verify the ability exists
         UBlueprint* AbilityBlueprint = LoadObject<UBlueprint>(nullptr, *AbilityPath);
         UClass* AbilityClass = nullptr;
 
@@ -223,7 +215,6 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
         // This is complex because we need to modify the CDO's array
         // For simplicity, we'll add a note that the array should be configured in editor
 
-        // Mark as modified
         FBlueprintEditorUtils::MarkBlueprintAsModified(SetBlueprint);
         McpSafeAssetSave(SetBlueprint);
 
@@ -236,8 +227,6 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability validated for set"), Result);
         return true;
     }
-
-    // grant_ability - Grant ability to actor's AbilitySystemComponent at runtime
 
     return false;
 }

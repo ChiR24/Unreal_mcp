@@ -13,7 +13,6 @@ bool HandleCreateMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
       return true;
     }
 
-    // Validate and sanitize the asset name
     FString OriginalName = Name;
     FString SanitizedName = SanitizeAssetName(Name);
 
@@ -35,7 +34,6 @@ bool HandleCreateMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
       Path = TEXT("/Game/Materials");
     }
 
-    // Validate path doesn't contain traversal sequences
     FString ValidatedPath;
     FString PathError;
     if (!ValidateAssetCreationPath(Path, Name, ValidatedPath, PathError)) {
@@ -60,7 +58,6 @@ bool HandleCreateMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
       return true;
     }
 
-    // Validate parent folder exists
     FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
     IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 

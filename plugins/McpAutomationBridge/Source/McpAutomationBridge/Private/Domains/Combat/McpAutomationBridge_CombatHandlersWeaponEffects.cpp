@@ -26,7 +26,6 @@ bool FCombatActionContext::HandleWeaponEffects() const
         double Scale = GetJsonNumberField(Payload, TEXT("muzzleFlashScale"), 1.0);
         FString SoundPath = GetJsonStringField(Payload, TEXT("muzzleSoundPath"));
 
-        // Add variables for muzzle flash config
         AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleFlashParticlePath"), MakeStringPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleFlashScale"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleSoundPath"), MakeStringPinType());
@@ -65,7 +64,6 @@ bool FCombatActionContext::HandleWeaponEffects() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -98,9 +96,6 @@ bool FCombatActionContext::HandleWeaponEffects() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Muzzle flash configured."), Result);
         return true;
     }
-
-    // configure_tracer
-
     if (SubAction == TEXT("configure_tracer"))
     {
         if (BlueprintPath.IsEmpty())
@@ -119,7 +114,6 @@ bool FCombatActionContext::HandleWeaponEffects() const
         FString TracerPath = GetJsonStringField(Payload, TEXT("tracerParticlePath"));
         double TracerSpeed = GetJsonNumberField(Payload, TEXT("tracerSpeed"), 10000.0);
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("TracerParticlePath"), MakeStringPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("TracerSpeed"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("bUseTracers"), MakeBoolPinType());
@@ -127,7 +121,6 @@ bool FCombatActionContext::HandleWeaponEffects() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -157,9 +150,6 @@ bool FCombatActionContext::HandleWeaponEffects() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Tracer configured."), Result);
         return true;
     }
-
-    // configure_impact_effects
-
     if (SubAction == TEXT("configure_impact_effects"))
     {
         if (BlueprintPath.IsEmpty())
@@ -179,7 +169,6 @@ bool FCombatActionContext::HandleWeaponEffects() const
         FString SoundPath = GetJsonStringField(Payload, TEXT("impactSoundPath"));
         FString DecalPath = GetJsonStringField(Payload, TEXT("impactDecalPath"));
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("ImpactParticlePath"), MakeStringPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("ImpactSoundPath"), MakeStringPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("ImpactDecalPath"), MakeStringPinType());
@@ -187,7 +176,6 @@ bool FCombatActionContext::HandleWeaponEffects() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -218,9 +206,6 @@ bool FCombatActionContext::HandleWeaponEffects() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Impact effects configured."), Result);
         return true;
     }
-
-    // configure_shell_ejection
-
     return false;
 }
 #endif

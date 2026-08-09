@@ -51,7 +51,6 @@ bool HandleGetMaterialNodeDetails(UMcpAutomationBridgeSubsystem* Bridge, const F
     Result->SetStringField(TEXT("assetType"),
                            Material ? TEXT("Material") : TEXT("MaterialFunction"));
 
-    // Extra introspection for function input/output nodes
     if (UMaterialExpressionFunctionInput *In = Cast<UMaterialExpressionFunctionInput>(Expr)) {
       Result->SetStringField(TEXT("inputName"), In->InputName.ToString());
       Result->SetStringField(TEXT("inputType"), FunctionInputTypeToString(In->InputType));
@@ -66,9 +65,6 @@ bool HandleGetMaterialNodeDetails(UMcpAutomationBridgeSubsystem* Bridge, const F
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // set_two_sided
-  // --------------------------------------------------------------------------
   return false;
 }
 }

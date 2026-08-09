@@ -36,7 +36,6 @@ bool HandleCreateLevel(
         bHasLevelName = Payload->TryGetStringField(TEXT("levelName"), LevelName);
     }
 
-    // Fail if levelName was not provided OR if it's empty
     if (!bHasLevelName || LevelName.IsEmpty())
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -44,7 +43,6 @@ bool HandleCreateLevel(
         return true;
     }
 
-    // Validate levelName for invalid characters
     // These characters are not allowed in Windows filenames and UE asset names
     const FString InvalidChars = TEXT("\\/:*?\"<>|");
     for (const TCHAR& Char : LevelName)
@@ -58,7 +56,6 @@ bool HandleCreateLevel(
         }
     }
 
-    // Check length (max 255 chars)
     if (LevelName.Len() > 255)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -67,7 +64,6 @@ bool HandleCreateLevel(
         return true;
     }
 
-    // Check for reserved Windows filenames
     const TArray<FString> ReservedNames = {
         TEXT("CON"), TEXT("PRN"), TEXT("AUX"), TEXT("NUL"),
         TEXT("COM1"), TEXT("COM2"), TEXT("COM3"), TEXT("COM4"), TEXT("COM5"),
@@ -109,7 +105,6 @@ bool HandleCreateLevel(
     }
     LevelPath = SafeLevelPath;
 
-    // Build full path
     FString FullPath = LevelPath / LevelName;
     if (!FullPath.StartsWith(TEXT("/")))
     {
@@ -125,7 +120,6 @@ bool HandleCreateLevel(
     UPackage* ExistingPackage = FindObject<UPackage>(nullptr, *FullPath);
     if (ExistingPackage)
     {
-        // Check if there's already a world in this package
         UWorld* ExistingWorld = FindObject<UWorld>(ExistingPackage, *LevelName);
         if (ExistingWorld)
         {
@@ -181,7 +175,6 @@ bool HandleCreateLevel(
         return true;
     }
 
-    // Create the level package
     UPackage* Package = CreatePackage(*FullPath);
     if (!Package)
     {
@@ -190,7 +183,6 @@ bool HandleCreateLevel(
         return true;
     }
 
-    // Create a new world
     UWorld* NewWorld = UWorld::CreateWorld(EWorldType::Inactive, false, FName(*LevelName), Package);
     if (!NewWorld)
     {
@@ -199,14 +191,12 @@ bool HandleCreateLevel(
         return true;
     }
 
-    // Initialize the world only if not already initialized
     // CreateWorld may already initialize it in some UE versions
     if (!NewWorld->bIsWorldInitialized)
     {
         NewWorld->InitWorld();
     }
 
-    // Enable World Partition if requested
     bool bWorldPartitionActuallyEnabled = false;
 #if ENGINE_MAJOR_VERSION >= 5
     if (bCreateWorldPartition)
@@ -235,13 +225,11 @@ bool HandleCreateLevel(
     }
 #endif
 
-    // Enable One File Per Actor (OFPA/External Actors) if requested
     // This is required for Data Layer support in World Partition levels
     bool bExternalActorsActuallyEnabled = false;
     if (bUseExternalActors && NewWorld->PersistentLevel)
     {
 #if WITH_EDITORONLY_DATA
-        // Set the bUseExternalActors flag on the persistent level
         // This enables actors to be stored as external packages, which is required
         // for Data Layer compatibility in World Partition levels
         NewWorld->PersistentLevel->bUseExternalActors = true;
@@ -250,10 +238,8 @@ bool HandleCreateLevel(
 #endif
     }
 
-    // Mark package dirty
     Package->MarkPackageDirty();
 
-    // Save if requested
     bool bSaveSucceeded = true;
     if (bSave)
     {
@@ -269,7 +255,6 @@ bool HandleCreateLevel(
             // Flush asset registry so the new level is immediately discoverable
             IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
 
-            // Convert package path to filename for scanning
             FString LevelFilename;
             if (FPackageName::TryConvertLongPackageNameToFilename(FullPath, LevelFilename, FPackageName::GetMapPackageExtension()))
             {

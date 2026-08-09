@@ -31,7 +31,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
 
   const FString Filename = MakeSafeScreenshotFilenameForMcp(Payload);
 
-  // Build the full path - save to project's Saved/Screenshots folder
   const FString ScreenshotDir = FPaths::ProjectSavedDir() / TEXT("Screenshots");
   IFileManager::Get().MakeDirectory(*ScreenshotDir, true);
   const FString FullPath = ScreenshotDir / Filename;

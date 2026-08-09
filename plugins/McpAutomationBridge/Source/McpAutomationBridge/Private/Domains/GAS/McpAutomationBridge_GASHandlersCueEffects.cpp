@@ -52,7 +52,6 @@ bool HandleGASCueEffects(const FGASRequestContext& Context, const FString& SubAc
 
         if (!ParticleSystem.IsEmpty())
         {
-            // Add Niagara/Particle system soft reference
             FEdGraphPinType ParticlePinType;
             ParticlePinType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
             ParticlePinType.PinSubCategoryObject = UObject::StaticClass();
@@ -60,7 +59,6 @@ bool HandleGASCueEffects(const FGASRequestContext& Context, const FString& SubAc
             FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CueParticleSystem"), ParticlePinType);
             FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("CueParticleSystem"), nullptr, FText::FromString(TEXT("Cue Effects")));
 
-            // Also add a string path variable for easy configuration
             FEdGraphPinType StringPinType;
             StringPinType.PinCategory = UEdGraphSchema_K2::PC_String;
             FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("ParticleSystemPath"), StringPinType);
@@ -72,7 +70,6 @@ bool HandleGASCueEffects(const FGASRequestContext& Context, const FString& SubAc
 
         if (!Sound.IsEmpty())
         {
-            // Add sound cue/wave soft reference
             FEdGraphPinType SoundPinType;
             SoundPinType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
             SoundPinType.PinSubCategoryObject = UObject::StaticClass();
@@ -80,13 +77,11 @@ bool HandleGASCueEffects(const FGASRequestContext& Context, const FString& SubAc
             FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CueSound"), SoundPinType);
             FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("CueSound"), nullptr, FText::FromString(TEXT("Cue Effects")));
 
-            // String path for configuration
             FEdGraphPinType StringPinType;
             StringPinType.PinCategory = UEdGraphSchema_K2::PC_String;
             FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("SoundPath"), StringPinType);
             FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("SoundPath"), nullptr, FText::FromString(TEXT("Cue Effects")));
 
-            // Volume and pitch multipliers
             FEdGraphPinType FloatPinType;
             FloatPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
             FloatPinType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
@@ -104,7 +99,6 @@ bool HandleGASCueEffects(const FGASRequestContext& Context, const FString& SubAc
 
         if (!CameraShake.IsEmpty())
         {
-            // Add camera shake class reference
             FEdGraphPinType ShakePinType;
             ShakePinType.PinCategory = UEdGraphSchema_K2::PC_SoftClass;
             ShakePinType.PinSubCategoryObject = UObject::StaticClass();
@@ -112,13 +106,11 @@ bool HandleGASCueEffects(const FGASRequestContext& Context, const FString& SubAc
             FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CueCameraShakeClass"), ShakePinType);
             FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("CueCameraShakeClass"), nullptr, FText::FromString(TEXT("Cue Effects")));
 
-            // String path for configuration
             FEdGraphPinType StringPinType;
             StringPinType.PinCategory = UEdGraphSchema_K2::PC_String;
             FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CameraShakePath"), StringPinType);
             FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("CameraShakePath"), nullptr, FText::FromString(TEXT("Cue Effects")));
 
-            // Shake scale
             FEdGraphPinType FloatPinType;
             FloatPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
             FloatPinType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
@@ -148,7 +140,6 @@ bool HandleGASCueEffects(const FGASRequestContext& Context, const FString& SubAc
             VariablesAdded.Add(TEXT("DecalPath"));
         }
 
-        // Add a master enable flag
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bCueEffectsEnabled"), BoolPinType);
@@ -175,8 +166,6 @@ bool HandleGASCueEffects(const FGASRequestContext& Context, const FString& SubAc
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Cue effect variables added to blueprint"), Result);
         return true;
     }
-
-
     return false;
 }
 }

@@ -87,7 +87,6 @@ bool HandleCreateDataLayer(
         return true;
     }
 
-    // Get the Data Layer Editor Subsystem
     UDataLayerEditorSubsystem* DataLayerEditorSubsystem = UDataLayerEditorSubsystem::Get();
     if (!DataLayerEditorSubsystem)
     {
@@ -114,7 +113,6 @@ bool HandleCreateDataLayer(
         FullAssetPath = TEXT("/Game/") + FullAssetPath;
     }
 
-    // Create the package for the data layer asset
     UPackage* AssetPackage = CreatePackage(*FullAssetPath);
     if (!AssetPackage)
     {
@@ -123,7 +121,6 @@ bool HandleCreateDataLayer(
         return true;
     }
 
-    // Create the UDataLayerAsset
     UDataLayerAsset* NewDataLayerAsset = NewObject<UDataLayerAsset>(AssetPackage, *DataLayerName, RF_Public | RF_Standalone);
     if (!NewDataLayerAsset)
     {
@@ -132,7 +129,6 @@ bool HandleCreateDataLayer(
         return true;
     }
 
-    // Configure the data layer asset type
     if (DataLayerType == TEXT("Runtime"))
     {
         NewDataLayerAsset->SetType(EDataLayerType::Runtime);
@@ -142,11 +138,9 @@ bool HandleCreateDataLayer(
         NewDataLayerAsset->SetType(EDataLayerType::Editor);
     }
 
-    // Mark package dirty and notify asset registry
     AssetPackage->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(NewDataLayerAsset);
 
-    // Save the asset
     McpSafeAssetSave(NewDataLayerAsset);
 
     // Step 2: Create a UDataLayerInstance using the asset
@@ -166,11 +160,9 @@ bool HandleCreateDataLayer(
         return true;
     }
 
-    // Configure initial visibility and loaded state
     DataLayerEditorSubsystem->SetDataLayerVisibility(NewDataLayerInstance, bIsInitiallyVisible);
     DataLayerEditorSubsystem->SetDataLayerIsLoadedInEditor(NewDataLayerInstance, bIsInitiallyLoaded, false);
 
-    // Mark world dirty
     World->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();

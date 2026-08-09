@@ -49,7 +49,6 @@ bool UMcpAutomationBridgeSubsystem::HandleFindByTag(
           TEXT("SECURITY_VIOLATION"));
       return true;
     }
-    // Path is valid - could be used for scoping asset search in future
   }
 
   FName TagName(*Tag);

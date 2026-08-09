@@ -9,8 +9,6 @@ UDynamicMesh* GetOrCreateDynamicMesh(UObject* Outer)
     return NewObject<UDynamicMesh>(Outer);
 }
 
-// Helper to spawn DynamicMeshActor and assign mesh - REDUCES CODE DUPLICATION
-
 AActor* SpawnDynamicMeshActorWithMesh(
     const FTransform& Transform,
     const FString& Name,

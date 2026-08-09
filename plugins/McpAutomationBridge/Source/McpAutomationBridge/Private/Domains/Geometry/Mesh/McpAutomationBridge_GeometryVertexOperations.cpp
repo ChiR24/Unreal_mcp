@@ -62,10 +62,6 @@ bool HandleAppendVertex(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     return true;
 }
 
-// -------------------------------------------------------------------------
-// delete_vertex - Remove a vertex from mesh
-// -------------------------------------------------------------------------
-
 bool HandleDeleteVertex(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
@@ -133,10 +129,6 @@ bool HandleDeleteVertex(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     return true;
 }
 
-// -------------------------------------------------------------------------
-// delete_triangle - Remove a triangle from mesh
-// -------------------------------------------------------------------------
-
 bool HandleGetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
@@ -199,10 +191,6 @@ bool HandleGetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const FString&
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Vertex position retrieved"), Result);
     return true;
 }
-
-// -------------------------------------------------------------------------
-// set_vertex_position - Set position of a vertex
-// -------------------------------------------------------------------------
 
 bool HandleSetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -269,9 +257,6 @@ bool HandleSetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const FString&
     return true;
 }
 
-// -------------------------------------------------------------------------
-// translate_mesh - Translate entire mesh
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

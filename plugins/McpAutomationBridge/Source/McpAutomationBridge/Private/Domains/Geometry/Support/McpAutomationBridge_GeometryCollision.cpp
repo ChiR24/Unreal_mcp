@@ -50,7 +50,6 @@ bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const FString&
     FGeometryScriptCollisionFromMeshOptions CollisionOptions;
     CollisionOptions.bEmitTransaction = false;
 
-    // Set method based on collision type
     if (CollisionType == TEXT("box") || CollisionType == TEXT("boxes"))
     {
         CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::AlignedBoxes;
@@ -81,7 +80,6 @@ bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const FString&
     FGeometryScriptSimpleCollision Collision = UGeometryScriptLibrary_CollisionFunctions::GenerateCollisionFromMesh(
         Mesh, CollisionOptions, nullptr);
 
-    // Set the collision on the DynamicMeshComponent
     FGeometryScriptSetSimpleCollisionOptions SetOptions;
     UGeometryScriptLibrary_CollisionFunctions::SetSimpleCollisionOfDynamicMeshComponent(
         Collision, DMC, SetOptions, nullptr);
@@ -96,7 +94,6 @@ bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const FString&
     FGeometryScriptCollisionFromMeshOptions CollisionOptions;
     CollisionOptions.bEmitTransaction = false;
 
-    // Set method based on collision type
     if (CollisionType == TEXT("box") || CollisionType == TEXT("boxes"))
     {
         CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::AlignedBoxes;
@@ -138,10 +135,6 @@ bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const FString&
 #endif
     return true;
 }
-
-// -------------------------------------------------------------------------
-// Transform Operations (Mirror, Array)
-// -------------------------------------------------------------------------
 
 bool HandleGenerateComplexCollision(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                            const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -190,11 +183,9 @@ bool HandleGenerateComplexCollision(UMcpAutomationBridgeSubsystem* Self, const F
     CollisionOptions.MaxConvexHullsPerMesh = FMath::Clamp(MaxHullCount, 1, 64);
     CollisionOptions.bEmitTransaction = false;
 
-    // Generate collision from mesh
     FGeometryScriptSimpleCollision Collision = UGeometryScriptLibrary_CollisionFunctions::GenerateCollisionFromMesh(
         Mesh, CollisionOptions, nullptr);
 
-    // Set the collision on the DynamicMeshComponent
     FGeometryScriptSetSimpleCollisionOptions SetOptions;
     UGeometryScriptLibrary_CollisionFunctions::SetSimpleCollisionOfDynamicMeshComponent(
         Collision, DMC, SetOptions, nullptr);
@@ -207,7 +198,6 @@ bool HandleGenerateComplexCollision(UMcpAutomationBridgeSubsystem* Self, const F
     Result->SetNumberField(TEXT("shapeCount"), ShapeCount);
     Result->SetStringField(TEXT("collisionType"), TEXT("convex_decomposition"));
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, TargetActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Complex collision generated"), Result);
@@ -216,10 +206,6 @@ bool HandleGenerateComplexCollision(UMcpAutomationBridgeSubsystem* Self, const F
 #endif
     return true;
 }
-
-// -------------------------------------------------------------------------
-// Simplify Collision
-// -------------------------------------------------------------------------
 
 bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -262,20 +248,16 @@ bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const FString&
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-    // Simplify the mesh first, then generate simpler collision
-    // Use mesh simplification to reduce geometry before collision generation
     FGeometryScriptSimplifyMeshOptions SimplifyOptions;
     SimplifyOptions.Method = EGeometryScriptRemoveMeshSimplificationType::StandardQEM;
     SimplifyOptions.bAllowSeamCollapse = true;
 
-    // Calculate target triangle count based on simplification factor
     int32 CurrentTris = Mesh->GetTriangleCount();
     int32 TargetTris = FMath::Max(4, static_cast<int32>(CurrentTris * SimplificationFactor));
 
     UGeometryScriptLibrary_MeshSimplifyFunctions::ApplySimplifyToTriangleCount(
         Mesh, TargetTris, SimplifyOptions, nullptr);
 
-    // Generate simplified collision using SetDynamicMeshCollisionFromMesh (UE 5.4+)
     FGeometryScriptCollisionFromMeshOptions CollisionOptions;
     CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::ConvexHulls;
     CollisionOptions.MaxConvexHullsPerMesh = FMath::Clamp(TargetHullCount, 1, 16);
@@ -285,7 +267,6 @@ bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const FString&
     UGeometryScriptLibrary_CollisionFunctions::SetDynamicMeshCollisionFromMesh(
         Mesh, DMC, CollisionOptions, nullptr);
 
-    // Get collision info from the component for reporting
     FGeometryScriptSetSimpleCollisionOptions SetOptions;
     FGeometryScriptSimpleCollision Collision = UGeometryScriptLibrary_CollisionFunctions::GetSimpleCollisionFromComponent(
         DMC, nullptr);
@@ -298,7 +279,6 @@ bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const FString&
     Result->SetNumberField(TEXT("trianglesAfter"), Mesh->GetTriangleCount());
     Result->SetNumberField(TEXT("shapeCount"), ShapeCount);
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, TargetActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Collision simplified"), Result);
@@ -308,9 +288,6 @@ bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const FString&
     return true;
 }
 
-// -------------------------------------------------------------------------
-// LOD Generation (Geometry)
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

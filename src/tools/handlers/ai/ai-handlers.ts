@@ -1,19 +1,3 @@
-/**
- * AI System Handlers
- *
- * Complete AI implementation including:
- * - AI Controller (creation, behavior tree assignment, blackboard)
- * - Blackboard (asset creation, keys, instance sync)
- * - Behavior Tree (expanded creation, composite nodes, tasks, decorators, services)
- * - EQS (queries, generators, contexts, tests)
- * - Perception System (sight, hearing, damage, touch, teams)
- * - State Trees (UE5.3+ state machine alternative)
- * - Smart Objects (definitions, slots, behaviors)
- * - Mass AI (crowd simulation, entity configs, spawners)
- *
- * @module ai-handlers
- */
-
 import { ITools } from '../../../types/tools/tool-interfaces.js';
 import { createUnknownActionResponse } from '../foundation/dispatch/handler-error-context.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
@@ -49,11 +33,9 @@ export async function handleAITools(
   }
   const { argsRecord, sendRequest } = dispatcher;
 
+  // Section markers mirror docs/Roadmap.md 16.1-16.9 so the roadmap cross-references resolve.
+  // 16.1 AI Controller
   switch (action) {
-    // =========================================================================
-    // 16.1 AI Controller (3 actions)
-    // =========================================================================
-
     case 'create_ai_controller': {
       requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
       return sendRequest('create_ai_controller');
@@ -79,10 +61,7 @@ export async function handleAITools(
       return sendRequest('assign_blackboard');
     }
 
-    // =========================================================================
-    // 16.2 Blackboard (3 actions)
-    // =========================================================================
-
+    // 16.2 Blackboard
     case 'create_blackboard_asset': {
       requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
       return sendRequest('create_blackboard_asset');
@@ -101,10 +80,7 @@ export async function handleAITools(
       return sendRequest('set_key_instance_synced');
     }
 
-    // =========================================================================
-    // 16.3 Behavior Tree - Expanded (6 actions)
-    // =========================================================================
-
+    // 16.3 Behavior Tree (Expanded)
     case 'create_behavior_tree': {
       requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
       return sendRequest('create_behavior_tree');
@@ -140,10 +116,7 @@ export async function handleAITools(
       return sendRequest('configure_bt_node');
     }
 
-    // =========================================================================
-    // 16.4 Environment Query System - EQS (5 actions)
-    // =========================================================================
-
+    // 16.4 Environment Query System (EQS)
     case 'create_eqs_query': {
       requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
       return sendRequest('create_eqs_query');
@@ -173,10 +146,7 @@ export async function handleAITools(
       return sendRequest('configure_test_scoring');
     }
 
-    // =========================================================================
-    // 16.5 Perception System (5 actions)
-    // =========================================================================
-
+    // 16.5 Perception System
     case 'add_ai_perception_component': {
       requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
       return sendRequest('add_ai_perception_component');
@@ -202,10 +172,7 @@ export async function handleAITools(
       return sendRequest('set_perception_team');
     }
 
-    // =========================================================================
-    // 16.6 State Trees - UE5.3+ (4 actions)
-    // =========================================================================
-
+    // 16.6 State Trees (UE5.3+)
     case 'create_state_tree': {
       requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
       return sendRequest('create_state_tree');
@@ -230,10 +197,7 @@ export async function handleAITools(
       return sendRequest('configure_state_tree_task');
     }
 
-    // =========================================================================
-    // 16.7 Smart Objects (4 actions)
-    // =========================================================================
-
+    // 16.7 Smart Objects
     case 'create_smart_object_definition': {
       requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
       return sendRequest('create_smart_object_definition');
@@ -255,10 +219,7 @@ export async function handleAITools(
       return sendRequest('add_smart_object_component');
     }
 
-    // =========================================================================
-    // 16.8 Mass AI / Crowds (3 actions)
-    // =========================================================================
-
+    // 16.8 Mass AI (Crowds)
     case 'create_mass_entity_config': {
       requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
       return sendRequest('create_mass_entity_config');
@@ -273,10 +234,6 @@ export async function handleAITools(
       requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
       return sendRequest('add_mass_spawner');
     }
-
-    // =========================================================================
-    // Default / Unknown Action
-    // =========================================================================
 
     default:
       return createUnknownActionResponse(`Unknown AI action: ${action}`);

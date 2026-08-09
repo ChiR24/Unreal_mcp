@@ -14,7 +14,6 @@ bool HandleAnimationCreateControlRigAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Create a new Control Rig blueprint
     FString RigName;
     if (!Payload->TryGetStringField(TEXT("name"), RigName) || RigName.IsEmpty()) {
       Message = TEXT("name required for create_control_rig");

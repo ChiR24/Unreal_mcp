@@ -134,7 +134,6 @@ bool HandleRecalculateNormals(UMcpAutomationBridgeSubsystem* Self, const FString
     );
 #endif
 
-    // Force refresh
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

@@ -62,10 +62,6 @@ int32 Iterations = GetJsonIntField(Payload, TEXT("iterations"), 10);
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Mesh Repair
-// -------------------------------------------------------------------------
-
 bool HandleRelax(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
@@ -121,10 +117,6 @@ bool HandleRelax(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Relax applied"), Result);
     return true;
 }
-
-// -------------------------------------------------------------------------
-// UV Operations (Project UV)
-// -------------------------------------------------------------------------
 
 bool HandleStretch(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)

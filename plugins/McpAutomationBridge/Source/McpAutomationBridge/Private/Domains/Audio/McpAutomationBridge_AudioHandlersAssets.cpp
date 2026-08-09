@@ -140,15 +140,6 @@ bool HandleAssetActions(
     return true;
   }
 
-  // -------------------------------------------------------------------------
-  // create_sound_class / audio_create_sound_class
-  // -------------------------------------------------------------------------
-  // Creates a USoundClass asset with optional volume/pitch properties and parent.
-  //
-  // Payload:  { "name": string, "properties"?: { "volume"?: number, "pitch"?: number },
-  //             "parentClass"?: string }
-  // Response: { "success": bool, "path": string, "name": string }
-  // -------------------------------------------------------------------------
   if (Lower == TEXT("create_sound_class") ||
              Lower == TEXT("audio_create_sound_class")) {
     FString Name;

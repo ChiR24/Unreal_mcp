@@ -176,7 +176,6 @@ bool HandleSetupPerception(UMcpAutomationBridgeSubsystem* Self, const FString& R
         return true;
     }
 
-    // create_nav_link_proxy - Create a NavLinkProxy blueprint
     return true;
 }
 }

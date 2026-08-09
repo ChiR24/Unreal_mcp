@@ -1,4 +1,3 @@
-// McpAutomationBridge_BehaviorTreeSerializers.h
 // Shared, runtime-only (AIModule) serializers for Behavior Tree + Blackboard assets.
 // Traverses the runtime object graph (UBehaviorTree::RootNode), never the editor BTGraph,
 // so it compiles in all targets and needs no BehaviorTreeEditor dependency.

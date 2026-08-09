@@ -16,9 +16,6 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("HandleBlueprintCreate ENTRY: RequestId=%s"), *RequestId);
 
-  // -------------------------------------------------------------------------
-  // Validate Required Fields
-  // -------------------------------------------------------------------------
   FString Name;
   LocalPayload->TryGetStringField(TEXT("name"), Name);
   if (Name.TrimStartAndEnd().IsEmpty()) {
@@ -60,9 +57,6 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
       TEXT("HandleBlueprintCreate: name=%s, savePath=%s, waitForCompletion=%s"),
       *Name, *SavePath, bWaitForCompletion ? TEXT("true") : TEXT("false"));
 
-  // -------------------------------------------------------------------------
-  // Request Coalescing (Track In-Flight Requests)
-  // -------------------------------------------------------------------------
   {
     FScopeLock Lock(&GBlueprintCreateMutex);
     if (GBlueprintCreateInflight.Contains(CreateKey)) {

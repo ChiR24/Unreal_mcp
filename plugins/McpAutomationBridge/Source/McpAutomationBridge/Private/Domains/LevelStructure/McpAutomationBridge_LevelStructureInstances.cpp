@@ -43,7 +43,6 @@ bool HandleCreateLevelInstance(
     {
         NormalizedLevelPath = TEXT("/Game/") + NormalizedLevelPath;
     }
-    // Remove .umap extension if present
     NormalizedLevelPath.RemoveFromEnd(TEXT(".umap"));
 
     if (!FPackageName::DoesPackageExist(NormalizedLevelPath))
@@ -61,7 +60,6 @@ bool HandleCreateLevelInstance(
         return true;
     }
 
-    // Get Level Instance Subsystem
     ULevelInstanceSubsystem* LevelInstanceSubsystem = World->GetSubsystem<ULevelInstanceSubsystem>();
     if (!LevelInstanceSubsystem)
     {

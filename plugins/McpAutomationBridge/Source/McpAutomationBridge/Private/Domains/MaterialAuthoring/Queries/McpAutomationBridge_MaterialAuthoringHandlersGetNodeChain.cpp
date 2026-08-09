@@ -66,7 +66,6 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
       bEndIsMainPin = true;
     }
 
-    // BFS from Start downstream
     TMap<UMaterialExpression*, UMaterialExpression*> Parent;
     TArray<UMaterialExpression*> BFSQueue;
     BFSQueue.Add(StartExpr);
@@ -78,11 +77,9 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
     while (Idx < BFSQueue.Num()) {
       UMaterialExpression *Cur = BFSQueue[Idx++];
 
-      // Check if we reached the end
       if (EndExpr && Cur == EndExpr) { bPathFound = true; PathEnd = Cur; break; }
       if (bEndIsMainPin && Material) {
 #if WITH_EDITORONLY_DATA
-        // Check if Cur feeds any main pin
         auto IsMainTarget = [&](const FExpressionInput &Input) { return Input.Expression == Cur; };
         if ((!EndPin.IsEmpty() && EndPin == TEXT("BaseColor") && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, BaseColor))) ||
             (!EndPin.IsEmpty() && EndPin == TEXT("EmissiveColor") && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, EmissiveColor))) ||
@@ -100,7 +97,6 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
 #endif
       }
 
-      // Enqueue downstream neighbors
       TArray<UMaterialExpression*> Neighbors;
       Downstream.MultiFind(Cur, Neighbors);
       for (UMaterialExpression *N : Neighbors) {
@@ -113,7 +109,6 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (bPathFound && PathEnd) {
-      // Reconstruct path
       TArray<UMaterialExpression*> Path;
       UMaterialExpression *Walk = PathEnd;
       while (Walk) {

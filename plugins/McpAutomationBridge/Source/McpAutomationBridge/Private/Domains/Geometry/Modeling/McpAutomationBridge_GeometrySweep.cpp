@@ -67,12 +67,10 @@ FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"), T
     FString SweepStatus;
     int32 PathStepsUsed = 0;
 
-    // Get mesh bounding box to derive profile shape
     FBox MeshBBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
     FVector MeshCenter = MeshBBox.GetCenter();
     FVector MeshExtent = MeshBBox.GetExtent();
 
-    // Create a cross-section profile from mesh XY bounds
     TArray<FVector2D> PolygonVertices;
     int32 NumPolySides = FMath::Clamp(Steps / 2, 4, 32);
     double ProfileRadius = FMath::Max(MeshExtent.X, MeshExtent.Y);
@@ -91,7 +89,6 @@ FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"), T
         ));
     }
 
-    // Build sweep path
     TArray<FTransform> PathFrames;
 
     if (SplineActor)
@@ -102,22 +99,18 @@ FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"), T
             SplineLength = SplineComp->GetSplineLength();
             PathStepsUsed = FMath::Clamp(Steps, 2, 256);
 
-            // Sample the spline at regular intervals to build the path
             for (int32 i = 0; i <= PathStepsUsed; ++i)
             {
                 float Alpha = (float)i / PathStepsUsed;
                 float Dist = SplineLength * Alpha;
 
-                // Get spline location and rotation at this distance
                 FVector Location = SplineComp->GetLocationAtDistanceAlongSpline(Dist, ESplineCoordinateSpace::World);
                 FQuat Rotation = SplineComp->GetQuaternionAtDistanceAlongSpline(Dist, ESplineCoordinateSpace::World);
 
-                // Apply twist interpolation
                 float TwistAngle = FMath::DegreesToRadians(Twist * Alpha);
                 FQuat TwistRotation = FQuat(FVector::ForwardVector, TwistAngle);
                 Rotation = Rotation * TwistRotation;
 
-                // Apply scale interpolation
                 float Scale = FMath::Lerp((float)ScaleStart, (float)ScaleEnd, Alpha);
 
                 PathFrames.Add(FTransform(Rotation, Location, FVector(Scale)));
@@ -142,11 +135,9 @@ FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"), T
             float Alpha = (float)i / PathStepsUsed;
             FVector Location = MeshCenter + FVector(0, 0, -SweepHeight/2 + SweepHeight * Alpha);
 
-            // Apply twist
             float TwistAngle = FMath::DegreesToRadians(Twist * Alpha);
             FQuat Rotation = FQuat(FVector::UpVector, TwistAngle);
 
-            // Apply scale interpolation
             float Scale = FMath::Lerp((float)ScaleStart, (float)ScaleEnd, Alpha);
 
             PathFrames.Add(FTransform(Rotation, Location, FVector(Scale)));
@@ -158,7 +149,6 @@ FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"), T
         }
     }
 
-    // Perform the sweep using Geometry Script
     if (PathFrames.Num() >= 2)
     {
         // Note: FGeometryScriptSimplePolygon is not needed here - the path is already built
@@ -189,9 +179,6 @@ FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"), T
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Duplicate Along Spline Operation
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

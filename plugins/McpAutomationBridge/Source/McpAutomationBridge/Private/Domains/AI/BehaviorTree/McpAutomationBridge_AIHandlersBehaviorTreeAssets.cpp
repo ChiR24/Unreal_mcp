@@ -58,8 +58,6 @@ static UBehaviorTree* CreateBehaviorTreeAsset(const FString& Path, const FString
     return BehaviorTree;
 }
 
-// Helper to create EQS Query asset
-
 bool HandleCreateBehaviorTree(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString SubAction = TEXT("create_behavior_tree");

@@ -52,7 +52,6 @@ bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
 
-    // Ensure the mesh has UV overlay for the specified channel
     UE::Geometry::FDynamicMeshAttributeSet* Attributes = EditMesh.Attributes();
     if (!Attributes)
     {
@@ -62,7 +61,6 @@ bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 
     if (UVChannel >= Attributes->NumUVLayers())
     {
-        // Add UV layers up to the requested channel
         for (int32 i = Attributes->NumUVLayers(); i <= UVChannel; ++i)
         {
             Attributes->SetNumUVLayers(i + 1);
@@ -76,13 +74,11 @@ bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
         return true;
     }
 
-    // Set UV for the vertex (all connected elements)
     FVector2f UVValue(static_cast<float>(U), static_cast<float>(V));
     int32 ElementsModified = 0;
 
     if (VertexIndex >= 0 && EditMesh.IsVertex(VertexIndex))
     {
-        // Get all UV elements for this vertex and set their UVs
         TArray<int32> ElementIDs;
         for (int32 ElementID : UVOverlay->ElementIndicesItr())
         {
@@ -93,7 +89,6 @@ bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
             }
         }
 
-        // If no elements exist for this vertex, we need to handle it differently
         if (ElementsModified == 0)
         {
             Self->SendAutomationError(Socket, RequestId,
@@ -120,10 +115,6 @@ bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("UV coordinates set"), Result);
     return true;
 }
-
-// -------------------------------------------------------------------------
-// append_vertex - Add a single vertex to mesh
-// -------------------------------------------------------------------------
 
 bool HandleUnwrapUV(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                            const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -164,7 +155,6 @@ bool HandleUnwrapUV(UMcpAutomationBridgeSubsystem* Self, const FString& RequestI
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-    // Use XAtlas for proper UV unwrapping
     FGeometryScriptXAtlasOptions XAtlasOptions;
     // XAtlas defaults are reasonable for most cases
 
@@ -247,9 +237,6 @@ bool HandlePackUVIslands(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Nanite Conversion
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

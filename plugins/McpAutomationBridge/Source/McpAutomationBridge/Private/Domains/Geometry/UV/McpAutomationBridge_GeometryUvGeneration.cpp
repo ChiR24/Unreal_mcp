@@ -100,7 +100,6 @@ FString ProjectionType = GetJsonStringField(Payload, TEXT("projectionType"), TEX
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-    // Create projection transform with scale applied
     FTransform ProjectionTransform(FQuat::Identity, FVector::ZeroVector, FVector(Scale));
 
     // UE 5.7: UV projection option structs removed. Use new function signatures directly.
@@ -150,7 +149,6 @@ bool HandleTransformUVs(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     int32 UVChannel = GetJsonIntField(Payload, TEXT("uvChannel"), 0);
 
-    // Transform parameters
 double TranslateU = GetJsonNumberField(Payload, TEXT("translateU"), 0.0);
     double TranslateV = GetJsonNumberField(Payload, TEXT("translateV"), 0.0);
     double ScaleU = GetJsonNumberField(Payload, TEXT("scaleU"), 1.0);
@@ -193,21 +191,18 @@ double TranslateU = GetJsonNumberField(Payload, TEXT("translateU"), 0.0);
     // UE 5.7: TransformMeshUVs was removed, use separate TranslateMeshUVs, ScaleMeshUVs, RotateMeshUVs
     FGeometryScriptMeshSelection Selection; // Empty = apply to entire mesh
 
-    // Apply translation
     if (TranslateU != 0.0 || TranslateV != 0.0)
     {
         UGeometryScriptLibrary_MeshUVFunctions::TranslateMeshUVs(
             Mesh, UVChannel, FVector2D(TranslateU, TranslateV), Selection, nullptr);
     }
 
-    // Apply scale
     if (ScaleU != 1.0 || ScaleV != 1.0)
     {
         UGeometryScriptLibrary_MeshUVFunctions::ScaleMeshUVs(
             Mesh, UVChannel, FVector2D(ScaleU, ScaleV), FVector2D(0.5, 0.5), Selection, nullptr);
     }
 
-    // Apply rotation
     if (Rotation != 0.0)
     {
         UGeometryScriptLibrary_MeshUVFunctions::RotateMeshUVs(

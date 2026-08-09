@@ -13,7 +13,6 @@ bool HandleInventoryEquipmentFunctionActions(UMcpAutomationBridgeSubsystem& Brid
       return true;
     }
 
-    // Load the blueprint
     UBlueprint* Blueprint =
         Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
     if (!Blueprint) {
@@ -27,7 +26,6 @@ bool HandleInventoryEquipmentFunctionActions(UMcpAutomationBridgeSubsystem& Brid
     TArray<TSharedPtr<FJsonValue>> FunctionsAdded;
     TArray<TSharedPtr<FJsonValue>> VariablesAdded;
 
-    // Add helper variables for equipment operations
     FEdGraphPinType IntType;
     IntType.PinCategory = UEdGraphSchema_K2::PC_Int;
 
@@ -40,7 +38,6 @@ bool HandleInventoryEquipmentFunctionActions(UMcpAutomationBridgeSubsystem& Brid
     FEdGraphPinType SoftObjectType;
     SoftObjectType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
 
-    // Add variables that support equipment functions
     TArray<TPair<FName, FEdGraphPinType>> EquipmentVars = {
       TPair<FName, FEdGraphPinType>(TEXT("LastEquippedSlot"), NameType),
       TPair<FName, FEdGraphPinType>(TEXT("LastUnequippedSlot"), NameType),
@@ -64,7 +61,6 @@ bool HandleInventoryEquipmentFunctionActions(UMcpAutomationBridgeSubsystem& Brid
       }
     }
 
-    // Add event dispatchers for equipment operations
     FEdGraphPinType DelegateType;
     DelegateType.PinCategory = UEdGraphSchema_K2::PC_MCDelegate;
 

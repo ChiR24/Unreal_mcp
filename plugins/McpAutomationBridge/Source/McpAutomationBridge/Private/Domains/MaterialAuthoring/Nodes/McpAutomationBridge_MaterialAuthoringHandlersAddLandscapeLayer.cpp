@@ -16,11 +16,8 @@ bool HandleAddLandscapeLayer(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
     // Accept path via multiple parameter names (assetPath, materialPath, or path)
     FString Path;
     if (Payload->TryGetStringField(TEXT("assetPath"), Path) && !Path.IsEmpty()) {
-      // Use assetPath
     } else if (Payload->TryGetStringField(TEXT("materialPath"), Path) && !Path.IsEmpty()) {
-      // Use materialPath
     } else if (Payload->TryGetStringField(TEXT("path"), Path) && !Path.IsEmpty()) {
-      // Use path
     } else {
       Path = TEXT("/Game/Landscape/Layers");
     }
@@ -35,7 +32,6 @@ bool HandleAddLandscapeLayer(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
     }
     Path = ValidatedPath;
 
-    // Validate the full package path
     FString PackagePath = Path / LayerName;
     if (!FPackageName::IsValidLongPackageName(PackagePath)) {
       Bridge->SendAutomationError(Socket, RequestId,
@@ -44,7 +40,6 @@ bool HandleAddLandscapeLayer(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
       return true;
     }
 
-    // Create the landscape layer info asset
     FString PackageName = PackagePath;
     UPackage* Package = CreatePackage(*PackageName);
     if (!Package) {
@@ -60,12 +55,10 @@ bool HandleAddLandscapeLayer(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
       return true;
     }
 
-    // Set layer name
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
     LayerInfo->LayerName = FName(*LayerName);
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
-    // Set optional properties
     double Hardness = 0.5;
     if (Payload->TryGetNumberField(TEXT("hardness"), Hardness)) {
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -73,7 +66,6 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
 
-    // Set physical material if provided
     FString PhysMaterialPath;
     if (Payload->TryGetStringField(TEXT("physicalMaterialPath"), PhysMaterialPath) && !PhysMaterialPath.IsEmpty()) {
       // SECURITY: Validate physicalMaterialPath before loading
@@ -108,7 +100,6 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
 #endif
 
-    // Save the asset
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave) {
@@ -118,7 +109,6 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       LayerInfo->MarkPackageDirty();
     }
 
-    // Notify asset registry
     FAssetRegistryModule::AssetCreated(LayerInfo);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

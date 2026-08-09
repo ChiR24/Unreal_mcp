@@ -111,9 +111,6 @@ public:
             return;
         }
 
-        // ---------------------------------------------------------------------
-        // Convert verbosity to string
-        // ---------------------------------------------------------------------
         FString VerbosityString;
         switch (Verbosity)
         {
@@ -188,13 +185,11 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    // Validate action
     if (Action != TEXT("manage_logs"))
     {
         return false;
     }
 
-    // Validate payload
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -202,7 +197,6 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
         return true;
     }
 
-    // Extract subaction
     const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
 
     auto SendLogSubscriptionResponse = [this, RequestingSocket, &RequestId](
@@ -280,7 +274,6 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
         return true;
     }
 
-    // Unknown subaction
     SendAutomationError(RequestingSocket, RequestId,
         TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;

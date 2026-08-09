@@ -186,9 +186,6 @@ bool HandleDisplaceByTexture(UMcpAutomationBridgeSubsystem* Self, const FString&
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Chamfer Operation
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

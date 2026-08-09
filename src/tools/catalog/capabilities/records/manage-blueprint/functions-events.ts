@@ -1,7 +1,4 @@
 /**
- * Function and event records: add_function, remove_function, add_event,
- * remove_event.
- *
  * Functions and events are Blueprint graph members with distinct lifecycle:
  * add_function creates a function graph; add_event creates an event node in
  * the EventGraph. Both return the member name for subsequent graph operations.

@@ -54,8 +54,6 @@ static UBlackboardData* CreateBlackboardAsset(const FString& Path, const FString
     return Blackboard;
 }
 
-// Helper to create Behavior Tree asset
-
 bool HandleCreateBlackboardAsset(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString SubAction = TEXT("create_blackboard_asset");

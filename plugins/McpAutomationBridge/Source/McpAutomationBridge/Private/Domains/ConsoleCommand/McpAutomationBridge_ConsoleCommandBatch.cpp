@@ -25,7 +25,6 @@ bool HandleBatchConsoleCommands(
         return true;
     }
 
-    // Get commands array
     const TArray<TSharedPtr<FJsonValue>>* CommandsArray = nullptr;
     if (!Payload->TryGetArrayField(TEXT("commands"), CommandsArray) || !CommandsArray)
     {
@@ -41,7 +40,6 @@ bool HandleBatchConsoleCommands(
         return true;
     }
 
-    // Get the world context
     UWorld* World = nullptr;
     if (GEditor)
     {
@@ -105,7 +103,6 @@ bool HandleBatchConsoleCommands(
             continue;
         }
 
-        // Execute the console command
         bool bSuccess = false;
 
         // Try to execute via editor first; Exec returns true if command was handled.
@@ -131,7 +128,6 @@ bool HandleBatchConsoleCommands(
         }
     }
 
-    // Build response
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("totalCommands"), TotalCommands);
     Result->SetNumberField(TEXT("executedCount"), ExecutedCount);

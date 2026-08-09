@@ -26,13 +26,10 @@ bool FCombatActionContext::HandleWeaponAmmo() const
         double ReloadTime = GetJsonNumberField(Payload, TEXT("reloadTime"), 2.0);
         FString ReloadAnimPath = GetJsonStringField(Payload, TEXT("reloadAnimationPath"));
 
-        // Add integer variable: MagazineSize
         AddBlueprintVariableCombat(Blueprint, TEXT("MagazineSize"), MakeIntPinType());
         // Add integer variable: CurrentAmmo (starts at MagazineSize)
         AddBlueprintVariableCombat(Blueprint, TEXT("CurrentAmmo"), MakeIntPinType());
-        // Add float variable: ReloadTime
         AddBlueprintVariableCombat(Blueprint, TEXT("ReloadTime"), MakeFloatPinType());
-        // Add bool variable: bIsReloading
         AddBlueprintVariableCombat(Blueprint, TEXT("bIsReloading"), MakeBoolPinType());
 
         // Add object variable: ReloadAnimation (UAnimMontage*)
@@ -47,11 +44,9 @@ bool FCombatActionContext::HandleWeaponAmmo() const
             }
         }
 
-        // Mark modified and compile
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set default values via CDO after compile
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -97,9 +92,6 @@ bool FCombatActionContext::HandleWeaponAmmo() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Reload system configured with Blueprint variables."), Result);
         return true;
     }
-
-    // setup_ammo_system
-
     if (SubAction == TEXT("setup_ammo_system"))
     {
         if (BlueprintPath.IsEmpty())
@@ -121,7 +113,6 @@ bool FCombatActionContext::HandleWeaponAmmo() const
         int32 AmmoPerShot = static_cast<int32>(GetJsonNumberField(Payload, TEXT("ammoPerShot"), 1));
         bool bInfiniteAmmo = GetJsonBoolField(Payload, TEXT("infiniteAmmo"), false);
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("MaxAmmo"), MakeIntPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("CurrentTotalAmmo"), MakeIntPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("AmmoPerShot"), MakeIntPinType());
@@ -131,7 +122,6 @@ bool FCombatActionContext::HandleWeaponAmmo() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -180,9 +170,6 @@ bool FCombatActionContext::HandleWeaponAmmo() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ammo system configured with Blueprint variables."), Result);
         return true;
     }
-
-    // setup_attachment_system
-
     return false;
 }
 #endif

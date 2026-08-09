@@ -30,14 +30,12 @@ bool HandleEnableWorldPartition(
         return true;
     }
 
-    // Check if World Partition is available
     UWorldPartition* WorldPartition = World->GetWorldPartition();
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetBoolField(TEXT("worldPartitionEnabled"), WorldPartition != nullptr);
     ResponseJson->SetBoolField(TEXT("requested"), bEnable);
 
-    // If user requested to enable WP but it's not enabled, return failure
     if (bEnable && !WorldPartition)
     {
         ResponseJson->SetStringField(TEXT("note"), TEXT("World Partition must be enabled when creating the level. Convert existing level via Edit > Convert Level"));

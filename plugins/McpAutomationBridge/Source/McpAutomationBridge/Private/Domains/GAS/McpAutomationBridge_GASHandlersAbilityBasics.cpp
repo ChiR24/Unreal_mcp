@@ -64,7 +64,6 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
         return true;
     }
 
-    // set_ability_tags
     if (SubAction == TEXT("set_ability_tags"))
     {
         if (BlueprintPath.IsEmpty())
@@ -90,7 +89,6 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
 
         TArray<FString> TagsAdded;
 
-        // Ability tags
         const TArray<TSharedPtr<FJsonValue>>* AbilityTagsArray = nullptr;
         if (Payload->TryGetArrayField(TEXT("abilityTags"), AbilityTagsArray))
         {
@@ -197,7 +195,6 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
         return true;
     }
 
-    // set_ability_costs
     if (SubAction == TEXT("set_ability_costs"))
     {
         if (BlueprintPath.IsEmpty())
@@ -249,7 +246,6 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
         return true;
     }
 
-    // set_ability_cooldown
     if (SubAction == TEXT("set_ability_cooldown"))
     {
         if (BlueprintPath.IsEmpty())
@@ -300,8 +296,6 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability cooldown set"), Result);
         return true;
     }
-
-    // set_ability_targeting - REAL IMPLEMENTATION with actual targeting configuration
 
     return false;
 }

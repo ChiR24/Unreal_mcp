@@ -55,7 +55,6 @@ bool HandleOpenLevelBlueprint(
     ULevelScriptBlueprint* LevelBP = PersistentLevel->GetLevelScriptBlueprint(false);
     if (!LevelBP)
     {
-        // Try to create the level blueprint manually for unsaved levels
         if (!bIsSavedLevel)
         {
             Subsystem->SendAutomationResponse(Socket, RequestId, false,

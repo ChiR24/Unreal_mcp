@@ -108,9 +108,6 @@ bool HandleSetScalarParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const 
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // set_vector_parameter_value
-  // --------------------------------------------------------------------------
   return false;
 }
 }

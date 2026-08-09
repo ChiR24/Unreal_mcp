@@ -95,7 +95,6 @@ bool HandleGASTagAssets(const FGASRequestContext& Context, const FString& SubAct
             return true;
         };
 
-        // Load the asset
         UObject* Asset = LoadObject<UObject>(nullptr, *AssetPath);
         if (!Asset)
         {

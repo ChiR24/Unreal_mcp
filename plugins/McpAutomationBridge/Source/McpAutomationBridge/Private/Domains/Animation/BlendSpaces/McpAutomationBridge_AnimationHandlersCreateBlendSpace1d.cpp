@@ -13,7 +13,6 @@ bool HandleAnimationCreateBlendSpace1dAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Create a 1D blend space
     FString BlendSpaceName;
     if (!Payload->TryGetStringField(TEXT("name"), BlendSpaceName) ||
         BlendSpaceName.IsEmpty()) {

@@ -9,7 +9,6 @@ FVector ReadVectorFromPayload(const TSharedPtr<FJsonObject>& Payload, const TCHA
     if (!Payload.IsValid())
         return Default;
 
-    // Try array format first [x, y, z]
     const TArray<TSharedPtr<FJsonValue>>* ArrayPtr;
     if (Payload->TryGetArrayField(FieldName, ArrayPtr) && ArrayPtr->Num() >= 3)
     {
@@ -20,7 +19,6 @@ FVector ReadVectorFromPayload(const TSharedPtr<FJsonObject>& Payload, const TCHA
         );
     }
 
-    // Try object format {x, y, z}
     const TSharedPtr<FJsonObject>* ObjPtr;
     if (Payload->TryGetObjectField(FieldName, ObjPtr))
     {
@@ -41,7 +39,6 @@ FRotator ReadRotatorFromPayload(const TSharedPtr<FJsonObject>& Payload, const TC
     if (!Payload.IsValid())
         return Default;
 
-    // Try array format first [pitch, yaw, roll]
     const TArray<TSharedPtr<FJsonValue>>* ArrayPtr;
     if (Payload->TryGetArrayField(FieldName, ArrayPtr) && ArrayPtr->Num() >= 3)
     {
@@ -52,11 +49,9 @@ FRotator ReadRotatorFromPayload(const TSharedPtr<FJsonObject>& Payload, const TC
         );
     }
 
-    // Try object format {pitch, yaw, roll} or {x, y, z}
     const TSharedPtr<FJsonObject>* ObjPtr;
     if (Payload->TryGetObjectField(FieldName, ObjPtr))
     {
-        // Check for {pitch, yaw, roll} format first
         if ((*ObjPtr)->HasField(TEXT("pitch")) || (*ObjPtr)->HasField(TEXT("yaw")) || (*ObjPtr)->HasField(TEXT("roll")))
         {
             return FRotator(
@@ -76,8 +71,6 @@ FRotator ReadRotatorFromPayload(const TSharedPtr<FJsonObject>& Payload, const TC
     return Default;
 }
 
-// Helper to read FTransform from JSON
-
 FTransform ReadTransformFromPayload(const TSharedPtr<FJsonObject>& Payload)
 {
     FVector Location = ReadVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -90,8 +83,6 @@ FTransform ReadTransformFromPayload(const TSharedPtr<FJsonObject>& Payload)
         Scale
     );
 }
-
-// Helper to create or get a dynamic mesh for operations
 
 FVector AxisVectorFromPayload(const TSharedPtr<FJsonObject>& Payload, const FVector& Default)
 {

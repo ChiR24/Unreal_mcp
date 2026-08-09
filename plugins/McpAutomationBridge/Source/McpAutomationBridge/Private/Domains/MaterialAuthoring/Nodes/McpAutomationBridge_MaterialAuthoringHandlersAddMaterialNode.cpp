@@ -45,13 +45,11 @@ bool HandleAddMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     UObject *HostOuter = Material ? static_cast<UObject*>(Material)
                                   : static_cast<UObject*>(Function);
 
-    // Get position from payload
     float X = 0.0f;
     float Y = 0.0f;
     Payload->TryGetNumberField(TEXT("x"), X);
     Payload->TryGetNumberField(TEXT("y"), Y);
 
-    // Resolve the expression class based on nodeType
     UClass *ExpressionClass = nullptr;
     if (NodeType == TEXT("TextureSample"))
       ExpressionClass = UMaterialExpressionTextureSample::StaticClass();
@@ -147,7 +145,6 @@ bool HandleAddMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString&
       }
     }
 
-    // Create the expression
     UMaterialExpression *NewExpr = NewObject<UMaterialExpression>(
         HostOuter, ExpressionClass, NAME_None, RF_Transactional);
     if (!NewExpr) {
@@ -155,16 +152,13 @@ bool HandleAddMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString&
       return true;
     }
 
-    // Set editor position
     NewExpr->MaterialExpressionEditorX = (int32)X;
     NewExpr->MaterialExpressionEditorY = (int32)Y;
 
-    // Add to the host's expression collection (Material or MaterialFunction)
 #if WITH_EDITORONLY_DATA
     AddExpressionToContainer(Material, Function, NewExpr);
 #endif
 
-    // If parameter node, set the parameter name
     FString ParamName;
     if (Payload->TryGetStringField(TEXT("name"), ParamName) && !ParamName.IsEmpty()) {
       if (UMaterialExpressionParameter *ParamExpr = Cast<UMaterialExpressionParameter>(NewExpr)) {

@@ -174,7 +174,6 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
 #endif
   }
 
-  // blueprint_set_metadata: Set metadata on a blueprint asset
   return false;
 }
 #endif
