@@ -58,7 +58,15 @@ inline const TArray<FString>& WidgetAuthoring()
 		TEXT("add_interaction_prompt"), TEXT("add_objective_tracker"),
 		TEXT("add_damage_indicator"), TEXT("create_inventory_ui"),
 		TEXT("create_dialog_widget"), TEXT("create_radial_menu"),
-		TEXT("get_widget_info"), TEXT("preview_widget")
+		TEXT("get_widget_info"), TEXT("preview_widget"),
+		TEXT("add_quest_tracker"), TEXT("add_safe_zone"), TEXT("add_spacer"),
+		TEXT("add_widget_component"), TEXT("add_widget_switcher"),
+		TEXT("bind_localized_text"), TEXT("create_credits_screen"),
+		TEXT("create_shop_ui"), TEXT("create_widget_style"),
+		TEXT("delete_animation"), TEXT("get_widget_slot_info"),
+		TEXT("remove_widget"), TEXT("rename_widget"), TEXT("reparent_widget"),
+		TEXT("set_font"), TEXT("set_localization_key"), TEXT("set_margin"),
+		TEXT("set_widget_binding")
 	};
 	return Actions;
 }
