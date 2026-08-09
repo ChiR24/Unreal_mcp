@@ -81,7 +81,7 @@ public class McpAutomationBridge : ModuleRules {
             PublicDefinitions.Add(bHasReplayApi ? "MCP_HAS_REPLAY_API=1" : "MCP_HAS_REPLAY_API=0");
             PublicDefinitions.Add(bHasReplaySubsystemTotalTime ? "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=1" : "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=0");
 
-            AddOptionalModules(Target, EngineDir, new string[] { "D|LevelSequenceEditor|LevelSequenceEditor", "D|NiagaraEditor|NiagaraEditor", "D|EnhancedInput|EnhancedInput", "D|InputEditor|InputEditor", "D|BehaviorTreeEditor|BehaviorTreeEditor", "D|DataValidation|DataValidation", "D|Synthesis|Synthesis", "D|IKRig|IKRig", "D|ChaosVehicles|ChaosVehicles", "D|AnimationData|AnimationData" });
+            AddOptionalModules(Target, EngineDir, new string[] { "D|LevelSequenceEditor|LevelSequenceEditor", "D|NiagaraEditor|NiagaraEditor", "D|EnhancedInput|EnhancedInput", "D|InputEditor|InputEditor", "D|BehaviorTreeEditor|BehaviorTreeEditor", "D|DataValidation|DataValidation", "D|Synthesis|Synthesis", "D|IKRig|IKRig", "D|IKRigEditor|IKRigEditor", "D|ChaosVehicles|ChaosVehicles", "D|AnimationData|AnimationData" });
 
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
             PublicDefinitions.Add("MCP_HAS_EDGRAPH_SCHEMA_K2=1");
