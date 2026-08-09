@@ -24,7 +24,15 @@ void RegisterWidgetGuid(UWidgetBlueprint* WidgetBP, UWidget* Widget)
             *WidgetFName.ToString(), *WidgetGuid.ToString());
     }
 #else
-    UE_LOG(LogTemp, Verbose, TEXT("RegisterWidgetGuid: Widget '%s' registered (UE 5.0 mode)"),
+    // Before UE 5.6 UWidgetBlueprint has no WidgetVariableNameToGuidMap, so there
+    // is nothing to register: the engine keeps the widget variable's GUID in
+    // UBlueprint::NewVariables[].VarGuid and assigns it itself. Writing our own
+    // GUID in there would overwrite an engine-managed value that existing
+    // bindings resolve through. This branch previously logged "registered",
+    // claiming work it had not done.
+    UE_LOG(LogTemp, Verbose,
+        TEXT("RegisterWidgetGuid: no-op for '%s' - this engine has no widget GUID map; "
+             "the engine owns the variable GUID in NewVariables"),
         *WidgetFName.ToString());
 #endif
 }
@@ -43,7 +51,10 @@ void UnregisterWidgetGuid(UWidgetBlueprint* WidgetBP, UWidget* Widget)
         UE_LOG(LogTemp, Verbose, TEXT("UnregisterWidgetGuid: Unregistered widget '%s'"), *WidgetFName.ToString());
     }
 #else
-    UE_LOG(LogTemp, Verbose, TEXT("UnregisterWidgetGuid: Widget '%s' unregistered (UE 5.0 mode)"),
+    // No GUID map before 5.6, so nothing was ever registered to remove. Logged
+    // "unregistered" before, which read as confirmation of a removal.
+    UE_LOG(LogTemp, Verbose,
+        TEXT("UnregisterWidgetGuid: no-op for '%s' - this engine has no widget GUID map"),
         *WidgetFName.ToString());
 #endif
 }
@@ -64,7 +75,11 @@ void RegisterAnimationGuid(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animati
             *AnimFName.ToString(), *AnimGuid.ToString());
     }
 #else
-    UE_LOG(LogTemp, Verbose, TEXT("RegisterAnimationGuid: Animation '%s' registered (UE 5.0 mode)"),
+    // Same as RegisterWidgetGuid: no map to write to before 5.6. The animation
+    // itself is still added to WidgetBP->Animations below, which is the part
+    // that actually matters on these engines.
+    UE_LOG(LogTemp, Verbose,
+        TEXT("RegisterAnimationGuid: no-op for '%s' - this engine has no widget GUID map"),
         *AnimFName.ToString());
 #endif
     if (!WidgetBP->Animations.Contains(Animation))
