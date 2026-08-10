@@ -67,8 +67,16 @@ static bool CreateRerouteNode(FActionContext& Context)
 
     float X = 0.0f;
     float Y = 0.0f;
-    Context.Payload->TryGetNumberField(TEXT("x"), X);
-    Context.Payload->TryGetNumberField(TEXT("y"), Y);
+    // Match create_node: accept the tool-facing posX/posY names, which reach the
+    // native transport unnormalized (the TS bridge's posX->x mapping is bypassed).
+    if (!Context.Payload->TryGetNumberField(TEXT("x"), X))
+    {
+        Context.Payload->TryGetNumberField(TEXT("posX"), X);
+    }
+    if (!Context.Payload->TryGetNumberField(TEXT("y"), Y))
+    {
+        Context.Payload->TryGetNumberField(TEXT("posY"), Y);
+    }
 
     FGraphNodeCreator<UK2Node_Knot> NodeCreator(*Context.TargetGraph);
     UK2Node_Knot* RerouteNode = NodeCreator.CreateNode(false);
