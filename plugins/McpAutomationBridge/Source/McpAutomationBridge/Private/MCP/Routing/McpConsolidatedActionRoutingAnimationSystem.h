@@ -78,7 +78,14 @@ inline const TArray<FString>& Skeleton()
 		TEXT("assign_cloth_asset_to_mesh"), TEXT("create_morph_target"),
 		TEXT("set_morph_target_deltas"), TEXT("import_morph_targets"),
 		TEXT("get_skeleton_info"), TEXT("list_bones"), TEXT("list_sockets"),
-		TEXT("list_physics_bodies")
+		TEXT("list_physics_bodies"),
+		TEXT("add_socket"), TEXT("modify_socket"), TEXT("delete_socket"),
+		TEXT("remove_socket"), TEXT("set_physics_asset"),
+		TEXT("modify_physics_body"), TEXT("remove_physics_body"),
+		TEXT("set_physics_constraint"), TEXT("get_physics_asset_info"),
+		TEXT("list_morph_targets"), TEXT("delete_morph_target"),
+		TEXT("set_morph_target_value"), TEXT("get_bone_transform"),
+		TEXT("list_virtual_bones"), TEXT("delete_virtual_bone")
 	};
 	return Actions;
 }

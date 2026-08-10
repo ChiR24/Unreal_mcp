@@ -66,7 +66,12 @@ export const SKELETON_ACTIONS = [
   'add_physics_constraint', 'configure_constraint_limits',
   'bind_cloth_to_skeletal_mesh', 'assign_cloth_asset_to_mesh',
   'create_morph_target', 'set_morph_target_deltas', 'import_morph_targets',
-  'get_skeleton_info', 'list_bones', 'list_sockets', 'list_physics_bodies'
+  'get_skeleton_info', 'list_bones', 'list_sockets', 'list_physics_bodies',
+  'add_socket', 'modify_socket', 'delete_socket', 'remove_socket',
+  'set_physics_asset', 'modify_physics_body', 'remove_physics_body',
+  'set_physics_constraint', 'get_physics_asset_info',
+  'list_morph_targets', 'delete_morph_target', 'set_morph_target_value',
+  'get_bone_transform', 'list_virtual_bones', 'delete_virtual_bone'
 ] as const;
 
 export const LIGHTING_ACTIONS = [
