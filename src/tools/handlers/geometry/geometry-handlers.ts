@@ -20,7 +20,7 @@ const GEOMETRY_ACTIONS = [
   'create_arch', 'create_pipe', 'create_ramp',
   // Booleans
   'boolean_union', 'boolean_subtract', 'boolean_intersection',
-  'boolean_trim', 'self_union',
+  'boolean_trim', 'self_union', 'difference',
   // Modeling operations
   'extrude', 'inset', 'outset', 'bevel', 'offset_faces', 'shell', 'revolve', 'chamfer',
   'extrude_along_spline', 'bridge', 'loft', 'sweep',
@@ -46,6 +46,11 @@ const GEOMETRY_ACTIONS = [
   'mirror', 'array_linear', 'array_radial',
   // Export/conversion
   'convert_to_static_mesh',
+  // DynamicMesh authoring
+  'create_procedural_mesh', 'append_vertex', 'append_triangle',
+  'delete_vertex', 'delete_triangle',
+  'get_vertex_position', 'set_vertex_position', 'set_vertex_color',
+  'set_uvs', 'split_normals', 'translate_mesh',
   // Utils
   'get_mesh_info'
 ] as const;
