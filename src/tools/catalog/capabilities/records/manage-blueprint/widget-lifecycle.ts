@@ -8,7 +8,7 @@
  * Widget handles: `widgetPath` (asset path) identifies the Widget Blueprint.
  */
 import type { CapabilityRecordSource } from '../../index.js';
-import { buildRecord, WIDGET_PLUGINS } from './helpers.js';
+import { buildPromotedRecord, buildRecord, WIDGET_PLUGINS } from './helpers.js';
 import { P } from './properties.js';
 
 const FAMILY = 'widget-lifecycle';
@@ -79,4 +79,68 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'preview_widget', widgetPath: '/Game/UI/WBP_MainUI', previewSize: '1080p' },
     exampleOutput: { success: true, message: 'Widget blueprint marked for recompilation. Open in Widget Blueprint Editor to see preview.', widgetPath: '/Game/UI/WBP_MainUI' },
   }),
+  buildPromotedRecord({
+    id: 'blueprint.remove_widget',
+    action: 'remove_widget',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Remove a widget from the widget tree of a Widget Blueprint.',
+    whenToUse: ['A widget must be deleted from a Widget Blueprint layout.'],
+    whenNotToUse: ['The widget should stay but be hidden (use set_visibility).'],
+    inputProps: { action: P.action, widgetPath: P.widgetPath, slotName: P.slotName },
+    required: ['action', 'widgetPath', 'slotName'],
+    outputProps: {
+      widgetPath: P.widgetPath,
+      removedWidget: { type: 'string', description: 'Name of the widget that was removed from the widget tree.' },
+    },
+    outputRequired: ['widgetPath', 'removedWidget'],
+    effect: 'destructive',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: WIDGET_PLUGINS,
+    exampleInput: { action: 'remove_widget', widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText' },
+    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', removedWidget: 'TitleText' },
+  }, 'Deletes a widget from the tree, unlike the visibility and styling actions that leave it in place.'),
+  buildPromotedRecord({
+    id: 'blueprint.rename_widget',
+    action: 'rename_widget',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Rename a widget inside the widget tree of a Widget Blueprint.',
+    whenToUse: ['A widget name must change so bindings and lookups can address it.'],
+    whenNotToUse: ['The Widget Blueprint asset itself should be renamed (use manage_asset).'],
+    inputProps: { action: P.action, widgetPath: P.widgetPath, slotName: P.slotName, newName: P.newName },
+    required: ['action', 'widgetPath', 'slotName', 'newName'],
+    outputProps: { widgetPath: P.widgetPath, oldName: P.oldName, newName: P.newName },
+    outputRequired: ['widgetPath', 'oldName', 'newName'],
+    effect: 'write',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: WIDGET_PLUGINS,
+    exampleInput: { action: 'rename_widget', widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText', newName: 'HeaderText' },
+    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', oldName: 'TitleText', newName: 'HeaderText' },
+  }, 'Renames a widget within the tree; slotName carries the current name and the response echoes it as oldName.'),
+  buildPromotedRecord({
+    id: 'blueprint.reparent_widget',
+    action: 'reparent_widget',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Move a widget under a different parent widget inside a Widget Blueprint.',
+    whenToUse: ['An existing widget must move into another panel without being recreated.'],
+    whenNotToUse: ['The widget is being added for the first time (use the matching add action).'],
+    inputProps: { action: P.action, widgetPath: P.widgetPath, slotName: P.slotName, newParent: P.newParent },
+    required: ['action', 'widgetPath', 'slotName', 'newParent'],
+    outputProps: {
+      widgetPath: P.widgetPath,
+      widget: { type: 'string', description: 'Name of the widget that was reparented.' },
+      newParent: P.newParent,
+    },
+    outputRequired: ['widgetPath', 'widget', 'newParent'],
+    effect: 'write',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: WIDGET_PLUGINS,
+    exampleInput: { action: 'reparent_widget', widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText', newParent: 'HeaderBox' },
+    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', widget: 'TitleText', newParent: 'HeaderBox' },
+  }, 'Moves an existing widget between parents, which the add actions cannot do.'),
 ];

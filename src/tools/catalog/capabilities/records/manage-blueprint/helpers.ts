@@ -139,4 +139,24 @@ export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
   };
 }
 
+/**
+ * A capability authored after the gateway migration.
+ *
+ * `legacyIds` still carries the pair the parent action enum and the gateway
+ * route resolve through, but that pair never shipped on the pre-gateway
+ * surface, so `provenance` keeps `extractOccurrences()` from counting it into
+ * an audit of what did.
+ */
+export function buildPromotedRecord(spec: RecordSpec, rationale: string): CapabilityRecordSource {
+  return {
+    ...buildRecord(spec),
+    normalization: {
+      class: 'C_SAME_VERB_DIFFERENT_TARGET',
+      disposition: 'retain',
+      rationale,
+      provenance: 'post-migration',
+    },
+  };
+}
+
 export { availability, BP_PLUGINS, behavior, outputSchema, policy, routing, V5_0, V5_8_P1, WIDGET_PLUGINS };

@@ -19,12 +19,12 @@ const COMPLETE_SOURCES = {
 } as const;
 
 describe('pilot capability retrieval aggregate', () => {
-  it('Given the four completed pilots, When the aggregate is created, Then it contains exactly 493 unique parsed records', () => {
+  it('Given the four completed pilots, When the aggregate is created, Then it contains exactly 510 unique parsed records', () => {
     const catalog = createPilotCapabilityCatalog(COMPLETE_SOURCES);
 
-    expect(PILOT_CAPABILITY_RECORD_COUNT).toBe(493);
-    expect(catalog).toHaveLength(493);
-    expect(new Set(catalog.map((record) => record.id))).toHaveLength(493);
+    expect(PILOT_CAPABILITY_RECORD_COUNT).toBe(510);
+    expect(catalog).toHaveLength(510);
+    expect(new Set(catalog.map((record) => record.id))).toHaveLength(510);
     expect(catalog.every((record) => record.hashes.algorithm === 'sha256')).toBe(true);
   });
 

@@ -1,5 +1,5 @@
 // tests/unit/gate/pilot-freeze-gate.test.ts
-// Task 14 isolated pilot architecture-freeze gate. Proves the clean 493-record
+// Task 14 isolated pilot architecture-freeze gate. Proves the clean 510-record
 // pilot state, frozen emitter hashes, retrieval disclosure, and six seeded
 // regressions each fail their exact invariant. No other repo file changes.
 
@@ -38,7 +38,7 @@ import {
 // at-least-one-of groups to manage-asset (channel_pack, create_enum,
 // connect_nodes/connect_material_pins) and manage-sequence (add_keyframe),
 // removing the group members from `required` so the groups actually enforce
-// the native alternatives. The 493-record structure is unchanged.
+// the native alternatives. The 510-record structure is unchanged.
 //
 // Re-frozen a third time after the record-vs-native field parity audit:
 // asset delete/delete_asset/delete_assets now declare `path` (native reads
@@ -46,17 +46,17 @@ import {
 // bridge-delete `force` flag the live suite exercises; enable_world_partition
 // and configure_grid_size no longer require the native-ignored `levelPath`
 // (configure_grid_size also gained `priority`); list_light_types output is
-// `types` (native emits `types`). The 493-record structure is unchanged.
+// `types` (native emits `types`). The 510-record structure is unchanged.
 //
 // Re-frozen a fourth time after the MCP black-box ledger remediation: the
 // record-vs-native parity fixes across all four pilot parents moved their
-// schema and content hashes — build-environment lighting (light type/count
+// schema and content hashes â€” build-environment lighting (light type/count
 // outputs), manage-asset (asset lifecycle/query/enum parity), manage-blueprint
 // (graph node and widget parity), and manage-sequence (cinematic/media/
-// timeline parity). The 493-record structure and exact ID set are unchanged.
-const FROZEN_JSON_HASH = '12ed1b1390a9b3fde2c23ca81447c858bb95c2c33ce2dc3f302c361b66727672';
-const FROZEN_TS_HASH = 'a063248ef311d92e77cacce6f8dfe368001cfc7c79332d944187294db84de6f8';
-const FROZEN_NATIVE_HASH = '93a3b13f703e52125b0c8b4c856987cf904bfbf522a8053ee8d099e106fbb093';
+// timeline parity). The 510-record structure and exact ID set are unchanged.
+const FROZEN_JSON_HASH = 'b444754cb103ada791b68a879712ee2c6ace89b21009df605b17fe05bba59857';
+const FROZEN_TS_HASH = '1860fb241d7154c30cd75660aa1d1a2b53e4c0a8ab39bd8ad08094f6cc188b6b';
+const FROZEN_NATIVE_HASH = '360023dd6461ec995f8d37eb6abcf2eddbb9ed39d2e0bdc089d60b15a0cc7d96';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();
@@ -87,14 +87,14 @@ function rehash(record: CapabilityRecord): Record<string, unknown> {
   return source;
 }
 
-describe('pilot architecture-freeze gate: clean 493-record state', () => {
-  it('Given the four tracked pilot exports, When aggregated, Then the breakdown is 150+158+104+81=493 with exact unique IDs', () => {
+describe('pilot architecture-freeze gate: clean 510-record state', () => {
+  it('Given the four tracked pilot exports, When aggregated, Then the breakdown is 150+158+121+81=510 with exact unique IDs', () => {
     expect(BUILD_ENVIRONMENT_RECORDS.length).toBe(150);
     expect(MANAGE_ASSET_RECORDS.length).toBe(158);
-    expect(MANAGE_BLUEPRINT_RECORDS.length).toBe(104);
+    expect(MANAGE_BLUEPRINT_RECORDS.length).toBe(121);
     expect(MANAGE_SEQUENCE_RECORDS.length).toBe(81);
-    expect(PILOT_CAPABILITY_CATALOG.length).toBe(493);
-    expect(new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.id)).size).toBe(493);
+    expect(PILOT_CAPABILITY_CATALOG.length).toBe(510);
+    expect(new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.id)).size).toBe(510);
   });
 
   it('Given the frozen pilot emitter outputs, When hashed, Then JSON/TS/native hashes match the freeze contract exactly', () => {
@@ -125,7 +125,7 @@ describe('pilot architecture-freeze gate: clean 493-record state', () => {
 });
 
 describe('pilot architecture-freeze gate: six seeded regressions', () => {
-  it('Given a missing canonical record and a duplicated legacy mapping, When the catalog is built and parsed, Then 493 completeness fails and an exact legacyIds issue path is reported', () => {
+  it('Given a missing canonical record and a duplicated legacy mapping, When the catalog is built and parsed, Then 510 completeness fails and an exact legacyIds issue path is reported', () => {
     const truncated = {
       buildEnvironment: BUILD_ENVIRONMENT_RECORDS.slice(0, -1),
       manageAsset: MANAGE_ASSET_RECORDS,

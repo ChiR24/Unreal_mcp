@@ -32,8 +32,8 @@ describe('manage_blueprint carries canonical parent metadata', () => {
     expect(record.parent.category).toBe('core');
   });
 
-  it('stamps parent metadata on all 104 records', () => {
-    expect(MANAGE_BLUEPRINT_RECORDS).toHaveLength(104);
+  it('stamps parent metadata on all 121 records', () => {
+    expect(MANAGE_BLUEPRINT_RECORDS).toHaveLength(121);
     for (const record of MANAGE_BLUEPRINT_RECORDS) {
       expect(record.parent).toEqual(PARENT);
     }

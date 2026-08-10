@@ -5,8 +5,8 @@
 import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
-export const CANONICAL_CAPABILITY_RECORD_COUNT = 1335;
-export const CATALOG_REVISION = "eba0be2d104f7510";
+export const CANONICAL_CAPABILITY_RECORD_COUNT = 1352;
+export const CATALOG_REVISION = "7a780f300011f79e";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -27200,6 +27200,190 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "blueprint.add_quest_tracker",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "add_quest_tracker"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-game-ui",
+      "topics": [
+        "add_quest_tracker"
+      ],
+      "summary": "Add a quest tracker widget to a HUD Widget Blueprint.",
+      "whenToUse": [
+        "Active quest or mission state must be shown on the HUD."
+      ],
+      "whenNotToUse": [
+        "A generic objective list is enough (use add_objective_tracker)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "slotName"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Add a quest tracker widget to a HUD Widget Blueprint.",
+        "input": {
+          "action": "add_quest_tracker",
+          "widgetPath": "/Game/UI/WBP_HUD",
+          "slotName": "QuestTracker"
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_HUD",
+          "slotName": "QuestTracker"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "add_quest_tracker",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Builds the quest-specific tracker composite; add_objective_tracker targets the generic objective list.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "2f731d773e75dacb962c73163779ede032379fbb2cdea3343e01cf3ec0d2b81c",
+      "content": "bd117005ea8d4363de19b2a75b7d270d8b7e9295e64587fc750277afc4080085"
+    }
+  },
+  {
     "id": "blueprint.add_rich_text_block",
     "aliases": [],
     "legacyIds": [
@@ -27386,6 +27570,194 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "7ad2c842cf9be4f81faf5330a98cd484bd0c28f3125989c226c822a5df0a403c",
       "content": "01649e7b7104698aefcbd441631f88965f4a484cf6e5f76638634d76b3bba932"
+    }
+  },
+  {
+    "id": "blueprint.add_safe_zone",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "add_safe_zone"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-panels",
+      "topics": [
+        "add_safe_zone"
+      ],
+      "summary": "Add a Safe Zone to a Widget Blueprint so child content respects the platform title-safe area.",
+      "whenToUse": [
+        "HUD content must stay inside the title-safe area on console or TV output."
+      ],
+      "whenNotToUse": [
+        "The layout is desktop-only and no safe-area inset applies."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "parentSlot": {
+            "type": "string",
+            "description": "Parent slot to add the widget to."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "slotName"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Add a Safe Zone to a Widget Blueprint so child content respects the platform title-safe area.",
+        "input": {
+          "action": "add_safe_zone",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "SafeZone_0"
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "SafeZone_0"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "add_safe_zone",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Applies a platform safe-area inset to its children; no other panel container performs that adjustment.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "72f11bcf276df3deaaa04cdc26d2d2c3751b1c7e7086adf419cf3166481056fa",
+      "content": "c974780a54c263c9bfbbed5d51f11fa20fc875d352963c7c7b582ce48a8a6c53"
     }
   },
   {
@@ -28417,6 +28789,216 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "5a750d2f1f812ac35845c765cb574da307b74b557a39be0d1a8d8341527604b3",
       "content": "6dc2e7c62e817aae3e969c1d4d76c9f38d5b4429053c78e0c64b6167e76136b3"
+    }
+  },
+  {
+    "id": "blueprint.add_spacer",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "add_spacer"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-panels",
+      "topics": [
+        "add_spacer"
+      ],
+      "summary": "Add a Spacer to a Widget Blueprint to reserve fixed empty space inside a layout.",
+      "whenToUse": [
+        "Fixed empty space must separate sibling widgets in a box or panel."
+      ],
+      "whenNotToUse": [
+        "The gap should belong to an existing widget (set its padding instead)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "parentSlot": {
+            "type": "string",
+            "description": "Parent slot to add the widget to."
+          },
+          "sizeX": {
+            "type": "number",
+            "description": "Slot width in slate units."
+          },
+          "sizeY": {
+            "type": "number",
+            "description": "Slot height in slate units."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "sizeX": {
+            "type": "number",
+            "description": "Slot width in slate units."
+          },
+          "sizeY": {
+            "type": "number",
+            "description": "Slot height in slate units."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "slotName",
+          "sizeX",
+          "sizeY"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Add a Spacer to a Widget Blueprint to reserve fixed empty space inside a layout.",
+        "input": {
+          "action": "add_spacer",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "Spacer_0",
+          "sizeX": 100,
+          "sizeY": 24
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "Spacer_0",
+          "sizeX": 100,
+          "sizeY": 24
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "add_spacer",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Reserves fixed layout space rather than hosting children, so it stays distinct from the panel containers.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "3751034e10a468093a5276c630aed3b91940f2e57b1abb22a3cfb32c1cbc65d3",
+      "content": "90d9b1d8cb284059d663b1815626c3a64db2b635b6bdccf66ffd466563cfd8ee"
     }
   },
   {
@@ -29801,6 +30383,432 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "blueprint.add_widget_component",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "add_widget_component"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-content",
+      "topics": [
+        "add_widget_component"
+      ],
+      "summary": "Add a widget of any UMG class to a Widget Blueprint by class name.",
+      "whenToUse": [
+        "A widget class is needed that no dedicated add_* action covers."
+      ],
+      "whenNotToUse": [
+        "A dedicated action exists for the class (prefer add_button, add_text_block, and the rest)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "componentType": {
+            "type": "string",
+            "description": "Component class name to add."
+          },
+          "componentName": {
+            "type": "string",
+            "description": "Name for the SCS component node."
+          },
+          "parentName": {
+            "type": "string",
+            "description": "Optional parent panel name to add the widget under."
+          },
+          "positionX": {
+            "type": "number",
+            "description": "Canvas slot X position, applied only when the parent is a canvas panel."
+          },
+          "positionY": {
+            "type": "number",
+            "description": "Canvas slot Y position, applied only when the parent is a canvas panel."
+          },
+          "sizeX": {
+            "type": "number",
+            "description": "Slot width in slate units."
+          },
+          "sizeY": {
+            "type": "number",
+            "description": "Slot height in slate units."
+          },
+          "text": {
+            "type": "string",
+            "description": "Text content for a text block or button."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath",
+          "componentType"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "componentName": {
+            "type": "string",
+            "description": "Name for the SCS component node."
+          },
+          "componentType": {
+            "type": "string",
+            "description": "Resolved widget class name, which may differ from the requested componentType."
+          },
+          "parentName": {
+            "type": "string",
+            "description": "Optional parent panel name to add the widget under."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "componentName",
+          "componentType",
+          "parentName"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Add a widget of any UMG class to a Widget Blueprint by class name.",
+        "input": {
+          "action": "add_widget_component",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "componentType": "TextBlock",
+          "componentName": "Caption",
+          "text": "Ready"
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "componentName": "Caption",
+          "componentType": "TextBlock",
+          "parentName": "CanvasPanel_0"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "add_widget_component",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Resolves an arbitrary widget class by name, so it stays distinct from the per-class add actions.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "475cca6c61b4bc00f0cf737e7b20ce59f0dcc38df79d1b6e09f6ceabc5616560",
+      "content": "0c4aceb34d545a635dbb5d53393b26f3efc667c6772a34a72073ab3ed52fae9b"
+    }
+  },
+  {
+    "id": "blueprint.add_widget_switcher",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "add_widget_switcher"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-panels",
+      "topics": [
+        "add_widget_switcher"
+      ],
+      "summary": "Add a Widget Switcher to a Widget Blueprint to show one child at a time by index.",
+      "whenToUse": [
+        "Several pages or tabs must occupy one region with only one visible at a time."
+      ],
+      "whenNotToUse": [
+        "All children should be visible together (use an overlay or a box)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "parentSlot": {
+            "type": "string",
+            "description": "Parent slot to add the widget to."
+          },
+          "activeIndex": {
+            "type": "number",
+            "description": "Index shown first by a widget switcher."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "activeIndex": {
+            "type": "number",
+            "description": "Index shown first by a widget switcher."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "slotName",
+          "activeIndex"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Add a Widget Switcher to a Widget Blueprint to show one child at a time by index.",
+        "input": {
+          "action": "add_widget_switcher",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "PageSwitcher",
+          "activeIndex": 0
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "PageSwitcher",
+          "activeIndex": 0
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "add_widget_switcher",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Shows exactly one child selected by index, which no other panel container does.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "6ae731c0ed9b9707a6d90980fbbd04960854ee62886aaa3377e0799d8286073b",
+      "content": "910e9233fc34aec6923e354f85907f1ae4b10f805e6ca73aee5eca439726293e"
+    }
+  },
+  {
     "id": "blueprint.add_wrap_box",
     "aliases": [],
     "legacyIds": [
@@ -30351,6 +31359,219 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "64a3c16a1b0b700d8439877347722336e4976c395c09aa3df32306193211646b",
       "content": "a5830e768cc17030c2c161364de9c7cd038889715f5ce96c5a116c76d4ad98fa"
+    }
+  },
+  {
+    "id": "blueprint.bind_localized_text",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "bind_localized_text"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-bindings",
+      "topics": [
+        "bind_localized_text"
+      ],
+      "summary": "Point a Text Block at a string-table entry so its text follows the active localization.",
+      "whenToUse": [
+        "Displayed text must come from a string table rather than a literal."
+      ],
+      "whenNotToUse": [
+        "The text is authored inline and never localized (set it directly instead)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "stringTableId": {
+            "type": "string",
+            "description": "String table asset backing a localized text binding."
+          },
+          "stringKey": {
+            "type": "string",
+            "description": "Key looked up within the string table."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath",
+          "slotName",
+          "stringTableId",
+          "stringKey"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "stringTableId": {
+            "type": "string",
+            "description": "String table asset backing a localized text binding."
+          },
+          "stringKey": {
+            "type": "string",
+            "description": "Key looked up within the string table."
+          },
+          "note": {
+            "type": "string",
+            "description": "Why the binding was not applied; present only when success is false."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "slotName",
+          "stringTableId",
+          "stringKey"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Point a Text Block at a string-table entry so its text follows the active localization.",
+        "input": {
+          "action": "bind_localized_text",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "TitleText",
+          "stringTableId": "/Game/Localization/ST_UI.ST_UI",
+          "stringKey": "Menu_Title"
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "TitleText",
+          "stringTableId": "/Game/Localization/ST_UI.ST_UI",
+          "stringKey": "Menu_Title"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "bind_localized_text",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Resolves text through a string table, unlike the property bindings that read a Blueprint member.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "581457d6a8e2afaf35bd810ebf879d64486d5e562cd8294bdeecb2020842445d",
+      "content": "53a5a15902d1db366b9125e685b4ecca4a8ad6cfc7897432d623c528381a971d"
     }
   },
   {
@@ -32203,6 +33424,187 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "be3981f689be945604cbbb9d7ae11c1df23b6f7a7371bbf689617bf63a6ff51c",
       "content": "d939a26b5afa0d28fa234eb0e0d6878870e92f89af869c8634030b91d8d76d22"
+    }
+  },
+  {
+    "id": "blueprint.create_credits_screen",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "create_credits_screen"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-game-ui",
+      "topics": [
+        "create_credits_screen"
+      ],
+      "summary": "Create a credits screen Widget Blueprint pre-populated with a scrolling credits layout.",
+      "whenToUse": [
+        "A credits screen must be scaffolded as a new Widget Blueprint asset."
+      ],
+      "whenNotToUse": [
+        "The credits widget already exists and only needs content edits."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the new Blueprint or asset."
+          },
+          "path": {
+            "type": "string",
+            "description": "Destination /Game folder for a new Widget Blueprint."
+          },
+          "folder": {
+            "type": "string",
+            "description": "Destination /Game folder for a Widget Blueprint."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Create a credits screen Widget Blueprint pre-populated with a scrolling credits layout.",
+        "input": {
+          "action": "create_credits_screen",
+          "name": "WBP_Credits",
+          "path": "/Game/UI"
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_Credits"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "create_credits_screen",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Creates a new Widget Blueprint asset from a credits template rather than adding a widget to an existing one.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "560c0079577e71a1f09243208ebb7300a3517664f7480e2de7a07d8d1740dadd",
+      "content": "a992f2813701b23923ef7dffa8b1fb64c0aaa2324b500800be8db7541ae2b8a7"
     }
   },
   {
@@ -34296,6 +35698,198 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "blueprint.create_shop_ui",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "create_shop_ui"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-game-ui",
+      "topics": [
+        "create_shop_ui"
+      ],
+      "summary": "Create a shop Widget Blueprint pre-populated with a configurable item grid.",
+      "whenToUse": [
+        "A shop or store screen must be scaffolded as a new Widget Blueprint asset."
+      ],
+      "whenNotToUse": [
+        "Only the item grid of an existing shop widget needs changing."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the new Blueprint or asset."
+          },
+          "path": {
+            "type": "string",
+            "description": "Destination /Game folder for a new Widget Blueprint."
+          },
+          "folder": {
+            "type": "string",
+            "description": "Destination /Game folder for a Widget Blueprint."
+          },
+          "columns": {
+            "type": "number",
+            "description": "Item columns in the generated shop grid."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "columns": {
+            "type": "number",
+            "description": "Item columns in the generated shop grid."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "columns"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Create a shop Widget Blueprint pre-populated with a configurable item grid.",
+        "input": {
+          "action": "create_shop_ui",
+          "name": "WBP_Shop",
+          "path": "/Game/UI",
+          "columns": 4
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_Shop",
+          "columns": 4
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "create_shop_ui",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Creates a new Widget Blueprint asset from a shop template rather than adding a widget to an existing one.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "3ddd5ed0f7f91d6de512c69faef057b36aacf8e2bb7a50f1caec1cdfa0d804b4",
+      "content": "2a48bffbcff3a770edcba4337af86221a98641a3efbe89f63bee55bdbbc63cc9"
+    }
+  },
+  {
     "id": "blueprint.create_struct_make_break_nodes",
     "aliases": [],
     "legacyIds": [
@@ -34949,6 +36543,197 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "blueprint.delete_animation",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "delete_animation"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-animation",
+      "topics": [
+        "delete_animation"
+      ],
+      "summary": "Delete a named animation from a Widget Blueprint.",
+      "whenToUse": [
+        "An animation is obsolete and must be removed from the Widget Blueprint."
+      ],
+      "whenNotToUse": [
+        "The animation should only stop playing (change its loop or play mode instead)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "animationName": {
+            "type": "string",
+            "description": "Widget animation name."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath",
+          "animationName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "deletedAnimation": {
+            "type": "string",
+            "description": "Name of the animation that was removed."
+          },
+          "remainingAnimations": {
+            "type": "number",
+            "description": "Number of animations left on the Widget Blueprint."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "deletedAnimation",
+          "remainingAnimations"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Delete a named animation from a Widget Blueprint.",
+        "input": {
+          "action": "delete_animation",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "animationName": "Pulse"
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "deletedAnimation": "Pulse",
+          "remainingAnimations": 2
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "destructive",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "destructive",
+      "consent": "explicit",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "delete_animation",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Removes an animation outright, so it is the only destructive action in the widget animation family.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "2f2714cf72c28fc07f6a5edc2c4f64b41874870c69fc09738135b4f70b5d289a",
+      "content": "6da87c2139d2f80c8f38e940187d4133e49ae5999277ba80f89f3c463043e4e9"
+    }
+  },
+  {
     "id": "blueprint.delete_node",
     "aliases": [],
     "legacyIds": [
@@ -35128,7 +36913,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "schema": "869c2ac348483e9307125b4238abea90906b4d4b0d91ebba43e4a2cf1820ae0d",
       "content": "cc7796bf35b22f08491a928fb7dbe806e0f16ada02b2d982abd82e430147eeb6"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
   {
     "id": "blueprint.ensure_exists",
     "aliases": [],
@@ -36673,6 +38460,282 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "blueprint.get_widget_slot_info",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "get_widget_slot_info"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-info",
+      "topics": [
+        "get_widget_slot_info"
+      ],
+      "summary": "Read the slot, geometry, and parent of one widget inside a Widget Blueprint.",
+      "whenToUse": [
+        "The layout of a single widget must be inspected before adjusting it."
+      ],
+      "whenNotToUse": [
+        "The whole widget tree is needed (use get_widget_info)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath",
+          "slotName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "widgetClass": {
+            "type": "string",
+            "description": "Class name of the inspected widget."
+          },
+          "isVisible": {
+            "type": "boolean",
+            "description": "Whether the widget is currently visible."
+          },
+          "slotClass": {
+            "type": "string",
+            "description": "Class name of the slot holding the widget (omitted when the widget occupies no slot)."
+          },
+          "canvasSlotInfo": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Canvas geometry of the widget (omitted unless the slot is a canvas panel slot).",
+            "properties": {
+              "anchorMinX": {
+                "type": "number",
+                "description": "Minimum anchor X."
+              },
+              "anchorMinY": {
+                "type": "number",
+                "description": "Minimum anchor Y."
+              },
+              "anchorMaxX": {
+                "type": "number",
+                "description": "Maximum anchor X."
+              },
+              "anchorMaxY": {
+                "type": "number",
+                "description": "Maximum anchor Y."
+              },
+              "alignmentX": {
+                "type": "number",
+                "description": "Alignment X within the slot."
+              },
+              "alignmentY": {
+                "type": "number",
+                "description": "Alignment Y within the slot."
+              },
+              "positionX": {
+                "type": "number",
+                "description": "Slot position X."
+              },
+              "positionY": {
+                "type": "number",
+                "description": "Slot position Y."
+              },
+              "sizeX": {
+                "type": "number",
+                "description": "Slot width."
+              },
+              "sizeY": {
+                "type": "number",
+                "description": "Slot height."
+              },
+              "zOrder": {
+                "type": "number",
+                "description": "Slot draw order."
+              }
+            },
+            "required": [
+              "anchorMinX",
+              "anchorMinY",
+              "anchorMaxX",
+              "anchorMaxY",
+              "alignmentX",
+              "alignmentY",
+              "positionX",
+              "positionY",
+              "sizeX",
+              "sizeY",
+              "zOrder"
+            ]
+          },
+          "parentName": {
+            "type": "string",
+            "description": "Optional parent panel name to add the widget under."
+          },
+          "parentClass": {
+            "type": "string",
+            "description": "Class name of the parent widget (omitted when the widget has no parent)."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "slotName",
+          "widgetClass",
+          "isVisible"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Read the slot, geometry, and parent of one widget inside a Widget Blueprint.",
+        "input": {
+          "action": "get_widget_slot_info",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "TitleText"
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "TitleText",
+          "widgetClass": "TextBlock",
+          "isVisible": true,
+          "slotClass": "CanvasPanelSlot",
+          "parentName": "CanvasPanel_0",
+          "parentClass": "CanvasPanel"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "read",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "read",
+      "consent": "none",
+      "dataAccess": "project-read"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "get_widget_slot_info",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Reports the slot and geometry of one widget, where get_widget_info returns the whole tree.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "4a5b61985edf1deeae3da7a6099033254749dc3ddc3957b7898632c3b3f94e52",
+      "content": "83d8dbabcfbc38a3bbc2ff6affc45060bc1e6c24e8bb703f6fac1a80af565b1a"
+    }
+  },
+  {
     "id": "blueprint.list_node_types",
     "aliases": [],
     "legacyIds": [
@@ -36870,9 +38933,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "schema": "6f165f71b51b6e1fb5ae785ad934115562c2c9095f176cab9875a0a9c18c3b99",
       "content": "8a7bbd7b176c061a4e42f314ed0715ef494e746b644c1304b76d7c0e24ec8243"
     }
-  }
-]);
-const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
+  },
   {
     "id": "blueprint.modify_scs",
     "aliases": [],
@@ -38141,6 +40202,191 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "blueprint.remove_widget",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "remove_widget"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-lifecycle",
+      "topics": [
+        "remove_widget"
+      ],
+      "summary": "Remove a widget from the widget tree of a Widget Blueprint.",
+      "whenToUse": [
+        "A widget must be deleted from a Widget Blueprint layout."
+      ],
+      "whenNotToUse": [
+        "The widget should stay but be hidden (use set_visibility)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath",
+          "slotName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "removedWidget": {
+            "type": "string",
+            "description": "Name of the widget that was removed from the widget tree."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "removedWidget"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Remove a widget from the widget tree of a Widget Blueprint.",
+        "input": {
+          "action": "remove_widget",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "TitleText"
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "removedWidget": "TitleText"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "destructive",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "destructive",
+      "consent": "explicit",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "remove_widget",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Deletes a widget from the tree, unlike the visibility and styling actions that leave it in place.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "3b01ffd6f5f956259f49c54c8cb16785cbe22a98fcc92de3a5674e7746595141",
+      "content": "234ccc138873ea5279ea77e41f87a9ab1ba83a084ddd8999c06e3e98a8c1a9ba"
+    }
+  },
+  {
     "id": "blueprint.rename_variable",
     "aliases": [],
     "legacyIds": [
@@ -38319,6 +40565,203 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "blueprint.rename_widget",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "rename_widget"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-lifecycle",
+      "topics": [
+        "rename_widget"
+      ],
+      "summary": "Rename a widget inside the widget tree of a Widget Blueprint.",
+      "whenToUse": [
+        "A widget name must change so bindings and lookups can address it."
+      ],
+      "whenNotToUse": [
+        "The Widget Blueprint asset itself should be renamed (use manage_asset)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "newName": {
+            "type": "string",
+            "description": "New name for a renamed variable, function, or component."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath",
+          "slotName",
+          "newName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "oldName": {
+            "type": "string",
+            "description": "Current variable name before renaming."
+          },
+          "newName": {
+            "type": "string",
+            "description": "New name for a renamed variable, function, or component."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "oldName",
+          "newName"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Rename a widget inside the widget tree of a Widget Blueprint.",
+        "input": {
+          "action": "rename_widget",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "TitleText",
+          "newName": "HeaderText"
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "oldName": "TitleText",
+          "newName": "HeaderText"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "rename_widget",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Renames a widget within the tree; slotName carries the current name and the response echoes it as oldName.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "147cd38cb306c813dbbbc64eeeffb2983516fe9832347a2f07a53f4f4016350a",
+      "content": "0de731c4f99c7ea601e4005ac80d61478ab6b656affdb9d4a1c4a57815fa6213"
+    }
+  },
+  {
     "id": "blueprint.reparent_scs_component",
     "aliases": [],
     "legacyIds": [
@@ -38494,6 +40937,203 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "3d4a2c661dc6fff8b523abe1d00d889425ec7142383979b99a0c08ca229b249f",
       "content": "2698208ff238dd83293f9053f58e4d3d9b590bf018a8ab421a5851a6004c9359"
+    }
+  },
+  {
+    "id": "blueprint.reparent_widget",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "reparent_widget"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-lifecycle",
+      "topics": [
+        "reparent_widget"
+      ],
+      "summary": "Move a widget under a different parent widget inside a Widget Blueprint.",
+      "whenToUse": [
+        "An existing widget must move into another panel without being recreated."
+      ],
+      "whenNotToUse": [
+        "The widget is being added for the first time (use the matching add action)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "newParent": {
+            "type": "string",
+            "description": "New parent SCS node name."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath",
+          "slotName",
+          "newParent"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "widget": {
+            "type": "string",
+            "description": "Name of the widget that was reparented."
+          },
+          "newParent": {
+            "type": "string",
+            "description": "New parent SCS node name."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "widget",
+          "newParent"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Move a widget under a different parent widget inside a Widget Blueprint.",
+        "input": {
+          "action": "reparent_widget",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "TitleText",
+          "newParent": "HeaderBox"
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "widget": "TitleText",
+          "newParent": "HeaderBox"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "reparent_widget",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Moves an existing widget between parents, which the add actions cannot do.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "08b9b1776813e5775099db17adf2b5ec199daa27822e09b929309c6e49636e09",
+      "content": "04b6237ab165200345ebc68dda21f35a70de441e9be1599b6055c861442f1032"
     }
   },
   {
@@ -39430,6 +42070,643 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "f089c484f3c3acb73387cc890e4fa8080afb12719cef6570cf163d162a6a7f15",
       "content": "f4acb8badf513b6836298b1679928d7d8be6abf145608f32238a91680efcb7c0"
+    }
+  },
+  {
+    "id": "blueprint.set_font",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "set_font"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-content",
+      "topics": [
+        "set_font"
+      ],
+      "summary": "Set the font asset and size on a Text Block or Rich Text Block inside a Widget Blueprint.",
+      "whenToUse": [
+        "A text widget needs a specific font face or size."
+      ],
+      "whenNotToUse": [
+        "The target is not a text widget; the call reports success false."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "font": {
+            "type": "string",
+            "description": "Font asset path; the size is applied even when this is omitted."
+          },
+          "fontSize": {
+            "type": "number",
+            "description": "Font size."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath",
+          "slotName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "fontSize": {
+            "type": "number",
+            "description": "Font size."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "slotName",
+          "fontSize"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Set the font asset and size on a Text Block or Rich Text Block inside a Widget Blueprint.",
+        "input": {
+          "action": "set_font",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "TitleText",
+          "fontSize": 32
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "TitleText",
+          "fontSize": 32
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "set_font",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Targets the font face and size of a text widget, which the generic set_style path does not reach.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "a466c88b7cccae961c76c523d776edbe850465c750d1d855cd50e6f0cefa8818",
+      "content": "989e63ef1b72514763271da40164fe4621ffa10eee99654f9ba1f0ddac1e97e9"
+    }
+  },
+  {
+    "id": "blueprint.set_localization_key",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "set_localization_key"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-bindings",
+      "topics": [
+        "set_localization_key"
+      ],
+      "summary": "Assign the localization namespace and key a Text Block resolves its text through.",
+      "whenToUse": [
+        "A Text Block must carry an explicit localization key for translators."
+      ],
+      "whenNotToUse": [
+        "The text should read from a string table asset (use bind_localized_text)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "key": {
+            "type": "string",
+            "description": "Localization key assigned to the text widget."
+          },
+          "namespace": {
+            "type": "string",
+            "description": "Localization namespace owning the key."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath",
+          "slotName",
+          "key"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "namespace": {
+            "type": "string",
+            "description": "Localization namespace owning the key."
+          },
+          "key": {
+            "type": "string",
+            "description": "Localization key assigned to the text widget."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "slotName",
+          "namespace",
+          "key"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Assign the localization namespace and key a Text Block resolves its text through.",
+        "input": {
+          "action": "set_localization_key",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "TitleText",
+          "key": "Menu_Title",
+          "namespace": "Game"
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "TitleText",
+          "namespace": "Game",
+          "key": "Menu_Title"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "set_localization_key",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Stamps namespace/key metadata on the text itself rather than binding it to another asset or member.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "d99d8987c68910ee8ffb8eae11327fbb7fb22c276506708f439e456b5d0295c8",
+      "content": "2a597293857ca7a046b12955e710b3384c275314ae21a5fc758c92dfe9b9c30d"
+    }
+  },
+  {
+    "id": "blueprint.set_margin",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "set_margin"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-content",
+      "topics": [
+        "set_margin"
+      ],
+      "summary": "Set the slot margin on a widget held by a Horizontal Box, Vertical Box, Overlay, or Border.",
+      "whenToUse": [
+        "A widget needs spacing applied through its parent slot."
+      ],
+      "whenNotToUse": [
+        "The parent slot type carries no margin; the call reports success false."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "left": {
+            "type": "number",
+            "description": "Left margin in slate units."
+          },
+          "top": {
+            "type": "number",
+            "description": "Top margin in slate units."
+          },
+          "right": {
+            "type": "number",
+            "description": "Right margin in slate units."
+          },
+          "bottom": {
+            "type": "number",
+            "description": "Bottom margin in slate units."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath",
+          "slotName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "slotName": {
+            "type": "string",
+            "description": "Slot name for a child widget inside its parent."
+          },
+          "left": {
+            "type": "number",
+            "description": "Left margin in slate units."
+          },
+          "top": {
+            "type": "number",
+            "description": "Top margin in slate units."
+          },
+          "right": {
+            "type": "number",
+            "description": "Right margin in slate units."
+          },
+          "bottom": {
+            "type": "number",
+            "description": "Bottom margin in slate units."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "slotName",
+          "left",
+          "top",
+          "right",
+          "bottom"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Set the slot margin on a widget held by a Horizontal Box, Vertical Box, Overlay, or Border.",
+        "input": {
+          "action": "set_margin",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "TitleText",
+          "left": 8,
+          "top": 8,
+          "right": 8,
+          "bottom": 8
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "slotName": "TitleText",
+          "left": 8,
+          "top": 8,
+          "right": 8,
+          "bottom": 8
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "set_margin",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Writes the four margin edges on the parent slot, unlike the padding set by the panel actions.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "d731adc1e090973b3dfb36dec9580d405939ef59ff2bf79713a62d654dea0be2",
+      "content": "5d85bc7b1c4575a074bf52fc73a0f7c19c43535132d036aa93fe2471a69e5774"
     }
   },
   {
@@ -41672,6 +44949,232 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "0f689feb8ea87a2ec8c0d20dc22855b2dc886bbba59440f9b3c9035434884098",
       "content": "b47f3cb6de84371cb441a47c73e7307f278b37ef597fcee5f6bde2a3523da6b7"
+    }
+  },
+  {
+    "id": "blueprint.set_widget_binding",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_blueprint",
+        "action": "set_widget_binding"
+      }
+    ],
+    "discovery": {
+      "domain": "widget",
+      "family": "widget-bindings",
+      "topics": [
+        "set_widget_binding"
+      ],
+      "summary": "Bind any supported widget property to a Blueprint function, choosing the binding type from the property.",
+      "whenToUse": [
+        "One call should bind a property without picking the per-property bind action."
+      ],
+      "whenNotToUse": [
+        "The specific binding action is already known (use bind_text, bind_visibility, and so on)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The manage_blueprint action to execute."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "targetWidget": {
+            "type": "string",
+            "description": "Name of the widget inside the tree that receives the binding."
+          },
+          "property": {
+            "type": "string",
+            "description": "Widget property being bound; it selects the binding type."
+          },
+          "functionName": {
+            "type": "string",
+            "description": "Function name to add or remove."
+          }
+        },
+        "required": [
+          "action",
+          "widgetPath",
+          "targetWidget",
+          "property"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "Canonical /Game Widget Blueprint asset path."
+          },
+          "targetWidget": {
+            "type": "string",
+            "description": "Name of the widget inside the tree that receives the binding."
+          },
+          "property": {
+            "type": "string",
+            "description": "Widget property being bound; it selects the binding type."
+          },
+          "functionName": {
+            "type": "string",
+            "description": "Function name to add or remove."
+          },
+          "bindingType": {
+            "type": "string",
+            "description": "Binding kind the property resolved to (text, visibility, enabled, percent, or colorAndOpacity)."
+          },
+          "targetVerified": {
+            "type": "boolean",
+            "description": "Whether the named widget was found in the widget tree."
+          },
+          "saved": {
+            "type": "boolean",
+            "description": "Whether the Widget Blueprint was saved after binding."
+          }
+        },
+        "required": [
+          "success",
+          "widgetPath",
+          "targetWidget",
+          "property",
+          "functionName",
+          "bindingType",
+          "targetVerified",
+          "saved"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Bind any supported widget property to a Blueprint function, choosing the binding type from the property.",
+        "input": {
+          "action": "set_widget_binding",
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "targetWidget": "HealthBar",
+          "property": "Percent",
+          "functionName": "GetHealthPercent"
+        },
+        "output": {
+          "success": true,
+          "widgetPath": "/Game/UI/WBP_MainUI",
+          "targetWidget": "HealthBar",
+          "property": "Percent",
+          "functionName": "GetHealthPercent",
+          "bindingType": "percent",
+          "targetVerified": true,
+          "saved": true
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities",
+        "UMG"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_blueprint",
+      "dispatchAction": "set_widget_binding",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Selects the binding kind from the property name, where every other bind action fixes one kind up front.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_blueprint",
+      "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "eda6baa6116abdbc5aaeef6953884c8135606f2bcab63d331700daf6553b2fea",
+      "content": "adc086a32744752d3cd4dc3036c4e0ece17e61296c518185397d956b61490244"
     }
   },
   {
@@ -70869,7 +74372,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "schema": "c20ddb94762ed3d288b682c24e92dcbc167d5f38ff6b82b0c076021489e1c9f3",
       "content": "505a0ed712a8b4e73791b890c17b1d13c18e0c648565a10804b1b58b0a4da638"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
   {
     "id": "control_actor.attach_actor",
     "aliases": [],
@@ -74062,9 +77567,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "schema": "85d631a16f661a61a5e29fc254bc4fbf773fd62e813964d52140b5a2ad940e65",
       "content": "7423cdc8cae481cc4cb4f56a319ff6095d083dfb31f5da1596c06987842a3858"
     }
-  }
-]);
-const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
+  },
   {
     "id": "control_actor.get_actor_transform",
     "aliases": [],
@@ -107417,7 +110920,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "schema": "5ca4e216a63eff94fed234cf27d380324e0eb063c06e841cbbe045655f11a93d",
       "content": "774774552b25004756aaae744eab4319a0e660019b1da2f5037ee166f6d9194e"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
   {
     "id": "manage_ai.setup_perception",
     "aliases": [],
@@ -110477,9 +113982,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "schema": "8dcabf3317082d26595a0afec41529e4d67ee577c983eba4d96303a146768356",
       "content": "7b6aae3caf26e13cb0fa1e0f3d01b584ff9b6035f49281427903096ffa412c5a"
     }
-  }
-]);
-const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_audio.create_attenuation_settings",
     "aliases": [],
@@ -143272,7 +146775,9 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "schema": "44e2fac2fd7079bfb7751ead39d7f5a91aff8e9c10b582d50b27fdb7b17fbe27",
       "content": "e0905e601f3bf3ac3af382f0437deda36ff8333a7b2d04e921ffe3a6f3587fb5"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
   {
     "id": "manage_gas.set_effect_stacking",
     "aliases": [],
@@ -146357,9 +149862,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "schema": "ef92bc2e2144f385536b12717587bdb4c11bdeed122337a7cfadd244450b423b",
       "content": "b6ec93efc6d55a76c0d6d72208d34596b8d5c92a2a1c54b8841f56cb324226d1"
     }
-  }
-]);
-const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_geometry.create_arch",
     "aliases": [],
@@ -180857,7 +184360,9 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "schema": "7521280a2403dd1c809ec98bfa5475c422c6fe23de6ccecd338412483169dce3",
       "content": "7bc3fb596197fffb658e80131691eaec69dec39fffd85e288e109d3fb3831d9c"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
   {
     "id": "manage_level_structure.set_streaming_distance",
     "aliases": [],
@@ -183924,9 +187429,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "schema": "5f5707371c139015e9c4fc537be64ebfdff65f362fac3785c6ef573e39c6514d",
       "content": "745e3a362e76e17c0d46d9a515317c62450a55395dd2dd62871f70f6f5f39e39"
     }
-  }
-]);
-const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_networking.configure_net_driver",
     "aliases": [],
@@ -217162,7 +220665,9 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "schema": "78e8bd50f5f92c394286c1470c0cdf3f94a554785dcbeed996699709ac8bc3e5",
       "content": "c2307f2c9a2da8d1ef3fc280b98f8eb5e1ac264fc5ca89db16a796a446be2491"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
   {
     "id": "sequence.create",
     "aliases": [],
@@ -220471,9 +223976,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "schema": "5df299d027fab60ecc67e03b8accea75ace4327256438393ec55a47cc98d9f36",
       "content": "85f87aa848a9b2a0afe8ff057122ec74ddc1270dabf73e45c83a117123f2b874"
     }
-  }
-]);
-const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
+  },
   {
     "id": "sequence.mrq.add_render_pass",
     "aliases": [],
@@ -245229,12 +248732,28 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "0b3c38a2166c175af4feea1af68b745de54fafd797e7448f29bc09f8619ff77e"
   },
   {
+    "id": "blueprint.add_quest_tracker",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "add_quest_tracker",
+    "domain": "widget",
+    "schemaHash": "2f731d773e75dacb962c73163779ede032379fbb2cdea3343e01cf3ec0d2b81c",
+    "contentHash": "bd117005ea8d4363de19b2a75b7d270d8b7e9295e64587fc750277afc4080085"
+  },
+  {
     "id": "blueprint.add_rich_text_block",
     "parentTool": "manage_blueprint",
     "dispatchAction": "add_rich_text_block",
     "domain": "widget",
     "schemaHash": "7ad2c842cf9be4f81faf5330a98cd484bd0c28f3125989c226c822a5df0a403c",
     "contentHash": "01649e7b7104698aefcbd441631f88965f4a484cf6e5f76638634d76b3bba932"
+  },
+  {
+    "id": "blueprint.add_safe_zone",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "add_safe_zone",
+    "domain": "widget",
+    "schemaHash": "72f11bcf276df3deaaa04cdc26d2d2c3751b1c7e7086adf419cf3166481056fa",
+    "contentHash": "c974780a54c263c9bfbbed5d51f11fa20fc875d352963c7c7b582ce48a8a6c53"
   },
   {
     "id": "blueprint.add_scale_box",
@@ -245275,6 +248794,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "widget",
     "schemaHash": "5a750d2f1f812ac35845c765cb574da307b74b557a39be0d1a8d8341527604b3",
     "contentHash": "6dc2e7c62e817aae3e969c1d4d76c9f38d5b4429053c78e0c64b6167e76136b3"
+  },
+  {
+    "id": "blueprint.add_spacer",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "add_spacer",
+    "domain": "widget",
+    "schemaHash": "3751034e10a468093a5276c630aed3b91940f2e57b1abb22a3cfb32c1cbc65d3",
+    "contentHash": "90d9b1d8cb284059d663b1815626c3a64db2b635b6bdccf66ffd466563cfd8ee"
   },
   {
     "id": "blueprint.add_spin_box",
@@ -245333,6 +248860,22 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "9ba00ebe50b2b14f409233402672f6e1cc6c55f3d0c2afea7ae65a787b9c8856"
   },
   {
+    "id": "blueprint.add_widget_component",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "add_widget_component",
+    "domain": "widget",
+    "schemaHash": "475cca6c61b4bc00f0cf737e7b20ce59f0dcc38df79d1b6e09f6ceabc5616560",
+    "contentHash": "0c4aceb34d545a635dbb5d53393b26f3efc667c6772a34a72073ab3ed52fae9b"
+  },
+  {
+    "id": "blueprint.add_widget_switcher",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "add_widget_switcher",
+    "domain": "widget",
+    "schemaHash": "6ae731c0ed9b9707a6d90980fbbd04960854ee62886aaa3377e0799d8286073b",
+    "contentHash": "910e9233fc34aec6923e354f85907f1ae4b10f805e6ca73aee5eca439726293e"
+  },
+  {
     "id": "blueprint.add_wrap_box",
     "parentTool": "manage_blueprint",
     "dispatchAction": "add_wrap_box",
@@ -245355,6 +248898,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "widget",
     "schemaHash": "64a3c16a1b0b700d8439877347722336e4976c395c09aa3df32306193211646b",
     "contentHash": "a5830e768cc17030c2c161364de9c7cd038889715f5ce96c5a116c76d4ad98fa"
+  },
+  {
+    "id": "blueprint.bind_localized_text",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "bind_localized_text",
+    "domain": "widget",
+    "schemaHash": "581457d6a8e2afaf35bd810ebf879d64486d5e562cd8294bdeecb2020842445d",
+    "contentHash": "53a5a15902d1db366b9125e685b4ecca4a8ad6cfc7897432d623c528381a971d"
   },
   {
     "id": "blueprint.bind_on_clicked",
@@ -245435,6 +248986,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "blueprint",
     "schemaHash": "be3981f689be945604cbbb9d7ae11c1df23b6f7a7371bbf689617bf63a6ff51c",
     "contentHash": "d939a26b5afa0d28fa234eb0e0d6878870e92f89af869c8634030b91d8d76d22"
+  },
+  {
+    "id": "blueprint.create_credits_screen",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "create_credits_screen",
+    "domain": "widget",
+    "schemaHash": "560c0079577e71a1f09243208ebb7300a3517664f7480e2de7a07d8d1740dadd",
+    "contentHash": "a992f2813701b23923ef7dffa8b1fb64c0aaa2324b500800be8db7541ae2b8a7"
   },
   {
     "id": "blueprint.create_dialog_widget",
@@ -245525,6 +249084,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "a444b25627b7f77865db474931f7d73059991f68c9db5a70c0f34f4d0b7b4191"
   },
   {
+    "id": "blueprint.create_shop_ui",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "create_shop_ui",
+    "domain": "widget",
+    "schemaHash": "3ddd5ed0f7f91d6de512c69faef057b36aacf8e2bb7a50f1caec1cdfa0d804b4",
+    "contentHash": "2a48bffbcff3a770edcba4337af86221a98641a3efbe89f63bee55bdbbc63cc9"
+  },
+  {
     "id": "blueprint.create_struct_make_break_nodes",
     "parentTool": "manage_blueprint",
     "dispatchAction": "create_struct_make_break_nodes",
@@ -245547,6 +249114,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "widget",
     "schemaHash": "1bc996899e845c5c26c212fdb1188d39059ea009bd6423a06e22e95970494311",
     "contentHash": "728bb13e4cbfaf0dfb45a5267c16eb695abe3aa23d86e79b1e8d458485e9a474"
+  },
+  {
+    "id": "blueprint.delete_animation",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "delete_animation",
+    "domain": "widget",
+    "schemaHash": "2f2714cf72c28fc07f6a5edc2c4f64b41874870c69fc09738135b4f70b5d289a",
+    "contentHash": "6da87c2139d2f80c8f38e940187d4133e49ae5999277ba80f89f3c463043e4e9"
   },
   {
     "id": "blueprint.delete_node",
@@ -245621,6 +249196,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "510e92917ae1c9a06d1bd8c55c468a0f5e8a1b37f8b3915d338bc4aafdd8aac9"
   },
   {
+    "id": "blueprint.get_widget_slot_info",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "get_widget_slot_info",
+    "domain": "widget",
+    "schemaHash": "4a5b61985edf1deeae3da7a6099033254749dc3ddc3957b7898632c3b3f94e52",
+    "contentHash": "83d8dbabcfbc38a3bbc2ff6affc45060bc1e6c24e8bb703f6fac1a80af565b1a"
+  },
+  {
     "id": "blueprint.list_node_types",
     "parentTool": "manage_blueprint",
     "dispatchAction": "list_node_types",
@@ -245685,6 +249268,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "a9124cfe0d3383fd85dc343529c43936585b3455d817c0c20a489f51580d6d63"
   },
   {
+    "id": "blueprint.remove_widget",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "remove_widget",
+    "domain": "widget",
+    "schemaHash": "3b01ffd6f5f956259f49c54c8cb16785cbe22a98fcc92de3a5674e7746595141",
+    "contentHash": "234ccc138873ea5279ea77e41f87a9ab1ba83a084ddd8999c06e3e98a8c1a9ba"
+  },
+  {
     "id": "blueprint.rename_variable",
     "parentTool": "manage_blueprint",
     "dispatchAction": "rename_variable",
@@ -245693,12 +249284,28 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "307b0b248d8bc4617bc6f767cf3b52f5cccbdea2c6885c165e4862651a7dcd28"
   },
   {
+    "id": "blueprint.rename_widget",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "rename_widget",
+    "domain": "widget",
+    "schemaHash": "147cd38cb306c813dbbbc64eeeffb2983516fe9832347a2f07a53f4f4016350a",
+    "contentHash": "0de731c4f99c7ea601e4005ac80d61478ab6b656affdb9d4a1c4a57815fa6213"
+  },
+  {
     "id": "blueprint.reparent_scs_component",
     "parentTool": "manage_blueprint",
     "dispatchAction": "reparent_scs_component",
     "domain": "blueprint",
     "schemaHash": "3d4a2c661dc6fff8b523abe1d00d889425ec7142383979b99a0c08ca229b249f",
     "contentHash": "2698208ff238dd83293f9053f58e4d3d9b590bf018a8ab421a5851a6004c9359"
+  },
+  {
+    "id": "blueprint.reparent_widget",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "reparent_widget",
+    "domain": "widget",
+    "schemaHash": "08b9b1776813e5775099db17adf2b5ec199daa27822e09b929309c6e49636e09",
+    "contentHash": "04b6237ab165200345ebc68dda21f35a70de441e9be1599b6055c861442f1032"
   },
   {
     "id": "blueprint.set_alignment",
@@ -245739,6 +249346,30 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "blueprint",
     "schemaHash": "f089c484f3c3acb73387cc890e4fa8080afb12719cef6570cf163d162a6a7f15",
     "contentHash": "f4acb8badf513b6836298b1679928d7d8be6abf145608f32238a91680efcb7c0"
+  },
+  {
+    "id": "blueprint.set_font",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "set_font",
+    "domain": "widget",
+    "schemaHash": "a466c88b7cccae961c76c523d776edbe850465c750d1d855cd50e6f0cefa8818",
+    "contentHash": "989e63ef1b72514763271da40164fe4621ffa10eee99654f9ba1f0ddac1e97e9"
+  },
+  {
+    "id": "blueprint.set_localization_key",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "set_localization_key",
+    "domain": "widget",
+    "schemaHash": "d99d8987c68910ee8ffb8eae11327fbb7fb22c276506708f439e456b5d0295c8",
+    "contentHash": "2a597293857ca7a046b12955e710b3384c275314ae21a5fc758c92dfe9b9c30d"
+  },
+  {
+    "id": "blueprint.set_margin",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "set_margin",
+    "domain": "widget",
+    "schemaHash": "d731adc1e090973b3dfb36dec9580d405939ef59ff2bf79713a62d654dea0be2",
+    "contentHash": "5d85bc7b1c4575a074bf52fc73a0f7c19c43535132d036aa93fe2471a69e5774"
   },
   {
     "id": "blueprint.set_metadata",
@@ -245835,6 +249466,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "widget",
     "schemaHash": "0f689feb8ea87a2ec8c0d20dc22855b2dc886bbba59440f9b3c9035434884098",
     "contentHash": "b47f3cb6de84371cb441a47c73e7307f278b37ef597fcee5f6bde2a3523da6b7"
+  },
+  {
+    "id": "blueprint.set_widget_binding",
+    "parentTool": "manage_blueprint",
+    "dispatchAction": "set_widget_binding",
+    "domain": "widget",
+    "schemaHash": "eda6baa6116abdbc5aaeef6953884c8135606f2bcab63d331700daf6553b2fea",
+    "contentHash": "adc086a32744752d3cd4dc3036c4e0ece17e61296c518185397d956b61490244"
   },
   {
     "id": "blueprint.set_widget_parent_class",
@@ -256508,6 +260147,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "widget",
     "widget-content"
   ],
+  "blueprint.add_quest_tracker": [
+    "add",
+    "add_quest_tracker",
+    "blueprint",
+    "blueprint.add_quest_tracker",
+    "hud",
+    "manage_blueprint",
+    "quest",
+    "tracker",
+    "widget",
+    "widget-game-ui"
+  ],
   "blueprint.add_rich_text_block": [
     "add",
     "add_rich_text_block",
@@ -256520,6 +260171,24 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "text",
     "widget",
     "widget-content"
+  ],
+  "blueprint.add_safe_zone": [
+    "add",
+    "add_safe_zone",
+    "area",
+    "blueprint",
+    "blueprint.add_safe_zone",
+    "child",
+    "content",
+    "manage_blueprint",
+    "platform",
+    "respects",
+    "safe",
+    "the",
+    "titlesafe",
+    "widget",
+    "widget-panels",
+    "zone"
   ],
   "blueprint.add_scale_box": [
     "add",
@@ -256594,6 +260263,22 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "slider",
     "widget",
     "widget-content"
+  ],
+  "blueprint.add_spacer": [
+    "add",
+    "add_spacer",
+    "blueprint",
+    "blueprint.add_spacer",
+    "empty",
+    "fixed",
+    "inside",
+    "layout",
+    "manage_blueprint",
+    "reserve",
+    "space",
+    "spacer",
+    "widget",
+    "widget-panels"
   ],
   "blueprint.add_spin_box": [
     "add",
@@ -256691,6 +260376,34 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "widget",
     "widget-panels"
   ],
+  "blueprint.add_widget_component": [
+    "add",
+    "add_widget_component",
+    "any",
+    "blueprint",
+    "blueprint.add_widget_component",
+    "class",
+    "manage_blueprint",
+    "name",
+    "umg",
+    "widget",
+    "widget-content"
+  ],
+  "blueprint.add_widget_switcher": [
+    "add",
+    "add_widget_switcher",
+    "blueprint",
+    "blueprint.add_widget_switcher",
+    "child",
+    "index",
+    "manage_blueprint",
+    "one",
+    "show",
+    "switcher",
+    "time",
+    "widget",
+    "widget-panels"
+  ],
   "blueprint.add_wrap_box": [
     "add",
     "add_wrap_box",
@@ -256731,6 +260444,23 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "property",
     "the",
     "variable",
+    "widget",
+    "widget-bindings"
+  ],
+  "blueprint.bind_localized_text": [
+    "active",
+    "bind_localized_text",
+    "block",
+    "blueprint.bind_localized_text",
+    "entry",
+    "follows",
+    "its",
+    "localization",
+    "manage_blueprint",
+    "point",
+    "stringtable",
+    "text",
+    "the",
     "widget",
     "widget-bindings"
   ],
@@ -256869,6 +260599,21 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage_blueprint",
     "path",
     "type",
+    "with"
+  ],
+  "blueprint.create_credits_screen": [
+    "blueprint",
+    "blueprint.create_credits_screen",
+    "create",
+    "create_credits_screen",
+    "credits",
+    "layout",
+    "manage_blueprint",
+    "prepopulated",
+    "screen",
+    "scrolling",
+    "widget",
+    "widget-game-ui",
     "with"
   ],
   "blueprint.create_dialog_widget": [
@@ -257026,6 +260771,21 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "widget-templates",
     "with"
   ],
+  "blueprint.create_shop_ui": [
+    "blueprint",
+    "blueprint.create_shop_ui",
+    "configurable",
+    "create",
+    "create_shop_ui",
+    "grid",
+    "item",
+    "manage_blueprint",
+    "prepopulated",
+    "shop",
+    "widget",
+    "widget-game-ui",
+    "with"
+  ],
   "blueprint.create_struct_make_break_nodes": [
     "blueprint",
     "blueprint.create_struct_make_break_nodes",
@@ -257069,6 +260829,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "widget",
     "widget-lifecycle",
     "with"
+  ],
+  "blueprint.delete_animation": [
+    "animation",
+    "blueprint",
+    "blueprint.delete_animation",
+    "delete",
+    "delete_animation",
+    "from",
+    "manage_blueprint",
+    "named",
+    "widget",
+    "widget-animation"
   ],
   "blueprint.delete_node": [
     "blueprint",
@@ -257204,6 +260976,22 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "widget",
     "widget-info"
   ],
+  "blueprint.get_widget_slot_info": [
+    "and",
+    "blueprint",
+    "blueprint.get_widget_slot_info",
+    "geometry",
+    "get_widget_slot_info",
+    "inside",
+    "manage_blueprint",
+    "one",
+    "parent",
+    "read",
+    "slot",
+    "the",
+    "widget",
+    "widget-info"
+  ],
   "blueprint.list_node_types": [
     "add_node",
     "available",
@@ -257315,6 +261103,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "variable",
     "variables"
   ],
+  "blueprint.remove_widget": [
+    "blueprint",
+    "blueprint.remove_widget",
+    "from",
+    "manage_blueprint",
+    "remove",
+    "remove_widget",
+    "the",
+    "tree",
+    "widget",
+    "widget-lifecycle"
+  ],
   "blueprint.rename_variable": [
     "blueprint",
     "blueprint.rename_variable",
@@ -257324,6 +261124,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "rename_variable",
     "variable",
     "variables"
+  ],
+  "blueprint.rename_widget": [
+    "blueprint",
+    "blueprint.rename_widget",
+    "inside",
+    "manage_blueprint",
+    "rename",
+    "rename_widget",
+    "the",
+    "tree",
+    "widget",
+    "widget-lifecycle"
   ],
   "blueprint.reparent_scs_component": [
     "blueprint",
@@ -257338,6 +261150,19 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "scs",
     "the",
     "tree"
+  ],
+  "blueprint.reparent_widget": [
+    "blueprint",
+    "blueprint.reparent_widget",
+    "different",
+    "inside",
+    "manage_blueprint",
+    "move",
+    "parent",
+    "reparent_widget",
+    "under",
+    "widget",
+    "widget-lifecycle"
   ],
   "blueprint.set_alignment": [
     "alignment",
@@ -257413,6 +261238,59 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "the",
     "value",
     "variables"
+  ],
+  "blueprint.set_font": [
+    "and",
+    "asset",
+    "block",
+    "blueprint",
+    "blueprint.set_font",
+    "font",
+    "inside",
+    "manage_blueprint",
+    "rich",
+    "set",
+    "set_font",
+    "size",
+    "text",
+    "the",
+    "widget",
+    "widget-content"
+  ],
+  "blueprint.set_localization_key": [
+    "and",
+    "assign",
+    "block",
+    "blueprint.set_localization_key",
+    "its",
+    "key",
+    "localization",
+    "manage_blueprint",
+    "namespace",
+    "resolves",
+    "set_localization_key",
+    "text",
+    "the",
+    "through",
+    "widget",
+    "widget-bindings"
+  ],
+  "blueprint.set_margin": [
+    "blueprint.set_margin",
+    "border",
+    "box",
+    "held",
+    "horizontal",
+    "manage_blueprint",
+    "margin",
+    "overlay",
+    "set",
+    "set_margin",
+    "slot",
+    "the",
+    "vertical",
+    "widget",
+    "widget-content"
   ],
   "blueprint.set_metadata": [
     "arbitrary",
@@ -257582,6 +261460,24 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "visible",
     "widget",
     "widget-layout"
+  ],
+  "blueprint.set_widget_binding": [
+    "any",
+    "bind",
+    "binding",
+    "blueprint",
+    "blueprint.set_widget_binding",
+    "choosing",
+    "from",
+    "function",
+    "manage_blueprint",
+    "property",
+    "set_widget_binding",
+    "supported",
+    "the",
+    "type",
+    "widget",
+    "widget-bindings"
   ],
   "blueprint.set_widget_parent_class": [
     "blueprint",
@@ -277889,7 +281785,7 @@ export const DOCS_DATA = [
     "name": "manage_blueprint",
     "category": "core",
     "description": "Create Blueprints and UMG widgets, add SCS/UI components, set defaults, and manipulate Blueprint graphs, bindings, and widget layouts.",
-    "actionCount": 104
+    "actionCount": 121
   },
   {
     "name": "manage_character",
@@ -278578,9 +282474,17 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "fd6d933fbf92d2d059cdd96c3965360e4aadb28c112e2b10fc2fedafa32b7703",
     "content": "0b3c38a2166c175af4feea1af68b745de54fafd797e7448f29bc09f8619ff77e"
   },
+  "blueprint.add_quest_tracker": {
+    "schema": "2f731d773e75dacb962c73163779ede032379fbb2cdea3343e01cf3ec0d2b81c",
+    "content": "bd117005ea8d4363de19b2a75b7d270d8b7e9295e64587fc750277afc4080085"
+  },
   "blueprint.add_rich_text_block": {
     "schema": "7ad2c842cf9be4f81faf5330a98cd484bd0c28f3125989c226c822a5df0a403c",
     "content": "01649e7b7104698aefcbd441631f88965f4a484cf6e5f76638634d76b3bba932"
+  },
+  "blueprint.add_safe_zone": {
+    "schema": "72f11bcf276df3deaaa04cdc26d2d2c3751b1c7e7086adf419cf3166481056fa",
+    "content": "c974780a54c263c9bfbbed5d51f11fa20fc875d352963c7c7b582ce48a8a6c53"
   },
   "blueprint.add_scale_box": {
     "schema": "10b3ca1b3cd4b9e730d75983e6be3388defc826b1f2bd93878c2d579ceee2852",
@@ -278601,6 +282505,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "blueprint.add_slider": {
     "schema": "5a750d2f1f812ac35845c765cb574da307b74b557a39be0d1a8d8341527604b3",
     "content": "6dc2e7c62e817aae3e969c1d4d76c9f38d5b4429053c78e0c64b6167e76136b3"
+  },
+  "blueprint.add_spacer": {
+    "schema": "3751034e10a468093a5276c630aed3b91940f2e57b1abb22a3cfb32c1cbc65d3",
+    "content": "90d9b1d8cb284059d663b1815626c3a64db2b635b6bdccf66ffd466563cfd8ee"
   },
   "blueprint.add_spin_box": {
     "schema": "4c215875984588b0093092dcab5a001a280cf84891715e0212d14d0df79e6fd4",
@@ -278630,6 +282538,14 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "03a5facf76ec04de208ac2200d36a29496a7de833e5a50a36fa2a48c7f3d9763",
     "content": "9ba00ebe50b2b14f409233402672f6e1cc6c55f3d0c2afea7ae65a787b9c8856"
   },
+  "blueprint.add_widget_component": {
+    "schema": "475cca6c61b4bc00f0cf737e7b20ce59f0dcc38df79d1b6e09f6ceabc5616560",
+    "content": "0c4aceb34d545a635dbb5d53393b26f3efc667c6772a34a72073ab3ed52fae9b"
+  },
+  "blueprint.add_widget_switcher": {
+    "schema": "6ae731c0ed9b9707a6d90980fbbd04960854ee62886aaa3377e0799d8286073b",
+    "content": "910e9233fc34aec6923e354f85907f1ae4b10f805e6ca73aee5eca439726293e"
+  },
   "blueprint.add_wrap_box": {
     "schema": "0be1a7b629bc71ba87bb4d42dfeaee379cdf2bed4d603b5099c5c0a0c798e49a",
     "content": "b8b99bed02568c8e16de3027f4e37f72b74e04e8e747d44f5ccedb9237fe97a7"
@@ -278641,6 +282557,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "blueprint.bind_enabled": {
     "schema": "64a3c16a1b0b700d8439877347722336e4976c395c09aa3df32306193211646b",
     "content": "a5830e768cc17030c2c161364de9c7cd038889715f5ce96c5a116c76d4ad98fa"
+  },
+  "blueprint.bind_localized_text": {
+    "schema": "581457d6a8e2afaf35bd810ebf879d64486d5e562cd8294bdeecb2020842445d",
+    "content": "53a5a15902d1db366b9125e685b4ecca4a8ad6cfc7897432d623c528381a971d"
   },
   "blueprint.bind_on_clicked": {
     "schema": "64a3c16a1b0b700d8439877347722336e4976c395c09aa3df32306193211646b",
@@ -278681,6 +282601,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "blueprint.create_blueprint": {
     "schema": "be3981f689be945604cbbb9d7ae11c1df23b6f7a7371bbf689617bf63a6ff51c",
     "content": "d939a26b5afa0d28fa234eb0e0d6878870e92f89af869c8634030b91d8d76d22"
+  },
+  "blueprint.create_credits_screen": {
+    "schema": "560c0079577e71a1f09243208ebb7300a3517664f7480e2de7a07d8d1740dadd",
+    "content": "a992f2813701b23923ef7dffa8b1fb64c0aaa2324b500800be8db7541ae2b8a7"
   },
   "blueprint.create_dialog_widget": {
     "schema": "462b6adefb65a7912095b7bc245d78596712f9e72381bbeb51650628fe34936b",
@@ -278726,6 +282650,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "013c97a309e7c7ced68dbd0dba993321b1a6619aad9784fb0e859722cb8f4b0a",
     "content": "a444b25627b7f77865db474931f7d73059991f68c9db5a70c0f34f4d0b7b4191"
   },
+  "blueprint.create_shop_ui": {
+    "schema": "3ddd5ed0f7f91d6de512c69faef057b36aacf8e2bb7a50f1caec1cdfa0d804b4",
+    "content": "2a48bffbcff3a770edcba4337af86221a98641a3efbe89f63bee55bdbbc63cc9"
+  },
   "blueprint.create_struct_make_break_nodes": {
     "schema": "5fa37c4ab27171b33ab1acf443884571b4d4bd39699998845e879ff1277fdbbb",
     "content": "fdd1a060daaab848d363dd370a291a6c2baebb505c72afaa3422811927fcb532"
@@ -278737,6 +282665,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "blueprint.create_widget_blueprint": {
     "schema": "1bc996899e845c5c26c212fdb1188d39059ea009bd6423a06e22e95970494311",
     "content": "728bb13e4cbfaf0dfb45a5267c16eb695abe3aa23d86e79b1e8d458485e9a474"
+  },
+  "blueprint.delete_animation": {
+    "schema": "2f2714cf72c28fc07f6a5edc2c4f64b41874870c69fc09738135b4f70b5d289a",
+    "content": "6da87c2139d2f80c8f38e940187d4133e49ae5999277ba80f89f3c463043e4e9"
   },
   "blueprint.delete_node": {
     "schema": "869c2ac348483e9307125b4238abea90906b4d4b0d91ebba43e4a2cf1820ae0d",
@@ -278774,6 +282706,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "8e8e036d6f5f0c4cf79b1f9b78cd8c41bccbcff6773cc05d0362c7cf5cd02f57",
     "content": "510e92917ae1c9a06d1bd8c55c468a0f5e8a1b37f8b3915d338bc4aafdd8aac9"
   },
+  "blueprint.get_widget_slot_info": {
+    "schema": "4a5b61985edf1deeae3da7a6099033254749dc3ddc3957b7898632c3b3f94e52",
+    "content": "83d8dbabcfbc38a3bbc2ff6affc45060bc1e6c24e8bb703f6fac1a80af565b1a"
+  },
   "blueprint.list_node_types": {
     "schema": "6f165f71b51b6e1fb5ae785ad934115562c2c9095f176cab9875a0a9c18c3b99",
     "content": "8a7bbd7b176c061a4e42f314ed0715ef494e746b644c1304b76d7c0e24ec8243"
@@ -278806,13 +282742,25 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "529671dd5d6d7a80b3eeceef384640f237a85dae52c04cb74bc91bdffe743823",
     "content": "a9124cfe0d3383fd85dc343529c43936585b3455d817c0c20a489f51580d6d63"
   },
+  "blueprint.remove_widget": {
+    "schema": "3b01ffd6f5f956259f49c54c8cb16785cbe22a98fcc92de3a5674e7746595141",
+    "content": "234ccc138873ea5279ea77e41f87a9ab1ba83a084ddd8999c06e3e98a8c1a9ba"
+  },
   "blueprint.rename_variable": {
     "schema": "18186f5862b2cc808f667cffa1d1c56ffc8fbcedccfe0146d6fbc5039c17ba4d",
     "content": "307b0b248d8bc4617bc6f767cf3b52f5cccbdea2c6885c165e4862651a7dcd28"
   },
+  "blueprint.rename_widget": {
+    "schema": "147cd38cb306c813dbbbc64eeeffb2983516fe9832347a2f07a53f4f4016350a",
+    "content": "0de731c4f99c7ea601e4005ac80d61478ab6b656affdb9d4a1c4a57815fa6213"
+  },
   "blueprint.reparent_scs_component": {
     "schema": "3d4a2c661dc6fff8b523abe1d00d889425ec7142383979b99a0c08ca229b249f",
     "content": "2698208ff238dd83293f9053f58e4d3d9b590bf018a8ab421a5851a6004c9359"
+  },
+  "blueprint.reparent_widget": {
+    "schema": "08b9b1776813e5775099db17adf2b5ec199daa27822e09b929309c6e49636e09",
+    "content": "04b6237ab165200345ebc68dda21f35a70de441e9be1599b6055c861442f1032"
   },
   "blueprint.set_alignment": {
     "schema": "bc618a56f555036674e5f053d82e769e9d8b1f5ac49fa131d9dfc5de1f2e692c",
@@ -278833,6 +282781,18 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "blueprint.set_default": {
     "schema": "f089c484f3c3acb73387cc890e4fa8080afb12719cef6570cf163d162a6a7f15",
     "content": "f4acb8badf513b6836298b1679928d7d8be6abf145608f32238a91680efcb7c0"
+  },
+  "blueprint.set_font": {
+    "schema": "a466c88b7cccae961c76c523d776edbe850465c750d1d855cd50e6f0cefa8818",
+    "content": "989e63ef1b72514763271da40164fe4621ffa10eee99654f9ba1f0ddac1e97e9"
+  },
+  "blueprint.set_localization_key": {
+    "schema": "d99d8987c68910ee8ffb8eae11327fbb7fb22c276506708f439e456b5d0295c8",
+    "content": "2a597293857ca7a046b12955e710b3384c275314ae21a5fc758c92dfe9b9c30d"
+  },
+  "blueprint.set_margin": {
+    "schema": "d731adc1e090973b3dfb36dec9580d405939ef59ff2bf79713a62d654dea0be2",
+    "content": "5d85bc7b1c4575a074bf52fc73a0f7c19c43535132d036aa93fe2471a69e5774"
   },
   "blueprint.set_metadata": {
     "schema": "52072063d55bf8f5e158a46972659973dfe09cf0a3094654f98b6fd9dda0fe7a",
@@ -278881,6 +282841,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "blueprint.set_visibility": {
     "schema": "0f689feb8ea87a2ec8c0d20dc22855b2dc886bbba59440f9b3c9035434884098",
     "content": "b47f3cb6de84371cb441a47c73e7307f278b37ef597fcee5f6bde2a3523da6b7"
+  },
+  "blueprint.set_widget_binding": {
+    "schema": "eda6baa6116abdbc5aaeef6953884c8135606f2bcab63d331700daf6553b2fea",
+    "content": "adc086a32744752d3cd4dc3036c4e0ece17e61296c518185397d956b61490244"
   },
   "blueprint.set_widget_parent_class": {
     "schema": "b11c620cd29def4aa109070cfc5c70ba721c2092fea58aa21d95673d3f6296ea",

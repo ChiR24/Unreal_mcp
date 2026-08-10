@@ -53,7 +53,7 @@ describe('promoted WidgetAuthoring routes dispatch on both surfaces', () => {
 
     expect(
       missing,
-      `absent from WIDGET_AUTHORING_ACTIONS, so the consolidated handler would `
+      'absent from WIDGET_AUTHORING_ACTIONS, so the consolidated handler would '
       + `fall through to the Blueprint domain:\n${missing.join('\n')}`,
     ).toEqual([]);
   });
@@ -64,7 +64,7 @@ describe('promoted WidgetAuthoring routes dispatch on both surfaces', () => {
 
     expect(
       missing,
-      `absent from WidgetAuthoring(), so IsWidgetAuthoringAction() is false and `
+      'absent from WidgetAuthoring(), so IsWidgetAuthoringAction() is false and '
       + `manage_blueprint never forwards to HandleManageWidgetAuthoringAction:\n${missing.join('\n')}`,
     ).toEqual([]);
   });

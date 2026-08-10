@@ -8,7 +8,7 @@
  * its parent slot). Required: widgetPath.
  */
 import type { CapabilityRecordSource } from '../../index.js';
-import { buildRecord, WIDGET_PLUGINS } from './helpers.js';
+import { buildPromotedRecord, buildRecord, WIDGET_PLUGINS } from './helpers.js';
 import { P } from './properties.js';
 
 const FAMILY = 'widget-panels';
@@ -49,4 +49,61 @@ export const WIDGET_PANELS_RECORDS: readonly CapabilityRecordSource[] = [
   panel('add_size_box', 'blueprint.add_size_box', 'Add a Size Box to a Widget Blueprint for explicit child size override.', { widthOverride: P.widthOverride, heightOverride: P.heightOverride, minDesiredWidth: P.minDesiredWidth, minDesiredHeight: P.minDesiredHeight }),
   panel('add_scale_box', 'blueprint.add_scale_box', 'Add a Scale Box to a Widget Blueprint for scalable child content.', { stretch: P.stretch, stretchDirection: P.stretchDirection, userSpecifiedScale: P.userSpecifiedScale }),
   panel('add_border', 'blueprint.add_border', 'Add a Border widget to a Widget Blueprint for framed/decorative child layout.', { brushColor: P.brushColor, padding: P.padding }),
+  buildPromotedRecord({
+    id: 'blueprint.add_spacer',
+    action: 'add_spacer',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Add a Spacer to a Widget Blueprint to reserve fixed empty space inside a layout.',
+    whenToUse: ['Fixed empty space must separate sibling widgets in a box or panel.'],
+    whenNotToUse: ['The gap should belong to an existing widget (set its padding instead).'],
+    inputProps: { action: P.action, widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, sizeX: P.sizeX, sizeY: P.sizeY },
+    required: ['action', 'widgetPath'],
+    outputProps: { widgetPath: P.widgetPath, slotName: P.slotName, sizeX: P.sizeX, sizeY: P.sizeY },
+    outputRequired: ['widgetPath', 'slotName', 'sizeX', 'sizeY'],
+    effect: 'write',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: WIDGET_PLUGINS,
+    exampleInput: { action: 'add_spacer', widgetPath: '/Game/UI/WBP_MainUI', slotName: 'Spacer_0', sizeX: 100, sizeY: 24 },
+    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', slotName: 'Spacer_0', sizeX: 100, sizeY: 24 },
+  }, 'Reserves fixed layout space rather than hosting children, so it stays distinct from the panel containers.'),
+  buildPromotedRecord({
+    id: 'blueprint.add_safe_zone',
+    action: 'add_safe_zone',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Add a Safe Zone to a Widget Blueprint so child content respects the platform title-safe area.',
+    whenToUse: ['HUD content must stay inside the title-safe area on console or TV output.'],
+    whenNotToUse: ['The layout is desktop-only and no safe-area inset applies.'],
+    inputProps: { action: P.action, widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot },
+    required: ['action', 'widgetPath'],
+    outputProps: { widgetPath: P.widgetPath, slotName: P.slotName },
+    outputRequired: ['widgetPath', 'slotName'],
+    effect: 'write',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: WIDGET_PLUGINS,
+    exampleInput: { action: 'add_safe_zone', widgetPath: '/Game/UI/WBP_MainUI', slotName: 'SafeZone_0' },
+    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', slotName: 'SafeZone_0' },
+  }, 'Applies a platform safe-area inset to its children; no other panel container performs that adjustment.'),
+  buildPromotedRecord({
+    id: 'blueprint.add_widget_switcher',
+    action: 'add_widget_switcher',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Add a Widget Switcher to a Widget Blueprint to show one child at a time by index.',
+    whenToUse: ['Several pages or tabs must occupy one region with only one visible at a time.'],
+    whenNotToUse: ['All children should be visible together (use an overlay or a box).'],
+    inputProps: { action: P.action, widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, activeIndex: P.activeIndex },
+    required: ['action', 'widgetPath'],
+    outputProps: { widgetPath: P.widgetPath, slotName: P.slotName, activeIndex: P.activeIndex },
+    outputRequired: ['widgetPath', 'slotName', 'activeIndex'],
+    effect: 'write',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: WIDGET_PLUGINS,
+    exampleInput: { action: 'add_widget_switcher', widgetPath: '/Game/UI/WBP_MainUI', slotName: 'PageSwitcher', activeIndex: 0 },
+    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', slotName: 'PageSwitcher', activeIndex: 0 },
+  }, 'Shows exactly one child selected by index, which no other panel container does.'),
 ];

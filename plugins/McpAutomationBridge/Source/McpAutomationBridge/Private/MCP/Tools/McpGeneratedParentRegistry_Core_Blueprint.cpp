@@ -12,6 +12,7 @@ public:
 	{
 		FMcpSchemaBuilder Schema;
 			Schema.String(TEXT("actionPath"), TEXT("Enhanced Input action asset path accepted in place of inputActionPath."));
+			Schema.Number(TEXT("activeIndex"), TEXT("Index shown first by a widget switcher."));
 			Schema.FreeformObject(TEXT("alignment"), TEXT("Widget alignment (0-1)."));
 			Schema.Bool(TEXT("alwaysShowScrollbar"), TEXT("Always show scrollbar."));
 			Schema.FreeformObject(TEXT("anchorMax"), TEXT("Maximum anchor point (0-1)."));
@@ -24,12 +25,14 @@ public:
 			Schema.String(TEXT("bindingSource"), TEXT("Variable or function name to bind to."));
 			Schema.String(TEXT("blueprintPath"), TEXT("Canonical /Game Blueprint asset path."));
 			Schema.String(TEXT("blueprintType"), TEXT("Blueprint type hint for creation."));
+			Schema.Number(TEXT("bottom"), TEXT("Bottom margin in slate units."));
 			Schema.FreeformObject(TEXT("brushColor"), TEXT("Border brush color."));
 			Schema.FreeformObject(TEXT("brushSize"), TEXT("Brush/image size."));
 			Schema.String(TEXT("category"), TEXT("Category folder for the variable."));
 			Schema.StringEnum(TEXT("clipping"), { TEXT("Inherit"), TEXT("ClipToBounds"), TEXT("ClipToBoundsWithoutIntersecting"), TEXT("ClipToBoundsAlways"), TEXT("OnDemand") }, TEXT("Widget clipping mode."));
 			Schema.FreeformObject(TEXT("colorAndOpacity"), TEXT("Color and opacity (0-1 values)."));
 			Schema.Number(TEXT("columnCount"), TEXT("Number of columns in a uniform/grid panel."));
+			Schema.Number(TEXT("columns"), TEXT("Item columns in the generated shop grid."));
 			Schema.String(TEXT("componentClass"), TEXT("Component class path for SCS node creation."));
 			Schema.String(TEXT("componentName"), TEXT("Name for the SCS component node."));
 			Schema.String(TEXT("componentType"), TEXT("Component class name to add."));
@@ -43,6 +46,7 @@ public:
 			Schema.Number(TEXT("fadeTime"), TEXT("Fade time in seconds."));
 			Schema.FreeformObject(TEXT("fillColorAndOpacity"), TEXT("Fill color for progress bar."));
 			Schema.String(TEXT("folder"), TEXT("Destination /Game folder for a Widget Blueprint."));
+			Schema.String(TEXT("font"), TEXT("Font asset path; the size is applied even when this is omitted."));
 			Schema.Number(TEXT("fontSize"), TEXT("Font size."));
 			Schema.String(TEXT("fromNodeId"), TEXT("Source node identifier for a pin connection."));
 			Schema.String(TEXT("fromPinName"), TEXT("Source pin name for a pin connection."));
@@ -66,6 +70,8 @@ public:
 			Schema.Bool(TEXT("isMarquee"), TEXT("Progress bar marquee mode."));
 			Schema.Bool(TEXT("isPublic"), TEXT("Whether the variable is exposed to the editor/BP graph."));
 			Schema.Bool(TEXT("isReplicated"), TEXT("Whether the variable is replicated."));
+			Schema.String(TEXT("key"), TEXT("Localization key assigned to the text widget."));
+			Schema.Number(TEXT("left"), TEXT("Left margin in slate units."));
 			Schema.String(TEXT("linkedTo"), TEXT("Target pin descriptor for a pin link."));
 			Schema.FreeformObject(TEXT("location"), TEXT("Relative location {x, y, z} for an SCS component template."));
 			Schema.Number(TEXT("loopCount"), TEXT("Number of loops (-1 for infinite)."));
@@ -82,6 +88,7 @@ public:
 			Schema.Number(TEXT("minDesiredWidth"), TEXT("Minimum desired width."));
 			Schema.Number(TEXT("minValue"), TEXT("Minimum slider/spinbox value."));
 			Schema.String(TEXT("name"), TEXT("Name for the new Blueprint or asset."));
+			Schema.String(TEXT("namespace"), TEXT("Localization namespace owning the key."));
 			Schema.String(TEXT("newName"), TEXT("New name for a renamed variable, function, or component."));
 			Schema.String(TEXT("newParent"), TEXT("New parent SCS node name."));
 			Schema.String(TEXT("nodeGuid"), TEXT("Node GUID accepted in place of nodeId."));
@@ -108,12 +115,16 @@ public:
 			Schema.Number(TEXT("posX"), TEXT("X coordinate for node placement."));
 			Schema.Number(TEXT("posY"), TEXT("Y coordinate for node placement."));
 			Schema.FreeformObject(TEXT("position"), TEXT("Widget position offset."));
+			Schema.Number(TEXT("positionX"), TEXT("Canvas slot X position, applied only when the parent is a canvas panel."));
+			Schema.Number(TEXT("positionY"), TEXT("Canvas slot Y position, applied only when the parent is a canvas panel."));
 			Schema.String(TEXT("preset"), TEXT("Named anchor preset (e.g. TopCenter) applied in place of anchorMin/anchorMax."));
 			Schema.StringEnum(TEXT("previewSize"), { TEXT("1080p"), TEXT("720p"), TEXT("mobile"), TEXT("custom") }, TEXT("Preview resolution preset."));
 			Schema.String(TEXT("promptFormat"), TEXT("Interaction prompt format."));
 			Schema.FreeformObject(TEXT("properties"), TEXT("Property bag applied to the CDO, component template, or node."));
+			Schema.String(TEXT("property"), TEXT("Widget property being bound; it selects the binding type."));
 			Schema.String(TEXT("propertyName"), TEXT("Property name to set on the CDO or component."));
 			Schema.AnyValue(TEXT("propertyValue"), TEXT("Value to assign to the property."));
+			Schema.Number(TEXT("right"), TEXT("Right margin in slate units."));
 			Schema.FreeformObject(TEXT("rotation"), TEXT("Relative rotation {pitch, yaw, roll} for an SCS component template."));
 			Schema.Number(TEXT("rowCount"), TEXT("Number of rows in a uniform/grid panel."));
 			Schema.Bool(TEXT("saveAfterCompile"), TEXT("Whether to save the asset after compiling."));
@@ -126,6 +137,8 @@ public:
 			Schema.FreeformObject(TEXT("shear"), TEXT("Render shear."));
 			Schema.Bool(TEXT("showSpeakerName"), TEXT("Show speaker name in dialog."));
 			Schema.FreeformObject(TEXT("size"), TEXT("Widget size override {x,y}."));
+			Schema.Number(TEXT("sizeX"), TEXT("Slot width in slate units."));
+			Schema.Number(TEXT("sizeY"), TEXT("Slot height in slate units."));
 			Schema.String(TEXT("slotName"), TEXT("Slot name for a child widget inside its parent."));
 			Schema.FreeformObject(TEXT("slotPadding"), TEXT("Padding between uniform grid slots."));
 			Schema.String(TEXT("sourceNode"), TEXT("Source node id accepted in place of fromNodeId."));
@@ -133,16 +146,20 @@ public:
 			Schema.Number(TEXT("stepSize"), TEXT("Value step size for slider."));
 			Schema.StringEnum(TEXT("stretch"), { TEXT("None"), TEXT("Fill"), TEXT("ScaleToFit"), TEXT("ScaleToFitX"), TEXT("ScaleToFitY"), TEXT("ScaleToFill"), TEXT("UserSpecified") }, TEXT("Scale box stretch mode."));
 			Schema.StringEnum(TEXT("stretchDirection"), { TEXT("Both"), TEXT("DownOnly"), TEXT("UpOnly") }, TEXT("Scale box stretch direction."));
+			Schema.String(TEXT("stringKey"), TEXT("Key looked up within the string table."));
+			Schema.String(TEXT("stringTableId"), TEXT("String table asset backing a localized text binding."));
 			Schema.String(TEXT("structPath"), TEXT("Blueprint Struct asset path (UserDefinedStruct or native UScriptStruct)."));
 			Schema.String(TEXT("targetClass"), TEXT("Target class for a class-member node."));
 			Schema.String(TEXT("targetNode"), TEXT("Target node id accepted in place of toNodeId."));
 			Schema.String(TEXT("targetPin"), TEXT("Target pin name on the destination node."));
+			Schema.String(TEXT("targetWidget"), TEXT("Name of the widget inside the tree that receives the binding."));
 			Schema.String(TEXT("text"), TEXT("Text content for a text block or button."));
 			Schema.String(TEXT("texturePath"), TEXT("Texture asset path for an image or brush."));
 			Schema.Number(TEXT("time"), TEXT("Keyframe time."));
 			Schema.String(TEXT("title"), TEXT("Title text for a menu template."));
 			Schema.String(TEXT("toNodeId"), TEXT("Target node identifier for a pin connection."));
 			Schema.String(TEXT("toPinName"), TEXT("Target pin name for a pin connection."));
+			Schema.Number(TEXT("top"), TEXT("Top margin in slate units."));
 			Schema.StringEnum(TEXT("trackType"), { TEXT("transform"), TEXT("color"), TEXT("opacity"), TEXT("renderOpacity"), TEXT("material") }, TEXT("Animation track type."));
 			Schema.FreeformObject(TEXT("translation"), TEXT("Render translation offset."));
 			Schema.Number(TEXT("userSpecifiedScale"), TEXT("User specified scale value."));
@@ -157,7 +174,7 @@ public:
 			Schema.Number(TEXT("x"), TEXT("Canvas X position for a HUD element (default 20)."));
 			Schema.Number(TEXT("y"), TEXT("Canvas Y position for a HUD element (default 20)."));
 			Schema.Number(TEXT("zOrder"), TEXT("Z-order for a canvas slot."));
-			Schema.StringEnum(TEXT("action"), { TEXT("create"), TEXT("create_blueprint"), TEXT("get_blueprint"), TEXT("get"), TEXT("ensure_exists"), TEXT("compile"), TEXT("add_component"), TEXT("add_scs_component"), TEXT("modify_scs"), TEXT("get_scs"), TEXT("remove_scs_component"), TEXT("reparent_scs_component"), TEXT("set_scs_transform"), TEXT("set_scs_property"), TEXT("add_variable"), TEXT("remove_variable"), TEXT("rename_variable"), TEXT("set_variable_metadata"), TEXT("set_metadata"), TEXT("set_default"), TEXT("create_node"), TEXT("add_node"), TEXT("delete_node"), TEXT("create_reroute_node"), TEXT("get_node_details"), TEXT("get_graph_details"), TEXT("get_pin_details"), TEXT("list_node_types"), TEXT("create_struct_make_break_nodes"), TEXT("connect_pins"), TEXT("break_pin_links"), TEXT("set_node_property"), TEXT("set_pin_default_value"), TEXT("add_construction_script"), TEXT("add_function"), TEXT("remove_function"), TEXT("add_event"), TEXT("remove_event"), TEXT("probe_handle"), TEXT("create_widget_blueprint"), TEXT("set_widget_parent_class"), TEXT("preview_widget"), TEXT("add_canvas_panel"), TEXT("add_horizontal_box"), TEXT("add_vertical_box"), TEXT("add_overlay"), TEXT("add_grid_panel"), TEXT("add_uniform_grid"), TEXT("add_wrap_box"), TEXT("add_scroll_box"), TEXT("add_size_box"), TEXT("add_scale_box"), TEXT("add_border"), TEXT("add_text_block"), TEXT("add_rich_text_block"), TEXT("add_image"), TEXT("add_button"), TEXT("add_check_box"), TEXT("add_slider"), TEXT("add_progress_bar"), TEXT("add_text_input"), TEXT("add_combo_box"), TEXT("add_spin_box"), TEXT("add_list_view"), TEXT("add_tree_view"), TEXT("add_health_bar"), TEXT("add_ammo_counter"), TEXT("add_minimap"), TEXT("add_crosshair"), TEXT("add_compass"), TEXT("add_interaction_prompt"), TEXT("add_objective_tracker"), TEXT("add_damage_indicator"), TEXT("create_main_menu"), TEXT("create_pause_menu"), TEXT("create_settings_menu"), TEXT("create_loading_screen"), TEXT("create_hud_widget"), TEXT("create_inventory_ui"), TEXT("create_dialog_widget"), TEXT("create_radial_menu"), TEXT("set_anchor"), TEXT("set_alignment"), TEXT("set_position"), TEXT("set_size"), TEXT("set_padding"), TEXT("set_z_order"), TEXT("set_render_transform"), TEXT("set_visibility"), TEXT("set_style"), TEXT("set_clipping"), TEXT("create_property_binding"), TEXT("bind_text"), TEXT("bind_visibility"), TEXT("bind_color"), TEXT("bind_enabled"), TEXT("bind_on_clicked"), TEXT("bind_on_hovered"), TEXT("bind_on_value_changed"), TEXT("create_widget_animation"), TEXT("add_animation_track"), TEXT("add_animation_keyframe"), TEXT("set_animation_loop"), TEXT("get_widget_info") }, TEXT("Action to invoke on manage_blueprint."));
+			Schema.StringEnum(TEXT("action"), { TEXT("create"), TEXT("create_blueprint"), TEXT("get_blueprint"), TEXT("get"), TEXT("ensure_exists"), TEXT("compile"), TEXT("add_component"), TEXT("add_scs_component"), TEXT("modify_scs"), TEXT("get_scs"), TEXT("remove_scs_component"), TEXT("reparent_scs_component"), TEXT("set_scs_transform"), TEXT("set_scs_property"), TEXT("add_variable"), TEXT("remove_variable"), TEXT("rename_variable"), TEXT("set_variable_metadata"), TEXT("set_metadata"), TEXT("set_default"), TEXT("create_node"), TEXT("add_node"), TEXT("delete_node"), TEXT("create_reroute_node"), TEXT("get_node_details"), TEXT("get_graph_details"), TEXT("get_pin_details"), TEXT("list_node_types"), TEXT("create_struct_make_break_nodes"), TEXT("connect_pins"), TEXT("break_pin_links"), TEXT("set_node_property"), TEXT("set_pin_default_value"), TEXT("add_construction_script"), TEXT("add_function"), TEXT("remove_function"), TEXT("add_event"), TEXT("remove_event"), TEXT("probe_handle"), TEXT("create_widget_blueprint"), TEXT("set_widget_parent_class"), TEXT("preview_widget"), TEXT("remove_widget"), TEXT("rename_widget"), TEXT("reparent_widget"), TEXT("add_canvas_panel"), TEXT("add_horizontal_box"), TEXT("add_vertical_box"), TEXT("add_overlay"), TEXT("add_grid_panel"), TEXT("add_uniform_grid"), TEXT("add_wrap_box"), TEXT("add_scroll_box"), TEXT("add_size_box"), TEXT("add_scale_box"), TEXT("add_border"), TEXT("add_spacer"), TEXT("add_safe_zone"), TEXT("add_widget_switcher"), TEXT("add_text_block"), TEXT("add_rich_text_block"), TEXT("add_image"), TEXT("add_button"), TEXT("add_check_box"), TEXT("add_slider"), TEXT("add_progress_bar"), TEXT("add_text_input"), TEXT("add_combo_box"), TEXT("add_spin_box"), TEXT("add_list_view"), TEXT("add_tree_view"), TEXT("add_widget_component"), TEXT("set_font"), TEXT("set_margin"), TEXT("add_health_bar"), TEXT("add_ammo_counter"), TEXT("add_minimap"), TEXT("add_crosshair"), TEXT("add_compass"), TEXT("add_interaction_prompt"), TEXT("add_objective_tracker"), TEXT("add_damage_indicator"), TEXT("add_quest_tracker"), TEXT("create_credits_screen"), TEXT("create_shop_ui"), TEXT("create_main_menu"), TEXT("create_pause_menu"), TEXT("create_settings_menu"), TEXT("create_loading_screen"), TEXT("create_hud_widget"), TEXT("create_inventory_ui"), TEXT("create_dialog_widget"), TEXT("create_radial_menu"), TEXT("set_anchor"), TEXT("set_alignment"), TEXT("set_position"), TEXT("set_size"), TEXT("set_padding"), TEXT("set_z_order"), TEXT("set_render_transform"), TEXT("set_visibility"), TEXT("set_style"), TEXT("set_clipping"), TEXT("create_property_binding"), TEXT("bind_text"), TEXT("bind_visibility"), TEXT("bind_color"), TEXT("bind_enabled"), TEXT("bind_on_clicked"), TEXT("bind_on_hovered"), TEXT("bind_on_value_changed"), TEXT("bind_localized_text"), TEXT("set_localization_key"), TEXT("set_widget_binding"), TEXT("create_widget_animation"), TEXT("add_animation_track"), TEXT("add_animation_keyframe"), TEXT("set_animation_loop"), TEXT("delete_animation"), TEXT("get_widget_info"), TEXT("get_widget_slot_info") }, TEXT("Action to invoke on manage_blueprint."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

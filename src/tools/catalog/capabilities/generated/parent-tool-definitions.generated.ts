@@ -5978,6 +5978,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Enhanced Input action asset path accepted in place of inputActionPath."
         },
+        "activeIndex": {
+          "type": "number",
+          "description": "Index shown first by a widget switcher."
+        },
         "alignment": {
           "type": "object",
           "additionalProperties": true,
@@ -6032,6 +6036,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Blueprint type hint for creation."
         },
+        "bottom": {
+          "type": "number",
+          "description": "Bottom margin in slate units."
+        },
         "brushColor": {
           "type": "object",
           "additionalProperties": true,
@@ -6068,6 +6076,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "columnCount": {
           "type": "number",
           "description": "Number of columns in a uniform/grid panel."
+        },
+        "columns": {
+          "type": "number",
+          "description": "Item columns in the generated shop grid."
         },
         "componentClass": {
           "type": "string",
@@ -6121,6 +6133,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "folder": {
           "type": "string",
           "description": "Destination /Game folder for a Widget Blueprint."
+        },
+        "font": {
+          "type": "string",
+          "description": "Font asset path; the size is applied even when this is omitted."
         },
         "fontSize": {
           "type": "number",
@@ -6233,6 +6249,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the variable is replicated."
         },
+        "key": {
+          "type": "string",
+          "description": "Localization key assigned to the text widget."
+        },
+        "left": {
+          "type": "number",
+          "description": "Left margin in slate units."
+        },
         "linkedTo": {
           "type": "string",
           "description": "Target pin descriptor for a pin link."
@@ -6300,6 +6324,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "name": {
           "type": "string",
           "description": "Name for the new Blueprint or asset."
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Localization namespace owning the key."
         },
         "newName": {
           "type": "string",
@@ -6453,6 +6481,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Widget position offset."
         },
+        "positionX": {
+          "type": "number",
+          "description": "Canvas slot X position, applied only when the parent is a canvas panel."
+        },
+        "positionY": {
+          "type": "number",
+          "description": "Canvas slot Y position, applied only when the parent is a canvas panel."
+        },
         "preset": {
           "type": "string",
           "description": "Named anchor preset (e.g. TopCenter) applied in place of anchorMin/anchorMax."
@@ -6477,12 +6513,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "property": {
+          "type": "string",
+          "description": "Widget property being bound; it selects the binding type."
+        },
         "propertyName": {
           "type": "string",
           "description": "Property name to set on the CDO or component."
         },
         "propertyValue": {
           "description": "Value to assign to the property."
+        },
+        "right": {
+          "type": "number",
+          "description": "Right margin in slate units."
         },
         "rotation": {
           "type": "object",
@@ -6552,6 +6596,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Widget size override {x,y}."
         },
+        "sizeX": {
+          "type": "number",
+          "description": "Slot width in slate units."
+        },
+        "sizeY": {
+          "type": "number",
+          "description": "Slot height in slate units."
+        },
         "slotName": {
           "type": "string",
           "description": "Slot name for a child widget inside its parent."
@@ -6596,6 +6648,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Scale box stretch direction."
         },
+        "stringKey": {
+          "type": "string",
+          "description": "Key looked up within the string table."
+        },
+        "stringTableId": {
+          "type": "string",
+          "description": "String table asset backing a localized text binding."
+        },
         "structPath": {
           "type": "string",
           "description": "Blueprint Struct asset path (UserDefinedStruct or native UScriptStruct)."
@@ -6611,6 +6671,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "targetPin": {
           "type": "string",
           "description": "Target pin name on the destination node."
+        },
+        "targetWidget": {
+          "type": "string",
+          "description": "Name of the widget inside the tree that receives the binding."
         },
         "text": {
           "type": "string",
@@ -6635,6 +6699,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "toPinName": {
           "type": "string",
           "description": "Target pin name for a pin connection."
+        },
+        "top": {
+          "type": "number",
+          "description": "Top margin in slate units."
         },
         "trackType": {
           "type": "string",
@@ -6753,6 +6821,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create_widget_blueprint",
             "set_widget_parent_class",
             "preview_widget",
+            "remove_widget",
+            "rename_widget",
+            "reparent_widget",
             "add_canvas_panel",
             "add_horizontal_box",
             "add_vertical_box",
@@ -6764,6 +6835,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_size_box",
             "add_scale_box",
             "add_border",
+            "add_spacer",
+            "add_safe_zone",
+            "add_widget_switcher",
             "add_text_block",
             "add_rich_text_block",
             "add_image",
@@ -6776,6 +6850,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_spin_box",
             "add_list_view",
             "add_tree_view",
+            "add_widget_component",
+            "set_font",
+            "set_margin",
             "add_health_bar",
             "add_ammo_counter",
             "add_minimap",
@@ -6784,6 +6861,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_interaction_prompt",
             "add_objective_tracker",
             "add_damage_indicator",
+            "add_quest_tracker",
+            "create_credits_screen",
+            "create_shop_ui",
             "create_main_menu",
             "create_pause_menu",
             "create_settings_menu",
@@ -6810,11 +6890,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "bind_on_clicked",
             "bind_on_hovered",
             "bind_on_value_changed",
+            "bind_localized_text",
+            "set_localization_key",
+            "set_widget_binding",
             "create_widget_animation",
             "add_animation_track",
             "add_animation_keyframe",
             "set_animation_loop",
-            "get_widget_info"
+            "delete_animation",
+            "get_widget_info",
+            "get_widget_slot_info"
           ],
           "description": "Action to invoke on manage_blueprint."
         }
@@ -6827,6 +6912,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "activeIndex": {
+          "type": "number",
+          "description": "Index shown first by a widget switcher."
+        },
         "animationName": {
           "type": "string",
           "description": "Widget animation name."
@@ -6843,9 +6932,85 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Asset path of the created node (verification)."
         },
+        "bindingType": {
+          "type": "string",
+          "description": "Binding kind the property resolved to (text, visibility, enabled, percent, or colorAndOpacity)."
+        },
         "blueprintPath": {
           "type": "string",
           "description": "Canonical /Game Blueprint asset path."
+        },
+        "bottom": {
+          "type": "number",
+          "description": "Bottom margin in slate units."
+        },
+        "canvasSlotInfo": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Canvas geometry of the widget (omitted unless the slot is a canvas panel slot).",
+          "properties": {
+            "anchorMinX": {
+              "type": "number",
+              "description": "Minimum anchor X."
+            },
+            "anchorMinY": {
+              "type": "number",
+              "description": "Minimum anchor Y."
+            },
+            "anchorMaxX": {
+              "type": "number",
+              "description": "Maximum anchor X."
+            },
+            "anchorMaxY": {
+              "type": "number",
+              "description": "Maximum anchor Y."
+            },
+            "alignmentX": {
+              "type": "number",
+              "description": "Alignment X within the slot."
+            },
+            "alignmentY": {
+              "type": "number",
+              "description": "Alignment Y within the slot."
+            },
+            "positionX": {
+              "type": "number",
+              "description": "Slot position X."
+            },
+            "positionY": {
+              "type": "number",
+              "description": "Slot position Y."
+            },
+            "sizeX": {
+              "type": "number",
+              "description": "Slot width."
+            },
+            "sizeY": {
+              "type": "number",
+              "description": "Slot height."
+            },
+            "zOrder": {
+              "type": "number",
+              "description": "Slot draw order."
+            }
+          },
+          "required": [
+            "anchorMinX",
+            "anchorMinY",
+            "anchorMaxX",
+            "anchorMaxY",
+            "alignmentX",
+            "alignmentY",
+            "positionX",
+            "positionY",
+            "sizeX",
+            "sizeY",
+            "zOrder"
+          ]
+        },
+        "columns": {
+          "type": "number",
+          "description": "Item columns in the generated shop grid."
         },
         "comment": {
           "type": "string",
@@ -6867,6 +7032,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name for the SCS component node."
         },
+        "componentType": {
+          "type": "string",
+          "description": "Resolved widget class name, which may differ from the requested componentType."
+        },
         "components": {
           "type": "array",
           "items": {
@@ -6880,6 +7049,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "count": {
           "type": "number",
           "description": "Total number of node types listed."
+        },
+        "deletedAnimation": {
+          "type": "string",
+          "description": "Name of the animation that was removed."
         },
         "diagnostics": {
           "type": "array",
@@ -6899,6 +7072,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the node exists after creation (verification)."
         },
+        "fontSize": {
+          "type": "number",
+          "description": "Font size."
+        },
         "functionName": {
           "type": "string",
           "description": "Function name to add or remove."
@@ -6907,9 +7084,33 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target graph name (Event Graph, Construction Script, etc.)."
         },
+        "isVisible": {
+          "type": "boolean",
+          "description": "Whether the widget is currently visible."
+        },
+        "key": {
+          "type": "string",
+          "description": "Localization key assigned to the text widget."
+        },
+        "left": {
+          "type": "number",
+          "description": "Left margin in slate units."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Localization namespace owning the key."
+        },
+        "newName": {
+          "type": "string",
+          "description": "New name for a renamed variable, function, or component."
+        },
+        "newParent": {
+          "type": "string",
+          "description": "New parent SCS node name."
         },
         "nodeClass": {
           "type": "string",
@@ -6975,13 +7176,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Guidance on follow-up HUD element actions (add_health_bar, add_crosshair, add_ammo_counter)."
         },
+        "oldName": {
+          "type": "string",
+          "description": "Current variable name before renaming."
+        },
         "parent": {
           "type": "string",
           "description": "Parent SCS node name for reparenting."
         },
         "parentClass": {
           "type": "string",
-          "description": "Parent class path for Blueprint creation (e.g. /Script/Engine.Actor)."
+          "description": "Class name of the parent widget (omitted when the widget has no parent)."
+        },
+        "parentName": {
+          "type": "string",
+          "description": "Optional parent panel name to add the widget under."
         },
         "pinNames": {
           "type": "array",
@@ -7025,12 +7234,24 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Pin descriptors (name, direction, type, links)."
         },
+        "property": {
+          "type": "string",
+          "description": "Widget property being bound; it selects the binding type."
+        },
         "propertyValue": {
           "description": "Value to assign to the property."
         },
         "reachable": {
           "type": "boolean",
           "description": "Whether the Blueprint handle is reachable."
+        },
+        "remainingAnimations": {
+          "type": "number",
+          "description": "Number of animations left on the Widget Blueprint."
+        },
+        "removedWidget": {
+          "type": "string",
+          "description": "Name of the widget that was removed from the widget tree."
         },
         "results": {
           "type": "array",
@@ -7042,6 +7263,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Per-operation results when operations are provided.",
           "x-unreal-reflection-boundary": true
         },
+        "right": {
+          "type": "number",
+          "description": "Right margin in slate units."
+        },
         "saved": {
           "type": "boolean",
           "description": "Whether the action succeeded."
@@ -7052,9 +7277,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "sizeX": {
+          "type": "number",
+          "description": "Slot width in slate units."
+        },
+        "sizeY": {
+          "type": "number",
+          "description": "Slot height in slate units."
+        },
+        "slotClass": {
+          "type": "string",
+          "description": "Class name of the slot holding the widget (omitted when the widget occupies no slot)."
+        },
         "slotName": {
           "type": "string",
           "description": "Slot name for a child widget inside its parent."
+        },
+        "stringKey": {
+          "type": "string",
+          "description": "Key looked up within the string table."
+        },
+        "stringTableId": {
+          "type": "string",
+          "description": "String table asset backing a localized text binding."
         },
         "structPath": {
           "type": "string",
@@ -7064,9 +7309,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the action succeeded."
         },
+        "targetVerified": {
+          "type": "boolean",
+          "description": "Whether the named widget was found in the widget tree."
+        },
+        "targetWidget": {
+          "type": "string",
+          "description": "Name of the widget inside the tree that receives the binding."
+        },
         "title": {
           "type": "string",
           "description": "Title text for a menu template."
+        },
+        "top": {
+          "type": "number",
+          "description": "Top margin in slate units."
         },
         "value": {
           "description": "Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON."
@@ -7077,6 +7334,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "verifiedValue": {
           "description": "Value to assign to the property."
+        },
+        "widget": {
+          "type": "string",
+          "description": "Name of the widget that was reparented."
+        },
+        "widgetClass": {
+          "type": "string",
+          "description": "Class name of the inspected widget."
         },
         "widgetInfo": {
           "type": "object",

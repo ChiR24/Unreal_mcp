@@ -98,9 +98,9 @@ describe('manage_blueprint pilot: schema and hash parity', () => {
     expect(hash1).toBe(hash2);
   });
 
-  it('pilot manifest has 104 tools (1:1 canonical ID keying)', () => {
+  it('pilot manifest has 121 tools (1:1 canonical ID keying)', () => {
     const manifest = buildPilotManifest(MANAGE_BLUEPRINT_RECORDS);
-    expect(manifest.tools.length).toBe(104);
+    expect(manifest.tools.length).toBe(121);
     expect(manifest.source).toBe('pilot:capabilityRecords');
   });
 

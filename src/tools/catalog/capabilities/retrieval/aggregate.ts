@@ -16,8 +16,8 @@ import { MANAGE_TOOLS_RECORDS } from '../records/manage-tools/index.js';
 import { SYSTEM_CONTROL_RECORDS } from '../records/system-control/index.js';
 import { compareById as compareCanonicalIds } from '../../../../utils/serialization/ordering.js';
 
-export const PILOT_CAPABILITY_RECORD_COUNT = 493 as const;
-export const CORE_CAPABILITY_RECORD_COUNT = 470 as const;
+export const PILOT_CAPABILITY_RECORD_COUNT = 510 as const;
+export const CORE_CAPABILITY_RECORD_COUNT = 487 as const;
 
 export type PilotCapabilityCatalogSources = {
   readonly buildEnvironment: readonly CapabilityRecordSource[];
@@ -64,7 +64,7 @@ export class CapabilityCatalogSizeError extends Error {
 }
 
 /**
- * The eight core parents in AUTHORED order — the sequence each record
+ * The eight core parents in AUTHORED order â€” the sequence each record
  * directory declares. The canonical-registry generator derives every parent's
  * action enum from the first-seen record sequence, so it must consume this
  * view; the id-sorted catalog below would alphabetise those enums.

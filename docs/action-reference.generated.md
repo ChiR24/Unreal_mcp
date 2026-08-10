@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `eba0be2d104f7510`
+Catalog revision: `7a780f300011f79e`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 1335 capabilities across
+The catalog declares 1352 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -44,7 +44,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai` | 62 | 4 | 58 | 0 | manage ai |
 | `manage_asset` | 158 | 34 | 114 | 10 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 50 | 0 | 50 | 0 | audio |
-| `manage_blueprint` | 104 | 9 | 89 | 6 | blueprint, widget |
+| `manage_blueprint` | 121 | 10 | 103 | 8 | blueprint, widget |
 | `manage_character` | 27 | 1 | 26 | 0 | manage character |
 | `manage_combat` | 39 | 2 | 37 | 0 | manage combat |
 | `manage_effect` | 59 | 3 | 55 | 1 | manage effect |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-150 of 1335 capabilities require consent.
+152 of 1352 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -93,11 +93,13 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.source_control_checkout` | `manage_asset` | `source_control_checkout` | write | explicit |
 | `asset.source_control_submit` | `manage_asset` | `source_control_submit` | write | explicit |
 | `blueprint.break_pin_links` | `manage_blueprint` | `break_pin_links` | destructive | explicit |
+| `blueprint.delete_animation` | `manage_blueprint` | `delete_animation` | destructive | explicit |
 | `blueprint.delete_node` | `manage_blueprint` | `delete_node` | destructive | explicit |
 | `blueprint.remove_event` | `manage_blueprint` | `remove_event` | destructive | explicit |
 | `blueprint.remove_function` | `manage_blueprint` | `remove_function` | destructive | explicit |
 | `blueprint.remove_scs_component` | `manage_blueprint` | `remove_scs_component` | destructive | explicit |
 | `blueprint.remove_variable` | `manage_blueprint` | `remove_variable` | destructive | explicit |
+| `blueprint.remove_widget` | `manage_blueprint` | `remove_widget` | destructive | explicit |
 | `build_environment.delete` | `build_environment` | `delete` | destructive | explicit |
 | `build_environment.remove_foliage` | `build_environment` | `remove_foliage` | destructive | explicit |
 | `build_environment.remove_foliage_instances` | `build_environment` | `remove_foliage_instances` | destructive | explicit |
@@ -379,12 +381,15 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.add_objective_tracker` | `manage_blueprint` | `add_objective_tracker` | write | write | none | `manage_blueprint.add_objective_tracker` |
 | `blueprint.add_overlay` | `manage_blueprint` | `add_overlay` | write | write | none | `manage_blueprint.add_overlay` |
 | `blueprint.add_progress_bar` | `manage_blueprint` | `add_progress_bar` | write | write | none | `manage_blueprint.add_progress_bar` |
+| `blueprint.add_quest_tracker` | `manage_blueprint` | `add_quest_tracker` | write | write | none | `manage_blueprint.add_quest_tracker` |
 | `blueprint.add_rich_text_block` | `manage_blueprint` | `add_rich_text_block` | write | write | none | `manage_blueprint.add_rich_text_block` |
+| `blueprint.add_safe_zone` | `manage_blueprint` | `add_safe_zone` | write | write | none | `manage_blueprint.add_safe_zone` |
 | `blueprint.add_scale_box` | `manage_blueprint` | `add_scale_box` | write | write | none | `manage_blueprint.add_scale_box` |
 | `blueprint.add_scroll_box` | `manage_blueprint` | `add_scroll_box` | write | write | none | `manage_blueprint.add_scroll_box` |
 | `blueprint.add_scs_component` | `manage_blueprint` | `add_scs_component` | write | write | none | `manage_blueprint.add_scs_component` |
 | `blueprint.add_size_box` | `manage_blueprint` | `add_size_box` | write | write | none | `manage_blueprint.add_size_box` |
 | `blueprint.add_slider` | `manage_blueprint` | `add_slider` | write | write | none | `manage_blueprint.add_slider` |
+| `blueprint.add_spacer` | `manage_blueprint` | `add_spacer` | write | write | none | `manage_blueprint.add_spacer` |
 | `blueprint.add_spin_box` | `manage_blueprint` | `add_spin_box` | write | write | none | `manage_blueprint.add_spin_box` |
 | `blueprint.add_text_block` | `manage_blueprint` | `add_text_block` | write | write | none | `manage_blueprint.add_text_block` |
 | `blueprint.add_text_input` | `manage_blueprint` | `add_text_input` | write | write | none | `manage_blueprint.add_text_input` |
@@ -392,9 +397,12 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.add_uniform_grid` | `manage_blueprint` | `add_uniform_grid` | write | write | none | `manage_blueprint.add_uniform_grid` |
 | `blueprint.add_variable` | `manage_blueprint` | `add_variable` | write | write | none | `manage_blueprint.add_variable` |
 | `blueprint.add_vertical_box` | `manage_blueprint` | `add_vertical_box` | write | write | none | `manage_blueprint.add_vertical_box` |
+| `blueprint.add_widget_component` | `manage_blueprint` | `add_widget_component` | write | write | none | `manage_blueprint.add_widget_component` |
+| `blueprint.add_widget_switcher` | `manage_blueprint` | `add_widget_switcher` | write | write | none | `manage_blueprint.add_widget_switcher` |
 | `blueprint.add_wrap_box` | `manage_blueprint` | `add_wrap_box` | write | write | none | `manage_blueprint.add_wrap_box` |
 | `blueprint.bind_color` | `manage_blueprint` | `bind_color` | write | write | none | `manage_blueprint.bind_color` |
 | `blueprint.bind_enabled` | `manage_blueprint` | `bind_enabled` | write | write | none | `manage_blueprint.bind_enabled` |
+| `blueprint.bind_localized_text` | `manage_blueprint` | `bind_localized_text` | write | write | none | `manage_blueprint.bind_localized_text` |
 | `blueprint.bind_on_clicked` | `manage_blueprint` | `bind_on_clicked` | write | write | none | `manage_blueprint.bind_on_clicked` |
 | `blueprint.bind_on_hovered` | `manage_blueprint` | `bind_on_hovered` | write | write | none | `manage_blueprint.bind_on_hovered` |
 | `blueprint.bind_on_value_changed` | `manage_blueprint` | `bind_on_value_changed` | write | write | none | `manage_blueprint.bind_on_value_changed` |
@@ -405,6 +413,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.connect_pins` | `manage_blueprint` | `connect_pins` | write | write | none | `manage_blueprint.connect_pins` |
 | `blueprint.create` | `manage_blueprint` | `create` | write | write | none | `manage_blueprint.create` |
 | `blueprint.create_blueprint` | `manage_blueprint` | `create_blueprint` | write | write | none | `manage_blueprint.create_blueprint` |
+| `blueprint.create_credits_screen` | `manage_blueprint` | `create_credits_screen` | write | write | none | `manage_blueprint.create_credits_screen` |
 | `blueprint.create_dialog_widget` | `manage_blueprint` | `create_dialog_widget` | write | write | none | `manage_blueprint.create_dialog_widget` |
 | `blueprint.create_hud_widget` | `manage_blueprint` | `create_hud_widget` | write | write | none | `manage_blueprint.create_hud_widget` |
 | `blueprint.create_inventory_ui` | `manage_blueprint` | `create_inventory_ui` | write | write | none | `manage_blueprint.create_inventory_ui` |
@@ -416,9 +425,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.create_radial_menu` | `manage_blueprint` | `create_radial_menu` | write | write | none | `manage_blueprint.create_radial_menu` |
 | `blueprint.create_reroute_node` | `manage_blueprint` | `create_reroute_node` | write | write | none | `manage_blueprint.create_reroute_node` |
 | `blueprint.create_settings_menu` | `manage_blueprint` | `create_settings_menu` | write | write | none | `manage_blueprint.create_settings_menu` |
+| `blueprint.create_shop_ui` | `manage_blueprint` | `create_shop_ui` | write | write | none | `manage_blueprint.create_shop_ui` |
 | `blueprint.create_struct_make_break_nodes` | `manage_blueprint` | `create_struct_make_break_nodes` | write | write | none | `manage_blueprint.create_struct_make_break_nodes` |
 | `blueprint.create_widget_animation` | `manage_blueprint` | `create_widget_animation` | write | write | none | `manage_blueprint.create_widget_animation` |
 | `blueprint.create_widget_blueprint` | `manage_blueprint` | `create_widget_blueprint` | write | write | none | `manage_blueprint.create_widget_blueprint` |
+| `blueprint.delete_animation` | `manage_blueprint` | `delete_animation` | destructive | destructive | explicit | `manage_blueprint.delete_animation` |
 | `blueprint.delete_node` | `manage_blueprint` | `delete_node` | destructive | destructive | explicit | `manage_blueprint.delete_node` |
 | `blueprint.ensure_exists` | `manage_blueprint` | `ensure_exists` | write | write | none | `manage_blueprint.ensure_exists` |
 | `blueprint.get` | `manage_blueprint` | `get` | read | read | none | `manage_blueprint.get` |
@@ -428,6 +439,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.get_pin_details` | `manage_blueprint` | `get_pin_details` | read | read | none | `manage_blueprint.get_pin_details` |
 | `blueprint.get_scs` | `manage_blueprint` | `get_scs` | read | read | none | `manage_blueprint.get_scs` |
 | `blueprint.get_widget_info` | `manage_blueprint` | `get_widget_info` | read | read | none | `manage_blueprint.get_widget_info` |
+| `blueprint.get_widget_slot_info` | `manage_blueprint` | `get_widget_slot_info` | read | read | none | `manage_blueprint.get_widget_slot_info` |
 | `blueprint.list_node_types` | `manage_blueprint` | `list_node_types` | read | read | none | `manage_blueprint.list_node_types` |
 | `blueprint.modify_scs` | `manage_blueprint` | `modify_scs` | write | write | none | `manage_blueprint.modify_scs` |
 | `blueprint.preview_widget` | `manage_blueprint` | `preview_widget` | write | write | none | `manage_blueprint.preview_widget` |
@@ -436,13 +448,19 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.remove_function` | `manage_blueprint` | `remove_function` | destructive | destructive | explicit | `manage_blueprint.remove_function` |
 | `blueprint.remove_scs_component` | `manage_blueprint` | `remove_scs_component` | destructive | destructive | explicit | `manage_blueprint.remove_scs_component` |
 | `blueprint.remove_variable` | `manage_blueprint` | `remove_variable` | destructive | destructive | explicit | `manage_blueprint.remove_variable` |
+| `blueprint.remove_widget` | `manage_blueprint` | `remove_widget` | destructive | destructive | explicit | `manage_blueprint.remove_widget` |
 | `blueprint.rename_variable` | `manage_blueprint` | `rename_variable` | write | write | none | `manage_blueprint.rename_variable` |
+| `blueprint.rename_widget` | `manage_blueprint` | `rename_widget` | write | write | none | `manage_blueprint.rename_widget` |
 | `blueprint.reparent_scs_component` | `manage_blueprint` | `reparent_scs_component` | write | write | none | `manage_blueprint.reparent_scs_component` |
+| `blueprint.reparent_widget` | `manage_blueprint` | `reparent_widget` | write | write | none | `manage_blueprint.reparent_widget` |
 | `blueprint.set_alignment` | `manage_blueprint` | `set_alignment` | write | write | none | `manage_blueprint.set_alignment` |
 | `blueprint.set_anchor` | `manage_blueprint` | `set_anchor` | write | write | none | `manage_blueprint.set_anchor` |
 | `blueprint.set_animation_loop` | `manage_blueprint` | `set_animation_loop` | write | write | none | `manage_blueprint.set_animation_loop` |
 | `blueprint.set_clipping` | `manage_blueprint` | `set_clipping` | write | write | none | `manage_blueprint.set_clipping` |
 | `blueprint.set_default` | `manage_blueprint` | `set_default` | write | write | none | `manage_blueprint.set_default` |
+| `blueprint.set_font` | `manage_blueprint` | `set_font` | write | write | none | `manage_blueprint.set_font` |
+| `blueprint.set_localization_key` | `manage_blueprint` | `set_localization_key` | write | write | none | `manage_blueprint.set_localization_key` |
+| `blueprint.set_margin` | `manage_blueprint` | `set_margin` | write | write | none | `manage_blueprint.set_margin` |
 | `blueprint.set_metadata` | `manage_blueprint` | `set_metadata` | write | write | none | `manage_blueprint.set_metadata` |
 | `blueprint.set_node_property` | `manage_blueprint` | `set_node_property` | write | write | none | `manage_blueprint.set_node_property` |
 | `blueprint.set_padding` | `manage_blueprint` | `set_padding` | write | write | none | `manage_blueprint.set_padding` |
@@ -455,6 +473,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.set_style` | `manage_blueprint` | `set_style` | write | write | none | `manage_blueprint.set_style` |
 | `blueprint.set_variable_metadata` | `manage_blueprint` | `set_variable_metadata` | write | write | none | `manage_blueprint.set_variable_metadata` |
 | `blueprint.set_visibility` | `manage_blueprint` | `set_visibility` | write | write | none | `manage_blueprint.set_visibility` |
+| `blueprint.set_widget_binding` | `manage_blueprint` | `set_widget_binding` | write | write | none | `manage_blueprint.set_widget_binding` |
 | `blueprint.set_widget_parent_class` | `manage_blueprint` | `set_widget_parent_class` | write | write | none | `manage_blueprint.set_widget_parent_class` |
 | `blueprint.set_z_order` | `manage_blueprint` | `set_z_order` | write | write | none | `manage_blueprint.set_z_order` |
 | `build_environment.add_foliage` | `build_environment` | `add_foliage` | write | write | none | `build_environment.add_foliage` |

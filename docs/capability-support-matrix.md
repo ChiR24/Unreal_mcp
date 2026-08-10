@@ -5,9 +5,9 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `eba0be2d104f7510`
+Catalog revision: `7a780f300011f79e`
 
-Every one of the 1335 capabilities declares all three semantics. The
+Every one of the 1352 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
 compensation); a capability carries a stronger claim only where the ledger
 cites the implementation that proves it. A mostly-pessimistic matrix is the
@@ -17,10 +17,10 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 1335 | 0 / 1176 |
-| Undoable | 0 / 1335 | 0 / 1176 |
-| Compensatable | 21 / 1335 | 20 / 1176 |
-| Fully pessimistic | 1314 / 1335 | 1156 / 1176 |
+| Previewable | 0 / 1352 | 0 / 1192 |
+| Undoable | 0 / 1352 | 0 / 1192 |
+| Compensatable | 21 / 1352 | 20 / 1192 |
+| Fully pessimistic | 1331 / 1352 | 1172 / 1192 |
 
 ## By parent tool
 
@@ -34,7 +34,7 @@ truthful result, not a gap in coverage.
 | `manage_ai` | 62 | 58 | 0 | 0 | 0 |
 | `manage_asset` | 158 | 124 | 0 | 0 | 1 |
 | `manage_audio` | 50 | 50 | 0 | 0 | 1 |
-| `manage_blueprint` | 104 | 95 | 0 | 0 | 3 |
+| `manage_blueprint` | 121 | 111 | 0 | 0 | 3 |
 | `manage_character` | 27 | 26 | 0 | 0 | 0 |
 | `manage_combat` | 39 | 37 | 0 | 0 | 0 |
 | `manage_effect` | 59 | 56 | 0 | 0 | 0 |
@@ -230,12 +230,15 @@ truthful result, not a gap in coverage.
 | `blueprint.add_objective_tracker` | write | none | none | none |
 | `blueprint.add_overlay` | write | none | none | none |
 | `blueprint.add_progress_bar` | write | none | none | none |
+| `blueprint.add_quest_tracker` | write | none | none | none |
 | `blueprint.add_rich_text_block` | write | none | none | none |
+| `blueprint.add_safe_zone` | write | none | none | none |
 | `blueprint.add_scale_box` | write | none | none | none |
 | `blueprint.add_scroll_box` | write | none | none | none |
 | `blueprint.add_scs_component` | write | none | none | none |
 | `blueprint.add_size_box` | write | none | none | none |
 | `blueprint.add_slider` | write | none | none | none |
+| `blueprint.add_spacer` | write | none | none | none |
 | `blueprint.add_spin_box` | write | none | none | none |
 | `blueprint.add_text_block` | write | none | none | none |
 | `blueprint.add_text_input` | write | none | none | none |
@@ -243,9 +246,12 @@ truthful result, not a gap in coverage.
 | `blueprint.add_uniform_grid` | write | none | none | none |
 | `blueprint.add_variable` | write | none | none | none |
 | `blueprint.add_vertical_box` | write | none | none | none |
+| `blueprint.add_widget_component` | write | none | none | none |
+| `blueprint.add_widget_switcher` | write | none | none | none |
 | `blueprint.add_wrap_box` | write | none | none | none |
 | `blueprint.bind_color` | write | none | none | none |
 | `blueprint.bind_enabled` | write | none | none | none |
+| `blueprint.bind_localized_text` | write | none | none | none |
 | `blueprint.bind_on_clicked` | write | none | none | none |
 | `blueprint.bind_on_hovered` | write | none | none | none |
 | `blueprint.bind_on_value_changed` | write | none | none | none |
@@ -256,6 +262,7 @@ truthful result, not a gap in coverage.
 | `blueprint.connect_pins` | write | none | none | inverse: blueprint.break_pin_links |
 | `blueprint.create` | write | none | none | none |
 | `blueprint.create_blueprint` | write | none | none | none |
+| `blueprint.create_credits_screen` | write | none | none | none |
 | `blueprint.create_dialog_widget` | write | none | none | none |
 | `blueprint.create_hud_widget` | write | none | none | none |
 | `blueprint.create_inventory_ui` | write | none | none | none |
@@ -267,9 +274,11 @@ truthful result, not a gap in coverage.
 | `blueprint.create_radial_menu` | write | none | none | none |
 | `blueprint.create_reroute_node` | write | none | none | inverse: blueprint.delete_node |
 | `blueprint.create_settings_menu` | write | none | none | none |
+| `blueprint.create_shop_ui` | write | none | none | none |
 | `blueprint.create_struct_make_break_nodes` | write | none | none | none |
 | `blueprint.create_widget_animation` | write | none | none | none |
 | `blueprint.create_widget_blueprint` | write | none | none | none |
+| `blueprint.delete_animation` | destructive | none | none | none |
 | `blueprint.delete_node` | destructive | none | none | none |
 | `blueprint.ensure_exists` | write | none | none | none |
 | `blueprint.get` | read | none | none | none |
@@ -279,6 +288,7 @@ truthful result, not a gap in coverage.
 | `blueprint.get_pin_details` | read | none | none | none |
 | `blueprint.get_scs` | read | none | none | none |
 | `blueprint.get_widget_info` | read | none | none | none |
+| `blueprint.get_widget_slot_info` | read | none | none | none |
 | `blueprint.list_node_types` | read | none | none | none |
 | `blueprint.modify_scs` | write | none | none | none |
 | `blueprint.preview_widget` | write | none | none | none |
@@ -287,13 +297,19 @@ truthful result, not a gap in coverage.
 | `blueprint.remove_function` | destructive | none | none | none |
 | `blueprint.remove_scs_component` | destructive | none | none | none |
 | `blueprint.remove_variable` | destructive | none | none | none |
+| `blueprint.remove_widget` | destructive | none | none | none |
 | `blueprint.rename_variable` | write | none | none | none |
+| `blueprint.rename_widget` | write | none | none | none |
 | `blueprint.reparent_scs_component` | write | none | none | none |
+| `blueprint.reparent_widget` | write | none | none | none |
 | `blueprint.set_alignment` | write | none | none | none |
 | `blueprint.set_anchor` | write | none | none | none |
 | `blueprint.set_animation_loop` | write | none | none | none |
 | `blueprint.set_clipping` | write | none | none | none |
 | `blueprint.set_default` | write | none | none | none |
+| `blueprint.set_font` | write | none | none | none |
+| `blueprint.set_localization_key` | write | none | none | none |
+| `blueprint.set_margin` | write | none | none | none |
 | `blueprint.set_metadata` | write | none | none | none |
 | `blueprint.set_node_property` | write | none | none | none |
 | `blueprint.set_padding` | write | none | none | none |
@@ -306,6 +322,7 @@ truthful result, not a gap in coverage.
 | `blueprint.set_style` | write | none | none | none |
 | `blueprint.set_variable_metadata` | write | none | none | none |
 | `blueprint.set_visibility` | write | none | none | none |
+| `blueprint.set_widget_binding` | write | none | none | none |
 | `blueprint.set_widget_parent_class` | write | none | none | none |
 | `blueprint.set_z_order` | write | none | none | none |
 | `build_environment.add_foliage` | write | none | none | none |

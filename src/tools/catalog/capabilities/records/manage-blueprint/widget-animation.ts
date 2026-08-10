@@ -7,7 +7,7 @@
  * design time (no SetPlayRate call).
  */
 import type { CapabilityRecordSource } from '../../index.js';
-import { buildRecord, WIDGET_PLUGINS } from './helpers.js';
+import { buildPromotedRecord, buildRecord, WIDGET_PLUGINS } from './helpers.js';
 import { P } from './properties.js';
 
 const FAMILY = 'widget-animation';
@@ -85,4 +85,27 @@ export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'set_animation_loop', widgetPath: '/Game/UI/WBP_MainUI', animationName: 'Pulse', loopCount: -1, playMode: 'pingpong' },
     exampleOutput: { success: true, message: 'Animation loop set' },
   }),
+  buildPromotedRecord({
+    id: 'blueprint.delete_animation',
+    action: 'delete_animation',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Delete a named animation from a Widget Blueprint.',
+    whenToUse: ['An animation is obsolete and must be removed from the Widget Blueprint.'],
+    whenNotToUse: ['The animation should only stop playing (change its loop or play mode instead).'],
+    inputProps: { action: P.action, widgetPath: P.widgetPath, animationName: P.animationName },
+    required: ['action', 'widgetPath', 'animationName'],
+    outputProps: {
+      widgetPath: P.widgetPath,
+      deletedAnimation: { type: 'string', description: 'Name of the animation that was removed.' },
+      remainingAnimations: { type: 'number', description: 'Number of animations left on the Widget Blueprint.' },
+    },
+    outputRequired: ['widgetPath', 'deletedAnimation', 'remainingAnimations'],
+    effect: 'destructive',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: WIDGET_PLUGINS,
+    exampleInput: { action: 'delete_animation', widgetPath: '/Game/UI/WBP_MainUI', animationName: 'Pulse' },
+    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', deletedAnimation: 'Pulse', remainingAnimations: 2 },
+  }, 'Removes an animation outright, so it is the only destructive action in the widget animation family.'),
 ];

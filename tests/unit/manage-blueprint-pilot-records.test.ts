@@ -3,8 +3,8 @@
  * and SCS ownership tests.
  *
  * Verifies:
- * - Exactly 104 canonical records (39 core + 65 widget)
- * - All 104 TS enum actions are represented with matching legacy IDs
+ * - Exactly 121 canonical records (39 core + 82 widget)
+ * - All 121 TS enum actions are represented with matching legacy IDs
  * - All 21 hidden operations have explicit promote/map/remove dispositions
  * - apply_style_to_widget and set_animation_speed no-op routes are NOT
  *   active canonical records (route disposition: remove)
@@ -28,7 +28,7 @@ import {
   MANAGE_BLUEPRINT_RECORDS,
 } from '../../src/tools/catalog/capabilities/records/manage-blueprint/index.js';
 
-// The 104 actions from the TS enum (39 core + 65 widget)
+// The 121 actions from the TS enum (39 core + 82 widget)
 const CORE_ACTIONS = [
   'create', 'create_blueprint', 'get_blueprint', 'get', 'compile',
   'add_component', 'set_default', 'modify_scs', 'get_scs', 'add_scs_component',
@@ -56,16 +56,21 @@ const WIDGET_ACTIONS = [
   'add_crosshair', 'add_compass', 'add_interaction_prompt', 'add_objective_tracker',
   'add_damage_indicator', 'create_inventory_ui', 'create_dialog_widget', 'create_radial_menu',
   'get_widget_info', 'preview_widget',
+  'add_quest_tracker', 'add_safe_zone', 'add_spacer', 'add_widget_component',
+  'add_widget_switcher', 'bind_localized_text', 'create_credits_screen', 'create_shop_ui',
+  'delete_animation', 'get_widget_slot_info', 'remove_widget',
+  'rename_widget', 'reparent_widget', 'set_font', 'set_localization_key',
+  'set_margin', 'set_widget_binding',
 ] as const;
 
 const ALL_TS_ENUM_ACTIONS = [...CORE_ACTIONS, ...WIDGET_ACTIONS];
 
 describe('manage_blueprint pilot: exact record set', () => {
-  it('has exactly 104 canonical records (39 core + 65 widget)', () => {
-    expect(MANAGE_BLUEPRINT_RECORD_COUNT).toBe(104);
+  it('has exactly 121 canonical records (39 core + 82 widget)', () => {
+    expect(MANAGE_BLUEPRINT_RECORD_COUNT).toBe(121);
     expect(CORE_ACTIONS.length).toBe(39);
-    expect(WIDGET_ACTIONS.length).toBe(65);
-    expect(ALL_TS_ENUM_ACTIONS.length).toBe(104);
+    expect(WIDGET_ACTIONS.length).toBe(82);
+    expect(ALL_TS_ENUM_ACTIONS.length).toBe(121);
   });
 
   it('every TS enum action has a matching legacy ID in the records', () => {

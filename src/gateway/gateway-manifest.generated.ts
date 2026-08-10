@@ -5982,6 +5982,9 @@ export const gatewayManifest = {
         "create_widget_blueprint",
         "set_widget_parent_class",
         "preview_widget",
+        "remove_widget",
+        "rename_widget",
+        "reparent_widget",
         "add_canvas_panel",
         "add_horizontal_box",
         "add_vertical_box",
@@ -5993,6 +5996,9 @@ export const gatewayManifest = {
         "add_size_box",
         "add_scale_box",
         "add_border",
+        "add_spacer",
+        "add_safe_zone",
+        "add_widget_switcher",
         "add_text_block",
         "add_rich_text_block",
         "add_image",
@@ -6005,6 +6011,9 @@ export const gatewayManifest = {
         "add_spin_box",
         "add_list_view",
         "add_tree_view",
+        "add_widget_component",
+        "set_font",
+        "set_margin",
         "add_health_bar",
         "add_ammo_counter",
         "add_minimap",
@@ -6013,6 +6022,9 @@ export const gatewayManifest = {
         "add_interaction_prompt",
         "add_objective_tracker",
         "add_damage_indicator",
+        "add_quest_tracker",
+        "create_credits_screen",
+        "create_shop_ui",
         "create_main_menu",
         "create_pause_menu",
         "create_settings_menu",
@@ -6039,14 +6051,20 @@ export const gatewayManifest = {
         "bind_on_clicked",
         "bind_on_hovered",
         "bind_on_value_changed",
+        "bind_localized_text",
+        "set_localization_key",
+        "set_widget_binding",
         "create_widget_animation",
         "add_animation_track",
         "add_animation_keyframe",
         "set_animation_loop",
-        "get_widget_info"
+        "delete_animation",
+        "get_widget_info",
+        "get_widget_slot_info"
       ],
       "parameterNames": [
         "actionPath",
+        "activeIndex",
         "alignment",
         "alwaysShowScrollbar",
         "anchorMax",
@@ -6059,12 +6077,14 @@ export const gatewayManifest = {
         "bindingSource",
         "blueprintPath",
         "blueprintType",
+        "bottom",
         "brushColor",
         "brushSize",
         "category",
         "clipping",
         "colorAndOpacity",
         "columnCount",
+        "columns",
         "componentClass",
         "componentName",
         "componentType",
@@ -6078,6 +6098,7 @@ export const gatewayManifest = {
         "fadeTime",
         "fillColorAndOpacity",
         "folder",
+        "font",
         "fontSize",
         "fromNodeId",
         "fromPinName",
@@ -6101,6 +6122,8 @@ export const gatewayManifest = {
         "isMarquee",
         "isPublic",
         "isReplicated",
+        "key",
+        "left",
         "linkedTo",
         "location",
         "loopCount",
@@ -6117,6 +6140,7 @@ export const gatewayManifest = {
         "minDesiredWidth",
         "minValue",
         "name",
+        "namespace",
         "newName",
         "newParent",
         "nodeGuid",
@@ -6143,12 +6167,16 @@ export const gatewayManifest = {
         "posX",
         "posY",
         "position",
+        "positionX",
+        "positionY",
         "preset",
         "previewSize",
         "promptFormat",
         "properties",
+        "property",
         "propertyName",
         "propertyValue",
+        "right",
         "rotation",
         "rowCount",
         "saveAfterCompile",
@@ -6161,6 +6189,8 @@ export const gatewayManifest = {
         "shear",
         "showSpeakerName",
         "size",
+        "sizeX",
+        "sizeY",
         "slotName",
         "slotPadding",
         "sourceNode",
@@ -6168,16 +6198,20 @@ export const gatewayManifest = {
         "stepSize",
         "stretch",
         "stretchDirection",
+        "stringKey",
+        "stringTableId",
         "structPath",
         "targetClass",
         "targetNode",
         "targetPin",
+        "targetWidget",
         "text",
         "texturePath",
         "time",
         "title",
         "toNodeId",
         "toPinName",
+        "top",
         "trackType",
         "translation",
         "userSpecifiedScale",
@@ -6199,6 +6233,10 @@ export const gatewayManifest = {
           "actionPath": {
             "type": "string",
             "description": "Enhanced Input action asset path accepted in place of inputActionPath."
+          },
+          "activeIndex": {
+            "type": "number",
+            "description": "Index shown first by a widget switcher."
           },
           "alignment": {
             "type": "object",
@@ -6254,6 +6292,10 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Blueprint type hint for creation."
           },
+          "bottom": {
+            "type": "number",
+            "description": "Bottom margin in slate units."
+          },
           "brushColor": {
             "type": "object",
             "additionalProperties": true,
@@ -6290,6 +6332,10 @@ export const gatewayManifest = {
           "columnCount": {
             "type": "number",
             "description": "Number of columns in a uniform/grid panel."
+          },
+          "columns": {
+            "type": "number",
+            "description": "Item columns in the generated shop grid."
           },
           "componentClass": {
             "type": "string",
@@ -6343,6 +6389,10 @@ export const gatewayManifest = {
           "folder": {
             "type": "string",
             "description": "Destination /Game folder for a Widget Blueprint."
+          },
+          "font": {
+            "type": "string",
+            "description": "Font asset path; the size is applied even when this is omitted."
           },
           "fontSize": {
             "type": "number",
@@ -6455,6 +6505,14 @@ export const gatewayManifest = {
             "type": "boolean",
             "description": "Whether the variable is replicated."
           },
+          "key": {
+            "type": "string",
+            "description": "Localization key assigned to the text widget."
+          },
+          "left": {
+            "type": "number",
+            "description": "Left margin in slate units."
+          },
           "linkedTo": {
             "type": "string",
             "description": "Target pin descriptor for a pin link."
@@ -6522,6 +6580,10 @@ export const gatewayManifest = {
           "name": {
             "type": "string",
             "description": "Name for the new Blueprint or asset."
+          },
+          "namespace": {
+            "type": "string",
+            "description": "Localization namespace owning the key."
           },
           "newName": {
             "type": "string",
@@ -6675,6 +6737,14 @@ export const gatewayManifest = {
             "x-unreal-reflection-boundary": true,
             "description": "Widget position offset."
           },
+          "positionX": {
+            "type": "number",
+            "description": "Canvas slot X position, applied only when the parent is a canvas panel."
+          },
+          "positionY": {
+            "type": "number",
+            "description": "Canvas slot Y position, applied only when the parent is a canvas panel."
+          },
           "preset": {
             "type": "string",
             "description": "Named anchor preset (e.g. TopCenter) applied in place of anchorMin/anchorMax."
@@ -6699,12 +6769,20 @@ export const gatewayManifest = {
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
+          "property": {
+            "type": "string",
+            "description": "Widget property being bound; it selects the binding type."
+          },
           "propertyName": {
             "type": "string",
             "description": "Property name to set on the CDO or component."
           },
           "propertyValue": {
             "description": "Value to assign to the property."
+          },
+          "right": {
+            "type": "number",
+            "description": "Right margin in slate units."
           },
           "rotation": {
             "type": "object",
@@ -6774,6 +6852,14 @@ export const gatewayManifest = {
             "x-unreal-reflection-boundary": true,
             "description": "Widget size override {x,y}."
           },
+          "sizeX": {
+            "type": "number",
+            "description": "Slot width in slate units."
+          },
+          "sizeY": {
+            "type": "number",
+            "description": "Slot height in slate units."
+          },
           "slotName": {
             "type": "string",
             "description": "Slot name for a child widget inside its parent."
@@ -6818,6 +6904,14 @@ export const gatewayManifest = {
             ],
             "description": "Scale box stretch direction."
           },
+          "stringKey": {
+            "type": "string",
+            "description": "Key looked up within the string table."
+          },
+          "stringTableId": {
+            "type": "string",
+            "description": "String table asset backing a localized text binding."
+          },
           "structPath": {
             "type": "string",
             "description": "Blueprint Struct asset path (UserDefinedStruct or native UScriptStruct)."
@@ -6833,6 +6927,10 @@ export const gatewayManifest = {
           "targetPin": {
             "type": "string",
             "description": "Target pin name on the destination node."
+          },
+          "targetWidget": {
+            "type": "string",
+            "description": "Name of the widget inside the tree that receives the binding."
           },
           "text": {
             "type": "string",
@@ -6857,6 +6955,10 @@ export const gatewayManifest = {
           "toPinName": {
             "type": "string",
             "description": "Target pin name for a pin connection."
+          },
+          "top": {
+            "type": "number",
+            "description": "Top margin in slate units."
           },
           "trackType": {
             "type": "string",
@@ -6975,6 +7077,9 @@ export const gatewayManifest = {
               "create_widget_blueprint",
               "set_widget_parent_class",
               "preview_widget",
+              "remove_widget",
+              "rename_widget",
+              "reparent_widget",
               "add_canvas_panel",
               "add_horizontal_box",
               "add_vertical_box",
@@ -6986,6 +7091,9 @@ export const gatewayManifest = {
               "add_size_box",
               "add_scale_box",
               "add_border",
+              "add_spacer",
+              "add_safe_zone",
+              "add_widget_switcher",
               "add_text_block",
               "add_rich_text_block",
               "add_image",
@@ -6998,6 +7106,9 @@ export const gatewayManifest = {
               "add_spin_box",
               "add_list_view",
               "add_tree_view",
+              "add_widget_component",
+              "set_font",
+              "set_margin",
               "add_health_bar",
               "add_ammo_counter",
               "add_minimap",
@@ -7006,6 +7117,9 @@ export const gatewayManifest = {
               "add_interaction_prompt",
               "add_objective_tracker",
               "add_damage_indicator",
+              "add_quest_tracker",
+              "create_credits_screen",
+              "create_shop_ui",
               "create_main_menu",
               "create_pause_menu",
               "create_settings_menu",
@@ -7032,11 +7146,16 @@ export const gatewayManifest = {
               "bind_on_clicked",
               "bind_on_hovered",
               "bind_on_value_changed",
+              "bind_localized_text",
+              "set_localization_key",
+              "set_widget_binding",
               "create_widget_animation",
               "add_animation_track",
               "add_animation_keyframe",
               "set_animation_loop",
-              "get_widget_info"
+              "delete_animation",
+              "get_widget_info",
+              "get_widget_slot_info"
             ],
             "description": "Action to invoke on manage_blueprint."
           },
