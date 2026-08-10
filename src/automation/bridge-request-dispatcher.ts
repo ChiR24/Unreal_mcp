@@ -1,4 +1,12 @@
 import { config } from '../config.js';
+import { McpRequestCancelledError } from './request-cancellation-error.js';
+import { ConnectionLifecycle } from './connection-lifecycle.js';
+import { RequestCorrelation } from './request-correlation.js';
+import { ConsentGrantSchema } from '../tools/catalog/capabilities/semantic/authorization.js';
+import {
+    ExpectedRevisionsSchema,
+    type ExpectedRevisions,
+} from '../tools/catalog/capabilities/semantic/execution-options.js';
 import type { Logger } from '../utils/logging/logger.js';
 import type { RequestTracker } from './request-tracker.js';
 import type {
@@ -8,9 +16,15 @@ import type {
     QueuedRequestItem
 } from './types.js';
 
-type AutomationRequestOptions = { timeoutMs?: number };
+type AutomationRequestOptions = {
+    timeoutMs?: number;
+    mcpRequestId?: string;
+    correlationId?: string;
+    consent?: { capability: string; acknowledge: 'explicit' | 'elevated' };
+    expectedRevisions?: ExpectedRevisions;
+};
 
-interface AutomationRequestDispatcherDependencies {
+export interface AutomationRequestDispatcherDependencies {
     readonly enabled: boolean;
     readonly maxQueuedRequests: number;
     readonly connectionTimeoutMs: number;
@@ -31,13 +45,21 @@ interface AutomationRequestDispatcherDependencies {
 }
 
 export class AutomationRequestDispatcher {
-    private readonly queuedRequestItems: QueuedRequestItem[] = [];
-    private connectionPromise?: Promise<void>;
-    private connectionLock = false;
-    private connectionAttemptCleanup?: () => void;
-    private connectionAttemptReject?: (reason: Error) => void;
+    private queuedRequestItems: QueuedRequestItem[] = [];
+    private readonly correlation = new RequestCorrelation();
+    private readonly connection: ConnectionLifecycle;
 
-    constructor(private readonly deps: AutomationRequestDispatcherDependencies) { }
+    constructor(private readonly deps: AutomationRequestDispatcherDependencies) {
+        this.connection = new ConnectionLifecycle({
+            enabled: deps.enabled,
+            connectionTimeoutMs: deps.connectionTimeoutMs,
+            log: deps.log,
+            startClient: deps.startClient,
+            abortPendingConnection: deps.abortPendingConnection,
+            once: deps.once,
+            off: deps.off
+        });
+    }
 
     public async sendAutomationRequest<T = AutomationBridgeResponseMessage>(
         action: string,
@@ -45,7 +67,7 @@ export class AutomationRequestDispatcher {
         options: AutomationRequestOptions = {}
     ): Promise<T> {
         if (!this.deps.isConnected()) {
-            await this.ensureConnected();
+            await this.connection.ensureConnected();
         }
 
         if (!this.deps.isConnected()) {
@@ -58,23 +80,32 @@ export class AutomationRequestDispatcher {
             }
 
             return new Promise<T>((resolve, reject) => {
-                this.queuedRequestItems.push({
+                const item: QueuedRequestItem = {
                     resolve: resolve as (value: unknown) => void,
                     reject: reject as (reason: unknown) => void,
                     action,
                     payload,
-                    options
-                });
+                    options,
+                    mcpRequestId: options.mcpRequestId
+                };
+                this.queuedRequestItems.push(item);
+                this.correlation.registerQueued(options.mcpRequestId, item);
             });
         }
 
         return this.sendRequestInternal<T>(action, payload, options);
     }
 
+    /** The MCP requests awaiting an automation id, for progress fan-out. */
+    public mcpRequestIdsForAuto(autoId: string): string[] {
+        return this.correlation.mcpRequestIdsForAuto(autoId);
+    }
+
     public stop(reason: Error): void {
-        this.abortConnectionAttempt(reason);
+        this.connection.abort(reason);
         this.rejectQueuedRequests(reason);
         this.deps.requestTracker.rejectAll(reason);
+        this.correlation.clear();
     }
 
     public rejectQueuedRequests(error: Error): void {
@@ -87,97 +118,38 @@ export class AutomationRequestDispatcher {
         this.deps.requestTracker.rejectAll(error);
     }
 
-    private async ensureConnected(): Promise<void> {
-        if (!this.deps.enabled) {
-            throw new Error('Automation bridge disabled');
+    /**
+     * Cancel every automation request correlated to an MCP request id.
+     *
+     * Rejects queued items that never left the bridge and, for each inflight
+     * subscriber, rejects the caller-local promise and (when it is the last
+     * subscriber for a given automation id) sends a targeted `cancel_request`
+     * frame to Unreal. Convergence point for both SDK AbortSignal cancellation
+     * and explicit `notifications/cancelled` handling. Non-throwing and
+     * idempotent: a second call for the same id is a no-op once torn down.
+     */
+    public cancelMcpRequest(mcpRequestId: string, reason: string): void {
+        if (!mcpRequestId) return;
+
+        const queued = this.correlation.takeQueued(mcpRequestId);
+        if (queued.length > 0) {
+            this.queuedRequestItems = this.queuedRequestItems.filter((it) => !queued.includes(it));
+            const error = new McpRequestCancelledError(`MCP request cancelled: ${reason}`, reason);
+            for (const it of queued) it.reject(error);
         }
 
-        this.deps.log.info('Automation bridge not connected, attempting lazy connection...');
-        if (!this.connectionPromise && !this.connectionLock) {
-            this.connectionLock = true;
-            this.connectionPromise = this.createConnectionPromise();
-        }
-
-        try {
-            await this.waitForConnection();
-        } catch (error) {
-            const message = getErrorMessage(error);
-            if (message === 'Lazy connection timeout') {
-                this.abortConnectionAttempt(new Error('Lazy connection timeout'));
+        this.correlation.cancel(
+            mcpRequestId,
+            reason,
+            {
+                sendFrame: (autoId) => this.deps.send({ type: 'cancel_request', requestId: autoId, reason }),
+                rejectUnderlying: (autoId) => this.deps.requestTracker.rejectRequest(
+                    autoId,
+                    new McpRequestCancelledError(`MCP request cancelled: ${reason}`, reason)
+                ),
+                log: this.deps.log
             }
-            this.deps.log.error('Lazy connection failed', error);
-            throw new Error(`Failed to establish connection to Unreal Engine: ${message}`);
-        }
-    }
-
-    private createConnectionPromise(): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            const onConnect = () => {
-                cleanup();
-                resolve();
-            };
-            const onError = (error: Error) => {
-                cleanup();
-                reject(error);
-            };
-            const onHandshakeFail = (info: { reason: string }) => {
-                cleanup();
-                reject(new Error(`Handshake failed: ${String(info.reason)}`));
-            };
-            const cleanup = () => {
-                this.deps.off('connected', onConnect);
-                this.deps.off('error', onError);
-                this.deps.off('handshakeFailed', onHandshakeFail);
-                this.connectionLock = false;
-                this.connectionPromise = undefined;
-                if (this.connectionAttemptCleanup === cleanup) {
-                    this.connectionAttemptCleanup = undefined;
-                    this.connectionAttemptReject = undefined;
-                }
-            };
-
-            this.connectionAttemptCleanup = cleanup;
-            this.connectionAttemptReject = reject;
-            this.deps.once('connected', onConnect);
-            this.deps.once('error', onError);
-            this.deps.once('handshakeFailed', onHandshakeFail);
-
-            try {
-                this.deps.startClient();
-            } catch (error) {
-                onError(error instanceof Error ? error : new Error(String(error)));
-            }
-        });
-    }
-
-    private async waitForConnection(): Promise<void> {
-        let timeoutId: ReturnType<typeof setTimeout> | undefined;
-        const timeoutPromise = new Promise<never>((_, reject) => {
-            timeoutId = setTimeout(() => reject(new Error('Lazy connection timeout')), this.deps.connectionTimeoutMs);
-        });
-
-        try {
-            await Promise.race([this.connectionPromise, timeoutPromise]);
-        } finally {
-            if (timeoutId) clearTimeout(timeoutId);
-        }
-    }
-
-    private abortConnectionAttempt(reason: Error): void {
-        const rejectConnectionAttempt = this.connectionAttemptReject;
-        const cleanup = this.connectionAttemptCleanup;
-        if (cleanup) {
-            cleanup();
-        } else {
-            this.connectionLock = false;
-            this.connectionPromise = undefined;
-            this.connectionAttemptReject = undefined;
-        }
-
-        if (rejectConnectionAttempt) {
-            rejectConnectionAttempt(reason);
-        }
-        this.deps.abortPendingConnection(reason);
+        );
     }
 
     private async sendRequestInternal<T>(
@@ -186,32 +158,65 @@ export class AutomationRequestDispatcher {
         options: AutomationRequestOptions
     ): Promise<T> {
         const timeoutMs = options.timeoutMs ?? config.MCP_REQUEST_TIMEOUT_MS;
-        const coalesceKey = this.deps.requestTracker.createCoalesceKey(action, payload);
+        const coalesceKey = options.expectedRevisions === undefined
+            ? this.deps.requestTracker.createCoalesceKey(action, payload)
+            : undefined;
         if (coalesceKey) {
             const existing = this.deps.requestTracker.getCoalescedRequest(coalesceKey);
-            if (existing) {
-                return existing.then(castAutomationResponse<T>);
+            const autoId = this.correlation.getAutoIdForCoalesceKey(coalesceKey);
+            if (existing && autoId) {
+                return this.createSubscriberPromise<T>(existing, options.mcpRequestId, autoId);
             }
         }
 
         const { requestId, promise } = this.deps.requestTracker.createRequest(action, payload, timeoutMs);
         if (coalesceKey) {
             this.deps.requestTracker.setCoalescedRequest(coalesceKey, promise);
+            this.correlation.noteCoalesceKey(coalesceKey, requestId);
         }
 
-        const resultPromise = promise.then(castAutomationResponse<T>);
-        void resultPromise.then(
-            () => this.processRequestQueue(),
-            () => this.processRequestQueue()
-        );
+        const resultPromise = promise.then(castAutomationResponse);
+        void resultPromise
+            .then(() => this.processRequestQueue(), () => this.processRequestQueue())
+            .finally(() => this.correlation.settle(requestId))
+            .catch(() => undefined);
 
-        if (this.deps.send({ type: 'automation_request', requestId, action, payload })) {
+        const envelope: AutomationBridgeMessage = { type: 'automation_request', requestId, action, payload };
+        if (options.correlationId !== undefined) envelope.correlationId = options.correlationId;
+        if (options.consent !== undefined) envelope.consent = options.consent;
+        if (options.expectedRevisions !== undefined) envelope.expectedRevisions = options.expectedRevisions;
+        if (this.deps.send(envelope)) {
             this.deps.requestTracker.updateLastRequestSentAt();
-            return resultPromise;
+            return this.createSubscriberPromise<T>(resultPromise, options.mcpRequestId, requestId);
         }
 
         this.deps.requestTracker.rejectRequest(requestId, new Error('Failed to send request'));
         throw new Error('Failed to send request');
+    }
+
+    /**
+     * Wrap an underlying automation request promise in a per-caller subscriber
+     * promise. The subscriber follows the shared promise but can be rejected
+     * independently on cancellation, which is what lets coalesced callers (who
+     * share one underlying automation id) cancel without tearing each other down.
+     */
+    private createSubscriberPromise<T>(
+        shared: Promise<AutomationBridgeResponseMessage>,
+        mcpRequestId: string | undefined,
+        autoId: string
+    ): Promise<T> {
+        return new Promise<T>((resolve, reject) => {
+            shared.then(
+                (value) => resolve(value as T),
+                (error) => reject(error)
+            );
+            this.correlation.register(
+                mcpRequestId,
+                autoId,
+                resolve as (value: unknown) => void,
+                reject as (reason: unknown) => void
+            );
+        });
     }
 
     private processRequestQueue(): void {
@@ -228,21 +233,35 @@ export class AutomationRequestDispatcher {
             const item = this.queuedRequestItems.shift();
             if (!item) continue;
 
-            this.sendRequestInternal(item.action, item.payload, getQueuedOptions(item.options))
-                .then(item.resolve)
-                .catch(item.reject);
+            this.correlation.detachQueued(item);
+            try {
+                const requestPromise = this.sendRequestInternal(item.action, item.payload, getQueuedOptions(item.options));
+                requestPromise.then(item.resolve, item.reject);
+            } catch (error) {
+                // Synchronous setup failure (e.g. tracker at capacity): reject the
+                // dequeued caller and keep draining the remaining items.
+                item.reject(error);
+            }
         }
     }
 }
 
-function castAutomationResponse<T>(response: AutomationBridgeResponseMessage): T {
-    return response as T;
+function castAutomationResponse(response: AutomationBridgeResponseMessage): AutomationBridgeResponseMessage {
+    return response;
 }
 
 function getQueuedOptions(options: Record<string, unknown>): AutomationRequestOptions {
-    return typeof options.timeoutMs === 'number' ? { timeoutMs: options.timeoutMs } : {};
-}
-
-function getErrorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
+    const result: AutomationRequestOptions = {};
+    if (typeof options.timeoutMs === 'number') result.timeoutMs = options.timeoutMs;
+    if (typeof options.mcpRequestId === 'string') result.mcpRequestId = options.mcpRequestId;
+    if (typeof options.correlationId === 'string') result.correlationId = options.correlationId;
+    // Re-parsed rather than asserted: this arrives as an untyped record, and a
+    // malformed grant must be dropped here rather than forwarded to the plugin.
+    const consent = ConsentGrantSchema.safeParse(options.consent);
+    if (consent.success) {
+        result.consent = { capability: consent.data.capability, acknowledge: consent.data.acknowledge };
+    }
+    const expectedRevisions = ExpectedRevisionsSchema.safeParse(options.expectedRevisions);
+    if (expectedRevisions.success) result.expectedRevisions = expectedRevisions.data;
+    return result;
 }

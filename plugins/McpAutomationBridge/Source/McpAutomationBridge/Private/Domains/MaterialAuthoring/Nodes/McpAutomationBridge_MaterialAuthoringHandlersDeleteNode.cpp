@@ -79,7 +79,6 @@ bool HandleDeleteNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
 #endif
       }
 
-      // Remove the expression
       if (Material) {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         Material->GetExpressionCollection().RemoveExpression(Expr);

@@ -7,8 +7,8 @@ namespace McpGeometryHandlers
 bool HandleWeldVertices(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double Tolerance = GetNumberFieldGeom(Payload, TEXT("tolerance"), 0.0001);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double Tolerance = GetJsonNumberField(Payload, TEXT("tolerance"), 0.0001);
 
     if (ActorName.IsEmpty())
     {
@@ -61,7 +61,7 @@ bool HandleWeldVertices(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 bool HandleFillHoles(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -119,7 +119,7 @@ bool HandleFillHoles(UMcpAutomationBridgeSubsystem* Self, const FString& Request
 bool HandleRemoveDegenerates(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -171,9 +171,9 @@ bool HandleRemoveDegenerates(UMcpAutomationBridgeSubsystem* Self, const FString&
 bool HandleMergeVertices(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double Tolerance = GetNumberFieldGeom(Payload, TEXT("tolerance"), 0.001);
-    bool bCompactMesh = GetBoolFieldGeom(Payload, TEXT("compact"), true);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double Tolerance = GetJsonNumberField(Payload, TEXT("tolerance"), 0.001);
+    bool bCompactMesh = GetJsonBoolField(Payload, TEXT("compact"), true);
 
     if (ActorName.IsEmpty())
     {
@@ -237,9 +237,6 @@ bool HandleMergeVertices(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     return true;
 }
 
-// -------------------------------------------------------------------------
-// UV Transform Operations
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

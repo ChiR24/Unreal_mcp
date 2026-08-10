@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { CancelledNotificationSchema } from '@modelcontextprotocol/sdk/types.js';
 
 import { AutomationBridge } from '../automation/index.js';
 import { AutomationLogger } from '../automation/log-redaction.js';
@@ -8,8 +9,12 @@ import { ServerSetup } from '../server-setup.js';
 import { HealthMonitor } from '../services/health-monitor.js';
 import { startMetricsServer } from '../services/metrics-server.js';
 import { consolidatedToolDefinitions } from '../tools/catalog/consolidated-tool-definitions.js';
+import { unrealGatewayToolDefinition } from '../tools/catalog/unreal-gateway-definition.js';
 import { UnrealBridge } from '../unreal-bridge.js';
+import { canonicalizeMcpRequestId } from '../automation/request-context.js';
 import { responseValidator } from '../utils/responses/response-validator.js';
+import { BoundedTaskStore } from './mcp-primitives/bounded-task-store.js';
+import { wirePrimitives } from './mcp-primitives/primitive-wiring.js';
 
 const require = createRequire(import.meta.url);
 const packageInfo: { name?: string; version?: string } = (() => {
@@ -106,6 +111,9 @@ export function createServer() {
       responseValidator.registerSchema(tool.name, tool.outputSchema);
     }
   }
+  if (unrealGatewayToolDefinition.outputSchema) {
+    responseValidator.registerSchema(unrealGatewayToolDefinition.name, unrealGatewayToolDefinition.outputSchema);
+  }
   log.debug(
     `Registered ${responseValidator.getStats().totalSchemas} output schemas for validation`,
   );
@@ -113,6 +121,21 @@ export function createServer() {
   log.debug('Server starting without connecting to Unreal Engine');
   healthMonitor.metrics.connectionStatus = 'disconnected';
 
+  // Task 37: advertise exactly the implemented session-profile primitives — the
+  // single `unreal` tool, resources (with subscribe), prompts, and completions —
+  // and nothing else. Capabilities are set at constructor time, before
+  // serverSetup registers the backing handlers; wirePrimitives then fails closed
+  // if any advertised capability lacks its handler. The single stable tool never
+  // changes membership, so no *_list_changed member is declared. This shape
+  // mirrors ADVERTISED_SESSION_CAPABILITIES and is kept an inline literal.
+  //
+  // Task 44 adds `tasks`, and it is advertised ONLY because `taskStore` below
+  // makes it real: supplying the store is what makes the SDK register the four
+  // tasks/* handlers, and wirePrimitives then refuses to construct if any of
+  // them is missing. The two must move together — the SDK checks neither
+  // direction, so a store without the advert silently answers methods the
+  // handshake denies, and an advert without the store answers -32601.
+  const taskStore = new BoundedTaskStore();
   const server = new Server(
     {
       name: SERVER_NAME,
@@ -120,10 +143,13 @@ export function createServer() {
     },
     {
       capabilities: {
-        tools: { listChanged: true },
-        resources: {},
+        tools: {},
+        resources: { subscribe: true },
         prompts: {},
+        completions: {},
+        tasks: { list: {}, cancel: {}, requests: { tools: { call: {} } } },
       },
+      taskStore,
     },
   );
 
@@ -148,11 +174,41 @@ export function createServer() {
   );
   serverSetup.setup();
 
+  // Wire the Tasks 31-36 MCP primitives (resource subscriptions + coalesced
+  // notifications, workflow prompts, completions, and the adaptive client
+  // profile) onto the server. Runs after setup() so the read-only resource and
+  // tools handlers already exist when the fail-closed PrimitiveRegistry validates
+  // the advertised surface. Its cleanup helper drains every primitive store and
+  // the flush timer on server close.
+  const wiredPrimitives = wirePrimitives(server);
+
+  // Forward inbound notifications/cancelled to the automation bridge so the
+  // matching queued or inflight Unreal work is cancelled. This is the TS stdio
+  // counterpart to the native /mcp transport's cancellation and converges on
+  // the same idempotent cancellation primitive as SDK AbortSignal cancellation.
+  server.setNotificationHandler(CancelledNotificationSchema, (notification) => {
+    const rawId = (notification.params as { requestId?: string | number }).requestId;
+    if (rawId === undefined) return;
+    const requestId = canonicalizeMcpRequestId(rawId);
+    automationBridge.cancelMcpRequest(requestId, 'Client cancelled request');
+  });
+
+  // Shutdown drain, chained so the close handlers wirePrimitives and the tool
+  // registry already installed still run. Retained task results are session
+  // state; a closed server must not keep holding them.
+  const previousOnClose = server.onclose;
+  server.onclose = (): void => {
+    taskStore.clear();
+    previousOnClose?.();
+  };
+
   return {
     server,
     bridge,
     automationBridge,
     healthMonitor,
     metricsServer,
+    wiredPrimitives,
+    taskStore,
   };
 }

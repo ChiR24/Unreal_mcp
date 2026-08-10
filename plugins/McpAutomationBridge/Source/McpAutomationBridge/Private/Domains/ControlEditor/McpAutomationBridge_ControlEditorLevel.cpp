@@ -5,7 +5,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString LevelPath;
-  // Accept multiple parameter names for flexibility
   // levelPath is the primary, path and assetPath are aliases
   Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
   if (LevelPath.IsEmpty()) {
@@ -20,7 +19,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     return true;
   }
 
-  // Normalize the level path
   if (!LevelPath.StartsWith(TEXT("/"))) {
     LevelPath = FString::Printf(TEXT("/Game/%s"), *LevelPath);
   }
@@ -33,7 +31,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     return true;
   }
 
-  // Remove map suffix if present
   if (LevelPath.EndsWith(TEXT(".umap"))) {
     LevelPath.LeftChopInline(5);
   }
@@ -44,7 +41,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     return true;
   }
 
-  // Use FEditorFileUtils to load the map
   FString MapPath = LevelPath + TEXT(".umap");
 
   // CRITICAL FIX: Unreal stores levels in TWO possible path patterns:
@@ -52,7 +48,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
   // 2. Flat (legacy): /Game/Path/LevelName.umap
   // We must check BOTH paths before returning FILE_NOT_FOUND.
 
-  // Build both possible paths
   FString FlatMapPath = LevelPath + TEXT(".umap");
   // Check if path is /Engine/ or /Game/ and extract accordingly
   int32 PrefixLen = 6; // Default: "/Game/" is 6 chars
@@ -70,7 +65,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
   FString FullFolderMapPath = ContentDir + FolderMapPath.Mid(PrefixLen);
   FullFolderMapPath = FPaths::ConvertRelativePathToFull(FullFolderMapPath);
 
-  // Check which path exists
   FString MapPathToLoad;
   FString FullMapPath;
 
@@ -87,7 +81,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
            TEXT("OpenLevel: Found level at flat path: %s"), *FullFlatMapPath);
   } else {
-    // Neither path exists - return detailed error
     TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
     ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
     ErrorDetails->SetStringField(TEXT("checkedFolderBased"), FullFolderMapPath);

@@ -214,9 +214,11 @@ bool TryCreateCustomEventNode(
     SaveLoadedAssetThrottled(Context.Blueprint);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(
-        TEXT("nodeId"),
-        EventNode->NodeGuid.ToString());
+    // `nodeGuid` is the required output field on blueprint.add_event; see the
+    // note in McpAutomationBridge_BlueprintGraphHandlersPrivate.h.
+    const FString EventNodeGuidText = EventNode->NodeGuid.ToString();
+    Result->SetStringField(TEXT("nodeGuid"), EventNodeGuidText);
+    Result->SetStringField(TEXT("nodeId"), EventNodeGuidText);
     Result->SetStringField(TEXT("nodeName"), EventNode->GetName());
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(

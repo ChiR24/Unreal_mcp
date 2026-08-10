@@ -53,7 +53,6 @@ bool HandleSetStreamingDistance(
         return true;
     }
 
-    // Find the streaming level in the world's streaming levels array
     ULevelStreaming* FoundLevel = nullptr;
     for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels())
     {
@@ -64,24 +63,18 @@ bool HandleSetStreamingDistance(
         }
     }
 
-    // If not found in streaming levels, check if the level exists on disk and create a streaming reference
     // This handles cases where the sublevel was created but the streaming reference wasn't loaded
     if (!FoundLevel)
     {
-        // Build potential full paths for the level
         TArray<FString> PotentialPaths;
 
-        // Try as-is first (might be a full path)
         if (LevelName.StartsWith(TEXT("/Game/")))
         {
             PotentialPaths.Add(LevelName);
         }
-        // Try under the current world's path
         FString WorldPath = FPaths::GetPath(World->GetOutermost()->GetName());
         PotentialPaths.Add(WorldPath / LevelName);
-        // Try under /Game/ directly
         PotentialPaths.Add(FString(TEXT("/Game/")) / LevelName);
-        // Try with the level name as a full path under /Game/
         PotentialPaths.Add(FString(TEXT("/Game/")) + LevelName);
 
         for (const FString& TestPath : PotentialPaths)
@@ -92,7 +85,6 @@ bool HandleSetStreamingDistance(
                 // Already a package path, check if package exists
                 if (FPackageName::DoesPackageExist(TestFullPath))
                 {
-                    // Found the level on disk - create a streaming reference
                     ULevelStreamingDynamic* NewStreamingLevel = NewObject<ULevelStreamingDynamic>(World, ULevelStreamingDynamic::StaticClass());
                     if (NewStreamingLevel)
                     {
@@ -149,7 +141,6 @@ bool HandleSetStreamingDistance(
         return true;
     }
 
-    // Create an ALevelStreamingVolume at the specified location with size based on streaming distance
     FActorSpawnParameters SpawnParams;
     SpawnParams.Name = MakeUniqueObjectName(World, ALevelStreamingVolume::StaticClass(),
         FName(*FString::Printf(TEXT("StreamingVolume_%s"), *LevelName)));
@@ -169,10 +160,8 @@ bool HandleSetStreamingDistance(
         return true;
     }
 
-    // Set the volume label
     NewVolume->SetActorLabel(FString::Printf(TEXT("StreamingVolume_%s"), *LevelName));
 
-    // Configure streaming usage
     if (StreamingUsage == TEXT("Loading"))
     {
         NewVolume->StreamingUsage = EStreamingVolumeUsage::SVB_Loading;
@@ -199,14 +188,12 @@ bool HandleSetStreamingDistance(
     FVector DesiredScale = FVector(StreamingDistance / 100.0); // Brush is ~200 units, half = 100
     NewVolume->SetActorScale3D(DesiredScale);
 
-    // Associate the volume with the streaming level
     FoundLevel->EditorStreamingVolumes.AddUnique(NewVolume);
 
     // Note: UpdateStreamingLevelsRefs() is not exported/available in all UE versions
     // The association via EditorStreamingVolumes is sufficient - refs update on save
     UE_LOG(LogMcpLevelStructureHandlers, Verbose, TEXT("Streaming volume created - refs will update on save"));
 
-    // Mark the level streaming object as dirty
     FoundLevel->MarkPackageDirty();
     World->MarkPackageDirty();
 

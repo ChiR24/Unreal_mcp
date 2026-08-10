@@ -67,7 +67,6 @@ bool HandleAddLevelBlueprintNode(
         return true;
     }
 
-    // Get the event graph
     UEdGraph* EventGraph = FBlueprintEditorUtils::FindEventGraph(LevelBP);
     if (!EventGraph)
     {
@@ -83,7 +82,6 @@ bool HandleAddLevelBlueprintNode(
 
     if (!NodeClassObj)
     {
-        // Try with BlueprintGraph prefix
         FString BlueprintGraphPath = TEXT("/Script/BlueprintGraph.") + NodeClass;
         NodeClassObj = FindObject<UClass>(nullptr, *BlueprintGraphPath);
         TriedPaths += TEXT(", ") + BlueprintGraphPath;
@@ -91,7 +89,6 @@ bool HandleAddLevelBlueprintNode(
 
     if (!NodeClassObj)
     {
-        // Try with Engine prefix
         FString EnginePath = TEXT("/Script/Engine.") + NodeClass;
         NodeClassObj = FindObject<UClass>(nullptr, *EnginePath);
         TriedPaths += TEXT(", ") + EnginePath;
@@ -99,7 +96,6 @@ bool HandleAddLevelBlueprintNode(
 
     if (!NodeClassObj)
     {
-        // Try with UnrealEd prefix
         FString UnrealEdPath = TEXT("/Script/UnrealEd.") + NodeClass;
         NodeClassObj = FindObject<UClass>(nullptr, *UnrealEdPath);
         TriedPaths += TEXT(", ") + UnrealEdPath;
@@ -108,7 +104,6 @@ bool HandleAddLevelBlueprintNode(
     FString CreatedNodeName;
     if (NodeClassObj && NodeClassObj->IsChildOf(UK2Node::StaticClass()))
     {
-        // Create the node
         UK2Node* NewNode = NewObject<UK2Node>(EventGraph, NodeClassObj);
         if (NewNode)
         {
@@ -160,7 +155,6 @@ bool HandleAddLevelBlueprintNode(
         return true;
     }
 
-    // Mark blueprint as modified
     FBlueprintEditorUtils::MarkBlueprintAsModified(LevelBP);
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();

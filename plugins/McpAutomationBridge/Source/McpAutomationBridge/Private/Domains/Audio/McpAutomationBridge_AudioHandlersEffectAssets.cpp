@@ -84,14 +84,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
 #endif
 }
 
-// -----------------------------------------------------------------------------
-// HandleCreateSourceEffectChain
-// -----------------------------------------------------------------------------
-// Creates a USoundEffectSourcePresetChain asset.
-//
-// Payload:  { "chainName": string, "outputPath"?: string }
-// Response: { "chainPath": string, "chainName": string }
-// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {

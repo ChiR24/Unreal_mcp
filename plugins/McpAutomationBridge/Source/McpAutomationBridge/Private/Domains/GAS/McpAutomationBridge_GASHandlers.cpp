@@ -40,11 +40,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         return true;
     }
 
-    FString SubAction = McpGASHandlers::GetStringFieldGAS(Payload, TEXT("subAction"));
+    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
     if (SubAction.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'subAction' in payload."), TEXT("INVALID_ARGUMENT"));
         return true;
+    }
+
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    for (const TCHAR* PathField : { TEXT("abilityPath"), TEXT("effectPath"),
+                                    TEXT("cuePath"), TEXT("attributeSetPath") })
+    {
+        if (!BlueprintPath.IsEmpty())
+        {
+            break;
+        }
+        BlueprintPath = GetJsonStringField(Payload, PathField);
     }
 
     McpGASHandlers::FGASRequestContext Context{
@@ -52,10 +63,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         RequestId,
         RequestingSocket,
         Payload,
-        McpGASHandlers::GetStringFieldGAS(Payload, TEXT("name")),
-        McpGASHandlers::GetStringFieldGAS(Payload, TEXT("path"), TEXT("/Game")),
-        McpGASHandlers::GetStringFieldGAS(Payload, TEXT("blueprintPath")),
-        McpGASHandlers::GetStringFieldGAS(Payload, TEXT("assetPath"))
+        GetJsonStringField(Payload, TEXT("name")),
+        GetJsonStringField(Payload, TEXT("path"), TEXT("/Game")),
+        BlueprintPath,
+        GetJsonStringField(Payload, TEXT("assetPath"))
     };
 
     if (McpGASHandlers::HandleGASComponents(Context, SubAction) ||

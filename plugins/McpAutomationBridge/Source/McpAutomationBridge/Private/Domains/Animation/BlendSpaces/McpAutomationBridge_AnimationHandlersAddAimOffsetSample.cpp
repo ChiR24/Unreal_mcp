@@ -15,7 +15,6 @@ bool HandleAnimationAddAimOffsetSampleAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Add a sample to an aim offset
     FString AssetPath;
     Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
 

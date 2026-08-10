@@ -15,7 +15,6 @@ bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const
       return true;
     }
 
-    // Load the actor blueprint
     UBlueprint* Blueprint =
         Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *ActorPath));
     if (!Blueprint) {
@@ -30,7 +29,6 @@ bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const
     double DropRadius = GetPayloadNumber(Payload, TEXT("dropRadius"), 100.0);
     bool bDropOnDeath = GetPayloadBool(Payload, TEXT("dropOnDeath"), true);
 
-    // Add loot drop configuration variables
     FEdGraphPinType IntType;
     IntType.PinCategory = UEdGraphSchema_K2::PC_Int;
 
@@ -48,7 +46,6 @@ bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const
     VectorType.PinCategory = UEdGraphSchema_K2::PC_Struct;
     VectorType.PinSubCategoryObject = TBaseStructure<FVector>::Get();
 
-    // Loot drop variables
     TArray<TPair<FName, FEdGraphPinType>> LootVars = {
       TPair<FName, FEdGraphPinType>(TEXT("LootTable"), SoftObjectType),
       TPair<FName, FEdGraphPinType>(TEXT("LootDropCount"), IntType),
@@ -76,7 +73,6 @@ bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const
       }
     }
 
-    // Add event dispatcher for loot drops
     FEdGraphPinType DelegateType;
     DelegateType.PinCategory = UEdGraphSchema_K2::PC_MCDelegate;
 
@@ -92,7 +88,6 @@ bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const
       AddedVars.Add(MakeShared<FJsonValueString>(TEXT("OnLootDropped")));
     }
 
-    // Set default values on CDO if available
     if (Blueprint->GeneratedClass) {
       UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject();
       if (CDO) {
@@ -148,7 +143,6 @@ bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const
       return true;
     }
 
-    // Load the loot table asset
     UObject* LootTableObj = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *LootTablePath);
     UMcpGenericDataAsset* LootTable = Cast<UMcpGenericDataAsset>(LootTableObj);
 
@@ -174,7 +168,6 @@ bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const
       }
     }
 
-    // Default tiers if none provided
     if (Tiers.Num() == 0) {
       Tiers = {
         TPair<FString, double>(TEXT("Common"), 60.0),
@@ -187,7 +180,6 @@ bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const
 
     bool bTiersSet = false;
 
-    // Try to find and set QualityTiers property via reflection
     FProperty* TiersProp = LootTable->GetClass()->FindPropertyByName(TEXT("QualityTiers"));
     if (!TiersProp) {
       TiersProp = LootTable->GetClass()->FindPropertyByName(TEXT("Tiers"));

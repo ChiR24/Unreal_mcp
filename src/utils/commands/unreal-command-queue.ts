@@ -1,10 +1,25 @@
 import { Logger } from '../logging/logger.js';
 
+/**
+ * Whether re-running a command after a transient failure is safe.
+ *
+ * A client-side timeout or dropped connection never proves the editor skipped
+ * the work, so re-running is only safe when repeating it cannot double a side
+ * effect: `safe-read` (side-effect free) or `idempotency-protected` (the callee
+ * collapses the replay). `never` is the default for everything else.
+ */
+export type CommandRetryPolicy = 'never' | 'safe-read' | 'idempotency-protected';
+
+export interface CommandExecuteOptions {
+  readonly retryPolicy?: CommandRetryPolicy;
+}
+
 export interface CommandQueueItem<T = unknown> {
   command: () => Promise<T>;
   resolve: (value: T) => void;
   reject: (reason?: unknown) => void;
   priority: number;
+  retryPolicy: CommandRetryPolicy;
   retryCount?: number;
 }
 
@@ -28,6 +43,8 @@ export class UnrealCommandQueue {
   private readonly MIN_COMMAND_DELAY = 100;
   private readonly MAX_COMMAND_DELAY = 500;
   private readonly STAT_COMMAND_DELAY = 300;
+  private readonly MAX_RECOVERY_ATTEMPTS = 1;
+  private readonly RECOVERY_DELAY_MS = 500;
 
   constructor() {
     this.startProcessor();
@@ -36,7 +53,11 @@ export class UnrealCommandQueue {
   /**
    * Execute a command with priority-based throttling
    */
-  async execute<T>(command: () => Promise<T>, priority: number = 5): Promise<T> {
+  async execute<T>(
+    command: () => Promise<T>,
+    priority: number = 5,
+    options: CommandExecuteOptions = {}
+  ): Promise<T> {
     if (this.stopped) {
       throw new UnrealCommandQueueStoppedError();
     }
@@ -46,7 +67,8 @@ export class UnrealCommandQueue {
         command: command as () => Promise<unknown>,
         resolve: resolve as (value: unknown) => void,
         reject,
-        priority
+        priority,
+        retryPolicy: options.retryPolicy ?? 'never'
       };
 
       this.enqueue(item);
@@ -118,19 +140,22 @@ export class UnrealCommandQueue {
             msg.includes('unknown action')
           );
 
-          if (isTransient && item.retryCount < 3) {
+          if (isTransient && this.mayRecover(item)) {
             item.retryCount++;
-            this.log.warn(`Command failed (transient), retrying (${item.retryCount}/3)`);
+            this.log.warn(
+              `Command failed (transient), recovering ${item.retryPolicy} work (${item.retryCount}/${this.MAX_RECOVERY_ATTEMPTS})`
+            );
             this.queue.unshift({
-              command: item.command,
-              resolve: item.resolve,
-              reject: item.reject,
-              priority: Math.max(1, item.priority - 1),
-              retryCount: item.retryCount
+              ...item,
+              priority: Math.max(1, item.priority - 1)
             });
-            await this.delay(500);
+            await this.delay(this.RECOVERY_DELAY_MS);
           } else {
-            if (isDeterministicFailure) {
+            if (isTransient) {
+              this.log.warn(
+                `Command failed (transient) and is not retry-safe (retryPolicy=${item.retryPolicy}); refusing to re-run`
+              );
+            } else if (isDeterministicFailure) {
               this.log.warn(`Command failed (non-retryable): ${msgRaw}`);
             }
             item.reject(error);
@@ -142,6 +167,13 @@ export class UnrealCommandQueue {
     } finally {
       this.isProcessing = false;
     }
+  }
+
+  private mayRecover(item: CommandQueueItem): boolean {
+    if (item.retryPolicy === 'never') {
+      return false;
+    }
+    return (item.retryCount ?? 0) < this.MAX_RECOVERY_ATTEMPTS;
   }
 
   private enqueue(item: CommandQueueItem): void {

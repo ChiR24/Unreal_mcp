@@ -48,7 +48,7 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
             return true;
         }
 
-        FString StackingType = GetStringFieldGAS(Payload, TEXT("stackingType"), TEXT("None"));
+        FString StackingType = GetJsonStringField(Payload, TEXT("stackingType"), TEXT("None"));
         const FString StackingTypeToken = NormalizeGASToken(StackingType);
         int32 StackLimit = static_cast<int32>(GetGASNumberFieldWithFallback(Payload, TEXT("stackLimit"), TEXT("stackLimitCount"), 1));
 
@@ -86,7 +86,7 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
 
         EffectCDO->StackLimitCount = StackLimit;
 
-        FString StackDurationRefreshPolicy = GetStringFieldGAS(Payload, TEXT("stackDurationRefreshPolicy"));
+        FString StackDurationRefreshPolicy = GetJsonStringField(Payload, TEXT("stackDurationRefreshPolicy"));
         const FString StackDurationRefreshPolicyToken = NormalizeGASToken(StackDurationRefreshPolicy);
         if (StackDurationRefreshPolicyToken == TEXT("refreshonsuccessfulapplication"))
         {
@@ -106,7 +106,7 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
 #endif
         }
 
-        FString StackPeriodResetPolicy = GetStringFieldGAS(Payload, TEXT("stackPeriodResetPolicy"));
+        FString StackPeriodResetPolicy = GetJsonStringField(Payload, TEXT("stackPeriodResetPolicy"));
         const FString StackPeriodResetPolicyToken = NormalizeGASToken(StackPeriodResetPolicy);
         if (StackPeriodResetPolicyToken == TEXT("resetonsuccessfulapplication"))
         {
@@ -117,7 +117,7 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
             EffectCDO->StackPeriodResetPolicy = EGameplayEffectStackingPeriodPolicy::NeverReset;
         }
 
-        FString StackExpirationPolicy = GetStringFieldGAS(Payload, TEXT("stackExpirationPolicy"));
+        FString StackExpirationPolicy = GetJsonStringField(Payload, TEXT("stackExpirationPolicy"));
         const FString StackExpirationPolicyToken = NormalizeGASToken(StackExpirationPolicy);
         if (StackExpirationPolicyToken == TEXT("clearentirestack"))
         {

@@ -19,7 +19,6 @@ bool HandleCreateSpecializedMaterial(UMcpAutomationBridgeSubsystem* Bridge, cons
       Path = TEXT("/Game/Materials");
     }
 
-    // Name validation - sanitize and check for invalid characters
     FString OriginalName = Name;
     FString SanitizedName = SanitizeAssetName(Name);
     FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
@@ -32,7 +31,6 @@ bool HandleCreateSpecializedMaterial(UMcpAutomationBridgeSubsystem* Bridge, cons
     }
     Name = SanitizedName;
 
-    // Path validation - check for traversal and normalize
     FString ValidatedPath;
     FString PathError;
     if (!ValidateAssetCreationPath(Path, Name, ValidatedPath, PathError)) {

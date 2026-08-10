@@ -79,7 +79,6 @@ bool HandleAssignActorToDataLayer(
         return true;
     }
 
-    // Get the Data Layer Editor Subsystem
     UDataLayerEditorSubsystem* DataLayerEditorSubsystem = UDataLayerEditorSubsystem::Get();
     if (!DataLayerEditorSubsystem)
     {

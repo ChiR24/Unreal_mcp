@@ -1,3 +1,4 @@
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
@@ -14,14 +15,7 @@ FString NormalizeAudioPath(const FString& Path, bool bForLoad)
 	}
 
 	FString Normalized = Sanitized;
-	if (Normalized.StartsWith(TEXT("/Content/")))
-	{
-		Normalized = TEXT("/Game/") + Normalized.Mid(9);
-	}
-	else if (Normalized == TEXT("/Content"))
-	{
-		Normalized = TEXT("/Game");
-	}
+	McpAssetPathCanonical::MapContentRootInline(Normalized);
 
 	Normalized.ReplaceInline(TEXT("\\"), TEXT("/"));
 	while (Normalized.EndsWith(TEXT("/")))

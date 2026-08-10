@@ -1,0 +1,111 @@
+import { isRecord } from '../utils/validation/type-guards.js';
+import { handleManageToolsCall } from './tool-registry-manage-tools.js';
+import {
+  findTool,
+  getActionValues,
+  getString,
+  gatewayError,
+  isGatewayFailure,
+  nextGatewayCorrelationId
+} from './gateway/gateway-shared.js';
+import type { CorrelationId } from '../tools/catalog/capabilities/semantic/ids.js';
+import { runWithGatewayCorrelation } from '../automation/gateway-correlation-context.js';
+import { describeGatewayCapability } from './gateway/gateway-describe.js';
+import { searchGatewayCapabilities } from './gateway/gateway-search.js';
+import { executeGatewayCall, type GatewayContext } from './gateway/gateway-execute.js';
+
+export type { GatewayContext };
+
+const CONFIGURE_TOOL = 'manage_tools';
+
+// configure is the only operation that used to reach a handler without the
+// admission checks execute applies, so an unroutable `tool`, a second action
+// smuggled through `params`, and an unknown action all reached dispatch.
+function configureAdmissionError(args: Record<string, unknown>, action: string | undefined): Record<string, unknown> | undefined {
+  const tool = getString(args, 'tool');
+  if (tool !== undefined && tool !== CONFIGURE_TOOL) {
+    return gatewayError('configure', 'UNKNOWN_TOOL', `configure routes only to ${CONFIGURE_TOOL}; '${tool}' cannot be configured.`);
+  }
+  if (action === undefined) return gatewayError('configure', 'MISSING_ACTION', 'configure requires a manage_tools action.');
+  if (!isRecord(args.params) && args.params !== undefined) return gatewayError('configure', 'INVALID_PARAMS', 'params must be an object.');
+  const params = isRecord(args.params) ? args.params : {};
+  if ('action' in params || 'subAction' in params) {
+    return gatewayError('configure', 'INVALID_PARAMS', 'action is an envelope field; remove it from params so one call cannot name two actions.');
+  }
+  const definition = findTool(CONFIGURE_TOOL);
+  const known = definition === undefined ? [] : getActionValues(definition);
+  if (known.length > 0 && !known.includes(action)) {
+    return {
+      ...gatewayError('configure', 'UNKNOWN_ACTION', `Unknown action '${action}' for ${CONFIGURE_TOOL}.`),
+      availableActions: known
+    };
+  }
+  return undefined;
+}
+
+async function configureGateway(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const action = getString(args, 'action');
+  const refusal = configureAdmissionError(args, action);
+  if (refusal !== undefined) return refusal;
+  const result = await handleManageToolsCall({ ...(isRecord(args.params) ? args.params : {}), action: action as string });
+  const succeeded = result.success === true;
+  const envelope: Record<string, unknown> = { success: succeeded, operation: 'configure', action, result };
+  // A wrapped failure used to carry no top-level code, so a caller had to reach
+  // into `result` to learn a configure call had failed at all.
+  if (!succeeded) {
+    const reported = isRecord(result) && typeof result.errorCode === 'string' && result.errorCode.length > 0
+      ? result.errorCode
+      : 'CONFIGURE_FAILED';
+    const detail = isRecord(result) && typeof result.message === 'string' ? result.message : 'configure failed.';
+    envelope.errorCode = reported;
+    envelope.error = detail;
+    envelope.message = detail;
+  }
+  // get_status surfaces the session's derived structural client profile; hoist it
+  // to the envelope top level so a gateway caller reads it without unwrapping `result`.
+  if (result.clientProfile !== undefined) {
+    envelope.clientProfile = result.clientProfile;
+  }
+  return envelope;
+}
+
+async function dispatchGatewayOperation(
+  operation: string,
+  args: Record<string, unknown>,
+  context: GatewayContext,
+  correlationId: CorrelationId
+): Promise<Record<string, unknown>> {
+  switch (operation) {
+    case 'search': return searchGatewayCapabilities(args);
+    case 'describe': return describeGatewayCapability(args);
+    case 'execute': return await runWithGatewayCorrelation(correlationId, () => executeGatewayCall(args, context, correlationId));
+    case 'configure': return await configureGateway(args);
+    default: return gatewayError(operation, 'UNKNOWN_OPERATION', 'operation must be search, describe, execute, or configure.');
+  }
+}
+
+export async function handleUnrealGatewayCall(args: Record<string, unknown>, context: GatewayContext): Promise<Record<string, unknown>> {
+  const operation = getString(args, 'operation') ?? 'unknown';
+  const correlationId = nextGatewayCorrelationId();
+  const tool = getString(args, 'tool');
+  const action = getString(args, 'action');
+  context.logger.debug('gateway request received', { correlationId, operation, tool, action });
+
+  const result = await dispatchGatewayOperation(operation, args, context, correlationId);
+
+  if (isGatewayFailure(result)) {
+    context.logger.warn('gateway request failed', {
+      correlationId,
+      operation,
+      tool,
+      action,
+      errorCode: typeof result.errorCode === 'string' ? result.errorCode : undefined
+    });
+  } else {
+    context.logger.debug('gateway request completed', { correlationId, operation, tool, action });
+  }
+
+  return result;
+}
+
+export { searchGatewayCapabilities as searchGatewayCatalog, describeGatewayCapability };

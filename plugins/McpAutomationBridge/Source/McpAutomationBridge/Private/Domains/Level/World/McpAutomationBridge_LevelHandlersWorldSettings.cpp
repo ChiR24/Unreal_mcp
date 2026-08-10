@@ -45,7 +45,6 @@ bool HandleSetLevelWorldSettingsAction(UMcpAutomationBridgeSubsystem& Subsystem,
 
     FString CurrentLevelPath = TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT("");
 
-    // If a specific level path was requested, validate it matches the current level
     if (!RequestedLevelPath.IsEmpty()) {
       if (CurrentLevelPath.ToLower() != RequestedLevelPath.ToLower()) {
         SendAutomationResponse(

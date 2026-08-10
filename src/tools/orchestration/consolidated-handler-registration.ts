@@ -64,6 +64,10 @@ import { handleSystemTools, handleConsoleCommand } from '../handlers/system/syst
 import { handleTextureTools } from '../handlers/texture/texture-handlers.js';
 import { handleVolumeTools } from '../handlers/volume/volume-handlers.js';
 import { handleWidgetAuthoringTools } from '../handlers/widget/widget-authoring-handlers.js';
+import { GENERATED_PARENT_ROUTING } from './generated-routing-index.generated.js';
+import type { ITools } from '../../types/tools/tool-interfaces.js';
+
+type ParentHandler = (args: Record<string, unknown>, tools: ITools) => Promise<unknown>;
 
 function mergeAutomationResponse(
   response: unknown,
@@ -85,74 +89,71 @@ const insightsActionSet = new Set<string>([
   'analyze_trace'
 ]);
 
-export function registerDefaultHandlers() {
-  toolRegistry.register('manage_asset', async (args, tools) => {
+// Per-parent dispatch closures (private routing logic, preserved as source).
+// The parent name -> handlerKey mapping is generated; this map turns each
+// handlerKey into the actual dispatch closure.
+const PARENT_DISPATCH: Record<string, ParentHandler> = {
+  asset: async (args, tools) => {
     const action = getToolAction(args);
-    if (materialAuthoringActionSet.has(action)) return await handleMaterialAuthoringTools(action, args, tools);
-    if (textureActionSet.has(action)) return await handleTextureTools(action, args, tools);
+    if (materialAuthoringActionSet.has(action)) return handleMaterialAuthoringTools(action, args, tools) as Promise<unknown>;
+    if (textureActionSet.has(action)) return handleTextureTools(action, args, tools) as Promise<unknown>;
     if (action === 'nanite_rebuild_mesh') {
       const payload = { ...args, subAction: action };
-      return cleanObject(await executeAutomationRequest(tools, 'manage_render', payload, `Automation bridge not available for ${action}`));
+      return cleanObject(await executeAutomationRequest(tools, 'manage_render', payload, `Automation bridge not available for ${action}`)) as Promise<unknown>;
     }
     if (isMaterialGraphAction(action)) {
       const subAction = resolveMaterialGraphSubAction(action);
-      return await handleGraphTools('manage_material_graph', subAction, args, tools);
+      return handleGraphTools('manage_material_graph', subAction, args, tools) as Promise<unknown>;
     }
     if (isBehaviorTreeGraphAction(action)) {
       const subAction = resolveBehaviorTreeGraphSubAction(action);
-      return await handleGraphTools('manage_behavior_tree', subAction, args, tools);
+      return handleGraphTools('manage_behavior_tree', subAction, args, tools) as Promise<unknown>;
     }
-    return await handleAssetTools(action, args, tools);
-  });
-
-  toolRegistry.register('manage_blueprint', async (args, tools) => {
+    return handleAssetTools(action, args, tools) as Promise<unknown>;
+  },
+  blueprint: async (args, tools) => {
     const action = getToolAction(args);
-    if (action === 'create_blueprint') return await handleBlueprintTools('create', args, tools);
-    if (action === 'get_blueprint') return await handleBlueprintGet(args, tools);
-    if (widgetAuthoringActionSet.has(action)) return await handleWidgetAuthoringTools(action, args, tools);
-    if (blueprintGraphActionSet.has(action)) return await handleGraphTools('manage_blueprint', action, args, tools);
-    return await handleBlueprintTools(action, args, tools);
-  });
-
-  toolRegistry.register('control_actor', async (args, tools) => await handleActorTools(getToolAction(args), args, tools));
-  toolRegistry.register('control_editor', async (args, tools) => await handleEditorTools(getToolAction(args), args, tools));
-  toolRegistry.register('manage_level', async (args, tools) => await handleLevelTools(getToolAction(args), args, tools));
-
-  toolRegistry.register('animation_physics', async (args, tools) => {
+    if (action === 'create_blueprint') return handleBlueprintTools('create', args, tools) as Promise<unknown>;
+    if (action === 'get_blueprint') return handleBlueprintGet(args, tools) as Promise<unknown>;
+    if (widgetAuthoringActionSet.has(action)) return handleWidgetAuthoringTools(action, args, tools) as Promise<unknown>;
+    if (blueprintGraphActionSet.has(action)) return handleGraphTools('manage_blueprint', action, args, tools) as Promise<unknown>;
+    return handleBlueprintTools(action, args, tools) as Promise<unknown>;
+  },
+  actor: (args, tools) => handleActorTools(getToolAction(args), args, tools) as Promise<unknown>,
+  editor: (args, tools) => handleEditorTools(getToolAction(args), args, tools) as Promise<unknown>,
+  level: (args, tools) => handleLevelTools(getToolAction(args), args, tools) as Promise<unknown>,
+  animation: async (args, tools) => {
     const action = getToolAction(args);
-    if (skeletonActionSet.has(action)) return await handleSkeletonTools(action, args, tools);
-    if (animationAuthoringActionSet.has(action)) return await handleAnimationAuthoringTools(action, args, tools);
+    if (skeletonActionSet.has(action)) return handleSkeletonTools(action, args, tools) as Promise<unknown>;
+    if (animationAuthoringActionSet.has(action)) return handleAnimationAuthoringTools(action, args, tools) as Promise<unknown>;
     if (action === 'add_notify' && (args.frame !== undefined || args.assetPath !== undefined)) {
-      return await handleAnimationAuthoringTools(action, args, tools);
+      return handleAnimationAuthoringTools(action, args, tools) as Promise<unknown>;
     }
-    return await handleAnimationTools(action, args, tools);
-  });
-
-  toolRegistry.register('manage_effect', async (args, tools) => await handleEffectTools(getToolAction(args), args, tools));
-
-  toolRegistry.register('build_environment', async (args, tools) => {
+    return handleAnimationTools(action, args, tools) as Promise<unknown>;
+  },
+  effect: (args, tools) => handleEffectTools(getToolAction(args), args, tools) as Promise<unknown>,
+  environment: async (args, tools) => {
     const action = getToolAction(args);
-    if (lightingActionSet.has(action)) return await handleLightingTools(action, args, tools);
+    if (lightingActionSet.has(action)) return handleLightingTools(action, args, tools) as Promise<unknown>;
     if (renderActionSet.has(action)) {
       return cleanObject(await executeAutomationRequest(
         tools,
         'manage_render',
         { ...args, subAction: action },
         `Automation bridge not available for ${action}`
-      ));
+      )) as Promise<unknown>;
     }
-    if (splineActionSet.has(action)) return await handleSplineTools(action, args, tools);
-    return await handleEnvironmentTools(action, args, tools);
-  });
-
-  toolRegistry.register('system_control', async (args, tools) => {
+    if (splineActionSet.has(action)) return handleSplineTools(action, args, tools) as Promise<unknown>;
+    return handleEnvironmentTools(action, args, tools) as Promise<unknown>;
+  },
+  system: async (args, tools) => {
     const action = getToolAction(args);
-    if (action === 'console_command') return await handleConsoleCommand(args, tools);
-    if (action === 'run_ubt') return await handlePipelineTools(action, args, tools);
-    if (performanceActionSet.has(action)) return await handlePerformanceTools(action, args, tools);
-    if (action === 'run_tests') return cleanObject(await executeAutomationRequest(tools, 'manage_tests', { ...args, subAction: action }, 'Bridge unavailable'));
+    if (action === 'console_command') return handleConsoleCommand(args, tools) as Promise<unknown>;
+    if (action === 'run_ubt') return handlePipelineTools(action, args, tools) as Promise<unknown>;
+    if (performanceActionSet.has(action)) return handlePerformanceTools(action, args, tools) as Promise<unknown>;
+    if (action === 'run_tests') return cleanObject(await executeAutomationRequest(tools, 'manage_tests', { ...args, subAction: action }, 'Bridge unavailable')) as Promise<unknown>;
     if (action === 'subscribe' || action === 'unsubscribe') {
-      return cleanObject(await executeAutomationRequest(tools, 'manage_logs', { ...args, subAction: action }, 'Bridge unavailable'));
+      return cleanObject(await executeAutomationRequest(tools, 'manage_logs', { ...args, subAction: action }, 'Bridge unavailable')) as Promise<unknown>;
     }
     if (action === 'spawn_category') {
       const categoryName = typeof args.categoryName === 'string'
@@ -183,43 +184,53 @@ export function registerDefaultHandlers() {
       const metadata = channels ? { action, channels, sessionType: 'trace' } : { action, sessionType: 'trace' };
       return cleanObject(mergeAutomationResponse(response, metadata));
     }
-    if (action === 'lumen_update_scene') return cleanObject(await executeAutomationRequest(tools, 'manage_render', { ...args, subAction: action }, 'Bridge unavailable'));
-    return await handleSystemTools(action, args, tools);
-  });
+    if (action === 'lumen_update_scene') return cleanObject(await executeAutomationRequest(tools, 'manage_render', { ...args, subAction: action }, 'Bridge unavailable')) as Promise<unknown>;
+    return handleSystemTools(action, args, tools) as Promise<unknown>;
+  },
+  sequence: (args, tools) => handleSequenceTools(getToolAction(args), args, tools) as Promise<unknown>,
+  inspect: (args, tools) => handleInspectTools(getToolAction(args), args, tools) as Promise<unknown>,
+  tools: (args, tools) => handleManageToolsTools(getToolAction(args), args, tools) as Promise<unknown>,
+  audio: async (args, tools) => {
+    const action = getToolAction(args);
+    if (audioAuthoringActionSet.has(action)) return handleAudioAuthoringTools(action, args, tools) as Promise<unknown>;
+    return handleAudioTools(action, args, tools) as Promise<unknown>;
+  },
+  geometry: (args, tools) => handleGeometryTools(getToolAction(args), args, tools) as Promise<unknown>,
+  pcg: (args, tools) => handlePCGTools(getToolAction(args), args, tools) as Promise<unknown>,
+  gas: (args, tools) => handleGASTools(getToolAction(args), args, tools) as Promise<unknown>,
+  character: (args, tools) => handleCharacterTools(getToolAction(args), args, tools) as Promise<unknown>,
+  combat: (args, tools) => handleCombatTools(getToolAction(args), args, tools) as Promise<unknown>,
+  ai: async (args, tools) => {
+    const action = getToolAction(args);
+    if (behaviorTreeActionSet.has(action)) return handleGraphTools('manage_behavior_tree', action, args, tools) as Promise<unknown>;
+    if (navigationActionSet.has(action)) return handleNavigationTools(action, args, tools) as Promise<unknown>;
+    return handleAITools(action, args, tools) as Promise<unknown>;
+  },
+  inventory: (args, tools) => handleInventoryTools(getToolAction(args), args, tools) as Promise<unknown>,
+  interaction: (args, tools) => handleInteractionTools(getToolAction(args), args, tools) as Promise<unknown>,
+  networking: async (args, tools) => {
+    const action = getToolAction(args);
+    if (sessionActionSet.has(action)) return handleSessionsTools(action, args, tools) as Promise<unknown>;
+    if (gameFrameworkActionSet.has(action)) return handleGameFrameworkTools(action, args, tools) as Promise<unknown>;
+    if (inputActionSet.has(action)) return handleInputTools(action, args, tools) as Promise<unknown>;
+    return handleNetworkingTools(action, args, tools) as Promise<unknown>;
+  },
+  levelStructure: async (args, tools) => {
+    const action = getToolAction(args);
+    if (volumeActionSet.has(action)) return handleVolumeTools(action, args, tools) as Promise<unknown>;
+    return handleLevelStructureTools(action, args, tools) as Promise<unknown>;
+  },
+};
 
-  toolRegistry.register('manage_sequence', async (args, tools) => await handleSequenceTools(getToolAction(args), args, tools));
-  toolRegistry.register('inspect', async (args, tools) => await handleInspectTools(getToolAction(args), args, tools));
-  toolRegistry.register('manage_tools', async (args, tools) => await handleManageToolsTools(getToolAction(args), args, tools));
-  toolRegistry.register('manage_audio', async (args, tools) => {
-    const action = getToolAction(args);
-    if (audioAuthoringActionSet.has(action)) return await handleAudioAuthoringTools(action, args, tools);
-    return await handleAudioTools(action, args, tools);
-  });
-
-  toolRegistry.register('manage_geometry', async (args, tools) => await handleGeometryTools(getToolAction(args), args, tools));
-  toolRegistry.register('manage_pcg', async (args, tools) => await handlePCGTools(getToolAction(args), args, tools));
-
-  toolRegistry.register('manage_gas', async (args, tools) => await handleGASTools(getToolAction(args), args, tools));
-  toolRegistry.register('manage_character', async (args, tools) => await handleCharacterTools(getToolAction(args), args, tools));
-  toolRegistry.register('manage_combat', async (args, tools) => await handleCombatTools(getToolAction(args), args, tools));
-  toolRegistry.register('manage_ai', async (args, tools) => {
-    const action = getToolAction(args);
-    if (behaviorTreeActionSet.has(action)) return await handleGraphTools('manage_behavior_tree', action, args, tools);
-    if (navigationActionSet.has(action)) return await handleNavigationTools(action, args, tools);
-    return await handleAITools(action, args, tools);
-  });
-  toolRegistry.register('manage_inventory', async (args, tools) => await handleInventoryTools(getToolAction(args), args, tools));
-  toolRegistry.register('manage_interaction', async (args, tools) => await handleInteractionTools(getToolAction(args), args, tools));
-  toolRegistry.register('manage_networking', async (args, tools) => {
-    const action = getToolAction(args);
-    if (sessionActionSet.has(action)) return await handleSessionsTools(action, args, tools);
-    if (gameFrameworkActionSet.has(action)) return await handleGameFrameworkTools(action, args, tools);
-    if (inputActionSet.has(action)) return await handleInputTools(action, args, tools);
-    return await handleNetworkingTools(action, args, tools);
-  });
-  toolRegistry.register('manage_level_structure', async (args, tools) => {
-    const action = getToolAction(args);
-    if (volumeActionSet.has(action)) return await handleVolumeTools(action, args, tools);
-    return await handleLevelStructureTools(action, args, tools);
-  });
+export function registerDefaultHandlers(): void {
+  // Registration is driven by the generated routing index (Task 23): the
+  // parent name -> handlerKey map is generated; the dispatch closures above
+  // are private routing logic. No hand-written schema/action table remains.
+  for (const entry of GENERATED_PARENT_ROUTING) {
+    const dispatch = PARENT_DISPATCH[entry.handlerKey];
+    if (!dispatch) {
+      throw new Error(`No parent dispatch registered for handlerKey '${entry.handlerKey}' (tool '${entry.name}')`);
+    }
+    toolRegistry.register(entry.name, (args, tools) => dispatch(args, tools));
+  }
 }

@@ -13,7 +13,6 @@ bool HandleInventoryEquipmentEffectActions(UMcpAutomationBridgeSubsystem& Bridge
       return true;
     }
 
-    // Load the blueprint
     UBlueprint* Blueprint =
         Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
     if (!Blueprint) {
@@ -24,7 +23,6 @@ bool HandleInventoryEquipmentEffectActions(UMcpAutomationBridgeSubsystem& Bridge
       return true;
     }
 
-    // Add equipment effect configuration variables
     FEdGraphPinType BoolType;
     BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
 
@@ -40,7 +38,6 @@ bool HandleInventoryEquipmentEffectActions(UMcpAutomationBridgeSubsystem& Bridge
     NameArrayType.PinCategory = UEdGraphSchema_K2::PC_Name;
     NameArrayType.ContainerType = EPinContainerType::Array;
 
-    // Stat modifier variables
     TArray<TPair<FName, FEdGraphPinType>> EffectVars = {
       TPair<FName, FEdGraphPinType>(TEXT("bApplyStatModifiers"), BoolType),
       TPair<FName, FEdGraphPinType>(TEXT("StatModifierMultiplier"), FloatType),

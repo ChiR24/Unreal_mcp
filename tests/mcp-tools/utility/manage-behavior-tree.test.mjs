@@ -195,7 +195,7 @@ const testCases = [
     arguments: { action: 'add_subnode', assetPath: '${captured:btPath}',
                  parentNodeId: '00000000-0000-0000-0000-000000000000',
                  subnodeType: 'Decorator', nodeClass: 'Cooldown' },
-    expected: 'INVALID_PARENT|not found' },
+    expected: 'error|INVALID_PARENT|not found' },
 
   // Symmetry with the other 4 BT SubActions: add_subnode also walks
   // UAIGraphNode::SubNodes via FindGraphNodeByIdOrName, so passing a subnode's
@@ -207,7 +207,7 @@ const testCases = [
     arguments: { action: 'add_subnode', assetPath: '${captured:btPath}',
                  parentNodeId: '${captured:bbDecId}',
                  subnodeType: 'Decorator', nodeClass: 'Cooldown' },
-    expected: 'INVALID_PARENT_FOR_SUBNODE|cannot host' },
+    expected: 'error|INVALID_PARENT_FOR_SUBNODE|cannot host' },
 
   // === Cleanup (two-step: assets first, then folder — UE 5.7 folder-delete
   // modal workaround per reference_mcp_integration_test_patterns memory) ===

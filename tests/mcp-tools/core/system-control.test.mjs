@@ -18,6 +18,7 @@ const PYTHON_HELPER_LITERAL = JSON.stringify(PYTHON_HELPER_RELATIVE);
 const PROJECT_SETTING_SECTION = '/Script/Engine.Engine';
 const PROJECT_SETTING_KEY = `McpSystemControlSmoke_${Date.now()}`;
 const TRACE_TEST_ID = Date.now();
+const OPTIONAL_SOUND = '/Engine/VREditor/Sounds/VR_click1.VR_click1';
 const TRACE_CAPTURE_FILE = `MCPTests/insights-capture-${TRACE_TEST_ID}.utrace`;
 const TRACE_START_FILE = `MCPTests/insights-start-${TRACE_TEST_ID}.utrace`;
 const TRACE_SNAPSHOT_FILE = `MCPTests/insights-snapshot-${TRACE_TEST_ID}.utrace`;
@@ -112,8 +113,10 @@ const testCases = [
   { scenario: 'ACTION: lumen_update_scene', toolName: 'system_control', arguments: { action: 'lumen_update_scene' }, expected: 'success' },
   // === PLAYBACK ===
   { scenario: 'PLAYBACK: play_sound', toolName: 'system_control', arguments: { action: 'play_sound', volume: 0 }, expected: 'success' },
+  { scenario: 'OPTIONAL: play_sound with soundPath and pitch', toolName: 'system_control', arguments: { action: 'play_sound', soundPath: OPTIONAL_SOUND, pitch: 1.0, volume: 0 }, expected: 'success' },
   // === CREATE ===
   { scenario: 'CREATE: create_widget', toolName: 'system_control', arguments: { action: 'create_widget', name: WIDGET_NAME, savePath: TEST_FOLDER }, expected: 'success|already exists' },
+  { scenario: 'OPTIONAL: create_widget with widgetType', toolName: 'system_control', arguments: { action: 'create_widget', name: `${WIDGET_NAME}_Typed`, savePath: TEST_FOLDER, widgetType: 'UserWidget' }, expected: 'success|already exists' },
   // === ACTION ===
   { scenario: 'ACTION: show_widget', toolName: 'system_control', arguments: { action: 'show_widget', widgetId: 'notification', message: 'System control smoke', duration: 0.1 }, expected: 'success' },
   // === ADD ===
@@ -121,6 +124,7 @@ const testCases = [
   { scenario: 'ADD: add_widget_child parentName', toolName: 'system_control', arguments: { action: 'add_widget_child', widgetPath: WIDGET_PATH, childClass: 'TextBlock', name: 'SystemControlNestedText', parentName: 'RootCanvas', text: 'System control nested child' }, expected: 'success' },
   // === CONFIG ===
   { scenario: 'CONFIG: set_cvar', toolName: 'system_control', arguments: { action: 'set_cvar', name: 'r.ScreenPercentage', value: '100' }, expected: 'success' },
+  { scenario: 'OPTIONAL: set_cvar via cvar alias', toolName: 'system_control', arguments: { action: 'set_cvar', cvar: 'r.ScreenPercentage', value: '100' }, expected: 'success' },
   // === INFO ===
   { scenario: 'INFO: get_project_settings', toolName: 'system_control', arguments: { action: 'get_project_settings', section: '/Script/Engine.Engine' }, expected: 'success' },
   // === ACTION ===
@@ -183,6 +187,7 @@ const testCases = [
     { scenario: 'CONFIG: configure_lod', toolName: 'system_control', arguments: {"action": "configure_lod", "forceLOD": -1, "lodBias": 0}, expected: 'success' },
     // === ACTION ===
     { scenario: 'ACTION: apply_baseline_settings', toolName: 'system_control', arguments: {"action": "apply_baseline_settings"}, expected: 'success' },
+    { scenario: 'OPTIONAL: apply_baseline_settings with profile', toolName: 'system_control', arguments: { action: 'apply_baseline_settings', profile: 'balanced' }, expected: 'success' },
     { scenario: 'ACTION: optimize_draw_calls', toolName: 'system_control', arguments: {"action": "optimize_draw_calls", "enableInstancing": false, "enableBatching": true}, expected: 'success' },
     { scenario: 'ACTION: merge_actors', toolName: 'system_control', arguments: {"action": "merge_actors", "actors": [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], "replaceSourceActors": false, "mergeActors": true, "outputPath": MERGED_ACTOR_ASSET}, expected: 'success' },
     { scenario: 'ACTION: merge_actors via packageName', toolName: 'system_control', arguments: {"action": "merge_actors", "actors": [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], "replaceSourceActors": false, "packageName": MERGED_ACTOR_PACKAGE_ASSET}, expected: 'success' },
@@ -190,6 +195,7 @@ const testCases = [
     { scenario: 'CONFIG: configure_occlusion_culling', toolName: 'system_control', arguments: {"action": "configure_occlusion_culling"}, expected: 'success' },
     // === ACTION ===
     { scenario: 'ACTION: optimize_shaders', toolName: 'system_control', arguments: {"action": "optimize_shaders"}, expected: 'success' },
+    { scenario: 'OPTIONAL: optimize_shaders without forced recompile', toolName: 'system_control', arguments: { action: 'optimize_shaders', forceRecompile: false }, expected: 'success' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_nanite', toolName: 'system_control', arguments: {"action": "configure_nanite"}, expected: 'success' },
     { scenario: 'CONFIG: configure_world_partition', toolName: 'system_control', arguments: {"action": "configure_world_partition", "cellSize": 6400, "streamingDistance": 25600}, expected: 'success' },

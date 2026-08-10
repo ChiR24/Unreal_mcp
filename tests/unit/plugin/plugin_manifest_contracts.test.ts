@@ -4,6 +4,13 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
+// Canonical version source: package.json. Deriving VersionName from it keeps
+// the manifest contract meaningful across releases instead of freezing the
+// literal, which would desync when the release is bumped.
+const CANONICAL_VERSION = JSON.parse(
+  readFileSync(resolve(process.cwd(), 'package.json'), 'utf8'),
+).version as string;
+
 const pluginDependencySchema = z.object({
   Name: z.string(),
   Enabled: z.boolean(),
@@ -65,8 +72,8 @@ describe('plugin manifest contracts', () => {
     // Then
     expect(version).toEqual({
       FileVersion: 3,
-      Version: 531,
-      VersionName: '0.5.31',
+      Version: 530,
+      VersionName: CANONICAL_VERSION,
     });
   });
 

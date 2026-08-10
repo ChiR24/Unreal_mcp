@@ -49,7 +49,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - **Graceful Degradation** — Server starts even without an active Unreal connection
 - **On-Demand Connection** — Retries automation handshakes with exponential backoff
 - **Command Safety** — Blocks dangerous console commands with pattern-based validation
-- **Capability Token Auth** — Optional token-based authentication for both WS and HTTP transports
+- **Capability Token Auth** — On-by-default token authentication (auto-generated 32-byte secret at `<Project>/Saved/MCP/capability-token`) for both WS and HTTP transports; manual `CapabilityToken` in Project Settings overrides the file
 - **Asset Caching** — 10-second TTL for improved performance
 - **Metrics Rate Limiting** — Per-IP rate limiting (60 req/min) on Prometheus endpoint
 - **Centralized Configuration** — Unified class aliases and type definitions
@@ -60,12 +60,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 ### Prerequisites
 
-- **Unreal Engine** 5.0–5.8 source-compatibility target. The current complete
-  live acceptance record covers UE 5.7.4 only.
-
-Choose your transport:
-- **Option A: Native MCP** (recommended) — no additional dependencies
-- **Option B: TypeScript Bridge** — requires **Node.js** 18+
+- **Node.js 20.19 or later** (Node.js 18 is not supported) — required for the TypeScript stdio bridge. Not needed for the native MCP transport.
 
 ### Step 1: Install MCP Server (Option B only — skip for Native MCP)
 
@@ -182,14 +177,14 @@ Enable via **Edit → Plugins**, then restart the editor.
 </details>
 
 > 💡 Optional plugins are auto-enabled by the MCP Automation Bridge plugin when needed.
-> PCG support is compiled for source projects when the project explicitly enables PCG. Versioned release packages for UE 5.2+ include PCG support.
+> PCG support is compiled for source projects when the project explicitly enables PCG. Versioned release packages for UE 5.2+ include PCG support. All Unreal Engine versions from 5.0 to 5.8 are supported and working.
 
 ### Step 4: Configure MCP Client
 
 #### Option A: Native MCP Transport (Direct HTTP — no bridge needed)
 
 The plugin includes a built-in MCP Streamable HTTP server. AI clients connect directly to the plugin over HTTP — no TypeScript bridge, no Node.js, no npm.
-**Note:** the `bAllowNonLoopback` setting now applies to **both** the WebSocket bridge and the native MCP transport. Enabling it binds both surfaces to non-loopback addresses. If you only need LAN access for the WebSocket bridge, do not enable `bAllowNonLoopback` and instead expose the bridge via a reverse proxy. When `bAllowNonLoopback` is enabled, **always also enable `bRequireCapabilityToken`** — the default-allow loopback posture means any LAN client can otherwise call any tool without authentication.
+**Note:** the `bAllowNonLoopback` setting now applies to **both** the WebSocket bridge and the native MCP transport. Enabling it binds both surfaces to non-loopback addresses. If you only need LAN access for the WebSocket bridge, do not enable `bAllowNonLoopback` and instead expose the bridge via a reverse proxy. Capability token auth is on by default (0.5.31+) — both transports require authentication automatically. A manually configured `CapabilityToken` in Project Settings or the auto-generated token at `<Project>/Saved/MCP/capability-token` is used automatically.
 
 **Enable in Unreal:**
 1. **Edit > Project Settings > Plugins > MCP Automation Bridge**
@@ -246,7 +241,7 @@ Features:
 - Multiple concurrent sessions (Cursor + Claude Code + others simultaneously)
 - Dynamic tool management — core tools load by default, enable more via `manage_tools`
 - Python execution via `execute_python` action (inline code or .py files)
-- Capability token authentication — enable in project settings for network security
+- Capability token authentication — on by default (auto-generated secret at `<Project>/Saved/MCP/capability-token`; manual `CapabilityToken` in Project Settings overrides)
 
 #### Option B: TypeScript Bridge (stdio — classic setup)
 
@@ -344,7 +339,61 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 ## Available Tools
 
-**23 exposed MCP tools** in broad all-tools mode. Related actions live directly on their parent tools so clients load less context without losing capabilities.
+The MCP server exposes a single **`unreal`** gateway tool. The 23 canonical parent tools are internal and reachable exclusively through the gateway's four operations: `search`, `describe`, `execute`, and `configure`.
+
+### Gateway Workflow
+
+1. **`search`** — discover available tools by keyword, category, or action name
+2. **`describe`** — get the exact contract (actions, parameters, schema) for a specific tool
+3. **`execute`** — run one validated action on a canonical tool
+4. **`configure`** — manage internal tool enable/disable state (wraps `manage_tools`)
+
+Example call:
+
+```json
+{
+  "operation": "search",
+  "query": "asset"
+}
+```
+
+Then:
+
+```json
+{
+  "operation": "describe",
+  "tool": "manage_asset",
+  "action": "import_asset"
+}
+```
+
+Then:
+
+```json
+{
+  "operation": "execute",
+  "tool": "manage_asset",
+  "action": "import_asset",
+  "params": { "sourcePath": "/path/to/asset.fbx", "destinationPath": "/Game/Imported/asset" }
+}
+```
+
+### Migration from direct tool calls
+
+The single `unreal` gateway is permanent on both transports; there is no opt-out and no legacy 23-tool listing to restore. A client that still calls a canonical tool name directly (`tools/call` with `name: "manage_asset"`, `name: "control_actor"`, etc.) receives a bounded, copy-paste-executable `DIRECT_TOOL_CALL_REMOVED` receipt instead of a routed call. The receipt carries a `nextCall` that drills exactly one level: `{ "operation": "search" }` for an unknown name, `{ "operation": "describe", "tool": "<tool>" }` when no action was supplied, or `{ "operation": "execute", "tool": "<tool>", "action": "<action>", "params": { ... } }` when the direct call already named an action. Run that `nextCall` through the `unreal` tool to finish the migration.
+
+### Gateway Protocol & Transport
+
+Both transports expose the same `unreal` gateway contract, but they are separate lifecycles. Do not route around their boundaries.
+
+- **TypeScript stdio transport** — `node dist/cli.js` talks to the Unreal plugin over a WebSocket bridge. It permanently exposes the single `unreal` gateway tool; there is no gateway-mode toggle.
+- **Native MCP transport** — the plugin's built-in Streamable HTTP/SSE server at `/mcp` (no Node.js, no bridge). The native MCP surface permanently exposes the same single `unreal` gateway tool; there is no gateway-mode toggle.
+
+Both surfaces negotiate the MCP protocol version at `initialize`; the supported set is intentionally asymmetric. The native `/mcp` transport supports exactly the three modern versions `2025-11-25`, `2025-06-18`, and `2025-03-26`, and deliberately does not implement the later `2026-07-28` RC. The TypeScript stdio server also accepts the two legacy versions `2024-11-05` and `2024-10-07`, so the native surface is intentionally stricter. Both negotiate down to the highest mutually supported version (`2025-11-25` is the latest). See [docs/protocol.md](docs/protocol.md) for the full negotiation and transport contract, including the `MCP-Protocol-Version` header guard (HTTP 400 on invalid), cancellation semantics, and `progressToken` handling.
+
+### Internal Canonical Tools (23)
+
+The gateway hides these 23 canonical parent tools. They are listed here for reference:
 
 <details>
 <summary><b>Core Tools</b></summary>
@@ -430,11 +479,30 @@ docker run -it --rm -e UE_PROJECT_PATH=/project unreal-mcp
 ## Development
 
 ```bash
-npm run build       # Build TypeScript
-npm run lint        # Run ESLint
-npm run test:unit   # Run unit tests
-npm run test:all    # Run all tests
+npm run build         # Clean + compile TypeScript to dist/
+npm run lint          # Run ESLint 9 (fail on any warning)
+npm run type-check    # tsc --noEmit
+npm run test:unit     # Vitest unit tests (no Unreal required)
+npm run test:smoke    # Offline mock in-memory MCP check (needs built dist/)
+npm run manifest:check   # Fail if generated gateway manifest artifacts drift
+npm run test:native-parity # TS vs native canonical tool/action equality
+npm run test:params      # Parity + strict parameter audit
+npm run version:check    # Assert all version sources agree
+npm test                 # Integration suite (needs a live Unreal Editor + bridge)
 ```
+
+### Gateway manifest generation
+
+The neutral gateway manifest is generated from `src/tools/catalog/consolidated-tool-definitions.ts` into three artifacts (runtime `.ts`/`.json` plus the native `.h`). Never hand-edit the generated files.
+
+```bash
+node --loader ts-node/esm scripts/generate-gateway-manifest.ts          # regenerate
+node --loader ts-node/esm scripts/generate-gateway-manifest.ts --check  # CI gate: fail on drift
+```
+
+### CI gates
+
+CI runs, in order: ESLint 9 (`npx eslint . --max-warnings=0`), TypeScript type-check, unit tests, `registry:check`, `normalization:check`, `manifest:check`, `policy:check`, native parity + parameter audit (`test:params`), `migration:check`, `primitives:check`, `security:check`, `eval:check`, `version:check`, `workflow:check`, then a blocking runtime-only dependency audit (`npm audit --omit=dev --audit-level=high`) followed by an informational full-tree `npm audit --audit-level=moderate`. A plugin packaging job runs `scripts/package-plugin.sh` only when an Unreal Engine source root secret is provided (opt-in), because CI runners do not ship an engine. Release archives exclude `Binaries/`, `Intermediate/`, and `Saved/` so generated build dirs never leak.
 
 ---
 
@@ -460,3 +528,4 @@ Contributions welcome! Please:
 ## License
 
 MIT — See [LICENSE](LICENSE)
+

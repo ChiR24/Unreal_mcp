@@ -17,9 +17,9 @@ bool HandleConfigureSmartObjectSlotBehavior(UMcpAutomationBridgeSubsystem* Self,
     if (SubAction == TEXT("configure_slot_behavior"))
     {
 #if MCP_HAS_SMART_OBJECTS && MCP_SMART_OBJECTS_HEADERS_AVAILABLE
-        FString DefinitionPath = GetStringFieldAI(Payload, TEXT("definitionPath"));
-        int32 SlotIndex = static_cast<int32>(GetNumberFieldAI(Payload, TEXT("slotIndex"), 0));
-        FString BehaviorType = GetStringFieldAI(Payload, TEXT("behaviorType"), TEXT(""));
+        FString DefinitionPath = GetJsonStringField(Payload, TEXT("definitionPath"));
+        int32 SlotIndex = static_cast<int32>(GetJsonNumberField(Payload, TEXT("slotIndex"), 0));
+        FString BehaviorType = GetJsonStringField(Payload, TEXT("behaviorType"), TEXT(""));
 
         if (DefinitionPath.IsEmpty())
         {
@@ -68,7 +68,7 @@ bool HandleConfigureSmartObjectSlotBehavior(UMcpAutomationBridgeSubsystem* Self,
         // Configure enabled state
         if (Payload->HasField(TEXT("enabled")))
         {
-            Slot.bEnabled = GetBoolFieldAI(Payload, TEXT("enabled"), true);
+            Slot.bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
         }
 
         // Save
@@ -85,8 +85,8 @@ bool HandleConfigureSmartObjectSlotBehavior(UMcpAutomationBridgeSubsystem* Self,
         return true;
 #endif
 #elif MCP_HAS_SMART_OBJECTS
-        FString DefinitionPath = GetStringFieldAI(Payload, TEXT("definitionPath"));
-        int32 SlotIndex = static_cast<int32>(GetNumberFieldAI(Payload, TEXT("slotIndex"), 0));
+        FString DefinitionPath = GetJsonStringField(Payload, TEXT("definitionPath"));
+        int32 SlotIndex = static_cast<int32>(GetJsonNumberField(Payload, TEXT("slotIndex"), 0));
         Result->SetNumberField(TEXT("slotIndex"), SlotIndex);
         Result->SetStringField(TEXT("message"), TEXT("Slot behavior configuration registered (headers unavailable)"));
         Result->SetBoolField(TEXT("headersUnavailable"), true);
@@ -109,9 +109,9 @@ bool HandleAddSmartObjectComponent(UMcpAutomationBridgeSubsystem* Self, const FS
     if (SubAction == TEXT("add_smart_object_component"))
     {
 #if MCP_HAS_SMART_OBJECTS && MCP_SMART_OBJECTS_HEADERS_AVAILABLE
-        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
-        FString DefinitionPath = GetStringFieldAI(Payload, TEXT("definitionPath"), TEXT(""));
-        FString ComponentName = GetStringFieldAI(Payload, TEXT("componentName"), TEXT("SmartObjectComponent"));
+        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+        FString DefinitionPath = GetJsonStringField(Payload, TEXT("definitionPath"), TEXT(""));
+        FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("SmartObjectComponent"));
 
         if (BlueprintPath.IsEmpty())
         {
@@ -174,7 +174,7 @@ bool HandleAddSmartObjectComponent(UMcpAutomationBridgeSubsystem* Self, const FS
         Result->SetStringField(TEXT("message"), TEXT("Smart Object component added to blueprint"));
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Component added"), Result);
 #elif MCP_HAS_SMART_OBJECTS
-        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
+        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
         Result->SetStringField(TEXT("componentName"), TEXT("SmartObject"));
         Result->SetStringField(TEXT("message"), TEXT("Smart Object component addition registered (headers unavailable)"));
         Result->SetBoolField(TEXT("headersUnavailable"), true);
@@ -186,10 +186,6 @@ bool HandleAddSmartObjectComponent(UMcpAutomationBridgeSubsystem* Self, const FS
 #endif
         return true;
     }
-
-    // =========================================================================
-    // 16.8 Mass AI / Crowds (3 actions)
-    // =========================================================================
 
     return true;
 }

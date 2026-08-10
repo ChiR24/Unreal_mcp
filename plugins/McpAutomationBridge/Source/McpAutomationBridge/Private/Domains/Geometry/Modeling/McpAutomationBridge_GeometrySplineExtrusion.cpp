@@ -7,13 +7,13 @@ namespace McpGeometryHandlers
 bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"));
-    int32 Segments = GetIntFieldGeom(Payload, TEXT("segments"), 16);
-    bool bCap = GetBoolFieldGeom(Payload, TEXT("cap"), true);
-    double ScaleStart = GetNumberFieldGeom(Payload, TEXT("scaleStart"), 1.0);
-    double ScaleEnd = GetNumberFieldGeom(Payload, TEXT("scaleEnd"), 1.0);
-    double Twist = GetNumberFieldGeom(Payload, TEXT("twist"), 0.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"));
+    int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 16);
+    bool bCap = GetJsonBoolField(Payload, TEXT("cap"), true);
+    double ScaleStart = GetJsonNumberField(Payload, TEXT("scaleStart"), 1.0);
+    double ScaleEnd = GetJsonNumberField(Payload, TEXT("scaleEnd"), 1.0);
+    double Twist = GetJsonNumberField(Payload, TEXT("twist"), 0.0);
 
     if (ActorName.IsEmpty())
     {
@@ -78,12 +78,10 @@ bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     int32 TrisBefore = Mesh->GetTriangleCount();
 
-    // Get mesh bounding box to derive profile shape
     FBox MeshBBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
     FVector MeshCenter = MeshBBox.GetCenter();
     FVector MeshExtent = MeshBBox.GetExtent();
 
-    // Create a cross-section profile from mesh XY bounds
     TArray<FVector2D> PolygonVertices;
     int32 NumPolySides = FMath::Clamp(Segments / 2, 4, 32);
     double ProfileRadius = FMath::Max(MeshExtent.X, MeshExtent.Y);
@@ -102,7 +100,6 @@ bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString
         ));
     }
 
-    // Build path frames from spline
     TArray<FTransform> PathFrames;
     float SplineLength = SplineComp->GetSplineLength();
     int32 PathSteps = FMath::Clamp(Segments, 2, 256);
@@ -112,26 +109,21 @@ bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString
         float Alpha = (float)i / PathSteps;
         float Dist = SplineLength * Alpha;
 
-        // Get spline location and rotation at this distance
         FVector Location = SplineComp->GetLocationAtDistanceAlongSpline(Dist, ESplineCoordinateSpace::World);
         FQuat Rotation = SplineComp->GetQuaternionAtDistanceAlongSpline(Dist, ESplineCoordinateSpace::World);
 
-        // Apply twist interpolation
         float TwistAngle = FMath::DegreesToRadians(Twist * Alpha);
         FQuat TwistRotation = FQuat(FVector::ForwardVector, TwistAngle);
         Rotation = Rotation * TwistRotation;
 
-        // Apply scale interpolation
         float Scale = FMath::Lerp((float)ScaleStart, (float)ScaleEnd, Alpha);
 
         PathFrames.Add(FTransform(Rotation, Location, FVector(Scale)));
     }
 
-    // Use SweepPolygon to create the extruded mesh
     // UE 5.7: FGeometryScriptPolygonsToSweepOptions removed, use direct parameters
     FGeometryScriptPrimitiveOptions PrimOptions;
 
-    // Clear existing mesh and sweep the profile along the path
     // UE 5.5+: AppendSweepPolygon has MiterLimit parameter
     // UE 5.4 and earlier: No MiterLimit parameter
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
@@ -177,7 +169,6 @@ bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
 
-    // Add verification data for the target actor
     if (TargetActor)
     {
         McpHandlerUtils::AddVerification(Result, TargetActor);
@@ -187,9 +178,6 @@ bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Edge Split Operations
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

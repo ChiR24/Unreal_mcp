@@ -1,4 +1,17 @@
 import { Logger } from '../utils/logging/logger.js';
+import { TelemetryRegistry } from './telemetry-registry.js';
+
+/**
+ * Bounded telemetry dimensions for one tracked request. Both fields are coerced
+ * against the closed schema sets before they can become a metric label, so a
+ * caller that passes a capability id or a content path here degrades to
+ * `unknown` rather than exporting it.
+ */
+export interface PerformanceDimensions {
+  readonly actionClass?: unknown;
+  readonly failureClass?: unknown;
+  readonly queueWaitMs?: number;
+}
 
 export interface PerformanceMetrics {
   totalRequests: number;
@@ -31,6 +44,11 @@ function elapsedSince(startTime: number): number {
 export class HealthMonitor {
   private logger: Logger;
   public metrics: PerformanceMetrics;
+  /**
+   * Bounded counters/histograms for the metrics and resource surfaces.
+   * Observation only: nothing reads this back to change server behavior.
+   */
+  public readonly telemetry: TelemetryRegistry = new TelemetryRegistry({ surface: 'typescript' });
   private healthCheckTimer: NodeJS.Timeout | undefined;
   private lastHealthSuccessAt = 0;
   private responseTimeTotal = 0;
@@ -52,8 +70,17 @@ export class HealthMonitor {
     };
   }
 
-  trackPerformance(startTime: number, success: boolean) {
+  trackPerformance(startTime: number, success: boolean, dimensions: PerformanceDimensions = {}) {
     const responseTime = elapsedSince(startTime);
+    this.telemetry.observeRequest({
+      actionClass: dimensions.actionClass,
+      outcome: success ? 'success' : 'failure',
+      failureClass: dimensions.failureClass,
+      durationSeconds: responseTime / 1000,
+      ...(typeof dimensions.queueWaitMs === 'number'
+        ? { queueWaitSeconds: Math.max(0, dimensions.queueWaitMs) / 1000 }
+        : {})
+    });
     this.metrics.totalRequests++;
     if (success) {
       this.metrics.successfulRequests++;

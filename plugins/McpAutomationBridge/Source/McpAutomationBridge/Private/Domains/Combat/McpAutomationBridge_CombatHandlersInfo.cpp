@@ -26,7 +26,6 @@ bool FCombatActionContext::HandleInfoActions() const
         Info->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Info->SetStringField(TEXT("parentClass"), Blueprint->ParentClass ? Blueprint->ParentClass->GetName() : TEXT("Unknown"));
 
-        // Check for components
         bool bHasWeaponMesh = false;
         bool bHasProjectileMovement = false;
         bool bHasCollision = false;
@@ -64,7 +63,6 @@ bool FCombatActionContext::HandleInfoActions() const
         Info->SetBoolField(TEXT("hasCollision"), bHasCollision);
         Info->SetArrayField(TEXT("components"), ComponentList);
 
-        // List Blueprint variables
         TArray<TSharedPtr<FJsonValue>> VariableList;
         for (const FBPVariableDescription& Var : Blueprint->NewVariables)
         {
@@ -78,11 +76,6 @@ bool FCombatActionContext::HandleInfoActions() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Combat info retrieved."), Result);
         return true;
     }
-
-    // ============================================================
-    // ALIASES
-    // ============================================================
-
     // setup_damage_type -> alias for create_damage_type
 
     if (SubAction == TEXT("get_combat_stats"))
@@ -116,13 +109,6 @@ bool FCombatActionContext::HandleInfoActions() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Combat stats retrieved."), Result);
         return true;
     }
-
-    // ============================================================
-    // NEW SUB-ACTIONS
-    // ============================================================
-
-    // create_damage_effect - creates a blueprint with damage effect variables
-
     return false;
 }
 #endif

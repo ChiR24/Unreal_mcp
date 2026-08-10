@@ -1,0 +1,8 @@
+[
+  {
+    "name": "describe-case-colliding-params",
+    "operation": "describe",
+    "tool": "manage_level",
+    "action": "add_sublevel"
+  }
+]

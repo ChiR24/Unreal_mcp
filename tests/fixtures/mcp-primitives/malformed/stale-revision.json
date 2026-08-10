@@ -1,0 +1,11 @@
+{
+  "id": "inadmissible-stale-revision",
+  "captureKind": "executable-ts",
+  "domain": "revision",
+  "match": "exact",
+  "provenance": "a revision sequence that rewinds below a prior value",
+  "value": {
+    "uri": "ue://capability/catalog",
+    "revisions": [3, 2]
+  }
+}

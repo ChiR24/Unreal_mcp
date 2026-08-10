@@ -32,6 +32,7 @@ class DynamicToolManager {
   private readonly toolStates = new Map<string, ToolState>();
   private readonly categoryStates = new Map<ToolCategory, CategoryState>();
   private initialized = false;
+  private catalogStateRevision = 0;
 
   initialize(): void {
     if (this.initialized) {
@@ -72,7 +73,7 @@ class DynamicToolManager {
 
   enableTools(toolNames: string[]): EnableToolsResult {
     this.ensureInitialized();
-    const result = enableToolStates(this.toolStates, this.categoryStates, toolNames);
+    const result = this.applyMutation(() => enableToolStates(this.toolStates, this.categoryStates, toolNames));
 
     logInfoForNames('Enabled tools', result.enabled);
     if (result.notFound.length > 0) {
@@ -84,7 +85,7 @@ class DynamicToolManager {
 
   disableTools(toolNames: string[]): DisableToolsResult {
     this.ensureInitialized();
-    const result = disableToolStates(this.toolStates, this.categoryStates, toolNames);
+    const result = this.applyMutation(() => disableToolStates(this.toolStates, this.categoryStates, toolNames));
 
     logInfoForNames('Disabled tools', result.disabled);
     if (result.protected.length > 0) {
@@ -96,7 +97,7 @@ class DynamicToolManager {
 
   enableCategory(category: ToolCategory): CategoryEnableResult {
     this.ensureInitialized();
-    const result = enableCategoryState(this.toolStates, this.categoryStates, category);
+    const result = this.applyMutation(() => enableCategoryState(this.toolStates, this.categoryStates, category));
 
     if (result.enabled.length > 0) {
       const target = category === 'all' ? 'all categories' : `category '${category}'`;
@@ -108,7 +109,7 @@ class DynamicToolManager {
 
   disableCategory(category: ToolCategory): CategoryDisableResult {
     this.ensureInitialized();
-    const result = disableCategoryState(this.toolStates, this.categoryStates, category);
+    const result = this.applyMutation(() => disableCategoryState(this.toolStates, this.categoryStates, category));
     if (category === 'core' && !result.notFound) {
       log.warn(`Cannot disable protected category: ${category}`);
     }
@@ -126,6 +127,7 @@ class DynamicToolManager {
     enabledTools: number;
     disabledTools: number;
     categories: CategoryState[];
+    catalogStateRevision: number;
   } {
     this.ensureInitialized();
     const visibleTools = this.listTools();
@@ -135,13 +137,18 @@ class DynamicToolManager {
       totalTools: visibleTools.length,
       enabledTools: enabledCount,
       disabledTools: visibleTools.length - enabledCount,
-      categories: this.listCategories()
+      categories: this.listCategories(),
+      catalogStateRevision: this.catalogStateRevision
     };
+  }
+
+  getCatalogStateRevision(): number {
+    return this.catalogStateRevision;
   }
 
   reset(): { enabled: number } {
     this.ensureInitialized();
-    const count = resetToolStates(this.toolStates, this.categoryStates);
+    const count = this.applyMutation(() => resetToolStates(this.toolStates, this.categoryStates));
 
     log.info(`Reset ${count} tools to enabled state`);
     return { enabled: count };
@@ -155,6 +162,27 @@ class DynamicToolManager {
   getToolState(toolName: string): ToolState | undefined {
     this.ensureInitialized();
     return this.toolStates.get(toolName);
+  }
+
+  // Only the flags isToolStateEnabled() reads. enabledCount is excluded because it
+  // is a cache recomputed on every read and rewritten unconditionally by reset(),
+  // so folding it in would report a no-op batch as a visibility change.
+  private visibilityFingerprint(): string {
+    const tools = Array.from(this.toolStates.values(), state => `${state.name}=${state.enabled ? 1 : 0}`);
+    const categories = Array.from(this.categoryStates.values(), cat => `${cat.name}=${cat.enabled ? 1 : 0}`);
+    return `${tools.join(',')}|${categories.join(',')}`;
+  }
+
+  // Advances the revision at most once per batch, and only when visibility really
+  // moved. Compare-mutate-compare runs synchronously, so no caller can observe a
+  // revision before the state change it describes.
+  private applyMutation<T>(mutate: () => T): T {
+    const before = this.visibilityFingerprint();
+    const result = mutate();
+    if (this.visibilityFingerprint() !== before) {
+      this.catalogStateRevision++;
+    }
+    return result;
   }
 
   private addToolDefinition(def: ToolDefinition): void {

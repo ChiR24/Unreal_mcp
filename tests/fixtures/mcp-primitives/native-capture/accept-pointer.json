@@ -1,0 +1,19 @@
+{
+  "id": "native-pointer-resources-gateway-fallback",
+  "captureKind": "native-protocol",
+  "domain": "pointer",
+  "match": "exact",
+  "provenance": "native automation McpAutomationBridge.Task38.NativeProtocolCapture (native-automation-inprocess); transcript native-transcript.jsonl",
+  "transcript": {
+    "mechanism": "native-automation-inprocess",
+    "testName": "McpAutomationBridge.Task38.NativeProtocolCapture",
+    "engineVersion": "5.7.4-0+UE5",
+    "protocolVersion": "2025-11-25",
+    "capturedAt": "2026-07-23T00:00:00.000Z",
+    "transcriptRef": "native-transcript.jsonl",
+    "transcriptSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "sourceHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "packageHash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "value": { "primitive": "resources", "mode": "gateway", "reference": "search" }
+}

@@ -62,17 +62,6 @@ bool HandleAnalysisActions(
     return true;
   }
 
-  // -------------------------------------------------------------------------
-  // set_doppler_effect
-  // -------------------------------------------------------------------------
-  // Configure doppler effect. Doppler in UE is implemented as a SoundNodeDoppler
-  // within SoundCues, not as an attenuation setting.
-  // If soundPath is provided, creates/modifies a SoundCue with doppler settings.
-  //
-  // Payload:  { "soundPath"?: string, "dopplerIntensity"?: number (default 1.0),
-  //             "velocityScale"?: number (default 1.0), "save"?: bool (default true) }
-  // Response: { "success": bool, "dopplerIntensity": number, "velocityScale": number }
-  // -------------------------------------------------------------------------
   if (Lower == TEXT("set_doppler_effect")) {
     FString SoundPath;
     Payload->TryGetStringField(TEXT("soundPath"), SoundPath);

@@ -11,6 +11,7 @@
  */
 
 import { ITools } from '../../../types/tools/tool-interfaces.js';
+import { createUnknownActionResponse } from '../foundation/dispatch/handler-error-context.js';
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import { createSubActionDispatcher, requireNonEmptyString } from '../foundation/dispatch/common-handlers.js';
@@ -212,10 +213,6 @@ export async function handleInteractionTools(
     // =========================================================================
 
     default:
-      return cleanObject({
-        success: false,
-        error: 'UNKNOWN_ACTION',
-        message: `Unknown interaction action: ${action}`
-      });
+      return createUnknownActionResponse(`Unknown interaction action: ${action}`);
   }
 }

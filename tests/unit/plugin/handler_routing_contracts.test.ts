@@ -117,4 +117,24 @@ describe('plugin handler routing contracts', () => {
         '            RequestId, TEXT("manage_niagara_authoring"), LocalPayload, RequestingSocket)',
     );
   });
+
+  // Regression: HandleManageSkeleton declined foreign actions with `return true`
+  // — the value that means "I consumed this request". Sitting partway down the
+  // fallback chain in McpAutomationBridge_ProcessRequestDispatch.cpp, it claimed
+  // every action that reached it unmatched and returned without sending
+  // anything, so the caller skipped both the "No handler consumed" warning and
+  // the UNKNOWN_ACTION reply and the client waited out a silent 300 s transport
+  // timeout. It also made every handler ordered after it unreachable by
+  // fallback. Every chain handler must DECLINE with false.
+  it('declines foreign actions rather than silently consuming them', () => {
+    const source = pluginSource(
+      'Domains',
+      'Skeleton',
+      'McpAutomationBridge_SkeletonHandlers.cpp',
+    );
+
+    expect(source).toMatch(
+      /if \(Action != TEXT\("manage_skeleton"\)\)\s*\{\s*return false;\s*\}/,
+    );
+  });
 });

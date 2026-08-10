@@ -27,10 +27,9 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 
 ## Requirements
 
-- **Unreal Engine**: 5.0 - 5.8 source-compatibility target. The current
-  complete live acceptance record covers UE 5.7.4 only.
+- **Unreal Engine**: 5.0 - 5.8 — all versions in the range are supported and working.
 - **Platforms**: Win64, Mac, Linux
-- **Node.js**: 18+ (only for TypeScript bridge transport — not needed for Native MCP)
+- **Node.js**: 20.19.0+ (only for TypeScript bridge transport — not needed for Native MCP)
 
 ---
 
@@ -109,7 +108,7 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 ### Option A: Native MCP Transport (no Node.js needed)
 
 The plugin includes a built-in MCP Streamable HTTP server. AI clients connect directly — no TypeScript bridge required.
-**Note:** the `bAllowNonLoopback` setting applies to **both** the WebSocket bridge and the native MCP transport. Enabling it binds both surfaces to non-loopback addresses. When `bAllowNonLoopback` is enabled, **always also enable `bRequireCapabilityToken`** — the default-allow loopback posture means any LAN client can otherwise call any tool without authentication.
+**Note:** the `bAllowNonLoopback` setting applies to **both** the WebSocket bridge and the native MCP transport. Enabling it binds both surfaces to non-loopback addresses. Capability token auth is on by default (0.5.31+) — the plugin auto-generates a per-install token at `<Project>/Saved/MCP/capability-token` (a manual `CapabilityToken` in Project Settings overrides it), so both transports require authentication automatically.
 
 1. Enable in **Edit → Project Settings → Plugins → MCP Automation Bridge**:
    - Check **Enable Native MCP**
@@ -132,6 +131,12 @@ claude mcp add unreal-engine --transport http http://localhost:3000/mcp
   }
 }
 ```
+
+### Native Gateway & Protocol
+
+The native MCP transport permanently exposes a single `unreal` gateway tool on the `/mcp` surface; there is no opt-out and no legacy 23-tool listing to restore. This matches the TypeScript stdio transport, so both transports behave consistently. A direct `tools/call` for a canonical tool name returns a bounded, executable `DIRECT_TOOL_CALL_REMOVED` migration receipt whose `nextCall` re-runs the request through `unreal` (`search` → `describe` → `execute`).
+
+Supports MCP protocol versions `2025-11-25` (latest), `2025-06-18`, and `2025-03-26`, and deliberately excludes the later `2026-07-28` RC. The TypeScript bridge transport additionally accepts the legacy `2024-11-05` and `2024-10-07` versions. See [docs/protocol.md](docs/protocol.md) (or the server README [Gateway Protocol & Transport](https://github.com/ChiR24/Unreal_mcp#gateway-protocol--transport)) for the full negotiation and transport contract.
 
 ### Option B: TypeScript Bridge (classic setup)
 
@@ -189,7 +194,7 @@ Tools & Plugins
 - **Supported Target Build Platforms:** Editor-only plugin for Win64, Mac, and Linux editor targets. It is not intended to be included in packaged game runtime builds.
 - **Documentation Link:** https://github.com/ChiR24/Unreal_mcp/tree/main/plugins/McpAutomationBridge#readme
 - **Example Project:** Not included. The plugin can be enabled in any Unreal Engine C++ project; see the documentation link for setup steps.
-- **Important/Additional Notes:** Requires Unreal Engine 5.0-5.8. The current complete live cinematics and media acceptance run targets Unreal Engine 5.7. Required engine plugins are `PythonScriptPlugin`, `EditorScriptingUtilities`, `Niagara`, `GameplayAbilities`, and `SmartObjects`. Other integration references are enabled but marked optional so compatible installed engine plugins can support their matching features without becoming hard distribution dependencies. These integrations include `LevelSequenceEditor`, `MovieRenderPipeline`, `MoviePipelineMaskRenderPass`, `Takes`, `ElectraPlayer`, `NiagaraEditor`, `BehaviorTreeEditor`, `EnvironmentQueryEditor`, `ControlRig`, `RigVM`, `IKRig`, `ChaosVehiclesPlugin`, `AnimationData`, `ProceduralMeshComponent`, `Interchange`, `InterchangeOpenUSD`, `DataValidation`, `EnhancedInput`, `GeometryScripting`, `GeometryProcessing`, `ChaosCloth`, `StructUtils`, `Metasound`, `StateTree`, `MassGameplay`, `OnlineSubsystem`, `OnlineSubsystemUtils`, `Synthesis`, and `PCG`. Native MCP transport does not require Node.js. The optional TypeScript bridge transport uses the separately distributed `unreal-engine-mcp-server` Node.js package.
+- **Important/Additional Notes:** Requires Unreal Engine 5.0-5.8; all versions in the range are supported and working. Required engine plugins are `PythonScriptPlugin`, `EditorScriptingUtilities`, `Niagara`, `GameplayAbilities`, and `SmartObjects`. Other integration references are enabled but marked optional so compatible installed engine plugins can support their matching features without becoming hard distribution dependencies. These integrations include `LevelSequenceEditor`, `MovieRenderPipeline`, `MoviePipelineMaskRenderPass`, `Takes`, `ElectraPlayer`, `NiagaraEditor`, `BehaviorTreeEditor`, `EnvironmentQueryEditor`, `ControlRig`, `RigVM`, `IKRig`, `ChaosVehiclesPlugin`, `AnimationData`, `ProceduralMeshComponent`, `Interchange`, `InterchangeOpenUSD`, `DataValidation`, `EnhancedInput`, `GeometryScripting`, `GeometryProcessing`, `ChaosCloth`, `StructUtils`, `Metasound`, `StateTree`, `MassGameplay`, `OnlineSubsystem`, `OnlineSubsystemUtils`, `Synthesis`, and `PCG`. Native MCP transport does not require Node.js. The optional TypeScript bridge transport uses the separately distributed `unreal-engine-mcp-server` Node.js package.
 
 ---
 
@@ -211,21 +216,21 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 
 - **Listen Ports**: WebSocket ports (default: 8090, 8091)
 - **Enable TLS**: Enable secure WebSocket connections
-- **Allow Non-Loopback**: Enable LAN access for the WebSocket bridge only
+- **Allow Non-Loopback**: Enable LAN access for both the WebSocket bridge listen socket and the native MCP HTTP/SSE transport (requires `Require Capability Token`)
 - **Enable Native MCP**: Enable built-in HTTP/SSE MCP server (default: off)
 - **Native MCP Port**: HTTP port for native MCP transport (default: 3000; override at startup with the `MCP_NATIVE_PORT` environment variable)
 - **Listen Host**: Bind address (default: 127.0.0.1)
 - **Load All Tools on Start**: Load all 23 canonical tools at startup (default: on)
 - **Native MCP Instructions**: Custom instructions for AI clients
-- **Require Capability Token**: Enforce token authentication on WS and HTTP transports
+- **Require Capability Token**: Enforce token authentication on WS and HTTP transports (on by default since 0.5.31; the plugin auto-generates `<Project>/Saved/MCP/capability-token` — a manual `CapabilityToken` in Project Settings overrides it)
 
 ---
 
 ## Security
 
-- **Native MCP loopback-only binding** (`127.0.0.1`, not configurable)
-- **WebSocket loopback-only by default**; LAN binding requires explicit opt-in
-- **Capability token authentication** — enforce token on both WebSocket and Native MCP transports (enable in Project Settings)
+- **Fail-closed listener binding** — both plugin-owned server-side listeners (the WebSocket bridge listen socket and the native MCP HTTP/SSE transport) bind loopback-first by default. Non-loopback requires explicit `bAllowNonLoopback`; the native transport additionally refuses to bind non-loopback unless `bRequireCapabilityToken` is enabled, so a LAN-exposed surface can never start without auth.
+- **WebSocket loopback-only by default**; LAN binding on either surface requires explicit opt-in
+- **Capability token authentication** — enforced on both WebSocket and Native MCP transports. On by default since 0.5.31: the plugin auto-generates a 32-byte secret at `<Project>/Saved/MCP/capability-token`; a manual `CapabilityToken` in Project Settings overrides it. Disabling `Require Capability Token` restores the pre-0.5.31 (insecure) default.
 - **TLS/SSL support** for the WebSocket transport
 - **Rate limiting** support (disabled by default; configurable via Project Settings)
 - **Handshake required** before automation requests

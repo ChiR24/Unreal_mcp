@@ -19,7 +19,11 @@ void FMcpConnectionManager::HandleClientConnected(
     TSharedPtr<FMcpBridgeWebSocket> ClientSocket) {
   if (!ClientSocket.IsValid())
     return;
-  AuthenticatedSockets.Remove(ClientSocket.Get());
+  {
+    FScopeLock Lock(&AuthSocketsMutex);
+    AuthenticatedSockets.Remove(ClientSocket.Get());
+  }
+  ForgetSocketPrincipal(ClientSocket.Get());
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("Client socket connected (port=%d)"), ClientSocket->GetPort());
 
@@ -74,7 +78,11 @@ void FMcpConnectionManager::HandleConnectionError(
          TEXT("Automation bridge socket error (port=%d): %s"), Port, *Error);
 
   if (Socket.IsValid()) {
-    AuthenticatedSockets.Remove(Socket.Get());
+    {
+      FScopeLock Lock(&AuthSocketsMutex);
+      AuthenticatedSockets.Remove(Socket.Get());
+    }
+    ForgetSocketPrincipal(Socket.Get());
     {
       FScopeLock Lock(&LogSubscribersMutex);
       LogSubscriberSockets.Remove(Socket.Get());
@@ -82,6 +90,14 @@ void FMcpConnectionManager::HandleConnectionError(
     {
       FScopeLock Lock(&RateLimitMutex);
       SocketRateLimits.Remove(Socket.Get());
+    }
+    {
+      FScopeLock Lock(&PendingRequestsMutex);
+      for (auto It = PendingRequestsToSockets.CreateIterator(); It; ++It) {
+        if (It->Value.Get() == Socket.Get()) {
+          It.RemoveCurrent();
+        }
+      }
     }
     Socket->OnMessage().RemoveAll(this);
     Socket->OnClosed().RemoveAll(this);
@@ -115,7 +131,11 @@ void FMcpConnectionManager::HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket,
          TEXT("Socket closed: port=%d code=%d reason=%s clean=%s"), Port,
          StatusCode, *Reason, bWasClean ? TEXT("true") : TEXT("false"));
   if (Socket.IsValid()) {
-    AuthenticatedSockets.Remove(Socket.Get());
+    {
+      FScopeLock Lock(&AuthSocketsMutex);
+      AuthenticatedSockets.Remove(Socket.Get());
+    }
+    ForgetSocketPrincipal(Socket.Get());
     {
       FScopeLock Lock(&LogSubscribersMutex);
       LogSubscriberSockets.Remove(Socket.Get());
@@ -123,6 +143,14 @@ void FMcpConnectionManager::HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket,
     {
       FScopeLock Lock(&RateLimitMutex);
       SocketRateLimits.Remove(Socket.Get());
+    }
+    {
+      FScopeLock Lock(&PendingRequestsMutex);
+      for (auto It = PendingRequestsToSockets.CreateIterator(); It; ++It) {
+        if (It->Value.Get() == Socket.Get()) {
+          It.RemoveCurrent();
+        }
+      }
     }
     ActiveSockets.Remove(Socket);
   }

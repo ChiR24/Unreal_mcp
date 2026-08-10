@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   STDIO_REPLAY_ACTION_LABELS,
   validateStdioReplayEvidenceDocument
-} from '../../scripts/cinematics-live-evidence.mjs';
+} from '../fixtures/cinematics/cinematics-live-evidence.mjs';
 import { evaluateExpectation } from '../test-runner.mjs';
 
 const require = createRequire(import.meta.url);

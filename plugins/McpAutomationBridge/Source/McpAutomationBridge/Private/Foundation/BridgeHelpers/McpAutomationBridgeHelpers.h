@@ -64,6 +64,7 @@
 #include "HAL/PlatformProcess.h"
 #endif
 
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersCommandValidation.h"
 #include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetCreation.h"

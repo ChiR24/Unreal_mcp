@@ -23,6 +23,14 @@ public:
 	/** Get set of all currently enabled tool names. */
 	TSet<FString> GetEnabledToolNames() const;
 
+	/**
+	 * Process-local monotonic counter of effective catalog state mutations.
+	 * Starts at 0 after Initialize() and advances once per effective batch.
+	 * This is runtime visibility state, NOT the immutable generated catalog
+	 * content fingerprint; the two are separate and must not be conflated.
+	 */
+	uint64 GetCatalogStateRevision() const;
+
 	/** Dispatch a manage_tools action. Returns JSON result for the response. */
 	TSharedPtr<FJsonObject> HandleAction(const FString& Action,
 		const TSharedPtr<FJsonObject>& Args);
@@ -53,8 +61,14 @@ private:
 	TMap<FString, bool> InitialToolEnabled;
 	TMap<FString, bool> InitialCategoryEnabled;
 
-	/** Protects ToolStates, CategoryStates, InitialToolEnabled, InitialCategoryEnabled. */
+	/**
+	 * Protects ToolStates, CategoryStates, InitialToolEnabled,
+	 * InitialCategoryEnabled and CatalogStateRevision.
+	 */
 	mutable FCriticalSection StateMutex;
+
+	/** Bumped once per effective mutation batch; see GetCatalogStateRevision(). */
+	uint64 CatalogStateRevision = 0;
 
 	/** Lock-free impl — caller must hold StateMutex. */
 	bool IsToolEnabled_NoLock(const FString& ToolName) const;

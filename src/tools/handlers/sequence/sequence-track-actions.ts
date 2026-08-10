@@ -1,6 +1,7 @@
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import { executeAutomationRequest, requireNonEmptyString } from '../foundation/dispatch/common-handlers.js';
+import { validateRequiredFields } from '../foundation/arguments/batch-validation.js';
 import type { SequenceActionResponse } from './sequence-handler-state.js';
 
 export async function handleSequenceTrackAction(
@@ -10,8 +11,7 @@ export async function handleSequenceTrackAction(
 ): Promise<unknown | undefined> {
   switch (action) {
     case 'add_track': {
-      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
-      const trackType = requireNonEmptyString(args.trackType, 'trackType', 'Missing required parameter: trackType');
+      const { path, trackType } = validateRequiredFields(args, ['path', 'trackType']);
       const trackName = typeof args.trackName === 'string' ? args.trackName : '';
       const actorName = typeof args.actorName === 'string' ? args.actorName : undefined;
 
@@ -54,26 +54,22 @@ export async function handleSequenceTrackAction(
       return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
     }
     case 'remove_track': {
-      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
-      const trackName = requireNonEmptyString(args.trackName, 'trackName', 'Missing required parameter: trackName');
+      const { path, trackName } = validateRequiredFields(args, ['path', 'trackName']);
       const payload = { ...args, path, trackName, subAction: 'remove_track' };
       return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
     }
     case 'set_track_muted': {
-      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
-      const trackName = requireNonEmptyString(args.trackName, 'trackName', 'Missing required parameter: trackName');
+      const { path, trackName } = validateRequiredFields(args, ['path', 'trackName']);
       const payload = { ...args, path, trackName, subAction: 'set_track_muted' };
       return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
     }
     case 'set_track_solo': {
-      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
-      const trackName = requireNonEmptyString(args.trackName, 'trackName', 'Missing required parameter: trackName');
+      const { path, trackName } = validateRequiredFields(args, ['path', 'trackName']);
       const payload = { ...args, path, trackName, subAction: 'set_track_solo' };
       return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
     }
     case 'set_track_locked': {
-      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
-      const trackName = requireNonEmptyString(args.trackName, 'trackName', 'Missing required parameter: trackName');
+      const { path, trackName } = validateRequiredFields(args, ['path', 'trackName']);
       const payload = { ...args, path, trackName, subAction: 'set_track_locked' };
       return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
     }

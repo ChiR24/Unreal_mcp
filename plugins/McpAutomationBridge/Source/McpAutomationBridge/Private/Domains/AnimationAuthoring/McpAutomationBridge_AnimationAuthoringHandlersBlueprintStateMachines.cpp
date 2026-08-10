@@ -8,11 +8,11 @@ TSharedPtr<FJsonObject> HandleBlueprintStateMachineActions(const FString& SubAct
 {
     if (SubAction == TEXT("add_state_machine"))
     {
-        FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
-        FString StateMachineName = GetStringFieldAnimAuth(Params, TEXT("stateMachineName"), TEXT(""));
-        int32 NodePosX = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionX"), 0));
-        int32 NodePosY = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionY"), 0));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString BlueprintPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("blueprintPath"), TEXT("")));
+        FString StateMachineName = GetJsonStringField(Params, TEXT("stateMachineName"), TEXT(""));
+        int32 NodePosX = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionX"), 0));
+        int32 NodePosY = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionY"), 0));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (StateMachineName.IsEmpty())
         {

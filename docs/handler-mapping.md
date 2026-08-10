@@ -2,7 +2,7 @@
 
 This document maps the TypeScript tool definitions to their corresponding C++ handlers in the Unreal Engine plugin.
 
-> **Note:** The TypeScript bridge exposes 23 canonical MCP tools. Former child tool names are not exposed or accepted as direct MCP tool names; their actions live on the canonical parent tools shown below.
+> **Note:** The public MCP surface is the single `unreal` gateway tool. The 23 canonical parent tools below are an **internal routing boundary** reached through `unreal.execute`; they are not listed by `tools/list`, and a direct `tools/call` on one returns a `DIRECT_TOOL_CALL_REMOVED` receipt. Former child tool names are likewise not accepted as tool names; their actions live on the canonical parent tools shown below. See [`gateway-client-guide.md`](gateway-client-guide.md).
 
 ## Asset Manager (`manage_asset`)
 

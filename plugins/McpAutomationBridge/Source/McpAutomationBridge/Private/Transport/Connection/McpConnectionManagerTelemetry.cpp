@@ -1,9 +1,18 @@
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
 
+#include "Foundation/McpTelemetryRegistry.h"
+
 void FMcpConnectionManager::RecordAutomationTelemetry(
     const FString &RequestId, bool bSuccess, const FString &Message,
     const FString &ErrorCode) {
   const double NowSeconds = FPlatformTime::Seconds();
+
+  // The scrapable terminal, recorded BEFORE the early return below so a response
+  // whose per-action log entry was never opened is still counted. Only the
+  // bounded error CODE is forwarded; Message is deliberately dropped because it
+  // routinely carries asset paths and object names.
+  FMcpTelemetryRegistry::Get().EndRequest(
+      RequestId, bSuccess ? TEXT("success") : TEXT("failure"), ErrorCode);
 
   FAutomationRequestTelemetry Entry;
   if (!ActiveRequestTelemetry.RemoveAndCopyValue(RequestId, Entry)) {

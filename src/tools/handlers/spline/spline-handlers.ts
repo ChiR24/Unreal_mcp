@@ -14,7 +14,7 @@
 
 import { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
-import { createSubActionDispatcher } from '../foundation/dispatch/common-handlers.js';
+import { createSubActionDispatcher, createUnknownActionResponse } from '../foundation/dispatch/common-handlers.js';
 
 /**
  * Handles all spline actions for the manage_splines tool.
@@ -116,10 +116,6 @@ export async function handleSplineTools(
       return sendRequest('get_splines_info');
 
     default:
-      return {
-        success: false,
-        error: 'UNKNOWN_ACTION',
-        message: `Unknown spline action: ${action}`
-      };
+      return createUnknownActionResponse(`Unknown spline action: ${action}`);
   }
 }

@@ -14,7 +14,6 @@ bool HandleInventoryPickupActorActions(UMcpAutomationBridgeSubsystem& Bridge, co
       return true;
     }
 
-    // Create a Blueprint actor for pickup
     UPackage* Package = CreateInventoryAssetPackage(Path, Name);
     if (!Package) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -31,16 +30,13 @@ bool HandleInventoryPickupActorActions(UMcpAutomationBridgeSubsystem& Bridge, co
                                   RF_Public | RF_Standalone, nullptr, GWarn));
 
     if (NewBlueprint) {
-      // Add sphere collision for pickup detection
       USimpleConstructionScript* SCS = NewBlueprint->SimpleConstructionScript;
       if (SCS) {
-        // Add static mesh component for visual
         USCS_Node* MeshNode = SCS->CreateNode(UStaticMeshComponent::StaticClass(), TEXT("PickupMesh"));
         if (MeshNode) {
           SCS->AddNode(MeshNode);
         }
 
-        // Add sphere component for interaction
         USCS_Node* SphereNode = SCS->CreateNode(USphereComponent::StaticClass(), TEXT("InteractionSphere"));
         if (SphereNode) {
           SCS->AddNode(SphereNode);
@@ -85,7 +81,6 @@ bool HandleInventoryPickupActorActions(UMcpAutomationBridgeSubsystem& Bridge, co
       return true;
     }
 
-    // Load the pickup blueprint
     UBlueprint* Blueprint =
         Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *PickupPath));
     if (!Blueprint) {
@@ -98,14 +93,12 @@ bool HandleInventoryPickupActorActions(UMcpAutomationBridgeSubsystem& Bridge, co
 
     bool bConfigured = false;
 
-    // Add interaction type and prompt as Blueprint variables
     FEdGraphPinType StringType;
     StringType.PinCategory = UEdGraphSchema_K2::PC_String;
 
     FEdGraphPinType NameType;
     NameType.PinCategory = UEdGraphSchema_K2::PC_Name;
 
-    // Add InteractionType variable
     bool bInteractionTypeExists = false;
     for (FBPVariableDescription& Var : Blueprint->NewVariables) {
       if (Var.VarName == TEXT("InteractionType")) {
@@ -117,7 +110,6 @@ bool HandleInventoryPickupActorActions(UMcpAutomationBridgeSubsystem& Bridge, co
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("InteractionType"), NameType);
     }
 
-    // Add InteractionPrompt variable
     bool bPromptExists = false;
     for (FBPVariableDescription& Var : Blueprint->NewVariables) {
       if (Var.VarName == TEXT("InteractionPrompt")) {
@@ -129,7 +121,6 @@ bool HandleInventoryPickupActorActions(UMcpAutomationBridgeSubsystem& Bridge, co
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("InteractionPrompt"), StringType);
     }
 
-    // Configure the interaction sphere component if it exists
     USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
     if (SCS) {
       for (USCS_Node* Node : SCS->GetAllNodes()) {

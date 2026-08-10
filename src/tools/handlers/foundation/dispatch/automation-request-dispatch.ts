@@ -3,7 +3,13 @@ import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import { CommandValidator } from '../../../../utils/commands/command-validator.js';
 import { cleanObject } from '../../../../utils/serialization/safe-json.js';
 import { validateArgsSecurity } from '../arguments/handler-argument-validation.js';
-import { getTimeoutMs } from './handler-timeout.js';
+import { getMcpRequestContext } from '../../../../automation/request-context.js';
+import { getGatewayCorrelationId } from '../../../../automation/gateway-correlation-context.js';
+import { getGatewayConsent } from '../../../../automation/gateway-consent-context.js';
+import { getGatewayExpectedRevisions } from '../../../../automation/gateway-expected-revisions-context.js';
+import { getGatewayTimeoutMs } from '../../../../automation/gateway-timeout-context.js';
+import type { ExpectedRevisions } from '../../../catalog/capabilities/semantic/execution-options.js';
+import { resolveActionTimeoutMs } from './handler-timeout.js';
 import { normalizePathFields } from '../normalization/ue-path-normalization.js';
 
 export interface SubActionDispatcher {
@@ -61,6 +67,7 @@ export async function executeAutomationRequest(
   options: {
     timeoutMs?: number;
     forwardTimeoutMsToUnreal?: boolean;
+    mcpRequestId?: string;
   } = {}
 ): Promise<unknown> {
   validateArgsSecurity(args);
@@ -75,7 +82,21 @@ export async function executeAutomationRequest(
     throw new Error(`Automation bridge is not connected to Unreal Engine. Please check if the editor is running and the plugin is enabled. Action: ${toolName}`);
   }
 
-  const timeoutMs = options.timeoutMs ?? (typeof args.timeoutMs === 'number' ? args.timeoutMs : undefined);
+  // No explicit budget: derive one from what this capability declares it costs.
+  // Leaving it undefined would hand a metadata read and a full asset import the
+  // same flat bridge default.
+  //
+  // The gateway's `options.timeoutMs` outranks that derived tier because it is
+  // the client stating its own deadline, and it is the only route left: the
+  // execute pipeline refuses `timeoutMs` in action params, so `args.timeoutMs`
+  // is now reachable only from handler-internal payloads. A call-site option
+  // still wins, since those encode a relationship a flat number would break
+  // (MRQ adds transport grace on top of the render deadline).
+  const timeoutMs = options.timeoutMs
+    ?? getGatewayTimeoutMs()
+    ?? (typeof args.timeoutMs === 'number'
+      ? args.timeoutMs
+      : resolveActionTimeoutMs(toolName, typeof args.action === 'string' ? args.action : undefined));
   const cleanedArgs = { ...args };
   // forwardTimeoutMsToUnreal is an MRQ-specific escape hatch: start_render
   // sends its timeoutMs to Unreal so the native transport can apply per-job
@@ -94,7 +115,37 @@ export async function executeAutomationRequest(
     delete cleanedArgs.timeoutMs;
   }
 
-  return await automationBridge.sendAutomationRequest(toolName, cleanedArgs, timeoutMs ? { timeoutMs } : {});
+  // Correlate this automation work to the active MCP request (if any) so the
+  // bridge can cancel it on notifications/cancelled. An explicit option wins;
+  // otherwise the async-local request context set by the tool registry is used.
+  const mcpRequestId = options.mcpRequestId ?? getMcpRequestContext()?.requestId;
+
+  // The single client-facing gateway correlation id (async-local) crosses here
+  // as bounded request metadata so the outbound automation request, the plugin
+  // queue and the receipt all join on the same id — never a handler param.
+  const gatewayCorrelationId = getGatewayCorrelationId();
+
+  // Validated per-call consent (async-local, set by the gateway) rides as an
+  // automation_request envelope sibling for the plugin to re-validate; it is
+  // never a handler param.
+  const gatewayConsent = getGatewayConsent();
+
+  const gatewayExpectedRevisions = getGatewayExpectedRevisions();
+
+  const sendOptions: {
+    timeoutMs?: number;
+    mcpRequestId?: string;
+    correlationId?: string;
+    consent?: { capability: string; acknowledge: 'explicit' | 'elevated' };
+    expectedRevisions?: ExpectedRevisions;
+  } = {};
+  if (timeoutMs !== undefined) sendOptions.timeoutMs = timeoutMs;
+  if (mcpRequestId !== undefined) sendOptions.mcpRequestId = mcpRequestId;
+  if (gatewayCorrelationId !== undefined) sendOptions.correlationId = gatewayCorrelationId;
+  if (gatewayConsent !== undefined) sendOptions.consent = gatewayConsent;
+  if (gatewayExpectedRevisions !== undefined) sendOptions.expectedRevisions = gatewayExpectedRevisions;
+
+  return await automationBridge.sendAutomationRequest(toolName, cleanedArgs, sendOptions);
 }
 
 export function createSubActionDispatcher(
@@ -112,7 +163,10 @@ export function createSubActionDispatcher(
   const argsRecord = options.pathFields && options.pathFields.length > 0
     ? normalizePathFields(rawArgs, options.pathFields)
     : { ...rawArgs };
-  const timeoutMs = options.timeoutMs ?? (typeof argsRecord.timeoutMs === 'number' ? argsRecord.timeoutMs : getTimeoutMs());
+  const timeoutMs = options.timeoutMs
+    ?? (typeof argsRecord.timeoutMs === 'number'
+      ? argsRecord.timeoutMs
+      : resolveActionTimeoutMs(options.toolName, typeof argsRecord.action === 'string' ? argsRecord.action : undefined));
 
   return {
     argsRecord,

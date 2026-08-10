@@ -144,7 +144,7 @@ async function handleFindByTag(context: AssetHandlerContext): Promise<Record<str
   return assetSuccessResponse(res, 'Assets found by tag', 'FIND_BY_TAG_FAILED', 'Tag search failed');
 }
 
-async function handleSimpleQueryAction(action: string, context: AssetHandlerContext): Promise<Record<string, unknown>> {
+export async function handleSimpleQueryAction(action: string, context: AssetHandlerContext): Promise<Record<string, unknown>> {
   if (action === 'source_control_enable') {
     const provider = extractOptionalString(normalizeArgs(context.args, [{ key: 'provider', default: 'None' }]), 'provider') ?? 'None';
     return assetSuccessResponse(await executeAutomationRequest(context.tools, 'source_control_enable', { provider }), 'Source control enabled', 'SOURCE_CONTROL_FAILED', 'Source control enable failed');
@@ -163,7 +163,17 @@ async function handleSimpleQueryAction(action: string, context: AssetHandlerCont
   const payload = action === 'analyze_graph'
     ? { assetPath, maxDepth: extractOptionalNumber(params, 'maxDepth') }
     : { assetPath, recursive: extractOptionalBoolean(params, 'recursive'), subAction: action };
-  const requestAction = action === 'analyze_graph' ? 'get_asset_graph' : (action === 'get_source_control_state' ? 'asset_query' : action === 'exists' ? 'exists' : 'manage_asset');
+  // Task 21: get_source_control_state routes to the canonical manage_asset
+  // action (array-capable, disabled-SC-tolerant, richer envelope) rather than
+  // the weaker asset_query subAction handler. analyze_graph keeps its existing
+  // get_asset_graph (dependency-graph) mapping.
+  const requestAction = action === 'analyze_graph'
+    ? 'get_asset_graph'
+    : action === 'get_source_control_state'
+      ? 'manage_asset'
+      : action === 'exists'
+        ? 'exists'
+        : 'manage_asset';
   const messages: Record<string, string> = {
     get_dependencies: 'Dependencies retrieved',
     get_source_control_state: 'Source control state retrieved',

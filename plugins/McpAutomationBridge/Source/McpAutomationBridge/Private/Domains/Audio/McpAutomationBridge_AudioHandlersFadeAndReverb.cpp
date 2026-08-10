@@ -122,16 +122,6 @@ bool HandleFadeAndReverbActions(
      return true;
    }
 
-   // -------------------------------------------------------------------------
-   // create_reverb_zone
-   // -------------------------------------------------------------------------
-   // Creates an AAudioVolume actor with reverb settings.
-   //
-   // Payload:  { "name": string (required), "location"?: [x,y,z],
-   //             "size"?: [x,y,z], "reverbEffect"?: string (asset path),
-   //             "volume"?: number, "fadeTime"?: number }
-   // Response: { "success": bool, "actorName": string, "location": {x,y,z} }
-   // -------------------------------------------------------------------------
    if (Lower == TEXT("create_reverb_zone") || Lower == TEXT("audio_create_reverb_zone")) {
      FString ZoneName;
      if (!Payload->TryGetStringField(TEXT("name"), ZoneName) || ZoneName.IsEmpty()) {

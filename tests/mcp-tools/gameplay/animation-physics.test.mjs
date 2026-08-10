@@ -115,6 +115,7 @@ const testCases = [
 
 // === ADD (Montage Notify - needs assetPath; no notifyClass = simple notify event) ===
 { scenario: 'ADD: add_montage_notify', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 0.5, "notifyName": "Testmontage_notify"}, expected: 'success|already exists' },
+{ scenario: 'ADD: add_montage_notify via notifyClass', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 0.6, "notifyClass": "AnimNotify_PlaySound"}, expected: 'success|already exists' },
 
 // === CONFIG (Blend In - needs assetPath) ===
 { scenario: 'CONFIG: set_blend_in', toolName: 'animation_physics', arguments: {"action": "set_blend_in", "assetPath": `${TEST_FOLDER}/Testmontage`, "blendTime": 0.25}, expected: 'success' },
@@ -132,6 +133,7 @@ const testCases = [
 { scenario: 'CONFIG: set_root_motion_settings', toolName: 'animation_physics', arguments: {"action": "set_root_motion_settings", "assetPath": `${TEST_FOLDER}/Testanimation_sequence`, "enableRootMotion": true, "rootMotionRootLock": "RefPose", "forceRootLock": false, "save": true}, expected: 'success' },
 { scenario: 'CONFIG: set_additive_settings', toolName: 'animation_physics', arguments: {"action": "set_additive_settings", "assetPath": `${TEST_FOLDER}/Testanimation_sequence`, "additiveAnimType": "NoAdditive", "basePoseType": "RefPose", "basePoseFrame": 0, "save": true}, expected: 'success' },
 { scenario: 'INFO: get_animation_info', toolName: 'animation_physics', arguments: {"action": "get_animation_info", "assetPath": `${TEST_FOLDER}/Testanimation_sequence`}, expected: 'success' },
+{ scenario: 'INFO: get_animation_info through params envelope', toolName: 'animation_physics', arguments: {"action": "get_animation_info", "params": {"assetPath": `${TEST_FOLDER}/Testanimation_sequence`}}, expected: 'success', assertions: [{ path: 'structuredContent.result.frameRate', label: 'params envelope merged into the action arguments' }] },
 
 // === SETUP: Spawn a SkeletalMeshActor for playback/ragdoll tests ===
 { scenario: 'Setup: spawn SkeletalMeshActor', toolName: 'control_actor', arguments: {"action": "spawn", "actorName": "SkelTestActor", "actorClass": "SkeletalMeshActor"}, expected: 'success|already exists' },
@@ -142,7 +144,7 @@ const testCases = [
 
 // === ACTION (Ragdoll - needs actorName with SkeletalMeshComponent) ===
 { scenario: 'ACTION: setup_ragdoll', toolName: 'animation_physics', arguments: {"action": "setup_ragdoll", "actorName": "SkelTestActor"}, expected: 'success|COMPONENT_NOT_FOUND' },
-{ scenario: 'ACTION: activate_ragdoll', toolName: 'animation_physics', arguments: {"action": "activate_ragdoll", "actorName": "SkelTestActor"}, expected: 'success|COMPONENT_NOT_FOUND' },
+{ scenario: 'ACTION: activate_ragdoll toggles simulation on', toolName: 'animation_physics', arguments: {"action": "activate_ragdoll", "actorName": "SkelTestActor", "activate": true}, expected: 'success|COMPONENT_NOT_FOUND' },
 
 // === CONFIG (Vehicle - needs actorName) ===
 { scenario: 'CONFIG: configure_vehicle', toolName: 'animation_physics', arguments: {"action": "configure_vehicle", "actorName": "SkelTestActor", "vehicleType": "WheeledVehicle4W", "dragCoefficient": 0.32}, expected: 'success|NOT_AVAILABLE|COMPONENT_CREATION_FAILED|ACTOR_NOT_FOUND' },
@@ -152,6 +154,9 @@ const testCases = [
 
 // === CREATE (Anim Blueprint repeat - needs skeletonPath) ===
 { scenario: 'CREATE: create_anim_blueprint', toolName: 'animation_physics', arguments: {"action": "create_anim_blueprint", "name": "Testanim_blueprint", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH, "parentClass": "Actor"}, expected: 'success|already exists' },
+
+// === CREATE (Anim Blueprint from meshPath - skeleton inferred from the mesh, no skeletonPath) ===
+{ scenario: 'CREATE: create_anim_blueprint infers skeleton from meshPath', toolName: 'animation_physics', arguments: {"action": "create_anim_blueprint", "name": "Testanim_blueprint_from_mesh", "path": TEST_FOLDER, "meshPath": "/Engine/EngineMeshes/SkeletalCube"}, expected: 'success|already exists' },
 
 // === ADD (Blend Sample - needs assetPath and animationPath) ===
 { scenario: 'ADD: add_blend_sample', toolName: 'animation_physics', arguments: {"action": "add_blend_sample", "assetPath": `${TEST_FOLDER}/Testblend_space_1d`, "animationPath": `${TEST_FOLDER}/Testanimation_sequence`, "sampleValue": 100}, expected: 'success|already exists' },
@@ -173,6 +178,7 @@ const testCases = [
   `${TEST_FOLDER}/Testanimation_blueprint`,
   `${TEST_FOLDER}/Testanimation_bp`,
   `${TEST_FOLDER}/Testanim_blueprint`,
+  `${TEST_FOLDER}/Testanim_blueprint_from_mesh`,
   `${TEST_FOLDER}/Testblend_space`,
   `${TEST_FOLDER}/Testblend_space_1d`,
   `${TEST_FOLDER}/Testblend_space_2d`,

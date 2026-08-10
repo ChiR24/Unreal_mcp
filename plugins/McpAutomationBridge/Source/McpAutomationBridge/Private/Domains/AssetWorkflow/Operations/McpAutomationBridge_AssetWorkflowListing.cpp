@@ -8,6 +8,10 @@
 
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "HAL/FileManager.h"
+#include "Misc/PackageName.h"
+#include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetResolution.h"
+#include "Domains/AssetWorkflow/Operations/McpAutomationBridgeAssetListCursor.h"
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleListAssets(
@@ -20,35 +24,100 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
   FString TagFilter;
   FString PathStartsWith;
 
+  bool bHasExplicitPath = false;
   const TSharedPtr<FJsonObject> *FilterObj;
   if (Payload->TryGetObjectField(TEXT("filter"), FilterObj) && FilterObj) {
-    (*FilterObj)->TryGetStringField(TEXT("path"), PathFilter);
+    if ((*FilterObj)->TryGetStringField(TEXT("path"), PathFilter)) {
+      bHasExplicitPath = true;
+    }
     (*FilterObj)->TryGetStringField(TEXT("class"), ClassFilter);
     (*FilterObj)->TryGetStringField(TEXT("tag"), TagFilter);
     (*FilterObj)->TryGetStringField(TEXT("pathStartsWith"), PathStartsWith);
   } else {
     // Legacy support for direct path/recursive fields
-    Payload->TryGetStringField(TEXT("path"), PathFilter);
+    if (Payload->TryGetStringField(TEXT("path"), PathFilter)) {
+      bHasExplicitPath = true;
+    }
   }
 
-  // Sanitize PathFilter to remove trailing slash which can break AssetRegistry
-  // lookups
-  if (PathFilter.Len() > 1 && PathFilter.EndsWith(TEXT("/"))) {
-    PathFilter.RemoveAt(PathFilter.Len() - 1);
+  // Canonicalize + validate the listing path. Blocks traversal and invalid
+  // roots; TS already canonicalizes but native MCP callers may send raw input.
+  FString RawPath = PathFilter.IsEmpty() ? TEXT("/Game") : PathFilter;
+  FNormalizedAssetPath NormPath = NormalizeAssetPath(RawPath);
+  if (!NormPath.bIsValid) {
+    SendAutomationError(Socket, RequestId, NormPath.ErrorMessage, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  PathFilter = NormPath.Path;
+  const FString ExplicitListingPath = PathFilter;
+
+  if (!PathStartsWith.IsEmpty()) {
+    FNormalizedAssetPath NormStart = NormalizeAssetPath(PathStartsWith);
+    if (NormStart.bIsValid) {
+      PathStartsWith = NormStart.Path;
+    }
   }
 
   bool bRecursive = true;
   Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
 
-  // Parse pagination
+  // Opt-in per-asset disk metadata (size + modified date). Off by default:
+  // it costs one file stat per listed asset and grows the response.
+  bool bIncludeMetadata = false;
+  Payload->TryGetBoolField(TEXT("includeMetadata"), bIncludeMetadata);
+
+  // Parse bounds: direct limit/offset or pagination.{limit,offset}.
   int32 Offset = 0;
-  int32 Limit = -1; // -1 means no limit
+  int32 Limit = 50;
   const TSharedPtr<FJsonObject> *PaginationObj;
-  if (Payload->TryGetObjectField(TEXT("pagination"), PaginationObj) &&
-      PaginationObj) {
+  if (Payload->TryGetObjectField(TEXT("pagination"), PaginationObj) && PaginationObj) {
     (*PaginationObj)->TryGetNumberField(TEXT("offset"), Offset);
     (*PaginationObj)->TryGetNumberField(TEXT("limit"), Limit);
   }
+  Payload->TryGetNumberField(TEXT("limit"), Limit);
+  Payload->TryGetNumberField(TEXT("offset"), Offset);
+
+  // Opaque cursor overrides offset and the filtering path (its embedded path
+  // is adopted for filtering) and is validated for the per-session catalog
+  // revision (stale / cross-session). When the caller also supplies an explicit
+  // listing path, the two must agree: the cursor is the single source of truth
+  // for continuation, so a mismatched explicit path is a typed conflict.
+  FString CursorStr;
+  Payload->TryGetStringField(TEXT("cursor"), CursorStr);
+  if (!CursorStr.IsEmpty()) {
+    FMcpAssetListCursor Cursor;
+    if (!McpDecodeAssetListCursor(CursorStr, Cursor)) {
+      SendAutomationError(Socket, RequestId, TEXT("Invalid pagination cursor"), TEXT("INVALID_CURSOR"));
+      return true;
+    }
+    if (Cursor.Revision != McpGetAssetListRevision()) {
+      SendAutomationError(Socket, RequestId, TEXT("Pagination cursor is stale (catalog revision changed). Restart the listing."), TEXT("STALE_CURSOR"));
+      return true;
+    }
+    FNormalizedAssetPath NormCursorPath = NormalizeAssetPath(Cursor.Path);
+    if (!NormCursorPath.bIsValid) {
+      SendAutomationError(Socket, RequestId, TEXT("Cursor embeds an invalid listing path"), TEXT("INVALID_CURSOR"));
+      return true;
+    }
+    // A caller that paginates with only the cursor (no explicit path) keeps the
+    // cursor's embedded path so page 2+ stays consistent. A caller that also
+    // passes an explicit path must keep it identical to the cursor path.
+    if (bHasExplicitPath && ExplicitListingPath != NormCursorPath.Path) {
+      SendAutomationError(
+        Socket, RequestId,
+        FString::Printf(TEXT("Explicit path '%s' conflicts with continuation cursor path '%s'"),
+          *ExplicitListingPath, *NormCursorPath.Path),
+        TEXT("CURSOR_CONTEXT_MISMATCH"));
+      return true;
+    }
+    PathFilter = NormCursorPath.Path;
+    Offset = Cursor.Offset;
+  }
+
+  // Validated bounded limits: hard max 500, min 1, non-negative offset.
+  const int32 MaxLimit = 500;
+  Limit = FMath::Clamp(Limit, 1, MaxLimit);
+  Offset = FMath::Max(0, Offset);
 
   FAssetRegistryModule &AssetRegistryModule =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -176,19 +245,20 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     });
   }
 
-  int32 TotalCount = AssetList.Num();
+  // Deterministic, stable ordering before pagination (package path, then name).
+  AssetList.Sort([](const FAssetData &A, const FAssetData &B) {
+    const int32 PkgCmp = A.PackagePath.ToString().Compare(B.PackagePath.ToString());
+    if (PkgCmp != 0) return PkgCmp < 0;
+    return A.AssetName.ToString() < B.AssetName.ToString();
+  });
 
-  // Apply pagination
-  if (Offset > 0) {
-    if (Offset >= AssetList.Num()) {
-      AssetList.Empty();
-    } else {
-      AssetList.RemoveAt(0, Offset);
-    }
-  }
+  const int32 TotalCount = AssetList.Num();
 
-  if (Limit >= 0 && AssetList.Num() > Limit) {
-    AssetList.SetNum(Limit);
+  // Apply pagination as a stable slice of the sorted list.
+  TArray<FAssetData> Page;
+  if (TotalCount > 0 && Offset < TotalCount) {
+    const int32 Count = FMath::Min(Limit, TotalCount - Offset);
+    Page.Append(AssetList.GetData() + Offset, Count);
   }
 
   // Also fetch sub-folders if we are listing a directory (PathFilter is set)
@@ -212,8 +282,20 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     // immediate subfolders of the requested path.
   }
 
+  const bool bIncludeTags = Payload->HasField(TEXT("includeTags"))
+    ? Payload->GetBoolField(TEXT("includeTags"))
+    : false;
+
+  // File stats below are synchronous game-thread IO. Bound how many assets we
+  // stat so an unbounded recursive listing (no pagination limit) cannot stall
+  // the editor. Assets past the cap are still listed, just without disk
+  // metadata; the caller is told via metadataTruncated.
+  const int32 MetadataStatCap = 256;
+  int32 MetadataStatBudget = bIncludeMetadata ? MetadataStatCap : 0;
+  bool bMetadataTruncated = false;
+
   TArray<TSharedPtr<FJsonValue>> AssetsArray;
-  for (const FAssetData &Asset : AssetList) {
+  for (const FAssetData &Asset : Page) {
     TSharedPtr<FJsonObject> AssetObj = McpHandlerUtils::CreateResultObject();
     AssetObj->SetStringField(TEXT("name"), Asset.AssetName.ToString());
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -225,12 +307,36 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
 #endif
     AssetObj->SetStringField(TEXT("packagePath"), Asset.PackagePath.ToString());
 
-    // Add tags for context if requested
-    TArray<TSharedPtr<FJsonValue>> Tags;
-    for (auto TagPair : Asset.TagsAndValues) {
-      Tags.Add(MakeShared<FJsonValueString>(TagPair.Key.ToString()));
+    // Add tags only when explicitly requested (off by default).
+    if (bIncludeTags) {
+      TArray<TSharedPtr<FJsonValue>> Tags;
+      for (auto TagPair : Asset.TagsAndValues) {
+        Tags.Add(MakeShared<FJsonValueString>(TagPair.Key.ToString()));
+      }
+      AssetObj->SetArrayField(TEXT("tags"), Tags);
     }
-    AssetObj->SetArrayField(TEXT("tags"), Tags);
+
+    if (bIncludeMetadata) {
+      if (MetadataStatBudget > 0) {
+        --MetadataStatBudget;
+        FString PackageFilename;
+        if (FPackageName::DoesPackageExist(Asset.PackageName.ToString(),
+                                           &PackageFilename)) {
+          IFileManager &FileManager = IFileManager::Get();
+          const int64 FileSize = FileManager.FileSize(*PackageFilename);
+          if (FileSize >= 0) {
+            AssetObj->SetNumberField(TEXT("diskSizeBytes"),
+                                     static_cast<double>(FileSize));
+          }
+          const FDateTime Stamp = FileManager.GetTimeStamp(*PackageFilename);
+          if (Stamp != FDateTime::MinValue()) {
+            AssetObj->SetStringField(TEXT("modifiedAt"), Stamp.ToIso8601());
+          }
+        }
+      } else {
+        bMetadataTruncated = true;
+      }
+    }
 
     AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
   }
@@ -240,19 +346,34 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     FoldersJson.Add(MakeShared<FJsonValueString>(SubPath));
   }
 
+  const bool bHasMore = (Offset + Page.Num()) < TotalCount;
+  const int32 NextOffset = Offset + Page.Num();
+  const FString CurrentCursor = McpEncodeAssetListCursor({ Offset, PathFilter, McpGetAssetListRevision() });
+  const FString NextCursor = bHasMore
+    ? McpEncodeAssetListCursor({ NextOffset, PathFilter, McpGetAssetListRevision() })
+    : FString();
+
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetArrayField(TEXT("assets"), AssetsArray);
   Resp->SetArrayField(TEXT("folders"), FoldersJson);
   Resp->SetNumberField(TEXT("totalCount"), TotalCount);
   Resp->SetNumberField(TEXT("count"), AssetsArray.Num());
+  Resp->SetNumberField(TEXT("limit"), Limit);
   Resp->SetNumberField(TEXT("offset"), Offset);
+  Resp->SetBoolField(TEXT("hasMore"), bHasMore);
+  Resp->SetNumberField(TEXT("nextOffset"), NextOffset);
+  Resp->SetStringField(TEXT("cursor"), CurrentCursor);
+  Resp->SetStringField(TEXT("nextCursor"), NextCursor);
+  if (bIncludeMetadata) {
+    Resp->SetBoolField(TEXT("metadataTruncated"), bMetadataTruncated);
+  }
 
   SendAutomationResponse(Socket, RequestId, true, TEXT("Assets listed"), Resp,
                          FString());
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }

@@ -188,7 +188,7 @@ export class AssetResources extends BaseTool implements IAssetResources {
         const normalizedDir = this.normalizeDir(dir);
         const response = await this.sendAutomationRequest<AutomationResponse>(
           'list',
-          { directory: normalizedDir, limit, recursive: false },
+          { path: normalizedDir, limit, recursive: false },
           { timeoutMs: 30000 }
         );
 

@@ -4,15 +4,15 @@ import { CommandValidator } from './command-validator.js';
 
 describe('CommandValidator', () => {
     it('blocks python commands with spaces', () => {
-        expect(() => CommandValidator.validate('py print("hello")')).toThrow(/Python console commands are blocked/);
+        expect(() => CommandValidator.validate('py print("hello")')).toThrow(/Dangerous command blocked/);
     });
 
     it('blocks python commands with tabs', () => {
-        expect(() => CommandValidator.validate('py\tprint("hello")')).toThrow(/Python console commands are blocked/);
+        expect(() => CommandValidator.validate('py\tprint("hello")')).toThrow(/Dangerous command blocked/);
     });
 
     it('blocks simple python command', () => {
-        expect(() => CommandValidator.validate('py')).toThrow(/Python console commands are blocked/);
+        expect(() => CommandValidator.validate('py')).toThrow(/Dangerous command blocked/);
     });
 
     it('blocks dangerous commands', () => {
@@ -28,8 +28,8 @@ describe('CommandValidator', () => {
     });
 
     it('blocks forbidden tokens', () => {
-        expect(() => CommandValidator.validate('import os')).toThrow(/contains unsafe/);
-        expect(() => CommandValidator.validate('start "cmd"')).toThrow(/contains unsafe/);
+        expect(() => CommandValidator.validate('import os')).toThrow(/Dangerous command blocked/);
+        expect(() => CommandValidator.validate('start "cmd"')).toThrow(/Dangerous command blocked/);
     });
 
     it('allows safe commands', () => {
@@ -39,14 +39,14 @@ describe('CommandValidator', () => {
 
     // Security Bypasses
     it('blocks bypass attempts with extra whitespace', () => {
-        expect(() => CommandValidator.validate('import  os')).toThrow(/contains unsafe/);
-        expect(() => CommandValidator.validate('import\tos')).toThrow(/contains unsafe/);
-        expect(() => CommandValidator.validate('exec (')).toThrow(/contains unsafe/);
-        expect(() => CommandValidator.validate('open (')).toThrow(/contains unsafe/);
+        expect(() => CommandValidator.validate('import  os')).toThrow(/Dangerous command blocked/);
+        expect(() => CommandValidator.validate('import\tos')).toThrow(/Dangerous command blocked/);
+        expect(() => CommandValidator.validate('exec (')).toThrow(/Dangerous command blocked/);
+        expect(() => CommandValidator.validate('open (')).toThrow(/Dangerous command blocked/);
     });
 
     it('blocks python command alias', () => {
-        expect(() => CommandValidator.validate('python print("hello")')).toThrow(/Python console commands are blocked/);
+        expect(() => CommandValidator.validate('python print("hello")')).toThrow(/Dangerous command blocked/);
     });
 
     it('normalizes case and spacing when calculating priority', () => {

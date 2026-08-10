@@ -9,8 +9,6 @@ bool HandleAnimationAddStateMachineAction(FActionContext &Context,
   FString &Message = Context.Message;
   FString &ErrorCode = Context.ErrorCode;
 
-
-    // Add a state machine to an animation blueprint (delegate to create_state_machine)
     FString BlueprintPath;
     Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
 

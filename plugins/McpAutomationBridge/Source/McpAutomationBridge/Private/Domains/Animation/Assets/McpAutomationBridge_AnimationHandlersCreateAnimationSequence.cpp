@@ -17,7 +17,6 @@ bool HandleAnimationCreateAnimationSequenceAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Create a new animation sequence asset
     FString SequenceName;
     if (!Payload->TryGetStringField(TEXT("name"), SequenceName) ||
         SequenceName.IsEmpty()) {

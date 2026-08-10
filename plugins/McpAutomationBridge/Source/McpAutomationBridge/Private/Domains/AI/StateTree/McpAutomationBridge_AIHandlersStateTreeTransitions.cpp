@@ -12,10 +12,10 @@ bool HandleAddStateTreeTransition(UMcpAutomationBridgeSubsystem* Self, const FSt
     if (SubAction == TEXT("add_state_tree_transition"))
     {
 #if MCP_HAS_STATE_TREE && MCP_STATE_TREE_HEADERS_AVAILABLE
-        FString StateTreePath = GetStringFieldAI(Payload, TEXT("stateTreePath"));
-        FString FromState = GetStringFieldAI(Payload, TEXT("fromState"));
-        FString ToState = GetStringFieldAI(Payload, TEXT("toState"));
-        FString TriggerType = GetStringFieldAI(Payload, TEXT("triggerType"), TEXT("OnStateCompleted"));
+        FString StateTreePath = GetJsonStringField(Payload, TEXT("stateTreePath"));
+        FString FromState = GetJsonStringField(Payload, TEXT("fromState"));
+        FString ToState = GetJsonStringField(Payload, TEXT("toState"));
+        FString TriggerType = GetJsonStringField(Payload, TEXT("triggerType"), TEXT("OnStateCompleted"));
 
         if (StateTreePath.IsEmpty() || FromState.IsEmpty() || ToState.IsEmpty())
         {
@@ -109,9 +109,9 @@ bool HandleAddStateTreeTransition(UMcpAutomationBridgeSubsystem* Self, const FSt
         Result->SetStringField(TEXT("message"), TEXT("Transition added"));
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Transition added"), Result);
 #elif MCP_HAS_STATE_TREE
-        FString StateTreePath = GetStringFieldAI(Payload, TEXT("stateTreePath"));
-        FString FromState = GetStringFieldAI(Payload, TEXT("fromState"));
-        FString ToState = GetStringFieldAI(Payload, TEXT("toState"));
+        FString StateTreePath = GetJsonStringField(Payload, TEXT("stateTreePath"));
+        FString FromState = GetJsonStringField(Payload, TEXT("fromState"));
+        FString ToState = GetJsonStringField(Payload, TEXT("toState"));
         Result->SetStringField(TEXT("fromState"), FromState);
         Result->SetStringField(TEXT("toState"), ToState);
         Result->SetStringField(TEXT("message"), TEXT("Transition registered (headers unavailable)"));

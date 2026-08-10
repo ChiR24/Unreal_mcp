@@ -13,7 +13,7 @@
 
 import { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
-import { createSubActionDispatcher } from '../foundation/dispatch/common-handlers.js';
+import { createSubActionDispatcher, createUnknownActionResponse } from '../foundation/dispatch/common-handlers.js';
 
 /**
  * Handles all navigation actions for the manage_navigation tool.
@@ -82,10 +82,6 @@ export async function handleNavigationTools(
       return sendRequest('get_navigation_info');
 
     default:
-      return {
-        success: false,
-        error: 'UNKNOWN_ACTION',
-        message: `Unknown navigation action: ${action}`
-      };
+      return createUnknownActionResponse(`Unknown navigation action: ${action}`);
   }
 }

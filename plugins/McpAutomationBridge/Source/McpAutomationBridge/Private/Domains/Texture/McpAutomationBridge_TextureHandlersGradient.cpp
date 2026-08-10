@@ -23,7 +23,9 @@ TSharedPtr<FJsonObject> HandleCreateGradientTexture(const TSharedPtr<FJsonObject
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     TSet<FString> ValidParams = {
-        TEXT("subAction"), TEXT("name"), TEXT("path"), TEXT("gradientType"),
+        // `action` is injected by WithPayloadSubAction as the legacy dispatch
+        // verb (MCPBB-060); it is not a client parameter but must be accepted.
+        TEXT("action"), TEXT("subAction"), TEXT("name"), TEXT("path"), TEXT("gradientType"),
         TEXT("width"), TEXT("height"), TEXT("angle"), TEXT("centerX"),
         TEXT("centerY"), TEXT("radius"), TEXT("hdr"), TEXT("save"),
         TEXT("startColor"), TEXT("endColor")

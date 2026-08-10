@@ -31,6 +31,8 @@ FMcpNativeTransport::ESessionValidationResult FMcpNativeTransport::ValidateSessi
 
 		ActiveSessions.Remove(SessionId);
 		SessionRateStates.Remove(SessionId);
+		SessionProtocolVersions.Remove(SessionId);
+		SessionPrincipals.Remove(SessionId);
 	}
 	CloseSessionConnections(SessionId);
 	OutError = TEXT("Invalid or expired session ID");
@@ -134,7 +136,8 @@ bool FMcpNativeTransport::QueueAutomationRequestForSession(
 	const FString& SessionId, const FString& RequestId,
 	const FString& DispatchAction,
 	const TSharedPtr<FJsonObject>& Arguments,
-	bool& bOutSessionActive)
+	bool& bOutSessionActive,
+	const TMap<EMcpStateKind, int64>& ExpectedRevisions)
 {
 	bOutSessionActive = false;
 	if (!Subsystem)
@@ -148,10 +151,16 @@ bool FMcpNativeTransport::QueueAutomationRequestForSession(
 		return false;
 	}
 	bOutSessionActive = ActiveSessions.Contains(SessionId);
+	// Task 45: a native request carries no socket, so the MCP session id is the
+	// only thing that keeps its queue fairness lane and per-session cap distinct
+	// from every other session's.
 	return bOutSessionActive &&
 		Subsystem->QueueAutomationRequest(
 			RequestId, DispatchAction, Arguments, nullptr,
-			ERequestOrigin::NativeHTTP) == EAutomationQueueRejection::None;
+			ERequestOrigin::NativeHTTP,
+			ExpectedRevisions,
+			FString(TEXT("native:")) + SessionId) ==
+			EAutomationQueueRejection::None;
 }
 
 void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
@@ -160,6 +169,12 @@ void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
 	{
 		return;
 	}
+
+	// Task 37: the single close funnel is where DELETE, init-eviction, failed
+	// init, and the inactivity-timeout close converge, so draining the session's
+	// MCP primitive state (subscriptions + coalescer pending) here covers all of
+	// those teardown moments with one seam.
+	ReleaseSessionPrimitives(SessionId);
 
 	{
 		FScopeLock Lock(&LogEventSubscriptionsMutex);
@@ -236,9 +251,11 @@ void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
 
 void FMcpNativeTransport::OnToolsListChanged()
 {
-	UE_LOG(LogMcpNativeTransport, Log,
-		TEXT("Tool list changed — broadcasting notifications/tools/list_changed"));
-	BroadcastToolsListChanged();
+	// The public tools/list is permanently the single static 'unreal' gateway
+	// tool, so a dynamic-tool visibility change never alters its shape; the
+	// notifications/tools/list_changed broadcast is suppressed unconditionally.
+	UE_LOG(LogMcpNativeTransport, Verbose,
+		TEXT("Tool list changed — suppressed (public surface is a static single tool)"));
 }
 
 void FMcpNativeTransport::BroadcastToolsListChanged()

@@ -11,11 +11,11 @@ namespace McpSkeletonHandlers {
 
 bool HandlePreviewPhysicsAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
         // Also accept skeletonPath for backward compatibility
         if (SkeletalMeshPath.IsEmpty())
         {
-            SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
+            SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
         }
         bool bEnable = GetJsonBoolField(Payload, TEXT("enable"), true);
 

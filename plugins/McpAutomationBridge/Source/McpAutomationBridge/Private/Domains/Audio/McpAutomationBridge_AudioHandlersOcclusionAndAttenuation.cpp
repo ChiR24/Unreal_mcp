@@ -92,16 +92,6 @@ bool HandleSpatialActions(
      return true;
    }
 
-   // -------------------------------------------------------------------------
-   // set_sound_attenuation
-   // -------------------------------------------------------------------------
-   // Creates or modifies a USoundAttenuation asset with distance settings.
-   //
-   // Payload:  { "name": string (required), "innerRadius"?: number,
-   //             "falloffDistance"?: number, "attenuationShape"?: string,
-   //             "falloffMode"?: string, "path"?: string, "save"?: bool }
-   // Response: { "success": bool, "path": string, "name": string }
-   // -------------------------------------------------------------------------
    if (Lower == TEXT("set_sound_attenuation") || Lower == TEXT("audio_set_sound_attenuation")) {
      FString Name;
      if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {

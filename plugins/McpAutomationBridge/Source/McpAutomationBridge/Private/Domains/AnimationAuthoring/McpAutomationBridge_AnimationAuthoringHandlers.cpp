@@ -9,7 +9,7 @@ using namespace McpAnimationAuthoring;
 static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    FString SubAction = GetStringFieldAnimAuth(Params, TEXT("subAction"), TEXT(""));
+    FString SubAction = GetJsonStringField(Params, TEXT("subAction"), TEXT(""));
 
     if (TSharedPtr<FJsonObject> Result = HandleSequenceAssetActions(SubAction, Params, Response))
     {
@@ -127,13 +127,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAnimationAuthoringAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    // Check if this is an animation authoring action
     if (Action != TEXT("manage_animation_authoring"))
     {
-        return false; // Not handled
+        return false;
     }
 
-    // Call the internal processing function
     TSharedPtr<FJsonObject> Result = HandleAnimationAuthoringRequest(Payload);
 
     // Send response
@@ -158,6 +156,4 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAnimationAuthoringAction(
     SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to process animation authoring action"), TEXT("PROCESSING_FAILED"));
     return true;
 }
-
-
 #endif // WITH_EDITOR

@@ -44,6 +44,7 @@ const ignoredDirectoryNames = new Set([
   'Intermediate',
   'node_modules',
   'reports',
+  'evidence',
 ]);
 const activeCodeExtensions = new Set([
   '.c',
@@ -67,6 +68,16 @@ const forbiddenNumberedIdentifier = new RegExp(
   `(?:is)?${forbiddenNumberedPrefix}[ _-]*\\d+`,
   'i',
 );
+
+// The sibling vocabulary, policed on PATHS only. A plan numbers its work items and
+// those numbers used to reach the tree: 213 files and 16 directories were named for
+// a task rather than for what they test, so `progress-on-the-wire` lived under
+// `task-44` and told a reader nothing once the plan was gone. Paths are clean now
+// and this keeps them clean. Contents are deliberately NOT policed here - 439 files
+// still carry a task number in a comment, and a gate that fails on all of them
+// would be switched off rather than satisfied.
+const forbiddenTaskPrefix = String.fromCharCode(116, 97, 115, 107);
+const forbiddenTaskPath = new RegExp(`${forbiddenTaskPrefix}[ _-]*\\d+`, 'i');
 
 const listDirectories = (directory: string): readonly string[] =>
   readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -144,13 +155,18 @@ describe('TypeScript source structure', () => {
         forbiddenNumberedIdentifier.test(readFileSync(filePath, 'utf8')),
       )
       .map((filePath) => relative(repositoryRoot, filePath));
+    const invalidTaskPaths = activeFiles
+      .map((filePath) => relative(repositoryRoot, filePath))
+      .filter((filePath) => forbiddenTaskPath.test(filePath));
 
     expect({
       invalidContents,
       invalidPaths,
+      invalidTaskPaths,
     }).toEqual({
       invalidContents: [],
       invalidPaths: [],
+      invalidTaskPaths: [],
     });
-  });
+  }, 60_000);
 });

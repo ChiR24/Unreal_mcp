@@ -178,7 +178,7 @@ export async function connectAutomationBridge(context: ConnectContext, timeoutMs
   context.setConnected(true);
 }
 
-export async function waitForAutomationConnection(
+async function waitForAutomationConnection(
   automationBridge: AutomationBridge,
   log: UnrealBridgeLogger,
   timeoutMs: number

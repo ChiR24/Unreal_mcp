@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
+#include "McpCapabilityScopes.h"
 #include "McpAutomationBridgeSettings.generated.h"
 
 // Store these settings in the project's config (DefaultGame.ini) and expose
@@ -48,6 +49,13 @@ public:
 
     UPROPERTY(config, EditAnywhere, Category = "Security")
     FString CapabilityToken;
+
+    /** Scoped capability tokens for the documented migration window. Each narrows
+     * authority and never widens it; a scoped token may list only
+     * Read/Write/Destructive, never Admin. The legacy CapabilityToken above maps
+     * explicitly to Admin. Configured settings remain the only durable storage. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Scoped Tokens")
+    TArray<FMcpScopedCapabilityToken> ScopedCapabilityTokens;
 
     UPROPERTY(config, EditAnywhere, Category = "Connection", meta = (ClampMin = "0.0"))
     float AutoReconnectDelay;
@@ -283,14 +291,31 @@ public:
                 MultiLine = "true"))
     FString NativeMCPInstructions;
 
+private:
+    static volatile int32& EditGenerationCounter()
+    {
+        static volatile int32 Counter = 0;
+        return Counter;
+    }
+
+public:
     virtual FName GetCategoryName() const override { return FName(TEXT("Plugins")); }
     virtual FText GetSectionText() const override;
+
+    // Bumped on every settings edit so caches derived from these values (the
+    // capability-principal candidate table) rebuild without re-reading settings
+    // on every request. Never derived from, and never reveals, a token.
+    static int32 GetEditGeneration()
+    {
+        return FPlatformAtomics::AtomicRead(&EditGenerationCounter());
+    }
 
 #if WITH_EDITOR
     // Persist changed properties immediately when edited in Project Settings
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override
     {
         Super::PostEditChangeProperty(PropertyChangedEvent);
+        FPlatformAtomics::InterlockedIncrement(&EditGenerationCounter());
         SaveConfig();
     }
 #endif

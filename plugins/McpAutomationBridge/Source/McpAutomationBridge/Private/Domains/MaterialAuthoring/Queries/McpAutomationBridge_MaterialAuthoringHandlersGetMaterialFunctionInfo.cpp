@@ -75,9 +75,6 @@ bool HandleGetMaterialFunctionInfo(UMcpAutomationBridgeSubsystem* Bridge, const 
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // find_node — search expressions by type or name
-  // --------------------------------------------------------------------------
   return false;
 }
 }

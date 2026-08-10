@@ -56,8 +56,6 @@ USoundBase *ResolveSoundAsset(const FString &SoundPath) {
 }
 
 /**
- * @brief Resolve a USoundMix by asset path or asset name.
- *
  * Attempts to load a USoundMix using the provided MixPath. If MixPath contains a
  * full asset path and the asset exists, that asset is returned. If MixPath does
  * not contain a path separator, the function treats it as an asset name and
@@ -66,9 +64,6 @@ USoundBase *ResolveSoundAsset(const FString &SoundPath) {
  * VERSION COMPATIBILITY:
  * - UE 5.0: FARFilter uses ClassNames (FName)
  * - UE 5.1+: FARFilter uses ClassPaths (FTopLevelAssetPath)
- *
- * @param MixPath Asset path or asset name to resolve.
- * @return USoundMix* Pointer to the resolved USoundMix, or nullptr if not found.
  */
 USoundMix *ResolveSoundMix(const FString &MixPath) {
 	if (MixPath.IsEmpty())

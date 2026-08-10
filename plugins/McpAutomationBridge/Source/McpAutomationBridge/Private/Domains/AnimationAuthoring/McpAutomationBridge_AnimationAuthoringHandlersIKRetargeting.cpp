@@ -9,11 +9,11 @@ TSharedPtr<FJsonObject> HandleIKRetargetActions(const FString& SubAction, const 
     if (SubAction == TEXT("create_ik_retargeter"))
     {
 #if MCP_HAS_IKRETARGET_FACTORY && MCP_HAS_IKRETARGETER
-        FString Name = GetStringFieldAnimAuth(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("path"), TEXT("/Game/Retargeting")));
-        FString SourceIKRigPath = GetStringFieldAnimAuth(Params, TEXT("sourceIKRigPath"), TEXT(""));
-        FString TargetIKRigPath = GetStringFieldAnimAuth(Params, TEXT("targetIKRigPath"), TEXT(""));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeAnimPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Retargeting")));
+        FString SourceIKRigPath = GetJsonStringField(Params, TEXT("sourceIKRigPath"), TEXT(""));
+        FString TargetIKRigPath = GetJsonStringField(Params, TEXT("targetIKRigPath"), TEXT(""));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (Name.IsEmpty())
         {
@@ -106,9 +106,9 @@ Retargeter->TargetIKRigAsset = TargetRig;
     if (SubAction == TEXT("set_retarget_chain_mapping"))
     {
 #if MCP_HAS_IKRETARGETER
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString SourceChain = GetStringFieldAnimAuth(Params, TEXT("sourceChain"), TEXT(""));
-        FString TargetChain = GetStringFieldAnimAuth(Params, TEXT("targetChain"), TEXT(""));
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString SourceChain = GetJsonStringField(Params, TEXT("sourceChain"), TEXT(""));
+        FString TargetChain = GetJsonStringField(Params, TEXT("targetChain"), TEXT(""));
 
         if (SourceChain.IsEmpty() || TargetChain.IsEmpty())
         {

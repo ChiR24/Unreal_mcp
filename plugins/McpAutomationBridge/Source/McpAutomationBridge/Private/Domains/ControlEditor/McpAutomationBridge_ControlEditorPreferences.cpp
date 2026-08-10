@@ -15,7 +15,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
   FString Category;
   Payload->TryGetStringField(TEXT("category"), Category);
 
-  // Get preferences object from payload
   const TSharedPtr<FJsonObject>* PrefsPtr = nullptr;
   if (Payload->TryGetObjectField(TEXT("preferences"), PrefsPtr) && PrefsPtr && (*PrefsPtr).IsValid()) {
     for (const auto& Pair : (*PrefsPtr)->Values) {
@@ -91,8 +90,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
   return true;
 #endif
 }
-
-
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetEditorMode(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -111,7 +108,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetEditorMode(
     return true;
   }
 
-  // Execute editor mode command via console
   FString Command = FString::Printf(TEXT("mode %s"), *Mode);
   GEditor->Exec(GEditor->GetEditorWorldContext().World(), *Command);
 
@@ -125,8 +121,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetEditorMode(
   return false;
 #endif
 }
-
-
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetFixedDeltaTime(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -145,7 +139,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetFixedDeltaTime(
     return true;
   }
 
-  // Set fixed delta time via console
   FString Command = FString::Printf(TEXT("r.FixedDeltaTime %f"), DeltaTime);
   GEditor->Exec(GEditor->GetEditorWorldContext().World(), *Command);
 

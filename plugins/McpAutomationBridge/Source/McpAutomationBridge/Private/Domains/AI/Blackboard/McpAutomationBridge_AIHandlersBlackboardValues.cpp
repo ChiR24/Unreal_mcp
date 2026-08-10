@@ -17,14 +17,14 @@ bool HandleSetBlackboardValue(UMcpAutomationBridgeSubsystem* Self, const FString
     const FString SubAction = TEXT("set_blackboard_value");
     if (SubAction == TEXT("set_blackboard_value"))
     {
-        FString BBPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
+        FString BBPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
         if (BBPath.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blackboardPath"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
-        FString KeyName = GetStringFieldAI(Payload, TEXT("keyName"));
+        FString KeyName = GetJsonStringField(Payload, TEXT("keyName"));
         if (KeyName.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing keyName"), TEXT("INVALID_ARGUMENT"));
@@ -42,7 +42,7 @@ bool HandleSetBlackboardValue(UMcpAutomationBridgeSubsystem* Self, const FString
         // Find the key and set its value
         bool bKeyFound = false;
         bool bValueSet = false;
-        FString ValueStr = GetStringFieldAI(Payload, TEXT("value"));
+        FString ValueStr = GetJsonStringField(Payload, TEXT("value"));
 
         for (FBlackboardEntry& Key : BBData->Keys)
         {
@@ -141,14 +141,14 @@ bool HandleGetBlackboardValue(UMcpAutomationBridgeSubsystem* Self, const FString
     const FString SubAction = TEXT("get_blackboard_value");
     if (SubAction == TEXT("get_blackboard_value"))
     {
-        FString BBPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
+        FString BBPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
         if (BBPath.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blackboardPath"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
-        FString KeyName = GetStringFieldAI(Payload, TEXT("keyName"));
+        FString KeyName = GetJsonStringField(Payload, TEXT("keyName"));
         if (KeyName.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing keyName"), TEXT("INVALID_ARGUMENT"));

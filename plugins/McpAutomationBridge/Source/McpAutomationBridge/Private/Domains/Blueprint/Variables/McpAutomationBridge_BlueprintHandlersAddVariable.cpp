@@ -1,4 +1,9 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+// Supplies MCP_BLUEPRINT_ACTION_LOCALS, which declares RequestId /
+// RequestingSocket / LocalPayload / Bridge for every handler in this file. Every
+// other Blueprint handler that uses the macro includes this; omitting it here
+// compiled only by transitive luck and fails outright under an installed engine.
+#include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintAssetLoad.h"
@@ -197,7 +202,7 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
       case EJson::Number: {
         const double Num = DefaultVal->AsNumber();
         const bool bIsIntLike =
-            PinType.PinCategory == MCP_PC_Int ||
+            PinType.PinCategory == UEdGraphSchema_K2::PC_Int ||
             PinType.PinCategory == UEdGraphSchema_K2::PC_Byte;
         if (bIsIntLike && FMath::Frac(Num) == 0.0) {
           DefaultStr = FString::Printf(TEXT("%lld"), static_cast<int64>(Num));

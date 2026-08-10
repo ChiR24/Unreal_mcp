@@ -90,6 +90,9 @@ const testCases = [
   { scenario: 'ACTION: setup_damage_type', toolName: 'manage_combat', arguments: { action: 'setup_damage_type', name: ALIAS_DAMAGE_TYPE_NAME, path: TEST_FOLDER }, expected: 'success', assertions: [{ path: 'structuredContent.result.damageTypePath', equals: `${TEST_FOLDER}/${ALIAS_DAMAGE_TYPE_NAME}.${ALIAS_DAMAGE_TYPE_NAME}`, label: 'setup_damage_type returns created path' }] },
   { scenario: 'CONFIG: configure_hit_detection', toolName: 'manage_combat', arguments: { action: 'configure_hit_detection', blueprintPath: weaponPath, hitboxType: 'Sphere', damageMultiplier: 1.5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.hitboxType', equals: 'Sphere', label: 'hit detection hitbox type applied' }] },
   { scenario: 'INFO: get_combat_stats', toolName: 'manage_combat', arguments: { action: 'get_combat_stats', blueprintPath: weaponPath }, expected: 'success', assertions: [{ path: 'structuredContent.result.combatInfo.parentClass', equals: 'Actor', label: 'combat stats reports weapon parent class' }] },
+  // params envelope: clients that cannot send arbitrary top-level fields nest them
+  // under `params`, which is merged with top-level arguments before routing.
+  { scenario: 'INFO: get_combat_stats via params envelope', toolName: 'manage_combat', arguments: { action: 'get_combat_stats', params: { blueprintPath: weaponPath } }, expected: 'success', assertions: [{ path: 'structuredContent.result.combatInfo.parentClass', equals: 'Actor', label: 'nested params resolved the same weapon blueprint' }] },
 
   // === DAMAGE EFFECTS AND DEFENSE ===
   { scenario: 'CREATE: create_damage_effect', toolName: 'manage_combat', arguments: { action: 'create_damage_effect', name: DAMAGE_EFFECT_NAME, path: TEST_FOLDER, duration: 8, damagePerSecond: 15, effectType: 'DamageOverTime' }, expected: 'success', assertions: [{ path: 'structuredContent.result.duration', equals: 8, label: 'damage effect duration applied' }] },

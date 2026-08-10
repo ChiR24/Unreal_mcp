@@ -33,7 +33,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
   if (Prim->Mobility == EComponentMobility::Static)
     Prim->SetMobility(EComponentMobility::Movable);
 
-  // Ensure collision is enabled for physics
   if (Prim->GetCollisionEnabled() == ECollisionEnabled::NoCollision) {
     Prim->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
   }
@@ -67,7 +66,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
   Prim->WakeAllRigidBodies();
   Prim->MarkRenderStateDirty();
 
-  // Verify physics state
   const bool bIsSimulating = Prim->IsSimulatingPhysics();
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
@@ -91,7 +89,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
     return true;
   }
 
-  // Add verification data
 	McpHandlerUtils::AddVerification(Data, Found);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Force applied"), Data);
@@ -100,8 +97,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
   return false;
 #endif
 }
-
-
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -131,7 +126,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
     return true;
   }
 
-  // Set collision on root component
   if (USceneComponent* RootComp = Actor->GetRootComponent()) {
     if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(RootComp)) {
       if (bCollisionEnabled) {

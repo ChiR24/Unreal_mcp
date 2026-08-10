@@ -4,8 +4,17 @@
 #include "HAL/Runnable.h"
 #include "Dom/JsonValue.h"
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
+#include "MCP/DynamicTools/McpSessionConfigureStore.h"
+#include "MCP/Primitives/McpSubscriptionStore.h"
+#include "MCP/Primitives/McpNotificationCoalescer.h"
+#include "MCP/Primitives/McpTaskMethods.h"
 #include "Async/Future.h"
 #include <atomic>
+#include "MCP/Transport/McpNativeTransportConnectionTypes.h"
+#include "Foundation/McpCapabilityPrincipal.h"
+#include "Foundation/McpLiveStateRevisions.h"
+
+struct FMcpReceiptContext;
 
 class UMcpAutomationBridgeSubsystem;
 class FSocket;
@@ -15,7 +24,9 @@ class ISocketSubsystem;
 
 /**
  * Native MCP Streamable HTTP transport with SSE streaming.
- * Raw socket HTTP server speaking JSON-RPC 2.0 (MCP protocol 2025-03-26).
+ * Raw socket HTTP server speaking JSON-RPC 2.0 (MCP protocol 2025-11-25;
+ * negotiates 2025-06-18 / 2025-03-26). Validates the MCP-Protocol-Version
+ * header on every post-initialize request.
  * SSE streaming for tools/call — progress notifications + final result.
  * Runs alongside existing WebSocket transport — opt-in via bEnableNativeMCP setting.
  */
@@ -76,6 +87,14 @@ public:
 	/** Clean up requests that have exceeded the timeout. Called from Tick. */
 	void CleanupStaleRequests();
 
+	// ─── Cancellation (notifications/cancelled) ─────────────────────────────
+	// Correlates the client's requestId to the inflight SSE connection, marks it
+	// cancelled (so the late response is suppressed) and cancels the underlying
+	// automation request. Safe to call for unknown/already-completed ids. The
+	// CallerSessionId scopes the cancellation so one session cannot cancel
+	// another session's in-flight request.
+	void HandleCancelledNotification(const TSharedPtr<FJsonObject>& Params, const FString& CallerSessionId);
+
 	// Dedicated-thread keepalive (immune to GameThread stalls).
 	void RunKeepaliveLoop();
 	void SweepNotificationKeepalives();
@@ -86,49 +105,6 @@ public:
 	virtual void Stop() override;
 
 private:
-	/** Parsed HTTP request (minimal — only POST/DELETE /mcp). */
-	struct FParsedHttpRequest
-	{
-		FString Method;      // "GET", "POST", or "DELETE"
-		FString Path;        // "/mcp"
-		FString Body;
-		FString SessionId;   // from Mcp-Session-Id header
-		FString Accept;      // from Accept header
-		FString CapabilityToken;  // from X-MCP-Capability-Token header
-		FString Origin;      // from Origin header for browser CORS validation
-		int32 ContentLength = 0;
-	};
-
-	/** Active SSE streaming connection for a tools/call request. */
-	struct FSSEConnection
-	{
-		FSocket* Socket = nullptr;
-		TSharedPtr<FJsonValue> JsonRpcId;
-		double StartTime = 0.0;
-		double TimeoutSeconds = 300.0;
-		FString ToolName;
-		FString SessionId;  // for touching ActiveSessions during long-running calls
-		FCriticalSection WriteMutex;  // protects socket writes from GameThread
-		std::atomic<bool> bMarkedForRemoval{false};  // set by failed writes, checked by CleanupStaleRequests
-		std::atomic<bool> bProgressWritePending{false};
-	};
-
-	/** Persistent SSE notification stream (GET /mcp). */
-	struct FNotificationStream
-	{
-		FSocket* Socket = nullptr;
-		FString SessionId;
-		FString StreamId;
-		double StartTime = 0.0;
-		// Non-atomic: written once in HandleGetMcp before the stream is published into
-		// NotificationStreams (that publish establishes the happens-before), then
-		// read/written only by the keepalive thread (RunKeepaliveLoop).
-		double LastKeepaliveTime = 0.0;
-		FCriticalSection WriteMutex;
-		std::atomic<bool> bReady{false};
-		std::atomic<bool> bMarkedForRemoval{false};
-	};
-
 	enum class ESessionValidationResult
 	{
 		Valid,
@@ -151,6 +127,12 @@ private:
 		const FString& ContentType, const FString& Body,
 		const TMap<FString, FString>& ExtraHeaders = {},
 		const FString& CorsOrigin = FString());
+	// Send a response then tear down the client socket (close + destroy). Returns SendHttpResponse result so callers branch on send success.
+	bool SendAndClose(FSocket* ClientSocket, int32 StatusCode, const FString& ContentType, const FString& Body, const TMap<FString, FString>& ExtraHeaders = {}, const FString& CorsOrigin = FString());
+	// Send a prebuilt JSON-RPC body and tear down the client socket. Shared by
+	// the early-return error paths in HandleToolsCall so each stays a one-liner.
+	void SendBodyAndClose(FSocket* ClientSocket, const FString& Body,
+		int32 Status, const FString& CorsOrigin);
 	bool SendSSEHeaders(FSocket* Socket, const FString& SessionId,
 		const FString& CorsOrigin = FString());
 	static bool WriteSSEEvent(FSSEConnection& Conn, const FString& EventData);
@@ -159,7 +141,7 @@ private:
 	FString HandleInitialize(const TSharedPtr<FJsonObject>& Params,
 		const TSharedPtr<FJsonValue>& Id, FString& OutSessionId,
 		const FString& ConnectionRemoteAddr);
-	FString HandleToolsList(const TSharedPtr<FJsonValue>& Id);
+	FString HandleToolsList(const TSharedPtr<FJsonValue>& Id, const FString& SessionId);
 	void HandleToolsCall(const TSharedPtr<FJsonObject>& Params,
 		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
 		const FString& SessionId, const FString& CorsOrigin);
@@ -168,7 +150,47 @@ private:
 		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
 		const FString& SessionId, const FString& CorsOrigin);
 
+	// Route a tools/call whose name is the 'unreal' gateway tool.
+	void HandleGatewayCall(
+		const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
+		FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
+		const TSharedPtr<FJsonValue>& ProgressToken = nullptr);
+
+	// Gateway mode pre-dispatch: route 'unreal' or reject a direct canonical call.
+	// Returns true when it handled (or rejected) the call so the caller returns.
+	bool HandleGatewayModePreDispatch(
+		const FString& ToolName, const TSharedPtr<FJsonObject>& Arguments,
+		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
+		const FString& SessionId, const FString& CorsOrigin,
+		const TSharedPtr<FJsonValue>& ProgressToken = nullptr);
+
+	// Canonical execute operation of the 'unreal' gateway tool.
+	void HandleGatewayExecute(
+		const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
+		FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
+		const TSharedPtr<FJsonValue>& ProgressToken);
+
+	// Shared SSE streaming + subsystem queue path used by both canonical and
+	// gateway execute calls. DispatchAction + Arguments are already resolved.
+	// CapabilityId/OutputSchema are supplied only by gateway execute, so the
+	// completion path can validate the result and emit a semantic receipt.
+	void StreamToolCall(
+		const FString& ToolName, const FString& DispatchAction,
+		const TSharedPtr<FJsonObject>& Arguments, const TSharedPtr<FJsonValue>& Id,
+		FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
+		const TSharedPtr<FJsonValue>& ProgressToken,
+		const FString& CapabilityId,
+		const TSharedPtr<FJsonObject>& OutputSchema,
+		const FMcpReceiptContext& Context);
+
 	// Session validation
+	// Task 40 session principal. Bound once at initialize from the presented
+	// capability token, then re-verified on every later request so a client can
+	// never present one token at initialize and a different one afterwards.
+	void BindSessionPrincipal(const FString& SessionId, const FString& PresentedToken);
+	FMcpCapabilityPrincipal GetSessionPrincipal(const FString& SessionId);
+	bool VerifySessionPrincipal(const FString& SessionId, const FString& PresentedToken);
+
 	ESessionValidationResult ValidateSession(const FString& SessionId, FString& OutError);
 	static int32 GetSessionValidationStatusCode(ESessionValidationResult Result);
 	void TouchSession(const FString& SessionId);
@@ -181,8 +203,38 @@ private:
 		const FString& SessionId, const FString& RequestId,
 		const FString& DispatchAction,
 		const TSharedPtr<FJsonObject>& Arguments,
-		bool& bOutSessionActive);
+		bool& bOutSessionActive,
+		const TMap<EMcpStateKind, int64>& ExpectedRevisions =
+			TMap<EMcpStateKind, int64>());
 	void CloseSessionConnections(const FString& SessionId);
+	// Sessions holding an SSE call or a notification stream. MUST be called
+	// WITHOUT SessionMutex held: its two collection-mutex scopes are sequential
+	// (Notification, then SSE — same relative order as CloseSessionConnections),
+	// and no path in this file takes a collection mutex while holding
+	// SessionMutex.
+	void CollectSessionsWithLiveConnections(TSet<FString>& OutSessionIds) const;
+
+	// ─── MCP protocol-version negotiation (spec 2025-11-25 lifecycle) ───
+	// Negotiate the initialize protocolVersion: echo a supported version, or
+	// fall back to the latest supported version for any well-formed (non-empty
+	// string) request version. Returns false (with OutError set) when the
+	// field is missing, non-string, or empty -> caller emits JSON-RPC -32602.
+	bool NegotiateInitializeProtocolVersion(
+		const TSharedPtr<FJsonObject>& Params, FString& OutNegotiated,
+		FString& OutError);
+	// Resolve the MCP-Protocol-Version header for a post-initialize request.
+	// Returns false when the header value is present but unsupported/invalid
+	// (caller responds HTTP 400). When absent, derives from the negotiated
+	// session version or McpDefaultProtocolVersion().
+	bool ResolveRequestProtocolVersion(
+		const FString& HeaderValue, const FString& SessionId,
+		FString& OutVersion, FString& OutError);
+	// Validate the protocol-version header for a POST/GET request; on failure
+	// send HTTP 400 and close the socket. Returns false when the request was
+	// rejected (caller must return). bJsonBody selects the 400 body format.
+	bool GuardProtocolVersionHeader(
+		FSocket* ClientSocket, const FParsedHttpRequest& Req,
+		const TSharedPtr<FJsonValue>& Id, bool bJsonBody);
 
 	void OnToolsListChanged();
 	void BroadcastToolsListChanged();
@@ -197,13 +249,43 @@ private:
 		const TArray<TSharedPtr<FNotificationStream>>& Streams,
 		const FString& NotificationJson);
 
+	// ─── MCP primitives (Tasks 31-36 wiring) ────────────────────────────────
+	// Dispatches resources/*, prompts/*, and completion/complete by delegating
+	// to the pure Tasks 31-36 primitives, inserted before the ErrorMethodNotFound
+	// fallback so an implemented primitive never 404s. Returns true when it
+	// handled (or errored) the method. Static capability/project reads are served
+	// safely; editor-state URIs return a typed RESOURCE_UNAVAILABLE rather than
+	// reading editor APIs from the socket thread.
+	bool HandlePrimitiveMethod(
+		const FString& Method, const TSharedPtr<FJsonObject>& Params,
+		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
+		const FString& SessionId, const FString& CorsOrigin);
+	// Lazily construct the coalescer + wire the subscription release hook once.
+	void InitializePrimitivesIfNeeded();
+	// The single per-session primitive cleanup seam: drains a session's
+	// subscriptions + coalescer pending. Invoked at every session-teardown moment.
+	void ReleaseSessionPrimitives(const FString& SessionId);
+	// URI-only resources/updated over the reused async notification writer.
+	void SendResourceUpdatedNotification(const FString& SessionId, const FString& Uri);
+	// Drain due coalesced notifications from the existing keepalive loop.
+	void FlushDuePrimitiveNotifications();
+
 	UMcpAutomationBridgeSubsystem* Subsystem;
 	FMcpDynamicToolManager ToolManager;
+	// Per-session MCP primitive state (Tasks 34/36). The coalescer holds
+	// references to the store + configure store, so those are declared first.
+	FMcpSubscriptionStore SubscriptionStore;
+	FMcpSessionConfigureStore SessionConfigureStore;
+	TUniquePtr<FMcpNotificationCoalescer> NotificationCoalescer;
+	// Task 44: owns the bounded per-session task store AND the tasks/* handlers,
+	// so routing costs the transport no method of its own.
+	FMcpTaskSurface TaskSurface;
+	mutable FCriticalSection PrimitiveStateMutex;
 	int32 ListenPort = 0;
 
 	// Server identity & instructions (loaded from server-info.json + settings)
 	FString ServerName = TEXT("unreal-mcp");
-	FString ServerVersion = TEXT("0.5.31");
+	FString ServerVersion = TEXT("0.5.30");
 	FString BaseInstructions;
 	FString UserInstructions;
 
@@ -228,6 +310,9 @@ private:
 
 	// Session state (multi-session, with activity tracking)
 	TMap<FString, double> ActiveSessions;  // SessionId → LastActivityTime
+	TMap<FString, FString> SessionProtocolVersions;  // SessionId → negotiated MCP-Protocol-Version
+	// SessionId → bound principal. The presented token is never stored here.
+	TMap<FString, FMcpCapabilityPrincipal> SessionPrincipals;
 	struct FSessionRateState
 	{
 		double InitializationCompletedAt = 0.0;
@@ -247,6 +332,14 @@ private:
 
 	static constexpr double SessionTimeoutSeconds = 3600.0;  // 1 hour
 	static constexpr double AbandonedSessionGraceSeconds = 5.0;
+	// Second-tier reclaim threshold at the session cap. Eviction used to accept
+	// ONLY never-used sessions, so once MaxActiveSessions clients had each made
+	// a single request, initialize hard-failed for every new client until the
+	// 1-hour inactivity timer reclaimed a slot — a client that exits without
+	// DELETE (crash, Ctrl-C, container stop) held its slot for the full hour.
+	// A session idle this long with no live SSE or notification stream has no
+	// work to lose, so it is reclaimable well before the inactivity timeout.
+	static constexpr double IdleSessionReclaimSeconds = 120.0;
 	static constexpr double SessionRateWindowSeconds = 60.0;
 	static constexpr int32 MaxClientRequestsPerMinute = 600;
 	static constexpr int32 MaxClientToolCallsPerMinute = 120;
@@ -254,6 +347,18 @@ private:
 	// Active SSE streaming connections (RequestId → connection)
 	TMap<FString, TSharedPtr<FSSEConnection>> SSEConnections;
 	mutable FCriticalSection SSEConnectionsMutex;
+
+	// Cancellation (notifications/cancelled): maps the client's JSON-RPC id key
+	// to the internal SSE/automation request id, and tracks which internal ids
+	// were cancelled so the late completion response is suppressed (not written
+	// to the client). Guarded by CancelledRequestsMutex.
+	TMap<FString, FString> CancelledClientIdToInternal;  // client id key -> internal request id
+	TSet<FString> CancelledInternalRequestIds;            // internal ids to suppress
+	// Insertion-order of client-id keys, bounded by a cap constant in
+	// McpNativeTransportCancellation.cpp, so the two maps above can be evicted
+	// oldest-first and never grow without limit.
+	TArray<FString> CancelledMarkerOrder;
+	mutable FCriticalSection CancelledRequestsMutex;
 
 	// Persistent notification streams (GET /mcp — StreamId → stream)
 	TMap<FString, TSharedPtr<FNotificationStream>> NotificationStreams;
@@ -281,10 +386,17 @@ private:
 	//     collection mutex is held; it is never acquired before or instead of the
 	//     collection mutex. See WriteSSEEvent, WriteNotificationEvent,
 	//     WriteNotificationKeepalive.
-	//   * CloseSessionConnections is the only function that takes multiple
-	//     collection mutexes (Log → Notification → SSE). It does not take
-	//     SessionMutex and is safe because it operates after the session has
-	//     already been removed from ActiveSessions by the caller.
+	//   * CancelledRequestsMutex is taken ONLY after SSEConnectionsMutex and only
+	//     ever before a per-connection WriteMutex. It guards the cancellation
+	//     sets and is never held while acquiring SSEConnectionsMutex,
+	//     NotificationStreamsMutex, or SessionMutex — so it cannot participate in
+	//     a lock-order cycle. See HandleCancelledNotification / CompletePendingRequest.
+	//   * CloseSessionConnections and CollectSessionsWithLiveConnections are the
+	//     only functions that take multiple collection mutexes, always in
+	//     sequential non-nested scopes in the same relative order (Notification
+	//     → SSE); never combine them with SessionMutex. They are safe because
+	//     they run after the session has already been removed from ActiveSessions
+	//     by the caller, or (for the collector) before any session lock is taken.
 
 	static constexpr int32 MaxNotificationStreamsPerSession = 4;
 	static constexpr int32 MaxTotalNotificationStreams = 16;

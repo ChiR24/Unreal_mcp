@@ -185,9 +185,40 @@ TSharedPtr<FJsonObject> HandleMetaSoundInterfaceActions(const FString& SubAction
 		else
 		{
 			Response->SetBoolField(TEXT("success"), false);
+#if MCP_HAS_METASOUND_FRONTEND_V2
+			// Distinguish "no such graph input" from a genuine set failure and list
+			// the available inputs so the caller can self-correct.
+			const FMetasoundFrontendClassInput* GraphInput = Builder.FindGraphInput(FName(*InputName));
+			if (!GraphInput)
+			{
+				Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Graph input '%s' not found"), *InputName));
+				Response->SetStringField(TEXT("errorCode"), TEXT("INPUT_NOT_FOUND"));
+				Response->SetStringField(TEXT("code"), TEXT("INPUT_NOT_FOUND"));
+				TArray<TSharedPtr<FJsonValue>> InputArray;
+				const FMetasoundFrontendDocument& Doc = Builder.GetConstDocumentChecked();
+				for (const FMetasoundFrontendClassInput& Input : Doc.RootGraph.GetDefaultInterface().Inputs)
+				{
+					TSharedPtr<FJsonObject> InputObj = McpHandlerUtils::CreateResultObject();
+					InputObj->SetStringField(TEXT("inputName"), Input.Name.ToString());
+					InputObj->SetStringField(TEXT("dataType"), Input.TypeName.ToString());
+					InputArray.Add(MakeShared<FJsonValueObject>(InputObj));
+				}
+				// Always emit availableInputs (even when empty) so INPUT_NOT_FOUND has a
+				// consistent shape — an empty array means "this graph has no inputs".
+				Response->SetArrayField(TEXT("availableInputs"), InputArray);
+			}
+			else
+			{
+				Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Failed to set default for input '%s' - value could not be applied (likely a data-type mismatch; expected '%s')"), *InputName, *GraphInput->TypeName.ToString()));
+				Response->SetStringField(TEXT("errorCode"), TEXT("SET_DEFAULT_FAILED"));
+				Response->SetStringField(TEXT("code"), TEXT("SET_DEFAULT_FAILED"));
+				Response->SetStringField(TEXT("expectedDataType"), GraphInput->TypeName.ToString());
+			}
+#else
 			Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Failed to set default for input '%s'"), *InputName));
 			Response->SetStringField(TEXT("errorCode"), TEXT("SET_DEFAULT_FAILED"));
 			Response->SetStringField(TEXT("code"), TEXT("SET_DEFAULT_FAILED"));
+#endif
 		}
 
 #if MCP_HAS_METASOUND_FRONTEND_V2

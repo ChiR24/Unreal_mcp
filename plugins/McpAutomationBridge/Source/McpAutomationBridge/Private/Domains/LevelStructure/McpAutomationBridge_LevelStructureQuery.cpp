@@ -38,7 +38,6 @@ bool HandleGetLevelStructureInfo(
     TSharedPtr<FJsonObject> InfoJson = McpHandlerUtils::CreateResultObject();
     InfoJson->SetStringField(TEXT("currentLevel"), World->GetMapName());
 
-    // Get streaming levels
     TArray<TSharedPtr<FJsonValue>> SublevelsArray;
     const TArray<ULevelStreaming*>& StreamingLevels = World->GetStreamingLevels();
     InfoJson->SetNumberField(TEXT("sublevelCount"), StreamingLevels.Num());
@@ -52,13 +51,11 @@ bool HandleGetLevelStructureInfo(
     }
     InfoJson->SetArrayField(TEXT("sublevels"), SublevelsArray);
 
-    // Check World Partition
     UWorldPartition* WorldPartition = World->GetWorldPartition();
     InfoJson->SetBoolField(TEXT("worldPartitionEnabled"), WorldPartition != nullptr);
 
     if (WorldPartition)
     {
-        // Get data layers
         TArray<TSharedPtr<FJsonValue>> DataLayersArray;
         UDataLayerSubsystem* DataLayerSubsystem = World->GetSubsystem<UDataLayerSubsystem>();
         if (DataLayerSubsystem)
@@ -68,7 +65,6 @@ bool HandleGetLevelStructureInfo(
         InfoJson->SetArrayField(TEXT("dataLayers"), DataLayersArray);
     }
 
-    // Get level instances
     TArray<TSharedPtr<FJsonValue>> LevelInstancesArray;
     for (TActorIterator<ALevelInstance> It(World); It; ++It)
     {
@@ -80,10 +76,8 @@ bool HandleGetLevelStructureInfo(
     // HLOD layers - enumerate from World Partition or legacy HLOD system
     TArray<TSharedPtr<FJsonValue>> HlodLayersArray;
 
-    // Check for World Partition HLOD layers
     if (World->GetWorldPartition())
     {
-        // Iterate through all UHLODLayer assets that are relevant to this world
         for (TObjectIterator<UHLODLayer> It; It; ++It)
         {
             UHLODLayer* Layer = *It;
@@ -104,7 +98,6 @@ bool HandleGetLevelStructureInfo(
                 PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
 
-                // Get layer type as string
                 FString LayerTypeStr;
                 switch (Layer->GetLayerType())
                 {
@@ -117,7 +110,6 @@ bool HandleGetLevelStructureInfo(
                 }
                 LayerJson->SetStringField(TEXT("layerType"), LayerTypeStr);
 
-                // Get parent layer if available
                 TSoftObjectPtr<UHLODLayer> ParentLayerSoft = Layer->GetParentLayer();
                 if (ParentLayerSoft.IsValid())
                 {
@@ -129,7 +121,6 @@ bool HandleGetLevelStructureInfo(
         }
     }
 
-    // Also check for World Partition HLOD actors in the world
     if (HlodLayersArray.Num() == 0 && World->GetWorldPartition())
     {
         TSet<FString> FoundLayers;

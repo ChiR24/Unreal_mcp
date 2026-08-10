@@ -10,7 +10,6 @@ bool HandleAnimationAddBlendNodeAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Add a blend node to an animation blueprint
     FString BlueprintPath;
     Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
 

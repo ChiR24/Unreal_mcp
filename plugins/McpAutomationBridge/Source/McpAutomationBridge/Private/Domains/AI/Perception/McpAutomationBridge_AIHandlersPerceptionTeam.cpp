@@ -53,8 +53,8 @@ bool HandleSetPerceptionTeam(UMcpAutomationBridgeSubsystem* Self, const FString&
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("set_perception_team"))
     {
-        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
-        int32 TeamId = static_cast<int32>(GetNumberFieldAI(Payload, TEXT("teamId"), 0));
+        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+        int32 TeamId = static_cast<int32>(GetJsonNumberField(Payload, TEXT("teamId"), 0));
 
         // CRITICAL: Explicitly check if asset exists before LoadObject
         // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
@@ -122,10 +122,6 @@ bool HandleSetPerceptionTeam(UMcpAutomationBridgeSubsystem* Self, const FString&
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Team set"), Result);
         return true;
     }
-
-    // =========================================================================
-    // 16.6 State Trees - UE5.3+ (4 actions)
-    // =========================================================================
 
     return true;
 }

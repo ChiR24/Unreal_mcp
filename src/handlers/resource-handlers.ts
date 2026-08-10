@@ -3,7 +3,9 @@ import { AssetResources } from '../resources/assets.js';
 import { ActorResources } from '../resources/actors.js';
 import { LevelResources } from '../resources/levels.js';
 import { HealthMonitor } from '../services/health-monitor.js';
+import { createDefaultReadinessProbes, evaluateReadiness } from '../services/readiness.js';
 import type { AutomationStatusBridge } from '../types/tools/tool-interfaces.js';
+import type { ExtendedResourceReader } from '../resources/resource-read-router.js';
 
 interface ResourceBridge {
   readonly isConnected: boolean;
@@ -56,7 +58,8 @@ export class ResourceHandler {
     private actorResources: ActorResources,
     private levelResources: LevelResources,
     private healthMonitor: HealthMonitor,
-    private ensureConnected: () => Promise<boolean>
+    private ensureConnected: () => Promise<boolean>,
+    private extendedReader?: ExtendedResourceReader
   ) { }
 
   registerHandlers() {
@@ -113,6 +116,11 @@ export class ResourceHandler {
           maxConcurrentConnections: automationStatus.maxConcurrentConnections
         };
 
+        const readiness = evaluateReadiness(createDefaultReadinessProbes({
+          automationBridge: this.automationBridge,
+          healthMonitor: this.healthMonitor
+        }));
+
         const health = {
           status: this.healthMonitor.metrics.connectionStatus,
           uptimeSeconds: Math.floor(uptimeMs / 1000),
@@ -136,7 +144,13 @@ export class ResourceHandler {
             }
           },
           recentErrors: redactRecentErrors(this.healthMonitor.metrics.recentErrors.slice(-10)),
-          automationBridge: automationSummary
+          automationBridge: automationSummary,
+          readiness,
+          diagnostics: this.healthMonitor.telemetry.snapshot(),
+          // Same exposition text /metrics serves. The native transport has no
+          // HTTP metrics endpoint, so ue://health is the only surface both
+          // transports can be scraped through - keep them symmetric.
+          metricsExposition: this.healthMonitor.telemetry.render(readiness)
         };
 
         return jsonResource(uri, health);
@@ -175,6 +189,10 @@ export class ResourceHandler {
         }
         const info = await this.bridge.getEngineVersion();
         return jsonResource(uri, info);
+      }
+
+      if (this.extendedReader) {
+        return this.extendedReader.read(uri);
       }
 
       throw new Error(`Unknown resource: ${uri}`);

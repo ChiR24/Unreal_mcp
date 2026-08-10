@@ -33,7 +33,7 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
             return true;
         }
 
-        FString CalculationClassPath = GetStringFieldGAS(Payload, TEXT("calculationClass"));
+        FString CalculationClassPath = GetJsonStringField(Payload, TEXT("calculationClass"));
         if (CalculationClassPath.IsEmpty())
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing calculationClass."), TEXT("INVALID_ARGUMENT"));
@@ -55,7 +55,6 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
             return true;
         }
 
-        // Load the calculation class
         UClass* CalcClass = LoadClass<UGameplayEffectExecutionCalculation>(nullptr, *CalculationClassPath);
         if (!CalcClass)
         {
@@ -64,7 +63,6 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
             return true;
         }
 
-        // Create and add the execution definition
         FGameplayEffectExecutionDefinition ExecDef;
         ExecDef.CalculationClass = CalcClass;
         EffectCDO->Executions.Add(ExecDef);
@@ -88,7 +86,7 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
             return true;
         }
 
-        FString CueTag = GetStringFieldGAS(Payload, TEXT("cueTag"));
+        FString CueTag = GetJsonStringField(Payload, TEXT("cueTag"));
         if (CueTag.IsEmpty())
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing cueTag."), TEXT("INVALID_ARGUMENT"));

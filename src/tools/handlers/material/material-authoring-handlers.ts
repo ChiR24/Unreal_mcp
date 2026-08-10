@@ -1,6 +1,7 @@
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
 import { ResponseFactory } from '../../../utils/responses/response-factory.js';
+import { createUnknownActionResponse } from '../foundation/dispatch/common-handlers.js';
 import { MATERIAL_AUTHORING_ACTIONS } from '../../catalog/consolidated-tool-definitions.js';
 import { handleMaterialCreationAction } from './material-authoring-creation.js';
 import { handleMaterialParameterAction } from './material-authoring-parameters.js';
@@ -43,9 +44,8 @@ export async function handleMaterialAuthoringTools(
     const nodeGenericResult = await handleMaterialNodeGenericAction(action, args, tools);
     if (nodeGenericResult !== undefined) return nodeGenericResult;
 
-    return ResponseFactory.error(
-      `Unknown material authoring action: ${action}. Available actions: ${MATERIAL_AUTHORING_ACTIONS.join(', ')}`,
-      'UNKNOWN_ACTION'
+    return createUnknownActionResponse(
+      `Unknown material authoring action: ${action}. Available actions: ${MATERIAL_AUTHORING_ACTIONS.join(', ')}`
     );
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));

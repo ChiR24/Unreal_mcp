@@ -61,12 +61,3 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
   return true;
 #endif
 }
-
-/**
- * Handles requests to get asset dependencies.
- *
- * @param RequestId Unique request identifier.
- * @param Payload JSON payload containing 'assetPath' and optional 'recursive'.
- * @param Socket WebSocket connection.
- * @return True if handled.
- */

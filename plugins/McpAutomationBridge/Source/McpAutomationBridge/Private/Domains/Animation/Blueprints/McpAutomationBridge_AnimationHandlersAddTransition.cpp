@@ -10,7 +10,6 @@ bool HandleAnimationAddTransitionAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Add a transition between states
     FString BlueprintPath;
     Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
 

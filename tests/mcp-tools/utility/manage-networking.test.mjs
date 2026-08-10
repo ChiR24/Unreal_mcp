@@ -224,6 +224,18 @@ const testCases = [
       { path: 'structuredContent.result.networkingInfo.netDormancy', equals: 'DORM_Awake', label: 'networking info reads dormancy' }
     ]
   },
+  // params envelope: clients that cannot send arbitrary top-level fields nest them
+  // under `params`, which is merged with top-level arguments before routing.
+  {
+    scenario: 'INFO: get_networking_info via params envelope',
+    toolName: 'manage_networking',
+    arguments: { action: 'get_networking_info', params: { blueprintPath: ACTOR_BP_PATH } },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.networkingInfo.bReplicates', equals: true, label: 'nested params resolved the same replicated actor CDO' },
+      { path: 'structuredContent.result.networkingInfo.netUpdateFrequency', equals: 33, label: 'nested params read the configured net update frequency' }
+    ]
+  },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [TARGET_ACTOR, OWNER_ACTOR, PAWN_ACTOR] }, expected: 'success|not found' },
@@ -551,7 +563,7 @@ const testCases = [
   testCases.push(
     { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
 
-    { scenario: 'CREATE: create_hud_class', toolName: 'manage_networking', arguments: { action: 'create_hud_class', name: HUD_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.HUD', timeoutMs: 120000 }, expected: 'success', assertions: createBlueprintAssertions(HUD_ASSET_PATH, HUD_OBJECT_PATH, HUD_NAME, 'hud blueprint') },
+    { scenario: 'CREATE: create_hud_class', toolName: 'manage_networking', arguments: { action: 'create_hud_class', name: HUD_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.HUD' }, expected: 'success', timeoutMs: 120000, assertions: createBlueprintAssertions(HUD_ASSET_PATH, HUD_OBJECT_PATH, HUD_NAME, 'hud blueprint') },
     { scenario: 'CREATE: create_game_mode', toolName: 'manage_networking', arguments: { action: 'create_game_mode', name: GAME_MODE_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.GameMode', defaultPawnClass: DEFAULT_PAWN_CLASS, hudClass: HUD_OBJECT_PATH, save: true }, expected: 'success', assertions: createBlueprintAssertions(GAME_MODE_ASSET_PATH, GAME_MODE_OBJECT_PATH, GAME_MODE_NAME, 'game mode blueprint') },
     { scenario: 'CREATE: create_game_state', toolName: 'manage_networking', arguments: { action: 'create_game_state', name: GAME_STATE_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.GameState' }, expected: 'success', assertions: createBlueprintAssertions(GAME_STATE_ASSET_PATH, GAME_STATE_OBJECT_PATH, GAME_STATE_NAME, 'game state blueprint') },
     { scenario: 'CREATE: create_player_controller', toolName: 'manage_networking', arguments: { action: 'create_player_controller', name: PLAYER_CONTROLLER_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.PlayerController' }, expected: 'success', assertions: createBlueprintAssertions(PLAYER_CONTROLLER_ASSET_PATH, PLAYER_CONTROLLER_OBJECT_PATH, PLAYER_CONTROLLER_NAME, 'player controller blueprint') },
@@ -628,7 +640,7 @@ const testCases = [
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete test blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: `${TEST_FOLDER}/BP_Test_${ts}`, force: true }, expected: 'success|not found' },
-    { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'DELETE_FAILED|success|not found' },
+    { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found|DELETE_FAILED' },
   );
 }
 

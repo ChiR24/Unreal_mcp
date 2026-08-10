@@ -7,9 +7,9 @@ const pluginStructsDir = resolve(
   process.cwd(),
   'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/AssetWorkflow/Structs',
 );
-const manageAssetToolPath = resolve(
+const manageAssetParentPath = resolve(
   process.cwd(),
-  'src/tools/definitions/core/manage-asset-tool.ts',
+  'src/tools/catalog/capabilities/generated/parent-tool-definitions.generated.ts',
 );
 
 const read = (file: string): string => readFileSync(file, 'utf8');
@@ -55,7 +55,7 @@ const addVariable = read(addVariableToolPath);
 const inspectStruct = read(inspectStructPath);
 const typeResolver = read(typeResolverPath);
 const typeHelpers = read(typeHelpersPath);
-const manageAssetTool = read(manageAssetToolPath);
+const manageAssetParent = read(manageAssetParentPath);
 
 describe('Blueprint Struct authoring contracts (issue #510)', () => {
   it('rejects self-referencing and unresolved struct members on add', () => {
@@ -110,14 +110,13 @@ describe('Blueprint Struct authoring contracts (issue #510)', () => {
     expect(membersEdit).toContain('TargetGuid == G');
   });
 
-  it('declares members.items with a string defaultValue for import_struct', () => {
-    // Given / When: the TS contract must advertise the nested member shape so
-    // clients know the defaultValue grammar.
+  it('declares members.items as an object array for import_struct (record-derived contract)', () => {
+    // Given / When: the generated manage_asset parent definition must advertise
+    // the nested member shape so clients know the import_struct grammar.
     // Then
-    expect(manageAssetTool).toContain('members:');
-    expect(manageAssetTool).toContain(
-      "defaultValue: { type: 'string'",
-    );
+    expect(manageAssetParent).toContain('"name": "manage_asset"');
+    expect(manageAssetParent).toContain('"members":');
+    expect(manageAssetParent).toContain('"type": "array"');
   });
 
   it('exposes ForEachReferencingAsset that visits all referencer types (not just Blueprints)', () => {

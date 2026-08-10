@@ -8,6 +8,14 @@
 // - Reference: Engine/Source/Runtime/CoreUObject/Public/Misc/PackageName.h
 #if WITH_EDITOR
 #include "Misc/PackageName.h"
+// UEditorAssetLibrary is used below. It reached this header only through the
+// PCH, which an installed-engine build does not guarantee; include it here with
+// the same guard the PCH uses so the header is self-contained.
+#if __has_include("EditorAssetLibrary.h")
+#include "EditorAssetLibrary.h"
+#elif __has_include("Editor/EditorAssetLibrary.h")
+#include "Editor/EditorAssetLibrary.h"
+#endif
 
 struct FNormalizedAssetPath {
   FString Path;

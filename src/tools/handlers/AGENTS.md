@@ -36,12 +36,15 @@ executeAutomationRequest(
   toolName,
   args,
   errorMessage?,
-  { timeoutMs? }
+  { timeoutMs?, forwardTimeoutMsToUnreal?, mcpRequestId? }
 )
 ```
 - `tools` supplies the current `automationBridge`; never import or construct a bridge in a handler.
 - `toolName` is the Unreal bridge action/domain, which may differ from the public parent tool.
-- Dispatch validates argument security and console-command payloads, removes `timeoutMs`, checks connection state, then calls `sendAutomationRequest()`.
+- Timeout precedence: `options.timeoutMs` → gateway async-local `getGatewayTimeoutMs()` → `args.timeoutMs` (handler-internal payloads only) → `resolveActionTimeoutMs(toolName, action)` capability cost tier.
+- `forwardTimeoutMsToUnreal` is valid ONLY for `manage_sequence/start_render` (MRQ deadline escape hatch); any other tool/action throws, and otherwise `timeoutMs` is stripped before forwarding.
+- Dispatch validates argument security and console-command payloads, checks connection state, then calls `sendAutomationRequest()`.
+- `mcpRequestId` defaults to the async-local MCP request context; gateway correlation id, consent, and expected revisions ride as automation_request envelope siblings — never handler params.
 - For repeated sub-actions, prefer `createSubActionDispatcher(tools, args, options)`.
 
 ## CONVENTIONS

@@ -108,7 +108,26 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
     return true;
   }
 
-  FString PackagePath = TEXT("/Game/Foliage");
+  // `path` is published on build_environment.create_foliage_type, but this
+  // handler hardcoded /Game/Foliage and never read it — so the asset was
+  // reported as created (success) at a location the caller never asked for.
+  // Sanitized because it becomes a package path.
+  FString PackagePath;
+  if (!Payload->TryGetStringField(TEXT("path"), PackagePath) ||
+      PackagePath.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("savePath"), PackagePath);
+  }
+  PackagePath = PackagePath.IsEmpty()
+                    ? FString(TEXT("/Game/Foliage"))
+                    : SanitizeProjectRelativePath(PackagePath);
+  if (PackagePath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid 'path': contains traversal sequences or "
+                             "an unsupported content root"),
+                        TEXT("INVALID_PATH"));
+    return true;
+  }
+  PackagePath.RemoveFromEnd(TEXT("/"));
   FString AssetName = Name;
   FString FullPackagePath =
       FString::Printf(TEXT("%s/%s"), *PackagePath, *AssetName);

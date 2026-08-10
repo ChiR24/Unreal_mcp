@@ -50,7 +50,7 @@ describe('handleTextureTools dispatch', () => {
       seamless: false,
       hdr: false,
       save: false
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(result).toMatchObject({
       success: true,
       message: "Noise texture 'T_Rock' created"
@@ -76,12 +76,12 @@ describe('handleTextureTools dispatch', () => {
       subAction: 'set_texture_filter',
       assetPath: '/Game/Textures/T_Rock',
       filter: 'Nearest'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(sendAutomationRequest).toHaveBeenNthCalledWith(2, 'manage_texture', {
       subAction: 'set_texture_wrap',
       assetPath: '/Game/Textures/T_Rock',
       wrapMode: 'Clamp'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 
   it('preserves native error envelopes from texture operations', async () => {
@@ -114,8 +114,8 @@ describe('handleTextureTools dispatch', () => {
     expect(sendAutomationRequest).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       success: false,
-      message: 'Unknown texture action: unknown_texture_action',
-      data: null
+      error: 'UNKNOWN_ACTION',
+      message: 'Unknown texture action: unknown_texture_action'
     });
   });
 });

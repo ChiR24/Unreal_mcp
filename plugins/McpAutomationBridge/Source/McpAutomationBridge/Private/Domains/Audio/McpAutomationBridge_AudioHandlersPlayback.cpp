@@ -96,16 +96,10 @@ bool HandlePlaybackActions(
     return true;
   }
 
-  // -------------------------------------------------------------------------
-  // play_sound_2d / audio_play_sound_2d
-  // -------------------------------------------------------------------------
-  // Plays a non-spatialized 2D sound with optional volume, pitch, start time.
-  //
   // Payload:  { "soundPath": string, "volume"?: number, "pitch"?: number,
   //             "startTime"?: number }
   // Response: { "success": bool, "soundPath": string, "volume": number,
   //             "pitch": number }
-  // -------------------------------------------------------------------------
   else if (Lower == TEXT("play_sound_2d") ||
              Lower == TEXT("audio_play_sound_2d")) {
     FString SoundPath;
@@ -156,15 +150,9 @@ bool HandlePlaybackActions(
     return true;
   }
 
-  // -------------------------------------------------------------------------
-  // play_sound_attached / audio_play_sound_attached
-  // -------------------------------------------------------------------------
-  // Attaches and plays a sound on an actor's component or socket.
-  //
   // Payload:  { "soundPath": string, "actorName": string,
   //             "attachPointName"?: string }
   // Response: { "componentName": string }
-  // -------------------------------------------------------------------------
   else if (Lower == TEXT("play_sound_attached") ||
              Lower == TEXT("audio_play_sound_attached")) {
     FString SoundPath, ActorName, AttachPoint;

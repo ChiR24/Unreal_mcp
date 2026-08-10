@@ -1,0 +1,208 @@
+[
+  {
+    "name": "search-empty-default",
+    "operation": "search",
+    "query": ""
+  },
+  {
+    "name": "search-keyword-spawn",
+    "operation": "search",
+    "query": "spawn"
+  },
+  {
+    "name": "search-id-exact",
+    "operation": "search",
+    "query": "animation_physics.cleanup"
+  },
+  {
+    "name": "search-keyword-asset-max-limit",
+    "operation": "search",
+    "query": "asset",
+    "limit": 25
+  },
+  {
+    "name": "search-keyword-asset-cursor",
+    "operation": "search",
+    "query": "asset",
+    "limit": 25,
+    "offset": 25
+  },
+  {
+    "name": "search-single-result",
+    "operation": "search",
+    "query": "asset",
+    "limit": 1
+  },
+  {
+    "name": "search-limit-clamped-high",
+    "operation": "search",
+    "query": "asset",
+    "limit": 999
+  },
+  {
+    "name": "search-limit-clamped-low",
+    "operation": "search",
+    "query": "asset",
+    "limit": 0
+  },
+  {
+    "name": "search-negative-offset",
+    "operation": "search",
+    "query": "asset",
+    "offset": -5
+  },
+  {
+    "name": "search-offset-past-end",
+    "operation": "search",
+    "query": "asset",
+    "offset": 100000
+  },
+  {
+    "name": "search-no-match",
+    "operation": "search",
+    "query": "zzzznotacapability"
+  },
+  {
+    "name": "search-domain-filter",
+    "operation": "search",
+    "query": "",
+    "domain": "animation physics"
+  },
+  {
+    "name": "search-family-filter",
+    "operation": "search",
+    "query": "",
+    "family": "physics"
+  },
+  {
+    "name": "search-domain-and-family",
+    "operation": "search",
+    "query": "",
+    "domain": "animation physics",
+    "family": "physics"
+  },
+  {
+    "name": "search-domain-filter-with-query",
+    "operation": "search",
+    "query": "ragdoll",
+    "domain": "animation physics"
+  },
+  {
+    "name": "search-unknown-domain",
+    "operation": "search",
+    "query": "",
+    "domain": "animaton physics"
+  },
+  {
+    "name": "search-unknown-family",
+    "operation": "search",
+    "query": "",
+    "family": "physicz"
+  },
+  {
+    "name": "search-byte-budget",
+    "operation": "search",
+    "query": "create",
+    "limit": 25
+  },
+  {
+    "name": "search-whitespace-query",
+    "operation": "search",
+    "query": "   asset   "
+  },
+  {
+    "name": "search-uppercase-query",
+    "operation": "search",
+    "query": "ASSET",
+    "limit": 5
+  },
+  {
+    "name": "describe-tool-summary",
+    "operation": "describe",
+    "tool": "animation_physics"
+  },
+  {
+    "name": "describe-tool-summary-paged",
+    "operation": "describe",
+    "tool": "animation_physics",
+    "limit": 5,
+    "offset": 10
+  },
+  {
+    "name": "describe-tool-summary-filtered",
+    "operation": "describe",
+    "tool": "animation_physics",
+    "query": "ragdoll"
+  },
+  {
+    "name": "describe-tool-summary-limit-clamped",
+    "operation": "describe",
+    "tool": "manage_asset",
+    "limit": 999
+  },
+  {
+    "name": "describe-capability-read",
+    "operation": "describe",
+    "tool": "animation_physics",
+    "action": "get_animation_info"
+  },
+  {
+    "name": "describe-capability-destructive",
+    "operation": "describe",
+    "tool": "animation_physics",
+    "action": "cleanup"
+  },
+  {
+    "name": "describe-capability-version-gated",
+    "operation": "describe",
+    "tool": "manage_geometry",
+    "action": "convert_to_nanite"
+  },
+  {
+    "name": "describe-capability-deprecated",
+    "operation": "describe",
+    "tool": "animation_physics",
+    "action": "set_retarget_chain_mapping"
+  },
+  {
+    "name": "describe-param",
+    "operation": "describe",
+    "tool": "animation_physics",
+    "action": "get_animation_info",
+    "param": "assetPath"
+  },
+  {
+    "name": "describe-unknown-tool",
+    "operation": "describe",
+    "tool": "manage_asts"
+  },
+  {
+    "name": "describe-unknown-tool-empty",
+    "operation": "describe",
+    "tool": ""
+  },
+  {
+    "name": "describe-unknown-action",
+    "operation": "describe",
+    "tool": "animation_physics",
+    "action": "cleanupp"
+  },
+  {
+    "name": "describe-unknown-param",
+    "operation": "describe",
+    "tool": "animation_physics",
+    "action": "get_animation_info",
+    "param": "assetpath2"
+  },
+  {
+    "name": "describe-case-sensitive-tool",
+    "operation": "describe",
+    "tool": "Animation_Physics"
+  },
+  {
+    "name": "describe-case-sensitive-action",
+    "operation": "describe",
+    "tool": "animation_physics",
+    "action": "CLEANUP"
+  }
+]

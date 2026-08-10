@@ -15,7 +15,7 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     const FString SubAction = TEXT("set_ai_movement");
     if (SubAction == TEXT("set_ai_movement"))
     {
-        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
+        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
         if (BlueprintPath.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_ARGUMENT"));
@@ -72,7 +72,7 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         TArray<FString> PropertiesSet;
 
         // Walking speed
-        float MaxWalkSpeed = GetNumberFieldAI(Payload, TEXT("maxWalkSpeed"), -1.0f);
+        float MaxWalkSpeed = GetJsonNumberField(Payload, TEXT("maxWalkSpeed"), -1.0f);
         if (MaxWalkSpeed > 0.0f)
         {
             MovementComp->MaxWalkSpeed = MaxWalkSpeed;
@@ -80,7 +80,7 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         }
 
         // Max acceleration
-        float MaxAcceleration = GetNumberFieldAI(Payload, TEXT("maxAcceleration"), -1.0f);
+        float MaxAcceleration = GetJsonNumberField(Payload, TEXT("maxAcceleration"), -1.0f);
         if (MaxAcceleration > 0.0f)
         {
             MovementComp->MaxAcceleration = MaxAcceleration;
@@ -88,7 +88,7 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         }
 
         // Braking deceleration walking
-        float BrakingDeceleration = GetNumberFieldAI(Payload, TEXT("brakingDeceleration"), -1.0f);
+        float BrakingDeceleration = GetJsonNumberField(Payload, TEXT("brakingDeceleration"), -1.0f);
         if (BrakingDeceleration > 0.0f)
         {
             MovementComp->BrakingDecelerationWalking = BrakingDeceleration;
@@ -96,7 +96,7 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         }
 
         // Rotation rate
-        float RotationRate = GetNumberFieldAI(Payload, TEXT("rotationRate"), -1.0f);
+        float RotationRate = GetJsonNumberField(Payload, TEXT("rotationRate"), -1.0f);
         if (RotationRate > 0.0f)
         {
             MovementComp->RotationRate = FRotator(0.0f, RotationRate, 0.0f);
@@ -106,7 +106,7 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         // Use acceleration for paths
         // UE 5.7+: bUseAccelerationForPaths was removed from UNavMovementComponent
         // Use bRequestedMoveUseAcceleration in UCharacterMovementComponent instead
-        bool bUseAcceleration = GetBoolFieldAI(Payload, TEXT("useAccelerationForPaths"));
+        bool bUseAcceleration = GetJsonBoolField(Payload, TEXT("useAccelerationForPaths"));
         if (Payload->HasField(TEXT("useAccelerationForPaths")))
         {
             MovementComp->bRequestedMoveUseAcceleration = bUseAcceleration;
@@ -114,7 +114,7 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         }
 
         // Orient rotation to movement
-        bool bOrientToMovement = GetBoolFieldAI(Payload, TEXT("orientRotationToMovement"));
+        bool bOrientToMovement = GetJsonBoolField(Payload, TEXT("orientRotationToMovement"));
         if (Payload->HasField(TEXT("orientRotationToMovement")))
         {
             MovementComp->bOrientRotationToMovement = bOrientToMovement;
@@ -122,7 +122,7 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         }
 
         // Use RVO avoidance
-        bool bUseRVOAvoidance = GetBoolFieldAI(Payload, TEXT("useRVOAvoidance"));
+        bool bUseRVOAvoidance = GetJsonBoolField(Payload, TEXT("useRVOAvoidance"));
         if (Payload->HasField(TEXT("useRVOAvoidance")))
         {
             MovementComp->bUseRVOAvoidance = bUseRVOAvoidance;
@@ -130,7 +130,7 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         }
 
         // Avoidance weight
-        float AvoidanceWeight = GetNumberFieldAI(Payload, TEXT("avoidanceWeight"), -1.0f);
+        float AvoidanceWeight = GetJsonNumberField(Payload, TEXT("avoidanceWeight"), -1.0f);
         if (AvoidanceWeight >= 0.0f)
         {
             MovementComp->AvoidanceWeight = AvoidanceWeight;
@@ -138,7 +138,7 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         }
 
         // Max fly speed (for flying AI)
-        float MaxFlySpeed = GetNumberFieldAI(Payload, TEXT("maxFlySpeed"), -1.0f);
+        float MaxFlySpeed = GetJsonNumberField(Payload, TEXT("maxFlySpeed"), -1.0f);
         if (MaxFlySpeed > 0.0f)
         {
             MovementComp->MaxFlySpeed = MaxFlySpeed;
@@ -146,7 +146,7 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         }
 
         // Jump Z velocity
-        float JumpZVelocity = GetNumberFieldAI(Payload, TEXT("jumpZVelocity"), -1.0f);
+        float JumpZVelocity = GetJsonNumberField(Payload, TEXT("jumpZVelocity"), -1.0f);
         if (JumpZVelocity > 0.0f)
         {
             MovementComp->JumpZVelocity = JumpZVelocity;
@@ -180,11 +180,6 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         return true;
     }
 
-    // =========================================================================
-    // Aliases & Convenience Actions
-    // =========================================================================
-
-    // Alias: create_blackboard -> create_blackboard_asset
     return true;
 }
 }

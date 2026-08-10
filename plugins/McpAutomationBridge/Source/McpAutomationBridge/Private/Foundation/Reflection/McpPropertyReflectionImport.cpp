@@ -1,4 +1,5 @@
 #include "Foundation/Reflection/McpPropertyReflectionPrivate.h"
+#include "JsonObjectConverter.h"
 
 namespace McpPropertyReflection
 {
@@ -247,6 +248,16 @@ bool ApplyJsonValueToProperty(void* TargetContainer, FProperty* Property, const 
         }
         UnderlyingProperty->SetIntPropertyValue(
             EnumProp->ContainerPtrToValuePtr<void>(TargetContainer), IntValue);
+        return true;
+    }
+
+    if (FStructProperty* StructProp = CastField<FStructProperty>(Property))
+    {
+        if (ValueField->Type != EJson::Object) { OutError = TEXT("Struct property requires a JSON object value"); return false; }
+        UScriptStruct* ScriptStruct = StructProp->Struct;
+        if (!ScriptStruct) { OutError = TEXT("Struct property has no valid UScriptStruct"); return false; }
+        void* StructMemory = StructProp->ContainerPtrToValuePtr<void>(TargetContainer);
+        if (!FJsonObjectConverter::JsonObjectToUStruct(ValueField->AsObject().ToSharedRef(), ScriptStruct, StructMemory, 0, 0)) { OutError = FString::Printf(TEXT("Failed to convert JSON object to struct '%s'"), *ScriptStruct->GetName()); return false; }
         return true;
     }
 

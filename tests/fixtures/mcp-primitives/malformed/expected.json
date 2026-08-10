@@ -1,0 +1,12 @@
+{
+  "note": "Sidecar manifest (NOT a capture). Maps each inadmissible fixture in this folder to the EXACT HarnessRejection.reason checkFixture must throw. Kept out of the captures themselves so no annotation key can trip assertClosed before the target reason fires. Consumed by scripts/qa/task-38-parity-qa.mjs and parity-harness-selftest.test.ts.",
+  "expected": {
+    "source-text-snapshot.json": "SOURCE_TEXT_CAPTURE",
+    "unknown-field.json": "UNKNOWN_FIELD",
+    "broad-expectation.json": "BROAD_EXPECTATION",
+    "schema-dump.json": "SCHEMA_DUMP",
+    "stale-revision.json": "STALE_REVISION",
+    "cross-session.json": "CROSS_SESSION_ID",
+    "missing-cleanup.json": "MISSING_CLEANUP"
+  }
+}

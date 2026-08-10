@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
   privateSource,
 } from './sequence_contract_test_utils.js';
+import { consolidatedToolDefinitions } from '../../../src/tools/catalog/consolidated-tool-definitions.js';
 
 describe('sequence media contracts', () => {
   it('does not mutate existing media assets during create actions', () => {
@@ -181,5 +184,82 @@ describe('sequence media contracts', () => {
     expect(asyncPlayback.indexOf('ActivePlaybackGenerations.Add')).toBeLessThan(
       asyncPlayback.indexOf('FTSTicker::GetCoreTicker().AddTicker'),
     );
+  });
+});
+
+describe('manage_sequence dead-schema-drift guard', () => {
+  // Dead-schema-drift guard: the fields below are not consumed by any Media or
+  // RecordReplay handler (speculative aliases only) and must stay out of the
+  // contract. clearSources/additionalOptions are genuinely RecordReplay-owned
+  // (configure_take_sources / configure_demo_settings) and must stay declared.
+  const DEAD_FIELDS = ['mediaPlaylistPath', 'mediaTexturePath', 'targetActorName'];
+  const RECORDREPLAY_FIELDS = ['clearSources', 'additionalOptions'];
+  const MEDIA_ACTIONS = [
+    'create_media_player',
+    'create_media_source',
+    'create_media_texture',
+    'create_media_sound_component',
+    'create_media_playlist',
+    'play_media',
+    'pause_media',
+    'seek_media',
+  ];
+
+  it('omits verified-dead fields from the canonical TS schema', () => {
+    const inputSchema = (consolidatedToolDefinitions.find((t) => t.name === 'manage_sequence') as NonNullable<typeof consolidatedToolDefinitions[number]>).inputSchema as {
+      properties?: Record<string, unknown>;
+    };
+    const properties = inputSchema.properties ?? {};
+    for (const field of DEAD_FIELDS) {
+      expect(properties[field], `canonical schema must not declare dead field ${field}`).toBeUndefined();
+    }
+  });
+
+  it('retains RecordReplay-owned fields and does not claim them as Media', () => {
+    const inputSchema = (consolidatedToolDefinitions.find((t) => t.name === 'manage_sequence') as NonNullable<typeof consolidatedToolDefinitions[number]>).inputSchema as {
+      properties?: Record<string, unknown>;
+    };
+    const properties = inputSchema.properties ?? {};
+    for (const field of RECORDREPLAY_FIELDS) {
+      expect(properties[field], `canonical schema must retain RecordReplay field ${field}`).toBeDefined();
+    }
+  });
+
+  it('keeps all eight Media actions in the canonical action enum', () => {
+    const inputSchema = (consolidatedToolDefinitions.find((t) => t.name === 'manage_sequence') as NonNullable<typeof consolidatedToolDefinitions[number]>).inputSchema as {
+      properties?: { action?: { enum?: string[] } };
+    };
+    const actions = inputSchema.properties?.action?.enum ?? [];
+    for (const action of MEDIA_ACTIONS) {
+      expect(actions, `canonical schema must declare Media action ${action}`).toContain(action);
+    }
+  });
+
+  it('omits dead fields from the generated gateway manifest and native schema mirror', () => {
+    const manifest = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'src/gateway/gateway-manifest.generated.json'), 'utf8'),
+    ) as { tools: Array<{ name: string; parameterNames: string[] }> };
+    const manageSequence = manifest.tools.find((tool) => tool.name === 'manage_sequence');
+    const parameterNames = manageSequence?.parameterNames ?? [];
+    for (const field of DEAD_FIELDS) {
+      expect(
+        parameterNames,
+        `generated gateway manifest must not declare dead field ${field}`,
+      ).not.toContain(field);
+    }
+
+    const nativeSchemaSource = readFileSync(
+      resolve(
+        process.cwd(),
+        'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools/McpGeneratedParentRegistry_Utility_Sequence.cpp',
+      ),
+      'utf8',
+    );
+    for (const field of DEAD_FIELDS) {
+      expect(
+        nativeSchemaSource,
+        `native schema mirror must not declare dead field ${field}`,
+      ).not.toContain(`.String(TEXT("${field}")`);
+    }
   });
 });

@@ -20,15 +20,16 @@ public class McpAutomationBridge : ModuleRules {
     private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
 
     public McpAutomationBridge(ReadOnlyTargetRules Target) : base(Target) {
-        long AvailableMemoryMB = GetActualAvailableMemoryMB();
-        long TotalMemoryMB = GetTotalPhysicalMemoryMB();
+        long AvailableMemoryMB, TotalMemoryMB;
+        GetHostMemoryMB(out AvailableMemoryMB, out TotalMemoryMB);
 
         ApplyMsvcCompatibility(Target);
         Console.WriteLine(string.Format("McpAutomationBridge: Detected {0}MB available memory (of {1}MB total)", AvailableMemoryMB, TotalMemoryMB));
 
         PCHUsage = PCHUsageMode.NoPCHs;
         bUseUnity = true;
-        TrySetIntMember(this, "NumIncludedBytesPerUnityCPPOverride", 256 * 1024);
+        TrySetMember(this, "NumIncludedBytesPerUnityCPPOverride", 256 * 1024, _ => true);
+        DisableAdaptiveUnityBuild(Target);
         PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
 
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Json", "JsonUtilities", "LevelSequence", "MovieScene", "MovieSceneTracks", "GameplayTags", "AIModule", "Landscape" });
@@ -80,7 +81,7 @@ public class McpAutomationBridge : ModuleRules {
             PublicDefinitions.Add(bHasReplayApi ? "MCP_HAS_REPLAY_API=1" : "MCP_HAS_REPLAY_API=0");
             PublicDefinitions.Add(bHasReplaySubsystemTotalTime ? "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=1" : "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=0");
 
-            AddOptionalModules(Target, EngineDir, new string[] { "D|LevelSequenceEditor|LevelSequenceEditor", "D|NiagaraEditor|NiagaraEditor", "D|EnhancedInput|EnhancedInput", "D|InputEditor|InputEditor", "D|BehaviorTreeEditor|BehaviorTreeEditor", "D|DataValidation|DataValidation", "D|Synthesis|Synthesis", "D|IKRig|IKRig", "D|ChaosVehicles|ChaosVehicles", "D|AnimationData|AnimationData" });
+            AddOptionalModules(Target, EngineDir, new string[] { "D|LevelSequenceEditor|LevelSequenceEditor", "D|NiagaraEditor|NiagaraEditor", "D|EnhancedInput|EnhancedInput", "D|InputEditor|InputEditor", "D|BehaviorTreeEditor|BehaviorTreeEditor", "D|DataValidation|DataValidation", "D|Synthesis|Synthesis", "D|IKRig|IKRig", "D|IKRigEditor|IKRigEditor", "D|ChaosVehicles|ChaosVehicles", "D|AnimationData|AnimationData" });
 
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
             PublicDefinitions.Add("MCP_HAS_EDGRAPH_SCHEMA_K2=1");
@@ -106,7 +107,7 @@ public class McpAutomationBridge : ModuleRules {
             TargetRules targetRules = innerField?.GetValue(Target) as TargetRules;
             if (targetRules == null) return;
 
-            if (TrySetBooleanMember(targetRules, "bUndefinedIdentifierErrors", false, true)) {
+            if (TrySetMember(targetRules, "bUndefinedIdentifierErrors", false, current => current)) {
                 Console.WriteLine("McpAutomationBridge: Disabled bUndefinedIdentifierErrors for UE 5.0-5.2 MSVC build");
             }
 
@@ -123,11 +124,23 @@ public class McpAutomationBridge : ModuleRules {
         Console.WriteLine(string.Format("McpAutomationBridge: Applied MSVC __has_feature compatibility for UE 5.{0}", Target.Version.MinorVersion));
     }
 
-    private static bool TrySetBooleanMember(object target, string memberName, bool value, bool onlyIfCurrentlyTrue = false) =>
-        TrySetMember(target, memberName, value, current => !onlyIfCurrentlyTrue || current);
+    // Adaptive unity ejects every file UBT thinks you are editing from the unity blobs. Installed
+    // engines classify by the read-only flag, so all 1100+ shipped sources qualify and unity is
+    // defeated entirely - a ~10x build-time cost. bUseAdaptiveUnityBuild is target-scope only.
+    private static void DisableAdaptiveUnityBuild(ReadOnlyTargetRules Target) {
+        try {
+            var innerField = typeof(ReadOnlyTargetRules).GetField("Inner", InstanceFlags);
+            TargetRules targetRules = innerField?.GetValue(Target) as TargetRules;
+            if (targetRules == null) return;
 
-    private static bool TrySetIntMember(object target, string memberName, int value) =>
-        TrySetMember(target, memberName, value, _ => true);
+            if (TrySetMember(targetRules, "bUseAdaptiveUnityBuild", false, current => current)) {
+                Console.WriteLine("McpAutomationBridge: Disabled adaptive unity build so module sources stay in unity blobs");
+            }
+        }
+        catch (Exception Ex) {
+            Console.WriteLine(string.Format("McpAutomationBridge: WARNING: Could not disable adaptive unity build: {0}", Ex.Message));
+        }
+    }
 
     private static bool TrySetMember<T>(object target, string memberName, T value, Func<T, bool> canSet) {
         var property = target.GetType().GetProperty(memberName, InstanceFlags);
@@ -172,34 +185,24 @@ public class McpAutomationBridge : ModuleRules {
         catch { return false; }
     }
 
-    private static long GetActualAvailableMemoryMB() {
+    private static void GetHostMemoryMB(out long availableMB, out long totalMB) {
         try {
-            long available, total;
-            if (TryGetWindowsMemoryMB(out available, out total)) return available;
-        }
-        catch { }
-
-        string memoryHint = Environment.GetEnvironmentVariable("UE_BUILD_MEMORY_MB");
-        long hintValue;
-        return !string.IsNullOrEmpty(memoryHint) && long.TryParse(memoryHint, out hintValue) && hintValue > 0 ? hintValue : 4096;
-    }
-
-    private static long GetTotalPhysicalMemoryMB() {
-        try {
-            long available, total;
-            if (TryGetWindowsMemoryMB(out available, out total)) return total;
+            if (TryGetWindowsMemoryMB(out availableMB, out totalMB)) return;
         }
         catch (Exception Ex) {
-            Console.WriteLine(string.Format("McpAutomationBridge: Total memory detection failed: {0}", Ex.Message));
+            Console.WriteLine(string.Format("McpAutomationBridge: Memory detection failed: {0}", Ex.Message));
         }
-        return 8192;
+        string memoryHint = Environment.GetEnvironmentVariable("UE_BUILD_MEMORY_MB");
+        long hintValue;
+        availableMB = !string.IsNullOrEmpty(memoryHint) && long.TryParse(memoryHint, out hintValue) && hintValue > 0 ? hintValue : 4096;
+        totalMB = 8192;
     }
 
     private void AddOptionalModules(ReadOnlyTargetRules Target, string EngineDir, string[] specs) {
         foreach (string spec in specs) {
             string[] parts = spec.Split('|');
-            if (parts.Length == 3 && parts[0] == "D") AddOptionalDynamicModule(Target, EngineDir, parts[1], parts[2]);
-            else if (parts.Length == 3 && parts[0] == "C") AddOptionalConditionalModule(EngineDir, parts[1], parts[2]);
+            if (parts.Length == 3 && parts[0] == "D") AddOptionalModule(Target, EngineDir, parts[1], parts[2], true);
+            else if (parts.Length == 3 && parts[0] == "C") AddOptionalModule(Target, EngineDir, parts[1], parts[2], false);
         }
     }
 
@@ -235,22 +238,18 @@ public class McpAutomationBridge : ModuleRules {
         return false;
     }
 
-    private bool AddOptionalDynamicModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName) {
+    private bool AddOptionalModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName, bool bDelayLoad) {
         if (!FindOptionalModule(EngineDir, SearchName)) return false;
         PrivateDependencyModuleNames.Add(ModuleName);
-        if (Target.Platform == UnrealTargetPlatform.Win64) {
+        if (bDelayLoad && Target.Platform == UnrealTargetPlatform.Win64) {
             PublicDelayLoadDLLs.Add(string.Format("UnrealEditor-{0}.dll", ModuleName));
         }
-        Console.WriteLine(string.Format("McpAutomationBridge: Added optional module '{0}' with delay-load", ModuleName));
+        Console.WriteLine(string.Format("McpAutomationBridge: Added optional module '{0}'{1}", ModuleName, bDelayLoad ? " with delay-load" : " (conditional)"));
         return true;
     }
 
-    private bool AddOptionalConditionalModule(string EngineDir, string ModuleName, string SearchName) {
-        if (!FindOptionalModule(EngineDir, SearchName)) return false;
-        PrivateDependencyModuleNames.Add(ModuleName);
-        Console.WriteLine(string.Format("McpAutomationBridge: Added optional module '{0}' (conditional)", ModuleName));
-        return true;
-    }
+    private bool AddOptionalDynamicModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName)
+        => AddOptionalModule(Target, EngineDir, ModuleName, SearchName, true);
 
     private bool AddOptionalModuleGroup(string EngineDir, string FeatureName, string[] ModuleNames) {
         string[] MissingModules = ModuleNames.Where(

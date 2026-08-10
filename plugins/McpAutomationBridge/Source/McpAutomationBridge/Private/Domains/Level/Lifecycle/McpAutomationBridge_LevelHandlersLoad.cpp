@@ -22,13 +22,11 @@ namespace McpLevelHandlers {
 #define HandleManageLevelStructureAction(...) Subsystem.HandleManageLevelStructureAction(__VA_ARGS__)
 #define HandleSetMetadata(...) Subsystem.HandleSetMetadata(__VA_ARGS__)
 bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-      // Map to Open command
       FString LevelPath;
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
       bool bSaveDirtyPackages = false;
       Payload->TryGetBoolField(TEXT("saveDirtyPackages"), bSaveDirtyPackages);
 
-      // Determine invalid characters for checks
       if (LevelPath.IsEmpty()) {
         SendAutomationError(RequestingSocket, RequestId,
                             TEXT("levelPath required"),
@@ -46,7 +44,6 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
       }
       LevelPath = SanitizedLevelPath;
 
-      // Auto-resolve short names
       if (!LevelPath.StartsWith(TEXT("/")) && !FPaths::FileExists(LevelPath)) {
         FString TryPath = FString::Printf(TEXT("/Game/Maps/%s"), *LevelPath);
         if (FPackageName::DoesPackageExist(TryPath)) {
@@ -62,7 +59,6 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
         return true;
       }
 
-      // Try to resolve package path to filename
       FString Filename;
       bool bGotFilename = false;
       if (FPackageName::IsPackageFilename(LevelPath)) {
@@ -93,7 +89,6 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
       FString FilenameToCheck;
       bool bFileExists = false;
 
-      // Build both possible paths
       FString FlatMapPath, FullFlatMapPath, FolderMapPath, FullFolderMapPath;
       if (FPackageName::TryConvertLongPackageNameToFilename(
               LevelPath, FlatMapPath, FPackageName::GetMapPackageExtension())) {
@@ -138,7 +133,6 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
         return true;
       }
 
-      // Force any pending work to complete
       FlushRenderingCommands();
 
       bool bSavedDirtyPackagesBeforeLoad = false;
@@ -187,7 +181,6 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
 
       const bool bLoaded = McpSafeLoadMap(ResolvedFileToLoad);
 
-      // Post-load verification: check that the loaded world matches the requested path
       if (bLoaded) {
         UWorld* LoadedWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
         if (LoadedWorld) {
@@ -218,9 +211,6 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
                                TEXT("Level loaded"), Resp, FString());
         return true;
       } else {
-        // Fallback to ExecuteConsoleCommand "Open" if LoadMap failed (e.g.
-        // maybe it was a raw asset path or something) But actually if LoadMap
-        // fails, Open likely fails too.
         SendAutomationResponse(
             RequestingSocket, RequestId, false,
             FString::Printf(TEXT("Failed to load map: %s"), *LevelPath),

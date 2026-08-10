@@ -89,7 +89,8 @@ const testCases = [
   // === CREATE ===
   { scenario: 'CREATE: create_sky_sphere', toolName: 'build_environment', arguments: {"action": "create_sky_sphere", "name": `TestSkySphere_${ts}`, "path": TEST_FOLDER}, expected: 'success|already exists' },
   // === CONFIG ===
-  { scenario: 'CONFIG: set_time_of_day', toolName: 'build_environment', arguments: {"action": "set_time_of_day", "time": 9, "hour": 9, "propertyName": "time_of_day", "propertyValue": 1}, expected: 'success' },
+  { scenario: 'CONFIG: set_time_of_day', toolName: 'build_environment', arguments: {"action": "set_time_of_day", "time": 9, "hour": 9, "propertyValue": 1}, expected: 'success' },
+  { scenario: 'CONFIG: set_time_of_day via params passthrough', toolName: 'build_environment', arguments: { action: 'set_time_of_day', params: { time: 9, hour: 9 } }, expected: 'success' },
   // === CREATE ===
   { scenario: 'CREATE: create_fog_volume', toolName: 'build_environment', arguments: {"action": "create_fog_volume", "name": `TestFogVolume_${ts}`, "path": TEST_FOLDER}, expected: 'success|already exists' },
 
@@ -166,6 +167,7 @@ const testCases = [
 
     // === CREATE ===
     { scenario: 'CREATE: spawn_light', toolName: 'build_environment', arguments: {"action": "spawn_light", "lightType": "Point", "location": {"x": 0, "y": 0, "z": 100}}, expected: 'success|already exists' },
+    { scenario: 'CREATE: spawn_light by class', toolName: 'build_environment', arguments: {"action": "spawn_light", "lightClass": "PointLight", "location": {"x": 0, "y": 0, "z": 200}}, expected: 'success|already exists' },
     { scenario: 'CREATE: create_light', toolName: 'build_environment', arguments: {"action": "create_light", "name": "Testlight", "path": "/Game/MCPTest"}, expected: 'success|already exists' },
     { scenario: 'CREATE: spawn_sky_light', toolName: 'build_environment', arguments: {"action": "spawn_sky_light", "location": {"x": 0, "y": 0, "z": 100}}, expected: 'success|already exists' },
     { scenario: 'CREATE: create_sky_light', toolName: 'build_environment', arguments: {"action": "create_sky_light", "name": "Testsky_light", "path": "/Game/MCPTest"}, expected: 'success|already exists' },
@@ -229,7 +231,7 @@ const testCases = [
     { scenario: 'Setup: create spline mesh blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: SPLINE_MESH_BP, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
 
     // === CREATE ===
-    { scenario: 'CREATE: create_spline_actor', toolName: 'build_environment', arguments: { action: 'create_spline_actor', actorName: SPLINE_ACTOR, location: { x: 0, y: 0, z: 0 }, initialPoints: [{ location: { x: 0, y: 0, z: 0 } }, { location: { x: 300, y: 0, z: 0 } }], splineType: 'Curve', timeoutMs: 120000 }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_spline_actor', toolName: 'build_environment', arguments: { action: 'create_spline_actor', actorName: SPLINE_ACTOR, location: { x: 0, y: 0, z: 0 }, initialPoints: [{ location: { x: 0, y: 0, z: 0 } }, { location: { x: 300, y: 0, z: 0 } }], splineType: 'Curve' }, expected: 'success|already exists', timeoutMs: 120000 },
     // === ADD ===
     { scenario: 'ADD: add_spline_point', toolName: 'build_environment', arguments: { action: 'add_spline_point', actorName: SPLINE_ACTOR, position: { x: 600, y: 120, z: 0 }, pointType: 'Curve' }, expected: 'success|already exists' },
     // === DELETE ===

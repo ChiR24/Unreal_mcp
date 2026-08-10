@@ -7,8 +7,8 @@ namespace McpGeometryHandlers
 bool HandleExtrude(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double Distance = GetNumberFieldGeom(Payload, TEXT("distance"), 10.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double Distance = GetJsonNumberField(Payload, TEXT("distance"), 10.0);
     FVector Direction = ReadVectorFromPayload(Payload, TEXT("direction"), FVector(0, 0, 1));
 
     if (ActorName.IsEmpty())
@@ -68,8 +68,8 @@ bool HandleInsetOutset(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket,
                               bool bIsInset)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double Distance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double Distance = GetJsonNumberField(Payload, TEXT("distance"), 5.0);
 
     if (ActorName.IsEmpty())
     {
@@ -126,9 +126,9 @@ bool HandleInsetOutset(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-double BevelDistance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
-    int32 Subdivisions = GetIntFieldGeom(Payload, TEXT("subdivisions"), 0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+double BevelDistance = GetJsonNumberField(Payload, TEXT("distance"), 5.0);
+    int32 Subdivisions = GetJsonIntField(Payload, TEXT("subdivisions"), 0);
 
     if (ActorName.IsEmpty())
     {

@@ -137,7 +137,7 @@ bool HandleAnimationCreateBlendSpaceAction(FActionContext &Context,
             ErrorCode = TEXT("NOT_AVAILABLE");
             Resp->SetStringField(TEXT("error"), Message);
 #endif
-          } // End valid params
+          }
 
         ValidationFailed:;
         }

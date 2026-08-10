@@ -1,6 +1,7 @@
 import type { ITools } from '../../../../types/tools/tool-interfaces.js';
 import type { AudioArgs, HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import { TOOL_ACTIONS } from '../../../../utils/commands/action-constants.js';
+import { createUnknownActionResponse } from '../../foundation/dispatch/handler-error-context.js';
 import { cleanObject } from '../../../../utils/serialization/safe-json.js';
 import { executeAutomationRequest } from '../../foundation/dispatch/common-handlers.js';
 import {
@@ -87,11 +88,6 @@ export async function handleAudioTools(
     case 'add_source_effect':
       return cleanObject(await addSourceEffect(tools, args)) as Record<string, unknown>;
     default:
-      return cleanObject({
-        success: false,
-        isError: true,
-        error: 'UNKNOWN_ACTION',
-        message: `Unknown audio action: ${action}`
-      });
+      return createUnknownActionResponse(`Unknown audio action: ${action}`, { isError: true });
   }
 }

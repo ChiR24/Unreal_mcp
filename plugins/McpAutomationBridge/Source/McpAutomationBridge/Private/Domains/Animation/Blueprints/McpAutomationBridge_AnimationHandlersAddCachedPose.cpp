@@ -10,7 +10,6 @@ bool HandleAnimationAddCachedPoseAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Add a cached pose node
     FString BlueprintPath;
     Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
 

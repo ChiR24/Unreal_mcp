@@ -15,7 +15,6 @@ bool HandleAnimationAddBlendSampleAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Add a sample to a blend space
     FString AssetPath;
     Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
 

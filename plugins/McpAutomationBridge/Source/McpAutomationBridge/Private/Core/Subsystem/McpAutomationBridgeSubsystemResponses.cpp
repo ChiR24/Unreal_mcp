@@ -1,6 +1,8 @@
 #include "McpAutomationBridgeSubsystem.h"
 
 #include "MCP/Transport/McpNativeTransport.h"
+#include "Core/Requests/McpRequestOriginRegistry.h"
+#include "Foundation/McpTelemetryRegistry.h"
 #include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "McpConnectionManager.h"
@@ -142,8 +144,21 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
         EffectiveMessage = SanitizeEngineErrorForResponse(EffectiveMessage);
     }
 
+    // The registry wins over CurrentRequestOrigin because it is the only source
+    // still true for a DEFERRED reply: ProcessAutomationRequest's ON_SCOPE_EXIT
+    // resets the global to WebSocket, so a handler answering from an
+    // AsyncTask/timer/delegate reached this line with it already cleared, and
+    // every native /mcp response from such a handler went down the WebSocket
+    // path, was dropped, and hung the caller until the 300s SSE sweeper.
     ERequestOrigin EffectiveOrigin =
         Origin == ERequestOrigin::WebSocket ? CurrentRequestOrigin : Origin;
+    ERequestOrigin RecordedOrigin = ERequestOrigin::WebSocket;
+    if (FMcpRequestOriginRegistry::Get().Resolve(RequestId, RecordedOrigin))
+    {
+        EffectiveOrigin = RecordedOrigin;
+    }
+    // Released here: the single funnel every delivered response passes through.
+    FMcpRequestOriginRegistry::Get().Forget(RequestId);
     // F3 fix: removed the response-stealing override that redirected a
     // WebSocket-originated response to the Native HTTP transport when the
     // RequestId matched a Native pending request. RequestIds are
@@ -154,6 +169,17 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     // for WebSocket-originated calls).
     if (EffectiveOrigin == ERequestOrigin::NativeHTTP && NativeTransport)
     {
+        // This branch RETURNS, so it never reaches the connection manager that
+        // closes the interval for a WebSocket reply. Without this call the
+        // interval opened at queue admission is never closed and a native-only
+        // deployment scrapes permanently empty counters. Recorded BEFORE the
+        // delivery attempt so a dropped delivery is still counted, and only the
+        // bounded error CODE is forwarded - EffectiveMessage routinely carries
+        // asset paths and object names.
+        FMcpTelemetryRegistry::Get().EndRequest(
+            RequestId,
+            bEffectiveSuccess ? TEXT("success") : TEXT("failure"),
+            EffectiveErrorCode);
         if (!NativeTransport->CompletePendingRequest(
                 RequestId,
                 bEffectiveSuccess,
@@ -218,6 +244,10 @@ void UMcpAutomationBridgeSubsystem::SendAutomationRejection(
         case EAutomationQueueRejection::QueueFull:
             Code = TEXT("AUTOMATION_QUEUE_FULL");
             Message = TEXT("Automation request rejected: queue is full");
+            break;
+        case EAutomationQueueRejection::SessionQueueFull:
+            Code = TEXT("AUTOMATION_SESSION_QUEUE_FULL");
+            Message = TEXT("Automation request rejected: this session already has the maximum number of queued requests; retry after your queued work drains");
             break;
         default:
             break;

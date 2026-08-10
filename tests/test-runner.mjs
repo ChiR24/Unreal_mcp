@@ -44,6 +44,55 @@ const serverEnv = Object.assign({}, process.env);
 
 const DEFAULT_RESPONSE_LOG_MAX_CHARS = 6000; // default max chars
 const RESPONSE_LOGGING_ENABLED = process.env.UNREAL_MCP_TEST_LOG_RESPONSES !== '0';
+const GATEWAY_CONTROL_FIELDS = ['action', 'subAction', 'params'];
+const GATEWAY_OPTION_FIELDS = [
+  'idempotencyKey',
+  'expectedCatalogRevision',
+  'expectedRevisions',
+  'preview',
+  'savePolicy',
+  'timeoutMs',
+  'validationLevel',
+  'taskPreference'
+];
+const MAX_GATEWAY_TIMEOUT_MS = 600_000;
+
+export function toGatewayCall(toolName, args) {
+  const action = typeof args?.action === 'string'
+    ? args.action
+    : typeof args?.subAction === 'string'
+      ? args.subAction
+      : undefined;
+  if (action === undefined) {
+    throw new TypeError(`Gateway call for '${toolName}' requires a string action or subAction.`);
+  }
+
+  const nested = args?.params !== null
+    && typeof args?.params === 'object'
+    && !Array.isArray(args.params)
+    ? args.params
+    : {};
+  const params = { ...nested, ...args };
+  for (const field of GATEWAY_CONTROL_FIELDS) delete params[field];
+
+  const options = {};
+  for (const field of GATEWAY_OPTION_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(params, field)) continue;
+    options[field] = params[field];
+    delete params[field];
+  }
+
+  return {
+    name: 'unreal',
+    arguments: {
+      operation: 'execute',
+      tool: toolName,
+      action,
+      params,
+      ...(Object.keys(options).length === 0 ? {} : { options })
+    }
+  };
+}
 
 function clampString(value, maxChars) {
   if (typeof value !== 'string') return '';
@@ -698,12 +747,23 @@ export function summarizeResponseForReport(response) {
   };
 }
 
-function createToolCaller(client, { useProgressTimeouts = false } = {}) {
+export function createToolCaller(client, { useProgressTimeouts = false } = {}) {
   return async function callToolOnce(callOptions, baseTimeoutMs) {
-    const envDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000') || 60000;
-    const perCall = Number(callOptions?.arguments?.timeoutMs) || undefined;
-    const base = typeof baseTimeoutMs === 'number' && baseTimeoutMs > 0 ? baseTimeoutMs : (perCall || envDefault);
-    const serverTimeoutMs = base;
+    const configuredDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000');
+    const envDefault = Number.isFinite(configuredDefault) && configuredDefault > 0
+      ? Math.min(Math.trunc(configuredDefault), MAX_GATEWAY_TIMEOUT_MS)
+      : 60_000;
+    const explicitTimeout = callOptions?.name === 'unreal'
+      ? callOptions?.arguments?.options?.timeoutMs
+      : callOptions?.arguments?.timeoutMs ?? callOptions?.arguments?.params?.timeoutMs;
+    const parsedTimeout = Number(explicitTimeout);
+    const perCall = Number.isFinite(parsedTimeout) && parsedTimeout > 0
+      ? Math.trunc(parsedTimeout)
+      : undefined;
+    const base = typeof baseTimeoutMs === 'number' && Number.isFinite(baseTimeoutMs) && baseTimeoutMs > 0
+      ? baseTimeoutMs
+      : (perCall ?? envDefault);
+    const serverTimeoutMs = Math.min(Math.trunc(base), MAX_GATEWAY_TIMEOUT_MS);
     const clientTimeoutMs = useProgressTimeouts
       ? Number(process.env.UNREAL_MCP_TEST_CLIENT_TIMEOUT_MS ?? '300000') || 300000
       : serverTimeoutMs;
@@ -712,8 +772,14 @@ function createToolCaller(client, { useProgressTimeouts = false } = {}) {
       : `timeout ${clientTimeoutMs}ms`;
 
     try {
-      console.log(`[CALL] ${callOptions.name} (${timeoutLabel})`);
-      const outgoing = withServerTimeout(callOptions, serverTimeoutMs);
+      const gatewayCall = callOptions.name === 'unreal'
+        ? callOptions
+        : toGatewayCall(callOptions.name, callOptions.arguments ?? {});
+      const outgoing = withServerTimeout(gatewayCall, serverTimeoutMs);
+      const callTarget = outgoing.name === 'unreal' && typeof outgoing.arguments?.tool === 'string'
+        ? `${outgoing.name}:${outgoing.arguments.tool}`
+        : outgoing.name;
+      console.log(`[CALL] ${callTarget} (${timeoutLabel})`);
       let callPromise;
       try {
         callPromise = client.callTool(outgoing, undefined, { timeout: clientTimeoutMs });

@@ -40,10 +40,23 @@
     "test:smoke": "node --loader ts-node/esm scripts/smoke-test.ts",
     "test:native-parity": "node tests/native-mcp-parity-audit.mjs",
     "test:params": "npm run test:native-parity && node tests/parameter-combination-audit.mjs --static --strict --optional-strict",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "registry:generate": "node --loader ts-node/esm scripts/generate-canonical-registry.ts",
+    "registry:check": "node --loader ts-node/esm scripts/generate-canonical-registry.ts --check",
+    "manifest:check": "node --loader ts-node/esm scripts/generate-gateway-manifest.ts --check",
+    "normalization:check": "node --loader ts-node/esm scripts/generate-normalization-inventory.mjs --check",
+    "normalization:audit": "node --loader ts-node/esm scripts/audit-normalization-inventory.mjs",
+    "version:check": "vitest run tests/unit/version-consistency.test.ts",
+    "policy:generate": "node --loader ts-node/esm scripts/generate-console-command-policy.ts",
+    "policy:check": "node --loader ts-node/esm scripts/generate-console-command-policy.ts --check",
+    "migration:check": "vitest run tests/unit/migration tests/unit/mcp-primitives/profiles-fallback-migration-parity.test.ts tests/unit/docs/gateway-migration-doc-contract.test.ts",
+    "primitives:check": "vitest run tests/unit/mcp-primitives/resources-parity.test.ts tests/unit/mcp-primitives/prompts-completions-parity.test.ts tests/unit/mcp-primitives/session-subscription-parity.test.ts tests/unit/mcp-primitives/profiles-fallback-parity.test.ts tests/unit/mcp-primitives/parity-harness-selftest.test.ts tests/unit/server/primitive-startup.test.ts",
+    "security:check": "vitest run tests/unit/security tests/unit/adversarial",
+    "eval:check": "vitest run --config tests/eval/vitest.eval.config.ts",
+    "workflow:check": "vitest run tests/unit/workflow_ tests/unit/release-archive-excludes.test.ts"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20.19.0"
   },
   "keywords": [
     "mcp",
@@ -58,7 +71,7 @@
   "author": "Unreal Engine MCP Team",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.25.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
     "ajv": "^8.17.1",
     "dotenv": "^17.2.3",
     "mcp-client-capabilities": "^0.0.14",
@@ -66,39 +79,18 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@eslint/js": "9.39.5",
     "@types/node": "^26.0.1",
     "@types/ws": "^8.18.1",
-    "@typescript-eslint/eslint-plugin": "^8.50.0",
-    "@typescript-eslint/parser": "^8.49.0",
+    "@typescript-eslint/eslint-plugin": "8.63.0",
+    "@typescript-eslint/parser": "8.63.0",
     "@vitest/coverage-v8": "^4.0.16",
-    "eslint": "^10.0.2",
+    "eslint": "9.39.5",
+    "eslint-plugin-n": "^18.2.2",
+    "js-yaml": "^5.2.1",
     "rimraf": "^6.1.2",
     "ts-node": "^10.9.2",
-    "typescript": "^7.0.2",
+    "typescript": "5.9.3",
     "vitest": "^4.0.16"
-  },
-  "overrides": {
-    "@typescript-eslint/eslint-plugin": {
-      "typescript": "^6.0.2"
-    },
-    "@typescript-eslint/parser": {
-      "typescript": "^6.0.2"
-    },
-    "@typescript-eslint/project-service": {
-      "typescript": "^6.0.2"
-    },
-    "@typescript-eslint/tsconfig-utils": {
-      "typescript": "^6.0.2"
-    },
-    "@typescript-eslint/type-utils": {
-      "typescript": "^6.0.2"
-    },
-    "@typescript-eslint/typescript-estree": {
-      "typescript": "^6.0.2"
-    },
-    "@typescript-eslint/utils": {
-      "typescript": "^6.0.2"
-    }
   }
 }

@@ -1,0 +1,150 @@
+// src/resources/capability-resources.ts
+// Task 31: bounded, revisioned capability catalog and per-capability record.
+// The data source is injected (default reads the neutral gateway manifest, the
+// single source of truth for the gateway catalog) and the revision is injected
+// via the shared RevisionProvider so the catalog participates in the future
+// subscription lane (Task 34) without this module owning any mutation. No full
+// input schema is ever emitted — only identifiers, categories, and action
+// names — so the payload stays bounded.
+
+import { getGatewayManifest } from '../gateway/gateway-manifest.js';
+import type { GatewayManifest } from '../gateway/gateway-manifest-types.js';
+import { capabilityIndex, legacyPairKey } from '../server/gateway/gateway-capability-index.js';
+import {
+  type ResourceRevision,
+  type RevisionProvider,
+  type RevisionedResource,
+} from '../server/mcp-primitives/resource-revision.js';
+import { RESOURCE_ERROR_CODES, ResourceError } from './resource-errors.js';
+
+const CATALOG_URI = 'ue://capability/catalog';
+const MAX_CATALOG_ENTRIES = 64;
+const MAX_RECORD_ACTIONS = 200;
+
+export interface CapabilityCatalogEntry {
+  readonly id: string;
+  readonly category: string | null;
+  readonly actionCount: number;
+}
+
+export interface CapabilityCatalogData {
+  readonly count: number;
+  readonly totalCount: number;
+  readonly truncated: boolean;
+  readonly capabilities: readonly CapabilityCatalogEntry[];
+}
+
+export interface CapabilityRecordData {
+  readonly id: string;
+  readonly category: string | null;
+  readonly actionCount: number;
+  readonly parameterCount: number;
+  readonly truncated: boolean;
+  readonly actions: readonly string[];
+}
+
+/** Injected bounded capability source (default: the neutral gateway manifest). */
+export interface CapabilitySource {
+  entries(): readonly CapabilityCatalogEntry[];
+  record(id: string): CapabilityRecordData | undefined;
+}
+
+export class GatewayManifestCapabilitySource implements CapabilitySource {
+  private readonly manifest: GatewayManifest;
+
+  constructor(manifest: GatewayManifest = getGatewayManifest()) {
+    this.manifest = manifest;
+  }
+
+  entries(): readonly CapabilityCatalogEntry[] {
+    return this.manifest.tools.map((tool) => ({
+      id: tool.name,
+      category: tool.category,
+      actionCount: tool.actions.length,
+    }));
+  }
+
+  record(id: string): CapabilityRecordData | undefined {
+    const tool = this.manifest.tools.find((candidate) => candidate.name === id);
+    if (tool === undefined) {
+      // The template is `ue://capability/{capabilityId}` and completion offers
+      // canonical capability ids, but the manifest is keyed by PARENT TOOL name
+      // — so every one of the ~1.7k completion values resolved to NOT_FOUND
+      // while only the 23 tool names worked. Both id spaces are legitimate
+      // addresses for this resource, so fall back to the canonical registry
+      // rather than narrowing what completion may suggest.
+      return this.canonicalRecord(id);
+    }
+    const actions = tool.actions.slice(0, MAX_RECORD_ACTIONS);
+    return {
+      id: tool.name,
+      category: tool.category,
+      actionCount: tool.actions.length,
+      parameterCount: tool.parameterNames.length,
+      truncated: tool.actions.length > actions.length,
+      actions,
+    };
+  }
+
+  /**
+   * One canonical capability addressed by its canonical id. A capability is a
+   * single action, so `actionCount` is 1 and `actions` names the dispatch verb.
+   * Stays bounded like the parent-tool record: identifiers and action names
+   * only, never an input schema body.
+   */
+  private canonicalRecord(id: string): CapabilityRecordData | undefined {
+    const index = capabilityIndex();
+    // Every address the completion pool can emit: the canonical id, a declared
+    // alias, and the dot-joined legacy `tool.action` pair. Resolving only the
+    // canonical id would still leave the alias and legacy suggestions dead.
+    const dot = id.indexOf('.');
+    const record = index.byId.get(id)
+      ?? index.byAlias.get(id)
+      ?? (dot > 0 ? index.byLegacyPair.get(legacyPairKey(id.slice(0, dot), id.slice(dot + 1))) : undefined);
+    if (record === undefined) {
+      return undefined;
+    }
+    return {
+      id: record.id,
+      category: record.parent.category ?? null,
+      actionCount: 1,
+      parameterCount: Object.keys(record.schemas.input.properties).length,
+      truncated: false,
+      actions: [record.routing.dispatchAction],
+    };
+  }
+}
+
+export class CapabilityResources {
+  constructor(
+    private readonly source: CapabilitySource,
+    private readonly revisions: RevisionProvider,
+  ) {}
+
+  private catalogRevision(): ResourceRevision {
+    return this.revisions.currentRevision('ue://capability/catalog');
+  }
+
+  readCatalog(): RevisionedResource<CapabilityCatalogData> {
+    const all = this.source.entries();
+    const capped = all.slice(0, MAX_CATALOG_ENTRIES);
+    return {
+      uri: CATALOG_URI,
+      revision: this.catalogRevision(),
+      data: {
+        count: capped.length,
+        totalCount: all.length,
+        truncated: all.length > capped.length,
+        capabilities: capped,
+      },
+    };
+  }
+
+  readRecord(uri: string, id: string): RevisionedResource<CapabilityRecordData> {
+    const record = this.source.record(id);
+    if (record === undefined) {
+      throw new ResourceError(RESOURCE_ERROR_CODES.NOT_FOUND, uri, `Unknown capability: ${id}`);
+    }
+    return { uri, revision: this.catalogRevision(), data: record };
+  }
+}

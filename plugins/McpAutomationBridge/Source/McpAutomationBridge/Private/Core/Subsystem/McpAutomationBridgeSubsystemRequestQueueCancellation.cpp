@@ -3,6 +3,11 @@
 #include "Async/Async.h"
 #include "HAL/PlatformProcess.h"
 
+// ADVISORY cancellation (NOT a hard abort): this removes a queued request before
+// it runs and records a cancel marker for in-flight requests, but it CANNOT
+// interrupt an already-dispatched editor operation. A queued request is dropped;
+// an in-flight request keeps executing until it completes, and only its late
+// response is suppressed by the transports (never aborted here).
 bool UMcpAutomationBridgeSubsystem::CancelAutomationRequest(
     const FString& RequestId)
 {
@@ -42,6 +47,12 @@ bool UMcpAutomationBridgeSubsystem::CancelAutomationRequests(
                 ActiveAutomationRequestIds.Contains(RequestId);
             if (bWasInFlight || bWasActive)
             {
+                // Advisory for in-flight/active requests: we record a cancel
+                // marker (CanceledAutomationRequestIds) and take the execution
+                // barrier so the queue observes it, but the editor operation
+                // already dispatched on the game thread keeps running to
+                // completion. The transports suppress the resulting late
+                // response. We do NOT stop the in-flight editor work.
                 bNeedsExecutionBarrier.store(true, std::memory_order_release);
             }
             if (bWasInFlight)

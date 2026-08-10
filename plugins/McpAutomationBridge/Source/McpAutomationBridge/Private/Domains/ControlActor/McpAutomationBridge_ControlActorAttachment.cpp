@@ -44,7 +44,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
   Child->MarkPackageDirty();
   Parent->MarkPackageDirty();
 
-  // Verify attachment
   bool bAttached = false;
   if (Child->GetRootComponent() &&
       Child->GetRootComponent()->GetAttachParent() == ParentRoot) {
@@ -62,7 +61,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
     return true;
   }
 
-  // Add verification data for the child actor
 	McpHandlerUtils::AddVerification(Data, Child);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor attached"), Data);
@@ -108,7 +106,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
   Found->SetOwner(nullptr);
   Found->MarkPackageDirty();
 
-  // Verify detachment
   const bool bDetached = (RootComp->GetAttachParent() == nullptr);
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
@@ -121,7 +118,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
     return true;
   }
 
-  // Add verification data
 	McpHandlerUtils::AddVerification(Data, Found);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor detached"), Data);

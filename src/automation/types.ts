@@ -1,4 +1,5 @@
 import { WebSocket } from 'ws';
+import type { LiveStateRevisions } from '../tools/catalog/capabilities/semantic/live-state-revisions.js';
 
 export interface AutomationBridgeOptions {
     host?: string | null;
@@ -40,12 +41,26 @@ export interface AutomationBridgeAutomationEvent {
     message?: string;
 }
 
+/**
+ * Targeted cancellation frame sent from the TS bridge to Unreal when an MCP
+ * request is cancelled. Carries an already-generated automation request id so
+ * the plugin can cancel the exact correlated operation.
+ */
+export interface CancelRequestMessage extends AutomationBridgeMessage {
+    type: 'cancel_request';
+    /** The automation request id previously allocated by the bridge. */
+    requestId: string;
+    /** Optional human-readable cancellation reason. */
+    reason?: string;
+}
+
 export interface AutomationBridgeResponseMessage extends AutomationBridgeMessage {
     requestId: string;
     success?: boolean;
     message?: string;
     error?: string;
     result?: unknown;
+    liveRevisions?: LiveStateRevisions;
 }
 
 export type PendingRequestDetail = { requestId: string; action: string; ageMs: number };
@@ -111,6 +126,25 @@ export interface AutomationBridgeStatus {
     heartbeatIntervalMs: number;
 }
 
+/**
+ * One progress observation forwarded from Unreal toward the MCP client.
+ *
+ * Structurally identical to the server-side progress primitive's update shape,
+ * declared here so the automation layer never has to import upward from the
+ * server layer to describe its own outbound signal.
+ */
+export interface AutomationProgressUpdate {
+    readonly progress: number;
+    readonly total?: number;
+    readonly message?: string;
+}
+
+/** Receives progress already resolved to the MCP request that owns it. */
+export type AutomationProgressListener = (
+    mcpRequestId: string,
+    update: AutomationProgressUpdate
+) => void;
+
 export interface PendingRequest {
     resolve: (value: AutomationBridgeResponseMessage) => void;
     reject: (reason: Error) => void;
@@ -141,6 +175,8 @@ export interface QueuedRequestItem {
     action: string;
     payload: Record<string, unknown>;
     options: Record<string, unknown>;
+    /** Canonicalized MCP request id that owns this queued item, if any. */
+    mcpRequestId?: string;
 }
 
 export interface SocketInfo {

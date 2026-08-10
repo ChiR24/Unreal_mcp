@@ -125,7 +125,7 @@ describe('Asset Handlers Security', () => {
         expect(sendAutomationRequest).toHaveBeenCalledWith('manage_asset', {
             assetPath: '/Game/Props/SM_Crate',
             subAction: 'get_metadata'
-        }, {});
+        }, { timeoutMs: expect.any(Number) });
         expect(result).toMatchObject({
             success: true,
             message: 'Metadata retrieved (2 items)',
@@ -135,6 +135,36 @@ describe('Asset Handlers Security', () => {
                 metadata: { owner: 'qa' }
             }
         });
+    });
+
+    it('should normalize newName into destinationPath for rename when destinationPath is absent', async () => {
+        sendAutomationRequest.mockResolvedValueOnce({ success: true, assetPath: '/Game/Meshes/SM_Crate_Renamed' });
+
+        const result = await handleAssetTools('rename', {
+            sourcePath: '/Game/Meshes/SM_Crate',
+            newName: 'SM_Crate_Renamed'
+        }, mockTools);
+
+        expect(result.success).toBe(true);
+        // newName is resolved against the source's parent directory so the
+        // native handler never sees a rename missing destinationPath (MCPBB-062).
+        expect(sendAutomationRequest).toHaveBeenCalledWith('manage_asset', {
+            sourcePath: '/Game/Meshes/SM_Crate',
+            destinationPath: '/Game/Meshes/SM_Crate_Renamed',
+            newName: 'SM_Crate_Renamed',
+            subAction: 'rename'
+        }, { timeoutMs: expect.any(Number) });
+    });
+
+    it('should reject rename when neither destinationPath nor newName is provided', async () => {
+        const result = await handleAssetTools('rename', {
+            sourcePath: '/Game/Meshes/SM_Crate'
+        }, mockTools);
+
+        expect(result.success).toBe(false);
+        expect(result.isError).toBe(true);
+        expect(result.message).toMatch(/destinationPath or newName/i);
+        expect(sendAutomationRequest).not.toHaveBeenCalled();
     });
 
     it('should reject traversal paths in delete asset arrays', async () => {

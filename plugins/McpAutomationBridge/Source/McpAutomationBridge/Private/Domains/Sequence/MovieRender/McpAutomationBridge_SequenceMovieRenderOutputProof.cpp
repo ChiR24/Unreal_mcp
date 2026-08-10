@@ -139,11 +139,10 @@ bool CaptureRenderOutputSnapshot(UMoviePipelineExecutorJob *Job,
             ResolveConfig(Job, Message, Code)) {
       if (UMoviePipelineOutputSetting *Output =
               Cast<UMoviePipelineOutputSetting>(Config->FindSettingByClass(
-                  UMoviePipelineOutputSetting::StaticClass(), true)))
-      {
+                  UMoviePipelineOutputSetting::StaticClass(), true))) {
         State->ExpectedFileNameFormat = Output->FileNameFormat;
-        State->ExpectedOutputDirectory = GetOutputDirectory(Job);
       }
+      State->ExpectedOutputDirectory = GetOutputDirectory(Job);
     }
   }
   TArray<FString> Files;

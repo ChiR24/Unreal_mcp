@@ -1,6 +1,7 @@
 #pragma once
 
 #include "McpConnectionManager.h"
+#include "Foundation/McpSecureTokenCompare.h"
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
 #include "HAL/PlatformProcess.h"

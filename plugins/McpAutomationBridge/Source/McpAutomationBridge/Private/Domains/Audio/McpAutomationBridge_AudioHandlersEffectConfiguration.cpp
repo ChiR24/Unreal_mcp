@@ -71,16 +71,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSourceEffect(
 #endif
 }
 
-// -----------------------------------------------------------------------------
-// HandleCreateSubmixEffect
-// -----------------------------------------------------------------------------
-// Creates a USoundEffectSubmixPreset asset.
-//
-// Payload:  { "effectName": string, "outputPath"?: string,
-//             "effectType"?: string }
-// Response: { "effectPath": string, "effectName": string,
-//             "effectType": string }
-// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleCreateSubmixEffect(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {

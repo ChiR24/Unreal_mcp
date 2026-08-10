@@ -20,7 +20,6 @@ bool HandleListLevelsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStr
     UWorld *World =
         GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
 
-    // Add current persistent level
     if (World) {
       TSharedPtr<FJsonObject> CurrentLevel = McpHandlerUtils::CreateResultObject();
       CurrentLevel->SetStringField(TEXT("name"), World->GetMapName());
@@ -31,7 +30,6 @@ bool HandleListLevelsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStr
       CurrentLevel->SetBoolField(TEXT("isVisible"), true);
       LevelsArray.Add(MakeShared<FJsonValueObject>(CurrentLevel));
 
-      // Add streaming levels
       for (const ULevelStreaming *StreamingLevel :
            World->GetStreamingLevels()) {
         if (!StreamingLevel)
@@ -57,7 +55,6 @@ bool HandleListLevelsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStr
       }
     }
 
-    // Also query Asset Registry for all map assets
     IAssetRegistry &AssetRegistry =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry")
             .Get();

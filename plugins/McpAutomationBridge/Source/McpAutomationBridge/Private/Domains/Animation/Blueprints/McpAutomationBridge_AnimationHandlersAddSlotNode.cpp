@@ -10,7 +10,6 @@ bool HandleAnimationAddSlotNodeAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Add a slot node to an animation blueprint
     FString BlueprintPath;
     Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
 

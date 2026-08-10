@@ -30,7 +30,7 @@ describe('handleLevelTools path normalization', () => {
     expect(sendAutomationRequest).toHaveBeenCalledWith('manage_level', {
       action: 'save_level_as',
       savePath: '/Game/Maps/Demo'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 
   it('validates normalized /Content level paths before dispatch', async () => {
@@ -47,7 +47,7 @@ describe('handleLevelTools path normalization', () => {
       levelPath: '/Game/Maps/Demo',
       streaming: false,
       saveDirtyPackages: true
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 
   it('maps DirectionalLight spawn_light requests to the directional light class path', async () => {
@@ -66,7 +66,7 @@ describe('handleLevelTools path normalization', () => {
         actorName: 'Sun',
         classPath: '/Script/Engine.DirectionalLight'
       }),
-      {}
+      { timeoutMs: expect.any(Number) }
     );
   });
 
@@ -101,14 +101,14 @@ describe('handleLevelTools path normalization', () => {
     expect(sendAutomationRequest).toHaveBeenNthCalledWith(1, 'manage_level', {
       action: 'delete_level',
       levelPath: '/Game/Maps/Demo'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(sendAutomationRequest).toHaveBeenNthCalledWith(2, 'manage_level', {
       action: 'delete_level',
       levelPath: '/Game/Maps/A'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(sendAutomationRequest).toHaveBeenNthCalledWith(3, 'manage_level', {
       action: 'delete_level',
       levelPath: '/Game/Maps/B'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 });

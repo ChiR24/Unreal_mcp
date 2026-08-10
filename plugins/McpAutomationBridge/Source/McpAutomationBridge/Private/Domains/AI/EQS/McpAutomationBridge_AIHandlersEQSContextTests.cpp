@@ -21,8 +21,8 @@ bool HandleAddEQSContext(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("add_eqs_context"))
     {
-        FString QueryPath = GetStringFieldAI(Payload, TEXT("queryPath"));
-        FString ContextType = GetStringFieldAI(Payload, TEXT("contextType"));
+        FString QueryPath = GetJsonStringField(Payload, TEXT("queryPath"));
+        FString ContextType = GetJsonStringField(Payload, TEXT("contextType"));
 
         UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
         if (!Query)
@@ -57,8 +57,8 @@ bool HandleAddEQSTest(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
                             TEXT("NOT_SUPPORTED"));
         return true;
 #else
-        FString QueryPath = GetStringFieldAI(Payload, TEXT("queryPath"));
-        FString TestType = GetStringFieldAI(Payload, TEXT("testType"));
+        FString QueryPath = GetJsonStringField(Payload, TEXT("queryPath"));
+        FString TestType = GetJsonStringField(Payload, TEXT("testType"));
 
         UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
         if (!Query)

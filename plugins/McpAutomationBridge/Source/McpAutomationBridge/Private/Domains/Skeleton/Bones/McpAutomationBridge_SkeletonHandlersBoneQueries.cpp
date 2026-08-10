@@ -17,10 +17,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSkeletonInfo(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
+    FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
     if (SkeletonPath.IsEmpty())
     {
-        SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+        SkeletonPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
     }
 
     FString Error;
@@ -64,10 +64,10 @@ bool UMcpAutomationBridgeSubsystem::HandleListBones(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
+    FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
     if (SkeletonPath.IsEmpty())
     {
-        SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+        SkeletonPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
     }
 
     FString Error;
@@ -131,9 +131,9 @@ bool UMcpAutomationBridgeSubsystem::HandleGetBoneTransform(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 #if WITH_EDITOR
-    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
-    FString SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
-    FString BoneName = GetStringFieldSkel(Payload, TEXT("boneName"));
+    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
+    FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
+    FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
     int32 LODIndex = GetIntFieldSkel(Payload, TEXT("lodIndex"), 0);
 
     if (BoneName.IsEmpty())

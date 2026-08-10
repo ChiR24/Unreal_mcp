@@ -12,7 +12,6 @@ bool HandleAnimationSetAxisSettingsAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Set blend space axis settings
     FString AssetPath;
     Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
 

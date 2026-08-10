@@ -59,14 +59,12 @@ bool HandleConfigureHlodLayer(
     }
     HlodLayerPath = SafePath;
 
-    // Build full path
     FString FullPath = HlodLayerPath / HlodLayerName;
     if (!FullPath.StartsWith(TEXT("/")))
     {
         FullPath = TEXT("/Game/") + FullPath;
     }
 
-    // Create the package for the HLOD layer asset
     UPackage* AssetPackage = CreatePackage(*FullPath);
     if (!AssetPackage)
     {
@@ -75,7 +73,6 @@ bool HandleConfigureHlodLayer(
         return true;
     }
 
-    // Create the UHLODLayer asset
     UHLODLayer* NewHLODLayer = NewObject<UHLODLayer>(AssetPackage, *HlodLayerName, RF_Public | RF_Standalone);
     if (!NewHLODLayer)
     {
@@ -84,13 +81,11 @@ bool HandleConfigureHlodLayer(
         return true;
     }
 
-    // Configure the HLOD layer
     // UE 5.1-5.6: SetIsSpatiallyLoaded is available
     // UE 5.7+: Deprecated - streaming grid properties are in partition settings
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1 && ENGINE_MINOR_VERSION < 7
     NewHLODLayer->SetIsSpatiallyLoaded(bIsSpatiallyLoaded);
 
-    // Set layer type
     if (LayerType == TEXT("Instancing"))
     {
         NewHLODLayer->SetLayerType(EHLODLayerType::Instancing);
@@ -109,11 +104,9 @@ bool HandleConfigureHlodLayer(
     }
 #endif
 
-    // Mark package dirty and notify asset registry
     AssetPackage->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(NewHLODLayer);
 
-    // Save the asset
     McpSafeAssetSave(NewHLODLayer);
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();

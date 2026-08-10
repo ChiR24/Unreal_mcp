@@ -1,3 +1,4 @@
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 #include "Domains/GameFramework/McpAutomationBridge_GameFrameworkHandlersContext.h"
 
 DEFINE_LOG_CATEGORY(LogMcpGameFrameworkHandlers);
@@ -181,8 +182,8 @@ UBlueprint* CreateGameFrameworkBlueprint(const FString& Path, const FString& Nam
     FString FullPath = Path;
     if (!FullPath.StartsWith(TEXT("/Game/")))
     {
-        if (FullPath.StartsWith(TEXT("/Content/"))) FullPath = FullPath.Replace(TEXT("/Content/"), TEXT("/Game/"));
-        else if (!FullPath.StartsWith(TEXT("/"))) FullPath = TEXT("/Game/") + FullPath;
+        McpAssetPathCanonical::MapContentRootInline(FullPath);
+        if (!FullPath.StartsWith(TEXT("/"))) FullPath = TEXT("/Game/") + FullPath;
     }
     if (FullPath.EndsWith(TEXT("/"))) FullPath = FullPath.LeftChop(1);
 

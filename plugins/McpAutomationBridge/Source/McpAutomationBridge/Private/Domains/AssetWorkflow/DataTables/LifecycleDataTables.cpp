@@ -244,7 +244,7 @@ bool HandleDataTableAction(
         if (!S) { OutResult = McpDataTableMakeError(TEXT("ASSET_NOT_FOUND"), nullptr); return true; }
 
         FString ValidityMsg;
-        if (!FStructureEditorUtils::IsStructureValid(S, nullptr, &ValidityMsg))
+        if (FStructureEditorUtils::IsStructureValid(S, nullptr, &ValidityMsg) != FStructureEditorUtils::EStructureError::Ok)
         {
             OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), *ValidityMsg);
             return true;

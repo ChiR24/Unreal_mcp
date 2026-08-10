@@ -1,4 +1,5 @@
 #include "Domains/Texture/McpAutomationBridge_TextureHandlersShared.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 
 namespace McpTextureHandlers
 {
@@ -97,16 +98,13 @@ bool ValidateTextureIterationCount(double Value, const TCHAR* Name,
     return true;
 }
 
+// Empty means REFUSED, not "unchanged": the shared canonicalizer rejects a
+// value whose resolved target it cannot vouch for. Replaying its steps here in
+// a different order (alias map before separator normalization) is what let
+// "\Content\..." mean one thing to the pre-queue gate and another here.
 FString NormalizeTexturePath(const FString& Path)
 {
-    FString Normalized = Path;
-    Normalized.ReplaceInline(TEXT("/Content"), TEXT("/Game"));
-    Normalized.ReplaceInline(TEXT("\\"), TEXT("/"));
-    while (Normalized.EndsWith(TEXT("/")))
-    {
-        Normalized.LeftChopInline(1);
-    }
-    return Normalized;
+    return McpCanonicalizeContentPath(Path, /*bAssumeGameRoot=*/true);
 }
 
 FAssetData GetTextureAssetDataByObjectPath(const FString& ObjectPath)

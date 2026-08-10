@@ -259,7 +259,3 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(
   return true;
 #endif
 }
-
-// ============================================================================
-// 10. MATERIAL PARAMETER & INSTANCE MANAGEMENT
-// ============================================================================

@@ -113,6 +113,14 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::Array(const FString& Name, const FString& 
 	return *this;
 }
 
+FMcpSchemaBuilder& FMcpSchemaBuilder::ArrayOfAny(const FString& Name, const FString& Description)
+{
+	auto Prop = MakeTypedProperty(TEXT("array"), Description);
+	Prop->SetObjectField(TEXT("items"), MakeShared<FJsonObject>());
+	AddProperty(Name, Prop);
+	return *this;
+}
+
 FMcpSchemaBuilder& FMcpSchemaBuilder::ArrayOfObjects(const FString& Name,
 	const FString& Description, TFunction<void(FMcpSchemaBuilder&)> ItemBuilder)
 {
@@ -137,6 +145,30 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::FreeformObject(const FString& Name,
 	const FString& Description)
 {
 	auto Prop = MakeTypedProperty(TEXT("object"), Description);
+	AddProperty(Name, Prop);
+	return *this;
+}
+
+FMcpSchemaBuilder& FMcpSchemaBuilder::AnyValue(const FString& Name, const FString& Description)
+{
+	auto Prop = MakeShared<FJsonObject>();
+	if (!Description.IsEmpty())
+	{
+		Prop->SetStringField(TEXT("description"), Description);
+	}
+	AddProperty(Name, Prop);
+	return *this;
+}
+
+FMcpSchemaBuilder& FMcpSchemaBuilder::TypeUnion(const FString& Name,
+	const TArray<FString>& Types, const FString& Description)
+{
+	auto Prop = MakeShared<FJsonObject>();
+	Prop->SetArrayField(TEXT("type"), MakeStringValueArray(Types));
+	if (!Description.IsEmpty())
+	{
+		Prop->SetStringField(TEXT("description"), Description);
+	}
 	AddProperty(Name, Prop);
 	return *this;
 }

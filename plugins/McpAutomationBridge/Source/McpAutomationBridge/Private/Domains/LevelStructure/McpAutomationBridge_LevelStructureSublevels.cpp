@@ -55,19 +55,15 @@ bool HandleCreateSublevel(
         return true;
     }
 
-    // Validate parentLevel if specified
     if (!ParentLevel.IsEmpty())
     {
-        // Normalize the parent level path
         FString NormalizedParentPath = ParentLevel;
         if (!NormalizedParentPath.StartsWith(TEXT("/Game/")))
         {
             NormalizedParentPath = TEXT("/Game/") + NormalizedParentPath;
         }
-        // Remove .umap extension if present
         NormalizedParentPath.RemoveFromEnd(TEXT(".umap"));
 
-        // Check if the parent level exists
         if (!FPackageName::DoesPackageExist(NormalizedParentPath))
         {
             Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -76,7 +72,6 @@ bool HandleCreateSublevel(
         }
     }
 
-    // Build full sublevel path
     FString FullSublevelPath;
     if (SublevelPath.IsEmpty())
     {
@@ -97,7 +92,6 @@ bool HandleCreateSublevel(
         FullSublevelPath = SafePath;
     }
 
-    // Ensure path starts with /Game/
     if (!FullSublevelPath.StartsWith(TEXT("/Game/")))
     {
         FullSublevelPath = TEXT("/Game/") + FullSublevelPath;
@@ -106,7 +100,6 @@ bool HandleCreateSublevel(
     // IDEMPOTENT: Check if sublevel already exists
     if (FPackageName::DoesPackageExist(FullSublevelPath))
     {
-        // Sublevel already exists - find or create streaming reference
         ULevelStreaming* ExistingStreamingLevel = nullptr;
         for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels())
         {
@@ -129,14 +122,8 @@ bool HandleCreateSublevel(
         return true;
     }
 
-    // CRITICAL FIX: Create the actual sublevel asset on disk using UEditorLevelUtils
-    // This creates a proper .umap file that can be loaded later
-    // See: EditorLevelUtils.h - CreateNewStreamingLevel creates a new level and adds it as streaming
-
-    // Build the package name for the new sublevel
     FString SublevelPackageName = FullSublevelPath;
 
-    // Create a new level package
     UPackage* SublevelPackage = CreatePackage(*SublevelPackageName);
     if (!SublevelPackage)
     {
@@ -145,7 +132,6 @@ bool HandleCreateSublevel(
         return true;
     }
 
-    // Create the new world for the sublevel
     UWorld* NewSublevelWorld = UWorld::CreateWorld(EWorldType::Inactive, false, FName(*SublevelName), SublevelPackage);
     if (!NewSublevelWorld)
     {
@@ -154,16 +140,13 @@ bool HandleCreateSublevel(
         return true;
     }
 
-    // Initialize the world if not already initialized
     if (!NewSublevelWorld->bIsWorldInitialized)
     {
         NewSublevelWorld->InitWorld();
     }
 
-    // Mark package dirty
     SublevelPackage->MarkPackageDirty();
 
-    // Save the sublevel to disk
     bool bSaveSucceeded = true;
     if (bSave)
     {
@@ -183,7 +166,6 @@ bool HandleCreateSublevel(
         }
     }
 
-    // Create streaming level to add to parent world
     ULevelStreamingDynamic* StreamingLevel = NewObject<ULevelStreamingDynamic>(World, ULevelStreamingDynamic::StaticClass());
     if (StreamingLevel)
     {
@@ -192,11 +174,9 @@ bool HandleCreateSublevel(
         StreamingLevel->SetShouldBeVisible(true);
         StreamingLevel->SetShouldBeLoaded(true);
 
-        // Add to world's streaming levels
         World->AddStreamingLevel(StreamingLevel);
     }
 
-    // Mark parent world dirty
     World->MarkPackageDirty();
 
     // Save parent world if requested (to persist streaming level reference)

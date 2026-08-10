@@ -48,12 +48,22 @@ public:
 	FMcpSchemaBuilder& Array(const FString& Name, const FString& Description,
 		const FString& ItemType = TEXT("string"));
 
+	/** Array of unconstrained items (items: {}); Array() would narrow them to a type. */
+	FMcpSchemaBuilder& ArrayOfAny(const FString& Name, const FString& Description);
+
 	/** Array of objects property with item schema. */
 	FMcpSchemaBuilder& ArrayOfObjects(const FString& Name, const FString& Description,
 		TFunction<void(FMcpSchemaBuilder&)> ItemBuilder = nullptr);
 
 	/** Freeform object property (type: "object", no properties constraint). */
 	FMcpSchemaBuilder& FreeformObject(const FString& Name, const FString& Description);
+
+	/** Unconstrained "any" property (no type constraint). */
+	FMcpSchemaBuilder& AnyValue(const FString& Name, const FString& Description = FString());
+
+	/** JSON Schema type union property (e.g. type: ["number", "string"]). */
+	FMcpSchemaBuilder& TypeUnion(const FString& Name, const TArray<FString>& Types,
+		const FString& Description = FString());
 
 	/** Declare required property names. Can be called multiple times. */
 	FMcpSchemaBuilder& Required(const TArray<FString>& Names);

@@ -17,7 +17,7 @@ bool HandleAddAIPerceptionComponent(UMcpAutomationBridgeSubsystem* Self, const F
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("add_ai_perception_component"))
     {
-        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
+        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
 
         // CRITICAL: Explicitly check if asset exists before LoadObject
         // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
@@ -77,7 +77,7 @@ bool HandleConfigureSightConfig(UMcpAutomationBridgeSubsystem* Self, const FStri
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("configure_sight_config"))
     {
-        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
+        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
 
         // CRITICAL: Explicitly check if asset exists before LoadObject
         // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
@@ -98,15 +98,15 @@ bool HandleConfigureSightConfig(UMcpAutomationBridgeSubsystem* Self, const FStri
         }
 
         // Get sight config parameters
-        double SightRadius = GetNumberFieldAI(Payload, TEXT("sightRadius"), 3000.0);
-        double LoseSightRadius = GetNumberFieldAI(Payload, TEXT("loseSightRadius"), SightRadius + 500.0);
-        double PeripheralAngle = GetNumberFieldAI(Payload, TEXT("peripheralVisionAngle"), 90.0);
+        double SightRadius = GetJsonNumberField(Payload, TEXT("sightRadius"), 3000.0);
+        double LoseSightRadius = GetJsonNumberField(Payload, TEXT("loseSightRadius"), SightRadius + 500.0);
+        double PeripheralAngle = GetJsonNumberField(Payload, TEXT("peripheralVisionAngle"), 90.0);
         const TSharedPtr<FJsonObject>* SightConfigObj = nullptr;
         if (Payload->TryGetObjectField(TEXT("sightConfig"), SightConfigObj) && SightConfigObj->IsValid())
         {
-            SightRadius = GetNumberFieldAI(*SightConfigObj, TEXT("sightRadius"), SightRadius);
-            LoseSightRadius = GetNumberFieldAI(*SightConfigObj, TEXT("loseSightRadius"), LoseSightRadius);
-            PeripheralAngle = GetNumberFieldAI(*SightConfigObj, TEXT("peripheralVisionAngle"), PeripheralAngle);
+            SightRadius = GetJsonNumberField(*SightConfigObj, TEXT("sightRadius"), SightRadius);
+            LoseSightRadius = GetJsonNumberField(*SightConfigObj, TEXT("loseSightRadius"), LoseSightRadius);
+            PeripheralAngle = GetJsonNumberField(*SightConfigObj, TEXT("peripheralVisionAngle"), PeripheralAngle);
         }
 
         if (!Blueprint->SimpleConstructionScript)

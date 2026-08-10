@@ -19,6 +19,7 @@ void FMcpDynamicToolManager::Initialize(const FMcpToolRegistry& Registry, bool b
 	FScopeLock Lock(&StateMutex);
 	ToolStates.Empty();
 	CategoryStates.Empty();
+	CatalogStateRevision = 0;
 
 	for (const FString& ToolName : Registry.GetToolNames())
 	{
@@ -106,6 +107,9 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 		return GetStatus();
 	}
 
+	// Effective mutations bump CatalogStateRevision under StateMutex so a
+	// concurrent status read never sees new state with a stale revision; the
+	// delegate fires only after unlock, with the new revision already visible.
 	bool bChanged = false;
 	TSharedPtr<FJsonObject> Result;
 
@@ -122,6 +126,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 		{
 			FScopeLock Lock(&StateMutex);
 			Result = Reset(bChanged);
+			if (bChanged) ++CatalogStateRevision;
 		}
 		if (bChanged) OnToolsChanged.ExecuteIfBound();
 		return Result;
@@ -142,6 +147,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 		{
 			FScopeLock Lock(&StateMutex);
 			Result = EnableTools(Names, bChanged);
+			if (bChanged) ++CatalogStateRevision;
 		}
 		if (bChanged) OnToolsChanged.ExecuteIfBound();
 		return Result;
@@ -162,6 +168,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 		{
 			FScopeLock Lock(&StateMutex);
 			Result = DisableTools(Names, bChanged);
+			if (bChanged) ++CatalogStateRevision;
 		}
 		if (bChanged) OnToolsChanged.ExecuteIfBound();
 		return Result;
@@ -174,6 +181,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 		{
 			FScopeLock Lock(&StateMutex);
 			Result = EnableCategory(Cat, bChanged);
+			if (bChanged) ++CatalogStateRevision;
 		}
 		if (bChanged) OnToolsChanged.ExecuteIfBound();
 		return Result;
@@ -186,6 +194,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 		{
 			FScopeLock Lock(&StateMutex);
 			Result = DisableCategory(Cat, bChanged);
+			if (bChanged) ++CatalogStateRevision;
 		}
 		if (bChanged) OnToolsChanged.ExecuteIfBound();
 		return Result;

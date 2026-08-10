@@ -8,11 +8,11 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
 {
     if (SubAction == TEXT("create_anim_blueprint"))
     {
-    FString Name = GetStringFieldAnimAuth(Params, TEXT("name"), TEXT(""));
-    FString Path = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("path"), TEXT("/Game/Blueprints")));
-    FString SkeletonPath = GetStringFieldAnimAuth(Params, TEXT("skeletonPath"), TEXT(""));
-    FString ParentClass = GetStringFieldAnimAuth(Params, TEXT("parentClass"), TEXT("AnimInstance"));
-    bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+    FString Path = NormalizeAnimPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Blueprints")));
+    FString SkeletonPath = GetJsonStringField(Params, TEXT("skeletonPath"), TEXT(""));
+    FString ParentClass = GetJsonStringField(Params, TEXT("parentClass"), TEXT("AnimInstance"));
+    bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (Name.IsEmpty())
     {

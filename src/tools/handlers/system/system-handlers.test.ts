@@ -29,7 +29,7 @@ describe('handleSystemTools console-style actions', () => {
 
     const result = await handleSystemTools('show_fps', { action: 'show_fps', enabled: false }, tools);
 
-    expect(sendAutomationRequest).toHaveBeenCalledWith('console_command', { command: 'stat fps 0' }, {});
+    expect(sendAutomationRequest).toHaveBeenCalledWith('console_command', { command: 'stat fps 0' }, { timeoutMs: expect.any(Number) });
     expect(result).toMatchObject({
       success: true,
       action: 'show_fps',
@@ -48,7 +48,7 @@ describe('handleSystemTools console-style actions', () => {
 
     expect(sendAutomationRequest).toHaveBeenCalledWith('console_command', {
       command: 'sg.GlobalIlluminationQuality 4'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(result).toMatchObject({
       success: true,
       action: 'set_quality'
@@ -72,7 +72,7 @@ describe('handleSystemTools widget and asset actions', () => {
       type: 'UserWidget',
       savePath: '/Game/UI',
       folder: '/Game/UI'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(result).toMatchObject({
       success: true,
       action: 'create_widget',
@@ -99,7 +99,7 @@ describe('handleSystemTools widget and asset actions', () => {
       action: 'validate_assets',
       paths: ['/Game/M_Test'],
       recursive: undefined
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(result).toMatchObject({
       success: true,
       action: 'validate_assets',
@@ -144,7 +144,7 @@ describe('handleSystemTools window and screenshot actions', () => {
       resolution: undefined,
       mode: 'game_viewport',
       returnBase64: true
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(result).toMatchObject({
       success: true,
       action: 'screenshot',
@@ -178,7 +178,7 @@ describe('handleSystemTools window and screenshot actions', () => {
 
     expect(sendAutomationRequest).toHaveBeenCalledWith('console_command', {
       command: 'r.FullScreenMode 1'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(result).toMatchObject({
       success: true,
       action: 'set_fullscreen',
@@ -193,7 +193,7 @@ describe('handleConsoleCommand', () => {
 
     const result = await handleConsoleCommand({ command: '  stat fps  ' }, tools);
 
-    expect(sendAutomationRequest).toHaveBeenCalledWith('console_command', { command: 'stat fps' }, {});
+    expect(sendAutomationRequest).toHaveBeenCalledWith('console_command', { command: 'stat fps' }, { timeoutMs: expect.any(Number) });
     expect(result).toMatchObject({
       success: true,
       command: 'stat fps'

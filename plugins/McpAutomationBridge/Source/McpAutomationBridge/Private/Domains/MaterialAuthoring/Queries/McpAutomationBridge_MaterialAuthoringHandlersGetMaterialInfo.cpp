@@ -52,7 +52,6 @@ bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     Result->SetNumberField(TEXT("nodeCount"), AllExpressions.Num());
 
     if (Material) {
-      // Domain
       switch (Material->MaterialDomain) {
       case EMaterialDomain::MD_Surface:
         Result->SetStringField(TEXT("domain"), TEXT("Surface"));
@@ -77,7 +76,6 @@ bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString&
         break;
       }
 
-      // Blend mode
       switch (Material->BlendMode) {
       case EBlendMode::BLEND_Opaque:
         Result->SetStringField(TEXT("blendMode"), TEXT("Opaque"));
@@ -101,7 +99,6 @@ bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString&
 
       Result->SetBoolField(TEXT("twoSided"), Material->TwoSided);
     } else {
-      // UMaterialFunction basic info
       Result->SetStringField(TEXT("description"), Function->Description);
       Result->SetBoolField(TEXT("exposeToLibrary"), Function->bExposeToLibrary);
     }
@@ -168,7 +165,6 @@ bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString&
         ExprObj->SetStringField(TEXT("desc"), Expr->GetDescription());
         ExprObj->SetNumberField(TEXT("x"), Expr->MaterialExpressionEditorX);
         ExprObj->SetNumberField(TEXT("y"), Expr->MaterialExpressionEditorY);
-        // Add name for parameter/input/output nodes
         if (UMaterialExpressionParameter *P = Cast<UMaterialExpressionParameter>(Expr)) {
           ExprObj->SetStringField(TEXT("name"), P->ParameterName.ToString());
         } else if (UMaterialExpressionFunctionInput *FI = Cast<UMaterialExpressionFunctionInput>(Expr)) {
@@ -176,7 +172,6 @@ bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString&
         } else if (UMaterialExpressionFunctionOutput *FO = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
           ExprObj->SetStringField(TEXT("name"), FO->OutputName.ToString());
         }
-        // Include code for CustomExpression nodes
         if (UMaterialExpressionCustom *CE = Cast<UMaterialExpressionCustom>(Expr)) {
           ExprObj->SetStringField(TEXT("code"), CE->Code);
           ExprObj->SetNumberField(TEXT("inputCount"), CE->Inputs.Num());
@@ -198,9 +193,6 @@ bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // get_material_function_info (explicit MF introspection)
-  // --------------------------------------------------------------------------
   return false;
 }
 }

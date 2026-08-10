@@ -7,7 +7,7 @@ namespace McpGeometryHandlers
 bool HandleGetMeshInfo(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
@@ -71,9 +71,9 @@ bool HandleGetMeshInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 bool HandleRecalculateNormals(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    bool bAreaWeighted = GetBoolFieldGeom(Payload, TEXT("areaWeighted"), true);
-    double SplitAngle = GetNumberFieldGeom(Payload, TEXT("splitAngle"), 60.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    bool bAreaWeighted = GetJsonBoolField(Payload, TEXT("areaWeighted"), true);
+    double SplitAngle = GetJsonNumberField(Payload, TEXT("splitAngle"), 60.0);
 
     if (ActorName.IsEmpty())
     {
@@ -134,7 +134,6 @@ bool HandleRecalculateNormals(UMcpAutomationBridgeSubsystem* Self, const FString
     );
 #endif
 
-    // Force refresh
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -148,7 +147,7 @@ bool HandleRecalculateNormals(UMcpAutomationBridgeSubsystem* Self, const FString
 bool HandleFlipNormals(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));

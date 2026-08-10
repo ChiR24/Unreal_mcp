@@ -1,13 +1,15 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 
 #include "Engine/Blueprint.h"
 #include "K2Node_BreakStruct.h"
 #include "K2Node_MakeStruct.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#include "StructUtils/UserDefinedStruct.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include MCP_USER_DEFINED_STRUCT_HEADER
 
 #if WITH_EDITOR
 

@@ -7,7 +7,7 @@ namespace McpGeometryHandlers
 bool HandleRecomputeTangents(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -54,15 +54,11 @@ bool HandleRecomputeTangents(UMcpAutomationBridgeSubsystem* Self, const FString&
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Revolve Operation
-// -------------------------------------------------------------------------
-
 bool HandleSplitNormals(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double SplitAngle = GetNumberFieldGeom(Payload, TEXT("splitAngle"), 60.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double SplitAngle = GetJsonNumberField(Payload, TEXT("splitAngle"), 60.0);
 
     if (ActorName.IsEmpty())
     {
@@ -119,9 +115,6 @@ bool HandleSplitNormals(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     return true;
 }
 
-// -------------------------------------------------------------------------
-// create_procedural_mesh - Create empty dynamic mesh actor
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

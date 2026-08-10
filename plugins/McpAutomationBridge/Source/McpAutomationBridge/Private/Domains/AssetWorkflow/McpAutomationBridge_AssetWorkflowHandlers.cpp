@@ -3,6 +3,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 
 #include "Dom/JsonObject.h"
+#include "MCP/Routing/McpConsolidatedActionRouting.h"
 
 // Struct ecosystem (issue #struct-ecosystem) — Wave 1 handler shard headers.
 #include "Domains/AssetWorkflow/DataTables/Shared.h"
@@ -18,13 +19,20 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   FString Lower = Action.ToLower();
 
-  // If the action is the generic "manage_asset" tool, check for a subAction in
-  // the payload
+  // If the action is the generic "manage_asset" tool, resolve the concrete
+  // action from the payload. This read `subAction` ONLY, but the native gateway
+  // writes the concrete action to `action` (McpNativeGatewayValidation.cpp sets
+  // Arguments["action"] = LegacyAction and never sets subAction), so every
+  // native manage_asset call failed to promote, fell through this whole
+  // dispatch table, and was answered by an unrelated domain further down the
+  // chain — analyze_graph came back as "Unknown manage_sessions action".
+  // GetPayloadSubAction is the repo's shared reader for exactly this: subAction
+  // first, then action, normalized. It is already what the manage_asset routing
+  // registration uses, so this makes the two agree.
   if (Lower == TEXT("manage_asset") && Payload.IsValid()) {
-    FString SubAction;
-    if (Payload->TryGetStringField(TEXT("subAction"), SubAction) &&
-        !SubAction.IsEmpty()) {
-      Lower = SubAction.ToLower();
+    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
+    if (!SubAction.IsEmpty() && SubAction != TEXT("manage_asset")) {
+      Lower = SubAction;
     }
   }
 
@@ -34,6 +42,15 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // Dispatch to specific handlers
   // CRITICAL: These actions must match what TS sends as 'action' (not just 'subAction')
   // When TS calls executeAutomationRequest(tools, 'search_assets', {...}), Action='search_assets'
+  //
+  // Leaf handlers that take an action parameter are passed `Lower`, never
+  // `Action`. `Lower` is the RESOLVED concrete action; `Action` is still the
+  // parent verb ("manage_asset") whenever the gateway dispatched by tool name.
+  // Seventeen of these passed `Action`, so each leaf re-checked its own name,
+  // saw "manage_asset", and DECLINED the request it had just been selected for
+  // — after which the request fell through to whatever catch-all claimed it
+  // next (analyze_graph was answered by manage_sessions, then by
+  // manage_level_structure). Selection and hand-off must use the same string.
 
   // Asset Operations
   if (Lower == TEXT("import"))
@@ -85,49 +102,49 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
 
   // Search (CRITICAL: search_assets must be dispatched - was missing causing timeouts)
   if (Lower == TEXT("search_assets"))
-    return HandleSearchAssets(RequestId, Action, Payload, RequestingSocket);
+    return HandleSearchAssets(RequestId, Lower, Payload, RequestingSocket);
 
   // Bulk Operations
   if (Lower == TEXT("fixup_redirectors"))
-    return HandleFixupRedirectors(RequestId, Action, Payload, RequestingSocket);
+    return HandleFixupRedirectors(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("bulk_rename"))
-    return HandleBulkRenameAssets(RequestId, Action, Payload, RequestingSocket);
+    return HandleBulkRenameAssets(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("bulk_delete"))
-    return HandleBulkDeleteAssets(RequestId, Action, Payload, RequestingSocket);
+    return HandleBulkDeleteAssets(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("generate_lods"))
     return HandleGenerateLODs(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("nanite_rebuild_mesh"))
-    return HandleNaniteRebuildMesh(RequestId, Action, Payload, RequestingSocket);
+    return HandleNaniteRebuildMesh(RequestId, Lower, Payload, RequestingSocket);
 
   // Source Control
   if (Lower == TEXT("source_control_checkout"))
-    return HandleSourceControlCheckout(RequestId, Action, Payload, RequestingSocket);
+    return HandleSourceControlCheckout(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("source_control_submit"))
-    return HandleSourceControlSubmit(RequestId, Action, Payload, RequestingSocket);
+    return HandleSourceControlSubmit(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("get_source_control_state"))
-    return HandleGetSourceControlState(RequestId, Action, Payload, RequestingSocket);
+    return HandleGetSourceControlState(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("source_control_enable"))
-    return HandleSourceControlEnable(RequestId, Action, Payload, RequestingSocket);
+    return HandleSourceControlEnable(RequestId, Lower, Payload, RequestingSocket);
 
   // Graph & Analysis
   if (Lower == TEXT("analyze_graph"))
-    return HandleAnalyzeGraph(RequestId, Action, Payload, RequestingSocket);
+    return HandleAnalyzeGraph(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("find_by_tag"))
-    return HandleFindByTag(RequestId, Action, Payload, RequestingSocket);
+    return HandleFindByTag(RequestId, Lower, Payload, RequestingSocket);
 
   // Material Authoring
   if (Lower == TEXT("add_material_node"))
-    return HandleAddMaterialNode(RequestId, Action, Payload, RequestingSocket);
+    return HandleAddMaterialNode(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("connect_material_pins"))
-    return HandleConnectMaterialPins(RequestId, Action, Payload, RequestingSocket);
+    return HandleConnectMaterialPins(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("remove_material_node"))
-    return HandleRemoveMaterialNode(RequestId, Action, Payload, RequestingSocket);
+    return HandleRemoveMaterialNode(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("break_material_connections"))
-    return HandleBreakMaterialConnections(RequestId, Action, Payload, RequestingSocket);
+    return HandleBreakMaterialConnections(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("get_material_node_details"))
-    return HandleGetMaterialNodeDetails(RequestId, Action, Payload, RequestingSocket);
+    return HandleGetMaterialNodeDetails(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("rebuild_material"))
-    return HandleRebuildMaterial(RequestId, Action, Payload, RequestingSocket);
+    return HandleRebuildMaterial(RequestId, Lower, Payload, RequestingSocket);
 
   // Struct Authoring (first-class Blueprint Struct support, issue #510)
   if (Lower == TEXT("create_struct") || Lower == TEXT("get_struct") ||

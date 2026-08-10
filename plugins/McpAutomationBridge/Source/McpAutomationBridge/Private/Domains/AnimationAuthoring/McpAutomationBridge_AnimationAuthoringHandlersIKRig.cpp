@@ -9,22 +9,23 @@ TSharedPtr<FJsonObject> HandleIKRigActions(const FString& SubAction, const TShar
 if (SubAction == TEXT("create_ik_rig"))
 {
 #if MCP_HAS_IKRIG_FACTORY && MCP_HAS_IKRIG
-    FString Name = GetStringFieldAnimAuth(Params, TEXT("name"), TEXT(""));
-    FString Path = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("path"), TEXT("/Game/Retargeting")));
-    FString SkeletalMeshPath = GetStringFieldAnimAuth(Params, TEXT("skeletalMeshPath"), TEXT(""));
-    FString SkeletonPath = GetStringFieldAnimAuth(Params, TEXT("skeletonPath"), TEXT(""));
-    bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+    FString Path = NormalizeAnimPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Retargeting")));
+    FString SkeletalMeshPath = GetJsonStringField(Params, TEXT("skeletalMeshPath"), TEXT(""));
+    FString SkeletonPath = GetJsonStringField(Params, TEXT("skeletonPath"), TEXT(""));
+    bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (Name.IsEmpty())
     {
         ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
     }
 
-    // Use static factory method to create IK Rig (UE 5.1+) or fallback to NewObject (UE 5.0)
+    // Use the static factory (UE 5.6+, it notifies the asset registry) or fall
+    // back to NewObject on older engines where CreateNewIKRigAsset is absent.
 #if MCP_HAS_IKRIG_CREATE_NEW_ASSET
     UIKRigDefinition* IKRig = MCP_IKRIG_CREATE_NEW_ASSET(Path, Name);
 #else
-    // UE 5.0: Create using NewObject since CreateNewIKRigAsset doesn't exist
+    // UE 5.0-5.5: Create using NewObject since CreateNewIKRigAsset doesn't exist
     UPackage* Package = CreatePackage(*FString(Path / Name));
     if (!Package)
     {
@@ -35,6 +36,11 @@ if (SubAction == TEXT("create_ik_rig"))
     {
         ANIM_ERROR_RESPONSE(TEXT("Failed to create IK Rig asset"), TEXT("CREATION_FAILED"));
     }
+    // CreateNewIKRigAsset notifies the asset registry for us; NewObject does not.
+    // Without this the rig exists on disk but is unregistered, so it does not
+    // appear in the Content Browser until an unrelated rescan happens to pick it
+    // up — the asset looked lost even though creation had reported success.
+    FAssetRegistryModule::AssetCreated(IKRig);
     // Mark the package as needing save
     Package->MarkPackageDirty();
 #endif
@@ -90,8 +96,8 @@ if (SubAction == TEXT("create_ik_rig"))
     if (SubAction == TEXT("add_ik_chain"))
     {
 #if MCP_HAS_IKRIG
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString ChainName = GetStringFieldAnimAuth(Params, TEXT("chainName"), TEXT(""));
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString ChainName = GetJsonStringField(Params, TEXT("chainName"), TEXT(""));
 
         if (ChainName.IsEmpty())
         {

@@ -67,6 +67,7 @@ const testCases = [
 
   // === BEHAVIOR TREE ===
   { scenario: 'ADD: add_composite_node', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'Sequence' }, expected: 'success' },
+  { scenario: 'ADD: add_composite_node named', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'Selector', nodeName: 'RootSelector' }, expected: 'success' },
   { scenario: 'ADD: add_task_node', toolName: 'manage_ai', arguments: { action: 'add_task_node', behaviorTreePath: '${captured:behaviorTreePath}', taskType: 'Wait' }, expected: 'success' },
   { scenario: 'ADD: add_decorator', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Blackboard' }, expected: 'success' },
   { scenario: 'ADD: add_service', toolName: 'manage_ai', arguments: { action: 'add_service', behaviorTreePath: '${captured:behaviorTreePath}', serviceType: 'DefaultFocus' }, expected: 'success' },
@@ -132,6 +133,10 @@ const testCases = [
 
   // === UTILITY / ALIASES ===
   { scenario: 'INFO: get_ai_info', toolName: 'manage_ai', arguments: { action: 'get_ai_info', controllerPath: '${captured:controllerPath}' }, expected: 'success' },
+  // `params` is the gateway passthrough merged into top-level arguments by
+  // consolidated-call-utils.ts for clients that cannot send arbitrary top-level
+  // fields; this case proves the merged form reaches the handler identically.
+  { scenario: 'INFO: get_ai_info via params passthrough', toolName: 'manage_ai', arguments: { action: 'get_ai_info', params: { controllerPath: '${captured:controllerPath}' } }, expected: 'success' },
   {
     scenario: 'CREATE: create_blackboard',
     toolName: 'manage_ai',

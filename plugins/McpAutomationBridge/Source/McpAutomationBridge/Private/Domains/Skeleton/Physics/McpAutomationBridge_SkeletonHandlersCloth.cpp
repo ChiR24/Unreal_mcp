@@ -25,8 +25,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
-    FString ClothAssetName = GetStringFieldSkel(Payload, TEXT("clothAssetName"));
+    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
+    FString ClothAssetName = GetJsonStringField(Payload, TEXT("clothAssetName"));
     int32 MeshLodIndex = 0;
     int32 SectionIndex = 0;
     int32 AssetLodIndex = 0;
@@ -151,7 +151,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssignClothAssetToMesh(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
 
     if (SkeletalMeshPath.IsEmpty())
     {

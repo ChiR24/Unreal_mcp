@@ -19,9 +19,9 @@ bool HandleAssignBlackboard(UMcpAutomationBridgeSubsystem* Self, const FString& 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("assign_blackboard"))
     {
-        FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
-        FString BehaviorTreePath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
-        FString BlackboardPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
+        FString ControllerPath = GetJsonStringField(Payload, TEXT("controllerPath"));
+        FString BehaviorTreePath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
+        FString BlackboardPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
 
         if (ControllerPath.IsEmpty() && !BehaviorTreePath.IsEmpty())
         {

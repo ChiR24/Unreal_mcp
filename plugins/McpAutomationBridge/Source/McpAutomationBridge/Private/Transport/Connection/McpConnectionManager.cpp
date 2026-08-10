@@ -1,4 +1,5 @@
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersCapabilityToken.h"
 
 FMcpConnectionManager::FMcpConnectionManager() {}
 
@@ -13,8 +14,9 @@ void FMcpConnectionManager::Initialize(
       EnvListenPorts = Settings->ListenPorts;
     if (!Settings->EndpointUrl.IsEmpty())
       EndpointUrl = Settings->EndpointUrl;
-    if (!Settings->CapabilityToken.IsEmpty())
-      CapabilityToken = Settings->CapabilityToken;
+    // Route through the capability-token store so auto-generation and token-file
+    // persistence are handled in one place, consistently for both transports.
+    CapabilityToken = McpCapabilityTokenStore::ResolveEffectiveToken(Settings);
     if (Settings->AutoReconnectDelay > 0.0f)
       AutoReconnectDelaySeconds = Settings->AutoReconnectDelay;
     if (Settings->ClientPort > 0)
@@ -144,7 +146,10 @@ void FMcpConnectionManager::Stop() {
     }
   }
   ActiveSockets.Empty();
-  AuthenticatedSockets.Empty();
+  {
+    FScopeLock Lock(&AuthSocketsMutex);
+    AuthenticatedSockets.Empty();
+  }
   {
     FScopeLock Lock(&LogSubscribersMutex);
     LogSubscriberSockets.Empty();

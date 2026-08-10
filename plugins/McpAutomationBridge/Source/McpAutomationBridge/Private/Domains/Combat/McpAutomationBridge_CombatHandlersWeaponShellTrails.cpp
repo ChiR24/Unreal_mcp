@@ -22,11 +22,10 @@ bool FCombatActionContext::HandleWeaponShellTrails() const
             return true;
         }
 
-        FString ShellMeshPath = GetStringFieldCombat(Payload, TEXT("shellMeshPath"));
-        double EjectionForce = GetNumberFieldCombat(Payload, TEXT("shellEjectionForce"), 300.0);
-        double ShellLifespan = GetNumberFieldCombat(Payload, TEXT("shellLifespan"), 5.0);
+        FString ShellMeshPath = GetJsonStringField(Payload, TEXT("shellMeshPath"));
+        double EjectionForce = GetJsonNumberField(Payload, TEXT("shellEjectionForce"), 300.0);
+        double ShellLifespan = GetJsonNumberField(Payload, TEXT("shellLifespan"), 5.0);
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("ShellMeshPath"), MakeStringPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("ShellEjectionForce"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("ShellLifespan"), MakeFloatPinType());
@@ -35,7 +34,6 @@ bool FCombatActionContext::HandleWeaponShellTrails() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -70,13 +68,6 @@ bool FCombatActionContext::HandleWeaponShellTrails() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Shell ejection configured."), Result);
         return true;
     }
-
-    // ============================================================
-    // 15.7 MELEE COMBAT
-    // ============================================================
-
-    // create_melee_trace
-
     if (SubAction == TEXT("configure_weapon_trails"))
     {
         if (BlueprintPath.IsEmpty())
@@ -92,11 +83,10 @@ bool FCombatActionContext::HandleWeaponShellTrails() const
             return true;
         }
 
-        FString TrailParticlePath = GetStringFieldCombat(Payload, TEXT("weaponTrailParticlePath"));
-        FString TrailStartSocket = GetStringFieldCombat(Payload, TEXT("weaponTrailStartSocket"), TEXT("WeaponBase"));
-        FString TrailEndSocket = GetStringFieldCombat(Payload, TEXT("weaponTrailEndSocket"), TEXT("WeaponTip"));
+        FString TrailParticlePath = GetJsonStringField(Payload, TEXT("weaponTrailParticlePath"));
+        FString TrailStartSocket = GetJsonStringField(Payload, TEXT("weaponTrailStartSocket"), TEXT("WeaponBase"));
+        FString TrailEndSocket = GetJsonStringField(Payload, TEXT("weaponTrailEndSocket"), TEXT("WeaponTip"));
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("WeaponTrailParticlePath"), MakeStringPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("WeaponTrailStartSocket"), MakeNamePinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("WeaponTrailEndSocket"), MakeNamePinType());
@@ -105,7 +95,6 @@ bool FCombatActionContext::HandleWeaponShellTrails() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())

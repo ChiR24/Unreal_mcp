@@ -93,9 +93,6 @@ bool HandleSetBlendMode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // set_shading_model
-  // --------------------------------------------------------------------------
   return false;
 }
 }

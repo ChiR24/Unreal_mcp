@@ -1,6 +1,7 @@
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import { ResponseFactory } from '../../../utils/responses/response-factory.js';
+import { createUnknownActionResponse } from '../foundation/dispatch/handler-error-context.js';
 import { handleTextureChannelAction } from './texture-channel-actions.js';
 import { handleTextureCompatAction } from './texture-compat-actions.js';
 import { handleTextureGenerationAction } from './texture-generation-actions.js';
@@ -41,7 +42,7 @@ export async function handleTextureTools(
       await handleTextureSettingsAction(normalizedAction, context) ??
       await handleTextureCompatAction(normalizedAction, context);
 
-    return result ?? ResponseFactory.error(`Unknown texture action: ${action}`, 'UNKNOWN_ACTION');
+    return result ?? createUnknownActionResponse(`Unknown texture action: ${action}`);
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     return ResponseFactory.error(`Texture operation failed: ${err.message}`, 'TEXTURE_ERROR');

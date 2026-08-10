@@ -30,7 +30,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                         TEXT("EDITOR_ONLY"));
     return true;
 #else
-    FString SubAction = GetStringFieldAI(Payload, TEXT("subAction"));
+    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
     if (SubAction.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,

@@ -36,7 +36,6 @@ bool HandleScsSetTransform(const FBlueprintActionContext &Context) {
       return true;
     }
 
-    // Get SCS with explicit null check
     USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
     if (!SCS) {
       Bridge.SendAutomationResponse(
@@ -46,12 +45,10 @@ bool HandleScsSetTransform(const FBlueprintActionContext &Context) {
       return true;
     }
 
-    // Find the SCS node by component name
     const TArray<USCS_Node *> &AllNodes = SCS->GetAllNodes();
     for (USCS_Node *Node : AllNodes) {
       if (Node && Node->GetVariableName().IsValid() &&
           Node->GetVariableName().ToString() == ComponentName) {
-        // Read transform from payload
         const TArray<TSharedPtr<FJsonValue>> *LocationArray = nullptr;
         const TArray<TSharedPtr<FJsonValue>> *RotationArray = nullptr;
         const TArray<TSharedPtr<FJsonValue>> *ScaleArray = nullptr;
@@ -93,7 +90,6 @@ bool HandleScsSetTransform(const FBlueprintActionContext &Context) {
           }
         }
 
-        // Compile and save the blueprint
         bool bCompiled = false;
         bool bSaved = false;
         if (bModified) {

@@ -35,9 +35,6 @@ bool HandleInspectSettingsAction(
                                    TEXT("Project settings retrieved"), Resp, FString());
             return true;
         }
-        // ---------------------------------------------------------------------
-        // get_editor_settings
-        // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("get_editor_settings")))
         {
             Resp->SetStringField(TEXT("action"), TEXT("inspect"));
@@ -62,9 +59,6 @@ bool HandleInspectSettingsAction(
                                    TEXT("Editor settings retrieved"), Resp, FString());
             return true;
         }
-        // ---------------------------------------------------------------------
-        // get_world_settings
-        // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("get_world_settings")))
         {
             UWorld* World = McpGetRuntimeInspectionWorld();
@@ -105,9 +99,6 @@ bool HandleInspectSettingsAction(
             }
             return true;
         }
-        // ---------------------------------------------------------------------
-        // get_viewport_info
-        // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("get_viewport_info")))
         {
             if (GEditor && GEditor->GetActiveViewport())
@@ -128,9 +119,6 @@ bool HandleInspectSettingsAction(
             }
             return true;
         }
-        // ---------------------------------------------------------------------
-        // get_selected_actors
-        // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("get_selected_actors")))
         {
             TArray<TSharedPtr<FJsonValue>> ActorsArray;
@@ -157,9 +145,6 @@ bool HandleInspectSettingsAction(
                                    TEXT("Selected actors retrieved"), Resp, FString());
             return true;
         }
-        // ---------------------------------------------------------------------
-        // get_scene_stats
-        // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("get_scene_stats")))
         {
             int32 ActorCount = 0;
@@ -177,9 +162,6 @@ bool HandleInspectSettingsAction(
                                    TEXT("Scene stats retrieved"), Resp, FString());
             return true;
         }
-        // ---------------------------------------------------------------------
-        // get_performance_stats
-        // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("get_performance_stats")))
         {
             // BUG-e85282: when a PIE/play session is active, measure THAT world (actor count + frame delta), not
@@ -227,6 +209,18 @@ bool HandleInspectSettingsAction(
             Resp->SetNumberField(TEXT("frameTimeMs"), FrameTimeMs);
             Resp->SetNumberField(TEXT("estimatedFps"), EstimatedFps);
             Resp->SetNumberField(TEXT("fps"), EstimatedFps);
+            // `fps` comes from the frame delta, which an idle/unfocused editor
+            // throttles hard — it read 3 FPS while the viewport showed 60 and
+            // the thread timings implied ~84. Publish the busiest thread and a
+            // throttle flag so a consumer can tell a real stall from an idle
+            // editor instead of reading `fps` as a performance verdict.
+            const double BusiestThreadMs = FMath::Max(
+                FMath::Max(GameThreadMs, RenderThreadMs), GPUFrameMs);
+            Resp->SetNumberField(TEXT("busiestThreadMs"), BusiestThreadMs);
+            Resp->SetNumberField(TEXT("threadTimeDerivedFps"),
+                                 BusiestThreadMs > 0.0 ? 1000.0 / BusiestThreadMs : 0.0);
+            Resp->SetBoolField(TEXT("frameDeltaMayBeEditorThrottled"),
+                               WorldType != TEXT("PIE"));
             Resp->SetNumberField(TEXT("gameThreadMs"), GameThreadMs);
             Resp->SetNumberField(TEXT("renderThreadMs"), RenderThreadMs);
             Resp->SetNumberField(TEXT("rhiThreadMs"), RHIThreadMs);
@@ -238,9 +232,6 @@ bool HandleInspectSettingsAction(
                                    TEXT("Performance stats retrieved"), Resp, FString());
             return true;
         }
-        // ---------------------------------------------------------------------
-        // get_memory_stats
-        // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("get_memory_stats")))
         {
             const FPlatformMemoryStats MemoryStats = FPlatformMemory::GetStats();

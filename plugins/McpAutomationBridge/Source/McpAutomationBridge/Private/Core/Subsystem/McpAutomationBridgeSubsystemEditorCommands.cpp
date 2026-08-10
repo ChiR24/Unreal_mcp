@@ -117,16 +117,18 @@ UBlueprint* UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(
         return nullptr;
     }
 
-    FString NormalizedPath = PackagePath;
-    NormalizedPath.ReplaceInline(TEXT("/Content"), TEXT("/Game"));
-    NormalizedPath.ReplaceInline(TEXT("\\"), TEXT("/"));
-    if (!NormalizedPath.StartsWith(TEXT("/Game")))
+    // Call the canonicalizer WHOLE rather than replaying its steps here. It
+    // normalizes separators BEFORE mapping the /Content alias; doing it the
+    // other way round left "\Content\TeamA\Thing" invisible to the alias map,
+    // so this executor rooted it at /Game/Content/... while the pre-queue gate
+    // had already resolved it to /Game/TeamA/... and admitted it. Guard and
+    // executor now cannot disagree, because they run the same function.
+    const FString NormalizedPath = McpCanonicalizeContentPath(PackagePath, /*bAssumeGameRoot=*/true);
+    if (NormalizedPath.IsEmpty())
     {
-        NormalizedPath = TEXT("/Game") / NormalizedPath;
-    }
-    while (NormalizedPath.EndsWith(TEXT("/")))
-    {
-        NormalizedPath.LeftChopInline(1);
+        OutError = FString::Printf(
+            TEXT("Package path is not a valid content path: %s"), *PackagePath);
+        return nullptr;
     }
 
     const FString FullPackageName = NormalizedPath / AssetName;

@@ -140,6 +140,7 @@ bool HandleGetInputInfo(
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("success"), true);
     Result->SetStringField(TEXT("assetPath"), SanitizedAssetPath);
     Result->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
     Result->SetStringField(TEXT("assetName"), Asset->GetName());

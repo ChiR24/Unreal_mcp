@@ -17,7 +17,6 @@ bool HandleAnimationSetBoneKeyAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Set a keyframe for a bone track
     FString AssetPath;
     Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
 

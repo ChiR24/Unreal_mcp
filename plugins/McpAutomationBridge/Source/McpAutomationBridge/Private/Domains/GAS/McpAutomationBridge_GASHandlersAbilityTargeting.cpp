@@ -37,9 +37,9 @@ bool HandleGASAbilityTargeting(const FGASRequestContext& Context, const FString&
 
         FString TargetingType = GetGASStringFieldWithFallback(Payload, TEXT("targetingType"), TEXT("targetingMode"), TEXT("self"));
         float TargetingRange = static_cast<float>(GetGASNumberFieldWithFallback(Payload, TEXT("targetingRange"), TEXT("targetRange"), 1000.0));
-        float AOERadius = static_cast<float>(GetNumberFieldGAS(Payload, TEXT("aoeRadius"), 0.0));
-        bool bRequiresLineOfSight = GetBoolFieldGAS(Payload, TEXT("requiresLineOfSight"), false);
-        float TargetingAngle = static_cast<float>(GetNumberFieldGAS(Payload, TEXT("targetingAngle"), 360.0));
+        float AOERadius = static_cast<float>(GetJsonNumberField(Payload, TEXT("aoeRadius"), 0.0));
+        bool bRequiresLineOfSight = GetJsonBoolField(Payload, TEXT("requiresLineOfSight"), false);
+        float TargetingAngle = static_cast<float>(GetJsonNumberField(Payload, TEXT("targetingAngle"), 360.0));
 
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint || !Blueprint->GeneratedClass)
@@ -49,14 +49,11 @@ bool HandleGASAbilityTargeting(const FGASRequestContext& Context, const FString&
             return true;
         }
 
-        // Verify this is a GameplayAbility blueprint
         if (!Blueprint->GeneratedClass->IsChildOf(UGameplayAbility::StaticClass()))
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint is not a GameplayAbility"), TEXT("INVALID_TYPE"));
             return true;
         }
-
-        // Add targeting configuration variables based on targeting type
 
         // 1. Targeting Type enum-like variable (stored as Name for flexibility)
         FEdGraphPinType NamePinType;
@@ -64,7 +61,6 @@ bool HandleGASAbilityTargeting(const FGASRequestContext& Context, const FString&
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("TargetingType"), NamePinType);
         FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("TargetingType"), nullptr, FText::FromString(TEXT("Targeting")));
 
-        // Set the default value
         for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
         {
             if (VarDesc.VarName == TEXT("TargetingType"))
@@ -174,8 +170,6 @@ bool HandleGASAbilityTargeting(const FGASRequestContext& Context, const FString&
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Targeting configuration complete"), Result);
         return true;
     }
-
-    // add_ability_task - REAL IMPLEMENTATION with AbilityTask class reference and configuration
 
     return false;
 }

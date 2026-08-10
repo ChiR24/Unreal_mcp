@@ -1,0 +1,68 @@
+// Material parameter, property, function, and instance records.
+// Path param names mirror the field the native handler reads, which is assetPath for some
+// actions and materialPath for others; the split is deliberate, not an inconsistency to tidy.
+
+import type { RecordSpec } from './builder.js';
+import { aliasCanonical, arrObj, bool, ex, LOW, num, READ, READ_POLICY, r, schema, str, WRITE, WRITE_POLICY } from './builder.js';
+
+const MAT = str('Material /Game asset path.');
+const MATFN = str('Material function /Game asset path.');
+const MINST = str('Material instance /Game asset path.');
+const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
+
+// get_material_info shares none of `OK`'s fields: the handler
+// (…/MaterialAuthoring/Queries/…GetMaterialInfo.cpp) emits assetType/nodeCount/
+// domain/blendMode/twoSided/parameters/inputs and never sets `details`. Under
+// the generic OK schema, output projection therefore discarded the entire
+// payload and "Material info retrieved." carried nothing — leaving no way to
+// verify anything create_material claims to have set.
+const MATERIAL_INFO_OK = schema({
+  success: bool('Operation succeeded.'),
+  assetType: str('Asset type: Material or MaterialFunction.'),
+  nodeCount: num('Number of expression nodes in the graph.'),
+  domain: str('Material domain, e.g. Surface, PostProcess, UI.'),
+  blendMode: str('Blend mode, e.g. Opaque, Masked, Translucent.'),
+  twoSided: bool('Whether the material renders two-sided.'),
+  description: str('Material function description.'),
+  exposeToLibrary: bool('Whether a material function is exposed to the library.'),
+  parameters: arrObj('Material parameters (name, type, nodeId).'),
+  inputs: arrObj('Material function inputs (name, type, nodeId).'),
+}, ['success']);
+
+const M = '/Game/Materials/M_Base';
+const MI = '/Game/Materials/MI_Base_Rusty';
+const MF = '/Game/Materials/Functions/MF_HeightBlend';
+const DONE = { success: true };
+
+export const MATERIAL_PARAMS_RECORDS: readonly RecordSpec[] = [
+  r('set_blend_mode', 'material', 'Set the blend mode of a material.', schema({ assetPath: MAT, blendMode: str('Blend mode.') }, ['assetPath', 'blendMode']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Switch a material to masked blending', { assetPath: M, blendMode: 'Masked' }, DONE)] }),
+  r('set_shading_model', 'material', 'Set the shading model of a material.', schema({ assetPath: MAT, shadingModel: str('Shading model.') }, ['assetPath', 'shadingModel']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Use the default lit shading model', { assetPath: M, shadingModel: 'DefaultLit' }, DONE)] }),
+  r('set_material_domain', 'material', 'Set the material domain of a material.', schema({ assetPath: MAT, materialDomain: str('Material domain.') }, ['assetPath', 'materialDomain']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Keep a material in the surface domain', { assetPath: M, materialDomain: 'Surface' }, DONE)] }),
+  r('compile_material', 'material', 'Compile a material.', schema({ assetPath: MAT }, ['assetPath']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', normalization: aliasCanonical('rebuild_material'), examples: [ex('Compile after editing the graph', { assetPath: M }, DONE)] }),
+  r('get_material_info', 'material', 'Retrieve material information.', schema({ assetPath: MAT }, ['assetPath']), MATERIAL_INFO_OK, READ, READ_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Read a material\'s configuration', { assetPath: M }, { success: true, assetType: 'Material', nodeCount: 4, domain: 'Surface', blendMode: 'Opaque', twoSided: false })] }),
+  r('set_two_sided', 'material', 'Set the two-sided flag on a material.', schema({ assetPath: MAT, value: bool('Two-sided value.') }, ['assetPath', 'value']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Render a material from both sides', { assetPath: M, value: true }, DONE)] }),
+  r('add_function_input', 'material', 'Add a function input to a material function.', schema({ assetPath: MATFN, inputName: str('Input name.'), inputType: str('Input type.'), x: num('Node X position (preferred spelling; posX is the fallback).'), y: num('Node Y position (preferred spelling; posY is the fallback).') }, ['assetPath', 'inputName']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Add a scalar height input', { assetPath: MF, inputName: 'Height', inputType: 'Scalar', x: -400, y: 0 }, DONE)] }),
+  r('add_function_output', 'material', 'Add a function output to a material function.', schema({ assetPath: MATFN, inputName: str('Output name.'), inputType: str('Output type.'), x: num('Node X position (preferred spelling; posX is the fallback).'), y: num('Node Y position (preferred spelling; posY is the fallback).') }, ['assetPath', 'inputName']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Add the blended result output', { assetPath: MF, inputName: 'Result', inputType: 'Scalar', x: 400, y: 0 }, DONE)] }),
+  r('use_material_function', 'material', 'Insert a material function reference into a material graph.', schema({ materialPath: MAT, functionPath: str('Material function /Game path.'), x: num('Node X position (preferred spelling; posX is the fallback).'), y: num('Node Y position (preferred spelling; posY is the fallback).') }, ['materialPath', 'functionPath']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Reference a blend function from a material', { materialPath: M, functionPath: MF, x: -200, y: 500 }, DONE)] }),
+  r('get_material_function_info', 'material', 'Retrieve information about a material function.', schema({ assetPath: MATFN }, ['assetPath']), OK, READ, READ_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Read a function\'s inputs and outputs', { assetPath: MF }, DONE)] }),
+  r('set_scalar_parameter_value', 'material', 'Set a scalar parameter value on a material instance.', schema({ assetPath: MINST, parameterName: str('Parameter name.'), value: num('Scalar value.') }, ['assetPath', 'parameterName', 'value']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Override roughness on an instance', { assetPath: MI, parameterName: 'Roughness', value: 0.8 }, DONE)] }),
+  r('set_vector_parameter_value', 'material', 'Set a vector parameter value on a material instance.', schema({ assetPath: MINST, parameterName: str('Parameter name.'), value: { description: 'Vector value.' } }, ['assetPath', 'parameterName', 'value']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Tint an instance rust-orange', { assetPath: MI, parameterName: 'BaseTint', value: [0.55, 0.27, 0.1, 1] }, DONE)] }),
+  r('set_texture_parameter_value', 'material', 'Set a texture parameter value on a material instance.', schema({ assetPath: MINST, parameterName: str('Parameter name.'), texturePath: str('Texture /Game path.') }, ['assetPath', 'parameterName', 'texturePath']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Swap the base colour texture', { assetPath: MI, parameterName: 'BaseColor', texturePath: '/Game/Textures/T_Rust' }, DONE)] }),
+  r('add_landscape_layer', 'material', 'Add a landscape layer to a landscape material.', schema({ materialPath: MAT, layerName: str('Layer name.') }, ['materialPath', 'layerName']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Add a grass weight-blended layer', { materialPath: '/Game/Materials/Landscape/M_Landscape', layerName: 'Grass' }, DONE)] }),
+  r('configure_layer_blend', 'material', 'Configure layer blend settings on a landscape material.', schema({ materialPath: MAT, layers: arrObj('Layer blend definitions.'), blendType: str('Blend type.') }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Weight-blend the landscape layers', { materialPath: '/Game/Materials/Landscape/M_Landscape', blendType: 'LB_WeightBlend' }, DONE)] })
+];

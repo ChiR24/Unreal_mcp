@@ -43,9 +43,6 @@ bool HandleAddStaticSwitchParameter(UMcpAutomationBridgeSubsystem* Bridge, const
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_math_node
-  // --------------------------------------------------------------------------
   return false;
 }
 }

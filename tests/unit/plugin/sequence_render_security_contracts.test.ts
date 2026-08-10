@@ -8,8 +8,15 @@ import {
   publicSource,
 } from './sequence_contract_test_utils.js';
 
+// Canonical version source: package.json. Hardcoding the literal here would
+// silently desync when the release is bumped; derive it instead so the server
+// version metadata assertion stays meaningful across releases.
+const CANONICAL_VERSION = JSON.parse(
+  readFileSync(resolve(process.cwd(), 'package.json'), 'utf8'),
+).version as string;
+
 const nativeSchemaScenario = (): string => readFileSync(
-  resolve(process.cwd(), 'scripts', 'sequence-native-direct-schema.mjs'),
+  resolve(process.cwd(), 'tests', 'fixtures', 'sequence-render-security', 'sequence-native-direct-schema.mjs'),
   'utf8',
 );
 
@@ -216,7 +223,7 @@ describe('sequence render and native security contracts', () => {
       'sequence-native-direct-queue-restore.mjs',
     ].map((fileName) =>
       readFileSync(
-        resolve(process.cwd(), 'scripts', fileName),
+        resolve(process.cwd(), 'tests', 'fixtures', 'sequence-render-security', fileName),
         'utf8',
       ),
     ).join('\n');
@@ -235,7 +242,9 @@ describe('sequence render and native security contracts', () => {
     const nativeScenario = readFileSync(
       resolve(
         process.cwd(),
-        'scripts',
+        'tests',
+        'fixtures',
+        'sequence-render-security',
         'sequence-native-direct-render-job.mjs',
       ),
       'utf8',
@@ -319,6 +328,32 @@ describe('sequence render and native security contracts', () => {
     expect(outputProof).toContain('TEXT("renderPasses")');
   });
 
+  it('exposes Movie Render Queue allowlisted executor contract from case aggregation', () => {
+    const happyCases = readFileSync(
+      resolve(
+        process.cwd(),
+        'tests',
+        'mcp-tools',
+        'utility',
+        'cinematics-cases',
+        'movie-render.cjs',
+      ),
+      'utf8',
+    );
+    const executor = privateSource(
+      'Domains',
+      'Sequence',
+      'MovieRender',
+      'McpAutomationBridge_SequenceMovieRenderExecutor.cpp',
+    );
+
+    expect(happyCases).toContain('MoviePipelineInProcessExecutor');
+    expect(happyCases).toContain(
+      '/MovieRenderPipeline/Blueprints/DefaultBurnIn.DefaultBurnIn_C',
+    );
+    expect(executor).toContain('MovieRenderExecutorClassAllowlist');
+  });
+
   it('rejects non-post-process materials before adding custom render passes', () => {
     const passes = privateSource(
       'Domains',
@@ -340,7 +375,9 @@ describe('sequence render and native security contracts', () => {
     const nativeCases = readFileSync(
       resolve(
         process.cwd(),
-        'scripts',
+        'tests',
+        'fixtures',
+        'sequence-render-security',
         'sequence-native-direct-render-job.mjs',
       ),
       'utf8',
@@ -393,41 +430,54 @@ describe('sequence render and native security contracts', () => {
     const definition = privateSource(
       'MCP',
       'Tools',
-      'Utility',
-      'McpTool_ManageSequence.cpp',
+      'McpGeneratedParentRegistry_Utility_Sequence.cpp',
     );
-    const transport = privateSource(
+    // Task 30 cutover: the legacy direct-call ValidateToolArguments tail in
+    // McpNativeTransportJsonRpc.cpp is gone. Strict argument validation now runs on
+    // the Task-27 canonical gateway execute path, which validates each request
+    // against the capability's exact input schema before anything is queued.
+    const gatewayExecute = privateSource(
       'MCP',
-      'Transport',
-      'McpNativeTransportJsonRpc.cpp',
+      'Execute',
+      'McpNativeTransportGatewayExecute.cpp',
+    );
+    const gatewayValidation = privateSource(
+      'MCP',
+      'Execute',
+      'McpNativeGatewayValidation.cpp',
     );
 
     expect(definition).toContain('EnforceStrictArguments() const override');
-    expect(transport).toContain('ValidateToolArguments(');
+    expect(gatewayExecute).toContain('ValidateAndResolveGatewayExecute(');
+    expect(gatewayValidation).toContain('McpValidateObjectAgainstCanonicalSchema');
+    expect(gatewayValidation).toContain('Request.Record->InputSchema');
+    // Strict validation gates the queue: a bad argument never reaches StreamToolCall.
+    expect(gatewayExecute.indexOf('ValidateAndResolveGatewayExecute(')).toBeLessThan(
+      gatewayExecute.indexOf('StreamToolCall('),
+    );
 
-    const validation = privateSource(
+    // Task 30: the legacy transport validator is deleted. Strict per-action
+    // validation runs through the canonical gateway schema keyword validator,
+    // which keeps the exact-integer JSON-number rule (no float-tolerance slop).
+    const schemaKeywords = privateSource(
       'MCP',
-      'Transport',
-      'McpNativeTransportArgumentValidation.cpp',
+      'Execute',
+      'McpNativeGatewaySchemaKeywords.cpp',
     );
     const schemaFields = privateSource(
       'MCP',
       'Tools',
-      'Utility',
-      'McpTool_ManageSequenceSchemaFields.cpp',
+      'McpGeneratedParentRegistry_Utility_Sequence.cpp',
     );
-    expect(validation).toContain('ValidateValueAgainstSchema');
-    expect(validation).toContain('INVALID_TOOL_ARGUMENT');
-    expect(validation).toContain('UNKNOWN_TOOL_ARGUMENT');
-    expect(validation).toContain('FMath::TruncToDouble');
-    expect(validation).toContain('9007199254740991.0');
-    expect(validation).not.toContain('FMath::IsNearlyEqual');
+    expect(schemaKeywords).toContain('MaxExactJsonInteger = 9007199254740991.0');
+    expect(schemaKeywords).toContain('FMath::TruncToDouble');
+    expect(schemaKeywords).not.toContain('FMath::IsNearlyEqual');
     expect(schemaFields).toContain('.Object(TEXT("settings")');
     expect(schemaFields).not.toContain(
       '.FreeformObject(TEXT("settings")',
     );
     expect(schemaFields).toContain('.Object(TEXT("burnIn")');
-    expect(validation).toContain('case EJson::Null:');
+    expect(schemaKeywords).toContain('case EJson::Null:');
   });
 
   it('bounds native sessions, pending calls, and the editor request queue', () => {
@@ -473,7 +523,10 @@ describe('sequence render and native security contracts', () => {
     expect(lifecycle).toContain('bInAllowNonLoopback');
     expect(lifecycle).toContain('!bIsLoopback && !bAllowNonLoopback');
     expect(lifecycle).toContain('falling back to 127.0.0.1');
-    expect(lifecycle).toContain('explicitly allowed non-loopback address');
+    // Fail-closed LAN/token coupling: a non-loopback bind is refused unless the
+    // capability token is required, so a LAN-exposed surface is never unauthenticated.
+    expect(lifecycle).toContain('refusing to bind native MCP to non-loopback');
+    expect(lifecycle).toContain('bRequireCapabilityToken');
     expect(jsonRpc).toContain('FScopeLock SessionLock(&SessionMutex)');
     expect(jsonRpc).toContain('ActiveSessions.Contains(SessionId)');
     expect(jsonRpc.indexOf('ActiveSessions.Contains(SessionId)')).toBeLessThan(
@@ -485,7 +538,7 @@ describe('sequence render and native security contracts', () => {
     const transport = privateSource(
       'MCP',
       'Transport',
-      'McpNativeTransport.h',
+      'McpNativeTransportConnectionTypes.h',
     );
     const pending = privateSource(
       'MCP',
@@ -510,22 +563,24 @@ describe('sequence render and native security contracts', () => {
   });
 
   it('declares frame and resolution inputs as integers in both schemas', () => {
-    const typeScript = readFileSync(
-      resolve(
-        process.cwd(),
-        'src',
-        'tools',
-        'definitions',
-        'utility',
-        'manage-sequence-tool.ts',
+    // The hand-written definitions module was removed; the canonical TypeScript
+    // surface is now the generated gateway manifest projected from the
+    // capability records, so assert its structural types rather than source text.
+    const manifest = JSON.parse(
+      readFileSync(
+        resolve(process.cwd(), 'src', 'gateway', 'gateway-manifest.generated.json'),
+        'utf8',
       ),
-      'utf8',
+    ) as { tools: { name: string; inputSchema: { properties: Record<string, { type?: string }> } }[] };
+    const sequenceTool = manifest.tools.find(
+      (tool) => tool.name === 'manage_sequence',
     );
+    if (!sequenceTool) throw new Error('manage_sequence missing from gateway manifest');
+    const properties = sequenceTool.inputSchema.properties;
     const native = privateSource(
       'MCP',
       'Tools',
-      'Utility',
-      'McpTool_ManageSequenceSchemaFields.cpp',
+      'McpGeneratedParentRegistry_Utility_Sequence.cpp',
     );
 
     for (const field of [
@@ -538,33 +593,63 @@ describe('sequence render and native security contracts', () => {
       'playbackStart',
       'playbackEnd',
     ]) {
-      expect(typeScript).toContain(`${field}: commonSchemas.integerProp`);
+      expect(properties[field]?.type).toBe('integer');
       expect(native).toContain(`.Integer(TEXT("${field}")`);
       expect(native).not.toContain(`.Number(TEXT("${field}")`);
     }
   });
 
-  it('recycles only unused native sessions and protects active clients', () => {
+  // Recycling used to accept ONLY never-used sessions, so a client that made
+  // one request and then vanished without DELETE held its slot until the 1-hour
+  // inactivity timer — and once every slot was held that way, initialize
+  // hard-failed for every new client. A second tier now reclaims idle sessions
+  // too, but must never take one that still owns a live stream.
+  it('prefers unused native sessions, then idle ones, and never evicts a streaming client', () => {
     const discovery = privateSource(
       'MCP',
       'Transport',
       'McpNativeTransportToolDiscovery.cpp',
     );
 
-    expect(discovery).toContain('EvictedSessionId');
-    expect(discovery).toContain('!RateState->bHasClientActivity');
-    expect(discovery).toContain('InitializationCompletedAt');
-    expect(discovery).toContain('AbandonedSessionGraceSeconds');
-    expect(discovery).toContain('ActiveSessions.Remove(EvictedSessionId)');
-    expect(discovery).toContain('TEXT("Native MCP session limit reached")');
-    expect(discovery).not.toContain('EvictedSessionId = OldestSessionId');
+    // Slice the HandleInitialize body so the ordering assertions below prove
+    // same-function scope (a whole-file [\s\S]* regex would match across
+    // unrelated functions). The function body ends at the first column-0 '}'.
+    const initializeStart = discovery.indexOf(
+      'FString FMcpNativeTransport::HandleInitialize(',
+    );
+    expect(initializeStart).toBeGreaterThanOrEqual(0);
+    const initializeBody = discovery.slice(
+      initializeStart,
+      discovery.indexOf('\n}\n', initializeStart),
+    );
+
+    expect(initializeBody).toContain('EvictedSessionId');
+    expect(initializeBody).toContain('!RateState->bHasClientActivity');
+    expect(initializeBody).toContain('InitializationCompletedAt');
+    expect(initializeBody).toContain('AbandonedSessionGraceSeconds');
+    expect(initializeBody).toContain('ActiveSessions.Remove(EvictedSessionId)');
+    expect(initializeBody).toContain('TEXT("Native MCP session limit reached');
+    expect(initializeBody).not.toContain('EvictedSessionId = OldestSessionId');
+
+    // Second tier: idle-threshold gated, and live streams are excluded.
+    expect(initializeBody).toContain('IdleSessionReclaimSeconds');
+    expect(initializeBody).toContain('SessionsWithLiveConnections.Contains');
+    // Gathered before the session lock — the collection mutexes must never be
+    // taken while SessionMutex is held.
+    const collectIndex = initializeBody.indexOf(
+      'CollectSessionsWithLiveConnections(SessionsWithLiveConnections);',
+    );
+    const lockIndex = initializeBody.indexOf('FScopeLock Lock(&SessionMutex)');
+    expect(collectIndex).toBeGreaterThanOrEqual(0);
+    expect(lockIndex).toBeGreaterThanOrEqual(0);
+    expect(collectIndex).toBeLessThan(lockIndex);
   });
 
   it('atomically reserves notification streams and tears down sessions', () => {
     const transport = privateSource(
       'MCP',
       'Transport',
-      'McpNativeTransport.h',
+      'McpNativeTransportConnectionTypes.h',
     );
     const notifications = privateSource(
       'MCP',
@@ -758,7 +843,9 @@ describe('sequence render and native security contracts', () => {
     const nativeRender = readFileSync(
       resolve(
         process.cwd(),
-        'scripts',
+        'tests',
+        'fixtures',
+        'sequence-render-security',
         'sequence-native-direct-render-sequence.mjs',
       ),
       'utf8',
@@ -786,12 +873,15 @@ describe('sequence render and native security contracts', () => {
     const transport = privateSource(
       'MCP',
       'Transport',
-      'McpNativeTransport.h',
+      'McpNativeTransportConnectionTypes.h',
     );
-    const jsonRpc = privateSource(
+    // Task 30 cutover: the legacy direct-call timeout tail in McpNativeTransportJsonRpc.cpp
+    // is gone. start_render now streams through the gateway execute path, so the
+    // per-tool timeout is resolved in StreamToolCall via the shared timeout policy.
+    const gatewayStream = privateSource(
       'MCP',
       'Transport',
-      'McpNativeTransportJsonRpc.cpp',
+      'McpNativeTransportGatewayStream.cpp',
     );
     const policy = privateSource(
       'MCP',
@@ -808,8 +898,9 @@ describe('sequence render and native security contracts', () => {
     expect(policy).toContain('ResolveToolCallTimeoutSeconds');
     expect(policy).toContain('NativeResponseGraceMs');
     expect(policy).toContain('MaxMovieRenderCancellationWaitMs');
-    expect(jsonRpc).toContain('MaxMovieRenderCancellationWaitMs');
-    expect(jsonRpc).toContain('Conn->TimeoutSeconds');
+    expect(gatewayStream).toContain('ResolveToolCallTimeoutSeconds');
+    expect(gatewayStream).toContain('MaxMovieRenderCancellationWaitMs');
+    expect(gatewayStream).toContain('Conn->TimeoutSeconds');
     expect(cleanup).toContain('Conn->TimeoutSeconds');
     expect(cleanup).toContain('CancelAutomationRequest(Entry.Key)');
     expect(cleanup.indexOf('CancelAutomationRequest(Entry.Key)')).toBeLessThan(
@@ -893,8 +984,8 @@ describe('sequence render and native security contracts', () => {
     expect(connection).not.toContain('*HttpReq.SessionId');
     expect(cleanup).not.toContain('*Stream->SessionId');
     expect(notifications).not.toContain('*SessionId');
-    expect(transport).toContain('ServerVersion = TEXT("0.5.31")');
-    expect(JSON.parse(serverInfo).version).toBe('0.5.31');
+    expect(transport).toContain(`ServerVersion = TEXT("${CANONICAL_VERSION}")`);
+    expect(JSON.parse(serverInfo).version).toBe(CANONICAL_VERSION);
   });
 
   it('bounds render filename zero padding', () => {

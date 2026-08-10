@@ -16,10 +16,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateVirtualBone(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
-    FString SourceBone = GetStringFieldSkel(Payload, TEXT("sourceBoneName"));
-    FString TargetBone = GetStringFieldSkel(Payload, TEXT("targetBoneName"));
-    FString VirtualBoneName = GetStringFieldSkel(Payload, TEXT("boneName"));
+    FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
+    FString SourceBone = GetJsonStringField(Payload, TEXT("sourceBoneName"));
+    FString TargetBone = GetJsonStringField(Payload, TEXT("targetBoneName"));
+    FString VirtualBoneName = GetJsonStringField(Payload, TEXT("boneName"));
 
     if (SkeletonPath.IsEmpty())
     {
@@ -91,9 +91,9 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameBone(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
-    FString BoneName = GetStringFieldSkel(Payload, TEXT("boneName"));
-    FString NewBoneName = GetStringFieldSkel(Payload, TEXT("newBoneName"));
+    FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
+    FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
+    FString NewBoneName = GetJsonStringField(Payload, TEXT("newBoneName"));
 
     if (SkeletonPath.IsEmpty() || BoneName.IsEmpty() || NewBoneName.IsEmpty())
     {
@@ -157,8 +157,8 @@ bool UMcpAutomationBridgeSubsystem::HandleListVirtualBones(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 #if WITH_EDITOR
-    FString SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
-    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
+    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
 
     USkeleton* Skeleton = nullptr;
 
@@ -221,8 +221,8 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteVirtualBone(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 #if WITH_EDITOR
-    FString SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
-    FString VirtualBoneName = GetStringFieldSkel(Payload, TEXT("virtualBoneName"));
+    FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
+    FString VirtualBoneName = GetJsonStringField(Payload, TEXT("virtualBoneName"));
 
     if (SkeletonPath.IsEmpty() || VirtualBoneName.IsEmpty())
     {

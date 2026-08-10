@@ -18,7 +18,6 @@ bool HandleAnimationCreatePoseLibraryAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Create a pose library asset
     FString LibraryName;
     if (!Payload->TryGetStringField(TEXT("name"), LibraryName) || LibraryName.IsEmpty()) {
       Message = TEXT("name required for create_pose_library");

@@ -22,17 +22,11 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"  // MUST be first - UE version compatibility macros
 
-// -----------------------------------------------------------------------------
-// Core Includes
-// -----------------------------------------------------------------------------
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-// -----------------------------------------------------------------------------
-// Engine Includes
-// -----------------------------------------------------------------------------
 #include "Dom/JsonObject.h"
 #include "EngineUtils.h"
 #include "GameplayDebuggerCategory.h"
@@ -60,14 +54,12 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    // Validate action
     const FString LowerAction = Action.ToLower();
     if (LowerAction != TEXT("manage_debug") && LowerAction != TEXT("spawn_category"))
     {
         return false;
     }
 
-    // Validate payload
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -75,7 +67,6 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
         return true;
     }
 
-    // Extract subaction
     FString SubAction = GetJsonStringField(Payload, TEXT("subAction")).ToLower();
     if (SubAction.IsEmpty())
     {
@@ -87,16 +78,12 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
         SubAction = TEXT("spawn_category");
     }
 
-    // -------------------------------------------------------------------------
-    // spawn_category: Toggle gameplay debugger category
-    // -------------------------------------------------------------------------
     if (SubAction == TEXT("spawn_category"))
     {
         // Accept both 'categoryName' and 'category' for flexibility
         FString CategoryName;
         if (!Payload->TryGetStringField(TEXT("categoryName"), CategoryName))
         {
-            // Fallback to 'category' field if 'categoryName' not found
             Payload->TryGetStringField(TEXT("category"), CategoryName);
         }
 
@@ -216,7 +203,6 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
             }
         }
 
-        // Build response
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("categoryName"), CategoryName);
         Result->SetBoolField(TEXT("enabled"), bEnabled);
@@ -240,7 +226,6 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
         return true;
     }
 
-    // Unknown subaction
     SendAutomationError(RequestingSocket, RequestId,
         TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;

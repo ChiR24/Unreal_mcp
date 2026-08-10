@@ -668,12 +668,18 @@ function createRenderingAdversarialCases(ctx) {
     // outside /Game (or surface a controlled error). Any test that lets
     // `..` or absolute host paths reach engine code would catch a
     // regression of the asset-path security boundary.
-    createNamedActionCase('Adversarial: reject parent-segment in render target packagePath', 'create_render_target', {
-      name: 'EvilRT',
-      width: 64,
-      height: 64,
-      packagePath: '/Game/../../../etc/Evil'
-    }, { expected: errorExpected('not found', 'invalid', 'unsupported') }),
+    {
+      scenario: 'Adversarial: reject parent-segment in render target path',
+      toolName: 'manage_asset',
+      arguments: {
+        action: 'create_render_target',
+        name: 'EvilRT',
+        width: 64,
+        height: 64,
+        path: '/Game/../../../etc/Evil'
+      },
+      expected: errorExpected('not found', 'invalid', 'unsupported')
+    },
     createNamedActionCase('Adversarial: reject parent-segment in LUT asset path', 'set_pp_lut', {
       actorName: ctx.postProcessVolume,
       lutPath: '/Game/../../Engine/Content/EngineMaterials/Default'

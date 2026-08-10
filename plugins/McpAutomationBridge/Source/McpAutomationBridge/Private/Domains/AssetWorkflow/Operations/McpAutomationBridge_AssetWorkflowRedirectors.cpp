@@ -1,5 +1,6 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -69,9 +70,7 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
 
   // Normalize path
   FString NormalizedPath = SanitizedPath;
-  if (NormalizedPath.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) {
-    NormalizedPath = FString::Printf(TEXT("/Game%s"), *NormalizedPath.RightChop(8));
-  }
+  McpAssetPathCanonical::MapContentRootInline(NormalizedPath);
 
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
   AsyncTask(ENamedThreads::GameThread, [WeakThis, RequestId, NormalizedPath,
@@ -185,7 +184,3 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
   return true;
 #endif
 }
-
-// ============================================================================
-// 2. SOURCE CONTROL CHECKOUT
-// ============================================================================

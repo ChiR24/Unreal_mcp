@@ -103,6 +103,24 @@ describe('normalizePathFields', () => {
     expect(normalized.barePath).toBe('/Game/Foo/Bar');
   });
 
+  it('maps a bare root alias with no subpath', () => {
+    const normalized = normalizePathFields({
+      contentRoot: '/Content',
+      windowsContentRoot: '\\Content'
+    }, ['contentRoot', 'windowsContentRoot']);
+
+    expect(normalized.contentRoot).toBe('/Game');
+    expect(normalized.windowsContentRoot).toBe('/Game');
+  });
+
+  it('leaves a folder that merely starts with Content alone', () => {
+    const normalized = normalizePathFields({
+      siblingPath: '/ContentOther/Foo'
+    }, ['siblingPath']);
+
+    expect(normalized.siblingPath).toBe('/ContentOther/Foo');
+  });
+
   it('blocks parent-directory path segments after alias normalization', () => {
     for (const value of ['..', 'Foo/..', 'Foo\\..', '/Game/..', '/Game/Foo/../Bar']) {
       const normalized = normalizePathFields({ assetPath: value }, ['assetPath']);
@@ -225,7 +243,7 @@ describe('executeAutomationRequest console command validation', () => {
     const { tools, sendAutomationRequest } = createConnectedTools();
 
     await expect(executeAutomationRequest(tools, 'console_command', { command: 'py print("unsafe")' }))
-      .rejects.toThrow(/Python console commands are blocked/);
+      .rejects.toThrow(/Dangerous command blocked/);
 
     expect(sendAutomationRequest).not.toHaveBeenCalled();
   });
@@ -257,7 +275,7 @@ describe('executeAutomationRequest console command validation', () => {
 
     await executeAutomationRequest(tools, 'console_command', { command: 'stat fps' });
 
-    expect(sendAutomationRequest).toHaveBeenCalledWith('console_command', { command: 'stat fps' }, {});
+    expect(sendAutomationRequest).toHaveBeenCalledWith('console_command', { command: 'stat fps' }, { timeoutMs: expect.any(Number) });
   });
 
   it('forwards timeoutMs to Unreal only when explicitly requested', async () => {

@@ -52,7 +52,6 @@ bool HandleFunctionInputsOutputs(UMcpAutomationBridgeSubsystem* Bridge, const FS
               Func, UMaterialExpressionFunctionInput::StaticClass(), NAME_None,
               RF_Transactional);
       Input->InputName = FName(*InputName);
-      // Set input type
       if (InputType == TEXT("Float1") || InputType == TEXT("Scalar"))
         Input->InputType = EFunctionInputType::FunctionInput_Scalar;
       else if (InputType == TEXT("Float2") || InputType == TEXT("Vector2"))
@@ -101,9 +100,6 @@ bool HandleFunctionInputsOutputs(UMcpAutomationBridgeSubsystem* Bridge, const FS
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // use_material_function (host can be UMaterial OR UMaterialFunction)
-  // --------------------------------------------------------------------------
   return false;
 }
 }

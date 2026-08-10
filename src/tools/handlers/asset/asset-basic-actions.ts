@@ -5,6 +5,7 @@ import { executeAutomationRequest, getTimeoutMs } from '../foundation/dispatch/c
 import {
   extractOptionalBoolean,
   extractOptionalNumber,
+  extractOptionalObject,
   extractOptionalString,
   extractString,
   normalizeArgs
@@ -26,46 +27,105 @@ function normalizeDeletePath(path: string): string {
   return normalized;
 }
 
+const ASSET_LIST_DEFAULT_LIMIT = 50;
+const ASSET_LIST_MAX_LIMIT = 500;
+const ASSET_LIST_MIN_LIMIT = 1;
+
+function resolveNumeric(raw: unknown): number | undefined {
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : undefined;
+  if (typeof raw === 'string' && raw.trim() !== '' && Number.isFinite(Number(raw))) return Number(raw);
+  return undefined;
+}
+
+function normalizeListLimit(raw: unknown): number {
+  const value = resolveNumeric(raw);
+  if (value === undefined) return ASSET_LIST_DEFAULT_LIMIT;
+  return Math.min(ASSET_LIST_MAX_LIMIT, Math.max(ASSET_LIST_MIN_LIMIT, Math.floor(value)));
+}
+
+function normalizeListOffset(raw: unknown): number {
+  const value = resolveNumeric(raw);
+  if (value === undefined || value < 0) return 0;
+  return Math.floor(value);
+}
+
 export async function handleListAssets(context: AssetHandlerContext): Promise<Record<string, unknown>> {
   const params = normalizeArgs(context.args, [
     { key: 'path', aliases: ['directory', 'directoryPath', 'assetPath'], default: '/Game' },
-    { key: 'limit', default: 50 },
+    { key: 'limit' },
+    { key: 'offset' },
+    { key: 'cursor' },
     { key: 'recursive', aliases: ['recursivePaths'], default: false },
-    { key: 'depth', default: undefined }
+    { key: 'depth' },
+    { key: 'includeTags', default: false },
+    { key: 'includeMetadata', aliases: ['withMetadata'], default: undefined }
   ]);
-  const path = normalizeAndSanitizeAssetPath(extractOptionalString(params, 'path') ?? '/Game');
-  const limit = extractOptionalNumber(params, 'limit') ?? 50;
+
+  const pagination = extractOptionalObject(params, 'pagination');
+
+  const limit = normalizeListLimit(params['limit'] ?? (pagination ? pagination['limit'] : undefined));
+  const offset = normalizeListOffset(params['offset'] ?? (pagination ? pagination['offset'] : undefined));
+  const cursor = extractOptionalString(params, 'cursor');
   const recursive = extractOptionalBoolean(params, 'recursive') ?? false;
   const depth = extractOptionalNumber(params, 'depth');
+  const includeTags = extractOptionalBoolean(params, 'includeTags') ?? false;
+  const includeMetadata = extractOptionalBoolean(params, 'includeMetadata');
+
+  // Canonical path normalization; also throws on traversal attempts, which the
+  // domain dispatcher turns into a structured SECURITY_VIOLATION error.
+  const path = normalizeAndSanitizeAssetPath(extractOptionalString(params, 'path') ?? '/Game');
+
   const res = await executeAutomationRequest(context.tools, 'list', {
     path,
     recursive: recursive === true || (depth !== undefined && depth > 0),
-    depth
+    depth,
+    limit,
+    offset,
+    cursor: cursor ?? undefined,
+    includeTags,
+    includeMetadata
   }) as AssetListResponse;
+
+  if (!res || res.success === false) {
+    return ResponseFactory.errorWithCode(
+      typeof res.error === 'string' ? res.error : 'LIST_FAILED',
+      typeof res.message === 'string' ? res.message : 'Asset listing failed',
+      { path, cursor: cursor ?? null }
+    );
+  }
+
   const assets: AssetListItem[] = Array.isArray(res.assets)
     ? res.assets
     : (Array.isArray(res.result) ? res.result : (res.result?.assets || []));
   const folders: string[] = Array.isArray(res.folders) ? res.folders : (Array.isArray(res.result) ? [] : (res.result?.folders || []));
-  const limitedAssets = assets.slice(0, limit);
-  const remaining = Math.max(0, assets.length - limit);
-  let message = `Found ${assets.length} assets`;
-  if (folders.length > 0) message += ` and ${folders.length} folders`;
-  message += `: ${limitedAssets.map(asset => asset.path || asset.package || asset.name || 'unknown').join(', ')}`;
+  const totalCount = typeof res.totalCount === 'number' ? res.totalCount : assets.length;
+  const count = typeof res.count === 'number' ? res.count : assets.length;
+  const returnedLimit = typeof res.limit === 'number' ? res.limit : limit;
+  const returnedOffset = typeof res.offset === 'number' ? res.offset : offset;
+  const hasMore = res.hasMore === true;
+  const nextOffset = typeof res.nextOffset === 'number' ? res.nextOffset : (hasMore ? returnedOffset + count : totalCount);
+  const returnedCursor = typeof res.cursor === 'string' && res.cursor.length > 0 ? res.cursor : (cursor ?? null);
+  const nextCursor = typeof res.nextCursor === 'string' && res.nextCursor.length > 0 ? res.nextCursor : null;
 
-  if (folders.length > 0 && limitedAssets.length < limit) {
-    const remainingLimit = limit - limitedAssets.length;
-    const limitedFolders = folders.slice(0, remainingLimit);
-    if (limitedAssets.length > 0) message += ', ';
-    message += `Folders: [${limitedFolders.join(', ')}]`;
-    if (folders.length > remainingLimit) message += '...';
-  }
-  if (remaining > 0) message += `... and ${remaining} others`;
+  let message = `Listed ${count} asset(s) (offset ${returnedOffset}, limit ${returnedLimit}, total ${totalCount})`;
+  message += ` in ${path}`;
+  if (folders.length > 0) message += `; ${folders.length} subfolder(s)`;
+  if (hasMore) message += '; more available';
 
+  const rawTruncated = res.metadataTruncated ??
+    (Array.isArray(res.result) ? undefined : (res.result as Record<string, unknown> | undefined)?.metadataTruncated);
   return ResponseFactory.success({
-    assets: limitedAssets,
+    assets,
     folders,
-    totalCount: assets.length,
-    count: limitedAssets.length
+    totalCount,
+    count,
+    limit: returnedLimit,
+    offset: returnedOffset,
+    hasMore,
+    nextOffset,
+    cursor: returnedCursor,
+    nextCursor,
+    ...(typeof rawTruncated === 'boolean' ? { metadataTruncated: rawTruncated } : {})
   }, message);
 }
 

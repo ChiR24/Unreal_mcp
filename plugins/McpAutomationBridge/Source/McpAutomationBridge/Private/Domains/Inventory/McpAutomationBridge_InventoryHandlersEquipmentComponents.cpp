@@ -32,7 +32,6 @@ bool HandleInventoryEquipmentComponentActions(UMcpAutomationBridgeSubsystem& Bri
       if (NewNode) {
         SCS->AddNode(NewNode);
 
-        // Add equipment-related Blueprint variables
         FEdGraphPinType SoftObjectArrayType;
         SoftObjectArrayType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
         SoftObjectArrayType.ContainerType = EPinContainerType::Array;
@@ -41,7 +40,6 @@ bool HandleInventoryEquipmentComponentActions(UMcpAutomationBridgeSubsystem& Bri
         NameArrayType.PinCategory = UEdGraphSchema_K2::PC_Name;
         NameArrayType.ContainerType = EPinContainerType::Array;
 
-        // Add EquipmentSlots array variable
         bool bSlotsExists = false;
         for (FBPVariableDescription& Var : Blueprint->NewVariables) {
           if (Var.VarName == TEXT("EquipmentSlots")) {
@@ -53,7 +51,6 @@ bool HandleInventoryEquipmentComponentActions(UMcpAutomationBridgeSubsystem& Bri
           FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("EquipmentSlots"), SoftObjectArrayType);
         }
 
-        // Add EquippedItems array
         bool bEquippedExists = false;
         for (FBPVariableDescription& Var : Blueprint->NewVariables) {
           if (Var.VarName == TEXT("EquippedItems")) {
@@ -65,7 +62,6 @@ bool HandleInventoryEquipmentComponentActions(UMcpAutomationBridgeSubsystem& Bri
           FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("EquippedItems"), SoftObjectArrayType);
         }
 
-        // Add SlotNames array
         bool bSlotNamesExists = false;
         for (FBPVariableDescription& Var : Blueprint->NewVariables) {
           if (Var.VarName == TEXT("SlotNames")) {
@@ -116,7 +112,6 @@ bool HandleInventoryEquipmentComponentActions(UMcpAutomationBridgeSubsystem& Bri
       return true;
     }
 
-    // Load the blueprint
     UBlueprint* Blueprint =
         Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
     if (!Blueprint) {
@@ -127,7 +122,6 @@ bool HandleInventoryEquipmentComponentActions(UMcpAutomationBridgeSubsystem& Bri
       return true;
     }
 
-    // Get custom slots from payload or use defaults
     TArray<FString> SlotNames;
     const TArray<TSharedPtr<FJsonValue>>* SlotsArr = nullptr;
     if (Payload->TryGetArrayField(TEXT("slots"), SlotsArr) && SlotsArr) {
@@ -136,7 +130,6 @@ bool HandleInventoryEquipmentComponentActions(UMcpAutomationBridgeSubsystem& Bri
       }
     }
 
-    // Default slots if none provided
     if (SlotNames.Num() == 0) {
       SlotNames = {
         TEXT("Head"),
@@ -149,7 +142,6 @@ bool HandleInventoryEquipmentComponentActions(UMcpAutomationBridgeSubsystem& Bri
       };
     }
 
-    // Add SlotNames array variable if it doesn't exist
     FEdGraphPinType NameArrayType;
     NameArrayType.PinCategory = UEdGraphSchema_K2::PC_Name;
     NameArrayType.ContainerType = EPinContainerType::Array;

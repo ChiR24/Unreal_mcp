@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import tseslintPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
+import nPlugin from 'eslint-plugin-n';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -66,6 +67,26 @@ export default [
       // ESLint 10 new rules - disabled to maintain compatibility with existing codebase
       'preserve-caught-error': 'off',
       'no-useless-assignment': 'off',
+    },
+  },
+  {
+    // Enforce the declared Node.js runtime floor (>=20.19.0). Unsupported
+    // built-in APIs and ES syntax are surfaced as warnings so they trip the
+    // CI `--max-warnings=0` gate. We intentionally do NOT downgrade @types/node
+    // or cast unsupported APIs away; the floor is enforced structurally here.
+    files: ['**/*.ts'],
+    plugins: {
+      n: nPlugin,
+    },
+    rules: {
+      'n/no-unsupported-features/node-builtins': [
+        'warn',
+        { version: '20.19.0' },
+      ],
+      'n/no-unsupported-features/es-syntax': [
+        'warn',
+        { version: '20.19.0' },
+      ],
     },
   },
 ];

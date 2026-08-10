@@ -14,12 +14,13 @@ export class HandshakeHandler extends EventEmitter {
     private readonly DEFAULT_HANDSHAKE_TIMEOUT_MS = 5000;
 
     constructor(
-        private capabilityToken?: string
+        private readonly capabilityToken?: string,
+        private readonly resolveToken?: () => Promise<string | undefined>
     ) {
         super();
     }
 
-    public initiateHandshake(socket: AutomationSocket, timeoutMs: number = this.DEFAULT_HANDSHAKE_TIMEOUT_MS): Promise<Record<string, unknown>> {
+    public async initiateHandshake(socket: AutomationSocket, timeoutMs: number = this.DEFAULT_HANDSHAKE_TIMEOUT_MS): Promise<Record<string, unknown>> {
         return new Promise((resolve, reject) => {
             let settled = false;
             let helloTimer: NodeJS.Timeout | undefined;
@@ -95,16 +96,33 @@ export class HandshakeHandler extends EventEmitter {
 
             // Send bridge_hello with a slight delay to ensure the server has registered its handlers
             helloTimer = setTimeout(() => {
-                if (!settled && socket.readyState === WebSocket.OPEN) {
+                void (async () => {
+                    if (settled || socket.readyState !== WebSocket.OPEN) {
+                        this.log.warn('Socket closed before bridge_hello could be sent');
+                        return;
+                    }
+                    let capabilityToken: string | undefined;
+                    try {
+                        capabilityToken = this.resolveToken
+                            ? await this.resolveToken()
+                            : this.capabilityToken;
+                    } catch (error) {
+                        this.log.error(
+                            'Capability token resolution failed; sending bridge_hello without a token',
+                            error instanceof Error ? error.message : String(error)
+                        );
+                        capabilityToken = this.capabilityToken || undefined;
+                    }
+                    if (settled) {
+                        return;
+                    }
                     const helloPayload: AutomationBridgeMessage = {
                         type: 'bridge_hello',
-                        capabilityToken: this.capabilityToken || undefined
+                        capabilityToken
                     };
                     this.log.debug('Sending bridge_hello (delayed)');
                     socket.send(JSON.stringify(helloPayload));
-                } else {
-                    this.log.warn('Socket closed before bridge_hello could be sent');
-                }
+                })();
             }, 500);
         });
     }

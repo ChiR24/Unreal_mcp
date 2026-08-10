@@ -23,10 +23,23 @@ bool TryCreateVariableNode(
         return false;
     }
 
+    // blueprint.create_node publishes the variable's name as `memberName` and
+    // closes the schema (additionalProperties:false), so `variableName` cannot
+    // reach this handler through the gateway. Reading only `variableName` meant
+    // the name always arrived empty and every VariableGet/VariableSet failed
+    // with VARIABLE_NOT_FOUND for a variable that exists — while the sibling
+    // `memberClass` resolved correctly, which is what made the bug look like a
+    // lookup failure rather than a dropped parameter. Consequence: no Blueprint
+    // graph could read or write a variable at all. `variableName` is retained as
+    // the legacy WebSocket spelling.
     FString VariableName;
-    Context.Payload->TryGetStringField(
-        TEXT("variableName"),
-        VariableName);
+    if (!Context.Payload->TryGetStringField(TEXT("memberName"), VariableName) ||
+        VariableName.IsEmpty())
+    {
+        Context.Payload->TryGetStringField(
+            TEXT("variableName"),
+            VariableName);
+    }
     const FName VariableFName(*VariableName);
 
     FString MemberClassName;

@@ -64,9 +64,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
+    // `true` means "this handler consumed the request" — so returning it for an
+    // action this handler does NOT own claimed every foreign action reaching
+    // this step of the fallback chain and returned without sending anything.
+    // The caller then saw a consumed request, skipped both the "No handler
+    // consumed" warning and the UNKNOWN_ACTION reply, and left the client
+    // waiting for a response that could never come: a silent 300 s transport
+    // timeout with no log line naming a cause. It also made every handler
+    // ordered after this one unreachable. Declining must be `false`.
     if (Action != TEXT("manage_skeleton"))
     {
-        return true;
+        return false;
     }
 
     FString SubAction;

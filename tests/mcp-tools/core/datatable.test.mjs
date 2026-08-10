@@ -1,13 +1,9 @@
 #!/usr/bin/env node
 
-import fs from 'node:fs';
-import path from 'node:path';
 import { runToolTests } from '../../test-runner.mjs';
 
 const TEST_FOLDER = '/Game/MCPTest/CoreDataTables';
 const ts = Date.now();
-
-const asset = (name) => `${TEST_FOLDER}/${name}`;
 
 const testCases = [
   // === SETUP ===

@@ -1,0 +1,14 @@
+{
+  "id": "inadmissible-broad-expectation",
+  "captureKind": "executable-ts",
+  "domain": "result",
+  "match": "success|error",
+  "provenance": "a broad mask expectation instead of an exact comparison",
+  "value": {
+    "uri": "ue://capability/catalog",
+    "mimeType": "application/json",
+    "revision": 1,
+    "dataPresent": true,
+    "dataKeys": ["capabilities", "count", "totalCount", "truncated"]
+  }
+}

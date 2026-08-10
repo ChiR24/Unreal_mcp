@@ -8,12 +8,12 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
 {
     if (SubAction == TEXT("add_state"))
     {
-        FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
-        FString StateMachineName = GetStringFieldAnimAuth(Params, TEXT("stateMachineName"), TEXT(""));
-        FString StateName = GetStringFieldAnimAuth(Params, TEXT("stateName"), TEXT(""));
-        int32 NodePosX = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionX"), 200));
-        int32 NodePosY = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionY"), 0));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString BlueprintPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("blueprintPath"), TEXT("")));
+        FString StateMachineName = GetJsonStringField(Params, TEXT("stateMachineName"), TEXT(""));
+        FString StateName = GetJsonStringField(Params, TEXT("stateName"), TEXT(""));
+        int32 NodePosX = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionX"), 200));
+        int32 NodePosY = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionY"), 0));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (StateName.IsEmpty())
         {
@@ -148,12 +148,12 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
 
     if (SubAction == TEXT("add_transition"))
     {
-        FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
-        FString StateMachineName = GetStringFieldAnimAuth(Params, TEXT("stateMachineName"), TEXT(""));
-        FString FromState = GetStringFieldAnimAuth(Params, TEXT("fromState"), TEXT(""));
-        FString ToState = GetStringFieldAnimAuth(Params, TEXT("toState"), TEXT(""));
-        float CrossfadeDuration = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("crossfadeDuration"), 0.2));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString BlueprintPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("blueprintPath"), TEXT("")));
+        FString StateMachineName = GetJsonStringField(Params, TEXT("stateMachineName"), TEXT(""));
+        FString FromState = GetJsonStringField(Params, TEXT("fromState"), TEXT(""));
+        FString ToState = GetJsonStringField(Params, TEXT("toState"), TEXT(""));
+        float CrossfadeDuration = static_cast<float>(GetJsonNumberField(Params, TEXT("crossfadeDuration"), 0.2));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (FromState.IsEmpty() || ToState.IsEmpty())
         {

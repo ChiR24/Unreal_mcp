@@ -115,10 +115,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
 #endif
 }
 
-// ============================================================================
-// 3. SOURCE CONTROL SUBMIT
-// ============================================================================
-
 bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -238,10 +234,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
 #endif
 }
 
-// ============================================================================
-// 4A. SOURCE CONTROL ENABLE
-// ============================================================================
-
 bool UMcpAutomationBridgeSubsystem::HandleSourceControlEnable(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -296,9 +288,3 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlEnable(
   return true;
 #endif
 }
-
-// ============================================================================
-
-// ============================================================================
-// 4. BULK RENAME ASSETS
-// ============================================================================

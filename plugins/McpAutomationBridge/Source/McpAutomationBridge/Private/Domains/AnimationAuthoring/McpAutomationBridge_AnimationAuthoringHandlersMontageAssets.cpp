@@ -8,11 +8,11 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
 {
     if (SubAction == TEXT("create_montage"))
     {
-    FString Name = GetStringFieldAnimAuth(Params, TEXT("name"), TEXT(""));
-    FString Path = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("path"), TEXT("/Game/Animations")));
-    FString SkeletonPath = GetStringFieldAnimAuth(Params, TEXT("skeletonPath"), TEXT(""));
-    FString SlotName = GetStringFieldAnimAuth(Params, TEXT("slotName"), TEXT("DefaultSlot"));
-    bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+    FString Path = NormalizeAnimPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Animations")));
+    FString SkeletonPath = GetJsonStringField(Params, TEXT("skeletonPath"), TEXT(""));
+    FString SlotName = GetJsonStringField(Params, TEXT("slotName"), TEXT("DefaultSlot"));
+    bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (Name.IsEmpty())
     {
@@ -66,10 +66,10 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
 
     if (SubAction == TEXT("add_montage_section"))
     {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString SectionName = GetStringFieldAnimAuth(Params, TEXT("sectionName"), TEXT(""));
-        float StartTime = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("startTime"), 0.0));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString SectionName = GetJsonStringField(Params, TEXT("sectionName"), TEXT(""));
+        float StartTime = static_cast<float>(GetJsonNumberField(Params, TEXT("startTime"), 0.0));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (SectionName.IsEmpty())
         {
@@ -94,11 +94,11 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
 
     if (SubAction == TEXT("add_montage_slot"))
     {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString AnimationPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("animationPath"), TEXT("")));
-        FString SlotName = GetStringFieldAnimAuth(Params, TEXT("slotName"), TEXT("DefaultSlot"));
-        float StartTime = static_cast<float>(GetNumberFieldAnimAuth(Params, TEXT("startTime"), 0.0));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString AnimationPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("animationPath"), TEXT("")));
+        FString SlotName = GetJsonStringField(Params, TEXT("slotName"), TEXT("DefaultSlot"));
+        float StartTime = static_cast<float>(GetJsonNumberField(Params, TEXT("startTime"), 0.0));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
         if (!Montage)
@@ -152,9 +152,9 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
 
     if (SubAction == TEXT("set_section_timing"))
     {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString SectionName = GetStringFieldAnimAuth(Params, TEXT("sectionName"), TEXT(""));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString SectionName = GetJsonStringField(Params, TEXT("sectionName"), TEXT(""));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (SectionName.IsEmpty())
         {

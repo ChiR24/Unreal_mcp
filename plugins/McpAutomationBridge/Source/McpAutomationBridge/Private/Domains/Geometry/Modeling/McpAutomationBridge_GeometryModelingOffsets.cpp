@@ -7,8 +7,8 @@ namespace McpGeometryHandlers
 bool HandleOffsetFaces(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double Distance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double Distance = GetJsonNumberField(Payload, TEXT("distance"), 5.0);
 
     if (ActorName.IsEmpty())
     {
@@ -64,8 +64,8 @@ bool HandleOffsetFaces(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 bool HandleShell(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double Thickness = GetNumberFieldGeom(Payload, TEXT("thickness"), 5.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double Thickness = GetJsonNumberField(Payload, TEXT("thickness"), 5.0);
 
     if (ActorName.IsEmpty())
     {
@@ -115,16 +115,12 @@ bool HandleShell(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Deformers
-// -------------------------------------------------------------------------
-
 bool HandleChamfer(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double Distance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
-    int32 Steps = GetIntFieldGeom(Payload, TEXT("steps"), 1);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double Distance = GetJsonNumberField(Payload, TEXT("distance"), 5.0);
+    int32 Steps = GetJsonIntField(Payload, TEXT("steps"), 1);
 
     if (ActorName.IsEmpty())
     {
@@ -163,7 +159,6 @@ bool HandleChamfer(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
     // Use bevel with steps=1 for chamfer effect
     FGeometryScriptMeshBevelOptions BevelOptions;
     BevelOptions.BevelDistance = Distance;
-            // BevelOptions.Subdivisions = FMath::Max(0, Steps - 1); // Not available in UE 5.3
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshPolygroupBevel(
         Mesh, BevelOptions, nullptr);
 
@@ -177,9 +172,6 @@ bool HandleChamfer(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Merge Vertices
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

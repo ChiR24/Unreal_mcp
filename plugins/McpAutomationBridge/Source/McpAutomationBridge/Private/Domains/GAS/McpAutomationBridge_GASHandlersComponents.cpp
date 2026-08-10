@@ -43,7 +43,7 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
             return true;
         }
 
-        FString ComponentName = GetStringFieldGAS(Payload, TEXT("componentName"), TEXT("AbilitySystemComponent"));
+        FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("AbilitySystemComponent"));
 
         USCS_Node* NewNode = Blueprint->SimpleConstructionScript->CreateNode(
             UAbilitySystemComponent::StaticClass(), FName(*ComponentName));
@@ -85,8 +85,8 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
             return true;
         }
 
-        FString ComponentName = GetStringFieldGAS(Payload, TEXT("componentName"), TEXT("AbilitySystemComponent"));
-        FString ReplicationMode = GetStringFieldGAS(Payload, TEXT("replicationMode"), TEXT("Full"));
+        FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("AbilitySystemComponent"));
+        FString ReplicationMode = GetJsonStringField(Payload, TEXT("replicationMode"), TEXT("Full"));
         const FString ReplicationModeToken = NormalizeGASToken(ReplicationMode);
 
         // Find ASC in SCS

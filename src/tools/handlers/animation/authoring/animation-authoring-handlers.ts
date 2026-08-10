@@ -1,5 +1,6 @@
 import type { ITools } from '../../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
+import { createUnknownActionResponse } from '../../foundation/dispatch/handler-error-context.js';
 import { ResponseFactory } from '../../../../utils/responses/response-factory.js';
 import { handleAnimationBlueprintAction } from './animation-authoring-blueprints.js';
 import { handleBlendSpaceAction } from './animation-authoring-blend-spaces.js';
@@ -86,7 +87,7 @@ export async function handleAnimationAuthoringTools(
       }
     }
 
-    return ResponseFactory.error(`Unknown animation authoring action: ${action}`, 'UNKNOWN_ACTION');
+    return createUnknownActionResponse(`Unknown animation authoring action: ${action}`);
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     return ResponseFactory.error(`Animation authoring operation failed: ${err.message}`, 'ANIMATION_AUTHORING_ERROR');

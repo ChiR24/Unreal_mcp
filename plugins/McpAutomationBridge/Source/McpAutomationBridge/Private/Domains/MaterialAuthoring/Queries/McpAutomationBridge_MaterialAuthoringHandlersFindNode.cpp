@@ -23,7 +23,6 @@ bool HandleFindNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Reques
         ? MCP_GET_MATERIAL_EXPRESSIONS(Material)
         : MCP_GET_FUNCTION_EXPRESSIONS(Function);
 
-    // Build connection count map for each expression
     TMap<FGuid, int32> ConnectionCountMap;
     for (UMaterialExpression *Expr : Exprs) {
       if (!Expr) continue;
@@ -59,15 +58,12 @@ bool HandleFindNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Reques
     for (UMaterialExpression *Expr : Exprs) {
       if (!Expr) continue;
 
-      // Deduplicate by GUID
       if (SeenIds.Contains(Expr->MaterialExpressionGuid)) continue;
 
       FString ClassName = Expr->GetClass()->GetName();
 
-      // Type match (substring)
       if (!SearchType.IsEmpty() && !ClassName.Contains(SearchType)) continue;
 
-      // Name match
       if (!SearchName.IsEmpty()) {
         bool bNameMatch = false;
         if (UMaterialExpressionParameter *P = Cast<UMaterialExpressionParameter>(Expr)) {

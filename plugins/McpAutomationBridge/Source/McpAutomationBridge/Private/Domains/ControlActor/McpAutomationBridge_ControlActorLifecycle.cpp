@@ -78,7 +78,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
     ErrorCode = bAllDeleted ? FString() : TEXT("DELETE_PARTIAL");
   }
 
-  // Add verification data for delete operations
   Resp->SetBoolField(TEXT("existsAfter"), false);
   Resp->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
 
@@ -92,8 +91,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
   return false;
 #endif
 }
-
-
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -135,7 +132,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
   Data->SetStringField(TEXT("actorName"), Duplicated->GetActorLabel());
   Data->SetStringField(TEXT("actorPath"), Duplicated->GetPathName());
 
-  // Add verification data
   McpHandlerUtils::AddVerification(Data, Duplicated);
 
   TArray<TSharedPtr<FJsonValue>> OffsetArray;
@@ -151,8 +147,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
   return false;
 #endif
 }
-
-
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -189,7 +183,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
     DeletedArray.Add(MakeShared<FJsonValueString>(Name));
   Data->SetArrayField(TEXT("deleted"), DeletedArray);
 
-  // Add verification data for delete operations
   Data->SetBoolField(TEXT("existsAfter"), false);
   Data->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
 

@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -26,7 +27,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   FVector Scale =
       ExtractVectorField(Payload, TEXT("scale"), Found->GetActorScale3D());
 
-  Found->Modify();
+  FMcpScopedEditorTransaction Transaction(
+      FText::FromString(TEXT("Set Actor Transform")),
+      EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{Found});
+
   Found->SetActorLocation(Location, false, nullptr,
                           ETeleportType::TeleportPhysics);
   Found->SetActorRotation(Rotation, ETeleportType::TeleportPhysics);
@@ -34,7 +38,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   Found->MarkComponentsRenderStateDirty();
   Found->MarkPackageDirty();
 
-  // Verify transform
   const FVector NewLoc = Found->GetActorLocation();
   const FRotator NewRot = Found->GetActorRotation();
   const FVector NewScale = Found->GetActorScale3D();
@@ -46,6 +49,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+  Transaction.DescribeInto(Data);
 
   auto MakeArray = [](const FVector &Vec) {
     TArray<TSharedPtr<FJsonValue>> Arr;
@@ -65,7 +69,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
     return true;
   }
 
-  // Add verification data
 	McpHandlerUtils::AddVerification(Data, Found);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor transform updated"), Data);
@@ -148,7 +151,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
     return true;
   }
 
-  Found->Modify();
+  // Every primitive component below is mutated too, so each one has to be in the
+  // transaction; capturing only the actor would let undo restore half the change.
+  TArray<UObject *> Undoable{Found};
+  for (UActorComponent *Comp : Found->GetComponents()) {
+    if (UPrimitiveComponent *Prim = Cast<UPrimitiveComponent>(Comp)) {
+      Undoable.Add(Prim);
+    }
+  }
+
+  FMcpScopedEditorTransaction Transaction(
+      FText::FromString(TEXT("Set Actor Visibility")),
+      EMcpMutationDurability::EditorStateOnly, Undoable);
+
   Found->SetActorHiddenInGame(!bVisible);
   Found->SetActorEnableCollision(bVisible);
 
@@ -164,13 +179,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
   Found->MarkComponentsRenderStateDirty();
   Found->MarkPackageDirty();
 
-  // Verify visibility state
   const bool bIsHidden = Found->IsHidden();
   const bool bStateMatches = (bIsHidden == !bVisible);
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetBoolField(TEXT("visible"), !bIsHidden);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+  Transaction.DescribeInto(Data);
 
   if (!bStateMatches) {
     SendStandardErrorResponse(this, Socket, RequestId,
@@ -179,7 +194,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
     return true;
   }
 
-  // Add verification data
 	McpHandlerUtils::AddVerification(Data, Found);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor visibility updated"), Data);

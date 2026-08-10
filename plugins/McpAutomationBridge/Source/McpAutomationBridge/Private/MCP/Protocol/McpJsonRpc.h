@@ -53,15 +53,20 @@ public:
 	/** Build a JSON-RPC 2.0 error response string. */
 	static FString BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code, const FString& Message);
 
+	/** Build a JSON-RPC 2.0 error response string with an optional data object. */
+	static FString BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code, const FString& Message, const TSharedPtr<FJsonObject>& Data);
+
 	/** Build an MCP tool result object (content array + isError). */
 	static TSharedPtr<FJsonObject> BuildToolResult(
 		bool bSuccess, const FString& Message,
 		const TSharedPtr<FJsonObject>& Data = nullptr,
 		const FString& ErrorCode = FString());
 
-	/** Build a JSON-RPC 2.0 progress notification (no id — it's a notification). */
+	/** Build a JSON-RPC 2.0 progress notification (no id — it's a notification).
+	 *  ProgressToken is echoed verbatim (preserving string/number type) so the
+	 *  client can match it to the token it supplied in _meta.progressToken. */
 	static FString BuildProgressNotification(
-		const FString& ProgressToken, float Progress, float Total,
+		const TSharedPtr<FJsonValue>& ProgressToken, float Progress, float Total,
 		const FString& Message);
 
 	/** Build a generic JSON-RPC 2.0 notification (no id). */

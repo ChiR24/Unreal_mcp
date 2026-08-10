@@ -26,7 +26,9 @@ TSharedPtr<FJsonObject> HandleCreateNormalFromHeight(const TSharedPtr<FJsonObjec
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     TSet<FString> ValidParams = {
-        TEXT("subAction"), TEXT("sourceTexture"), TEXT("name"), TEXT("path"),
+        // `action` is injected by WithPayloadSubAction as the legacy dispatch
+        // verb (MCPBB-060); it is not a client parameter but must be accepted.
+        TEXT("action"), TEXT("subAction"), TEXT("sourceTexture"), TEXT("name"), TEXT("path"),
         TEXT("strength"), TEXT("algorithm"), TEXT("flipY"), TEXT("save"), TEXT("channelMode")
     };
     for (const auto& Field : Params->Values)

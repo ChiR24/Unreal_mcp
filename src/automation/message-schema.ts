@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LiveStateRevisionsSchema } from '../tools/catalog/capabilities/semantic/live-state-revisions.js';
 
 const stringArray = z.array(z.string());
 const nonNegativeInteger = z.number().int().min(0);
@@ -10,7 +11,8 @@ export const automationResponseSchema = z.looseObject({
     message: z.string().optional(),
     error: z.string().optional(),
     result: z.unknown().optional(),
-    action: z.string().optional()
+    action: z.string().optional(),
+    liveRevisions: LiveStateRevisionsSchema.optional()
 });
 
 export const automationEventSchema = z.looseObject({
@@ -22,6 +24,29 @@ export const automationEventSchema = z.looseObject({
     message: z.string().optional()
 });
 
+// Task 40 authority descriptor (additive). z.object STRIPS unknown keys, so a
+// stray token, path prefix or limit a plugin might place here can never survive
+// into the cached descriptor: only these six non-secret fields are retained.
+export const bridgeAuthoritySchema = z.object({
+    profile: z.string().optional(),
+    scopes: stringArray.optional(),
+    deprecated: z.boolean().optional(),
+    tokenRequired: z.boolean().optional(),
+    pathRestricted: z.boolean().optional(),
+    projectRestricted: z.boolean().optional()
+});
+
+export type BridgeAuthority = z.infer<typeof bridgeAuthoritySchema>;
+
+export function readBridgeAuthority(
+    metadata: Record<string, unknown> | undefined
+): BridgeAuthority | undefined {
+    const raw = metadata?.authority;
+    if (raw === undefined) return undefined;
+    const parsed = bridgeAuthoritySchema.safeParse(raw);
+    return parsed.success ? parsed.data : undefined;
+}
+
 export const bridgeAckSchema = z.looseObject({
     type: z.literal('bridge_ack'),
     message: z.string().optional(),
@@ -32,7 +57,8 @@ export const bridgeAckSchema = z.looseObject({
     supportedOpcodes: stringArray.optional(),
     expectedResponseOpcodes: stringArray.optional(),
     capabilities: stringArray.optional(),
-    heartbeatIntervalMs: nonNegativeInteger.optional()
+    heartbeatIntervalMs: nonNegativeInteger.optional(),
+    authority: bridgeAuthoritySchema.optional()
 });
 
 export const bridgeErrorSchema = z.looseObject({
@@ -67,6 +93,14 @@ export const progressUpdateSchema = z.looseObject({
     stillWorking: z.boolean().optional()  // True if operation is still in progress
 });
 
+// Targeted cancellation frame sent by the TS bridge to Unreal when an MCP
+// request is cancelled. Carries the previously-allocated automation request id.
+export const cancelRequestSchema = z.looseObject({
+    type: z.literal('cancel_request'),
+    requestId: z.string().min(1),
+    reason: z.string().optional()
+});
+
 export const automationMessageSchema = z.discriminatedUnion('type', [
     automationResponseSchema,
     automationEventSchema,
@@ -75,7 +109,8 @@ export const automationMessageSchema = z.discriminatedUnion('type', [
     bridgePingSchema,
     bridgePongSchema,
     bridgeGoodbyeSchema,
-    progressUpdateSchema
+    progressUpdateSchema,
+    cancelRequestSchema
 ]);
 
 export type AutomationMessageSchema = z.infer<typeof automationMessageSchema>;

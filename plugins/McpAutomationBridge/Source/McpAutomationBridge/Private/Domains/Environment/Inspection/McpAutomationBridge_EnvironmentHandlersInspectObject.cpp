@@ -9,10 +9,6 @@ bool HandleInspectObjectAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     FString ObjectPath = InitialObjectPath;
-    // =========================================================================
-    // Handle Object-Specific Inspection
-    // =========================================================================
-    // Find the target object using centralized helper
     FString ResolvedPath;
     UObject* TargetObject = McpHandlerUtils::ResolveObjectFromPath(ObjectPath, &ResolvedPath);
 
@@ -30,18 +26,13 @@ bool HandleInspectObjectAction(
         ObjectPath = ResolvedPath;
     }
 
-    // -------------------------------------------------------------------------
-    // Build inspection result
-    // -------------------------------------------------------------------------
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
 
-    // Basic object info
     Resp->SetStringField(TEXT("objectPath"), TargetObject->GetPathName());
     Resp->SetStringField(TEXT("objectName"), TargetObject->GetName());
     Resp->SetStringField(TEXT("className"), TargetObject->GetClass()->GetName());
     Resp->SetStringField(TEXT("classPath"), TargetObject->GetClass()->GetPathName());
 
-    // If it's an actor, add actor-specific info
     if (AActor *Actor = Cast<AActor>(TargetObject))
     {
         Resp->SetStringField(TEXT("actorLabel"), Actor->GetActorLabel());
@@ -49,7 +40,6 @@ bool HandleInspectObjectAction(
         Resp->SetBoolField(TEXT("isHidden"), Actor->IsHidden());
         Resp->SetBoolField(TEXT("isSelected"), Actor->IsSelected());
 
-        // Transform info
         TSharedPtr<FJsonObject> TransformObj = McpHandlerUtils::CreateResultObject();
         const FTransform &Transform = Actor->GetActorTransform();
 
@@ -74,7 +64,6 @@ bool HandleInspectObjectAction(
 
         Resp->SetObjectField(TEXT("transform"), TransformObj);
 
-        // Components info
         TArray<TSharedPtr<FJsonValue>> ComponentsArray;
         TInlineComponentArray<UActorComponent *> Components;
         Actor->GetComponents(Components);

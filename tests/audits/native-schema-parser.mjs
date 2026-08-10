@@ -6,11 +6,14 @@ const METHOD_TYPES = {
   String: 'string',
   Array: 'array',
   ArrayOfObjects: 'array',
+  ArrayOfAny: 'array',
   Number: 'number',
   Integer: 'integer',
   Bool: 'boolean',
   Object: 'object',
-  FreeformObject: 'object'
+  FreeformObject: 'object',
+  AnyValue: 'any',
+  TypeUnion: 'union'
 };
 
 function textValues(source) {
@@ -83,6 +86,9 @@ function propertySchema(method, argumentsList) {
     const itemType = textValues(argumentsList[2] ?? '')[0] ?? 'string';
     return { type, items: { type: itemType } };
   }
+  if (method === 'ArrayOfAny') {
+    return { type, items: {} };
+  }
   if (method === 'ArrayOfObjects') {
     const body = lambdaBody(argumentsList[2] ?? '');
     const itemSchema = body ? parseBuilderSchema(body) : { properties: {}, required: [] };
@@ -106,14 +112,21 @@ function propertySchema(method, argumentsList) {
         : {})
     };
   }
+  if (method === 'AnyValue') {
+    return {};
+  }
+  if (method === 'TypeUnion') {
+    const typeList = textValues(argumentsList[1] ?? '');
+    return { type: [...new Set(typeList)].sort() };
+  }
   return { type };
 }
 
-function parseBuilderSchema(source) {
+export function parseBuilderSchema(source) {
   const maskedSource = maskCppLiteralsAndComments(source);
   const properties = {};
   const required = [];
-  const methodPattern = /\.(StringEnum|String|ArrayOfObjects|Array|Number|Integer|Bool|Object|FreeformObject|Required)\s*\(/g;
+  const methodPattern = /\.(StringEnum|String|ArrayOfObjects|ArrayOfAny|Array|Number|Integer|Bool|Object|FreeformObject|AnyValue|TypeUnion|Required)\s*\(/g;
   let match;
   while ((match = methodPattern.exec(maskedSource)) !== null) {
     const openIndex = match.index + match[0].lastIndexOf('(');

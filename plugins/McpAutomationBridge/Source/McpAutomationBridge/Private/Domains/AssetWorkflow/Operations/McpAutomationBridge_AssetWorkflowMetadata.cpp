@@ -254,8 +254,4 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
 #endif
 }
 
-// ============================================================================
-// 9. NANITE/MESH WORKFLOW ACTIONS
-// ============================================================================
-
 // Dispatcher-compatible mesh workflow handlers with explicit success/error responses.

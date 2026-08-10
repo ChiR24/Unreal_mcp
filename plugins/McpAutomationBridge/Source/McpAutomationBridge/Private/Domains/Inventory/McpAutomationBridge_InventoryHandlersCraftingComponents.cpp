@@ -32,7 +32,6 @@ bool HandleInventoryCraftingComponentActions(UMcpAutomationBridgeSubsystem& Brid
       if (NewNode) {
         SCS->AddNode(NewNode);
 
-        // Add crafting-related Blueprint variables
         FEdGraphPinType SoftObjectArrayType;
         SoftObjectArrayType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
         SoftObjectArrayType.ContainerType = EPinContainerType::Array;
@@ -47,7 +46,6 @@ bool HandleInventoryCraftingComponentActions(UMcpAutomationBridgeSubsystem& Brid
         FEdGraphPinType IntType;
         IntType.PinCategory = UEdGraphSchema_K2::PC_Int;
 
-        // Crafting variables
         TArray<TPair<FName, FEdGraphPinType>> CraftingVars = {
           TPair<FName, FEdGraphPinType>(TEXT("AvailableRecipes"), SoftObjectArrayType),
           TPair<FName, FEdGraphPinType>(TEXT("CraftingQueue"), SoftObjectArrayType),
@@ -73,7 +71,6 @@ bool HandleInventoryCraftingComponentActions(UMcpAutomationBridgeSubsystem& Brid
           }
         }
 
-        // Add event dispatchers for crafting
         FEdGraphPinType DelegateType;
         DelegateType.PinCategory = UEdGraphSchema_K2::PC_MCDelegate;
 

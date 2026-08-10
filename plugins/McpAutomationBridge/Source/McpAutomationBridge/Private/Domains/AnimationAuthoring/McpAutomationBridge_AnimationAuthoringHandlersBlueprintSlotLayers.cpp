@@ -8,12 +8,12 @@ TSharedPtr<FJsonObject> HandleBlueprintSlotLayerActions(const FString& SubAction
 {
     if (SubAction == TEXT("add_slot_node"))
     {
-        FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
-        FString SlotName = GetStringFieldAnimAuth(Params, TEXT("slotName"), TEXT(""));
-        FString GroupName = GetStringFieldAnimAuth(Params, TEXT("groupName"), TEXT("DefaultGroup"));
-        int32 NodePosX = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionX"), 0));
-        int32 NodePosY = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionY"), 0));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString BlueprintPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("blueprintPath"), TEXT("")));
+        FString SlotName = GetJsonStringField(Params, TEXT("slotName"), TEXT(""));
+        FString GroupName = GetJsonStringField(Params, TEXT("groupName"), TEXT("DefaultGroup"));
+        int32 NodePosX = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionX"), 0));
+        int32 NodePosY = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionY"), 0));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (SlotName.IsEmpty())
         {
@@ -62,11 +62,11 @@ TSharedPtr<FJsonObject> HandleBlueprintSlotLayerActions(const FString& SubAction
 
     if (SubAction == TEXT("add_layered_blend_per_bone"))
     {
-        FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
-        FString BoneName = GetStringFieldAnimAuth(Params, TEXT("boneName"), TEXT(""));
-        int32 NodePosX = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionX"), 0));
-        int32 NodePosY = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionY"), 0));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString BlueprintPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("blueprintPath"), TEXT("")));
+        FString BoneName = GetJsonStringField(Params, TEXT("boneName"), TEXT(""));
+        int32 NodePosX = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionX"), 0));
+        int32 NodePosY = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionY"), 0));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
         if (!AnimBP)

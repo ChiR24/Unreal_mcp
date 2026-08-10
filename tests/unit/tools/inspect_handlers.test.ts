@@ -149,19 +149,14 @@ describe('Inspect Handlers', () => {
 
   it('keeps unsupported inspect export file-path params out of the schema', async () => {
     const { consolidatedToolDefinitions } = await import('../../../src/tools/catalog/consolidated-tool-definitions.js');
-    const { coreToolDefinitions } = await import('../../../src/tools/schemas/core-tools.js');
     const inspectTool = consolidatedToolDefinitions.find((t: { name: string }) => t.name === 'inspect');
-    const coreInspectTool = coreToolDefinitions.find((t: { name: string }) => t.name === 'inspect');
-    const tools = [inspectTool, coreInspectTool];
 
-    for (const tool of tools) {
-      const properties = (tool?.inputSchema as Record<string, unknown> & {
-        properties: Record<string, unknown>
-      })?.properties;
-      expect(properties).not.toHaveProperty('destinationPath');
-      expect(properties).not.toHaveProperty('outputPath');
-      expect(properties).not.toHaveProperty('format');
-    }
+    const properties = (inspectTool?.inputSchema as Record<string, unknown> & {
+      properties: Record<string, unknown>
+    })?.properties;
+    expect(properties).not.toHaveProperty('destinationPath');
+    expect(properties).not.toHaveProperty('outputPath');
+    expect(properties).not.toHaveProperty('format');
   });
 
   it('normalizes name and propertyPath aliases for get_property', async () => {

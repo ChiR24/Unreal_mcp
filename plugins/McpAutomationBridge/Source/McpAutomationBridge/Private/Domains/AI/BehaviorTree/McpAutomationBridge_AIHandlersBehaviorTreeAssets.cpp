@@ -58,16 +58,14 @@ static UBehaviorTree* CreateBehaviorTreeAsset(const FString& Path, const FString
     return BehaviorTree;
 }
 
-// Helper to create EQS Query asset
-
 bool HandleCreateBehaviorTree(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString SubAction = TEXT("create_behavior_tree");
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("create_behavior_tree"))
     {
-        FString Name = GetStringFieldAI(Payload, TEXT("name"));
-        FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/BehaviorTrees"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/BehaviorTrees"));
 
         if (Name.IsEmpty())
         {
@@ -101,8 +99,13 @@ bool HandleAddCompositeNode(UMcpAutomationBridgeSubsystem* Self, const FString& 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("add_composite_node"))
     {
-        FString BTPath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
-        FString CompositeType = GetStringFieldAI(Payload, TEXT("compositeType"));
+        FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
+        FString CompositeType = GetJsonStringField(Payload, TEXT("compositeType"));
+        // Composite nodes were created unnamed and the response carried no
+        // identifier, so a caller had nothing to hand to add_decorator /
+        // add_service / add_task_node afterwards — the tree could be created
+        // but never assembled.
+        const FString RequestedNodeName = GetJsonStringField(Payload, TEXT("nodeName"));
 
         UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
         if (!BT)
@@ -126,6 +129,12 @@ bool HandleAddCompositeNode(UMcpAutomationBridgeSubsystem* Self, const FString& 
 
         if (NewNode)
         {
+#if WITH_EDITORONLY_DATA
+            if (!RequestedNodeName.IsEmpty())
+            {
+                NewNode->NodeName = RequestedNodeName;
+            }
+#endif
             // For adding to root, we'd need to access the internal structure
             // The BT needs a root node set
             if (!BT->RootNode)
@@ -135,6 +144,10 @@ bool HandleAddCompositeNode(UMcpAutomationBridgeSubsystem* Self, const FString& 
             BT->MarkPackageDirty();
             McpSafeAssetSave(BT);
 
+            // Return an addressable identifier so the node can be referenced by
+            // the decorator/service/task actions that follow.
+            Result->SetStringField(TEXT("nodeName"), NewNode->GetNodeName());
+            Result->SetBoolField(TEXT("isRoot"), BT->RootNode == NewNode);
             Result->SetStringField(TEXT("compositeType"), CompositeType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s node"), *CompositeType));
             McpHandlerUtils::AddVerification(Result, BT);
@@ -159,8 +172,8 @@ bool HandleAddTaskNode(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("add_task_node"))
     {
-        FString BTPath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
-        FString TaskType = GetStringFieldAI(Payload, TEXT("taskType"));
+        FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
+        FString TaskType = GetJsonStringField(Payload, TEXT("taskType"));
 
         UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
         if (!BT)

@@ -13,7 +13,6 @@ bool HandleInventoryEquipmentVisualActions(UMcpAutomationBridgeSubsystem& Bridge
       return true;
     }
 
-    // Load the blueprint
     UBlueprint* Blueprint =
         Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
     if (!Blueprint) {
@@ -27,7 +26,6 @@ bool HandleInventoryEquipmentVisualActions(UMcpAutomationBridgeSubsystem& Bridge
     bool bAttachToSocket = GetPayloadBool(Payload, TEXT("attachToSocket"), true);
     FString DefaultSocket = GetPayloadString(Payload, TEXT("defaultSocket"), TEXT("hand_r"));
 
-    // Add equipment visual configuration variables
     FEdGraphPinType BoolType;
     BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
 
@@ -45,7 +43,6 @@ bool HandleInventoryEquipmentVisualActions(UMcpAutomationBridgeSubsystem& Bridge
     TransformType.PinCategory = UEdGraphSchema_K2::PC_Struct;
     TransformType.PinSubCategoryObject = TBaseStructure<FTransform>::Get();
 
-    // Visual configuration variables
     TArray<TPair<FName, FEdGraphPinType>> VisualVars = {
       TPair<FName, FEdGraphPinType>(TEXT("bAttachToSocket"), BoolType),
       TPair<FName, FEdGraphPinType>(TEXT("DefaultAttachSocket"), NameType),

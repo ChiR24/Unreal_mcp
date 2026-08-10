@@ -27,19 +27,16 @@ bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const F
       return true;
     }
 
-    // Update code if provided
     FString NewCode;
     if (Payload->TryGetStringField(TEXT("code"), NewCode)) {
       CustomExpr->Code = NewCode;
     }
 
-    // Update description if provided
     FString NewDesc;
     if (Payload->TryGetStringField(TEXT("description"), NewDesc)) {
       CustomExpr->Description = NewDesc;
     }
 
-    // Update output type if provided
     FString NewOutputType;
     if (Payload->TryGetStringField(TEXT("outputType"), NewOutputType)) {
       if (NewOutputType == TEXT("Float1")) CustomExpr->OutputType = CMOT_Float1;
@@ -49,7 +46,6 @@ bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const F
       else if (NewOutputType == TEXT("MaterialAttributes")) CustomExpr->OutputType = CMOT_MaterialAttributes;
     }
 
-    // Update inputs if provided
     const TArray<TSharedPtr<FJsonValue>> *InputsArray = nullptr;
     if (Payload->TryGetArrayField(TEXT("inputs"), InputsArray) && InputsArray) {
       CustomExpr->Inputs.Empty();
@@ -67,7 +63,6 @@ bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const F
       }
     }
 
-    // Update additional outputs if provided
     const TArray<TSharedPtr<FJsonValue>> *OutputsArray = nullptr;
     if (Payload->TryGetArrayField(TEXT("additionalOutputs"), OutputsArray) && OutputsArray) {
       CustomExpr->AdditionalOutputs.Empty();
@@ -102,9 +97,6 @@ bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const F
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // get_node_chain — trace signal path from startNodeId to endNodeId/endPin
-  // --------------------------------------------------------------------------
   return false;
 }
 }

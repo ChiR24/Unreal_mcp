@@ -64,7 +64,9 @@ describe('handlePipelineTools run_ubt validation', () => {
       .rejects.toThrow(/response-file/);
   });
 
-  it('uses Unreal bundled dotnet when UBT is discovered as the legacy dll', async () => {
+  // The fake dotnet is a shebang text file; Windows cannot spawn it with
+  // shell:false (Node reports spawn UNKNOWN), so this case is POSIX-only.
+  it.skipIf(process.platform === 'win32')('uses Unreal bundled dotnet when UBT is discovered as the legacy dll', async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'cosmic-wolf-ubt-'));
     const previousEnginePath = process.env.UE_ENGINE_PATH;
     const previousProjectPath = process.env.UE_PROJECT_PATH;

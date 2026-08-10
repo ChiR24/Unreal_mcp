@@ -13,7 +13,7 @@
 
 import { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
-import { createSubActionDispatcher, requireNonEmptyString } from '../foundation/dispatch/common-handlers.js';
+import { createSubActionDispatcher, createUnknownActionResponse, requireNonEmptyString } from '../foundation/dispatch/common-handlers.js';
 
 
 /**
@@ -319,10 +319,6 @@ export async function handleNiagaraAuthoringTools(
     // =========================================================================
 
     default:
-      return {
-        success: false,
-        error: 'UNKNOWN_ACTION',
-        message: `Unknown Niagara authoring action: ${action}`
-      };
+      return createUnknownActionResponse(`Unknown Niagara authoring action: ${action}`);
   }
 }

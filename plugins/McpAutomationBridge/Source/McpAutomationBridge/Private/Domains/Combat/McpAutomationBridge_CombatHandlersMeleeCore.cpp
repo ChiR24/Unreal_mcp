@@ -22,11 +22,10 @@ bool FCombatActionContext::HandleMeleeCore() const
             return true;
         }
 
-        FString TraceStartSocket = GetStringFieldCombat(Payload, TEXT("meleeTraceStartSocket"), TEXT("WeaponBase"));
-        FString TraceEndSocket = GetStringFieldCombat(Payload, TEXT("meleeTraceEndSocket"), TEXT("WeaponTip"));
-        double TraceRadius = GetNumberFieldCombat(Payload, TEXT("meleeTraceRadius"), 10.0);
+        FString TraceStartSocket = GetJsonStringField(Payload, TEXT("meleeTraceStartSocket"), TEXT("WeaponBase"));
+        FString TraceEndSocket = GetJsonStringField(Payload, TEXT("meleeTraceEndSocket"), TEXT("WeaponTip"));
+        double TraceRadius = GetJsonNumberField(Payload, TEXT("meleeTraceRadius"), 10.0);
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("MeleeTraceStartSocket"), MakeNamePinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("MeleeTraceEndSocket"), MakeNamePinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("MeleeTraceRadius"), MakeFloatPinType());
@@ -35,7 +34,6 @@ bool FCombatActionContext::HandleMeleeCore() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -70,9 +68,6 @@ bool FCombatActionContext::HandleMeleeCore() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Melee trace configured."), Result);
         return true;
     }
-
-    // configure_combo_system
-
     if (SubAction == TEXT("configure_combo_system"))
     {
         if (BlueprintPath.IsEmpty())
@@ -88,10 +83,9 @@ bool FCombatActionContext::HandleMeleeCore() const
             return true;
         }
 
-        double ComboWindowTime = GetNumberFieldCombat(Payload, TEXT("comboWindowTime"), 0.5);
-        int32 MaxComboCount = static_cast<int32>(GetNumberFieldCombat(Payload, TEXT("maxComboCount"), 3));
+        double ComboWindowTime = GetJsonNumberField(Payload, TEXT("comboWindowTime"), 0.5);
+        int32 MaxComboCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxComboCount"), 3));
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("ComboWindowTime"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("MaxComboCount"), MakeIntPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("CurrentComboIndex"), MakeIntPinType());
@@ -100,7 +94,6 @@ bool FCombatActionContext::HandleMeleeCore() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -134,9 +127,6 @@ bool FCombatActionContext::HandleMeleeCore() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Combo system configured."), Result);
         return true;
     }
-
-    // create_hit_pause (hitstop)
-
     if (SubAction == TEXT("create_hit_pause"))
     {
         if (BlueprintPath.IsEmpty())
@@ -152,10 +142,9 @@ bool FCombatActionContext::HandleMeleeCore() const
             return true;
         }
 
-        double HitPauseDuration = GetNumberFieldCombat(Payload, TEXT("hitPauseDuration"), 0.05);
-        double TimeDilation = GetNumberFieldCombat(Payload, TEXT("hitPauseTimeDilation"), 0.1);
+        double HitPauseDuration = GetJsonNumberField(Payload, TEXT("hitPauseDuration"), 0.05);
+        double TimeDilation = GetJsonNumberField(Payload, TEXT("hitPauseTimeDilation"), 0.1);
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("HitPauseDuration"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("HitPauseTimeDilation"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("bEnableHitPause"), MakeBoolPinType());
@@ -163,7 +152,6 @@ bool FCombatActionContext::HandleMeleeCore() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -193,9 +181,6 @@ bool FCombatActionContext::HandleMeleeCore() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hit pause (hitstop) configured."), Result);
         return true;
     }
-
-    // configure_hit_reaction
-
     return false;
 }
 #endif

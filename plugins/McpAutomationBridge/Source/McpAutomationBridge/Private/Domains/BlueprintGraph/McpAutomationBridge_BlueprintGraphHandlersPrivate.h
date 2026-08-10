@@ -63,7 +63,17 @@ struct FActionContext
         SaveLoadedAssetThrottled(Blueprint);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
+        // `nodeGuid` is the name blueprint.create_node/add_event declare and
+        // mark REQUIRED in their output schema. The gateway projects the result
+        // to schema-declared names only, so emitting just `nodeId` projected to
+        // an empty payload and turned every successful node creation into
+        // OUTPUT_SCHEMA_VIOLATION — the node existed in the graph while the
+        // caller was told it failed. Both names are emitted: `nodeGuid` for the
+        // canonical contract, `nodeId` for the WebSocket surface and for
+        // delete_node/connect_pins, which consume that spelling.
+        const FString NodeGuidText = NewNode->NodeGuid.ToString();
+        Result->SetStringField(TEXT("nodeGuid"), NodeGuidText);
+        Result->SetStringField(TEXT("nodeId"), NodeGuidText);
         Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
         McpHandlerUtils::AddVerification(Result, Blueprint);
         SendResponse(TEXT("Node created."), Result);
@@ -76,6 +86,8 @@ bool PrepareBlueprintAndGraph(FActionContext& Context);
 bool HandleListNodeTypes(FActionContext& Context);
 bool HandleNodeCreationAction(FActionContext& Context);
 bool HandlePinMutationAction(FActionContext& Context);
+bool SetPinDefaultValue(FActionContext& Context);
+FString PickFirstNonEmpty(const TSharedPtr<FJsonObject>& Payload, const TArray<const TCHAR*>& Keys);
 bool HandleNodeMutationAction(FActionContext& Context);
 bool HandleNodeQueryAction(FActionContext& Context);
 bool HandleNodeDetailAction(FActionContext& Context);

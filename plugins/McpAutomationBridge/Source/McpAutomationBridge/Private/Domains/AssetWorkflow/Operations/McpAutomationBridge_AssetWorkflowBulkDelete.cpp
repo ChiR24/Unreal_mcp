@@ -61,9 +61,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     if (!FolderPath.IsEmpty()) {
       // Normalize path
       FString NormalizedPath = FolderPath;
-      if (NormalizedPath.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) {
-        NormalizedPath = FString::Printf(TEXT("/Game%s"), *NormalizedPath.RightChop(8));
-      }
+      McpAssetPathCanonical::MapContentRootInline(NormalizedPath);
 
       NormalizedPath = SanitizeProjectRelativePath(NormalizedPath);
       if (NormalizedPath.IsEmpty()) {

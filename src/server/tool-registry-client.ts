@@ -1,5 +1,6 @@
 import { mcpClients } from 'mcp-client-capabilities';
 import { config } from '../config.js';
+import { parseClientCapabilityProfile, type ClientCapabilityProfile } from './mcp-primitives/session-capability-profile.js';
 
 const KNOWN_DYNAMIC_CLIENT_NAMES = ['cursor', 'cline', 'windsurf', 'kilo', 'opencode', 'vscode', 'visual studio code'];
 
@@ -33,4 +34,14 @@ export function getEffectiveCategories(supportsListChanged: boolean, currentCate
     return (!supportsListChanged || currentCategories.includes('all'))
         ? ['all']
         : currentCategories;
+}
+
+// Task 35 — derive the per-session client profile STRUCTURALLY from the declared
+// MCP capabilities. Unlike clientSupportsListChanged above (a legacy name-based
+// heuristic that no longer steers the permanent single-tool listing), this never
+// inspects the client name or version, so two clients that declare identical
+// capabilities behave identically regardless of brand. Task 37 calls it at
+// initialize with server.getClientCapabilities().
+export function deriveClientCapabilityProfile(declaredCapabilities: unknown): ClientCapabilityProfile {
+    return parseClientCapabilityProfile(declaredCapabilities);
 }

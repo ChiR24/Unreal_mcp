@@ -19,8 +19,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRemovePhysicsBody(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 #if WITH_EDITOR
-    FString PhysicsAssetPath = GetStringFieldSkel(Payload, TEXT("physicsAssetPath"));
-    FString BoneName = GetStringFieldSkel(Payload, TEXT("boneName"));
+    FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
+    FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
 
     if (PhysicsAssetPath.IsEmpty() || BoneName.IsEmpty())
     {

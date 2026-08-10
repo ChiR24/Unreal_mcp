@@ -53,16 +53,13 @@ bool HandleStreamLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       return true;
     }
 
-    // Find the streaming level by name/path
     ULevelStreaming* TargetStreamingLevel = nullptr;
     FString NormalizedLevelName = LevelName;
 
-    // Normalize the path - remove .umap extension if present
     if (NormalizedLevelName.EndsWith(TEXT(".umap"))) {
       NormalizedLevelName = NormalizedLevelName.LeftChop(5);
     }
 
-    // Search for the streaming level
     for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels()) {
       if (StreamingLevel) {
         FString StreamingName = StreamingLevel->GetWorldAssetPackageName();
@@ -81,7 +78,6 @@ bool HandleStreamLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     Result->SetBoolField(TEXT("shouldBeVisible"), bVis);
 
     if (TargetStreamingLevel) {
-      // Use the streaming level API directly
       TargetStreamingLevel->SetShouldBeLoaded(bLoad);
       TargetStreamingLevel->SetShouldBeVisible(bVis);
 
@@ -109,7 +105,6 @@ bool HandleStreamLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
                           bLoad ? TEXT("Load") : TEXT("Unload"),
                           bVis ? TEXT("Show") : TEXT("Hide"));
 
-      // Execute console command and check result
       bool bCmdSuccess = false;
       if (World) {
         bCmdSuccess = GEditor->Exec(World, *Cmd);

@@ -105,9 +105,6 @@ bool HandleSetShadingModel(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // set_material_domain
-  // --------------------------------------------------------------------------
   return false;
 }
 }

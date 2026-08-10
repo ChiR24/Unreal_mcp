@@ -24,7 +24,7 @@ function createConnectedTools() {
 describe('handleEditorTools', () => {
   it('keeps control_editor schemas strict-function compatible', async () => {
     const { consolidatedToolDefinitions } = await import('../../catalog/consolidated-tool-definitions.js');
-    const { coreToolDefinitions } = await import('../../schemas/core-tools.js');
+    const { generatedParentToolDefinitions: coreToolDefinitions } = await import('../../catalog/capabilities/generated/parent-tool-definitions.generated.js');
     const tools = [
       consolidatedToolDefinitions.find((tool) => tool.name === 'control_editor'),
       coreToolDefinitions.find((tool) => tool.name === 'control_editor')
@@ -43,7 +43,7 @@ describe('handleEditorTools', () => {
 
   it('exposes all supported simulate_input parameters in the public schemas', async () => {
     const { consolidatedToolDefinitions } = await import('../../catalog/consolidated-tool-definitions.js');
-    const { coreToolDefinitions } = await import('../../schemas/core-tools.js');
+    const { generatedParentToolDefinitions: coreToolDefinitions } = await import('../../catalog/capabilities/generated/parent-tool-definitions.generated.js');
     const tools = [
       consolidatedToolDefinitions.find((tool) => tool.name === 'control_editor'),
       coreToolDefinitions.find((tool) => tool.name === 'control_editor')
@@ -74,7 +74,7 @@ describe('handleEditorTools', () => {
       action: 'screenshot',
       filename: undefined,
       resolution: undefined
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 
   it('normalizes editor asset and level paths before dispatch', async () => {
@@ -86,11 +86,11 @@ describe('handleEditorTools', () => {
     expect(sendAutomationRequest).toHaveBeenNthCalledWith(1, 'control_editor', {
       action: 'open_asset',
       assetPath: '/Game/UI/WBP_Menu'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
     expect(sendAutomationRequest).toHaveBeenNthCalledWith(2, 'control_editor', {
       action: 'open_level',
       levelPath: '/Game/Maps/Demo'
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 
   it('requests image data for full editor window screenshots', async () => {
@@ -104,7 +104,7 @@ describe('handleEditorTools', () => {
       resolution: undefined,
       mode: 'full_editor_window',
       returnBase64: true
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 
   it('routes game viewport screenshots to the game viewport capture path', async () => {
@@ -118,7 +118,7 @@ describe('handleEditorTools', () => {
       resolution: undefined,
       mode: 'game_viewport',
       returnBase64: true
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 
   it('returns string action for invalid screenshot modes', async () => {
@@ -147,7 +147,7 @@ describe('handleEditorTools', () => {
       x: undefined,
       y: undefined,
       button: undefined
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 
   it('maps simulate_input from inputType key plus inputAction', async () => {
@@ -162,7 +162,7 @@ describe('handleEditorTools', () => {
       x: undefined,
       y: undefined,
       button: undefined
-    }, {});
+    }, { timeoutMs: expect.any(Number) });
   });
 
   it('rejects simulate_input when only the routing action is present', async () => {

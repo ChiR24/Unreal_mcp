@@ -102,8 +102,15 @@ describe('plugin packaging contracts', () => {
       'name.lower().endswith(forbidden_extensions)',
     );
     expect(batchScript).toContain(
-      '[System.IO.Compression.ZipFile]::OpenRead($args[0])',
+      '[System.IO.Compression.ZipFile]::OpenRead($env:MCP_PKG_ZIP)',
     );
+    // `powershell -Command` appends trailing tokens to the command TEXT instead
+    // of binding them to $args, so the earlier `OpenRead($args[0]) "%ZIP_PATH%"`
+    // form passed $null and threw "Empty path name is not legal" on every run --
+    // the verification step failed for a reason unrelated to what it verifies.
+    // Every helper reads its path from the environment instead, so no argument
+    // indexing may return (the prose REM explaining this is expected to stay).
+    expect(batchScript).not.toContain('$args[');
     expect(batchScript).toContain('Archive verification failed.');
   });
 

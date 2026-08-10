@@ -37,14 +37,13 @@ bool FCombatActionContext::HandleWeaponEquipment() const
                     if (SlotValue->Type == EJson::Object)
                     {
                         auto SlotObj = SlotValue->AsObject();
-                        FString SlotName = GetStringFieldCombat(SlotObj, TEXT("slotName"));
-                        FString SlotType = GetStringFieldCombat(SlotObj, TEXT("slotType"), TEXT("Optic"));
+                        FString SlotName = GetJsonStringField(SlotObj, TEXT("slotName"));
+                        FString SlotType = GetJsonStringField(SlotObj, TEXT("slotType"), TEXT("Optic"));
 
                         if (!SlotName.IsEmpty())
                         {
                             SlotNames.Add(SlotName);
 
-                            // Create actual SceneComponent as attachment point
                             FString ComponentName = FString::Printf(TEXT("AttachPoint_%s"), *SlotName);
                             USceneComponent* AttachPoint = GetOrCreateSCSComponent<USceneComponent>(Blueprint, ComponentName, TEXT("WeaponMesh"));
                             if (AttachPoint)
@@ -97,9 +96,6 @@ bool FCombatActionContext::HandleWeaponEquipment() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Attachment system configured with SceneComponent attach points."), Result);
         return true;
     }
-
-    // setup_weapon_switching
-
     if (SubAction == TEXT("setup_weapon_switching"))
     {
         if (BlueprintPath.IsEmpty())
@@ -115,12 +111,11 @@ bool FCombatActionContext::HandleWeaponEquipment() const
             return true;
         }
 
-        double SwitchInTime = GetNumberFieldCombat(Payload, TEXT("switchInTime"), 0.3);
-        double SwitchOutTime = GetNumberFieldCombat(Payload, TEXT("switchOutTime"), 0.2);
-        FString EquipAnimPath = GetStringFieldCombat(Payload, TEXT("equipAnimationPath"));
-        FString UnequipAnimPath = GetStringFieldCombat(Payload, TEXT("unequipAnimationPath"));
+        double SwitchInTime = GetJsonNumberField(Payload, TEXT("switchInTime"), 0.3);
+        double SwitchOutTime = GetJsonNumberField(Payload, TEXT("switchOutTime"), 0.2);
+        FString EquipAnimPath = GetJsonStringField(Payload, TEXT("equipAnimationPath"));
+        FString UnequipAnimPath = GetJsonStringField(Payload, TEXT("unequipAnimationPath"));
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("SwitchInTime"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("SwitchOutTime"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("bIsSwitching"), MakeBoolPinType());
@@ -151,7 +146,6 @@ bool FCombatActionContext::HandleWeaponEquipment() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())

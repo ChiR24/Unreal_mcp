@@ -8,7 +8,7 @@ TSharedPtr<FJsonObject> HandleAnimationInfoActions(const FString& SubAction, con
 {
     if (SubAction == TEXT("get_animation_info"))
     {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 
         UObject* Asset = StaticLoadObject(UObject::StaticClass(), nullptr, *AssetPath);
         if (!Asset)

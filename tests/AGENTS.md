@@ -21,7 +21,21 @@ tests/
 `-- reports/                        # generated JSON only; never add AGENTS or hand-authored files
 ```
 
-The mock smoke test is `scripts/smoke-test.ts`, not under this directory. It imports `dist/index.js`, uses linked in-memory transports, enables `MOCK_UNREAL_CONNECTION`, and checks the 23-tool surface plus `manage_tools`.
+The mock smoke test is `scripts/smoke-test.ts`, not under this directory. It imports `dist/index.js` (so `npm run build` must run first), uses linked in-memory transports, and self-sets `MOCK_UNREAL_CONNECTION`. It asserts exactly **one public tool (`unreal`)**, that search/describe/configure work, that `perActionSchemas` is `false`, and that a hidden parent tool called directly is **rejected**. It does NOT assert a 23-tool listing.
+
+## TIMEOUT LADDER
+| Scope | Default | Override |
+|-------|---------|----------|
+| Vitest unit | 10s | `vitest.config.ts` `testTimeout` |
+| Integration per-case | **5s** | `UNREAL_MCP_TEST_CASE_TIMEOUT_MS`, or per-case `timeoutMs` (cleanup cases use 30s) |
+| Per-call server | 60s | `UNREAL_MCP_TEST_CALL_TIMEOUT_MS` |
+| Client / progress | 300s | `UNREAL_MCP_TEST_CLIENT_TIMEOUT_MS` |
+| Bridge port wait | 5s/port | `UNREAL_MCP_WAIT_PORT_MS` (client-level wait is 10s) |
+| Inter-case throttle | 100ms | `UNREAL_MCP_TEST_THROTTLE_MS` |
+
+Other runner env: `MCP_AUTOMATION_WS_HOST` (127.0.0.1), `MCP_AUTOMATION_WS_PORTS` (8090,8091), `UNREAL_MCP_SERVER_CMD/ARGS/CWD`, `UNREAL_MCP_FORCE_DIST`, `UNREAL_MCP_AUTO_BUILD` / `UNREAL_MCP_NO_AUTO_BUILD`, `UNREAL_MCP_TEST_LOG_RESPONSES`.
+
+The runner AUTO-BUILDS: if `dist/cli.js` is missing, or source is newer than dist, it runs `npm run build` unless `UNREAL_MCP_NO_AUTO_BUILD=1`. It still needs a live editor.
 
 ## WHERE TO LOOK
 | Task | Location | Notes |

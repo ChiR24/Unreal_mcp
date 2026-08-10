@@ -1,42 +1,49 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 
 #if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
+// Empty means REFUSED, not "unchanged": the shared canonicalizer rejects a
+// value whose resolved target it cannot vouch for. Replaying its steps here in
+// a different order (alias map before separator normalization) is what let
+// "\Content\..." mean one thing to the pre-queue gate and another here.
 FString NormalizeAnimPath(const FString& Path)
 {
-    FString Normalized = Path;
-    Normalized.ReplaceInline(TEXT("/Content"), TEXT("/Game"));
-    Normalized.ReplaceInline(TEXT("\\"), TEXT("/"));
-
-    // Remove trailing slashes
-    while (Normalized.EndsWith(TEXT("/")))
-    {
-        Normalized.LeftChopInline(1);
-    }
-
-    return Normalized;
+    return McpCanonicalizeContentPath(Path, /*bAssumeGameRoot=*/true);
 }
 
 // Helper to load skeleton from path
 USkeleton* LoadSkeletonFromPathAnim(const FString& SkeletonPath)
 {
-    FString NormalizedPath = NormalizeAnimPath(SkeletonPath);
+    const FString NormalizedPath = NormalizeAnimPath(SkeletonPath);
+    if (NormalizedPath.IsEmpty())
+    {
+        return nullptr;
+    }
     return Cast<USkeleton>(StaticLoadObject(USkeleton::StaticClass(), nullptr, *NormalizedPath));
 }
 
 // Helper to load skeletal mesh from path
 USkeletalMesh* LoadSkeletalMeshFromPathAnim(const FString& MeshPath)
 {
-    FString NormalizedPath = NormalizeAnimPath(MeshPath);
+    const FString NormalizedPath = NormalizeAnimPath(MeshPath);
+    if (NormalizedPath.IsEmpty())
+    {
+        return nullptr;
+    }
     return Cast<USkeletalMesh>(StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *NormalizedPath));
 }
 
 // Helper to load animation sequence from path
 UAnimSequence* LoadAnimSequenceFromPath(const FString& AnimPath)
 {
-    FString NormalizedPath = NormalizeAnimPath(AnimPath);
+    const FString NormalizedPath = NormalizeAnimPath(AnimPath);
+    if (NormalizedPath.IsEmpty())
+    {
+        return nullptr;
+    }
     return Cast<UAnimSequence>(StaticLoadObject(UAnimSequence::StaticClass(), nullptr, *NormalizedPath));
 }
 
@@ -70,9 +77,9 @@ FVector GetVectorFromJsonAnim(const TSharedPtr<FJsonObject>& Obj)
         return FVector::ZeroVector;
     }
     return FVector(
-        GetNumberFieldAnimAuth(Obj, TEXT("x"), 0.0),
-        GetNumberFieldAnimAuth(Obj, TEXT("y"), 0.0),
-        GetNumberFieldAnimAuth(Obj, TEXT("z"), 0.0)
+        GetJsonNumberField(Obj, TEXT("x"), 0.0),
+        GetJsonNumberField(Obj, TEXT("y"), 0.0),
+        GetJsonNumberField(Obj, TEXT("z"), 0.0)
     );
 }
 
@@ -87,18 +94,18 @@ FRotator GetRotatorFromJsonAnim(const TSharedPtr<FJsonObject>& Obj)
     if (Obj->HasField(TEXT("pitch")) || Obj->HasField(TEXT("yaw")) || Obj->HasField(TEXT("roll")))
     {
         return FRotator(
-            GetNumberFieldAnimAuth(Obj, TEXT("pitch"), 0.0),
-            GetNumberFieldAnimAuth(Obj, TEXT("yaw"), 0.0),
-            GetNumberFieldAnimAuth(Obj, TEXT("roll"), 0.0)
+            GetJsonNumberField(Obj, TEXT("pitch"), 0.0),
+            GetJsonNumberField(Obj, TEXT("yaw"), 0.0),
+            GetJsonNumberField(Obj, TEXT("roll"), 0.0)
         );
     }
     else if (Obj->HasField(TEXT("w")))
     {
         FQuat Quat(
-            GetNumberFieldAnimAuth(Obj, TEXT("x"), 0.0),
-            GetNumberFieldAnimAuth(Obj, TEXT("y"), 0.0),
-            GetNumberFieldAnimAuth(Obj, TEXT("z"), 0.0),
-            GetNumberFieldAnimAuth(Obj, TEXT("w"), 1.0)
+            GetJsonNumberField(Obj, TEXT("x"), 0.0),
+            GetJsonNumberField(Obj, TEXT("y"), 0.0),
+            GetJsonNumberField(Obj, TEXT("z"), 0.0),
+            GetJsonNumberField(Obj, TEXT("w"), 1.0)
         );
         return Quat.Rotator();
     }

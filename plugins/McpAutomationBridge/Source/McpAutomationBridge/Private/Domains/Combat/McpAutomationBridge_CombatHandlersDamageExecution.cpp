@@ -22,11 +22,10 @@ bool FCombatActionContext::HandleDamageExecution() const
             return true;
         }
 
-        double DamageImpulse = GetNumberFieldCombat(Payload, TEXT("damageImpulse"), 500.0);
-        double CriticalMultiplier = GetNumberFieldCombat(Payload, TEXT("criticalMultiplier"), 2.0);
-        double HeadshotMultiplier = GetNumberFieldCombat(Payload, TEXT("headshotMultiplier"), 2.5);
+        double DamageImpulse = GetJsonNumberField(Payload, TEXT("damageImpulse"), 500.0);
+        double CriticalMultiplier = GetJsonNumberField(Payload, TEXT("criticalMultiplier"), 2.0);
+        double HeadshotMultiplier = GetJsonNumberField(Payload, TEXT("headshotMultiplier"), 2.5);
 
-        // Add damage-related variables
         AddBlueprintVariableCombat(Blueprint, TEXT("DamageImpulse"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("CriticalMultiplier"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("HeadshotMultiplier"), MakeFloatPinType());
@@ -34,7 +33,6 @@ bool FCombatActionContext::HandleDamageExecution() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -66,9 +64,6 @@ bool FCombatActionContext::HandleDamageExecution() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage execution configured."), Result);
         return true;
     }
-
-    // setup_hitbox_component
-
     if (SubAction == TEXT("setup_hitbox_component"))
     {
         if (BlueprintPath.IsEmpty())
@@ -84,13 +79,12 @@ bool FCombatActionContext::HandleDamageExecution() const
             return true;
         }
 
-        FString HitboxType = GetStringFieldCombat(Payload, TEXT("hitboxType"), TEXT("Capsule"));
-        FString BoneName = GetStringFieldCombat(Payload, TEXT("hitboxBoneName"), TEXT(""));
-        bool bIsDamageZoneHead = GetBoolFieldCombat(Payload, TEXT("isDamageZoneHead"), false);
-        double DamageMultiplier = GetNumberFieldCombat(Payload, TEXT("damageMultiplier"), 1.0);
+        FString HitboxType = GetJsonStringField(Payload, TEXT("hitboxType"), TEXT("Capsule"));
+        FString BoneName = GetJsonStringField(Payload, TEXT("hitboxBoneName"), TEXT(""));
+        bool bIsDamageZoneHead = GetJsonBoolField(Payload, TEXT("isDamageZoneHead"), false);
+        double DamageMultiplier = GetJsonNumberField(Payload, TEXT("damageMultiplier"), 1.0);
         TSharedPtr<FJsonObject> AppliedHitboxSize = MakeShared<FJsonObject>();
 
-        // Create appropriate collision component based on type
         if (HitboxType == TEXT("Capsule"))
         {
             UCapsuleComponent* Hitbox = GetOrCreateSCSComponent<UCapsuleComponent>(Blueprint, TEXT("HitboxCapsule"));
@@ -99,8 +93,8 @@ bool FCombatActionContext::HandleDamageExecution() const
                 auto HitboxSizeObj = Payload->GetObjectField(TEXT("hitboxSize"));
                 if (HitboxSizeObj.IsValid())
                 {
-                    double Radius = GetNumberFieldCombat(HitboxSizeObj, TEXT("radius"), 34.0);
-                    double HalfHeight = GetNumberFieldCombat(HitboxSizeObj, TEXT("halfHeight"), 88.0);
+                    double Radius = GetJsonNumberField(HitboxSizeObj, TEXT("radius"), 34.0);
+                    double HalfHeight = GetJsonNumberField(HitboxSizeObj, TEXT("halfHeight"), 88.0);
                     Hitbox->SetCapsuleRadius(static_cast<float>(Radius));
                     Hitbox->SetCapsuleHalfHeight(static_cast<float>(HalfHeight));
                     AppliedHitboxSize->SetNumberField(TEXT("radius"), Radius);
@@ -138,21 +132,19 @@ bool FCombatActionContext::HandleDamageExecution() const
                 auto HitboxSizeObj = Payload->GetObjectField(TEXT("hitboxSize"));
                 if (HitboxSizeObj.IsValid())
                 {
-                    double Radius = GetNumberFieldCombat(HitboxSizeObj, TEXT("radius"), 50.0);
+                    double Radius = GetJsonNumberField(HitboxSizeObj, TEXT("radius"), 50.0);
                     Hitbox->SetSphereRadius(static_cast<float>(Radius));
                     AppliedHitboxSize->SetNumberField(TEXT("radius"), Radius);
                 }
             }
         }
 
-        // Add hitbox metadata variables
         AddBlueprintVariableCombat(Blueprint, TEXT("bIsHeadshotZone"), MakeBoolPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("HitboxDamageMultiplier"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -203,10 +195,9 @@ bool FCombatActionContext::HandleDamageExecution() const
             return true;
         }
 
-        FString HitboxType = GetStringFieldCombat(Payload, TEXT("hitboxType"), TEXT("Capsule"));
-        double DamageMultiplier = GetNumberFieldCombat(Payload, TEXT("damageMultiplier"), 1.0);
+        FString HitboxType = GetJsonStringField(Payload, TEXT("hitboxType"), TEXT("Capsule"));
+        double DamageMultiplier = GetJsonNumberField(Payload, TEXT("damageMultiplier"), 1.0);
 
-        // Create collision component based on type
         if (HitboxType == TEXT("Capsule"))
         {
             GetOrCreateSCSComponent<UCapsuleComponent>(Blueprint, TEXT("HitboxCapsule"));

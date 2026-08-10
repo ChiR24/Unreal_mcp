@@ -108,7 +108,6 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
       return true;
     }
 
-    // Load the recipe asset
     UObject* RecipeAsset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *RecipePath);
     if (!RecipeAsset) {
       Bridge.SendAutomationError(
@@ -132,7 +131,6 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
 
     if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(IngredientsProp)) {
       FScriptArrayHelper ArrayHelper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(RecipeAsset));
-      // Actually add a new element to the array
       int32 NewIdx = ArrayHelper.AddValue();
       if (NewIdx != INDEX_NONE) {
         IngredientIndex = NewIdx;

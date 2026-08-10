@@ -9,30 +9,6 @@
 #if WITH_EDITOR && MCP_HAS_GAS
 namespace McpGASHandlers
 {
-static inline FString GetStringFieldGAS(
-    const TSharedPtr<FJsonObject>& Payload,
-    const FString& Field,
-    const FString& DefaultValue = TEXT(""))
-{
-    return GetJsonStringField(Payload, Field, DefaultValue);
-}
-
-static inline double GetNumberFieldGAS(
-    const TSharedPtr<FJsonObject>& Payload,
-    const FString& Field,
-    double DefaultValue = 0.0)
-{
-    return GetJsonNumberField(Payload, Field, DefaultValue);
-}
-
-static inline bool GetBoolFieldGAS(
-    const TSharedPtr<FJsonObject>& Payload,
-    const FString& Field,
-    bool DefaultValue = false)
-{
-    return GetJsonBoolField(Payload, Field, DefaultValue);
-}
-
 static inline FString NormalizeGASToken(FString Value)
 {
     Value.TrimStartAndEndInline();
@@ -49,13 +25,13 @@ static inline FString GetGASStringFieldWithFallback(
     const TCHAR* FallbackField,
     const FString& DefaultValue = FString())
 {
-    FString Value = GetStringFieldGAS(Payload, PrimaryField);
+    FString Value = GetJsonStringField(Payload, PrimaryField);
     if (!Value.IsEmpty())
     {
         return Value;
     }
 
-    Value = GetStringFieldGAS(Payload, FallbackField);
+    Value = GetJsonStringField(Payload, FallbackField);
     return Value.IsEmpty() ? DefaultValue : Value;
 }
 

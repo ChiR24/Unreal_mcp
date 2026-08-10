@@ -14,7 +14,7 @@ vi.mock('../foundation/dispatch/common-handlers.js', async () => {
 });
 
 import { handleSequenceTools } from './sequence-handlers.js';
-import { manageSequenceToolDefinition } from '../../definitions/utility/manage-sequence-tool.js';
+import { consolidatedToolDefinitions } from '../../catalog/consolidated-tool-definitions.js';
 
 const tools = {
   systemTools: {
@@ -153,7 +153,7 @@ describe('handleSequenceTools path normalization', () => {
     }
   );
 
-  it('normalizes cinematics and media UE asset paths without rewriting local media paths', async () => {
+  it('normalizes live cinematics and media UE asset paths but leaves dead aliases unnormalized', async () => {
     await handleSequenceTools('create_media_texture', {
       action: 'create_media_texture',
       mediaPlayerPath: 'Game/MCPTest/Media/MP_Cinematics',
@@ -162,17 +162,32 @@ describe('handleSequenceTools path normalization', () => {
       filePath: '/tmp/cinematics/source.mp4'
     }, tools);
 
-    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
-      tools,
-      'manage_sequence',
-      expect.objectContaining({
-        subAction: 'create_media_texture',
-        mediaPlayerPath: '/Game/MCPTest/Media/MP_Cinematics',
-        mediaSourcePath: '/Game/MCPTest/Media/MS_Cinematics',
-        mediaTexturePath: '/Game/MCPTest/Media/MT_Cinematics',
-        filePath: '/tmp/cinematics/source.mp4'
-      })
-    );
+    const payload = (executeAutomationRequestMock.mock.calls[0] as unknown as [ITools, string, Record<string, unknown>])[2];
+    expect(payload).toEqual(expect.objectContaining({
+      subAction: 'create_media_texture',
+      mediaPlayerPath: '/Game/MCPTest/Media/MP_Cinematics',
+      mediaSourcePath: '/Game/MCPTest/Media/MS_Cinematics',
+      filePath: '/tmp/cinematics/source.mp4'
+    }));
+    expect(payload.mediaTexturePath).toBe('MCPTest/Media/MT_Cinematics');
+  });
+
+  it('does not normalize verified-dead media path aliases (schema-drift guard)', async () => {
+    await handleSequenceTools('create_media_texture', {
+      action: 'create_media_texture',
+      mediaTexturePath: 'MCPTest/Media/MT_Cinematics',
+      mediaPlaylistPath: 'Content/MCPTest/Media/MPL_Cinematics'
+    }, tools);
+
+    const payload = (executeAutomationRequestMock.mock.calls[0] as unknown as [ITools, string, Record<string, unknown>])[2];
+    expect(payload.mediaTexturePath).toBe('MCPTest/Media/MT_Cinematics');
+    expect(payload.mediaPlaylistPath).toBe('Content/MCPTest/Media/MPL_Cinematics');
+    expect(payload).not.toEqual(expect.objectContaining({
+      mediaTexturePath: '/Game/MCPTest/Media/MT_Cinematics'
+    }));
+    expect(payload).not.toEqual(expect.objectContaining({
+      mediaPlaylistPath: '/Game/MCPTest/Media/MPL_Cinematics'
+    }));
   });
 
   it('normalizes every advertised cinematics and media UE path alias before dispatch', async () => {
@@ -251,6 +266,7 @@ describe('handleSequenceTools path normalization', () => {
 
 describe('manage_sequence value and frame-rate schema', () => {
   it('advertises every value shape accepted by sequence handlers', () => {
+    const manageSequenceToolDefinition = consolidatedToolDefinitions.find((t) => t.name === 'manage_sequence') as NonNullable<typeof consolidatedToolDefinitions[number]>;
     const properties = manageSequenceToolDefinition.inputSchema.properties;
     if (typeof properties !== 'object' || properties === null || Array.isArray(properties)) {
       throw new TypeError('manage_sequence properties schema is unavailable');
@@ -268,6 +284,7 @@ describe('manage_sequence value and frame-rate schema', () => {
   });
 
   it('does not advertise particle asset assignment for activation tracks', () => {
+    const manageSequenceToolDefinition = consolidatedToolDefinitions.find((t) => t.name === 'manage_sequence') as NonNullable<typeof consolidatedToolDefinitions[number]>;
     const properties = manageSequenceToolDefinition.inputSchema.properties;
     if (typeof properties !== 'object' || properties === null || Array.isArray(properties)) {
       throw new TypeError('manage_sequence properties schema is unavailable');

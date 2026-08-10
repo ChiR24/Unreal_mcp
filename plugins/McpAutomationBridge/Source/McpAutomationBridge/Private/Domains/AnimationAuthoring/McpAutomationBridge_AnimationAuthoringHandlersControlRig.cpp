@@ -11,12 +11,12 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
 // ControlRig factory static methods (CreateNewControlRigAsset, CreateControlRigFromSkeletalMeshOrSkeleton)
 // are only available in UE 5.5+ where ControlRigBlueprintFactory.h is in Public folder
 #if MCP_HAS_CONTROLRIG_FACTORY && MCP_HAS_CONTROLRIG_BLUEPRINT && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
-        FString Name = GetStringFieldAnimAuth(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("path"), TEXT("/Game/ControlRigs")));
-        FString SkeletalMeshPath = GetStringFieldAnimAuth(Params, TEXT("skeletalMeshPath"), TEXT(""));
-        FString SkeletonPath = GetStringFieldAnimAuth(Params, TEXT("skeletonPath"), TEXT(""));
-        bool bModularRig = GetBoolFieldAnimAuth(Params, TEXT("modularRig"), false);
-    bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeAnimPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/ControlRigs")));
+        FString SkeletalMeshPath = GetJsonStringField(Params, TEXT("skeletalMeshPath"), TEXT(""));
+        FString SkeletonPath = GetJsonStringField(Params, TEXT("skeletonPath"), TEXT(""));
+        bool bModularRig = GetJsonBoolField(Params, TEXT("modularRig"), false);
+    bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (Name.IsEmpty())
         {
@@ -69,10 +69,10 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
 #elif MCP_HAS_CONTROLRIG_BLUEPRINT
         // Factory static methods not available in UE 5.1-5.4 (header is in Private folder)
         // Use the Subsystem's CreateControlRigBlueprint method as fallback
-        FString Name = GetStringFieldAnimAuth(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("path"), TEXT("/Game/ControlRigs")));
-        FString SkeletalMeshPath = GetStringFieldAnimAuth(Params, TEXT("skeletalMeshPath"), TEXT(""));
-        FString SkeletonPath = GetStringFieldAnimAuth(Params, TEXT("skeletonPath"), TEXT(""));
+        FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeAnimPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/ControlRigs")));
+        FString SkeletalMeshPath = GetJsonStringField(Params, TEXT("skeletalMeshPath"), TEXT(""));
+        FString SkeletonPath = GetJsonStringField(Params, TEXT("skeletonPath"), TEXT(""));
 
         if (Name.IsEmpty())
         {
@@ -145,7 +145,7 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
             }
         }
 
-        if (!SaveAnimAsset(ControlRigBP, GetBoolFieldAnimAuth(Params, TEXT("save"), true)))
+        if (!SaveAnimAsset(ControlRigBP, GetJsonBoolField(Params, TEXT("save"), true)))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to save Control Rig Blueprint"), TEXT("SAVE_FAILED"));
         }
@@ -162,9 +162,9 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
     if (SubAction == TEXT("add_control"))
     {
 #if MCP_HAS_CONTROLRIG
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString ControlName = GetStringFieldAnimAuth(Params, TEXT("controlName"), TEXT(""));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString ControlName = GetJsonStringField(Params, TEXT("controlName"), TEXT(""));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (ControlName.IsEmpty())
         {
@@ -182,8 +182,8 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
     if (SubAction == TEXT("add_rig_unit"))
     {
 #if MCP_HAS_CONTROLRIG
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString UnitType = GetStringFieldAnimAuth(Params, TEXT("unitType"), TEXT(""));
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString UnitType = GetJsonStringField(Params, TEXT("unitType"), TEXT(""));
 
         ANIM_ERROR_RESPONSE(
             TEXT("add_rig_unit is handled by the animation_physics runtime authoring route; call animation_physics with action=add_rig_unit."),

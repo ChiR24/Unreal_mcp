@@ -68,7 +68,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameView(
     return true;
   }
 
-  // Toggle game view via console command
   GEditor->Exec(GEditor->GetEditorWorldContext().World(),
                 bEnabled ? TEXT("ToggleGameView 1") : TEXT("ToggleGameView 0"));
 
@@ -94,7 +93,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetImmersiveMode(
   if (GEditor && GEditor->GetActiveViewport()) {
     FViewport* Viewport = GEditor->GetActiveViewport();
     if (Viewport) {
-      // Immersive mode toggle via console
       GEditor->Exec(GEditor->GetEditorWorldContext().World(), TEXT("ToggleImmersive"));
     }
   }

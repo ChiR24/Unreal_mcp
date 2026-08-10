@@ -29,7 +29,7 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         TSharedPtr<FJsonObject> AIInfo = McpHandlerUtils::CreateResultObject();
 
         // --- blueprintPath: auto-discover AI setup from Pawn/Character/AIController blueprint ---
-        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
+        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
         if (!BlueprintPath.IsEmpty())
         {
             BlueprintPath = SanitizeProjectRelativePath(BlueprintPath);
@@ -64,7 +64,7 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         }
 
         // --- controllerPath: explicit controller blueprint (overrides blueprintPath discovery) ---
-        FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
+        FString ControllerPath = GetJsonStringField(Payload, TEXT("controllerPath"));
         if (!ControllerPath.IsEmpty())
         {
             UBlueprint* Controller = LoadObject<UBlueprint>(nullptr, *ControllerPath);
@@ -76,7 +76,7 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         }
 
         // --- behaviorTreePath ---
-        FString BTPath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
+        FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
         if (!BTPath.IsEmpty())
         {
             UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
@@ -134,7 +134,7 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
                 // Report associated blackboard from BT asset (only if
                 // blackboardPath was not explicitly provided, to avoid
                 // silently overwriting an explicit value)
-                FString ExplicitBBPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
+                FString ExplicitBBPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
                 if (BT->BlackboardAsset && ExplicitBBPath.IsEmpty())
                 {
                     AIInfo->SetStringField(TEXT("assignedBlackboard"),
@@ -213,7 +213,7 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         }
 
         // --- blackboardPath ---
-        FString BBPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
+        FString BBPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
         if (!BBPath.IsEmpty())
         {
             UBlackboardData* BB = LoadObject<UBlackboardData>(nullptr, *BBPath);
@@ -229,7 +229,7 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         }
 
         // --- queryPath ---
-        FString QueryPath = GetStringFieldAI(Payload, TEXT("queryPath"));
+        FString QueryPath = GetJsonStringField(Payload, TEXT("queryPath"));
         if (!QueryPath.IsEmpty())
         {
             UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
@@ -244,11 +244,6 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         return true;
     }
 
-    // =========================================================================
-    // Configuration Actions (3 new actions)
-    // =========================================================================
-
-    // set_ai_perception - Unified perception configuration (sight/hearing/damage in one call)
     return true;
 }
 }

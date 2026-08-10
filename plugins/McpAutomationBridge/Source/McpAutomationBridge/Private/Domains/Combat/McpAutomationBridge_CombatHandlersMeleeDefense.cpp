@@ -22,15 +22,13 @@ bool FCombatActionContext::HandleMeleeDefense() const
             return true;
         }
 
-        FString HitReactionMontage = GetStringFieldCombat(Payload, TEXT("hitReactionMontage"));
-        double StunTime = GetNumberFieldCombat(Payload, TEXT("hitReactionStunTime"), 0.5);
+        FString HitReactionMontage = GetJsonStringField(Payload, TEXT("hitReactionMontage"));
+        double StunTime = GetJsonNumberField(Payload, TEXT("hitReactionStunTime"), 0.5);
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("HitReactionMontagePath"), MakeStringPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("HitReactionStunTime"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("bIsStunned"), MakeBoolPinType());
 
-        // Load animation if path provided
         bool bAnimLoaded = false;
         if (!HitReactionMontage.IsEmpty())
         {
@@ -45,7 +43,6 @@ bool FCombatActionContext::HandleMeleeDefense() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -76,9 +73,6 @@ bool FCombatActionContext::HandleMeleeDefense() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hit reaction configured."), Result);
         return true;
     }
-
-    // setup_parry_block_system
-
     if (SubAction == TEXT("setup_parry_block_system"))
     {
         if (BlueprintPath.IsEmpty())
@@ -94,13 +88,12 @@ bool FCombatActionContext::HandleMeleeDefense() const
             return true;
         }
 
-        double ParryWindowStart = GetNumberFieldCombat(Payload, TEXT("parryWindowStart"), 0.0);
-        double ParryWindowEnd = GetNumberFieldCombat(Payload, TEXT("parryWindowEnd"), 0.15);
-        FString ParryAnimPath = GetStringFieldCombat(Payload, TEXT("parryAnimationPath"));
-        double BlockDamageReduction = GetNumberFieldCombat(Payload, TEXT("blockDamageReduction"), 0.8);
-        double BlockStaminaCost = GetNumberFieldCombat(Payload, TEXT("blockStaminaCost"), 10.0);
+        double ParryWindowStart = GetJsonNumberField(Payload, TEXT("parryWindowStart"), 0.0);
+        double ParryWindowEnd = GetJsonNumberField(Payload, TEXT("parryWindowEnd"), 0.15);
+        FString ParryAnimPath = GetJsonStringField(Payload, TEXT("parryAnimationPath"));
+        double BlockDamageReduction = GetJsonNumberField(Payload, TEXT("blockDamageReduction"), 0.8);
+        double BlockStaminaCost = GetJsonNumberField(Payload, TEXT("blockStaminaCost"), 10.0);
 
-        // Add variables
         AddBlueprintVariableCombat(Blueprint, TEXT("ParryWindowStart"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("ParryWindowEnd"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("BlockDamageReduction"), MakeFloatPinType());
@@ -108,7 +101,6 @@ bool FCombatActionContext::HandleMeleeDefense() const
         AddBlueprintVariableCombat(Blueprint, TEXT("bIsBlocking"), MakeBoolPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("bIsInParryWindow"), MakeBoolPinType());
 
-        // Load parry animation if path provided
         bool bAnimLoaded = false;
         if (!ParryAnimPath.IsEmpty())
         {
@@ -123,7 +115,6 @@ bool FCombatActionContext::HandleMeleeDefense() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -179,9 +170,6 @@ bool FCombatActionContext::HandleMeleeDefense() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Parry and block system configured."), Result);
         return true;
     }
-
-    // configure_weapon_trails
-
     return false;
 }
 #endif

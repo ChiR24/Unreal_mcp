@@ -7,10 +7,10 @@ namespace McpGeometryHandlers
 bool HandleBridge(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
-    int32 EdgeGroupB = GetIntFieldGeom(Payload, TEXT("edgeGroupB"), 1);
-    int32 Subdivisions = GetIntFieldGeom(Payload, TEXT("subdivisions"), 1);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+int32 EdgeGroupA = GetJsonIntField(Payload, TEXT("edgeGroupA"), 0);
+    int32 EdgeGroupB = GetJsonIntField(Payload, TEXT("edgeGroupB"), 1);
+    int32 Subdivisions = GetJsonIntField(Payload, TEXT("subdivisions"), 1);
 
     if (ActorName.IsEmpty())
     {
@@ -73,7 +73,6 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
     }
     else
     {
-        // Validate edge group indices
         int32 LoopCount = BoundaryLoops.GetLoopCount();
         int32 LoopIndexA = FMath::Clamp(EdgeGroupA, 0, LoopCount - 1);
         int32 LoopIndexB = FMath::Clamp(EdgeGroupB, 0, LoopCount - 1);
@@ -128,14 +127,12 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
                 int32 vB1 = VertsB[iB_Next];
 
                 // Create two triangles forming a quad between the loops
-                // Triangle 1: vA0 -> vA1 -> vB0
                 if (vA0 != vA1 && vA1 != vB0 && vB0 != vA0)
                 {
                     int32 Result = EditMesh.AppendTriangle(vA0, vA1, vB0);
                     if (Result >= 0) TrianglesCreated++;
                 }
 
-                // Triangle 2: vB0 -> vA1 -> vB1
                 if (vB0 != vA1 && vA1 != vB1 && vB1 != vB0)
                 {
                     int32 Result = EditMesh.AppendTriangle(vB0, vA1, vB1);
@@ -179,18 +176,14 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Loft Operation
-// -------------------------------------------------------------------------
-
 bool HandleDuplicateAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"));
-int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 10);
-    bool bAlignToSpline = GetBoolFieldGeom(Payload, TEXT("alignToSpline"), true);
-    double ScaleVariation = GetNumberFieldGeom(Payload, TEXT("scaleVariation"), 0.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"));
+int32 Count = GetJsonIntField(Payload, TEXT("count"), 10);
+    bool bAlignToSpline = GetJsonBoolField(Payload, TEXT("alignToSpline"), true);
+    double ScaleVariation = GetJsonNumberField(Payload, TEXT("scaleVariation"), 0.0);
 
     if (ActorName.IsEmpty() || SplineActorName.IsEmpty())
     {
@@ -239,7 +232,6 @@ int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 10);
         return true;
     }
 
-    // Create duplicates along spline
     float SplineLength = SplineComp->GetSplineLength();
     TArray<FString> CreatedActors;
 
@@ -256,14 +248,12 @@ int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 10);
         FVector Location = SplineComp->GetLocationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World);
         FRotator Rotation = bAlignToSpline ? SplineComp->GetRotationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World) : FRotator::ZeroRotator;
 
-        // Duplicate the source actor at this location
         AActor* NewActor = ActorSS->DuplicateActor(SourceActor, World);
         if (NewActor)
         {
             NewActor->SetActorLocation(Location);
             NewActor->SetActorRotation(Rotation);
 
-            // Apply scale variation if requested
             if (ScaleVariation > 0.0)
             {
                 double ScaleFactor = 1.0 + FMath::RandRange(-ScaleVariation, ScaleVariation);
@@ -286,9 +276,6 @@ int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 10);
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Loop Cut Operation
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

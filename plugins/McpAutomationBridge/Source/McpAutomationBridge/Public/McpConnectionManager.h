@@ -5,6 +5,8 @@
 #include "Dom/JsonObject.h"
 #include "Templates/SharedPointer.h"
 #include "Misc/ScopeLock.h"
+#include "Foundation/McpCapabilityPrincipal.h"
+#include "Foundation/McpLiveStateRevisions.h"
 
 class FMcpBridgeWebSocket;
 class UMcpAutomationBridgeSettings;
@@ -13,7 +15,13 @@ class UMcpAutomationBridgeSettings;
  * Delegate for handling incoming automation requests.
  * Params: RequestId, Action, Payload, RequestingSocket
  */
-DECLARE_DELEGATE_FourParams(FMcpMessageReceivedCallback, const FString&, const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FMcpBridgeWebSocket>);
+DECLARE_DELEGATE_FiveParams(FMcpMessageReceivedCallback, const FString&, const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FMcpBridgeWebSocket>, const FMcpExpectedRevisions&);
+
+/**
+ * Delegate for handling inbound cancel_request frames from the TS bridge.
+ * Params: RequestId (the automation request id to cancel)
+ */
+DECLARE_DELEGATE_OneParam(FMcpRequestCancelledCallback, const FString&);
 
 /**
  * Manages WebSocket connections for the MCP Automation Bridge.
@@ -53,10 +61,21 @@ public:
     void SendProgressUpdate(const FString& RequestId, float Percent = -1.0f, const FString& Message = TEXT(""), bool bStillWorking = true);
 
 	void SetOnMessageReceived(FMcpMessageReceivedCallback InCallback);
+	void SetOnAutomationRequestCancelled(FMcpRequestCancelledCallback InCallback);
 
 	// Request tracking helpers
 	int32 GetActiveSocketCount() const;
 	void RegisterRequestSocket(const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+	/**
+	 * Returns whether the requesting socket is permitted to cancel RequestId.
+	 * True when the request is NOT tracked (legacy/untracked path — forwarded
+	 * for backward compatibility) or when it IS tracked AND owned by Socket.
+	 * False when the request is tracked and owned by a DIFFERENT socket, which
+	 * prevents one authenticated client from cancelling another client's
+	 * in-flight request. Reads PendingRequestsToSockets under PendingRequestsMutex.
+	 */
+	bool IsCancelAllowedForSocket(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId) const;
 	void SetLogSubscription(TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSubscribed);
 	bool HasLogSubscribers() const;
 
@@ -67,6 +86,10 @@ public:
 	bool Tick(float DeltaTime);
 
 private:
+	// Allowed access for the focused cancel-scoping automation test.
+	friend class FMcpCancelScopeTest;
+	friend class FMcpDrainSessionTeardownTest;
+
 	void AttemptConnection();
 	void ForceReconnect(const FString& Reason, float ReconnectDelayOverride = -1.0f);
 
@@ -76,18 +99,47 @@ private:
 	void HandleServerConnectionError(const FString& Error);
 	void HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket, int32 StatusCode, const FString& Reason, bool bWasClean);
 	void HandleMessage(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Message);
+	void HandleCancelRequest(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId);
 	void HandleHeartbeat(TSharedPtr<FMcpBridgeWebSocket> Socket);
 
 	void EmitAutomationTelemetrySummaryIfNeeded(double NowSeconds);
 	bool UpdateRateLimit(FMcpBridgeWebSocket* SocketPtr, bool bIncrementMessage, bool bIncrementAutomation, FString& OutReason);
 
+	// Resolve the socket's capability principal from the presented bridge_hello
+	// token and bind it in SocketPrincipals. Returns false when the connection
+	// must be refused, which is the ONLY authentication verdict for bridge_hello.
+	bool AuthenticateSocketPrincipal(FMcpBridgeWebSocket* SocketPtr, const FString& PresentedToken, bool bLegacyTokenMatch);
+
+	// Build and send the bridge_ack, including the additive, secret-free authority
+	// descriptor for the principal just bound to this socket.
+	void SendBridgeAck(TSharedPtr<FMcpBridgeWebSocket> Socket, FMcpBridgeWebSocket* SocketPtr);
+
+	// Drop the socket's principal. Takes AuthSocketsMutex itself so every teardown
+	// site keeps its AuthenticatedSockets scope to a single guarded statement.
+	void ForgetSocketPrincipal(FMcpBridgeWebSocket* SocketPtr);
+
+	// Pre-queue security gate for one automation_request. Returns false when the
+	// request was refused and a typed automation_response has already been sent,
+	// so the caller must not map or dispatch it.
+	bool AuthorizeAutomationRequest(TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject>& RootObj);
+
+	// Copy of the socket's bound principal, or an unauthenticated principal when
+	// none is bound. Taken by value under AuthSocketsMutex so callers never hold
+	// a pointer into the map across a teardown.
+	FMcpCapabilityPrincipal GetSocketPrincipal(FMcpBridgeWebSocket* SocketPtr);
+
 private:
 	TArray<TSharedPtr<FMcpBridgeWebSocket>> ActiveSockets;
 	TMap<FString, TSharedPtr<FMcpBridgeWebSocket>> PendingRequestsToSockets;
 	TSet<FMcpBridgeWebSocket*> AuthenticatedSockets;
+	// Bound at bridge_hello, cleared on teardown, guarded by AuthSocketsMutex. The
+	// plugin is the sole authority: the socket's principal is re-consulted before
+	// every request is enqueued; the presented token is never stored here.
+	TMap<FMcpBridgeWebSocket*, FMcpCapabilityPrincipal> SocketPrincipals;
 	TSet<FMcpBridgeWebSocket*> LogSubscriberSockets;
 	FTSTicker::FDelegateHandle TickerHandle;
 	FMcpMessageReceivedCallback OnMessageReceived;
+	FMcpRequestCancelledCallback OnAutomationRequestCancelled;
 
 	// Configuration
 	FString EnvListenHost;
@@ -146,7 +198,12 @@ private:
 	double TelemetrySummaryIntervalSeconds = 120.0;
 	double LastTelemetrySummaryLogSeconds = 0.0;
 
-	mutable FCriticalSection PendingRequestsMutex;
-	mutable FCriticalSection RateLimitMutex;
-	mutable FCriticalSection LogSubscribersMutex;
+  mutable FCriticalSection PendingRequestsMutex;
+  mutable FCriticalSection RateLimitMutex;
+  mutable FCriticalSection LogSubscribersMutex;
+
+  // Guards every runtime AuthenticatedSockets access. AuthSocketsMutex is taken
+  // alone and released before PendingRequestsMutex, RateLimitMutex,
+  // LogSubscribersMutex, Socket->Close(), or delegate callbacks.
+  mutable FCriticalSection AuthSocketsMutex;
 };

@@ -19,13 +19,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreatePhysicsAsset(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
     // Also accept skeletonPath for backward compatibility
     if (SkeletalMeshPath.IsEmpty())
     {
-        SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
+        SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
     }
-    FString OutputPath = GetStringFieldSkel(Payload, TEXT("outputPath"));
+    FString OutputPath = GetJsonStringField(Payload, TEXT("outputPath"));
 
     if (SkeletalMeshPath.IsEmpty())
     {
@@ -98,12 +98,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSetPhysicsAsset(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 #if WITH_EDITOR
-    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
     if (SkeletalMeshPath.IsEmpty())
     {
-        SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("meshPath"));
+        SkeletalMeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
     }
-    FString PhysicsAssetPath = GetStringFieldSkel(Payload, TEXT("physicsAssetPath"));
+    FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
 
     if (SkeletalMeshPath.IsEmpty() || PhysicsAssetPath.IsEmpty())
     {

@@ -17,9 +17,8 @@
  */
 
 import { ITools } from '../../../types/tools/tool-interfaces.js';
-import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
-import { createSubActionDispatcher } from '../foundation/dispatch/common-handlers.js';
+import { createSubActionDispatcher, createUnknownActionResponse } from '../foundation/dispatch/common-handlers.js';
 
 /**
  * Normalize parameter names from snake_case to camelCase for C++ compatibility.
@@ -147,8 +146,14 @@ export async function handleVolumeTools(
     // Volume Configuration (3 actions)
     // ========================================================================
     case 'set_volume_extent':
-    case 'set_volume_bounds': // Alias for compatibility
       return sendRequest('set_volume_extent');
+
+    case 'set_volume_bounds':
+      // Distinct native six-value min/max bounds contract
+      // (McpAutomationBridge_VolumeHandlersBounds.cpp HandleSetVolumeBounds),
+      // NOT an alias of set_volume_extent. Task 21: stop the silent lossy
+      // collapse that dropped the bounds.origin/position semantics.
+      return sendRequest('set_volume_bounds');
 
     case 'set_volume_properties':
       return sendRequest('set_volume_properties');
@@ -166,10 +171,6 @@ export async function handleVolumeTools(
       return sendRequest('get_volumes_info');
 
     default:
-      return cleanObject({
-        success: false,
-        error: 'UNKNOWN_ACTION',
-        message: `Unknown volume action: ${action}`
-      });
+      return createUnknownActionResponse(`Unknown volume action: ${action}`);
   }
 }

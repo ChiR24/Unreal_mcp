@@ -13,7 +13,6 @@ bool HandleAddDesaturation(UMcpAutomationBridgeSubsystem* Bridge, const FString&
             HostOuter, UMaterialExpressionDesaturation::StaticClass(), NAME_None,
             RF_Transactional);
 
-    // Set optional luminance factors
     const TSharedPtr<FJsonObject> *LumObj;
     if (Payload->TryGetObjectField(TEXT("luminanceFactors"), LumObj)) {
       double R = 0.3, G = 0.59, B = 0.11;

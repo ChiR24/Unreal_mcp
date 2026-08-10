@@ -16,7 +16,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         return false;
     }
 
-    // Validate payload
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -25,7 +24,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         return true;
     }
 
-    // Extract sub-action
     FString SubAction;
     Payload->TryGetStringField(TEXT("action"), SubAction);
     const FString LowerSub = SubAction.ToLower();
@@ -33,9 +31,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     UE_LOG(LogMcpEnvironmentHandlers, Verbose,
            TEXT("HandleBuildEnvironmentAction: SubAction=%s"), *LowerSub);
 
-    // =========================================================================
-    // Foliage Sub-actions (dispatch to dedicated handlers)
-    // =========================================================================
     if (LowerSub == TEXT("add_foliage_instances"))
     {
         FString FoliageTypePath;
@@ -130,9 +125,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
                                      Payload, RequestingSocket);
     }
 
-    // =========================================================================
-    // Landscape Operations (dispatch to dedicated handlers)
-    // =========================================================================
     else if (LowerSub == TEXT("paint_landscape") ||
              LowerSub == TEXT("paint_landscape_layer"))
     {

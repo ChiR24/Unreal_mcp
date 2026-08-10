@@ -1,0 +1,15 @@
+{
+  "id": "ts-profile-full-client",
+  "captureKind": "executable-ts",
+  "domain": "profile",
+  "match": "exact",
+  "provenance": "Executed at runtime: parseClientCapabilityProfile({ resources: { subscribe: true }, prompts: {}, completions: {}, elicitation: {}, tasks: {} }) from src/server/mcp-primitives/session-capability-profile.ts. Re-derived live in parity-harness-characterization.test.ts.",
+  "value": {
+    "hasResources": true,
+    "hasPrompts": true,
+    "hasCompletions": true,
+    "hasSubscriptions": true,
+    "hasElicitation": true,
+    "hasTasks": true
+  }
+}

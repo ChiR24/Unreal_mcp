@@ -16,6 +16,7 @@ bool HandleGetSessionsInfo(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    ResponseJson->SetBoolField(TEXT("success"), true);
     TSharedPtr<FJsonObject> SessionsInfo = McpHandlerUtils::CreateResultObject();
 
     int32 LocalPlayerCount = SessionsHelpers::GetLocalPlayerCount();

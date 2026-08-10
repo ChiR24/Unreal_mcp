@@ -7,9 +7,9 @@ namespace McpGeometryHandlers
 bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 LODCount = GetIntFieldGeom(Payload, TEXT("lodCount"), 4);
-    FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"), TEXT(""));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 LODCount = GetJsonIntField(Payload, TEXT("lodCount"), 4);
+    FString AssetPath = GetJsonStringField(Payload, TEXT("assetPath"), TEXT(""));
 
     if (ActorName.IsEmpty() && AssetPath.IsEmpty())
     {
@@ -122,7 +122,6 @@ bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, const FStri
     Result->SetNumberField(TEXT("lodCount"), LODCount);
     Result->SetNumberField(TEXT("triangles"), StaticMesh->GetNumTriangles(0));
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, StaticMesh);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LODs generated for geometry"), Result);
@@ -132,18 +131,14 @@ bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, const FStri
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Set LOD Settings
-// -------------------------------------------------------------------------
-
 bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"));
-    int32 LODIndex = GetIntFieldGeom(Payload, TEXT("lodIndex"), 1);
-    double TrianglePercent = GetNumberFieldGeom(Payload, TEXT("trianglePercent"), 50.0);
-    bool bRecomputeNormals = GetBoolFieldGeom(Payload, TEXT("recomputeNormals"), false);
-    bool bRecomputeTangents = GetBoolFieldGeom(Payload, TEXT("recomputeTangents"), false);
+    FString AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));
+    int32 LODIndex = GetJsonIntField(Payload, TEXT("lodIndex"), 1);
+    double TrianglePercent = GetJsonNumberField(Payload, TEXT("trianglePercent"), 50.0);
+    bool bRecomputeNormals = GetJsonBoolField(Payload, TEXT("recomputeNormals"), false);
+    bool bRecomputeTangents = GetJsonBoolField(Payload, TEXT("recomputeTangents"), false);
 
     if (AssetPath.IsEmpty())
     {
@@ -176,11 +171,9 @@ bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 
     FStaticMeshSourceModel& SourceModel = StaticMesh->GetSourceModel(LODIndex);
 
-    // Set reduction settings
     SourceModel.ReductionSettings.PercentTriangles = TrianglePercent / 100.0f;
     SourceModel.ReductionSettings.PercentVertices = TrianglePercent / 100.0f;
 
-    // Set build settings
     SourceModel.BuildSettings.bRecomputeNormals = bRecomputeNormals;
     SourceModel.BuildSettings.bRecomputeTangents = bRecomputeTangents;
 
@@ -194,7 +187,6 @@ bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     Result->SetNumberField(TEXT("lodIndex"), LODIndex);
     Result->SetNumberField(TEXT("trianglePercent"), TrianglePercent);
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, StaticMesh);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LOD settings updated"), Result);
@@ -204,14 +196,10 @@ bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Set LOD Screen Sizes
-// -------------------------------------------------------------------------
-
 bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"));
+    FString AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));
 
     // Parse screen sizes (can be array or object)
     TArray<float> ScreenSizes;
@@ -284,7 +272,6 @@ bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const FString&
     Result->SetNumberField(TEXT("lodCount"), NumLODs);
     Result->SetNumberField(TEXT("screenSizesSet"), ScreenSizes.Num());
 
-    // Add verification data
     McpHandlerUtils::AddVerification(Result, StaticMesh);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LOD screen sizes updated"), Result);

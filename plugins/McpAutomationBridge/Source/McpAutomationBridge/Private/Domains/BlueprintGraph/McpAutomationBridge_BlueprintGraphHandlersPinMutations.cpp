@@ -6,6 +6,27 @@
 
 namespace McpBlueprintGraphHandlers
 {
+// Accept the documented node/pin field-name aliases. These were added to
+// HandleBlueprintConnectPins, but that is not the handler connect_pins
+// reaches: the action routes to ConnectPins below, and this path read only
+// the from*/to* names — so every documented sourceNodeId/sourceNode/nodeId
+// call failed with NODE_NOT_FOUND. break_pin_links had the same gap against
+// its own nodeId/pinName pair. In every case the canonical name is listed
+// first, so existing callers keep their exact precedence.
+FString PickFirstNonEmpty(const TSharedPtr<FJsonObject>& Payload,
+                                 const TArray<const TCHAR*>& Keys)
+{
+    FString Value;
+    for (const TCHAR* Key : Keys)
+    {
+        if (Payload->TryGetStringField(Key, Value) && !Value.IsEmpty())
+        {
+            return Value;
+        }
+    }
+    return FString();
+}
+
 static bool ConnectPins(FActionContext& Context)
 {
     if (Context.SubAction != TEXT("connect_pins"))
@@ -18,14 +39,23 @@ static bool ConnectPins(FActionContext& Context)
     Context.Blueprint->Modify();
     Context.TargetGraph->Modify();
 
-    FString FromNodeId;
-    FString FromPinName;
-    FString ToNodeId;
-    FString ToPinName;
-    Context.Payload->TryGetStringField(TEXT("fromNodeId"), FromNodeId);
-    Context.Payload->TryGetStringField(TEXT("fromPinName"), FromPinName);
-    Context.Payload->TryGetStringField(TEXT("toNodeId"), ToNodeId);
-    Context.Payload->TryGetStringField(TEXT("toPinName"), ToPinName);
+    const FString FromNodeId = PickFirstNonEmpty(
+        Context.Payload, {TEXT("fromNodeId"), TEXT("fromNode"),
+                          TEXT("sourceNodeGuid"), TEXT("sourceNodeId"),
+                          TEXT("sourceNode"), TEXT("nodeId")});
+    const FString FromPinName = PickFirstNonEmpty(
+        Context.Payload, {TEXT("fromPinName"), TEXT("fromPin"),
+                          TEXT("sourcePinName"), TEXT("sourcePin"),
+                          TEXT("outputPin"), TEXT("sourceOutputPin"),
+                          TEXT("pinName")});
+    const FString ToNodeId = PickFirstNonEmpty(
+        Context.Payload, {TEXT("toNodeId"), TEXT("toNode"),
+                          TEXT("targetNodeGuid"), TEXT("targetNodeId"),
+                          TEXT("targetNode")});
+    const FString ToPinName = PickFirstNonEmpty(
+        Context.Payload, {TEXT("toPinName"), TEXT("toPin"),
+                          TEXT("targetPinName"), TEXT("targetPin"),
+                          TEXT("inputPin")});
 
     UEdGraphNode* FromNode = Context.FindNode(FromNodeId);
     UEdGraphNode* ToNode = Context.FindNode(ToNodeId);
@@ -96,6 +126,21 @@ static bool ConnectPins(FActionContext& Context)
         return true;
     }
 
+    // Snapshot node GUIDs so we can detect an auto-inserted conversion node.
+    // When the pin types differ but an autocast exists, the schema silently
+    // spawns a conversion node (e.g. real->int Truncate) inside
+    // TryCreateConnection and still returns true. Surfacing it stops the caller
+    // from unknowingly accepting a precision/semantic change.
+    TSet<FGuid> NodeGuidsBefore;
+    NodeGuidsBefore.Reserve(Context.TargetGraph->Nodes.Num());
+    for (UEdGraphNode* ExistingNode : Context.TargetGraph->Nodes)
+    {
+        if (ExistingNode)
+        {
+            NodeGuidsBefore.Add(ExistingNode->NodeGuid);
+        }
+    }
+
     if (!Context.TargetGraph->GetSchema()->TryCreateConnection(
             FromPin,
             ToPin))
@@ -106,11 +151,38 @@ static bool ConnectPins(FActionContext& Context)
         return true;
     }
 
+    // A node present now but not before == the auto-inserted conversion node.
+    UEdGraphNode* ConversionNode = nullptr;
+    for (UEdGraphNode* MaybeNew : Context.TargetGraph->Nodes)
+    {
+        if (MaybeNew && !NodeGuidsBefore.Contains(MaybeNew->NodeGuid))
+        {
+            ConversionNode = MaybeNew;
+            break;
+        }
+    }
+
     FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
     SaveLoadedAssetThrottled(Context.Blueprint);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    if (ConversionNode)
+    {
+        Result->SetBoolField(TEXT("conversionInserted"), true);
+        Result->SetStringField(
+            TEXT("conversionNodeId"), ConversionNode->NodeGuid.ToString());
+        Result->SetStringField(
+            TEXT("conversionNodeTitle"),
+            ConversionNode->GetNodeTitle(ENodeTitleType::ListView).ToString());
+        Result->SetStringField(
+            TEXT("note"),
+            TEXT("Pin types differed; an automatic conversion node was inserted "
+                 "between the pins (possible precision/semantic change)."));
+    }
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
-    Context.SendResponse(TEXT("Pins connected."), Result);
+    Context.SendResponse(
+        ConversionNode ? TEXT("Pins connected (conversion node inserted).")
+                       : TEXT("Pins connected."),
+        Result);
     return true;
 }
 
@@ -126,10 +198,14 @@ static bool BreakPinLinks(FActionContext& Context)
     Context.Blueprint->Modify();
     Context.TargetGraph->Modify();
 
-    FString NodeId;
-    FString PinName;
-    Context.Payload->TryGetStringField(TEXT("nodeId"), NodeId);
-    Context.Payload->TryGetStringField(TEXT("pinName"), PinName);
+    const FString NodeId = PickFirstNonEmpty(
+        Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid"), TEXT("fromNodeId"),
+                          TEXT("fromNode"), TEXT("sourceNodeGuid"),
+                          TEXT("sourceNodeId"), TEXT("sourceNode")});
+    const FString PinName = PickFirstNonEmpty(
+        Context.Payload, {TEXT("pinName"), TEXT("pin"), TEXT("fromPinName"),
+                          TEXT("fromPin"), TEXT("sourcePinName"),
+                          TEXT("sourcePin"), TEXT("sourceOutputPin")});
     UEdGraphNode* TargetNode = Context.FindNode(NodeId);
     if (!TargetNode)
     {
@@ -152,59 +228,6 @@ static bool BreakPinLinks(FActionContext& Context)
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(TEXT("Pin links broken."), Result);
-    return true;
-}
-
-static bool SetPinDefaultValue(FActionContext& Context)
-{
-    if (Context.SubAction != TEXT("set_pin_default_value"))
-    {
-        return false;
-    }
-
-    FString NodeId;
-    FString PinName;
-    FString Value;
-    Context.Payload->TryGetStringField(TEXT("nodeId"), NodeId);
-    Context.Payload->TryGetStringField(TEXT("pinName"), PinName);
-    Context.Payload->TryGetStringField(TEXT("value"), Value);
-
-    UEdGraphNode* TargetNode = Context.FindNode(NodeId);
-    if (!TargetNode)
-    {
-        Context.SendError(TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
-        return true;
-    }
-    UEdGraphPin* Pin = Context.FindPin(TargetNode, PinName);
-    if (!Pin)
-    {
-        Context.SendError(TEXT("Pin not found."), TEXT("PIN_NOT_FOUND"));
-        return true;
-    }
-    if (Pin->Direction != EGPD_Input)
-    {
-        Context.SendError(
-            TEXT("Can only set default values on input pins."),
-            TEXT("INVALID_PIN_DIRECTION"));
-        return true;
-    }
-
-    const FScopedTransaction Transaction(
-        FText::FromString(TEXT("Set Pin Default Value")));
-    Context.Blueprint->Modify();
-    Context.TargetGraph->Modify();
-    TargetNode->Modify();
-    Context.TargetGraph->GetSchema()->TrySetDefaultValue(*Pin, Value);
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
-    SaveLoadedAssetThrottled(Context.Blueprint);
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("nodeId"), NodeId);
-    Result->SetStringField(TEXT("nodeName"), TargetNode->GetName());
-    Result->SetStringField(TEXT("pinName"), PinName);
-    Result->SetStringField(TEXT("value"), Value);
-    McpHandlerUtils::AddVerification(Result, Context.Blueprint);
-    Context.SendResponse(TEXT("Pin default value set."), Result);
     return true;
 }
 

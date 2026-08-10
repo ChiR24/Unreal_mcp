@@ -47,7 +47,6 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bo
     return ExactMatch;
   }
 
-  // If no exact match, check fuzzy matches ONLY if exact matching is not required
   if (!bExactMatchOnly) {
     if (FuzzyMatches.Num() == 1) {
       return FuzzyMatches[0];
@@ -70,14 +69,6 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bo
 #endif
   return nullptr;
 }
-
-/**
- * Spawn a native actor from a class or mesh path and apply the requested transform.
- *
- * The handler accepts optional `location`, `rotation`, and `scale` payload fields,
- * applies scale only when explicitly provided, and returns the actual actor scale
- * so callers can verify the resulting transform without an additional query.
- */
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,

@@ -33,7 +33,7 @@ const testCases = [
   { scenario: 'CREATE: create_stairs', toolName: 'manage_geometry', arguments: {"action": "create_stairs", "name": `Teststairs_${ts}`, "path": "/Game/MCPTest", "numSteps": 5, "stepWidth": 90, "stepHeight": 18, "stepDepth": 28}, expected: 'success|already exists' },
   { scenario: 'CREATE: create_spiral_stairs', toolName: 'manage_geometry', arguments: {"action": "create_spiral_stairs", "name": `Testspiral_stairs_${ts}`, "path": "/Game/MCPTest", "numSteps": 6, "stepWidth": 80, "stepHeight": 16, "innerRadius": 120, "numTurns": 0.5}, expected: 'success|already exists' },
   { scenario: 'Reset: cleanup geometry actors', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: 'GeoTest' }, expected: 'success|not found' },
-  { scenario: 'CREATE: create_ring', toolName: 'manage_geometry', arguments: {"action": "create_ring", "name": `Testring_${ts}`, "path": "/Game/MCPTest", "radius": 55, "innerRadius": 25, "numSides": 24}, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_ring', toolName: 'manage_geometry', arguments: {"action": "create_ring", "name": `Testring_${ts}`, "path": "/Game/MCPTest", "radius": 55, "innerRadius": 25, "outerRadius": 55, "numSides": 24}, expected: 'success|already exists' },
   { scenario: 'CREATE: create_arch', toolName: 'manage_geometry', arguments: {"action": "create_arch", "name": `Testarch_${ts}`, "path": "/Game/MCPTest", "radius": 90, "innerRadius": 20, "radialSegments": 12, "numRings": 6}, expected: 'success|already exists' },
   { scenario: 'CREATE: create_pipe', toolName: 'manage_geometry', arguments: {"action": "create_pipe", "name": `Testpipe_${ts}`, "path": "/Game/MCPTest", "radius": 55, "innerRadius": 35, "height": 110, "numSides": 18, "heightSegments": 2}, expected: 'success|already exists' },
   { scenario: 'CREATE: create_ramp', toolName: 'manage_geometry', arguments: {"action": "create_ramp", "name": "Testramp", "path": "/Game/MCPTest"}, expected: 'success|already exists' },
@@ -57,7 +57,7 @@ const testCases = [
   { scenario: 'ACTION: outset', toolName: 'manage_geometry', arguments: {"action": "outset", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: bevel', toolName: 'manage_geometry', arguments: {"action": "bevel", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: offset_faces', toolName: 'manage_geometry', arguments: {"action": "offset_faces", "actorName": EDIT_ACTOR}, expected: 'success' },
-  { scenario: 'ACTION: shell', toolName: 'manage_geometry', arguments: {"action": "shell", "actorName": EDIT_ACTOR}, expected: 'success' },
+  { scenario: 'ACTION: shell', toolName: 'manage_geometry', arguments: {"action": "shell", "actorName": EDIT_ACTOR, "thickness": 5}, expected: 'success' },
   { scenario: 'ACTION: revolve', toolName: 'manage_geometry', arguments: {"action": "revolve", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: chamfer', toolName: 'manage_geometry', arguments: {"action": "chamfer", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: extrude_along_spline', toolName: 'manage_geometry', arguments: {"action": "extrude_along_spline", "actorName": EDIT_ACTOR, "splineActorName": SPLINE_ACTOR, "segments": 8, "cap": true}, expected: 'success' },
@@ -121,6 +121,7 @@ const testCases = [
   { scenario: 'ACTION: convert_to_static_mesh', toolName: 'manage_geometry', arguments: {"action": "convert_to_static_mesh", "actorName": EDIT_ACTOR, "outputPath": `Game/GeneratedMeshes/TestBox_Static_${ts}`}, expected: 'success' },
   // === INFO ===
   { scenario: 'INFO: get_mesh_info', toolName: 'manage_geometry', arguments: {"action": "get_mesh_info", "actorName": EDIT_ACTOR}, expected: 'success' },
+  { scenario: 'INFO: get_mesh_info via params passthrough', toolName: 'manage_geometry', arguments: { action: 'get_mesh_info', params: { actorName: EDIT_ACTOR } }, expected: 'success' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: `TestActor_${ts}` }, expected: 'success|not found' },

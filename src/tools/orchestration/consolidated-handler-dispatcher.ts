@@ -7,6 +7,7 @@ import {
   mergeActionParams,
   normalizeToolCall
 } from './consolidated-call-utils.js';
+import { normalizeAutomationFrame } from './automation-frame-normalization.js';
 import { toolRegistry } from './dynamic-handler-registry.js';
 
 function hasStringMessage(value: unknown): value is { readonly message: string } {
@@ -37,7 +38,7 @@ export async function handleConsolidatedToolCall(
 
     const handler = toolRegistry.getHandler(normalized.name);
     if (handler) {
-      const result = await handler(normalizedArgs, tools);
+      const result = normalizeAutomationFrame(await handler(normalizedArgs, tools));
       return addErrorContext(result, normalized.name, actionForError);
     }
 

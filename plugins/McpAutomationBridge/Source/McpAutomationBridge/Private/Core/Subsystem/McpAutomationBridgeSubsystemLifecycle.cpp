@@ -6,6 +6,8 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "McpConnectionManager.h"
 #include "Core/Errors/McpRequestErrorDevice.h"
+#include "Foundation/McpLiveStateRevisionTracker.h"
+#include "Foundation/McpReadinessState.h"
 
 void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -32,6 +34,7 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
     // the lifecycle intent obvious to readers — any future change to the
     // default (e.g. a deferred-start mode) does not silently flip this code.
     StartAcceptingAutomationRequests();
+    McpStartLiveStateTracking();
     ConnectionManager = MakeShared<FMcpConnectionManager>();
     ConnectionManager->Initialize(GetDefault<UMcpAutomationBridgeSettings>());
     ConnectionManager->SetOnMessageReceived(
@@ -41,15 +44,24 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
                 const FString& RequestId,
                 const FString& Action,
                 const TSharedPtr<FJsonObject>& Payload,
-                TSharedPtr<FMcpBridgeWebSocket> Socket)
+                TSharedPtr<FMcpBridgeWebSocket> Socket,
+                const FMcpExpectedRevisions& ExpectedRevisions)
             {
                 const EAutomationQueueRejection Reason =
                     QueueAutomationRequest(
-                        RequestId, Action, Payload, Socket);
+                        RequestId, Action, Payload, Socket,
+                        ERequestOrigin::WebSocket, ExpectedRevisions);
                 if (Reason != EAutomationQueueRejection::None)
                 {
                     SendAutomationRejection(Socket, RequestId, Reason);
                 }
+            }));
+    ConnectionManager->SetOnAutomationRequestCancelled(
+        FMcpRequestCancelledCallback::CreateWeakLambda(
+            this,
+            [this](const FString& RequestId)
+            {
+                CancelAutomationRequest(RequestId);
             }));
 
     InitializeHandlers();
@@ -60,6 +72,11 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
         FTickerDelegate::CreateUObject(this, &UMcpAutomationBridgeSubsystem::Tick),
         0.0f);
 
+    // Published only here, at the END of a non-commandlet initialization that
+    // registered handlers and installed the ticker. Readiness is a POSITIVE
+    // observation: the early commandlet return above leaves it false.
+    FMcpReadinessState::Get().SetEditorReady(true);
+
     UE_LOG(
         LogMcpAutomationBridgeSubsystem,
         Log,
@@ -68,7 +85,9 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
 
 void UMcpAutomationBridgeSubsystem::Deinitialize()
 {
+    FMcpReadinessState::Get().Reset();
     StopAcceptingAutomationRequests();
+    McpStopLiveStateTracking();
 
     if (TickHandle.IsValid())
     {
@@ -219,6 +238,7 @@ void UMcpAutomationBridgeSubsystem::StartNativeTransport()
             Settings->ListenHost,
             Settings->bAllowNonLoopback))
     {
+        FMcpReadinessState::Get().SetTransportReady(true);
         return;
     }
 

@@ -7,8 +7,8 @@ namespace McpGeometryHandlers
 bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 3);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 Count = GetJsonIntField(Payload, TEXT("count"), 3);
     FVector Offset = ReadVectorFromPayload(Payload, TEXT("offset"), FVector(100, 0, 0));
 
     if (ActorName.IsEmpty())
@@ -50,7 +50,6 @@ bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-    // Safety: Check memory pressure before array operation
     if (!IsMemoryPressureSafe())
     {
         Self->SendAutomationError(Socket, RequestId,
@@ -60,7 +59,6 @@ bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
         return true;
     }
 
-    // Safety: Estimate triangles after array and check against limit
     int32 TriCountBefore = Mesh->GetTriangleCount();
     int64 EstimatedTriangles = static_cast<int64>(TriCountBefore) * Count;
 
@@ -73,11 +71,9 @@ bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
         return true;
     }
 
-    // Create a copy for arraying
     UDynamicMesh* SourceMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     SourceMesh->SetMesh(Mesh->GetMeshRef());
 
-    // Create transform for repeat
     FTransform RepeatTransform;
     RepeatTransform.SetLocation(Offset);
 
@@ -97,11 +93,11 @@ bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 6);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 Count = GetJsonIntField(Payload, TEXT("count"), 6);
     FVector Center = ReadVectorFromPayload(Payload, TEXT("center"), FVector::ZeroVector);
-    FString Axis = GetStringFieldGeom(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
-    double TotalAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 360.0);
+    FString Axis = GetJsonStringField(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
+    double TotalAngle = GetJsonNumberField(Payload, TEXT("angle"), 360.0);
 
     if (ActorName.IsEmpty())
     {
@@ -142,7 +138,6 @@ bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-    // Safety: Check memory pressure before array operation
     if (!IsMemoryPressureSafe())
     {
         Self->SendAutomationError(Socket, RequestId,
@@ -152,7 +147,6 @@ bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
         return true;
     }
 
-    // Safety: Estimate triangles after array and check against limit
     int32 TriCountBefore = Mesh->GetTriangleCount();
     int64 EstimatedTriangles = static_cast<int64>(TriCountBefore) * Count;
 
@@ -165,17 +159,14 @@ bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
         return true;
     }
 
-    // Create a copy for arraying
     UDynamicMesh* SourceMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     SourceMesh->SetMesh(Mesh->GetMeshRef());
 
-    // Calculate rotation per step
     double AngleStep = TotalAngle / Count;
     FVector RotationAxis = FVector::UpVector;
     if (Axis == TEXT("X")) RotationAxis = FVector::ForwardVector;
     else if (Axis == TEXT("Y")) RotationAxis = FVector::RightVector;
 
-    // Build transforms array
     TArray<FTransform> Transforms;
     for (int32 i = 1; i < Count; ++i)  // Start from 1 (original is at 0)
     {
@@ -183,7 +174,6 @@ bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
         FQuat Rotation = FQuat(RotationAxis, FMath::DegreesToRadians(Angle));
         FTransform Transform;
         Transform.SetRotation(Rotation);
-        // Rotate around center point
         Transform.SetLocation(Center + Rotation.RotateVector(-Center));
         Transforms.Add(Transform);
     }
@@ -202,9 +192,6 @@ bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Additional Primitives (Arch, Pipe)
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

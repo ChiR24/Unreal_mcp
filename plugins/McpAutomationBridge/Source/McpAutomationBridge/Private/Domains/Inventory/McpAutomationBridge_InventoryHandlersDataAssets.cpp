@@ -14,7 +14,6 @@ bool HandleInventoryDataAssetActions(UMcpAutomationBridgeSubsystem& Bridge, cons
       return true;
     }
 
-    // Create a primary data asset for item with validated path
     FString PathError;
     FString SanitizedName = SanitizeAssetName(Name);
     UPackage* Package = CreateValidatedInventoryAssetPackage(Path, SanitizedName, PathError);
@@ -72,7 +71,6 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       return true;
     }
 
-    // Get properties object from payload
     const TSharedPtr<FJsonObject>* PropertiesObj = nullptr;
     TArray<FString> ModifiedProperties;
     TArray<FString> FailedProperties;
@@ -83,7 +81,6 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         const FString PropertyName(*Pair.Key);
         const TSharedPtr<FJsonValue>& PropertyValue = Pair.Value;
 
-        // Find the property on the item asset class
         FProperty* Prop = ItemAsset->GetClass()->FindPropertyByName(*PropertyName);
         if (Prop) {
           FString ApplyError;

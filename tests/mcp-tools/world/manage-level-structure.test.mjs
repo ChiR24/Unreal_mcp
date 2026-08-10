@@ -60,16 +60,17 @@ const testCases = [
 
   // === INFO ===
   { scenario: 'INFO: get_level_structure_info', toolName: 'manage_level_structure', arguments: { action: 'get_level_structure_info' }, expected: 'success' },
+  { scenario: 'INFO: get_volumes_info via params passthrough', toolName: 'manage_level_structure', arguments: { action: 'get_volumes_info', params: { filter: 'Test' } }, expected: 'success' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete level instance', toolName: 'control_actor', arguments: { action: 'delete', actorName: LEVEL_INSTANCE }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete packed level actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: PACKED_LEVEL }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete minimap volume', toolName: 'control_actor', arguments: { action: 'delete', actorName: MINIMAP_VOLUME }, expected: 'not found|success' },
+  { scenario: 'Cleanup: delete minimap volume', toolName: 'control_actor', arguments: { action: 'delete', actorName: MINIMAP_VOLUME }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete streaming volume', toolName: 'control_actor', arguments: { action: 'delete', actorName: STREAMING_VOLUME }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: TEST_ACTOR }, expected: 'success|not found' },
   { scenario: 'Cleanup: unload sublevel', toolName: 'manage_level', arguments: { action: 'unload', levelPath: SUBLEVEL_PATH }, expected: 'success|not loaded|not found' },
   { scenario: 'Cleanup: delete created levels', toolName: 'manage_level', arguments: { action: 'delete', levelPaths: [SUBLEVEL_PATH, LEVEL_PATH] }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete data layer asset', toolName: 'manage_asset', arguments: { action: 'delete', path: `/Game/DataLayers/${DATA_LAYER}`, force: true }, expected: 'not found|success' },
+  { scenario: 'Cleanup: delete data layer asset', toolName: 'manage_asset', arguments: { action: 'delete', path: `/Game/DataLayers/${DATA_LAYER}`, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete HLOD asset', toolName: 'manage_asset', arguments: { action: 'delete', path: `${HLOD_FOLDER}/${HLOD_LAYER}`, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];

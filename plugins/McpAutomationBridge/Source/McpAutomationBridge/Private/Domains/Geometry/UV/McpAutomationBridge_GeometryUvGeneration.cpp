@@ -7,7 +7,7 @@ namespace McpGeometryHandlers
 bool HandleAutoUV(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -62,10 +62,10 @@ bool HandleAutoUV(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 bool HandleProjectUV(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-FString ProjectionType = GetStringFieldGeom(Payload, TEXT("projectionType"), TEXT("box")).ToLower();
-    double Scale = GetNumberFieldGeom(Payload, TEXT("scale"), 1.0);
-    int32 UVChannel = GetIntFieldGeom(Payload, TEXT("uvChannel"), 0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+FString ProjectionType = GetJsonStringField(Payload, TEXT("projectionType"), TEXT("box")).ToLower();
+    double Scale = GetJsonNumberField(Payload, TEXT("scale"), 1.0);
+    int32 UVChannel = GetJsonIntField(Payload, TEXT("uvChannel"), 0);
 
     if (ActorName.IsEmpty())
     {
@@ -100,7 +100,6 @@ FString ProjectionType = GetStringFieldGeom(Payload, TEXT("projectionType"), TEX
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-    // Create projection transform with scale applied
     FTransform ProjectionTransform(FQuat::Identity, FVector::ZeroVector, FVector(Scale));
 
     // UE 5.7: UV projection option structs removed. Use new function signatures directly.
@@ -147,15 +146,14 @@ FString ProjectionType = GetStringFieldGeom(Payload, TEXT("projectionType"), TEX
 bool HandleTransformUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 UVChannel = GetIntFieldGeom(Payload, TEXT("uvChannel"), 0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 UVChannel = GetJsonIntField(Payload, TEXT("uvChannel"), 0);
 
-    // Transform parameters
-double TranslateU = GetNumberFieldGeom(Payload, TEXT("translateU"), 0.0);
-    double TranslateV = GetNumberFieldGeom(Payload, TEXT("translateV"), 0.0);
-    double ScaleU = GetNumberFieldGeom(Payload, TEXT("scaleU"), 1.0);
-    double ScaleV = GetNumberFieldGeom(Payload, TEXT("scaleV"), 1.0);
-    double Rotation = GetNumberFieldGeom(Payload, TEXT("rotation"), 0.0);
+double TranslateU = GetJsonNumberField(Payload, TEXT("translateU"), 0.0);
+    double TranslateV = GetJsonNumberField(Payload, TEXT("translateV"), 0.0);
+    double ScaleU = GetJsonNumberField(Payload, TEXT("scaleU"), 1.0);
+    double ScaleV = GetJsonNumberField(Payload, TEXT("scaleV"), 1.0);
+    double Rotation = GetJsonNumberField(Payload, TEXT("rotation"), 0.0);
 
     if (ActorName.IsEmpty())
     {
@@ -193,21 +191,18 @@ double TranslateU = GetNumberFieldGeom(Payload, TEXT("translateU"), 0.0);
     // UE 5.7: TransformMeshUVs was removed, use separate TranslateMeshUVs, ScaleMeshUVs, RotateMeshUVs
     FGeometryScriptMeshSelection Selection; // Empty = apply to entire mesh
 
-    // Apply translation
     if (TranslateU != 0.0 || TranslateV != 0.0)
     {
         UGeometryScriptLibrary_MeshUVFunctions::TranslateMeshUVs(
             Mesh, UVChannel, FVector2D(TranslateU, TranslateV), Selection, nullptr);
     }
 
-    // Apply scale
     if (ScaleU != 1.0 || ScaleV != 1.0)
     {
         UGeometryScriptLibrary_MeshUVFunctions::ScaleMeshUVs(
             Mesh, UVChannel, FVector2D(ScaleU, ScaleV), FVector2D(0.5, 0.5), Selection, nullptr);
     }
 
-    // Apply rotation
     if (Rotation != 0.0)
     {
         UGeometryScriptLibrary_MeshUVFunctions::RotateMeshUVs(

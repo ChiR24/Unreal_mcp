@@ -14,7 +14,9 @@ namespace McpBlueprintHandlers {
 bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("blueprint_remove_variable")) ||
-      AlphaNumLower.Contains(TEXT("blueprintremovevariable"))) {
+      ActionMatchesPattern(TEXT("remove_variable")) ||
+      AlphaNumLower.Contains(TEXT("blueprintremovevariable")) ||
+      AlphaNumLower.Contains(TEXT("removevariable"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_remove_variable handler: RequestId=%s"),
            *RequestId);
@@ -101,7 +103,9 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
   }
 
   if (ActionMatchesPattern(TEXT("blueprint_rename_variable")) ||
-      AlphaNumLower.Contains(TEXT("blueprintrenamevariable"))) {
+      ActionMatchesPattern(TEXT("rename_variable")) ||
+      AlphaNumLower.Contains(TEXT("blueprintrenamevariable")) ||
+      AlphaNumLower.Contains(TEXT("renamevariable"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_rename_variable handler: RequestId=%s"),
            *RequestId);
@@ -192,7 +196,6 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
 #endif
   }
 
-  // Add an event to the blueprint (synchronous editor implementation)
   return false;
 }
 #endif

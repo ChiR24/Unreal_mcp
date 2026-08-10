@@ -79,4 +79,20 @@ describe('handleAudioAuthoringTools payload mapping', () => {
     const payload = sendAutomationRequest.mock.calls[0]?.[1] ?? {};
     expect(payload).not.toHaveProperty('spatialization');
   });
+
+  it('accepts nodeClassName instead of nodeType for add_metasound_node', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools();
+
+    await handleAudioAuthoringTools('add_metasound_node', {
+      action: 'add_metasound_node',
+      assetPath: '/Game/Audio/TestMetaSound',
+      nodeClassName: 'UE.Sine.Audio'
+    }, tools);
+
+    expect(sendAutomationRequest).toHaveBeenCalledWith('manage_audio_authoring', expect.objectContaining({
+      subAction: 'add_metasound_node',
+      assetPath: '/Game/Audio/TestMetaSound.TestMetaSound',
+      nodeClassName: 'UE.Sine.Audio'
+    }), expect.any(Object));
+  });
 });

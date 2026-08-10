@@ -1,4 +1,5 @@
 #include "Domains/AssetWorkflow/Enums/Shared.h"
+#include "Async/Async.h"
 #include "Kismet2/EnumEditorUtils.h"
 #include "Misc/ScopedEvent.h"
 #include "ObjectTools.h"
@@ -115,7 +116,7 @@ bool HandleEnumLifecycleActions(
             {
                 Names[i].Value = i;
             }
-            Enum->SetEnums(Names, Enum->GetCppForm());
+            MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
         }
 
         Package->MarkPackageDirty();

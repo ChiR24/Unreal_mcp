@@ -1,5 +1,9 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 
+#if WITH_EDITOR
+#include "ComponentReregisterContext.h"
+#endif
+
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -81,7 +85,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     if (USceneComponent *SC = Cast<USceneComponent>(TargetComponent)) {
       FString EnumVal;
       if ((*MobilityVal)->TryGetString(EnumVal)) {
-        // Parse enum string
         int64 Val =
             StaticEnum<EComponentMobility::Type>()->GetValueByNameString(
                 EnumVal);
@@ -101,11 +104,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
 
   for (const auto &Pair : PropertiesObject->Values) {
     const FString PropertyName(*Pair.Key);
-    // Skip Mobility as we already handled it
     if (PropertyName.Equals(TEXT("Mobility"), ESearchCase::IgnoreCase))
       continue;
 
-    // Special handling for SimulatePhysics
     if (PropertyName.Equals(TEXT("SimulatePhysics"), ESearchCase::IgnoreCase) ||
         PropertyName.Equals(TEXT("bSimulatePhysics"), ESearchCase::IgnoreCase)) {
       if (UPrimitiveComponent *Prim =
@@ -115,6 +116,38 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
 			Prim->SetSimulatePhysics(bVal);
 				AppliedProperties.Add(PropertyName);
 				continue;
+        }
+      }
+    }
+
+    // A mesh asset has to go through the engine setter, never raw reflection.
+    // UStaticMeshComponent::ShouldCreateRenderState() returns false while the
+    // mesh is null, so a component that registered empty has NO render state at
+    // all -- and MarkRenderStateDirty() only flags an existing one, so it does
+    // nothing here. SetStaticMesh() is what notices that case and calls
+    // RecreateRenderState_Concurrent(); it also runs the bookkeeping a raw write
+    // skips (NotifyIfStaticMeshChanged, physics/nav/streaming state, bounds).
+    // Writing the property directly leaves an actor that reports correct bounds
+    // and a correct StaticMesh but is never drawn.
+    if (PropertyName.Equals(TEXT("StaticMesh"), ESearchCase::IgnoreCase)) {
+      if (UStaticMeshComponent *MeshComp =
+              Cast<UStaticMeshComponent>(TargetComponent)) {
+        FString MeshPath;
+        const bool bClearMesh = Pair.Value->Type == EJson::Null;
+        if (bClearMesh || Pair.Value->TryGetString(MeshPath)) {
+          UStaticMesh *NewMesh = nullptr;
+          if (!MeshPath.IsEmpty()) {
+            NewMesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+            if (!NewMesh) {
+              PropertyWarnings.Add(FString::Printf(
+                  TEXT("Failed to set %s: no static mesh could be loaded from %s"),
+                  *PropertyName, *MeshPath));
+              continue;
+            }
+          }
+          MeshComp->SetStaticMesh(NewMesh);
+          AppliedProperties.Add(PropertyName);
+          continue;
         }
       }
     }
@@ -134,14 +167,34 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
                                            *PropertyName, *ApplyError));
   }
 
+  // Whether a component can render at all is decided at registration time, and
+  // some properties change that answer. A component that had nothing to draw
+  // when it registered carries no render state, and MarkRenderStateDirty() is a
+  // documented no-op while bRenderStateCreated is false -- precisely the state
+  // the write above may have just invalidated. ShouldCreateRenderState() is
+  // protected, so ask the engine the same question the way it asks itself: a
+  // re-register re-runs the check and creates the state if it is now warranted.
+  if (TargetComponent->IsRegistered() &&
+      !TargetComponent->IsRenderStateCreated()) {
+    FComponentReregisterContext ReregisterContext(TargetComponent);
+  } else {
+    TargetComponent->MarkRenderStateDirty();
+  }
   if (USceneComponent *SceneComponent =
           Cast<USceneComponent>(TargetComponent)) {
-    SceneComponent->MarkRenderStateDirty();
     SceneComponent->UpdateComponentToWorld();
   }
   TargetComponent->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  // Report whether the component ended up with a render state. Without this the
+  // response cannot distinguish "property written" from "component will draw",
+  // which is the exact gap that let a mesh assignment look successful while the
+  // actor stayed invisible.
+  if (Cast<UPrimitiveComponent>(TargetComponent)) {
+    Data->SetBoolField(TEXT("renderStateCreated"),
+                       TargetComponent->IsRenderStateCreated());
+  }
   if (AppliedProperties.Num() > 0) {
     TArray<TSharedPtr<FJsonValue>> PropsArray;
     for (const FString &PropName : AppliedProperties)
@@ -149,7 +202,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     Data->SetArrayField(TEXT("applied"), PropsArray);
   }
 
-  // Add verification data
 	McpHandlerUtils::AddVerification(Data, Found);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Component properties updated"), Data);
@@ -158,8 +210,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
   return false;
 #endif
 }
-
-
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -193,7 +243,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
     return true;
   }
 
-  // Get property using reflection
   FProperty* Property = Component->GetClass()->FindPropertyByName(*PropertyName);
   if (!Property) {
     SendAutomationError(Socket, RequestId,
@@ -208,7 +257,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
   Data->SetStringField(TEXT("propertyName"), PropertyName);
   Data->SetStringField(TEXT("propertyType"), Property->GetClass()->GetName());
 
-  // Extract property value using the existing helper function
   TSharedPtr<FJsonValue> PropertyValue = ExportPropertyToJsonValue(Component, Property);
   if (PropertyValue.IsValid()) {
     Data->SetField(TEXT("value"), PropertyValue);

@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -115,16 +115,46 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           if [ -d "plugins/McpAutomationBridge" ]; then
+            # Exclude generated/editor build dirs so local paths and object
+            # files never leak into the distributed plugin archive.
             tar -czvf release-artifacts/McpAutomationBridge-plugin-${VERSION}.tar.gz \
+              --exclude='plugins/McpAutomationBridge/Binaries' \
+              --exclude='plugins/McpAutomationBridge/Intermediate' \
+              --exclude='plugins/McpAutomationBridge/Saved' \
+              --exclude='plugins/McpAutomationBridge/.cache' \
+              --exclude='plugins/McpAutomationBridge/DerivedDataCache' \
               plugins/McpAutomationBridge/
 
             zip -r release-artifacts/McpAutomationBridge-plugin-${VERSION}.zip \
-              plugins/McpAutomationBridge/
+              plugins/McpAutomationBridge/ \
+              -x '*/Binaries/*' \
+              -x '*/Intermediate/*' \
+              -x '*/Saved/*' \
+              -x '*/.cache/*' \
+              -x '*/DerivedDataCache/*'
 
             echo "Plugin archive created"
           else
             echo "Plugin directory not found, skipping plugin archive"
           fi
+
+      - name: Verify no generated build dirs in plugin archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -e
+          if [ ! -f "release-artifacts/McpAutomationBridge-plugin-${VERSION}.tar.gz" ]; then
+            echo "No plugin archive produced; skipping verification"
+            exit 0
+          fi
+          FORBIDDEN=$(tar -tzvf "release-artifacts/McpAutomationBridge-plugin-${VERSION}.tar.gz" \
+            | awk '{print $NF}' | grep -E '(^|/)(Binaries|Intermediate|Saved|\.cache|DerivedDataCache)(/|$)' || true)
+          if [ -n "$FORBIDDEN" ]; then
+            echo "❌ Plugin archive contains generated build dirs:"
+            echo "$FORBIDDEN"
+            exit 1
+          fi
+          echo "✅ Plugin archive excludes Binaries/Intermediate/Saved/.cache/DerivedDataCache"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2

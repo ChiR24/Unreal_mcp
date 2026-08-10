@@ -1,0 +1,162 @@
+/**
+ * Shared builder for world-domain capability records (manage_level_structure,
+ * manage_geometry, manage_pcg).
+ *
+ * Constructs the boilerplate portions of a CapabilityRecordSource (schemas,
+ * availability with optional UE version/plugin gates, behavior with async PCG
+ * task contracts, policy, cost, routing, normalization, deprecation) so each
+ * family file declares only what varies. Does NOT touch frozen pilot builders
+ * (build-environment), the shared model, schema, generator, or any aggregate.
+ *
+ * Grounded in: src/tools/definitions/world/{manage-level-structure,
+ * manage-geometry,manage-pcg}-tool.ts, world handler routing, native World
+ * domain dispatch, the GeometryScripting/PCG Build.cs probes, and Water runtime
+ * detection notes from the world closeout evidence.
+ */
+import type {
+  CapabilityAvailability,
+  CapabilityBehaviorSource,
+  CapabilityRecordSource,
+  CapabilityRouting,
+  Draft202012ObjectSchema,
+  JsonObject,
+  UnrealVersion,
+} from '../../index.js';
+import {
+  CapabilityAliasSchema,
+  CapabilityIdSchema,
+  LegacyActionNameSchema,
+  LegacyToolNameSchema,
+} from '../../index.js';
+import { getParentToolMetadata } from '../parent-metadata.js';
+import { policy, behavior } from '../shared/record-presets.js';
+
+const SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema' as const;
+
+const V5_0 = { major: 5 as const, minor: 0, patch: 0, channel: 'stable' as const };
+const V5_3 = { major: 5 as const, minor: 3, patch: 0, channel: 'stable' as const };
+const V5_7 = { major: 5 as const, minor: 7, patch: 0, channel: 'stable' as const };
+const V5_8_P1 = { major: 5 as const, minor: 8, patch: 0, channel: 'preview' as const, preview: 1 };
+
+type EffectType = 'read' | 'write' | 'destructive';
+type EditorState = 'edit' | 'pie' | 'simulate';
+
+export type WorldRecordSpec = {
+  readonly parentTool: 'manage_level_structure' | 'manage_geometry' | 'manage_pcg';
+  readonly action: string;
+  readonly dispatchAction?: string;
+  readonly dispatchMode?: 'tool' | 'action' | 'local';
+  readonly family: string;
+  readonly summary: string;
+  readonly whenToUse: readonly string[];
+  readonly whenNotToUse: readonly string[];
+  readonly inputProps: JsonObject;
+  readonly required: readonly string[];
+  readonly outputProps?: JsonObject;
+  readonly outputRequired?: readonly string[];
+  readonly effect: EffectType;
+  readonly behavior?: Partial<CapabilityBehaviorSource>;
+  readonly costLatency: 'instant' | 'interactive' | 'long-running';
+  readonly costResources: 'low' | 'medium' | 'high';
+  readonly plugins?: readonly string[];
+  readonly editorStates?: readonly EditorState[];
+  readonly unrealMin?: UnrealVersion;
+  readonly unrealMax?: UnrealVersion;
+  readonly aliases?: readonly string[];
+  readonly normalizationRationale: string;
+  readonly exampleInput: JsonObject;
+  readonly exampleOutput: JsonObject;
+};
+
+const ACTION_PROP: JsonObject = {
+  type: 'string',
+  description: 'The action to execute on the parent tool.',
+};
+
+function schema(properties: JsonObject, required: readonly string[]): Draft202012ObjectSchema {
+  return {
+    $schema: SCHEMA_URI,
+    type: 'object',
+    properties,
+    required: [...required],
+    additionalProperties: false,
+  };
+}
+
+function outputSchema(props: JsonObject, required: readonly string[]): Draft202012ObjectSchema {
+  const full: JsonObject = {
+    success: { type: 'boolean', description: 'Whether the action succeeded.' },
+    message: { type: 'string', description: 'Human-readable result message.' },
+    ...props,
+  };
+  return schema(full, ['success', ...required]);
+}
+
+const EMPTY_OUTPUT = outputSchema({}, []);
+
+function availability(
+  spec: WorldRecordSpec,
+): CapabilityAvailability {
+  const min = spec.unrealMin ?? V5_0;
+  const max = spec.unrealMax ?? V5_8_P1;
+  return {
+    unreal: { min, max },
+    requiredPlugins: [...(spec.plugins ?? [])],
+    editorStates: [...(spec.editorStates ?? ['edit'])],
+  };
+}
+
+
+
+function routing(
+  parentTool: string,
+  dispatchAction: string,
+  dispatchMode: 'tool' | 'action' | 'local' = 'tool',
+): CapabilityRouting {
+  return {
+    parentTool: LegacyToolNameSchema.parse(parentTool),
+    dispatchAction: LegacyActionNameSchema.parse(dispatchAction),
+    dispatchMode,
+  };
+}
+
+export function buildWorldRecord(
+  spec: WorldRecordSpec,
+): CapabilityRecordSource {
+  const required = [...new Set(['action', ...spec.required])];
+  const input = schema({ action: ACTION_PROP, ...spec.inputProps }, required);
+  const output = spec.outputProps
+    ? outputSchema(spec.outputProps, spec.outputRequired ?? [])
+    : EMPTY_OUTPUT;
+  return {
+    id: CapabilityIdSchema.parse(`${spec.parentTool}.${spec.action}`),
+    aliases: (spec.aliases ?? []).map((alias) => CapabilityAliasSchema.parse(alias)),
+    legacyIds: [
+      { tool: LegacyToolNameSchema.parse(spec.parentTool), action: LegacyActionNameSchema.parse(spec.action) },
+    ],
+    discovery: {
+      domain: 'world',
+      family: spec.family,
+      topics: [spec.action],
+      summary: spec.summary,
+      whenToUse: [...spec.whenToUse],
+      whenNotToUse: [...spec.whenNotToUse],
+    },
+    schemas: { input, output },
+    examples: [{ title: spec.summary, input: spec.exampleInput, output: spec.exampleOutput }],
+    availability: availability(spec),
+    behavior: behavior(spec.effect, spec.behavior),
+    policy: policy(spec.effect),
+    cost: { latency: spec.costLatency, resources: spec.costResources },
+    routing: routing(spec.parentTool, spec.dispatchAction ?? spec.action, spec.dispatchMode),
+    normalization: {
+      class: 'C_SAME_VERB_DIFFERENT_TARGET',
+      disposition: 'retain',
+      rationale: spec.normalizationRationale,
+    },
+    deprecation: { status: 'active' },
+    parent: getParentToolMetadata(spec.parentTool),
+  };
+}
+
+export { V5_0, V5_3, V5_7, V5_8_P1 };

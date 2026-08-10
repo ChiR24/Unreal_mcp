@@ -52,7 +52,6 @@ bool HandleAssetCreationFunction(
   IAssetTools &AssetTools =
       FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
 
-  // Resolve factory
   UClass *FactoryUClass = ResolveClassByName(FactoryClass);
   if (!FactoryUClass) {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -63,7 +62,6 @@ bool HandleAssetCreationFunction(
 #endif
   }
 
-  // Quick factory lookup by short name if full resolution failed
   if (!FactoryUClass) {
     for (TObjectIterator<UClass> It; It; ++It) {
       if (It->GetName().Equals(FactoryClass) ||
@@ -93,7 +91,6 @@ bool HandleAssetCreationFunction(
     return true;
   }
 
-  // Attempt creation
   UObject *NewAsset =
       AssetTools.CreateAsset(AssetName, PackagePath, nullptr, Factory);
   if (NewAsset) {

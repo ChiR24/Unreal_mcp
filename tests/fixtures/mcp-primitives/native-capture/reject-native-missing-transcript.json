@@ -1,0 +1,8 @@
+{
+  "id": "native-pointer-no-transcript",
+  "captureKind": "native-protocol",
+  "domain": "pointer",
+  "match": "exact",
+  "provenance": "native-protocol capture with no transcript provenance block — inadmissible",
+  "value": { "primitive": "resources", "mode": "gateway", "reference": "search" }
+}

@@ -21,8 +21,11 @@ export async function tryHandleSpecialAnimationAction(
   if (animAction === 'play_anim_montage' || animAction === 'play_montage') {
     return await handlePlayMontage(args, argsTyped, tools);
   }
-  if (animAction === 'setup_ragdoll' || animAction === 'activate_ragdoll') {
+  if (animAction === 'setup_ragdoll') {
     return await handleSetupRagdoll(argsTyped, tools);
+  }
+  if (animAction === 'activate_ragdoll') {
+    return await handleActivateRagdoll(argsTyped, tools);
   }
   return undefined;
 }
@@ -120,6 +123,35 @@ async function handleSetupRagdoll(argsTyped: AnimationArgs, tools: ITools): Prom
       success: false,
       error: 'ACTOR_NOT_FOUND',
       message: message || 'Actor not found; no ragdoll applied',
+      actorName: argsTyped.actorName
+    });
+  }
+
+  return cleanObject(resp);
+}
+
+async function handleActivateRagdoll(argsTyped: AnimationArgs, tools: ITools): Promise<Record<string, unknown>> {
+  const mutableArgs = { ...argsTyped } as AnimationArgs & Record<string, unknown>;
+
+  if (argsTyped.actorName && !argsTyped.meshPath && !argsTyped.skeletonPath) {
+    const meshComp = await findSkeletalMeshComponent(tools, argsTyped.actorName);
+    if (meshComp && meshComp.path) {
+      mutableArgs.meshPath = meshComp.path;
+    }
+  }
+
+  // Task 21: route to the distinct native activate_ragdoll action, NOT
+  // setup_ragdoll, so the activation toggle is actually reachable.
+  const resp = await executeAutomationRequest(tools, 'activate_ragdoll', mutableArgs, 'Automation bridge not available for ragdoll activation') as AutomationResponse;
+  const result = (resp?.result ?? resp ?? {}) as ResultPayload;
+  const message = typeof result.message === 'string' ? result.message : '';
+  const msgLower = message.toLowerCase();
+
+  if (msgLower.includes('actor not found') || msgLower.includes('no ragdoll applied')) {
+    return cleanObject({
+      success: false,
+      error: 'ACTOR_NOT_FOUND',
+      message: message || 'Actor not found; no ragdoll activation',
       actorName: argsTyped.actorName
     });
   }

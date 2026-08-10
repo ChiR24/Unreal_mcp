@@ -6,7 +6,10 @@
 
 #include "Containers/Ticker.h"
 #include "Engine/Engine.h"
+#include "HAL/FileManager.h"
 #include "HAL/IConsoleManager.h"
+#include "Misc/DateTime.h"
+#include "Misc/Paths.h"
 
 #if WITH_EDITOR
 #include "Editor/UnrealEd/Public/Editor.h"
@@ -55,8 +58,6 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
     {
         bool bDetailed = false;
         Context.Payload->TryGetBoolField(TEXT("detailed"), bDetailed);
-        FString OutputPath;
-        Context.Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
 
         if (!RequireEditor(Context))
         {
@@ -65,9 +66,38 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
 
         const FString Command = bDetailed ? TEXT("memreport -full") : TEXT("memreport");
         GEngine->Exec(GEditor->GetEditorWorldContext().World(), *Command);
+
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        const FString ReportDirectory = FPaths::ProfilingDir() / TEXT("MemReports");
+        Resp->SetStringField(TEXT("reportDirectory"), ReportDirectory);
+        TArray<FString> ReportFiles;
+        // FindFilesRecursive takes no result ceiling — its last parameter is
+        // bClearFileNames, so a count argument here does not compile. Truncating
+        // the results would also be wrong rather than merely unbounded: picking
+        // the newest of an arbitrary subset can miss the actual newest report.
+        // If this directory ever needs a real traversal bound, that requires a
+        // visitor (IterateDirectoryStatRecursively), which can stop early and
+        // read ModificationTime in the same pass.
+        IFileManager::Get().FindFilesRecursive(
+            ReportFiles, *ReportDirectory, TEXT("*.memreport"), true, false, true);
+        FString NewestReport;
+        FDateTime NewestStamp = FDateTime::MinValue();
+        for (const FString& File : ReportFiles)
+        {
+            const FDateTime Stamp = IFileManager::Get().GetTimeStamp(*File);
+            if (Stamp > NewestStamp)
+            {
+                NewestStamp = Stamp;
+                NewestReport = File;
+            }
+        }
+        if (!NewestReport.IsEmpty())
+        {
+            Resp->SetStringField(TEXT("reportPath"), NewestReport);
+        }
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
-            TEXT("Memory report generated"), nullptr);
+            TEXT("Memory report generated"), Resp);
         return true;
     }
 

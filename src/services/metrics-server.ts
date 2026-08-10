@@ -2,12 +2,31 @@ import http from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
 import { HealthMonitor } from './health-monitor.js';
 import { Logger } from '../utils/logging/logger.js';
-import type { AutomationStatusBridge } from '../types/tools/tool-interfaces.js';
+import {
+  createDefaultReadinessProbes,
+  evaluateReadiness,
+  type ReadinessProbes,
+  type ReadinessReport
+} from './readiness.js';
 
-interface MetricsServerOptions {
+// Only the four status fields the exposition actually reads. Narrower than
+// AutomationStatusBridge on purpose: the metrics surface must not grow a
+// dependency on fields (handshake metadata, connection lists, pending request
+// details) that carry ids and addresses it is not allowed to export.
+export interface MetricsStatusSource {
+  getStatus(): {
+    connected: boolean;
+    pendingRequests: number;
+    maxPendingRequests: number;
+    maxConcurrentConnections: number;
+  };
+}
+
+export interface MetricsServerOptions {
   healthMonitor: HealthMonitor;
-  automationBridge: AutomationStatusBridge;
+  automationBridge: MetricsStatusSource;
   logger: Logger;
+  readiness?: ReadinessProbes;
 }
 
 function parseMetricsPort(value: string | undefined): number {
@@ -68,7 +87,17 @@ function isAuthorized(req: http.IncomingMessage, token: string): boolean {
   return false;
 }
 
-function formatPrometheusMetrics(options: MetricsServerOptions): string {
+function resolveReadiness(options: MetricsServerOptions): ReadinessReport {
+  const probes =
+    options.readiness ??
+    createDefaultReadinessProbes({
+      automationBridge: options.automationBridge,
+      healthMonitor: options.healthMonitor
+    });
+  return evaluateReadiness(probes);
+}
+
+function formatPrometheusMetrics(options: MetricsServerOptions, readiness: ReadinessReport): string {
   const { healthMonitor, automationBridge } = options;
   const m = healthMonitor.metrics;
   const status = automationBridge.getStatus();
@@ -116,7 +145,7 @@ function formatPrometheusMetrics(options: MetricsServerOptions): string {
   lines.push('# TYPE unreal_mcp_uptime_seconds gauge');
   lines.push(`unreal_mcp_uptime_seconds ${uptimeSeconds}`);
 
-  return lines.join('\n') + '\n';
+  return lines.join('\n') + '\n' + healthMonitor.telemetry.render(readiness);
 }
 
 export function startMetricsServer(options: MetricsServerOptions): http.Server | null {
@@ -172,12 +201,21 @@ export function startMetricsServer(options: MetricsServerOptions): http.Server |
     }
 
     if (req.url === '/metrics' && req.method === 'GET') {
-      const metrics = formatPrometheusMetrics(options);
+      // A scrape must still succeed while NOT ready - that is when the readiness
+      // gauges matter most - so this stays 200 regardless of the report.
+      const metrics = formatPrometheusMetrics(options, resolveReadiness(options));
       res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4' });
       res.end(metrics);
-    } else if (req.url === '/health' && req.method === 'GET') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ status: 'ok', uptime: Date.now() - options.healthMonitor.metrics.uptime }));
+    } else if ((req.url === '/health' || req.url === '/ready') && req.method === 'GET') {
+      const readiness = resolveReadiness(options);
+      res.writeHead(readiness.ready ? 200 : 503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        status: readiness.ready ? 'ok' : 'not_ready',
+        ready: readiness.ready,
+        components: readiness.components,
+        notReady: readiness.notReady,
+        uptime: Date.now() - options.healthMonitor.metrics.uptime
+      }));
     } else {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       res.end('Not Found');

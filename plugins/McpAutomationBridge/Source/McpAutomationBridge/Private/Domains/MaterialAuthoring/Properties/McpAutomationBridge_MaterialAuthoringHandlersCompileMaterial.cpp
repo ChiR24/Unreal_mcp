@@ -62,9 +62,6 @@ bool HandleCompileMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // get_material_info (supports UMaterial and UMaterialFunction)
-  // --------------------------------------------------------------------------
   return false;
 }
 }

@@ -10,7 +10,6 @@ bool HandleAnimationSetTransitionRulesAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Set transition rules/conditions
     FString BlueprintPath;
     Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
 

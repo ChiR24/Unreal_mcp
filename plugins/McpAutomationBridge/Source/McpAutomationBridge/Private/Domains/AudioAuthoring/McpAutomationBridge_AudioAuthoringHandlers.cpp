@@ -59,7 +59,31 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioAuthoringAction(
 		else
 		{
 			FString ErrorMsg = Response->HasField(TEXT("error")) ? GetJsonStringField(Response, TEXT("error")) : Message.Len() > 0 ? Message : TEXT("Unknown error");
-			SendAutomationError(RequestingSocket, RequestId, ErrorMsg, ErrorCode);
+			// Preserve diagnostic payload fields handlers attach to failures
+			// (e.g. availableNodes/availableInputs); SendAutomationError would
+			// discard the whole response object. Envelope fields keep the same
+			// shape: message = human text, error = code.
+			TSharedPtr<FJsonObject> Details = MakeShared<FJsonObject>();
+			for (const auto& Pair : Response->Values)
+			{
+				const FString Key(Pair.Key.Len(), *Pair.Key);
+				if (Key == TEXT("success") || Key == TEXT("error") || Key == TEXT("errorCode") ||
+					Key == TEXT("code") || Key == TEXT("message") || Key == TEXT("type") ||
+					Key == TEXT("requestId") || Key == TEXT("data") || Key == TEXT("result"))
+				{
+					continue;
+				}
+				Details->SetField(Key, Pair.Value);
+			}
+			if (Details->Values.Num() > 0)
+			{
+				SendAutomationResponse(RequestingSocket, RequestId, false, ErrorMsg, Details,
+					ErrorCode.IsEmpty() ? TEXT("AUTOMATION_ERROR") : ErrorCode);
+			}
+			else
+			{
+				SendAutomationError(RequestingSocket, RequestId, ErrorMsg, ErrorCode);
+			}
 		}
 	}
 	else

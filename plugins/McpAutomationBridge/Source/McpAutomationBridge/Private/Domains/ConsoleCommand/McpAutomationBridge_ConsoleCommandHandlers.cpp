@@ -1,19 +1,3 @@
-// =============================================================================
-// McpAutomationBridge_ConsoleCommandHandlers.cpp
-// =============================================================================
-// Handler implementations for console command execution operations.
-//
-// HANDLERS IMPLEMENTED:
-// ---------------------
-// - batch_console_commands: Execute multiple console commands in batch
-// - console_command: Execute a single console command
-//
-// SECURITY:
-// ---------
-// - Commands are validated against blocked patterns
-// - Path traversal in command arguments is blocked
-// =============================================================================
-
 #include "Core/Compatibility/McpVersionCompatibility.h"  // MUST BE FIRST - Version compatibility macros
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
@@ -28,85 +12,26 @@
 #include "Kismet/GameplayStatics.h"
 #endif
 
-// =============================================================================
-// Logging
-// =============================================================================
-
 DEFINE_LOG_CATEGORY(LogMcpConsoleHandlers);
-
-// =============================================================================
-// Blocked Command Patterns
-// =============================================================================
 
 namespace ConsoleCommandSecurity
 {
-    // Commands that are blocked for security reasons
-    static const TCHAR* const BLOCKED_COMMANDS[] = {
-        TEXT("shutdown"),
-        TEXT("quit"),
-        TEXT("exit"),
-        TEXT("kill"),
-        TEXT("crash"),
-        TEXT("r.gpucrash"),
-        TEXT("r.crash"),
-        TEXT("forcecrash"),
-        TEXT("debugbreak"),
-        TEXT("buildpaths"),
-        TEXT("rebuildnavigation"),
-        TEXT("recompileglobalshaders"),  // Can cause instability
-        TEXT("deriveddatacache"),         // Can corrupt DDC
-    };
-
-    // Destructive/process commands are blocked until an explicit allow-list exists.
-    static const TCHAR* const RESTRICTED_COMMANDS[] = {
-        TEXT("delete"),       // Destructive
-        TEXT("destroy"),      // Destructive
-        TEXT("unrealbuildtool"), // Process spawning
-        TEXT("ubt"),          // Process spawning
-    };
-
-    static const TCHAR* const FORBIDDEN_COMMAND_NAMES[] = {
-        TEXT("rm"),
-        TEXT("del"),
-        TEXT("format"),
-        TEXT("copy"),
-        TEXT("move"),
-        TEXT("start"),
-    };
-
-    static const TCHAR* const FORBIDDEN_TOKENS[] = {
-        TEXT("import os"),
-        TEXT("import sys"),
-        TEXT("import subprocess"),
-        TEXT("subprocess."),
-        TEXT("os.system"),
-        TEXT("exec("),
-        TEXT("eval("),
-        TEXT("__import__"),
-        TEXT("with open"),
-        TEXT("open("),
-        TEXT("write("),
-        TEXT("read("),
-        TEXT("debug crash"),
-        TEXT("debug break"),
-        TEXT("assert false"),
-        TEXT("check(false)"),
-        TEXT("viewmode visualizebuffer basecolor"),
-        TEXT("viewmode visualizebuffer worldnormal"),
-        TEXT("obj garbage"),
-        TEXT("obj list"),
-        TEXT("memreport"),
-    };
+    // One canonical console-command policy, generated from the TypeScript typed
+    // rule data by scripts/generate-console-command-policy.ts (Task 22). The
+    // handwritten block lists were removed; this namespace now consumes the
+    // generated arrays so both transports share one fail-closed policy.
+    #include "Domains/ConsoleCommand/McpAutomationBridge_ConsoleCommandPolicy.generated.h"
 
     static bool ContainsUnsafeSeparator(const FString& Command)
     {
-        return Command.Contains(TEXT("\n")) ||
-               Command.Contains(TEXT("\r")) ||
-               Command.Contains(TEXT("&&")) ||
-               Command.Contains(TEXT("||")) ||
-               Command.Contains(TEXT(";")) ||
-               Command.Contains(TEXT("|")) ||
-               Command.Contains(TEXT("`"));
+        for (const TCHAR* const Separator : McpGeneratedConsoleCommandPolicy::UNSAFE_SEPARATORS)
+        {
+            if (Command.Contains(Separator))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     static bool IsListedCommandName(const FString& CommandName, const TCHAR* const* Names, int32 Count)
@@ -134,7 +59,6 @@ namespace ConsoleCommandSecurity
             return true;
         }
 
-        // Extract command name (first word)
         TArray<FString> CommandParts;
         LowerCommand.ParseIntoArrayWS(CommandParts);
         if (CommandParts.Num() == 0)
@@ -143,21 +67,15 @@ namespace ConsoleCommandSecurity
         }
         const FString& CommandName = CommandParts[0];
 
-        if (CommandName.Equals(TEXT("py"), ESearchCase::IgnoreCase) ||
-            CommandName.Equals(TEXT("python"), ESearchCase::IgnoreCase))
+        // Check blocked/restricted/forbidden-name lists (py/python folded into BLOCKED).
+        if (IsListedCommandName(CommandName, McpGeneratedConsoleCommandPolicy::BLOCKED_COMMANDS, UE_ARRAY_COUNT(McpGeneratedConsoleCommandPolicy::BLOCKED_COMMANDS)) ||
+            IsListedCommandName(CommandName, McpGeneratedConsoleCommandPolicy::RESTRICTED_COMMANDS, UE_ARRAY_COUNT(McpGeneratedConsoleCommandPolicy::RESTRICTED_COMMANDS)) ||
+            IsListedCommandName(CommandName, McpGeneratedConsoleCommandPolicy::FORBIDDEN_COMMAND_NAMES, UE_ARRAY_COUNT(McpGeneratedConsoleCommandPolicy::FORBIDDEN_COMMAND_NAMES)))
         {
             return true;
         }
 
-        // Check blocked list
-        if (IsListedCommandName(CommandName, BLOCKED_COMMANDS, UE_ARRAY_COUNT(BLOCKED_COMMANDS)) ||
-            IsListedCommandName(CommandName, RESTRICTED_COMMANDS, UE_ARRAY_COUNT(RESTRICTED_COMMANDS)) ||
-            IsListedCommandName(CommandName, FORBIDDEN_COMMAND_NAMES, UE_ARRAY_COUNT(FORBIDDEN_COMMAND_NAMES)))
-        {
-            return true;
-        }
-
-        for (const TCHAR* Token : FORBIDDEN_TOKENS)
+        for (const TCHAR* Token : McpGeneratedConsoleCommandPolicy::FORBIDDEN_TOKENS)
         {
             if (LowerCommand.Contains(Token))
             {
@@ -168,10 +86,6 @@ namespace ConsoleCommandSecurity
         return false;
     }
 }
-
-// =============================================================================
-// Handler Implementation
-// =============================================================================
 
 bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
     const FString& RequestId,
@@ -184,18 +98,12 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
 
     UE_LOG(LogMcpConsoleHandlers, Verbose, TEXT("HandleConsoleCommandAction: %s"), *LowerAction);
 
-    // ===========================================================================
-    // batch_console_commands - Execute multiple console commands
-    // ===========================================================================
     if (LowerAction == TEXT("batch_console_commands"))
     {
         return McpConsoleCommandHandlers::HandleBatchConsoleCommands(
             this, RequestId, Payload, RequestingSocket);
     }
 
-    // ===========================================================================
-    // console_command - Execute a single console command
-    // ===========================================================================
     if (LowerAction == TEXT("console_command"))
     {
         if (!Payload.IsValid())
@@ -215,7 +123,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
 
         Command = Command.TrimStartAndEnd();
 
-        // Security check
         if (ConsoleCommandSecurity::IsBlockedCommand(Command))
         {
             SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -224,7 +131,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
             return true;
         }
 
-        // Get the world context
         UWorld* World = nullptr;
         if (GEditor)
         {

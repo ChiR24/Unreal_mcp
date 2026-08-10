@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.branch || 'main' }}
@@ -144,16 +144,39 @@ jobs:
           jq --arg v "$VERSION" '.version = $v | .packages[] |= if .registryType == "npm" then .version = $v else . end' server.json > tmp && mv tmp server.json
           echo "✅ Updated server.json to $VERSION"
 
-      - name: Update src/index.ts
+      - name: Update McpAutomationBridge.uplugin
         env:
           FINAL_VERSION: ${{ steps.final_version.outputs.version }}
         run: |
           VERSION="$FINAL_VERSION"
+          jq --arg v "$VERSION" '.VersionName = $v' plugins/McpAutomationBridge/McpAutomationBridge.uplugin > tmp && mv tmp plugins/McpAutomationBridge/McpAutomationBridge.uplugin
+          echo "✅ Updated McpAutomationBridge.uplugin VersionName to $VERSION"
 
-          # Update only the DEFAULT_SERVER_VERSION fallback string (targeted replacement)
-          perl -0777 -i -pe "s/(const DEFAULT_SERVER_VERSION[\\s\\S]*?:\\s*)'[^']+';/\${1}'$VERSION';/" src/index.ts
+      - name: Update server-factory.ts fallback
+        env:
+          FINAL_VERSION: ${{ steps.final_version.outputs.version }}
+        run: |
+          VERSION="$FINAL_VERSION"
+          # Update only the SERVER_VERSION hardcoded fallback string (targeted replacement)
+          perl -0777 -i -pe "s/(const SERVER_VERSION[\\s\\S]*?:\s*)'[0-9]+\.[0-9]+\.[0-9]+';/\${1}'$VERSION';/" src/server/server-factory.ts
+          echo "✅ Updated src/server/server-factory.ts SERVER_VERSION fallback to $VERSION"
 
-          echo "✅ Updated src/index.ts DEFAULT_SERVER_VERSION fallback to $VERSION"
+      - name: Update native server-info.json
+        env:
+          FINAL_VERSION: ${{ steps.final_version.outputs.version }}
+        run: |
+          VERSION="$FINAL_VERSION"
+          jq --arg v "$VERSION" '.version = $v' plugins/McpAutomationBridge/Resources/MCP/server-info.json > tmp && mv tmp plugins/McpAutomationBridge/Resources/MCP/server-info.json
+          echo "✅ Updated plugins/McpAutomationBridge/Resources/MCP/server-info.json version to $VERSION"
+
+      - name: Update native McpNativeTransport.h ServerVersion TEXT fallback
+        env:
+          FINAL_VERSION: ${{ steps.final_version.outputs.version }}
+        run: |
+          VERSION="$FINAL_VERSION"
+          # Update only the ServerVersion TEXT(...) fallback literal (targeted replacement)
+          perl -0777 -i -pe "s/(ServerVersion\s*=\s*TEXT\(\s*\")[0-9]+\.[0-9]+\.[0-9]+(\"\s*\))/\${1}$VERSION\${2}/" plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h
+          echo "✅ Updated plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h ServerVersion fallback to $VERSION"
 
       - name: Verify no hardcoded npm versions remain
         env:
@@ -251,6 +274,12 @@ jobs:
           echo "### Detailed Changes:"
           git diff
 
+      - name: Verify version sources agree
+        run: |
+          npm ci
+          npm run version:check
+          echo "✅ All version sources agree after the bump"
+
       - name: Commit changes
         env:
           FINAL_VERSION: ${{ steps.final_version.outputs.version }}
@@ -264,7 +293,11 @@ jobs:
             COMMIT_MESSAGE="chore: bump version to v$VERSION"
           fi
 
-          git add package.json package-lock.json server.json src/index.ts
+          git add package.json package-lock.json server.json \
+            plugins/McpAutomationBridge/McpAutomationBridge.uplugin \
+            src/server/server-factory.ts \
+            plugins/McpAutomationBridge/Resources/MCP/server-info.json \
+            plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h
 
           if [ "$CREATE_CHANGELOG" == "true" ]; then
             git add CHANGELOG.md
@@ -299,7 +332,10 @@ jobs:
           echo "### 📦 Files Updated:" >> $GITHUB_STEP_SUMMARY
           echo "- \`package.json\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`server.json\` (2 occurrences)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`src/index.ts\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`plugins/McpAutomationBridge/McpAutomationBridge.uplugin\` (VersionName)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`src/server/server-factory.ts\` (SERVER_VERSION fallback)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`plugins/McpAutomationBridge/Resources/MCP/server-info.json\` (version)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h\` (ServerVersion TEXT fallback)" >> $GITHUB_STEP_SUMMARY
 
           if [ "$CREATE_CHANGELOG" == "true" ]; then
             echo "- \`CHANGELOG.md\`" >> $GITHUB_STEP_SUMMARY

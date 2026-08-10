@@ -29,10 +29,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Action,
         Payload,
         RequestingSocket,
-        McpCombatHandlers::GetStringFieldCombat(Payload, TEXT("subAction")),
-        McpCombatHandlers::GetStringFieldCombat(Payload, TEXT("name")),
-        McpCombatHandlers::GetStringFieldCombat(Payload, TEXT("path"), TEXT("/Game")),
-        McpCombatHandlers::GetStringFieldCombat(Payload, TEXT("blueprintPath"))};
+        GetJsonStringField(Payload, TEXT("subAction")),
+        GetJsonStringField(Payload, TEXT("name")),
+        GetJsonStringField(Payload, TEXT("path"), TEXT("/Game")),
+        GetJsonStringField(Payload, TEXT("blueprintPath"))};
 
     if (Context.SubAction.IsEmpty())
     {

@@ -1,6 +1,6 @@
 import { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
-import { createSubActionDispatcher } from '../foundation/dispatch/common-handlers.js';
+import { createSubActionDispatcher, createUnknownActionResponse } from '../foundation/dispatch/common-handlers.js';
 
 export async function handlePCGTools(
   action: string,
@@ -105,10 +105,6 @@ export async function handlePCGTools(
       return sendRequest('set_pcg_partition_grid_size');
 
     default:
-      return {
-        success: false,
-        error: 'UNKNOWN_ACTION',
-        message: `Unknown PCG action: ${action}`
-      };
+      return createUnknownActionResponse(`Unknown PCG action: ${action}`);
   }
 }

@@ -49,26 +49,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSetContains(
   }
 
   void *TargetContainer = nullptr;
-  FProperty *Property = nullptr;
-  if (PropertyName.Contains(TEXT("."))) {
-    FString ResolveError;
-    Property = ResolveNestedPropertyPath(RootObject, PropertyName,
-                                         TargetContainer, ResolveError);
-    if (!Property || !TargetContainer) {
-      SendAutomationError(RequestingSocket, RequestId,
-                          FString::Printf(TEXT("Failed to resolve property: %s"), *ResolveError),
-                          TEXT("PROPERTY_NOT_FOUND"));
-      return true;
-    }
-  } else {
-    TargetContainer = RootObject;
-    Property = RootObject->GetClass()->FindPropertyByName(*PropertyName);
-    if (!Property) {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Property not found."),
-                          TEXT("PROPERTY_NOT_FOUND"));
-      return true;
-    }
+  FString ResolveError, ResolveErrorCode;
+  FProperty *Property = McpResolvePropertyContainer(
+      RootObject, PropertyName, TargetContainer, ResolveError, ResolveErrorCode);
+  if (!Property) {
+    SendAutomationError(RequestingSocket, RequestId, ResolveError, ResolveErrorCode);
+    return true;
   }
 
   FSetProperty *SetProp = CastField<FSetProperty>(Property);
@@ -167,26 +153,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSetClear(
   }
 
   void *TargetContainer = nullptr;
-  FProperty *Property = nullptr;
-  if (PropertyName.Contains(TEXT("."))) {
-    FString ResolveError;
-    Property = ResolveNestedPropertyPath(RootObject, PropertyName,
-                                         TargetContainer, ResolveError);
-    if (!Property || !TargetContainer) {
-      SendAutomationError(RequestingSocket, RequestId,
-                          FString::Printf(TEXT("Failed to resolve property: %s"), *ResolveError),
-                          TEXT("PROPERTY_NOT_FOUND"));
-      return true;
-    }
-  } else {
-    TargetContainer = RootObject;
-    Property = RootObject->GetClass()->FindPropertyByName(*PropertyName);
-    if (!Property) {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Property not found."),
-                          TEXT("PROPERTY_NOT_FOUND"));
-      return true;
-    }
+  FString ResolveError, ResolveErrorCode;
+  FProperty *Property = McpResolvePropertyContainer(
+      RootObject, PropertyName, TargetContainer, ResolveError, ResolveErrorCode);
+  if (!Property) {
+    SendAutomationError(RequestingSocket, RequestId, ResolveError, ResolveErrorCode);
+    return true;
   }
 
   FSetProperty *SetProp = CastField<FSetProperty>(Property);

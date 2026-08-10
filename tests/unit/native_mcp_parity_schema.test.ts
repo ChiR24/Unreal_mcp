@@ -1,80 +1,62 @@
 /// <reference types="node" />
 
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-const temporaryDirectories: string[] = [];
+import { registerTempRootCleanup, writeFixtureFile } from './audit-fixture-workspace.js';
+import {
+  capabilityRecordsFor,
+  createSchemaParityFixture,
+  generatedParentFor,
+  propertyNames
+} from './native-mcp-parity-schema-fixtures.js';
 
-function writeFile(root: string, relativePath: string, source: string): void {
-  const filePath = path.join(root, relativePath);
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, source);
-}
-
-function createFixture(
-  typeScriptProperties: string,
-  nativeFields: string,
-  required = "['action']"
-): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'native-parity-schema-'));
-  temporaryDirectories.push(root);
-  writeFile(root, 'src/tools/definitions/shared/action-sets.ts', '');
-  writeFile(
-    root,
-    'src/tools/definitions/utility/alpha-tool.ts',
-    [
-      'export const alphaToolDefinition = {',
-      "  name: 'alpha',",
-      '  inputSchema: {',
-      `    properties: { action: { type: 'string', enum: ['run'], description: 'Action' }, ${typeScriptProperties} },`,
-      `    required: ${required}`,
-      '  }',
-      '};',
-      ''
-    ].join('\n')
-  );
-  writeFile(
-    root,
-    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Registry/McpToolRegistry.cpp',
-    'const TArray<FString> CanonicalToolNames = { TEXT("alpha") };\n'
-  );
-  writeFile(
-    root,
-    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Routing/McpConsolidatedActionRoutingFixture.h',
-    ''
-  );
-  writeFile(
-    root,
-    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools/Utility/McpTool_Alpha.cpp',
-    [
-      'class FAlphaTool {',
-      '  FString GetName() const override { return TEXT("alpha"); }',
-      '  auto GetSchema() {',
-      '    FMcpSchemaBuilder Schema;',
-      '    Schema.StringEnum(TEXT("action"), { TEXT("run") }, TEXT("Action"));',
-      `    ${nativeFields}`,
-      '    Schema.Required({ TEXT("action") });',
-      '    return Schema.Build();',
-      '  }',
-      '};',
-      ''
-    ].join('\n')
-  );
-  return root;
-}
-
-afterEach(() => {
-  for (const directory of temporaryDirectories.splice(0)) {
-    fs.rmSync(directory, { recursive: true, force: true });
-  }
-});
+registerTempRootCleanup();
 
 describe('native MCP schema parity', () => {
-  it('declares every supported cinematics and media runtime field', async () => {
+  it('derives the manage_sequence parent property union from its capability records', async () => {
+    // Given the generated parent surface and the records it is derived from
+    const parent = await generatedParentFor('manage_sequence');
+    const records = capabilityRecordsFor('manage_sequence');
+
+    // When both property sets are collected
+    const recordProperties = [
+      ...new Set(records.flatMap((record) => Object.keys(record.schemas?.input?.properties ?? {})))
+    ].filter((name) => name !== 'action').sort();
+
+    // Then the parent declares exactly its records' union -- nothing invented, nothing dropped
+    expect(records.length).toBeGreaterThan(0);
+    expect(recordProperties.length).toBeGreaterThan(0);
+    expect(propertyNames(parent.inputSchema.properties)).toEqual(recordProperties);
+  });
+
+  it('keeps manage_sequence cinematics, media, and take runtime fields typed as declared', async () => {
+    // Given the generated parent and the records behind it
+    const parent = await generatedParentFor('manage_sequence');
+    const records = capabilityRecordsFor('manage_sequence');
+
+    // When frame-addressed timeline fields are inspected on both layers
+    for (const field of ['frame', 'lengthInFrames', 'playbackStart', 'playbackEnd']) {
+      const declaring = records.filter((record) => record.schemas?.input?.properties?.[field]);
+
+      // Then the parent and every declaring record agree the field is integer-typed
+      expect(declaring.length).toBeGreaterThan(0);
+      expect(parent.inputSchema.properties[field]?.type).toBe('integer');
+      for (const record of declaring) {
+        expect(record.schemas?.input?.properties?.[field]?.type).toBe('integer');
+      }
+    }
+
+    // And the Take Recorder destination stays a string path
+    expect(parent.inputSchema.properties.takeSequencePath?.type).toBe('string');
+  });
+
+  it('matches the native manage_sequence parent with no schema drift', async () => {
+    // Given the real repository on both surfaces
     const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
 
+    // When manage_sequence schema parity is audited
     const result = auditNativeMcpParity({
       repoRoot: process.cwd(),
       schemaParityTools: ['manage_sequence']
@@ -83,43 +65,19 @@ describe('native MCP schema parity', () => {
       ({ tool }) => tool === 'manage_sequence'
     );
 
-    expect(manageSequence).toBeUndefined();
-    const typeScriptSource = fs.readFileSync(
-      path.join(
-        process.cwd(),
-        'src/tools/definitions/utility/manage-sequence-tool.ts'
-      ),
-      'utf8'
-    );
-    for (const field of [
-      'defaultSourcePath',
-      'platformSources',
-      'playlistIndex',
-      'takeSequencePath',
-      'recordInto'
-    ]) {
-      expect(typeScriptSource).toContain(`${field}:`);
-    }
-    for (const field of [
-      'frame',
-      'width',
-      'height',
-      'startFrame',
-      'endFrame',
-      'lengthInFrames',
-      'playbackStart',
-      'playbackEnd'
-    ]) {
-      expect(typeScriptSource).toContain(
-        `${field}: commonSchemas.integerProp`
-      );
-    }
+    // Then discovery is non-vacuous and neither side has a missing property, an
+    // extra property, or any shape drift
+    expect(result.counts.typeScriptDefinitions).toBe(23);
+    expect(result.emptyDiscovery).toEqual([]);
+    expect(manageSequence?.missingNativeProperties ?? []).toEqual([]);
+    expect(manageSequence?.extraNativeProperties ?? []).toEqual([]);
+    expect(manageSequence?.schemaMismatches ?? []).toEqual([]);
   });
 
   it('does not let an unused same-prefix sibling satisfy a property', async () => {
     // Given
-    const root = createFixture("frameRate: { type: 'number' }", '');
-    writeFile(
+    const root = createSchemaParityFixture("frameRate: { type: 'number' }", '');
+    writeFixtureFile(
       root,
       'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools/Utility/McpTool_AlphaUnused.cpp',
       'void AddUnused(FMcpSchemaBuilder& Schema) { Schema.Number(TEXT("frameRate")); }\n'
@@ -142,7 +100,7 @@ describe('native MCP schema parity', () => {
 
   it('reports property type and requiredness mismatches', async () => {
     // Given
-    const root = createFixture(
+    const root = createSchemaParityFixture(
       "frameRate: { type: 'number' }, value: { type: 'object' }",
       'Schema.String(TEXT("frameRate"), TEXT("Rate")).FreeformObject(TEXT("value"), TEXT("Value"));',
       "['action', 'frameRate']"
@@ -161,7 +119,7 @@ describe('native MCP schema parity', () => {
 
   it('compares enum values, array items, and nested object shapes', async () => {
     // Given
-    const root = createFixture(
+    const root = createSchemaParityFixture(
       [
         "modes: { type: 'array', items: { type: 'string', enum: ['a', 'b'] } },",
         "settings: { type: 'object', properties: { enabled: { type: 'boolean' } } }"
@@ -188,23 +146,23 @@ describe('native MCP schema parity', () => {
 
   it('follows an explicitly included and called schema field implementation', async () => {
     // Given
-    const root = createFixture("frameRate: { type: 'number' }", [
+    const root = createSchemaParityFixture("frameRate: { type: 'number' }", [
       'McpAlphaFields::AddFields(Schema);'
     ].join('\n'));
     const toolsRoot = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools';
     const toolPath = `${toolsRoot}/Utility/McpTool_Alpha.cpp`;
     const toolSource = fs.readFileSync(path.join(root, toolPath), 'utf8');
-    writeFile(
+    writeFixtureFile(
       root,
       toolPath,
       `#include "MCP/Tools/Utility/McpAlphaFields.h"\n${toolSource}`
     );
-    writeFile(
+    writeFixtureFile(
       root,
       `${toolsRoot}/Utility/McpAlphaFields.h`,
       'namespace McpAlphaFields { void AddFields(FMcpSchemaBuilder& Schema); }\n'
     );
-    writeFile(
+    writeFixtureFile(
       root,
       `${toolsRoot}/Utility/McpAlphaFields.cpp`,
       [
@@ -227,12 +185,114 @@ describe('native MCP schema parity', () => {
 
   it('extracts raw any-value and type-union schema helper calls', async () => {
     // Given
-    const root = createFixture(
+    const root = createSchemaParityFixture(
       "value: { description: 'Any' }, frameRate: { type: ['number', 'string'] }",
       [
         'AddAnyValue(Schema, TEXT("value"), TEXT("Any"));',
         'AddTypeUnion(Schema, TEXT("frameRate"), { TEXT("number"), TEXT("string") }, TEXT("Rate"));'
       ].join('\n')
+    );
+    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+
+    // When
+    const result = auditNativeMcpParity({ repoRoot: root, schemaParityTools: ['alpha'] });
+
+    // Then
+    expect(result.schemaPropertyGaps).toEqual([]);
+  });
+
+  it('extracts a top-level AnyValue builder method as an unconstrained property', async () => {
+    // Given
+    const root = createSchemaParityFixture(
+      'value: {}',
+      'Schema.AnyValue(TEXT("value"), TEXT("Any"));'
+    );
+    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+
+    // When
+    const result = auditNativeMcpParity({ repoRoot: root, schemaParityTools: ['alpha'] });
+
+    // Then
+    expect(result.schemaPropertyGaps).toEqual([]);
+  });
+
+  it('extracts a top-level TypeUnion builder method as a sorted type-array schema', async () => {
+    // Given
+    const root = createSchemaParityFixture(
+      "frameRate: { type: ['number', 'string'] }",
+      'Schema.TypeUnion(TEXT("frameRate"), { TEXT("number"), TEXT("string") }, TEXT("Rate"));'
+    );
+    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+
+    // When
+    const result = auditNativeMcpParity({ repoRoot: root, schemaParityTools: ['alpha'] });
+
+    // Then
+    expect(result.schemaPropertyGaps).toEqual([]);
+  });
+
+  it('normalizes TypeUnion type-list order regardless of source order', async () => {
+    // Given: native lists string before number, TS lists number before string
+    const root = createSchemaParityFixture(
+      "frameRate: { type: ['number', 'string'] }",
+      'Schema.TypeUnion(TEXT("frameRate"), { TEXT("string"), TEXT("number") }, TEXT("Rate"));'
+    );
+    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+
+    // When
+    const result = auditNativeMcpParity({ repoRoot: root, schemaParityTools: ['alpha'] });
+
+    // Then
+    expect(result.schemaPropertyGaps).toEqual([]);
+  });
+
+  it('extracts a TypeUnion inside a nested builder callback', async () => {
+    // Given: nested object callback declares a TypeUnion on the inner builder
+    const root = createSchemaParityFixture(
+      [
+        "settings: { type: 'object', properties: { rate: { type: ['number'] } } }"
+      ].join(' '),
+      [
+        'Schema.Object(TEXT("settings"), TEXT("Settings"), [](FMcpSchemaBuilder& S) {',
+        '  S.TypeUnion(TEXT("rate"), { TEXT("number") }, TEXT("Rate"));',
+        '});'
+      ].join('\n')
+    );
+    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+
+    // When
+    const result = auditNativeMcpParity({ repoRoot: root, schemaParityTools: ['alpha'] });
+
+    // Then
+    expect(result.schemaPropertyGaps).toEqual([]);
+  });
+
+  it('extracts an AnyValue inside a nested builder callback', async () => {
+    // Given: nested object callback declares an unconstrained AnyValue on the inner builder
+    const root = createSchemaParityFixture(
+      [
+        "settings: { type: 'object', properties: { payload: {} } }"
+      ].join(' '),
+      [
+        'Schema.Object(TEXT("settings"), TEXT("Settings"), [](FMcpSchemaBuilder& S) {',
+        '  S.AnyValue(TEXT("payload"), TEXT("Payload"));',
+        '});'
+      ].join('\n')
+    );
+    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+
+    // When
+    const result = auditNativeMcpParity({ repoRoot: root, schemaParityTools: ['alpha'] });
+
+    // Then
+    expect(result.schemaPropertyGaps).toEqual([]);
+  });
+
+  it('handles a TypeUnion with no type entries as an empty type array', async () => {
+    // Given: malformed/empty type list on the native side
+    const root = createSchemaParityFixture(
+      'frameRate: { type: [] }',
+      'Schema.TypeUnion(TEXT("frameRate"), {}, TEXT("Rate"));'
     );
     const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
 

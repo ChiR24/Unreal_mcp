@@ -23,7 +23,6 @@ bool HandleAddCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const FStr
             RF_Transactional);
     CustomExpr->Code = Code;
 
-    // Set output type
     if (OutputType == TEXT("Float1") || OutputType == TEXT("CMOT_Float1"))
       CustomExpr->OutputType = CMOT_Float1;
     else if (OutputType == TEXT("Float2") || OutputType == TEXT("CMOT_Float2"))
@@ -41,7 +40,6 @@ bool HandleAddCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const FStr
       CustomExpr->Description = Description;
     }
 
-    // Parse optional named input pins
     const TArray<TSharedPtr<FJsonValue>> *InputsArray = nullptr;
     if (Payload->TryGetArrayField(TEXT("inputs"), InputsArray) && InputsArray) {
       CustomExpr->Inputs.Empty();
@@ -59,7 +57,6 @@ bool HandleAddCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const FStr
       }
     }
 
-    // Parse optional additional outputs
     const TArray<TSharedPtr<FJsonValue>> *OutputsArray = nullptr;
     if (Payload->TryGetArrayField(TEXT("additionalOutputs"), OutputsArray) && OutputsArray) {
       CustomExpr->AdditionalOutputs.Empty();

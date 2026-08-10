@@ -7,8 +7,8 @@ namespace McpGeometryHandlers
 bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                       const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));
 
     if (ActorName.IsEmpty())
     {
@@ -88,15 +88,11 @@ bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Additional Primitives
-// -------------------------------------------------------------------------
-
 bool HandleConvertToNanite(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                   const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));
 
     if (ActorName.IsEmpty())
     {
@@ -138,7 +134,6 @@ bool HandleConvertToNanite(UMcpAutomationBridgeSubsystem* Self, const FString& R
     FGeometryScriptCreateNewStaticMeshAssetOptions CreateOptions;
     CreateOptions.bEnableRecomputeNormals = true;
     CreateOptions.bEnableRecomputeTangents = true;
-    // Enable Nanite for this conversion
     CreateOptions.bEnableNanite = true;
 
     EGeometryScriptOutcomePins Outcome;
@@ -166,9 +161,6 @@ bool HandleConvertToNanite(UMcpAutomationBridgeSubsystem* Self, const FString& R
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Extrude Along Spline
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

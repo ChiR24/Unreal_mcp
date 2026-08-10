@@ -131,6 +131,21 @@ bool HandleRenderReflectionAction(
     AActor* Actor = FindRenderActor(Reference);
     if (!Actor)
     {
+        // These subActions act on an existing reflection capture actor. Falling
+        // through to the dispatcher would surface its generic "Unknown
+        // subAction" refusal, which names an internal dispatch concept the
+        // client never declared (MCPBB-088). Name the real missing prerequisite
+        // instead, mirroring RenderSceneCapture.cpp.
+        if (SubAction == TEXT("configure_capture_offset") ||
+            SubAction == TEXT("recapture_scene") ||
+            SubAction == TEXT("configure_planar_reflection"))
+        {
+            Subsystem->SendAutomationError(
+                RequestingSocket, RequestId,
+                FString::Printf(TEXT("Reflection capture actor not found: %s"), *Reference),
+                TEXT("ACTOR_NOT_FOUND"));
+            return true;
+        }
         return false;
     }
 

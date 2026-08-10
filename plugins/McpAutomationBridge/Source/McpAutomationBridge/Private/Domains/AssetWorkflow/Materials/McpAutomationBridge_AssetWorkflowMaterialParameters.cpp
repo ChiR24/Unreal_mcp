@@ -28,15 +28,26 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
 #if WITH_EDITOR
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+  // The published capability schema declares `parameterName`/`parameterType`
+  // with additionalProperties:false, so `name`/`type` cannot be sent through
+  // the gateway at all. Reading only `name`/`type` here left the capability
+  // uncallable by ANY input: the schema-correct call failed in the handler,
+  // the handler-correct call failed schema validation, and sending both was
+  // rejected as an undeclared parameter. Prefer the contract spelling and keep
+  // `name`/`type` as the legacy WebSocket fallback.
   FString Name;
-  Payload->TryGetStringField(TEXT("name"), Name);
+  if (!Payload->TryGetStringField(TEXT("parameterName"), Name) || Name.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("name"), Name);
+  }
   FString Type;
-  Payload->TryGetStringField(TEXT("type"), Type);
+  if (!Payload->TryGetStringField(TEXT("parameterType"), Type) || Type.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("type"), Type);
+  }
 
   if (AssetPath.IsEmpty() || Name.IsEmpty() || Type.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("assetPath, name, and type required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+                           TEXT("assetPath, parameterName, and parameterType required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
 

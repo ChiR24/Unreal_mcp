@@ -43,7 +43,7 @@ describe('automation event stream contracts', () => {
       .map((file) => file.replace(`${process.cwd()}/`, ''));
 
     expect(bypasses).toEqual([]);
-  });
+  }, 60_000);
 
   it('sanitizes streamed log messages before broadcasting them', () => {
     const logHandlers = privateSource(

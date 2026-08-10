@@ -50,7 +50,6 @@ bool HandleConfigureLevelStreaming(
         return true;
     }
 
-    // Find the streaming level in the world's streaming levels array
     ULevelStreaming* FoundLevel = nullptr;
     for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels())
     {
@@ -61,24 +60,18 @@ bool HandleConfigureLevelStreaming(
         }
     }
 
-    // If not found in streaming levels, check if the level exists on disk and create a streaming reference
     // This handles cases where the sublevel was created but the streaming reference wasn't loaded
     if (!FoundLevel)
     {
-        // Build potential full paths for the level
         TArray<FString> PotentialPaths;
 
-        // Try as-is first (might be a full path)
         if (LevelName.StartsWith(TEXT("/Game/")))
         {
             PotentialPaths.Add(LevelName);
         }
-        // Try under the current world's path
         FString WorldPath = FPaths::GetPath(World->GetOutermost()->GetName());
         PotentialPaths.Add(WorldPath / LevelName);
-        // Try under /Game/ directly
         PotentialPaths.Add(FString(TEXT("/Game/")) / LevelName);
-        // Try with the level name as a full path under /Game/
         PotentialPaths.Add(FString(TEXT("/Game/")) + LevelName);
 
         for (const FString& TestPath : PotentialPaths)
@@ -89,7 +82,6 @@ bool HandleConfigureLevelStreaming(
                 // Already a package path, check if package exists
                 if (FPackageName::DoesPackageExist(TestFullPath))
                 {
-                    // Found the level on disk - create a streaming reference
                     ULevelStreamingDynamic* NewStreamingLevel = NewObject<ULevelStreamingDynamic>(World, ULevelStreamingDynamic::StaticClass());
                     if (NewStreamingLevel)
                     {
@@ -116,7 +108,6 @@ bool HandleConfigureLevelStreaming(
         return true;
     }
 
-    // Configure streaming settings
     FoundLevel->SetShouldBeVisible(bShouldBeVisible);
     FoundLevel->bShouldBlockOnLoad = bShouldBlockOnLoad;
     FoundLevel->bDisableDistanceStreaming = bDisableDistanceStreaming;

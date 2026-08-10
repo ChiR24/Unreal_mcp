@@ -14,7 +14,6 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
       return true;
     }
 
-    // Create a data asset for loot table
     UPackage* Package = CreateInventoryAssetPackage(Path, Name);
     if (!Package) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -62,7 +61,6 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
       return true;
     }
 
-    // Load the loot table asset
     UObject* LootTableObj = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *LootTablePath);
     UMcpGenericDataAsset* LootTable = Cast<UMcpGenericDataAsset>(LootTableObj);
 
@@ -77,7 +75,6 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
     int32 EntryIndex = 0;
     bool bEntryAdded = false;
 
-    // Try to find and modify LootEntries array via reflection
     FProperty* EntriesProp = LootTable->GetClass()->FindPropertyByName(TEXT("LootEntries"));
     if (!EntriesProp) {
       EntriesProp = LootTable->GetClass()->FindPropertyByName(TEXT("Entries"));
@@ -86,7 +83,6 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
     if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(EntriesProp)) {
       // For custom loot table classes with proper array properties
       FScriptArrayHelper ArrayHelper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(LootTable));
-      // Actually add a new element to the array
       int32 NewIdx = ArrayHelper.AddValue();
       if (NewIdx != INDEX_NONE) {
         EntryIndex = NewIdx;
@@ -150,7 +146,6 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
       return true;
     }
 
-    // Load the loot table asset
     UObject* LootTableObj = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *LootTablePath);
     UMcpGenericDataAsset* LootTable = Cast<UMcpGenericDataAsset>(LootTableObj);
 
@@ -165,7 +160,6 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
     bool bEntryRemoved = false;
     int32 RemovedIndex = -1;
 
-    // Try to find and modify LootEntries array via reflection
     FProperty* EntriesProp = LootTable->GetClass()->FindPropertyByName(TEXT("LootEntries"));
     if (!EntriesProp) {
       EntriesProp = LootTable->GetClass()->FindPropertyByName(TEXT("Entries"));

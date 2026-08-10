@@ -7,8 +7,8 @@ namespace McpGeometryHandlers
 bool HandleSimplifyMesh(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    double TargetPercentage = GetNumberFieldGeom(Payload, TEXT("targetPercentage"), 50.0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double TargetPercentage = GetJsonNumberField(Payload, TEXT("targetPercentage"), 50.0);
 
     if (ActorName.IsEmpty())
     {
@@ -79,8 +79,8 @@ bool HandleSimplifyMesh(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 Iterations = GetIntFieldGeom(Payload, TEXT("iterations"), 1);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 Iterations = GetJsonIntField(Payload, TEXT("iterations"), 1);
 
     if (ActorName.IsEmpty())
     {
@@ -164,7 +164,6 @@ bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& Request
 
     int32 TriCountAfter = Mesh->GetTriangleCount();
 
-    // Warning if approaching limit
     if (TriCountAfter > WARNING_TRIANGLE_THRESHOLD)
     {
         UE_LOG(LogMcpGeometryHandlers, Warning, TEXT("Subdivide result has %d triangles (warning threshold: %d)"),
@@ -186,8 +185,8 @@ bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& Request
 bool HandleRemeshUniform(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 TargetTriangleCount = GetIntFieldGeom(Payload, TEXT("targetTriangleCount"), 5000);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 TargetTriangleCount = GetJsonIntField(Payload, TEXT("targetTriangleCount"), 5000);
 
     if (ActorName.IsEmpty())
     {
@@ -242,9 +241,6 @@ bool HandleRemeshUniform(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Collision Generation
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

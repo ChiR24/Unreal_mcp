@@ -42,7 +42,7 @@ describe('handleGeometryTools argument normalization', () => {
       subAction: 'create_box',
       dimensions: [100, 0, 25, 0],
       location: [0, 5, -3]
-    }), {});
+    }), { timeoutMs: expect.any(Number) });
   });
 
   it('drops non-finite UV aliases while preserving finite values', async () => {
@@ -59,7 +59,7 @@ describe('handleGeometryTools argument normalization', () => {
       subAction: 'transform_uvs',
       scaleV: 2,
       translateU: 0.25
-    }), {});
+    }), { timeoutMs: expect.any(Number) });
     const payload = sendAutomationRequest.mock.calls[0]?.[1] ?? {};
     expect(payload).not.toHaveProperty('scaleU');
     expect(payload).not.toHaveProperty('translateV');
@@ -77,7 +77,7 @@ describe('handleGeometryTools argument normalization', () => {
     expect(sendAutomationRequest).toHaveBeenCalledWith('manage_geometry', expect.objectContaining({
       subAction: 'create_box',
       path: '/Game/MCPTest/Geometry'
-    }), {});
+    }), { timeoutMs: expect.any(Number) });
   });
 
   it('normalizes texture path aliases before Unreal dispatch', async () => {
@@ -92,7 +92,7 @@ describe('handleGeometryTools argument normalization', () => {
     expect(sendAutomationRequest).toHaveBeenCalledWith('manage_geometry', expect.objectContaining({
       subAction: 'displace_by_texture',
       texturePath: '/Game/MCPTest/Geometry/T_Displace'
-    }), {});
+    }), { timeoutMs: expect.any(Number) });
   });
 
   it('normalizes outputPath aliases after mapping them to assetPath', async () => {
@@ -108,7 +108,7 @@ describe('handleGeometryTools argument normalization', () => {
       subAction: 'convert_to_static_mesh',
       outputPath: '/Game/GeneratedMeshes/SM_GeoBox',
       assetPath: '/Game/GeneratedMeshes/SM_GeoBox'
-    }), {});
+    }), { timeoutMs: expect.any(Number) });
   });
 
   it('normalizes LOD asset paths before Unreal dispatch', async () => {
@@ -125,6 +125,6 @@ describe('handleGeometryTools argument normalization', () => {
       subAction: 'set_lod_settings',
       assetPath: '/Game/MCPTest/TestMesh',
       trianglePercent: 50
-    }), {});
+    }), { timeoutMs: expect.any(Number) });
   });
 });

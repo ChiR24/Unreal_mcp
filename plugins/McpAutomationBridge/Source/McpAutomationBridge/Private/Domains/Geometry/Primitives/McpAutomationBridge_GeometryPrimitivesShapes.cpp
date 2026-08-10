@@ -7,15 +7,15 @@ namespace McpGeometryHandlers
 bool HandleCreateArch(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedArch");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double MajorRadius = GetNumberFieldGeom(Payload, TEXT("majorRadius"), 100.0);
-    double MinorRadius = GetNumberFieldGeom(Payload, TEXT("minorRadius"), 25.0);
-    double ArchAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 180.0);
-    int32 MajorSteps = GetIntFieldGeom(Payload, TEXT("majorSteps"), 16);
-    int32 MinorSteps = GetIntFieldGeom(Payload, TEXT("minorSteps"), 8);
+double MajorRadius = GetJsonNumberField(Payload, TEXT("majorRadius"), 100.0);
+    double MinorRadius = GetJsonNumberField(Payload, TEXT("minorRadius"), 25.0);
+    double ArchAngle = GetJsonNumberField(Payload, TEXT("angle"), 180.0);
+    int32 MajorSteps = GetJsonIntField(Payload, TEXT("majorSteps"), 16);
+    int32 MinorSteps = GetJsonIntField(Payload, TEXT("minorSteps"), 8);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -49,15 +49,15 @@ double MajorRadius = GetNumberFieldGeom(Payload, TEXT("majorRadius"), 100.0);
 bool HandleCreatePipe(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedPipe");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double OuterRadius = GetNumberFieldGeom(Payload, TEXT("outerRadius"), 50.0);
-    double InnerRadius = GetNumberFieldGeom(Payload, TEXT("innerRadius"), 40.0);
-    double Height = GetNumberFieldGeom(Payload, TEXT("height"), 100.0);
-    int32 RadialSteps = GetIntFieldGeom(Payload, TEXT("radialSteps"), 24);
-    int32 HeightSteps = GetIntFieldGeom(Payload, TEXT("heightSteps"), 1);
+double OuterRadius = GetJsonNumberField(Payload, TEXT("outerRadius"), 50.0);
+    double InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), 40.0);
+    double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
+    int32 RadialSteps = GetJsonIntField(Payload, TEXT("radialSteps"), 24);
+    int32 HeightSteps = GetJsonIntField(Payload, TEXT("heightSteps"), 1);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -101,13 +101,13 @@ double OuterRadius = GetNumberFieldGeom(Payload, TEXT("outerRadius"), 50.0);
 bool HandleCreateRamp(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedRamp");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double Width = GetNumberFieldGeom(Payload, TEXT("width"), 100.0);
-    double Length = GetNumberFieldGeom(Payload, TEXT("length"), 200.0);
-    double Height = GetNumberFieldGeom(Payload, TEXT("height"), 50.0);
+double Width = GetJsonNumberField(Payload, TEXT("width"), 100.0);
+    double Length = GetJsonNumberField(Payload, TEXT("length"), 200.0);
+    double Height = GetJsonNumberField(Payload, TEXT("height"), 50.0);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -141,22 +141,17 @@ double Width = GetNumberFieldGeom(Payload, TEXT("width"), 100.0);
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Mesh Topology Operations (Triangulate, Poke)
-// -------------------------------------------------------------------------
-
 bool HandleRevolve(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedRevolve");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double Angle = GetNumberFieldGeom(Payload, TEXT("angle"), 360.0);
-    int32 Steps = GetIntFieldGeom(Payload, TEXT("steps"), 16);
-    bool bCapped = GetBoolFieldGeom(Payload, TEXT("capped"), true);
+double Angle = GetJsonNumberField(Payload, TEXT("angle"), 360.0);
+    int32 Steps = GetJsonIntField(Payload, TEXT("steps"), 16);
+    bool bCapped = GetJsonBoolField(Payload, TEXT("capped"), true);
 
-    // Get profile points from payload
     TArray<FVector2D> ProfilePoints;
     if (Payload->HasField(TEXT("profile")))
     {
@@ -166,8 +161,8 @@ double Angle = GetNumberFieldGeom(Payload, TEXT("angle"), 360.0);
             const TSharedPtr<FJsonObject>& PointObj = PointValue->AsObject();
             if (PointObj.IsValid())
             {
-double X = GetNumberFieldGeom(PointObj, TEXT("x"), 0.0);
-                double Y = GetNumberFieldGeom(PointObj, TEXT("y"), 0.0);
+double X = GetJsonNumberField(PointObj, TEXT("x"), 0.0);
+                double Y = GetJsonNumberField(PointObj, TEXT("y"), 0.0);
                 ProfilePoints.Add(FVector2D(X, Y));
             }
         }
@@ -216,9 +211,6 @@ double X = GetNumberFieldGeom(PointObj, TEXT("x"), 0.0);
     return true;
 }
 
-// -------------------------------------------------------------------------
-// Additional Deformers (Stretch, Spherify, Cylindrify)
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

@@ -8,10 +8,10 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
 {
     if (SubAction == TEXT("add_sync_marker"))
     {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString MarkerName = GetStringFieldAnimAuth(Params, TEXT("markerName"), TEXT(""));
-        int32 Frame = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("frame"), 0));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString MarkerName = GetJsonStringField(Params, TEXT("markerName"), TEXT(""));
+        int32 Frame = static_cast<int32>(GetJsonNumberField(Params, TEXT("frame"), 0));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (MarkerName.IsEmpty())
         {
@@ -48,11 +48,11 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
 
     if (SubAction == TEXT("set_root_motion_settings"))
     {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        bool bEnableRootMotion = GetBoolFieldAnimAuth(Params, TEXT("enableRootMotion"), true);
-        FString RootMotionRootLock = GetStringFieldAnimAuth(Params, TEXT("rootMotionRootLock"), TEXT("RefPose"));
-        bool bForceRootLock = GetBoolFieldAnimAuth(Params, TEXT("forceRootLock"), false);
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        bool bEnableRootMotion = GetJsonBoolField(Params, TEXT("enableRootMotion"), true);
+        FString RootMotionRootLock = GetJsonStringField(Params, TEXT("rootMotionRootLock"), TEXT("RefPose"));
+        bool bForceRootLock = GetJsonBoolField(Params, TEXT("forceRootLock"), false);
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
         if (!Sequence)
@@ -86,12 +86,12 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
 
     if (SubAction == TEXT("set_additive_settings"))
     {
-        FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString AdditiveAnimType = GetStringFieldAnimAuth(Params, TEXT("additiveAnimType"), TEXT("NoAdditive"));
-        FString BasePoseType = GetStringFieldAnimAuth(Params, TEXT("basePoseType"), TEXT("RefPose"));
-        FString BasePoseAnimation = GetStringFieldAnimAuth(Params, TEXT("basePoseAnimation"), TEXT(""));
-        int32 BasePoseFrame = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("basePoseFrame"), 0));
-        bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString AdditiveAnimType = GetJsonStringField(Params, TEXT("additiveAnimType"), TEXT("NoAdditive"));
+        FString BasePoseType = GetJsonStringField(Params, TEXT("basePoseType"), TEXT("RefPose"));
+        FString BasePoseAnimation = GetJsonStringField(Params, TEXT("basePoseAnimation"), TEXT(""));
+        int32 BasePoseFrame = static_cast<int32>(GetJsonNumberField(Params, TEXT("basePoseFrame"), 0));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
         if (!Sequence)

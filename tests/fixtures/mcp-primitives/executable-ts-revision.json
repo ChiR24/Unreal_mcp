@@ -1,0 +1,11 @@
+{
+  "id": "ts-revision-catalog-monotonic",
+  "captureKind": "executable-ts",
+  "domain": "revision",
+  "match": "exact",
+  "provenance": "Executed at runtime: [INITIAL_REVISION, nextRevision(INITIAL_REVISION), nextRevision(nextRevision(INITIAL_REVISION))] from src/server/mcp-primitives/resource-revision.ts. Monotonic non-decreasing by construction. Re-derived live in parity-harness-characterization.test.ts.",
+  "value": {
+    "uri": "ue://capability/catalog",
+    "revisions": [1, 2, 3]
+  }
+}

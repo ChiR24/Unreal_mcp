@@ -10,6 +10,7 @@ import {
   optionalNumber
 } from './blueprint-action-context.js';
 import type { BlueprintActionContext } from './blueprint-action-context.js';
+import { isRecord } from '../../../utils/validation/type-guards.js';
 
 export async function handleBlueprintGetAction(context: BlueprintActionContext): Promise<Record<string, unknown>> {
   return await executeBlueprintRequest(context, 'blueprint_get', {
@@ -40,8 +41,4 @@ export async function handleBlueprintGet(args: HandlerArgs, tools: ITools): Prom
   }
 
   return cleanRecord(result);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

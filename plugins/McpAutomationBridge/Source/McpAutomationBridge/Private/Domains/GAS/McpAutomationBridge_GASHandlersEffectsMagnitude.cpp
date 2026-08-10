@@ -42,13 +42,12 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
             return true;
         }
 
-        FString DurationType = GetStringFieldGAS(Payload, TEXT("durationType"), TEXT("Instant"));
+        FString DurationType = GetJsonStringField(Payload, TEXT("durationType"), TEXT("Instant"));
         const FString DurationTypeToken = NormalizeGASToken(DurationType);
 
         // Only set duration policy on CDO if we created a new blueprint
         if (!bReusedExisting)
         {
-            // Set duration policy on CDO
             if (Blueprint->GeneratedClass)
             {
                 UGameplayEffect* EffectCDO = Cast<UGameplayEffect>(Blueprint->GeneratedClass->GetDefaultObject());
@@ -110,9 +109,9 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
             return true;
         }
 
-        FString DurationType = GetStringFieldGAS(Payload, TEXT("durationType"), TEXT("Instant"));
+        FString DurationType = GetJsonStringField(Payload, TEXT("durationType"), TEXT("Instant"));
         const FString DurationTypeToken = NormalizeGASToken(DurationType);
-        float Duration = static_cast<float>(GetNumberFieldGAS(Payload, TEXT("duration"), 0.0));
+        float Duration = static_cast<float>(GetJsonNumberField(Payload, TEXT("duration"), 0.0));
 
         if (DurationTypeToken == TEXT("instant"))
         {
@@ -231,7 +230,7 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
             return true;
         }
 
-        int32 ModifierIndex = static_cast<int32>(GetNumberFieldGAS(Payload, TEXT("modifierIndex"), 0));
+        int32 ModifierIndex = static_cast<int32>(GetJsonNumberField(Payload, TEXT("modifierIndex"), 0));
         float Value = static_cast<float>(GetGASNumberFieldWithFallback(Payload, TEXT("value"), TEXT("modifierMagnitude"), 0.0));
         FString MagnitudeType = GetGASStringFieldWithFallback(Payload, TEXT("magnitudeType"), TEXT("magnitudeCalculationType"), TEXT("ScalableFloat"));
 

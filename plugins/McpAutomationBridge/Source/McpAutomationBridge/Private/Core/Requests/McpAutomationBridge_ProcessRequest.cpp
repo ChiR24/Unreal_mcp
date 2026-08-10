@@ -2,7 +2,9 @@
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
+#include "Core/Security/McpPrequeueGate.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "Foundation/McpTelemetryRegistry.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Core/Requests/McpAutomationBridge_ProcessRequestDispatch.h"
 #include "McpConnectionManager.h"
@@ -34,7 +36,9 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    ERequestOrigin Origin) {
+    ERequestOrigin Origin,
+    const TMap<EMcpStateKind, int64> &ExpectedRevisions,
+    const FString &SessionKey) {
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT(">>> ProcessAutomationRequest ENTRY: RequestId=%s action='%s' "
               "(thread=%s)"),
@@ -49,7 +53,8 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
                                      : 0);
   if (!IsInGameThread()) {
     const EAutomationQueueRejection Reason = QueueAutomationRequest(
-        RequestId, Action, Payload, RequestingSocket, Origin);
+        RequestId, Action, Payload, RequestingSocket, Origin,
+        ExpectedRevisions, SessionKey);
     if (Reason != EAutomationQueueRejection::None) {
       SendAutomationRejection(RequestingSocket, RequestId, Reason);
     }
@@ -66,7 +71,8 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
            *RequestId, *Action);
 
     const EAutomationQueueRejection Reason = QueueAutomationRequest(
-        RequestId, Action, Payload, RequestingSocket, Origin);
+        RequestId, Action, Payload, RequestingSocket, Origin,
+        ExpectedRevisions, SessionKey);
     if (Reason != EAutomationQueueRejection::None) {
       SendAutomationRejection(RequestingSocket, RequestId, Reason);
     }
@@ -88,7 +94,8 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
   // Reentrancy guard / enqueue
   if (bProcessingAutomationRequest) {
     const EAutomationQueueRejection Reason = QueueAutomationRequest(
-        RequestId, Action, Payload, RequestingSocket, Origin);
+        RequestId, Action, Payload, RequestingSocket, Origin,
+        ExpectedRevisions, SessionKey);
     if (Reason != EAutomationQueueRejection::None) {
       SendAutomationRejection(RequestingSocket, RequestId, Reason);
     }
@@ -110,6 +117,16 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
         TEXT("EDITOR_MODAL_ACTIVE"));
     return;
   }
+
+  // Dispatch really starts HERE - after the reentrancy guard and the modal
+  // refusal, both of which re-queue or refuse without running a handler. Closing
+  // the queue interval any earlier would attribute a second queue wait to
+  // handler time. BeginRequest is idempotent on the start instant, so a queued
+  // request keeps the admission timestamp and only gains its bounded action
+  // class; a request dispatched inline opens a zero-length queue interval here.
+  FMcpTelemetryRegistry::Get().BeginRequest(
+      RequestId, McpPrequeueGate::ResolveActionClass(Action, Payload));
+  FMcpTelemetryRegistry::Get().MarkDispatched(RequestId);
 
   bProcessingAutomationRequest = true;
   CurrentRequestOrigin = Origin;
@@ -180,6 +197,13 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
                TEXT("ProcessAutomationRequest: No handler consumed "
                     "RequestId=%s action='%s' (%.3f ms)"),
                *RequestId, *Action, DurationMs);
+        // Nothing consumed the request and no response was sent, so the
+        // connection-manager terminal path will never fire for it. Closing it
+        // here is what stops this outcome from staying log-only. EndRequest is a
+        // no-op once a terminal has already been recorded, so the handled paths
+        // above cannot be double counted.
+        FMcpTelemetryRegistry::Get().EndRequest(
+            RequestId, TEXT("failure"), TEXT("internal"));
       }
     };
 

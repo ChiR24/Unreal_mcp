@@ -167,15 +167,6 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
 #endif
 }
 
-/**
- * Handles metadata setting requests for assets.
- *
- * @param RequestId Unique request identifier.
- * @param Payload JSON payload containing 'assetPath' and 'metadata' object.
- * @param Socket WebSocket connection.
- * @return True if handled.
- */
-
 bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {

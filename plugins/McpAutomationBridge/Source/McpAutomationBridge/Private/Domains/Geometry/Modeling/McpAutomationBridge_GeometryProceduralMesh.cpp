@@ -7,11 +7,11 @@ namespace McpGeometryHandlers
 bool HandleCreateProceduralMesh(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("ProceduralMesh");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    bool bEnableCollision = GetBoolFieldGeom(Payload, TEXT("enableCollision"), false);
+    bool bEnableCollision = GetJsonBoolField(Payload, TEXT("enableCollision"), false);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FString SpawnError;
@@ -24,7 +24,6 @@ bool HandleCreateProceduralMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
         return true;
     }
 
-    // Initialize with an empty dynamic mesh
     if (ADynamicMeshActor* DMActor = Cast<ADynamicMeshActor>(NewActor))
     {
         UDynamicMeshComponent* DMComp = DMActor->GetDynamicMeshComponent();
@@ -42,14 +41,10 @@ bool HandleCreateProceduralMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
     return true;
 }
 
-// -------------------------------------------------------------------------
-// append_triangle - Add single triangle to mesh
-// -------------------------------------------------------------------------
-
 bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -57,11 +52,10 @@ bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& Re
         return true;
     }
 
-    // Read vertices
     FVector V0 = ReadVectorFromPayload(Payload, TEXT("v0"), FVector(0, 0, 0));
     FVector V1 = ReadVectorFromPayload(Payload, TEXT("v1"), FVector(100, 0, 0));
     FVector V2 = ReadVectorFromPayload(Payload, TEXT("v2"), FVector(50, 100, 0));
-    int32 GroupID = GetIntFieldGeom(Payload, TEXT("groupID"), 0);
+    int32 GroupID = GetJsonIntField(Payload, TEXT("groupID"), 0);
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
@@ -98,12 +92,10 @@ bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     // Use the internal mesh directly to append triangle
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
 
-    // Append vertices
     int32 Idx0 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V0));
     int32 Idx1 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V1));
     int32 Idx2 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V2));
 
-    // Append triangle
     int32 TriIdx = EditMesh.AppendTriangle(Idx0, Idx1, Idx2, GroupID);
 
     DMC->NotifyMeshUpdated();
@@ -119,15 +111,11 @@ bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     return true;
 }
 
-// -------------------------------------------------------------------------
-// set_vertex_color - Set vertex colors on mesh
-// -------------------------------------------------------------------------
-
 bool HandleDeleteTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 TriangleIndex = GetIntFieldGeom(Payload, TEXT("triangleIndex"), -1);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 TriangleIndex = GetJsonIntField(Payload, TEXT("triangleIndex"), -1);
 
     if (ActorName.IsEmpty() || TriangleIndex < 0)
     {
@@ -189,20 +177,16 @@ bool HandleDeleteTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     return true;
 }
 
-// -------------------------------------------------------------------------
-// get_vertex_position - Get position of a vertex
-// -------------------------------------------------------------------------
-
 bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
-    int32 VertexIndex = GetIntFieldGeom(Payload, TEXT("vertexIndex"), -1);
-    double R = GetNumberFieldGeom(Payload, TEXT("r"), 1.0);
-    double G = GetNumberFieldGeom(Payload, TEXT("g"), 1.0);
-    double B = GetNumberFieldGeom(Payload, TEXT("b"), 1.0);
-    double A = GetNumberFieldGeom(Payload, TEXT("a"), 1.0);
-    bool bSetAll = GetBoolFieldGeom(Payload, TEXT("setAll"), false);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 VertexIndex = GetJsonIntField(Payload, TEXT("vertexIndex"), -1);
+    double R = GetJsonNumberField(Payload, TEXT("r"), 1.0);
+    double G = GetJsonNumberField(Payload, TEXT("g"), 1.0);
+    double B = GetJsonNumberField(Payload, TEXT("b"), 1.0);
+    double A = GetJsonNumberField(Payload, TEXT("a"), 1.0);
+    bool bSetAll = GetJsonBoolField(Payload, TEXT("setAll"), false);
 
     if (ActorName.IsEmpty())
     {
@@ -254,7 +238,6 @@ bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 
     if (bSetAll)
     {
-        // Set all vertex colors
         for (int32 VID : EditMesh.VertexIndicesItr())
         {
             EditMesh.SetVertexColor(VID, Color);
@@ -286,9 +269,6 @@ bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     return true;
 }
 
-// -------------------------------------------------------------------------
-// set_uvs - Set UV coordinates on mesh
-// -------------------------------------------------------------------------
 } // namespace McpGeometryHandlers
 
 #endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

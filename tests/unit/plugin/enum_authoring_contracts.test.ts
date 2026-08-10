@@ -19,6 +19,12 @@ const values = read(
 const shared = read(
   `${pluginEnumsDir}/Shared.h`,
 );
+const compat = read(
+  resolve(
+    process.cwd(),
+    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Core/Compatibility/McpVersionCompatibility.h',
+  ),
+);
 
 describe('UserDefinedEnum authoring contracts (struct ecosystem)', () => {
   it('creates enums through the UserDefinedEnum factory', () => {
@@ -29,12 +35,14 @@ describe('UserDefinedEnum authoring contracts (struct ecosystem)', () => {
     expect(lifecycle).toContain('RF_Standalone');
   });
 
-  it('commits enum mutations via SetEnums / PostEditChange', () => {
-    // Given / When: value and lifecycle mutations must go through the editor
-    // util (SetEnums) and refresh editor state (PostEditChange) so the enum
-    // reinstances correctly.
+  it('commits enum mutations via MCP_SET_ENUMS / PostEditChange', () => {
+    // Given / When: value and lifecycle mutations must commit through the
+    // version-shimmed editor util (MCP_SET_ENUMS -> SetEnums) and refresh
+    // editor state (PostEditChange) so the enum reinstances correctly.
     // Then
-    expect(values).toContain('SetEnums');
+    expect(values).toContain('MCP_SET_ENUMS');
+    expect(compat).toContain('MCP_SET_ENUMS');
+    expect(compat).toContain('SetEnums');
     expect(shared).toContain('PostEditChange');
   });
 
@@ -42,7 +50,7 @@ describe('UserDefinedEnum authoring contracts (struct ecosystem)', () => {
     // Given / When: save is gated on bSave and routed through the safe wrapper.
     // The direct UPackage::SavePackage path must never appear.
     // Then
-    expect(values).toContain('SetEnums');
+    expect(values).toContain('MCP_SET_ENUMS');
     expect(shared).toContain('McpSafeAssetSave');
     expect(lifecycle).not.toContain('UPackage::SavePackage');
     expect(values).not.toContain('UPackage::SavePackage');

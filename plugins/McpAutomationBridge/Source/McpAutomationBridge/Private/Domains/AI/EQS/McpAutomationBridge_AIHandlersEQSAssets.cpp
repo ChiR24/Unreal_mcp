@@ -63,8 +63,8 @@ bool HandleCreateEQSQuery(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("create_eqs_query"))
     {
-        FString Name = GetStringFieldAI(Payload, TEXT("name"));
-        FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/EQS"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/EQS"));
 
         if (Name.IsEmpty())
         {
@@ -98,8 +98,8 @@ bool HandleAddEQSGenerator(UMcpAutomationBridgeSubsystem* Self, const FString& R
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("add_eqs_generator"))
     {
-        FString QueryPath = GetStringFieldAI(Payload, TEXT("queryPath"));
-        FString GeneratorType = GetStringFieldAI(Payload, TEXT("generatorType"));
+        FString QueryPath = GetJsonStringField(Payload, TEXT("queryPath"));
+        FString GeneratorType = GetJsonStringField(Payload, TEXT("generatorType"));
 
         UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
         if (!Query)

@@ -163,7 +163,13 @@ bool HandleAddMaterialParameterTrack(UMcpAutomationBridgeSubsystem *Self,
   }
   FString ParameterType;
   double ScalarValue = 0.0;
-  FLinearColor ColorValue;
+  // FLinearColor's default constructor leaves its channels uninitialized, and
+  // the only writer (ReadLinearColor) runs on the !bScalar branch, so the
+  // compiler cannot correlate the write with the use below and warns C4701.
+  // The use is in fact guarded, but leaving the one warning the plugin emits
+  // standing would hide the next real one. Seeded to opaque black, matching
+  // ReadLinearColor's own defaults (rgb 0, alpha 1).
+  FLinearColor ColorValue(0.0f, 0.0f, 0.0f, 1.0f);
   const bool bScalar =
       Params->TryGetNumberField(TEXT("value"), ScalarValue) &&
       FMath::IsFinite(ScalarValue);

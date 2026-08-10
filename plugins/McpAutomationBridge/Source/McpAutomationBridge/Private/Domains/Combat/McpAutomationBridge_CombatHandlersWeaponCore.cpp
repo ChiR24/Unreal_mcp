@@ -23,11 +23,10 @@ bool FCombatActionContext::HandleWeaponCore() const
             return true;
         }
 
-        // Add static mesh component for weapon mesh
         UStaticMeshComponent* WeaponMesh = GetOrCreateSCSComponent<UStaticMeshComponent>(Blueprint, TEXT("WeaponMesh"));
         if (WeaponMesh)
         {
-            FString MeshPath = GetStringFieldCombat(Payload, TEXT("weaponMeshPath"));
+            FString MeshPath = GetJsonStringField(Payload, TEXT("weaponMeshPath"));
             if (!MeshPath.IsEmpty())
             {
                 UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
@@ -38,13 +37,11 @@ bool FCombatActionContext::HandleWeaponCore() const
             }
         }
 
-        // Set base damage as default variable if needed
-        double BaseDamage = GetNumberFieldCombat(Payload, TEXT("baseDamage"), 25.0);
-        double FireRate = GetNumberFieldCombat(Payload, TEXT("fireRate"), 600.0);
-        double Range = GetNumberFieldCombat(Payload, TEXT("range"), 10000.0);
-        double Spread = GetNumberFieldCombat(Payload, TEXT("spread"), 2.0);
+        double BaseDamage = GetJsonNumberField(Payload, TEXT("baseDamage"), 25.0);
+        double FireRate = GetJsonNumberField(Payload, TEXT("fireRate"), 600.0);
+        double Range = GetJsonNumberField(Payload, TEXT("range"), 10000.0);
+        double Spread = GetJsonNumberField(Payload, TEXT("spread"), 2.0);
 
-        // Apply weapon stats as Blueprint variables using FBlueprintEditorUtils
         AddBlueprintVariableCombat(Blueprint, TEXT("BaseDamage"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("FireRate"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("Range"), MakeFloatPinType());
@@ -53,12 +50,10 @@ bool FCombatActionContext::HandleWeaponCore() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set default values for the variables using CDO
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
             {
-                // Set via reflection
                 if (FDoubleProperty* DamageProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("BaseDamage")))
                 {
                     DamageProp->SetPropertyValue_InContainer(CDO, BaseDamage);
@@ -80,7 +75,6 @@ bool FCombatActionContext::HandleWeaponCore() const
 
         McpSafeAssetSave(Blueprint);
 
-        // Build response using standardized helper
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("baseDamage"), BaseDamage);
@@ -91,9 +85,6 @@ bool FCombatActionContext::HandleWeaponCore() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon blueprint created successfully."), Result);
         return true;
     }
-
-    // configure_weapon_mesh
-
     if (SubAction == TEXT("configure_weapon_mesh"))
     {
         if (BlueprintPath.IsEmpty())
@@ -109,7 +100,7 @@ bool FCombatActionContext::HandleWeaponCore() const
             return true;
         }
 
-        FString MeshPath = GetStringFieldCombat(Payload, TEXT("weaponMeshPath"));
+        FString MeshPath = GetJsonStringField(Payload, TEXT("weaponMeshPath"));
         if (!MeshPath.IsEmpty())
         {
             UStaticMeshComponent* WeaponMesh = GetOrCreateSCSComponent<UStaticMeshComponent>(Blueprint, TEXT("WeaponMesh"));
@@ -134,9 +125,6 @@ bool FCombatActionContext::HandleWeaponCore() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon mesh configured."), Result);
         return true;
     }
-
-    // configure_weapon_sockets
-
     if (SubAction == TEXT("configure_weapon_sockets"))
     {
         if (BlueprintPath.IsEmpty())
@@ -152,9 +140,8 @@ bool FCombatActionContext::HandleWeaponCore() const
             return true;
         }
 
-        // Add socket name variables to Blueprint
-        FString MuzzleSocket = GetStringFieldCombat(Payload, TEXT("muzzleSocketName"), TEXT("Muzzle"));
-        FString EjectionSocket = GetStringFieldCombat(Payload, TEXT("ejectionSocketName"), TEXT("ShellEject"));
+        FString MuzzleSocket = GetJsonStringField(Payload, TEXT("muzzleSocketName"), TEXT("Muzzle"));
+        FString EjectionSocket = GetJsonStringField(Payload, TEXT("ejectionSocketName"), TEXT("ShellEject"));
 
         AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleSocketName"), MakeNamePinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("EjectionSocketName"), MakeNamePinType());
@@ -162,7 +149,6 @@ bool FCombatActionContext::HandleWeaponCore() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        // Set default values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
             if (UObject* CDO = BPGC->GetDefaultObject())
@@ -189,9 +175,6 @@ bool FCombatActionContext::HandleWeaponCore() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon sockets configured."), Result);
         return true;
     }
-
-    // set_weapon_stats
-
     return false;
 }
 #endif

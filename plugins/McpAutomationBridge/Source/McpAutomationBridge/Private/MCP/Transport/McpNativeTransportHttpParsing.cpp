@@ -119,6 +119,10 @@ bool FMcpNativeTransport::ReadHttpRequest(FSocket* Socket, FParsedHttpRequest& O
 			{
 				OutRequest.Origin = Value;
 			}
+			else if (Key.Equals(TEXT("MCP-Protocol-Version"), ESearchCase::IgnoreCase))
+			{
+				OutRequest.ProtocolVersion = Value;
+			}
 		}
 	}
 

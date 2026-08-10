@@ -1,4 +1,5 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersCapabilityToken.h"
 
 bool FMcpNativeTransport::SendHttpResponse(FSocket* Socket, int32 StatusCode,
 	const FString& ContentType, const FString& Body,
@@ -57,6 +58,17 @@ bool FMcpNativeTransport::SendHttpResponse(FSocket* Socket, int32 StatusCode,
 	return true;
 }
 
+bool FMcpNativeTransport::SendAndClose(FSocket* ClientSocket, int32 StatusCode,
+	const FString& ContentType, const FString& Body,
+	const TMap<FString, FString>& ExtraHeaders, const FString& CorsOrigin)
+{
+	const bool bSent = SendHttpResponse(ClientSocket, StatusCode, ContentType, Body, ExtraHeaders, CorsOrigin);
+	ClientSocket->Close();
+	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+	if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+	return bSent;
+}
+
 bool FMcpNativeTransport::SendSSEHeaders(FSocket* Socket, const FString& SessionId,
 	const FString& CorsOrigin)
 {
@@ -78,10 +90,16 @@ bool FMcpNativeTransport::SendSSEHeaders(FSocket* Socket, const FString& Session
 bool FMcpNativeTransport::IsCorsEnabled() const
 {
 	const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
+	// Route through the store (READ-ONLY: never auto-generates) so CORS is only
+	// enabled when an effective token is already available (explicit setting or
+	// persisted file), matching the auth path. An unauthenticated preflight must
+	// never create the token file as a side effect.
+	const FString EffectiveToken =
+		McpCapabilityTokenStore::ResolveEffectiveToken(Settings, /*bAutoGenerate=*/false);
 	return (ListenHost == TEXT("127.0.0.1") || ListenHost == TEXT("::1"))
 		&& Settings
 		&& Settings->bRequireCapabilityToken
-		&& !Settings->CapabilityToken.IsEmpty();
+		&& !EffectiveToken.IsEmpty();
 }
 
 bool FMcpNativeTransport::IsAllowedCorsOrigin(const FString& Origin) const

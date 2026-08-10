@@ -17,7 +17,6 @@ bool HandleAnimationCreateAimOffsetAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
 
 
-    // Create an aim offset (2D by default)
     FString AimOffsetName;
     if (!Payload->TryGetStringField(TEXT("name"), AimOffsetName) ||
         AimOffsetName.IsEmpty()) {
@@ -48,13 +47,11 @@ bool HandleAnimationCreateAimOffsetAction(FActionContext &Context,
           UEditorAssetLibrary::MakeDirectory(SavePath);
         }
 
-        // Check if 1D or 2D aim offset
         bool bIs1D = false;
         Payload->TryGetBoolField(TEXT("is1D"), bIs1D);
 
         UClass *AimOffsetClass = bIs1D ? UAimOffsetBlendSpace1D::StaticClass() : UAimOffsetBlendSpace::StaticClass();
 
-        // Create using the appropriate factory
         UFactory *Factory = nullptr;
         if (bIs1D) {
           UBlendSpaceFactory1D *Factory1D = NewObject<UBlendSpaceFactory1D>();

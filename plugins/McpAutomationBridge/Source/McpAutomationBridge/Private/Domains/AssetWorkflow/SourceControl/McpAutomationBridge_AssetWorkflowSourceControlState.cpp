@@ -179,7 +179,3 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
   return true;
 #endif
 }
-
-// ============================================================================
-// ANALYZE GRAPH
-// ============================================================================
