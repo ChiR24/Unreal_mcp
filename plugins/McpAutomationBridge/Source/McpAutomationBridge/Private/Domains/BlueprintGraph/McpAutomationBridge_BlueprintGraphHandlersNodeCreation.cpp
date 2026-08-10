@@ -91,8 +91,21 @@ bool HandleNodeCreationAction(FActionContext& Context)
     Context.Payload->TryGetStringField(TEXT("nodeType"), NodeType);
     float X = 0.0f;
     float Y = 0.0f;
-    Context.Payload->TryGetNumberField(TEXT("x"), X);
-    Context.Payload->TryGetNumberField(TEXT("y"), Y);
+    // The TS bridge maps posX->x / posY->y before dispatch (graph-handlers.ts),
+    // but the native transport delivers the payload unnormalized, so a caller's
+    // posX/posY reach this handler verbatim. Read x first, then fall back to the
+    // tool-facing posX/posY names — mirroring the PCG graph handler and add_node,
+    // which already accept posX/posY. Without this, native callers that send
+    // posX/posY (the documented alias in the manage_blueprint schema) land every
+    // node at (0,0).
+    if (!Context.Payload->TryGetNumberField(TEXT("x"), X))
+    {
+        Context.Payload->TryGetNumberField(TEXT("posX"), X);
+    }
+    if (!Context.Payload->TryGetNumberField(TEXT("y"), Y))
+    {
+        Context.Payload->TryGetNumberField(TEXT("posY"), Y);
+    }
 
     if (TryCreateCommonFunctionNode(Context, NodeType, X, Y) ||
         TryCreateVariableNode(Context, NodeType, X, Y) ||

@@ -297,7 +297,8 @@ const GRAPH_DIR = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Privat
 const HISTORICAL_FALSE_UNDO_CLAIMS = [
   { id: 'blueprint.delete_node', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp`, line: 40, direct: true },
   { id: 'blueprint.create_reroute_node', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp`, line: 63, direct: true },
-  { id: 'blueprint.set_node_property', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp`, line: 100, direct: true },
+  // Shifted down by the posX/posY fallback added to CreateRerouteNode above it.
+  { id: 'blueprint.set_node_property', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp`, line: 108, direct: true },
   { id: 'blueprint.connect_pins', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp`, line: 37, direct: true },
   { id: 'blueprint.break_pin_links', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp`, line: 196, direct: true },
   // Split out of the PinMutations translation unit under the 250-pure-line gate.
