@@ -51,7 +51,7 @@ describe('unreal gateway search', () => {
         expect(result.operation).toBe('search');
         const results = result.results as Array<Record<string, unknown>>;
         expect(results.length).toBe(25);
-        expect(result.total).toBe(1352);
+        expect(result.total).toBe(1363);
         expect(result.hasMore).toBe(true);
     });
 

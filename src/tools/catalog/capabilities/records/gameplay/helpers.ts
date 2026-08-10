@@ -116,6 +116,7 @@ export interface RecordSpec {
   readonly normalizationDisposition?: CapabilityRecordSource['normalization']['disposition'];
   readonly normalizationRationale?: string;
   readonly normalizationAliasOf?: string;
+  readonly normalizationProvenance?: CapabilityRecordSource['normalization']['provenance'];
   readonly deprecation?: CapabilityDeprecation;
   readonly aliases?: readonly string[];
   readonly exampleInput: JsonObject;
@@ -158,6 +159,9 @@ export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
       ...(spec.normalizationAliasOf === undefined
         ? {}
         : { aliasOf: CapabilityIdSchema.parse(spec.normalizationAliasOf) }),
+      ...(spec.normalizationProvenance === undefined
+        ? {}
+        : { provenance: spec.normalizationProvenance }),
     },
     deprecation: spec.deprecation ?? { status: 'active' },
     parent: getParentToolMetadata(spec.parentTool),

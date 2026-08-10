@@ -5,8 +5,8 @@
 import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
-export const CANONICAL_CAPABILITY_RECORD_COUNT = 1352;
-export const CATALOG_REVISION = "7a780f300011f79e";
+export const CANONICAL_CAPABILITY_RECORD_COUNT = 1363;
+export const CATALOG_REVISION = "46e249baeb7f6f6c";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -2884,6 +2884,232 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "8a55f4e31a45bf1a694716216168029b0729ad84de149198d9616f554f5e53ee",
       "content": "c2113131d3d01b6a59314fd24d591854c6e1eb673398c0505c90716b3cd1df42"
+    }
+  },
+  {
+    "id": "animation_physics.add_socket",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "animation_physics",
+        "action": "add_socket"
+      }
+    ],
+    "discovery": {
+      "domain": "animation physics",
+      "family": "skeleton",
+      "topics": [
+        "add_socket"
+      ],
+      "summary": "Add a socket to a bone under the add_socket spelling of create_socket.",
+      "whenToUse": [
+        "An attach point is needed."
+      ],
+      "whenNotToUse": [
+        "Use an existing socket."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "skeletonPath": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
+          },
+          "socketName": {
+            "type": "string",
+            "description": "Target socket name."
+          },
+          "attachBoneName": {
+            "type": "string",
+            "description": "Bone the socket attaches to."
+          },
+          "relativeLocation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Socket location relative to its attach bone as [x, y, z]."
+          },
+          "relativeRotation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Socket rotation relative to its attach bone as [pitch, yaw, roll]."
+          },
+          "relativeScale": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Socket scale relative to its attach bone as [x, y, z]."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the created/modified asset to disk."
+          }
+        },
+        "required": [
+          "skeletonPath",
+          "socketName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "socketName": {
+            "type": "string",
+            "description": "Target socket name."
+          },
+          "boneName": {
+            "type": "string",
+            "description": "Target bone name."
+          },
+          "skeletonPath": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Add a socket to a bone under the add_socket spelling of create_socket.",
+        "input": {
+          "action": "add_socket",
+          "skeletonPath": "/Game/SK_Char",
+          "socketName": "Weapon",
+          "attachBoneName": "hand_r",
+          "relativeLocation": [
+            1,
+            2,
+            3
+          ],
+          "save": true
+        },
+        "output": {
+          "success": true,
+          "message": "Socket created",
+          "socketName": "Weapon",
+          "boneName": "hand_r",
+          "skeletonPath": "/Game/SK_Char"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "animation_physics",
+      "dispatchAction": "add_socket",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "B_ALIAS",
+      "disposition": "alias",
+      "rationale": "Alias of create_socket; the native dispatch map routes both spellings to HandleCreateSocket.",
+      "aliasOf": "animation_physics.create_socket",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "animation_physics",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "e500d6659d53372d5885c4c45e6528fd2b746714acffc996d6a6fe8afcd6ce7a",
+      "content": "059790937c3e06c3f83291e817e9a22db42a35a066fe3e95c96ff296662cace9"
     }
   },
   {
@@ -9570,6 +9796,511 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "animation_physics.get_bone_transform",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "animation_physics",
+        "action": "get_bone_transform"
+      }
+    ],
+    "discovery": {
+      "domain": "animation physics",
+      "family": "skeleton",
+      "topics": [
+        "get_bone_transform"
+      ],
+      "summary": "Read the reference-pose transform and parent of a bone.",
+      "whenToUse": [
+        "A bone position must be read before placing a socket or constraint."
+      ],
+      "whenNotToUse": [
+        "The whole hierarchy is needed (use list_bones)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "skeletonPath": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
+          },
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game SkeletalMesh asset path."
+          },
+          "boneName": {
+            "type": "string",
+            "description": "Target bone name."
+          }
+        },
+        "required": [
+          "boneName"
+        ],
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "skeletonPath",
+          "skeletalMeshPath"
+        ]
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "boneName": {
+            "type": "string",
+            "description": "Target bone name."
+          },
+          "boneIndex": {
+            "type": "number",
+            "description": "Index of the bone in the reference skeleton."
+          },
+          "parentBone": {
+            "type": "string",
+            "description": "Name of the parent bone, empty for the root."
+          },
+          "parentIndex": {
+            "type": "number",
+            "description": "Index of the parent bone, -1 for the root."
+          },
+          "location": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Reference-pose location.",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            }
+          },
+          "rotation": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Reference-pose rotation.",
+            "properties": {
+              "pitch": {
+                "type": "number"
+              },
+              "yaw": {
+                "type": "number"
+              },
+              "roll": {
+                "type": "number"
+              }
+            }
+          },
+          "scale": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Reference-pose scale.",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Read the reference-pose transform and parent of a bone.",
+        "input": {
+          "action": "get_bone_transform",
+          "skeletonPath": "/Game/SK_Char",
+          "boneName": "hand_r"
+        },
+        "output": {
+          "success": true,
+          "message": "Bone transform read",
+          "boneName": "hand_r",
+          "boneIndex": 12,
+          "parentBone": "lowerarm_r",
+          "parentIndex": 11,
+          "location": {
+            "x": 10,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "pitch": 0,
+            "yaw": 0,
+            "roll": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          }
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "read",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "read",
+      "consent": "none",
+      "dataAccess": "project-read"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "animation_physics",
+      "dispatchAction": "get_bone_transform",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native skeleton route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "animation_physics",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "017d2516315a413679b1e89edfc2be5bd0c32199e64b79070680adda74de23e6",
+      "content": "68699810fdbd3d095199da20f2253531e50035a87f5161b99ea0e530896c6267"
+    }
+  },
+  {
+    "id": "animation_physics.get_physics_asset_info",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "animation_physics",
+        "action": "get_physics_asset_info"
+      }
+    ],
+    "discovery": {
+      "domain": "animation physics",
+      "family": "skeleton",
+      "topics": [
+        "get_physics_asset_info"
+      ],
+      "summary": "Read the bodies and constraints declared by a Physics Asset.",
+      "whenToUse": [
+        "The contents of a Physics Asset must be inspected before editing it."
+      ],
+      "whenNotToUse": [
+        "Only the body names are needed (use list_physics_bodies)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "physicsAssetPath": {
+            "type": "string",
+            "description": "Canonical /Game PhysicsAsset path."
+          },
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game SkeletalMesh asset path."
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "physicsAssetPath",
+          "skeletalMeshPath"
+        ]
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "physicsAssetPath": {
+            "type": "string",
+            "description": "Canonical /Game PhysicsAsset path."
+          },
+          "numBodies": {
+            "type": "number",
+            "description": "Number of physics bodies in the asset."
+          },
+          "numConstraints": {
+            "type": "number",
+            "description": "Number of constraints in the asset."
+          },
+          "bodies": {
+            "type": "array",
+            "description": "One entry per physics body.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "boneName": {
+                  "type": "string"
+                },
+                "physicsType": {
+                  "type": "string"
+                },
+                "numSpheres": {
+                  "type": "number"
+                },
+                "numBoxes": {
+                  "type": "number"
+                },
+                "numCapsules": {
+                  "type": "number"
+                },
+                "numConvex": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "constraints": {
+            "type": "array",
+            "description": "One entry per constraint.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "bone1": {
+                  "type": "string"
+                },
+                "bone2": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Read the bodies and constraints declared by a Physics Asset.",
+        "input": {
+          "action": "get_physics_asset_info",
+          "physicsAssetPath": "/Game/PA_Char"
+        },
+        "output": {
+          "success": true,
+          "message": "Physics asset read",
+          "physicsAssetPath": "/Game/PA_Char",
+          "numBodies": 9,
+          "numConstraints": 8,
+          "bodies": [
+            {
+              "boneName": "spine_01",
+              "physicsType": "Simulated",
+              "numSpheres": 0,
+              "numBoxes": 1,
+              "numCapsules": 0,
+              "numConvex": 0
+            }
+          ],
+          "constraints": [
+            {
+              "name": "spine_01",
+              "bone1": "spine_01",
+              "bone2": "pelvis"
+            }
+          ]
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "read",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "read",
+      "consent": "none",
+      "dataAccess": "project-read"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "animation_physics",
+      "dispatchAction": "get_physics_asset_info",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native skeleton route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "animation_physics",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "3ca58ca9fe08abc862a126965cd1177663c2de579eead7fd64912d7eab89f79e",
+      "content": "7f90ffa22b6d13b013ddb7a0b803abd31688667f49d211ce1a52e47e82d4be60"
+    }
+  },
+  {
     "id": "animation_physics.get_skeleton_info",
     "aliases": [],
     "legacyIds": [
@@ -10262,6 +10993,206 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "animation_physics.list_morph_targets",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "animation_physics",
+        "action": "list_morph_targets"
+      }
+    ],
+    "discovery": {
+      "domain": "animation physics",
+      "family": "skeleton",
+      "topics": [
+        "list_morph_targets"
+      ],
+      "summary": "List the morph targets declared on a Skeletal Mesh.",
+      "whenToUse": [
+        "The available morph targets must be discovered before driving one."
+      ],
+      "whenNotToUse": [
+        "A morph target must be created (use create_morph_target)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game SkeletalMesh asset path."
+          },
+          "meshPath": {
+            "type": "string",
+            "description": "Canonical /Game mesh asset path."
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "skeletalMeshPath",
+          "meshPath"
+        ]
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game SkeletalMesh asset path."
+          },
+          "count": {
+            "type": "number",
+            "description": "Number of morph targets found."
+          },
+          "morphTargets": {
+            "type": "array",
+            "description": "One entry per morph target.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "numDeltas": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "List the morph targets declared on a Skeletal Mesh.",
+        "input": {
+          "action": "list_morph_targets",
+          "skeletalMeshPath": "/Game/SKM_Char"
+        },
+        "output": {
+          "success": true,
+          "message": "Morph targets listed",
+          "skeletalMeshPath": "/Game/SKM_Char",
+          "count": 2,
+          "morphTargets": [
+            {
+              "name": "Smile",
+              "numDeltas": 128
+            }
+          ]
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "read",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "read",
+      "consent": "none",
+      "dataAccess": "project-read"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "animation_physics",
+      "dispatchAction": "list_morph_targets",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native skeleton route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "animation_physics",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "f44279cdf322b41d85a874c233d35af62904bfc1a45813aacd64772df864548a",
+      "content": "8639a4904c8869394f041a6c3d292d9e8cd644eb559b305e4fb3194ba33f0b88"
+    }
+  },
+  {
     "id": "animation_physics.list_physics_bodies",
     "aliases": [],
     "legacyIds": [
@@ -10604,6 +11535,210 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "animation_physics.list_virtual_bones",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "animation_physics",
+        "action": "list_virtual_bones"
+      }
+    ],
+    "discovery": {
+      "domain": "animation physics",
+      "family": "skeleton",
+      "topics": [
+        "list_virtual_bones"
+      ],
+      "summary": "List the virtual bones declared on a skeleton.",
+      "whenToUse": [
+        "Existing virtual bones must be discovered before adding another."
+      ],
+      "whenNotToUse": [
+        "A virtual bone must be created (use create_virtual_bone)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "skeletonPath": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
+          },
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game SkeletalMesh asset path."
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "skeletonPath",
+          "skeletalMeshPath"
+        ]
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "skeletonPath": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
+          },
+          "count": {
+            "type": "number",
+            "description": "Number of virtual bones found."
+          },
+          "virtualBones": {
+            "type": "array",
+            "description": "One entry per virtual bone.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "sourceBone": {
+                  "type": "string"
+                },
+                "targetBone": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "List the virtual bones declared on a skeleton.",
+        "input": {
+          "action": "list_virtual_bones",
+          "skeletonPath": "/Game/SK_Char"
+        },
+        "output": {
+          "success": true,
+          "message": "Virtual bones listed",
+          "skeletonPath": "/Game/SK_Char",
+          "count": 1,
+          "virtualBones": [
+            {
+              "name": "VB_hand_r",
+              "sourceBone": "spine_03",
+              "targetBone": "hand_r"
+            }
+          ]
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "read",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "read",
+      "consent": "none",
+      "dataAccess": "project-read"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "animation_physics",
+      "dispatchAction": "list_virtual_bones",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native skeleton route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "animation_physics",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "e3835e4f4030c9e31f67f719b564619d2afd0c079dfae954b614f3efaea2b18b",
+      "content": "08af83267db914d4c440ecef91062ac285b6f43d7bdcdc48d7743ea394fbdd68"
+    }
+  },
+  {
     "id": "animation_physics.mirror_weights",
     "aliases": [],
     "legacyIds": [
@@ -10781,6 +11916,422 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "2cba38598f0cbbbdaf070d1f4033d9618b948ab8ed3f3cb2d427df89929442cc",
       "content": "8ce1cb2ad694d82f7bfb6183e9606068d546aeac2234303825cba3000ed923cf"
+    }
+  },
+  {
+    "id": "animation_physics.modify_physics_body",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "animation_physics",
+        "action": "modify_physics_body"
+      }
+    ],
+    "discovery": {
+      "domain": "animation physics",
+      "family": "skeleton",
+      "topics": [
+        "modify_physics_body"
+      ],
+      "summary": "Modify a physics body mass, damping, or collision under the modify_physics_body spelling of configure_physics_body.",
+      "whenToUse": [
+        "Body parameters must change."
+      ],
+      "whenNotToUse": [
+        "Use add_physics_body."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "physicsAssetPath": {
+            "type": "string",
+            "description": "Canonical /Game PhysicsAsset path."
+          },
+          "boneName": {
+            "type": "string",
+            "description": "Target bone name."
+          },
+          "mass": {
+            "type": "number",
+            "description": "Mass value."
+          },
+          "linearDamping": {
+            "type": "number",
+            "description": "Linear damping value."
+          },
+          "angularDamping": {
+            "type": "number",
+            "description": "Angular damping value."
+          },
+          "collisionEnabled": {
+            "type": "boolean",
+            "description": "Whether collision is enabled."
+          },
+          "simulatePhysics": {
+            "type": "boolean",
+            "description": "Whether physics simulation is enabled."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the created/modified asset to disk."
+          }
+        },
+        "required": [
+          "physicsAssetPath",
+          "boneName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Modify a physics body mass, damping, or collision under the modify_physics_body spelling of configure_physics_body.",
+        "input": {
+          "action": "modify_physics_body",
+          "physicsAssetPath": "/Game/PA_Char",
+          "boneName": "spine_01",
+          "mass": 5,
+          "linearDamping": 0.25,
+          "collisionEnabled": true
+        },
+        "output": {
+          "success": true,
+          "message": "Physics body configured"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "animation_physics",
+      "dispatchAction": "modify_physics_body",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "B_ALIAS",
+      "disposition": "alias",
+      "rationale": "Alias of configure_physics_body; the native dispatch map routes both spellings to HandleConfigurePhysicsBody.",
+      "aliasOf": "animation_physics.configure_physics_body",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "animation_physics",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "889bd894b27bbd330d5c6208644d9a90956ef732ce4d52002a40693f572f915a",
+      "content": "c6e2e472c277833c64a481a988fb182a38e1b5731343679dca6d0a564b4dd157"
+    }
+  },
+  {
+    "id": "animation_physics.modify_socket",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "animation_physics",
+        "action": "modify_socket"
+      }
+    ],
+    "discovery": {
+      "domain": "animation physics",
+      "family": "skeleton",
+      "topics": [
+        "modify_socket"
+      ],
+      "summary": "Modify an existing socket transform under the modify_socket spelling of configure_socket.",
+      "whenToUse": [
+        "Socket offset must change."
+      ],
+      "whenNotToUse": [
+        "Use add_socket."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "skeletonPath": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
+          },
+          "socketName": {
+            "type": "string",
+            "description": "Target socket name."
+          },
+          "attachBoneName": {
+            "type": "string",
+            "description": "Bone the socket attaches to."
+          },
+          "relativeLocation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Socket location relative to its attach bone as [x, y, z]."
+          },
+          "relativeRotation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Socket rotation relative to its attach bone as [pitch, yaw, roll]."
+          },
+          "relativeScale": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Socket scale relative to its attach bone as [x, y, z]."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the created/modified asset to disk."
+          }
+        },
+        "required": [
+          "skeletonPath",
+          "socketName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "socketName": {
+            "type": "string",
+            "description": "Target socket name."
+          },
+          "skeletonPath": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Modify an existing socket transform under the modify_socket spelling of configure_socket.",
+        "input": {
+          "action": "modify_socket",
+          "skeletonPath": "/Game/SK_Char",
+          "socketName": "Weapon",
+          "relativeLocation": [
+            4,
+            5,
+            6
+          ],
+          "save": true
+        },
+        "output": {
+          "success": true,
+          "message": "Socket configured",
+          "socketName": "Weapon",
+          "skeletonPath": "/Game/SK_Char"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "animation_physics",
+      "dispatchAction": "modify_socket",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "B_ALIAS",
+      "disposition": "alias",
+      "rationale": "Alias of configure_socket; the native dispatch map routes both spellings to HandleConfigureSocket.",
+      "aliasOf": "animation_physics.configure_socket",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "animation_physics",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "cc98d4f5ad9f3716493cedccafeeb3a06a484a93225771f23fdcdd26e8e2e4e4",
+      "content": "911cde22be3d11d468588285552f2cfbbb281488a4a92f86f8b874f3ca94d696"
     }
   },
   {
@@ -11641,6 +13192,189 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "2d13b253e1f3257684c249ed02cf2fee53929cec3e5417af414c61d9b596cc49",
       "content": "35fa242777a2058364693fcf6e9427683b8b720eb7c05267096a51f8d7fb9ab9"
+    }
+  },
+  {
+    "id": "animation_physics.remove_physics_body",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "animation_physics",
+        "action": "remove_physics_body"
+      }
+    ],
+    "discovery": {
+      "domain": "animation physics",
+      "family": "skeleton",
+      "topics": [
+        "remove_physics_body"
+      ],
+      "summary": "Remove a physics body from a Physics Asset.",
+      "whenToUse": [
+        "A bone should no longer simulate."
+      ],
+      "whenNotToUse": [
+        "The body only needs different parameters (use configure_physics_body)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "physicsAssetPath": {
+            "type": "string",
+            "description": "Canonical /Game PhysicsAsset path."
+          },
+          "boneName": {
+            "type": "string",
+            "description": "Target bone name."
+          }
+        },
+        "required": [
+          "physicsAssetPath",
+          "boneName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "physicsAssetPath": {
+            "type": "string",
+            "description": "Canonical /Game PhysicsAsset path."
+          },
+          "boneName": {
+            "type": "string",
+            "description": "Target bone name."
+          },
+          "remainingBodies": {
+            "type": "number",
+            "description": "Number of physics bodies left on the asset after the call."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Remove a physics body from a Physics Asset.",
+        "input": {
+          "action": "remove_physics_body",
+          "physicsAssetPath": "/Game/PA_Char",
+          "boneName": "spine_01"
+        },
+        "output": {
+          "success": true,
+          "message": "Physics body removed",
+          "physicsAssetPath": "/Game/PA_Char",
+          "boneName": "spine_01",
+          "remainingBodies": 8
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "destructive",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "destructive",
+      "consent": "explicit",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "animation_physics",
+      "dispatchAction": "remove_physics_body",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native skeleton route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "animation_physics",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "370d6ccffc798d4ca60c3acbf74d4e280e44b8223033fafeb0d31c7a12b5cb5a",
+      "content": "e4f40f9a01b58f26db0343be0ef475c2525dcd3f54f3c23e4474bf085fc031c7"
     }
   },
   {
@@ -13806,6 +15540,591 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "cea7cf262ca974901fd786168cbe782f663566cff4dbbcbe1013c725f0f08807",
       "content": "0b0b1579f1228d98d45f1e6ceba27783798b6eb11b18ecd984f7a9bae82c7fb5"
+    }
+  },
+  {
+    "id": "animation_physics.set_morph_target_value",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "animation_physics",
+        "action": "set_morph_target_value"
+      }
+    ],
+    "discovery": {
+      "domain": "animation physics",
+      "family": "skeleton",
+      "topics": [
+        "set_morph_target_value"
+      ],
+      "summary": "Drive a morph target weight on a Skeletal Mesh actor in the level.",
+      "whenToUse": [
+        "A morph target weight must be previewed on a placed actor."
+      ],
+      "whenNotToUse": [
+        "The morph target asset itself must change (use set_morph_target_deltas)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "actorName": {
+            "type": "string",
+            "description": "Target actor name in the current level."
+          },
+          "morphTargetName": {
+            "type": "string",
+            "description": "Morph target name."
+          },
+          "value": {
+            "description": "Property value (any type)."
+          },
+          "addMissing": {
+            "type": "boolean",
+            "description": "Whether to add the morph target when the component does not already carry it."
+          }
+        },
+        "required": [
+          "actorName",
+          "morphTargetName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Target actor name in the current level."
+          },
+          "morphTargetName": {
+            "type": "string",
+            "description": "Morph target name."
+          },
+          "value": {
+            "type": "number",
+            "description": "Weight applied to the morph target."
+          },
+          "activeMorphTargets": {
+            "type": "array",
+            "description": "Morph targets currently driven on the actor.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "weight": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Drive a morph target weight on a Skeletal Mesh actor in the level.",
+        "input": {
+          "action": "set_morph_target_value",
+          "actorName": "SKM_Char_1",
+          "morphTargetName": "Smile",
+          "value": 0.75
+        },
+        "output": {
+          "success": true,
+          "message": "Morph target value set",
+          "actorName": "SKM_Char_1",
+          "morphTargetName": "Smile",
+          "value": 0.75,
+          "activeMorphTargets": [
+            {
+              "name": "Smile",
+              "weight": 0.75
+            }
+          ]
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "animation_physics",
+      "dispatchAction": "set_morph_target_value",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native skeleton route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "animation_physics",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "e995b64d694d53955d837a5a1bc64f4ad8d141987d9d836cea6614436cfc3e62",
+      "content": "6cafb2b81dabea2b7d542a0014f1d65701a1d08da8c8bf3f2d727a54e632a170"
+    }
+  },
+  {
+    "id": "animation_physics.set_physics_asset",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "animation_physics",
+        "action": "set_physics_asset"
+      }
+    ],
+    "discovery": {
+      "domain": "animation physics",
+      "family": "skeleton",
+      "topics": [
+        "set_physics_asset"
+      ],
+      "summary": "Assign a Physics Asset to a Skeletal Mesh.",
+      "whenToUse": [
+        "A Skeletal Mesh must reference a specific Physics Asset."
+      ],
+      "whenNotToUse": [
+        "The Physics Asset itself must be edited (use configure_physics_body)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game SkeletalMesh asset path."
+          },
+          "meshPath": {
+            "type": "string",
+            "description": "Canonical /Game mesh asset path."
+          },
+          "physicsAssetPath": {
+            "type": "string",
+            "description": "Canonical /Game PhysicsAsset path."
+          }
+        },
+        "required": [
+          "physicsAssetPath"
+        ],
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "skeletalMeshPath",
+          "meshPath"
+        ]
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game SkeletalMesh asset path."
+          },
+          "physicsAssetPath": {
+            "type": "string",
+            "description": "Canonical /Game PhysicsAsset path."
+          },
+          "physicsAssetName": {
+            "type": "string",
+            "description": "Name of the generated Physics Asset."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Assign a Physics Asset to a Skeletal Mesh.",
+        "input": {
+          "action": "set_physics_asset",
+          "skeletalMeshPath": "/Game/SKM_Char",
+          "physicsAssetPath": "/Game/PA_Char"
+        },
+        "output": {
+          "success": true,
+          "message": "Physics asset assigned",
+          "skeletalMeshPath": "/Game/SKM_Char",
+          "physicsAssetPath": "/Game/PA_Char",
+          "physicsAssetName": "PA_Char"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "animation_physics",
+      "dispatchAction": "set_physics_asset",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native skeleton route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "animation_physics",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "d3909ea3445025916e2033151d30d380416388774a7dcea7be6da0fa2e0665b8",
+      "content": "2077013cf4d29fba0b6ce6a8080d2bbb94c029c1bda600865596ceeba892eaca"
+    }
+  },
+  {
+    "id": "animation_physics.set_physics_constraint",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "animation_physics",
+        "action": "set_physics_constraint"
+      }
+    ],
+    "discovery": {
+      "domain": "animation physics",
+      "family": "skeleton",
+      "topics": [
+        "set_physics_constraint"
+      ],
+      "summary": "Constrain two physics bodies under the set_physics_constraint spelling of add_physics_constraint.",
+      "whenToUse": [
+        "Bodies must be jointed."
+      ],
+      "whenNotToUse": [
+        "Rigid bodies suffice."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "physicsAssetPath": {
+            "type": "string",
+            "description": "Canonical /Game PhysicsAsset path."
+          },
+          "bodyA": {
+            "type": "string",
+            "description": "First physics body."
+          },
+          "bodyB": {
+            "type": "string",
+            "description": "Second physics body."
+          },
+          "constraintName": {
+            "type": "string",
+            "description": "Name of the created physics constraint."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the created/modified asset to disk."
+          }
+        },
+        "required": [
+          "physicsAssetPath"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Constrain two physics bodies under the set_physics_constraint spelling of add_physics_constraint.",
+        "input": {
+          "action": "set_physics_constraint",
+          "physicsAssetPath": "/Game/PA_Char",
+          "bodyA": "spine_01",
+          "bodyB": "spine_02",
+          "constraintName": "Spine"
+        },
+        "output": {
+          "success": true,
+          "message": "Constraint added"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "animation_physics",
+      "dispatchAction": "set_physics_constraint",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "B_ALIAS",
+      "disposition": "alias",
+      "rationale": "Alias of add_physics_constraint; the native dispatch map routes both spellings to HandleAddPhysicsConstraint.",
+      "aliasOf": "animation_physics.add_physics_constraint",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "animation_physics",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "4f0e8590bffa57ac4b301a8968658bdc550f636204315389fe0046a27977d957",
+      "content": "18cd6a186710a218bca8a16a8a56cd4349a85fe4c0be4276902e2344a1035440"
     }
   },
   {
@@ -34778,7 +37097,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "schema": "b4b032da85014740b4af3af661d1efd9497be37fdf84533e29fb30387f8eab2b",
       "content": "ff199ddb528d270cb44966b9c38e58d2e4649ebb1e10eaa18907f0aced7cc8e4"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
   {
     "id": "blueprint.create_pause_menu",
     "aliases": [],
@@ -36913,9 +39234,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "schema": "869c2ac348483e9307125b4238abea90906b4d4b0d91ebba43e4a2cf1820ae0d",
       "content": "cc7796bf35b22f08491a928fb7dbe806e0f16ada02b2d982abd82e430147eeb6"
     }
-  }
-]);
-const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
+  },
   {
     "id": "blueprint.ensure_exists",
     "aliases": [],
@@ -72386,7 +74705,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "schema": "f2b8b1962dd6e40df925a49919a2021ef70e864b1ec524aaf5dace6d3c31c824",
       "content": "022ac6780726c305005d7e41548a23fbd8082303e07eac7cb90cda46a1be3c2d"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
   {
     "id": "build_environment.set_time_of_day",
     "aliases": [],
@@ -74372,9 +76693,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "schema": "c20ddb94762ed3d288b682c24e92dcbc167d5f38ff6b82b0c076021489e1c9f3",
       "content": "505a0ed712a8b4e73791b890c17b1d13c18e0c648565a10804b1b58b0a4da638"
     }
-  }
-]);
-const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
+  },
   {
     "id": "control_actor.attach_actor",
     "aliases": [],
@@ -109047,7 +111366,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "schema": "1011067925c9a1046107a9061d32c156cfd9458c658a15374fcb651158ff5af3",
       "content": "c7144f9e3865e881ad689b1e6429bbd3cdc38636a1ea633c23a0cfcbcdaa279e"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
   {
     "id": "manage_ai.rebuild_navigation",
     "aliases": [],
@@ -110920,9 +113241,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "schema": "5ca4e216a63eff94fed234cf27d380324e0eb063c06e841cbbe045655f11a93d",
       "content": "774774552b25004756aaae744eab4319a0e660019b1da2f5037ee166f6d9194e"
     }
-  }
-]);
-const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_ai.setup_perception",
     "aliases": [],
@@ -144782,7 +147101,9 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "schema": "5a57d552f78e23072cbc3e960de37ebb33850d1ffb5a55a6265b14b176168011",
       "content": "a1808a77998f1e91a2177cbc230e0173445405a485c86c5453749489cad26911"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
   {
     "id": "manage_gas.create_gameplay_effect",
     "aliases": [],
@@ -146775,9 +149096,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "schema": "44e2fac2fd7079bfb7751ead39d7f5a91aff8e9c10b582d50b27fdb7b17fbe27",
       "content": "e0905e601f3bf3ac3af382f0437deda36ff8333a7b2d04e921ffe3a6f3587fb5"
     }
-  }
-]);
-const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_gas.set_effect_stacking",
     "aliases": [],
@@ -182266,7 +184585,9 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "schema": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
       "content": "2e45a9ddc64e0d2845ae864c21e53732c08e872d2bab0eb5331e4cbc93ac6911"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
   {
     "id": "manage_level_structure.create_reverb_volume",
     "aliases": [],
@@ -184360,9 +186681,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "schema": "7521280a2403dd1c809ec98bfa5475c422c6fe23de6ccecd338412483169dce3",
       "content": "7bc3fb596197fffb658e80131691eaec69dec39fffd85e288e109d3fb3831d9c"
     }
-  }
-]);
-const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_level_structure.set_streaming_distance",
     "aliases": [],
@@ -218462,7 +220781,9 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "schema": "4fef314015924406b151b201ed34239803c4af9d6bbc68bf4737b619a2147897",
       "content": "165addbb451e03f3d485192b4dce254df33ef6b4483b51379324cb65c9c8b990"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
   {
     "id": "sequence.cinematic.add_property_track",
     "aliases": [],
@@ -220665,9 +222986,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "schema": "78e8bd50f5f92c394286c1470c0cdf3f94a554785dcbeed996699709ac8bc3e5",
       "content": "c2307f2c9a2da8d1ef3fc280b98f8eb5e1ac264fc5ca89db16a796a446be2491"
     }
-  }
-]);
-const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
+  },
   {
     "id": "sequence.create",
     "aliases": [],
@@ -247660,6 +249979,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "c2113131d3d01b6a59314fd24d591854c6e1eb673398c0505c90716b3cd1df42"
   },
   {
+    "id": "animation_physics.add_socket",
+    "parentTool": "animation_physics",
+    "dispatchAction": "add_socket",
+    "domain": "animation physics",
+    "schemaHash": "e500d6659d53372d5885c4c45e6528fd2b746714acffc996d6a6fe8afcd6ce7a",
+    "contentHash": "059790937c3e06c3f83291e817e9a22db42a35a066fe3e95c96ff296662cace9"
+  },
+  {
     "id": "animation_physics.add_state",
     "parentTool": "animation_physics",
     "dispatchAction": "add_state",
@@ -247956,6 +250283,22 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "aaf9b3e27c52935ed638f665110258bae13d87d9f2f092eb90fd6d3d4ae49414"
   },
   {
+    "id": "animation_physics.get_bone_transform",
+    "parentTool": "animation_physics",
+    "dispatchAction": "get_bone_transform",
+    "domain": "animation physics",
+    "schemaHash": "017d2516315a413679b1e89edfc2be5bd0c32199e64b79070680adda74de23e6",
+    "contentHash": "68699810fdbd3d095199da20f2253531e50035a87f5161b99ea0e530896c6267"
+  },
+  {
+    "id": "animation_physics.get_physics_asset_info",
+    "parentTool": "animation_physics",
+    "dispatchAction": "get_physics_asset_info",
+    "domain": "animation physics",
+    "schemaHash": "3ca58ca9fe08abc862a126965cd1177663c2de579eead7fd64912d7eab89f79e",
+    "contentHash": "7f90ffa22b6d13b013ddb7a0b803abd31688667f49d211ce1a52e47e82d4be60"
+  },
+  {
     "id": "animation_physics.get_skeleton_info",
     "parentTool": "animation_physics",
     "dispatchAction": "get_skeleton_info",
@@ -247988,6 +250331,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "8312d9cd25b08c5f79cce82f5a88efc9bc03291a1ebf26c9b9fca78706fc6afa"
   },
   {
+    "id": "animation_physics.list_morph_targets",
+    "parentTool": "animation_physics",
+    "dispatchAction": "list_morph_targets",
+    "domain": "animation physics",
+    "schemaHash": "f44279cdf322b41d85a874c233d35af62904bfc1a45813aacd64772df864548a",
+    "contentHash": "8639a4904c8869394f041a6c3d292d9e8cd644eb559b305e4fb3194ba33f0b88"
+  },
+  {
     "id": "animation_physics.list_physics_bodies",
     "parentTool": "animation_physics",
     "dispatchAction": "list_physics_bodies",
@@ -248004,12 +250355,36 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "18e1694e2268a6b497f98fb47d3445c9d01fe21074596cddaab43a2316b4a8e4"
   },
   {
+    "id": "animation_physics.list_virtual_bones",
+    "parentTool": "animation_physics",
+    "dispatchAction": "list_virtual_bones",
+    "domain": "animation physics",
+    "schemaHash": "e3835e4f4030c9e31f67f719b564619d2afd0c079dfae954b614f3efaea2b18b",
+    "contentHash": "08af83267db914d4c440ecef91062ac285b6f43d7bdcdc48d7743ea394fbdd68"
+  },
+  {
     "id": "animation_physics.mirror_weights",
     "parentTool": "animation_physics",
     "dispatchAction": "mirror_weights",
     "domain": "animation physics",
     "schemaHash": "2cba38598f0cbbbdaf070d1f4033d9618b948ab8ed3f3cb2d427df89929442cc",
     "contentHash": "8ce1cb2ad694d82f7bfb6183e9606068d546aeac2234303825cba3000ed923cf"
+  },
+  {
+    "id": "animation_physics.modify_physics_body",
+    "parentTool": "animation_physics",
+    "dispatchAction": "modify_physics_body",
+    "domain": "animation physics",
+    "schemaHash": "889bd894b27bbd330d5c6208644d9a90956ef732ce4d52002a40693f572f915a",
+    "contentHash": "c6e2e472c277833c64a481a988fb182a38e1b5731343679dca6d0a564b4dd157"
+  },
+  {
+    "id": "animation_physics.modify_socket",
+    "parentTool": "animation_physics",
+    "dispatchAction": "modify_socket",
+    "domain": "animation physics",
+    "schemaHash": "cc98d4f5ad9f3716493cedccafeeb3a06a484a93225771f23fdcdd26e8e2e4e4",
+    "contentHash": "911cde22be3d11d468588285552f2cfbbb281488a4a92f86f8b874f3ca94d696"
   },
   {
     "id": "animation_physics.normalize_weights",
@@ -248050,6 +250425,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "animation physics",
     "schemaHash": "2d13b253e1f3257684c249ed02cf2fee53929cec3e5417af414c61d9b596cc49",
     "contentHash": "35fa242777a2058364693fcf6e9427683b8b720eb7c05267096a51f8d7fb9ab9"
+  },
+  {
+    "id": "animation_physics.remove_physics_body",
+    "parentTool": "animation_physics",
+    "dispatchAction": "remove_physics_body",
+    "domain": "animation physics",
+    "schemaHash": "370d6ccffc798d4ca60c3acbf74d4e280e44b8223033fafeb0d31c7a12b5cb5a",
+    "contentHash": "e4f40f9a01b58f26db0343be0ef475c2525dcd3f54f3c23e4474bf085fc031c7"
   },
   {
     "id": "animation_physics.rename_bone",
@@ -248146,6 +250529,30 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "animation physics",
     "schemaHash": "cea7cf262ca974901fd786168cbe782f663566cff4dbbcbe1013c725f0f08807",
     "contentHash": "0b0b1579f1228d98d45f1e6ceba27783798b6eb11b18ecd984f7a9bae82c7fb5"
+  },
+  {
+    "id": "animation_physics.set_morph_target_value",
+    "parentTool": "animation_physics",
+    "dispatchAction": "set_morph_target_value",
+    "domain": "animation physics",
+    "schemaHash": "e995b64d694d53955d837a5a1bc64f4ad8d141987d9d836cea6614436cfc3e62",
+    "contentHash": "6cafb2b81dabea2b7d542a0014f1d65701a1d08da8c8bf3f2d727a54e632a170"
+  },
+  {
+    "id": "animation_physics.set_physics_asset",
+    "parentTool": "animation_physics",
+    "dispatchAction": "set_physics_asset",
+    "domain": "animation physics",
+    "schemaHash": "d3909ea3445025916e2033151d30d380416388774a7dcea7be6da0fa2e0665b8",
+    "contentHash": "2077013cf4d29fba0b6ce6a8080d2bbb94c029c1bda600865596ceeba892eaca"
+  },
+  {
+    "id": "animation_physics.set_physics_constraint",
+    "parentTool": "animation_physics",
+    "dispatchAction": "set_physics_constraint",
+    "domain": "animation physics",
+    "schemaHash": "4f0e8590bffa57ac4b301a8968658bdc550f636204315389fe0046a27977d957",
+    "contentHash": "18cd6a186710a218bca8a16a8a56cd4349a85fe4c0be4276902e2344a1035440"
   },
   {
     "id": "animation_physics.set_retarget_chain_mapping",
@@ -258536,6 +260943,20 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "node",
     "slot"
   ],
+  "animation_physics.add_socket": [
+    "add",
+    "add_socket",
+    "animation physics",
+    "animation_physics",
+    "animation_physics.add_socket",
+    "bone",
+    "create_socket",
+    "skeleton",
+    "socket",
+    "spelling",
+    "the",
+    "under"
+  ],
   "animation_physics.add_state": [
     "add",
     "add_state",
@@ -258961,6 +261382,35 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "physics",
     "read"
   ],
+  "animation_physics.get_bone_transform": [
+    "and",
+    "animation physics",
+    "animation_physics",
+    "animation_physics.get_bone_transform",
+    "bone",
+    "get_bone_transform",
+    "parent",
+    "read",
+    "referencepose",
+    "skeleton",
+    "the",
+    "transform"
+  ],
+  "animation_physics.get_physics_asset_info": [
+    "and",
+    "animation physics",
+    "animation_physics",
+    "animation_physics.get_physics_asset_info",
+    "asset",
+    "bodies",
+    "constraints",
+    "declared",
+    "get_physics_asset_info",
+    "physics",
+    "read",
+    "skeleton",
+    "the"
+  ],
   "animation_physics.get_skeleton_info": [
     "animation physics",
     "animation_physics",
@@ -259005,6 +261455,20 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "list_bones",
     "skeleton"
   ],
+  "animation_physics.list_morph_targets": [
+    "animation physics",
+    "animation_physics",
+    "animation_physics.list_morph_targets",
+    "declared",
+    "list",
+    "list_morph_targets",
+    "mesh",
+    "morph",
+    "skeletal",
+    "skeleton",
+    "targets",
+    "the"
+  ],
   "animation_physics.list_physics_bodies": [
     "animation physics",
     "animation_physics",
@@ -259025,6 +261489,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "skeleton",
     "sockets"
   ],
+  "animation_physics.list_virtual_bones": [
+    "animation physics",
+    "animation_physics",
+    "animation_physics.list_virtual_bones",
+    "bones",
+    "declared",
+    "list",
+    "list_virtual_bones",
+    "skeleton",
+    "the",
+    "virtual"
+  ],
   "animation_physics.mirror_weights": [
     "across",
     "animation physics",
@@ -259037,6 +261513,38 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "skin",
     "symmetry",
     "weights"
+  ],
+  "animation_physics.modify_physics_body": [
+    "animation physics",
+    "animation_physics",
+    "animation_physics.modify_physics_body",
+    "body",
+    "collision",
+    "configure_physics_body",
+    "damping",
+    "mass",
+    "modify",
+    "modify_physics_body",
+    "physics",
+    "skeleton",
+    "spelling",
+    "the",
+    "under"
+  ],
+  "animation_physics.modify_socket": [
+    "animation physics",
+    "animation_physics",
+    "animation_physics.modify_socket",
+    "configure_socket",
+    "existing",
+    "modify",
+    "modify_socket",
+    "skeleton",
+    "socket",
+    "spelling",
+    "the",
+    "transform",
+    "under"
   ],
   "animation_physics.normalize_weights": [
     "animation physics",
@@ -259092,6 +261600,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "from",
     "remove",
     "remove_bone",
+    "skeleton"
+  ],
+  "animation_physics.remove_physics_body": [
+    "animation physics",
+    "animation_physics",
+    "animation_physics.remove_physics_body",
+    "asset",
+    "body",
+    "from",
+    "physics",
+    "remove",
+    "remove_physics_body",
     "skeleton"
   ],
   "animation_physics.rename_bone": [
@@ -259227,6 +261747,49 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "skeleton",
     "target",
     "vertex"
+  ],
+  "animation_physics.set_morph_target_value": [
+    "actor",
+    "animation physics",
+    "animation_physics",
+    "animation_physics.set_morph_target_value",
+    "drive",
+    "level",
+    "mesh",
+    "morph",
+    "set_morph_target_value",
+    "skeletal",
+    "skeleton",
+    "target",
+    "the",
+    "weight"
+  ],
+  "animation_physics.set_physics_asset": [
+    "animation physics",
+    "animation_physics",
+    "animation_physics.set_physics_asset",
+    "asset",
+    "assign",
+    "mesh",
+    "physics",
+    "set_physics_asset",
+    "skeletal",
+    "skeleton"
+  ],
+  "animation_physics.set_physics_constraint": [
+    "add_physics_constraint",
+    "animation physics",
+    "animation_physics",
+    "animation_physics.set_physics_constraint",
+    "bodies",
+    "constrain",
+    "physics",
+    "set_physics_constraint",
+    "skeleton",
+    "spelling",
+    "the",
+    "two",
+    "under"
   ],
   "animation_physics.set_retarget_chain_mapping": [
     "animation physics",
@@ -281737,7 +284300,7 @@ export const DOCS_DATA = [
     "name": "animation_physics",
     "category": "gameplay",
     "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
-    "actionCount": 87
+    "actionCount": 98
   },
   {
     "name": "build_environment",
@@ -281938,6 +284501,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "8a55f4e31a45bf1a694716216168029b0729ad84de149198d9616f554f5e53ee",
     "content": "c2113131d3d01b6a59314fd24d591854c6e1eb673398c0505c90716b3cd1df42"
   },
+  "animation_physics.add_socket": {
+    "schema": "e500d6659d53372d5885c4c45e6528fd2b746714acffc996d6a6fe8afcd6ce7a",
+    "content": "059790937c3e06c3f83291e817e9a22db42a35a066fe3e95c96ff296662cace9"
+  },
   "animation_physics.add_state": {
     "schema": "5fdb7c69e7bcb31f271eef7bc259d0c4ea8a63dafe245fc4b8414fbf7a8089e0",
     "content": "e7e49199c3d7e30f88124fa423110cd43c0b52844d23ed80f99fb7e59afb0cb1"
@@ -282086,6 +284653,14 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "4a16248522f47ccbb92e3cf30b1160cdca9a4a282d2eeb017b580dbc99e366fa",
     "content": "aaf9b3e27c52935ed638f665110258bae13d87d9f2f092eb90fd6d3d4ae49414"
   },
+  "animation_physics.get_bone_transform": {
+    "schema": "017d2516315a413679b1e89edfc2be5bd0c32199e64b79070680adda74de23e6",
+    "content": "68699810fdbd3d095199da20f2253531e50035a87f5161b99ea0e530896c6267"
+  },
+  "animation_physics.get_physics_asset_info": {
+    "schema": "3ca58ca9fe08abc862a126965cd1177663c2de579eead7fd64912d7eab89f79e",
+    "content": "7f90ffa22b6d13b013ddb7a0b803abd31688667f49d211ce1a52e47e82d4be60"
+  },
   "animation_physics.get_skeleton_info": {
     "schema": "6583a441073827641cea408ee99e39345f534b9676510ae9c13885af0b6197c8",
     "content": "c388c76b215bde8d7d72949ef36cd4fb090d2c5c12ef29bf157fb91c10c9e9a3"
@@ -282102,6 +284677,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "312f789446edd5bf81f33073463557093115e655df03df863470a6bdaec930e6",
     "content": "8312d9cd25b08c5f79cce82f5a88efc9bc03291a1ebf26c9b9fca78706fc6afa"
   },
+  "animation_physics.list_morph_targets": {
+    "schema": "f44279cdf322b41d85a874c233d35af62904bfc1a45813aacd64772df864548a",
+    "content": "8639a4904c8869394f041a6c3d292d9e8cd644eb559b305e4fb3194ba33f0b88"
+  },
   "animation_physics.list_physics_bodies": {
     "schema": "96e047034082d30d06c01a94cd7919723d286ba0700f8d91acd6e59d1d163175",
     "content": "749cfd5e24bd5e5a2997b2a139b1d35ece6e9a4ab40cb699b49552c9aac7e986"
@@ -282110,9 +284689,21 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "afc4a60358f31cddd37baf4e54cb1a6b978307cf474669aca2b3c6698d0fbe90",
     "content": "18e1694e2268a6b497f98fb47d3445c9d01fe21074596cddaab43a2316b4a8e4"
   },
+  "animation_physics.list_virtual_bones": {
+    "schema": "e3835e4f4030c9e31f67f719b564619d2afd0c079dfae954b614f3efaea2b18b",
+    "content": "08af83267db914d4c440ecef91062ac285b6f43d7bdcdc48d7743ea394fbdd68"
+  },
   "animation_physics.mirror_weights": {
     "schema": "2cba38598f0cbbbdaf070d1f4033d9618b948ab8ed3f3cb2d427df89929442cc",
     "content": "8ce1cb2ad694d82f7bfb6183e9606068d546aeac2234303825cba3000ed923cf"
+  },
+  "animation_physics.modify_physics_body": {
+    "schema": "889bd894b27bbd330d5c6208644d9a90956ef732ce4d52002a40693f572f915a",
+    "content": "c6e2e472c277833c64a481a988fb182a38e1b5731343679dca6d0a564b4dd157"
+  },
+  "animation_physics.modify_socket": {
+    "schema": "cc98d4f5ad9f3716493cedccafeeb3a06a484a93225771f23fdcdd26e8e2e4e4",
+    "content": "911cde22be3d11d468588285552f2cfbbb281488a4a92f86f8b874f3ca94d696"
   },
   "animation_physics.normalize_weights": {
     "schema": "aa545999cea9b9c38688079c1903dc418760e5cfc78c46593803e05e0058a189",
@@ -282133,6 +284724,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "animation_physics.remove_bone": {
     "schema": "2d13b253e1f3257684c249ed02cf2fee53929cec3e5417af414c61d9b596cc49",
     "content": "35fa242777a2058364693fcf6e9427683b8b720eb7c05267096a51f8d7fb9ab9"
+  },
+  "animation_physics.remove_physics_body": {
+    "schema": "370d6ccffc798d4ca60c3acbf74d4e280e44b8223033fafeb0d31c7a12b5cb5a",
+    "content": "e4f40f9a01b58f26db0343be0ef475c2525dcd3f54f3c23e4474bf085fc031c7"
   },
   "animation_physics.rename_bone": {
     "schema": "7a6606b5d94293867c3214d2e841f2788374da6b40203845464ae7f42bb8bba9",
@@ -282181,6 +284776,18 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "animation_physics.set_morph_target_deltas": {
     "schema": "cea7cf262ca974901fd786168cbe782f663566cff4dbbcbe1013c725f0f08807",
     "content": "0b0b1579f1228d98d45f1e6ceba27783798b6eb11b18ecd984f7a9bae82c7fb5"
+  },
+  "animation_physics.set_morph_target_value": {
+    "schema": "e995b64d694d53955d837a5a1bc64f4ad8d141987d9d836cea6614436cfc3e62",
+    "content": "6cafb2b81dabea2b7d542a0014f1d65701a1d08da8c8bf3f2d727a54e632a170"
+  },
+  "animation_physics.set_physics_asset": {
+    "schema": "d3909ea3445025916e2033151d30d380416388774a7dcea7be6da0fa2e0665b8",
+    "content": "2077013cf4d29fba0b6ce6a8080d2bbb94c029c1bda600865596ceeba892eaca"
+  },
+  "animation_physics.set_physics_constraint": {
+    "schema": "4f0e8590bffa57ac4b301a8968658bdc550f636204315389fe0046a27977d957",
+    "content": "18cd6a186710a218bca8a16a8a56cd4349a85fe4c0be4276902e2344a1035440"
   },
   "animation_physics.set_retarget_chain_mapping": {
     "schema": "b24200b12fe245da9b5becf40b85bfac195a4c8a75390c13fde1f0a0e24f5267",

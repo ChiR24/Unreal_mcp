@@ -144,7 +144,7 @@ describe('Task 25: native and TypeScript discovery are byte-identical', () => {
     // it is pinned below by native_discovery_known_divergence_contracts so a new
     // occurrence fails here instead of silently dropping a parameter.
     const knownCaseCollisions = [
-      "/935/schemas/input/properties: 'subLevelPath' vs 'sublevelPath'",
+      "/946/schemas/input/properties: 'subLevelPath' vs 'sublevelPath'",
     ];
     const collisions: string[] = [];
     walkCaseCollidingKeys(registry.records as unknown as JsonValue, '', collisions);

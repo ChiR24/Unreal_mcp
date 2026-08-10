@@ -1,14 +1,14 @@
 /**
  * tests/unit/capability-metadata-audit.test.ts
  *
- * Cross-domain metadata audit for all 1,352 capability records.
+ * Cross-domain metadata audit for all 1,363 capability records.
  *
  * RED first: a seeded stale "5.1-5.6 only" comment OR verb-derived metadata
  * (a read record relabelled as a mutating write) MUST make the audit fail with
  * a leaf-evidence violation. This proves the audit catches dishonest/derived
  * metadata rather than rubber-stamping the source.
  *
- * GREEN after Task 19 corrections: the real 1,352-record universe passes with
+ * GREEN after Task 19 corrections: the real 1,363-record universe passes with
  * zero hard violations, and the audit is deterministic across runs.
  */
 import { describe, expect, it } from 'vitest';
@@ -23,7 +23,7 @@ function cloneRecord(record: CapabilityRecord): CapabilityRecord {
   return structuredClone(record);
 }
 
-describe('capability metadata audit â€” RED seed must fail', () => {
+describe('capability metadata audit Ã¢â‚¬â€ RED seed must fail', () => {
   it('flags a seeded stale "5.1-5.6 only" UE-version comment (C6)', () => {
     const records = loadAllCapabilityRecords();
     const target = cloneRecord(records[0]);
@@ -71,11 +71,11 @@ describe('capability metadata audit â€” RED seed must fail', () => {
   });
 });
 
-describe('capability metadata audit â€” GREEN universe passes', () => {
-  it('audits all 1,352 records with zero hard violations', () => {
+describe('capability metadata audit Ã¢â‚¬â€ GREEN universe passes', () => {
+  it('audits all 1,363 records with zero hard violations', () => {
     const records = loadAllCapabilityRecords();
-    expect(records.length).toBe(1352);
-    expect(new Set(records.map((r) => r.id)).size).toBe(1352);
+    expect(records.length).toBe(1363);
+    expect(new Set(records.map((r) => r.id)).size).toBe(1363);
     const report = auditCapabilityMetadata(records);
     expect(report.passed).toBe(true);
     expect(report.violations).toHaveLength(0);

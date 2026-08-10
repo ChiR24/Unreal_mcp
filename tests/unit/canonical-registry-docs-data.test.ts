@@ -20,8 +20,8 @@ describe('Task-23 docs data actionCount', () => {
     }
   });
 
-  it('sum of all actionCounts equals the total capability-record count (1,352)', () => {
+  it('sum of all actionCounts equals the total capability-record count (1,363)', () => {
     const total = docs.reduce((sum, entry) => sum + entry.actionCount, 0);
-    expect(total).toBe(1352);
+    expect(total).toBe(1363);
   });
 });

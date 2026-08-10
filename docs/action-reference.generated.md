@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `7a780f300011f79e`
+Catalog revision: `46e249baeb7f6f6c`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 1352 capabilities across
+The catalog declares 1363 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -36,7 +36,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
-| `animation_physics` | 87 | 6 | 79 | 2 | animation physics |
+| `animation_physics` | 98 | 10 | 85 | 3 | animation physics |
 | `build_environment` | 150 | 5 | 141 | 4 | environment |
 | `control_actor` | 46 | 14 | 29 | 3 | actor |
 | `control_editor` | 42 | 19 | 23 | 0 | editor |
@@ -62,12 +62,13 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-152 of 1352 capabilities require consent.
+153 of 1363 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
 | `animation_physics.cleanup` | `animation_physics` | `cleanup` | destructive | explicit |
 | `animation_physics.remove_bone` | `animation_physics` | `remove_bone` | destructive | explicit |
+| `animation_physics.remove_physics_body` | `animation_physics` | `remove_physics_body` | destructive | explicit |
 | `asset.add_material_parameter` | `manage_asset` | `add_material_parameter` | write | explicit |
 | `asset.bulk_delete` | `manage_asset` | `bulk_delete` | destructive | elevated |
 | `asset.bulk_rename` | `manage_asset` | `bulk_rename` | write | explicit |
@@ -247,6 +248,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.add_physics_body` | `animation_physics` | `add_physics_body` | write | write | none | `animation_physics.add_physics_body` |
 | `animation_physics.add_physics_constraint` | `animation_physics` | `add_physics_constraint` | write | write | none | `animation_physics.add_physics_constraint` |
 | `animation_physics.add_slot_node` | `animation_physics` | `add_slot_node` | write | write | none | `animation_physics.add_slot_node` |
+| `animation_physics.add_socket` | `animation_physics` | `add_socket` | write | write | none | `animation_physics.add_socket` |
 | `animation_physics.add_state` | `animation_physics` | `add_state` | write | write | none | `animation_physics.add_state` |
 | `animation_physics.add_state_machine` | `animation_physics` | `add_state_machine` | write | write | none | `animation_physics.add_state_machine` |
 | `animation_physics.add_sync_marker` | `animation_physics` | `add_sync_marker` | write | write | none | `animation_physics.add_sync_marker` |
@@ -284,18 +286,25 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.create_virtual_bone` | `animation_physics` | `create_virtual_bone` | write | write | none | `animation_physics.create_virtual_bone` |
 | `animation_physics.force_rebuild_blend_space` | `animation_physics` | `force_rebuild_blend_space` | write | write | none | `animation_physics.force_rebuild_blend_space` |
 | `animation_physics.get_animation_info` | `animation_physics` | `get_animation_info` | read | read | none | `animation_physics.get_animation_info` |
+| `animation_physics.get_bone_transform` | `animation_physics` | `get_bone_transform` | read | read | none | `animation_physics.get_bone_transform` |
+| `animation_physics.get_physics_asset_info` | `animation_physics` | `get_physics_asset_info` | read | read | none | `animation_physics.get_physics_asset_info` |
 | `animation_physics.get_skeleton_info` | `animation_physics` | `get_skeleton_info` | read | read | none | `animation_physics.get_skeleton_info` |
 | `animation_physics.import_morph_targets` | `animation_physics` | `import_morph_targets` | write | write | none | `animation_physics.import_morph_targets` |
 | `animation_physics.link_sections` | `animation_physics` | `link_sections` | write | write | none | `animation_physics.link_sections` |
 | `animation_physics.list_bones` | `animation_physics` | `list_bones` | read | read | none | `animation_physics.list_bones` |
+| `animation_physics.list_morph_targets` | `animation_physics` | `list_morph_targets` | read | read | none | `animation_physics.list_morph_targets` |
 | `animation_physics.list_physics_bodies` | `animation_physics` | `list_physics_bodies` | read | read | none | `animation_physics.list_physics_bodies` |
 | `animation_physics.list_sockets` | `animation_physics` | `list_sockets` | read | read | none | `animation_physics.list_sockets` |
+| `animation_physics.list_virtual_bones` | `animation_physics` | `list_virtual_bones` | read | read | none | `animation_physics.list_virtual_bones` |
 | `animation_physics.mirror_weights` | `animation_physics` | `mirror_weights` | write | write | none | `animation_physics.mirror_weights` |
+| `animation_physics.modify_physics_body` | `animation_physics` | `modify_physics_body` | write | write | none | `animation_physics.modify_physics_body` |
+| `animation_physics.modify_socket` | `animation_physics` | `modify_socket` | write | write | none | `animation_physics.modify_socket` |
 | `animation_physics.normalize_weights` | `animation_physics` | `normalize_weights` | write | write | none | `animation_physics.normalize_weights` |
 | `animation_physics.play_anim_montage` | `animation_physics` | `play_anim_montage` | write | write | none | `animation_physics.play_anim_montage` |
 | `animation_physics.play_montage` | `animation_physics` | `play_montage` | write | write | none | `animation_physics.play_montage` |
 | `animation_physics.prune_weights` | `animation_physics` | `prune_weights` | write | write | none | `animation_physics.prune_weights` |
 | `animation_physics.remove_bone` | `animation_physics` | `remove_bone` | destructive | destructive | explicit | `animation_physics.remove_bone` |
+| `animation_physics.remove_physics_body` | `animation_physics` | `remove_physics_body` | destructive | destructive | explicit | `animation_physics.remove_physics_body` |
 | `animation_physics.rename_bone` | `animation_physics` | `rename_bone` | write | write | none | `animation_physics.rename_bone` |
 | `animation_physics.set_additive_settings` | `animation_physics` | `set_additive_settings` | write | write | none | `animation_physics.set_additive_settings` |
 | `animation_physics.set_anim_graph_node_value` | `animation_physics` | `set_anim_graph_node_value` | write | write | none | `animation_physics.set_anim_graph_node_value` |
@@ -308,6 +317,9 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.set_curve_key` | `animation_physics` | `set_curve_key` | write | write | none | `animation_physics.set_curve_key` |
 | `animation_physics.set_interpolation_settings` | `animation_physics` | `set_interpolation_settings` | write | write | none | `animation_physics.set_interpolation_settings` |
 | `animation_physics.set_morph_target_deltas` | `animation_physics` | `set_morph_target_deltas` | write | write | none | `animation_physics.set_morph_target_deltas` |
+| `animation_physics.set_morph_target_value` | `animation_physics` | `set_morph_target_value` | write | write | none | `animation_physics.set_morph_target_value` |
+| `animation_physics.set_physics_asset` | `animation_physics` | `set_physics_asset` | write | write | none | `animation_physics.set_physics_asset` |
+| `animation_physics.set_physics_constraint` | `animation_physics` | `set_physics_constraint` | write | write | none | `animation_physics.set_physics_constraint` |
 | `animation_physics.set_retarget_chain_mapping` | `animation_physics` | `set_retarget_chain_mapping` | read | read | none | `animation_physics.set_retarget_chain_mapping` |
 | `animation_physics.set_root_motion_settings` | `animation_physics` | `set_root_motion_settings` | write | write | none | `animation_physics.set_root_motion_settings` |
 | `animation_physics.set_section_timing` | `animation_physics` | `set_section_timing` | write | write | none | `animation_physics.set_section_timing` |

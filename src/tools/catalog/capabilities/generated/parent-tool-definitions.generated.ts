@@ -27,6 +27,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target actor name in the current level."
         },
+        "addMissing": {
+          "type": "boolean",
+          "description": "Whether to add the morph target when the component does not already carry it."
+        },
         "additiveAnimType": {
           "type": "string",
           "description": "String parameter."
@@ -616,7 +620,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "get_skeleton_info",
             "list_bones",
             "list_sockets",
-            "list_physics_bodies"
+            "list_physics_bodies",
+            "set_physics_asset",
+            "remove_physics_body",
+            "get_physics_asset_info",
+            "list_morph_targets",
+            "set_morph_target_value",
+            "get_bone_transform",
+            "list_virtual_bones",
+            "add_socket",
+            "modify_socket",
+            "modify_physics_body",
+            "set_physics_constraint"
           ],
           "description": "Action to invoke on animation_physics."
         }
@@ -629,6 +644,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "activeMorphTargets": {
+          "type": "array",
+          "description": "Morph targets currently driven on the actor.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "weight": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "actorName": {
+          "type": "string",
+          "description": "Target actor name in the current level."
+        },
         "assetPath": {
           "type": "string",
           "description": "Canonical /Game asset path."
@@ -638,15 +673,52 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Canonical /Game Blueprint asset path."
         },
         "bodies": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "One entry per physics body.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "boneName": {
+                    "type": "string"
+                  },
+                  "physicsType": {
+                    "type": "string"
+                  },
+                  "numSpheres": {
+                    "type": "number"
+                  },
+                  "numBoxes": {
+                    "type": "number"
+                  },
+                  "numCapsules": {
+                    "type": "number"
+                  },
+                  "numConvex": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of string values."
+            }
+          ],
           "description": "List of string values."
         },
         "boneCount": {
           "type": "number",
           "description": "Numeric parameter."
+        },
+        "boneIndex": {
+          "type": "number",
+          "description": "Index of the bone in the reference skeleton."
         },
         "boneName": {
           "type": "string",
@@ -665,6 +737,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "List of string values."
+        },
+        "constraints": {
+          "type": "array",
+          "description": "One entry per constraint.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "bone1": {
+                "type": "string"
+              },
+              "bone2": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "count": {
+          "type": "number",
+          "description": "Number of morph targets found."
         },
         "endTime": {
           "type": "number",
@@ -686,6 +781,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Numeric parameter."
         },
+        "location": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Reference-pose location.",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          }
+        },
         "machineName": {
           "type": "string",
           "description": "State machine name."
@@ -697,6 +808,46 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "morphTargetName": {
+          "type": "string",
+          "description": "Morph target name."
+        },
+        "morphTargets": {
+          "type": "array",
+          "description": "One entry per morph target.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "numDeltas": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "numBodies": {
+          "type": "number",
+          "description": "Number of physics bodies in the asset."
+        },
+        "numConstraints": {
+          "type": "number",
+          "description": "Number of constraints in the asset."
+        },
+        "parentBone": {
+          "type": "string",
+          "description": "Name of the parent bone, empty for the root."
+        },
+        "parentIndex": {
+          "type": "number",
+          "description": "Index of the parent bone, -1 for the root."
+        },
+        "physicsAssetName": {
+          "type": "string",
+          "description": "Name of the generated Physics Asset."
         },
         "physicsAssetPath": {
           "type": "string",
@@ -713,6 +864,46 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "referencersCompiled": {
           "type": "number",
           "description": "Numeric parameter."
+        },
+        "remainingBodies": {
+          "type": "number",
+          "description": "Number of physics bodies left on the asset after the call."
+        },
+        "rotation": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Reference-pose rotation.",
+          "properties": {
+            "pitch": {
+              "type": "number"
+            },
+            "yaw": {
+              "type": "number"
+            },
+            "roll": {
+              "type": "number"
+            }
+          }
+        },
+        "scale": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Reference-pose scale.",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          }
+        },
+        "skeletalMeshPath": {
+          "type": "string",
+          "description": "Canonical /Game SkeletalMesh asset path."
         },
         "skeletonPath": {
           "type": "string",
@@ -741,9 +932,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the action succeeded."
         },
+        "value": {
+          "type": "number",
+          "description": "Weight applied to the morph target."
+        },
         "virtualBoneCount": {
           "type": "number",
           "description": "Numeric parameter."
+        },
+        "virtualBones": {
+          "type": "array",
+          "description": "One entry per virtual bone.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "sourceBone": {
+                "type": "string"
+              },
+              "targetBone": {
+                "type": "string"
+              }
+            }
+          }
         }
       },
       "additionalProperties": true

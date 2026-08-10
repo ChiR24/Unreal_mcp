@@ -96,11 +96,23 @@ export const gatewayManifest = {
         "get_skeleton_info",
         "list_bones",
         "list_sockets",
-        "list_physics_bodies"
+        "list_physics_bodies",
+        "set_physics_asset",
+        "remove_physics_body",
+        "get_physics_asset_info",
+        "list_morph_targets",
+        "set_morph_target_value",
+        "get_bone_transform",
+        "list_virtual_bones",
+        "add_socket",
+        "modify_socket",
+        "modify_physics_body",
+        "set_physics_constraint"
       ],
       "parameterNames": [
         "activate",
         "actorName",
+        "addMissing",
         "additiveAnimType",
         "angularDamping",
         "animationPath",
@@ -223,6 +235,10 @@ export const gatewayManifest = {
           "actorName": {
             "type": "string",
             "description": "Target actor name in the current level."
+          },
+          "addMissing": {
+            "type": "boolean",
+            "description": "Whether to add the morph target when the component does not already carry it."
           },
           "additiveAnimType": {
             "type": "string",
@@ -813,7 +829,18 @@ export const gatewayManifest = {
               "get_skeleton_info",
               "list_bones",
               "list_sockets",
-              "list_physics_bodies"
+              "list_physics_bodies",
+              "set_physics_asset",
+              "remove_physics_body",
+              "get_physics_asset_info",
+              "list_morph_targets",
+              "set_morph_target_value",
+              "get_bone_transform",
+              "list_virtual_bones",
+              "add_socket",
+              "modify_socket",
+              "modify_physics_body",
+              "set_physics_constraint"
             ],
             "description": "Action to invoke on animation_physics."
           },

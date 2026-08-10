@@ -106,6 +106,8 @@ export const P: PropertyMap = {
   sourceBoneName: str('Source bone name.'),
   targetBoneName: str('Target bone name.'),
   morphTargetName: str('Morph target name.'),
+  virtualBoneName: str('Virtual bone name.'),
+  addMissing: bool('Whether to add the morph target when the component does not already carry it.'),
   vehicleType: str('Vehicle type.'),
   bodyA: str('First physics body.'),
   bodyB: str('Second physics body.'),

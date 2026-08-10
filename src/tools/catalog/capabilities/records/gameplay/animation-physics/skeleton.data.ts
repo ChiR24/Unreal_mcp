@@ -4,19 +4,21 @@
  * Grounded in animation_physics action enum (...SKELETON_ACTIONS) and native
  * HandleManageSkeleton (Plugins/.../Private/Domains/Skeleton/
  * McpAutomationBridge_SkeletonHandlers.cpp). These route through the
- * manage_skeleton bridge tool (skeleton-handlers.ts:155). All 29 are editor
- * authoring mutations on skeleton/physics-asset assets. The 16 hidden native
- * skeleton routes (add_socket, modify_socket, modify_physics_body,
- * set_physics_asset, remove_physics_body, get_physics_asset_info,
- * list_morph_targets, delete_morph_target, delete_socket, remove_socket,
- * get_bone_transform, list_virtual_bones, delete_virtual_bone,
- * set_morph_target_value, set_physics_constraint, preview_physics) are
- * dispositioned separately in ../../hidden-routes.ts, not here.
+ * manage_skeleton bridge tool (skeleton-handlers.ts:155). All are editor
+ * authoring mutations on skeleton/physics-asset assets.
+ *
+ * Fifteen of the hidden native skeleton routes are promoted here, authored
+ * after the gateway migration and marked `post-migration` so the normalization
+ * audit of the pre-gateway surface stays truthful. Five of them share a native
+ * handler method with a route already declared above, so they are aliases and
+ * mirror that record's schema exactly; the rest are distinct capabilities.
+ * `preview_physics` remains dispositioned in ../../hidden-routes.ts only.
  */
 import type { CapabilityRecordSource } from '../../../index.js';
 import { buildRecord } from '../helpers.js';
 import { P } from '../properties.js';
 import { A } from './animation-properties.js';
+import { num } from '../../shared/schema-props.js';
 
 const T = 'animation_physics';
 const F = 'skeleton';
@@ -24,6 +26,14 @@ const W = ['A skeleton, bone, socket, physics body or morph target must be autho
 const ESU = ['EditorScriptingUtilities'];
 const SKEL_BONE_REQUIRED = ['action', 'skeletonPath', 'boneName'];
 const MESH_REQUIRED = ['action', 'skeletalMeshPath'];
+
+const PROMOTED = 'Promoted from a hidden native skeleton route after the gateway migration.';
+const POST = 'post-migration' as const;
+const REMAINING = (what: string) => num(`Number of ${what} left on the asset after the call.`);
+// `deriveAliasFold` reads the alias relation out of this prose, so the bare
+// action name must follow "Alias of" for the record to fold into its primary.
+const ALIAS_OF = (action: string, method: string) =>
+  `Alias of ${action}; the native dispatch map routes both spellings to ${method}.`;
 
 export const SKELETON_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.create_skeleton`, action: 'create_skeleton', family: F,
@@ -205,4 +215,127 @@ export const SKELETON_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: { bodies: P.arrayOfStrings }, outputRequired: [],
     exampleInput: { action: 'list_physics_bodies', physicsAssetPath: '/Game/PA_Char' },
     exampleOutput: { success: true, message: 'Bodies listed', bodies: ['spine_01'] } }),
+  buildRecord({ parentTool: T, id: `${T}.set_physics_asset`, action: 'set_physics_asset', family: F,
+    summary: 'Assign a Physics Asset to a Skeletal Mesh.', whenToUse: ['A Skeletal Mesh must reference a specific Physics Asset.'], whenNotToUse: ['The Physics Asset itself must be edited (use configure_physics_body).'],
+    inputProps: { action: P.action, skeletalMeshPath: P.skeletalMeshPath, meshPath: P.meshPath, physicsAssetPath: P.physicsAssetPath },
+    required: ['action', 'physicsAssetPath'], requiredOneOf: ['skeletalMeshPath', 'meshPath'],
+    effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: ESU,
+    outputProps: { skeletalMeshPath: P.skeletalMeshPath, physicsAssetPath: P.physicsAssetPath, physicsAssetName: A.physicsAssetName }, outputRequired: [],
+    normalizationRationale: PROMOTED, normalizationProvenance: POST,
+    exampleInput: { action: 'set_physics_asset', skeletalMeshPath: '/Game/SKM_Char', physicsAssetPath: '/Game/PA_Char' },
+    exampleOutput: { success: true, message: 'Physics asset assigned', skeletalMeshPath: '/Game/SKM_Char', physicsAssetPath: '/Game/PA_Char', physicsAssetName: 'PA_Char' } }),
+  buildRecord({ parentTool: T, id: `${T}.remove_physics_body`, action: 'remove_physics_body', family: F,
+    summary: 'Remove a physics body from a Physics Asset.', whenToUse: ['A bone should no longer simulate.'], whenNotToUse: ['The body only needs different parameters (use configure_physics_body).'],
+    inputProps: { action: P.action, physicsAssetPath: P.physicsAssetPath, boneName: P.boneName },
+    required: ['action', 'physicsAssetPath', 'boneName'],
+    effect: 'destructive', behavior: { safeToRetry: false, supportsUndo: false }, latency: 'interactive', resources: 'low', plugins: ESU,
+    outputProps: { physicsAssetPath: P.physicsAssetPath, boneName: P.boneName, remainingBodies: REMAINING('physics bodies') }, outputRequired: [],
+    normalizationRationale: PROMOTED, normalizationProvenance: POST,
+    exampleInput: { action: 'remove_physics_body', physicsAssetPath: '/Game/PA_Char', boneName: 'spine_01' },
+    exampleOutput: { success: true, message: 'Physics body removed', physicsAssetPath: '/Game/PA_Char', boneName: 'spine_01', remainingBodies: 8 } }),
+  buildRecord({ parentTool: T, id: `${T}.get_physics_asset_info`, action: 'get_physics_asset_info', family: F,
+    summary: 'Read the bodies and constraints declared by a Physics Asset.', whenToUse: ['The contents of a Physics Asset must be inspected before editing it.'], whenNotToUse: ['Only the body names are needed (use list_physics_bodies).'],
+    inputProps: { action: P.action, physicsAssetPath: P.physicsAssetPath, skeletalMeshPath: P.skeletalMeshPath },
+    required: ['action'], requiredOneOf: ['physicsAssetPath', 'skeletalMeshPath'],
+    effect: 'read', behavior: { idempotency: 'idempotent', safeToRetry: true }, latency: 'instant', resources: 'low', plugins: ESU,
+    outputProps: {
+      physicsAssetPath: P.physicsAssetPath,
+      numBodies: { type: 'number', description: 'Number of physics bodies in the asset.' },
+      numConstraints: { type: 'number', description: 'Number of constraints in the asset.' },
+      bodies: { type: 'array', description: 'One entry per physics body.', items: { type: 'object', additionalProperties: false, properties: { boneName: { type: 'string' }, physicsType: { type: 'string' }, numSpheres: { type: 'number' }, numBoxes: { type: 'number' }, numCapsules: { type: 'number' }, numConvex: { type: 'number' } } } },
+      constraints: { type: 'array', description: 'One entry per constraint.', items: { type: 'object', additionalProperties: false, properties: { name: { type: 'string' }, bone1: { type: 'string' }, bone2: { type: 'string' } } } },
+    }, outputRequired: [],
+    normalizationRationale: PROMOTED, normalizationProvenance: POST,
+    exampleInput: { action: 'get_physics_asset_info', physicsAssetPath: '/Game/PA_Char' },
+    exampleOutput: { success: true, message: 'Physics asset read', physicsAssetPath: '/Game/PA_Char', numBodies: 9, numConstraints: 8, bodies: [{ boneName: 'spine_01', physicsType: 'Simulated', numSpheres: 0, numBoxes: 1, numCapsules: 0, numConvex: 0 }], constraints: [{ name: 'spine_01', bone1: 'spine_01', bone2: 'pelvis' }] } }),
+  buildRecord({ parentTool: T, id: `${T}.list_morph_targets`, action: 'list_morph_targets', family: F,
+    summary: 'List the morph targets declared on a Skeletal Mesh.', whenToUse: ['The available morph targets must be discovered before driving one.'], whenNotToUse: ['A morph target must be created (use create_morph_target).'],
+    inputProps: { action: P.action, skeletalMeshPath: P.skeletalMeshPath, meshPath: P.meshPath },
+    required: ['action'], requiredOneOf: ['skeletalMeshPath', 'meshPath'],
+    effect: 'read', behavior: { idempotency: 'idempotent', safeToRetry: true }, latency: 'instant', resources: 'low', plugins: ESU,
+    outputProps: {
+      skeletalMeshPath: P.skeletalMeshPath,
+      count: { type: 'number', description: 'Number of morph targets found.' },
+      morphTargets: { type: 'array', description: 'One entry per morph target.', items: { type: 'object', additionalProperties: false, properties: { name: { type: 'string' }, numDeltas: { type: 'number' } } } },
+    }, outputRequired: [],
+    normalizationRationale: PROMOTED, normalizationProvenance: POST,
+    exampleInput: { action: 'list_morph_targets', skeletalMeshPath: '/Game/SKM_Char' },
+    exampleOutput: { success: true, message: 'Morph targets listed', skeletalMeshPath: '/Game/SKM_Char', count: 2, morphTargets: [{ name: 'Smile', numDeltas: 128 }] } }),
+  buildRecord({ parentTool: T, id: `${T}.set_morph_target_value`, action: 'set_morph_target_value', family: F,
+    summary: 'Drive a morph target weight on a Skeletal Mesh actor in the level.', whenToUse: ['A morph target weight must be previewed on a placed actor.'], whenNotToUse: ['The morph target asset itself must change (use set_morph_target_deltas).'],
+    inputProps: { action: P.action, actorName: P.actorName, morphTargetName: P.morphTargetName, value: P.value, addMissing: P.addMissing },
+    required: ['action', 'actorName', 'morphTargetName'],
+    effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: ESU,
+    outputProps: {
+      actorName: P.actorName, morphTargetName: P.morphTargetName,
+      value: { type: 'number', description: 'Weight applied to the morph target.' },
+      activeMorphTargets: { type: 'array', description: 'Morph targets currently driven on the actor.', items: { type: 'object', additionalProperties: false, properties: { name: { type: 'string' }, weight: { type: 'number' } } } },
+    }, outputRequired: [],
+    normalizationRationale: PROMOTED, normalizationProvenance: POST,
+    exampleInput: { action: 'set_morph_target_value', actorName: 'SKM_Char_1', morphTargetName: 'Smile', value: 0.75 },
+    exampleOutput: { success: true, message: 'Morph target value set', actorName: 'SKM_Char_1', morphTargetName: 'Smile', value: 0.75, activeMorphTargets: [{ name: 'Smile', weight: 0.75 }] } }),
+  buildRecord({ parentTool: T, id: `${T}.get_bone_transform`, action: 'get_bone_transform', family: F,
+    summary: 'Read the reference-pose transform and parent of a bone.', whenToUse: ['A bone position must be read before placing a socket or constraint.'], whenNotToUse: ['The whole hierarchy is needed (use list_bones).'],
+    inputProps: { action: P.action, skeletonPath: P.skeletonPath, skeletalMeshPath: P.skeletalMeshPath, boneName: P.boneName },
+    required: ['action', 'boneName'], requiredOneOf: ['skeletonPath', 'skeletalMeshPath'],
+    effect: 'read', behavior: { idempotency: 'idempotent', safeToRetry: true }, latency: 'instant', resources: 'low', plugins: ESU,
+    outputProps: {
+      boneName: P.boneName,
+      boneIndex: { type: 'number', description: 'Index of the bone in the reference skeleton.' },
+      parentBone: { type: 'string', description: 'Name of the parent bone, empty for the root.' },
+      parentIndex: { type: 'number', description: 'Index of the parent bone, -1 for the root.' },
+      location: { type: 'object', additionalProperties: false, description: 'Reference-pose location.', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+      rotation: { type: 'object', additionalProperties: false, description: 'Reference-pose rotation.', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } } },
+      scale: { type: 'object', additionalProperties: false, description: 'Reference-pose scale.', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } },
+    }, outputRequired: [],
+    normalizationRationale: PROMOTED, normalizationProvenance: POST,
+    exampleInput: { action: 'get_bone_transform', skeletonPath: '/Game/SK_Char', boneName: 'hand_r' },
+    exampleOutput: { success: true, message: 'Bone transform read', boneName: 'hand_r', boneIndex: 12, parentBone: 'lowerarm_r', parentIndex: 11, location: { x: 10, y: 0, z: 0 }, rotation: { pitch: 0, yaw: 0, roll: 0 }, scale: { x: 1, y: 1, z: 1 } } }),
+  buildRecord({ parentTool: T, id: `${T}.list_virtual_bones`, action: 'list_virtual_bones', family: F,
+    summary: 'List the virtual bones declared on a skeleton.', whenToUse: ['Existing virtual bones must be discovered before adding another.'], whenNotToUse: ['A virtual bone must be created (use create_virtual_bone).'],
+    inputProps: { action: P.action, skeletonPath: P.skeletonPath, skeletalMeshPath: P.skeletalMeshPath },
+    required: ['action'], requiredOneOf: ['skeletonPath', 'skeletalMeshPath'],
+    effect: 'read', behavior: { idempotency: 'idempotent', safeToRetry: true }, latency: 'instant', resources: 'low', plugins: ESU,
+    outputProps: {
+      skeletonPath: P.skeletonPath,
+      count: { type: 'number', description: 'Number of virtual bones found.' },
+      virtualBones: { type: 'array', description: 'One entry per virtual bone.', items: { type: 'object', additionalProperties: false, properties: { name: { type: 'string' }, sourceBone: { type: 'string' }, targetBone: { type: 'string' } } } },
+    }, outputRequired: [],
+    normalizationRationale: PROMOTED, normalizationProvenance: POST,
+    exampleInput: { action: 'list_virtual_bones', skeletonPath: '/Game/SK_Char' },
+    exampleOutput: { success: true, message: 'Virtual bones listed', skeletonPath: '/Game/SK_Char', count: 1, virtualBones: [{ name: 'VB_hand_r', sourceBone: 'spine_03', targetBone: 'hand_r' }] } }),
+  buildRecord({ parentTool: T, id: `${T}.add_socket`, action: 'add_socket', family: F,
+    summary: 'Add a socket to a bone under the add_socket spelling of create_socket.', whenToUse: ['An attach point is needed.'], whenNotToUse: ['Use an existing socket.'],
+    inputProps: { action: P.action, skeletonPath: P.skeletonPath, socketName: P.socketName, attachBoneName: A.attachBoneName, relativeLocation: A.relativeLocation, relativeRotation: A.relativeRotation, relativeScale: A.relativeScale, save: P.save },
+    required: ['action', 'skeletonPath', 'socketName'], effect: 'write', latency: 'interactive', resources: 'low', plugins: ESU,
+    outputProps: { socketName: P.socketName, boneName: P.boneName, skeletonPath: P.skeletonPath }, outputRequired: [],
+    normalizationClass: 'B_ALIAS', normalizationDisposition: 'alias', normalizationAliasOf: `${T}.create_socket`,
+    normalizationRationale: ALIAS_OF('create_socket', 'HandleCreateSocket'), normalizationProvenance: POST,
+    exampleInput: { action: 'add_socket', skeletonPath: '/Game/SK_Char', socketName: 'Weapon', attachBoneName: 'hand_r', relativeLocation: [1, 2, 3], save: true },
+    exampleOutput: { success: true, message: 'Socket created', socketName: 'Weapon', boneName: 'hand_r', skeletonPath: '/Game/SK_Char' } }),
+  buildRecord({ parentTool: T, id: `${T}.modify_socket`, action: 'modify_socket', family: F,
+    summary: 'Modify an existing socket transform under the modify_socket spelling of configure_socket.', whenToUse: ['Socket offset must change.'], whenNotToUse: ['Use add_socket.'],
+    inputProps: { action: P.action, skeletonPath: P.skeletonPath, socketName: P.socketName, attachBoneName: A.attachBoneName, relativeLocation: A.relativeLocation, relativeRotation: A.relativeRotation, relativeScale: A.relativeScale, save: P.save },
+    required: ['action', 'skeletonPath', 'socketName'], effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: ESU,
+    outputProps: { socketName: P.socketName, skeletonPath: P.skeletonPath }, outputRequired: [],
+    normalizationClass: 'B_ALIAS', normalizationDisposition: 'alias', normalizationAliasOf: `${T}.configure_socket`,
+    normalizationRationale: ALIAS_OF('configure_socket', 'HandleConfigureSocket'), normalizationProvenance: POST,
+    exampleInput: { action: 'modify_socket', skeletonPath: '/Game/SK_Char', socketName: 'Weapon', relativeLocation: [4, 5, 6], save: true },
+    exampleOutput: { success: true, message: 'Socket configured', socketName: 'Weapon', skeletonPath: '/Game/SK_Char' } }),
+  buildRecord({ parentTool: T, id: `${T}.modify_physics_body`, action: 'modify_physics_body', family: F,
+    summary: 'Modify a physics body mass, damping, or collision under the modify_physics_body spelling of configure_physics_body.', whenToUse: ['Body parameters must change.'], whenNotToUse: ['Use add_physics_body.'],
+    inputProps: { action: P.action, physicsAssetPath: P.physicsAssetPath, boneName: P.boneName, mass: P.mass, linearDamping: P.linearDamping, angularDamping: P.angularDamping, collisionEnabled: P.collisionEnabled, simulatePhysics: P.simulatePhysics, save: P.save },
+    required: ['action', 'physicsAssetPath', 'boneName'], effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: ESU,
+    normalizationClass: 'B_ALIAS', normalizationDisposition: 'alias', normalizationAliasOf: `${T}.configure_physics_body`,
+    normalizationRationale: ALIAS_OF('configure_physics_body', 'HandleConfigurePhysicsBody'), normalizationProvenance: POST,
+    exampleInput: { action: 'modify_physics_body', physicsAssetPath: '/Game/PA_Char', boneName: 'spine_01', mass: 5, linearDamping: 0.25, collisionEnabled: true },
+    exampleOutput: { success: true, message: 'Physics body configured' } }),
+  buildRecord({ parentTool: T, id: `${T}.set_physics_constraint`, action: 'set_physics_constraint', family: F,
+    summary: 'Constrain two physics bodies under the set_physics_constraint spelling of add_physics_constraint.', whenToUse: ['Bodies must be jointed.'], whenNotToUse: ['Rigid bodies suffice.'],
+    inputProps: { action: P.action, physicsAssetPath: P.physicsAssetPath, bodyA: P.bodyA, bodyB: P.bodyB, constraintName: A.constraintName, save: P.save },
+    required: ['action', 'physicsAssetPath'], effect: 'write', latency: 'interactive', resources: 'low', plugins: ESU,
+    normalizationClass: 'B_ALIAS', normalizationDisposition: 'alias', normalizationAliasOf: `${T}.add_physics_constraint`,
+    normalizationRationale: ALIAS_OF('add_physics_constraint', 'HandleAddPhysicsConstraint'), normalizationProvenance: POST,
+    exampleInput: { action: 'set_physics_constraint', physicsAssetPath: '/Game/PA_Char', bodyA: 'spine_01', bodyB: 'spine_02', constraintName: 'Spine' },
+    exampleOutput: { success: true, message: 'Constraint added' } }),
 ];

@@ -5,9 +5,9 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `7a780f300011f79e`
+Catalog revision: `46e249baeb7f6f6c`
 
-Every one of the 1352 capabilities declares all three semantics. The
+Every one of the 1363 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
 compensation); a capability carries a stronger claim only where the ledger
 cites the implementation that proves it. A mostly-pessimistic matrix is the
@@ -17,16 +17,16 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 1352 | 0 / 1192 |
-| Undoable | 0 / 1352 | 0 / 1192 |
-| Compensatable | 21 / 1352 | 20 / 1192 |
-| Fully pessimistic | 1331 / 1352 | 1172 / 1192 |
+| Previewable | 0 / 1363 | 0 / 1199 |
+| Undoable | 0 / 1363 | 0 / 1199 |
+| Compensatable | 21 / 1363 | 20 / 1199 |
+| Fully pessimistic | 1342 / 1363 | 1179 / 1199 |
 
 ## By parent tool
 
 | Parent | Capabilities | Mutations | Preview | Undo | Compensation |
 | --- | --- | --- | --- | --- | --- |
-| `animation_physics` | 87 | 81 | 0 | 0 | 0 |
+| `animation_physics` | 98 | 88 | 0 | 0 | 0 |
 | `build_environment` | 150 | 145 | 0 | 0 | 3 |
 | `control_actor` | 46 | 32 | 0 | 0 | 4 |
 | `control_editor` | 42 | 23 | 0 | 0 | 2 |
@@ -96,6 +96,7 @@ truthful result, not a gap in coverage.
 | `animation_physics.add_physics_body` | write | none | none | none |
 | `animation_physics.add_physics_constraint` | write | none | none | none |
 | `animation_physics.add_slot_node` | write | none | none | none |
+| `animation_physics.add_socket` | write | none | none | none |
 | `animation_physics.add_state` | write | none | none | none |
 | `animation_physics.add_state_machine` | write | none | none | none |
 | `animation_physics.add_sync_marker` | write | none | none | none |
@@ -133,18 +134,25 @@ truthful result, not a gap in coverage.
 | `animation_physics.create_virtual_bone` | write | none | none | none |
 | `animation_physics.force_rebuild_blend_space` | write | none | none | none |
 | `animation_physics.get_animation_info` | read | none | none | none |
+| `animation_physics.get_bone_transform` | read | none | none | none |
+| `animation_physics.get_physics_asset_info` | read | none | none | none |
 | `animation_physics.get_skeleton_info` | read | none | none | none |
 | `animation_physics.import_morph_targets` | write | none | none | none |
 | `animation_physics.link_sections` | write | none | none | none |
 | `animation_physics.list_bones` | read | none | none | none |
+| `animation_physics.list_morph_targets` | read | none | none | none |
 | `animation_physics.list_physics_bodies` | read | none | none | none |
 | `animation_physics.list_sockets` | read | none | none | none |
+| `animation_physics.list_virtual_bones` | read | none | none | none |
 | `animation_physics.mirror_weights` | write | none | none | none |
+| `animation_physics.modify_physics_body` | write | none | none | none |
+| `animation_physics.modify_socket` | write | none | none | none |
 | `animation_physics.normalize_weights` | write | none | none | none |
 | `animation_physics.play_anim_montage` | write | none | none | none |
 | `animation_physics.play_montage` | write | none | none | none |
 | `animation_physics.prune_weights` | write | none | none | none |
 | `animation_physics.remove_bone` | destructive | none | none | none |
+| `animation_physics.remove_physics_body` | destructive | none | none | none |
 | `animation_physics.rename_bone` | write | none | none | none |
 | `animation_physics.set_additive_settings` | write | none | none | none |
 | `animation_physics.set_anim_graph_node_value` | write | none | none | none |
@@ -157,6 +165,9 @@ truthful result, not a gap in coverage.
 | `animation_physics.set_curve_key` | write | none | none | none |
 | `animation_physics.set_interpolation_settings` | write | none | none | none |
 | `animation_physics.set_morph_target_deltas` | write | none | none | none |
+| `animation_physics.set_morph_target_value` | write | none | none | none |
+| `animation_physics.set_physics_asset` | write | none | none | none |
+| `animation_physics.set_physics_constraint` | write | none | none | none |
 | `animation_physics.set_retarget_chain_mapping` | read | none | none | none |
 | `animation_physics.set_root_motion_settings` | write | none | none | none |
 | `animation_physics.set_section_timing` | write | none | none | none |
