@@ -9394,14 +9394,26 @@ export const gatewayManifest = {
         "set_lod_screen_sizes",
         "convert_to_nanite",
         "convert_to_static_mesh",
-        "get_mesh_info"
+        "get_mesh_info",
+        "create_procedural_mesh",
+        "append_vertex",
+        "append_triangle",
+        "get_vertex_position",
+        "set_vertex_position",
+        "set_vertex_color",
+        "set_uvs",
+        "split_normals",
+        "translate_mesh",
+        "difference"
       ],
       "parameterNames": [
+        "a",
         "actorName",
         "amount",
         "angle",
         "assetPath",
         "axis",
+        "b",
         "cap",
         "center",
         "collisionType",
@@ -9411,6 +9423,9 @@ export const gatewayManifest = {
         "depthSegments",
         "dimensions",
         "distance",
+        "enableCollision",
+        "g",
+        "groupID",
         "hardEdgeAngle",
         "height",
         "heightScale",
@@ -9439,6 +9454,7 @@ export const gatewayManifest = {
         "outputPath",
         "path",
         "position",
+        "r",
         "radialSegments",
         "radius",
         "recomputeNormals",
@@ -9448,8 +9464,10 @@ export const gatewayManifest = {
         "scale",
         "screenSizes",
         "segments",
+        "setAll",
         "simplificationFactor",
         "splineActorName",
+        "splitAngle",
         "stepDepth",
         "stepHeight",
         "stepWidth",
@@ -9462,11 +9480,18 @@ export const gatewayManifest = {
         "texturePath",
         "thickness",
         "toolActor",
+        "translation",
         "trianglePercent",
         "trimActorName",
+        "u",
         "uvChannel",
         "uvOffset",
         "uvScale",
+        "v",
+        "v0",
+        "v1",
+        "v2",
+        "vertexIndex",
         "weight",
         "weldDistance",
         "width",
@@ -9475,6 +9500,10 @@ export const gatewayManifest = {
       "inputSchema": {
         "type": "object",
         "properties": {
+          "a": {
+            "type": "number",
+            "description": "Alpha channel, 0-1."
+          },
           "actorName": {
             "type": "string",
             "description": "Actor name in the level."
@@ -9494,6 +9523,10 @@ export const gatewayManifest = {
           "axis": {
             "type": "string",
             "description": "Deformation axis: X, Y, or Z."
+          },
+          "b": {
+            "type": "number",
+            "description": "Blue channel, 0-1."
           },
           "cap": {
             "type": "boolean",
@@ -9560,6 +9593,18 @@ export const gatewayManifest = {
           "distance": {
             "type": "number",
             "description": "Distance for offset-style operations."
+          },
+          "enableCollision": {
+            "type": "boolean",
+            "description": "Enable simple collision on the created DynamicMesh actor."
+          },
+          "g": {
+            "type": "number",
+            "description": "Green channel, 0-1."
+          },
+          "groupID": {
+            "type": "integer",
+            "description": "Polygroup id assigned to the appended triangle."
           },
           "hardEdgeAngle": {
             "type": "number",
@@ -9718,6 +9763,10 @@ export const gatewayManifest = {
             },
             "additionalProperties": false
           },
+          "r": {
+            "type": "number",
+            "description": "Red channel, 0-1."
+          },
           "radialSegments": {
             "type": "integer",
             "description": "Radial tessellation segments for circular primitives."
@@ -9797,6 +9846,10 @@ export const gatewayManifest = {
             "type": "integer",
             "description": "Number of segments for the operation."
           },
+          "setAll": {
+            "type": "boolean",
+            "description": "Apply the colour to every vertex instead of one."
+          },
           "simplificationFactor": {
             "type": "number",
             "description": "Collision simplification factor."
@@ -9804,6 +9857,10 @@ export const gatewayManifest = {
           "splineActorName": {
             "type": "string",
             "description": "Spline actor name for extrude/sweep along spline."
+          },
+          "splitAngle": {
+            "type": "number",
+            "description": "Angle threshold in degrees above which normals are split."
           },
           "stepDepth": {
             "type": "number",
@@ -9853,6 +9910,25 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Tool actor name for boolean operations."
           },
+          "translation": {
+            "type": "object",
+            "description": "Translation {x, y, z} applied to every mesh vertex.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
           "trianglePercent": {
             "type": "number",
             "description": "Percent of triangles to keep for LOD reduction."
@@ -9860,6 +9936,10 @@ export const gatewayManifest = {
           "trimActorName": {
             "type": "string",
             "description": "Trim actor name for boolean trim."
+          },
+          "u": {
+            "type": "number",
+            "description": "U coordinate."
           },
           "uvChannel": {
             "type": "integer",
@@ -9894,6 +9974,71 @@ export const gatewayManifest = {
               }
             },
             "additionalProperties": false
+          },
+          "v": {
+            "type": "number",
+            "description": "V coordinate."
+          },
+          "v0": {
+            "type": "object",
+            "description": "First corner {x, y, z} of the appended triangle.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "v1": {
+            "type": "object",
+            "description": "Second corner {x, y, z} of the appended triangle.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "v2": {
+            "type": "object",
+            "description": "Third corner {x, y, z} of the appended triangle.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "vertexIndex": {
+            "type": "integer",
+            "description": "Index of the vertex the operation targets."
           },
           "weight": {
             "type": "number",
@@ -9989,7 +10134,17 @@ export const gatewayManifest = {
               "set_lod_screen_sizes",
               "convert_to_nanite",
               "convert_to_static_mesh",
-              "get_mesh_info"
+              "get_mesh_info",
+              "create_procedural_mesh",
+              "append_vertex",
+              "append_triangle",
+              "get_vertex_position",
+              "set_vertex_position",
+              "set_vertex_color",
+              "set_uvs",
+              "split_normals",
+              "translate_mesh",
+              "difference"
             ],
             "description": "Action to invoke on manage_geometry."
           },

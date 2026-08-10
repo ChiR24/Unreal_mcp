@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `46e249baeb7f6f6c`
+Catalog revision: `033b372686491d2a`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 1363 capabilities across
+The catalog declares 1373 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -49,7 +49,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_combat` | 39 | 2 | 37 | 0 | manage combat |
 | `manage_effect` | 59 | 3 | 55 | 1 | manage effect |
 | `manage_gas` | 27 | 1 | 26 | 0 | manage gas |
-| `manage_geometry` | 76 | 1 | 75 | 0 | world |
+| `manage_geometry` | 86 | 2 | 84 | 0 | world |
 | `manage_interaction` | 22 | 1 | 21 | 0 | manage interaction |
 | `manage_inventory` | 33 | 1 | 32 | 0 | manage inventory |
 | `manage_level` | 24 | 5 | 17 | 2 | level |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-153 of 1363 capabilities require consent.
+153 of 1373 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -1047,6 +1047,8 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_gas.set_effect_tags` | `manage_gas` | `set_effect_tags` | write | write | none | `manage_gas.set_effect_tags` |
 | `manage_gas.set_instancing_policy` | `manage_gas` | `set_instancing_policy` | write | write | none | `manage_gas.set_instancing_policy` |
 | `manage_gas.set_modifier_magnitude` | `manage_gas` | `set_modifier_magnitude` | write | write | none | `manage_gas.set_modifier_magnitude` |
+| `manage_geometry.append_triangle` | `manage_geometry` | `append_triangle` | write | write | none | `manage_geometry.append_triangle` |
+| `manage_geometry.append_vertex` | `manage_geometry` | `append_vertex` | write | write | none | `manage_geometry.append_vertex` |
 | `manage_geometry.array_linear` | `manage_geometry` | `array_linear` | write | write | none | `manage_geometry.array_linear` |
 | `manage_geometry.array_radial` | `manage_geometry` | `array_radial` | write | write | none | `manage_geometry.array_radial` |
 | `manage_geometry.auto_uv` | `manage_geometry` | `auto_uv` | write | write | none | `manage_geometry.auto_uv` |
@@ -1068,6 +1070,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_geometry.create_disc` | `manage_geometry` | `create_disc` | write | write | none | `manage_geometry.create_disc` |
 | `manage_geometry.create_pipe` | `manage_geometry` | `create_pipe` | write | write | none | `manage_geometry.create_pipe` |
 | `manage_geometry.create_plane` | `manage_geometry` | `create_plane` | write | write | none | `manage_geometry.create_plane` |
+| `manage_geometry.create_procedural_mesh` | `manage_geometry` | `create_procedural_mesh` | write | write | none | `manage_geometry.create_procedural_mesh` |
 | `manage_geometry.create_ramp` | `manage_geometry` | `create_ramp` | write | write | none | `manage_geometry.create_ramp` |
 | `manage_geometry.create_ring` | `manage_geometry` | `create_ring` | write | write | none | `manage_geometry.create_ring` |
 | `manage_geometry.create_sphere` | `manage_geometry` | `create_sphere` | write | write | none | `manage_geometry.create_sphere` |
@@ -1075,6 +1078,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_geometry.create_stairs` | `manage_geometry` | `create_stairs` | write | write | none | `manage_geometry.create_stairs` |
 | `manage_geometry.create_torus` | `manage_geometry` | `create_torus` | write | write | none | `manage_geometry.create_torus` |
 | `manage_geometry.cylindrify` | `manage_geometry` | `cylindrify` | write | write | none | `manage_geometry.cylindrify` |
+| `manage_geometry.difference` | `manage_geometry` | `difference` | write | write | none | `manage_geometry.difference` |
 | `manage_geometry.displace_by_texture` | `manage_geometry` | `displace_by_texture` | write | write | none | `manage_geometry.displace_by_texture` |
 | `manage_geometry.duplicate_along_spline` | `manage_geometry` | `duplicate_along_spline` | write | write | none | `manage_geometry.duplicate_along_spline` |
 | `manage_geometry.edge_split` | `manage_geometry` | `edge_split` | write | write | none | `manage_geometry.edge_split` |
@@ -1086,6 +1090,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_geometry.generate_complex_collision` | `manage_geometry` | `generate_complex_collision` | write | write | none | `manage_geometry.generate_complex_collision` |
 | `manage_geometry.generate_lods` | `manage_geometry` | `generate_lods` | write | write | none | `manage_geometry.generate_lods` |
 | `manage_geometry.get_mesh_info` | `manage_geometry` | `get_mesh_info` | read | read | none | `manage_geometry.get_mesh_info` |
+| `manage_geometry.get_vertex_position` | `manage_geometry` | `get_vertex_position` | read | read | none | `manage_geometry.get_vertex_position` |
 | `manage_geometry.inset` | `manage_geometry` | `inset` | write | write | none | `manage_geometry.inset` |
 | `manage_geometry.lattice_deform` | `manage_geometry` | `lattice_deform` | write | write | none | `manage_geometry.lattice_deform` |
 | `manage_geometry.loft` | `manage_geometry` | `loft` | write | write | none | `manage_geometry.loft` |
@@ -1109,16 +1114,21 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_geometry.self_union` | `manage_geometry` | `self_union` | write | write | none | `manage_geometry.self_union` |
 | `manage_geometry.set_lod_screen_sizes` | `manage_geometry` | `set_lod_screen_sizes` | write | write | none | `manage_geometry.set_lod_screen_sizes` |
 | `manage_geometry.set_lod_settings` | `manage_geometry` | `set_lod_settings` | write | write | none | `manage_geometry.set_lod_settings` |
+| `manage_geometry.set_uvs` | `manage_geometry` | `set_uvs` | write | write | none | `manage_geometry.set_uvs` |
+| `manage_geometry.set_vertex_color` | `manage_geometry` | `set_vertex_color` | write | write | none | `manage_geometry.set_vertex_color` |
+| `manage_geometry.set_vertex_position` | `manage_geometry` | `set_vertex_position` | write | write | none | `manage_geometry.set_vertex_position` |
 | `manage_geometry.shell` | `manage_geometry` | `shell` | write | write | none | `manage_geometry.shell` |
 | `manage_geometry.simplify_collision` | `manage_geometry` | `simplify_collision` | write | write | none | `manage_geometry.simplify_collision` |
 | `manage_geometry.simplify_mesh` | `manage_geometry` | `simplify_mesh` | write | write | none | `manage_geometry.simplify_mesh` |
 | `manage_geometry.smooth` | `manage_geometry` | `smooth` | write | write | none | `manage_geometry.smooth` |
 | `manage_geometry.spherify` | `manage_geometry` | `spherify` | write | write | none | `manage_geometry.spherify` |
+| `manage_geometry.split_normals` | `manage_geometry` | `split_normals` | write | write | none | `manage_geometry.split_normals` |
 | `manage_geometry.stretch` | `manage_geometry` | `stretch` | write | write | none | `manage_geometry.stretch` |
 | `manage_geometry.subdivide` | `manage_geometry` | `subdivide` | write | write | none | `manage_geometry.subdivide` |
 | `manage_geometry.sweep` | `manage_geometry` | `sweep` | write | write | none | `manage_geometry.sweep` |
 | `manage_geometry.taper` | `manage_geometry` | `taper` | write | write | none | `manage_geometry.taper` |
 | `manage_geometry.transform_uvs` | `manage_geometry` | `transform_uvs` | write | write | none | `manage_geometry.transform_uvs` |
+| `manage_geometry.translate_mesh` | `manage_geometry` | `translate_mesh` | write | write | none | `manage_geometry.translate_mesh` |
 | `manage_geometry.triangulate` | `manage_geometry` | `triangulate` | write | write | none | `manage_geometry.triangulate` |
 | `manage_geometry.twist` | `manage_geometry` | `twist` | write | write | none | `manage_geometry.twist` |
 | `manage_geometry.unwrap_uv` | `manage_geometry` | `unwrap_uv` | write | write | none | `manage_geometry.unwrap_uv` |

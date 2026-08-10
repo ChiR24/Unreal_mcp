@@ -64,6 +64,7 @@ export type WorldRecordSpec = {
   readonly unrealMax?: UnrealVersion;
   readonly aliases?: readonly string[];
   readonly normalizationRationale: string;
+  readonly normalizationProvenance?: CapabilityRecordSource['normalization']['provenance'];
   readonly exampleInput: JsonObject;
   readonly exampleOutput: JsonObject;
 };
@@ -153,6 +154,9 @@ export function buildWorldRecord(
       class: 'C_SAME_VERB_DIFFERENT_TARGET',
       disposition: 'retain',
       rationale: spec.normalizationRationale,
+      ...(spec.normalizationProvenance === undefined
+        ? {}
+        : { provenance: spec.normalizationProvenance }),
     },
     deprecation: { status: 'active' },
     parent: getParentToolMetadata(spec.parentTool),

@@ -1,7 +1,7 @@
 // tests/unit/world-capability-records.test.ts
 // Focused fail-closed tests for the Task 16 world capability catalog.
-// Proves: 45 manage_level_structure + 76 manage_geometry + 30 manage_pcg
-// records (151 net-new), 301 frozen aggregate reusing the 150 build_environment
+// Proves: 45 manage_level_structure + 86 manage_geometry + 30 manage_pcg
+// records (161 net-new), 311 frozen aggregate reusing the 150 build_environment
 // records by identity, exact action-set/order parity extracted from the canonical
 // tool definitions (no duplicated arrays), async PCG contract truth (taskId is a
 // number, no cancellation/poll), partition-grid-size source-backed shape, shell
@@ -53,18 +53,18 @@ const GEOMETRY_ACTIONS = actionEnum(consolidatedToolDefinitions.find((t) => t.na
 const PCG_ACTIONS = actionEnum(consolidatedToolDefinitions.find((t) => t.name === 'manage_pcg') as NonNullable<typeof consolidatedToolDefinitions[number]>);
 
 describe('Task 16 net-new counts', () => {
-  it('level-structure 45, geometry 76, pcg 30 records', () => {
+  it('level-structure 45, geometry 86, pcg 30 records', () => {
     expect(MANAGE_LEVEL_STRUCTURE_RECORD_COUNT).toBe(45);
     expect(MANAGE_LEVEL_STRUCTURE_RECORDS).toHaveLength(45);
-    expect(MANAGE_GEOMETRY_RECORD_COUNT).toBe(76);
-    expect(MANAGE_GEOMETRY_RECORDS).toHaveLength(76);
+    expect(MANAGE_GEOMETRY_RECORD_COUNT).toBe(86);
+    expect(MANAGE_GEOMETRY_RECORDS).toHaveLength(86);
     expect(MANAGE_PCG_RECORD_COUNT).toBe(30);
     expect(MANAGE_PCG_RECORDS).toHaveLength(30);
   });
-  it('net-new world records total 151', () => {
+  it('net-new world records total 161', () => {
     expect(MANAGE_LEVEL_STRUCTURE_RECORD_COUNT + MANAGE_GEOMETRY_RECORD_COUNT + MANAGE_PCG_RECORD_COUNT)
       .toBe(WORLD_NET_NEW_COUNT);
-    expect(WORLD_NET_NEW_COUNT).toBe(151);
+    expect(WORLD_NET_NEW_COUNT).toBe(161);
   });
 });
 
@@ -86,14 +86,14 @@ describe('Task 16 action-set/order parity (extracted from tool definitions)', ()
   });
   it('all net-new IDs are unique', () => {
     const netNewIds = [...ids(MANAGE_LEVEL_STRUCTURE_RECORDS), ...ids(MANAGE_GEOMETRY_RECORDS), ...ids(MANAGE_PCG_RECORDS)];
-    expect(new Set(netNewIds).size).toBe(151);
+    expect(new Set(netNewIds).size).toBe(161);
   });
 });
 
-describe('Task 16 frozen 301 aggregate', () => {
-  it('aggregate has exactly 301 records and unique IDs', () => {
-    expect(WORLD_CAPABILITY_RECORD_COUNT).toBe(301);
-    expect(new Set(ids(WORLD_CAPABILITY_CATALOG)).size).toBe(301);
+describe('Task 16 frozen 311 aggregate', () => {
+  it('aggregate has exactly 311 records and unique IDs', () => {
+    expect(WORLD_CAPABILITY_RECORD_COUNT).toBe(311);
+    expect(new Set(ids(WORLD_CAPABILITY_CATALOG)).size).toBe(311);
   });
   it('aggregate reuses the 150 build_environment records by object identity', () => {
     expect(WORLD_REUSED_BUILD_ENVIRONMENT_COUNT).toBe(150);

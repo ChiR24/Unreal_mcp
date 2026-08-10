@@ -13,6 +13,7 @@ import { GEOMETRY_PRIMITIVES_RECORDS } from './manage-geometry.primitives.data.j
 import { GEOMETRY_OPERATIONS_RECORDS } from './manage-geometry.operations.data.js';
 import { GEOMETRY_DEFORM_RECORDS } from './manage-geometry.deform.data.js';
 import { GEOMETRY_OPTIMIZE_RECORDS } from './manage-geometry.optimize.data.js';
+import { GEOMETRY_DYNAMICMESH_RECORDS } from './manage-geometry.dynamicmesh.data.js';
 
 // Records are emitted in the exact legacy manage_geometry action-enum order.
 // The data shards below are authored in definition order (primitives, then
@@ -25,6 +26,7 @@ export const MANAGE_GEOMETRY_SOURCES: readonly CapabilityRecordSource[] = [
   ...GEOMETRY_OPERATIONS_RECORDS,
   ...GEOMETRY_DEFORM_RECORDS,
   ...GEOMETRY_OPTIMIZE_RECORDS,
+  ...GEOMETRY_DYNAMICMESH_RECORDS,
 ];
 
 export const MANAGE_GEOMETRY_RECORDS: readonly CapabilityRecordSource[] = MANAGE_GEOMETRY_SOURCES;

@@ -11,11 +11,13 @@ public:
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		FMcpSchemaBuilder Schema;
+			Schema.Number(TEXT("a"), TEXT("Alpha channel, 0-1."));
 			Schema.String(TEXT("actorName"), TEXT("Actor name in the level."));
 			Schema.Number(TEXT("amount"), TEXT("Generic amount (bevel size, inset/extrude distance)."));
 			Schema.Number(TEXT("angle"), TEXT("Angle in degrees."));
 			Schema.String(TEXT("assetPath"), TEXT("Canonical /Game asset path."));
 			Schema.String(TEXT("axis"), TEXT("Deformation axis: X, Y, or Z."));
+			Schema.Number(TEXT("b"), TEXT("Blue channel, 0-1."));
 			Schema.Bool(TEXT("cap"), TEXT("Cap open ends of tubes."));
 			Schema.Object(TEXT("center"), TEXT("Center of operation."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("x"), TEXT("X"));
@@ -33,6 +35,9 @@ public:
 				  S.Number(TEXT("z"), TEXT("Z"));
 			});
 			Schema.Number(TEXT("distance"), TEXT("Distance for offset-style operations."));
+			Schema.Bool(TEXT("enableCollision"), TEXT("Enable simple collision on the created DynamicMesh actor."));
+			Schema.Number(TEXT("g"), TEXT("Green channel, 0-1."));
+			Schema.Integer(TEXT("groupID"), TEXT("Polygroup id assigned to the appended triangle."));
 			Schema.Number(TEXT("hardEdgeAngle"), TEXT("Angle threshold for hard edges (degrees)."));
 			Schema.Number(TEXT("height"), TEXT("Primitive height."));
 			Schema.Number(TEXT("heightScale"), TEXT("Texture displacement height scale."));
@@ -73,6 +78,7 @@ public:
 				  S.Number(TEXT("y"), TEXT("Y"));
 				  S.Number(TEXT("z"), TEXT("Z"));
 			});
+			Schema.Number(TEXT("r"), TEXT("Red channel, 0-1."));
 			Schema.Integer(TEXT("radialSegments"), TEXT("Radial tessellation segments for circular primitives."));
 			Schema.Number(TEXT("radius"), TEXT("Primitive radius."));
 			Schema.Bool(TEXT("recomputeNormals"), TEXT("Recompute normals for the LOD."));
@@ -86,8 +92,10 @@ public:
 			});
 			Schema.Array(TEXT("screenSizes"), TEXT("Screen size for each LOD."), TEXT("number"));
 			Schema.Integer(TEXT("segments"), TEXT("Number of segments for the operation."));
+			Schema.Bool(TEXT("setAll"), TEXT("Apply the colour to every vertex instead of one."));
 			Schema.Number(TEXT("simplificationFactor"), TEXT("Collision simplification factor."));
 			Schema.String(TEXT("splineActorName"), TEXT("Spline actor name for extrude/sweep along spline."));
+			Schema.Number(TEXT("splitAngle"), TEXT("Angle threshold in degrees above which normals are split."));
 			Schema.Number(TEXT("stepDepth"), TEXT("Depth of each stair step."));
 			Schema.Number(TEXT("stepHeight"), TEXT("Height of each stair step."));
 			Schema.Number(TEXT("stepWidth"), TEXT("Width of each stair step."));
@@ -100,8 +108,14 @@ public:
 			Schema.String(TEXT("texturePath"), TEXT("Canonical /Game texture asset path."));
 			Schema.Number(TEXT("thickness"), TEXT("Shell wall thickness (scalar)."));
 			Schema.String(TEXT("toolActor"), TEXT("Tool actor name for boolean operations."));
+			Schema.Object(TEXT("translation"), TEXT("Translation {x, y, z} applied to every mesh vertex."), [](FMcpSchemaBuilder& S) {
+				  S.Number(TEXT("x"), TEXT("X"));
+				  S.Number(TEXT("y"), TEXT("Y"));
+				  S.Number(TEXT("z"), TEXT("Z"));
+			});
 			Schema.Number(TEXT("trianglePercent"), TEXT("Percent of triangles to keep for LOD reduction."));
 			Schema.String(TEXT("trimActorName"), TEXT("Trim actor name for boolean trim."));
+			Schema.Number(TEXT("u"), TEXT("U coordinate."));
 			Schema.Integer(TEXT("uvChannel"), TEXT("UV channel index (0-7)."));
 			Schema.Object(TEXT("uvOffset"), TEXT("UV offset {u, v}."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("u"), TEXT("U"));
@@ -111,11 +125,28 @@ public:
 				  S.Number(TEXT("u"), TEXT("U"));
 				  S.Number(TEXT("v"), TEXT("V"));
 			});
+			Schema.Number(TEXT("v"), TEXT("V coordinate."));
+			Schema.Object(TEXT("v0"), TEXT("First corner {x, y, z} of the appended triangle."), [](FMcpSchemaBuilder& S) {
+				  S.Number(TEXT("x"), TEXT("X"));
+				  S.Number(TEXT("y"), TEXT("Y"));
+				  S.Number(TEXT("z"), TEXT("Z"));
+			});
+			Schema.Object(TEXT("v1"), TEXT("Second corner {x, y, z} of the appended triangle."), [](FMcpSchemaBuilder& S) {
+				  S.Number(TEXT("x"), TEXT("X"));
+				  S.Number(TEXT("y"), TEXT("Y"));
+				  S.Number(TEXT("z"), TEXT("Z"));
+			});
+			Schema.Object(TEXT("v2"), TEXT("Third corner {x, y, z} of the appended triangle."), [](FMcpSchemaBuilder& S) {
+				  S.Number(TEXT("x"), TEXT("X"));
+				  S.Number(TEXT("y"), TEXT("Y"));
+				  S.Number(TEXT("z"), TEXT("Z"));
+			});
+			Schema.Integer(TEXT("vertexIndex"), TEXT("Index of the vertex the operation targets."));
 			Schema.Number(TEXT("weight"), TEXT("Weight for lattice deformation."));
 			Schema.Number(TEXT("weldDistance"), TEXT("Distance threshold for vertex welding."));
 			Schema.Number(TEXT("width"), TEXT("Primitive width along X."));
 			Schema.Integer(TEXT("widthSegments"), TEXT("Tessellation segments along width."));
-			Schema.StringEnum(TEXT("action"), { TEXT("create_box"), TEXT("create_sphere"), TEXT("create_cylinder"), TEXT("create_cone"), TEXT("create_capsule"), TEXT("create_torus"), TEXT("create_plane"), TEXT("create_disc"), TEXT("create_stairs"), TEXT("create_spiral_stairs"), TEXT("create_ring"), TEXT("create_arch"), TEXT("create_pipe"), TEXT("create_ramp"), TEXT("boolean_union"), TEXT("boolean_subtract"), TEXT("boolean_intersection"), TEXT("boolean_trim"), TEXT("self_union"), TEXT("extrude"), TEXT("inset"), TEXT("outset"), TEXT("bevel"), TEXT("offset_faces"), TEXT("shell"), TEXT("revolve"), TEXT("chamfer"), TEXT("extrude_along_spline"), TEXT("bridge"), TEXT("loft"), TEXT("sweep"), TEXT("duplicate_along_spline"), TEXT("loop_cut"), TEXT("edge_split"), TEXT("quadrangulate"), TEXT("bend"), TEXT("twist"), TEXT("taper"), TEXT("noise_deform"), TEXT("smooth"), TEXT("relax"), TEXT("stretch"), TEXT("spherify"), TEXT("cylindrify"), TEXT("lattice_deform"), TEXT("displace_by_texture"), TEXT("triangulate"), TEXT("poke"), TEXT("mirror"), TEXT("array_linear"), TEXT("array_radial"), TEXT("simplify_mesh"), TEXT("subdivide"), TEXT("remesh_uniform"), TEXT("merge_vertices"), TEXT("remesh_voxel"), TEXT("weld_vertices"), TEXT("fill_holes"), TEXT("remove_degenerates"), TEXT("auto_uv"), TEXT("project_uv"), TEXT("transform_uvs"), TEXT("unwrap_uv"), TEXT("pack_uv_islands"), TEXT("recalculate_normals"), TEXT("flip_normals"), TEXT("recompute_tangents"), TEXT("generate_collision"), TEXT("generate_complex_collision"), TEXT("simplify_collision"), TEXT("generate_lods"), TEXT("set_lod_settings"), TEXT("set_lod_screen_sizes"), TEXT("convert_to_nanite"), TEXT("convert_to_static_mesh"), TEXT("get_mesh_info") }, TEXT("Action to invoke on manage_geometry."));
+			Schema.StringEnum(TEXT("action"), { TEXT("create_box"), TEXT("create_sphere"), TEXT("create_cylinder"), TEXT("create_cone"), TEXT("create_capsule"), TEXT("create_torus"), TEXT("create_plane"), TEXT("create_disc"), TEXT("create_stairs"), TEXT("create_spiral_stairs"), TEXT("create_ring"), TEXT("create_arch"), TEXT("create_pipe"), TEXT("create_ramp"), TEXT("boolean_union"), TEXT("boolean_subtract"), TEXT("boolean_intersection"), TEXT("boolean_trim"), TEXT("self_union"), TEXT("extrude"), TEXT("inset"), TEXT("outset"), TEXT("bevel"), TEXT("offset_faces"), TEXT("shell"), TEXT("revolve"), TEXT("chamfer"), TEXT("extrude_along_spline"), TEXT("bridge"), TEXT("loft"), TEXT("sweep"), TEXT("duplicate_along_spline"), TEXT("loop_cut"), TEXT("edge_split"), TEXT("quadrangulate"), TEXT("bend"), TEXT("twist"), TEXT("taper"), TEXT("noise_deform"), TEXT("smooth"), TEXT("relax"), TEXT("stretch"), TEXT("spherify"), TEXT("cylindrify"), TEXT("lattice_deform"), TEXT("displace_by_texture"), TEXT("triangulate"), TEXT("poke"), TEXT("mirror"), TEXT("array_linear"), TEXT("array_radial"), TEXT("simplify_mesh"), TEXT("subdivide"), TEXT("remesh_uniform"), TEXT("merge_vertices"), TEXT("remesh_voxel"), TEXT("weld_vertices"), TEXT("fill_holes"), TEXT("remove_degenerates"), TEXT("auto_uv"), TEXT("project_uv"), TEXT("transform_uvs"), TEXT("unwrap_uv"), TEXT("pack_uv_islands"), TEXT("recalculate_normals"), TEXT("flip_normals"), TEXT("recompute_tangents"), TEXT("generate_collision"), TEXT("generate_complex_collision"), TEXT("simplify_collision"), TEXT("generate_lods"), TEXT("set_lod_settings"), TEXT("set_lod_screen_sizes"), TEXT("convert_to_nanite"), TEXT("convert_to_static_mesh"), TEXT("get_mesh_info"), TEXT("create_procedural_mesh"), TEXT("append_vertex"), TEXT("append_triangle"), TEXT("get_vertex_position"), TEXT("set_vertex_position"), TEXT("set_vertex_color"), TEXT("set_uvs"), TEXT("split_normals"), TEXT("translate_mesh"), TEXT("difference") }, TEXT("Action to invoke on manage_geometry."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

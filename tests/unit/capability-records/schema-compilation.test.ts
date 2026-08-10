@@ -7,7 +7,7 @@ import {
 } from '../../../src/server/gateway/gateway-execute-validate.js';
 import { isRecord as isRecordObject } from '../../../src/utils/validation/type-guards.js';
 
-const EXPECTED_RECORDS = 1363;
+const EXPECTED_RECORDS = 1373;
 const EXPECTED_SCHEMAS = EXPECTED_RECORDS * 2;
 
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));

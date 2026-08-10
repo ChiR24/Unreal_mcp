@@ -3,7 +3,7 @@
  *
  * Combines the 150 reused build_environment pilot records (referenced, never
  * regenerated) with the 151 net-new world records authored for Task 16
- * (manage_level_structure 45, manage_geometry 76, manage_pcg 30) into a
+ * (manage_level_structure 45, manage_geometry 86, manage_pcg 30) into a
  * single 301-record frozen catalog. The aggregate is sorted by canonical ID
  * and frozen with Object.freeze so accidental mutation fails closed.
  *
@@ -18,9 +18,9 @@ import { MANAGE_GEOMETRY_RECORDS } from './manage-geometry.index.js';
 import { MANAGE_PCG_RECORDS } from './manage-pcg.index.js';
 import { compareById as compareCanonicalIds } from '../../../../../utils/serialization/ordering.js';
 
-export const WORLD_NET_NEW_COUNT = 151 as const;
+export const WORLD_NET_NEW_COUNT = 161 as const;
 export const WORLD_REUSED_BUILD_ENVIRONMENT_COUNT = 150 as const;
-export const WORLD_AGGREGATE_COUNT = 301 as const;
+export const WORLD_AGGREGATE_COUNT = 311 as const;
 
 /**
  * Raw source records (build_environment is reused by object identity; the 151

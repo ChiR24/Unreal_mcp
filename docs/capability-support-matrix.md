@@ -5,9 +5,9 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `46e249baeb7f6f6c`
+Catalog revision: `033b372686491d2a`
 
-Every one of the 1363 capabilities declares all three semantics. The
+Every one of the 1373 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
 compensation); a capability carries a stronger claim only where the ledger
 cites the implementation that proves it. A mostly-pessimistic matrix is the
@@ -17,10 +17,10 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 1363 | 0 / 1199 |
-| Undoable | 0 / 1363 | 0 / 1199 |
-| Compensatable | 21 / 1363 | 20 / 1199 |
-| Fully pessimistic | 1342 / 1363 | 1179 / 1199 |
+| Previewable | 0 / 1373 | 0 / 1208 |
+| Undoable | 0 / 1373 | 0 / 1208 |
+| Compensatable | 21 / 1373 | 20 / 1208 |
+| Fully pessimistic | 1352 / 1373 | 1188 / 1208 |
 
 ## By parent tool
 
@@ -39,7 +39,7 @@ truthful result, not a gap in coverage.
 | `manage_combat` | 39 | 37 | 0 | 0 | 0 |
 | `manage_effect` | 59 | 56 | 0 | 0 | 0 |
 | `manage_gas` | 27 | 26 | 0 | 0 | 0 |
-| `manage_geometry` | 76 | 75 | 0 | 0 | 0 |
+| `manage_geometry` | 86 | 84 | 0 | 0 | 0 |
 | `manage_interaction` | 22 | 21 | 0 | 0 | 0 |
 | `manage_inventory` | 33 | 32 | 0 | 0 | 0 |
 | `manage_level` | 24 | 19 | 0 | 0 | 0 |
@@ -895,6 +895,8 @@ truthful result, not a gap in coverage.
 | `manage_gas.set_effect_tags` | write | none | none | none |
 | `manage_gas.set_instancing_policy` | write | none | none | none |
 | `manage_gas.set_modifier_magnitude` | write | none | none | none |
+| `manage_geometry.append_triangle` | write | none | none | none |
+| `manage_geometry.append_vertex` | write | none | none | none |
 | `manage_geometry.array_linear` | write | none | none | none |
 | `manage_geometry.array_radial` | write | none | none | none |
 | `manage_geometry.auto_uv` | write | none | none | none |
@@ -916,6 +918,7 @@ truthful result, not a gap in coverage.
 | `manage_geometry.create_disc` | write | none | none | none |
 | `manage_geometry.create_pipe` | write | none | none | none |
 | `manage_geometry.create_plane` | write | none | none | none |
+| `manage_geometry.create_procedural_mesh` | write | none | none | none |
 | `manage_geometry.create_ramp` | write | none | none | none |
 | `manage_geometry.create_ring` | write | none | none | none |
 | `manage_geometry.create_sphere` | write | none | none | none |
@@ -923,6 +926,7 @@ truthful result, not a gap in coverage.
 | `manage_geometry.create_stairs` | write | none | none | none |
 | `manage_geometry.create_torus` | write | none | none | none |
 | `manage_geometry.cylindrify` | write | none | none | none |
+| `manage_geometry.difference` | write | none | none | none |
 | `manage_geometry.displace_by_texture` | write | none | none | none |
 | `manage_geometry.duplicate_along_spline` | write | none | none | none |
 | `manage_geometry.edge_split` | write | none | none | none |
@@ -934,6 +938,7 @@ truthful result, not a gap in coverage.
 | `manage_geometry.generate_complex_collision` | write | none | none | none |
 | `manage_geometry.generate_lods` | write | none | none | none |
 | `manage_geometry.get_mesh_info` | read | none | none | none |
+| `manage_geometry.get_vertex_position` | read | none | none | none |
 | `manage_geometry.inset` | write | none | none | none |
 | `manage_geometry.lattice_deform` | write | none | none | none |
 | `manage_geometry.loft` | write | none | none | none |
@@ -957,16 +962,21 @@ truthful result, not a gap in coverage.
 | `manage_geometry.self_union` | write | none | none | none |
 | `manage_geometry.set_lod_screen_sizes` | write | none | none | none |
 | `manage_geometry.set_lod_settings` | write | none | none | none |
+| `manage_geometry.set_uvs` | write | none | none | none |
+| `manage_geometry.set_vertex_color` | write | none | none | none |
+| `manage_geometry.set_vertex_position` | write | none | none | none |
 | `manage_geometry.shell` | write | none | none | none |
 | `manage_geometry.simplify_collision` | write | none | none | none |
 | `manage_geometry.simplify_mesh` | write | none | none | none |
 | `manage_geometry.smooth` | write | none | none | none |
 | `manage_geometry.spherify` | write | none | none | none |
+| `manage_geometry.split_normals` | write | none | none | none |
 | `manage_geometry.stretch` | write | none | none | none |
 | `manage_geometry.subdivide` | write | none | none | none |
 | `manage_geometry.sweep` | write | none | none | none |
 | `manage_geometry.taper` | write | none | none | none |
 | `manage_geometry.transform_uvs` | write | none | none | none |
+| `manage_geometry.translate_mesh` | write | none | none | none |
 | `manage_geometry.triangulate` | write | none | none | none |
 | `manage_geometry.twist` | write | none | none | none |
 | `manage_geometry.unwrap_uv` | write | none | none | none |

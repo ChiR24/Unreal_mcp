@@ -5,8 +5,8 @@
 import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
-export const CANONICAL_CAPABILITY_RECORD_COUNT = 1363;
-export const CATALOG_REVISION = "46e249baeb7f6f6c";
+export const CANONICAL_CAPABILITY_RECORD_COUNT = 1373;
+export const CATALOG_REVISION = "033b372686491d2a";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -149847,6 +149847,489 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "manage_geometry.append_triangle",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_geometry",
+        "action": "append_triangle"
+      }
+    ],
+    "discovery": {
+      "domain": "world",
+      "family": "dynamicmesh",
+      "topics": [
+        "append_triangle"
+      ],
+      "summary": "Append a triangle to a DynamicMesh actor from three corner positions.",
+      "whenToUse": [
+        "A face must be added to an authored mesh in one call."
+      ],
+      "whenNotToUse": [
+        "Only a point is needed; use append_vertex."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "v0": {
+            "type": "object",
+            "description": "First corner {x, y, z} of the appended triangle.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "v1": {
+            "type": "object",
+            "description": "Second corner {x, y, z} of the appended triangle.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "v2": {
+            "type": "object",
+            "description": "Third corner {x, y, z} of the appended triangle.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          },
+          "groupID": {
+            "type": "integer",
+            "description": "Polygroup id assigned to the appended triangle."
+          }
+        },
+        "required": [
+          "action",
+          "actorName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "triangleIndex": {
+            "type": "integer",
+            "description": "Index of the triangle the operation targets."
+          },
+          "vertexIndex0": {
+            "type": "integer",
+            "description": "Index of the first appended corner."
+          },
+          "vertexIndex1": {
+            "type": "integer",
+            "description": "Index of the second appended corner."
+          },
+          "vertexIndex2": {
+            "type": "integer",
+            "description": "Index of the third appended corner."
+          },
+          "triangleCount": {
+            "type": "integer",
+            "description": "Triangle count of the mesh after the call."
+          }
+        },
+        "required": [
+          "success",
+          "actorName",
+          "triangleIndex",
+          "triangleCount"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Append a triangle to a DynamicMesh actor from three corner positions.",
+        "input": {
+          "action": "append_triangle",
+          "actorName": "DM_Authored",
+          "v0": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "v1": {
+            "x": 100,
+            "y": 0,
+            "z": 0
+          },
+          "v2": {
+            "x": 50,
+            "y": 100,
+            "z": 0
+          }
+        },
+        "output": {
+          "success": true,
+          "actorName": "DM_Authored",
+          "triangleIndex": 0,
+          "vertexIndex0": 0,
+          "vertexIndex1": 1,
+          "vertexIndex2": 2,
+          "triangleCount": 1
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GeometryScripting"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_geometry",
+      "dispatchAction": "append_triangle",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a raw native DynamicMesh route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_geometry",
+      "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
+      "category": "world"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "b482ddabcdbb02a3369824674135f4b0d55b0afb0020bf6cd458624fb2dd9e89",
+      "content": "ad9bfefeaffca39feaf6a462a3139a3e790fa2b8d4b07fa605c1991a39ce9a86"
+    }
+  },
+  {
+    "id": "manage_geometry.append_vertex",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_geometry",
+        "action": "append_vertex"
+      }
+    ],
+    "discovery": {
+      "domain": "world",
+      "family": "dynamicmesh",
+      "topics": [
+        "append_vertex"
+      ],
+      "summary": "Append one vertex to a DynamicMesh actor and return its index.",
+      "whenToUse": [
+        "A mesh is being authored point by point."
+      ],
+      "whenNotToUse": [
+        "A whole triangle is being added; use append_triangle."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "position": {
+            "type": "object",
+            "description": "Position {x, y, z} for the operation.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "action",
+          "actorName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "vertexIndex": {
+            "type": "integer",
+            "description": "Index of the vertex the operation targets."
+          },
+          "vertexCount": {
+            "type": "integer",
+            "description": "Vertex count of the mesh after the call."
+          }
+        },
+        "required": [
+          "success",
+          "actorName",
+          "vertexIndex",
+          "vertexCount"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Append one vertex to a DynamicMesh actor and return its index.",
+        "input": {
+          "action": "append_vertex",
+          "actorName": "DM_Authored",
+          "position": {
+            "x": 100,
+            "y": 0,
+            "z": 0
+          }
+        },
+        "output": {
+          "success": true,
+          "actorName": "DM_Authored",
+          "vertexIndex": 3,
+          "vertexCount": 4
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GeometryScripting"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_geometry",
+      "dispatchAction": "append_vertex",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a raw native DynamicMesh route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_geometry",
+      "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
+      "category": "world"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "5c2333780f4804c360796d69f5d8b92a24d7ca9021eca50e0fe6eb8c27533d21",
+      "content": "cc6ff637a073cf3473904c5290dac5e8996bf0495f198811475c4872e4f7131c"
+    }
+  },
+  {
     "id": "manage_geometry.array_linear",
     "aliases": [],
     "legacyIds": [
@@ -154200,6 +154683,196 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "manage_geometry.create_procedural_mesh",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_geometry",
+        "action": "create_procedural_mesh"
+      }
+    ],
+    "discovery": {
+      "domain": "world",
+      "family": "dynamicmesh",
+      "topics": [
+        "create_procedural_mesh"
+      ],
+      "summary": "Spawn an empty DynamicMesh actor to author geometry into.",
+      "whenToUse": [
+        "A mesh must be built vertex by vertex rather than from a primitive."
+      ],
+      "whenNotToUse": [
+        "A parametric shape is enough; use a create_* primitive."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the new asset or node."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "enableCollision": {
+            "type": "boolean",
+            "description": "Enable simple collision on the created DynamicMesh actor."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the new asset or node."
+          },
+          "class": {
+            "type": "string",
+            "description": "Class of the spawned actor."
+          },
+          "enableCollision": {
+            "type": "boolean",
+            "description": "Enable simple collision on the created DynamicMesh actor."
+          }
+        },
+        "required": [
+          "success",
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Spawn an empty DynamicMesh actor to author geometry into.",
+        "input": {
+          "action": "create_procedural_mesh",
+          "name": "DM_Authored",
+          "enableCollision": true
+        },
+        "output": {
+          "success": true,
+          "name": "DM_Authored",
+          "class": "DynamicMeshActor",
+          "enableCollision": true
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GeometryScripting"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_geometry",
+      "dispatchAction": "create_procedural_mesh",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a raw native DynamicMesh route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_geometry",
+      "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
+      "category": "world"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "6cf9729e6c9706370edf8723b7fe6c0654198eb88c7c8226ffa21af87484dcc9",
+      "content": "defd1dcdc0270470b2db1abd0cc7be0f19b0445c2d17c4cceb6878f56b915baa"
+    }
+  },
+  {
     "id": "manage_geometry.create_ramp",
     "aliases": [],
     "legacyIds": [
@@ -155876,6 +156549,187 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "eb3e8ebd305cb6b579ac7cb3cec4893e367aa3b269e374c6046720d556c2a7db",
       "content": "b2035ce52dc5472528fc1f5c3048f732415e5e4e63b892c778b846fe4a1194fa"
+    }
+  },
+  {
+    "id": "manage_geometry.difference",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_geometry",
+        "action": "difference"
+      }
+    ],
+    "discovery": {
+      "domain": "world",
+      "family": "dynamicmesh",
+      "topics": [
+        "difference"
+      ],
+      "summary": "Subtract a tool mesh from a target mesh under the difference spelling of boolean_subtract.",
+      "whenToUse": [
+        "A caller reaches for the CSG name for a subtraction."
+      ],
+      "whenNotToUse": [
+        "The canonical spelling is available; use boolean_subtract."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "targetActor": {
+            "type": "string",
+            "description": "Target actor name for boolean operations."
+          },
+          "toolActor": {
+            "type": "string",
+            "description": "Tool actor name for boolean operations."
+          },
+          "keepTool": {
+            "type": "boolean",
+            "description": "Keep the tool actor after the operation."
+          },
+          "keepInside": {
+            "type": "boolean",
+            "description": "Keep geometry inside the tool."
+          }
+        },
+        "required": [
+          "action",
+          "targetActor",
+          "toolActor"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Subtract a tool mesh from a target mesh under the difference spelling of boolean_subtract.",
+        "input": {
+          "action": "difference",
+          "targetActor": "DM_A",
+          "toolActor": "DM_B"
+        },
+        "output": {
+          "success": true,
+          "message": "Boolean subtract complete"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GeometryScripting"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "medium"
+    },
+    "routing": {
+      "parentTool": "manage_geometry",
+      "dispatchAction": "difference",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Alias of boolean_subtract: both spellings dispatch to HandleBooleanSubtract.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_geometry",
+      "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
+      "category": "world"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "fad1599dc25188f93b2f8cf6470cb9e432c77fad83752320b269741c6f0bd835",
+      "content": "791b427026bb3187ad7714efec12119f16acd958590825c27a37a7cdb7252542"
     }
   },
   {
@@ -157852,6 +158706,215 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "792b8181a3d1448a8ed61df37fa4f3a54eee9c615b797c01bec10d109fe5f669",
       "content": "25e5ebd840fc74ab600441e293932174c2c6e9daf72b8f45057f5f179008bf04"
+    }
+  },
+  {
+    "id": "manage_geometry.get_vertex_position",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_geometry",
+        "action": "get_vertex_position"
+      }
+    ],
+    "discovery": {
+      "domain": "world",
+      "family": "dynamicmesh",
+      "topics": [
+        "get_vertex_position"
+      ],
+      "summary": "Read the position of one vertex of a DynamicMesh actor.",
+      "whenToUse": [
+        "An authored vertex must be inspected before it is moved."
+      ],
+      "whenNotToUse": [
+        "Whole-mesh counts are wanted; use get_mesh_info."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "vertexIndex": {
+            "type": "integer",
+            "description": "Index of the vertex the operation targets."
+          }
+        },
+        "required": [
+          "action",
+          "actorName",
+          "vertexIndex"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "vertexIndex": {
+            "type": "integer",
+            "description": "Index of the vertex the operation targets."
+          },
+          "position": {
+            "type": "object",
+            "description": "Position {x, y, z} for the operation.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "actorName",
+          "vertexIndex",
+          "position"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Read the position of one vertex of a DynamicMesh actor.",
+        "input": {
+          "action": "get_vertex_position",
+          "actorName": "DM_Authored",
+          "vertexIndex": 1
+        },
+        "output": {
+          "success": true,
+          "actorName": "DM_Authored",
+          "vertexIndex": 1,
+          "position": {
+            "x": 100,
+            "y": 0,
+            "z": 0
+          }
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GeometryScripting"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "read",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "read",
+      "consent": "none",
+      "dataAccess": "project-read"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_geometry",
+      "dispatchAction": "get_vertex_position",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a raw native DynamicMesh route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_geometry",
+      "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
+      "category": "world"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "1b7c3bc4aa8560145b550325070e4ed6fab54b7078f4525611b3122606e64007",
+      "content": "2ff5fcfd8fd9bef7b9ca03bb3ed56d6474114ab7a8b261784f91eec250de645b"
     }
   },
   {
@@ -161918,6 +162981,684 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "manage_geometry.set_uvs",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_geometry",
+        "action": "set_uvs"
+      }
+    ],
+    "discovery": {
+      "domain": "world",
+      "family": "dynamicmesh",
+      "topics": [
+        "set_uvs"
+      ],
+      "summary": "Set the UV coordinate of one vertex on a UV channel of a DynamicMesh actor.",
+      "whenToUse": [
+        "An authored vertex needs an exact UV rather than a generated one."
+      ],
+      "whenNotToUse": [
+        "The whole mesh needs unwrapping; use auto_uv or unwrap_uv."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "vertexIndex": {
+            "type": "integer",
+            "description": "Index of the vertex the operation targets."
+          },
+          "u": {
+            "type": "number",
+            "description": "U coordinate."
+          },
+          "v": {
+            "type": "number",
+            "description": "V coordinate."
+          },
+          "uvChannel": {
+            "type": "integer",
+            "description": "UV channel index (0-7)."
+          }
+        },
+        "required": [
+          "action",
+          "actorName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "vertexIndex": {
+            "type": "integer",
+            "description": "Index of the vertex the operation targets."
+          },
+          "u": {
+            "type": "number",
+            "description": "U coordinate."
+          },
+          "v": {
+            "type": "number",
+            "description": "V coordinate."
+          },
+          "uvChannel": {
+            "type": "integer",
+            "description": "UV channel index (0-7)."
+          },
+          "elementsModified": {
+            "type": "integer",
+            "description": "Number of UV elements written."
+          }
+        },
+        "required": [
+          "success",
+          "actorName",
+          "elementsModified"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Set the UV coordinate of one vertex on a UV channel of a DynamicMesh actor.",
+        "input": {
+          "action": "set_uvs",
+          "actorName": "DM_Authored",
+          "vertexIndex": 1,
+          "u": 0.5,
+          "v": 0.25,
+          "uvChannel": 0
+        },
+        "output": {
+          "success": true,
+          "actorName": "DM_Authored",
+          "vertexIndex": 1,
+          "u": 0.5,
+          "v": 0.25,
+          "uvChannel": 0,
+          "elementsModified": 1
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GeometryScripting"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_geometry",
+      "dispatchAction": "set_uvs",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a raw native DynamicMesh route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_geometry",
+      "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
+      "category": "world"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "35ad1537584a9f666a389f78df3cce965675a297a4ca030128ba657bcdd17753",
+      "content": "b09c505a7fd2c5538ebe5eb97bb4e43db4f7aaa2e962133b3238a9e3afa46a8d"
+    }
+  },
+  {
+    "id": "manage_geometry.set_vertex_color",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_geometry",
+        "action": "set_vertex_color"
+      }
+    ],
+    "discovery": {
+      "domain": "world",
+      "family": "dynamicmesh",
+      "topics": [
+        "set_vertex_color"
+      ],
+      "summary": "Set the vertex colour on one vertex, or on every vertex, of a DynamicMesh actor.",
+      "whenToUse": [
+        "Authored geometry must carry colour the material reads."
+      ],
+      "whenNotToUse": [
+        "A material parameter is the right place for the colour."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "vertexIndex": {
+            "type": "integer",
+            "description": "Index of the vertex the operation targets."
+          },
+          "r": {
+            "type": "number",
+            "description": "Red channel, 0-1."
+          },
+          "g": {
+            "type": "number",
+            "description": "Green channel, 0-1."
+          },
+          "b": {
+            "type": "number",
+            "description": "Blue channel, 0-1."
+          },
+          "a": {
+            "type": "number",
+            "description": "Alpha channel, 0-1."
+          },
+          "setAll": {
+            "type": "boolean",
+            "description": "Apply the colour to every vertex instead of one."
+          }
+        },
+        "required": [
+          "action",
+          "actorName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "verticesModified": {
+            "type": "integer",
+            "description": "Number of vertices whose colour changed."
+          },
+          "r": {
+            "type": "number",
+            "description": "Red channel, 0-1."
+          },
+          "g": {
+            "type": "number",
+            "description": "Green channel, 0-1."
+          },
+          "b": {
+            "type": "number",
+            "description": "Blue channel, 0-1."
+          },
+          "a": {
+            "type": "number",
+            "description": "Alpha channel, 0-1."
+          }
+        },
+        "required": [
+          "success",
+          "actorName",
+          "verticesModified"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Set the vertex colour on one vertex, or on every vertex, of a DynamicMesh actor.",
+        "input": {
+          "action": "set_vertex_color",
+          "actorName": "DM_Authored",
+          "r": 1,
+          "g": 0,
+          "b": 0,
+          "a": 1,
+          "setAll": true
+        },
+        "output": {
+          "success": true,
+          "actorName": "DM_Authored",
+          "verticesModified": 4,
+          "r": 1,
+          "g": 0,
+          "b": 0,
+          "a": 1
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GeometryScripting"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_geometry",
+      "dispatchAction": "set_vertex_color",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a raw native DynamicMesh route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_geometry",
+      "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
+      "category": "world"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "b7a8ce1fb0872201c887663093cef869d0413015880af406ea27ff73c89453ee",
+      "content": "02c77f522b9a150b901ab003d631611cd396438a162165fbe70d01f36ad9eba9"
+    }
+  },
+  {
+    "id": "manage_geometry.set_vertex_position",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_geometry",
+        "action": "set_vertex_position"
+      }
+    ],
+    "discovery": {
+      "domain": "world",
+      "family": "dynamicmesh",
+      "topics": [
+        "set_vertex_position"
+      ],
+      "summary": "Move one vertex of a DynamicMesh actor to a new position.",
+      "whenToUse": [
+        "An authored vertex must be nudged without rebuilding the mesh."
+      ],
+      "whenNotToUse": [
+        "The whole mesh must move; use translate_mesh."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "vertexIndex": {
+            "type": "integer",
+            "description": "Index of the vertex the operation targets."
+          },
+          "position": {
+            "type": "object",
+            "description": "Position {x, y, z} for the operation.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "action",
+          "actorName",
+          "vertexIndex"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "vertexIndex": {
+            "type": "integer",
+            "description": "Index of the vertex the operation targets."
+          },
+          "position": {
+            "type": "object",
+            "description": "Position {x, y, z} for the operation.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "actorName",
+          "vertexIndex",
+          "position"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Move one vertex of a DynamicMesh actor to a new position.",
+        "input": {
+          "action": "set_vertex_position",
+          "actorName": "DM_Authored",
+          "vertexIndex": 1,
+          "position": {
+            "x": 120,
+            "y": 0,
+            "z": 0
+          }
+        },
+        "output": {
+          "success": true,
+          "actorName": "DM_Authored",
+          "vertexIndex": 1,
+          "position": {
+            "x": 120,
+            "y": 0,
+            "z": 0
+          }
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GeometryScripting"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_geometry",
+      "dispatchAction": "set_vertex_position",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a raw native DynamicMesh route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_geometry",
+      "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
+      "category": "world"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "3f2db1e0ca462773e180803b37af3133df2411cbe909109db58db16b4a665bc4",
+      "content": "1c6e69a209328a37667376abb2b41b622b9b51fc75f481910e2f70942f02a931"
+    }
+  },
+  {
     "id": "manage_geometry.shell",
     "aliases": [],
     "legacyIds": [
@@ -162797,6 +164538,189 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "eb3e8ebd305cb6b579ac7cb3cec4893e367aa3b269e374c6046720d556c2a7db",
       "content": "5d6d3a6f9703b98e992a9a314f141f67a55b920fcdd8bd0c943c6cdc31eb5b3a"
+    }
+  },
+  {
+    "id": "manage_geometry.split_normals",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_geometry",
+        "action": "split_normals"
+      }
+    ],
+    "discovery": {
+      "domain": "world",
+      "family": "dynamicmesh",
+      "topics": [
+        "split_normals"
+      ],
+      "summary": "Split the normals of a DynamicMesh actor above an angle threshold to harden edges.",
+      "whenToUse": [
+        "Authored geometry shades too soft across its creases."
+      ],
+      "whenNotToUse": [
+        "Normals only need recomputing; use recalculate_normals."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "splitAngle": {
+            "type": "number",
+            "description": "Angle threshold in degrees above which normals are split."
+          }
+        },
+        "required": [
+          "action",
+          "actorName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "splitAngle": {
+            "type": "number",
+            "description": "Angle threshold in degrees above which normals are split."
+          }
+        },
+        "required": [
+          "success",
+          "actorName",
+          "splitAngle"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Split the normals of a DynamicMesh actor above an angle threshold to harden edges.",
+        "input": {
+          "action": "split_normals",
+          "actorName": "DM_Authored",
+          "splitAngle": 45
+        },
+        "output": {
+          "success": true,
+          "actorName": "DM_Authored",
+          "splitAngle": 45
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GeometryScripting"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_geometry",
+      "dispatchAction": "split_normals",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a raw native DynamicMesh route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_geometry",
+      "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
+      "category": "world"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "7e4e5b5600401a09aac45bbd48c06c5b32dce90234434a15a6153abf1147b754",
+      "content": "b3354f82a4e18e841165e2e9b4e4c3cc48849c8c1899f8a033cca18d014a8616"
     }
   },
   {
@@ -163721,6 +165645,227 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "1d3e84a46e092bb6be348c4f84f2e704533ff89eee8cf295bc10deb24d0f321d",
       "content": "f60586763032bb4461f5b652fcba20036bd438d32761e952e439a1a81d18303c"
+    }
+  },
+  {
+    "id": "manage_geometry.translate_mesh",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_geometry",
+        "action": "translate_mesh"
+      }
+    ],
+    "discovery": {
+      "domain": "world",
+      "family": "dynamicmesh",
+      "topics": [
+        "translate_mesh"
+      ],
+      "summary": "Translate every vertex of a DynamicMesh actor, leaving the actor transform alone.",
+      "whenToUse": [
+        "Authored geometry must shift inside its own local space."
+      ],
+      "whenNotToUse": [
+        "The actor itself should move; set its transform instead."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "translation": {
+            "type": "object",
+            "description": "Translation {x, y, z} applied to every mesh vertex.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "action",
+          "actorName"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Actor name in the level."
+          },
+          "translation": {
+            "type": "object",
+            "description": "Translation {x, y, z} applied to every mesh vertex.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "actorName",
+          "translation"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Translate every vertex of a DynamicMesh actor, leaving the actor transform alone.",
+        "input": {
+          "action": "translate_mesh",
+          "actorName": "DM_Authored",
+          "translation": {
+            "x": 0,
+            "y": 0,
+            "z": 50
+          }
+        },
+        "output": {
+          "success": true,
+          "actorName": "DM_Authored",
+          "translation": {
+            "x": 0,
+            "y": 0,
+            "z": 50
+          }
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GeometryScripting"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_geometry",
+      "dispatchAction": "translate_mesh",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a raw native DynamicMesh route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_geometry",
+      "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
+      "category": "world"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "6b858bc25dadf02b09a09aa11d74b8bea808b437068e7ca8ab77ff36a420544b",
+      "content": "d4bfe07523d067c709d0adf4184eabe70df8f20e984e97e705c79ec4c796d62e"
     }
   },
   {
@@ -182427,7 +184572,9 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "schema": "c9f61d7586be2c7c75c44d61bc6e8ce6ea573f218cda31ca283e3bf1f21e9963",
       "content": "13fc8ee60dc8a1311d6571d23fa406953d1c96ce6772d8a3d0d57cf11eb3bb8f"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
   {
     "id": "manage_level_structure.create_level_instance",
     "aliases": [],
@@ -184585,9 +186732,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "schema": "541fce8d407ef1e74271d2193e4357e059f321ac1f577bfc0fab9618aa90728b",
       "content": "2e45a9ddc64e0d2845ae864c21e53732c08e872d2bab0eb5331e4cbc93ac6911"
     }
-  }
-]);
-const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_level_structure.create_reverb_volume",
     "aliases": [],
@@ -218940,7 +221085,9 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "schema": "698fb4bd451fa6e918754f76778f7a732c33c978097abff53452bf2014b15fc3",
       "content": "44545e210d9bf7288a75555f22e6c6948506f91145a9edbe6fcf1e0aaa60417f"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
   {
     "id": "sequence.add_section",
     "aliases": [],
@@ -220781,9 +222928,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "schema": "4fef314015924406b151b201ed34239803c4af9d6bbc68bf4737b619a2147897",
       "content": "165addbb451e03f3d485192b4dce254df33ef6b4483b51379324cb65c9c8b990"
     }
-  }
-]);
-const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
+  },
   {
     "id": "sequence.cinematic.add_property_track",
     "aliases": [],
@@ -256371,6 +258516,22 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "e9bf1ebfc6d2ad1497221ff26e9ddd60294689cc49b9bd151ae97cffa2f5b1a2"
   },
   {
+    "id": "manage_geometry.append_triangle",
+    "parentTool": "manage_geometry",
+    "dispatchAction": "append_triangle",
+    "domain": "world",
+    "schemaHash": "b482ddabcdbb02a3369824674135f4b0d55b0afb0020bf6cd458624fb2dd9e89",
+    "contentHash": "ad9bfefeaffca39feaf6a462a3139a3e790fa2b8d4b07fa605c1991a39ce9a86"
+  },
+  {
+    "id": "manage_geometry.append_vertex",
+    "parentTool": "manage_geometry",
+    "dispatchAction": "append_vertex",
+    "domain": "world",
+    "schemaHash": "5c2333780f4804c360796d69f5d8b92a24d7ca9021eca50e0fe6eb8c27533d21",
+    "contentHash": "cc6ff637a073cf3473904c5290dac5e8996bf0495f198811475c4872e4f7131c"
+  },
+  {
     "id": "manage_geometry.array_linear",
     "parentTool": "manage_geometry",
     "dispatchAction": "array_linear",
@@ -256539,6 +258700,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "54ccba86cf868fcb5383e891f595aeb24d49214c5f0b7f89f997e7991a46e8da"
   },
   {
+    "id": "manage_geometry.create_procedural_mesh",
+    "parentTool": "manage_geometry",
+    "dispatchAction": "create_procedural_mesh",
+    "domain": "world",
+    "schemaHash": "6cf9729e6c9706370edf8723b7fe6c0654198eb88c7c8226ffa21af87484dcc9",
+    "contentHash": "defd1dcdc0270470b2db1abd0cc7be0f19b0445c2d17c4cceb6878f56b915baa"
+  },
+  {
     "id": "manage_geometry.create_ramp",
     "parentTool": "manage_geometry",
     "dispatchAction": "create_ramp",
@@ -256593,6 +258762,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "world",
     "schemaHash": "eb3e8ebd305cb6b579ac7cb3cec4893e367aa3b269e374c6046720d556c2a7db",
     "contentHash": "b2035ce52dc5472528fc1f5c3048f732415e5e4e63b892c778b846fe4a1194fa"
+  },
+  {
+    "id": "manage_geometry.difference",
+    "parentTool": "manage_geometry",
+    "dispatchAction": "difference",
+    "domain": "world",
+    "schemaHash": "fad1599dc25188f93b2f8cf6470cb9e432c77fad83752320b269741c6f0bd835",
+    "contentHash": "791b427026bb3187ad7714efec12119f16acd958590825c27a37a7cdb7252542"
   },
   {
     "id": "manage_geometry.displace_by_texture",
@@ -256681,6 +258858,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "world",
     "schemaHash": "792b8181a3d1448a8ed61df37fa4f3a54eee9c615b797c01bec10d109fe5f669",
     "contentHash": "25e5ebd840fc74ab600441e293932174c2c6e9daf72b8f45057f5f179008bf04"
+  },
+  {
+    "id": "manage_geometry.get_vertex_position",
+    "parentTool": "manage_geometry",
+    "dispatchAction": "get_vertex_position",
+    "domain": "world",
+    "schemaHash": "1b7c3bc4aa8560145b550325070e4ed6fab54b7078f4525611b3122606e64007",
+    "contentHash": "2ff5fcfd8fd9bef7b9ca03bb3ed56d6474114ab7a8b261784f91eec250de645b"
   },
   {
     "id": "manage_geometry.inset",
@@ -256867,6 +259052,30 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "be7615262055ff9d053f3483caa23066e090d2f94c29361153703f2f7cc57c03"
   },
   {
+    "id": "manage_geometry.set_uvs",
+    "parentTool": "manage_geometry",
+    "dispatchAction": "set_uvs",
+    "domain": "world",
+    "schemaHash": "35ad1537584a9f666a389f78df3cce965675a297a4ca030128ba657bcdd17753",
+    "contentHash": "b09c505a7fd2c5538ebe5eb97bb4e43db4f7aaa2e962133b3238a9e3afa46a8d"
+  },
+  {
+    "id": "manage_geometry.set_vertex_color",
+    "parentTool": "manage_geometry",
+    "dispatchAction": "set_vertex_color",
+    "domain": "world",
+    "schemaHash": "b7a8ce1fb0872201c887663093cef869d0413015880af406ea27ff73c89453ee",
+    "contentHash": "02c77f522b9a150b901ab003d631611cd396438a162165fbe70d01f36ad9eba9"
+  },
+  {
+    "id": "manage_geometry.set_vertex_position",
+    "parentTool": "manage_geometry",
+    "dispatchAction": "set_vertex_position",
+    "domain": "world",
+    "schemaHash": "3f2db1e0ca462773e180803b37af3133df2411cbe909109db58db16b4a665bc4",
+    "contentHash": "1c6e69a209328a37667376abb2b41b622b9b51fc75f481910e2f70942f02a931"
+  },
+  {
     "id": "manage_geometry.shell",
     "parentTool": "manage_geometry",
     "dispatchAction": "shell",
@@ -256907,6 +259116,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "5d6d3a6f9703b98e992a9a314f141f67a55b920fcdd8bd0c943c6cdc31eb5b3a"
   },
   {
+    "id": "manage_geometry.split_normals",
+    "parentTool": "manage_geometry",
+    "dispatchAction": "split_normals",
+    "domain": "world",
+    "schemaHash": "7e4e5b5600401a09aac45bbd48c06c5b32dce90234434a15a6153abf1147b754",
+    "contentHash": "b3354f82a4e18e841165e2e9b4e4c3cc48849c8c1899f8a033cca18d014a8616"
+  },
+  {
     "id": "manage_geometry.stretch",
     "parentTool": "manage_geometry",
     "dispatchAction": "stretch",
@@ -256945,6 +259162,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "world",
     "schemaHash": "1d3e84a46e092bb6be348c4f84f2e704533ff89eee8cf295bc10deb24d0f321d",
     "contentHash": "f60586763032bb4461f5b652fcba20036bd438d32761e952e439a1a81d18303c"
+  },
+  {
+    "id": "manage_geometry.translate_mesh",
+    "parentTool": "manage_geometry",
+    "dispatchAction": "translate_mesh",
+    "domain": "world",
+    "schemaHash": "6b858bc25dadf02b09a09aa11d74b8bea808b437068e7ca8ab77ff36a420544b",
+    "contentHash": "d4bfe07523d067c709d0adf4184eabe70df8f20e984e97e705c79ec4c796d62e"
   },
   {
     "id": "manage_geometry.triangulate",
@@ -270727,6 +272952,35 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "set",
     "set_modifier_magnitude"
   ],
+  "manage_geometry.append_triangle": [
+    "actor",
+    "append",
+    "append_triangle",
+    "corner",
+    "dynamicmesh",
+    "from",
+    "manage_geometry",
+    "manage_geometry.append_triangle",
+    "positions",
+    "three",
+    "triangle",
+    "world"
+  ],
+  "manage_geometry.append_vertex": [
+    "actor",
+    "and",
+    "append",
+    "append_vertex",
+    "dynamicmesh",
+    "index",
+    "its",
+    "manage_geometry",
+    "manage_geometry.append_vertex",
+    "one",
+    "return",
+    "vertex",
+    "world"
+  ],
   "manage_geometry.array_linear": [
     "array",
     "array_linear",
@@ -270981,6 +273235,19 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "primitives",
     "world"
   ],
+  "manage_geometry.create_procedural_mesh": [
+    "actor",
+    "author",
+    "create_procedural_mesh",
+    "dynamicmesh",
+    "empty",
+    "geometry",
+    "into",
+    "manage_geometry",
+    "manage_geometry.create_procedural_mesh",
+    "spawn",
+    "world"
+  ],
   "manage_geometry.create_ramp": [
     "actor",
     "create",
@@ -271063,6 +273330,22 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage_geometry.cylindrify",
     "mesh",
     "toward",
+    "world"
+  ],
+  "manage_geometry.difference": [
+    "boolean_subtract",
+    "difference",
+    "dynamicmesh",
+    "from",
+    "manage_geometry",
+    "manage_geometry.difference",
+    "mesh",
+    "spelling",
+    "subtract",
+    "target",
+    "the",
+    "tool",
+    "under",
     "world"
   ],
   "manage_geometry.displace_by_texture": [
@@ -271195,6 +273478,19 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "optimize",
     "return",
     "vertexfacematerial",
+    "world"
+  ],
+  "manage_geometry.get_vertex_position": [
+    "actor",
+    "dynamicmesh",
+    "get_vertex_position",
+    "manage_geometry",
+    "manage_geometry.get_vertex_position",
+    "one",
+    "position",
+    "read",
+    "the",
+    "vertex",
     "world"
   ],
   "manage_geometry.inset": [
@@ -271473,6 +273769,47 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "settings",
     "world"
   ],
+  "manage_geometry.set_uvs": [
+    "actor",
+    "channel",
+    "coordinate",
+    "dynamicmesh",
+    "manage_geometry",
+    "manage_geometry.set_uvs",
+    "one",
+    "set",
+    "set_uvs",
+    "the",
+    "vertex",
+    "world"
+  ],
+  "manage_geometry.set_vertex_color": [
+    "actor",
+    "colour",
+    "dynamicmesh",
+    "every",
+    "manage_geometry",
+    "manage_geometry.set_vertex_color",
+    "one",
+    "set",
+    "set_vertex_color",
+    "the",
+    "vertex",
+    "world"
+  ],
+  "manage_geometry.set_vertex_position": [
+    "actor",
+    "dynamicmesh",
+    "manage_geometry",
+    "manage_geometry.set_vertex_position",
+    "move",
+    "new",
+    "one",
+    "position",
+    "set_vertex_position",
+    "vertex",
+    "world"
+  ],
   "manage_geometry.shell": [
     "create",
     "dynamic",
@@ -271531,6 +273868,22 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "toward",
     "world"
   ],
+  "manage_geometry.split_normals": [
+    "above",
+    "actor",
+    "angle",
+    "dynamicmesh",
+    "edges",
+    "harden",
+    "manage_geometry",
+    "manage_geometry.split_normals",
+    "normals",
+    "split",
+    "split_normals",
+    "the",
+    "threshold",
+    "world"
+  ],
   "manage_geometry.stretch": [
     "along",
     "axis",
@@ -271587,6 +273940,21 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "transform",
     "transform_uvs",
     "uvs",
+    "world"
+  ],
+  "manage_geometry.translate_mesh": [
+    "actor",
+    "alone",
+    "dynamicmesh",
+    "every",
+    "leaving",
+    "manage_geometry",
+    "manage_geometry.translate_mesh",
+    "the",
+    "transform",
+    "translate",
+    "translate_mesh",
+    "vertex",
     "world"
   ],
   "manage_geometry.triangulate": [
@@ -284378,7 +286746,7 @@ export const DOCS_DATA = [
     "name": "manage_geometry",
     "category": "world",
     "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
-    "actionCount": 76
+    "actionCount": 86
   },
   {
     "name": "manage_interaction",
@@ -287697,6 +290065,14 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "40072666dd71e6fdad271766bb70bd49a5ac7354c474a4845dc9218a91ed0db0",
     "content": "e9bf1ebfc6d2ad1497221ff26e9ddd60294689cc49b9bd151ae97cffa2f5b1a2"
   },
+  "manage_geometry.append_triangle": {
+    "schema": "b482ddabcdbb02a3369824674135f4b0d55b0afb0020bf6cd458624fb2dd9e89",
+    "content": "ad9bfefeaffca39feaf6a462a3139a3e790fa2b8d4b07fa605c1991a39ce9a86"
+  },
+  "manage_geometry.append_vertex": {
+    "schema": "5c2333780f4804c360796d69f5d8b92a24d7ca9021eca50e0fe6eb8c27533d21",
+    "content": "cc6ff637a073cf3473904c5290dac5e8996bf0495f198811475c4872e4f7131c"
+  },
   "manage_geometry.array_linear": {
     "schema": "fb49b2c56caa0efc0d08eef13e0e5caa2c15478596b845ef631f230711d53b28",
     "content": "83a65289586d368c12b95d4c1f5438af1e2074872f4d86cfc7c8785127295be5"
@@ -287781,6 +290157,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "61bcb142657d748e8315274706d00871ab443a0c889d690c93d5eb00d6b9cfb2",
     "content": "54ccba86cf868fcb5383e891f595aeb24d49214c5f0b7f89f997e7991a46e8da"
   },
+  "manage_geometry.create_procedural_mesh": {
+    "schema": "6cf9729e6c9706370edf8723b7fe6c0654198eb88c7c8226ffa21af87484dcc9",
+    "content": "defd1dcdc0270470b2db1abd0cc7be0f19b0445c2d17c4cceb6878f56b915baa"
+  },
   "manage_geometry.create_ramp": {
     "schema": "f67e4fc3c0b0206d415b0f7d8a2fa121326c0de85871448a355e779cf7ec9bfd",
     "content": "e46ee75e879bc1fcb0979d893acf285d5e983b61ad4078f33207cd681da62d15"
@@ -287808,6 +290188,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "manage_geometry.cylindrify": {
     "schema": "eb3e8ebd305cb6b579ac7cb3cec4893e367aa3b269e374c6046720d556c2a7db",
     "content": "b2035ce52dc5472528fc1f5c3048f732415e5e4e63b892c778b846fe4a1194fa"
+  },
+  "manage_geometry.difference": {
+    "schema": "fad1599dc25188f93b2f8cf6470cb9e432c77fad83752320b269741c6f0bd835",
+    "content": "791b427026bb3187ad7714efec12119f16acd958590825c27a37a7cdb7252542"
   },
   "manage_geometry.displace_by_texture": {
     "schema": "001d4e09914d2e73f552609a6cd06c1dce0e3cc4adec4326ad66150b564d7009",
@@ -287852,6 +290236,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "manage_geometry.get_mesh_info": {
     "schema": "792b8181a3d1448a8ed61df37fa4f3a54eee9c615b797c01bec10d109fe5f669",
     "content": "25e5ebd840fc74ab600441e293932174c2c6e9daf72b8f45057f5f179008bf04"
+  },
+  "manage_geometry.get_vertex_position": {
+    "schema": "1b7c3bc4aa8560145b550325070e4ed6fab54b7078f4525611b3122606e64007",
+    "content": "2ff5fcfd8fd9bef7b9ca03bb3ed56d6474114ab7a8b261784f91eec250de645b"
   },
   "manage_geometry.inset": {
     "schema": "6ce79ce911105f02d13851f5d3dd7ba9d1c4c6809c5de526dec18ef59928d3c2",
@@ -287945,6 +290333,18 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "b98c88e9f489b16f46e9eee7db594980604938fcf7dce977235db00e42dbd8c9",
     "content": "be7615262055ff9d053f3483caa23066e090d2f94c29361153703f2f7cc57c03"
   },
+  "manage_geometry.set_uvs": {
+    "schema": "35ad1537584a9f666a389f78df3cce965675a297a4ca030128ba657bcdd17753",
+    "content": "b09c505a7fd2c5538ebe5eb97bb4e43db4f7aaa2e962133b3238a9e3afa46a8d"
+  },
+  "manage_geometry.set_vertex_color": {
+    "schema": "b7a8ce1fb0872201c887663093cef869d0413015880af406ea27ff73c89453ee",
+    "content": "02c77f522b9a150b901ab003d631611cd396438a162165fbe70d01f36ad9eba9"
+  },
+  "manage_geometry.set_vertex_position": {
+    "schema": "3f2db1e0ca462773e180803b37af3133df2411cbe909109db58db16b4a665bc4",
+    "content": "1c6e69a209328a37667376abb2b41b622b9b51fc75f481910e2f70942f02a931"
+  },
   "manage_geometry.shell": {
     "schema": "4634bd8a989e86e354f439cc422f164f08c5150e3ba9aaa3b24932c50b420502",
     "content": "ed70c5476db409a7c410788d79242bbfe128a7c9d72c25ba0084316c39a52619"
@@ -287965,6 +290365,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "eb3e8ebd305cb6b579ac7cb3cec4893e367aa3b269e374c6046720d556c2a7db",
     "content": "5d6d3a6f9703b98e992a9a314f141f67a55b920fcdd8bd0c943c6cdc31eb5b3a"
   },
+  "manage_geometry.split_normals": {
+    "schema": "7e4e5b5600401a09aac45bbd48c06c5b32dce90234434a15a6153abf1147b754",
+    "content": "b3354f82a4e18e841165e2e9b4e4c3cc48849c8c1899f8a033cca18d014a8616"
+  },
   "manage_geometry.stretch": {
     "schema": "91b23291f356b8d354f26aa23ffb818c53965a4eae3400b11a1fcd76a1bb9078",
     "content": "f653a01f12f5bfd82e8c4a3d5c006ff19d11e35969417c87338e6d128889d7c0"
@@ -287984,6 +290388,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "manage_geometry.transform_uvs": {
     "schema": "1d3e84a46e092bb6be348c4f84f2e704533ff89eee8cf295bc10deb24d0f321d",
     "content": "f60586763032bb4461f5b652fcba20036bd438d32761e952e439a1a81d18303c"
+  },
+  "manage_geometry.translate_mesh": {
+    "schema": "6b858bc25dadf02b09a09aa11d74b8bea808b437068e7ca8ab77ff36a420544b",
+    "content": "d4bfe07523d067c709d0adf4184eabe70df8f20e984e97e705c79ec4c796d62e"
   },
   "manage_geometry.triangulate": {
     "schema": "1c4659c54a6b488b6a21b524b83fd713c5cc687bd40bbdb7325e061c2a756009",

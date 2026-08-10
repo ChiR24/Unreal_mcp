@@ -7,11 +7,11 @@ import {
 } from '../../../src/server/gateway/gateway-search-filters.js';
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 
-const EXPECTED_RECORDS = 1363;
+const EXPECTED_RECORDS = 1373;
 const sizeOf = (value: unknown): number => Buffer.byteLength(JSON.stringify(value), 'utf8');
 
 describe('Task 29 - search disclosure stays bounded and deterministic', () => {
-  it('an unbudgeted full-catalog browse never approaches the 1,363-record payload', () => {
+  it('an unbudgeted full-catalog browse never approaches the 1,373-record payload', () => {
     const result = searchGatewayCapabilities({});
     const size = sizeOf(result);
 
@@ -104,7 +104,7 @@ describe('Task 29 - describe discloses progressively and never dumps a union', (
     expect(new Set(levels.map((l) => JSON.stringify(l))).size).toBeGreaterThan(1);
   });
 
-  it('the catalog really is the full 1,363 universe behind these bounded views', () => {
+  it('the catalog really is the full 1,373 universe behind these bounded views', () => {
     expect(ALL_CAPABILITY_RECORDS.length).toBe(EXPECTED_RECORDS);
   });
 });

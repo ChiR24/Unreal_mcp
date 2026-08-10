@@ -9761,6 +9761,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
+        "a": {
+          "type": "number",
+          "description": "Alpha channel, 0-1."
+        },
         "actorName": {
           "type": "string",
           "description": "Actor name in the level."
@@ -9780,6 +9784,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "axis": {
           "type": "string",
           "description": "Deformation axis: X, Y, or Z."
+        },
+        "b": {
+          "type": "number",
+          "description": "Blue channel, 0-1."
         },
         "cap": {
           "type": "boolean",
@@ -9846,6 +9854,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "distance": {
           "type": "number",
           "description": "Distance for offset-style operations."
+        },
+        "enableCollision": {
+          "type": "boolean",
+          "description": "Enable simple collision on the created DynamicMesh actor."
+        },
+        "g": {
+          "type": "number",
+          "description": "Green channel, 0-1."
+        },
+        "groupID": {
+          "type": "integer",
+          "description": "Polygroup id assigned to the appended triangle."
         },
         "hardEdgeAngle": {
           "type": "number",
@@ -10004,6 +10024,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "additionalProperties": false
         },
+        "r": {
+          "type": "number",
+          "description": "Red channel, 0-1."
+        },
         "radialSegments": {
           "type": "integer",
           "description": "Radial tessellation segments for circular primitives."
@@ -10083,6 +10107,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Number of segments for the operation."
         },
+        "setAll": {
+          "type": "boolean",
+          "description": "Apply the colour to every vertex instead of one."
+        },
         "simplificationFactor": {
           "type": "number",
           "description": "Collision simplification factor."
@@ -10090,6 +10118,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "splineActorName": {
           "type": "string",
           "description": "Spline actor name for extrude/sweep along spline."
+        },
+        "splitAngle": {
+          "type": "number",
+          "description": "Angle threshold in degrees above which normals are split."
         },
         "stepDepth": {
           "type": "number",
@@ -10139,6 +10171,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Tool actor name for boolean operations."
         },
+        "translation": {
+          "type": "object",
+          "description": "Translation {x, y, z} applied to every mesh vertex.",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "X"
+            },
+            "y": {
+              "type": "number",
+              "description": "Y"
+            },
+            "z": {
+              "type": "number",
+              "description": "Z"
+            }
+          },
+          "additionalProperties": false
+        },
         "trianglePercent": {
           "type": "number",
           "description": "Percent of triangles to keep for LOD reduction."
@@ -10146,6 +10197,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "trimActorName": {
           "type": "string",
           "description": "Trim actor name for boolean trim."
+        },
+        "u": {
+          "type": "number",
+          "description": "U coordinate."
         },
         "uvChannel": {
           "type": "integer",
@@ -10180,6 +10235,71 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           },
           "additionalProperties": false
+        },
+        "v": {
+          "type": "number",
+          "description": "V coordinate."
+        },
+        "v0": {
+          "type": "object",
+          "description": "First corner {x, y, z} of the appended triangle.",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "X"
+            },
+            "y": {
+              "type": "number",
+              "description": "Y"
+            },
+            "z": {
+              "type": "number",
+              "description": "Z"
+            }
+          },
+          "additionalProperties": false
+        },
+        "v1": {
+          "type": "object",
+          "description": "Second corner {x, y, z} of the appended triangle.",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "X"
+            },
+            "y": {
+              "type": "number",
+              "description": "Y"
+            },
+            "z": {
+              "type": "number",
+              "description": "Z"
+            }
+          },
+          "additionalProperties": false
+        },
+        "v2": {
+          "type": "object",
+          "description": "Third corner {x, y, z} of the appended triangle.",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "X"
+            },
+            "y": {
+              "type": "number",
+              "description": "Y"
+            },
+            "z": {
+              "type": "number",
+              "description": "Z"
+            }
+          },
+          "additionalProperties": false
+        },
+        "vertexIndex": {
+          "type": "integer",
+          "description": "Index of the vertex the operation targets."
         },
         "weight": {
           "type": "number",
@@ -10275,7 +10395,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_lod_screen_sizes",
             "convert_to_nanite",
             "convert_to_static_mesh",
-            "get_mesh_info"
+            "get_mesh_info",
+            "create_procedural_mesh",
+            "append_vertex",
+            "append_triangle",
+            "get_vertex_position",
+            "set_vertex_position",
+            "set_vertex_color",
+            "set_uvs",
+            "split_normals",
+            "translate_mesh",
+            "difference"
           ],
           "description": "Action to invoke on manage_geometry."
         }
@@ -10288,21 +10418,141 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "a": {
+          "type": "number",
+          "description": "Alpha channel, 0-1."
+        },
+        "actorName": {
+          "type": "string",
+          "description": "Actor name in the level."
+        },
+        "b": {
+          "type": "number",
+          "description": "Blue channel, 0-1."
+        },
+        "class": {
+          "type": "string",
+          "description": "Class of the spawned actor."
+        },
+        "elementsModified": {
+          "type": "integer",
+          "description": "Number of UV elements written."
+        },
+        "enableCollision": {
+          "type": "boolean",
+          "description": "Enable simple collision on the created DynamicMesh actor."
+        },
+        "g": {
+          "type": "number",
+          "description": "Green channel, 0-1."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name for the new asset or node."
+        },
+        "position": {
+          "type": "object",
+          "description": "Position {x, y, z} for the operation.",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "X"
+            },
+            "y": {
+              "type": "number",
+              "description": "Y"
+            },
+            "z": {
+              "type": "number",
+              "description": "Z"
+            }
+          },
+          "additionalProperties": false
+        },
+        "r": {
+          "type": "number",
+          "description": "Red channel, 0-1."
+        },
+        "splitAngle": {
+          "type": "number",
+          "description": "Angle threshold in degrees above which normals are split."
         },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
         },
+        "translation": {
+          "type": "object",
+          "description": "Translation {x, y, z} applied to every mesh vertex.",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "X"
+            },
+            "y": {
+              "type": "number",
+              "description": "Y"
+            },
+            "z": {
+              "type": "number",
+              "description": "Z"
+            }
+          },
+          "additionalProperties": false
+        },
         "triangleCount": {
+          "type": [
+            "integer",
+            "number"
+          ],
+          "description": "Triangle count of the mesh after the call."
+        },
+        "triangleIndex": {
+          "type": "integer",
+          "description": "Index of the triangle the operation targets."
+        },
+        "u": {
           "type": "number",
-          "description": "Triangle count."
+          "description": "U coordinate."
+        },
+        "uvChannel": {
+          "type": "integer",
+          "description": "UV channel index (0-7)."
+        },
+        "v": {
+          "type": "number",
+          "description": "V coordinate."
         },
         "vertexCount": {
-          "type": "number",
-          "description": "Vertex count."
+          "type": [
+            "integer",
+            "number"
+          ],
+          "description": "Vertex count of the mesh after the call."
+        },
+        "vertexIndex": {
+          "type": "integer",
+          "description": "Index of the vertex the operation targets."
+        },
+        "vertexIndex0": {
+          "type": "integer",
+          "description": "Index of the first appended corner."
+        },
+        "vertexIndex1": {
+          "type": "integer",
+          "description": "Index of the second appended corner."
+        },
+        "vertexIndex2": {
+          "type": "integer",
+          "description": "Index of the third appended corner."
+        },
+        "verticesModified": {
+          "type": "integer",
+          "description": "Number of vertices whose colour changed."
         }
       },
       "additionalProperties": true
