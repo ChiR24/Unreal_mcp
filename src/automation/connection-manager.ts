@@ -69,7 +69,6 @@ export class ConnectionManager extends EventEmitter {
         this.activeSockets.set(socket, socketInfo);
         this.rateLimitState.set(socket, { windowStartMs: Date.now(), messageCount: 0, automationCount: 0 });
 
-        // Set as primary socket if this is the first connection
         if (!this.primarySocket) {
             this.primarySocket = socket;
         }

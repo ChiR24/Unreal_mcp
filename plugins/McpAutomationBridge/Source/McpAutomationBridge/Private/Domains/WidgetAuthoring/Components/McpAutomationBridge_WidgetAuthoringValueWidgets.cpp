@@ -54,13 +54,11 @@ bool HandleWidgetAuthoringValueWidgets(
         // CRITICAL: Register widget GUID to prevent ensure failures during compilation
         RegisterWidgetGuid(WidgetBP, ProgressBarWidget);
 
-        // Set percent if provided
         if (Payload->HasField(TEXT("percent")))
         {
             ProgressBarWidget->SetPercent(static_cast<float>(GetJsonNumberField(Payload, TEXT("percent"), 0.5)));
         }
 
-        // Set fill color if provided
         if (Payload->HasTypedField<EJson::Object>(TEXT("fillColorAndOpacity")))
         {
             TSharedPtr<FJsonObject> ColorObj = Payload->GetObjectField(TEXT("fillColorAndOpacity"));
@@ -68,7 +66,6 @@ bool HandleWidgetAuthoringValueWidgets(
             ProgressBarWidget->SetFillColorAndOpacity(Color);
         }
 
-        // Set marquee if provided
         if (Payload->HasField(TEXT("isMarquee")))
         {
             ProgressBarWidget->SetIsMarquee(GetJsonBoolField(Payload, TEXT("isMarquee")));
@@ -132,13 +129,11 @@ bool HandleWidgetAuthoringValueWidgets(
         // CRITICAL: Register widget GUID to prevent ensure failures during compilation
         RegisterWidgetGuid(WidgetBP, SliderWidget);
 
-        // Set value if provided
         if (Payload->HasField(TEXT("value")))
         {
             SliderWidget->SetValue(static_cast<float>(GetJsonNumberField(Payload, TEXT("value"), 0.5)));
         }
 
-        // Set min/max values if provided
         if (Payload->HasField(TEXT("minValue")))
         {
             SliderWidget->SetMinValue(static_cast<float>(GetJsonNumberField(Payload, TEXT("minValue"), 0.0)));
@@ -148,7 +143,6 @@ bool HandleWidgetAuthoringValueWidgets(
             SliderWidget->SetMaxValue(static_cast<float>(GetJsonNumberField(Payload, TEXT("maxValue"), 1.0)));
         }
 
-        // Set step size if provided
         if (Payload->HasField(TEXT("stepSize")))
         {
             SliderWidget->SetStepSize(static_cast<float>(GetJsonNumberField(Payload, TEXT("stepSize"), 0.01)));

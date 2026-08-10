@@ -137,7 +137,6 @@ bool HandleWidgetAuthoringManipulation(
             return true;
         }
 
-        // Remove from current parent and add to new parent
         if (UPanelWidget* OldParent = TargetWidget->GetParent())
         {
             OldParent->RemoveChild(TargetWidget);

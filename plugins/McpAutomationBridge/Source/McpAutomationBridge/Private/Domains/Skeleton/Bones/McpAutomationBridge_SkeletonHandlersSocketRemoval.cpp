@@ -28,7 +28,6 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteSocket(
         return true;
     }
 
-    // Try skeletal mesh first
     if (!SkeletalMeshPath.IsEmpty())
     {
         FString Error;

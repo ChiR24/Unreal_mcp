@@ -39,7 +39,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNormalizeWeights(
     Mesh->Build();
     McpSafeAssetSave(Mesh);
 
-    // Save if requested
     bool bSave = false;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave)
@@ -83,7 +82,6 @@ bool UMcpAutomationBridgeSubsystem::HandlePruneWeights(
     Mesh->Build();
     McpSafeAssetSave(Mesh);
 
-    // Save if requested
     bool bSave = false;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave)

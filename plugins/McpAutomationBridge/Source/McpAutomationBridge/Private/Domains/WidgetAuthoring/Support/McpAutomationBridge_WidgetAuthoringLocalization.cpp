@@ -58,7 +58,6 @@ bool HandleWidgetAuthoringLocalization(
         bool bApplied = false;
         if (UTextBlock* TextWidget = Cast<UTextBlock>(TargetWidget))
         {
-            // Create localized text reference
             FText LocalizedText = FText::ChangeKey(FTextKey(Namespace), FTextKey(Key), TextWidget->GetText());
             TextWidget->SetText(LocalizedText);
             bApplied = true;
@@ -106,7 +105,6 @@ bool HandleWidgetAuthoringLocalization(
         bool bBound = false;
         if (UTextBlock* TextWidget = Cast<UTextBlock>(TargetWidget))
         {
-            // Try to get text from string table
             FText LocalizedText = FText::FromStringTable(FName(*StringTableId), StringKey);
             if (!LocalizedText.IsEmpty())
             {

@@ -50,7 +50,6 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        // Check for duplicate animation name
         for (UWidgetAnimation* ExistingAnim : WidgetBP->Animations)
         {
             if (ExistingAnim && ExistingAnim->GetName().Equals(AnimationName, ESearchCase::IgnoreCase))
@@ -62,7 +61,6 @@ bool HandleWidgetAuthoringAnimationCore(
             }
         }
 
-        // Create new UWidgetAnimation
         UWidgetAnimation* NewAnim = NewObject<UWidgetAnimation>(WidgetBP, FName(*AnimationName), RF_Transactional);
         if (!NewAnim)
         {
@@ -79,7 +77,6 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        // Initialize the animation MovieScene with playback settings
         UMovieScene* MovieScene = NewAnim->GetMovieScene();
 
         // Clamp duration to avoid zero-length animations
@@ -88,7 +85,6 @@ bool HandleWidgetAuthoringAnimationCore(
         // Set display rate (20 fps is the UE default for widget animations)
         MovieScene->SetDisplayRate(FFrameRate(20, 1));
 
-        // Set playback range based on duration
         const FFrameTime InFrame = 0.0 * MovieScene->GetTickResolution();
         const FFrameTime OutFrame = SafeDuration * MovieScene->GetTickResolution();
         MovieScene->SetPlaybackRange(TRange<FFrameNumber>(InFrame.FrameNumber, OutFrame.FrameNumber + 1));
@@ -129,7 +125,6 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        // Find the animation
         UWidgetAnimation* Animation = nullptr;
         for (UWidgetAnimation* Anim : WidgetBP->Animations)
         {
@@ -146,7 +141,6 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        // Find the target widget in the widget tree
         UWidget* TargetWidget = nullptr;
         if (WidgetBP->WidgetTree)
         {
@@ -173,7 +167,6 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        // Add the possessable to the MovieScene
         FGuid BindingGuid = MovieScene->AddPossessable(TargetWidget->GetFName().ToString(), TargetWidget->GetClass());
 
         // CRITICAL: For editor-time (WidgetBlueprint context), we cannot use BindPossessableObject
@@ -220,7 +213,6 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        // Find the animation
         UWidgetAnimation* Animation = nullptr;
         for (UWidgetAnimation* Anim : WidgetBP->Animations)
         {
@@ -271,7 +263,6 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        // Find the animation
         UWidgetAnimation* Animation = nullptr;
         for (UWidgetAnimation* Anim : WidgetBP->Animations)
         {

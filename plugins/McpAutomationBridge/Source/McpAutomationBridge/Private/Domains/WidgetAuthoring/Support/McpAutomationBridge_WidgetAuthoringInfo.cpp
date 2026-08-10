@@ -44,14 +44,12 @@ bool HandleWidgetAuthoringInfo(
 
         TSharedPtr<FJsonObject> WidgetInfo = McpHandlerUtils::CreateResultObject();
 
-        // Basic info
         WidgetInfo->SetStringField(TEXT("widgetClass"), WidgetBP->GetName());
         if (WidgetBP->ParentClass)
         {
             WidgetInfo->SetStringField(TEXT("parentClass"), WidgetBP->ParentClass->GetName());
         }
 
-        // Collect widgets/slots
         TArray<TSharedPtr<FJsonValue>> SlotsArray;
         if (WidgetBP->WidgetTree)
         {
@@ -62,7 +60,6 @@ bool HandleWidgetAuthoringInfo(
         }
         WidgetInfo->SetArrayField(TEXT("slots"), SlotsArray);
 
-        // Collect animations
         TArray<TSharedPtr<FJsonValue>> AnimsArray;
         for (UWidgetAnimation* Anim : WidgetBP->Animations)
         {

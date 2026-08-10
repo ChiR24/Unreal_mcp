@@ -55,7 +55,6 @@ export function sanitizeCommandArgument(arg: string): string {
     return '';
   }
 
-  // Remove leading/trailing whitespace
   let sanitized = arg.trim();
 
   // Remove null bytes and control characters
@@ -87,7 +86,6 @@ export function sanitizeAssetName(name: string): string {
     return 'Asset';
   }
 
-  // Remove leading/trailing whitespace
   let sanitized = name.trim();
 
   // Check for SQL injection patterns and reject early
@@ -99,10 +97,8 @@ export function sanitizeAssetName(name: string): string {
   // Replace invalid characters with underscores
   sanitized = sanitized.replace(INVALID_CHARS, '_');
 
-  // Remove consecutive underscores
   sanitized = sanitized.replace(/_+/g, '_');
 
-  // Remove leading/trailing underscores
   sanitized = sanitized.replace(/^_+|_+$/g, '');
 
   // If name is empty after sanitization, use default
@@ -142,7 +138,6 @@ export function normalizeAndSanitizeAssetPath(path: string): string {
     return '/Game';
   }
 
-  // Normalize slashes
   path = path.replace(/\\/g, '/');
 
   // Normalize double slashes (prevents engine crash from paths like /Game//Test)
@@ -155,7 +150,6 @@ export function normalizeAndSanitizeAssetPath(path: string): string {
     path = `/${path}`;
   }
 
-  // Split path into segments and sanitize each
   let segments = path.split('/').filter(s => s.length > 0);
 
   // Block path traversal attempts

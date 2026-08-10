@@ -53,12 +53,10 @@ bool HandleWidgetAuthoringCollectionWidgets(
         // CRITICAL: Register widget GUID to prevent ensure failures during compilation
         RegisterWidgetGuid(WidgetBP, SpinBox);
 
-        // Set value
         if (Payload->HasField(TEXT("value")))
         {
             SpinBox->SetValue(static_cast<float>(GetJsonNumberField(Payload, TEXT("value"), 0.0)));
         }
-        // Set min/max
         if (Payload->HasField(TEXT("minValue")))
         {
             SpinBox->SetMinValue(static_cast<float>(GetJsonNumberField(Payload, TEXT("minValue"), 0.0)));
@@ -67,7 +65,6 @@ bool HandleWidgetAuthoringCollectionWidgets(
         {
             SpinBox->SetMaxValue(static_cast<float>(GetJsonNumberField(Payload, TEXT("maxValue"), 100.0)));
         }
-        // Set delta
         if (Payload->HasField(TEXT("delta")))
         {
             SpinBox->SetDelta(static_cast<float>(GetJsonNumberField(Payload, TEXT("delta"), 1.0)));

@@ -81,7 +81,6 @@ bool HandleWidgetAuthoringGenericComponent(
             return true;
         }
 
-        // Find parent panel
         FString ParentName = GetJsonStringField(Payload, TEXT("parentName"));
         UPanelWidget* Parent = Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget);
 
@@ -97,16 +96,13 @@ bool HandleWidgetAuthoringGenericComponent(
 
         if (!Parent)
         {
-            // Create a canvas panel as root if none exists
             Parent = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("RootCanvas"));
             WidgetBP->WidgetTree->RootWidget = Parent;
             RegisterWidgetGuid(WidgetBP, Parent);
         }
 
-        // Map component type to UWidget class
         UClass* WidgetClass = nullptr;
 
-        // Common widget types
         if (ComponentType.Equals(TEXT("TextBlock"), ESearchCase::IgnoreCase) ||
             ComponentType.Equals(TEXT("Text"), ESearchCase::IgnoreCase))
         {
@@ -225,7 +221,6 @@ bool HandleWidgetAuthoringGenericComponent(
             return true;
         }
 
-        // Create the widget
         UWidget* NewWidget = WidgetBP->WidgetTree->ConstructWidget<UWidget>(WidgetClass, *ComponentName);
         if (!NewWidget)
         {
@@ -234,10 +229,8 @@ bool HandleWidgetAuthoringGenericComponent(
         }
         RegisterWidgetGuid(WidgetBP, NewWidget);
 
-        // Add to parent
         Parent->AddChild(NewWidget);
 
-        // Configure slot if canvas panel
         if (UCanvasPanel* Canvas = Cast<UCanvasPanel>(Parent))
         {
             if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(NewWidget->Slot))
@@ -259,7 +252,6 @@ bool HandleWidgetAuthoringGenericComponent(
             }
         }
 
-        // Set initial text if TextBlock
         if (UTextBlock* TextWidget = Cast<UTextBlock>(NewWidget))
         {
             FString InitialText = GetJsonStringField(Payload, TEXT("text"));

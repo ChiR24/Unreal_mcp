@@ -52,7 +52,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetBoneTransform(
         return true;
     }
 
-    // Parse transform
     FVector Location = ParseVectorFromJson(Payload, TEXT("location"));
     FRotator Rotation = ParseRotatorFromJson(Payload, TEXT("rotation"));
     FVector Scale = ParseVectorFromJson(Payload, TEXT("scale"), FVector::OneVector);
@@ -66,7 +65,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetBoneTransform(
 
     McpSafeAssetSave(Mesh);
 
-    // Save if requested
     bool bSave = false;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave)

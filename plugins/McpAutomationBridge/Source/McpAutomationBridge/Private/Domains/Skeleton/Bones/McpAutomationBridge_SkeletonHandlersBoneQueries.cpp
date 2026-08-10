@@ -26,7 +26,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSkeletonInfo(
     FString Error;
     USkeleton* Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Error);
 
-    // Try loading as skeletal mesh if skeleton load failed
     if (!Skeleton && !SkeletonPath.IsEmpty())
     {
         USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletonPath, Error);
@@ -45,14 +44,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSkeletonInfo(
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, Skeleton);
 
-    // Bone count
     const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
     Result->SetNumberField(TEXT("boneCount"), RefSkeleton.GetRawBoneNum());
 
-    // Virtual bone count
     Result->SetNumberField(TEXT("virtualBoneCount"), Skeleton->GetVirtualBones().Num());
 
-    // Socket count
     Result->SetNumberField(TEXT("socketCount"), Skeleton->Sockets.Num());
 
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Skeleton info retrieved"), Result);
@@ -104,7 +100,6 @@ bool UMcpAutomationBridgeSubsystem::HandleListBones(
             BoneObj->SetStringField(TEXT("parentName"), RefSkeleton.GetBoneName(ParentIndex).ToString());
         }
 
-        // Use McpHandlerUtils helper for transform JSON
         const FTransform& RefPose = RefSkeleton.GetRefBonePose()[i];
         TSharedPtr<FJsonObject> TransformObj = McpHandlerUtils::CreateResultObject();
         TransformObj->SetNumberField(TEXT("x"), RefPose.GetLocation().X);

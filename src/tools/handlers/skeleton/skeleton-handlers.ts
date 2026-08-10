@@ -59,7 +59,6 @@ function normalizeSkeletonArgs(action: string, args: HandlerArgs): Record<string
     normalized.parentBone = args.parentBoneName;
   }
 
-  // Normalize location/position parameters
   if (args.location) {
     normalized.location = normalizeLocation(args.location);
   }
@@ -80,7 +79,6 @@ function normalizeSkeletonArgs(action: string, args: HandlerArgs): Record<string
     }
   }
 
-  // Normalize scale
   if (args.scale) {
     if (Array.isArray(args.scale)) {
       const [x, y, z] = args.scale.map((v: unknown) => Number(v) || 1);
@@ -92,7 +90,6 @@ function normalizeSkeletonArgs(action: string, args: HandlerArgs): Record<string
     }
   }
 
-  // Normalize bone weights array
   if (args.weights && Array.isArray(args.weights)) {
     normalized.weights = args.weights.map((w: unknown) => {
       if (typeof w === 'object' && w !== null) {
@@ -107,7 +104,6 @@ function normalizeSkeletonArgs(action: string, args: HandlerArgs): Record<string
     });
   }
 
-  // Normalize constraint limits
   if (args.limits && typeof args.limits === 'object' && args.limits !== null) {
     const limits = args.limits as Record<string, unknown>;
     normalized.limits = {
@@ -136,7 +132,6 @@ export async function handleSkeletonTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  // Validate action
   if (!SKELETON_ACTIONS.includes(action as SkeletonAction)) {
     return {
       success: false,
@@ -145,10 +140,8 @@ export async function handleSkeletonTools(
     };
   }
 
-  // Normalize arguments
   const normalizedArgs = normalizeSkeletonArgs(action, args);
 
-  // Route to C++ handler
   try {
     const response = await executeAutomationRequest(
       tools,

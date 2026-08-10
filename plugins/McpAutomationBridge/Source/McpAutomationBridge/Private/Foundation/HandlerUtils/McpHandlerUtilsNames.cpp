@@ -58,13 +58,11 @@ FString ToSafeAssetName(const FString& Input)
         Sanitized = Sanitized.Replace(CharStr, TEXT("_"));
     }
 
-    // Remove consecutive underscores
     while (Sanitized.Contains(TEXT("__")))
     {
         Sanitized = Sanitized.Replace(TEXT("__"), TEXT("_"));
     }
 
-    // Remove leading/trailing underscores
     while (Sanitized.StartsWith(TEXT("_")))
     {
         Sanitized.RemoveAt(0);
@@ -80,7 +78,6 @@ FString ToSafeAssetName(const FString& Input)
         return TEXT("Asset");
     }
 
-    // Ensure name starts with letter or underscore
     if (!FChar::IsAlpha(Sanitized[0]) && Sanitized[0] != TEXT('_'))
     {
         Sanitized = TEXT("Asset_") + Sanitized;
@@ -101,13 +98,11 @@ FString MakeUniqueAssetName(const FString& BaseName, const FString& PackagePath)
     FString TestName = ToSafeAssetName(BaseName);
     FString TestPath = PackagePath / TestName;
 
-    // Check if the name is already unique
     if (!UEditorAssetLibrary::DoesAssetExist(TestPath))
     {
         return TestName;
     }
 
-    // Append number suffix until we find a unique name
     int32 Suffix = 1;
     while (Suffix < 10000) // Safety limit
     {

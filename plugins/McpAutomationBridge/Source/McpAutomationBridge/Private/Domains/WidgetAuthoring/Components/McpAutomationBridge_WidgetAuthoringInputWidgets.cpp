@@ -260,7 +260,6 @@ bool HandleWidgetAuthoringInputWidgets(
         // CRITICAL: Register widget GUID to prevent ensure failures during compilation
         RegisterWidgetGuid(WidgetBP, ComboBox);
 
-        // Add options if provided
         const TArray<TSharedPtr<FJsonValue>>* Options = GetArrayField(Payload, TEXT("options"));
         if (Options)
         {
@@ -270,7 +269,6 @@ bool HandleWidgetAuthoringInputWidgets(
             }
         }
 
-        // Set selected option
         FString SelectedOption = GetJsonStringField(Payload, TEXT("selectedOption"));
         if (!SelectedOption.IsEmpty())
         {

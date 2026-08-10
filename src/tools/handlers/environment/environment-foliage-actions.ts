@@ -26,7 +26,6 @@ export async function handleEnvironmentFoliageAction(
           cullDistance: argsTyped.cullDistance
         }) as Record<string, unknown>);
       } else {
-        // Validate foliageType is provided
         const foliageType = argsTyped.foliageType || argsTyped.foliageTypePath;
         if (!foliageType) {
           return cleanObject({
@@ -39,7 +38,6 @@ export async function handleEnvironmentFoliageAction(
         // Support location+radius to generate locations if explicit array not provided
         let locations = argsTyped.locations as Vector3[] | undefined;
         if (!locations && argsTyped.location && argsTyped.radius) {
-          // Generate locations around the center point within radius
           const center = argsTyped.location;
           const radius = argsTyped.radius || 500;
           const count = argsTyped.density || (argsRecord.count as number) || 10;
@@ -57,7 +55,6 @@ export async function handleEnvironmentFoliageAction(
           locations = [argsRecord.position as Vector3];
         }
 
-        // Validate we have locations to place
         if (!locations || locations.length === 0) {
           return cleanObject({
             success: false,
@@ -98,9 +95,7 @@ export async function handleEnvironmentFoliageAction(
       }) as Record<string, unknown>);
     }
     case 'paint_foliage': {
-      // Get locations array if provided
       const locations = argsTyped.locations as Vector3[] | undefined;
-      // Get position/location object, default to {0,0,0} if not provided
       const position = vec3ToObject(argsRecord.position as Vector3 | undefined) ??
                        vec3ToObject(argsTyped.location) ??
                        { x: 0, y: 0, z: 0 };

@@ -100,7 +100,6 @@ bool HandleWidgetAuthoringAnimationQueries(
 
         if (AnimationName.IsEmpty())
         {
-            // Return list of all animations
             TArray<TSharedPtr<FJsonValue>> AnimationsArray;
             for (UWidgetAnimation* Anim : WidgetBP->Animations)
             {
@@ -131,7 +130,6 @@ bool HandleWidgetAuthoringAnimationQueries(
         }
         else
         {
-            // Return info for specific animation
             UWidgetAnimation* TargetAnim = nullptr;
             for (UWidgetAnimation* Anim : WidgetBP->Animations)
             {

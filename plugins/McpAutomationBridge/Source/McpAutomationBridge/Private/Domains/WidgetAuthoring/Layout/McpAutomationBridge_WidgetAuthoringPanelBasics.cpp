@@ -49,7 +49,6 @@ bool HandleWidgetAuthoringPanelBasics(
             return true;
         }
 
-        // Create canvas panel
         UCanvasPanel* CanvasPanel = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), FName(*SlotName));
         if (!CanvasPanel)
         {

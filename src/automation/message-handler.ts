@@ -108,7 +108,6 @@ export class MessageHandler {
 
         if (pending.waitForEvent) {
             if (!pending.initialResponse) {
-                // Store initial response and wait for event
                 pending.initialResponse = enforcedResponse;
 
                 // If the initial response indicates failure, resolve immediately
@@ -124,7 +123,6 @@ export class MessageHandler {
                     return;
                 }
 
-                // Set event timeout
                 const eventTimeoutMs = pending.eventTimeoutMs || 30000; // Default 30s for event
                 pending.eventTimeout = setTimeout(() => {
                     this.requestTracker.rejectRequest(requestId, new Error(`Timed out waiting for completion event for ${pending.action}`));
@@ -227,7 +225,6 @@ export class MessageHandler {
             return;
         }
 
-        // Log the progress update
         const progressStr = percent !== undefined ? ` (${percent.toFixed(1)}%)` : '';
         const msgStr = statusMsg ? `: ${statusMsg}` : '';
         this.log.debug(`Progress update for ${pending.action}${progressStr}${msgStr}`);

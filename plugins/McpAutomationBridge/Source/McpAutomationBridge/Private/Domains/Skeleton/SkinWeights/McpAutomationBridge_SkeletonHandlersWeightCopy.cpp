@@ -92,7 +92,6 @@ FString SourceMeshPath = GetJsonStringField(Payload, TEXT("sourceMeshPath"));
         FSkeletalMeshLODModel& SourceLOD = SourceModel->LODModels[LODIndex];
         FSkeletalMeshLODModel& TargetLOD = TargetModel->LODModels[LODIndex];
 
-        // Create skin weight profile on target
         FSkinWeightProfileInfo NewProfile;
         NewProfile.Name = FName(*ProfileName);
         TargetMesh->AddSkinWeightProfile(NewProfile);
@@ -103,7 +102,6 @@ FString SourceMeshPath = GetJsonStringField(Payload, TEXT("sourceMeshPath"));
         uint32 VertsToCopy = FMath::Min(SourceLOD.NumVertices, TargetLOD.NumVertices);
         ProfileData.SkinWeights.SetNum(TargetLOD.NumVertices);
 
-        // Initialize with zeros
         for (uint32 i = 0; i < TargetLOD.NumVertices; ++i)
         {
             FMemory::Memzero(&ProfileData.SkinWeights[i], sizeof(FRawSkinWeight));

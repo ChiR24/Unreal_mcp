@@ -204,7 +204,6 @@ function normalizeGeometryAliases(
 function normalizeGeometryArgs(action: string, args: HandlerArgs): Record<string, unknown> {
   const normalized: Record<string, unknown> = { ...args, subAction: action };
 
-  // Normalize location/position parameters
   if (args.location) {
     normalized.location = normalizeFiniteLocation(args.location);
   }
@@ -215,12 +214,10 @@ function normalizeGeometryArgs(action: string, args: HandlerArgs): Record<string
     normalized.center = normalizeFiniteLocation(args.center);
   }
 
-  // Normalize dimensions for primitives
   if (args.dimensions && Array.isArray(args.dimensions)) {
     normalized.dimensions = normalizeFiniteNumberArray(args.dimensions);
   }
 
-  // Normalize axis vectors
   if (args.axis && Array.isArray(args.axis)) {
     normalized.axis = normalizeFiniteNumberArray(args.axis);
   }
@@ -243,7 +240,6 @@ export async function handleGeometryTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  // Validate action
   if (!GEOMETRY_ACTIONS.includes(action as GeometryAction)) {
     return {
       success: false,
@@ -252,7 +248,6 @@ export async function handleGeometryTools(
     };
   }
 
-  // Normalize args and forward to C++
   const normalizedArgs = normalizeGeometryArgs(action, args);
 
   try {

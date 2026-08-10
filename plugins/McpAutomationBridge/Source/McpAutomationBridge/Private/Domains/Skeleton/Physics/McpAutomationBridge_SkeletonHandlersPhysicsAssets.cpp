@@ -41,7 +41,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreatePhysicsAsset(
         return true;
     }
 
-    // Determine output path
     if (OutputPath.IsEmpty())
     {
         OutputPath = FPaths::GetPath(SkeletalMeshPath);
@@ -75,7 +74,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreatePhysicsAsset(
     Package->MarkPackageDirty();
     McpSafeAssetSave(PhysicsAsset);
 
-    // Save if requested
     bool bSave = false;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave)
@@ -112,7 +110,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetPhysicsAsset(
         return true;
     }
 
-    // Load skeletal mesh
     FString Error;
     USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
     if (!Mesh)
@@ -121,7 +118,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetPhysicsAsset(
         return true;
     }
 
-    // Load physics asset
     UPhysicsAsset* PhysAsset = Cast<UPhysicsAsset>(
         StaticLoadObject(UPhysicsAsset::StaticClass(), nullptr, *PhysicsAssetPath));
     if (!PhysAsset)
@@ -132,7 +128,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetPhysicsAsset(
         return true;
     }
 
-    // Assign physics asset to skeletal mesh
     Mesh->SetPhysicsAsset(PhysAsset);
     Mesh->MarkPackageDirty();
     McpSafeAssetSave(Mesh);

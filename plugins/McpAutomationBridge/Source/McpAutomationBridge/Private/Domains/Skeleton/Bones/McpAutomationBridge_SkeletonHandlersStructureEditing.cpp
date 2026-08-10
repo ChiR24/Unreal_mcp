@@ -47,7 +47,6 @@ FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
             return true;
         }
 
-        // Check if it's the root bone
         if (BoneIndex == 0)
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId,

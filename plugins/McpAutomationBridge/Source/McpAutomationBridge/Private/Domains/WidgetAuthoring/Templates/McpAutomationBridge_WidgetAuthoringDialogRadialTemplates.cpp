@@ -83,11 +83,9 @@ bool HandleWidgetAuthoringDialogRadialTemplates(
         // This prevents ensure failures if compilation is triggered during widget creation.
         // The compiler's ValidateAndFixUpVariableGuids() expects all widgets to be in the GUID map.
 
-        // Create root canvas
         UCanvasPanel* RootCanvas = CreateAndRegisterWidget<UCanvasPanel>(WidgetBP, WidgetBP->WidgetTree, TEXT("RootCanvas"));
         WidgetBP->WidgetTree->RootWidget = RootCanvas;
 
-        // Dialog background
         UBorder* DialogBg = CreateAndRegisterWidget<UBorder>(WidgetBP, WidgetBP->WidgetTree, TEXT("DialogBackground"));
         RootCanvas->AddChild(DialogBg);
         if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(DialogBg->Slot))
@@ -100,20 +98,16 @@ bool HandleWidgetAuthoringDialogRadialTemplates(
         UVerticalBox* DialogContainer = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("DialogContainer"));
         DialogBg->AddChild(DialogContainer);
 
-        // Speaker name
         UTextBlock* SpeakerName = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("SpeakerName"));
         SpeakerName->SetText(FText::FromString(TEXT("Speaker")));
         DialogContainer->AddChild(SpeakerName);
 
-        // Dialog text
         URichTextBlock* DialogText = CreateAndRegisterWidget<URichTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("DialogText"));
         DialogContainer->AddChild(DialogText);
 
-        // Response options container
         UVerticalBox* ResponseBox = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("ResponseOptions"));
         DialogContainer->AddChild(ResponseBox);
 
-        // Sample response buttons
         for (int32 i = 1; i <= 3; ++i)
         {
             FString ResponseName = FString::Printf(TEXT("Response_%d"), i);

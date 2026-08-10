@@ -44,10 +44,8 @@ FString ValidateAssetPath(const FString& Path)
         return FString();
     }
 
-    // Normalize slashes
     CleanPath.ReplaceInline(TEXT("\\"), TEXT("/"));
 
-    // Remove double slashes
     while (CleanPath.Contains(TEXT("//")))
     {
         CleanPath = CleanPath.Replace(TEXT("//"), TEXT("/"));
@@ -60,13 +58,11 @@ FString ValidateAssetPath(const FString& Path)
         return FString();
     }
 
-    // Ensure path starts with /
     if (!CleanPath.StartsWith(TEXT("/")))
     {
         CleanPath = TEXT("/") + CleanPath;
     }
 
-    // Validate root
     const bool bValidRoot = CleanPath.StartsWith(TEXT("/Game/")) ||
                            CleanPath.StartsWith(TEXT("/Engine/")) ||
                            CleanPath.StartsWith(TEXT("/Script/"));

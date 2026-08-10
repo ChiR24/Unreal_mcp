@@ -61,7 +61,6 @@ bool UMcpAutomationBridgeSubsystem::HandleListPhysicsBodies(
         BodyObj->SetStringField(TEXT("boneName"), BodySetup->BoneName.ToString());
         BodyObj->SetBoolField(TEXT("considerForBounds"), BodySetup->bConsiderForBounds);
 
-        // Collision type
         FString CollisionType;
         switch (BodySetup->CollisionTraceFlag)
         {
@@ -72,7 +71,6 @@ bool UMcpAutomationBridgeSubsystem::HandleListPhysicsBodies(
         }
         BodyObj->SetStringField(TEXT("collisionType"), CollisionType);
 
-        // Primitive counts
         BodyObj->SetNumberField(TEXT("sphereCount"), BodySetup->AggGeom.SphereElems.Num());
         BodyObj->SetNumberField(TEXT("boxCount"), BodySetup->AggGeom.BoxElems.Num());
         BodyObj->SetNumberField(TEXT("capsuleCount"), BodySetup->AggGeom.SphylElems.Num());
@@ -123,7 +121,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetPhysicsAssetInfo(
         return true;
     }
 
-    // Gather physics bodies info
     TArray<TSharedPtr<FJsonValue>> BodiesArray;
     for (USkeletalBodySetup* BodySetup : PhysAsset->SkeletalBodySetups)
     {
@@ -142,7 +139,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetPhysicsAssetInfo(
         }
     }
 
-    // Gather constraints info
     TArray<TSharedPtr<FJsonValue>> ConstraintsArray;
     for (UPhysicsConstraintTemplate* Constraint : PhysAsset->ConstraintSetup)
     {

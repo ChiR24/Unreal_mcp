@@ -35,7 +35,6 @@ export class ServerSetup {
     this.logger = logger;
     this.healthMonitor = healthMonitor;
 
-    // Initialize resources
     this.assetResources = new AssetResources(bridge);
     this.actorResources = new ActorResources(bridge, automationBridge);
     this.levelResources = new LevelResources(bridge, automationBridge);
@@ -46,7 +45,6 @@ export class ServerSetup {
 
     const ensureConnected = this.ensureConnectedOnDemand.bind(this);
 
-    // Register Resources
     const resourceRegistry = new ResourceRegistry(
       this.server,
       this.bridge,
@@ -59,7 +57,6 @@ export class ServerSetup {
     );
     resourceRegistry.register();
 
-    // Register Tools
     const toolRegistry = new ToolRegistry(
       this.server,
       this.bridge,

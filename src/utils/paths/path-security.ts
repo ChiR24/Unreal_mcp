@@ -41,7 +41,6 @@ export function sanitizePath(path: string, allowedRoots?: string[]): string {
         throw new Error('Invalid path: cannot be empty');
     }
 
-    // Normalize separators
     let normalized = trimmed.replace(/\\/g, '/');
 
     // Normalize double slashes (prevents engine crash from paths like /Game//Test)

@@ -19,16 +19,10 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"  // MUST be first - UE version compatibility macros
 
-// -----------------------------------------------------------------------------
-// Core Includes
-// -----------------------------------------------------------------------------
 #include "McpAutomationBridgeSubsystem.h"
 #include "Domains/SystemControl/McpAutomationBridge_SystemControlHandlersPrivate.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h" // UE5.8: explicit include (unity regroup no longer pulls GetJsonStringField transitively)
 
-// -----------------------------------------------------------------------------
-// Engine Includes
-// -----------------------------------------------------------------------------
 #include "Dom/JsonObject.h"
 
 // =============================================================================
@@ -41,13 +35,11 @@ bool UMcpAutomationBridgeSubsystem::HandleTestAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    // Validate action
     if (Action != TEXT("manage_tests"))
     {
         return false;
     }
 
-    // Validate payload
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -55,7 +47,6 @@ bool UMcpAutomationBridgeSubsystem::HandleTestAction(
         return true;
     }
 
-    // Extract subaction
     const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
 
     // -------------------------------------------------------------------------
@@ -67,7 +58,6 @@ bool UMcpAutomationBridgeSubsystem::HandleTestAction(
             this, RequestId, Payload, RequestingSocket);
     }
 
-    // Unknown subaction
     SendAutomationError(RequestingSocket, RequestId,
         TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;

@@ -16,7 +16,6 @@ export function interpretStandardResult(
   response: unknown,
   defaults: { successMessage: string; failureMessage: string }
 ): InterpretedStandardResult {
-  // Handle automation bridge response format
   const payload = (response && typeof response === 'object' ? response : {}) as Record<string, unknown>;
   const success = payload.success === true;
   const rawText = typeof payload.message === 'string' ? payload.message :

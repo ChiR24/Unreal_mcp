@@ -69,7 +69,6 @@ bool HandleWidgetAuthoringCanvasSlotGeometry(
                 Anchors.Maximum.Y = GetJsonNumberField(AnchorMax, TEXT("y"), 1.0);
             }
 
-            // Handle preset anchors
             FString Preset = GetJsonStringField(Payload, TEXT("preset"));
             if (!Preset.IsEmpty())
             {

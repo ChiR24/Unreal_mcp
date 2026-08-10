@@ -47,7 +47,6 @@ bool HandleWidgetAuthoringPropertyBindings(
             return true;
         }
 
-        // Find the target widget (TextBlock)
         UTextBlock* TextWidget = nullptr;
         WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
             if (W && W->GetFName().ToString().Equals(SlotName, ESearchCase::IgnoreCase))

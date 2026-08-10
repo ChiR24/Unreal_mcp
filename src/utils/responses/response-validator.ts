@@ -68,13 +68,11 @@ export class ResponseValidator {
       return { valid: true }; // Pass through if no schema defined
     }
 
-    // Extract structured content from response
     let structuredContent = response;
     const responseObj = isRecord(response) ? response : null;
 
     // If response has MCP format with content array
     if (responseObj && responseObj.content && Array.isArray(responseObj.content)) {
-      // Try to extract structured data from text content
       const textContent = responseObj.content.find((c: unknown): c is Record<string, unknown> =>
         isRecord(c) && c.type === 'text'
       );
@@ -85,7 +83,6 @@ export class ResponseValidator {
 
         if (looksLikeJson) {
           try {
-            // Parse JSON using native JSON.parse
             structuredContent = JSON.parse(rawText);
           } catch {
             // If JSON parsing fails, fall back to using the full response
@@ -126,7 +123,6 @@ export class ResponseValidator {
    * existing `content` responses intact.
    */
   async wrapResponse(toolName: string, response: unknown): Promise<Record<string, unknown>> {
-    // Ensure response is safe to serialize first
     let safeResponse = response;
     try {
       if (response && typeof response === 'object') {

@@ -74,7 +74,6 @@ export class RequestTracker {
                 }
             }, timeoutMs);
 
-            // Set up absolute timeout cap to prevent indefinite extension
             const absoluteTimeout = setTimeout(() => {
                 if (this.pendingRequests.has(requestId)) {
                     this.cleanupRequest(requestId);
@@ -124,7 +123,6 @@ export class RequestTracker {
             return false;
         }
 
-        // Check 1: Max extensions limit
         if (pending.extensionCount !== undefined && pending.extensionCount >= MAX_PROGRESS_EXTENSIONS) {
             pending.reject(new Error(
                 `Request ${requestId} exceeded max progress extensions (${MAX_PROGRESS_EXTENSIONS}) - possible deadlock detected`
@@ -133,7 +131,6 @@ export class RequestTracker {
             return false;
         }
 
-        // Check 2: Stale detection - same percent for too many updates
         if (percent !== undefined && pending.lastProgressPercent === percent) {
             pending.staleCount = (pending.staleCount || 0) + 1;
             if (pending.staleCount >= PROGRESS_STALE_THRESHOLD) {
@@ -144,11 +141,9 @@ export class RequestTracker {
                 return false;
             }
         } else {
-            // Reset stale count on progress change
             pending.staleCount = 0;
         }
 
-        // Clear existing timeout and set new one
         clearTimeout(pending.timeout);
 
         const newTimeout = setTimeout(() => {

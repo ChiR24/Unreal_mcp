@@ -91,7 +91,6 @@ export class CapabilityTokenProvider {
             return undefined;
         }
 
-        // Validate format: exactly 64 lowercase hex chars
         if (!/^[0-9a-f]{64}$/.test(trimmed)) {
             if (!this.warnedAboutFileIssue) {
                 this.warnedAboutFileIssue = true;

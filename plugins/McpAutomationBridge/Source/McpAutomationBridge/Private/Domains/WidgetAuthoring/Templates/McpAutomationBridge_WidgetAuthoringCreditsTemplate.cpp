@@ -74,11 +74,9 @@ bool HandleWidgetAuthoringCreditsTemplate(
         // This prevents ensure failures if compilation is triggered during widget creation.
         // The compiler's ValidateAndFixUpVariableGuids() expects all widgets to be in the GUID map.
 
-        // Root canvas
         UCanvasPanel* RootCanvas = CreateAndRegisterWidget<UCanvasPanel>(WidgetBP, WidgetBP->WidgetTree, TEXT("RootCanvas"));
         WidgetBP->WidgetTree->RootWidget = RootCanvas;
 
-        // Background
         UImage* Background = CreateAndRegisterWidget<UImage>(WidgetBP, WidgetBP->WidgetTree, TEXT("Background"));
         RootCanvas->AddChild(Background);
         if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(Background->Slot))
@@ -87,7 +85,6 @@ bool HandleWidgetAuthoringCreditsTemplate(
             Slot->SetOffsets(FMargin(0.0f));
         }
 
-        // Scrolling credits container
         UScrollBox* CreditsScroll = CreateAndRegisterWidget<UScrollBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("CreditsScroll"));
         RootCanvas->AddChild(CreditsScroll);
         if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(CreditsScroll->Slot))
@@ -98,11 +95,9 @@ bool HandleWidgetAuthoringCreditsTemplate(
             Slot->SetOffsets(FMargin(0.0f, 50.0f, 0.0f, 50.0f));
         }
 
-        // Credits content
         UVerticalBox* CreditsContent = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("CreditsContent"));
         CreditsScroll->AddChild(CreditsContent);
 
-        // Sample credits sections
         TArray<FString> Sections = { TEXT("Lead Developer"), TEXT("Art Director"), TEXT("Sound Design"), TEXT("Special Thanks") };
         for (const FString& Section : Sections)
         {

@@ -235,7 +235,6 @@ bool HandleStructPropertyAction(
         }
         else
         {
-            // No values supplied: just (re)initialize the instance type.
             Inst->InitializeAs(TargetStruct);
         }
 

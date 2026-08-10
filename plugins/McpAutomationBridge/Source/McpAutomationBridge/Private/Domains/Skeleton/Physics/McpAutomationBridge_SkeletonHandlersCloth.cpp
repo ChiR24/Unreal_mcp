@@ -53,7 +53,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
 
-    // Find the cloth asset by name if provided
     UClothingAssetBase* TargetClothAsset = nullptr;
     // UE 5.7 returns TArray<TObjectPtr<>> - UE 5.0 returns TArray<UClothingAssetBase*>
     const auto& ClothingAssets = Mesh->GetMeshClothingAssets();
@@ -84,7 +83,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
             return true;
         }
 
-        // Bind the cloth asset to the specified section
         bool bSuccess = TargetClothAsset->BindToSkeletalMesh(Mesh, MeshLodIndex, SectionIndex, AssetLodIndex);
 
         if (bSuccess)
@@ -167,7 +165,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAssignClothAssetToMesh(
         return true;
     }
 
-    // List current clothing assets
     TArray<TSharedPtr<FJsonValue>> ClothingArray;
     for (const auto& ClothAssetPtr : Mesh->GetMeshClothingAssets())
     {

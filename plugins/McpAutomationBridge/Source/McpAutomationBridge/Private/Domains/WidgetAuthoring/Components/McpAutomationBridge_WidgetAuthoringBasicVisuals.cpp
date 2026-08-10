@@ -62,10 +62,8 @@ bool HandleWidgetAuthoringBasicVisuals(
         // CRITICAL: Register widget GUID to prevent ensure failures during compilation
         RegisterWidgetGuid(WidgetBP, TextBlock);
 
-        // Set text
         TextBlock->SetText(FText::FromString(Text));
 
-        // Set optional properties
         if (Payload->HasField(TEXT("fontSize")))
         {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -148,7 +146,6 @@ bool HandleWidgetAuthoringBasicVisuals(
         // CRITICAL: Register widget GUID to prevent ensure failures during compilation
         RegisterWidgetGuid(WidgetBP, ImageWidget);
 
-        // Set texture if provided
         FString TexturePath = GetJsonStringField(Payload, TEXT("texturePath"));
         if (!TexturePath.IsEmpty())
         {
@@ -159,7 +156,6 @@ bool HandleWidgetAuthoringBasicVisuals(
             }
         }
 
-        // Set color if provided
         if (Payload->HasTypedField<EJson::Object>(TEXT("colorAndOpacity")))
         {
             TSharedPtr<FJsonObject> ColorObj = Payload->GetObjectField(TEXT("colorAndOpacity"));
@@ -225,13 +221,11 @@ bool HandleWidgetAuthoringBasicVisuals(
         // CRITICAL: Register widget GUID to prevent ensure failures during compilation
         RegisterWidgetGuid(WidgetBP, ButtonWidget);
 
-        // Set enabled state if provided
         if (Payload->HasField(TEXT("isEnabled")))
         {
             ButtonWidget->SetIsEnabled(GetJsonBoolField(Payload, TEXT("isEnabled"), true));
         }
 
-        // Set color if provided
         if (Payload->HasTypedField<EJson::Object>(TEXT("colorAndOpacity")))
         {
             TSharedPtr<FJsonObject> ColorObj = Payload->GetObjectField(TEXT("colorAndOpacity"));

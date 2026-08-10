@@ -58,7 +58,6 @@ FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"))
 
         FSkeletalMeshLODModel& LODModel = ImportedModel->LODModels[LODIndex];
 
-        // Create mirrored skin weight profile
         FSkinWeightProfileInfo NewProfile;
         NewProfile.Name = FName(*ProfileName);
         Mesh->AddSkinWeightProfile(NewProfile);

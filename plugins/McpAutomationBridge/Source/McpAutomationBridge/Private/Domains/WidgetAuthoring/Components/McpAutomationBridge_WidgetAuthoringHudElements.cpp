@@ -74,18 +74,15 @@ bool HandleWidgetAuthoringHudElements(
         UHorizontalBox* HealthBox = CreateAndRegisterWidget<UHorizontalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("HealthBarContainer"));
         Parent->AddChild(HealthBox);
 
-        // Add health icon/label
         UTextBlock* HealthLabel = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("HealthLabel"));
         HealthLabel->SetText(FText::FromString(TEXT("HP")));
         HealthBox->AddChild(HealthLabel);
 
-        // Add progress bar for health
         UProgressBar* HealthProgress = CreateAndRegisterWidget<UProgressBar>(WidgetBP, WidgetBP->WidgetTree, TEXT("HealthBar"));
         HealthProgress->SetPercent(1.0f);
         HealthProgress->SetFillColorAndOpacity(FLinearColor(0.8f, 0.1f, 0.1f, 1.0f));
         HealthBox->AddChild(HealthProgress);
 
-        // Set position if parent is canvas panel
         if (UCanvasPanel* Canvas = Cast<UCanvasPanel>(Parent))
         {
             if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(HealthBox->Slot))
@@ -159,7 +156,6 @@ bool HandleWidgetAuthoringHudElements(
         Crosshair->SetColorAndOpacity(FSlateColor(FLinearColor::White));
         Parent->AddChild(Crosshair);
 
-        // Center the crosshair if parent is canvas panel
         if (UCanvasPanel* Canvas = Cast<UCanvasPanel>(Parent))
         {
             if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(Crosshair->Slot))
@@ -219,7 +215,6 @@ bool HandleWidgetAuthoringHudElements(
         }
 
         // CRITICAL: Use CreateAndRegisterWidget to register GUID immediately after creation
-        // Create ammo counter text
         UTextBlock* AmmoText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("AmmoCounter"));
         AmmoText->SetText(FText::FromString(TEXT("30 / 90")));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -232,7 +227,6 @@ bool HandleWidgetAuthoringHudElements(
         AmmoText->SetFont(FontInfo);
         Parent->AddChild(AmmoText);
 
-        // Position at bottom right if canvas
         if (UCanvasPanel* Canvas = Cast<UCanvasPanel>(Parent))
         {
             if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(AmmoText->Slot))

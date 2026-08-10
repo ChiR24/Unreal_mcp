@@ -53,7 +53,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
         return true;
     }
 
-    // Check that both bodies exist
     if (PhysicsAsset->FindBodyIndex(FName(*BodyA)) == INDEX_NONE)
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -70,7 +69,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
         return true;
     }
 
-    // Create constraint
     UPhysicsConstraintTemplate* Constraint = NewObject<UPhysicsConstraintTemplate>(PhysicsAsset, NAME_None, RF_Transactional);
     if (!Constraint)
     {
@@ -89,7 +87,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
 
     PhysicsAsset->ConstraintSetup.Add(Constraint);
 
-    // Apply default limits
     const TSharedPtr<FJsonObject>* LimitsObj = nullptr;
     if (Payload->TryGetObjectField(TEXT("limits"), LimitsObj) && LimitsObj && LimitsObj->IsValid())
     {
@@ -113,7 +110,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
     PhysicsAsset->UpdateBodySetupIndexMap();
     McpSafeAssetSave(PhysicsAsset);
 
-    // Save if requested
     bool bSave = false;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave)
@@ -170,7 +166,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
         return true;
     }
 
-    // Find constraint by body names
     UPhysicsConstraintTemplate* Constraint = nullptr;
     for (UPhysicsConstraintTemplate* C : PhysicsAsset->ConstraintSetup)
     {
@@ -199,7 +194,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
         return true;
     }
 
-    // Configure limits
     const TSharedPtr<FJsonObject>* LimitsObj = nullptr;
     if (Payload->TryGetObjectField(TEXT("limits"), LimitsObj) && LimitsObj && LimitsObj->IsValid())
     {
@@ -243,7 +237,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
 
     McpSafeAssetSave(PhysicsAsset);
 
-    // Save if requested
     bool bSave = false;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave)

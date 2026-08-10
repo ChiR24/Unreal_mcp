@@ -5,9 +5,7 @@ import { TOOL_ACTIONS } from '../../../../utils/commands/action-constants.js';
 export type { ArgConfig, NormalizedArgs } from './argument-normalization.js';
 export { normalizeArgs, normalizeArgsTyped } from './argument-normalization.js';
 
-// ============================================================================
 // Type-safe extraction helpers for handler use
-// ============================================================================
 
 /**
  * Extract a string from normalized args, asserting it exists.

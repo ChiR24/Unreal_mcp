@@ -36,7 +36,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
         return true;
     }
 
-    // Check if morph target already exists
     UMorphTarget* ExistingMorph = Mesh->FindMorphTarget(FName(*MorphTargetName));
     if (ExistingMorph)
     {
@@ -55,7 +54,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
     // 1. Provide deltas and populate them BEFORE registering, OR
     // 2. Return EMPTY_MORPH_TARGET error immediately without creating the morph target
 
-    // Check if deltas parameter is provided
     const TArray<TSharedPtr<FJsonValue>>* DeltasArray = nullptr;
     bool bHasDeltas = Payload->TryGetArrayField(TEXT("deltas"), DeltasArray) && DeltasArray && DeltasArray->Num() > 0;
 
@@ -69,7 +67,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
         return true;
     }
 
-    // Parse deltas array
     TArray<FMorphTargetDelta> Deltas;
     for (const TSharedPtr<FJsonValue>& DeltaValue : *DeltasArray)
     {
@@ -114,7 +111,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
         return true;
     }
 
-    // Create new morph target
     UMorphTarget* NewMorphTarget = NewObject<UMorphTarget>(Mesh, FName(*MorphTargetName));
     if (!NewMorphTarget)
     {
@@ -125,7 +121,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
     // Set BaseSkelMesh - required for HasValidData() to work properly
     NewMorphTarget->BaseSkelMesh = Mesh;
 
-    // Get LOD index (default to 0)
     int32 LODIndex = 0;
     Payload->TryGetNumberField(TEXT("lodIndex"), LODIndex);
 
@@ -146,7 +141,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
     return true;
 #endif
 
-    // NOW validate that we have valid data
     if (!NewMorphTarget->HasValidData())
     {
         // This shouldn't happen if deltas were valid, but check anyway
@@ -163,7 +157,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
 
     McpSafeAssetSave(Mesh);
 
-    // Save if requested
     bool bSave = false;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave)
@@ -206,7 +199,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
     UMorphTarget* MorphTarget = Mesh->FindMorphTarget(FName(*MorphTargetName));
     bool bCreatedMorphTarget = false;
 
-    // Parse deltas array
     const TArray<TSharedPtr<FJsonValue>>* DeltasArray = nullptr;
     if (!Payload->TryGetArrayField(TEXT("deltas"), DeltasArray) || !DeltasArray)
     {
@@ -215,7 +207,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
         return true;
     }
 
-    // Build delta vertices
     TArray<FMorphTargetDelta> Deltas;
     for (const TSharedPtr<FJsonValue>& DeltaValue : *DeltasArray)
     {
@@ -264,7 +255,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
         bCreatedMorphTarget = true;
     }
 
-    // Apply deltas to morph target
     // MorphLODModels is protected in UE 5.6+, use PopulateDeltas() for proper editor workflow
 #if WITH_EDITOR
     // Use PopulateDeltas - the proper API for morph target manipulation
@@ -277,7 +267,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
 #endif
 
 
-    // Validate morph target has valid data after setting deltas
     // This prevents returning success for morph targets that trigger Engine Ensures
     if (!MorphTarget->HasValidData())
     {
@@ -294,7 +283,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
 
     McpSafeAssetSave(Mesh);
 
-    // Save if requested
     bool bSave = false;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave)

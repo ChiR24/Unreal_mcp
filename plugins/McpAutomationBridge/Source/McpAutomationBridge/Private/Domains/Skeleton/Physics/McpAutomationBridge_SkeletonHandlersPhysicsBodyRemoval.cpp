@@ -29,7 +29,6 @@ bool UMcpAutomationBridgeSubsystem::HandleRemovePhysicsBody(
         return true;
     }
 
-    // Load physics asset
     UPhysicsAsset* PhysAsset = Cast<UPhysicsAsset>(
         StaticLoadObject(UPhysicsAsset::StaticClass(), nullptr, *PhysicsAssetPath));
     if (!PhysAsset)
@@ -40,7 +39,6 @@ bool UMcpAutomationBridgeSubsystem::HandleRemovePhysicsBody(
         return true;
     }
 
-    // Find and remove the body setup for this bone
     int32 BodyIndex = INDEX_NONE;
     for (int32 i = 0; i < PhysAsset->SkeletalBodySetups.Num(); ++i)
     {
@@ -60,10 +58,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRemovePhysicsBody(
         return true;
     }
 
-    // Remove the body setup and any associated constraints
     PhysAsset->Modify();
 
-    // Remove constraints that reference this body
     FName BoneFName(*BoneName);
     for (int32 i = PhysAsset->ConstraintSetup.Num() - 1; i >= 0; --i)
     {
@@ -78,7 +74,6 @@ bool UMcpAutomationBridgeSubsystem::HandleRemovePhysicsBody(
         }
     }
 
-    // Remove the body setup
     PhysAsset->SkeletalBodySetups.RemoveAt(BodyIndex);
     PhysAsset->UpdateBoundsBodiesArray();
     PhysAsset->UpdateBodySetupIndexMap();

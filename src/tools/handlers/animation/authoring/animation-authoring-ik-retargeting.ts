@@ -174,7 +174,6 @@ export async function handleIkRetargetingAction(
         return ResponseFactory.success(res, res.message ?? `Chain mapping '${sourceChain}' -> '${targetChain}' set`);
       }
 
-  // ===== Utility =====
 
     default:
       return undefined;

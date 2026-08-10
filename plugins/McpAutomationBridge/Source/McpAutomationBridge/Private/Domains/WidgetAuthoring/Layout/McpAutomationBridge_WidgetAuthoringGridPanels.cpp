@@ -118,7 +118,6 @@ bool HandleWidgetAuthoringGridPanels(
         // CRITICAL: Register widget GUID to prevent ensure failures during compilation
         RegisterWidgetGuid(WidgetBP, UniformGrid);
 
-        // Set slot padding if provided
         if (Payload->HasField(TEXT("slotPadding")))
         {
             TSharedPtr<FJsonObject> PaddingObj = GetObjectField(Payload, TEXT("slotPadding"));
@@ -133,7 +132,6 @@ bool HandleWidgetAuthoringGridPanels(
             }
         }
 
-        // Set min desired slot size
         if (Payload->HasField(TEXT("minDesiredSlotWidth")))
         {
             UniformGrid->SetMinDesiredSlotWidth(static_cast<float>(GetJsonNumberField(Payload, TEXT("minDesiredSlotWidth"), 0.0)));
@@ -198,7 +196,6 @@ bool HandleWidgetAuthoringGridPanels(
         // CRITICAL: Register widget GUID to prevent ensure failures during compilation
         RegisterWidgetGuid(WidgetBP, WrapBox);
 
-        // Set inner slot padding if provided
         if (Payload->HasField(TEXT("innerSlotPadding")))
         {
             TSharedPtr<FJsonObject> PaddingObj = GetObjectField(Payload, TEXT("innerSlotPadding"));
@@ -211,7 +208,6 @@ bool HandleWidgetAuthoringGridPanels(
             }
         }
 
-        // Set explicit wrap size
         // Note: SetWrapSize was introduced in UE 5.1
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         if (Payload->HasField(TEXT("wrapSize")))

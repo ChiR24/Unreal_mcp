@@ -293,7 +293,6 @@ bool HandleWidgetAuthoringEventBindings(
             return true;
         }
 
-        // Check if property exists on widget
         FProperty* Prop = TargetWidget->GetClass()->FindPropertyByName(FName(*PropertyName));
         FString PropertyType = Prop ? Prop->GetCPPType() : TEXT("Unknown");
 

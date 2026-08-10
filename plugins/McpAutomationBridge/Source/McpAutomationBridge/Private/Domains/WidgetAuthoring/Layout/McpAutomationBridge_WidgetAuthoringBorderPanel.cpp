@@ -52,7 +52,6 @@ bool HandleWidgetAuthoringBorderPanel(
         // CRITICAL: Register widget GUID to prevent ensure failures during compilation
         RegisterWidgetGuid(WidgetBP, BorderWidget);
 
-        // Set brush color if provided
         if (Payload->HasTypedField<EJson::Object>(TEXT("brushColor")))
         {
             TSharedPtr<FJsonObject> ColorObj = Payload->GetObjectField(TEXT("brushColor"));
@@ -60,7 +59,6 @@ bool HandleWidgetAuthoringBorderPanel(
             BorderWidget->SetBrushColor(Color);
         }
 
-        // Set content color if provided
         if (Payload->HasTypedField<EJson::Object>(TEXT("contentColorAndOpacity")))
         {
             TSharedPtr<FJsonObject> ColorObj = Payload->GetObjectField(TEXT("contentColorAndOpacity"));
@@ -68,7 +66,6 @@ bool HandleWidgetAuthoringBorderPanel(
             BorderWidget->SetContentColorAndOpacity(Color);
         }
 
-        // Set padding if provided
         if (Payload->HasTypedField<EJson::Object>(TEXT("padding")))
         {
             TSharedPtr<FJsonObject> PaddingObj = Payload->GetObjectField(TEXT("padding"));

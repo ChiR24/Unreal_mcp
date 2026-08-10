@@ -31,7 +31,6 @@ export class ActorResources {
   }
 
   async listActors() {
-    // Check cache first
     const cached = this.getFromCache('listActors');
     if (cached !== null) {
       return cached;
@@ -47,7 +46,6 @@ export class ActorResources {
       const respResult = resp?.result as Record<string, unknown> | undefined;
       const resultData = respResult?.data as Record<string, unknown> | Array<unknown> | undefined;
 
-      // Check multiple possible locations for actors array
       const actors = Array.isArray(resp?.actors) ? resp.actors as Array<Record<string, unknown>>
         : Array.isArray(respResult?.actors) ? respResult.actors as Array<Record<string, unknown>>
         : Array.isArray(resultData) ? resultData as Array<Record<string, unknown>>

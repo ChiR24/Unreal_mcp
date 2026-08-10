@@ -39,7 +39,6 @@ FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"))
             return true;
         }
 
-        // Parse weights array
         const TArray<TSharedPtr<FJsonValue>>* WeightsArray = nullptr;
         if (!Payload->TryGetArrayField(TEXT("weights"), WeightsArray) || !WeightsArray)
         {
@@ -48,7 +47,6 @@ FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"))
         }
 
 #if WITH_EDITORONLY_DATA
-        // Access the LOD model for editing
         FSkeletalMeshModel* ImportedModel = Mesh->GetImportedModel();
         if (!ImportedModel || ImportedModel->LODModels.Num() == 0)
         {
@@ -69,7 +67,6 @@ FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"))
 
         FSkeletalMeshLODModel& LODModel = ImportedModel->LODModels[LODIndex];
 
-        // Create or update skin weight profile
         FSkinWeightProfileInfo* ProfileInfo = nullptr;
         for (FSkinWeightProfileInfo& Info : Mesh->GetSkinWeightProfiles())
         {
@@ -82,13 +79,11 @@ FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"))
 
         if (!ProfileInfo)
         {
-            // Add new profile
             FSkinWeightProfileInfo NewProfile;
             NewProfile.Name = FName(*ProfileName);
             Mesh->AddSkinWeightProfile(NewProfile);
         }
 
-        // Build FImportedSkinWeightProfileData from weights array
         FImportedSkinWeightProfileData& ProfileData = LODModel.SkinWeightProfiles.FindOrAdd(FName(*ProfileName));
         ProfileData.SkinWeights.SetNum(LODModel.NumVertices);
 
@@ -112,7 +107,6 @@ FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"))
             FRawSkinWeight& SkinWeight = ProfileData.SkinWeights[VertexIndex];
             FMemory::Memzero(&SkinWeight, sizeof(FRawSkinWeight));
 
-            // Parse bone influences
             const TArray<TSharedPtr<FJsonValue>>* InfluencesArray = nullptr;
             if ((*WeightObj)->TryGetArrayField(TEXT("influences"), InfluencesArray) && InfluencesArray)
             {
@@ -139,7 +133,6 @@ FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"))
             WeightsSet++;
         }
 
-        // Rebuild the mesh with the new skin weight profile
         Mesh->Build();
         McpSafeAssetSave(Mesh);
 

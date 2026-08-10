@@ -73,7 +73,6 @@ export class UnrealCommandQueue {
 
       this.enqueue(item);
 
-      // Process queue if not already processing
       if (!this.isProcessing) {
         this.processQueue();
       }

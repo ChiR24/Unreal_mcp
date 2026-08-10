@@ -48,7 +48,6 @@ export async function handleEnvironmentLandscapeAction(
       }) as Record<string, unknown>);
     case 'sculpt':
     case 'sculpt_landscape': {
-      // Default to 'Raise' tool if not specified
       const tool = (argsRecord.tool as string) || 'Raise';
       return cleanObject(await executeAutomationRequest(tools, 'sculpt_landscape', {
         landscapeName: argsTyped.landscapeName || argsTyped.name || '',

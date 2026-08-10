@@ -67,7 +67,6 @@ bool HandleWidgetAuthoringCreation(
 
         FString ParentClass = GetJsonStringField(Payload, TEXT("parentClass"), TEXT("UserWidget"));
 
-        // Build full path
         FString FullPath = Folder / Name;
         if (!FullPath.StartsWith(TEXT("/")))
         {
@@ -98,7 +97,6 @@ bool HandleWidgetAuthoringCreation(
             }
         }
 
-        // Create package
         UPackage* Package = CreatePackage(*FullPath);
         if (!Package)
         {
@@ -110,7 +108,6 @@ bool HandleWidgetAuthoringCreation(
         UClass* ParentUClass = UUserWidget::StaticClass();
         if (!ParentClass.Equals(TEXT("UserWidget"), ESearchCase::IgnoreCase))
         {
-            // Try to find custom parent class
             // Note: FindFirstObject was introduced in UE 5.1
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
             UClass* FoundClass = FindFirstObject<UClass>(*ParentClass, EFindFirstObjectOptions::None);
@@ -123,7 +120,6 @@ bool HandleWidgetAuthoringCreation(
             }
         }
 
-        // Create widget blueprint
         UWidgetBlueprint* WidgetBlueprint = Cast<UWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
             ParentUClass,
             Package,
@@ -147,7 +143,6 @@ bool HandleWidgetAuthoringCreation(
         const bool bSaved = McpSafeAssetSave(WidgetBlueprint);
         const bool bPostCreateSucceeded = bCompiled && bSaved;
 
-        // Return the full object path (Package.ObjectName format) for proper loading
         FString ObjectPath = WidgetBlueprint->GetPathName();
 
         ResultJson->SetBoolField(TEXT("success"), bPostCreateSucceeded);
@@ -170,21 +165,16 @@ bool HandleWidgetAuthoringCreation(
         return true;
     }
 
-    // =========================================================================
-    // show_widget: Show a widget in viewport or display notification
-    // =========================================================================
     if (SubAction.Equals(TEXT("show_widget"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         FString WidgetId = GetJsonStringField(Payload, TEXT("widgetId"));
         FString Message = GetJsonStringField(Payload, TEXT("message"));
 
-        // Handle notification widget specially
         if (WidgetId.Equals(TEXT("notification"), ESearchCase::IgnoreCase))
         {
             FString NotificationText = Message.IsEmpty() ? TEXT("Notification") : Message;
 
-            // Use notification system
             FNotificationInfo Info(FText::FromString(NotificationText));
             Info.ExpireDuration = 3.0f;
             Info.bUseLargeFont = true;
@@ -199,7 +189,6 @@ bool HandleWidgetAuthoringCreation(
             return true;
         }
 
-        // For regular widgets, we need a path
         FString EffectivePath = WidgetPath.IsEmpty() ? GetJsonStringField(Payload, TEXT("name")) : WidgetPath;
         if (EffectivePath.IsEmpty())
         {
@@ -219,7 +208,6 @@ bool HandleWidgetAuthoringCreation(
         }
         EffectivePath = SanitizedPath;
 
-        // Load the widget blueprint
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(EffectivePath);
         if (!WidgetBP)
         {
@@ -230,10 +218,8 @@ bool HandleWidgetAuthoringCreation(
         }
 
         // Note: Actually showing the widget in viewport requires PIE (Play In Editor)
-        // In editor mode, we can open the widget designer instead
         if (GEditor)
         {
-            // Open the widget blueprint in the editor
             GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(WidgetBP);
         }
 

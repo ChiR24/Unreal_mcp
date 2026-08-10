@@ -19,7 +19,6 @@ export function cleanObject<T = unknown>(obj: T, maxDepth: number = 10): T {
       return '[Max depth reached]';
     }
 
-    // Handle primitives
     if (value === null || value === undefined) {
       return value;
     }
@@ -44,12 +43,10 @@ export function cleanObject<T = unknown>(obj: T, maxDepth: number = 10): T {
     activePath.add(value);
 
     try {
-      // Handle arrays
       if (Array.isArray(value)) {
         return value.map((item, index) => clean(item, depth + 1, `${path}[${index}]`));
       }
 
-      // Handle objects
       const cleaned: Record<string, unknown> = {};
 
       // Use Object.keys to avoid prototype properties

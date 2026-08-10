@@ -41,13 +41,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateVirtualBone(
         return true;
     }
 
-    // Generate virtual bone name if not provided
     if (VirtualBoneName.IsEmpty())
     {
         VirtualBoneName = FString::Printf(TEXT("VB_%s_to_%s"), *SourceBone, *TargetBone);
     }
 
-    // Add virtual bone
     FName NewVirtualBoneName;
     bool bSuccess = Skeleton->AddNewVirtualBone(FName(*SourceBone), FName(*TargetBone), NewVirtualBoneName);
 
@@ -68,7 +66,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateVirtualBone(
 
     McpSafeAssetSave(Skeleton);
 
-    // Save if requested
     bool bSave = false;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave)
@@ -110,7 +107,6 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameBone(
         return true;
     }
 
-    // Check if it's a virtual bone
     const TArray<FVirtualBone>& VirtualBones = Skeleton->GetVirtualBones();
     bool bIsVirtualBone = false;
     for (const FVirtualBone& VB : VirtualBones)
@@ -239,7 +235,6 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteVirtualBone(
         return true;
     }
 
-    // Find and remove the virtual bone
     const TArray<FVirtualBone>& VirtualBones = Skeleton->GetVirtualBones();
     int32 FoundIndex = INDEX_NONE;
     for (int32 i = 0; i < VirtualBones.Num(); ++i)
@@ -258,7 +253,6 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteVirtualBone(
         return true;
     }
 
-    // Remove using the skeleton's API
     TArray<FName> BonesToRemove;
     BonesToRemove.Add(FName(*VirtualBoneName));
     Skeleton->RemoveVirtualBones(BonesToRemove);

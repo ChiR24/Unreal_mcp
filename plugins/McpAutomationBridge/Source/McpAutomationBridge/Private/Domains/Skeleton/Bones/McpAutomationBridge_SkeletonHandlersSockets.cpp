@@ -50,7 +50,6 @@ bool UMcpAutomationBridgeSubsystem::HandleListSockets(
         SocketObj->SetStringField(TEXT("name"), Socket->SocketName.ToString());
         SocketObj->SetStringField(TEXT("boneName"), Socket->BoneName.ToString());
 
-        // Use McpHandlerUtils helpers for transform JSON
         SocketObj->SetObjectField(TEXT("relativeLocation"), McpHandlerUtils::VectorToJson(Socket->RelativeLocation));
         SocketObj->SetObjectField(TEXT("relativeRotation"), McpHandlerUtils::RotatorToJson(Socket->RelativeRotation));
         SocketObj->SetObjectField(TEXT("relativeScale"), McpHandlerUtils::VectorToJson(Socket->RelativeScale));
@@ -114,7 +113,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
         return true;
     }
 
-    // Check if socket already exists
     for (USkeletalMeshSocket* ExistingSocket : Skeleton->Sockets)
     {
         if (ExistingSocket && ExistingSocket->SocketName == FName(*SocketName))
@@ -126,14 +124,12 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
         }
     }
 
-    // Create the socket
     USkeletalMeshSocket* NewSocket = NewObject<USkeletalMeshSocket>(Skeleton);
     if (!NewSocket)
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create socket object"), TEXT("CREATION_FAILED"));
         return true;
     }
-    // Parse socket transform using ParseVectorFromJson helpers
     NewSocket->SocketName = FName(*SocketName);
     NewSocket->RelativeLocation = ParseVectorFromJson(Payload, TEXT("relativeLocation"));
     NewSocket->RelativeRotation = ParseRotatorFromJson(Payload, TEXT("relativeRotation"));
@@ -143,7 +139,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
     Skeleton->Sockets.Add(NewSocket);
     McpSafeAssetSave(Skeleton);
 
-    // Save if requested
     bool bSave = false;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave)
@@ -196,7 +191,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
         return true;
     }
 
-    // Find the socket
     USkeletalMeshSocket* Socket = nullptr;
     for (USkeletalMeshSocket* S : Skeleton->Sockets)
     {
@@ -215,7 +209,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
         return true;
     }
 
-    // Update properties
     FString NewBoneName = GetJsonStringField(Payload, TEXT("attachBoneName"));
     if (!NewBoneName.IsEmpty())
     {
@@ -239,7 +232,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
 
     McpSafeAssetSave(Skeleton);
 
-    // Save if requested
     bool bSave = false;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave)

@@ -139,7 +139,6 @@ FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
 
         const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
 
-        // Check if bone already exists
         if (RefSkeleton.FindBoneIndex(FName(*BoneName)) != INDEX_NONE)
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId,
@@ -147,7 +146,6 @@ FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
             return true;
         }
 
-        // Find parent bone index
         int32 ParentIndex = INDEX_NONE;
         if (!ParentName.IsEmpty())
         {
@@ -167,13 +165,11 @@ FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
             return true;
         }
 
-        // Parse transform from payload
         FVector Location = ParseVectorFromJson(Payload, TEXT("location"));
         FRotator Rotation = ParseRotatorFromJson(Payload, TEXT("rotation"));
         FVector Scale = ParseVectorFromJson(Payload, TEXT("scale"), FVector::OneVector);
         FTransform BoneTransform(Rotation, Location, Scale);
 
-        // Add the bone using FReferenceSkeletonModifier
         FReferenceSkeletonModifier Modifier(Skeleton);
         FMeshBoneInfo NewBone;
         NewBone.Name = FName(*BoneName);
