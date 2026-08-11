@@ -11,9 +11,10 @@
 // Real files, real hashes, real pids. A mocked fs would let a "stale package"
 // check pass against timestamps no build system ever produces.
 
-import { mkdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 
 import { INDEPENDENCE, observeProcess } from './state-oracles.mjs';
 import {
@@ -25,7 +26,13 @@ import {
   validateEvidence,
 } from './evidence-validator.mjs';
 
-const ROOT = join('/tmp/opencode/task-50', `evidence-spec-${process.pid}`);
+// Owned scratch, created by `mkdtempSync` so the directory is ours the instant it
+// exists: exclusive creation, mode 0700, and a name nobody could have squatted.
+// A pid-derived name in a shared temp dir is none of those things, and the hashes
+// and mtimes this suite asserts on are only evidence if nothing else can write here.
+// `realpathSync` first because containment and relative-path checks below compare
+// resolved paths, and macOS hands out `/var/...` symlinks for the temp dir.
+const ROOT = mkdtempSync(join(realpathSync(tmpdir()), 'task50-evidence-spec-'));
 
 /** Codes present in a result, for a compact assertion. */
 const codes = (result: ReturnType<typeof validateEvidence>) => result.rejections.map((entry) => entry.code);
@@ -94,7 +101,6 @@ function currentStartTicks(): number {
   return Number(observeProcess({ pid: process.pid }).detail.startTicks) || 0;
 }
 
-beforeAll(() => { mkdirSync(ROOT, { recursive: true }); });
 afterAll(() => { rmSync(ROOT, { recursive: true, force: true }); });
 
 describe('Task 50 — POSITIVE CONTROL: a well-formed document validates', () => {

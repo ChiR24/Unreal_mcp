@@ -1,10 +1,14 @@
 name: "CodeQL Security Analysis"
 
+# `dev` is the default branch and the one every PR targets, so it is listed
+# alongside `main`. Without it the only analysis this repository ever received was
+# the weekly cron, which meant the alert list trailed the code by a full release
+# cycle and no PR was ever scanned before it merged.
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
   schedule:
     - cron: '0 6 * * 1'  # Weekly on Monday at 6 AM UTC
 

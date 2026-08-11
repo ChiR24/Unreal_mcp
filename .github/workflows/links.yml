@@ -1,13 +1,14 @@
 name: '🔗 Check Broken Links'
 
+# `dev` is the default branch and every PR's target; `main` only sees releases.
 on:
   push:
-    branches: ['main']
+    branches: ['main', 'dev']
     paths:
       - '**.md'
       - 'docs/**'
   pull_request:
-    branches: ['main']
+    branches: ['main', 'dev']
     paths:
       - '**.md'
       - 'docs/**'

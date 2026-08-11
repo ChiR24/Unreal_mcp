@@ -2,11 +2,12 @@ name: Smoke Test (Mock Mode)
 permissions:
   contents: read
 
+# `dev` is the default branch and every PR's target; `main` only sees releases.
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

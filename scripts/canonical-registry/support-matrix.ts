@@ -26,7 +26,14 @@ const isMutation = (record: CapabilityRecord): boolean => record.behavior.effect
 
 // Markdown cell content is authored data (guidance / citations), so a stray
 // pipe or newline would silently corrupt the table.
-const cell = (value: string): string => value.replace(/\|/g, '&#124;').replace(/\r?\n/g, ' ');
+//
+// Backslash is escaped FIRST and the order is load-bearing: markdown treats `\`
+// as an escape, so a citation containing `\|` would otherwise become `\&#124;`,
+// where the surviving backslash escapes the entity's `&` and the cell renders the
+// literal text `&#124;` instead of a pipe. Escaping backslashes up front leaves
+// nothing that can escape what this function inserts afterwards.
+const cell = (value: string): string =>
+  value.replace(/\\/g, '&#92;').replace(/\|/g, '&#124;').replace(/\r?\n/g, ' ');
 
 const previewCell = (record: CapabilityRecord): string => {
   const { preview } = record.behavior.semantics;

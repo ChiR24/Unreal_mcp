@@ -15,6 +15,7 @@ import { join, resolve, sep } from 'node:path';
 
 import {
   DisposableWorkspace,
+  MANIFEST_FILE,
   OWNERSHIP_REASONS,
   OWNED_PARENT,
   RESERVED_PORTS,
@@ -26,8 +27,9 @@ import {
 } from './disposable-project.mjs';
 
 /** A throwaway /proc, so the orphan scan is tested without spawning anything.
- *  /proc is Linux-shaped, so cmdlines carry forward slashes on every host — the
- *  module's task-52 needle is `/tmp/opencode/task52-`, not a join-built path. */
+ *  /proc is Linux-shaped, so cmdlines carry forward slashes on every host, which
+ *  is why the module spells OWNED_PARENT with forward slashes and matches on
+ *  `${OWNED_PARENT}/task52-` rather than a join-built path. */
 function fakeProc(entries: { pid: number; cmdline: string; ppid?: number }[]) {
   const root = mkdtempSync(join(tmpdir(), 'task52-proc-'));
   for (const entry of entries) {
@@ -197,16 +199,20 @@ describe('surveyOwnedParent', () => {
   });
 
   it('classifies an abandoned run without touching it', () => {
-    const orphan = join(OWNED_PARENT, 'task52-unit-orphan');
+    // Surveys a parent this test made, not the shared one: planting a fake
+    // abandoned run in the real owned parent would leave a manifest for whatever
+    // else is running on this host to classify — and reclaim.
+    const parent = mkdtempSync(join(tmpdir(), 'task52-survey-'));
+    const orphan = join(parent, 'task52-unit-orphan');
     mkdirSync(orphan, { recursive: true });
-    writeFileSync(join(orphan, 'OWNED-BY-TASK-52.json'),
+    writeFileSync(join(orphan, MANIFEST_FILE),
       JSON.stringify({ runId: 'task52-unit-orphan', ownerPid: 2 ** 22, openedAt: new Date().toISOString() }), { mode: 0o600 });
     try {
-      const found = surveyOwnedParent().runs.find((entry) => entry.runId === 'task52-unit-orphan');
+      const found = surveyOwnedParent({ parent }).runs.find((entry) => entry.runId === 'task52-unit-orphan');
       expect(found?.ownerAlive).toBe(false);
       expect(existsSync(orphan)).toBe(true);
     } finally {
-      rmSync(orphan, { recursive: true, force: true });
+      rmSync(parent, { recursive: true, force: true });
     }
   });
 });

@@ -10,9 +10,9 @@
 //
 // THE THREE RULES, and what each one is protecting against:
 //
-//   1. Everything lives under ONE owned root inside /tmp/opencode, stamped with a
-//      run id. Nothing outside it is ever written or removed — not the repo, not
-//      an engine root, not another run's directory.
+//   1. Everything lives under ONE owned root inside OWNED_PARENT, created by
+//      mkdtemp and stamped with a run id. Nothing outside it is ever written or
+//      removed — not the repo, not an engine root, not another run's directory.
 //   2. Removal resolves symlinks FIRST. A relative path that stays inside the
 //      root by string comparison can still point anywhere once a symlink is in
 //      the way, and `rm -rf` follows it.
@@ -25,12 +25,26 @@
 // an interrupted run leaves a readable record of exactly what it owned.
 
 import { createServer } from 'node:net';
-import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { basename, join, resolve, sep } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
-/** The one directory tree a run may create and destroy. */
-export const OWNED_PARENT = '/tmp/opencode';
+/**
+ * The one directory tree a run may create and destroy.
+ *
+ * Rooted at the OS temp dir rather than a hardcoded `/tmp`, so it follows TMPDIR
+ * and names a real place on Windows, and spelled with forward slashes because the
+ * orphan scan below matches it against `/proc` cmdlines, which are POSIX-shaped on
+ * every host. It stays a STABLE, well-known parent on purpose: `surveyOwnedParent`
+ * and `reclaimOrphanedRun` are a LATER process reading an earlier run's manifest,
+ * so a per-process root would silently delete that capability. Unpredictability
+ * belongs to the per-run child, which `open()` creates with mkdtemp.
+ */
+export const OWNED_PARENT = join(realpathSync(tmpdir()), 'opencode').replaceAll('\\', '/');
+
+/** The ownership stamp that makes a directory recognisably this lane's. */
+export const MANIFEST_FILE = 'OWNED-BY-TASK-52.json';
 
 /** Ports this wave's other surfaces use. A disposable run never takes them. */
 export const RESERVED_PORTS = Object.freeze([3000, 8090, 8091]);
@@ -154,23 +168,80 @@ function walk(root) {
  * One disposable workspace, owned end to end.
  */
 export class DisposableWorkspace {
-  /** @param {{ runId?: string, parent?: string, purpose?: string }} [spec] */
+  /**
+   * The directory THIS instance created. Only `open()` ever assigns it, and only
+   * from `mkdtempSync`, so the ownership stamp can never be written into a tree
+   * this process merely adopted or was handed.
+   * @type {string|null}
+   */
+  #createdRoot = null;
+
+  /** True when the tree was HANDED to this instance rather than made by it. */
+  #adopted = false;
+
+  /** @param {{ runId?: string, parent?: string, root?: string, purpose?: string }} [spec] */
   constructor(spec = {}) {
     this.runId = spec.runId ?? `task52-${Date.now().toString(36)}-${randomBytes(3).toString('hex')}`;
     this.parent = spec.parent ?? OWNED_PARENT;
-    this.root = join(this.parent, this.runId);
+    this.#adopted = spec.root !== undefined;
+    /**
+     * Null until this workspace either CREATES its tree (`open()`) or ADOPTS an
+     * existing one (`{ root }`, which is how reclaim addresses an abandoned run).
+     * A workspace that has done neither owns no path at all, and saying so is what
+     * stops `close()` from removing a directory this process never made.
+     * @type {string|null}
+     */
+    this.root = spec.root === undefined ? null : resolve(spec.root);
     this.purpose = spec.purpose ?? 'task-52 disposable UE certification';
-    this.manifestPath = join(this.root, 'OWNED-BY-TASK-52.json');
     /** @type {Record<string, number>} */
     this.ports = {};
     this.opened = false;
   }
 
+  /** Where this workspace's ownership stamp lives, once it has a tree at all. */
+  get manifestPath() {
+    return this.root === null ? null : join(this.root, MANIFEST_FILE);
+  }
+
   /** Create the root and stamp it, BEFORE anything else is written into it. */
   open() {
-    const guard = judgeOwnership({ ownedRoot: this.root, path: this.root });
-    if (!guard.owned) throw new Error(`refusing to open a workspace outside ${OWNED_PARENT}: ${guard.detail}`);
-    mkdirSync(this.root, { recursive: true });
+    // An ADOPTED tree belongs to somebody else's run and was taken over only to
+    // reclaim it. Opening one would stamp OUR manifest into it, and because
+    // `#createdRoot` starts null it would also mint a fresh mkdtemp directory and
+    // reassign `this.root` to it — silently abandoning the very tree the caller
+    // named, which is the opposite of what reclaim asked for. Refusing keeps
+    // `close()` pointed at that tree.
+    if (this.#adopted) {
+      throw new Error(`refusing to open an adopted workspace at ${this.root}: adopt is for reclaiming a tree this run did not create`);
+    }
+    // IDEMPOTENT. A second open() must reuse the tree this run already made, not
+    // mint another one: the stranded directory would keep a manifest naming a
+    // LIVE pid, so `surveyOwnedParent` would report it forever and
+    // `reclaimOrphanedRun` would refuse it forever.
+    if (this.#createdRoot === null) {
+      // Refuse before creating anything, as this file's whole discipline requires.
+      const parentGuard = judgeOwnership({ ownedRoot: this.parent, path: this.parent });
+      if (!parentGuard.owned) throw new Error(`refusing to open a workspace outside ${OWNED_PARENT}: ${parentGuard.detail}`);
+      mkdirSync(this.parent, { recursive: true, mode: 0o700 });
+      // The shared parent sits in a world-writable temp dir, so prove it is a real
+      // directory rather than a symlink somebody planted BEFORE writing under it.
+      // `judgeOwnership` cannot answer this one: asked whether a path contains
+      // ITSELF it resolves both sides through the same link and always agrees.
+      const realParent = resolveThroughExisting(this.parent);
+      if (realParent !== resolve(this.parent)) {
+        throw new Error(`refusing to open a workspace: ${this.parent} resolves to ${realParent}, which is not where it claims to be`);
+      }
+      // The parent is shared and predictable so a later run can survey it; this
+      // run's own directory must not be. mkdtemp creates it exclusively at mode
+      // 0700, so nothing could have parked a directory on the name first, and the
+      // `task52-` prefix the orphan scan matches on is preserved. A parent that
+      // already existed keeps the mode it was created with.
+      this.#createdRoot = mkdtempSync(join(this.parent, `${this.runId}-`));
+      // The directory mkdtemp made IS this run's identity from here on, so the
+      // manifest, the orphan scan and a later reclaim all name the same thing.
+      this.runId = basename(this.#createdRoot);
+    }
+    this.root = this.#createdRoot;
     this.opened = true;
     this.writeManifest();
     return this.manifest();
@@ -184,11 +255,15 @@ export class DisposableWorkspace {
   }
 
   writeManifest() {
-    writeFileSync(this.manifestPath, `${JSON.stringify(this.manifest(), null, 2)}\n`, { mode: 0o600 });
+    if (this.#createdRoot === null) {
+      throw new Error('refusing to stamp a workspace this run did not create: open() first');
+    }
+    writeFileSync(join(this.#createdRoot, MANIFEST_FILE), `${JSON.stringify(this.manifest(), null, 2)}\n`, { mode: 0o600 });
   }
 
   /** @param {string} relative */
   path(relative) {
+    if (this.root === null) throw new Error(`refusing to address ${relative}: this workspace owns no tree yet`);
     const target = join(this.root, relative);
     const guard = judgeOwnership({ ownedRoot: this.root, path: target });
     if (!guard.owned) throw new Error(`refusing to address ${target}: ${guard.detail}`);
@@ -234,6 +309,11 @@ export class DisposableWorkspace {
    * Never touches anything outside the owned root, and says so with a receipt.
    */
   close() {
+    if (this.root === null) {
+      // Never opened, never adopted: there is no tree of ours to remove, and a
+      // clean receipt is the honest answer rather than a path we might delete.
+      return { removed: true, reason: 'NOTHING_TO_REMOVE', detail: 'workspace was never opened', entriesBefore: 0, residual: [] };
+    }
     const before = walk(this.root).length;
     const guard = judgeOwnership({ ownedRoot: this.root, path: this.root });
     if (!guard.owned) {
@@ -351,7 +431,7 @@ export async function sweepOrphanedProcesses(spec = {}) {
  */
 export async function reclaimOrphanedRun(spec) {
   const signal = spec.signal ?? ((pid, sig) => process.kill(pid, sig));
-  const manifestPath = join(spec.root, 'OWNED-BY-TASK-52.json');
+  const manifestPath = join(spec.root, MANIFEST_FILE);
   if (!existsSync(manifestPath)) {
     return { reclaimed: false, reason: 'NOT_A_TASK52_RUN', root: spec.root, stopped: [], removal: null };
   }
@@ -386,7 +466,10 @@ export async function reclaimOrphanedRun(spec) {
   }
   await new Promise((settle) => { setTimeout(settle, 2000); });
 
-  const workspace = new DisposableWorkspace({ runId: manifest.runId });
+  // ADOPT the tree the manifest names rather than rebuilding a path from the run
+  // id: since `open()` lets mkdtemp name the directory, the manifest is the only
+  // authority on where an abandoned run actually lives.
+  const workspace = new DisposableWorkspace({ runId: manifest.runId, root: spec.root });
   const removal = workspace.close();
   return {
     reclaimed: removal.removed && processTreeNaming({ needle: spec.root }).length === 0,
@@ -411,7 +494,7 @@ export function surveyOwnedParent(spec = {}) {
   if (!existsSync(parent)) return { parent, runs, scanned: 0 };
   for (const entry of readdirSync(parent)) {
     const candidate = join(parent, entry);
-    const manifest = join(candidate, 'OWNED-BY-TASK-52.json');
+    const manifest = join(candidate, MANIFEST_FILE);
     try {
       if (!statSync(candidate).isDirectory() || !existsSync(manifest)) continue;
       const parsed = JSON.parse(readFileSync(manifest, 'utf8'));

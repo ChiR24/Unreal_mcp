@@ -19,11 +19,16 @@ permissions:
 # indistinguishable from a job that passed, so the skip is announced rather
 # than left as a grey badge.
 
+# `dev` is the DEFAULT branch and where every PR lands; `main` only receives
+# release merges. Gating on `main` alone left the gates below dormant for the
+# whole of a release cycle while work accumulated on `dev`, so a PR could carry a
+# full set of green checks without a single test, type-check or drift gate having
+# run against it. Both integration branches are named here for that reason.
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -112,13 +117,16 @@ jobs:
       #               brace-expansion chain is dev-only, cannot be cleared
       #               without a breaking eslint major, and took this whole job
       #               -- every gate above included -- red on every run.
-      #   =high       `--omit=dev --audit-level=moderate` ALSO exits 1 today:
-      #               GHSA-frvp-7c67-39w9 sits on the PRODUCTION path under the
-      #               pinned @modelcontextprotocol/sdk 1.29.0, and clearing it
-      #               means a breaking SDK bump. A runtime moderate is therefore
-      #               tolerated here, not absent; it is carried openly in
-      #               docs/security-and-receipts.md. Lowering this back to
-      #               moderate without moving off the pinned SDK re-reds the job.
+      #   =high       kept from when `--omit=dev --audit-level=moderate` also
+      #               exited 1: GHSA-frvp-7c67-39w9 sat on the PRODUCTION path
+      #               under the then-pinned @modelcontextprotocol/sdk 1.29.0.
+      #               That advisory is now CLEARED -- the SDK moved to 1.30.0 and
+      #               @hono/node-server off the vulnerable 1.x -- and the bump was
+      #               not breaking after all. Both audits report zero against this
+      #               lockfile, so the level could be tightened to moderate; that
+      #               is a deliberate change to make on purpose, because the
+      #               command string is pinned by
+      #               tests/unit/workflow_gate_order_contract.test.ts.
       - name: Dependency audit (runtime deps, blocking)
         run: npm audit --omit=dev --audit-level=high
 

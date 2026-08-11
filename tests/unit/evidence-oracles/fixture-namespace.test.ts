@@ -8,13 +8,17 @@
 // host that were correctly left alone. These tests exist to make that restraint
 // structural rather than a habit somebody has to remember at 2am.
 //
-// Every case uses REAL directories under the owned /tmp/opencode/task-50 root,
-// including the symlink and traversal cases — a mocked path module would happily
-// agree with a containment check that a real filesystem defeats.
+// Every case uses REAL directories under an owned scratch root, including the
+// symlink and traversal cases — a mocked path module would happily agree with a
+// containment check that a real filesystem defeats.
 
-import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync,
+  rmSync, symlinkSync, writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   CONTENT_ROOT,
@@ -28,7 +32,12 @@ import {
   residualContent,
 } from './fixture-namespace.mjs';
 
-const SANDBOX = join('/tmp/opencode/task-50', `fixture-spec-${process.pid}`);
+// `mkdtempSync`, not a pid-derived name: this suite's whole subject is who owns a
+// directory, so the sandbox it judges from has to be provably ours — created
+// exclusively, mode 0700, under a name no other process could have taken first.
+// `realpathSync` first because `isStrictlyInside` resolves both sides before
+// comparing, and on macOS the temp dir is itself a symlink.
+const SANDBOX = mkdtempSync(join(realpathSync(tmpdir()), 'task50-fixture-spec-'));
 const TEMP_PARENT = join(SANDBOX, 'temp');
 const PROJECT = join(SANDBOX, 'Project');
 
@@ -40,7 +49,13 @@ beforeEach(() => {
   mkdirSync(TEMP_PARENT, { recursive: true });
   mkdirSync(join(PROJECT, 'Content'), { recursive: true });
 });
-afterEach(() => { rmSync(SANDBOX, { recursive: true, force: true }); });
+// Empties the sandbox rather than removing it: SANDBOX is the mkdtemp-created
+// directory, and re-creating it per test with a plain `mkdirSync` would hand back
+// the default permissions mkdtemp exists to avoid.
+afterEach(() => {
+  for (const entry of readdirSync(SANDBOX)) rmSync(join(SANDBOX, entry), { recursive: true, force: true });
+});
+afterAll(() => { rmSync(SANDBOX, { recursive: true, force: true }); });
 
 describe('Task 50 — run ids cannot collide', () => {
   it('is time-ordered and random-suffixed', () => {
@@ -116,7 +131,7 @@ describe('Task 50 — a fixture that cannot be declared cannot be deleted', () =
   it('THROWS on a host path outside the owned temp namespace', () => {
     const namespace = makeNamespace();
     namespace.open();
-    expect(() => namespace.declare('file', '/tmp/opencode/big_1.json')).toThrowError(/UNOWNED|REFUSING/u);
+    expect(() => namespace.declare('file', join(SANDBOX, 'big_1.json'))).toThrowError(/UNOWNED|REFUSING/u);
   });
 
   it('removeOwnedFile REFUSES an unowned path and leaves it on disk', () => {
@@ -212,6 +227,21 @@ describe('Task 50 — cleanup is VERIFIED, and double cleanup is a no-op', () =>
     const receipt = namespace.close();
     expect(receipt.tempReleased).toBe(true);
     expect(existsSync(namespace.tempRoot)).toBe(false);
+  });
+
+  it('a REPEATED open() does not re-baseline: content made in between still reads as residue', () => {
+    const namespace = makeNamespace();
+    namespace.open();
+    // Somebody re-enters setup after a fixture already exists. If the second open
+    // re-observed the namespace, this file would become part of the "pre-state"
+    // and close() would call the run restored while the asset is still on disk.
+    mkdirSync(namespace.diskRoot, { recursive: true });
+    writeFileSync(join(namespace.diskRoot, 'M_Between.uasset'), 'made after the first open', { mode: 0o600 });
+    const second = namespace.open();
+    const receipt = namespace.close();
+    expect(second.baselineFileCount).toBe(0);
+    expect(receipt.contentRestored).toBe(false);
+    expect(receipt.residualContentFiles).toBe(1);
   });
 
   it('DOUBLE CLEANUP is idempotent: the second close removes nothing and still reports honestly', () => {

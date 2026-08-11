@@ -195,25 +195,46 @@ recorded in `.omo/evidence/task-64-pure-unreal-mcp-implementation.json`. The
 section below additionally records the advisory fixed in 0.5.31 so its
 remediation stays on the record.
 
-### A shipped dependency carries an advisory
+### A shipped dependency carried an advisory — now cleared
 
-`npm audit --audit-level=moderate` exits **1** against this tree: 7 advisories,
-2 moderate and 5 high.
+`npm audit --audit-level=moderate` exits **0** against this tree, both runtime
+only and across the full dev tree. The advisory below is kept on the record
+rather than deleted, because how it was cleared is the part worth remembering.
 
-| Advisory | Path | Reaches users |
-| --- | --- | --- |
-| `GHSA-frvp-7c67-39w9` — path traversal in `serve-static` on Windows via an encoded backslash (`%5C`) | production: `@modelcontextprotocol/sdk` (pinned at exactly 1.29.0) → `@hono/node-server` | **yes** |
-| `GHSA-mh99-v99m-4gvg` — unbounded expansion in `brace-expansion` | dev only: the ESLint `minimatch` chain | no |
+| Advisory | Path | Reached users | Status |
+| --- | --- | --- | --- |
+| `GHSA-frvp-7c67-39w9` — path traversal in `serve-static` on Windows via an encoded backslash (`%5C`) | production: `@modelcontextprotocol/sdk` → `@hono/node-server` | **yes** | cleared |
+| `GHSA-mh99-v99m-4gvg` — unbounded expansion in `brace-expansion` | dev only: the ESLint `minimatch` chain | no | cleared |
 
-The 5 high-severity findings are all the ESLint development chain and are never
-installed by a consumer of this package. The moderate one is different: it sits
-on the production path, so it ships in the bytes a user installs. **Its
-exploitability in this product has not been assessed** — no lane audited
-whether the vulnerable `serve-static` route is reachable here, and absence of
-an assessment is not evidence of safety.
+The production one shipped in the bytes a user installs, so it was cleared rather
+than argued away.
 
-Clearing it requires moving off the pinned SDK version, which is a breaking
-dependency change. That decision is not taken here.
+**Clearing it took two steps, and the first alone does nothing.** SDK 1.30.0
+widens its constraint from `^1.19.9` to `^1.19.9 || ^2.0.5`, but 1.19.17 still
+satisfies that range, so npm leaves the vulnerable version pinned in the
+lockfile. The transitive dependency has to be updated explicitly on top of the
+SDK bump. A dependency-bot PR that only raises the SDK will close nothing here.
+
+**Reachability, now that it has been looked at.** The only transport this
+product constructs is `StdioServerTransport` (`src/server/stdio-lifecycle.ts`);
+no HTTP or SSE server transport is instantiated anywhere in `src/`, and the
+native `/mcp` surface is UE C++ rather than anything Node. The vulnerable
+`serve-static` route therefore has no caller here. That is an argument for the
+advisory never having been exploitable in this product — it is **not** the reason
+it was cleared, and it does not make the dependency safe to leave stale.
+
+**What the upgrade is and is not verified by.** The unit suite is unchanged
+across it. Nothing in this repository exercises `@hono/node-server` at all:
+`scripts/smoke-test.ts` drives the server over `InMemoryTransport`, so it never
+starts an HTTP listener, and there is no HTTP smoke test. The 2.x bump is
+therefore unexercised by execution rather than proven benign — which is
+tolerable only because, per the paragraph above, the product never enters that
+code path.
+
+The blocking audit level in CI still reads `high`, which dates from when this
+advisory could not be cleared. Tightening it to `moderate` is now possible; the
+command string is pinned by `tests/unit/workflow_gate_order_contract.test.ts`,
+so it is a deliberate change rather than a drive-by.
 
 ### Advisory GHSA-x982-3jx2-x6q3 — loopback WS → Admin → `execute_python` / `console_command` RCE (patched 0.5.31)
 

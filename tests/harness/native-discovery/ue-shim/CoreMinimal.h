@@ -23,8 +23,13 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
+
+// FString::ParseIntoArrayWS fills a TArray, but TArray is declared below it, so
+// the method is declared inside FString and defined once TArray is complete.
+template <typename T> class TArray;
 
 using int32 = std::int32_t;
 using int64 = std::int64_t;
@@ -116,6 +121,10 @@ public:
 		return ToLower().Data == Other.ToLower().Data;
 	}
 
+	// Splits on whitespace. UE culls empty entries by default and returns the
+	// number of pieces; `ExtraDelim` adds further single-character separators.
+	int32 ParseIntoArrayWS(TArray<FString>& OutArray, const TCHAR* ExtraDelim = nullptr, bool CullEmpty = true) const;
+
 	// UE reports INDEX_NONE in the out-parameter when the character is absent, so
 	// a caller that checks only the out-parameter behaves the same here.
 	bool FindLastChar(TCHAR Ch, int32& OutIndex) const
@@ -189,6 +198,34 @@ private:
 	std::wstring Data;
 };
 
+// UE's FStringView is a NON-OWNING view over an existing buffer. The describe
+// unit uses it to compare FJsonObject keys without allocating, which is the only
+// surface needed here: construction from a null-terminated buffer, and an Equals
+// that honours ESearchCase exactly like FString's does.
+class FStringView
+{
+public:
+	FStringView() = default;
+	FStringView(const TCHAR* Raw) : View(Raw ? Raw : L"") {}
+
+	int32 Len() const { return static_cast<int32>(View.size()); }
+	bool IsEmpty() const { return View.empty(); }
+
+	bool Equals(const FStringView& Other, ESearchCase Case = ESearchCase::IgnoreCase) const
+	{
+		if (View.size() != Other.View.size()) return false;
+		if (Case == ESearchCase::CaseSensitive) return View == Other.View;
+		for (size_t Index = 0; Index < View.size(); ++Index)
+		{
+			if (std::towlower(View[Index]) != std::towlower(Other.View[Index])) return false;
+		}
+		return true;
+	}
+
+private:
+	std::wstring_view View;
+};
+
 template <typename T>
 class TArray
 {
@@ -196,7 +233,13 @@ public:
 	using SizeType = int32;
 	int32 Num() const { return static_cast<int32>(Items.size()); }
 	void Reserve(int32 Count) { Items.reserve(static_cast<size_t>(Count)); }
-	void Empty() { Items.clear(); }
+	// UE separates these two: Reset() empties the array but KEEPS the allocation
+	// for reuse, while Empty() releases it. `std::vector::clear()` retains
+	// capacity, so it implements Reset() and NOT Empty(); releasing needs the
+	// swap-with-a-temporary idiom, because `shrink_to_fit()` is only a
+	// non-binding request the implementation may ignore.
+	void Empty() { std::vector<T>().swap(Items); }
+	void Reset() { Items.clear(); }
 	void Add(const T& Value) { Items.push_back(Value); }
 	void Add(T&& Value) { Items.push_back(std::move(Value)); }
 
@@ -241,6 +284,28 @@ public:
 private:
 	std::vector<T> Items;
 };
+
+// Defined here rather than inline in FString because it needs a complete TArray.
+inline int32 FString::ParseIntoArrayWS(TArray<FString>& OutArray, const TCHAR* ExtraDelim, bool CullEmpty) const
+{
+	OutArray.Reset();
+	const std::wstring_view Extra = ExtraDelim ? std::wstring_view(ExtraDelim) : std::wstring_view();
+	std::wstring Current;
+	const auto Flush = [&]()
+	{
+		if (!Current.empty() || !CullEmpty) OutArray.Add(FString(Current));
+		Current.clear();
+	};
+	for (const wchar_t Ch : Data)
+	{
+		const bool IsDelimiter = std::iswspace(Ch) != 0
+			|| (!Extra.empty() && Extra.find(Ch) != std::wstring_view::npos);
+		if (IsDelimiter) Flush();
+		else Current.push_back(Ch);
+	}
+	Flush();
+	return OutArray.Num();
+}
 
 template <typename T>
 class TSharedPtr : public std::shared_ptr<T>
