@@ -1,8 +1,8 @@
 {
   "generator": "docs/capability-support-matrix.md",
-  "catalogRevision": "5cc42825a2758b6c",
-  "recordCount": 1380,
-  "mutationCount": 1215,
+  "catalogRevision": "0abb865ac0aef993",
+  "recordCount": 1381,
+  "mutationCount": 1216,
   "summary": {
     "all": {
       "preview": 0,
@@ -2250,6 +2250,37 @@
     },
     {
       "id": "animation_physics.remove_physics_body",
+      "parentTool": "animation_physics",
+      "effect": "destructive",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "animation_physics.remove_socket",
       "parentTool": "animation_physics",
       "effect": "destructive",
       "longRunning": false,

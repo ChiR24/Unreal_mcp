@@ -5,9 +5,9 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `5cc42825a2758b6c`
+Catalog revision: `0abb865ac0aef993`
 
-Every one of the 1380 capabilities declares all three semantics. The
+Every one of the 1381 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
 compensation); a capability carries a stronger claim only where the ledger
 cites the implementation that proves it. A mostly-pessimistic matrix is the
@@ -17,16 +17,16 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 1380 | 0 / 1215 |
-| Undoable | 0 / 1380 | 0 / 1215 |
-| Compensatable | 21 / 1380 | 20 / 1215 |
-| Fully pessimistic | 1359 / 1380 | 1195 / 1215 |
+| Previewable | 0 / 1381 | 0 / 1216 |
+| Undoable | 0 / 1381 | 0 / 1216 |
+| Compensatable | 21 / 1381 | 20 / 1216 |
+| Fully pessimistic | 1360 / 1381 | 1196 / 1216 |
 
 ## By parent tool
 
 | Parent | Capabilities | Mutations | Preview | Undo | Compensation |
 | --- | --- | --- | --- | --- | --- |
-| `animation_physics` | 98 | 88 | 0 | 0 | 0 |
+| `animation_physics` | 99 | 89 | 0 | 0 | 0 |
 | `build_environment` | 150 | 145 | 0 | 0 | 3 |
 | `control_actor` | 46 | 32 | 0 | 0 | 4 |
 | `control_editor` | 42 | 23 | 0 | 0 | 2 |
@@ -153,6 +153,7 @@ truthful result, not a gap in coverage.
 | `animation_physics.prune_weights` | write | none | none | none |
 | `animation_physics.remove_bone` | destructive | none | none | none |
 | `animation_physics.remove_physics_body` | destructive | none | none | none |
+| `animation_physics.remove_socket` | destructive | none | none | none |
 | `animation_physics.rename_bone` | write | none | none | none |
 | `animation_physics.set_additive_settings` | write | none | none | none |
 | `animation_physics.set_anim_graph_node_value` | write | none | none | none |

@@ -55,16 +55,16 @@ describe('Task 17 exhaustive gameplay records', () => {
     }
   });
 
-  it('contains exactly 374 ordered unique source records', () => {
+  it('contains exactly 375 ordered unique source records', () => {
     const expected = DEFINITIONS.flatMap((definition) =>
       actions(definition).map((action) => `${definition.name}.${action}`));
     expect(ids(GAMEPLAY_SOURCE_RECORDS)).toEqual(expected);
-    expect(GAMEPLAY_SOURCE_RECORDS).toHaveLength(374);
-    expect(new Set(ids(GAMEPLAY_SOURCE_RECORDS)).size).toBe(374);
+    expect(GAMEPLAY_SOURCE_RECORDS).toHaveLength(375);
+    expect(new Set(ids(GAMEPLAY_SOURCE_RECORDS)).size).toBe(375);
   });
 
   it('builds a frozen fail-closed aggregate with stable sorted IDs', () => {
-    expect(GAMEPLAY_CAPABILITY_RECORD_COUNT).toBe(374);
+    expect(GAMEPLAY_CAPABILITY_RECORD_COUNT).toBe(375);
     expect(Object.isFrozen(GAMEPLAY_CAPABILITY_CATALOG)).toBe(true);
     expect(ids(GAMEPLAY_CAPABILITY_CATALOG)).toEqual([...ids(GAMEPLAY_CAPABILITY_CATALOG)].sort());
   });

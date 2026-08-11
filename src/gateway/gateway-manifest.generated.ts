@@ -107,7 +107,8 @@ export const gatewayManifest = {
         "add_socket",
         "modify_socket",
         "modify_physics_body",
-        "set_physics_constraint"
+        "set_physics_constraint",
+        "remove_socket"
       ],
       "parameterNames": [
         "activate",
@@ -840,7 +841,8 @@ export const gatewayManifest = {
               "add_socket",
               "modify_socket",
               "modify_physics_body",
-              "set_physics_constraint"
+              "set_physics_constraint",
+              "remove_socket"
             ],
             "description": "Action to invoke on animation_physics."
           },

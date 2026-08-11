@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "5cc42825a2758b6c",
-  "recordCount": 1380,
+  "catalogRevision": "0abb865ac0aef993",
+  "recordCount": 1381,
   "records": [
     {
       "id": "animation_physics.activate_ragdoll",
@@ -13364,6 +13364,196 @@
         "algorithm": "sha256",
         "schema": "370d6ccffc798d4ca60c3acbf74d4e280e44b8223033fafeb0d31c7a12b5cb5a",
         "content": "e4f40f9a01b58f26db0343be0ef475c2525dcd3f54f3c23e4474bf085fc031c7"
+      }
+    },
+    {
+      "id": "animation_physics.remove_socket",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "animation_physics",
+          "action": "remove_socket"
+        }
+      ],
+      "discovery": {
+        "domain": "animation physics",
+        "family": "skeleton",
+        "topics": [
+          "remove_socket"
+        ],
+        "summary": "Remove a socket from a skeleton or skeletal mesh.",
+        "whenToUse": [
+          "An attach point must be taken off a skeleton."
+        ],
+        "whenNotToUse": [
+          "The socket transform should change; use configure_socket."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "socketName": {
+              "type": "string",
+              "description": "Target socket name."
+            },
+            "skeletonPath": {
+              "type": "string",
+              "description": "Canonical /Game Skeleton asset path."
+            },
+            "skeletalMeshPath": {
+              "type": "string",
+              "description": "Canonical /Game SkeletalMesh asset path."
+            }
+          },
+          "required": [
+            "socketName"
+          ],
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "skeletonPath",
+            "skeletalMeshPath"
+          ]
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "socketName": {
+              "type": "string",
+              "description": "Target socket name."
+            },
+            "skeletonPath": {
+              "type": "string",
+              "description": "Canonical /Game Skeleton asset path."
+            },
+            "remainingSockets": {
+              "type": "number",
+              "description": "Number of sockets left on the asset after the call."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Remove a socket from a skeleton or skeletal mesh.",
+          "input": {
+            "action": "remove_socket",
+            "skeletonPath": "/Game/SK_Char",
+            "socketName": "Weapon"
+          },
+          "output": {
+            "success": true,
+            "message": "Socket removed",
+            "socketName": "Weapon",
+            "skeletonPath": "/Game/SK_Char",
+            "remainingSockets": 2
+          }
+        }
+      ],
+      "availability": {
+        "unreal": {
+          "min": {
+            "major": 5,
+            "minor": 0,
+            "patch": 0,
+            "channel": "stable"
+          },
+          "max": {
+            "major": 5,
+            "minor": 8,
+            "patch": 0,
+            "channel": "preview",
+            "preview": 1
+          }
+        },
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "destructive",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false,
+        "supportsPreview": false,
+        "supportsUndo": false,
+        "semantics": {
+          "preview": {
+            "mode": "none",
+            "reports": [],
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+            }
+          },
+          "undo": {
+            "mode": "none",
+            "transactionScope": null,
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+            }
+          },
+          "compensation": {
+            "mode": "none",
+            "inverse": [],
+            "guidance": null,
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+            }
+          }
+        }
+      },
+      "policy": {
+        "requiredScope": "destructive",
+        "consent": "explicit",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "animation_physics",
+        "dispatchAction": "remove_socket",
+        "dispatchMode": "tool"
+      },
+      "normalization": {
+        "class": "C_SAME_VERB_DIFFERENT_TARGET",
+        "disposition": "retain",
+        "rationale": "Removal counterpart to create_socket, spelled to match remove_bone and remove_physics_body in this family; the same native handler also answers to delete_socket, which stays an unpromoted spelling.",
+        "provenance": "post-migration"
+      },
+      "deprecation": {
+        "status": "active"
+      },
+      "parent": {
+        "parent": "animation_physics",
+        "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+        "category": "gameplay"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "4e5c48c9f98ce5f5e82bb15bf9b917cd3906c051e0ba8edca4b89482ef671a19",
+        "content": "8ebc27508b41fe93ec1ea09a57ee150b891b5e41a10d3013ec0968f3cfd82325"
       }
     },
     {
@@ -253947,6 +254137,14 @@
       "contentHash": "e4f40f9a01b58f26db0343be0ef475c2525dcd3f54f3c23e4474bf085fc031c7"
     },
     {
+      "id": "animation_physics.remove_socket",
+      "parentTool": "animation_physics",
+      "dispatchAction": "remove_socket",
+      "domain": "animation physics",
+      "schemaHash": "4e5c48c9f98ce5f5e82bb15bf9b917cd3906c051e0ba8edca4b89482ef671a19",
+      "contentHash": "8ebc27508b41fe93ec1ea09a57ee150b891b5e41a10d3013ec0968f3cfd82325"
+    },
+    {
       "id": "animation_physics.rename_bone",
       "parentTool": "animation_physics",
       "dispatchAction": "rename_bone",
@@ -265260,6 +265458,18 @@
       "remove",
       "remove_physics_body",
       "skeleton"
+    ],
+    "animation_physics.remove_socket": [
+      "animation physics",
+      "animation_physics",
+      "animation_physics.remove_socket",
+      "from",
+      "mesh",
+      "remove",
+      "remove_socket",
+      "skeletal",
+      "skeleton",
+      "socket"
     ],
     "animation_physics.rename_bone": [
       "animation physics",
@@ -288190,7 +288400,7 @@
       "name": "animation_physics",
       "category": "gameplay",
       "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
-      "actionCount": 98
+      "actionCount": 99
     },
     {
       "name": "build_environment",

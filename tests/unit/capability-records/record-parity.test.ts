@@ -10,9 +10,9 @@
  * in the real repository). Fixture tests can still narrow the scope via an
  * explicit `schemaParityTools` override. `npm run registry:check` byte-compares
  * generated files and reports only "<path> is stale". Neither proves that the
- * 1,380 canonical records are field-for-field identical on both transports.
+ * 1,381 canonical records are field-for-field identical on both transports.
  *
- * This gate closes that gap by comparing STRUCTURED DATA for all 1,380 records
+ * This gate closes that gap by comparing STRUCTURED DATA for all 1,381 records
  * across the three shipped surfaces:
  *   TS canonical records  (src/tools/catalog/capabilities/records/aggregate.ts)
  *   neutral JSON          (generated/canonical-registry.generated.json)
@@ -33,7 +33,7 @@ import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/
 import { readAllNativeShardRecords, listNativeShardFiles } from './native-shard-records.js';
 import { diffPointers, formatDiffs, type PointerDiff } from './support.js';
 
-const EXPECTED_RECORDS = 1380;
+const EXPECTED_RECORDS = 1381;
 const EXPECTED_PARENTS = 23;
 
 const NEUTRAL_JSON_PATH = resolve(
@@ -65,13 +65,13 @@ const byId = (records: readonly Record<string, unknown>[]): ReadonlyMap<string, 
   return map;
 };
 
-describe('Task 29 - the full 1,380-record universe exists on every surface', () => {
-  it('TypeScript canonical records number exactly 1,380 with unique ids', () => {
+describe('Task 29 - the full 1,381-record universe exists on every surface', () => {
+  it('TypeScript canonical records number exactly 1,381 with unique ids', () => {
     expect(ALL_CAPABILITY_RECORDS.length).toBe(EXPECTED_RECORDS);
     expect(new Set(ALL_CAPABILITY_RECORDS.map((r) => r.id)).size).toBe(EXPECTED_RECORDS);
   });
 
-  it('the neutral JSON carries exactly 1,380 full records and a matching recordCount', () => {
+  it('the neutral JSON carries exactly 1,381 full records and a matching recordCount', () => {
     const neutral = loadNeutral();
     expect(neutral.records.length).toBe(EXPECTED_RECORDS);
     expect(neutral.recordCount).toBe(EXPECTED_RECORDS);
@@ -79,7 +79,7 @@ describe('Task 29 - the full 1,380-record universe exists on every surface', () 
     expect(new Set(neutral.records.map((r) => String(r.id))).size).toBe(EXPECTED_RECORDS);
   });
 
-  it('the native shards decode to exactly 1,380 records across 23 per-parent shards', () => {
+  it('the native shards decode to exactly 1,381 records across 23 per-parent shards', () => {
     expect(listNativeShardFiles().length).toBe(EXPECTED_PARENTS);
     expect(readAllNativeShardRecords().size).toBe(EXPECTED_RECORDS);
   });
@@ -102,7 +102,7 @@ describe('Task 29 - the full 1,380-record universe exists on every surface', () 
 });
 
 describe('Task 29 - every field of every record is identical on both transports', () => {
-  it('all 1,380 TypeScript records equal their neutral-JSON projection field-for-field', () => {
+  it('all 1,381 TypeScript records equal their neutral-JSON projection field-for-field', () => {
     const neutral = byId(loadNeutral().records);
     const diffs: PointerDiff[] = [];
     let compared = 0;
@@ -121,7 +121,7 @@ describe('Task 29 - every field of every record is identical on both transports'
     expect(compared).toBe(EXPECTED_RECORDS);
   });
 
-  it('all 1,380 TypeScript records equal their native shard projection field-for-field', () => {
+  it('all 1,381 TypeScript records equal their native shard projection field-for-field', () => {
     const native = readAllNativeShardRecords();
     const diffs: PointerDiff[] = [];
     let compared = 0;
@@ -140,7 +140,7 @@ describe('Task 29 - every field of every record is identical on both transports'
     expect(compared).toBe(EXPECTED_RECORDS);
   });
 
-  it('both transports agree on both hashes for all 1,380 records', () => {
+  it('both transports agree on both hashes for all 1,381 records', () => {
     const native = readAllNativeShardRecords();
     const neutral = byId(loadNeutral().records);
     const mismatches: string[] = [];
@@ -159,7 +159,7 @@ describe('Task 29 - every field of every record is identical on both transports'
 });
 
 describe('Task 29 - the 23 private parent routes survive intact', () => {
-  it('exactly 23 distinct parent tools own the 1,380 records on every surface', () => {
+  it('exactly 23 distinct parent tools own the 1,381 records on every surface', () => {
     const tsParents = new Set(ALL_CAPABILITY_RECORDS.map((r) => String(r.routing.parentTool)));
     expect(tsParents.size).toBe(EXPECTED_PARENTS);
 

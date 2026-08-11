@@ -56,6 +56,10 @@ const testCases = [
   { scenario: 'BONE: list_virtual_bones via skeletonPath', toolName: 'animation_physics', arguments: skel('list_virtual_bones'), expected: 'success|not found' },
   { scenario: 'BONE: list_virtual_bones via skeletalMeshPath', toolName: 'animation_physics', arguments: { action: 'list_virtual_bones', skeletalMeshPath: MESH_PATH }, expected: 'success|not found' },
 
+  // === SOCKET REMOVAL (last: it consumes the socket the cases above rely on) ===
+  { scenario: 'SOCKET: remove_socket via skeletonPath', toolName: 'animation_physics', arguments: skel('remove_socket', { socketName: SOCKET_NAME }), expected: 'success|not found' },
+  { scenario: 'SOCKET: remove_socket via skeletalMeshPath', toolName: 'animation_physics', arguments: { action: 'remove_socket', skeletalMeshPath: MESH_PATH, socketName: SOCKET_NAME }, expected: 'success|not found' },
+
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found', timeoutMs: 30000 },
 ];

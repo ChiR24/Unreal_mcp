@@ -5,8 +5,8 @@
 import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
-export const CANONICAL_CAPABILITY_RECORD_COUNT = 1380;
-export const CATALOG_REVISION = "5cc42825a2758b6c";
+export const CANONICAL_CAPABILITY_RECORD_COUNT = 1381;
+export const CATALOG_REVISION = "0abb865ac0aef993";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -13375,6 +13375,196 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "370d6ccffc798d4ca60c3acbf74d4e280e44b8223033fafeb0d31c7a12b5cb5a",
       "content": "e4f40f9a01b58f26db0343be0ef475c2525dcd3f54f3c23e4474bf085fc031c7"
+    }
+  },
+  {
+    "id": "animation_physics.remove_socket",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "animation_physics",
+        "action": "remove_socket"
+      }
+    ],
+    "discovery": {
+      "domain": "animation physics",
+      "family": "skeleton",
+      "topics": [
+        "remove_socket"
+      ],
+      "summary": "Remove a socket from a skeleton or skeletal mesh.",
+      "whenToUse": [
+        "An attach point must be taken off a skeleton."
+      ],
+      "whenNotToUse": [
+        "The socket transform should change; use configure_socket."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "socketName": {
+            "type": "string",
+            "description": "Target socket name."
+          },
+          "skeletonPath": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
+          },
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Canonical /Game SkeletalMesh asset path."
+          }
+        },
+        "required": [
+          "socketName"
+        ],
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "skeletonPath",
+          "skeletalMeshPath"
+        ]
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "socketName": {
+            "type": "string",
+            "description": "Target socket name."
+          },
+          "skeletonPath": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
+          },
+          "remainingSockets": {
+            "type": "number",
+            "description": "Number of sockets left on the asset after the call."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Remove a socket from a skeleton or skeletal mesh.",
+        "input": {
+          "action": "remove_socket",
+          "skeletonPath": "/Game/SK_Char",
+          "socketName": "Weapon"
+        },
+        "output": {
+          "success": true,
+          "message": "Socket removed",
+          "socketName": "Weapon",
+          "skeletonPath": "/Game/SK_Char",
+          "remainingSockets": 2
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "destructive",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "destructive",
+      "consent": "explicit",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "animation_physics",
+      "dispatchAction": "remove_socket",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Removal counterpart to create_socket, spelled to match remove_bone and remove_physics_body in this family; the same native handler also answers to delete_socket, which stays an unpromoted spelling.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "animation_physics",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "4e5c48c9f98ce5f5e82bb15bf9b917cd3906c051e0ba8edca4b89482ef671a19",
+      "content": "8ebc27508b41fe93ec1ea09a57ee150b891b5e41a10d3013ec0968f3cfd82325"
     }
   },
   {
@@ -36845,7 +37035,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "schema": "929d2d5f163b5e63bc5a14e495237f4264dbb6f44f407e404d2ad1dd861e5410",
       "content": "e1de4dcfe762b5a420c7200ec149f91a7333ef402194af0ce7b5b8bed8afb578"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
   {
     "id": "blueprint.create_node",
     "aliases": [],
@@ -37097,9 +37289,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "schema": "b4b032da85014740b4af3af661d1efd9497be37fdf84533e29fb30387f8eab2b",
       "content": "ff199ddb528d270cb44966b9c38e58d2e4649ebb1e10eaa18907f0aced7cc8e4"
     }
-  }
-]);
-const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
+  },
   {
     "id": "blueprint.create_pause_menu",
     "aliases": [],
@@ -74528,7 +74718,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "schema": "1336c42d803bb8ef81f852db68648b973c86073fd29a8bd8894bf934dabcb2e7",
       "content": "fc5a3f61bc852f8ae07ec49e7ec5ec91db63a36a62f937bdb6626069f9c8379f"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
   {
     "id": "build_environment.set_spline_type",
     "aliases": [],
@@ -74705,9 +74897,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "schema": "f2b8b1962dd6e40df925a49919a2021ef70e864b1ec524aaf5dace6d3c31c824",
       "content": "022ac6780726c305005d7e41548a23fbd8082303e07eac7cb90cda46a1be3c2d"
     }
-  }
-]);
-const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
+  },
   {
     "id": "build_environment.set_time_of_day",
     "aliases": [],
@@ -111189,7 +111379,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "schema": "9eb7c3ee4f9be09508bb253ccf0ac2b268377e7c075c4235e48ce996748b0942",
       "content": "c187e461e80ebdd920d5e6bb5b1fef8e8a4dc60a2d835aaff9298066feb3d22a"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
   {
     "id": "manage_ai.get_navigation_info",
     "aliases": [],
@@ -111387,9 +111579,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "schema": "8733bfd07a3338b1b54d2a3b22eab32babc7464c024ad97a320a9062647599c8",
       "content": "870a215e7566d1ed993b493434ef718b35d6b0e764ce5cb172cb58fa85fc2f44"
     }
-  }
-]);
-const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_ai.get_tree",
     "aliases": [],
@@ -147036,7 +147226,9 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "schema": "a335842a5dbc216a44a656ada29e1cf7d196968f2a4a49caf56ec2df30d8d2b2",
       "content": "001ce136b3db6a62ce2db10ed00ad1a75384bb67da832ce1c6d29630458734f8"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
   {
     "id": "manage_gas.configure_asc",
     "aliases": [],
@@ -147211,9 +147403,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "schema": "cccd90c9c7eb8c2342a297ad861dff73e9a2a0620a7a6b01447b3dd5c21a1b8c",
       "content": "81682bd9d4647a46827570a190ee4a97ee463bd2422ab6ad8ab4157dea815a36"
     }
-  }
-]);
-const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_gas.configure_cue_trigger",
     "aliases": [],
@@ -184350,7 +184540,9 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "schema": "da7d4e8208494d825e84957e1e1cc39c69b84f2304f08c12b6689c973d39b2d1",
       "content": "4919c46f4c938f1d1ae41cbd61a00ffa9e62a93b6e1ce362c8d96b2131825ae6"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
   {
     "id": "manage_level_structure.connect_level_blueprint_nodes",
     "aliases": [],
@@ -184532,9 +184724,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "schema": "df1d43f1e328782c77f2a1476f4c40419bbdb7479e868cdaf4c48c55069900cd",
       "content": "64637c7de1cc13d048d032547546734a3262f2cb801962de77ec5d963acea077"
     }
-  }
-]);
-const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_level_structure.create_audio_volume",
     "aliases": [],
@@ -221067,7 +221257,9 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "schema": "23890819754ebe502f16934b9c331d6d768a997a31343f1bc309598e8d00bad0",
       "content": "513a0354cf509c3b7d09f3c1ba5163edc8778c73d1af8c6185ed4dcc23fb1be2"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
   {
     "id": "material.set_two_sided",
     "aliases": [],
@@ -221233,9 +221425,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "schema": "575a1d1fb5cee2225bc830b031a3bda3fdc377c6bfc08501b82bac7049126972",
       "content": "2e48041666992aed8cd03830b22a78f35dd637bc7a17218c4ea0d9beea6174da"
     }
-  }
-]);
-const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
+  },
   {
     "id": "material.set_vector_parameter_value",
     "aliases": [],
@@ -253989,6 +254179,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "e4f40f9a01b58f26db0343be0ef475c2525dcd3f54f3c23e4474bf085fc031c7"
   },
   {
+    "id": "animation_physics.remove_socket",
+    "parentTool": "animation_physics",
+    "dispatchAction": "remove_socket",
+    "domain": "animation physics",
+    "schemaHash": "4e5c48c9f98ce5f5e82bb15bf9b917cd3906c051e0ba8edca4b89482ef671a19",
+    "contentHash": "8ebc27508b41fe93ec1ea09a57ee150b891b5e41a10d3013ec0968f3cfd82325"
+  },
+  {
     "id": "animation_physics.rename_bone",
     "parentTool": "animation_physics",
     "dispatchAction": "rename_bone",
@@ -265303,6 +265501,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "remove",
     "remove_physics_body",
     "skeleton"
+  ],
+  "animation_physics.remove_socket": [
+    "animation physics",
+    "animation_physics",
+    "animation_physics.remove_socket",
+    "from",
+    "mesh",
+    "remove",
+    "remove_socket",
+    "skeletal",
+    "skeleton",
+    "socket"
   ],
   "animation_physics.rename_bone": [
     "animation physics",
@@ -288236,7 +288446,7 @@ export const DOCS_DATA = [
     "name": "animation_physics",
     "category": "gameplay",
     "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
-    "actionCount": 98
+    "actionCount": 99
   },
   {
     "name": "build_environment",
@@ -288664,6 +288874,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "animation_physics.remove_physics_body": {
     "schema": "370d6ccffc798d4ca60c3acbf74d4e280e44b8223033fafeb0d31c7a12b5cb5a",
     "content": "e4f40f9a01b58f26db0343be0ef475c2525dcd3f54f3c23e4474bf085fc031c7"
+  },
+  "animation_physics.remove_socket": {
+    "schema": "4e5c48c9f98ce5f5e82bb15bf9b917cd3906c051e0ba8edca4b89482ef671a19",
+    "content": "8ebc27508b41fe93ec1ea09a57ee150b891b5e41a10d3013ec0968f3cfd82325"
   },
   "animation_physics.rename_bone": {
     "schema": "7a6606b5d94293867c3214d2e841f2788374da6b40203845464ae7f42bb8bba9",

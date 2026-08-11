@@ -631,7 +631,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_socket",
             "modify_socket",
             "modify_physics_body",
-            "set_physics_constraint"
+            "set_physics_constraint",
+            "remove_socket"
           ],
           "description": "Action to invoke on animation_physics."
         }
@@ -868,6 +869,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "remainingBodies": {
           "type": "number",
           "description": "Number of physics bodies left on the asset after the call."
+        },
+        "remainingSockets": {
+          "type": "number",
+          "description": "Number of sockets left on the asset after the call."
         },
         "rotation": {
           "type": "object",

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `5cc42825a2758b6c`
+Catalog revision: `0abb865ac0aef993`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 1380 capabilities across
+The catalog declares 1381 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -36,7 +36,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
-| `animation_physics` | 98 | 10 | 85 | 3 | animation physics |
+| `animation_physics` | 99 | 10 | 85 | 4 | animation physics |
 | `build_environment` | 150 | 5 | 141 | 4 | environment |
 | `control_actor` | 46 | 14 | 29 | 3 | actor |
 | `control_editor` | 42 | 19 | 23 | 0 | editor |
@@ -62,13 +62,14 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-153 of 1380 capabilities require consent.
+154 of 1381 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
 | `animation_physics.cleanup` | `animation_physics` | `cleanup` | destructive | explicit |
 | `animation_physics.remove_bone` | `animation_physics` | `remove_bone` | destructive | explicit |
 | `animation_physics.remove_physics_body` | `animation_physics` | `remove_physics_body` | destructive | explicit |
+| `animation_physics.remove_socket` | `animation_physics` | `remove_socket` | destructive | explicit |
 | `asset.add_material_parameter` | `manage_asset` | `add_material_parameter` | write | explicit |
 | `asset.bulk_delete` | `manage_asset` | `bulk_delete` | destructive | elevated |
 | `asset.bulk_rename` | `manage_asset` | `bulk_rename` | write | explicit |
@@ -305,6 +306,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.prune_weights` | `animation_physics` | `prune_weights` | write | write | none | `animation_physics.prune_weights` |
 | `animation_physics.remove_bone` | `animation_physics` | `remove_bone` | destructive | destructive | explicit | `animation_physics.remove_bone` |
 | `animation_physics.remove_physics_body` | `animation_physics` | `remove_physics_body` | destructive | destructive | explicit | `animation_physics.remove_physics_body` |
+| `animation_physics.remove_socket` | `animation_physics` | `remove_socket` | destructive | destructive | explicit | `animation_physics.remove_socket` |
 | `animation_physics.rename_bone` | `animation_physics` | `rename_bone` | write | write | none | `animation_physics.rename_bone` |
 | `animation_physics.set_additive_settings` | `animation_physics` | `set_additive_settings` | write | write | none | `animation_physics.set_additive_settings` |
 | `animation_physics.set_anim_graph_node_value` | `animation_physics` | `set_anim_graph_node_value` | write | write | none | `animation_physics.set_anim_graph_node_value` |

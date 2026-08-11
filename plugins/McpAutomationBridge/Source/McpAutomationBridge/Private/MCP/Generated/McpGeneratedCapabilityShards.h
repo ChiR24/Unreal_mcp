@@ -10,7 +10,7 @@
  * pure-ASCII JSON payload carrying the COMPLETE CapabilityRecord for native
  * discovery (aliases, legacyIds, discovery, schemas.input/output, examples,
  * availability, behavior/policy, normalization, deprecation, hashes).
- * 23 shards, 1380 records total.
+ * 23 shards, 1381 records total.
  *
  * Chunks are bounded so no single string literal approaches the MSVC 65,535-byte
  * ceiling; concatenating a shard's chunks in order yields its exact JSON.
@@ -19,7 +19,7 @@ namespace McpGeneratedCapabilityShards
 {
 namespace Detail
 {
-	extern const TCHAR* const MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS[];	// animation_physics (98)
+	extern const TCHAR* const MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS[];	// animation_physics (99)
 	extern const TCHAR* const MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS[];	// build_environment (150)
 	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS[];	// control_actor (46)
 	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS[];	// control_editor (42)
@@ -57,7 +57,7 @@ inline int32 Num() { return 23; }
 inline const FMcpCapabilityShard& At(int32 Index)
 {
 	static const FMcpCapabilityShard Table[] = {
-		{ TEXT("animation_physics"), Detail::MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS, 83, 98 },
+		{ TEXT("animation_physics"), Detail::MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS, 84, 99 },
 		{ TEXT("build_environment"), Detail::MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS, 128, 150 },
 		{ TEXT("control_actor"), Detail::MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS, 40, 46 },
 		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 34, 42 },
@@ -85,7 +85,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 	return Table[Index];
 }
 
-inline int32 TotalRecordCount() { return 1380; }
+inline int32 TotalRecordCount() { return 1381; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("5cc42825a2758b6c"); }
+inline const TCHAR* CatalogRevision() { return TEXT("0abb865ac0aef993"); }
 }

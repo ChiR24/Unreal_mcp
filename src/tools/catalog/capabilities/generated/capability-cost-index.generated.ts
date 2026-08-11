@@ -84,6 +84,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "animation_physics::prune_weights": "long-running|high",
   "animation_physics::remove_bone": "interactive|low",
   "animation_physics::remove_physics_body": "interactive|low",
+  "animation_physics::remove_socket": "interactive|low",
   "animation_physics::rename_bone": "interactive|low",
   "animation_physics::set_additive_settings": "interactive|low",
   "animation_physics::set_anim_graph_node_value": "interactive|low",
@@ -1422,4 +1423,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|low"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1409;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1410;
