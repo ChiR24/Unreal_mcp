@@ -5,9 +5,9 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `033b372686491d2a`
+Catalog revision: `5cc42825a2758b6c`
 
-Every one of the 1373 capabilities declares all three semantics. The
+Every one of the 1380 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
 compensation); a capability carries a stronger claim only where the ledger
 cites the implementation that proves it. A mostly-pessimistic matrix is the
@@ -17,10 +17,10 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 1373 | 0 / 1208 |
-| Undoable | 0 / 1373 | 0 / 1208 |
-| Compensatable | 21 / 1373 | 20 / 1208 |
-| Fully pessimistic | 1352 / 1373 | 1188 / 1208 |
+| Previewable | 0 / 1380 | 0 / 1215 |
+| Undoable | 0 / 1380 | 0 / 1215 |
+| Compensatable | 21 / 1380 | 20 / 1215 |
+| Fully pessimistic | 1359 / 1380 | 1195 / 1215 |
 
 ## By parent tool
 
@@ -31,14 +31,14 @@ truthful result, not a gap in coverage.
 | `control_actor` | 46 | 32 | 0 | 0 | 4 |
 | `control_editor` | 42 | 23 | 0 | 0 | 2 |
 | `inspect` | 36 | 6 | 0 | 0 | 0 |
-| `manage_ai` | 62 | 58 | 0 | 0 | 0 |
+| `manage_ai` | 65 | 61 | 0 | 0 | 0 |
 | `manage_asset` | 158 | 124 | 0 | 0 | 1 |
 | `manage_audio` | 50 | 50 | 0 | 0 | 1 |
 | `manage_blueprint` | 121 | 111 | 0 | 0 | 3 |
 | `manage_character` | 27 | 26 | 0 | 0 | 0 |
 | `manage_combat` | 39 | 37 | 0 | 0 | 0 |
 | `manage_effect` | 59 | 56 | 0 | 0 | 0 |
-| `manage_gas` | 27 | 26 | 0 | 0 | 0 |
+| `manage_gas` | 31 | 30 | 0 | 0 | 0 |
 | `manage_geometry` | 86 | 84 | 0 | 0 | 0 |
 | `manage_interaction` | 22 | 21 | 0 | 0 | 0 |
 | `manage_inventory` | 33 | 32 | 0 | 0 | 0 |
@@ -672,6 +672,7 @@ truthful result, not a gap in coverage.
 | `manage_ai.create_eqs_query` | write | none | none | none |
 | `manage_ai.create_mass_entity_config` | write | none | none | none |
 | `manage_ai.create_nav_link_proxy` | write | none | none | none |
+| `manage_ai.create_nav_modifier` | write | none | none | none |
 | `manage_ai.create_nav_modifier_component` | write | none | none | none |
 | `manage_ai.create_smart_link` | write | none | none | none |
 | `manage_ai.create_smart_object_definition` | write | none | none | none |
@@ -683,6 +684,8 @@ truthful result, not a gap in coverage.
 | `manage_ai.rebuild_navigation` | write | none | none | none |
 | `manage_ai.remove_node` | write | none | none | none |
 | `manage_ai.run_behavior_tree` | write | none | none | none |
+| `manage_ai.set_ai_movement` | write | none | none | none |
+| `manage_ai.set_ai_perception` | write | none | none | none |
 | `manage_ai.set_blackboard_value` | write | none | none | none |
 | `manage_ai.set_focus` | write | none | none | none |
 | `manage_ai.set_key_instance_synced` | write | none | none | none |
@@ -868,6 +871,7 @@ truthful result, not a gap in coverage.
 | `manage_effect.set_parameter_value` | write | none | none | none |
 | `manage_effect.spawn_niagara` | write | none | none | none |
 | `manage_effect.validate_niagara_system` | read | none | none | none |
+| `manage_gas.add_ability` | write | none | none | none |
 | `manage_gas.add_ability_system_component` | write | none | none | none |
 | `manage_gas.add_ability_task` | write | none | none | none |
 | `manage_gas.add_attribute` | write | none | none | none |
@@ -877,11 +881,14 @@ truthful result, not a gap in coverage.
 | `manage_gas.add_tag_to_asset` | write | none | none | none |
 | `manage_gas.configure_asc` | write | none | none | none |
 | `manage_gas.configure_cue_trigger` | write | none | none | none |
+| `manage_gas.create_ability_set` | write | none | none | none |
 | `manage_gas.create_attribute_set` | write | none | none | none |
+| `manage_gas.create_execution_calculation` | write | none | none | none |
 | `manage_gas.create_gameplay_ability` | write | none | none | none |
 | `manage_gas.create_gameplay_cue_notify` | write | none | none | none |
 | `manage_gas.create_gameplay_effect` | write | none | none | none |
 | `manage_gas.get_gas_info` | read | none | none | none |
+| `manage_gas.grant_ability` | write | none | none | none |
 | `manage_gas.set_ability_cooldown` | write | none | none | none |
 | `manage_gas.set_ability_costs` | write | none | none | none |
 | `manage_gas.set_ability_tags` | write | none | none | none |

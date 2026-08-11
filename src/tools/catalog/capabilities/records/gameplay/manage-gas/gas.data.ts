@@ -1,11 +1,9 @@
 /**
- * manage_gas capability records (27 actions). Grounded in manage-gas-tool.ts
+ * manage_gas capability records (31 actions). Grounded in manage-gas-tool.ts
  * action enum, gas-action-routes.ts, gas-handlers.ts, and the native GAS domain
- * (Plugins/.../Private/Domains/GAS/). All 27 are editor authoring of GAS
+ * (Plugins/.../Private/Domains/GAS/). All 31 are editor authoring of GAS
  * assets; the GameplayAbilities plugin gates them (native returns EDITOR_ONLY
- * when the plugin is absent). The 4 hidden native GAS routes (create_ability_set,
- * add_ability, grant_ability, create_execution_calculation) are dispositioned
- * in ../../hidden-routes.ts.
+ * when the plugin is absent).
  *
  * Each record declares exactly the parameters its own action accepts: the
  * required set comes from gas-action-routes.ts, the optional set from the fields
@@ -21,6 +19,8 @@ const T = 'manage_gas';
 const F = 'gas';
 const W = ['A Gameplay Ability System asset must be authored.'];
 const GAS_PLUGIN = ['GameplayAbilities'];
+const PROMOTED = 'Promoted from a hidden native GAS route after the gateway migration.';
+const POST = 'post-migration' as const;
 
 export const GAS_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.add_ability_system_component`, action: 'add_ability_system_component', family: F,
@@ -170,5 +170,49 @@ export const GAS_RECORDS: readonly CapabilityRecordSource[] = [
       netExecutionPolicy: P.string_, stackingType: P.string_,
       modifierCount: P.num_, cueCount: P.num_,
     }, outputRequired: [],
-    exampleInput: { action: 'get_gas_info', assetPath: '/Game/BP_Char' }, exampleOutput: { success: true, message: 'GAS info', gasType: 'GameplayAbility', assetName: 'GA_Dash', instancingPolicy: 'InstancedPerActor' } }),
+      exampleInput: { action: 'get_gas_info', assetPath: '/Game/BP_Char' }, exampleOutput: { success: true, message: 'GAS info', gasType: 'GameplayAbility', assetName: 'GA_Dash', instancingPolicy: 'InstancedPerActor' } }),
+  buildRecord({ parentTool: T, id: `${T}.create_ability_set`, action: 'create_ability_set', family: F,
+    summary: 'Create a Gameplay Ability Set blueprint that groups abilities granted together.',
+    whenToUse: ['Several abilities are always granted as one unit.'],
+    whenNotToUse: ['A single ability is enough; use create_gameplay_ability.'],
+    inputProps: { action: P.action, setPath: G.setPath, assetPath: P.assetPath, setName: G.setName },
+    required: ['action'], requiredOneOf: ['setPath', 'assetPath'],
+    outputProps: { setPath: G.setPath, status: P.string_, setName: G.setName, assetName: P.string_, variables: P.arrayOfStrings }, outputRequired: [],
+    effect: 'write', latency: 'interactive', resources: 'medium', plugins: GAS_PLUGIN,
+    exampleInput: { action: 'create_ability_set', setPath: '/Game/GAS/AS_Hero', setName: 'HeroCore' },
+    exampleOutput: { success: true, message: 'Ability set created', setPath: '/Game/GAS/AS_Hero', status: 'created', setName: 'HeroCore' },
+    normalizationRationale: PROMOTED, normalizationProvenance: POST }),
+  buildRecord({ parentTool: T, id: `${T}.add_ability`, action: 'add_ability', family: F,
+    summary: 'Add an ability to an existing Gameplay Ability Set.',
+    whenToUse: ['An ability must join a set that already exists.'],
+    whenNotToUse: ['The ability is granted directly to an actor; use grant_ability.'],
+    inputProps: { action: P.action, setPath: G.setPath, abilityPath: P.abilityPath, abilityClass: G.abilityClass },
+    required: ['action', 'setPath'], requiredOneOf: ['abilityPath', 'abilityClass'],
+    outputProps: { setPath: G.setPath, abilityPath: P.abilityPath, abilityClass: G.abilityClass, note: P.string_ }, outputRequired: [],
+    effect: 'write', latency: 'interactive', resources: 'low', plugins: GAS_PLUGIN,
+    exampleInput: { action: 'add_ability', setPath: '/Game/GAS/AS_Hero', abilityPath: '/Game/GAS/GA_Dash' },
+    exampleOutput: { success: true, message: 'Ability added', setPath: '/Game/GAS/AS_Hero', abilityPath: '/Game/GAS/GA_Dash' },
+    normalizationRationale: PROMOTED, normalizationProvenance: POST }),
+  buildRecord({ parentTool: T, id: `${T}.grant_ability`, action: 'grant_ability', family: F,
+    summary: 'Grant an ability to an actor blueprint that owns an AbilitySystemComponent.',
+    whenToUse: ['An actor must start play already owning an ability.'],
+    whenNotToUse: ['The ability belongs to a reusable set; use add_ability.'],
+    inputProps: { action: P.action, actorPath: G.actorPath, blueprintPath: P.blueprintPath, abilityPath: P.abilityPath, abilityClass: G.abilityClass, abilityLevel: G.abilityLevel, inputID: G.inputID },
+    required: ['action'], requiredOneOf: ['actorPath', 'blueprintPath'],
+    outputProps: { actorPath: G.actorPath, abilityClass: G.abilityClass, abilityLevel: G.abilityLevel, inputID: G.inputID, hasASC: P.bool_, createdInitialAbilitiesVar: P.bool_, note: P.string_ }, outputRequired: [],
+    effect: 'write', latency: 'interactive', resources: 'medium', plugins: GAS_PLUGIN,
+    exampleInput: { action: 'grant_ability', actorPath: '/Game/BP_Hero', abilityPath: '/Game/GAS/GA_Dash', abilityLevel: 1, inputID: 3 },
+    exampleOutput: { success: true, message: 'Ability granted', actorPath: '/Game/BP_Hero', abilityLevel: 1, inputID: 3, hasASC: true },
+    normalizationRationale: PROMOTED, normalizationProvenance: POST }),
+  buildRecord({ parentTool: T, id: `${T}.create_execution_calculation`, action: 'create_execution_calculation', family: F,
+    summary: 'Create a GameplayEffectExecutionCalculation blueprint for custom effect math.',
+    whenToUse: ['Effect magnitude needs code the modifier curve cannot express.'],
+    whenNotToUse: ['A scalable float or attribute-based modifier is enough.'],
+    inputProps: { action: P.action, name: P.name, path: P.path },
+    required: ['action', 'name'],
+    outputProps: { assetPath: P.assetPath, name: P.name, parentClass: P.string_, reusedExisting: P.bool_, variablesAdded: P.arrayOfStrings, note: P.string_ }, outputRequired: [],
+    effect: 'write', latency: 'interactive', resources: 'medium', plugins: GAS_PLUGIN,
+    exampleInput: { action: 'create_execution_calculation', name: 'GEEC_Damage', path: '/Game/GAS' },
+    exampleOutput: { success: true, message: 'Execution calculation created', assetPath: '/Game/GAS/GEEC_Damage', name: 'GEEC_Damage', reusedExisting: false },
+    normalizationRationale: PROMOTED, normalizationProvenance: POST }),
 ];

@@ -17,6 +17,8 @@ import { NAV } from './properties-navigation.js';
 import { AI } from './properties.js';
 
 const A = AI;
+const PROMOTED = 'Promoted from a hidden native manage_ai route after the gateway migration.';
+const POST = 'post-migration' as const;
 const N = NAV;
 
 /** Every create_* asset action shares the same name/path pair. */
@@ -202,6 +204,21 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     props: { action: A.action, assetPath: A.assetPath },
     required: ['assetPath'], effect: 'read', plugins: BT,
     out: { assetPath: A.assetPath },
-    example: { assetPath: '/Game/AI/BT_Enemy' }, result: 'Behavior Tree read',
-  }),
-];
+      example: { assetPath: '/Game/AI/BT_Enemy' }, result: 'Behavior Tree read',
+    }),
+    aiRecord({
+      action: 'create_nav_modifier',
+      summary: 'Add a NavModifier component to a Blueprint so the actor stamps a navigation area.',
+      use: 'An actor must mark the navmesh under it as a different area class.',
+      avoid: 'The navmesh area is a level volume rather than an actor; use create_nav_modifier_volume.',
+      props: {
+        action: A.action, blueprintPath: A.blueprintPath, componentName: A.componentName,
+        areaClass: N.areaClass, failsafeToDefaultNavmesh: A.failsafeToDefaultNavmesh,
+      },
+      required: ['blueprintPath'],
+      out: { blueprintPath: A.blueprintPath, componentName: A.componentName, areaClass: N.areaClass },
+      example: { blueprintPath: '/Game/AI/BP_Obstacle', componentName: 'NavModifier', areaClass: 'NavArea_Obstacle' },
+      result: 'Nav modifier component added',
+      provenance: POST, rationale: PROMOTED,
+    }),
+  ];

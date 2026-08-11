@@ -24,6 +24,7 @@ public:
 			Schema.String(TEXT("behaviorTreePath"), TEXT("Canonical /Game Behavior Tree asset path."));
 			Schema.String(TEXT("blackboardPath"), TEXT("Canonical /Game Blackboard asset path."));
 			Schema.String(TEXT("blueprintPath"), TEXT("Canonical /Game Blueprint asset path."));
+			Schema.Number(TEXT("brakingDeceleration"), TEXT("Braking deceleration while walking; left unchanged when omitted."));
 			Schema.Number(TEXT("broadcastInterval"), TEXT("Interval for the state-change broadcast (0 = single)."));
 			Schema.Number(TEXT("broadcastRadius"), TEXT("Radius for the state-change broadcast."));
 			Schema.Number(TEXT("cellHeight"), TEXT("NavMesh cell height (default: 10)."));
@@ -58,6 +59,7 @@ public:
 				  S.Number(TEXT("y"), TEXT(""));
 				  S.Number(TEXT("z"), TEXT(""));
 			});
+			Schema.Bool(TEXT("failsafeToDefaultNavmesh"), TEXT("Fall back to the default navmesh area when the modifier area class is unset."));
 			Schema.String(TEXT("focusActorName"), TEXT("Actor the controller should focus on."));
 			Schema.String(TEXT("fromState"), TEXT("Source state name."));
 			Schema.Object(TEXT("generatorSettings"), TEXT("Generator-specific settings."), [](FMcpSchemaBuilder& S) {
@@ -88,7 +90,9 @@ public:
 				  S.Number(TEXT("z"), TEXT(""));
 			});
 			Schema.Number(TEXT("loseSightRadius"), TEXT("Radius at which sight is lost."));
+			Schema.Number(TEXT("maxAcceleration"), TEXT("Maximum acceleration; left unchanged when omitted."));
 			Schema.Number(TEXT("maxSimplificationError"), TEXT("Edge simplification error."));
+			Schema.Number(TEXT("maxWalkSpeed"), TEXT("Maximum ground speed; left unchanged when omitted."));
 			Schema.Number(TEXT("mergeRegionSize"), TEXT("Region merge threshold."));
 			Schema.Number(TEXT("minRegionArea"), TEXT("Minimum region area to keep."));
 			Schema.String(TEXT("name"), TEXT("Name for the created asset or actor."));
@@ -123,6 +127,7 @@ public:
 				  S.Number(TEXT("yaw"), TEXT(""));
 				  S.Number(TEXT("roll"), TEXT(""));
 			});
+			Schema.Number(TEXT("rotationRate"), TEXT("Yaw rotation rate in degrees per second; left unchanged when omitted."));
 			Schema.Bool(TEXT("save"), TEXT("Persist the created/modified asset to disk."));
 			Schema.String(TEXT("savePath"), TEXT("Directory path used when saving the created Behavior Tree."));
 			Schema.StringEnum(TEXT("serviceType"), { TEXT("DefaultFocus"), TEXT("RunEQS"), TEXT("Custom") }, TEXT("Service node type."));
@@ -171,7 +176,7 @@ public:
 			Schema.AnyValue(TEXT("value"), TEXT("Property value (any type)."));
 			Schema.Number(TEXT("x"), TEXT("Graph node X coordinate."));
 			Schema.Number(TEXT("y"), TEXT("Graph node Y coordinate."));
-			Schema.StringEnum(TEXT("action"), { TEXT("add_ai_perception_component"), TEXT("add_blackboard_key"), TEXT("add_composite_node"), TEXT("add_decorator"), TEXT("add_eqs_context"), TEXT("add_eqs_generator"), TEXT("add_eqs_test"), TEXT("add_mass_spawner"), TEXT("add_node"), TEXT("add_service"), TEXT("add_smart_object_component"), TEXT("add_smart_object_slot"), TEXT("add_state_tree_state"), TEXT("add_state_tree_transition"), TEXT("add_subnode"), TEXT("add_task_node"), TEXT("assign_behavior_tree"), TEXT("assign_blackboard"), TEXT("break_connections"), TEXT("clear_focus"), TEXT("configure_bt_node"), TEXT("configure_damage_sense_config"), TEXT("configure_hearing_config"), TEXT("configure_mass_entity"), TEXT("configure_nav_area_cost"), TEXT("configure_nav_link"), TEXT("configure_nav_mesh_settings"), TEXT("configure_sight_config"), TEXT("configure_slot_behavior"), TEXT("configure_smart_link_behavior"), TEXT("configure_state_tree_task"), TEXT("configure_test_scoring"), TEXT("connect_nodes"), TEXT("create"), TEXT("create_ai_controller"), TEXT("create_behavior_tree"), TEXT("create_blackboard"), TEXT("create_blackboard_asset"), TEXT("create_eqs_query"), TEXT("create_mass_entity_config"), TEXT("create_nav_link_proxy"), TEXT("create_nav_modifier_component"), TEXT("create_smart_link"), TEXT("create_smart_object_definition"), TEXT("create_state_tree"), TEXT("get_ai_info"), TEXT("get_blackboard_value"), TEXT("get_navigation_info"), TEXT("get_tree"), TEXT("rebuild_navigation"), TEXT("remove_node"), TEXT("run_behavior_tree"), TEXT("set_blackboard_value"), TEXT("set_focus"), TEXT("set_key_instance_synced"), TEXT("set_nav_agent_properties"), TEXT("set_nav_area_class"), TEXT("set_nav_link_type"), TEXT("set_node_properties"), TEXT("set_perception_team"), TEXT("setup_perception"), TEXT("stop_behavior_tree") }, TEXT("Action to invoke on manage_ai."));
+			Schema.StringEnum(TEXT("action"), { TEXT("add_ai_perception_component"), TEXT("add_blackboard_key"), TEXT("add_composite_node"), TEXT("add_decorator"), TEXT("add_eqs_context"), TEXT("add_eqs_generator"), TEXT("add_eqs_test"), TEXT("add_mass_spawner"), TEXT("add_node"), TEXT("add_service"), TEXT("add_smart_object_component"), TEXT("add_smart_object_slot"), TEXT("add_state_tree_state"), TEXT("add_state_tree_transition"), TEXT("add_subnode"), TEXT("add_task_node"), TEXT("assign_behavior_tree"), TEXT("assign_blackboard"), TEXT("break_connections"), TEXT("clear_focus"), TEXT("configure_bt_node"), TEXT("configure_damage_sense_config"), TEXT("configure_hearing_config"), TEXT("configure_mass_entity"), TEXT("configure_nav_area_cost"), TEXT("configure_nav_link"), TEXT("configure_nav_mesh_settings"), TEXT("configure_sight_config"), TEXT("configure_slot_behavior"), TEXT("configure_smart_link_behavior"), TEXT("configure_state_tree_task"), TEXT("configure_test_scoring"), TEXT("connect_nodes"), TEXT("create"), TEXT("create_ai_controller"), TEXT("create_behavior_tree"), TEXT("create_blackboard"), TEXT("create_blackboard_asset"), TEXT("create_eqs_query"), TEXT("create_mass_entity_config"), TEXT("create_nav_link_proxy"), TEXT("create_nav_modifier_component"), TEXT("create_smart_link"), TEXT("create_smart_object_definition"), TEXT("create_state_tree"), TEXT("get_ai_info"), TEXT("get_blackboard_value"), TEXT("get_navigation_info"), TEXT("get_tree"), TEXT("create_nav_modifier"), TEXT("rebuild_navigation"), TEXT("remove_node"), TEXT("run_behavior_tree"), TEXT("set_blackboard_value"), TEXT("set_focus"), TEXT("set_key_instance_synced"), TEXT("set_nav_agent_properties"), TEXT("set_nav_area_class"), TEXT("set_nav_link_type"), TEXT("set_node_properties"), TEXT("set_perception_team"), TEXT("setup_perception"), TEXT("stop_behavior_tree"), TEXT("set_ai_perception"), TEXT("set_ai_movement") }, TEXT("Action to invoke on manage_ai."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

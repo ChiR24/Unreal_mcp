@@ -5,8 +5,8 @@
 import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
-export const CANONICAL_CAPABILITY_RECORD_COUNT = 1373;
-export const CATALOG_REVISION = "033b372686491d2a";
+export const CANONICAL_CAPABILITY_RECORD_COUNT = 1380;
+export const CATALOG_REVISION = "5cc42825a2758b6c";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -109852,6 +109852,192 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "manage_ai.create_nav_modifier",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_ai",
+        "action": "create_nav_modifier"
+      }
+    ],
+    "discovery": {
+      "domain": "manage ai",
+      "family": "ai",
+      "topics": [
+        "create_nav_modifier"
+      ],
+      "summary": "Add a NavModifier component to a Blueprint so the actor stamps a navigation area.",
+      "whenToUse": [
+        "An actor must mark the navmesh under it as a different area class."
+      ],
+      "whenNotToUse": [
+        "The navmesh area is a level volume rather than an actor; use create_nav_modifier_volume."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "componentName": {
+            "type": "string",
+            "description": "Name of the component to add."
+          },
+          "areaClass": {
+            "type": "string",
+            "description": "Navigation area class path."
+          },
+          "failsafeToDefaultNavmesh": {
+            "type": "boolean",
+            "description": "Fall back to the default navmesh area when the modifier area class is unset."
+          }
+        },
+        "required": [
+          "blueprintPath"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "componentName": {
+            "type": "string",
+            "description": "Name of the component to add."
+          },
+          "areaClass": {
+            "type": "string",
+            "description": "Navigation area class path."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Add a NavModifier component to a Blueprint so the actor stamps a navigation area.",
+        "input": {
+          "action": "create_nav_modifier",
+          "blueprintPath": "/Game/AI/BP_Obstacle",
+          "componentName": "NavModifier",
+          "areaClass": "NavArea_Obstacle"
+        },
+        "output": {
+          "success": true,
+          "message": "Nav modifier component added"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "medium"
+    },
+    "routing": {
+      "parentTool": "manage_ai",
+      "dispatchAction": "create_nav_modifier",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native manage_ai route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_ai",
+      "description": "Build AI systems: AI controllers, Behavior Trees, Blackboards, EQS, perception, State Trees, Smart Objects, NavMesh settings, nav modifiers, links, and pathfinding.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "6f7a64c64a1baf3787597500ca611b947fb53a78953b301f1f30ec9f59968760",
+      "content": "2faaaccd11f49a33fa8593d70b21c11968071bfefed222d6200e5bdb04d6e750"
+    }
+  },
+  {
     "id": "manage_ai.create_nav_modifier_component",
     "aliases": [],
     "legacyIds": [
@@ -111201,7 +111387,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "schema": "8733bfd07a3338b1b54d2a3b22eab32babc7464c024ad97a320a9062647599c8",
       "content": "870a215e7566d1ed993b493434ef718b35d6b0e764ce5cb172cb58fa85fc2f44"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
   {
     "id": "manage_ai.get_tree",
     "aliases": [],
@@ -111366,9 +111554,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "schema": "1011067925c9a1046107a9061d32c156cfd9458c658a15374fcb651158ff5af3",
       "content": "c7144f9e3865e881ad689b1e6429bbd3cdc38636a1ea633c23a0cfcbcdaa279e"
     }
-  }
-]);
-const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_ai.rebuild_navigation",
     "aliases": [],
@@ -111859,6 +112045,421 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "38adea4e6ce87da040d9ddd2cb08ccc091b4a8d544f55847f655d991725ba789",
       "content": "7cd3d45d7d17e7eaafea72bf5edbcbc77bd676062f8d7ca6421d5e2443f76286"
+    }
+  },
+  {
+    "id": "manage_ai.set_ai_movement",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_ai",
+        "action": "set_ai_movement"
+      }
+    ],
+    "discovery": {
+      "domain": "manage ai",
+      "family": "ai",
+      "topics": [
+        "set_ai_movement"
+      ],
+      "summary": "Set the movement limits on the CharacterMovement component of a Blueprint.",
+      "whenToUse": [
+        "Walk speed, acceleration, braking or rotation rate must change on a pawn asset."
+      ],
+      "whenNotToUse": [
+        "The pawn has no CharacterMovement component; the call reports the missing component instead."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "maxWalkSpeed": {
+            "type": "number",
+            "description": "Maximum ground speed; left unchanged when omitted."
+          },
+          "maxAcceleration": {
+            "type": "number",
+            "description": "Maximum acceleration; left unchanged when omitted."
+          },
+          "brakingDeceleration": {
+            "type": "number",
+            "description": "Braking deceleration while walking; left unchanged when omitted."
+          },
+          "rotationRate": {
+            "type": "number",
+            "description": "Yaw rotation rate in degrees per second; left unchanged when omitted."
+          }
+        },
+        "required": [
+          "blueprintPath"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "propertiesSet": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Names of the movement properties this call changed."
+          },
+          "propertyCount": {
+            "type": "number",
+            "description": "How many movement properties were changed."
+          },
+          "maxWalkSpeed": {
+            "type": "number",
+            "description": "Maximum ground speed; left unchanged when omitted."
+          },
+          "maxAcceleration": {
+            "type": "number",
+            "description": "Maximum acceleration; left unchanged when omitted."
+          },
+          "rotationRateYaw": {
+            "type": "number",
+            "description": "Yaw component of the resulting rotation rate."
+          },
+          "orientRotationToMovement": {
+            "type": "boolean",
+            "description": "Whether the component orients rotation to movement."
+          },
+          "useRVOAvoidance": {
+            "type": "boolean",
+            "description": "Whether RVO avoidance is enabled on the component."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Set the movement limits on the CharacterMovement component of a Blueprint.",
+        "input": {
+          "action": "set_ai_movement",
+          "blueprintPath": "/Game/AI/BP_Enemy",
+          "maxWalkSpeed": 450,
+          "rotationRate": 360
+        },
+        "output": {
+          "success": true,
+          "message": "AI movement configured"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "medium"
+    },
+    "routing": {
+      "parentTool": "manage_ai",
+      "dispatchAction": "set_ai_movement",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native manage_ai route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_ai",
+      "description": "Build AI systems: AI controllers, Behavior Trees, Blackboards, EQS, perception, State Trees, Smart Objects, NavMesh settings, nav modifiers, links, and pathfinding.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "6b453ca2cedfc254ead020e0419ea2d48ee82a04ba2ea2f1ed47cb941dc389d0",
+      "content": "48f8323bb07e732223a5cc1ae04ef609d5e6c50c4fc5c5e1fa7c9eddf87c0e1c"
+    }
+  },
+  {
+    "id": "manage_ai.set_ai_perception",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_ai",
+        "action": "set_ai_perception"
+      }
+    ],
+    "discovery": {
+      "domain": "manage ai",
+      "family": "ai",
+      "topics": [
+        "set_ai_perception"
+      ],
+      "summary": "Configure the sight and hearing senses of an AIController perception component.",
+      "whenToUse": [
+        "One call should add the perception component and set its senses together."
+      ],
+      "whenNotToUse": [
+        "Only one sense needs tuning; configure_sight_config and configure_hearing_config edit them separately."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "controllerPath": {
+            "type": "string",
+            "description": "Canonical /Game AI controller asset path."
+          },
+          "enableSight": {
+            "type": "boolean",
+            "description": "Enable the sight sense."
+          },
+          "sightRadius": {
+            "type": "number",
+            "description": "Sight radius in world units."
+          },
+          "loseSightRadius": {
+            "type": "number",
+            "description": "Radius at which sight is lost."
+          },
+          "peripheralVisionAngle": {
+            "type": "number",
+            "description": "Peripheral vision half-angle in degrees."
+          },
+          "enableHearing": {
+            "type": "boolean",
+            "description": "Enable the hearing sense."
+          }
+        },
+        "required": [
+          "controllerPath"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "controllerPath": {
+            "type": "string",
+            "description": "Canonical /Game AI controller asset path."
+          },
+          "createdNew": {
+            "type": "boolean",
+            "description": "Whether the perception component was added by this call."
+          },
+          "sensesConfigured": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Names of the senses this call configured."
+          },
+          "dominantSense": {
+            "type": "string",
+            "description": "Sense the component treats as dominant."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Configure the sight and hearing senses of an AIController perception component.",
+        "input": {
+          "action": "set_ai_perception",
+          "controllerPath": "/Game/AI/AIC_Enemy",
+          "enableSight": true,
+          "sightRadius": 2500,
+          "peripheralVisionAngle": 75
+        },
+        "output": {
+          "success": true,
+          "message": "AI perception configured"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "medium"
+    },
+    "routing": {
+      "parentTool": "manage_ai",
+      "dispatchAction": "set_ai_perception",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native manage_ai route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_ai",
+      "description": "Build AI systems: AI controllers, Behavior Trees, Blackboards, EQS, perception, State Trees, Smart Objects, NavMesh settings, nav modifiers, links, and pathfinding.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "586f42852e692ee63066ce2ea91e44794b694f11f11bccc4b7c099492a3a2aa2",
+      "content": "d205cddf4c94bb625b90a9f2ecfdbdc3a91d692f805a27556254615832d64fa5"
     }
   },
   {
@@ -145030,6 +145631,199 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "manage_gas.add_ability",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_gas",
+        "action": "add_ability"
+      }
+    ],
+    "discovery": {
+      "domain": "manage gas",
+      "family": "gas",
+      "topics": [
+        "add_ability"
+      ],
+      "summary": "Add an ability to an existing Gameplay Ability Set.",
+      "whenToUse": [
+        "An ability must join a set that already exists."
+      ],
+      "whenNotToUse": [
+        "The ability is granted directly to an actor; use grant_ability."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "setPath": {
+            "type": "string",
+            "description": "Canonical /Game ability set asset path."
+          },
+          "abilityPath": {
+            "type": "string",
+            "description": "Canonical /Game gameplay ability asset path."
+          },
+          "abilityClass": {
+            "type": "string",
+            "description": "GameplayAbility class path; accepted wherever abilityPath is."
+          }
+        },
+        "required": [
+          "setPath"
+        ],
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "abilityPath",
+          "abilityClass"
+        ]
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "setPath": {
+            "type": "string",
+            "description": "Canonical /Game ability set asset path."
+          },
+          "abilityPath": {
+            "type": "string",
+            "description": "Canonical /Game gameplay ability asset path."
+          },
+          "abilityClass": {
+            "type": "string",
+            "description": "GameplayAbility class path; accepted wherever abilityPath is."
+          },
+          "note": {
+            "type": "string",
+            "description": "String parameter."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Add an ability to an existing Gameplay Ability Set.",
+        "input": {
+          "action": "add_ability",
+          "setPath": "/Game/GAS/AS_Hero",
+          "abilityPath": "/Game/GAS/GA_Dash"
+        },
+        "output": {
+          "success": true,
+          "message": "Ability added",
+          "setPath": "/Game/GAS/AS_Hero",
+          "abilityPath": "/Game/GAS/GA_Dash"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GameplayAbilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "manage_gas",
+      "dispatchAction": "add_ability",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native GAS route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_gas",
+      "description": "Create Gameplay Abilities, Effects, Attribute Sets, and Gameplay Cues for ability systems.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "5a84cd254e0de0c7f7b9e968d50089534a9fc70af1d11bfe941328a1faa3a086",
+      "content": "b929a1ef28c5d45849afbe9c8999c3c25256662b5d62437c763a0225f2936c05"
+    }
+  },
+  {
     "id": "manage_gas.add_ability_system_component",
     "aliases": [],
     "legacyIds": [
@@ -146417,7 +147211,9 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "schema": "cccd90c9c7eb8c2342a297ad861dff73e9a2a0620a7a6b01447b3dd5c21a1b8c",
       "content": "81682bd9d4647a46827570a190ee4a97ee463bd2422ab6ad8ab4157dea815a36"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
   {
     "id": "manage_gas.configure_cue_trigger",
     "aliases": [],
@@ -146591,6 +147387,205 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "manage_gas.create_ability_set",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_gas",
+        "action": "create_ability_set"
+      }
+    ],
+    "discovery": {
+      "domain": "manage gas",
+      "family": "gas",
+      "topics": [
+        "create_ability_set"
+      ],
+      "summary": "Create a Gameplay Ability Set blueprint that groups abilities granted together.",
+      "whenToUse": [
+        "Several abilities are always granted as one unit."
+      ],
+      "whenNotToUse": [
+        "A single ability is enough; use create_gameplay_ability."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "setPath": {
+            "type": "string",
+            "description": "Canonical /Game ability set asset path."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "setName": {
+            "type": "string",
+            "description": "Display name recorded on the ability set."
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "setPath",
+          "assetPath"
+        ]
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "setPath": {
+            "type": "string",
+            "description": "Canonical /Game ability set asset path."
+          },
+          "status": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "setName": {
+            "type": "string",
+            "description": "Display name recorded on the ability set."
+          },
+          "assetName": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of string values."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Create a Gameplay Ability Set blueprint that groups abilities granted together.",
+        "input": {
+          "action": "create_ability_set",
+          "setPath": "/Game/GAS/AS_Hero",
+          "setName": "HeroCore"
+        },
+        "output": {
+          "success": true,
+          "message": "Ability set created",
+          "setPath": "/Game/GAS/AS_Hero",
+          "status": "created",
+          "setName": "HeroCore"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GameplayAbilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "medium"
+    },
+    "routing": {
+      "parentTool": "manage_gas",
+      "dispatchAction": "create_ability_set",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native GAS route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_gas",
+      "description": "Create Gameplay Abilities, Effects, Attribute Sets, and Gameplay Cues for ability systems.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "b7128c54e638e29c3097c187dfb274eaa278f6bf35d815ea6b520999414f2edc",
+      "content": "b8ae9dd11c596f3b5b19a729e0d1209b68cbd4dc3e6a52abf0cd4762e26d961a"
+    }
+  },
+  {
     "id": "manage_gas.create_attribute_set",
     "aliases": [],
     "legacyIds": [
@@ -146753,6 +147748,203 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "d5dfd969e08e3eb3a7e639f80dce1d2a9c5ea04ee520ca4552f78125cbb137ff",
       "content": "d1177746d4019d0fdbc337de93535650dc6b8c6291de0cce0cf101cf0e720b18"
+    }
+  },
+  {
+    "id": "manage_gas.create_execution_calculation",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_gas",
+        "action": "create_execution_calculation"
+      }
+    ],
+    "discovery": {
+      "domain": "manage gas",
+      "family": "gas",
+      "topics": [
+        "create_execution_calculation"
+      ],
+      "summary": "Create a GameplayEffectExecutionCalculation blueprint for custom effect math.",
+      "whenToUse": [
+        "Effect magnitude needs code the modifier curve cannot express."
+      ],
+      "whenNotToUse": [
+        "A scalable float or attribute-based modifier is enough."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name for the created asset or actor."
+          },
+          "path": {
+            "type": "string",
+            "description": "Canonical /Game output path for the created asset."
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the created asset or actor."
+          },
+          "parentClass": {
+            "type": "string",
+            "description": "String parameter."
+          },
+          "reusedExisting": {
+            "type": "boolean",
+            "description": "Boolean parameter."
+          },
+          "variablesAdded": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of string values."
+          },
+          "note": {
+            "type": "string",
+            "description": "String parameter."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Create a GameplayEffectExecutionCalculation blueprint for custom effect math.",
+        "input": {
+          "action": "create_execution_calculation",
+          "name": "GEEC_Damage",
+          "path": "/Game/GAS"
+        },
+        "output": {
+          "success": true,
+          "message": "Execution calculation created",
+          "assetPath": "/Game/GAS/GEEC_Damage",
+          "name": "GEEC_Damage",
+          "reusedExisting": false
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GameplayAbilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "medium"
+    },
+    "routing": {
+      "parentTool": "manage_gas",
+      "dispatchAction": "create_execution_calculation",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native GAS route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_gas",
+      "description": "Create Gameplay Abilities, Effects, Attribute Sets, and Gameplay Cues for ability systems.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "bb23cd10262758be81abac1575df2ead1c8496c08f4255feb7d11c5949bb13a1",
+      "content": "96b03413f549fa229f1504a9837fe9915c1a95ecd82f751c70b346e83bf392ac"
     }
   },
   {
@@ -147101,9 +148293,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "schema": "5a57d552f78e23072cbc3e960de37ebb33850d1ffb5a55a6265b14b176168011",
       "content": "a1808a77998f1e91a2177cbc230e0173445405a485c86c5453749489cad26911"
     }
-  }
-]);
-const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_gas.create_gameplay_effect",
     "aliases": [],
@@ -147489,6 +148679,225 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "1bc888e8e369ab850d5c2c695dac8b99891fca38b947ac4b47018e86d94620f0",
       "content": "a238dfd8400c8831c424e31d4a9bd2595721914fab93eb31c58f37e16acdb05d"
+    }
+  },
+  {
+    "id": "manage_gas.grant_ability",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "manage_gas",
+        "action": "grant_ability"
+      }
+    ],
+    "discovery": {
+      "domain": "manage gas",
+      "family": "gas",
+      "topics": [
+        "grant_ability"
+      ],
+      "summary": "Grant an ability to an actor blueprint that owns an AbilitySystemComponent.",
+      "whenToUse": [
+        "An actor must start play already owning an ability."
+      ],
+      "whenNotToUse": [
+        "The ability belongs to a reusable set; use add_ability."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "actorPath": {
+            "type": "string",
+            "description": "Canonical /Game actor Blueprint path; accepted wherever blueprintPath is."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path."
+          },
+          "abilityPath": {
+            "type": "string",
+            "description": "Canonical /Game gameplay ability asset path."
+          },
+          "abilityClass": {
+            "type": "string",
+            "description": "GameplayAbility class path; accepted wherever abilityPath is."
+          },
+          "abilityLevel": {
+            "type": "number",
+            "description": "Level the ability is granted at."
+          },
+          "inputID": {
+            "type": "number",
+            "description": "Input id bound to the granted ability; -1 leaves it unbound."
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorPath",
+          "blueprintPath"
+        ]
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "actorPath": {
+            "type": "string",
+            "description": "Canonical /Game actor Blueprint path; accepted wherever blueprintPath is."
+          },
+          "abilityClass": {
+            "type": "string",
+            "description": "GameplayAbility class path; accepted wherever abilityPath is."
+          },
+          "abilityLevel": {
+            "type": "number",
+            "description": "Level the ability is granted at."
+          },
+          "inputID": {
+            "type": "number",
+            "description": "Input id bound to the granted ability; -1 leaves it unbound."
+          },
+          "hasASC": {
+            "type": "boolean",
+            "description": "Boolean parameter."
+          },
+          "createdInitialAbilitiesVar": {
+            "type": "boolean",
+            "description": "Boolean parameter."
+          },
+          "note": {
+            "type": "string",
+            "description": "String parameter."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Grant an ability to an actor blueprint that owns an AbilitySystemComponent.",
+        "input": {
+          "action": "grant_ability",
+          "actorPath": "/Game/BP_Hero",
+          "abilityPath": "/Game/GAS/GA_Dash",
+          "abilityLevel": 1,
+          "inputID": 3
+        },
+        "output": {
+          "success": true,
+          "message": "Ability granted",
+          "actorPath": "/Game/BP_Hero",
+          "abilityLevel": 1,
+          "inputID": 3,
+          "hasASC": true
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "GameplayAbilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "medium"
+    },
+    "routing": {
+      "parentTool": "manage_gas",
+      "dispatchAction": "grant_ability",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Promoted from a hidden native GAS route after the gateway migration.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "manage_gas",
+      "description": "Create Gameplay Abilities, Effects, Attribute Sets, and Gameplay Cues for ability systems.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "6c121637a6aeffbb103c857bd1891fe32f8bc910861128370b4d2820b217f933",
+      "content": "8ed70e2320ef2f2569365f000fb2e788b0bc2212d7a8d951db334f1dc37f2850"
     }
   },
   {
@@ -183123,7 +184532,9 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "schema": "df1d43f1e328782c77f2a1476f4c40419bbdb7479e868cdaf4c48c55069900cd",
       "content": "64637c7de1cc13d048d032547546734a3262f2cb801962de77ec5d963acea077"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
   {
     "id": "manage_level_structure.create_audio_volume",
     "aliases": [],
@@ -184572,9 +185983,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "schema": "c9f61d7586be2c7c75c44d61bc6e8ce6ea573f218cda31ca283e3bf1f21e9963",
       "content": "13fc8ee60dc8a1311d6571d23fa406953d1c96ce6772d8a3d0d57cf11eb3bb8f"
     }
-  }
-]);
-const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_level_structure.create_level_instance",
     "aliases": [],
@@ -219824,7 +221233,9 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "schema": "575a1d1fb5cee2225bc830b031a3bda3fdc377c6bfc08501b82bac7049126972",
       "content": "2e48041666992aed8cd03830b22a78f35dd637bc7a17218c4ea0d9beea6174da"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
   {
     "id": "material.set_vector_parameter_value",
     "aliases": [],
@@ -221085,9 +222496,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "schema": "698fb4bd451fa6e918754f76778f7a732c33c978097abff53452bf2014b15fc3",
       "content": "44545e210d9bf7288a75555f22e6c6948506f91145a9edbe6fcf1e0aaa60417f"
     }
-  }
-]);
-const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
+  },
   {
     "id": "sequence.add_section",
     "aliases": [],
@@ -256732,6 +258141,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "98941b5be7e67a7fab1576e29be693ddebfaf2bb9a4a17ab220705c7d2b96a37"
   },
   {
+    "id": "manage_ai.create_nav_modifier",
+    "parentTool": "manage_ai",
+    "dispatchAction": "create_nav_modifier",
+    "domain": "manage ai",
+    "schemaHash": "6f7a64c64a1baf3787597500ca611b947fb53a78953b301f1f30ec9f59968760",
+    "contentHash": "2faaaccd11f49a33fa8593d70b21c11968071bfefed222d6200e5bdb04d6e750"
+  },
+  {
     "id": "manage_ai.create_nav_modifier_component",
     "parentTool": "manage_ai",
     "dispatchAction": "create_nav_modifier_component",
@@ -256818,6 +258235,22 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "manage ai",
     "schemaHash": "38adea4e6ce87da040d9ddd2cb08ccc091b4a8d544f55847f655d991725ba789",
     "contentHash": "7cd3d45d7d17e7eaafea72bf5edbcbc77bd676062f8d7ca6421d5e2443f76286"
+  },
+  {
+    "id": "manage_ai.set_ai_movement",
+    "parentTool": "manage_ai",
+    "dispatchAction": "set_ai_movement",
+    "domain": "manage ai",
+    "schemaHash": "6b453ca2cedfc254ead020e0419ea2d48ee82a04ba2ea2f1ed47cb941dc389d0",
+    "contentHash": "48f8323bb07e732223a5cc1ae04ef609d5e6c50c4fc5c5e1fa7c9eddf87c0e1c"
+  },
+  {
+    "id": "manage_ai.set_ai_perception",
+    "parentTool": "manage_ai",
+    "dispatchAction": "set_ai_perception",
+    "domain": "manage ai",
+    "schemaHash": "586f42852e692ee63066ce2ea91e44794b694f11f11bccc4b7c099492a3a2aa2",
+    "contentHash": "d205cddf4c94bb625b90a9f2ecfdbdc3a91d692f805a27556254615832d64fa5"
   },
   {
     "id": "manage_ai.set_blackboard_value",
@@ -258300,6 +259733,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "56bf277da512d4f5c4c3aade78ea6456c59356ebcc7ca517cd3bad5fa1601aa1"
   },
   {
+    "id": "manage_gas.add_ability",
+    "parentTool": "manage_gas",
+    "dispatchAction": "add_ability",
+    "domain": "manage gas",
+    "schemaHash": "5a84cd254e0de0c7f7b9e968d50089534a9fc70af1d11bfe941328a1faa3a086",
+    "contentHash": "b929a1ef28c5d45849afbe9c8999c3c25256662b5d62437c763a0225f2936c05"
+  },
+  {
     "id": "manage_gas.add_ability_system_component",
     "parentTool": "manage_gas",
     "dispatchAction": "add_ability_system_component",
@@ -258372,12 +259813,28 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "0439132f7d0ac611fd0ed21b1dc915af0a0e083c2c6ebf5f6287030ce1ac747e"
   },
   {
+    "id": "manage_gas.create_ability_set",
+    "parentTool": "manage_gas",
+    "dispatchAction": "create_ability_set",
+    "domain": "manage gas",
+    "schemaHash": "b7128c54e638e29c3097c187dfb274eaa278f6bf35d815ea6b520999414f2edc",
+    "contentHash": "b8ae9dd11c596f3b5b19a729e0d1209b68cbd4dc3e6a52abf0cd4762e26d961a"
+  },
+  {
     "id": "manage_gas.create_attribute_set",
     "parentTool": "manage_gas",
     "dispatchAction": "create_attribute_set",
     "domain": "manage gas",
     "schemaHash": "d5dfd969e08e3eb3a7e639f80dce1d2a9c5ea04ee520ca4552f78125cbb137ff",
     "contentHash": "d1177746d4019d0fdbc337de93535650dc6b8c6291de0cce0cf101cf0e720b18"
+  },
+  {
+    "id": "manage_gas.create_execution_calculation",
+    "parentTool": "manage_gas",
+    "dispatchAction": "create_execution_calculation",
+    "domain": "manage gas",
+    "schemaHash": "bb23cd10262758be81abac1575df2ead1c8496c08f4255feb7d11c5949bb13a1",
+    "contentHash": "96b03413f549fa229f1504a9837fe9915c1a95ecd82f751c70b346e83bf392ac"
   },
   {
     "id": "manage_gas.create_gameplay_ability",
@@ -258410,6 +259867,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "manage gas",
     "schemaHash": "1bc888e8e369ab850d5c2c695dac8b99891fca38b947ac4b47018e86d94620f0",
     "contentHash": "a238dfd8400c8831c424e31d4a9bd2595721914fab93eb31c58f37e16acdb05d"
+  },
+  {
+    "id": "manage_gas.grant_ability",
+    "parentTool": "manage_gas",
+    "dispatchAction": "grant_ability",
+    "domain": "manage gas",
+    "schemaHash": "6c121637a6aeffbb103c857bd1891fe32f8bc910861128370b4d2820b217f933",
+    "contentHash": "8ed70e2320ef2f2569365f000fb2e788b0bc2212d7a8d951db334f1dc37f2850"
   },
   {
     "id": "manage_gas.set_ability_cooldown",
@@ -270329,6 +271794,22 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "the",
     "world"
   ],
+  "manage_ai.create_nav_modifier": [
+    "actor",
+    "add",
+    "ai",
+    "area",
+    "blueprint",
+    "component",
+    "create_nav_modifier",
+    "manage ai",
+    "manage_ai",
+    "manage_ai.create_nav_modifier",
+    "navigation",
+    "navmodifier",
+    "stamps",
+    "the"
+  ],
   "manage_ai.create_nav_modifier_component": [
     "add",
     "ai",
@@ -270459,6 +271940,36 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "runonstart",
     "the",
     "tree"
+  ],
+  "manage_ai.set_ai_movement": [
+    "ai",
+    "blueprint",
+    "charactermovement",
+    "component",
+    "limits",
+    "manage ai",
+    "manage_ai",
+    "manage_ai.set_ai_movement",
+    "movement",
+    "set",
+    "set_ai_movement",
+    "the"
+  ],
+  "manage_ai.set_ai_perception": [
+    "ai",
+    "aicontroller",
+    "and",
+    "component",
+    "configure",
+    "hearing",
+    "manage ai",
+    "manage_ai",
+    "manage_ai.set_ai_perception",
+    "perception",
+    "senses",
+    "set_ai_perception",
+    "sight",
+    "the"
   ],
   "manage_ai.set_blackboard_value": [
     "ai",
@@ -272661,6 +274172,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "validate",
     "validate_niagara_system"
   ],
+  "manage_gas.add_ability": [
+    "ability",
+    "add",
+    "add_ability",
+    "existing",
+    "gameplay",
+    "gas",
+    "manage gas",
+    "manage_gas",
+    "manage_gas.add_ability",
+    "set"
+  ],
   "manage_gas.add_ability_system_component": [
     "abilitysystemcomponent",
     "add",
@@ -272756,6 +274279,23 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage_gas.configure_cue_trigger",
     "trigger"
   ],
+  "manage_gas.create_ability_set": [
+    "abilities",
+    "ability",
+    "blueprint",
+    "create",
+    "create_ability_set",
+    "gameplay",
+    "gas",
+    "granted",
+    "groups",
+    "manage gas",
+    "manage_gas",
+    "manage_gas.create_ability_set",
+    "set",
+    "that",
+    "together"
+  ],
   "manage_gas.create_attribute_set": [
     "attributeset",
     "classasset",
@@ -272765,6 +274305,20 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage gas",
     "manage_gas",
     "manage_gas.create_attribute_set"
+  ],
+  "manage_gas.create_execution_calculation": [
+    "blueprint",
+    "create",
+    "create_execution_calculation",
+    "custom",
+    "effect",
+    "for",
+    "gameplayeffectexecutioncalculation",
+    "gas",
+    "manage gas",
+    "manage_gas",
+    "manage_gas.create_execution_calculation",
+    "math"
   ],
   "manage_gas.create_gameplay_ability": [
     "ability",
@@ -272809,6 +274363,20 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage_gas.get_gas_info",
     "metadata",
     "read"
+  ],
+  "manage_gas.grant_ability": [
+    "ability",
+    "abilitysystemcomponent",
+    "actor",
+    "blueprint",
+    "gas",
+    "grant",
+    "grant_ability",
+    "manage gas",
+    "manage_gas",
+    "manage_gas.grant_ability",
+    "owns",
+    "that"
   ],
   "manage_gas.set_ability_cooldown": [
     "ability",
@@ -286698,7 +288266,7 @@ export const DOCS_DATA = [
     "name": "manage_ai",
     "category": "gameplay",
     "description": "Build AI systems: AI controllers, Behavior Trees, Blackboards, EQS, perception, State Trees, Smart Objects, NavMesh settings, nav modifiers, links, and pathfinding.",
-    "actionCount": 62
+    "actionCount": 65
   },
   {
     "name": "manage_asset",
@@ -286740,7 +288308,7 @@ export const DOCS_DATA = [
     "name": "manage_gas",
     "category": "gameplay",
     "description": "Create Gameplay Abilities, Effects, Attribute Sets, and Gameplay Cues for ability systems.",
-    "actionCount": 27
+    "actionCount": 31
   },
   {
     "name": "manage_geometry",
@@ -289173,6 +290741,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "dd5b1e7d996114f72bea05309b4417bb6d75d5fea9b4a0fbfeaa239cd4402b8b",
     "content": "98941b5be7e67a7fab1576e29be693ddebfaf2bb9a4a17ab220705c7d2b96a37"
   },
+  "manage_ai.create_nav_modifier": {
+    "schema": "6f7a64c64a1baf3787597500ca611b947fb53a78953b301f1f30ec9f59968760",
+    "content": "2faaaccd11f49a33fa8593d70b21c11968071bfefed222d6200e5bdb04d6e750"
+  },
   "manage_ai.create_nav_modifier_component": {
     "schema": "e08db3336eb37a728d424a5738add7ffff72f8d258215893d83f612cdc333998",
     "content": "e5bf8eb3abb4b52452bd8e17a19f2c33d6267252cf2c54d2bde4798c2c3e5306"
@@ -289216,6 +290788,14 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "manage_ai.run_behavior_tree": {
     "schema": "38adea4e6ce87da040d9ddd2cb08ccc091b4a8d544f55847f655d991725ba789",
     "content": "7cd3d45d7d17e7eaafea72bf5edbcbc77bd676062f8d7ca6421d5e2443f76286"
+  },
+  "manage_ai.set_ai_movement": {
+    "schema": "6b453ca2cedfc254ead020e0419ea2d48ee82a04ba2ea2f1ed47cb941dc389d0",
+    "content": "48f8323bb07e732223a5cc1ae04ef609d5e6c50c4fc5c5e1fa7c9eddf87c0e1c"
+  },
+  "manage_ai.set_ai_perception": {
+    "schema": "586f42852e692ee63066ce2ea91e44794b694f11f11bccc4b7c099492a3a2aa2",
+    "content": "d205cddf4c94bb625b90a9f2ecfdbdc3a91d692f805a27556254615832d64fa5"
   },
   "manage_ai.set_blackboard_value": {
     "schema": "08a488594154687324c345db040d1ae1c34ebc0996c71d6e87631ff7cf929b05",
@@ -289957,6 +291537,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "38c8008eba0f607cef8d1424bfa0acc72b358d1e065121f6b56782ecc2f860cd",
     "content": "56bf277da512d4f5c4c3aade78ea6456c59356ebcc7ca517cd3bad5fa1601aa1"
   },
+  "manage_gas.add_ability": {
+    "schema": "5a84cd254e0de0c7f7b9e968d50089534a9fc70af1d11bfe941328a1faa3a086",
+    "content": "b929a1ef28c5d45849afbe9c8999c3c25256662b5d62437c763a0225f2936c05"
+  },
   "manage_gas.add_ability_system_component": {
     "schema": "906a4a6ab3dcdfae020d6a76f0b331dc16ecd14eb3db6d0bd57bdff144a5f215",
     "content": "a0a24d00dff3974509f36d589f61e63aa85043ab7f36e2220d3bffe5309719ad"
@@ -289993,9 +291577,17 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "de950933d75f715e5bd906058317a872f5d13dc347f16ab10867a8175a20bced",
     "content": "0439132f7d0ac611fd0ed21b1dc915af0a0e083c2c6ebf5f6287030ce1ac747e"
   },
+  "manage_gas.create_ability_set": {
+    "schema": "b7128c54e638e29c3097c187dfb274eaa278f6bf35d815ea6b520999414f2edc",
+    "content": "b8ae9dd11c596f3b5b19a729e0d1209b68cbd4dc3e6a52abf0cd4762e26d961a"
+  },
   "manage_gas.create_attribute_set": {
     "schema": "d5dfd969e08e3eb3a7e639f80dce1d2a9c5ea04ee520ca4552f78125cbb137ff",
     "content": "d1177746d4019d0fdbc337de93535650dc6b8c6291de0cce0cf101cf0e720b18"
+  },
+  "manage_gas.create_execution_calculation": {
+    "schema": "bb23cd10262758be81abac1575df2ead1c8496c08f4255feb7d11c5949bb13a1",
+    "content": "96b03413f549fa229f1504a9837fe9915c1a95ecd82f751c70b346e83bf392ac"
   },
   "manage_gas.create_gameplay_ability": {
     "schema": "7a1fa0d1342c8b818979c1a7c84988fce1ac1d65b975d7b1f0ee37067206c90e",
@@ -290012,6 +291604,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "manage_gas.get_gas_info": {
     "schema": "1bc888e8e369ab850d5c2c695dac8b99891fca38b947ac4b47018e86d94620f0",
     "content": "a238dfd8400c8831c424e31d4a9bd2595721914fab93eb31c58f37e16acdb05d"
+  },
+  "manage_gas.grant_ability": {
+    "schema": "6c121637a6aeffbb103c857bd1891fe32f8bc910861128370b4d2820b217f933",
+    "content": "8ed70e2320ef2f2569365f000fb2e788b0bc2212d7a8d951db334f1dc37f2850"
   },
   "manage_gas.set_ability_cooldown": {
     "schema": "6df50695c8206abe892f601b7ba35acc35f42ca7edbbb82b4071ba238ed49c11",

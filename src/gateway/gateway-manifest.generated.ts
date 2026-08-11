@@ -3238,6 +3238,7 @@ export const gatewayManifest = {
         "get_blackboard_value",
         "get_navigation_info",
         "get_tree",
+        "create_nav_modifier",
         "rebuild_navigation",
         "remove_node",
         "run_behavior_tree",
@@ -3250,7 +3251,9 @@ export const gatewayManifest = {
         "set_node_properties",
         "set_perception_team",
         "setup_perception",
-        "stop_behavior_tree"
+        "stop_behavior_tree",
+        "set_ai_perception",
+        "set_ai_movement"
       ],
       "parameterNames": [
         "actorName",
@@ -3266,6 +3269,7 @@ export const gatewayManifest = {
         "behaviorTreePath",
         "blackboardPath",
         "blueprintPath",
+        "brakingDeceleration",
         "broadcastInterval",
         "broadcastRadius",
         "cellHeight",
@@ -3290,6 +3294,7 @@ export const gatewayManifest = {
         "enabledAreaClass",
         "endPoint",
         "failsafeExtent",
+        "failsafeToDefaultNavmesh",
         "focusActorName",
         "fromState",
         "generatorSettings",
@@ -3303,7 +3308,9 @@ export const gatewayManifest = {
         "linkType",
         "location",
         "loseSightRadius",
+        "maxAcceleration",
         "maxSimplificationError",
+        "maxWalkSpeed",
         "mergeRegionSize",
         "minRegionArea",
         "name",
@@ -3322,6 +3329,7 @@ export const gatewayManifest = {
         "properties",
         "queryPath",
         "rotation",
+        "rotationRate",
         "save",
         "savePath",
         "serviceType",
@@ -3401,6 +3409,10 @@ export const gatewayManifest = {
           "blueprintPath": {
             "type": "string",
             "description": "Canonical /Game Blueprint asset path."
+          },
+          "brakingDeceleration": {
+            "type": "number",
+            "description": "Braking deceleration while walking; left unchanged when omitted."
           },
           "broadcastInterval": {
             "type": "number",
@@ -3570,6 +3582,10 @@ export const gatewayManifest = {
             "description": "Failsafe extent used when the actor has no collision.",
             "additionalProperties": false
           },
+          "failsafeToDefaultNavmesh": {
+            "type": "boolean",
+            "description": "Fall back to the default navmesh area when the modifier area class is unset."
+          },
           "focusActorName": {
             "type": "string",
             "description": "Actor the controller should focus on."
@@ -3699,9 +3715,17 @@ export const gatewayManifest = {
             "type": "number",
             "description": "Radius at which sight is lost."
           },
+          "maxAcceleration": {
+            "type": "number",
+            "description": "Maximum acceleration; left unchanged when omitted."
+          },
           "maxSimplificationError": {
             "type": "number",
             "description": "Edge simplification error."
+          },
+          "maxWalkSpeed": {
+            "type": "number",
+            "description": "Maximum ground speed; left unchanged when omitted."
           },
           "mergeRegionSize": {
             "type": "number",
@@ -3824,6 +3848,10 @@ export const gatewayManifest = {
             },
             "description": "Rotation as {pitch, yaw, roll} in degrees.",
             "additionalProperties": false
+          },
+          "rotationRate": {
+            "type": "number",
+            "description": "Yaw rotation rate in degrees per second; left unchanged when omitted."
           },
           "save": {
             "type": "boolean",
@@ -4094,6 +4122,7 @@ export const gatewayManifest = {
               "get_blackboard_value",
               "get_navigation_info",
               "get_tree",
+              "create_nav_modifier",
               "rebuild_navigation",
               "remove_node",
               "run_behavior_tree",
@@ -4106,7 +4135,9 @@ export const gatewayManifest = {
               "set_node_properties",
               "set_perception_team",
               "setup_perception",
-              "stop_behavior_tree"
+              "stop_behavior_tree",
+              "set_ai_perception",
+              "set_ai_movement"
             ],
             "description": "Action to invoke on manage_ai."
           },
@@ -8860,14 +8891,21 @@ export const gatewayManifest = {
         "configure_cue_trigger",
         "set_cue_effects",
         "add_tag_to_asset",
-        "get_gas_info"
+        "get_gas_info",
+        "create_ability_set",
+        "add_ability",
+        "grant_ability",
+        "create_execution_calculation"
       ],
       "parameterNames": [
+        "abilityClass",
+        "abilityLevel",
         "abilityPath",
         "abilityTags",
         "activationBlockedTags",
         "activationPolicy",
         "activationRequiredTags",
+        "actorPath",
         "aoeRadius",
         "applicationRequiredTags",
         "assetPath",
@@ -8894,6 +8932,7 @@ export const gatewayManifest = {
         "effectPath",
         "grantedTags",
         "immunityTags",
+        "inputID",
         "instancingPolicy",
         "magnitudeCalculationType",
         "maxValue",
@@ -8908,6 +8947,8 @@ export const gatewayManifest = {
         "removalTags",
         "replicationMode",
         "setByCallerTag",
+        "setName",
+        "setPath",
         "soundPath",
         "stackDurationRefreshPolicy",
         "stackExpirationPolicy",
@@ -8925,6 +8966,14 @@ export const gatewayManifest = {
       "inputSchema": {
         "type": "object",
         "properties": {
+          "abilityClass": {
+            "type": "string",
+            "description": "GameplayAbility class path; accepted wherever abilityPath is."
+          },
+          "abilityLevel": {
+            "type": "number",
+            "description": "Level the ability is granted at."
+          },
           "abilityPath": {
             "type": "string",
             "description": "Canonical /Game gameplay ability asset path."
@@ -8959,6 +9008,10 @@ export const gatewayManifest = {
               "type": "string"
             },
             "description": "Tags required to activate this ability."
+          },
+          "actorPath": {
+            "type": "string",
+            "description": "Canonical /Game actor Blueprint path; accepted wherever blueprintPath is."
           },
           "aoeRadius": {
             "type": "number",
@@ -9103,6 +9156,10 @@ export const gatewayManifest = {
             },
             "description": "Tags that make a target immune to this effect."
           },
+          "inputID": {
+            "type": "number",
+            "description": "Input id bound to the granted ability; -1 leaves it unbound."
+          },
           "instancingPolicy": {
             "type": "string",
             "enum": [
@@ -9183,6 +9240,14 @@ export const gatewayManifest = {
           "setByCallerTag": {
             "type": "string",
             "description": "Gameplay tag keying a SetByCaller magnitude."
+          },
+          "setName": {
+            "type": "string",
+            "description": "Display name recorded on the ability set."
+          },
+          "setPath": {
+            "type": "string",
+            "description": "Canonical /Game ability set asset path."
           },
           "soundPath": {
             "type": "string",
@@ -9297,7 +9362,11 @@ export const gatewayManifest = {
               "configure_cue_trigger",
               "set_cue_effects",
               "add_tag_to_asset",
-              "get_gas_info"
+              "get_gas_info",
+              "create_ability_set",
+              "add_ability",
+              "grant_ability",
+              "create_execution_calculation"
             ],
             "description": "Action to invoke on manage_gas."
           },

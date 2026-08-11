@@ -50,7 +50,7 @@ import {
 //
 // Re-frozen a fourth time after the MCP black-box ledger remediation: the
 // record-vs-native parity fixes across all four pilot parents moved their
-// schema and content hashes â€” build-environment lighting (light type/count
+// schema and content hashes — build-environment lighting (light type/count
 // outputs), manage-asset (asset lifecycle/query/enum parity), manage-blueprint
 // (graph node and widget parity), and manage-sequence (cinematic/media/
 // timeline parity). The 510-record structure and exact ID set are unchanged.

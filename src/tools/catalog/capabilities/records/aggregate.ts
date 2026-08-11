@@ -18,7 +18,7 @@ import { CORE_CAPABILITY_SOURCE_RECORDS } from '../retrieval/aggregate.js';
 import { createCapabilityRecord, parseCapabilityCatalog } from '../parser.js';
 import type { CapabilityRecord } from '../model.js';
 
-export const ALL_CAPABILITY_RECORD_COUNT = 1373 as const;
+export const ALL_CAPABILITY_RECORD_COUNT = 1380 as const;
 
 export const ALL_CAPABILITY_RECORDS: readonly CapabilityRecord[] = (() => {
   const parsed = parseCapabilityCatalog([

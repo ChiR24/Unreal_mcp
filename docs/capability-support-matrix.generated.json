@@ -1,8 +1,8 @@
 {
   "generator": "docs/capability-support-matrix.md",
-  "catalogRevision": "033b372686491d2a",
-  "recordCount": 1373,
-  "mutationCount": 1208,
+  "catalogRevision": "5cc42825a2758b6c",
+  "recordCount": 1380,
+  "mutationCount": 1215,
   "summary": {
     "all": {
       "preview": 0,
@@ -18393,6 +18393,37 @@
       }
     },
     {
+      "id": "manage_ai.create_nav_modifier",
+      "parentTool": "manage_ai",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "manage_ai.create_nav_modifier_component",
       "parentTool": "manage_ai",
       "effect": "write",
@@ -18704,6 +18735,68 @@
     },
     {
       "id": "manage_ai.run_behavior_tree",
+      "parentTool": "manage_ai",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "manage_ai.set_ai_movement",
+      "parentTool": "manage_ai",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "manage_ai.set_ai_perception",
       "parentTool": "manage_ai",
       "effect": "write",
       "longRunning": false,
@@ -24471,6 +24564,37 @@
       }
     },
     {
+      "id": "manage_gas.add_ability",
+      "parentTool": "manage_gas",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "manage_gas.add_ability_system_component",
       "parentTool": "manage_gas",
       "effect": "write",
@@ -24750,7 +24874,69 @@
       }
     },
     {
+      "id": "manage_gas.create_ability_set",
+      "parentTool": "manage_gas",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "manage_gas.create_attribute_set",
+      "parentTool": "manage_gas",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "manage_gas.create_execution_calculation",
       "parentTool": "manage_gas",
       "effect": "write",
       "longRunning": false,
@@ -24877,6 +25063,37 @@
       "id": "manage_gas.get_gas_info",
       "parentTool": "manage_gas",
       "effect": "read",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "manage_gas.grant_ability",
+      "parentTool": "manage_gas",
+      "effect": "write",
       "longRunning": false,
       "preview": {
         "mode": "none",

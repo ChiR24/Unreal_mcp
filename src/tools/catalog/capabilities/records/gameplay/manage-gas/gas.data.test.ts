@@ -1,7 +1,7 @@
 /**
  * Per-action contract test for the manage_gas capability records.
  *
- * This locks the exact input contract of each of the 27 actions. It exists
+ * This locks the exact input contract of each of the 31 actions. It exists
  * because the parent union alone cannot catch a regression that replaces a real
  * per-action parameter with a generic placeholder: the union still "has some
  * property", so a union-level assertion stays green while every individual
@@ -46,15 +46,19 @@ const CONTRACTS: Readonly<Record<string, Contract>> = {
   set_cue_effects: { required: ['cuePath'], optional: ['particleSystemPath', 'soundPath', 'cameraShakePath', 'decalPath'] },
   add_tag_to_asset: { required: ['assetPath'], optional: ['tagName', 'tag'] },
   get_gas_info: { required: ['assetPath'], optional: [] },
+  create_ability_set: { required: [], optional: ['setPath', 'assetPath', 'setName'] },
+  add_ability: { required: ['setPath'], optional: ['abilityPath', 'abilityClass'] },
+  grant_ability: { required: [], optional: ['actorPath', 'blueprintPath', 'abilityPath', 'abilityClass', 'abilityLevel', 'inputID'] },
+  create_execution_calculation: { required: ['name'], optional: ['path'] },
 };
 
 const RECORDS = GAS_RECORDS.map((source) => createCapabilityRecord(source));
 const byAction = new Map(RECORDS.map((record) => [String(record.legacyIds[0].action), record]));
 
 describe('manage_gas capability records', () => {
-  it('declares exactly 27 actions, each routed to manage_gas', () => {
-    expect(RECORDS).toHaveLength(27);
-    expect(new Set(byAction.keys()).size).toBe(27);
+  it('declares exactly 31 actions, each routed to manage_gas', () => {
+    expect(RECORDS).toHaveLength(31);
+    expect(new Set(byAction.keys()).size).toBe(31);
     for (const record of RECORDS) {
       expect(record.routing.parentTool).toBe('manage_gas');
       expect(record.routing.dispatchAction).toBe(record.legacyIds[0].action);

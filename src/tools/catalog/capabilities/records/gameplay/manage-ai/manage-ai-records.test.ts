@@ -46,9 +46,9 @@ const requiredFor = (action: string): string[] => {
 };
 
 describe('manage_ai capability records', () => {
-  it('declares exactly 62 records with unique actions and parses each one', () => {
-    expect(records).toHaveLength(62);
-    expect(byAction.size).toBe(62);
+  it('declares exactly 65 records with unique actions and parses each one', () => {
+    expect(records).toHaveLength(65);
+    expect(byAction.size).toBe(65);
     for (const record of records) {
       expect(record.routing.parentTool).toBe('manage_ai');
       expect(record.discovery.family).toBe('ai');

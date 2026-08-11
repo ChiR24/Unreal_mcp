@@ -40,6 +40,13 @@ export type AiRecordSpec = {
   readonly plugins?: readonly string[];
   readonly example: JsonObject;
   readonly result: string;
+  /**
+   * Set on a capability authored after the gateway migration. Its legacyIds pair
+   * still carries the live routing identity, but the pair never shipped on the
+   * pre-gateway surface, so the normalization audit must not count it.
+   */
+  readonly provenance?: CapabilityRecordSource['normalization']['provenance'];
+  readonly rationale?: string;
 };
 
 export function aiRecord(spec: AiRecordSpec): CapabilityRecordSource {
@@ -61,7 +68,10 @@ export function aiRecord(spec: AiRecordSpec): CapabilityRecordSource {
     resources: 'medium',
     plugins: spec.plugins,
     editorStates: ['edit'],
-    exampleInput: { action: spec.action, ...spec.example },
-    exampleOutput: { success: true, message: spec.result },
-  });
+      exampleInput: { action: spec.action, ...spec.example },
+      exampleOutput: { success: true, message: spec.result },
+      ...(spec.provenance === undefined
+        ? {}
+        : { normalizationProvenance: spec.provenance, normalizationRationale: spec.rationale }),
+    });
 }

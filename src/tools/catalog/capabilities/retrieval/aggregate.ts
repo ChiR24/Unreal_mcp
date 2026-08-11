@@ -64,7 +64,7 @@ export class CapabilityCatalogSizeError extends Error {
 }
 
 /**
- * The eight core parents in AUTHORED order â€” the sequence each record
+ * The eight core parents in AUTHORED order — the sequence each record
  * directory declares. The canonical-registry generator derives every parent's
  * action enum from the first-seen record sequence, so it must consume this
  * view; the id-sorted catalog below would alphabetise those enums.

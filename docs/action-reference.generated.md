@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `033b372686491d2a`
+Catalog revision: `5cc42825a2758b6c`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 1373 capabilities across
+The catalog declares 1380 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -41,14 +41,14 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor` | 46 | 14 | 29 | 3 | actor |
 | `control_editor` | 42 | 19 | 23 | 0 | editor |
 | `inspect` | 36 | 30 | 5 | 1 | inspect |
-| `manage_ai` | 62 | 4 | 58 | 0 | manage ai |
+| `manage_ai` | 65 | 4 | 61 | 0 | manage ai |
 | `manage_asset` | 158 | 34 | 114 | 10 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 50 | 0 | 50 | 0 | audio |
 | `manage_blueprint` | 121 | 10 | 103 | 8 | blueprint, widget |
 | `manage_character` | 27 | 1 | 26 | 0 | manage character |
 | `manage_combat` | 39 | 2 | 37 | 0 | manage combat |
 | `manage_effect` | 59 | 3 | 55 | 1 | manage effect |
-| `manage_gas` | 27 | 1 | 26 | 0 | manage gas |
+| `manage_gas` | 31 | 1 | 30 | 0 | manage gas |
 | `manage_geometry` | 86 | 2 | 84 | 0 | world |
 | `manage_interaction` | 22 | 1 | 21 | 0 | manage interaction |
 | `manage_inventory` | 33 | 1 | 32 | 0 | manage inventory |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-153 of 1373 capabilities require consent.
+153 of 1380 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -824,6 +824,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai.create_eqs_query` | `manage_ai` | `create_eqs_query` | write | write | none | `manage_ai.create_eqs_query` |
 | `manage_ai.create_mass_entity_config` | `manage_ai` | `create_mass_entity_config` | write | write | none | `manage_ai.create_mass_entity_config` |
 | `manage_ai.create_nav_link_proxy` | `manage_ai` | `create_nav_link_proxy` | write | write | none | `manage_ai.create_nav_link_proxy` |
+| `manage_ai.create_nav_modifier` | `manage_ai` | `create_nav_modifier` | write | write | none | `manage_ai.create_nav_modifier` |
 | `manage_ai.create_nav_modifier_component` | `manage_ai` | `create_nav_modifier_component` | write | write | none | `manage_ai.create_nav_modifier_component` |
 | `manage_ai.create_smart_link` | `manage_ai` | `create_smart_link` | write | write | none | `manage_ai.create_smart_link` |
 | `manage_ai.create_smart_object_definition` | `manage_ai` | `create_smart_object_definition` | write | write | none | `manage_ai.create_smart_object_definition` |
@@ -835,6 +836,8 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai.rebuild_navigation` | `manage_ai` | `rebuild_navigation` | write | write | none | `manage_ai.rebuild_navigation` |
 | `manage_ai.remove_node` | `manage_ai` | `remove_node` | write | write | none | `manage_ai.remove_node` |
 | `manage_ai.run_behavior_tree` | `manage_ai` | `run_behavior_tree` | write | write | none | `manage_ai.run_behavior_tree` |
+| `manage_ai.set_ai_movement` | `manage_ai` | `set_ai_movement` | write | write | none | `manage_ai.set_ai_movement` |
+| `manage_ai.set_ai_perception` | `manage_ai` | `set_ai_perception` | write | write | none | `manage_ai.set_ai_perception` |
 | `manage_ai.set_blackboard_value` | `manage_ai` | `set_blackboard_value` | write | write | none | `manage_ai.set_blackboard_value` |
 | `manage_ai.set_focus` | `manage_ai` | `set_focus` | write | write | none | `manage_ai.set_focus` |
 | `manage_ai.set_key_instance_synced` | `manage_ai` | `set_key_instance_synced` | write | write | none | `manage_ai.set_key_instance_synced` |
@@ -1020,6 +1023,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_effect.set_parameter_value` | `manage_effect` | `set_parameter_value` | write | write | none | `manage_effect.set_parameter_value` |
 | `manage_effect.spawn_niagara` | `manage_effect` | `spawn_niagara` | write | write | none | `manage_effect.spawn_niagara` |
 | `manage_effect.validate_niagara_system` | `manage_effect` | `validate_niagara_system` | read | read | none | `manage_effect.validate_niagara_system` |
+| `manage_gas.add_ability` | `manage_gas` | `add_ability` | write | write | none | `manage_gas.add_ability` |
 | `manage_gas.add_ability_system_component` | `manage_gas` | `add_ability_system_component` | write | write | none | `manage_gas.add_ability_system_component` |
 | `manage_gas.add_ability_task` | `manage_gas` | `add_ability_task` | write | write | none | `manage_gas.add_ability_task` |
 | `manage_gas.add_attribute` | `manage_gas` | `add_attribute` | write | write | none | `manage_gas.add_attribute` |
@@ -1029,11 +1033,14 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_gas.add_tag_to_asset` | `manage_gas` | `add_tag_to_asset` | write | write | none | `manage_gas.add_tag_to_asset` |
 | `manage_gas.configure_asc` | `manage_gas` | `configure_asc` | write | write | none | `manage_gas.configure_asc` |
 | `manage_gas.configure_cue_trigger` | `manage_gas` | `configure_cue_trigger` | write | write | none | `manage_gas.configure_cue_trigger` |
+| `manage_gas.create_ability_set` | `manage_gas` | `create_ability_set` | write | write | none | `manage_gas.create_ability_set` |
 | `manage_gas.create_attribute_set` | `manage_gas` | `create_attribute_set` | write | write | none | `manage_gas.create_attribute_set` |
+| `manage_gas.create_execution_calculation` | `manage_gas` | `create_execution_calculation` | write | write | none | `manage_gas.create_execution_calculation` |
 | `manage_gas.create_gameplay_ability` | `manage_gas` | `create_gameplay_ability` | write | write | none | `manage_gas.create_gameplay_ability` |
 | `manage_gas.create_gameplay_cue_notify` | `manage_gas` | `create_gameplay_cue_notify` | write | write | none | `manage_gas.create_gameplay_cue_notify` |
 | `manage_gas.create_gameplay_effect` | `manage_gas` | `create_gameplay_effect` | write | write | none | `manage_gas.create_gameplay_effect` |
 | `manage_gas.get_gas_info` | `manage_gas` | `get_gas_info` | read | read | none | `manage_gas.get_gas_info` |
+| `manage_gas.grant_ability` | `manage_gas` | `grant_ability` | write | write | none | `manage_gas.grant_ability` |
 | `manage_gas.set_ability_cooldown` | `manage_gas` | `set_ability_cooldown` | write | write | none | `manage_gas.set_ability_cooldown` |
 | `manage_gas.set_ability_costs` | `manage_gas` | `set_ability_costs` | write | write | none | `manage_gas.set_ability_costs` |
 | `manage_gas.set_ability_tags` | `manage_gas` | `set_ability_tags` | write | write | none | `manage_gas.set_ability_tags` |

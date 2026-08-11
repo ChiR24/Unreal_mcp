@@ -16,6 +16,13 @@ import { AI } from './properties.js';
 const A = AI;
 const N = NAV;
 
+const PROMOTED = 'Promoted from a hidden native manage_ai route after the gateway migration.';
+const POST = 'post-migration' as const;
+const OUT_STR = (d: string) => ({ type: 'string', description: d });
+const OUT_NUM = (d: string) => ({ type: 'number', description: d });
+const OUT_BOOL = (d: string) => ({ type: 'boolean', description: d });
+const OUT_STR_ARRAY = (d: string) => ({ type: 'array', items: { type: 'string' }, description: d });
+
 export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
   aiRecord({
     action: 'rebuild_navigation', summary: 'Rebuild navigation for the loaded editor world.',
@@ -153,6 +160,51 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     props: { action: A.action, controllerPath: A.controllerPath },
     required: ['controllerPath'], plugins: BT,
     out: { assetPath: A.assetPath },
-    example: { controllerPath: '/Game/AI/AIC_Enemy' }, result: 'Behavior Tree run cleared',
-  }),
-];
+      example: { controllerPath: '/Game/AI/AIC_Enemy' }, result: 'Behavior Tree run cleared',
+    }),
+    aiRecord({
+      action: 'set_ai_perception',
+      summary: 'Configure the sight and hearing senses of an AIController perception component.',
+      use: 'One call should add the perception component and set its senses together.',
+      avoid: 'Only one sense needs tuning; configure_sight_config and configure_hearing_config edit them separately.',
+      props: {
+        action: A.action, controllerPath: A.controllerPath,
+        enableSight: A.enableSight, sightRadius: A.sightRadius, loseSightRadius: A.loseSightRadius,
+        peripheralVisionAngle: A.peripheralVisionAngle, enableHearing: A.enableHearing,
+      },
+      required: ['controllerPath'],
+      out: {
+        controllerPath: A.controllerPath,
+        createdNew: OUT_BOOL('Whether the perception component was added by this call.'),
+        sensesConfigured: OUT_STR_ARRAY('Names of the senses this call configured.'),
+        dominantSense: OUT_STR('Sense the component treats as dominant.'),
+      },
+      example: { controllerPath: '/Game/AI/AIC_Enemy', enableSight: true, sightRadius: 2500, peripheralVisionAngle: 75 },
+      result: 'AI perception configured',
+      provenance: POST, rationale: PROMOTED,
+    }),
+    aiRecord({
+      action: 'set_ai_movement',
+      summary: 'Set the movement limits on the CharacterMovement component of a Blueprint.',
+      use: 'Walk speed, acceleration, braking or rotation rate must change on a pawn asset.',
+      avoid: 'The pawn has no CharacterMovement component; the call reports the missing component instead.',
+      props: {
+        action: A.action, blueprintPath: A.blueprintPath,
+        maxWalkSpeed: A.maxWalkSpeed, maxAcceleration: A.maxAcceleration,
+        brakingDeceleration: A.brakingDeceleration, rotationRate: A.rotationRate,
+      },
+      required: ['blueprintPath'],
+      out: {
+        blueprintPath: A.blueprintPath,
+        propertiesSet: OUT_STR_ARRAY('Names of the movement properties this call changed.'),
+        propertyCount: OUT_NUM('How many movement properties were changed.'),
+        maxWalkSpeed: A.maxWalkSpeed, maxAcceleration: A.maxAcceleration,
+        rotationRateYaw: OUT_NUM('Yaw component of the resulting rotation rate.'),
+        orientRotationToMovement: OUT_BOOL('Whether the component orients rotation to movement.'),
+        useRVOAvoidance: OUT_BOOL('Whether RVO avoidance is enabled on the component.'),
+      },
+      example: { blueprintPath: '/Game/AI/BP_Enemy', maxWalkSpeed: 450, rotationRate: 360 },
+      result: 'AI movement configured',
+      provenance: POST, rationale: PROMOTED,
+    }),
+  ];

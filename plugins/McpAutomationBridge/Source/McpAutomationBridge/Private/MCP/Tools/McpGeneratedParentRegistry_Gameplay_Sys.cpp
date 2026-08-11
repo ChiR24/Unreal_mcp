@@ -11,11 +11,14 @@ public:
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		FMcpSchemaBuilder Schema;
+			Schema.String(TEXT("abilityClass"), TEXT("GameplayAbility class path; accepted wherever abilityPath is."));
+			Schema.Number(TEXT("abilityLevel"), TEXT("Level the ability is granted at."));
 			Schema.String(TEXT("abilityPath"), TEXT("Canonical /Game gameplay ability asset path."));
 			Schema.Array(TEXT("abilityTags"), TEXT("Gameplay tags granted to this ability."), TEXT("string"));
 			Schema.Array(TEXT("activationBlockedTags"), TEXT("Tags that block activation of this ability."), TEXT("string"));
 			Schema.StringEnum(TEXT("activationPolicy"), { TEXT("OnInputPressed"), TEXT("WhileInputActive"), TEXT("OnSpawn"), TEXT("OnGiven") }, TEXT("When the ability activates."));
 			Schema.Array(TEXT("activationRequiredTags"), TEXT("Tags required to activate this ability."), TEXT("string"));
+			Schema.String(TEXT("actorPath"), TEXT("Canonical /Game actor Blueprint path; accepted wherever blueprintPath is."));
 			Schema.Number(TEXT("aoeRadius"), TEXT("Area-of-effect radius in world units."));
 			Schema.Array(TEXT("applicationRequiredTags"), TEXT("Tags required to apply this effect."), TEXT("string"));
 			Schema.String(TEXT("assetPath"), TEXT("Canonical /Game asset path."));
@@ -42,6 +45,7 @@ public:
 			Schema.String(TEXT("effectPath"), TEXT("Canonical /Game gameplay effect asset path."));
 			Schema.Array(TEXT("grantedTags"), TEXT("Tags granted while the effect is active."), TEXT("string"));
 			Schema.Array(TEXT("immunityTags"), TEXT("Tags that make a target immune to this effect."), TEXT("string"));
+			Schema.Number(TEXT("inputID"), TEXT("Input id bound to the granted ability; -1 leaves it unbound."));
 			Schema.StringEnum(TEXT("instancingPolicy"), { TEXT("NonInstanced"), TEXT("InstancedPerActor"), TEXT("InstancedPerExecution") }, TEXT("How the ability is instanced."));
 			Schema.StringEnum(TEXT("magnitudeCalculationType"), { TEXT("ScalableFloat"), TEXT("AttributeBased"), TEXT("SetByCaller"), TEXT("CustomCalculationClass") }, TEXT("How the modifier magnitude is calculated."));
 			Schema.Number(TEXT("maxValue"), TEXT("Numeric parameter."));
@@ -56,6 +60,8 @@ public:
 			Schema.Array(TEXT("removalTags"), TEXT("Tags that cause this effect to be removed."), TEXT("string"));
 			Schema.StringEnum(TEXT("replicationMode"), { TEXT("Full"), TEXT("Minimal"), TEXT("Mixed") }, TEXT("ASC replication mode."));
 			Schema.String(TEXT("setByCallerTag"), TEXT("Gameplay tag keying a SetByCaller magnitude."));
+			Schema.String(TEXT("setName"), TEXT("Display name recorded on the ability set."));
+			Schema.String(TEXT("setPath"), TEXT("Canonical /Game ability set asset path."));
 			Schema.String(TEXT("soundPath"), TEXT("Canonical /Game sound asset path."));
 			Schema.StringEnum(TEXT("stackDurationRefreshPolicy"), { TEXT("RefreshOnSuccessfulApplication"), TEXT("NeverRefresh") }, TEXT("When stack duration refreshes."));
 			Schema.StringEnum(TEXT("stackExpirationPolicy"), { TEXT("ClearEntireStack"), TEXT("RemoveSingleStackAndRefreshDuration"), TEXT("RefreshDuration") }, TEXT("What happens when a stack expires."));
@@ -69,7 +75,7 @@ public:
 			Schema.StringEnum(TEXT("targetingMode"), { TEXT("None"), TEXT("SingleTarget"), TEXT("AOE"), TEXT("Directional"), TEXT("Ground"), TEXT("ActorPlacement") }, TEXT("Targeting mode for the ability."));
 			Schema.String(TEXT("taskType"), TEXT("String parameter."));
 			Schema.StringEnum(TEXT("triggerType"), { TEXT("OnActive"), TEXT("WhileActive"), TEXT("Executed"), TEXT("OnRemove") }, TEXT("When the gameplay cue triggers."));
-			Schema.StringEnum(TEXT("action"), { TEXT("add_ability_system_component"), TEXT("configure_asc"), TEXT("create_attribute_set"), TEXT("add_attribute"), TEXT("set_attribute_base_value"), TEXT("set_attribute_clamping"), TEXT("create_gameplay_ability"), TEXT("set_ability_tags"), TEXT("set_ability_costs"), TEXT("set_ability_cooldown"), TEXT("set_ability_targeting"), TEXT("add_ability_task"), TEXT("set_activation_policy"), TEXT("set_instancing_policy"), TEXT("create_gameplay_effect"), TEXT("set_effect_duration"), TEXT("add_effect_modifier"), TEXT("set_modifier_magnitude"), TEXT("add_effect_execution_calculation"), TEXT("add_effect_cue"), TEXT("set_effect_stacking"), TEXT("set_effect_tags"), TEXT("create_gameplay_cue_notify"), TEXT("configure_cue_trigger"), TEXT("set_cue_effects"), TEXT("add_tag_to_asset"), TEXT("get_gas_info") }, TEXT("Action to invoke on manage_gas."));
+			Schema.StringEnum(TEXT("action"), { TEXT("add_ability_system_component"), TEXT("configure_asc"), TEXT("create_attribute_set"), TEXT("add_attribute"), TEXT("set_attribute_base_value"), TEXT("set_attribute_clamping"), TEXT("create_gameplay_ability"), TEXT("set_ability_tags"), TEXT("set_ability_costs"), TEXT("set_ability_cooldown"), TEXT("set_ability_targeting"), TEXT("add_ability_task"), TEXT("set_activation_policy"), TEXT("set_instancing_policy"), TEXT("create_gameplay_effect"), TEXT("set_effect_duration"), TEXT("add_effect_modifier"), TEXT("set_modifier_magnitude"), TEXT("add_effect_execution_calculation"), TEXT("add_effect_cue"), TEXT("set_effect_stacking"), TEXT("set_effect_tags"), TEXT("create_gameplay_cue_notify"), TEXT("configure_cue_trigger"), TEXT("set_cue_effects"), TEXT("add_tag_to_asset"), TEXT("get_gas_info"), TEXT("create_ability_set"), TEXT("add_ability"), TEXT("grant_ability"), TEXT("create_execution_calculation") }, TEXT("Action to invoke on manage_gas."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

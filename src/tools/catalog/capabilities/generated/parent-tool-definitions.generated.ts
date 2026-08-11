@@ -3638,6 +3638,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game Blueprint asset path."
         },
+        "brakingDeceleration": {
+          "type": "number",
+          "description": "Braking deceleration while walking; left unchanged when omitted."
+        },
         "broadcastInterval": {
           "type": "number",
           "description": "Interval for the state-change broadcast (0 = single)."
@@ -3806,6 +3810,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Failsafe extent used when the actor has no collision.",
           "additionalProperties": false
         },
+        "failsafeToDefaultNavmesh": {
+          "type": "boolean",
+          "description": "Fall back to the default navmesh area when the modifier area class is unset."
+        },
         "focusActorName": {
           "type": "string",
           "description": "Actor the controller should focus on."
@@ -3935,9 +3943,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Radius at which sight is lost."
         },
+        "maxAcceleration": {
+          "type": "number",
+          "description": "Maximum acceleration; left unchanged when omitted."
+        },
         "maxSimplificationError": {
           "type": "number",
           "description": "Edge simplification error."
+        },
+        "maxWalkSpeed": {
+          "type": "number",
+          "description": "Maximum ground speed; left unchanged when omitted."
         },
         "mergeRegionSize": {
           "type": "number",
@@ -4060,6 +4076,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Rotation as {pitch, yaw, roll} in degrees.",
           "additionalProperties": false
+        },
+        "rotationRate": {
+          "type": "number",
+          "description": "Yaw rotation rate in degrees per second; left unchanged when omitted."
         },
         "save": {
           "type": "boolean",
@@ -4330,6 +4350,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "get_blackboard_value",
             "get_navigation_info",
             "get_tree",
+            "create_nav_modifier",
             "rebuild_navigation",
             "remove_node",
             "run_behavior_tree",
@@ -4342,7 +4363,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_node_properties",
             "set_perception_team",
             "setup_perception",
-            "stop_behavior_tree"
+            "stop_behavior_tree",
+            "set_ai_perception",
+            "set_ai_movement"
           ],
           "description": "Action to invoke on manage_ai."
         }
@@ -4398,6 +4421,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the Blackboard already existed and was reused."
         },
+        "areaClass": {
+          "type": "string",
+          "description": "Navigation area class path."
+        },
         "assetPath": {
           "type": "string",
           "description": "Canonical /Game asset path."
@@ -4414,17 +4441,41 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game Blueprint asset path."
         },
+        "componentName": {
+          "type": "string",
+          "description": "Name of the component to add."
+        },
         "configPath": {
           "type": "string",
           "description": "Canonical /Game Mass Entity config asset path."
+        },
+        "controllerPath": {
+          "type": "string",
+          "description": "Canonical /Game AI controller asset path."
+        },
+        "createdNew": {
+          "type": "boolean",
+          "description": "Whether the perception component was added by this call."
         },
         "definitionPath": {
           "type": "string",
           "description": "Canonical /Game Smart Object definition asset path."
         },
+        "dominantSense": {
+          "type": "string",
+          "description": "Sense the component treats as dominant."
+        },
         "isRoot": {
           "type": "boolean",
           "description": "Whether this node became the tree root."
+        },
+        "maxAcceleration": {
+          "type": "number",
+          "description": "Maximum acceleration; left unchanged when omitted."
+        },
+        "maxWalkSpeed": {
+          "type": "number",
+          "description": "Maximum ground speed; left unchanged when omitted."
         },
         "message": {
           "type": "string",
@@ -4485,9 +4536,39 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Resolved name of the created composite node."
         },
+        "orientRotationToMovement": {
+          "type": "boolean",
+          "description": "Whether the component orients rotation to movement."
+        },
+        "propertiesSet": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of the movement properties this call changed."
+        },
+        "propertyCount": {
+          "type": "number",
+          "description": "How many movement properties were changed."
+        },
+        "rotationRateYaw": {
+          "type": "number",
+          "description": "Yaw component of the resulting rotation rate."
+        },
+        "sensesConfigured": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of the senses this call configured."
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "useRVOAvoidance": {
+          "type": "boolean",
+          "description": "Whether RVO avoidance is enabled on the component."
         },
         "value": {
           "description": "Property value (any type)."
@@ -9309,6 +9390,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
+        "abilityClass": {
+          "type": "string",
+          "description": "GameplayAbility class path; accepted wherever abilityPath is."
+        },
+        "abilityLevel": {
+          "type": "number",
+          "description": "Level the ability is granted at."
+        },
         "abilityPath": {
           "type": "string",
           "description": "Canonical /Game gameplay ability asset path."
@@ -9343,6 +9432,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Tags required to activate this ability."
+        },
+        "actorPath": {
+          "type": "string",
+          "description": "Canonical /Game actor Blueprint path; accepted wherever blueprintPath is."
         },
         "aoeRadius": {
           "type": "number",
@@ -9487,6 +9580,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Tags that make a target immune to this effect."
         },
+        "inputID": {
+          "type": "number",
+          "description": "Input id bound to the granted ability; -1 leaves it unbound."
+        },
         "instancingPolicy": {
           "type": "string",
           "enum": [
@@ -9567,6 +9664,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "setByCallerTag": {
           "type": "string",
           "description": "Gameplay tag keying a SetByCaller magnitude."
+        },
+        "setName": {
+          "type": "string",
+          "description": "Display name recorded on the ability set."
+        },
+        "setPath": {
+          "type": "string",
+          "description": "Canonical /Game ability set asset path."
         },
         "soundPath": {
           "type": "string",
@@ -9681,7 +9786,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_cue_trigger",
             "set_cue_effects",
             "add_tag_to_asset",
-            "get_gas_info"
+            "get_gas_info",
+            "create_ability_set",
+            "add_ability",
+            "grant_ability",
+            "create_execution_calculation"
           ],
           "description": "Action to invoke on manage_gas."
         }
@@ -9694,6 +9803,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "abilityClass": {
+          "type": "string",
+          "description": "GameplayAbility class path; accepted wherever abilityPath is."
+        },
+        "abilityLevel": {
+          "type": "number",
+          "description": "Level the ability is granted at."
+        },
+        "abilityPath": {
+          "type": "string",
+          "description": "Canonical /Game gameplay ability asset path."
+        },
+        "actorPath": {
+          "type": "string",
+          "description": "Canonical /Game actor Blueprint path; accepted wherever blueprintPath is."
+        },
         "assetName": {
           "type": "string",
           "description": "String parameter."
@@ -9705,6 +9830,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "class": {
           "type": "string",
           "description": "String parameter."
+        },
+        "createdInitialAbilitiesVar": {
+          "type": "boolean",
+          "description": "Boolean parameter."
         },
         "cueCount": {
           "type": "number",
@@ -9722,6 +9851,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "String parameter."
         },
+        "hasASC": {
+          "type": "boolean",
+          "description": "Boolean parameter."
+        },
+        "inputID": {
+          "type": "number",
+          "description": "Input id bound to the granted ability; -1 leaves it unbound."
+        },
         "instancingPolicy": {
           "type": "string",
           "description": "String parameter."
@@ -9734,7 +9871,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Numeric parameter."
         },
+        "name": {
+          "type": "string",
+          "description": "Name for the created asset or actor."
+        },
         "netExecutionPolicy": {
+          "type": "string",
+          "description": "String parameter."
+        },
+        "note": {
           "type": "string",
           "description": "String parameter."
         },
@@ -9742,13 +9887,43 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "String parameter."
         },
+        "reusedExisting": {
+          "type": "boolean",
+          "description": "Boolean parameter."
+        },
+        "setName": {
+          "type": "string",
+          "description": "Display name recorded on the ability set."
+        },
+        "setPath": {
+          "type": "string",
+          "description": "Canonical /Game ability set asset path."
+        },
         "stackingType": {
+          "type": "string",
+          "description": "String parameter."
+        },
+        "status": {
           "type": "string",
           "description": "String parameter."
         },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of string values."
+        },
+        "variablesAdded": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of string values."
         }
       },
       "additionalProperties": true

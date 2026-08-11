@@ -103,4 +103,11 @@ export const GAS_P: PropertyMap = {
   soundPath: str('Canonical /Game sound asset path.'),
   cameraShakePath: str('Canonical /Game camera shake asset path.'),
   decalPath: str('Canonical /Game decal material asset path.'),
+
+  setPath: str('Canonical /Game ability set asset path.'),
+  setName: str('Display name recorded on the ability set.'),
+  abilityClass: str('GameplayAbility class path; accepted wherever abilityPath is.'),
+  actorPath: str('Canonical /Game actor Blueprint path; accepted wherever blueprintPath is.'),
+  abilityLevel: num('Level the ability is granted at.'),
+  inputID: num('Input id bound to the granted ability; -1 leaves it unbound.'),
 };

@@ -427,6 +427,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_ai::create_eqs_query": "interactive|medium",
   "manage_ai::create_mass_entity_config": "interactive|medium",
   "manage_ai::create_nav_link_proxy": "interactive|medium",
+  "manage_ai::create_nav_modifier": "interactive|medium",
   "manage_ai::create_nav_modifier_component": "interactive|medium",
   "manage_ai::create_smart_link": "interactive|medium",
   "manage_ai::create_smart_object_definition": "interactive|medium",
@@ -438,6 +439,8 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_ai::rebuild_navigation": "interactive|medium",
   "manage_ai::remove_node": "interactive|medium",
   "manage_ai::run_behavior_tree": "interactive|medium",
+  "manage_ai::set_ai_movement": "interactive|medium",
+  "manage_ai::set_ai_perception": "interactive|medium",
   "manage_ai::set_blackboard_value": "interactive|medium",
   "manage_ai::set_focus": "interactive|medium",
   "manage_ai::set_key_instance_synced": "interactive|medium",
@@ -907,6 +910,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_effect::set_parameter_value": "interactive|low",
   "manage_effect::spawn_niagara": "interactive|low",
   "manage_effect::validate_niagara_system": "instant|low",
+  "manage_gas::add_ability": "interactive|low",
   "manage_gas::add_ability_system_component": "interactive|medium",
   "manage_gas::add_ability_task": "interactive|low",
   "manage_gas::add_attribute": "interactive|low",
@@ -916,11 +920,14 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_gas::add_tag_to_asset": "interactive|low",
   "manage_gas::configure_asc": "interactive|low",
   "manage_gas::configure_cue_trigger": "interactive|low",
+  "manage_gas::create_ability_set": "interactive|medium",
   "manage_gas::create_attribute_set": "interactive|medium",
+  "manage_gas::create_execution_calculation": "interactive|medium",
   "manage_gas::create_gameplay_ability": "interactive|medium",
   "manage_gas::create_gameplay_cue_notify": "interactive|medium",
   "manage_gas::create_gameplay_effect": "interactive|medium",
   "manage_gas::get_gas_info": "instant|low",
+  "manage_gas::grant_ability": "interactive|medium",
   "manage_gas::set_ability_cooldown": "interactive|low",
   "manage_gas::set_ability_costs": "interactive|low",
   "manage_gas::set_ability_tags": "interactive|low",
@@ -1415,4 +1422,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|low"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1402;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1409;

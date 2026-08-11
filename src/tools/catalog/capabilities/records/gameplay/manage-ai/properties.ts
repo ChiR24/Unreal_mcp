@@ -156,5 +156,12 @@ export const AI = {
   offset: xyz('Slot offset relative to the definition origin.'),
   rotation: closed('Rotation as {pitch, yaw, roll} in degrees.',
     { pitch: N, yaw: N, roll: N }),
-  spawnCount: num('Number of entities the spawner creates.'),
-} satisfies Record<string, JsonObject>;
+    spawnCount: num('Number of entities the spawner creates.'),
+
+    // --- promoted native routes ---
+    failsafeToDefaultNavmesh: bool('Fall back to the default navmesh area when the modifier area class is unset.'),
+    maxWalkSpeed: num('Maximum ground speed; left unchanged when omitted.'),
+    maxAcceleration: num('Maximum acceleration; left unchanged when omitted.'),
+    brakingDeceleration: num('Braking deceleration while walking; left unchanged when omitted.'),
+    rotationRate: num('Yaw rotation rate in degrees per second; left unchanged when omitted.'),
+  } satisfies Record<string, JsonObject>;
