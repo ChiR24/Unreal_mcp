@@ -92,10 +92,17 @@ async function tryComponentProperties(
       });
     }
 
+    // Surface *why* the component sweep could not run, but never the raw
+    // automation envelope: it carries transport internals (type,
+    // requestId) that mean nothing to the caller and cannot be acted on.
+    const lookupReason = compsRes.success
+      ? 'returned success but no component list'
+      : `failed: ${typeof compsRes.error === 'string' ? compsRes.error : JSON.stringify(compsRes.error) || 'unknown error'}${
+        compsRes.message ? ` (${String(compsRes.message)})` : ''}`;
+
     return cleanObject({
       ...res,
-      message: `${res.message as string} (Smart Lookup failed: get_components returned ${compsRes.success ? 'success but no list' : `failure: ${compsRes.error}`} | Name: ${shortName} Path: ${actorName})`,
-      smartLookupGetComponentsError: compsRes
+      message: `${res.message as string} (Smart Lookup could not enumerate components: get_components ${lookupReason}. Looked for '${shortName}' under '${actorName}'. Verify the actor/Blueprint path, then retry with an explicit component path.)`
     });
   } catch (error: unknown) {
     const errorMsg = error instanceof Error ? error.message : String(error);
