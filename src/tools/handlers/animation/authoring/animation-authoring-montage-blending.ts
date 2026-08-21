@@ -15,7 +15,7 @@ export async function handleMontageBlendAction(
 
   case 'set_blend_in': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: true },
+      { key: 'assetPath', aliases: ['montagePath'], required: true },
       { key: 'blendTime', default: 0.25 },
       { key: 'blendOption', default: 'Linear' },
       { key: 'save', default: true },
@@ -47,7 +47,7 @@ export async function handleMontageBlendAction(
 
   case 'set_blend_out': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: true },
+      { key: 'assetPath', aliases: ['montagePath'], required: true },
       { key: 'blendTime', default: 0.25 },
       { key: 'blendOption', default: 'Linear' },
       { key: 'save', default: true },
@@ -79,7 +79,7 @@ export async function handleMontageBlendAction(
 
   case 'link_sections': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: true },
+      { key: 'assetPath', aliases: ['montagePath'], required: true },
       { key: 'fromSection', required: true },
       { key: 'toSection', required: true },
       { key: 'save', default: true },
