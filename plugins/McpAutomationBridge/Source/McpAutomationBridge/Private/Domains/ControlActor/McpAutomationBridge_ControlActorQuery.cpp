@@ -13,10 +13,42 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
   }
 
   // Security: Validate query format - reject path traversal attempts
-  if (Query.Contains(TEXT("..")) || Query.Contains(TEXT("\\")) || Query.Contains(TEXT("/"))) {
+  if (Query.Contains(TEXT("..")) || Query.Contains(TEXT("\\"))) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               FString::Printf(TEXT("Invalid name query: '%s'. Path separators and traversal characters are not allowed."), *Query), nullptr);
     return true;
+  }
+
+  // A caller that already holds an actor's FULL OBJECT PATH (handed out by find_by_property, inspect, and the
+  // outliner) naturally passes it here. Rejecting every '/' turned that into a bare "Invalid name query" with
+  // no hint about what this action actually wants, so reduce a well-formed object path to its leaf actor name
+  // instead: "/Game/Maps/Lvl.Lvl:PersistentLevel.BP_Shelf_C_1" -> "BP_Shelf_C_1". Traversal and backslashes
+  // are already rejected above, and the leaf can no longer contain a separator.
+  if (Query.Contains(TEXT("/"))) {
+    // Take the LAST separator of any kind. A short-circuiting || chain stops at the first character it
+    // finds, so '/Game/My.Folder/Actors' would cut at the '.' and yield 'Folder/Actors' -- still a path,
+    // contradicting the guarantee below. Compare all three and use the rightmost.
+    FString Leaf = Query;
+    int32 DotIndex = INDEX_NONE, ColonIndex = INDEX_NONE, SlashIndex = INDEX_NONE;
+    Leaf.FindLastChar(TEXT('.'), DotIndex);
+    Leaf.FindLastChar(TEXT(':'), ColonIndex);
+    Leaf.FindLastChar(TEXT('/'), SlashIndex);
+    const int32 SeparatorIndex = FMath::Max3(DotIndex, ColonIndex, SlashIndex);
+    if (SeparatorIndex != INDEX_NONE) {
+      Leaf = Leaf.RightChop(SeparatorIndex + 1);
+    }
+    Leaf.TrimStartAndEndInline();
+    if (Leaf.IsEmpty() || Leaf.Contains(TEXT("/"))) {
+      SendStandardErrorResponse(
+          this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+          FString::Printf(
+              TEXT("Invalid name query: '%s'. Pass an actor name (e.g. 'BP_Shelf_C_1') or a full object "
+                   "path ending in one (e.g. '/Game/Maps/Lvl.Lvl:PersistentLevel.BP_Shelf_C_1')."),
+              *Query),
+          nullptr);
+      return true;
+    }
+    Query = Leaf;
   }
 
   UEditorActorSubsystem *ActorSS =
