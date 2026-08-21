@@ -14,8 +14,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
 
   // Security: Validate query format - reject path traversal attempts
   if (Query.Contains(TEXT("..")) || Query.Contains(TEXT("\\"))) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              FString::Printf(TEXT("Invalid name query: '%s'. Path separators and traversal characters are not allowed."), *Query), nullptr);
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+        FString::Printf(
+            TEXT("Invalid name query: '%s'. '..' and backslashes are not accepted. Pass an actor "
+                 "name (e.g. 'BP_Shelf_C_1') or a full object path ending in one "
+                 "(e.g. '/Game/Maps/Lvl.Lvl:PersistentLevel.BP_Shelf_C_1')."),
+            *Query),
+        nullptr);
     return true;
   }
 
