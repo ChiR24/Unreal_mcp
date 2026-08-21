@@ -1,6 +1,8 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
 #if WITH_EDITOR
+#include "ComponentReregisterContext.h"
+
 namespace McpEnvironmentHandlers {
 
 UWorld *McpGetEditorWorld()
@@ -155,7 +157,23 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
     if (Component)
     {
         ComponentApplied = McpApplyPayloadSettings(Component, Payload, Applied, Failed);
-        Component->MarkRenderStateDirty();
+        // Every class reaching this line today is a USceneComponent, whose
+        // ShouldCreateRenderState() is unconditionally true, so a bare
+        // MarkRenderStateDirty() happens to be correct -- but only by accident of the
+        // call sites. ComponentClassPath is a free parameter of this helper. The day one
+        // caller passes a primitive, that luck runs out: UStaticMeshComponent registers
+        // with NO render state while its mesh is null, and MarkRenderStateDirty() is
+        // guarded on bRenderStateCreated, so it degrades to a silent no-op and the actor
+        // is configured but never drawn. Re-register instead of assuming: that re-runs
+        // ShouldCreateRenderState() and builds the state if it is now warranted.
+        if (Component->IsRegistered() && !Component->IsRenderStateCreated())
+        {
+            FComponentReregisterContext ReregisterContext(Component);
+        }
+        else
+        {
+            Component->MarkRenderStateDirty();
+        }
     }
     const int32 TotalApplied = ActorApplied + ComponentApplied;
 
@@ -165,6 +183,12 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
     {
         Resp->SetStringField(TEXT("componentName"), Component->GetName());
         Resp->SetStringField(TEXT("componentPath"), Component->GetPathName());
+        // Report whether the component can actually draw, so "configured" can never be
+        // read as "visible" again. This is the tripwire: it is true for every class the
+        // current callers pass, so a false is the signal that a component arrived which
+        // cannot render in its present state -- the failure that would otherwise be
+        // invisible in a success response.
+        Resp->SetBoolField(TEXT("componentRenderStateCreated"), Component->IsRenderStateCreated());
     }
     McpAddStringArrayField(Resp, TEXT("configuredProperties"), Applied);
     McpAddStringArrayField(Resp, TEXT("configurationErrors"), Failed);
