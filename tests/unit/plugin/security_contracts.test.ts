@@ -140,6 +140,37 @@ describe('plugin security contracts', () => {
     expect(destroyIdx).toBeLessThan(retIdx);
   });
 
+  it('accepts in-project absolute file paths but still enforces containment', () => {
+    const source = privateSource(
+      'Foundation',
+      'BridgeHelpers',
+      'Security',
+      'McpAutomationBridgeHelpersProjectPaths.h',
+    );
+    const resolver = source.slice(
+      source.indexOf('bool McpResolveProjectFilePath'),
+    );
+
+    // An absolute path is no longer rejected up front...
+    expect(resolver).not.toMatch(
+      /ProjectRelativePath\.IsEmpty\(\)\s*\|\|\s*!FPaths::IsRelative/u,
+    );
+    expect(resolver).toContain('const bool bWasAbsolute');
+
+    // ...but it must still be collapsed and then containment-checked. The
+    // containment call is the security boundary, so it has to come after the
+    // absolute branch and before any success return.
+    const absoluteBranch = resolver.indexOf('if (bWasAbsolute)');
+    const traversalGuard = resolver.indexOf('CollapseRelativeDirectories');
+    const containment = resolver.indexOf('McpValidateProjectSnapshotFilePath(');
+    const successReturn = resolver.indexOf('OutAbsolutePath = MoveTemp');
+
+    expect(absoluteBranch).toBeGreaterThan(-1);
+    expect(traversalGuard).toBeGreaterThan(absoluteBranch);
+    expect(containment).toBeGreaterThan(traversalGuard);
+    expect(successReturn).toBeGreaterThan(containment);
+  });
+
   it('bounds render workload controls before applying CVars', () => {
     const consoleSource = privateSource(
       'Domains',
