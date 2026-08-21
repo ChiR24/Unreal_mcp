@@ -1,6 +1,7 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
 #if WITH_EDITOR
+#include "K2Node_CallArrayFunction.h"
 #include "K2Node_FunctionEntry.h"
 // K2Node_DynamicCast is not always reachable through a single include path
 // across UE versions / module layouts; fall back across the known locations.
@@ -149,6 +150,25 @@ void CreateDynamicNode(
                  "nodes are created (and named) by add_function. Spawning one here "
                  "would leave an unnamed function graph that crashes the editor on "
                  "the next compile."),
+            TEXT("NODE_TYPE_NOT_SUPPORTED"));
+        return;
+    }
+
+    // Array-function nodes resolve their pins THROUGH a bound array function:
+    // GetArrayPins() ensures on TargetFunction and AllocateDefaultPins() ensures on
+    // TargetArrayPin. Spawned generically by class name there is no function to bind,
+    // so both ensures fire inside the engine before this returns, and the half-built
+    // node is left in the graph. Refuse with a usable message instead.
+    if (NodeClass->IsChildOf(UK2Node_CallArrayFunction::StaticClass()))
+    {
+        Context.SendError(
+            FString::Printf(
+                TEXT("'%s' is an array-function node: its pins are derived from a bound "
+                     "array function, so it cannot be spawned by class name (doing so trips "
+                     "an engine ensure). Create it as a function call instead — pass the array "
+                     "function you want (e.g. Array_Get, Array_Add, Array_Length) as the node "
+                     "type, or use list_node_types to find it."),
+                *NodeType),
             TEXT("NODE_TYPE_NOT_SUPPORTED"));
         return;
     }
