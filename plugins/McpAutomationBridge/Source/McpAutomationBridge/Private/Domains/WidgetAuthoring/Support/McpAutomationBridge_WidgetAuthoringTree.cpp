@@ -1,5 +1,6 @@
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringTreeMutation.h"
 
+#include "Components/CanvasPanel.h"
 #include "Components/PanelWidget.h"
 #include "Components/Widget.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
@@ -33,12 +34,36 @@ bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const F
         return false;
     }
     UWidgetTree* WidgetTree = WidgetBP->WidgetTree;
+    // Every add path funnels through here, so this is the one place that can
+    // guarantee it. Without bIsVariable the compiler emits no member property,
+    // leaving a widget authored through this API unreachable from its own graph
+    // — and UUserWidget::GetWidgetFromName is not a UFUNCTION, so there is no
+    // Blueprint-side workaround. A widget added by name is meant to be driven.
+    NewWidget->bIsVariable = true;
     if (ParentSlot.IsEmpty())
     {
         if (!WidgetTree->RootWidget)
         {
-            WidgetTree->RootWidget = NewWidget;
-            UE_LOG(LogTemp, Verbose, TEXT("SafeAddWidgetToTree: Set '%s' as root widget"), *NewWidget->GetName());
+            // A leaf at the root can hold no siblings, so the *second* top-level
+            // add used to hit the replace path below. Give leaves a canvas root
+            // up front and every later add is an ordinary AddChild.
+            if (Cast<UPanelWidget>(NewWidget))
+            {
+                WidgetTree->RootWidget = NewWidget;
+                UE_LOG(LogTemp, Verbose, TEXT("SafeAddWidgetToTree: Set '%s' as root widget"), *NewWidget->GetName());
+                return true;
+            }
+            UCanvasPanel* NewRoot = CreateAndRegisterWidget<UCanvasPanel>(
+                WidgetBP, WidgetTree, TEXT("RootCanvas"));
+            if (!NewRoot)
+            {
+                WidgetTree->RootWidget = NewWidget;
+                return true;
+            }
+            WidgetTree->RootWidget = NewRoot;
+            NewRoot->AddChild(NewWidget);
+            UE_LOG(LogTemp, Verbose, TEXT("SafeAddWidgetToTree: Created canvas root for leaf '%s'"),
+                *NewWidget->GetName());
         }
         else if (UPanelWidget* RootPanel = Cast<UPanelWidget>(WidgetTree->RootWidget))
         {
@@ -48,11 +73,23 @@ bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const F
         }
         else
         {
-            UE_LOG(LogTemp, Warning, TEXT("SafeAddWidgetToTree: Replacing non-panel root '%s' with '%s'"),
-                *WidgetTree->RootWidget->GetName(), *NewWidget->GetName());
-            UnregisterWidgetAndChildren(WidgetBP, WidgetTree->RootWidget);
-            WidgetTree->RemoveWidget(WidgetTree->RootWidget);
-            WidgetTree->RootWidget = NewWidget;
+            // Destroying the existing root to seat the newcomer silently threw
+            // away everything already authored, and the reparent it left behind
+            // tripped an engine ensure. Promote instead: wrap both in a canvas.
+            UWidget* ExistingRoot = WidgetTree->RootWidget;
+            UCanvasPanel* NewRoot = CreateAndRegisterWidget<UCanvasPanel>(
+                WidgetBP, WidgetTree, TEXT("RootCanvas"));
+            if (!NewRoot)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("SafeAddWidgetToTree: Could not create canvas root for '%s'"),
+                    *NewWidget->GetName());
+                return false;
+            }
+            WidgetTree->RootWidget = NewRoot;
+            NewRoot->AddChild(ExistingRoot);
+            NewRoot->AddChild(NewWidget);
+            UE_LOG(LogTemp, Verbose, TEXT("SafeAddWidgetToTree: Promoted root '%s' into a canvas to seat '%s'"),
+                *ExistingRoot->GetName(), *NewWidget->GetName());
         }
         return true;
     }

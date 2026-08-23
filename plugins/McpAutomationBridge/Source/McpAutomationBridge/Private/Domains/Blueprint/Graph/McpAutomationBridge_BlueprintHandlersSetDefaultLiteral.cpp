@@ -42,11 +42,18 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
       return true;
     }
 
-    const TSharedPtr<FJsonValue> ValueField =
-        LocalPayload->TryGetField(TEXT("value"));
+    // The published schema declares `propertyValue` and, with additionalProperties:false,
+    // rejects `value` as undeclared. Reading only `value` therefore made set_default
+    // uncallable through the gateway by any input at all. Prefer the contract spelling and
+    // keep `value` as the legacy WebSocket fallback.
+    TSharedPtr<FJsonValue> ValueField =
+        LocalPayload->TryGetField(TEXT("propertyValue"));
+    if (!ValueField.IsValid()) {
+      ValueField = LocalPayload->TryGetField(TEXT("value"));
+    }
     if (!ValueField.IsValid()) {
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("value field required"), nullptr,
+                             TEXT("propertyValue (or legacy 'value') field required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }

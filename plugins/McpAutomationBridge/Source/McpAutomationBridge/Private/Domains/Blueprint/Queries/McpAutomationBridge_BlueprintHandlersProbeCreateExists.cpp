@@ -17,10 +17,7 @@ bool HandleBlueprintProbeCreateExists(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("blueprint_probe_subobject_handle")) ||
       ActionMatchesPattern(TEXT("probe_subobject_handle")) ||
-      ActionMatchesPattern(TEXT("probehandle")) ||
-      AlphaNumLower.Contains(TEXT("blueprintprobesubobjecthandle")) ||
-      AlphaNumLower.Contains(TEXT("probesubobjecthandle")) ||
-      AlphaNumLower.Contains(TEXT("probehandle"))) {
+      AlphaNumLower.Contains(TEXT("blueprintprobesubobjecthandle"))) {
     return FBlueprintCreationHandlers::HandleBlueprintProbeSubobjectHandle(
         &Bridge, RequestId, LocalPayload, RequestingSocket);
   }

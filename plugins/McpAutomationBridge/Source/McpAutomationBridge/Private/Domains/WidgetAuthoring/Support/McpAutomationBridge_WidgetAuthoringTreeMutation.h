@@ -22,6 +22,12 @@ T* CreateAndRegisterWidget(UWidgetBlueprint* WidgetBlueprint, UWidgetTree* Widge
     T* Widget = WidgetTree->ConstructWidget<T>(T::StaticClass(), WidgetName);
     if (Widget)
     {
+        // Without this the compiler generates no member property, so a widget
+        // authored here cannot be referenced from the graph at all — and the
+        // only Blueprint-reachable alternative, UUserWidget::GetWidgetFromName,
+        // is not a UFUNCTION. A widget created through this API is one the
+        // caller intends to drive, so expose it.
+        Widget->bIsVariable = true;
         RegisterWidgetGuid(WidgetBlueprint, Widget);
     }
     return Widget;

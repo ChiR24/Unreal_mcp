@@ -26,6 +26,15 @@ static bool TryCreateFunctionNode(
     FString MemberClass;
     Context.Payload->TryGetStringField(TEXT("memberName"), MemberName);
     Context.Payload->TryGetStringField(TEXT("memberClass"), MemberClass);
+    // `targetClass` is published alongside `memberClass` and reads as the obvious way to say
+    // which class owns the function, but it was never consulted here. A call naming it was
+    // silently resolved by global search instead, so e.g. GetForwardVector landed on the
+    // KismetMathLibrary(Rotator) overload rather than the component's - a wrong node that
+    // still reported success. Treat it as an alias.
+    if (MemberClass.IsEmpty())
+    {
+        Context.Payload->TryGetStringField(TEXT("targetClass"), MemberClass);
+    }
     UFunction* Function = nullptr;
     if (!MemberClass.IsEmpty())
     {
@@ -97,39 +106,53 @@ static bool TryCreateEventNode(
         return true;
     }
 
+    // These aliases are AActor spellings. Rewriting unconditionally broke every
+    // non-Actor graph that happens to share a name: UUserWidget declares its own
+    // `Tick` UFUNCTION, so asking for Tick in a widget graph was rewritten to
+    // ReceiveTick and rejected as EVENT_NOT_FOUND. Try the name as given first
+    // and only fall back to the Actor spelling.
     static const TMap<FString, FString> Aliases = {
         {TEXT("BeginPlay"), TEXT("ReceiveBeginPlay")},
         {TEXT("Tick"), TEXT("ReceiveTick")},
         {TEXT("EndPlay"), TEXT("ReceiveEndPlay")}};
+    TArray<FString> Candidates;
+    Candidates.Add(EventName);
     if (const FString* Alias = Aliases.Find(EventName))
     {
-        EventName = *Alias;
+        Candidates.Add(*Alias);
     }
 
     UClass* TargetClass = nullptr;
     UFunction* EventFunction = nullptr;
-    if (!MemberClass.IsEmpty())
+    for (const FString& Candidate : Candidates)
     {
-        TargetClass = ResolveUClass(MemberClass);
-        if (TargetClass)
+        if (!MemberClass.IsEmpty())
         {
-            EventFunction =
-                TargetClass->FindFunctionByName(*EventName);
-        }
-    }
-    else
-    {
-        for (UClass* Class = Context.Blueprint->ParentClass;
-             Class && !EventFunction;
-             Class = Class->GetSuperClass())
-        {
-            EventFunction = Class->FindFunctionByName(
-                *EventName,
-                EIncludeSuperFlag::ExcludeSuper);
-            if (EventFunction)
+            TargetClass = ResolveUClass(MemberClass);
+            if (TargetClass)
             {
-                TargetClass = Class;
+                EventFunction = TargetClass->FindFunctionByName(*Candidate);
             }
+        }
+        else
+        {
+            for (UClass* Class = Context.Blueprint->ParentClass;
+                 Class && !EventFunction;
+                 Class = Class->GetSuperClass())
+            {
+                EventFunction = Class->FindFunctionByName(
+                    *Candidate,
+                    EIncludeSuperFlag::ExcludeSuper);
+                if (EventFunction)
+                {
+                    TargetClass = Class;
+                }
+            }
+        }
+        if (EventFunction)
+        {
+            EventName = Candidate;
+            break;
         }
     }
 

@@ -158,10 +158,19 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     if (PropName.IsEmpty()) {
       Payload->TryGetStringField(TEXT("propertyName"), PropName);
     }
-    const TSharedPtr<FJsonValue> PropVal =
-        Payload->TryGetField(TEXT("property_value"));
-    const TSharedPtr<FJsonValue> ResolvedPropVal =
-        PropVal.IsValid() ? PropVal : Payload->TryGetField(TEXT("value"));
+    // The published capability schema declares `propertyValue` and, with
+    // additionalProperties:false, rejects both spellings this handler used to read. That
+    // left set_scs_property uncallable through the gateway by ANY input: the contract
+    // spelling never reached the handler, and the handler spellings never passed
+    // validation. Prefer the contract, keep the legacy WebSocket spellings as fallbacks.
+    TSharedPtr<FJsonValue> ResolvedPropVal =
+        Payload->TryGetField(TEXT("propertyValue"));
+    if (!ResolvedPropVal.IsValid()) {
+      ResolvedPropVal = Payload->TryGetField(TEXT("property_value"));
+    }
+    if (!ResolvedPropVal.IsValid()) {
+      ResolvedPropVal = Payload->TryGetField(TEXT("value"));
+    }
     TSharedPtr<FJsonObject> Result = FSCSHandlers::SetSCSComponentProperty(
         BPPath, CompName, PropName, ResolvedPropVal);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId,

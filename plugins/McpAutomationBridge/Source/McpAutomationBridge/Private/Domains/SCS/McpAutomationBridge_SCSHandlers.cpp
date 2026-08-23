@@ -1,6 +1,7 @@
+#include "Domains/SCS/McpAutomationBridge_SCSHandlers.h"
+
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-#include "Domains/SCS/McpAutomationBridge_SCSHandlers.h"
 #include "Domains/SCS/McpAutomationBridge_SCSHandlersSupport.h"
 
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"

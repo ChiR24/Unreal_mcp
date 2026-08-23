@@ -102,6 +102,7 @@ static bool GetNodeDetails(FActionContext& Context)
         }
     }
     Result->SetArrayField(TEXT("pins"), Pins);
+    Result->SetStringField(TEXT("nodeId"), NodeId);
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(TEXT("Node details retrieved."), Result);
     return true;

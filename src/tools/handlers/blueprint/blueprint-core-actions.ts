@@ -35,9 +35,18 @@ export const blueprintCoreHandlers: Readonly<Record<string, BlueprintActionHandl
     requestedPath: blueprintTarget(context),
     saveAfterCompile: optionalBoolean(context.argsRecord.saveAfterCompile)
   }),
-  probe_handle: async (context) => await executeBlueprintRequest(context, 'blueprint_probe_subobject_handle', {
-    componentClass: optionalString(context.argsRecord.componentClass) ?? ''
-  }),
+  probe_handle: async (context) => {
+    const result = await executeBlueprintRequest(context, 'blueprint_probe_handle', {
+      requestedPath: blueprintTarget(context),
+      componentClass: optionalString(context.argsRecord.componentClass) ?? '',
+      operations: context.argsRecord.operations,
+      timeoutMs: optionalNumber(context.argsRecord.timeoutMs)
+    });
+    if (result.reachable === undefined && result.exists !== undefined) {
+      result.reachable = result.exists;
+    }
+    return result;
+  },
   get: async (context) => await handleBlueprintGetAction(context)
 };
 

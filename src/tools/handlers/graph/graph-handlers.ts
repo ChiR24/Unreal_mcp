@@ -150,6 +150,9 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
     if (processedRecord.defaultValue !== undefined && processedRecord.value === undefined) {
         processedRecord.value = processedRecord.defaultValue;
     }
+    if (processedRecord.propertyValue !== undefined && processedRecord.value === undefined) {
+        processedRecord.value = processedRecord.propertyValue;
+    }
     if (processedRecord.x === undefined && typeof processedRecord.posX === 'number') {
         processedRecord.x = processedRecord.posX;
     }
@@ -210,6 +213,57 @@ async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools
     return cleanObject(promoteScalarResultFields(res)) as Record<string, unknown>;
 }
 
+// The material root output is a UMaterialGraphNode_Root, not a UMaterialExpression, so the
+// plugin cannot resolve it by object name — FindExpressionInHost only walks the expression
+// list. It is addressed by this sentinel instead, which McpMaterialAuthoringHandlers::
+// HandleConnectNodes matches before it attempts an expression lookup.
+const MATERIAL_ROOT_SENTINEL = 'Main';
+
+// Spellings callers reach for when they mean the root: the node's editor label, the class
+// name reported by tooling, and the material's own name are all common guesses.
+const MATERIAL_ROOT_TARGET_ALIASES: ReadonlySet<string> = new Set([
+    'main',
+    'root',
+    'rootnode',
+    'output',
+    'materialoutput',
+    'material',
+    'materialgraphnoderoot'
+]);
+
+function isMaterialRootTarget(target: string): boolean {
+    // Drop spaces/underscores so 'Material Output' and 'MaterialGraphNode_Root' both match,
+    // then allow the trailing instance index the editor appends ('..._Root_0').
+    const key = target.trim().toLowerCase().replace(/[\s_]+/g, '');
+    return MATERIAL_ROOT_TARGET_ALIASES.has(key) || /^materialgraphnoderoot\d+$/.test(key);
+}
+
+// Root inputs the plugin accepts. It compares InputName with case-sensitive equality, so
+// canonicalize here rather than forwarding whatever casing the caller used.
+// Keep in sync with the main-node branch of HandleConnectNodes.
+const MATERIAL_OUTPUT_PINS: readonly string[] = [
+    'BaseColor',
+    'EmissiveColor',
+    'Roughness',
+    'Metallic',
+    'Specular',
+    'Normal',
+    'Opacity',
+    'OpacityMask',
+    'AmbientOcclusion',
+    'SubsurfaceColor',
+    'WorldPositionOffset'
+];
+
+const MATERIAL_OUTPUT_PIN_BY_KEY: Record<string, string> = {
+    ...Object.fromEntries(MATERIAL_OUTPUT_PINS.map((pin) => [pin.toLowerCase(), pin])),
+    ao: 'AmbientOcclusion'
+};
+
+function canonicalMaterialOutputPin(inputName: string): string | undefined {
+    return MATERIAL_OUTPUT_PIN_BY_KEY[inputName.trim().toLowerCase().replace(/[\s_]+/g, '')];
+}
+
 async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
     const payload: ProcessedGraphArgs = { ...args, subAction: action };
 
@@ -219,16 +273,31 @@ async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITool
             payload.sourceNodeId = payload.fromNodeId;
         }
 
-        if (payload.toNodeId && !payload.targetNodeId) {
-            if (typeof payload.toNodeId === 'string') {
-                payload.targetNodeId = payload.toNodeId.toLowerCase() === 'root' ? 'Main' : payload.toNodeId;
-            }
+        if (!payload.targetNodeId && typeof payload.toNodeId === 'string') {
+            payload.targetNodeId = payload.toNodeId;
         }
 
         const targetInput = payload.toPin ?? payload.targetPin;
         if (targetInput && !payload.inputName) {
             if (typeof targetInput === 'string') {
                 payload.inputName = targetInput.replace(/\s+/g, '');
+            }
+        }
+
+        // Resolve the root output. This used to normalize only the legacy toNodeId alias,
+        // so the documented targetNodeId spelling was passed through untouched and 'Root'
+        // reached the plugin verbatim, where it failed as NODE_NOT_FOUND. Naming an input
+        // pin with no target at all also means the root.
+        if (typeof payload.targetNodeId === 'string' && isMaterialRootTarget(payload.targetNodeId)) {
+            payload.targetNodeId = MATERIAL_ROOT_SENTINEL;
+        } else if (!payload.targetNodeId && payload.inputName) {
+            payload.targetNodeId = MATERIAL_ROOT_SENTINEL;
+        }
+
+        if (payload.targetNodeId === MATERIAL_ROOT_SENTINEL && typeof payload.inputName === 'string') {
+            const canonical = canonicalMaterialOutputPin(payload.inputName);
+            if (canonical) {
+                payload.inputName = canonical;
             }
         }
     }

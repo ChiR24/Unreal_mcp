@@ -16,6 +16,7 @@
 #include "Engine/Blueprint.h"
 #include "K2Node.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Foundation/GraphLayout/McpGraphNodeExtent.h"
 #endif
 
 namespace McpBlueprintGraphHandlers
@@ -75,8 +76,17 @@ struct FActionContext
         Result->SetStringField(TEXT("nodeGuid"), NodeGuidText);
         Result->SetStringField(TEXT("nodeId"), NodeGuidText);
         Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
+        // Callers place nodes by coordinate but were told nothing back about
+        // where the node actually landed or how big it is, so consecutive
+        // creates silently stacked on top of each other.
+        const FString PlacementWarning =
+            McpGraphLayout::AddNodePlacementFields(Result, *NewNode);
         McpHandlerUtils::AddVerification(Result, Blueprint);
-        SendResponse(TEXT("Node created."), Result);
+        SendResponse(
+            PlacementWarning.IsEmpty()
+                ? FString(TEXT("Node created."))
+                : FString::Printf(TEXT("Node created. %s"), *PlacementWarning),
+            Result);
     }
 #endif
 };

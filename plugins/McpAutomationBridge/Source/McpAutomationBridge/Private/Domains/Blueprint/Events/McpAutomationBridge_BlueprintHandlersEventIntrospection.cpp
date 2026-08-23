@@ -128,6 +128,8 @@ FMcpAutomationBridge_BuildBlueprintSnapshot(UBlueprint *Blueprint,
   Snapshot->SetStringField(TEXT("blueprintPath"), NormalizedPath);
   Snapshot->SetStringField(TEXT("resolvedPath"), NormalizedPath);
   Snapshot->SetStringField(TEXT("assetPath"), Blueprint->GetPathName());
+  Snapshot->SetStringField(TEXT("parentClass"),
+                           Blueprint->ParentClass ? Blueprint->ParentClass->GetPathName() : FString());
   Snapshot->SetArrayField(TEXT("variables"), Variables);
   Snapshot->SetArrayField(
       TEXT("functions"),

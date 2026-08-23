@@ -7,6 +7,7 @@ import {
   sendWidgetAuthoringRequest,
   validateWidgetRequiredFields
 } from './widget-authoring-context.js';
+import { projectWidgetSlotName } from './widget-slot-projection.js';
 
 export async function handleWidgetAuthoringTools(
   action: string,
@@ -20,5 +21,6 @@ export async function handleWidgetAuthoringTools(
 
   const context = createWidgetAuthoringContext(args, tools);
   validateWidgetRequiredFields(context.argsRecord, requiredFields);
-  return await sendWidgetAuthoringRequest(context, action);
+  const response = await sendWidgetAuthoringRequest(context, action);
+  return projectWidgetSlotName(action, response);
 }

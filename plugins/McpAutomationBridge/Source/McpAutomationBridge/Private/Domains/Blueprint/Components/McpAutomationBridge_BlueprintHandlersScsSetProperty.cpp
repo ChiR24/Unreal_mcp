@@ -29,7 +29,11 @@ bool HandleScsSetProperty(const FBlueprintActionContext &Context) {
     FString PropertyValue;
     Payload->TryGetStringField(TEXT("componentName"), ComponentName);
     Payload->TryGetStringField(TEXT("propertyName"), PropertyName);
-    Payload->TryGetStringField(TEXT("value"), PropertyValue);
+    // `propertyValue` is the published schema spelling; `value` is the legacy WebSocket
+    // one and cannot pass gateway validation, which rejects undeclared parameters.
+    if (!Payload->TryGetStringField(TEXT("propertyValue"), PropertyValue)) {
+      Payload->TryGetStringField(TEXT("value"), PropertyValue);
+    }
 
     if (ComponentName.IsEmpty() || PropertyName.IsEmpty()) {
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,

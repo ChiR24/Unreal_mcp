@@ -46,7 +46,11 @@ export async function sendWidgetAuthoringRequest(
     `Automation bridge not available for widget authoring action: ${subAction}`,
     { timeoutMs: context.timeoutMs }
   );
-  return cleanRecord(result);
+  const cleaned = cleanRecord(result);
+  if (cleaned.slotName === undefined && typeof cleaned.widgetName === 'string' && cleaned.widgetName !== '') {
+    cleaned.slotName = cleaned.widgetName;
+  }
+  return cleaned;
 }
 
 function normalizeVector2Alias(payload: Record<string, unknown>, objectKey: string, xKey: string, yKey: string): void {

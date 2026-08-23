@@ -73,6 +73,10 @@ const WIDGET_ACTION_REQUIREMENTS: Readonly<Record<string, readonly string[]>> = 
   add_animation_track: ['widgetPath', 'animationName', 'slotName', 'trackType'],
   add_animation_keyframe: ['widgetPath', 'animationName'],
   set_animation_loop: ['widgetPath', 'animationName'],
+  // The canonical record declares add_quest_tracker under manage_blueprint with
+  // required ['action','widgetPath'], but it was absent here, so the handler
+  // refused it with UNKNOWN_ACTION - an advertised action no input could reach.
+  add_quest_tracker: ['widgetPath'],
   ...Object.fromEntries(WIDGET_PATH_ONLY_ACTIONS.map((action) => [action, ['widgetPath']])),
   ...Object.fromEntries(WIDGET_SLOT_ACTIONS.map((action) => [action, ['widgetPath', 'slotName']])),
   ...Object.fromEntries(NAME_ONLY_TEMPLATE_ACTIONS.map((action) => [action, ['name']]))

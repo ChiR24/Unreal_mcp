@@ -1,6 +1,7 @@
+#include "Domains/BlueprintCreation/McpAutomationBridge_BlueprintCreationHandlers.h"
+
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-#include "Domains/BlueprintCreation/McpAutomationBridge_BlueprintCreationHandlers.h"
 #include "Domains/BlueprintCreation/McpAutomationBridge_BlueprintCreationHandlersPrivate.h"
 #include "HAL/PlatformTime.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"

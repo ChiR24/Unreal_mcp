@@ -7,6 +7,8 @@
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersSubobjectTraits.h"
 
 #if WITH_EDITOR
+#include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersNestedPropertyPath.h"
+#include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersPropertyApply.h"
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/Blueprint.h"
@@ -23,40 +25,71 @@ namespace {
 void ApplyModifyScsModifyComponent(USimpleConstructionScript *LocalSCS, const TSharedPtr<FJsonObject> &Op, TSharedPtr<FJsonObject> OpSummary) {
 FString ComponentName;
 Op->TryGetStringField(TEXT("componentName"), ComponentName);
-const TSharedPtr<FJsonValue> TransformVal =
-    Op->TryGetField(TEXT("transform"));
-const TSharedPtr<FJsonObject> TransformObj =
-    TransformVal.IsValid() && TransformVal->Type == EJson::Object
-        ? TransformVal->AsObject()
-        : nullptr;
-if (!ComponentName.IsEmpty() && TransformObj.IsValid()) {
-  USCS_Node *Node = FindScsNodeByName(LocalSCS, ComponentName);
-  if (Node && Node->ComponentTemplate &&
-      Node->ComponentTemplate->IsA<USceneComponent>()) {
-    USceneComponent *SceneTemplate =
-        Cast<USceneComponent>(Node->ComponentTemplate);
-    FVector Location = SceneTemplate->GetRelativeLocation();
-    FRotator Rotation = SceneTemplate->GetRelativeRotation();
-    FVector Scale = SceneTemplate->GetRelativeScale3D();
-    ReadVectorField(TransformObj, TEXT("location"), Location, Location);
-    ReadRotatorField(TransformObj, TEXT("rotation"), Rotation,
-                     Rotation);
-    ReadVectorField(TransformObj, TEXT("scale"), Scale, Scale);
-    SceneTemplate->SetRelativeLocation(Location);
-    SceneTemplate->SetRelativeRotation(Rotation);
-    SceneTemplate->SetRelativeScale3D(Scale);
-    OpSummary->SetBoolField(TEXT("success"), true);
-    OpSummary->SetStringField(TEXT("componentName"), ComponentName);
-  } else {
-    OpSummary->SetBoolField(TEXT("success"), false);
-    OpSummary->SetStringField(
-        TEXT("warning"),
-        TEXT("Component not found or template missing"));
+const TSharedPtr<FJsonValue> TransformVal = Op->TryGetField(TEXT("transform"));
+const TSharedPtr<FJsonObject> TransformObj = TransformVal.IsValid() && TransformVal->Type == EJson::Object ? TransformVal->AsObject() : nullptr;
+const TSharedPtr<FJsonValue> PropertiesVal = Op->TryGetField(TEXT("properties"));
+const TSharedPtr<FJsonObject> PropertiesObj = PropertiesVal.IsValid() && PropertiesVal->Type == EJson::Object ? PropertiesVal->AsObject() : nullptr;
+if (ComponentName.IsEmpty()) {
+  OpSummary->SetBoolField(TEXT("success"), false);
+  OpSummary->SetStringField(
+      TEXT("warning"), TEXT("Missing component name"));
+  return;
+}
+USCS_Node *Node = FindScsNodeByName(LocalSCS, ComponentName);
+if (!Node || !Node->ComponentTemplate) {
+  OpSummary->SetBoolField(TEXT("success"), false);
+  OpSummary->SetStringField(
+      TEXT("warning"),
+      TEXT("Component not found or template missing"));
+  return;
+}
+bool bAnySuccess = false;
+if (TransformObj.IsValid() &&
+    Node->ComponentTemplate->IsA<USceneComponent>()) {
+  USceneComponent *SceneTemplate =
+      Cast<USceneComponent>(Node->ComponentTemplate);
+  FVector Location = SceneTemplate->GetRelativeLocation();
+  FRotator Rotation = SceneTemplate->GetRelativeRotation();
+  FVector Scale = SceneTemplate->GetRelativeScale3D();
+  ReadVectorField(TransformObj, TEXT("location"), Location, Location);
+  ReadRotatorField(TransformObj, TEXT("rotation"), Rotation,
+                   Rotation);
+  ReadVectorField(TransformObj, TEXT("scale"), Scale, Scale);
+  SceneTemplate->SetRelativeLocation(Location);
+  SceneTemplate->SetRelativeRotation(Rotation);
+  SceneTemplate->SetRelativeScale3D(Scale);
+  bAnySuccess = true;
+}
+if (PropertiesObj.IsValid()) {
+  TArray<FString> PropertyNames;
+  PropertiesObj->Values.GetKeys(PropertyNames);
+  for (const FString &PropName : PropertyNames) {
+    const TSharedPtr<FJsonValue> *PropValPtr =
+        PropertiesObj->Values.Find(PropName);
+    if (!PropValPtr || !PropValPtr->IsValid())
+      continue;
+    void *ContainerPtr = nullptr;
+    FString ResolveError;
+    FProperty *TargetProp =
+        ResolveNestedPropertyPath(Node->ComponentTemplate,
+                                  PropName, ContainerPtr, ResolveError);
+    if (TargetProp && ContainerPtr) {
+      FString FailureMessage;
+      if (ApplyJsonValueToProperty(ContainerPtr, TargetProp,
+                                   *PropValPtr, FailureMessage)) {
+        bAnySuccess = true;
+      }
+    }
   }
+}
+if (bAnySuccess) {
+  OpSummary->SetBoolField(TEXT("success"), true);
+  OpSummary->SetStringField(TEXT("componentName"), ComponentName);
 } else {
   OpSummary->SetBoolField(TEXT("success"), false);
   OpSummary->SetStringField(
-      TEXT("warning"), TEXT("Missing component name or transform"));
+      TEXT("warning"),
+      TEXT("No transform or properties applied"));
 }
 }
 

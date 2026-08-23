@@ -3,6 +3,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintAssetLoad.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"
@@ -79,6 +80,13 @@ bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
                "broken blueprint was NOT written to disk."));
     }
     Out->SetStringField(TEXT("blueprintPath"), Path);
+    // Derived from what actually happened, never from the request: a failed
+    // compile with a skipped save contributes nothing and the receipt stays
+    // truthfully empty rather than reporting a write that did not occur.
+    TArray<FString> CompileChanges;
+    if (bCompiled) { CompileChanges.Add(TEXT("compiled")); }
+    if (bSaved) { CompileChanges.Add(TEXT("saved")); }
+    AddMutationEvidence(Out, BP, CompileChanges);
     Bridge.SendAutomationResponse(
         RequestingSocket, RequestId, /*bSuccess=*/bCompiled,
         bCompiled ? TEXT("Blueprint compiled")

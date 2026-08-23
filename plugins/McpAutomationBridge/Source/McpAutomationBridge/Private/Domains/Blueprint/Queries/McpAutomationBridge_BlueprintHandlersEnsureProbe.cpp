@@ -156,6 +156,7 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("exists"), bExists);
+    Resp->SetBoolField(TEXT("reachable"), bExists);
     Resp->SetStringField(TEXT("path"), bExists ? CheckPath : Path);
     if (!AssetClass.IsEmpty()) {
       Resp->SetStringField(TEXT("assetClass"), AssetClass);
