@@ -7,9 +7,18 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  // subAction FIRST, `action` only as the fallback — the same priority the
+  // pre-queue gate's McpHandlerUtils::NormalizeAction uses. This domain reaches
+  // execute_python, so a dispatcher that read `action` while the gate read
+  // `subAction` let a read-scoped caller buy in-process code execution.
+  // AuthorizeAutomationRequest already refuses a payload whose two fields
+  // disagree; resolving them in the gate's own order means this handler cannot
+  // diverge even if that guard is ever bypassed.
   FString SubAction;
   if (Payload.IsValid()) {
-    Payload->TryGetStringField(TEXT("action"), SubAction);
+    if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("action"), SubAction);
+    }
   }
 
   const FString Lower = SubAction.ToLower();
@@ -26,7 +35,17 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       Lower == TEXT("analyze_trace");
   const bool bLogSubscriptionAction =
       Lower == TEXT("subscribe") || Lower == TEXT("unsubscribe");
-  if (!Lower.StartsWith(TEXT("run_ubt")) &&
+  // system_control publishes console_command/execute_command, but the native
+  // accept list never included them, so both answered NOT_IMPLEMENTED on this
+  // transport while control_editor.console_command worked. Same published-but-
+  // unreachable drift as set_pin_default_value; forward instead of refusing.
+  const bool bConsoleAction =
+      Lower == TEXT("console_command") || Lower == TEXT("execute_command");
+  const bool bPluginAction = Lower == TEXT("list_plugins") ||
+                             Lower == TEXT("enable_plugin") ||
+                             Lower == TEXT("disable_plugin");
+  if (!bPluginAction && !bConsoleAction &&
+      !Lower.StartsWith(TEXT("run_ubt")) &&
       !Lower.StartsWith(TEXT("run_tests")) &&
       !Lower.StartsWith(TEXT("test_progress")) &&
       !Lower.StartsWith(TEXT("test_stale")) &&
@@ -44,6 +63,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                         TEXT("System control payload missing"),
                         TEXT("INVALID_PAYLOAD"));
     return true;
+  }
+
+  if (bConsoleAction) {
+    return HandleControlEditorConsoleCommand(RequestId, Payload, RequestingSocket);
+  }
+
+  if (bPluginAction) {
+    return McpSystemControlHandlers::HandleManagePlugins(this, RequestId, Lower,
+                                                         Payload, RequestingSocket);
   }
 
   if (bInsightsAction) {

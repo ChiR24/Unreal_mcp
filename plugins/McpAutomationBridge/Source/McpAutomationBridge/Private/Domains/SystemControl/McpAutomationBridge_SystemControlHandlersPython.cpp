@@ -274,10 +274,25 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
   Result->SetStringField(TEXT("executionId"), SafeId);
   Result->SetStringField(TEXT("codeSha256"), CodeSha256);
 
+  // The traceback rides in Result.error, but an error receipt carries only the
+  // message — so a failing script reported a bare "Python execution failed" with
+  // no way to find out why, on either transport and with nothing in the editor
+  // log either. Fold the interpreter's own text into the message.
+  FString FailureMessage(TEXT("Python execution failed"));
+  if (!bSuccess) {
+    const FString TrimmedError = Error.TrimStartAndEnd();
+    if (!TrimmedError.IsEmpty()) {
+      static constexpr int32 MaxErrorChars = 2000;
+      FailureMessage += TEXT(": ");
+      FailureMessage += TrimmedError.Len() > MaxErrorChars
+          ? TrimmedError.Left(MaxErrorChars) + TEXT("\n... (truncated)")
+          : TrimmedError;
+    }
+  }
+
   Self->SendAutomationResponse(
       RequestingSocket, RequestId, bSuccess,
-      bSuccess ? TEXT("Python executed successfully")
-               : TEXT("Python execution failed"),
+      bSuccess ? TEXT("Python executed successfully") : FailureMessage,
       Result, bSuccess ? FString() : TEXT("PYTHON_ERROR"));
   return true;
 #else

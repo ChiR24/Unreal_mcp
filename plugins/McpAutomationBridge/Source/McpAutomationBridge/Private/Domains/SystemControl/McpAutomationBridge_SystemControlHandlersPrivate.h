@@ -39,5 +39,10 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
                          const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload,
                          FSystemControlSocket RequestingSocket);
+bool HandleManagePlugins(UMcpAutomationBridgeSubsystem* Self,
+                         const FString& RequestId,
+                         const FString& SubAction,
+                         const TSharedPtr<FJsonObject>& Payload,
+                         FSystemControlSocket RequestingSocket);
 
 }
