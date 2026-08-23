@@ -16,12 +16,18 @@ describe('system_control routing: local TS dispatch vs fallback tool dispatch', 
 		}
 	});
 
-	it('only set_project_setting and execute_python use fallback tool dispatch to system_control', () => {
+	it('only set_project_setting, execute_python and the three plugin actions use fallback tool dispatch to system_control', () => {
 		const toolDispatch = SYSTEM_CONTROL_RECORDS.filter(
 			(r) => r.routing.dispatchMode === 'tool',
 		);
 		const toolActions = toolDispatch.map((r) => r.legacyIds[0].action).sort();
-		expect(toolActions).toEqual(['execute_python', 'set_project_setting']);
+		expect(toolActions).toEqual([
+			'disable_plugin',
+			'enable_plugin',
+			'execute_python',
+			'list_plugins',
+			'set_project_setting',
+		]);
 		for (const record of toolDispatch) {
 			expect(record.routing.dispatchAction).toBe('system_control');
 		}

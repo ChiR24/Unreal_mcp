@@ -21,12 +21,12 @@ describe('system_control hash parity: recompute and JSON round-trip', () => {
 		}
 	});
 
-	it('JSON round-trip preserves all 52 records with identical hashes', () => {
+	it('JSON round-trip preserves all 55 records with identical hashes', () => {
 		const json = JSON.stringify(SYSTEM_CONTROL_RECORDS);
 		const restored = JSON.parse(json) as typeof SYSTEM_CONTROL_RECORDS;
 		const catalog = parseCapabilityCatalog([...restored]);
-		expect(catalog).toHaveLength(52);
-		for (let i = 0; i < 52; i++) {
+		expect(catalog).toHaveLength(55);
+		for (let i = 0; i < 55; i++) {
 			expect(catalog[i].hashes).toEqual(SYSTEM_CONTROL_RECORDS[i].hashes);
 		}
 	});

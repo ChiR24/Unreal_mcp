@@ -1,7 +1,7 @@
 /**
  * Shared fixtures/helpers for the focused system_control capability record tests.
  *
- * Extracted only because EXPLICIT_ACTIONS / ALL_52_ACTIONS / findByAction are
+ * Extracted only because EXPLICIT_ACTIONS / ALL_55_ACTIONS / findByAction are
  * reused across the split test modules. No production code is touched.
  */
 import { PERFORMANCE_ACTIONS } from '../../../../definitions/shared/action-sets.js';
@@ -41,9 +41,12 @@ export const EXPLICIT_ACTIONS = [
 	'validate_assets',
 	'set_project_setting',
 	'execute_python',
+	'list_plugins',
+	'enable_plugin',
+	'disable_plugin',
 ] as const;
 
-export const ALL_52_ACTIONS = [...EXPLICIT_ACTIONS, ...PERFORMANCE_ACTIONS];
+export const ALL_55_ACTIONS = [...EXPLICIT_ACTIONS, ...PERFORMANCE_ACTIONS];
 
 export function findByAction(action: string) {
 	const record = SYSTEM_CONTROL_RECORDS.find(

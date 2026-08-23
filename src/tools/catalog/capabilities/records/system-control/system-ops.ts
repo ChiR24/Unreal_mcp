@@ -148,6 +148,17 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
       code: { type: 'string', description: 'Python code to execute inline (1 MB max).', maxLength: 1048576 },
       file: { type: 'string', description: 'Path to a .py file to execute.', maxLength: 4096 },
     },
+    // The handler already returns stdout and the interpreter traceback, but the
+    // default {success, message} output schema is closed, so both were stripped
+    // before reaching the caller. A failing script reported only "Python
+    // execution failed" — no traceback on the receipt and none in the editor
+    // log either, leaving the failure undiagnosable from either transport.
+    outputProps: {
+      output: { type: 'string', description: 'Captured stdout from the script.' },
+      error: { type: 'string', description: 'Captured stderr and the interpreter traceback when the script raises.' },
+      executionId: { type: 'string', description: 'Correlates the run with the temp wrapper under Saved/Temp/MCP_Python.' },
+      codeSha256: { type: 'string', description: 'SHA-256 of the executed code, as logged.' },
+    },
     required: [],
     requiredOneOf: ['code', 'file'],
     effect: 'write',
