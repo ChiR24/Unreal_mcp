@@ -34,6 +34,9 @@ export default [
       'vitest.config.ts',
       'test-*.js',
       'tests/**/*.mjs',
+      // Gitignored scratch: absent in CI, so linting it locally reports
+      // failures the pipeline will never see and hides ones it will.
+      '.omo/**',
     ],
   },
   js.configs.recommended,

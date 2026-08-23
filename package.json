@@ -53,7 +53,12 @@
     "primitives:check": "vitest run tests/unit/mcp-primitives/resources-parity.test.ts tests/unit/mcp-primitives/prompts-completions-parity.test.ts tests/unit/mcp-primitives/session-subscription-parity.test.ts tests/unit/mcp-primitives/profiles-fallback-parity.test.ts tests/unit/mcp-primitives/parity-harness-selftest.test.ts tests/unit/server/primitive-startup.test.ts",
     "security:check": "vitest run tests/unit/security tests/unit/adversarial",
     "eval:check": "vitest run --config tests/eval/vitest.eval.config.ts",
-    "workflow:check": "vitest run tests/unit/workflow_ tests/unit/release-archive-excludes.test.ts"
+    "workflow:check": "vitest run tests/unit/workflow_ tests/unit/release-archive-excludes.test.ts",
+    "native:compile": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/native-gates.ps1 -Gate compile",
+    "native:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/native-gates.ps1 -Gate smoke",
+    "native:smoke:core": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/native-gates.ps1 -Gate smokecore",
+    "native:smoke:fab": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/native-gates.ps1 -Gate smokefab",
+    "native:check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/native-gates.ps1"
   },
   "engines": {
     "node": ">=20.19.0"

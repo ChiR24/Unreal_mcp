@@ -40,6 +40,12 @@ tests/reports/
 tests/eval/evidence/*
 !tests/eval/evidence/task-4-baseline.json
 
+# Black-box QA campaign reports (large source-blind campaign artifacts; the
+# prior MCPBB campaign report is likewise excluded, previously only via the
+# machine-local .git/info/exclude)
+MCP_BLACKBOX_TEST_REPORT.md
+MCP_BLACK_BOX_TEST_REPORT.md
+
 # Temporary files
 *.tmp
 *.temp

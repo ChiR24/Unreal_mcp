@@ -204,6 +204,10 @@ jobs:
       - name: Package plugin with RunUAT BuildPlugin
         env:
           UNREAL_ENGINE_ROOT: ${{ secrets.UNREAL_ENGINE_ROOT }}
+          # Strict deprecation build: the quiet default is for local iteration,
+          # so CI must be the place the module's own deprecation drift stays
+          # visible (Build.cs honours MCP_STRICT_DEPRECATIONS=1).
+          MCP_STRICT_DEPRECATIONS: '1'
         run: ./scripts/package-plugin.sh "$UNREAL_ENGINE_ROOT" build/plugin-package
 
   live-matrix:
