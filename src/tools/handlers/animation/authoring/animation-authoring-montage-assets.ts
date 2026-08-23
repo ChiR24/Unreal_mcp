@@ -44,7 +44,7 @@ export async function handleMontageAssetAction(
 
   case 'add_montage_section': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: true },
+      { key: 'assetPath', aliases: ['montagePath'], required: true },
       { key: 'sectionName', required: true },
       { key: 'startTime', required: true },
       { key: 'save', default: true },
@@ -76,7 +76,7 @@ export async function handleMontageAssetAction(
 
   case 'add_montage_slot': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: true },
+      { key: 'assetPath', aliases: ['montagePath'], required: true },
       { key: 'animationPath', required: true },
       { key: 'slotName', default: 'DefaultSlot' },
       { key: 'startTime', default: 0 },
@@ -116,7 +116,7 @@ export async function handleMontageAssetAction(
 
   case 'set_section_timing': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: true },
+      { key: 'assetPath', aliases: ['montagePath'], required: true },
       { key: 'sectionName', required: true },
       { key: 'startTime' },
       { key: 'length' },
@@ -151,7 +151,7 @@ export async function handleMontageAssetAction(
 
   case 'add_montage_notify': {
     const params = normalizeArgs(args, [
-      { key: 'assetPath', required: true },
+      { key: 'assetPath', aliases: ['montagePath'], required: true },
       { key: 'notifyClass', required: false },
       { key: 'time', required: true },
       { key: 'trackIndex', default: 0 },
@@ -170,6 +170,11 @@ export async function handleMontageAssetAction(
     const trackIndex = nonNegativeIntegerOrDefault(params['trackIndex'], 0);
     const notifyName = extractOptionalString(params, 'notifyName');
     const save = extractOptionalBoolean(params, 'save') ?? true;
+    if (!notifyClass && !notifyName) {
+      // The authoring handler rejects the empty/empty pair with MISSING_NOTIFY_PARAMS; fail here so
+      // the doomed call does not burn a bridge round-trip. Either key alone is a valid call shape.
+      return ResponseFactory.errorWithCode('MISSING_NOTIFY_PARAMS', "add_montage_notify requires at least one of 'notifyName' or 'notifyClass'");
+    }
 
     const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
       subAction: 'add_montage_notify',
