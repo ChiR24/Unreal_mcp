@@ -123,7 +123,6 @@ describe('plugin manifest contracts', () => {
       'GeometryScripting',
       'GeometryProcessing',
       'ChaosCloth',
-      'StructUtils',
       'Metasound',
       'StateTree',
       'MassGameplay',

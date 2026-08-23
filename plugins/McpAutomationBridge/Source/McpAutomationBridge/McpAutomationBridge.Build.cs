@@ -69,29 +69,25 @@ public class McpAutomationBridge : ModuleRules {
                 AddOptionalModuleGroup(EngineDir, "Movie Pipeline Mask Render Pass", new string[] { "MoviePipelineMaskRenderPass" });
             bool bHasMoviePipelineObjectIdPass = bHasMoviePipelineMaskModule &&
                 File.Exists(Path.Combine(EngineDir, "Plugins", "MovieScene", "MoviePipelineMaskRenderPass", "Source", "MoviePipelineMaskRenderPass", "Public", "MoviePipelineObjectIdPass.h"));
-            bool bHasMoviePipelinePassMetadata = bHasMovieRenderPipeline &&
-                FileContains(Path.Combine(EngineDir, "Plugins", "MovieScene", "MovieRenderPipeline", "Source", "MovieRenderPipelineRenderPasses", "Public", "MoviePipelineDeferredPasses.h"), "bHighPrecisionOutput");
+            bool bHasMoviePipelinePassMetadata = bHasMovieRenderPipeline && FileContains(Path.Combine(EngineDir, "Plugins", "MovieScene", "MovieRenderPipeline", "Source", "MovieRenderPipelineRenderPasses", "Public", "MoviePipelineDeferredPasses.h"), "bHighPrecisionOutput");
             bool bHasSmaa = FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "SceneUtils.h"), "AAM_SMAA");
             bool bHasTakeRecorder = AddOptionalModuleGroup(EngineDir, "Take Recorder", new string[] { "TakesCore", "TakeRecorder", "TakeRecorderSources" });
-            bool bHasTakeRecorderOpenSequencer = bHasTakeRecorder &&
-                FileContains(Path.Combine(EngineDir, "Plugins", "VirtualProduction", "Takes", "Source", "TakeRecorder", "Public", "Recorder", "TakeRecorderParameters.h"), "bOpenSequencer");
             bool bHasReplayApi = File.Exists(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"));
-            bool bHasReplaySubsystemTotalTime = bHasReplayApi &&
-                FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"), "GetReplayTotalTime");
+            bool bHasReplaySubsystemTotalTime = bHasReplayApi && FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"), "GetReplayTotalTime");
+            bool bHasTakeRecorderOpenSequencer = bHasTakeRecorder && FileContains(Path.Combine(EngineDir, "Plugins", "VirtualProduction", "Takes", "Source", "TakeRecorder", "Public", "Recorder", "TakeRecorderParameters.h"), "bOpenSequencer");
 
-            PublicDefinitions.AddRange(new string[] { bHasCinematicCamera ? "MCP_HAS_CINEMATIC_CAMERA=1" : "MCP_HAS_CINEMATIC_CAMERA=0", bHasMediaAssets ? "MCP_HAS_MEDIA_ASSETS=1" : "MCP_HAS_MEDIA_ASSETS=0" });
-            PublicDefinitions.Add(bHasMovieRenderPipeline ? "MCP_HAS_MOVIE_RENDER_PIPELINE=1" : "MCP_HAS_MOVIE_RENDER_PIPELINE=0");
-            PublicDefinitions.AddRange(new string[] { bHasMoviePipelineObjectIdPass ? "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=1" : "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0", bHasMoviePipelinePassMetadata ? "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=1" : "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=0" });
-            bool bHasTeds = AddOptionalModuleGroup(EngineDir, "TypedElementFramework", new string[] { "TypedElementFramework" }); PublicDefinitions.AddRange(new string[] { bHasSmaa ? "MCP_HAS_SMAA=1" : "MCP_HAS_SMAA=0", bHasTeds ? "MCP_HAS_TEDS=1" : "MCP_HAS_TEDS=0" });
-            PublicDefinitions.Add(bHasTakeRecorder ? "MCP_HAS_TAKE_RECORDER=1" : "MCP_HAS_TAKE_RECORDER=0");
-            PublicDefinitions.Add(bHasTakeRecorderOpenSequencer ? "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=1" : "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=0");
-            PublicDefinitions.Add(bHasReplayApi ? "MCP_HAS_REPLAY_API=1" : "MCP_HAS_REPLAY_API=0");
-            PublicDefinitions.Add(bHasReplaySubsystemTotalTime ? "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=1" : "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=0");
+            bool bHasTeds = AddOptionalModuleGroup(EngineDir, "TypedElementFramework", new string[] { "TypedElementFramework" });
+            PublicDefinitions.AddRange(new string[] {
+                bHasCinematicCamera ? "MCP_HAS_CINEMATIC_CAMERA=1" : "MCP_HAS_CINEMATIC_CAMERA=0", bHasMediaAssets ? "MCP_HAS_MEDIA_ASSETS=1" : "MCP_HAS_MEDIA_ASSETS=0",
+                bHasMovieRenderPipeline ? "MCP_HAS_MOVIE_RENDER_PIPELINE=1" : "MCP_HAS_MOVIE_RENDER_PIPELINE=0", bHasSmaa ? "MCP_HAS_SMAA=1" : "MCP_HAS_SMAA=0",
+                bHasMoviePipelineObjectIdPass ? "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=1" : "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0", bHasTeds ? "MCP_HAS_TEDS=1" : "MCP_HAS_TEDS=0",
+                bHasTakeRecorder ? "MCP_HAS_TAKE_RECORDER=1" : "MCP_HAS_TAKE_RECORDER=0", bHasReplayApi ? "MCP_HAS_REPLAY_API=1" : "MCP_HAS_REPLAY_API=0",
+                bHasTakeRecorderOpenSequencer ? "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=1" : "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=0", bHasReplaySubsystemTotalTime ? "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=1" : "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=0"
+            });
 
             AddOptionalModules(Target, EngineDir, new string[] { "D|LevelSequenceEditor|LevelSequenceEditor", "D|NiagaraEditor|NiagaraEditor", "D|EnhancedInput|EnhancedInput", "D|InputEditor|InputEditor", "D|BehaviorTreeEditor|BehaviorTreeEditor", "D|DataValidation|DataValidation", "D|Synthesis|Synthesis", "D|IKRig|IKRig", "D|IKRigEditor|IKRigEditor", "D|ChaosVehicles|ChaosVehicles", "D|AnimationData|AnimationData" });
 
-            PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
-            PublicDefinitions.Add("MCP_HAS_EDGRAPH_SCHEMA_K2=1");
+            PublicDefinitions.AddRange(new string[] { "MCP_HAS_K2NODE_HEADERS=1", "MCP_HAS_EDGRAPH_SCHEMA_K2=1" });
             ConfigureSubobjectData(EngineDir);
             PublicDefinitions.Add(HasWorldPartitionForEachDataLayer(EngineDir) ? "MCP_HAS_WP_FOR_EACH_DATALAYER=1" : "MCP_HAS_WP_FOR_EACH_DATALAYER=0");
 
