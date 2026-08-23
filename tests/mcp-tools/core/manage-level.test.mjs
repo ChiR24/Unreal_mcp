@@ -47,6 +47,7 @@ const testCases = [
 
   // === METADATA ===
   { scenario: 'CONFIG: set_metadata', toolName: 'manage_level', arguments: { action: 'set_metadata', assetPath: MAIN_LEVEL, metadata: { suite: 'manage_level', timestamp: ts } }, expected: 'success' },
+  { scenario: 'CONFIG: set_world_settings', toolName: 'manage_level', arguments: { action: 'set_world_settings', gameMode: '/Game/Maps/BP_RaceGameMode', killZ: -100000, gravityZ: -980, timeDilation: 1, enableWorldBoundsChecks: true }, expected: 'success' },
 
   // === IMPORT / EXPORT / INFO ===
   { scenario: 'ACTION: export_level', toolName: 'manage_level', arguments: { action: 'export_level', levelPath: MAIN_LEVEL, exportPath: EXPORTED_LEVEL }, expected: 'success', timeoutMs: 45000 },

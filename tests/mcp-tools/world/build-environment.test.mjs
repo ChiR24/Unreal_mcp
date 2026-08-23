@@ -256,6 +256,9 @@ const testCases = [
     { scenario: 'CONFIG: configure_mesh_randomization', toolName: 'build_environment', arguments: { action: 'configure_mesh_randomization', randomizeScale: true, minScale: 0.9, maxScale: 1.1, randomizeRotation: true, rotationRange: 45 }, expected: 'success' },
     // === CREATE ===
     { scenario: 'CREATE: create_road_spline', toolName: 'build_environment', arguments: { action: 'create_road_spline', actorName: ROAD_SPLINE, location: { x: 0, y: 500, z: 0 } }, expected: 'success|already exists' },
+    // Route, mesh and loop together: the handler used to ignore points/meshPath entirely and
+    // emit a fixed demo zigzag with no geometry, so this asserts the real deformed road.
+    { scenario: 'CREATE: create_road_spline with explicit route and mesh', toolName: 'build_environment', arguments: { action: 'create_road_spline', actorName: 'IT_RoadLoop', meshPath: '/Engine/BasicShapes/Cube', materialPath: '/Engine/BasicShapes/BasicShapeMaterial', width: 600, closedLoop: true, points: [{ position: { x: 0, y: 0, z: 0 } }, { position: { x: 2000, y: 0, z: 0 } }, { position: { x: 2000, y: 2000, z: 0 } }, { position: { x: 0, y: 2000, z: 0 } }] }, expected: 'success|already exists' },
     { scenario: 'CREATE: create_river_spline', toolName: 'build_environment', arguments: { action: 'create_river_spline', actorName: RIVER_SPLINE, location: { x: 0, y: 650, z: 0 } }, expected: 'success|already exists' },
     { scenario: 'CREATE: create_fence_spline', toolName: 'build_environment', arguments: { action: 'create_fence_spline', actorName: FENCE_SPLINE, location: { x: 0, y: 800, z: 0 } }, expected: 'success|already exists' },
     { scenario: 'CREATE: create_wall_spline', toolName: 'build_environment', arguments: { action: 'create_wall_spline', actorName: WALL_SPLINE, location: { x: 0, y: 950, z: 0 } }, expected: 'success|already exists' },

@@ -64,8 +64,35 @@ const testCases = [
   { scenario: 'ACTION: map_surface_to_sound', toolName: 'manage_character', arguments: { action: 'map_surface_to_sound', blueprintPath: '${captured:blueprintPath}', surfaceType: 'Default' }, expected: 'success', assertions: [{ path: 'structuredContent.result.surfaceType', equals: 'Default', label: 'surface type mapped' }] },
   { scenario: 'CONFIG: configure_footstep_fx', toolName: 'manage_character', arguments: { action: 'configure_footstep_fx', blueprintPath: '${captured:blueprintPath}', volumeMultiplier: 0.8, particleScale: 1.25 }, expected: 'success', assertions: [{ path: 'structuredContent.result.particleScale', equals: 1.25, label: 'footstep particle scale applied' }] },
 
+  // === RETRY SAFETY (BB-012) ===
+  // Each setup action is executed a SECOND time against the same Character.
+  // The ensure-style variable add must converge: no duplicate variables, no
+  // error, and exactly one logical feature per action.
+  { scenario: 'RETRY: setup_mantling converges without duplicates', toolName: 'manage_character', arguments: { action: 'setup_mantling', blueprintPath: '${captured:blueprintPath}', mantleHeight: 180, mantleReachDistance: 120 }, expected: 'success' },
+  { scenario: 'RETRY: setup_vaulting converges without duplicates', toolName: 'manage_character', arguments: { action: 'setup_vaulting', blueprintPath: '${captured:blueprintPath}', vaultHeight: 120, vaultDepth: 200 }, expected: 'success' },
+  { scenario: 'RETRY: setup_climbing converges without duplicates', toolName: 'manage_character', arguments: { action: 'setup_climbing', blueprintPath: '${captured:blueprintPath}', climbSpeed: 240, climbableTag: 'Climbable' }, expected: 'success' },
+  { scenario: 'RETRY: setup_sliding converges without duplicates', toolName: 'manage_character', arguments: { action: 'setup_sliding', blueprintPath: '${captured:blueprintPath}', slideSpeed: 850, slideDuration: 1.1, slideCooldown: 0.6 }, expected: 'success' },
+  { scenario: 'RETRY: setup_wall_running converges without duplicates', toolName: 'manage_character', arguments: { action: 'setup_wall_running', blueprintPath: '${captured:blueprintPath}', wallRunSpeed: 720, wallRunDuration: 1.8, wallRunGravityScale: 0.5 }, expected: 'success' },
+  { scenario: 'RETRY: setup_grappling converges without duplicates', toolName: 'manage_character', arguments: { action: 'setup_grappling', blueprintPath: '${captured:blueprintPath}', grappleRange: 1500, grappleSpeed: 1800, grappleTargetTag: 'GrappleTarget' }, expected: 'success' },
+  { scenario: 'RETRY: setup_footstep_system converges without duplicates', toolName: 'manage_character', arguments: { action: 'setup_footstep_system', blueprintPath: '${captured:blueprintPath}', footstepEnabled: true, footstepSocketLeft: 'foot_l', footstepSocketRight: 'foot_r', footstepTraceDistance: 75 }, expected: 'success' },
+
+  // === WRONG TARGET (BB-012) ===
+  // A non-Character blueprint (the anim blueprint's AnimInstance parent chain)
+  // must be rejected by the prerequisite gate with zero mutation.
+  { scenario: 'ERROR: setup_climbing rejects a non-Character blueprint before mutation', toolName: 'manage_character', arguments: { action: 'setup_climbing', blueprintPath: '${captured:animBlueprintPath}', climbSpeed: 240 }, expected: { condition: 'error', errorPattern: 'invalid_object_type' } },
+
   // === INFO ===
-  { scenario: 'INFO: get_character_info', toolName: 'manage_character', arguments: { action: 'get_character_info', blueprintPath: '${captured:blueprintPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.hasCamera', equals: true, label: 'character info sees camera component' }] },
+  { scenario: 'INFO: get_character_info', toolName: 'manage_character', arguments: { action: 'get_character_info', blueprintPath: '${captured:blueprintPath}' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.hasCamera', equals: true, label: 'character info sees camera component' },
+    { path: 'structuredContent.result.movementVariables.variableNames', minLength: 10, label: 'movement variables reported as bounded object list' },
+    { path: 'structuredContent.result.movementVariables.setupFeatures.mantle.configured', equals: true, label: 'mantle feature configured after retry' },
+    { path: 'structuredContent.result.movementVariables.setupFeatures.vault.configured', equals: true, label: 'vault feature configured after retry' },
+    { path: 'structuredContent.result.movementVariables.setupFeatures.climb.configured', equals: true, label: 'climb feature configured after retry' },
+    { path: 'structuredContent.result.movementVariables.setupFeatures.slide.configured', equals: true, label: 'slide feature configured after retry' },
+    { path: 'structuredContent.result.movementVariables.setupFeatures.wallRun.configured', equals: true, label: 'wall run feature configured after retry' },
+    { path: 'structuredContent.result.movementVariables.setupFeatures.grapple.configured', equals: true, label: 'grapple feature configured after retry' },
+    { path: 'structuredContent.result.movementVariables.setupFeatures.footsteps.configured', equals: true, label: 'footsteps feature configured after retry' }
+  ] },
   // params envelope: clients that cannot send arbitrary top-level fields nest them
   // under `params`, which is merged with top-level arguments before routing.
   { scenario: 'INFO: get_character_info via params envelope', toolName: 'manage_character', arguments: { action: 'get_character_info', params: { blueprintPath: '${captured:blueprintPath}' } }, expected: 'success', assertions: [{ path: 'structuredContent.result.hasCamera', equals: true, label: 'nested params resolved the same character blueprint' }] },

@@ -15,10 +15,14 @@ describe('MessageHandler automation events', () => {
     it('allows manage_sequence responses to echo their native sub-action', async () => {
         const tracker = new RequestTracker(10);
         const handler = new MessageHandler(tracker);
-        const { requestId, promise } = tracker.createRequest('manage_sequence', {
-            action: 'create_master_sequence',
-            subAction: 'create_master_sequence'
-        }, 10000);
+        const { requestId, promise } = tracker.createRequest({
+            action: 'manage_sequence',
+            payload: {
+                action: 'create_master_sequence',
+                subAction: 'create_master_sequence'
+            },
+            timeoutMs: 10000
+        });
 
         handler.handleMessage({
             type: 'automation_response',
@@ -46,9 +50,13 @@ describe('MessageHandler automation events', () => {
     it('still flags unrelated response action mismatches', async () => {
         const tracker = new RequestTracker(10);
         const handler = new MessageHandler(tracker);
-        const { requestId, promise } = tracker.createRequest('control_actor', {
-            action: 'spawn'
-        }, 10000);
+        const { requestId, promise } = tracker.createRequest({
+            action: 'control_actor',
+            payload: {
+                action: 'spawn'
+            },
+            timeoutMs: 10000
+        });
 
         handler.handleMessage({
             type: 'automation_response',

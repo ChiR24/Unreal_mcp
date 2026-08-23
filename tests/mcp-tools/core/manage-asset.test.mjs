@@ -137,6 +137,7 @@ const testCases = [
   { scenario: 'ACTION: break_material_connections', toolName: 'manage_asset', arguments: { action: 'break_material_connections', assetPath: BASE_MATERIAL, nodeId: '${captured:multiplyNodeId}', pinName: 'A' }, expected: 'success' },
   { scenario: 'INFO: get_material_node_details', toolName: 'manage_asset', arguments: { action: 'get_material_node_details', assetPath: BASE_MATERIAL, nodeId: '${captured:multiplyNodeId}' }, expected: 'success' },
   { scenario: 'OPTIONAL: get_material_node_details by expressionIndex', toolName: 'manage_asset', arguments: { action: 'get_material_node_details', assetPath: BASE_MATERIAL, nodeId: '${captured:multiplyNodeId}', expressionIndex: 0 }, expected: 'success' },
+  { scenario: 'GRAPH: set_node_position', toolName: 'manage_asset', arguments: { action: 'set_node_position', assetPath: BASE_MATERIAL, nodeId: '${captured:multiplyNodeId}', x: 40, y: 60 }, expected: 'success' },
   { scenario: 'DELETE: remove_material_node', toolName: 'manage_asset', arguments: { action: 'remove_material_node', assetPath: BASE_MATERIAL, nodeId: '${captured:multiplyNodeId}' }, expected: 'success' },
   { scenario: 'ACTION: rebuild_material', toolName: 'manage_asset', arguments: { action: 'rebuild_material', assetPath: BASE_MATERIAL }, expected: 'success' },
 ];
@@ -208,13 +209,14 @@ const testCases = [
     // === CONNECT ===
     { scenario: 'CONNECT: connect_nodes', toolName: 'manage_asset', arguments: { action: 'connect_nodes', assetPath: MATERIAL_PATH, sourceNodeId: 'RoughnessParam', targetNodeId: 'Main', inputName: 'Roughness' }, expected: 'success' },
     { scenario: 'INFO: get_node_connections downstream', toolName: 'manage_asset', arguments: { action: 'get_node_connections', assetPath: MATERIAL_PATH, nodeId: 'RoughnessParam', direction: 'outputs', depth: -1, downstream: true }, expected: 'success' },
+    { scenario: 'INFO: get_node_connections upstream', toolName: 'manage_asset', arguments: { action: 'get_node_connections', assetPath: MATERIAL_PATH, nodeId: 'RoughnessParam', direction: 'inputs', upstream: true }, expected: 'success' },
     { scenario: 'INFO: get_node_chain to material pin', toolName: 'manage_asset', arguments: { action: 'get_node_chain', assetPath: MATERIAL_PATH, startNodeId: 'RoughnessParam', endPin: 'Roughness' }, expected: 'success' },
     { scenario: 'INFO: get_connected_subgraph from node', toolName: 'manage_asset', arguments: { action: 'get_connected_subgraph', assetPath: MATERIAL_PATH, nodeId: 'RoughnessParam' }, expected: 'success' },
     { scenario: 'ACTION: disconnect_nodes', toolName: 'manage_asset', arguments: { action: 'disconnect_nodes', assetPath: MATERIAL_PATH, nodeId: 'Main', pinName: 'Roughness' }, expected: 'success' },
     { scenario: 'INFO: get_connected_subgraph orphans only', toolName: 'manage_asset', arguments: { action: 'get_connected_subgraph', assetPath: MATERIAL_PATH, orphansOnly: true }, expected: 'success' },
 
     // === MATERIAL FUNCTIONS ===
-    { scenario: 'CREATE: create_material_function', toolName: 'manage_asset', arguments: { action: 'create_material_function', name: FUNCTION_NAME, path: TEST_FOLDER, description: 'MCP material function test' }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_material_function', toolName: 'manage_asset', arguments: { action: 'create_material_function', name: FUNCTION_NAME, path: TEST_FOLDER, description: 'MCP material function test', exposeToLibrary: true }, expected: 'success|already exists' },
     { scenario: 'ADD: add_function_input', toolName: 'manage_asset', arguments: { action: 'add_function_input', functionPath: FUNCTION_PATH, inputName: 'InputColor', inputType: 'Vector3', x: -250, y: 0 }, expected: 'success|already exists' },
     { scenario: 'ADD: add_function_output', toolName: 'manage_asset', arguments: { action: 'add_function_output', functionPath: FUNCTION_PATH, inputName: 'OutputColor', inputType: 'Vector3', x: 250, y: 0 }, expected: 'success|already exists' },
     { scenario: 'INFO: get_material_function_info', toolName: 'manage_asset', arguments: { action: 'get_material_function_info', functionPath: FUNCTION_PATH }, expected: 'success' },

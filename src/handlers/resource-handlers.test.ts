@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AutomationBridgeStatus } from '../automation/index.js';
 import type { AssetResources } from '../resources/assets.js';
 import type { ActorResources } from '../resources/actors.js';
 import type { LevelResources } from '../resources/levels.js';
+import { AutomationLogger } from '../automation/log-redaction.js';
 import { HealthMonitor } from '../services/health-monitor.js';
 import { Logger } from '../utils/logging/logger.js';
 import { ResourceHandler, type ResourceServer } from './resource-handlers.js';
@@ -11,14 +15,18 @@ import type { ExtendedResourceReader } from '../resources/resource-read-router.j
 type RegisteredResourceHandler = (request: { params: { uri: string } }) => Promise<{ contents: Array<{ text: string }> }>;
 type BridgeStub = {
   isConnected: boolean;
-  getEngineVersion?: () => Promise<unknown>;
-  getFeatureFlags?: () => Promise<unknown>;
+  getEngineVersion: () => Promise<unknown>;
+  getFeatureFlags: () => Promise<unknown>;
 };
 
 function createRegisteredHandler(
   status: AutomationBridgeStatus,
   healthMonitor: HealthMonitor,
-  bridgeStub: BridgeStub = { isConnected: false },
+  bridgeStub: BridgeStub = {
+    isConnected: false,
+    getEngineVersion: async () => ({}),
+    getFeatureFlags: async () => ({})
+  },
   extendedReader?: ExtendedResourceReader
 ): RegisteredResourceHandler {
   let registeredHandler: RegisteredResourceHandler | undefined;
@@ -160,7 +168,11 @@ describe('ResourceHandler extended resource delegation', () => {
         contents: [{ uri, mimeType: 'application/json', text: JSON.stringify({ uri, revision: 1, data: { ok: true } }) }]
       })
     };
-    const handler = createRegisteredHandler(createAutomationStatus(), healthMonitor, { isConnected: false }, reader);
+    const handler = createRegisteredHandler(createAutomationStatus(), healthMonitor, {
+      isConnected: false,
+      getEngineVersion: async () => ({}),
+      getFeatureFlags: async () => ({})
+    }, reader);
 
     // When
     const result = await handler({ params: { uri: 'ue://project' } });
@@ -177,5 +189,86 @@ describe('ResourceHandler extended resource delegation', () => {
 
     // When / Then
     await expect(handler({ params: { uri: 'ue://project' } })).rejects.toThrow('Unknown resource');
+  });
+});
+
+// Presenter driver over a REAL temp Saved/MCP/diagnostics tree. The reader's
+// own fail-closed/warn-once behavior is unit-proven in
+// src/automation/diagnostics-snapshot-reader.test.ts; these cases prove the
+// ResourceHandler WIRING attaches the allowlisted summaries to both bodies.
+const PRESENTER_ROOT = mkdtempSync(join(tmpdir(), 'mcp-diagnostics-presenters-'));
+const CURRENT_SNAPSHOT = {
+  schemaVersion: 1,
+  instance: { instanceId: 'inst-12345', pid: 12345, startTimeUtc: '2026-08-12T11:05:00.000Z' },
+  counters: { requests: 3, failures: 1, refusals: 1, queueWaitMs: 42 },
+  lastRequest: { requestId: 'req-current', correlationId: 'corr-1', canonicalAction: 'manage_asset.import_asset', origin: 'WebSocket', queueDepth: 2, enqueueAt: '2026-08-12T11:05:00.000Z', dispatchAt: '2026-08-12T11:05:00.120Z', terminalAt: '2026-08-12T11:05:00.500Z', terminalClass: 'success' },
+  lastHandshake: null,
+  lastDisconnect: null,
+  session: null
+};
+const PREVIOUS_SNAPSHOT = { ...CURRENT_SNAPSHOT, instance: { ...CURRENT_SNAPSHOT.instance, instanceId: 'inst-9999', pid: 9999 }, lastRequest: { ...CURRENT_SNAPSHOT.lastRequest, requestId: 'req-previous' } };
+
+describe('ResourceHandler diagnostics session presenters (real temp Saved tree)', () => {
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => { vi.stubEnv('UE_PROJECT_PATH', PRESENTER_ROOT); rmSync(join(PRESENTER_ROOT, 'Saved', 'MCP', 'diagnostics'), { recursive: true, force: true }); warnSpy = vi.spyOn(AutomationLogger.prototype, 'warn').mockImplementation(() => {}); });
+
+  afterAll(() => { rmSync(PRESENTER_ROOT, { recursive: true, force: true }); vi.unstubAllEnvs(); vi.restoreAllMocks(); });
+
+  function writeSnapshot(name: string, value: unknown): void { const dir = join(PRESENTER_ROOT, 'Saved', 'MCP', 'diagnostics'); mkdirSync(dir, { recursive: true }); writeFileSync(join(dir, name), JSON.stringify(value), { encoding: 'utf8' }); }
+
+  async function bodies(): Promise<Array<Record<string, unknown>>> {
+    const handler = createRegisteredHandler(createAutomationStatus(), new HealthMonitor(new Logger('ResourceHandlerTest', 'error')));
+    return Promise.all(['ue://health', 'ue://automation-bridge'].map(async (uri) => JSON.parse((await handler({ params: { uri } })).contents[0].text) as Record<string, unknown>));
+  }
+
+  it('exposes allowlisted currentSession/previousSession on both bodies', async () => {
+    writeSnapshot('current-session.json', CURRENT_SNAPSHOT);
+    writeSnapshot('previous-session.json', PREVIOUS_SNAPSHOT);
+    for (const body of await bodies()) {
+      const current = body.currentSession as Record<string, unknown>;
+      expect(current.schemaVersion).toBe(1);
+      expect((current.instance as Record<string, unknown>).pid).toBe(12345);
+      expect(((body.previousSession as Record<string, unknown>).instance as Record<string, unknown>).pid).toBe(9999);
+    }
+  });
+
+  it('projects previousSession null when no previous file exists (NF-6 parity)', async () => {
+    writeSnapshot('current-session.json', CURRENT_SNAPSHOT);
+    for (const body of await bodies()) {
+      expect((body.currentSession as Record<string, unknown>).schemaVersion).toBe(1);
+      expect(body.previousSession).toBeNull();
+    }
+  });
+
+  it('fails closed on corrupt and oversized snapshots with a bounded warning naming the path only', async () => {
+    writeSnapshot('current-session.json', '{ not json');
+    writeSnapshot('previous-session.json', '[]');
+    for (const body of await bodies()) {
+      expect(body.currentSession).toBeNull();
+      expect(body.previousSession).toBeNull();
+    }
+    writeSnapshot('current-session.json', { ...CURRENT_SNAPSHOT, counters: { ...CURRENT_SNAPSHOT.counters, requests: 'x'.repeat(70_000) } });
+    const [health, automation] = await bodies();
+    expect(health.currentSession).toBeNull();
+    expect(automation.currentSession).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+    for (const call of warnSpy.mock.calls) {
+      expect(call.map(String).join(' ')).not.toContain('not json');
+    }
+  });
+
+  it('never surfaces hostile payload/secret/idempotency/raw-session fields', async () => {
+    writeSnapshot('current-session.json', { ...CURRENT_SNAPSHOT, payload: { code: 'evil' }, capabilityToken: 'super-secret', idempotencyKey: 'raw-key', extraNested: { sessionId: 'raw-session' } });
+    const [health, automation] = await bodies();
+    const serialized = JSON.stringify({ health, automation });
+    for (const key of ['payload', 'capabilityToken', 'idempotencyKey']) {
+      for (const body of [health, automation]) {
+        expect(body.currentSession).not.toHaveProperty(key);
+      }
+    }
+    for (const forbidden of ['evil', 'super-secret', 'raw-key', 'raw-session']) {
+      expect(serialized).not.toContain(forbidden);
+    }
   });
 });
