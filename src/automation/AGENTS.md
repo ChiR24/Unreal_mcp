@@ -27,10 +27,12 @@ automation/
 |-- gateway-timeout-context.ts   # async-local gateway timeout control
 |-- capability-token-provider.ts # reads/verifies the plugin capability token, never logs it
 |-- log-redaction.ts             # redacts tokens/secrets from logs and diagnostics
+|-- diagnostics-snapshot-reader.ts # read-only TS reader for plugin diagnostics snapshots (current/previous)
+|-- natural-timeout-cancellation.ts # best-effort advisory cancel_request frame delivery for natural timeouts
 |-- types.ts                     # protocol, event, status, and queue contracts
 `-- index.ts                     # public export surface
 ```
-24 implementation files plus 13 colocated `*.test.ts` files.
+26 implementation files plus 16 colocated `*.test.ts` files.
 
 ## WHERE TO LOOK
 | Task | File | Notes |

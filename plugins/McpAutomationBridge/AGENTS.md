@@ -1,12 +1,13 @@
 # MCP AUTOMATION BRIDGE PLUGIN
 
-Editor-only UE 5.0-5.8 Preview plugin. It owns the WebSocket automation bridge and the optional native `/mcp` HTTP/SSE server. `McpAutomationBridge.uplugin` is the plugin version source (`0.5.30`); server package versions are separate.
+Editor-only UE 5.0-5.8 Preview plugin. It owns the WebSocket automation bridge, the optional native `/mcp` HTTP/SSE server, and the delay-loaded Fab asset-store adapter module. `McpAutomationBridge.uplugin` is the plugin version source (`0.5.30`); server package versions are separate.
 
 ## SCOPE MAP
 | Area | Owner | Notes |
 |------|-------|-------|
 | Manifest/config/docs | plugin root | `.uplugin`, `Config/`, plugin `README.md` and `CHANGELOG.md` |
 | Module dependencies | `Source/McpAutomationBridge/McpAutomationBridge.Build.cs` | Preserve UE-version probes and optional-module detection |
+| Fab adapter module | `Source/McpAutomationBridgeFab/` | Delay-loaded, optional; Fab browser bridge, import watcher, add-to-project, search, details, downloads. Compiles away when Fab/Megascans plugins are absent. |
 | Public API/settings | `Source/McpAutomationBridge/Public/` | Subsystem contract, settings, connection manager API |
 | Core lifecycle/routing | `Private/Core/` (36) | Queue, game-thread dispatch, registration shards, settings, responses — **nested `AGENTS.md`** |
 | Automation domains | `Private/Domains/` (1103 / 66 domains) | Domain handlers grouped by responsibility — **nested `AGENTS.md`** |

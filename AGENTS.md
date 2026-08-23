@@ -23,11 +23,13 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |   |                            #   orchestration/, dynamic/, editor/, level/, schemas/
 |   |   `-- definitions/shared/  # ONLY 2 files (tool-definition.ts, action-sets.ts) — NOT a contract source
 |   |-- types/ utils/            # utils: commands config interaction logging paths responses serialization validation
-|-- plugins/McpAutomationBridge/ # the ONLY plugin; editor-only UE (bridge + native MCP)
-|   `-- Source/McpAutomationBridge/{Public (17), Private/}
-|       Private/: Core(36) Domains(1103 / 66 domains) Foundation(81) MCP(164) Safety(19) Transport(23) Tests(25) UI(2)
-|       Core/: Compatibility Errors Module Requests Security Settings Subsystem
-|       MCP/:  DynamicTools Execute Gateway Generated Primitives Protocol Registry Resources Routing Tools Transport
+|-- plugins/McpAutomationBridge/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab adapter)
+|   |-- Source/McpAutomationBridge/{Public (17), Private/}
+|   |   Private/: Core(36) Domains(1103 / 66 domains) Foundation(85) MCP(164) Safety(19) Transport(23) Tests(25+subdirs) UI(2)
+|   |   Core/: Compatibility Errors Module Requests Security Settings Subsystem
+|   |   MCP/:  DynamicTools Execute Gateway Generated Primitives Protocol Registry Resources Routing Tools Transport
+|   `-- Source/McpAutomationBridgeFab/     # Fab asset-store adapter module (delay-loaded, optional)
+|       Private/: Fab browser bridge, import watcher, add-to-project, search, details, downloads
 |-- tests/                       # Vitest unit tests + custom MCP integration runner
 |-- scripts/                     # generators, packaging, sync, smoke, cleanup
 |-- docs/                        # handler maps, testing, protocol, plugin extension
@@ -37,7 +39,7 @@ NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-
 
 **NAMING TRAPS — get these wrong and you edit the wrong layer:**
 - `src/handlers/` (2 files, MCP **resources**) vs `src/tools/handlers/` (38 domains, **tool action logic**) vs `src/types/handlers/` (types).
-- `src/gateway/` (manifest **data**, generated) vs `src/server/gateway/` (25-file request **routing engine**, incl. the idempotency ledger).
+- `src/gateway/` (manifest **data**, generated) vs `src/server/gateway/` (27-file request **routing engine**, incl. the idempotency ledger).
 - `src/server/mcp-primitives/` (MCP resources/prompts/completions/subscriptions **protocol primitives**) vs `src/resources/` (the resource **providers** those primitives read) vs `src/handlers/` (the 2-file resource request **handlers**).
 - `src/config.ts` (env Zod schema) vs `src/config/` (UE class aliases only).
 - `src/wasm/` no longer exists (the empty stub directory is gone); `src/tools/definitions/` holds only 2 shared files and is not a source of truth.
@@ -49,7 +51,7 @@ NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-
 | Start TS MCP server | `src/cli.ts`, `src/index.ts`, `src/server/server-factory.ts`, `src/server/stdio-lifecycle.ts` | CLI shim -> public facade -> construction/lifecycle -> registration |
 | Add/change a TS tool contract | `src/tools/catalog/capabilities/records/<tool>/` + `records/parent-metadata.ts` | **THE source of truth.** `consolidated-tool-definitions.ts` and every `*.generated.*` are OUTPUTS — editing them is overwritten on next generate. See `src/tools/catalog/AGENTS.md` |
 | Regenerate contract artifacts | `npm run registry:generate`, then `registry:check` / `manifest:check` | Records -> TS facades + routing index + gateway manifest + native C++ registry/shards |
-| Change gateway routing (search/describe/execute) | `src/server/gateway/` (25 files) | Its own AGENTS.md. `src/gateway/` is only the generated manifest + loader |
+| Change gateway routing (search/describe/execute) | `src/server/gateway/` (27 files) | Its own AGENTS.md. `src/gateway/` is only the generated manifest + loader |
 | Change MCP protocol primitives (resources/prompts/completions/subscriptions/progress) | `src/server/mcp-primitives/` (48 files) | Its own AGENTS.md. Native mirror in `Private/MCP/Primitives/`; parity gated by `tests/unit/mcp-primitives/*-parity.test.ts` |
 | Change capability auth (scopes/consent/paths/quota) | `.../Private/Foundation/McpCapabilityAuthorization.h` (predicates), `.../Private/Core/Security/` (composition) | Predicates are pure + transport-shared; the plugin is the sole authority and re-enforces every request |
 | Change execute idempotency | `src/server/gateway/idempotency-ledger.ts`, `.../Private/Foundation/McpIdempotencyLedger.{h,cpp}` | Two mirrors, different caps (TS 1024 / native 4096). Change both |
@@ -145,7 +147,7 @@ Every automation request is gated **before it reaches the editor queue**. The Ty
 - Treating `src/handlers/` and `src/tools/handlers/` as one: the former is MCP resource handlers, the latter is tool action logic.
 - Editing generated artifacts: hand-edits to any `*.generated.*`, `capabilities/generated/`, or plugin `MCP/Generated/` file are silently overwritten by the next generate and fail drift checks. Edit the records, regenerate.
 - Never place AGENTS files in `dist/`, `build/`, `coverage/`, `tests/reports/`, `tmp/`, plugin `Binaries/`, plugin `Intermediate/`, or uppercase staging mirrors (`Plugins/`).
-- **Folder-budget headroom is GONE in two places**: the ≤25 files-per-folder gate is already satisfied at exactly 25 by `Private/MCP/Transport/` and `Private/Domains/Sequence/` (`Private/MCP/Generated/`, `Private/Domains/GAS/`, `Private/Domains/AnimationAuthoring/` sit at 24). Adding ONE file to any of those breaks CI — split into a subdirectory instead.
+- **Folder-budget headroom is GONE in five places**: the ≤25 files-per-folder gate is already satisfied at exactly 25 by `Private/MCP/Transport/`, `Private/Domains/Sequence/`, `Private/Foundation/`, and `Private/MCP/Execute/` (`Private/MCP/Generated/`, `Private/Domains/GAS/`, `Private/Domains/AnimationAuthoring/` sit at 24). Adding ONE file to any of those breaks CI — split into a subdirectory instead.
 - **Automated source-contract gates** (Vitest reads C++/C# text — these fail CI): 250 pure-line ceiling per plugin file (measured on *pure* lines, so a 380-line file with comments can still pass); ≤25 files per folder; no split artifacts (`Common`/`Part\d+`/`.incl`); every local `Mcp*` include must resolve; no `UPackage::SavePackage`; constant-time token compare only; no non-loopback bind without `bRequireCapabilityToken`; no browser-origin WS upgrade; no raw Python source in logs.
 - **Convention-only, NOT lint-enforced**: `no-explicit-any` and `no-console` are both `off` in `eslint.config.mjs`. `as any` / `@ts-ignore` / runtime `console.log` are still forbidden by project rule — nothing will catch them for you.
 - **Never `localeCompare`** for ordering: use byte-order (ASCII/UTF-16 code unit) comparison so generated shards agree byte-for-byte across machines (`src/utils/serialization/ordering.ts` exists for this).
