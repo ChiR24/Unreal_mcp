@@ -1,6 +1,8 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
 #if WITH_EDITOR
+#include "Components/SkyLightComponent.h"
+#include "Engine/SkyLight.h"
 namespace McpEnvironmentHandlers {
 
 FProperty *McpFindPropertyCaseInsensitive(UObject *Object, const FString &PropertyName)
@@ -129,6 +131,36 @@ int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Pa
         return 0;
     }
 
+    // BB-055: the canonical payload key skyLightIntensity does not match the
+    // USkyLightComponent property name "Intensity" (McpApplyPayloadSettings
+    // below does a case-insensitive exact-name match only), so translate it
+    // explicitly before the generic pass. Mirrors spawn_sky_light's top-level
+    // intensity handling (LightingHandlersSky.cpp).
+    // Live-discovered (Todo 39): configure_sky_light passes the ASkyLight actor
+    // (not the component) to McpApplyEnvironmentSettings, so resolve the
+    // component from the actor when the direct Cast fails.
+    USkyLightComponent *SkyComp = Cast<USkyLightComponent>(Target);
+    if (!SkyComp)
+    {
+        if (ASkyLight *SkyActor = Cast<ASkyLight>(Target))
+        {
+            SkyComp = Cast<USkyLightComponent>(SkyActor->GetLightComponent());
+        }
+    }
+    int32 SkyApplied = 0;
+    if (SkyComp)
+    {
+        double SkyIntensity = 0.0;
+        if (Payload->TryGetNumberField(TEXT("skyLightIntensity"), SkyIntensity))
+        {
+            SkyComp->Modify();
+            SkyComp->SetIntensity(static_cast<float>(SkyIntensity));
+            SkyComp->MarkPackageDirty();
+            AppliedProperties.Add(TEXT("Intensity"));
+            SkyApplied = 1;
+        }
+    }
+
     auto ApplyObject = [&](const TSharedPtr<FJsonObject> &ObjectToApply) -> int32
     {
         int32 AppliedCount = 0;
@@ -172,7 +204,7 @@ int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Pa
         return AppliedCount;
     };
 
-    int32 TotalApplied = ApplyObject(Payload);
+    int32 TotalApplied = SkyApplied + ApplyObject(Payload);
 
     const TSharedPtr<FJsonObject> *SettingsObj = nullptr;
     if (Payload->TryGetObjectField(TEXT("settings"), SettingsObj) && SettingsObj && SettingsObj->IsValid())
