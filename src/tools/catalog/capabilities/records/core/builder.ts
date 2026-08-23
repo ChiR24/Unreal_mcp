@@ -11,6 +11,7 @@
 import type {
   CapabilityAvailability,
   CapabilityBehaviorSource,
+  CapabilityPolicy,
   CapabilityRecordSource,
   CapabilityRouting,
   Draft202012ObjectSchema,
@@ -50,6 +51,8 @@ export type CoreRecordSpec = {
   readonly outputRequired?: readonly string[];
   readonly effect: EffectType;
   readonly behavior?: Partial<CapabilityBehaviorSource>;
+  /** Optional policy overrides on top of the effect-derived preset. */
+  readonly policyOverride?: Partial<CapabilityPolicy>;
   readonly costLatency: 'instant' | 'interactive' | 'long-running';
   readonly costResources: 'low' | 'medium' | 'high';
   readonly plugins?: readonly string[];
@@ -153,7 +156,7 @@ export function buildCoreRecord(
     examples: [{ title: spec.summary, input: spec.exampleInput, output: spec.exampleOutput }],
     availability: availability(spec.plugins, spec.editorStates),
     behavior: behavior(spec.effect, spec.behavior),
-    policy: policy(spec.effect),
+    policy: { ...policy(spec.effect), ...(spec.policyOverride ?? {}) },
     cost: { latency: spec.costLatency, resources: spec.costResources },
     routing: routing(spec.parentTool, spec.dispatchAction ?? spec.action, spec.dispatchMode),
     normalization: {

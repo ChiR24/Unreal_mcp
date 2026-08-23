@@ -1,7 +1,7 @@
 /**
  * Focused tests for the control_editor capability-record catalog.
  *
- * Proves: exact 42-action set equality with the canonical tool definition,
+ * Proves: exact 45-action set equality with the canonical tool definition,
  * 1:1 legacy-id mapping, unique canonical IDs, schema closure, routing
  * (tool/action/local modes), cross-parent/fallback misroute metadata,
  * effect/idempotency semantics, availability, and hash parity.
@@ -23,7 +23,10 @@ import {
   CONTROL_EDITOR_SOURCES,
 } from './index.js';
 
-const ALL_42_ACTIONS = [
+const ALL_45_ACTIONS = [
+  'invoke_reflected_function',
+  'describe_reflected_api',
+  'open_editor_tab',
   'play', 'stop', 'stop_pie', 'pause', 'resume', 'eject', 'possess',
   'set_game_speed', 'set_fixed_delta_time', 'step_frame', 'single_frame_step',
   'start_recording', 'stop_recording',
@@ -56,21 +59,21 @@ function findByAction(action: string) {
   return record;
 }
 
-describe('control_editor exact-set: 42 records mapped 1:1 to tool actions', () => {
-  it('produces exactly 42 capability records', () => {
-    expect(CONTROL_EDITOR_RECORD_COUNT).toBe(42);
-    expect(CONTROL_EDITOR_SOURCES).toHaveLength(42);
-    expect(CONTROL_EDITOR_RECORDS).toHaveLength(42);
+describe('control_editor exact-set: 45 records mapped 1:1 to tool actions', () => {
+  it('produces exactly 45 capability records', () => {
+    expect(CONTROL_EDITOR_RECORD_COUNT).toBe(45);
+    expect(CONTROL_EDITOR_SOURCES).toHaveLength(45);
+    expect(CONTROL_EDITOR_RECORDS).toHaveLength(45);
   });
 
   it('maps every control_editor tool action to exactly one record legacy ID', () => {
     const legacyKeys = new Set(
       CONTROL_EDITOR_RECORDS.flatMap((r) => r.legacyIds.map((li) => `${li.tool}::${li.action}`)),
     );
-    for (const action of ALL_42_ACTIONS) {
+    for (const action of ALL_45_ACTIONS) {
       expect(legacyKeys.has(`control_editor::${action}`)).toBe(true);
     }
-    expect(legacyKeys.size).toBe(42);
+    expect(legacyKeys.size).toBe(45);
   });
 
   it('the tool definition action enum matches the union of actions exactly', () => {
@@ -79,15 +82,15 @@ describe('control_editor exact-set: 42 records mapped 1:1 to tool actions', () =
     const actionProp = props.action;
     if (!actionProp?.enum) throw new TypeError('control_editor action enum is unavailable');
     const enumSet = new Set(actionProp.enum);
-    for (const action of ALL_42_ACTIONS) {
+    for (const action of ALL_45_ACTIONS) {
       expect(enumSet.has(action)).toBe(true);
     }
-    expect(enumSet.size).toBe(ALL_42_ACTIONS.length);
+    expect(enumSet.size).toBe(ALL_45_ACTIONS.length);
   });
 
-  it('has no duplicate canonical IDs, aliases, or legacy IDs across all 42 records', () => {
+  it('has no duplicate canonical IDs, aliases, or legacy IDs across all 45 records', () => {
     const catalog = parseCapabilityCatalog([...CONTROL_EDITOR_RECORDS]);
-    expect(catalog).toHaveLength(42);
+    expect(catalog).toHaveLength(45);
   });
 
   it('preserves canonical action order identical to the tool definition enum', () => {
@@ -260,12 +263,12 @@ describe('control_editor hash parity: TS source, JSON round-trip, and recompute'
     }
   });
 
-  it('JSON round-trip preserves all 42 records with identical hashes', () => {
+  it('JSON round-trip preserves all 45 records with identical hashes', () => {
     const json = JSON.stringify(CONTROL_EDITOR_RECORDS);
     const restored = JSON.parse(json) as typeof CONTROL_EDITOR_RECORDS;
     const catalog = parseCapabilityCatalog([...restored]);
-    expect(catalog).toHaveLength(42);
-    for (let i = 0; i < 42; i++) {
+    expect(catalog).toHaveLength(45);
+    for (let i = 0; i < 45; i++) {
       expect(catalog[i].hashes).toEqual(CONTROL_EDITOR_RECORDS[i].hashes);
     }
   });
