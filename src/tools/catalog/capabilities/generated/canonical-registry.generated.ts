@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 1400;
-export const CATALOG_REVISION = "eb0ee83d64c4f28f";
+export const CATALOG_REVISION = "336d2f321c63a2ca";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -288287,7 +288287,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
 
 export const MIGRATION_DATA = {
   "schemaVersion": "task20.migration.v1",
-  "entryCount": 1359,
+  "entryCount": 1346,
   "entries": [
     {
       "legacyKey": "animation_physics::activate_ragdoll",
@@ -290440,11 +290440,6 @@ export const MIGRATION_DATA = {
       "disposition": "canonical"
     },
     {
-      "legacyKey": "manage_asset::add_fab_asset_to_project",
-      "canonicalId": "asset.add_fab_asset_to_project",
-      "disposition": "canonical"
-    },
-    {
       "legacyKey": "manage_asset::add_fresnel",
       "canonicalId": "material.add_fresnel",
       "disposition": "canonical"
@@ -290780,11 +290775,6 @@ export const MIGRATION_DATA = {
       "disposition": "canonical"
     },
     {
-      "legacyKey": "manage_asset::download_fab_asset",
-      "canonicalId": "asset.download_fab_asset",
-      "disposition": "canonical"
-    },
-    {
       "legacyKey": "manage_asset::duplicate",
       "canonicalId": "asset.duplicate",
       "disposition": "canonical"
@@ -290857,11 +290847,6 @@ export const MIGRATION_DATA = {
     {
       "legacyKey": "manage_asset::get_enum",
       "canonicalId": "enum.get_enum",
-      "disposition": "canonical"
-    },
-    {
-      "legacyKey": "manage_asset::get_fab_listing_details",
-      "canonicalId": "asset.get_fab_listing_details",
       "disposition": "canonical"
     },
     {
@@ -290940,11 +290925,6 @@ export const MIGRATION_DATA = {
       "disposition": "canonical"
     },
     {
-      "legacyKey": "manage_asset::import_megascans_asset",
-      "canonicalId": "asset.import_megascans_asset",
-      "disposition": "canonical"
-    },
-    {
       "legacyKey": "manage_asset::import_struct",
       "canonicalId": "struct.import_struct",
       "disposition": "canonical"
@@ -290960,33 +290940,13 @@ export const MIGRATION_DATA = {
       "disposition": "canonical"
     },
     {
-      "legacyKey": "manage_asset::list_content_sources",
-      "canonicalId": "asset.list_content_sources",
-      "disposition": "canonical"
-    },
-    {
       "legacyKey": "manage_asset::list_data_table_rows",
       "canonicalId": "datatable.list_data_table_rows",
       "disposition": "canonical"
     },
     {
-      "legacyKey": "manage_asset::list_fab_downloads",
-      "canonicalId": "asset.list_fab_downloads",
-      "disposition": "canonical"
-    },
-    {
-      "legacyKey": "manage_asset::list_fab_library",
-      "canonicalId": "asset.list_fab_library",
-      "disposition": "canonical"
-    },
-    {
       "legacyKey": "manage_asset::list_instances",
       "canonicalId": "asset.list_instances",
-      "disposition": "canonical"
-    },
-    {
-      "legacyKey": "manage_asset::list_megascans_library",
-      "canonicalId": "asset.list_megascans_library",
       "disposition": "canonical"
     },
     {
@@ -290997,11 +290957,6 @@ export const MIGRATION_DATA = {
     {
       "legacyKey": "manage_asset::list_structs",
       "canonicalId": "struct.list_structs",
-      "disposition": "canonical"
-    },
-    {
-      "legacyKey": "manage_asset::migrate_assets",
-      "canonicalId": "asset.migrate_assets",
       "disposition": "canonical"
     },
     {
@@ -291102,11 +291057,6 @@ export const MIGRATION_DATA = {
     {
       "legacyKey": "manage_asset::search_assets",
       "canonicalId": "asset.search_assets",
-      "disposition": "canonical"
-    },
-    {
-      "legacyKey": "manage_asset::search_fab_listings",
-      "canonicalId": "asset.search_fab_listings",
       "disposition": "canonical"
     },
     {
@@ -294865,18 +294815,8 @@ export const MIGRATION_DATA = {
       "disposition": "canonical"
     },
     {
-      "legacyKey": "system_control::disable_plugin",
-      "canonicalId": "system_control.disable_plugin",
-      "disposition": "canonical"
-    },
-    {
       "legacyKey": "system_control::enable_gpu_timing",
       "canonicalId": "system_control.enable_gpu_timing",
-      "disposition": "canonical"
-    },
-    {
-      "legacyKey": "system_control::enable_plugin",
-      "canonicalId": "system_control.enable_plugin",
       "disposition": "canonical"
     },
     {
@@ -294902,11 +294842,6 @@ export const MIGRATION_DATA = {
     {
       "legacyKey": "system_control::get_trace_status",
       "canonicalId": "system_control.get_trace_status",
-      "disposition": "canonical"
-    },
-    {
-      "legacyKey": "system_control::list_plugins",
-      "canonicalId": "system_control.list_plugins",
       "disposition": "canonical"
     },
     {
