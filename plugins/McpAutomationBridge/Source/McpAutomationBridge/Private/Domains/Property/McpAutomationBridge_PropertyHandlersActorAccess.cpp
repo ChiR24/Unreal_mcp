@@ -1,6 +1,6 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
-
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersActorAccess.h"
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"

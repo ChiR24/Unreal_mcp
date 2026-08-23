@@ -8,6 +8,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
+#include "Safety/McpSafeReflectionTarget.h"
 
 #include "Components/ActorComponent.h"
 #include "GameFramework/Actor.h"
@@ -126,6 +127,18 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       }
   }
 
+  // Refuse /Script targets before ANY property is written. set_property is a
+  // `write` capability with no consent requirement, so without this a
+  // write-scoped principal could set bRequireCapabilityToken=false on the
+  // plugin's own settings CDO — which PostEditChange() below would then persist
+  // to DefaultGame.ini — and reconnect as an unauthenticated loopback Admin.
+  if (!McpSafeReflectionTarget::IsAddressable(RootObject)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        McpSafeReflectionTarget::DenyMessage(),
+                        McpSafeReflectionTarget::DenyCode());
+    return true;
+  }
+
   const bool bIsClassDefaultObject = RootObject->HasAnyFlags(RF_ClassDefaultObject);
   if (AActor *Actor = Cast<AActor>(RootObject))
   {
@@ -173,6 +186,18 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       }
   }
 #endif
+
+  // The guard ran on the resolved root; the Blueprint component-template branch
+  // above re-pointed RootObject, so the boundary is re-asserted on the target
+  // that Modify()/ApplyJsonValueToProperty()/PostEditChange() will actually hit.
+  // A template is rooted in a Blueprint that already passed, but the fail-closed
+  // boundary must not depend on that non-local invariant.
+  if (!McpSafeReflectionTarget::IsAddressable(RootObject)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        McpSafeReflectionTarget::DenyMessage(),
+                        McpSafeReflectionTarget::DenyCode());
+    return true;
+  }
 
   void* TargetContainer = nullptr;
   FProperty* Property = nullptr;
@@ -251,7 +276,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
 #endif
 
   TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
-  ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+  // Echo the RESOLVED property's canonical name, never the caller-supplied
+  // string: UE property lookup is case-insensitive, and the sibling redactor
+  // judges the echoed name with a case-sensitive classifier.
+  ResultPayload->SetStringField(TEXT("propertyName"), Property->GetName());
   ResultPayload->SetBoolField(TEXT("saved"), true);
   McpPropertyActorAccess::AddObjectVerification(ResultPayload, RootObject);
 

@@ -5,6 +5,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
+#include "Safety/McpSafeReflectionTarget.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleMapSetValue(
     const FString &RequestId, const FString &Action,
@@ -46,12 +47,16 @@ bool UMcpAutomationBridgeSubsystem::HandleMapSetValue(
     return true;
   }
 
-  UObject *RootObject = FindObject<UObject>(nullptr, *ObjectPath);
+  bool bObjectDenied = false;
+  UObject *RootObject = McpSafeReflectionTarget::FindAddressableObject(ObjectPath, &bObjectDenied);
   if (!RootObject) {
+    const FString NotFoundMessage = bObjectDenied
+        ? FString(McpSafeReflectionTarget::DenyMessage())
+        : FString::Printf(TEXT("Object not found: %s"), *ObjectPath);
     SendAutomationError(
         RequestingSocket, RequestId,
-        FString::Printf(TEXT("Object not found: %s"), *ObjectPath),
-        TEXT("OBJECT_NOT_FOUND"));
+        NotFoundMessage,
+        bObjectDenied ? FString(McpSafeReflectionTarget::DenyCode()) : TEXT("OBJECT_NOT_FOUND"));
     return true;
   }
 

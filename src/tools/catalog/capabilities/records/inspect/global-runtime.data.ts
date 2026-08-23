@@ -37,12 +37,18 @@ const RUNTIME_REPORT_OUTPUT = {
   actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Matching runtime actors and their inspected components/properties.' },
   count: { type: 'number', description: 'Number of actors returned after filtering.' },
   totalActorCount: { type: 'number', description: 'Total actors in the inspected world.' },
-  playerController: { type: 'string', description: 'Active PlayerController path.' },
-  pawn: { type: 'string', description: 'Possessed pawn path.' },
-  viewTarget: { type: 'string', description: 'Current view target path.' },
-  playerCameraManager: { type: 'string', description: 'PlayerCameraManager path.' },
-  cameraLocation: { type: 'array', items: { type: 'number' }, description: 'Camera location as [x, y, z].' },
-  cameraRotation: { type: 'array', items: { type: 'number' }, description: 'Camera rotation as [pitch, yaw, roll].' },
+  // These four are McpDescribeRuntimeActor() results — full actor descriptions,
+  // not path strings. Declared as `string` they did worse than the missing
+  // fields above: the output validator rejected the handler's real payload, so
+  // every pie_report during an actual PIE session failed OUTPUT_SCHEMA_VIOLATION
+  // and returned nothing at all. The capability only "worked" when no player
+  // controller existed, i.e. when there was nothing to report.
+  playerController: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Active PlayerController described as a runtime actor.' },
+  pawn: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Possessed pawn described as a runtime actor. Read its location to find where the player actually is.' },
+  viewTarget: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Current view target described as a runtime actor.' },
+  // Carries nested cameraLocation/cameraRotation objects. There are no
+  // top-level camera fields — the handler only ever sets them inside here.
+  playerCameraManager: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'PlayerCameraManager described as a runtime actor, plus cameraLocation and cameraRotation as {x,y,z} / {pitch,yaw,roll} objects.' },
 } as const;
 
 export const GLOBAL_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [

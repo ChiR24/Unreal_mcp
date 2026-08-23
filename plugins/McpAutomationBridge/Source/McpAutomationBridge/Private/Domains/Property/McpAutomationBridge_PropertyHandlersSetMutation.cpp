@@ -5,6 +5,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
+#include "Safety/McpSafeReflectionTarget.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleSetAdd(
     const FString &RequestId, const FString &Action,
@@ -40,11 +41,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSetAdd(
     return true;
   }
 
-  UObject *RootObject = FindObject<UObject>(nullptr, *ObjectPath);
+  bool bObjectDenied = false;
+  UObject *RootObject = McpSafeReflectionTarget::FindAddressableObject(ObjectPath, &bObjectDenied);
   if (!RootObject) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        FString::Printf(TEXT("Object not found: %s"), *ObjectPath),
-                        TEXT("OBJECT_NOT_FOUND"));
+    const FString NotFoundMessage = bObjectDenied
+        ? FString(McpSafeReflectionTarget::DenyMessage())
+        : FString::Printf(TEXT("Object not found: %s"), *ObjectPath);
+    SendAutomationError(
+        RequestingSocket, RequestId,
+        NotFoundMessage,
+        bObjectDenied ? FString(McpSafeReflectionTarget::DenyCode()) : TEXT("OBJECT_NOT_FOUND"));
     return true;
   }
 
@@ -163,11 +169,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSetRemove(
     return true;
   }
 
-  UObject *RootObject = FindObject<UObject>(nullptr, *ObjectPath);
+  bool bObjectDenied = false;
+  UObject *RootObject = McpSafeReflectionTarget::FindAddressableObject(ObjectPath, &bObjectDenied);
   if (!RootObject) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        FString::Printf(TEXT("Object not found: %s"), *ObjectPath),
-                        TEXT("OBJECT_NOT_FOUND"));
+    const FString NotFoundMessage = bObjectDenied
+        ? FString(McpSafeReflectionTarget::DenyMessage())
+        : FString::Printf(TEXT("Object not found: %s"), *ObjectPath);
+    SendAutomationError(
+        RequestingSocket, RequestId,
+        NotFoundMessage,
+        bObjectDenied ? FString(McpSafeReflectionTarget::DenyCode()) : TEXT("OBJECT_NOT_FOUND"));
     return true;
   }
 
