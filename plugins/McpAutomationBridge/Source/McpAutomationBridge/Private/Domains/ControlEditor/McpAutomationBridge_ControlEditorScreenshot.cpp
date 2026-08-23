@@ -48,8 +48,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     TArray<uint8> PngData;
     FIntVector ImageSize(0, 0, 0);
     FString CaptureError;
-    if (!CaptureSlateWindowPngForMcp(EditorWindow.ToSharedRef(), PngData,
-                                     ImageSize, CaptureError)) {
+    if (!CaptureSlateWindowPngForMcp(EditorWindow.ToSharedRef(), Payload,
+                                     PngData, ImageSize, CaptureError)) {
       SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"),
                                 CaptureError, nullptr);
       return true;
@@ -151,10 +151,31 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     Pixel.A = 255;
   }
 
+  // "resolution" was declared on this capability but never read, so a 4K
+  // viewport could only ever answer IMAGE_TOO_LARGE no matter what the caller
+  // asked for. Resample here and the parameter means what the schema says.
+  FIntPoint OutputSize = ViewportSize;
+  FString ResolutionError;
+  if (!ResolveScreenshotResolutionForMcp(Payload, ViewportSize, OutputSize,
+                                         ResolutionError)) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              ResolutionError, nullptr);
+    return true;
+  }
+
+  TArray<FColor> ResampledBitmap;
+  if (OutputSize != ViewportSize &&
+      Bitmap.Num() >= ViewportSize.X * ViewportSize.Y) {
+    ResampleBitmapForMcp(Bitmap, ViewportSize, ResampledBitmap, OutputSize);
+    Bitmap = MoveTemp(ResampledBitmap);
+  } else {
+    OutputSize = ViewportSize;
+  }
+
   TArray64<uint8> PngData;
   FImageUtils::PNGCompressImageArray(
-      ViewportSize.X,
-      ViewportSize.Y,
+      OutputSize.X,
+      OutputSize.Y,
       TArrayView64<const FColor>(Bitmap.GetData(), Bitmap.Num()),
       PngData);
   if (PngData.Num() == 0) {
@@ -165,7 +186,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
 
   const bool bSaved = FFileHelper::SaveArrayToFile(PngData, *FullPath);
 
-  bool bReturnBase64 = false;
+  // Defaulted to false while full_editor_window defaulted to true, so a plain
+  // screenshot call handed back only a path and the caller had to go read the
+  // PNG itself. The point of the capability is to return the picture; the
+  // oversize guard below still protects the receipt.
+  bool bReturnBase64 = true;
   Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -173,8 +198,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   Resp->SetStringField(TEXT("filename"), Filename);
   Resp->SetStringField(TEXT("mode"), Mode);
   Resp->SetBoolField(TEXT("saved"), bSaved);
-  Resp->SetNumberField(TEXT("width"), ViewportSize.X);
-  Resp->SetNumberField(TEXT("height"), ViewportSize.Y);
+  // width/height describe the PNG actually returned. When a resample happened
+  // the untouched viewport size rides alongside, so a caller comparing the two
+  // can tell a downscaled frame from a native-resolution one.
+  Resp->SetNumberField(TEXT("width"), OutputSize.X);
+  Resp->SetNumberField(TEXT("height"), OutputSize.Y);
+  if (OutputSize != ViewportSize) {
+    Resp->SetNumberField(TEXT("viewportWidth"), ViewportSize.X);
+    Resp->SetNumberField(TEXT("viewportHeight"), ViewportSize.Y);
+  }
   Resp->SetNumberField(TEXT("sizeBytes"), PngData.Num());
   Resp->SetNumberField(TEXT("fileSizeBytes"), PngData.Num());
   Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));

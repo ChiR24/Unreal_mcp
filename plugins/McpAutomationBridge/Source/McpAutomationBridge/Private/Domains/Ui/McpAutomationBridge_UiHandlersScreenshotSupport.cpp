@@ -1,6 +1,6 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
-
 #include "Domains/Ui/McpAutomationBridge_UiHandlersScreenshotSupport.h"
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"

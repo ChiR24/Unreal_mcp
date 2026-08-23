@@ -16,7 +16,14 @@ const D = 'editor';
 const SCREENSHOT_PROPS = {
   filename: P.filename,
   path: P.path,
-  resolution: P.resolution,
+  // Not P.resolution: this is a resample of one already-rendered frame, not a
+  // re-render, so WxH is a bounding box rather than an exact output size --
+  // aspect ratio is preserved and a box larger than the frame changes nothing.
+  // It is also the documented way out of IMAGE_TOO_LARGE.
+  resolution: {
+    type: 'string',
+    description: 'Maximum WxH for the returned PNG (e.g. "1280x720"). The capture is downscaled to fit inside this box with its aspect ratio preserved; a box at least as large as the viewport leaves the image untouched. Use this to bring an oversized capture under the base64 limit.'
+  },
   mode: P.mode,
   returnBase64: P.returnBase64,
   includeMetadata: P.includeMetadata,
@@ -26,8 +33,10 @@ const SCREENSHOT_PROPS = {
 const SCREENSHOT_OUTPUT = {
   imageBase64: { type: 'string', description: 'Base64-encoded PNG image data.' },
   mimeType: { type: 'string', description: 'Image MIME type.' },
-  width: P.width,
-  height: P.height,
+  width: { type: 'number', description: 'Width in pixels of the PNG actually returned.' },
+  height: { type: 'number', description: 'Height in pixels of the PNG actually returned.' },
+  viewportWidth: { type: 'number', description: 'Source viewport width in pixels. Present only when resolution forced a downscale, so width/height differ from the viewport.' },
+  viewportHeight: { type: 'number', description: 'Source viewport height in pixels. Present only when resolution forced a downscale.' },
   sizeBytes: { type: 'integer', description: 'Image size in bytes.' },
   screenshotPath: { type: 'string', description: 'Saved screenshot file path.' },
   mode: P.mode,

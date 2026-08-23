@@ -11,6 +11,7 @@
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "Foundation/McpScreenshotResample.h"
 #include "Domains/Ui/McpAutomationBridge_UiHandlersScreenshotSupport.h"
 #include "Misc/Base64.h"
 #include "Misc/FileHelper.h"
@@ -178,8 +179,33 @@ bool HandleScreenshotAction(
     return true;
   }
 
-  const int32 Width = Size.X;
-  const int32 Height = Size.Y;
+  // The game-viewport capture declares the same `resolution` parameter as the
+  // editor-viewport one and used to ignore it, so a PIE screenshot on a 4K
+  // display could only ever answer IMAGE_TOO_LARGE.
+  const FIntPoint CapturedSize(Size.X, Size.Y);
+  FIntPoint TargetSize = CapturedSize;
+  FString ResolutionError;
+  if (!ResolveScreenshotResolutionForMcp(Payload, CapturedSize, TargetSize,
+                                         ResolutionError)) {
+    Message = ResolutionError;
+    ErrorCode = TEXT("INVALID_ARGUMENT");
+    Resp->SetStringField(TEXT("error"), Message);
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Message,
+                                  Resp, ErrorCode);
+    bResponseSent = true;
+    return true;
+  }
+  if (TargetSize != CapturedSize &&
+      Bitmap.Num() >= CapturedSize.X * CapturedSize.Y) {
+    TArray<FColor> Resampled;
+    ResampleBitmapForMcp(Bitmap, CapturedSize, Resampled, TargetSize);
+    Bitmap = MoveTemp(Resampled);
+  } else {
+    TargetSize = CapturedSize;
+  }
+
+  const int32 Width = TargetSize.X;
+  const int32 Height = TargetSize.Y;
   TArray<uint8> PngData;
   IImageWrapperModule &ImageWrapperModule =
       FModuleManager::LoadModuleChecked<IImageWrapperModule>(

@@ -21,7 +21,10 @@ function makeReader(result: Record<string, unknown>): (key: string) => unknown {
   };
 }
 
-const ASSET_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath'] as const;
+// widgetPath is the canonical asset path of a Widget Blueprint and is what the
+// WidgetAuthoring handlers already emit, so without it every widget mutation
+// produced a receipt with no asset handle at all.
+const ASSET_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'widgetPath'] as const;
 const ACTOR_FIELDS = ['actorPath', 'actorName', 'actorLabel'] as const;
 const CHANGE_ARRAY_FIELDS = ['changes', 'changedEntities', 'changedAssets', 'affectedActors', 'modifiedPaths'] as const;
 const CHANGE_SINGLE_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'actorPath', 'actorName'] as const;

@@ -1,6 +1,6 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
-
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersCdoComponents.h"
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #if WITH_EDITOR
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
@@ -78,7 +78,7 @@ TSharedPtr<FJsonObject> BuildComponentSummary(
     else if (bDetailed)
     {
         TSharedPtr<FJsonObject> Props =
-            McpPropertyReflection::ExportObjectToJson(Template, false);
+            McpPropertyReflection::ExportObjectToJsonBounded(Template, false);
         if (Props.IsValid())
         {
             CompObj->SetObjectField(TEXT("properties"), Props);

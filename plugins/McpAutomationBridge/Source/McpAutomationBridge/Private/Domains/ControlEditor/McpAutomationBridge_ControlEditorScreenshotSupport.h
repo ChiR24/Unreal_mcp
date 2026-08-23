@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
+#include "Foundation/McpScreenshotResample.h"
 
 #if WITH_EDITOR
 #include "Framework/Application/SlateApplication.h"
@@ -18,8 +19,14 @@ FString MakeSafeScreenshotFilenameForMcp(
 void AddScreenshotMetadataForMcp(const TSharedPtr<FJsonObject> &Resp,
                                  const TSharedPtr<FJsonObject> &Payload);
 FString MakeScreenshotTooLargeMessageForMcp(int32 SizeBytes);
+
+// ResolveScreenshotResolutionForMcp / ResampleBitmapForMcp come from
+// Foundation/McpScreenshotResample.h so all three capture surfaces share one
+// implementation.
+
 TSharedPtr<SWindow> GetFullEditorSlateWindowForMcp();
 bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
+                                 const TSharedPtr<FJsonObject> &Payload,
                                  TArray<uint8> &OutPngData,
                                  FIntVector &OutSize, FString &OutError);
 #endif

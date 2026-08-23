@@ -42,7 +42,7 @@ export function boundArray<T>(values: readonly T[]): T[] {
 // within one string, so a credential that arrives as a real JSON value has no
 // keyword context left to match; the key it hangs under is the only signal, and
 // the invariant (a secret never reaches a receipt) makes that signal sufficient.
-const SECRET_KEY_WORDS = new Set([
+export const SECRET_KEY_WORDS = new Set([
   'token',
   'secret',
   'password',
@@ -58,14 +58,14 @@ const SECRET_KEY_WORDS = new Set([
 
 // Heads that carry no meaning of their own, so the real head sits one word to
 // their left: `secretValue` is still a secret, `tokenString` is still a token.
-const TRANSPARENT_HEADS = new Set(['value', 'data', 'string', 'text', 'raw', 'plain']);
+export const TRANSPARENT_HEADS = new Set(['value', 'data', 'string', 'text', 'raw', 'plain']);
 
 // Heads that make a compound a MEASUREMENT or a STATUS rather than a credential:
 // `tokenCount` is a count, `secretsFound` is a finding. This list is the ONLY
 // thing that suppresses masking once a secret word is present, so the default is
 // to mask - `secretKey`, `passwordHash` and `authorizationHeader` all name real
 // credentials, and an unrecognised head must never be assumed harmless.
-const MEASUREMENT_HEADS = new Set([
+export const MEASUREMENT_HEADS = new Set([
   'count', 'budget', 'length', 'size', 'limit', 'total', 'max', 'min',
   'index', 'order', 'position', 'offset', 'depth', 'age', 'ttl',
   'found', 'required', 'enabled', 'disabled', 'expired', 'valid', 'present',
@@ -77,7 +77,7 @@ const MEASUREMENT_HEADS = new Set([
 
 // Qualifiers that precede a credential noun. They name no secret alone, so they
 // only matter when reuniting a compound that carried no separator.
-const SECRET_QUALIFIERS = new Set([
+export const SECRET_QUALIFIERS = new Set([
   'api', 'access', 'auth', 'private', 'public', 'client', 'server', 'session',
   'user', 'admin', 'root', 'master', 'signing', 'refresh', 'bearer', 'oauth',
   'app', 'service', 'encryption', 'shared', 'secret',
@@ -85,7 +85,7 @@ const SECRET_QUALIFIERS = new Set([
 
 // Credential nouns that can close a compound. `secret` + `key` is a credential
 // even though `key` alone is far too generic to live in SECRET_KEY_WORDS.
-const CREDENTIAL_TAILS = new Set([
+export const CREDENTIAL_TAILS = new Set([
   'key', 'token', 'secret', 'password', 'passwd', 'pwd', 'credential',
   'authorization', 'signature', 'cert', 'certificate',
   'hash', 'bytes', 'digest', 'header', 'blob',
@@ -175,12 +175,56 @@ function namesCredential(words: readonly string[]): boolean {
 // `secretKey`, `passwordHash`, `authorizationHeader` and `credentialBytes` all
 // carry the credential itself, so an unrecognised head must never suppress the
 // mask; only MEASUREMENT_HEADS may, which is what spares `tokenCount`.
+// The compound splitter is O(n^2) on a separator-less run, and a receipt key is
+// caller-influenced (echoed map keys and property names), so an over-long key is
+// skipped rather than classified — the same bound the sibling-name path applies.
+export const MAX_KEY_NAME_LENGTH = 128;
+
 function isSecretKey(key: string): boolean {
+  if (key.length > MAX_KEY_NAME_LENGTH) return false;
   const words = keyWords(key);
   if (!namesCredential(words)) return false;
   let end = words.length;
   while (end > 1 && inSet(TRANSPARENT_HEADS, words[end - 1] ?? '')) end -= 1;
   return !inSet(MEASUREMENT_HEADS, words[end - 1] ?? '');
+}
+
+// Keys that carry a value but name no subject of their own, and keys that name
+// the subject a sibling carries. The reflection handlers answer in exactly this
+// split shape - `{propertyName: "CapabilityToken", value: "<token>"}` - which
+// defeats key-name classification twice over: `value` names nothing, and
+// `propertyName` holds a name rather than a secret, so masking IT would hide the
+// question instead of the answer. Native mirror: GenericValueKeys() and
+// NameBearingKeys() in McpNativeReceiptSecretKeys.cpp.
+export const GENERIC_VALUE_KEYS: ReadonlySet<string> = new Set([
+  'value', 'values', 'currentvalue', 'previousvalue', 'oldvalue', 'newvalue',
+  'defaultvalue', 'element', 'elements', 'entry', 'entries', 'result',
+]);
+
+export const NAME_BEARING_KEYS: ReadonlySet<string> = new Set([
+  'propertyname', 'propertypath', 'property', 'field', 'key', 'settingname',
+  'setting', 'name',
+]);
+
+// The NAME the caller asked for decides, judged by the same classifier a key
+// would face. `{name: 'Foo', value: 'bar'}` is untouched; only a name that itself
+// reads as a credential masks its generic siblings.
+//
+// The name is caller-supplied and unbounded (the reflection handlers only trim
+// it), and the compound splitter is O(n^2) on a camelCase-free run, so an
+// over-long name is skipped rather than classified: real property names are
+// short, and anything past the bound cannot be a credential this classifier
+// would recognise anyway.
+const MAX_SIBLING_NAME_LENGTH = 128;
+
+function namesCredentialBySibling(value: object): boolean {
+  for (const [key, entry] of Object.entries(value)) {
+    if (typeof entry !== 'string') continue;
+    if (entry.length > MAX_SIBLING_NAME_LENGTH) continue;
+    if (!NAME_BEARING_KEYS.has(key.toLowerCase())) continue;
+    if (isSecretKey(entry)) return true;
+  }
+  return false;
 }
 
 // Deep secret masking for the outer legacy envelope. Masks secret-looking string
@@ -233,8 +277,22 @@ export function maskSecretsDeep(value: unknown, depth = 0): unknown {
   if (value !== null && typeof value === 'object') {
     if (depth >= MAX_RECEIPT_DEPTH) return REDACTED;
     const out: Record<string, unknown> = {};
+    // Consulted once per object: when a name-bearing sibling names a credential,
+    // the generic value carriers in the SAME object are masked too. Without this
+    // a reflection reply launders a secret past key-name classification by
+    // splitting the name and the value across two fields.
+    const bySibling = namesCredentialBySibling(value);
     for (const [key, entry] of Object.entries(value)) {
-      assignJsonKey(out, key, isSecretKey(key) ? REDACTED : maskSecretsDeep(entry, depth + 1));
+      const isGenericSiblingCarrier =
+        bySibling && GENERIC_VALUE_KEYS.has(key.toLowerCase());
+      // A boolean or number cannot carry a credential, so the sibling path spares
+      // them (a secret-NAMED key still masks its whole value whatever the shape).
+      const masked =
+        isSecretKey(key) ||
+        (isGenericSiblingCarrier &&
+          typeof entry !== 'boolean' &&
+          typeof entry !== 'number');
+      assignJsonKey(out, key, masked ? REDACTED : maskSecretsDeep(entry, depth + 1));
     }
     return out;
   }

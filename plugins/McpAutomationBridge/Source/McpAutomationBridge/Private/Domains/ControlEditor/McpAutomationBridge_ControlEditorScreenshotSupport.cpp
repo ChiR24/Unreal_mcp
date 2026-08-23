@@ -5,7 +5,7 @@ namespace {
 bool IsUsableSlateWindowForMcp(const TSharedPtr<SWindow> &Window) {
   return Window.IsValid() && Window->IsVisible() && !Window->IsWindowMinimized();
 }
-}
+}  // namespace
 
 FString MakeSafeScreenshotFilenameForMcp(
     const TSharedPtr<FJsonObject> &Payload) {
@@ -54,8 +54,11 @@ void AddScreenshotMetadataForMcp(const TSharedPtr<FJsonObject> &Resp,
 }
 
 FString MakeScreenshotTooLargeMessageForMcp(int32 SizeBytes) {
+  // Naming resolution matters: "use a smaller viewport" is not something a
+  // caller on the far side of the bridge can act on, so the old wording left
+  // returnBase64=false -- i.e. no image at all -- as the only apparent way out.
   return FString::Printf(
-      TEXT("Screenshot PNG is too large to return as base64 (%d bytes, max %d bytes). Retry with returnBase64=false or a smaller viewport/window."),
+      TEXT("Screenshot PNG is too large to return as base64 (%d bytes, max %d bytes). Retry with a smaller resolution (e.g. resolution=\"1280x720\") or returnBase64=false."),
       SizeBytes, MaxScreenshotPngBytesForBase64ForMcp);
 }
 
@@ -95,6 +98,7 @@ TSharedPtr<SWindow> GetFullEditorSlateWindowForMcp() {
 }
 
 bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
+                                 const TSharedPtr<FJsonObject> &Payload,
                                  TArray<uint8> &OutPngData,
                                  FIntVector &OutSize, FString &OutError) {
   TSharedRef<SWidget> WindowWidget = Window;
@@ -109,6 +113,21 @@ bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
 
   for (FColor &Pixel : Bitmap) {
     Pixel.A = 255;
+  }
+
+  const FIntPoint CapturedSize(OutSize.X, OutSize.Y);
+  FIntPoint TargetSize = CapturedSize;
+  if (!ResolveScreenshotResolutionForMcp(Payload, CapturedSize, TargetSize,
+                                         OutError)) {
+    return false;
+  }
+  if (TargetSize != CapturedSize &&
+      Bitmap.Num() >= CapturedSize.X * CapturedSize.Y) {
+    TArray<FColor> Resampled;
+    ResampleBitmapForMcp(Bitmap, CapturedSize, Resampled, TargetSize);
+    Bitmap = MoveTemp(Resampled);
+    OutSize.X = TargetSize.X;
+    OutSize.Y = TargetSize.Y;
   }
 
   IImageWrapperModule &ImageWrapperModule =

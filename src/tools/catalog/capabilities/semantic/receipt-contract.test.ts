@@ -342,6 +342,178 @@ describe('receipt redaction — a secret-named KEY masks its value whatever its 
   });
 });
 
+// The reflection handlers (get_object_property, set_object_property,
+// array_get_element, map_get_value) answer in a SPLIT shape: the property the
+// caller named goes in `propertyName`, and its value goes in `value`. Both halves
+// of the key-name rule miss it — `value` names nothing, and `propertyName` holds
+// a name rather than a credential — so a read-scoped caller could once export the
+// plugin's own CapabilityToken through a fully redacted pipeline. The name-bearing
+// sibling therefore decides for the generic carriers in the same object.
+describe('receipt redaction — a credential NAMED by a sibling masks the generic value', () => {
+  const SECRET = 'sk-supersecret-abcdef0123456789';
+
+  it('masks `value` when `propertyName` names a credential', () => {
+    const masked = maskSecretsDeep({
+      propertyName: 'CapabilityToken',
+      value: SECRET,
+      objectPath: '/Script/McpAutomationBridge.Default__McpAutomationBridgeSettings',
+    }) as Record<string, unknown>;
+
+    expect(JSON.stringify(masked)).not.toContain(SECRET);
+    expect(masked.value).toBe('[REDACTED]');
+    // The NAME is the question, not the answer — masking it would hide which
+    // property was read while telling the caller nothing they did not send.
+    expect(masked.propertyName).toBe('CapabilityToken');
+  });
+
+  it('covers every generic carrier and every name-bearing field the handlers use', () => {
+    for (const nameKey of ['propertyName', 'propertyPath', 'property', 'field', 'key', 'name']) {
+      for (const valueKey of ['value', 'values', 'currentValue', 'previousValue', 'element', 'result']) {
+        const masked = maskSecretsDeep({
+          [nameKey]: 'ScopedCapabilityTokens',
+          [valueKey]: SECRET,
+        }) as Record<string, unknown>;
+        expect(masked[valueKey], `${nameKey}/${valueKey}`).toBe('[REDACTED]');
+      }
+    }
+  });
+
+  it('masks a STRUCTURED value named by a sibling, not just a string', () => {
+    const masked = maskSecretsDeep({
+      propertyName: 'ScopedCapabilityTokens',
+      value: [{ profile: 'reader', token: SECRET }],
+    }) as Record<string, unknown>;
+
+    expect(JSON.stringify(masked)).not.toContain(SECRET);
+    expect(masked.value).toBe('[REDACTED]');
+  });
+
+  it('applies at depth, inside the result envelope the handlers actually emit', () => {
+    const masked = maskSecretsDeep({
+      success: true,
+      data: { propertyName: 'CapabilityToken', value: SECRET },
+    });
+
+    expect(JSON.stringify(masked)).not.toContain(SECRET);
+  });
+
+  it('does NOT mask when the sibling names something ordinary (no over-masking)', () => {
+    const masked = maskSecretsDeep({
+      propertyName: 'StaticMesh',
+      value: '/Game/Meshes/SM_Rock',
+      name: 'Cube',
+    }) as Record<string, unknown>;
+
+    expect(masked.value).toBe('/Game/Meshes/SM_Rock');
+    expect(masked.name).toBe('Cube');
+  });
+
+  it('does NOT let a non-string sibling or an unrelated key trigger masking', () => {
+    const masked = maskSecretsDeep({
+      propertyName: { nested: 'CapabilityToken' },
+      description: 'CapabilityToken',
+      value: 'PLAIN',
+    }) as Record<string, unknown>;
+
+    expect(masked.value).toBe('PLAIN');
+  });
+
+  it('spares a measurement named by a sibling, matching the key-name rule', () => {
+    const masked = maskSecretsDeep({ propertyName: 'TokenCount', value: 7 }) as Record<
+      string,
+      unknown
+    >;
+
+    expect(masked.value).toBe(7);
+  });
+
+  it('spares a BOOLEAN or NUMBER sibling value (they cannot carry a credential)', () => {
+    const masked = maskSecretsDeep({
+      propertyName: 'CapabilityToken',
+      value: false,
+      name: 42,
+    }) as Record<string, unknown>;
+
+    expect(masked.value, 'a boolean sibling is not a credential carrier').toBe(false);
+    expect(masked.name, 'a numeric sibling is not a credential carrier').toBe(42);
+  });
+
+  it('still masks a string sibling value when the name-bearing field names a credential', () => {
+    const masked = maskSecretsDeep({
+      propertyName: 'CapabilityToken',
+      value: SECRET,
+    }) as Record<string, unknown>;
+
+    expect(masked.value).toBe('[REDACTED]');
+  });
+
+  it('classifies an over-long sibling name promptly instead of O(n^2)-splitting it', () => {
+    // The compound splitter is O(n^2) on a camelCase-free run, and the sibling
+    // name is caller-supplied; a 100 KB run of `a` must be skipped, not split.
+    const longName = 'a'.repeat(100_000);
+    const start = performance.now();
+    const masked = maskSecretsDeep({
+      propertyName: longName,
+      value: SECRET,
+    }) as Record<string, unknown>;
+
+    expect(masked.value, 'an over-long name must not trigger sibling masking').toBe(SECRET);
+    expect(performance.now() - start, 'a 100 KB name must not blow up the classifier').toBeLessThan(
+      1000
+    );
+  });
+});
+
+// The sibling classifier delegates to the same key-name classifier a key would
+// face, so TS and native must agree on which NAME-BEARING values classify as
+// credentials — a divergence would mask a reflection reply on one transport and
+// ship it in the clear on the other. This fixture pins the shared vocabulary
+// (compound tails included) so the two mirrors cannot drift.
+describe('receipt redaction — sibling-name classifier parity fixture (TS/native)', () => {
+  const SECRET = 'sk-supersecret-abcdef0123456789';
+
+  // Separator-less runs whose halves are NOT in the closed vocabulary
+  // (`capabilitytoken`, `CAPABILITYTOKEN`) are deliberately absent here: no
+  // transport's classifier recognises them, and the fix for that spelling is
+  // the canonical-name ECHO in the reflection handlers (the resolved
+  // `CapabilityToken` is what the classifier sees), not vocabulary expansion.
+  const CREDENTIAL_NAMES = [
+    'CapabilityToken', 'ScopedCapabilityTokens',
+    'SecretKey', 'ApiAccessToken', 'apiaccesstoken', 'AccessKey',
+    'passwordHash', 'passwordhash', 'credentialBytes', 'credentialbytes',
+    'authorizationHeader', 'authorizationheader', 'secretBlob', 'secretblob',
+    'signingKey', 'PrivateKey', 'ClientSecret', 'RefreshToken', 'OAuthToken',
+  ] as const;
+
+  const ORDINARY_NAMES = [
+    'StaticMesh', 'ActorLocation', 'SkeletalMesh', 'MaterialSlot',
+    'TokenCount', 'TokenLimit', 'TokenIndex', 'TokenBudget',
+    'SecretName', 'SecretVersion', 'AuthorizationRequired', 'AuthorizationScheme',
+  ] as const;
+
+  for (const name of CREDENTIAL_NAMES) {
+    it(`names \`${name}\` a credential (masks the sibling value)`, () => {
+      const masked = maskSecretsDeep({ propertyName: name, value: SECRET }) as Record<
+        string,
+        unknown
+      >;
+
+      expect(masked.value, `${name} must mask its generic sibling`).toBe('[REDACTED]');
+    });
+  }
+
+  for (const name of ORDINARY_NAMES) {
+    it(`names \`${name}\` ordinary (spares the sibling value)`, () => {
+      const masked = maskSecretsDeep({ propertyName: name, value: SECRET }) as Record<
+        string,
+        unknown
+      >;
+
+      expect(masked.value, `${name} must not mask its generic sibling`).toBe(SECRET);
+    });
+  }
+});
+
 // A head-word rule alone once un-masked every one of these: the head (`key`,
 // `hash`, `header`, `bytes`) is not itself a secret word, yet each compound
 // names the credential rather than a fact about it. Masking must therefore be
@@ -406,6 +578,10 @@ describe('receipt redaction — separator-less credential runs', () => {
   const CONCATENATED_KEYS = [
     'SECRETKEY', 'ACCESSTOKEN', 'PASSWORDHASH', 'passwordhash',
     'SECRETBYTES', 'secretdigest', 'PRIVATEKEYBYTES', 'APIACCESSTOKEN',
+    // Three-part runs whose credential word is the LEADING part and whose tail is
+    // two qualifiers/transparent heads. The predicate must judge the whole triple
+    // (never a sub-split), or the native surface masks less than stdio.
+    'SECRETUSERDATA', 'SECRETACCESSAPI', 'TOKENAPPOAUTH',
   ] as const;
 
   for (const key of CONCATENATED_KEYS) {

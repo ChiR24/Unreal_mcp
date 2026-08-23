@@ -126,7 +126,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
         }
         else
         {
-            CompJson = McpPropertyReflection::ExportObjectToJson(FoundComp, false);
+            CompJson = McpPropertyReflection::ExportObjectToJsonBounded(FoundComp, false);
         }
 
         Resp->SetStringField(TEXT("componentName"), ComponentNameFilter);
@@ -154,7 +154,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
     else if (bDetailed)
     {
         TSharedPtr<FJsonObject> CdoProps =
-            McpPropertyReflection::ExportObjectToJson(CDO, false);
+            McpPropertyReflection::ExportObjectToJsonBounded(CDO, false);
         if (CdoProps.IsValid())
         {
             Resp->SetObjectField(TEXT("cdoProperties"), CdoProps);
