@@ -34,6 +34,7 @@ interface AutomationBridgeClientDependencies {
     ) => void;
     readonly rejectQueuedRequests: (error: Error) => void;
     readonly rejectPendingRequests: (error: Error) => void;
+    readonly rejectOwnedRequests: (ownerId: string, error: Error) => number;
 }
 
 export class AutomationBridgeClient {
@@ -179,6 +180,16 @@ export class AutomationBridgeClient {
                 protocol: socketInfo.protocol || null
             });
             this.deps.log.info(`Automation bridge client socket closed (code=${code}, reason=${reason})`);
+
+            // Owner-scoped settlement when a connection survives: exactly the
+            // requests this socket carried, once each (entries are deleted),
+            // never a cancel_request frame (disconnect is an explicit
+            // non-notify class), idempotent for a secondary close that owns
+            // nothing. When no socket remains, the full teardown below rejects
+            // everything (owned included) and keeps the redacted close reason.
+            if (this.deps.connectionManager.isConnected()) {
+                this.deps.rejectOwnedRequests(socketInfo.connectionId, new Error('Automation bridge primary connection lost'));
+            }
 
             if (!this.deps.connectionManager.isConnected()) {
                 const error = new Error(reason || 'Connection lost');

@@ -153,6 +153,11 @@ export class ConnectionManager extends EventEmitter {
         return this.primarySocket;
     }
 
+    public getPrimaryConnectionId(): string | undefined {
+        if (!this.primarySocket) return undefined;
+        return this.activeSockets.get(this.primarySocket)?.connectionId;
+    }
+
     public isConnected(): boolean {
         return this.activeSockets.size > 0;
     }

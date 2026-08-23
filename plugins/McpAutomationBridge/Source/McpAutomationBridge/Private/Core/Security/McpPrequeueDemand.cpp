@@ -12,9 +12,23 @@
 // It does that by construction rather than by agreement — it calls the very
 // function the dispatch macros call, McpHandlerUtils::NormalizeAction, which
 // reads `payload.subAction` and otherwise falls back to the envelope action.
-// It deliberately does NOT read `payload.action`: no domain handler reads that
-// field, so honouring it here would let a client lower its own required scope
-// with a value that never influences what actually runs.
+// It deliberately does NOT read `payload.action`, so a decoy value there can
+// never lower the demand below what NormalizeAction resolves.
+//
+// That is only half the property, because `payload.action` is NOT an unread
+// field: roughly ten domain dispatchers (system_control, control_actor,
+// control_editor, manage_level, environment, animation, manage_input, effect,
+// blueprint) resolve their sub-action from it. Reading it here would let a
+// client lower its own scope; ignoring it while a dispatcher honours it would
+// let a client RAISE what runs past what was authorized. Neither is acceptable,
+// so the other half is enforced before this runs:
+// FMcpConnectionManager::AuthorizeAutomationRequest NORMALIZES any
+// automation_request whose payload declares both fields with different values
+// (overwriting `action` from the authoritative `subAction`), and
+// McpNativeTransportGatewayExecute stamps `subAction`
+// unconditionally from the server-resolved action. By the time a payload reaches
+// this function the two fields cannot disagree — do not remove either guard
+// without making every dispatcher call NormalizeAction.
 
 namespace McpPrequeueGate
 {

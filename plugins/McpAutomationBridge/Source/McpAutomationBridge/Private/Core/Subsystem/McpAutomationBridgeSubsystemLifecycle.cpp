@@ -6,6 +6,7 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "McpConnectionManager.h"
 #include "Core/Errors/McpRequestErrorDevice.h"
+#include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/McpLiveStateRevisionTracker.h"
 #include "Foundation/McpReadinessState.h"
 
@@ -22,6 +23,13 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
                  "as commandlet (cook/package mode)."));
         return;
     }
+
+    // BB-005: cache the diagnostics root on the game thread (socket-thread
+    // hooks never resolve project paths), then perform crash-tolerant startup
+    // rotation before request acceptance - a non-empty current is promoted to
+    // previous so a hard crash in a prior run leaves readable evidence.
+    FMcpDiagnosticsSnapshot::Get().InitializeFromGameThread();
+    FMcpDiagnosticsSnapshot::Get().RotateOnStartup();
 
     UE_LOG(
         LogMcpAutomationBridgeSubsystem,
@@ -135,6 +143,8 @@ void UMcpAutomationBridgeSubsystem::Deinitialize()
         }
         RequestErrorDevice.Reset();
     }
+
+    FMcpDiagnosticsSnapshot::Get().PersistCurrent();
 
     Super::Deinitialize();
 }

@@ -1,4 +1,9 @@
 import { PendingRequest, AutomationBridgeResponseMessage } from './types.js';
+import type {
+    NaturalTimeoutKind,
+    NaturalTimeoutObserver,
+    RequestTrackerRequestSpec
+} from './types.js';
 import { randomUUID, createHash } from 'node:crypto';
 import {
     PROGRESS_EXTENSION_MS,
@@ -17,7 +22,7 @@ export class RequestTracker {
     private pendingRequests = new Map<string, PendingRequest>();
     private coalescedRequests = new Map<string, Promise<AutomationBridgeResponseMessage>>();
     private lastRequestSentAt?: Date;
-
+    private naturalTimeoutObserver?: NaturalTimeoutObserver;
 
     constructor(
         private maxPendingRequests: number
@@ -48,18 +53,24 @@ export class RequestTracker {
     }
 
     /**
+     * Install the sink that receives typed terminal notifications for every
+     * natural tracker timeout class. The notification fires after the pending
+     * entry and its timers are already cleared.
+     */
+    public setNaturalTimeoutObserver(observer: NaturalTimeoutObserver | undefined): void {
+        this.naturalTimeoutObserver = observer;
+    }
+
+    /**
      * Create a new pending request with timeout handling.
-     * @param action - The action name being requested
-     * @param payload - The request payload
-     * @param timeoutMs - Timeout in milliseconds before the request fails
+     * @param spec - Object-style request specification (action, payload, timeoutMs)
      * @returns Object containing the requestId and a promise that resolves with the response
      * @throws Error if max pending requests limit is reached
      */
     public createRequest(
-        action: string,
-        payload: Record<string, unknown>,
-        timeoutMs: number
+        spec: RequestTrackerRequestSpec
     ): { requestId: string; promise: Promise<AutomationBridgeResponseMessage> } {
+        const { action, payload, timeoutMs } = spec;
         if (this.pendingRequests.size >= this.maxPendingRequests) {
             throw new Error(`Max pending requests limit reached (${this.maxPendingRequests})`);
         }
@@ -68,18 +79,19 @@ export class RequestTracker {
 
         const promise = new Promise<AutomationBridgeResponseMessage>((resolve, reject) => {
             const timeout = setTimeout(() => {
-                if (this.pendingRequests.has(requestId)) {
-                    this.cleanupRequest(requestId);
-                    reject(new Error(`Request ${requestId} timed out after ${timeoutMs}ms`));
-                }
+                this.settleNaturalTimeout(
+                    requestId,
+                    'ordinary_deadline',
+                    new Error(`Request ${requestId} timed out after ${timeoutMs}ms`)
+                );
             }, timeoutMs);
 
             const absoluteTimeout = setTimeout(() => {
-                if (this.pendingRequests.has(requestId)) {
-                    this.cleanupRequest(requestId);
-                    const totalMs = ABSOLUTE_MAX_TIMEOUT_MS;
-                    reject(new Error(`Request ${requestId} exceeded absolute max timeout (${totalMs}ms)`));
-                }
+                this.settleNaturalTimeout(
+                    requestId,
+                    'absolute_deadline',
+                    new Error(`Request ${requestId} exceeded absolute max timeout (${ABSOLUTE_MAX_TIMEOUT_MS}ms)`)
+                );
             }, ABSOLUTE_MAX_TIMEOUT_MS);
 
             this.pendingRequests.set(requestId, {
@@ -124,20 +136,26 @@ export class RequestTracker {
         }
 
         if (pending.extensionCount !== undefined && pending.extensionCount >= MAX_PROGRESS_EXTENSIONS) {
-            pending.reject(new Error(
-                `Request ${requestId} exceeded max progress extensions (${MAX_PROGRESS_EXTENSIONS}) - possible deadlock detected`
-            ));
-            this.cleanupRequest(requestId);
+            this.settleNaturalTimeout(
+                requestId,
+                'extension_cap',
+                new Error(
+                    `Request ${requestId} exceeded max progress extensions (${MAX_PROGRESS_EXTENSIONS}) - possible deadlock detected`
+                )
+            );
             return false;
         }
 
         if (percent !== undefined && pending.lastProgressPercent === percent) {
             pending.staleCount = (pending.staleCount || 0) + 1;
             if (pending.staleCount >= PROGRESS_STALE_THRESHOLD) {
-                pending.reject(new Error(
-                    `Request ${requestId} stalled - progress unchanged at ${percent}% for ${PROGRESS_STALE_THRESHOLD} updates`
-                ));
-                this.cleanupRequest(requestId);
+                this.settleNaturalTimeout(
+                    requestId,
+                    'stale_progress',
+                    new Error(
+                        `Request ${requestId} stalled - progress unchanged at ${percent}% for ${PROGRESS_STALE_THRESHOLD} updates`
+                    )
+                );
                 return false;
             }
         } else {
@@ -147,10 +165,11 @@ export class RequestTracker {
         clearTimeout(pending.timeout);
 
         const newTimeout = setTimeout(() => {
-            if (this.pendingRequests.has(requestId)) {
-                this.cleanupRequest(requestId);
-                pending.reject(new Error(`Request ${requestId} timed out after extension`));
-            }
+            this.settleNaturalTimeout(
+                requestId,
+                'progress_extension_deadline',
+                new Error(`Request ${requestId} timed out after extension`)
+            );
         }, PROGRESS_EXTENSION_MS);
 
         pending.timeout = newTimeout;
@@ -159,6 +178,26 @@ export class RequestTracker {
         pending.totalExtensionMs = (pending.totalExtensionMs || 0) + PROGRESS_EXTENSION_MS;
 
         return true;
+    }
+
+    /**
+     * Sole terminal settlement for a natural tracker timeout. Deletes the
+     * pending map entry and clears every timer first, then notifies the
+     * observer (which settles correlation before delivering the advisory
+     * cancel frame) and rejects the shared promise exactly once. Map deletion
+     * is the single settle token: a late inbound frame finds no entry.
+     */
+    private settleNaturalTimeout(requestId: string, kind: NaturalTimeoutKind, error: Error): void {
+        const pending = this.pendingRequests.get(requestId);
+        if (!pending) return;
+        this.cleanupRequest(requestId);
+        this.naturalTimeoutObserver?.({
+            requestId,
+            action: pending.action,
+            kind,
+            error
+        });
+        pending.reject(error);
     }
 
     private clearRequestTimers(pending: PendingRequest): void {
@@ -203,6 +242,37 @@ export class RequestTracker {
             pending.reject(error);
         }
         this.pendingRequests.clear();
+    }
+
+    /**
+     * Stamp the connection id that carried a pending request's frame. Called
+     * synchronously after a successful send, so the owner is the socket that
+     * actually received the frame.
+     */
+    public setOwnerId(requestId: string, ownerId: string): void {
+        const pending = this.pendingRequests.get(requestId);
+        if (pending) {
+            pending.ownerId = ownerId;
+        }
+    }
+
+    /**
+     * Settle every pending request owned by a removed connection. Deletes each
+     * entry via cleanupRequest (timers cleared, map deleted) before rejecting,
+     * so settlement is exactly once and idempotent. Never notifies the
+     * natural-timeout observer: a disconnect is an explicit non-notify class
+     * and must not emit an advisory cancel_request frame.
+     */
+    public rejectOwnedBy(ownerId: string, error: Error): number {
+        let settled = 0;
+        for (const [requestId, pending] of this.pendingRequests) {
+            if (pending.ownerId === ownerId) {
+                this.cleanupRequest(requestId);
+                pending.reject(error);
+                settled++;
+            }
+        }
+        return settled;
     }
 
     public getPendingCount(): number {

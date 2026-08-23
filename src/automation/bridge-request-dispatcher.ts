@@ -2,6 +2,7 @@ import { config } from '../config.js';
 import { McpRequestCancelledError } from './request-cancellation-error.js';
 import { ConnectionLifecycle } from './connection-lifecycle.js';
 import { RequestCorrelation } from './request-correlation.js';
+import { deliverNaturalTimeoutCancellation } from './natural-timeout-cancellation.js';
 import { ConsentGrantSchema } from '../tools/catalog/capabilities/semantic/authorization.js';
 import {
     ExpectedRevisionsSchema,
@@ -13,6 +14,7 @@ import type {
     AutomationBridgeEvents,
     AutomationBridgeMessage,
     AutomationBridgeResponseMessage,
+    NaturalTimeoutNotification,
     QueuedRequestItem
 } from './types.js';
 
@@ -32,6 +34,8 @@ export interface AutomationRequestDispatcherDependencies {
     readonly log: Logger;
     readonly isConnected: () => boolean;
     readonly send: (payload: AutomationBridgeMessage) => boolean;
+    /** Connection id of the socket the next send will use, for owner stamping. */
+    readonly getSendOwnerId?: () => string | undefined;
     readonly startClient: () => void;
     readonly abortPendingConnection: (reason: Error) => void;
     readonly once: <K extends keyof AutomationBridgeEvents>(
@@ -59,6 +63,7 @@ export class AutomationRequestDispatcher {
             once: deps.once,
             off: deps.off
         });
+        deps.requestTracker.setNaturalTimeoutObserver((notification) => this.handleNaturalTimeout(notification));
     }
 
     public async sendAutomationRequest<T = AutomationBridgeResponseMessage>(
@@ -118,6 +123,10 @@ export class AutomationRequestDispatcher {
         this.deps.requestTracker.rejectAll(error);
     }
 
+    public rejectOwnedRequests(ownerId: string, error: Error): number {
+        return this.deps.requestTracker.rejectOwnedBy(ownerId, error);
+    }
+
     /**
      * Cancel every automation request correlated to an MCP request id.
      *
@@ -152,14 +161,48 @@ export class AutomationRequestDispatcher {
         );
     }
 
+    /**
+     * Terminal natural-timeout settlement installed on the tracker. Runs inside
+     * the tracker's timer callback after the pending entry and its timers are
+     * already cleared. Settles correlation BEFORE the best-effort advisory
+     * cancel frame so an explicit-cancel race can never emit a second frame
+     * for this automation id; the shared-promise finalizer's settle then
+     * becomes an idempotent no-op.
+     */
+    private handleNaturalTimeout(notification: NaturalTimeoutNotification): void {
+        this.correlation.settle(notification.requestId);
+        deliverNaturalTimeoutCancellation(notification, {
+            send: this.deps.send,
+            log: this.deps.log
+        });
+    }
+
     private async sendRequestInternal<T>(
         action: string,
         payload: Record<string, unknown>,
         options: AutomationRequestOptions
     ): Promise<T> {
         const timeoutMs = options.timeoutMs ?? config.MCP_REQUEST_TIMEOUT_MS;
+        // Mirror of the plugin authority's reconciliation
+        // (McpConnectionManagerAuthority.cpp): the payload may legitimately carry
+        // `action` and `subAction` with different values (handler aliases rewrite
+        // `subAction` to the native name), and the plugin resolves subAction
+        // first. Normalizing here keeps both transports applying the same rule,
+        // so a decoy `action` can never steer a dispatcher away from what the
+        // plugin authorized. A shallow copy avoids mutating a caller-owned args
+        // object that a queued retry may reuse.
+        const hasAction =
+            typeof payload.action === 'string' && payload.action.length > 0;
+        const hasSubAction =
+            typeof payload.subAction === 'string' && payload.subAction.length > 0;
+        const reconciledPayload =
+            hasSubAction && (!hasAction || payload.action !== payload.subAction)
+                ? { ...payload, action: payload.subAction }
+                : hasAction && !hasSubAction
+                  ? { ...payload, subAction: payload.action }
+                  : payload;
         const coalesceKey = options.expectedRevisions === undefined
-            ? this.deps.requestTracker.createCoalesceKey(action, payload)
+            ? this.deps.requestTracker.createCoalesceKey(action, reconciledPayload)
             : undefined;
         if (coalesceKey) {
             const existing = this.deps.requestTracker.getCoalescedRequest(coalesceKey);
@@ -169,7 +212,7 @@ export class AutomationRequestDispatcher {
             }
         }
 
-        const { requestId, promise } = this.deps.requestTracker.createRequest(action, payload, timeoutMs);
+        const { requestId, promise } = this.deps.requestTracker.createRequest({ action, payload: reconciledPayload, timeoutMs });
         if (coalesceKey) {
             this.deps.requestTracker.setCoalescedRequest(coalesceKey, promise);
             this.correlation.noteCoalesceKey(coalesceKey, requestId);
@@ -181,12 +224,15 @@ export class AutomationRequestDispatcher {
             .finally(() => this.correlation.settle(requestId))
             .catch(() => undefined);
 
-        const envelope: AutomationBridgeMessage = { type: 'automation_request', requestId, action, payload };
+        const envelope: AutomationBridgeMessage = { type: 'automation_request', requestId, action, payload: reconciledPayload };
         if (options.correlationId !== undefined) envelope.correlationId = options.correlationId;
         if (options.consent !== undefined) envelope.consent = options.consent;
         if (options.expectedRevisions !== undefined) envelope.expectedRevisions = options.expectedRevisions;
         if (this.deps.send(envelope)) {
             this.deps.requestTracker.updateLastRequestSentAt();
+            // No await between send and stamp: the owner captured here IS the
+            // socket that carried the frame.
+            this.deps.requestTracker.setOwnerId(requestId, this.deps.getSendOwnerId?.() ?? '');
             return this.createSubscriberPromise<T>(resultPromise, options.mcpRequestId, requestId);
         }
 

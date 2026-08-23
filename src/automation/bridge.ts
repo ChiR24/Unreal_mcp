@@ -65,7 +65,8 @@ export class AutomationBridge extends EventEmitter {
             log: this.log,
             emit: (event, ...args) => this.emitAutomation(event, ...args),
             rejectQueuedRequests: (error) => this.requestDispatcher.rejectQueuedRequests(error),
-            rejectPendingRequests: (error) => this.requestDispatcher.rejectPendingRequests(error)
+            rejectPendingRequests: (error) => this.requestDispatcher.rejectPendingRequests(error),
+            rejectOwnedRequests: (ownerId, error) => this.requestDispatcher.rejectOwnedRequests(ownerId, error)
         });
         this.requestDispatcher = new AutomationRequestDispatcher({
             enabled: this.config.enabled,
@@ -75,6 +76,7 @@ export class AutomationBridge extends EventEmitter {
             log: this.log,
             isConnected: () => this.isConnected(),
             send: (payload) => this.client.send(payload),
+            getSendOwnerId: () => this.connectionManager.getPrimaryConnectionId(),
             startClient: () => this.client.startClient(),
             abortPendingConnection: () => this.client.abortPendingConnection(),
             once: (event, listener) => {

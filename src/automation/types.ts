@@ -145,6 +145,40 @@ export type AutomationProgressListener = (
     update: AutomationProgressUpdate
 ) => void;
 
+/**
+ * Object-style specification for a tracked automation request. Kept as one
+ * object so future concerns (e.g. ownership for Todo 7) can extend it without
+ * another positional signature change.
+ */
+export interface RequestTrackerRequestSpec {
+    readonly action: string;
+    readonly payload: Record<string, unknown>;
+    readonly timeoutMs: number;
+}
+
+/**
+ * The natural tracker timeout classes that terminate a request without an
+ * external response. Each maps to exactly one best-effort advisory
+ * `cancel_request` frame emitted by the dispatcher.
+ */
+export type NaturalTimeoutKind =
+    | 'ordinary_deadline'
+    | 'progress_extension_deadline'
+    | 'stale_progress'
+    | 'extension_cap'
+    | 'absolute_deadline';
+
+/** Typed terminal notification for a request the tracker settled by natural timeout. */
+export interface NaturalTimeoutNotification {
+    readonly requestId: string;
+    readonly action: string;
+    readonly kind: NaturalTimeoutKind;
+    readonly error: Error;
+}
+
+/** Receives natural-timeout terminal notifications. */
+export type NaturalTimeoutObserver = (notification: NaturalTimeoutNotification) => void;
+
 export interface PendingRequest {
     resolve: (value: AutomationBridgeResponseMessage) => void;
     reject: (reason: Error) => void;
@@ -162,6 +196,8 @@ export interface PendingRequest {
     staleCount?: number;
     absoluteTimeout?: NodeJS.Timeout;
     totalExtensionMs?: number;
+    /** Connection id of the socket that carried this request's frame (Todo 7 ownership). */
+    ownerId?: string;
 }
 
 /**

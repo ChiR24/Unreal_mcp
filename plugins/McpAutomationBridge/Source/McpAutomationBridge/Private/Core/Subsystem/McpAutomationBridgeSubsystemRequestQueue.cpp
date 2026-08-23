@@ -3,9 +3,12 @@
 #include "Async/Async.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Core/Requests/McpRequestOriginRegistry.h"
+#include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/McpLiveStateRevisions.h"
 #include "Foundation/McpTelemetryRegistry.h"
 #include "Misc/ScopeExit.h"
+
+namespace { void PersistSnapshotAsync() { AsyncTask(ENamedThreads::GameThread, []() { FMcpDiagnosticsSnapshot::Get().PersistCurrent(); }); } }
 
 EAutomationQueueRejection UMcpAutomationBridgeSubsystem::QueueAutomationRequest(
     const FString& RequestId,
@@ -26,15 +29,21 @@ EAutomationQueueRejection UMcpAutomationBridgeSubsystem::QueueAutomationRequest(
     Pending.SessionKey = McpQueueFairness::ResolveSessionKey(
         SessionKey, RequestingSocket.Get());
 
+    EAutomationQueueRejection Rejection = EAutomationQueueRejection::None;
+    int32 AdmissionDepthCarrier = 0;
     {
         FScopeLock Lock(&PendingAutomationRequestsMutex);
         if (!bAcceptingAutomationRequests)
         {
-            return EAutomationQueueRejection::NotAccepting;
+            // BB-005: refuse while the lock is held so the queue-depth read is
+            // race-free (same NF-3 discipline applied to admissions).
+            FMcpDiagnosticsSnapshot::Get().RecordRefusal(RequestId, TEXT("AUTOMATION_NOT_ACCEPTING"), PendingAutomationRequests.Num());
+            Rejection = EAutomationQueueRejection::NotAccepting;
         }
-        if (CanceledAutomationRequestIds.Remove(RequestId) > 0)
+        else if (CanceledAutomationRequestIds.Remove(RequestId) > 0)
         {
-            return EAutomationQueueRejection::AlreadyCanceled;
+            FMcpDiagnosticsSnapshot::Get().RecordRefusal(RequestId, TEXT("AUTOMATION_ALREADY_CANCELED"), PendingAutomationRequests.Num());
+            Rejection = EAutomationQueueRejection::AlreadyCanceled;
         }
         // Per-session admission cap, checked BEFORE the global cap so a
         // flooding session gets the precise refusal instead of a generic
@@ -45,7 +54,7 @@ EAutomationQueueRejection UMcpAutomationBridgeSubsystem::QueueAutomationRequest(
         // id), it only receives in-process re-queues from the save/GC/async-load
         // deferral path, and refusing those would turn a deferral into a lost
         // request. It stays bounded by the global cap below.
-        if (Pending.SessionKey != McpQueueFairness::AnonymousSessionKey())
+        else if (Pending.SessionKey != McpQueueFairness::AnonymousSessionKey())
         {
             int32 SessionPendingNum = 0;
             for (const FPendingAutomationRequest& Queued : PendingAutomationRequests)
@@ -64,20 +73,52 @@ EAutomationQueueRejection UMcpAutomationBridgeSubsystem::QueueAutomationRequest(
                     TEXT("Session automation queue is full (%d pending); rejecting action=%s"),
                     SessionPendingNum,
                     *Action);
-                return EAutomationQueueRejection::SessionQueueFull;
+                FMcpDiagnosticsSnapshot::Get().RecordRefusal(RequestId, TEXT("AUTOMATION_SESSION_QUEUE_FULL"), PendingAutomationRequests.Num());
+                Rejection = EAutomationQueueRejection::SessionQueueFull;
             }
         }
-        if (PendingAutomationRequests.Num() >= MaxPendingAutomationRequests)
+        if (Rejection == EAutomationQueueRejection::None &&
+            PendingAutomationRequests.Num() >= MaxPendingAutomationRequests)
         {
             UE_LOG(
                 LogMcpAutomationBridgeSubsystem,
                 Warning,
                 TEXT("Automation request queue is full; rejecting action=%s"),
                 *Action);
-            return EAutomationQueueRejection::QueueFull;
+            FMcpDiagnosticsSnapshot::Get().RecordRefusal(RequestId, TEXT("AUTOMATION_QUEUE_FULL"), PendingAutomationRequests.Num());
+            Rejection = EAutomationQueueRejection::QueueFull;
         }
-        PendingAutomationRequests.Add(MoveTemp(Pending));
+        if (Rejection == EAutomationQueueRejection::None)
+        {
+            // NF-2: the depth is captured IN the lock, as the last statement before
+            // the Add, so the queue-depth read is race-free against socket threads.
+            const int32 AdmissionDepth = PendingAutomationRequests.Num();
+            AdmissionDepthCarrier = AdmissionDepth;
+            PendingAutomationRequests.Add(MoveTemp(Pending));
+        }
     }
+
+    // BB-005 queue refusal: the refusal record is memory-only in-lock; its disk
+    // write is deferred OFF the lock to the game thread, so a hard crash after
+    // StopAcceptingAutomationRequests() (or on an empty queue) still leaves the
+    // last refusal persisted (plan line 197). The admission path coalesces its
+    // records into the next tick's pre-dispatch persist instead.
+    if (Rejection != EAutomationQueueRejection::None)
+    {
+        PersistSnapshotAsync();
+        return Rejection;
+    }
+
+    // BB-005: admission records memory-only on the socket/HTTP thread. The
+    // depth was read in-lock above; these store calls take the store's own
+    // mutex. NF-1: NO latch - every WebSocket admission records handshake
+    // success (last-writer-wins under the store mutex, always fresh). An
+    // admitted WS automation_request PROVES the bridge_hello gate passed for
+    // THIS connection; a later 4004/4005 close (H6) overwrites ok=false.
+    const int32 AdmissionDepth = AdmissionDepthCarrier;
+    FMcpDiagnosticsSnapshot::Get().RecordAdmission(RequestId, FString(), Action,
+        Origin == ERequestOrigin::NativeHTTP ? TEXT("NativeHTTP") : TEXT("WebSocket"), AdmissionDepth);
+    if (Origin == ERequestOrigin::WebSocket) { FMcpDiagnosticsSnapshot::Get().RecordHandshake(true); }
 
     // The origin has to outlive the synchronous dispatch that consumes this
     // request: a handler that defers its reply answers after
@@ -136,6 +177,7 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests()
     TGuardValue<bool> DrainGuard(QueueFairness.bDraining, true);
 
     TArray<FPendingAutomationRequest> LocalQueue;
+    int32 PendingCountAfterBatchCarrier = 0;
     {
         FScopeLock Lock(&PendingAutomationRequestsMutex);
         if (PendingAutomationRequests.Num() == 0)
@@ -173,7 +215,15 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests()
             PendingAutomationRequests.RemoveAt(
                 Index, 1, MCP_DISALLOW_SHRINKING);
         }
+        // NF-3: the post-batch count is captured IN the lock, after the
+        // RemoveAt loop, so the depth a pre-dispatch record reports is the
+        // race-free remainder seen by the mutation lane. Declared as a const
+        // inside the lock; the carrier below carries it past the lock scope
+        // because the pre-dispatch record runs after release.
+        const int32 PendingCountAfterBatch = PendingAutomationRequests.Num();
+        PendingCountAfterBatchCarrier = PendingCountAfterBatch;
     }
+    const int32 PendingCountAfterBatch = PendingCountAfterBatchCarrier;
 
     for (const FPendingAutomationRequest& Req : LocalQueue)
     {
@@ -253,6 +303,11 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests()
                 TEXT("MCP editor mutation lane violated: depth=%d gameThread=%d"),
                 QueueFairness.DispatchDepth,
                 IsInGameThread() ? 1 : 0);
+            // BB-005 pre-dispatch refresh immediately before mutation dispatch:
+            // this inline game-thread persist is THE crash anchor - a hard
+            // crash after this line leaves the last pre-dispatch record on disk.
+            FMcpDiagnosticsSnapshot::Get().RecordPreDispatch(Req.RequestId, PendingCountAfterBatch);
+            FMcpDiagnosticsSnapshot::Get().PersistCurrent();
             // The pins and the session lane travel WITH the request. If the
             // dispatch below defers again (GC / async load) or hits the
             // reentrancy guard, ProcessAutomationRequest re-queues, and passing
