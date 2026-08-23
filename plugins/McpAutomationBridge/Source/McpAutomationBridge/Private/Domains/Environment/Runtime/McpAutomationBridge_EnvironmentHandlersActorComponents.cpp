@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
+#include "Foundation/Render/McpRenderStateRefresh.h"
 
 #if WITH_EDITOR
 namespace McpEnvironmentHandlers {
@@ -155,7 +156,7 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
     if (Component)
     {
         ComponentApplied = McpApplyPayloadSettings(Component, Payload, Applied, Failed);
-        Component->MarkRenderStateDirty();
+        McpRenderRefresh::McpRefreshRenderState(Component);
     }
     const int32 TotalApplied = ActorApplied + ComponentApplied;
 

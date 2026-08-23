@@ -1,6 +1,6 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
-
 #include "Domains/Environment/McpAutomationBridge_EnvironmentSnapshotPaths.h"
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 #include "Misc/Paths.h"
