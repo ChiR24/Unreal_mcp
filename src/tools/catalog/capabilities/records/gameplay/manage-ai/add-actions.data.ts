@@ -51,6 +51,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
       action: A.action, behaviorTreePath: A.behaviorTreePath,
       compositeType: A.compositeType,
       nodeName: { type: 'string', description: 'Name for the created composite node.' },
+      parentNodeId: A.parentNodeId,
     },
     required: ['behaviorTreePath', 'compositeType'], plugins: BT,
     out: {
@@ -206,9 +207,9 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_task_node', summary: 'Add a task node to a Behavior Tree asset.',
     use: 'A Behavior Tree branch needs a leaf task.',
     avoid: 'Use add_composite_node for flow control.',
-    props: { action: A.action, behaviorTreePath: A.behaviorTreePath, taskType: A.taskType },
+    props: { action: A.action, behaviorTreePath: A.behaviorTreePath, taskType: A.taskType, parentNodeId: A.parentNodeId },
     required: ['behaviorTreePath', 'taskType'], plugins: BT,
-    out: { assetPath: A.assetPath },
+    out: { assetPath: A.assetPath, nodeId: A.nodeId },
     example: { behaviorTreePath: '/Game/AI/BT_Enemy', taskType: 'Wait' }, result: 'Task node added',
   }),
 ];

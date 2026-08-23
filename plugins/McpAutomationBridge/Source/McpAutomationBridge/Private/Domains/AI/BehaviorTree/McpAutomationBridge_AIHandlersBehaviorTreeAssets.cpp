@@ -3,12 +3,14 @@
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BehaviorTreeTypes.h"
 #include "BehaviorTree/BTCompositeNode.h"
 #include "BehaviorTree/BTTaskNode.h"
 #include "BehaviorTree/Composites/BTComposite_Selector.h"
 #include "BehaviorTree/Composites/BTComposite_Sequence.h"
 #include "BehaviorTree/Tasks/BTTask_MoveTo.h"
 #include "BehaviorTree/Tasks/BTTask_Wait.h"
+#include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeHandlersPrivate.h"
 #include "Misc/PackageName.h"
 
 namespace McpAIHandlers
@@ -53,6 +55,8 @@ static UBehaviorTree* CreateBehaviorTreeAsset(const FString& Path, const FString
     }
 
     FAssetRegistryModule::AssetCreated(BehaviorTree);
+    UEdGraph* Graph = nullptr;
+    McpBehaviorTreeHandlers::EnsureBehaviorTreeGraph(BehaviorTree, Graph);
     McpSafeAssetSave(BehaviorTree);
 
     return BehaviorTree;
@@ -221,7 +225,18 @@ bool HandleAddTaskNode(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 
         if (NewTask)
         {
+            UEdGraph* Graph = nullptr;
+            McpBehaviorTreeHandlers::EnsureBehaviorTreeGraph(BT, Graph);
+            // Attach as a leaf child of the root composite when a root exists.
+            if (BT->RootNode)
+            {
+                FBTCompositeChild Child;
+                Child.ChildTask = NewTask;
+                BT->RootNode->Children.Add(Child);
+            }
             BT->MarkPackageDirty();
+            McpSafeAssetSave(BT);
+            Result->SetStringField(TEXT("nodeId"), NewTask->GetName());
             Result->SetStringField(TEXT("taskType"), TaskType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s task"), *TaskType));
             McpHandlerUtils::AddVerification(Result, BT);

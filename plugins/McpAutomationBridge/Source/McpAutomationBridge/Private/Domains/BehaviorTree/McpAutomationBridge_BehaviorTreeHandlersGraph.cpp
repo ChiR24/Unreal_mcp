@@ -2,12 +2,36 @@
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeHandlersPrivate.h"
 
 #if WITH_EDITOR
+#include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "BehaviorTreeGraph.h"
 #include "EdGraph/EdGraphPin.h"
 #include "EdGraphSchema_BehaviorTree.h"
 
 namespace McpBehaviorTreeHandlers {
+
+bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph)
+{
+  if (!BehaviorTree)
+  {
+    return false;
+  }
+  OutGraph = BehaviorTree->BTGraph;
+  if (OutGraph)
+  {
+    return true;
+  }
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
+  UEdGraph* NewGraph = NewObject<UBehaviorTreeGraph>(BehaviorTree, TEXT("BehaviorTree"));
+  NewGraph->Schema = UEdGraphSchema_BehaviorTree::StaticClass();
+  BehaviorTree->BTGraph = NewGraph;
+  NewGraph->GetSchema()->CreateDefaultNodesForGraph(*NewGraph);
+  OutGraph = NewGraph;
+  return true;
+#else
+  return false;
+#endif
+}
 
 bool LoadBehaviorTreeForGraph(UMcpAutomationBridgeSubsystem* Subsystem,
                               const FRequestContext& Context,
@@ -44,10 +68,12 @@ bool LoadBehaviorTreeForGraph(UMcpAutomationBridgeSubsystem* Subsystem,
 
   UEdGraph* Graph = BehaviorTree->BTGraph;
   if (!Graph) {
-    Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
-                                   TEXT("Behavior Tree has no graph."),
-                                   TEXT("GRAPH_NOT_FOUND"));
-    return false;
+    if (!EnsureBehaviorTreeGraph(BehaviorTree, Graph)) {
+      Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                                     TEXT("Behavior Tree graph editing requires UE 5.3+."),
+                                     TEXT("NOT_SUPPORTED"));
+      return false;
+    }
   }
 
   OutContext = FGraphContext{BehaviorTree, Graph};
@@ -64,6 +90,7 @@ void UpdateBehaviorTreeAsset(const FGraphContext& Context)
 #endif
   Context.Graph->NotifyGraphChanged();
   Context.BehaviorTree->MarkPackageDirty();
+  McpSafeAssetSave(Context.BehaviorTree);
 }
 
 UEdGraphNode* FindGraphNodeByIdOrName(UEdGraph* Graph,

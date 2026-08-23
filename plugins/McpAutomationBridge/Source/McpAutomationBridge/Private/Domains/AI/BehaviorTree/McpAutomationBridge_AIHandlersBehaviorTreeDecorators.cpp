@@ -7,6 +7,8 @@
 #include "BehaviorTree/Decorators/BTDecorator_Blackboard.h"
 #include "BehaviorTree/Decorators/BTDecorator_Cooldown.h"
 #include "BehaviorTree/Decorators/BTDecorator_Loop.h"
+#include "BehaviorTree/Services/BTService_DefaultFocus.h"
+#include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeHandlersPrivate.h"
 
 namespace McpAIHandlers
 {
@@ -48,7 +50,12 @@ bool HandleAddDecorator(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 
         if (NewDecorator)
         {
+            UEdGraph* Graph = nullptr;
+            McpBehaviorTreeHandlers::EnsureBehaviorTreeGraph(BT, Graph);
+            BT->RootDecorators.Add(NewDecorator);
             BT->MarkPackageDirty();
+            McpSafeAssetSave(BT);
+            Result->SetStringField(TEXT("nodeId"), NewDecorator->GetName());
             Result->SetStringField(TEXT("decoratorType"), DecoratorType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s decorator"), *DecoratorType));
             McpHandlerUtils::AddVerification(Result, BT);
@@ -85,14 +92,43 @@ bool HandleAddService(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
             return true;
         }
 
-        // Services are added to composite nodes, not directly to the tree
-        // For now, just mark the tree as modified
-        BT->MarkPackageDirty();
-        Result->SetStringField(TEXT("serviceType"), ServiceType);
-        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Service %s reference created"), *ServiceType));
+        UBTService* NewService = nullptr;
+        if (ServiceType.Equals(TEXT("DefaultFocus"), ESearchCase::IgnoreCase))
+        {
+            NewService = NewObject<UBTService_DefaultFocus>(BT);
+        }
+        else
+        {
+            UClass* ServiceClass = FindObject<UClass>(nullptr,
+                *FString::Printf(TEXT("/Script/AIModule.BTService_%s"), *ServiceType));
+            if (ServiceClass && ServiceClass->IsChildOf(UBTService::StaticClass()))
+            {
+                NewService = NewObject<UBTService>(BT, ServiceClass);
+            }
+        }
 
-        McpHandlerUtils::AddVerification(Result, BT);
-        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Service added"), Result);
+        if (NewService)
+        {
+            UEdGraph* Graph = nullptr;
+            McpBehaviorTreeHandlers::EnsureBehaviorTreeGraph(BT, Graph);
+            if (BT->RootNode)
+            {
+                BT->RootNode->Services.Add(NewService);
+            }
+            BT->MarkPackageDirty();
+            McpSafeAssetSave(BT);
+            Result->SetStringField(TEXT("nodeId"), NewService->GetName());
+            Result->SetStringField(TEXT("serviceType"), ServiceType);
+            Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Service %s created"), *ServiceType));
+            McpHandlerUtils::AddVerification(Result, BT);
+            Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Service added"), Result);
+        }
+        else
+        {
+            Self->SendAutomationError(RequestingSocket, RequestId,
+                                FString::Printf(TEXT("Failed to create service: %s"), *ServiceType),
+                                TEXT("CREATION_FAILED"));
+        }
         return true;
     }
 

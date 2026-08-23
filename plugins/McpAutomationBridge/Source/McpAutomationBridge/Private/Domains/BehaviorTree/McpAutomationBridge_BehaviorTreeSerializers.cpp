@@ -1,5 +1,6 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeSerializers.h"
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"

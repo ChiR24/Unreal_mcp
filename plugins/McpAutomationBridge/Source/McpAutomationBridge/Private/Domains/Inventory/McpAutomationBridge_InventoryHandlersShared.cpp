@@ -1,5 +1,6 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Inventory/McpAutomationBridge_InventoryHandlersShared.h"
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 UPackage* CreateValidatedInventoryAssetPackage(const FString& Path, const FString& Name, FString& OutError)
 {

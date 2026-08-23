@@ -40,6 +40,7 @@ bool HandleGetTree(UMcpAutomationBridgeSubsystem* Subsystem,
 bool LoadBehaviorTreeForGraph(UMcpAutomationBridgeSubsystem* Subsystem,
                               const FRequestContext& Context,
                               FGraphContext& OutContext);
+bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph);
 void UpdateBehaviorTreeAsset(const FGraphContext& Context);
 UEdGraphNode* FindGraphNodeByIdOrName(UEdGraph* Graph,
                                       const FString& IdOrName);

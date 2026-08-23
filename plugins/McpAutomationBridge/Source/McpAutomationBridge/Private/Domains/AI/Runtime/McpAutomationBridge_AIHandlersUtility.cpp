@@ -116,20 +116,20 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
                 AIInfo->SetStringField(TEXT("assignedBehaviorTree"), BT->GetName());
                 AIInfo->SetBoolField(TEXT("hasRootNode"), BT->RootNode != nullptr);
 
-                TArray<TSharedPtr<FJsonValue>> RootDecoratorClasses;
-                TArray<TSharedPtr<FJsonValue>> RootDecorators;
+                AIInfo->SetNumberField(TEXT("rootDecoratorCount"), BT->RootDecorators.Num());
+
+                TArray<TSharedPtr<FJsonValue>> RootDecoratorClassesArr;
+                TArray<TSharedPtr<FJsonValue>> RootDecoratorsArr;
                 for (UBTDecorator* RootDecorator : BT->RootDecorators)
                 {
-                    if (!RootDecorator)
+                    if (RootDecorator)
                     {
-                        continue;
+                        RootDecoratorClassesArr.Add(MakeShared<FJsonValueString>(RootDecorator->GetClass()->GetName()));
+                        RootDecoratorsArr.Add(MakeShared<FJsonValueObject>(CreateBTNodeRuntimeInfo(RootDecorator)));
                     }
-                    RootDecoratorClasses.Add(MakeShared<FJsonValueString>(RootDecorator->GetClass()->GetName()));
-                    RootDecorators.Add(MakeShared<FJsonValueObject>(CreateBTNodeRuntimeInfo(RootDecorator)));
                 }
-                AIInfo->SetNumberField(TEXT("rootDecoratorCount"), BT->RootDecorators.Num());
-                AIInfo->SetArrayField(TEXT("rootDecoratorClasses"), RootDecoratorClasses);
-                AIInfo->SetArrayField(TEXT("rootDecorators"), RootDecorators);
+                AIInfo->SetArrayField(TEXT("rootDecoratorClasses"), RootDecoratorClassesArr);
+                AIInfo->SetArrayField(TEXT("rootDecorators"), RootDecoratorsArr);
 
                 // Report associated blackboard from BT asset (only if
                 // blackboardPath was not explicitly provided, to avoid

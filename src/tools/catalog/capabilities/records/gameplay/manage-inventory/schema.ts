@@ -101,6 +101,8 @@ export interface InventoryActionSpec {
   readonly exampleInput: JsonObject;
   /** Only get_inventory_info reads without writing. */
   readonly read?: boolean;
+  readonly outputProps?: PropertyMap;
+  readonly outputRequired?: readonly string[];
 }
 
 /**
@@ -121,8 +123,8 @@ export function inventoryRecord(spec: InventoryActionSpec): CapabilityRecordSour
     inputProps: { action: P.action, ...spec.inputProps },
     required: ['action', ...(spec.required ?? [])],
     requiredOneOf: spec.requiredOneOf,
-    outputProps: { assetPath: P.assetPath },
-    outputRequired: [],
+    outputProps: spec.outputProps ?? { assetPath: P.assetPath },
+    outputRequired: spec.outputRequired ?? [],
     effect: spec.read === true ? 'read' : 'write',
     latency: 'interactive',
     resources: 'medium',

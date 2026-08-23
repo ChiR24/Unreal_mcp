@@ -11,7 +11,7 @@
  * McpNavigationHandlers::HandleCreateNavLinkProxy, which reads actorName /
  * location / startPoint / endPoint / direction instead.
  */
-import type { CapabilityRecordSource } from '../../../index.js';
+import type { CapabilityRecordSource, JsonObject } from '../../../index.js';
 import { BT, EQS, MASS_AI, SMART_OBJECTS, STATE_TREE, aiRecord } from './builder.js';
 import { NAV } from './properties-navigation.js';
 import { AI } from './properties.js';
@@ -20,6 +20,8 @@ const A = AI;
 const PROMOTED = 'Promoted from a hidden native manage_ai route after the gateway migration.';
 const POST = 'post-migration' as const;
 const N = NAV;
+
+const reflObj: JsonObject = { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true };
 
 /** Every create_* asset action shares the same name/path pair. */
 const createProps = { action: A.action, name: A.name, path: A.path };
@@ -141,17 +143,22 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'get_ai_info', summary: 'Read AI asset information.',
     use: 'A caller needs the current state of an AI asset.',
     avoid: 'Use get_navigation_info for navigation state.',
-    props: {
-      action: A.action, controllerPath: A.controllerPath, behaviorTreePath: A.behaviorTreePath,
-      blackboardPath: A.blackboardPath, queryPath: A.queryPath,
-      stateTreePath: A.stateTreePath, blueprintPath: A.blueprintPath,
-    },
+    props: { action: A.action, controllerPath: A.controllerPath, behaviorTreePath: A.behaviorTreePath, blackboardPath: A.blackboardPath, queryPath: A.queryPath, stateTreePath: A.stateTreePath, blueprintPath: A.blueprintPath },
     effect: 'read',
     out: {
       aiInfo: {
         type: 'object',
-        description: 'AI asset state reported by the native AI domain (HandleGetAIInfo).',
+        description: 'AI asset state (HandleGetAIInfo).',
         properties: {
+          keyCount: { type: 'number', description: 'Blackboard key count.' },
+          rootDecoratorClasses: { type: 'array', items: { type: 'string' }, description: 'Class paths of decorators attached to the root node.' },
+          rootDecorators: { type: 'array', items: reflObj, description: 'Decorator objects attached to the root node.' },
+          childDecorators: { type: 'array', items: reflObj, description: 'Child decorators.' },
+          services: { type: 'array', items: reflObj, description: 'Services.' },
+          blackboardKeys: { type: 'array', items: reflObj, description: 'Blackboard keys.' },
+          parentBlackboard: { type: 'string', description: 'Parent blackboard asset path.' },
+          rootGraphBlackboard: { type: 'string', description: 'Blackboard assigned on the root graph node.' },
+          rootGraphBlackboardMatchesAssigned: { type: 'boolean', description: 'Whether the root graph blackboard matches the assigned blackboard.' },
           controllerClass: { type: 'string', description: 'AIController class path.' },
           assignedBehaviorTree: { type: 'string', description: 'Behavior Tree asset path assigned to the controller.' },
           assignedBlackboard: { type: 'string', description: 'Blackboard asset path assigned to the tree/controller.' },
@@ -166,12 +173,15 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     example: { controllerPath: '/Game/AI/AIC_Enemy' }, result: 'AI info read',
   }),
   aiRecord({
-    action: 'get_blackboard_value', summary: 'Read a Blackboard key value from a Blackboard asset.',
+    action: 'get_blackboard_value', summary: 'Read a Blackboard key value.',
     use: 'A caller needs the authored default of a Blackboard key.',
     avoid: 'Use set_blackboard_value to change it.',
     props: { action: A.action, blackboardPath: A.blackboardPath, keyName: A.keyName },
     required: ['blackboardPath', 'keyName'], effect: 'read', plugins: BT,
-    out: { value: A.value },
+    out: {
+      valueAvailable: { type: 'boolean', description: 'Whether the typed default value was available to read (false on UE 5.0-5.4).' },
+      value: A.value,
+    },
     example: { blackboardPath: '/Game/AI/BB_Enemy', keyName: 'TargetActor' },
     result: 'Blackboard value read',
   }),
@@ -203,7 +213,15 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     avoid: 'Use get_ai_info for asset-level metadata.',
     props: { action: A.action, assetPath: A.assetPath },
     required: ['assetPath'], effect: 'read', plugins: BT,
-    out: { assetPath: A.assetPath },
+    out: {
+      assetPath: A.assetPath,
+      tree: {
+        type: 'object',
+        description: 'Serialized Behavior Tree graph (root node, children, decorators, services) reported by the native BehaviorTree domain (HandleGetTree).',
+        additionalProperties: true,
+        'x-unreal-reflection-boundary': true,
+      },
+    },
       example: { assetPath: '/Game/AI/BT_Enemy' }, result: 'Behavior Tree read',
     }),
     aiRecord({

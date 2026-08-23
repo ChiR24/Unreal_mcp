@@ -75,7 +75,7 @@ describe('manage_ai capability records', () => {
   it('keeps navigation parameters off Behavior Tree actions and vice versa', () => {
     // buildRecord strips `action` from the per-record input schema (helpers.ts),
     // so a record's properties are exactly its handler-observable parameters.
-    expect(propsFor('add_task_node')).toEqual(['behaviorTreePath', 'taskType']);
+    expect(propsFor('add_task_node')).toEqual(['behaviorTreePath', 'taskType', 'parentNodeId']);
     expect(propsFor('set_nav_agent_properties')).not.toContain('behaviorTreePath');
     expect(propsFor('configure_nav_mesh_settings')).not.toContain('taskType');
     expect(propsFor('add_blackboard_key')).not.toContain('areaClass');
