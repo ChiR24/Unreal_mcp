@@ -158,19 +158,42 @@ export async function handleSimpleQueryAction(action: string, context: AssetHand
     return assetSuccessResponse(await executeAutomationRequest(context.tools, 'fixup_redirectors', payload), 'Redirectors fixed up successfully', 'FIXUP_REDIRECTORS_FAILED', 'Redirector fixup failed');
   }
 
-  const params = normalizeArgs(context.args, [{ key: 'assetPath', required: action !== 'analyze_graph' }, { key: 'recursive' }, { key: 'maxDepth' }]);
-  const assetPath = extractString(params, 'assetPath');
+  // The manage_asset schema advertises an `assetPaths` array for get_source_control_state,
+  // and the handler this routes to reads it (AssetWorkflow/...SourceControlState.cpp takes
+  // assetPath OR assetPaths). This wrapper still required the singular assetPath
+  // unconditionally and never forwarded the array, so an array-only call failed with
+  // "Missing required argument: assetPath" before it could reach that handler.
+  const assetPathsRaw = action === 'get_source_control_state' ? context.args.assetPaths : undefined;
+  const assetPaths = Array.isArray(assetPathsRaw)
+    ? assetPathsRaw.filter((p): p is string => typeof p === 'string' && p.trim().length > 0).map(p => p.trim())
+    : [];
+  const params = normalizeArgs(context.args, [
+    { key: 'assetPath', required: action !== 'analyze_graph' && assetPaths.length === 0 },
+    { key: 'recursive' },
+    { key: 'maxDepth' }
+  ]);
+  const assetPath = assetPaths.length > 0
+    ? (extractOptionalString(params, 'assetPath') ?? '')
+    : extractString(params, 'assetPath');
   const payload = action === 'analyze_graph'
     ? { assetPath, maxDepth: extractOptionalNumber(params, 'maxDepth') }
-    : { assetPath, recursive: extractOptionalBoolean(params, 'recursive'), subAction: action };
-  // Task 21: get_source_control_state routes to the canonical manage_asset
-  // action (array-capable, disabled-SC-tolerant, richer envelope) rather than
-  // the weaker asset_query subAction handler. analyze_graph keeps its existing
-  // get_asset_graph (dependency-graph) mapping.
+    : {
+      assetPath,
+      recursive: extractOptionalBoolean(params, 'recursive'),
+      subAction: action,
+      ...(assetPaths.length > 0 ? { assetPaths } : {})
+    };
+  // get_source_control_state goes to its own registered action, not through
+  // manage_asset. Routing it as a manage_asset subAction reaches
+  // HandleAssetAction, which resolves the subAction but passes the RAW action
+  // name down; HandleGetSourceControlState then re-checks that name, does not
+  // match, and returns false without answering -- the caller just waits out the
+  // 30s timeout. The direct action reaches the same array-capable handler and
+  // answers. analyze_graph keeps its existing get_asset_graph mapping.
   const requestAction = action === 'analyze_graph'
     ? 'get_asset_graph'
     : action === 'get_source_control_state'
-      ? 'manage_asset'
+      ? 'get_source_control_state'
       : action === 'exists'
         ? 'exists'
         : 'manage_asset';
