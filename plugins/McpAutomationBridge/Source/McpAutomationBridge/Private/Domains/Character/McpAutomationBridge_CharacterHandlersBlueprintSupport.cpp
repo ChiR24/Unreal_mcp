@@ -56,6 +56,53 @@ UBlueprint* LoadCharacterBlueprint(UMcpAutomationBridgeSubsystem* Self, const FS
     return Blueprint;
 }
 
+UBlueprint* RequireCharacterBlueprint(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const FString& BlueprintPath, FCharacterSocket Socket)
+{
+    UBlueprint* Blueprint = LoadCharacterBlueprint(Self, RequestId, BlueprintPath, Socket);
+    if (!Blueprint)
+    {
+        return nullptr;
+    }
+
+    bool bIsCharacterDerived = false;
+    for (UClass* Class = Blueprint->ParentClass; Class; Class = Class->GetSuperClass())
+    {
+        if (Class == ACharacter::StaticClass())
+        {
+            bIsCharacterDerived = true;
+            break;
+        }
+    }
+    if (!bIsCharacterDerived && Blueprint->GeneratedClass)
+    {
+        for (UClass* Class = Blueprint->GeneratedClass; Class; Class = Class->GetSuperClass())
+        {
+            if (Class == ACharacter::StaticClass())
+            {
+                bIsCharacterDerived = true;
+                break;
+            }
+        }
+    }
+    if (!bIsCharacterDerived)
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Blueprint is not a Character-derived blueprint: %s"), *BlueprintPath),
+            TEXT("INVALID_OBJECT_TYPE"));
+        return nullptr;
+    }
+
+    if (!Blueprint->GeneratedClass)
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Blueprint '%s' has no generated class yet; compile the Blueprint before setup actions."), *BlueprintPath),
+            TEXT("PREREQUISITE_FAILED"));
+        return nullptr;
+    }
+
+    return Blueprint;
+}
+
 void SetBPVarDefaultValue(UBlueprint* Blueprint, FName VarName, const FString& DefaultValue)
 {
     if (!Blueprint)
@@ -110,12 +157,37 @@ bool AddBlueprintVariable(UBlueprint* Blueprint, const FString& VarName, const F
         return false;
     }
 
-    const bool bSuccess = FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*VarName), PinType);
-    if (bSuccess && !Category.IsEmpty())
+    const FName VarFName(*VarName);
+    // UBlueprint itself has no FindNewVariable member; the editor-utils helper
+    // is the supported lookup. The NewVariables scan stays as a second pass
+    // because the helper only sees variables already committed to the class.
+    bool bAlreadyExists = FBlueprintEditorUtils::FindNewVariableIndex(Blueprint, VarFName) != INDEX_NONE;
+    if (!bAlreadyExists)
     {
-        FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, FName(*VarName), nullptr, FText::FromString(Category));
+        for (const FBPVariableDescription& VarDesc : Blueprint->NewVariables)
+        {
+            if (VarDesc.VarName == VarFName)
+            {
+                bAlreadyExists = true;
+                break;
+            }
+        }
     }
-    return bSuccess;
+
+    if (!bAlreadyExists)
+    {
+        const bool bSuccess = FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarFName, PinType);
+        if (!bSuccess)
+        {
+            return false;
+        }
+    }
+
+    if (!Category.IsEmpty())
+    {
+        FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, VarFName, nullptr, FText::FromString(Category));
+    }
+    return true;
 }
 
 FEdGraphPinType BoolPinType()

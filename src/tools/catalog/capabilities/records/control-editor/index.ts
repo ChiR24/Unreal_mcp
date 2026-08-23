@@ -1,7 +1,7 @@
 /**
  * control_editor capability record catalog.
  *
- * Exactly 42 canonical CapabilityRecord entries mapped 1:1 to the 42
+ * Exactly 45 canonical CapabilityRecord entries mapped 1:1 to the 45
  * control_editor actions in src/tools/definitions/core/control-editor-tool.ts.
  * Each record is grounded in the TypeScript handler bodies, native C++
  * ControlEditor domain dispatch, and the normalization inventory.
@@ -19,7 +19,7 @@
  * - input (1): simulate input
  * - history (2): undo/redo
  *
- * Total: 7 + 4 + 2 + 6 + 8 + 3 + 2 + 2 + 5 + 1 + 2 = 42
+ * Total: 10 + 4 + 2 + 6 + 8 + 3 + 2 + 2 + 5 + 1 + 2 = 45
  *
  * Record order is the authored family-file concatenation below, which reproduces
  * the canonical control_editor action enum exactly; this module does not

@@ -38,8 +38,8 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'array_radial', plugins: PLUGIN,
     family: F, summary: 'Create a radial array of a dynamic mesh.', whenToUse: ['Instances must be arrayed radially.'], whenNotToUse: ['A linear array is needed; use array_linear.'],
-    inputProps: { actorName: P.actorName, angle: P.angle, targetActor: P.targetActor, count: P.count, center: P.center }, required: ['targetActor', 'count'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
-    exampleInput: { action: 'array_radial', targetActor: 'DM_A', count: 8, center: { x: 0, y: 0, z: 0 } }, exampleOutput: { success: true, message: 'Radial array complete' },
+    inputProps: { actorName: P.actorName, angle: P.angle, targetActor: P.targetActor, count: P.count, center: P.center }, required: ['actorName', 'count'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    exampleInput: { action: 'array_radial', actorName: 'DM_A', count: 8, center: { x: 0, y: 0, z: 0 } }, exampleOutput: { success: true, message: 'Radial array complete' },
     normalizationRationale: NR,
   }),
   buildWorldRecord({
@@ -136,8 +136,8 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'recalculate_normals', plugins: PLUGIN,
     family: F, summary: 'Recalculate normals of a dynamic mesh.', whenToUse: ['Normals must be recalculated.'], whenNotToUse: ['Normals must be flipped; use flip_normals.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, hardEdgeAngle: P.hardEdgeAngle, computeWeightedNormals: P.computeWeightedNormals }, required: ['targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'recalculate_normals', targetActor: 'DM_A', hardEdgeAngle: 60 }, exampleOutput: { success: true, message: 'Recalculate normals complete' },
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, hardEdgeAngle: P.hardEdgeAngle, computeWeightedNormals: P.computeWeightedNormals }, required: ['actorName'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    exampleInput: { action: 'recalculate_normals', actorName: 'DM_A', hardEdgeAngle: 60 }, exampleOutput: { success: true, message: 'Recalculate normals complete' },
     normalizationRationale: NR,
   }),
   buildWorldRecord({

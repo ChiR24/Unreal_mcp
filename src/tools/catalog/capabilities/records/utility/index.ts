@@ -3,14 +3,13 @@ import { parseCapabilityCatalog } from '../../index.js';
 import { MANAGE_AUDIO_RECORDS } from '../manage-audio/index.js';
 import { MANAGE_NETWORKING_RECORDS } from '../manage-networking/index.js';
 import { MANAGE_SEQUENCE_RECORDS } from '../manage-sequence/index.js';
+import { compareById } from '../../../../../utils/serialization/ordering.js';
 
-export const UTILITY_NET_NEW_COUNT = 127 as const;
+export const UTILITY_NET_NEW_COUNT = 128 as const;
 export const UTILITY_REUSED_SEQUENCE_COUNT = 81 as const;
-export const UTILITY_AGGREGATE_COUNT = 208 as const;
+export const UTILITY_AGGREGATE_COUNT = 209 as const;
 
-function compareIds(left: CapabilityRecord, right: CapabilityRecord): number {
-  return left.id.localeCompare(right.id);
-}
+const compareIds = compareById;
 
 export const UTILITY_SOURCE_RECORDS: readonly CapabilityRecord[] = Object.freeze([
   ...MANAGE_SEQUENCE_RECORDS,

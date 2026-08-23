@@ -25,7 +25,11 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     }
 
     FString SubAction;
-    if (!Payload->TryGetStringField(TEXT("action"), SubAction))
+    if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty())
+    {
+        Payload->TryGetStringField(TEXT("action"), SubAction);
+    }
+    if (SubAction.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
             TEXT("Missing 'action' field in payload."), TEXT("INVALID_ARGUMENT"));

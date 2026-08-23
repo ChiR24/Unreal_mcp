@@ -24,7 +24,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
   }
 
   FString SubAction;
-  Payload->TryGetStringField(TEXT("action"), SubAction);
+  if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("action"), SubAction);
+  }
   const FString LowerSub = SubAction.ToLower();
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT("HandleAnimationPhysicsAction: subaction='%s'"), *LowerSub);

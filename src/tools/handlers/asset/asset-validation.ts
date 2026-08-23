@@ -1,7 +1,8 @@
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
 
 const VALID_ASSET_ACTIONS = new Set([
-  'list', 'import', 'duplicate', 'rename', 'move', 'delete',
+  'list', 'import', 'list_content_sources', 'migrate_assets',
+  'duplicate', 'rename', 'move', 'delete',
   'create_folder', 'search_assets', 'get_dependencies', 'validate',
   'fixup_redirectors', 'find_by_tag', 'exists', 'bulk_rename', 'bulk_delete',
   'duplicate_asset', 'rename_asset', 'move_asset', 'delete_asset', 'delete_assets',

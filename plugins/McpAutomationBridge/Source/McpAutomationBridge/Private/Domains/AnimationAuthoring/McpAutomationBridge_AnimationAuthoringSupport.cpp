@@ -1,5 +1,6 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 
 #if WITH_EDITOR

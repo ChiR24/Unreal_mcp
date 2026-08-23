@@ -61,7 +61,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_component_property',
     domain: DOMAIN,
     family: FAMILY_COMPONENT,
-    summary: 'Set one or more properties on a named actor component.',
+    summary: 'Set one or more properties on a named actor component. For RelativeScale3D/RelativeLocation, note that a child inherits its parent\'s scale: Unreal multiplies parent and child scale COMPONENT-WISE in the child\'s own local axes, and rotation does NOT permute which axis each factor lands on. World size = ParentScale * ChildScale * MeshExtent per local axis, and world offset = ParentScale * RelativeLocation. Under a parent scaled non-uniformly, divide the offset you want by the parent scale on that axis.',
     whenToUse: ['Component properties must be changed via a properties object or propertyName/value pair.'],
     whenNotToUse: ['The property should only be read (use get_component_property).'],
     inputProps: { actorName: P.actorName, componentName: P.componentName, properties: P.properties, propertyName: P.propertyName, value: P.value },

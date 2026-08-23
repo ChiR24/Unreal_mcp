@@ -1,7 +1,7 @@
 /**
  * manage_level capability record catalog.
  *
- * Exactly 24 canonical CapabilityRecord entries mapped 1:1 to the 24
+ * Exactly 25 canonical CapabilityRecord entries mapped 1:1 to the 25
  * manage_level actions in manage-level-tool.ts. Each record is grounded in
  * the TypeScript level handlers (src/tools/handlers/level/runtime/), native
  * Level domain dispatch (Private/Domains/Level/McpAutomationBridge_LevelHandlers.cpp),
@@ -18,8 +18,9 @@
  * - query (4): list_levels, get_current_level, get_summary, validate_level
  * - io (2): export_level, import_level
  * - sublevel (1): add_sublevel
+ * - settings (1): set_world_settings
  *
- * Total: 11 + 3 + 2 + 1 + 4 + 2 + 1 = 24
+ * Total: 11 + 3 + 2 + 1 + 4 + 2 + 1 + 1 = 25
  */
 import { type CapabilityRecord, type CapabilityRecordSource, createCapabilityRecord } from '../../index.js';
 

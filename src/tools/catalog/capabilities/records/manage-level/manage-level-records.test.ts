@@ -1,7 +1,7 @@
 /**
  * Focused tests for the manage_level capability record catalog.
  *
- * Proves: exact 24-action set equality with manage-level-tool.ts, unique
+ * Proves: exact 25-action set equality with manage-level-tool.ts, unique
  * canonical IDs/aliases/legacy IDs, routing fidelity to the TypeScript
  * level handlers and native Level domain dispatch, save/load/streaming/
  * lighting/metadata semantics, availability, and hash parity. Does not
@@ -24,6 +24,7 @@ const EXPECTED_ACTIONS = [
   'build_lighting', 'set_metadata', 'export_level', 'import_level',
   'list_levels', 'get_summary', 'delete', 'delete_level', 'validate_level',
   'add_sublevel', 'rename_level', 'duplicate_level', 'get_current_level',
+  'set_world_settings',
 ] as const;
 
 function findByAction(action: string) {
@@ -32,11 +33,11 @@ function findByAction(action: string) {
   return record;
 }
 
-describe('manage_level exact-set: 24 records mapped 1:1 to tool actions', () => {
-  it('produces exactly 24 capability records', () => {
-    expect(MANAGE_LEVEL_RECORD_COUNT).toBe(24);
-    expect(MANAGE_LEVEL_SOURCES).toHaveLength(24);
-    expect(MANAGE_LEVEL_RECORDS).toHaveLength(24);
+describe('manage_level exact-set: 25 records mapped 1:1 to tool actions', () => {
+  it('produces exactly 25 capability records', () => {
+    expect(MANAGE_LEVEL_RECORD_COUNT).toBe(25);
+    expect(MANAGE_LEVEL_SOURCES).toHaveLength(25);
+    expect(MANAGE_LEVEL_RECORDS).toHaveLength(25);
   });
 
   it('maps every manage_level tool action to exactly one record legacy ID', () => {
@@ -46,10 +47,10 @@ describe('manage_level exact-set: 24 records mapped 1:1 to tool actions', () => 
     for (const action of EXPECTED_ACTIONS) {
       expect(legacyKeys.has(`manage_level::${action}`)).toBe(true);
     }
-    expect(legacyKeys.size).toBe(24);
+    expect(legacyKeys.size).toBe(25);
   });
 
-  it('the tool definition action enum matches the 24-action set exactly', () => {
+  it('the tool definition action enum matches the 25-action set exactly', () => {
     const props = manageLevelToolDefinition.inputSchema.properties as Record<string, { enum?: readonly string[] }>;
     const actionProp = props.action;
     if (!actionProp?.enum) {
@@ -62,9 +63,9 @@ describe('manage_level exact-set: 24 records mapped 1:1 to tool actions', () => 
     expect(enumSet.size).toBe(EXPECTED_ACTIONS.length);
   });
 
-  it('has no duplicate canonical IDs, aliases, or legacy IDs across all 24 records', () => {
+  it('has no duplicate canonical IDs, aliases, or legacy IDs across all 25 records', () => {
     const catalog = parseCapabilityCatalog([...MANAGE_LEVEL_RECORDS]);
-    expect(catalog).toHaveLength(24);
+    expect(catalog).toHaveLength(25);
   });
 
   it('emits records in canonical tool-definition enum order', () => {
@@ -212,12 +213,12 @@ describe('manage_level hash parity: TS source, JSON round-trip, and recompute', 
     }
   });
 
-  it('JSON round-trip preserves all 24 records with identical hashes', () => {
+  it('JSON round-trip preserves all 25 records with identical hashes', () => {
     const json = JSON.stringify(MANAGE_LEVEL_RECORDS);
     const restored = JSON.parse(json) as typeof MANAGE_LEVEL_RECORDS;
     const catalog = parseCapabilityCatalog([...restored]);
-    expect(catalog).toHaveLength(24);
-    for (let i = 0; i < 24; i++) {
+    expect(catalog).toHaveLength(25);
+    for (let i = 0; i < 25; i++) {
       expect(catalog[i].hashes).toEqual(MANAGE_LEVEL_RECORDS[i].hashes);
     }
   });

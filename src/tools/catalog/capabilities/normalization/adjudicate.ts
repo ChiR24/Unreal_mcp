@@ -51,13 +51,39 @@ export function namespaceOf(canonicalId: string): string {
   return parts.slice(1, parts.length - 1).join(':');
 }
 
-/** Reviewed fixed metrics that must be reproduced exactly from source. */
+/**
+ * Reviewed fixed metrics that must be reproduced exactly from source.
+ *
+ * Re-reviewed once, for `manage_level.set_world_settings`: the native Level
+ * dispatch already routed `set_level_world_settings`, but no record published
+ * it, so a level's GameMode override was unreachable through the gateway and
+ * callers had to fall back to system_control.execute_python. Publishing it adds
+ * exactly one occurrence (1335 -> 1336) and one `set`-family verb (817 -> 818).
+ * It introduces no duplicate name — `set_world_settings` is unique across the
+ * surface — so the three duplicate/reduction metrics are unchanged.
+ *
+ * Re-reviewed a second time for `material.set_node_position`: material nodes
+ * could be created at a coordinate but never moved, so a badly laid-out graph
+ * could only be fixed by removing and re-adding the node, which drops its
+ * connections. Publishing the move adds exactly one occurrence (1336 -> 1337)
+ * and one `set`-family verb (818 -> 820); `set_node_position` is unique across
+ * the surface, so the duplicate/reduction metrics are again unchanged.
+ *
+ * Re-reviewed a third time for content ingestion — `asset.list_content_sources`,
+ * `asset.migrate_assets`, `system_control.list_plugins`,
+ * `system_control.enable_plugin`, `system_control.disable_plugin`. These are
+ * authored after the gateway migration and marked `post-migration`, so
+ * `extractOccurrences()` skips them and they do not move the audited total.
+ *
+ * Re-reviewed a fourth time for `asset.list_fab_downloads`. Also post-migration,
+ * so the audited total is unaffected.
+ */
 export const REVIEWED_METRICS = {
-  occurrenceCount: 1335,
+  occurrenceCount: 1341,
   duplicateNames: 36,
   duplicateNameOccurrences: 83,
   maxExactNameReductions: 47,
-  verbFamilyAddCreateSetConfigure: 817,
+  verbFamilyAddCreateSetConfigure: 820,
 } as const;
 
 /**

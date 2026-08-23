@@ -19,8 +19,15 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     FString EffectiveAction = Action;
     if (Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase) && Payload.IsValid())
     {
+        // subAction first, then `action` as the fallback - the same priority the
+        // pre-queue gate's NormalizeAction uses, so a split payload can never
+        // route this dispatcher away from what the gate authorized.
         FString PayloadAction;
-        if (Payload->TryGetStringField(TEXT("action"), PayloadAction) && !PayloadAction.IsEmpty())
+        if ((!Payload->TryGetStringField(TEXT("subAction"), PayloadAction) || PayloadAction.IsEmpty()))
+        {
+            Payload->TryGetStringField(TEXT("action"), PayloadAction);
+        }
+        if (!PayloadAction.IsEmpty())
         {
             EffectiveAction = PayloadAction;
         }

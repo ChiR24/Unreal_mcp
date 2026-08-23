@@ -6,7 +6,7 @@ namespace McpCharacterHandlers
 bool HandleSetupSliding(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
     const FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    UBlueprint* Blueprint = LoadCharacterBlueprint(Self, RequestId, BlueprintPath, Socket);
+    UBlueprint* Blueprint = RequireCharacterBlueprint(Self, RequestId, BlueprintPath, Socket);
     if (!Blueprint)
     {
         return true;
@@ -42,7 +42,7 @@ bool HandleSetupSliding(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 bool HandleSetupWallRunning(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
     const FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    UBlueprint* Blueprint = LoadCharacterBlueprint(Self, RequestId, BlueprintPath, Socket);
+    UBlueprint* Blueprint = RequireCharacterBlueprint(Self, RequestId, BlueprintPath, Socket);
     if (!Blueprint)
     {
         return true;
@@ -81,7 +81,7 @@ bool HandleSetupWallRunning(UMcpAutomationBridgeSubsystem* Self, const FString& 
 bool HandleSetupGrappling(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
     const FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    UBlueprint* Blueprint = LoadCharacterBlueprint(Self, RequestId, BlueprintPath, Socket);
+    UBlueprint* Blueprint = RequireCharacterBlueprint(Self, RequestId, BlueprintPath, Socket);
     if (!Blueprint)
     {
         return true;

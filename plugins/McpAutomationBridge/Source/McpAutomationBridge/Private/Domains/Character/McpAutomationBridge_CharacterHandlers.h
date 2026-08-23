@@ -45,6 +45,7 @@ using FCharacterSocket = TSharedPtr<FMcpBridgeWebSocket>;
 
 UBlueprint* CreateCharacterBlueprintAsset(const FString& Path, const FString& Name, FString& OutError);
 UBlueprint* LoadCharacterBlueprint(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const FString& BlueprintPath, FCharacterSocket Socket);
+UBlueprint* RequireCharacterBlueprint(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const FString& BlueprintPath, FCharacterSocket Socket);
 void SetBPVarDefaultValue(UBlueprint* Blueprint, FName VarName, const FString& DefaultValue);
 bool AddBlueprintVariable(UBlueprint* Blueprint, const FString& VarName, const FEdGraphPinType& PinType, const FString& Category = TEXT(""));
 FEdGraphPinType BoolPinType();

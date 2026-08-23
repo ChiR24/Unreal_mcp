@@ -163,9 +163,9 @@ export const SPLINE_RECORDS: readonly CapabilityRecordSource[] = [
     id: 'build_environment.create_road_spline', action: 'create_road_spline', family: F,
     summary: 'Create a road spline with mesh and width.',
     whenToUse: WU, whenNotToUse: ['A generic spline should be used.'],
-    inputProps: { action: P.action, name: P.name, location: P.location, meshPath: P.meshPath, width: P.width, points: P.points },
+    inputProps: { action: P.action, name: P.name, location: P.location, meshPath: P.meshPath, materialPath: P.materialPath, width: P.width, points: P.points, closedLoop: P.closedLoop },
     required: ['action'], effect: 'write', latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'create_road_spline', name: 'Road_1', meshPath: '/Game/Meshes/SM_Road', width: 500 },
+    exampleInput: { action: 'create_road_spline', name: 'Road_1', meshPath: '/Game/Meshes/SM_Road', materialPath: '/Game/Materials/M_Road', width: 500, closedLoop: true },
     exampleOutput: { success: true, message: 'Road spline created' },
   }),
   buildRecord({

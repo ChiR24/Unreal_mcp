@@ -80,6 +80,16 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
     NormalizedSection = FString::Printf(TEXT("/Script/%s"), *Section);
   }
 
+  // The plugin's own settings live under this section; letting the automation
+  // surface rewrite it would let a write-scoped caller disable its own
+  // authentication, so that section is refused outright.
+  if (NormalizedSection.Contains(TEXT("McpAutomationBridge"))) {
+    Message = TEXT("set_project_setting cannot target the McpAutomationBridge settings section");
+    ErrorCode = TEXT("SETTING_NOT_PERMITTED");
+    Resp->SetStringField(TEXT("error"), Message);
+    return true;
+  }
+
   const FString ConfigFile =
       FPaths::ProjectConfigDir() / TEXT("DefaultEngine.ini");
   GConfig->SetString(*NormalizedSection, *Key, *Value, ConfigFile);

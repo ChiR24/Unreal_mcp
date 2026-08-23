@@ -1,6 +1,6 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
-
 #include "Domains/Insights/McpAutomationBridge_InsightsRequests.h"
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"

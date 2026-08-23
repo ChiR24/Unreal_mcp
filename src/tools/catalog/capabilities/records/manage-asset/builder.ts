@@ -1,6 +1,6 @@
 // Shared builder for manage_asset capability records. Produces concise specs
 // that are expanded to full CapabilityRecordSource objects and validated via
-// createCapabilityRecord. All 158 records share availability, normalization
+// createCapabilityRecord. All 167 records share availability, normalization
 // defaults, and routing parent; per-record variation is in schemas, behavior,
 // policy, cost, and optional divergence/alias metadata.
 import { DRAFT_2020_12_SCHEMA_URI } from '../../constants.js';

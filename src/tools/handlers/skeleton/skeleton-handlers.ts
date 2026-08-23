@@ -8,34 +8,14 @@ import { ITools } from '../../../types/tools/tool-interfaces.js';
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import { executeAutomationRequest, normalizeLocation } from '../foundation/dispatch/common-handlers.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
+import { SKELETON_ACTIONS as SHARED_SKELETON_ACTIONS } from '../../definitions/shared/action-sets.js';
 
-// Valid actions for manage_skeleton tool
-// These must match C++ dispatcher in McpAutomationBridge_SkeletonHandlers.cpp
-const SKELETON_ACTIONS = [
-  // 7.1 Skeleton Creation
-  'create_skeleton', 'add_bone', 'remove_bone', 'rename_bone',
-  'set_bone_transform', 'set_bone_parent',
-  'create_virtual_bone',
-  'create_socket', 'configure_socket',
-  // Socket action aliases (for test compatibility)
-  'add_socket', 'remove_socket', 'modify_socket',
-  // 7.2 Skin Weights
-  'auto_skin_weights', 'set_vertex_weights',
-  'normalize_weights', 'prune_weights',
-  'copy_weights', 'mirror_weights',
-  // 7.3 Physics Asset
-  'create_physics_asset',
-  'add_physics_body', 'configure_physics_body',
-  'add_physics_constraint', 'configure_constraint_limits',
-  // Physics action aliases
-  'modify_physics_body', 'set_physics_constraint', 'preview_physics',
-  // 7.4 Cloth Setup (Basic)
-  'bind_cloth_to_skeletal_mesh', 'assign_cloth_asset_to_mesh',
-  // 7.5 Morph Targets
-  'create_morph_target', 'set_morph_target_deltas', 'import_morph_targets',
-  // Utils
-  'get_skeleton_info', 'list_bones', 'list_sockets', 'list_physics_bodies'
-] as const;
+// Valid actions for manage_skeleton tool. The canonical list lives in
+// src/tools/definitions/shared/action-sets.ts (the single source the routing
+// gate and native-parity audits read); this handler must never keep a second,
+// driftable copy. `preview_physics` is the one skeleton route with a native
+// dispatch entry but no canonical record, so it stays as a handler-only extra.
+const SKELETON_ACTIONS = [...SHARED_SKELETON_ACTIONS, 'preview_physics'] as const;
 
 type SkeletonAction = (typeof SKELETON_ACTIONS)[number];
 

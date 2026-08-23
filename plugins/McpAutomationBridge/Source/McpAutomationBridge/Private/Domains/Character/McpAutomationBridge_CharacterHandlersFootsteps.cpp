@@ -6,7 +6,7 @@ namespace McpCharacterHandlers
 bool HandleSetupFootstepSystem(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
     const FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    UBlueprint* Blueprint = LoadCharacterBlueprint(Self, RequestId, BlueprintPath, Socket);
+    UBlueprint* Blueprint = RequireCharacterBlueprint(Self, RequestId, BlueprintPath, Socket);
     if (!Blueprint)
     {
         return true;

@@ -29,10 +29,22 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
       button: P.button,
     },
     required: [],
+    // The handler already computes all three of these
+    // (Private/Domains/ControlEditor/McpAutomationBridge_ControlEditorInput.cpp),
+    // but the record declared no outputs at all, so the gateway stripped them and
+    // left only "delivered to PIE" -- which means ROUTED, not consumed. An
+    // Enhanced Input game silently ignores a raw Slate key, and with these fields
+    // dropped the call looked like an unqualified success while the pawn never
+    // moved. handledByPIE is the field that distinguishes the two.
+    outputProps: {
+      routedToPIE: { type: 'boolean', description: 'The event was routed to the PIE viewport rather than the editor.' },
+      handledByPIE: { type: 'boolean', description: 'PIE actually consumed the event. False here with routedToPIE true means the key reached the game and nothing bound it — the usual cause is an Enhanced Input game, where a raw key never reaches an InputAction.' },
+      handledBySlate: { type: 'boolean', description: 'Slate consumed the event (editor-level input).' },
+    },
     effect: 'write',
     costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'simulate_input', type: 'key_down', key: 'SpaceBar' },
-    exampleOutput: { success: true, message: 'Input simulated' },
+    exampleOutput: { success: true, message: 'Input simulated', routedToPIE: true, handledByPIE: true, handledBySlate: false },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
     normalizationRationale: 'TS normalizes input type aliases (press/release/click/move) to key_down/key_up/mouse_click/mouse_move before bridge dispatch. Distinct input verb.',
   }),

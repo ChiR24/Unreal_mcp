@@ -30,7 +30,9 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     }
 
     FString SubAction;
-    Payload->TryGetStringField(TEXT("action"), SubAction);
+    if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("action"), SubAction);
+    }
     const FString LowerSub = SubAction.ToLower();
     if (LowerSub == TEXT("load") || LowerSub == TEXT("load_level")) {
       return McpLevelHandlers::HandleLoadLevelAction(*this, RequestId, Payload,
@@ -51,6 +53,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       EffectiveAction = TEXT("build_lighting");
     } else if (LowerSub == TEXT("set_metadata")) {
       EffectiveAction = TEXT("set_metadata");
+    } else if (LowerSub == TEXT("set_world_settings") ||
+               LowerSub == TEXT("set_level_world_settings")) {
+      // Published as manage_level.set_world_settings; the gateway forwards the
+      // canonical action name rather than the record's dispatchAction, so the
+      // normalizer has to accept it alongside the native spelling.
+      EffectiveAction = TEXT("set_level_world_settings");
     } else if (LowerSub == TEXT("validate_level")) {
       EffectiveAction = TEXT("validate_level");
     } else if (LowerSub == TEXT("list") || LowerSub == TEXT("list_levels")) {

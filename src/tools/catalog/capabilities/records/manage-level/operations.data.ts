@@ -116,6 +116,47 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleOutput: { success: true, message: 'Metadata set' },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
+  // The native Level dispatch has always routed `set_level_world_settings`
+  // (McpAutomationBridge_LevelHandlers.cpp), but no record published it, so the
+  // only way to set a level's GameMode override through the gateway was to fall
+  // back to system_control.execute_python. Published here against the same
+  // native action; the handler re-validates and reports what it applied.
+  buildCoreRecord({
+    parentTool: 'manage_level', action: 'set_world_settings', dispatchAction: 'set_level_world_settings', dispatchMode: 'action',
+    domain: D, family: 'settings',
+    summary: "Set the loaded level's WorldSettings: GameMode override, kill Z, gravity, time dilation, and world bounds checks.",
+    whenToUse: ['A level needs its GameMode override or physics/world defaults set.'],
+    whenNotToUse: ['The GameMode class itself must be configured; use manage_networking.'],
+    inputProps: {
+      levelPath: P.levelPath,
+      gameMode: P.gameMode,
+      killZ: P.killZ,
+      gravityZ: P.gravityZ,
+      timeDilation: P.timeDilation,
+      enableWorldBoundsChecks: P.enableWorldBoundsChecks,
+    },
+    required: [],
+    // The handler rejects a call that supplies no setting, so the group is the
+    // contract rather than a convenience.
+    requiredOneOf: ['gameMode', 'killZ', 'gravityZ', 'timeDilation', 'enableWorldBoundsChecks'],
+    outputProps: {
+      levelPath: P.levelPath,
+      settingsApplied: P.settingsApplied,
+      appliedSettings: P.appliedSettings,
+      gameMode: P.gameMode,
+      killZ: P.killZ,
+      gravityZ: P.gravityZ,
+      timeDilation: P.timeDilation,
+    },
+    effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'instant', costResources: 'low',
+    exampleInput: { action: 'set_world_settings', gameMode: '/Game/Maps/BP_RaceGameMode' },
+    exampleOutput: {
+      success: true, message: 'World settings updated (1 applied)',
+      levelPath: '/Game/Maps/Demo', settingsApplied: true, appliedSettings: ['gameMode'],
+      gameMode: '/Game/Maps/BP_RaceGameMode.BP_RaceGameMode_C', killZ: -100000, gravityZ: -980, timeDilation: 1,
+    },
+    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
+  }),
   buildCoreRecord({
     parentTool: 'manage_level', action: 'list_levels', dispatchAction: 'list_levels', dispatchMode: 'action',
     domain: D, family: 'query',

@@ -1,6 +1,6 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
-
 #include "Domains/Lighting/McpAutomationBridge_LightingBuildCompatibility.h"
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Engine/World.h"
 #include "Misc/ConfigCacheIni.h"

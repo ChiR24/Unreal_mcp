@@ -1,6 +1,6 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
-
 #include "Domains/Landscape/McpAutomationBridge_LandscapeLookup.h"
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
