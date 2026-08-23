@@ -26,6 +26,7 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceDuplicate); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceRename); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceDelete); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceGetMetadata); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceSetMetadata); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceAddKeyframe); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceAddSection); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceSetTickResolution); \

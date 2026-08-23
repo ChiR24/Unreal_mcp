@@ -1,6 +1,7 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
 #include "MCP/Gateway/McpNativeGatewayDefinition.h"
+#include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Misc/SecureHash.h"
 
 namespace
@@ -20,6 +21,14 @@ FString BuildClientRateKey(
 		ClientName.Left(64) + TEXT("\x1f") +
 		ClientVersion.Left(32);
 	return FMD5::HashAnsiString(*Identity);
+}
+
+// H7: the session-create hook defers its disk write to the game thread; the
+// helper keeps the AsyncTask(GameThread) wrap in ONE file-local place.
+void PersistSnapshotAsync()
+{
+	AsyncTask(ENamedThreads::GameThread,
+		[]() { FMcpDiagnosticsSnapshot::Get().PersistCurrent(); });
 }
 }
 
@@ -162,6 +171,12 @@ FString FMcpNativeTransport::HandleInitialize(
 		SessionRateStates.Add(OutSessionId, RateState);
 		CurrentSessionCount = ActiveSessions.Num();
 	}
+	// H7: record the native session create AFTER the SessionMutex scope closes
+	// (the store's own mutex protects the memory record; only a truncated
+	// SHA-256 identity of the raw session id is stored - never the raw value).
+	// The disk write is deferred to the game thread.
+	FMcpDiagnosticsSnapshot::Get().RecordSessionCreated(OutSessionId);
+	PersistSnapshotAsync();
 	if (!EvictedSessionId.IsEmpty())
 	{
 		CloseSessionConnections(EvictedSessionId);

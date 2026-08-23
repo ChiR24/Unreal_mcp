@@ -163,13 +163,28 @@ void MaskSecretsDeepInternal(const TSharedPtr<FJsonObject>& Object, int32 Depth)
 	{
 		return;
 	}
+	// A reflection reply names the property it read in one field and carries the
+	// value in a generic sibling: `{propertyName:"CapabilityToken", value:"<token>"}`.
+	// Key-name classification is blind to that — the key holding the secret is
+	// `value`, which names nothing — so the NAME-BEARING sibling is consulted once
+	// per object and, when it names a credential, the generic carriers are masked
+	// alongside the secret-named keys.
+	const bool bSiblingNamesCredential = McpNamesCredentialBySibling(Object);
 	for (auto& Pair : Object->Values)
 	{
 		// A secret-named KEY masks its ENTIRE value whatever the value's shape:
 		// an object, an array and a number can each carry a credential just as
 		// well as a string, and recursing would only find leaves that no longer
 		// carry the keyword context the string masker needs.
-		if (McpIsSecretKey(FString(*Pair.Key)))
+		const FString Key(*Pair.Key);
+		const bool bGenericSiblingCarrier =
+			bSiblingNamesCredential && McpIsGenericValueKey(Key);
+		// A boolean or number cannot carry a credential, so the sibling path spares
+		// them (a secret-NAMED key still masks its whole value whatever the shape).
+		const bool bMasked = McpIsSecretKey(Key)
+			|| (bGenericSiblingCarrier && Pair.Value.IsValid()
+				&& Pair.Value->Type != EJson::Boolean && Pair.Value->Type != EJson::Number);
+		if (bMasked)
 		{
 			Pair.Value = MakeShared<FJsonValueString>(TEXT("[REDACTED]"));
 			continue;

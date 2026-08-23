@@ -117,8 +117,10 @@ class UAnimBlueprint;
 #if WITH_EDITOR
 
 // Editor subsystem
+// Only EditorSubsystem.h exists; the Subsystems/ spelling that used to sit
+// beside it names no real header. NoPCHs meant this file was never compiled,
+// so the bad include went unnoticed until it became a real PCH.
 #include "EditorSubsystem.h"
-#include "Subsystems/EditorSubsystem.h"
 
 // Scoped Transaction (for undo/redo support)
 #if __has_include("ScopedTransaction.h")

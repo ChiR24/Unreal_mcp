@@ -23,6 +23,21 @@ FString McpRedactText(const FString& Value);
  *  no `keyword<sep>value` context survives — the key name is the only signal. */
 bool McpIsSecretKey(const FString& Key);
 
+/** True when Key is a generic value carrier — a key that names no subject of its
+ *  own and takes its meaning from a NAME-BEARING sibling in the same object.
+ *  Defined in McpNativeReceiptSecretKeys.cpp; mirrors GENERIC_VALUE_KEYS in
+ *  receipt-redaction.ts. */
+bool McpIsGenericValueKey(const FString& Key);
+
+/** True when this object names a credential in a NAME-BEARING field while carrying
+ *  the credential itself in a generic sibling — the reflection reply shape
+ *  `{propertyName: "CapabilityToken", value: "<token>"}`. Key-name classification
+ *  alone cannot see that: the key holding the secret is `value`, which names
+ *  nothing, and the name that would betray it sits in a different field. Defined
+ *  in McpNativeReceiptSecretKeys.cpp; mirrors namesCredentialBySibling() in
+ *  receipt-redaction.ts. */
+bool McpNamesCredentialBySibling(const TSharedPtr<FJsonObject>& Object);
+
 /** Recursively mask secret string leaves in a JSON object tree in place, and
  *  mask a secret-NAMED key's entire value whatever its shape. Bounded by the
  *  shared receipt depth cap so a deeply nested tree cannot overflow the stack. */

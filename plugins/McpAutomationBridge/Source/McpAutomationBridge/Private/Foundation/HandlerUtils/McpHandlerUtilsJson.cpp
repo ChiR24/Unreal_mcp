@@ -1,3 +1,5 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Safety/McpSafeOperations.h"

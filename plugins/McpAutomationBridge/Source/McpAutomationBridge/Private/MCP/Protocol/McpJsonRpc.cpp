@@ -4,56 +4,12 @@
 #include "Serialization/JsonWriter.h"
 #include "Policies/CondensedJsonPrintPolicy.h"
 
-namespace
-{
-TSharedPtr<FJsonObject> MakeToolTextData(const TSharedPtr<FJsonObject>& Data)
-{
-	if (!Data.IsValid() || !Data->HasField(TEXT("imageBase64")))
-	{
-		return Data;
-	}
+#include "MCP/Protocol/McpJsonRpcImageContent.h"
 
-	TSharedPtr<FJsonObject> TextData = MakeShared<FJsonObject>();
-	for (const auto& Field : Data->Values)
-	{
-		const FString FieldName(Field.Key.Len(), *Field.Key);
-		if (FieldName != TEXT("imageBase64"))
-		{
-			TextData->SetField(FieldName, Field.Value);
-		}
-	}
-	TextData->SetStringField(TEXT("imageBase64"), TEXT("<omitted; see image content>"));
-	return TextData;
-}
-
-void AddImageContentIfPresent(const TSharedPtr<FJsonObject>& Data,
-	TArray<TSharedPtr<FJsonValue>>& Content)
-{
-	if (!Data.IsValid())
-	{
-		return;
-	}
-
-	FString ImageBase64;
-	if (!Data->TryGetStringField(TEXT("imageBase64"), ImageBase64) || ImageBase64.IsEmpty())
-	{
-		return;
-	}
-
-	FString MimeType;
-	Data->TryGetStringField(TEXT("mimeType"), MimeType);
-	if (MimeType.IsEmpty())
-	{
-		MimeType = TEXT("image/png");
-	}
-
-	TSharedPtr<FJsonObject> ImageContent = MakeShared<FJsonObject>();
-	ImageContent->SetStringField(TEXT("type"), TEXT("image"));
-	ImageContent->SetStringField(TEXT("data"), ImageBase64);
-	ImageContent->SetStringField(TEXT("mimeType"), MimeType);
-	Content.Add(MakeShared<FJsonValueObject>(ImageContent));
-}
-}
+// Image helpers live in McpJsonRpcImageContent.cpp so this translation unit stays
+// under the 250 pure-line ceiling; call sites below are unqualified.
+using McpJsonRpcImage::AddImageContentIfPresent;
+using McpJsonRpcImage::MakeToolTextData;
 
 FMcpJsonRpcRequest FMcpJsonRpc::ParseRequest(const FString& Body)
 {
@@ -204,7 +160,11 @@ TSharedPtr<FJsonObject> FMcpJsonRpc::BuildToolResult(
 	Result->SetArrayField(TEXT("content"), Content);
 	if (Data.IsValid())
 	{
-		Result->SetObjectField(TEXT("structuredContent"), Data);
+		// Same omission the text block gets. The image already travels once, as its own
+		// image content block; repeating the base64 here shipped it twice and left every
+		// client that renders structuredContent showing megabytes of unreadable text
+		// beside the picture. The placeholder keeps the field's shape intact.
+		Result->SetObjectField(TEXT("structuredContent"), MakeToolTextData(Data));
 	}
 	Result->SetBoolField(TEXT("isError"), !bSuccess);
 

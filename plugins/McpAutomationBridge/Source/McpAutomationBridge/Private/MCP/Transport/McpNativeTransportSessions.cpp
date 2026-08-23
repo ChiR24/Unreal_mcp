@@ -1,4 +1,5 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 
 FMcpNativeTransport::ESessionValidationResult FMcpNativeTransport::ValidateSession(
 	const FString& SessionId, FString& OutError)
@@ -137,8 +138,10 @@ bool FMcpNativeTransport::QueueAutomationRequestForSession(
 	const FString& DispatchAction,
 	const TSharedPtr<FJsonObject>& Arguments,
 	bool& bOutSessionActive,
+	EAutomationQueueRejection& OutRejection,
 	const TMap<EMcpStateKind, int64>& ExpectedRevisions)
 {
+	OutRejection = EAutomationQueueRejection::None;
 	bOutSessionActive = false;
 	if (!Subsystem)
 	{
@@ -151,17 +154,34 @@ bool FMcpNativeTransport::QueueAutomationRequestForSession(
 		return false;
 	}
 	bOutSessionActive = ActiveSessions.Contains(SessionId);
+	if (!bOutSessionActive)
+	{
+		return false;
+	}
 	// Task 45: a native request carries no socket, so the MCP session id is the
 	// only thing that keeps its queue fairness lane and per-session cap distinct
-	// from every other session's.
-	return bOutSessionActive &&
+	// from every other session's. The rejection is surfaced so the /mcp surface
+	// can answer each refusal with its precise typed code.
+	const EAutomationQueueRejection Rejection =
 		Subsystem->QueueAutomationRequest(
 			RequestId, DispatchAction, Arguments, nullptr,
 			ERequestOrigin::NativeHTTP,
 			ExpectedRevisions,
-			FString(TEXT("native:")) + SessionId) ==
-			EAutomationQueueRejection::None;
+			FString(TEXT("native:")) + SessionId);
+	OutRejection = Rejection;
+	return Rejection == EAutomationQueueRejection::None;
 }
+
+// H8 (NF-4): bounded first-close-wins dedupe set, file-local (compressed form
+// keeps this file inside the 250 pure-line ceiling). ClaimSessionClose returns
+// true at most once per session WHILE the id is retained in the 128-close
+// window; a re-close of an EVICTED id double-counts by design (documented
+// bounded approximation - never a global closed<=created claim). No
+// ActiveSessions.Contains gate: every caller pre-removes under SessionMutex.
+namespace { FCriticalSection SessionCloseLock; TArray<FString> ClosedSessionIds;
+bool ClaimSessionClose(const FString& Id) { FScopeLock Lock(&SessionCloseLock);
+if (ClosedSessionIds.Contains(Id)) { return false; }
+ClosedSessionIds.Add(Id); if (ClosedSessionIds.Num() > 128) { ClosedSessionIds.RemoveAt(0); } return true; } }
 
 void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
 {
@@ -169,6 +189,12 @@ void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
 	{
 		return;
 	}
+
+	// H8: dedupe the RECORD with the bounded first-close-wins set (claim once
+	// while retained); the teardown below still runs on every call - it is
+	// idempotent. The record is memory-only here; the disk write is deferred.
+	if (ClaimSessionClose(SessionId)) { FMcpDiagnosticsSnapshot::Get().RecordSessionClosed();
+	AsyncTask(ENamedThreads::GameThread, []() { FMcpDiagnosticsSnapshot::Get().PersistCurrent(); }); }
 
 	// Task 37: the single close funnel is where DELETE, init-eviction, failed
 	// init, and the inactivity-timeout close converge, so draining the session's

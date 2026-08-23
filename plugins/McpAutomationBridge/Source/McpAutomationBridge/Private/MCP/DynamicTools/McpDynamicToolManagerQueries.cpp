@@ -5,19 +5,24 @@
 TSharedPtr<FJsonObject> FMcpDynamicToolManager::ListTools()
 {
 	TArray<TSharedPtr<FJsonValue>> ToolsArr;
+	int32 EnabledCount = 0;
 	for (const auto& Pair : ToolStates)
 	{
+		const bool bEnabled = IsToolEnabled_NoLock(Pair.Key);
 		auto Obj = MakeShared<FJsonObject>();
 		Obj->SetStringField(TEXT("name"), Pair.Value.Name);
-		Obj->SetBoolField(TEXT("enabled"), IsToolEnabled_NoLock(Pair.Key));
+		Obj->SetBoolField(TEXT("enabled"), bEnabled);
 		Obj->SetStringField(TEXT("category"), Pair.Value.Category);
 		ToolsArr.Add(MakeShared<FJsonValueObject>(Obj));
+		if (bEnabled) ++EnabledCount;
 	}
 
 	auto Result = MakeShared<FJsonObject>();
 	Result->SetBoolField(TEXT("success"), true);
 	Result->SetArrayField(TEXT("tools"), ToolsArr);
 	Result->SetNumberField(TEXT("totalTools"), ToolStates.Num());
+	Result->SetNumberField(TEXT("enabledCount"), EnabledCount);
+	Result->SetNumberField(TEXT("disabledCount"), ToolStates.Num() - EnabledCount);
 	return Result;
 }
 

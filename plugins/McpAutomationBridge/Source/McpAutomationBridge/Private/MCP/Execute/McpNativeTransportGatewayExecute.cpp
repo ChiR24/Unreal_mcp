@@ -106,10 +106,15 @@ void FMcpNativeTransport::HandleGatewayExecute(
 
 	// Handlers that still read the legacy 'subAction' field find the value here;
 	// it is added after schema validation because it is not a declared property.
-	if (!Plan.Arguments->HasField(TEXT("subAction")))
-	{
-		Plan.Arguments->SetStringField(TEXT("subAction"), Plan.LegacyAction);
-	}
+	//
+	// Stamped UNCONDITIONALLY from the server-resolved action, never merged with
+	// whatever the caller sent. Domain dispatchers are split on which field they
+	// read — some take `action`, some `subAction` — so honouring a caller-supplied
+	// `subAction` would let it steer a dispatcher away from the capability the gate
+	// authorized. RejectReservedParams already refuses both control keys in params,
+	// which is why this is a no-op today; it stays unconditional so the split can
+	// never reopen if that check is ever relaxed.
+	Plan.Arguments->SetStringField(TEXT("subAction"), Plan.LegacyAction);
 
 	// Idempotency runs after the local-tool intercept (so configuration tools
 	// never enter the ledger) and before dispatch (so a replay or duplicate never

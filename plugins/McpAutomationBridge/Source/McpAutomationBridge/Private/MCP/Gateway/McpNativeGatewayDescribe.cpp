@@ -169,7 +169,7 @@ TSharedPtr<FJsonObject> CapabilityContract(
 	const FMcpCapabilityRecord& Record, const FString& Tool, const FString& Revision, bool bAvailable)
 {
 	auto Out = MakeShared<FJsonObject>();
-	Out->SetStringField(TEXT("action"), Record.DispatchAction);
+	Out->SetStringField(TEXT("action"), McpCapabilityPublicAction(Record));
 	SetObjectOrEmpty(Out, TEXT("availability"), Record.Availability);
 	Out->SetBoolField(TEXT("available"), bAvailable);
 	SetObjectOrEmpty(Out, TEXT("behavior"), Record.Behavior);

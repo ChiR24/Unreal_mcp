@@ -1,7 +1,8 @@
 // McpSchemaBuilder.cpp — Fluent builder for MCP tool inputSchema JSON
 
-#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "MCP/Registry/McpSchemaBuilder.h"
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 namespace
 {

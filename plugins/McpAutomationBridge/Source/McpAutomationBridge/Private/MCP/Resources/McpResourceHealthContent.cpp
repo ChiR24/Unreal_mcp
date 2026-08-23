@@ -1,6 +1,7 @@
 #include "MCP/Resources/McpResourceHealthContent.h"
 
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+#include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/McpReadinessState.h"
 #include "Foundation/McpTelemetryRegistry.h"
 #include "Foundation/McpTelemetrySchema.h"
@@ -97,6 +98,14 @@ namespace McpResourceHealth
 		Data->SetStringField(TEXT("surface"), McpTelemetrySchema::CoerceSurface(TEXT("native")));
 		Data->SetObjectField(TEXT("readiness"), Readiness);
 		Data->SetObjectField(TEXT("diagnostics"), Registry.SnapshotJson());
+		// NF-6: identical null-when-empty projection to the automation-bridge
+		// presenter (McpResourceBridgeContent.cpp) - cross-transport parity with
+		// the TS reader's null for a missing previous FILE.
+		const TSharedRef<FJsonObject> PreviousSummary = FMcpDiagnosticsSnapshot::Get().PreviousSummaryJson();
+		Data->SetField(TEXT("previousSession"), PreviousSummary->Values.Num() == 0
+			? TSharedPtr<FJsonValue>(MakeShared<FJsonValueNull>())
+			: TSharedPtr<FJsonValue>(MakeShared<FJsonValueObject>(PreviousSummary)));
+		Data->SetObjectField(TEXT("currentSession"), FMcpDiagnosticsSnapshot::Get().CurrentSummaryJson());
 		Data->SetStringField(TEXT("metricsExposition"), Registry.RenderPrometheus(&View));
 		return Data;
 	}

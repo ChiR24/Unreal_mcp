@@ -1,6 +1,7 @@
 #include "MCP/Resources/McpResourceBridgeContent.h"
 
 #include "McpAutomationBridgeSettings.h"
+#include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/McpReadinessState.h"
 #include "Foundation/McpTelemetryRegistry.h"
 #include "Dom/JsonValue.h"
@@ -78,6 +79,17 @@ namespace McpResourceBridge
 		Data->SetField(TEXT("lastHandshakeFailure"), MakeShared<FJsonValueNull>());
 		Data->SetField(TEXT("lastError"), MakeShared<FJsonValueNull>());
 		Data->SetBoolField(TEXT("listening"), Readiness.IsTransportReady());
+		// NF-6: PreviousSummaryJson() is an EMPTY object when no previous record
+		// exists (store returns MakeShared<FJsonObject>() when !bHasPrevious). The
+		// TS reader emits null for a missing previous FILE, so native must emit
+		// JSON null for the same semantic state. CurrentSummaryJson() is NEVER
+		// empty (BuildSnapshotJson always emits schemaVersion/instance/counters/
+		// lastRequest + three nullable sections).
+		const TSharedRef<FJsonObject> PreviousSummary = FMcpDiagnosticsSnapshot::Get().PreviousSummaryJson();
+		Data->SetField(TEXT("previousSession"), PreviousSummary->Values.Num() == 0
+			? TSharedPtr<FJsonValue>(MakeShared<FJsonValueNull>())
+			: TSharedPtr<FJsonValue>(MakeShared<FJsonValueObject>(PreviousSummary)));
+		Data->SetObjectField(TEXT("currentSession"), FMcpDiagnosticsSnapshot::Get().CurrentSummaryJson());
 		return Data;
 	}
 }  // namespace McpResourceBridge

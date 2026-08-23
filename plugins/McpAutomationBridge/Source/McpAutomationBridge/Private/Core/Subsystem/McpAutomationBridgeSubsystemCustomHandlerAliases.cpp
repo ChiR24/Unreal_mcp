@@ -1,6 +1,6 @@
-#include "McpAutomationBridgeSubsystem.h"
-
 #include "Core/Subsystem/McpAutomationBridgeSubsystemCustomHandlerAliases.h"
+
+#include "McpAutomationBridgeSubsystem.h"
 
 namespace McpCustomHandlerAliases
 {

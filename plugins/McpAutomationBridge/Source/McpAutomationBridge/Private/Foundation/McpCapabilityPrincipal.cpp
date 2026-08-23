@@ -90,6 +90,14 @@ TArray<FCandidate> BuildCandidates(const UMcpAutomationBridgeSettings& Settings)
 		Legacy.bAuthenticated = true;
 		Legacy.bDeprecated = true;
 		Candidates.Add({ Settings.CapabilityToken, MoveTemp(Legacy) });
+		// Record it, exactly as the scoped loop above records its own. Without
+		// this the store step below re-adds the SAME token as 'legacy-store',
+		// and because Resolve scans every candidate without breaking (constant
+		// time, deliberately) the later duplicate wins. Any operator who set an
+		// explicit CapabilityToken was therefore attributed to 'legacy-store'
+		// in audit and telemetry. Same scopes, so no privilege change -- a
+		// wrong identity string, which is the part that has to be right.
+		SeenTokens.Add(Settings.CapabilityToken);
 	}
 
 	// Also add the effective token from the store (auto-generated + persisted if
@@ -127,7 +135,13 @@ FCandidateTableRef GetCandidateTable(const UMcpAutomationBridgeSettings& Setting
 	static FCriticalSection CacheMutex;
 	static FCandidateTableRef Cached;
 	static int32 CachedGeneration = -1;
-	static const UMcpAutomationBridgeSettings* CachedSettings = nullptr;
+	// Weak, not raw. A raw pointer identifies an address, not an object: once a
+	// settings object is collected, the next NewObject can land on that address
+	// and — because GetEditGeneration() counts editor property edits and plain
+	// C++ assignment never bumps it — both halves of the key would match while
+	// the table described a different object entirely. A weak pointer carries a
+	// serial number, so a recycled address reads as a miss and rebuilds.
+	static TWeakObjectPtr<const UMcpAutomationBridgeSettings> CachedSettings;
 
 	// Cheap, non-secret staleness key: the settings revision counter and the
 	// object identity. A token value is never part of it. Do NOT fold in entry
@@ -136,7 +150,7 @@ FCandidateTableRef GetCandidateTable(const UMcpAutomationBridgeSettings& Setting
 	const int32 Generation = UMcpAutomationBridgeSettings::GetEditGeneration();
 
 	FScopeLock Lock(&CacheMutex);
-	if (!Cached.IsValid() || CachedGeneration != Generation || CachedSettings != &Settings)
+	if (!Cached.IsValid() || CachedGeneration != Generation || CachedSettings.Get() != &Settings)
 	{
 		Cached = MakeShared<const FCandidateTable, ESPMode::ThreadSafe>(BuildCandidates(Settings));
 		CachedGeneration = Generation;

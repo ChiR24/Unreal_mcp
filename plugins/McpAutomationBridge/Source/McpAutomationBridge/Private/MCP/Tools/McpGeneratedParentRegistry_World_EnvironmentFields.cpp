@@ -22,6 +22,7 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.String(TEXT("captureSource"), TEXT("Capture source string."));
 			Schema.Integer(TEXT("channel"), TEXT("Light channel index."));
 			Schema.Array(TEXT("channels"), TEXT("Lighting channel indices (0, 1, or 2)."), TEXT("integer"));
+			Schema.Bool(TEXT("closedLoop"), TEXT("Close the spline into a loop, joining the last point back to the first."));
 			Schema.Bool(TEXT("collisionEnabled"), TEXT("Whether collision is enabled."));
 			Schema.Number(TEXT("compensationValue"), TEXT("Exposure compensation value."));
 			Schema.String(TEXT("componentName"), TEXT("Component name."));

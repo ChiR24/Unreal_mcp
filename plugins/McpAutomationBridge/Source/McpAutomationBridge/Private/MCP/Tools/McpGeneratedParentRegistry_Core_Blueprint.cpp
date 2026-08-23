@@ -98,7 +98,7 @@ public:
 			Schema.String(TEXT("oldName"), TEXT("Current variable name before renaming."));
 			Schema.String(TEXT("onHoveredFunction"), TEXT("Function to call on hover."));
 			Schema.String(TEXT("onUnhoveredFunction"), TEXT("Function to call on unhover."));
-			Schema.ArrayOfObjects(TEXT("operations"), TEXT("Batch operations for probe_handle."));
+			Schema.AnyValue(TEXT("operations"), TEXT("Batch operations for probe_handle."));
 			Schema.Array(TEXT("options"), TEXT("Combo box options."), TEXT("string"));
 			Schema.StringEnum(TEXT("orientation"), { TEXT("Horizontal"), TEXT("Vertical") }, TEXT("Widget orientation."));
 			Schema.ArrayOfObjects(TEXT("outputs"), TEXT("Function output parameter descriptors."));

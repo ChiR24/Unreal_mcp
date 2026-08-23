@@ -21,6 +21,10 @@ class FSocket;
 class FRunnableThread;
 class FEvent;
 class ISocketSubsystem;
+// Forward-declared so the admission call can surface the precise queue
+// rejection; the full enum comes from McpAutomationBridgeSubsystem.h in every
+// .cpp that reads/writes it.
+enum class EAutomationQueueRejection : uint8;
 
 /**
  * Native MCP Streamable HTTP transport with SSE streaming.
@@ -204,6 +208,7 @@ private:
 		const FString& DispatchAction,
 		const TSharedPtr<FJsonObject>& Arguments,
 		bool& bOutSessionActive,
+		EAutomationQueueRejection& OutRejection,
 		const TMap<EMcpStateKind, int64>& ExpectedRevisions =
 			TMap<EMcpStateKind, int64>());
 	void CloseSessionConnections(const FString& SessionId);

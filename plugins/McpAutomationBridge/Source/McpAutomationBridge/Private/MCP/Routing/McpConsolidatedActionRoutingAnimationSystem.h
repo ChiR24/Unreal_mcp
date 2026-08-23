@@ -138,7 +138,8 @@ inline const TArray<FString>& SystemControlCore()
 		TEXT("lumen_update_scene"), TEXT("play_sound"), TEXT("create_widget"),
 		TEXT("show_widget"), TEXT("add_widget_child"), TEXT("set_cvar"),
 		TEXT("get_project_settings"), TEXT("validate_assets"),
-		TEXT("set_project_setting"), TEXT("execute_python")
+		TEXT("set_project_setting"), TEXT("execute_python"),
+		TEXT("list_plugins"), TEXT("enable_plugin"), TEXT("disable_plugin")
 	};
 	return Actions;
 }

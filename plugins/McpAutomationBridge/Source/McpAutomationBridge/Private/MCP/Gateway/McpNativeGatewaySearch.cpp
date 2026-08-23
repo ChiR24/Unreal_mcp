@@ -185,7 +185,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 		View->SetStringField(TEXT("family"), Entry.Record->Family);
 		View->SetArrayField(TEXT("matchReasons"), GatewayStringArray(Entry.Reasons));
 		View->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(
-			TEXT("describe"), Entry.Record->Parent, Entry.Record->DispatchAction, FString()));
+			TEXT("describe"), Entry.Record->Parent, McpCapabilityPublicAction(*Entry.Record), FString()));
 		View->SetStringField(TEXT("parent"), Entry.Record->Parent);
 		View->SetNumberField(TEXT("score"), Entry.Score);
 		View->SetStringField(TEXT("summary"), Entry.Record->Summary);
@@ -209,10 +209,13 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	}
 
 	const bool bHasMore = Offset + Results.Num() < Total;
+	const bool bByteBudgetTruncated = bTruncated;
+	bTruncated = bByteBudgetTruncated || bHasMore;
 	auto Out = MakeShared<FJsonObject>();
 	Out->SetStringField(TEXT("catalogRevision"), Revision);
 	Out->SetBoolField(TEXT("hasMore"), bHasMore);
 	Out->SetNumberField(TEXT("limit"), Limit);
+	Out->SetNumberField(TEXT("effectiveLimit"), Limit);
 	Out->SetStringField(TEXT("message"),
 		TEXT("Results are capability-level and bounded. Call describe with the exact capability before execute."));
 	Out->SetNumberField(TEXT("offset"), Offset);
@@ -222,6 +225,8 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	Out->SetBoolField(TEXT("success"), true);
 	Out->SetNumberField(TEXT("total"), Total);
 	Out->SetBoolField(TEXT("truncated"), bTruncated);
+	Out->SetStringField(TEXT("truncationReason"),
+		bByteBudgetTruncated ? TEXT("byte-budget") : (bHasMore ? TEXT("limit") : TEXT("none")));
 	if (Input.bHasDomain) Out->SetStringField(TEXT("domain"), Input.Domain);
 	if (Input.bHasFamily) Out->SetStringField(TEXT("family"), Input.Family);
 	if (bHasMore) Out->SetStringField(TEXT("nextCursor"), FString::FromInt(Offset + Results.Num()));

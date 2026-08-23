@@ -7,7 +7,10 @@ namespace McpConsolidatedActions
 inline const TArray<FString>& ManageAssetCore()
 {
 	static const TArray<FString> Actions = {
-		TEXT("list"), TEXT("import"), TEXT("duplicate"), TEXT("duplicate_asset"),
+		TEXT("list"), TEXT("import"), TEXT("list_content_sources"),
+		TEXT("migrate_assets"), TEXT("list_fab_downloads"), TEXT("list_fab_library"), TEXT("download_fab_asset"), TEXT("add_fab_asset_to_project"), TEXT("search_fab_listings"), TEXT("get_fab_listing_details"),
+		TEXT("list_megascans_library"), TEXT("import_megascans_asset"),
+		TEXT("duplicate"), TEXT("duplicate_asset"),
 		TEXT("rename"), TEXT("rename_asset"), TEXT("move"), TEXT("move_asset"),
 		TEXT("delete"), TEXT("delete_asset"), TEXT("delete_assets"),
 		TEXT("create_folder"), TEXT("search_assets"), TEXT("get_dependencies"),
@@ -58,7 +61,7 @@ inline const TArray<FString>& MaterialAuthoring()
 		TEXT("get_connected_subgraph"), TEXT("add_material_node"),
 		TEXT("rebuild_material"), TEXT("set_material_parameter"),
 		TEXT("get_material_node_details"), TEXT("remove_material_node"),
-		TEXT("set_two_sided")
+		TEXT("set_two_sided"), TEXT("set_node_position")
 	};
 	return Actions;
 }

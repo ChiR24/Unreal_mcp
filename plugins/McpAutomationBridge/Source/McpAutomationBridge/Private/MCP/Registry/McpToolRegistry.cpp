@@ -1,7 +1,8 @@
 // McpToolRegistry.cpp — Singleton registry for self-describing MCP tool definitions
 
-#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "MCP/Registry/McpToolRegistry.h"
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "MCP/Registry/McpToolDefinition.h"
 
 namespace

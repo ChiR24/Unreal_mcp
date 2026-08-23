@@ -62,19 +62,23 @@ public:
 	{
 		FMcpSchemaBuilder Schema;
 			Schema.String(TEXT("actorName"), TEXT("Name of the actor to target."));
+			Schema.Object(TEXT("arguments"), TEXT("Argument values keyed by parameter name. Converted per-property, so structs and arrays are accepted in their JSON form. Omitted parameters keep their zero-initialised default and are listed in unsetParameters."));
 			Schema.String(TEXT("assetPath"), TEXT("Asset path (e.g. /Game/Path/Asset)."));
 			Schema.Number(TEXT("blendTime"), TEXT("Blend time in seconds for set_view_target."));
 			Schema.String(TEXT("bookmarkName"), TEXT("Bookmark name identifier."));
 			Schema.String(TEXT("button"), TEXT("Mouse button for simulate_input."));
 			Schema.String(TEXT("category"), TEXT("Preferences category."));
+			Schema.String(TEXT("className"), TEXT("Reflected class name without prefix, for example \"FabBrowserApi\". The live instance is preferred; the class default object is the fallback when no instance exists yet."));
 			Schema.String(TEXT("command"), TEXT("Console command string."));
 			Schema.Number(TEXT("deltaTime"), TEXT("Fixed delta time in seconds."));
 			Schema.String(TEXT("description"), TEXT("Bookmark description."));
 			Schema.Number(TEXT("durationSeconds"), TEXT("Recording duration in seconds."));
 			Schema.Bool(TEXT("enabled"), TEXT("Whether the feature is enabled."));
 			Schema.String(TEXT("filename"), TEXT("Screenshot or recording filename."));
+			Schema.String(TEXT("filter"), TEXT("Case-sensitive substring matched against function names."));
 			Schema.Number(TEXT("fov"), TEXT("Camera field of view in degrees."));
 			Schema.Number(TEXT("frameRate"), TEXT("Recording frame rate."));
+			Schema.String(TEXT("functionName"), TEXT("Function name exactly as reported by describe_reflected_api."));
 			Schema.Number(TEXT("height"), TEXT("Viewport height in pixels."));
 			Schema.String(TEXT("id"), TEXT("Bookmark identifier."));
 			Schema.Bool(TEXT("includeMetadata"), TEXT("Attach caller-provided metadata to the response."));
@@ -94,7 +98,7 @@ public:
 			Schema.String(TEXT("path"), TEXT("Directory or file path."));
 			Schema.FreeformObject(TEXT("preferences"), TEXT("Editor preferences key-value pairs."));
 			Schema.Bool(TEXT("realtime"), TEXT("Whether realtime rendering is enabled."));
-			Schema.String(TEXT("resolution"), TEXT("Resolution setting (e.g. 1024x1024)."));
+			Schema.String(TEXT("resolution"), TEXT("Maximum WxH for the returned PNG (e.g. \"1280x720\"). The capture is downscaled to fit inside this box with its aspect ratio preserved; a box at least as large as the viewport leaves the image untouched. Use this to bring an oversized capture under the base64 limit."));
 			Schema.Bool(TEXT("returnBase64"), TEXT("Return PNG image data as base64."));
 			Schema.Object(TEXT("rotation"), TEXT("3D rotation (pitch, yaw, roll)."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("pitch"), TEXT("pitch"));
@@ -104,12 +108,13 @@ public:
 			Schema.Number(TEXT("speed"), TEXT("Game speed multiplier."));
 			Schema.String(TEXT("stat"), TEXT("Stat name to show or hide."));
 			Schema.Integer(TEXT("steps"), TEXT("Number of frames to step."));
+			Schema.String(TEXT("tabId"), TEXT("Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge) or \"FabTab\" (Fab)."));
 			Schema.String(TEXT("type"), TEXT("Input event type (key_down, key_up, mouse_click, mouse_move)."));
 			Schema.String(TEXT("viewMode"), TEXT("Viewport view mode (e.g. Lit, Unlit, Wireframe)."));
 			Schema.Number(TEXT("width"), TEXT("Viewport width in pixels."));
 			Schema.Number(TEXT("x"), TEXT("Mouse X coordinate for simulate_input."));
 			Schema.Number(TEXT("y"), TEXT("Mouse Y coordinate for simulate_input."));
-			Schema.StringEnum(TEXT("action"), { TEXT("play"), TEXT("stop"), TEXT("stop_pie"), TEXT("pause"), TEXT("resume"), TEXT("eject"), TEXT("possess"), TEXT("set_game_speed"), TEXT("set_fixed_delta_time"), TEXT("step_frame"), TEXT("single_frame_step"), TEXT("start_recording"), TEXT("stop_recording"), TEXT("set_view_target"), TEXT("set_game_view_target"), TEXT("set_camera"), TEXT("set_camera_position"), TEXT("set_viewport_camera"), TEXT("set_camera_fov"), TEXT("set_view_mode"), TEXT("set_viewport_resolution"), TEXT("set_viewport_realtime"), TEXT("set_editor_mode"), TEXT("set_immersive_mode"), TEXT("set_game_view"), TEXT("show_stats"), TEXT("hide_stats"), TEXT("console_command"), TEXT("execute_command"), TEXT("set_preferences"), TEXT("screenshot"), TEXT("take_screenshot"), TEXT("create_bookmark"), TEXT("jump_to_bookmark"), TEXT("open_asset"), TEXT("close_asset"), TEXT("open_level"), TEXT("focus_actor"), TEXT("save_all"), TEXT("simulate_input"), TEXT("undo"), TEXT("redo") }, TEXT("Action to invoke on control_editor."));
+			Schema.StringEnum(TEXT("action"), { TEXT("play"), TEXT("stop"), TEXT("stop_pie"), TEXT("pause"), TEXT("resume"), TEXT("eject"), TEXT("possess"), TEXT("set_game_speed"), TEXT("set_fixed_delta_time"), TEXT("step_frame"), TEXT("single_frame_step"), TEXT("start_recording"), TEXT("stop_recording"), TEXT("set_view_target"), TEXT("set_game_view_target"), TEXT("set_camera"), TEXT("set_camera_position"), TEXT("set_viewport_camera"), TEXT("set_camera_fov"), TEXT("set_view_mode"), TEXT("set_viewport_resolution"), TEXT("set_viewport_realtime"), TEXT("set_editor_mode"), TEXT("set_immersive_mode"), TEXT("set_game_view"), TEXT("show_stats"), TEXT("hide_stats"), TEXT("invoke_reflected_function"), TEXT("describe_reflected_api"), TEXT("open_editor_tab"), TEXT("console_command"), TEXT("execute_command"), TEXT("set_preferences"), TEXT("screenshot"), TEXT("take_screenshot"), TEXT("create_bookmark"), TEXT("jump_to_bookmark"), TEXT("open_asset"), TEXT("close_asset"), TEXT("open_level"), TEXT("focus_actor"), TEXT("save_all"), TEXT("simulate_input"), TEXT("undo"), TEXT("redo") }, TEXT("Action to invoke on control_editor."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}
@@ -159,8 +164,12 @@ public:
 			Schema.String(TEXT("assetPath"), TEXT("Alias of levelPath resolved by the manage_level argument normalizer."));
 			Schema.Array(TEXT("color"), TEXT("Linear color [r, g, b] or [r, g, b, a]."), TEXT("number"));
 			Schema.String(TEXT("destinationPath"), TEXT("Destination path for move/copy."));
+			Schema.Bool(TEXT("enableWorldBoundsChecks"), TEXT("Whether actors leaving the world bounds are culled."));
 			Schema.String(TEXT("exportPath"), TEXT("Export file path."));
+			Schema.String(TEXT("gameMode"), TEXT("GameMode override for the level. Accepts the Blueprint asset path or its generated _C class path."));
+			Schema.Number(TEXT("gravityZ"), TEXT("World gravity along Z; setting it also enables the global gravity override."));
 			Schema.Number(TEXT("intensity"), TEXT("Light intensity."));
+			Schema.Number(TEXT("killZ"), TEXT("Z height below which actors are destroyed."));
 			Schema.String(TEXT("levelName"), TEXT("Level name identifier."));
 			Schema.String(TEXT("levelPath"), TEXT("Level asset path (e.g. /Game/Maps/Demo)."));
 			Schema.Array(TEXT("levelPaths"), TEXT("Array of level asset paths."), TEXT("string"));
@@ -187,8 +196,9 @@ public:
 			Schema.String(TEXT("sublevelPath"), TEXT("Alias of subLevelPath resolved by the manage_level argument normalizer."));
 			Schema.String(TEXT("targetPath"), TEXT("Alias of destinationPath resolved by the manage_level argument normalizer."));
 			Schema.String(TEXT("template"), TEXT("Level template path accepted for compatibility; create_level dispatch does not apply it."));
+			Schema.Number(TEXT("timeDilation"), TEXT("Global time dilation multiplier for the level."));
 			Schema.Bool(TEXT("useWorldPartition"), TEXT("Create the level with World Partition enabled."));
-			Schema.StringEnum(TEXT("action"), { TEXT("load"), TEXT("load_level"), TEXT("save"), TEXT("save_level"), TEXT("save_as"), TEXT("save_level_as"), TEXT("create_level"), TEXT("delete"), TEXT("delete_level"), TEXT("rename_level"), TEXT("duplicate_level"), TEXT("stream"), TEXT("unload"), TEXT("unload_level"), TEXT("create_light"), TEXT("build_lighting"), TEXT("set_metadata"), TEXT("list_levels"), TEXT("get_current_level"), TEXT("get_summary"), TEXT("validate_level"), TEXT("export_level"), TEXT("import_level"), TEXT("add_sublevel") }, TEXT("Action to invoke on manage_level."));
+			Schema.StringEnum(TEXT("action"), { TEXT("load"), TEXT("load_level"), TEXT("save"), TEXT("save_level"), TEXT("save_as"), TEXT("save_level_as"), TEXT("create_level"), TEXT("delete"), TEXT("delete_level"), TEXT("rename_level"), TEXT("duplicate_level"), TEXT("stream"), TEXT("unload"), TEXT("unload_level"), TEXT("create_light"), TEXT("build_lighting"), TEXT("set_metadata"), TEXT("set_world_settings"), TEXT("list_levels"), TEXT("get_current_level"), TEXT("get_summary"), TEXT("validate_level"), TEXT("export_level"), TEXT("import_level"), TEXT("add_sublevel") }, TEXT("Action to invoke on manage_level."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

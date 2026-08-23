@@ -67,13 +67,15 @@ const TSet<FString>& SecretQualifiers()
 }
 
 // Credential nouns that can close a compound. `secret` + `key` is a credential
-// even though `key` alone is far too generic to live in SecretKeyWords.
+// even though `key` alone is far too generic to live in SecretKeyWords. Must stay
+// byte-identical to CREDENTIAL_TAILS in receipt-redaction.ts.
 const TSet<FString>& CredentialTails()
 {
 	static const TSet<FString> Words = {
 		TEXT("key"), TEXT("token"), TEXT("secret"), TEXT("password"), TEXT("passwd"),
 		TEXT("pwd"), TEXT("credential"), TEXT("authorization"), TEXT("signature"),
-		TEXT("cert"), TEXT("certificate")};
+		TEXT("cert"), TEXT("certificate"), TEXT("hash"), TEXT("bytes"), TEXT("digest"),
+		TEXT("header"), TEXT("blob")};
 	return Words;
 }
 
@@ -82,6 +84,44 @@ bool IsSplittableWord(const FString& Word)
 	return SecretKeyWords().Contains(Word) || SecretQualifiers().Contains(Word)
 		|| CredentialTails().Contains(Word) || MeasurementHeads().Contains(Word)
 		|| TransparentHeads().Contains(Word);
+}
+
+// Enumerates every complete segmentation of Word into `Parts` splittable words,
+// leftmost cut first, mirroring segmentations() in receipt-redaction.ts. The
+// credential predicate is deliberately NOT applied here: TS applies
+// splitNamesCredential() only to the COMPLETE part list (the `.find()` over the
+// full enumeration), so filtering sub-segmentations during recursion would reject
+// a split whose first part is the credential word while its tail is not itself
+// credential-named, and leave the native surface masking less than the stdio
+// surface.
+void CollectSegmentations(const FString& Word, int32 Parts,
+	TArray<TArray<FString>>& Out)
+{
+	if (Parts == 1)
+	{
+		if (IsSplittableWord(Word))
+		{
+			TArray<FString> Single;
+			Single.Add(Word);
+			Out.Add(MoveTemp(Single));
+		}
+		return;
+	}
+	for (int32 Cut = 2; Cut <= Word.Len() - 2; ++Cut)
+	{
+		const FString Head = Word.Left(Cut);
+		if (!IsSplittableWord(Head))
+		{
+			continue;
+		}
+		TArray<TArray<FString>> Rests;
+		CollectSegmentations(Word.RightChop(Cut), Parts - 1, Rests);
+		for (TArray<FString>& Rest : Rests)
+		{
+			Rest.Insert(Head, 0);
+			Out.Add(MoveTemp(Rest));
+		}
+	}
 }
 
 // Depluralisation is tried as an ALTERNATIVE rather than applied up front,
@@ -96,29 +136,45 @@ bool InSet(const TSet<FString>& Set, const FString& Word)
 	return Set.Contains(Word) || Set.Contains(Singular(Word));
 }
 
+// Mirrors splitNamesCredential() in receipt-redaction.ts: ANY part naming a
+// secret key word, or the LAST part being a credential tail, makes the split a
+// credential.
+bool PartsNameCredential(const TArray<FString>& Parts)
+{
+	for (const FString& Part : Parts)
+	{
+		if (SecretKeyWords().Contains(Part))
+		{
+			return true;
+		}
+	}
+	return Parts.Num() > 0 && CredentialTails().Contains(Parts.Last());
+}
+
 // `SECRETKEY` and `ACCESSTOKEN` carry no camelCase boundary and no separator, so
 // they arrive as one unrecognised word and escape masking entirely — while
 // `SECRET_KEY` and `secretKey` are both masked. Recover the boundary by
-// splitting a single run into two KNOWN words, at least one naming a credential.
+// splitting a single run into KNOWN words, at least one naming a credential.
 // Requiring both halves to be in the closed vocabulary is what stops `tokenizer`
 // becoming token + izer and `passwordless` becoming password + less.
+// Two parts cannot reach `APIACCESSTOKEN`, so the search runs to three - fewest
+// parts first, mirroring segmentations() in receipt-redaction.ts.
 void AppendCompound(const FString& Word, TArray<FString>& Out)
 {
-	if (Word.Len() >= 6 && !IsSplittableWord(Word))
+	if (Word.Len() < 6 || IsSplittableWord(Word))
 	{
-		for (int32 Cut = 2; Cut <= Word.Len() - 2; ++Cut)
+		Out.Add(Word);
+		return;
+	}
+	for (int32 Parts = 2; Parts <= 3; ++Parts)
+	{
+		TArray<TArray<FString>> Segmentations;
+		CollectSegmentations(Word, Parts, Segmentations);
+		for (const TArray<FString>& Segmentation : Segmentations)
 		{
-			const FString Head = Word.Left(Cut);
-			const FString Tail = Word.RightChop(Cut);
-			if (!IsSplittableWord(Head) || !IsSplittableWord(Tail))
+			if (PartsNameCredential(Segmentation))
 			{
-				continue;
-			}
-			if (SecretKeyWords().Contains(Head) || SecretKeyWords().Contains(Tail)
-				|| CredentialTails().Contains(Tail))
-			{
-				Out.Add(Head);
-				Out.Add(Tail);
+				Out.Append(Segmentation);
 				return;
 			}
 		}
@@ -180,10 +236,42 @@ bool NamesCredential(const TArray<FString>& Words)
 	}
 	return false;
 }
+
+// Keys that carry a value but name no subject of their own, and keys that name
+// the subject a sibling carries. The reflection handlers answer in exactly this
+// split shape — `{propertyName: "CapabilityToken", value: "<token>"}` — which
+// defeats key-name classification twice over: `value` names nothing, and
+// `propertyName` holds a name rather than a secret, so masking it would hide the
+// question instead of the answer.
+const TSet<FString>& GenericValueKeys()
+{
+	static const TSet<FString> Words = {
+		TEXT("value"), TEXT("values"), TEXT("currentvalue"), TEXT("previousvalue"),
+		TEXT("oldvalue"), TEXT("newvalue"), TEXT("defaultvalue"), TEXT("element"),
+		TEXT("elements"), TEXT("entry"), TEXT("entries"), TEXT("result")};
+	return Words;
+}
+
+const TSet<FString>& NameBearingKeys()
+{
+	static const TSet<FString> Words = {
+		TEXT("propertyname"), TEXT("propertypath"), TEXT("property"), TEXT("field"),
+		TEXT("key"), TEXT("settingname"), TEXT("setting"), TEXT("name")};
+	return Words;
+}
 }  // namespace
+
+// The compound splitter is O(n^2) on a separator-less run, and a receipt key is
+// caller-influenced (echoed map keys and property names), so an over-long key is
+// skipped rather than classified — the same bound the sibling-name path applies.
+constexpr int32 McpMaxKeyNameLength = 128;
 
 bool McpIsSecretKey(const FString& Key)
 {
+	if (Key.Len() > McpMaxKeyNameLength)
+	{
+		return false;
+	}
 	// FAIL-CLOSED: once any whole word names a credential the value is masked
 	// unless the head word proves the compound merely measures or describes it.
 	const TArray<FString> Words = KeyWords(Key);
@@ -197,4 +285,50 @@ bool McpIsSecretKey(const FString& Key)
 		--End;
 	}
 	return End < 1 || !InSet(MeasurementHeads(), Words[End - 1]);
+}
+
+bool McpIsGenericValueKey(const FString& Key)
+{
+	return GenericValueKeys().Contains(Key.ToLower());
+}
+
+// The NAME the caller asked for decides, judged by the same classifier a key
+// would face. `{name:"Foo", value:"bar"}` is untouched; only a name that itself
+// reads as a credential masks its sibling. Mirrors namesCredentialBySibling()
+// in receipt-redaction.ts, including the length bound: the name is caller-
+// supplied and the compound splitter is O(n^2) on a separator-less run, so an
+// over-long name is skipped rather than classified.
+constexpr int32 McpMaxSiblingNameLength = 128;
+
+bool McpNamesCredentialBySibling(const TSharedPtr<FJsonObject>& Object)
+{
+	if (!Object.IsValid())
+	{
+		return false;
+	}
+	for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Object->Values)
+	{
+		if (!NameBearingKeys().Contains(Pair.Key.ToLower()))
+		{
+			continue;
+		}
+		FString Named;
+		if (!Pair.Value.IsValid() || Pair.Value->Type != EJson::String
+			|| !Pair.Value->TryGetString(Named))
+		{
+			continue;
+		}
+		if (Named.Len() > McpMaxSiblingNameLength)
+		{
+			continue;
+		}
+		// The NAME the caller asked for decides, judged by the same classifier a
+		// key would face. `{name:"Foo", value:"bar"}` is untouched; only a name
+		// that itself reads as a credential masks its sibling.
+		if (McpIsSecretKey(Named))
+		{
+			return true;
+		}
+	}
+	return false;
 }

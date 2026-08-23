@@ -43,8 +43,20 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	// completion carries the success verdict separately from the payload (the
 	// WebSocket frame the TS gateway projects embeds it), so it is reunited
 	// first; the projected output is what is both validated and published.
+	// The 100k budget exists to stop an unbounded listing from flooding a client, and
+	// every capability that can page or filter keeps it. A screenshot can do neither: the
+	// payload is one indivisible base64 image, so the cap turned a working capture into
+	// RESULT_TOO_LARGE with advice ("retry with pagination") that cannot be followed. The
+	// image is separately bounded by MaxScreenshotPngBytesForBase64ForMcp, so the raised
+	// budget here is not unbounded — it is the one already enforced at the handler.
+	// Deliberately narrow: this must not become a general escape hatch.
+	const bool bIsImagePayload =
+		CapabilityId == TEXT("control_editor.screenshot") ||
+		CapabilityId == TEXT("system_control.screenshot");
+	const int32 ResultCharBudget = bIsImagePayload ? 6000000 : 100000;
+
 	int64 SerializedChars = 0;
-	if (McpSerializedResultExceeds(Result, 100000, &SerializedChars))
+	if (McpSerializedResultExceeds(Result, ResultCharBudget, &SerializedChars))
 	{
 		FMcpSemanticError TooLarge = McpOutputError(TEXT("RESULT_TOO_LARGE"),
 			TEXT("Result exceeded the gateway safety limit. Retry with the action pagination or filtering parameters described by this capability."));
