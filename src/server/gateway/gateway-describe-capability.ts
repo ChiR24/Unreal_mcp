@@ -13,7 +13,8 @@ import {
   capabilityContract,
   declaredParameterNames,
   isRequiredParameter,
-  parameterSchema
+  parameterSchema,
+  primaryExecutableAction
 } from './gateway-capability-view.js';
 import { closestMatches, MAX_SUGGESTIONS } from './gateway-guidance.js';
 import { gatewayError } from './gateway-shared.js';
@@ -71,7 +72,7 @@ export function describeCapabilityParameter(
     scope: 'parameter',
     capability: record.id,
     parentTool: record.routing.parentTool,
-    action: record.routing.dispatchAction,
+    action: primaryExecutableAction(record),
     param,
     required: isRequiredParameter(record, param),
     schema: parameterSchema(record, param) ?? {},

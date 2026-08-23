@@ -1,4 +1,4 @@
-// src/server/gateway/gateway-capability-view.ts
+﻿// src/server/gateway/gateway-capability-view.ts
 // Response projections for one canonical capability record.
 //
 // `search` rows stay compact (no schema bodies) while `describe` returns the
@@ -23,6 +23,27 @@ export function capabilityConsentGrant(
   };
 }
 
+// `routing.dispatchAction` is the NATIVE dispatch verb, not an execute
+// address: execute resolves a tool+action pair through `byLegacyPair`, which
+// is built from `record.legacyIds`. Publishing the dispatch action produced a
+// nextCall that either failed UNKNOWN_ACTION or - worse - resolved to a
+// DIFFERENT capability, silently running the wrong action on replay.
+//
+// The pair declared for this record's own parent tool wins, so a record that
+// carries several legacy spellings still advertises the one `execute` accepts
+// against the tool it is dispatched by.
+export function primaryLegacyId(
+  record: CapabilityRecord
+): CapabilityRecord['legacyIds'][number] | undefined {
+  return record.legacyIds.find((entry) => entry.tool === record.routing.parentTool)
+    ?? record.legacyIds[0];
+}
+
+/** The action name `execute` accepts for this capability, never the internal dispatch verb. */
+export function primaryExecutableAction(record: CapabilityRecord): string {
+  return primaryLegacyId(record)?.action ?? record.routing.dispatchAction;
+}
+
 export function capabilityNextCall(
   record: CapabilityRecord,
   availability: CapabilityAvailability
@@ -33,18 +54,10 @@ export function capabilityNextCall(
   if (availability.status === 'unavailable') {
     return { operation: 'search', domain: record.discovery.domain };
   }
-  // `routing.dispatchAction` is the NATIVE dispatch verb, not an execute
-  // address: execute resolves a tool+action pair through `byLegacyPair`, which
-  // is built from `record.legacyIds`. Publishing the dispatch action produced a
-  // nextCall that either failed UNKNOWN_ACTION or - worse - resolved to a
-  // DIFFERENT capability, silently running the wrong action on replay.
-  //
   // `capability` is the one selector guaranteed to resolve (`index.byId`), so it
   // leads. The legacy pair is emitted only when the record actually declares
   // one for this parent tool, which by construction is a key in `byLegacyPair`.
-  const legacy =
-    record.legacyIds.find((entry) => entry.tool === record.routing.parentTool)
-    ?? record.legacyIds[0];
+  const legacy = primaryLegacyId(record);
   return {
     operation: 'execute',
     capability: record.id,
@@ -136,7 +149,7 @@ export function capabilitySearchRow(
   return {
     capability: record.id,
     parentTool: record.routing.parentTool,
-    action: record.routing.dispatchAction,
+    action: primaryExecutableAction(record),
     category: record.parent.category,
     domain: record.discovery.domain,
     family: record.discovery.family,
@@ -162,7 +175,7 @@ export function capabilityContract(record: CapabilityRecord): Record<string, unk
     scope: 'capability',
     capability: record.id,
     parentTool: record.routing.parentTool,
-    action: record.routing.dispatchAction,
+    action: primaryExecutableAction(record),
     dispatchMode: record.routing.dispatchMode,
     category: record.parent.category,
     domain: record.discovery.domain,

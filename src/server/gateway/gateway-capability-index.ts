@@ -71,6 +71,55 @@ export function legacyPairKey(tool: string, action: string): string {
   return `${tool}::${action}`;
 }
 
+/** Every capability id claiming each alias / legacy pair, but only where more than one does. */
+export type IndexConflicts = {
+  readonly aliasConflicts: ReadonlyMap<string, readonly string[]>;
+  readonly legacyPairConflicts: ReadonlyMap<string, readonly string[]>;
+};
+
+// `byAlias` and `byLegacyPair` are single-winner maps: a second record claiming
+// an alias or a tool+action pair silently overwrote the first, so `describe`
+// answered for whichever record happened to sort last and the caller was never
+// told another capability owned the same selector. Detection is separated from
+// the maps themselves so the owners are reportable, not just countable.
+export function detectIndexConflicts(records: readonly CapabilityRecord[]): IndexConflicts {
+  const aliasOwners = new Map<string, string[]>();
+  const legacyPairOwners = new Map<string, string[]>();
+  for (const record of records) {
+    for (const alias of record.aliases) {
+      const owners = aliasOwners.get(alias) ?? [];
+      owners.push(record.id);
+      aliasOwners.set(alias, owners);
+    }
+    for (const legacy of record.legacyIds) {
+      const key = legacyPairKey(legacy.tool, legacy.action);
+      const owners = legacyPairOwners.get(key) ?? [];
+      owners.push(record.id);
+      legacyPairOwners.set(key, owners);
+    }
+  }
+
+  const contested = (owners: Map<string, string[]>): ReadonlyMap<string, readonly string[]> => {
+    const out = new Map<string, readonly string[]>();
+    for (const [key, ids] of owners) {
+      const distinct = [...new Set(ids)].sort(compareAscii);
+      if (distinct.length > 1) out.set(key, Object.freeze(distinct));
+    }
+    return out;
+  };
+
+  return {
+    aliasConflicts: contested(aliasOwners),
+    legacyPairConflicts: contested(legacyPairOwners)
+  };
+}
+
+function describeConflicts(label: string, conflicts: ReadonlyMap<string, readonly string[]>): string[] {
+  return [...conflicts]
+    .sort(([left], [right]) => compareAscii(left, right))
+    .map(([key, owners]) => `${label} '${key}' is claimed by ${owners.join(', ')}`);
+}
+
 function groupBy(
   records: readonly CapabilityRecord[],
   key: (record: CapabilityRecord) => string
@@ -88,6 +137,21 @@ function buildIndex(): CapabilityIndex {
   const records = Object.freeze(
     [...CANONICAL_CAPABILITY_RECORDS].sort((left, right) => compareAscii(left.id, right.id))
   );
+
+  // Fail closed rather than let the loop below pick a silent winner: an
+  // ambiguous selector in the generated catalogue is a build defect, and a
+  // gateway that resolves it arbitrarily runs the wrong action on replay.
+  const conflicts = detectIndexConflicts(records);
+  if (conflicts.aliasConflicts.size > 0 || conflicts.legacyPairConflicts.size > 0) {
+    const detail = [
+      ...describeConflicts('alias', conflicts.aliasConflicts),
+      ...describeConflicts('tool+action', conflicts.legacyPairConflicts)
+    ].join('; ');
+    throw new Error(
+      `GATEWAY_INDEX_CONFLICT: the canonical catalogue contains ambiguous selectors - ${detail}. `
+      + 'Give each capability a distinct alias and legacy pair, then regenerate.'
+    );
+  }
 
   const byId = new Map<string, CapabilityRecord>();
   const byAlias = new Map<string, CapabilityRecord>();

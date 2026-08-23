@@ -7,7 +7,7 @@
 // Any keyword outside the supported set is rejected fail-closed on both
 // surfaces. Extracted from gateway-execute-validate.ts.
 
-import { isRecord } from '../../utils/validation/type-guards.js';
+import { hasOwn, isRecord } from '../../utils/validation/type-guards.js';
 
 const SUPPORTED_SCHEMA_KEYWORDS = new Set([
   '$schema',
@@ -121,9 +121,7 @@ function validateScalarBounds(
 // and slip past the additionalProperties gate into dispatch. Native compares
 // against a TMap and has no such chain, so own-key lookup is also what keeps
 // the two surfaces reporting the same code for the same payload.
-export function hasOwn(target: object, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(target, key);
-}
+// (Implementation shared from src/utils/validation/type-guards.ts.)
 
 function ownProperty(properties: Record<string, unknown>, key: string): unknown {
   return hasOwn(properties, key) ? properties[key] : undefined;
@@ -134,8 +132,6 @@ function validateObject(
   schema: Record<string, unknown>,
   pointer: string
 ): SchemaViolation | undefined {
-  if (schema[REFLECTION_BOUNDARY_KEYWORD] === true) return undefined;
-
   const properties = isRecord(schema.properties) ? schema.properties : undefined;
 
   if (Array.isArray(schema.required)) {
@@ -162,9 +158,17 @@ function validateObject(
     }
   }
 
-  if (schema.additionalProperties === false && properties !== undefined) {
+  // An intentionally open object whose interior is arbitrary Unreal property data.
+  // Required/requiredOneOf above still apply to its declared fields; only the
+  // undeclared-key gate and property recursion are skipped for the interior.
+  if (schema[REFLECTION_BOUNDARY_KEYWORD] === true) return undefined;
+
+  // `additionalProperties: false` admits only declared keys. With no `properties`
+  // declared at all, that means NO key is admitted — absent `properties` must not
+  // read as "everything allowed", or the fail-closed gate would admit any key.
+  if (schema.additionalProperties === false) {
     for (const key of Object.keys(value)) {
-      if (!hasOwn(properties, key)) {
+      if (properties === undefined || !hasOwn(properties, key)) {
         return {
           reason: 'undeclared',
           pointer: `${pointer}/${key}`,

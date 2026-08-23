@@ -43,7 +43,13 @@ export type RankedCapability = {
   readonly reasons: readonly CapabilityMatchReason[];
 };
 
-export type FieldContribution = CapabilityMatchReason & { readonly score: number };
+export type FieldContribution = CapabilityMatchReason & {
+  readonly score: number;
+  /** Full matched token set — coverage and confidence must read this, not the
+   *  display-truncated `matchedTokens` (capped at `MAX_REASON_TOKENS`), or a
+   *  long query that matched every token would report understated coverage. */
+  readonly allMatchedTokens: readonly string[];
+};
 
 export type ScoreContext = {
   readonly index: CapabilitySearchIndex;

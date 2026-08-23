@@ -61,6 +61,8 @@ export const RETRIEVAL_SCORE_CONSTANTS = Object.freeze({
   headVerbMismatchPenalty: 10,
   minimumRelevanceScore: 0.01,
   confidenceSaturation: 40,
+  confidenceSaturationWeight: 0.85,
+  confidenceCoverageWeight: 0.15,
   minimumAutoSelectConfidence: 0.35,
   scorePrecision: 6,
   confidencePrecision: 4,

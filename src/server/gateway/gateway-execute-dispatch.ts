@@ -21,6 +21,19 @@ import type { GatewayReceiptContext } from './gateway-receipt-context.js';
 
 const MAX_EXECUTION_RESULT_CHARS = 100_000;
 
+// A screenshot is one indivisible base64 image: it can neither page nor filter,
+// so the flat cap refused a working capture with advice the caller cannot act on.
+// The native transport already raises the budget for exactly these two
+// capabilities (McpNativeGatewayExecuteReceiptBuild.cpp:53-56); without the
+// mirror the identical call succeeds over /mcp and fails over stdio. The image
+// stays separately bounded by the handler's own base64 ceiling, so this is the
+// limit already enforced upstream rather than a general escape hatch.
+const MAX_IMAGE_RESULT_CHARS = 6_000_000;
+const IMAGE_PAYLOAD_CAPABILITIES: ReadonlySet<string> = new Set([
+  'control_editor.screenshot',
+  'system_control.screenshot'
+]);
+
 export type GatewayContext = {
   tools: ITools;
   logger: Logger;
@@ -94,7 +107,10 @@ export async function dispatchAndValidate(
   // same bytes with `success:true` were refused. Size is a transport concern and
   // does not care which way the handler reported.
   const serialized = JSON.stringify(result);
-  const oversized = serialized !== undefined && serialized.length > MAX_EXECUTION_RESULT_CHARS;
+  const resultCharBudget = IMAGE_PAYLOAD_CAPABILITIES.has(record.id)
+    ? MAX_IMAGE_RESULT_CHARS
+    : MAX_EXECUTION_RESULT_CHARS;
+  const oversized = serialized !== undefined && serialized.length > resultCharBudget;
 
   if (handlerReportedFailure(result)) {
     // The plugin owns the live-state comparison (it must happen on the game

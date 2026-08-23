@@ -1,4 +1,4 @@
-// src/server/gateway/gateway-execute-resolve.ts
+﻿// src/server/gateway/gateway-execute-resolve.ts
 // Stage 1 of the canonical execute pipeline: turn a request form into exactly
 // one capability record, or into a typed refusal.
 //
@@ -28,6 +28,8 @@ export type ExecuteTargetIndex = {
   /** Alias -> every capability that declares it, so a collision is visible. */
   readonly aliasOwners: ReadonlyMap<string, readonly string[]>;
   readonly byLegacyPair: ReadonlyMap<string, CapabilityRecord>;
+  /** tool+action -> every capability that declares it, for the same reason. */
+  readonly legacyPairOwners: ReadonlyMap<string, readonly string[]>;
   readonly actionsByParentTool: ReadonlyMap<string, readonly string[]>;
   /** Capability ID namespace -> the parent tool that dispatches it. */
   readonly parentToolByNamespace: ReadonlyMap<string, string>;
@@ -57,6 +59,7 @@ export function buildExecuteTargetIndex(records: readonly CapabilityRecord[]): E
   const byId = new Map<string, CapabilityRecord>();
   const aliasOwners = new Map<string, string[]>();
   const byLegacyPair = new Map<string, CapabilityRecord>();
+  const legacyPairOwners = new Map<string, string[]>();
   const actionsByParentTool = new Map<string, string[]>();
 
   for (const record of records) {
@@ -67,7 +70,11 @@ export function buildExecuteTargetIndex(records: readonly CapabilityRecord[]): E
       aliasOwners.set(alias, owners);
     }
     for (const legacy of record.legacyIds) {
-      byLegacyPair.set(legacyPairKey(legacy.tool, legacy.action), record);
+      const pair = legacyPairKey(legacy.tool, legacy.action);
+      byLegacyPair.set(pair, record);
+      const pairOwners = legacyPairOwners.get(pair) ?? [];
+      if (!pairOwners.includes(record.id)) pairOwners.push(record.id);
+      legacyPairOwners.set(pair, pairOwners);
       const actions = actionsByParentTool.get(legacy.tool) ?? [];
       actions.push(legacy.action);
       actionsByParentTool.set(legacy.tool, actions);
@@ -80,6 +87,7 @@ export function buildExecuteTargetIndex(records: readonly CapabilityRecord[]): E
     byId,
     aliasOwners,
     byLegacyPair,
+    legacyPairOwners,
     actionsByParentTool,
     parentToolByNamespace: deriveNamespaceAliases(records)
   };
@@ -191,6 +199,23 @@ function lookupByLegacyPair(
         nextCall: suggestions[0] === undefined
           ? buildNextCall({ operation: 'describe', tool })
           : buildNextCall({ operation: 'describe', tool, action: suggestions[0] })
+      }
+    };
+  }
+
+  // `byLegacyPair` keeps one winner per key, so a pair claimed by two records
+  // would dispatch to whichever was indexed last. Refuse with both owners named
+  // instead: the caller can re-issue against the canonical ID it meant.
+  const owners = index.legacyPairOwners.get(legacyPairKey(tool, action ?? '')) ?? [];
+  if (owners.length > 1) {
+    const sorted = [...owners].sort();
+    return {
+      kind: 'failed',
+      failure: {
+        errorCode: 'LEGACY_PAIR_CONFLICT',
+        message: `'${tool}.${action ?? ''}' resolves to ${sorted.length} capabilities: ${sorted.join(', ')}. Call execute with one of those canonical IDs.`,
+        suggestions: sorted.slice(0, MAX_SUGGESTIONS),
+        nextCall: { operation: 'describe', capability: sorted[0] }
       }
     };
   }

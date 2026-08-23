@@ -41,8 +41,7 @@ export async function handleManageToolsTools(
         const tools = toolStates.map(state => ({
           name: state.name,
           enabled: dynamicToolManager.isToolEnabled(state.name),
-          category: state.category,
-          description: state.description.substring(0, 100) + (state.description.length > 100 ? '...' : '')
+          category: state.category
         }));
 
         const status = dynamicToolManager.getStatus();

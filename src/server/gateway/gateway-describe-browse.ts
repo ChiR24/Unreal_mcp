@@ -6,6 +6,7 @@
 
 import { capabilitiesInFamily, capabilityIndex, catalogRevision } from './gateway-capability-index.js';
 import { capabilityAvailability } from './gateway-availability.js';
+import { primaryExecutableAction } from './gateway-capability-view.js';
 import { closestMatches, MAX_SUGGESTIONS } from './gateway-guidance.js';
 import { gatewayError } from './gateway-shared.js';
 
@@ -98,7 +99,7 @@ export function describeFamily(domain: string, family: string, page: Page): Reco
     capabilities: rows.map((record) => ({
       capability: record.id,
       parentTool: record.routing.parentTool,
-      action: record.routing.dispatchAction,
+      action: primaryExecutableAction(record),
       summary: record.discovery.summary,
       effect: record.behavior.effect,
       availability: capabilityAvailability(record).status,

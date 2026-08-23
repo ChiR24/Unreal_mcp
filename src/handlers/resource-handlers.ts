@@ -1,4 +1,6 @@
 import { ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { readDiagnosticsSnapshots } from '../automation/diagnostics-snapshot-reader.js';
+import { AutomationLogger } from '../automation/log-redaction.js';
 import { AssetResources } from '../resources/assets.js';
 import { ActorResources } from '../resources/actors.js';
 import { LevelResources } from '../resources/levels.js';
@@ -12,6 +14,10 @@ interface ResourceBridge {
   getEngineVersion(): Promise<unknown>;
   getFeatureFlags(): Promise<unknown>;
 }
+
+// Module-level (no constructor churn): redacts secrets before the reader's
+// bounded fail-closed warnings reach the log.
+const diagnosticsReaderLogger = new AutomationLogger('DiagnosticsSnapshot');
 
 export type ResourceServer = {
   setRequestHandler(
@@ -94,6 +100,7 @@ export class ResourceHandler {
       }
 
       if (uri === 'ue://health') {
+        const snapshots = await readDiagnosticsSnapshots(diagnosticsReaderLogger);
         const uptimeMs = Date.now() - this.healthMonitor.metrics.uptime;
         const automationStatus = this.automationBridge.getStatus();
 
@@ -147,6 +154,8 @@ export class ResourceHandler {
           automationBridge: automationSummary,
           readiness,
           diagnostics: this.healthMonitor.telemetry.snapshot(),
+          currentSession: snapshots.current,
+          previousSession: snapshots.previous,
           // Same exposition text /metrics serves. The native transport has no
           // HTTP metrics endpoint, so ue://health is the only surface both
           // transports can be scraped through - keep them symmetric.
@@ -157,6 +166,7 @@ export class ResourceHandler {
       }
 
       if (uri === 'ue://automation-bridge') {
+        const snapshots = await readDiagnosticsSnapshots(diagnosticsReaderLogger);
         const status = this.automationBridge.getStatus();
         const content = {
           summary: {
@@ -176,7 +186,9 @@ export class ResourceHandler {
           lastDisconnect: status.lastDisconnect ? { code: status.lastDisconnect.code, at: status.lastDisconnect.at } : null,
           lastHandshakeFailure: status.lastHandshakeFailure ? { at: status.lastHandshakeFailure.at } : null,
           lastError: status.lastError ? { at: status.lastError.at } : null,
-          listening: status.webSocketListening
+          listening: status.webSocketListening,
+          currentSession: snapshots.current,
+          previousSession: snapshots.previous
         };
 
         return jsonResource(uri, content);

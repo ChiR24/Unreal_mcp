@@ -55,6 +55,7 @@ function scoreField(
   return {
     field: field.field,
     matchedTokens: Object.freeze(matchedTokens.slice(0, MAX_REASON_TOKENS)),
+    allMatchedTokens: Object.freeze(matchedTokens),
     score,
   };
 }
@@ -138,20 +139,19 @@ function actionCoverageScore(document: IndexedCapability, context: ScoreContext)
 /**
  * Adjacent query terms appearing adjacently in an identifier are stronger
  * evidence than the same terms scattered across it. Function-word pairs are
- * skipped so English glue cannot manufacture adjacency.
+ * skipped so English glue cannot manufacture adjacency. Pairs are formed over
+ * the precomputed `contentTokens` (query minus function words), so "create a
+ * widget" still sees the pair (create, widget): the article carries no meaning
+ * an identifier would ever encode.
  */
 function adjacencyScore(
   sequences: readonly (readonly string[])[],
-  queryTokens: readonly string[],
+  contentTokens: readonly string[],
 ): number {
-  // Pairs are formed over CONTENT tokens, stepping across function words:
-  // "create a widget" must still see the pair (create, widget), because the
-  // article carries no meaning an identifier would ever encode.
-  const content = queryTokens.filter((token) => !RETRIEVAL_FUNCTION_WORDS.has(token));
   let score = 0;
-  for (let index = 0; index + 1 < content.length; index += 1) {
-    const first = content[index];
-    const second = content[index + 1];
+  for (let index = 0; index + 1 < contentTokens.length; index += 1) {
+    const first = contentTokens[index];
+    const second = contentTokens[index + 1];
     if (first === undefined || second === undefined) continue;
     const adjacent = sequences.some((sequence) =>
       sequence.some((token, position) =>
@@ -178,17 +178,21 @@ export function scoreDocument(
   const score = lexicalScore
     + exactMatchBonus(document, context)
     + actionCoverageScore(document, context)
-    + adjacencyScore(document.sequences, context.queryTokens);
+    + adjacencyScore(document.sequences, context.contentTokens);
   if (score < RETRIEVAL_SCORE_CONSTANTS.minimumRelevanceScore) return null;
   contributions.sort((left, right) => {
     if (Math.abs(right.score - left.score) > SCORE_TIE_EPSILON) return right.score - left.score;
     return compareCanonicalCapabilityIds(left.field, right.field);
   });
-  const matched = new Set(contributions.flatMap((entry) => entry.matchedTokens));
+  const matched = new Set(contributions.flatMap((entry) => entry.allMatchedTokens));
   const coverage = matched.size / context.queryTokens.length;
   const saturation = score / (score + RETRIEVAL_SCORE_CONSTANTS.confidenceSaturation);
-  const confidence = rounded(Math.min(1, saturation * 0.85 + coverage * 0.15),
-    RETRIEVAL_SCORE_CONSTANTS.confidencePrecision);
+  const confidence = rounded(
+    Math.min(1,
+      saturation * RETRIEVAL_SCORE_CONSTANTS.confidenceSaturationWeight
+        + coverage * RETRIEVAL_SCORE_CONSTANTS.confidenceCoverageWeight),
+    RETRIEVAL_SCORE_CONSTANTS.confidencePrecision,
+  );
   return {
     record: document.record,
     score: rounded(score, RETRIEVAL_SCORE_CONSTANTS.scorePrecision),

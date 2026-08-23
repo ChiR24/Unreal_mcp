@@ -60,10 +60,12 @@ function envelope(
   filters: SearchFilters,
   page: { offset: number; limit: number; total: number; maxBytes: number },
   rows: Array<Record<string, unknown>>,
-  truncated: boolean,
+  byteBudgetTruncated: boolean,
   coercions: readonly ParameterCoercion[]
 ): Record<string, unknown> {
   const hasMore = page.offset + rows.length < page.total;
+  const truncated = byteBudgetTruncated || hasMore;
+  const truncationReason = byteBudgetTruncated ? 'byte-budget' : hasMore ? 'limit' : 'none';
   const result: Record<string, unknown> = {
     success: true,
     operation: 'search',
@@ -74,10 +76,12 @@ function envelope(
     total: page.total,
     offset: page.offset,
     limit: page.limit,
+    effectiveLimit: page.limit,
     servedCount: rows.length,
     maxBytes: page.maxBytes,
     hasMore,
     truncated,
+    truncationReason,
     message: 'Results are compact. Call describe with an exact capability before execute.'
   };
   if (hasMore) result.nextCursor = encodeCursor(page.offset + rows.length);

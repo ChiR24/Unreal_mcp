@@ -3,13 +3,12 @@
 // the gateway `options` envelope rules that mirror the native `/mcp` surface
 // exactly. Extracted from gateway-execute-validate.ts.
 
-import { isRecord } from '../../utils/validation/type-guards.js';
+import { hasOwn, isRecord } from '../../utils/validation/type-guards.js';
 import { IdempotencyKeySchema } from '../../tools/catalog/capabilities/semantic/ids.js';
 import {
   EXECUTION_OPTION_KEYS,
   LIVE_STATE_REVISION_KEYS
 } from '../../tools/catalog/capabilities/semantic/execution-options.js';
-import { hasOwn } from './gateway-schema-validate.js';
 
 export const MAX_TIMEOUT_MS = 600_000;
 
@@ -63,7 +62,7 @@ export function validateExecutionOptions(raw: unknown): OptionViolation | undefi
       return {
         errorCode: 'UNSUPPORTED_OPTION',
         option: key,
-        message: `Unsupported execution option '${key}'. Supported: [${EXECUTION_OPTION_KEYS.join(', ')}]`
+        message: `Unsupported execution option '${key}'. Honored: [${HONORED_EXECUTION_OPTION_KEYS.join(', ')}]`
       };
     }
   }
@@ -78,7 +77,7 @@ export function validateExecutionOptions(raw: unknown): OptionViolation | undefi
     };
   }
 
-  const timeout = raw.timeoutMs;
+  const timeout = hasOwn(raw, 'timeoutMs') ? raw.timeoutMs : undefined;
   if (timeout !== undefined
     && (typeof timeout !== 'number' || !Number.isInteger(timeout) || timeout <= 0 || timeout > MAX_TIMEOUT_MS)) {
     return {
@@ -88,7 +87,7 @@ export function validateExecutionOptions(raw: unknown): OptionViolation | undefi
     };
   }
 
-  const preview = raw.preview;
+  const preview = hasOwn(raw, 'preview') ? raw.preview : undefined;
   if (preview !== undefined && typeof preview !== 'boolean') {
     return {
       errorCode: 'INVALID_OPTIONS',
@@ -103,7 +102,7 @@ export function validateExecutionOptions(raw: unknown): OptionViolation | undefi
   // took the no-ledger path and the receipt omitted `idempotencyId`, so a retry
   // re-ran the mutation with nothing on the wire reporting that dedup was off.
   // A dedup guard that cannot be honoured must refuse, not proceed unprotected.
-  const idempotencyKey = raw.idempotencyKey;
+  const idempotencyKey = hasOwn(raw, 'idempotencyKey') ? raw.idempotencyKey : undefined;
   if (idempotencyKey !== undefined && !IdempotencyKeySchema.safeParse(idempotencyKey).success) {
     return {
       errorCode: 'INVALID_OPTIONS',
@@ -113,7 +112,7 @@ export function validateExecutionOptions(raw: unknown): OptionViolation | undefi
     };
   }
 
-  return validateExpectedRevisions(raw.expectedRevisions);
+  return validateExpectedRevisions(hasOwn(raw, 'expectedRevisions') ? raw.expectedRevisions : undefined);
 }
 
 /**
@@ -186,10 +185,11 @@ export function unsupportedPreviewMessage(capabilityId: string): string {
  *
  * No dispatch path reads the option, so there is no dry run to perform: honoring
  * the request would apply the real, irreversible mutation and then report it as
- * a preview. `behavior.supportsPreview` is deliberately NOT consulted — 124
- * records declare it and 10 of those are destructive, yet not one declaration is
- * backed by an implementation, so trusting it would leave the fake dry run in
- * place for exactly the most dangerous capabilities.
+ * a preview. `behavior.supportsPreview` is deliberately NOT consulted — no record
+ * in the current catalog declares it (the earlier "124 records declare it" figure
+ * was stale), and even if one did, no implementation backs the declaration, so
+ * trusting it would leave the fake dry run in place for exactly the most
+ * dangerous capabilities.
  */
 export function checkPreviewSupport(
   rawOptions: unknown,
