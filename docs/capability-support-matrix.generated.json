@@ -1,8 +1,8 @@
 {
   "generator": "docs/capability-support-matrix.md",
-  "catalogRevision": "0abb865ac0aef993",
-  "recordCount": 1381,
-  "mutationCount": 1216,
+  "catalogRevision": "eb0ee83d64c4f28f",
+  "recordCount": 1400,
+  "mutationCount": 1227,
   "summary": {
     "all": {
       "preview": 0,
@@ -3086,6 +3086,37 @@
       }
     },
     {
+      "id": "asset.add_fab_asset_to_project",
+      "parentTool": "manage_asset",
+      "effect": "write",
+      "longRunning": true,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "asset.add_material_parameter",
       "parentTool": "manage_asset",
       "effect": "write",
@@ -3396,6 +3427,37 @@
       }
     },
     {
+      "id": "asset.download_fab_asset",
+      "parentTool": "manage_asset",
+      "effect": "write",
+      "longRunning": true,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "asset.duplicate",
       "parentTool": "manage_asset",
       "effect": "write",
@@ -3675,6 +3737,37 @@
       }
     },
     {
+      "id": "asset.get_fab_listing_details",
+      "parentTool": "manage_asset",
+      "effect": "read",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "asset.get_material_stats",
       "parentTool": "manage_asset",
       "effect": "read",
@@ -3799,7 +3892,131 @@
       }
     },
     {
+      "id": "asset.import_megascans_asset",
+      "parentTool": "manage_asset",
+      "effect": "write",
+      "longRunning": true,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "asset.list",
+      "parentTool": "manage_asset",
+      "effect": "read",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "asset.list_content_sources",
+      "parentTool": "manage_asset",
+      "effect": "read",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "asset.list_fab_downloads",
+      "parentTool": "manage_asset",
+      "effect": "read",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "asset.list_fab_library",
       "parentTool": "manage_asset",
       "effect": "read",
       "longRunning": false,
@@ -3834,6 +4051,68 @@
       "parentTool": "manage_asset",
       "effect": "read",
       "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "asset.list_megascans_library",
+      "parentTool": "manage_asset",
+      "effect": "read",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "asset.migrate_assets",
+      "parentTool": "manage_asset",
+      "effect": "write",
+      "longRunning": true,
       "preview": {
         "mode": "none",
         "reports": [],
@@ -4048,6 +4327,37 @@
     },
     {
       "id": "asset.search_assets",
+      "parentTool": "manage_asset",
+      "effect": "read",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "asset.search_fab_listings",
       "parentTool": "manage_asset",
       "effect": "read",
       "longRunning": false,
@@ -12834,7 +13144,7 @@
     {
       "id": "control_actor.call_actor_function",
       "parentTool": "control_actor",
-      "effect": "write",
+      "effect": "destructive",
       "longRunning": false,
       "preview": {
         "mode": "none",
@@ -14173,6 +14483,37 @@
       }
     },
     {
+      "id": "control_editor.describe_reflected_api",
+      "parentTool": "control_editor",
+      "effect": "read",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "control_editor.eject",
       "parentTool": "control_editor",
       "effect": "write",
@@ -14297,6 +14638,37 @@
       }
     },
     {
+      "id": "control_editor.invoke_reflected_function",
+      "parentTool": "control_editor",
+      "effect": "destructive",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "control_editor.jump_to_bookmark",
       "parentTool": "control_editor",
       "effect": "read",
@@ -14357,6 +14729,37 @@
         "evidence": {
           "grade": "contract-derived",
           "citation": "catalogue-verified inverse capability"
+        }
+      }
+    },
+    {
+      "id": "control_editor.open_editor_tab",
+      "parentTool": "control_editor",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
         }
       }
     },
@@ -30547,6 +30950,37 @@
       }
     },
     {
+      "id": "manage_level.set_world_settings",
+      "parentTool": "manage_level",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "manage_level.stream",
       "parentTool": "manage_level",
       "effect": "write",
@@ -33926,6 +34360,37 @@
       }
     },
     {
+      "id": "manage_networking.set_hud_class",
+      "parentTool": "manage_networking",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "manage_networking.set_input_modifier",
       "parentTool": "manage_networking",
       "effect": "write",
@@ -37093,6 +37558,37 @@
     },
     {
       "id": "material.set_material_parameter",
+      "parentTool": "manage_asset",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "material.set_node_position",
       "parentTool": "manage_asset",
       "effect": "write",
       "longRunning": false,
@@ -40942,7 +41438,69 @@
       }
     },
     {
+      "id": "system_control.disable_plugin",
+      "parentTool": "system_control",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "system_control.enable_gpu_timing",
+      "parentTool": "system_control",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "system_control.enable_plugin",
       "parentTool": "system_control",
       "effect": "write",
       "longRunning": false,
@@ -41098,6 +41656,37 @@
     },
     {
       "id": "system_control.get_trace_status",
+      "parentTool": "system_control",
+      "effect": "read",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "system_control.list_plugins",
       "parentTool": "system_control",
       "effect": "read",
       "longRunning": false,

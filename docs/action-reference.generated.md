@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `0abb865ac0aef993`
+Catalog revision: `eb0ee83d64c4f28f`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 1381 capabilities across
+The catalog declares 1400 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -38,11 +38,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 99 | 10 | 85 | 4 | animation physics |
 | `build_environment` | 150 | 5 | 141 | 4 | environment |
-| `control_actor` | 46 | 14 | 29 | 3 | actor |
-| `control_editor` | 42 | 19 | 23 | 0 | editor |
+| `control_actor` | 46 | 14 | 28 | 4 | actor |
+| `control_editor` | 45 | 20 | 24 | 1 | editor |
 | `inspect` | 36 | 30 | 5 | 1 | inspect |
 | `manage_ai` | 65 | 4 | 61 | 0 | manage ai |
-| `manage_asset` | 158 | 34 | 114 | 10 | asset, datatable, enum, material, struct, texture |
+| `manage_asset` | 169 | 40 | 119 | 10 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 50 | 0 | 50 | 0 | audio |
 | `manage_blueprint` | 121 | 10 | 103 | 8 | blueprint, widget |
 | `manage_character` | 27 | 1 | 26 | 0 | manage character |
@@ -52,17 +52,17 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_geometry` | 86 | 2 | 84 | 0 | world |
 | `manage_interaction` | 22 | 1 | 21 | 0 | manage interaction |
 | `manage_inventory` | 33 | 1 | 32 | 0 | manage inventory |
-| `manage_level` | 24 | 5 | 17 | 2 | level |
+| `manage_level` | 25 | 5 | 18 | 2 | level |
 | `manage_level_structure` | 45 | 2 | 42 | 1 | world |
-| `manage_networking` | 77 | 6 | 67 | 4 | networking |
+| `manage_networking` | 78 | 6 | 68 | 4 | networking |
 | `manage_pcg` | 30 | 0 | 30 | 0 | world |
 | `manage_sequence` | 81 | 7 | 72 | 2 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 8 | 3 | 5 | 0 | tools |
-| `system_control` | 52 | 5 | 47 | 0 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
+| `system_control` | 55 | 6 | 49 | 0 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
 
 ## Capabilities requiring consent
 
-154 of 1381 capabilities require consent.
+161 of 1400 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -70,6 +70,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.remove_bone` | `animation_physics` | `remove_bone` | destructive | explicit |
 | `animation_physics.remove_physics_body` | `animation_physics` | `remove_physics_body` | destructive | explicit |
 | `animation_physics.remove_socket` | `animation_physics` | `remove_socket` | destructive | explicit |
+| `asset.add_fab_asset_to_project` | `manage_asset` | `add_fab_asset_to_project` | write | explicit |
 | `asset.add_material_parameter` | `manage_asset` | `add_material_parameter` | write | explicit |
 | `asset.bulk_delete` | `manage_asset` | `bulk_delete` | destructive | elevated |
 | `asset.bulk_rename` | `manage_asset` | `bulk_rename` | write | explicit |
@@ -79,11 +80,14 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.delete` | `manage_asset` | `delete` | destructive | elevated |
 | `asset.delete_asset` | `manage_asset` | `delete_asset` | destructive | elevated |
 | `asset.delete_assets` | `manage_asset` | `delete_assets` | destructive | elevated |
+| `asset.download_fab_asset` | `manage_asset` | `download_fab_asset` | write | explicit |
 | `asset.duplicate` | `manage_asset` | `duplicate` | write | explicit |
 | `asset.duplicate_asset` | `manage_asset` | `duplicate_asset` | write | explicit |
 | `asset.fixup_redirectors` | `manage_asset` | `fixup_redirectors` | write | explicit |
 | `asset.generate_lods` | `manage_asset` | `generate_lods` | write | explicit |
 | `asset.import` | `manage_asset` | `import` | write | explicit |
+| `asset.import_megascans_asset` | `manage_asset` | `import_megascans_asset` | write | explicit |
+| `asset.migrate_assets` | `manage_asset` | `migrate_assets` | write | explicit |
 | `asset.move` | `manage_asset` | `move` | write | explicit |
 | `asset.move_asset` | `manage_asset` | `move_asset` | write | explicit |
 | `asset.nanite_rebuild_mesh` | `manage_asset` | `manage_render` | write | explicit |
@@ -106,9 +110,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment.remove_foliage` | `build_environment` | `remove_foliage` | destructive | explicit |
 | `build_environment.remove_foliage_instances` | `build_environment` | `remove_foliage_instances` | destructive | explicit |
 | `build_environment.remove_spline_point` | `build_environment` | `remove_spline_point` | destructive | explicit |
+| `control_actor.call_actor_function` | `control_actor` | `call_actor_function` | destructive | elevated |
 | `control_actor.delete` | `control_actor` | `delete` | destructive | explicit |
 | `control_actor.delete_by_tag` | `control_actor` | `delete_by_tag` | destructive | explicit |
 | `control_actor.destroy_actor` | `control_actor` | `destroy_actor` | destructive | explicit |
+| `control_editor.invoke_reflected_function` | `control_editor` | `control_editor` | destructive | elevated |
 | `datatable.add_data_table_row` | `manage_asset` | `add_data_table_row` | write | explicit |
 | `datatable.clear_data_table_rows` | `manage_asset` | `clear_data_table_rows` | destructive | elevated |
 | `datatable.create_data_table` | `manage_asset` | `create_data_table` | write | explicit |
@@ -175,6 +181,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `material.set_blend_mode` | `manage_asset` | `set_blend_mode` | write | explicit |
 | `material.set_material_domain` | `manage_asset` | `set_material_domain` | write | explicit |
 | `material.set_material_parameter` | `manage_asset` | `set_material_parameter` | write | explicit |
+| `material.set_node_position` | `manage_asset` | `set_node_position` | write | explicit |
 | `material.set_scalar_parameter_value` | `manage_asset` | `set_scalar_parameter_value` | write | explicit |
 | `material.set_shading_model` | `manage_asset` | `set_shading_model` | write | explicit |
 | `material.set_static_switch_parameter_value` | `manage_asset` | `set_static_switch_parameter_value` | write | explicit |
@@ -332,6 +339,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.setup_physics_simulation` | `animation_physics` | `setup_physics_simulation` | write | write | none | `animation_physics.setup_physics_simulation` |
 | `animation_physics.setup_ragdoll` | `animation_physics` | `setup_ragdoll` | write | write | none | `animation_physics.setup_ragdoll` |
 | `animation_physics.setup_retargeting` | `animation_physics` | `setup_retargeting` | write | write | none | `animation_physics.setup_retargeting` |
+| `asset.add_fab_asset_to_project` | `manage_asset` | `add_fab_asset_to_project` | write | write | explicit | `manage_asset.add_fab_asset_to_project` |
 | `asset.add_material_parameter` | `manage_asset` | `add_material_parameter` | write | write | explicit | `manage_asset.add_material_parameter` |
 | `asset.analyze_graph` | `manage_asset` | `get_asset_graph` | read | read | none | `manage_asset.analyze_graph` |
 | `asset.bulk_delete` | `manage_asset` | `bulk_delete` | destructive | destructive | elevated | `manage_asset.bulk_delete` |
@@ -342,6 +350,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.delete` | `manage_asset` | `delete` | destructive | destructive | elevated | `manage_asset.delete` |
 | `asset.delete_asset` | `manage_asset` | `delete_asset` | destructive | destructive | elevated | `manage_asset.delete_asset` |
 | `asset.delete_assets` | `manage_asset` | `delete_assets` | destructive | destructive | elevated | `manage_asset.delete_assets` |
+| `asset.download_fab_asset` | `manage_asset` | `download_fab_asset` | write | write | explicit | `manage_asset.download_fab_asset` |
 | `asset.duplicate` | `manage_asset` | `duplicate` | write | write | explicit | `manage_asset.duplicate` |
 | `asset.duplicate_asset` | `manage_asset` | `duplicate_asset` | write | write | explicit | `manage_asset.duplicate_asset` |
 | `asset.exists` | `manage_asset` | `exists` | read | read | none | `manage_asset.exists` |
@@ -351,12 +360,19 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.generate_report` | `manage_asset` | `generate_report` | read | read | none | `manage_asset.generate_report` |
 | `asset.get_asset_graph` | `manage_asset` | `get_asset_graph` | read | read | none | `manage_asset.get_asset_graph` |
 | `asset.get_dependencies` | `manage_asset` | `get_dependencies` | read | read | none | `manage_asset.get_dependencies` |
+| `asset.get_fab_listing_details` | `manage_asset` | `get_fab_listing_details` | read | read | none | `manage_asset.get_fab_listing_details` |
 | `asset.get_material_stats` | `manage_asset` | `get_material_stats` | read | read | none | `manage_asset.get_material_stats` |
 | `asset.get_metadata` | `manage_asset` | `get_metadata` | read | read | none | `manage_asset.get_metadata` |
 | `asset.get_source_control_state` | `manage_asset` | `asset_query` | read | read | none | `manage_asset.get_source_control_state` |
 | `asset.import` | `manage_asset` | `import` | write | write | explicit | `manage_asset.import` |
+| `asset.import_megascans_asset` | `manage_asset` | `import_megascans_asset` | write | write | explicit | `manage_asset.import_megascans_asset` |
 | `asset.list` | `manage_asset` | `list` | read | read | none | `manage_asset.list` |
+| `asset.list_content_sources` | `manage_asset` | `list_content_sources` | read | read | none | `manage_asset.list_content_sources` |
+| `asset.list_fab_downloads` | `manage_asset` | `list_fab_downloads` | read | read | none | `manage_asset.list_fab_downloads` |
+| `asset.list_fab_library` | `manage_asset` | `list_fab_library` | read | read | none | `manage_asset.list_fab_library` |
 | `asset.list_instances` | `manage_asset` | `list_instances` | read | read | none | `manage_asset.list_instances` |
+| `asset.list_megascans_library` | `manage_asset` | `list_megascans_library` | read | read | none | `manage_asset.list_megascans_library` |
+| `asset.migrate_assets` | `manage_asset` | `migrate_assets` | write | write | explicit | `manage_asset.migrate_assets` |
 | `asset.move` | `manage_asset` | `move` | write | write | explicit | `manage_asset.move` |
 | `asset.move_asset` | `manage_asset` | `move_asset` | write | write | explicit | `manage_asset.move_asset` |
 | `asset.nanite_rebuild_mesh` | `manage_asset` | `manage_render` | write | write | explicit | `manage_asset.nanite_rebuild_mesh` |
@@ -364,6 +380,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.rename_asset` | `manage_asset` | `rename_asset` | write | write | explicit | `manage_asset.rename_asset` |
 | `asset.reset_instance_parameters` | `manage_asset` | `reset_instance_parameters` | write | write | explicit | `manage_asset.reset_instance_parameters` |
 | `asset.search_assets` | `manage_asset` | `asset_query` | read | read | none | `manage_asset.search_assets` |
+| `asset.search_fab_listings` | `manage_asset` | `search_fab_listings` | read | read | none | `manage_asset.search_fab_listings` |
 | `asset.set_metadata` | `manage_asset` | `set_metadata` | write | write | explicit | `manage_asset.set_metadata` |
 | `asset.set_tags` | `manage_asset` | `set_tags` | write | write | explicit | `manage_asset.set_tags` |
 | `asset.source_control_checkout` | `manage_asset` | `source_control_checkout` | write | write | explicit | `manage_asset.source_control_checkout` |
@@ -646,7 +663,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.apply_material` | `control_actor` | `apply_material` | write | write | none | `control_actor.apply_material` |
 | `control_actor.attach` | `control_actor` | `attach` | write | write | none | `control_actor.attach` |
 | `control_actor.attach_actor` | `control_actor` | `attach_actor` | write | write | none | `control_actor.attach_actor` |
-| `control_actor.call_actor_function` | `control_actor` | `call_actor_function` | write | write | none | `control_actor.call_actor_function` |
+| `control_actor.call_actor_function` | `control_actor` | `call_actor_function` | destructive | destructive | elevated | `control_actor.call_actor_function` |
 | `control_actor.create_snapshot` | `control_actor` | `create_snapshot` | read | read | none | `control_actor.create_snapshot` |
 | `control_actor.delete` | `control_actor` | `delete` | destructive | destructive | explicit | `control_actor.delete` |
 | `control_actor.delete_by_tag` | `control_actor` | `delete_by_tag` | destructive | destructive | explicit | `control_actor.delete_by_tag` |
@@ -689,12 +706,15 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.close_asset` | `control_editor` | `close_asset` | write | write | none | `control_editor.close_asset` |
 | `control_editor.console_command` | `control_editor` | `console_command` | write | write | none | `control_editor.console_command` |
 | `control_editor.create_bookmark` | `control_editor` | `create_bookmark` | write | write | none | `control_editor.create_bookmark` |
+| `control_editor.describe_reflected_api` | `control_editor` | `control_editor` | read | read | none | `control_editor.describe_reflected_api` |
 | `control_editor.eject` | `control_editor` | `eject` | write | write | none | `control_editor.eject` |
 | `control_editor.execute_command` | `control_editor` | `console_command` | write | write | none | `control_editor.execute_command` |
 | `control_editor.focus_actor` | `control_editor` | `focus_actor` | read | read | none | `control_editor.focus_actor` |
 | `control_editor.hide_stats` | `control_editor` | `hide_stats` | read | read | none | `control_editor.hide_stats` |
+| `control_editor.invoke_reflected_function` | `control_editor` | `control_editor` | destructive | destructive | elevated | `control_editor.invoke_reflected_function` |
 | `control_editor.jump_to_bookmark` | `control_editor` | `jump_to_bookmark` | read | read | none | `control_editor.jump_to_bookmark` |
 | `control_editor.open_asset` | `control_editor` | `open_asset` | read | read | none | `control_editor.open_asset` |
+| `control_editor.open_editor_tab` | `control_editor` | `control_editor` | write | write | none | `control_editor.open_editor_tab` |
 | `control_editor.open_level` | `control_editor` | `open_level` | write | write | none | `control_editor.open_level` |
 | `control_editor.pause` | `control_editor` | `pause` | write | write | none | `control_editor.pause` |
 | `control_editor.play` | `control_editor` | `play` | write | write | none | `control_editor.play` |
@@ -1217,6 +1237,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_level.save_level` | `manage_level` | `save` | write | write | none | `manage_level.save_level` |
 | `manage_level.save_level_as` | `manage_level` | `save_level_as` | write | write | none | `manage_level.save_level_as` |
 | `manage_level.set_metadata` | `manage_level` | `set_metadata` | write | write | none | `manage_level.set_metadata` |
+| `manage_level.set_world_settings` | `manage_level` | `set_level_world_settings` | write | write | none | `manage_level.set_world_settings` |
 | `manage_level.stream` | `manage_level` | `stream_level` | write | write | none | `manage_level.stream` |
 | `manage_level.unload` | `manage_level` | `stream_level` | write | write | none | `manage_level.unload` |
 | `manage_level.unload_level` | `manage_level` | `unload_level` | write | write | none | `manage_level.unload_level` |
@@ -1326,6 +1347,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_networking.set_autonomous_proxy` | `manage_networking` | `manage_networking` | write | write | none | `manage_networking.set_autonomous_proxy` |
 | `manage_networking.set_default_pawn_class` | `manage_networking` | `manage_game_framework` | write | write | none | `manage_networking.set_default_pawn_class` |
 | `manage_networking.set_game_state_class` | `manage_networking` | `manage_game_framework` | write | write | none | `manage_networking.set_game_state_class` |
+| `manage_networking.set_hud_class` | `manage_networking` | `manage_game_framework` | write | write | none | `manage_networking.set_hud_class` |
 | `manage_networking.set_input_modifier` | `manage_networking` | `manage_input` | write | write | none | `manage_networking.set_input_modifier` |
 | `manage_networking.set_input_trigger` | `manage_networking` | `manage_input` | write | write | none | `manage_networking.set_input_trigger` |
 | `manage_networking.set_net_dormancy` | `manage_networking` | `manage_networking` | write | write | none | `manage_networking.set_net_dormancy` |
@@ -1429,6 +1451,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `material.set_blend_mode` | `manage_asset` | `set_blend_mode` | write | write | explicit | `manage_asset.set_blend_mode` |
 | `material.set_material_domain` | `manage_asset` | `set_material_domain` | write | write | explicit | `manage_asset.set_material_domain` |
 | `material.set_material_parameter` | `manage_asset` | `set_material_parameter` | write | write | explicit | `manage_asset.set_material_parameter` |
+| `material.set_node_position` | `manage_asset` | `set_node_position` | write | write | explicit | `manage_asset.set_node_position` |
 | `material.set_scalar_parameter_value` | `manage_asset` | `set_scalar_parameter_value` | write | write | explicit | `manage_asset.set_scalar_parameter_value` |
 | `material.set_shading_model` | `manage_asset` | `set_shading_model` | write | write | explicit | `manage_asset.set_shading_model` |
 | `material.set_static_switch_parameter_value` | `manage_asset` | `set_static_switch_parameter_value` | write | write | explicit | `manage_asset.set_static_switch_parameter_value` |
@@ -1552,12 +1575,15 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.configure_world_partition` | `system_control` | `configure_world_partition` | write | write | none | `system_control.configure_world_partition` |
 | `system_control.console_command` | `system_control` | `console_command` | write | write | none | `system_control.console_command` |
 | `system_control.create_widget` | `system_control` | `manage_widget_authoring` | write | write | none | `system_control.create_widget` |
+| `system_control.disable_plugin` | `system_control` | `system_control` | write | write | none | `system_control.disable_plugin` |
 | `system_control.enable_gpu_timing` | `system_control` | `manage_performance` | write | write | none | `system_control.enable_gpu_timing` |
+| `system_control.enable_plugin` | `system_control` | `system_control` | write | write | none | `system_control.enable_plugin` |
 | `system_control.execute_command` | `system_control` | `console_command` | write | write | none | `system_control.execute_command` |
 | `system_control.execute_python` | `system_control` | `system_control` | write | write | none | `system_control.execute_python` |
 | `system_control.generate_memory_report` | `system_control` | `generate_memory_report` | write | write | none | `system_control.generate_memory_report` |
 | `system_control.get_project_settings` | `system_control` | `system_control` | read | read | none | `system_control.get_project_settings` |
 | `system_control.get_trace_status` | `system_control` | `manage_insights` | read | read | none | `system_control.get_trace_status` |
+| `system_control.list_plugins` | `system_control` | `system_control` | read | read | none | `system_control.list_plugins` |
 | `system_control.lumen_update_scene` | `system_control` | `manage_render` | write | write | none | `system_control.lumen_update_scene` |
 | `system_control.merge_actors` | `system_control` | `merge_actors` | write | write | none | `system_control.merge_actors` |
 | `system_control.optimize_draw_calls` | `system_control` | `optimize_draw_calls` | write | write | none | `system_control.optimize_draw_calls` |

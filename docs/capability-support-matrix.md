@@ -5,9 +5,9 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `0abb865ac0aef993`
+Catalog revision: `eb0ee83d64c4f28f`
 
-Every one of the 1381 capabilities declares all three semantics. The
+Every one of the 1400 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
 compensation); a capability carries a stronger claim only where the ledger
 cites the implementation that proves it. A mostly-pessimistic matrix is the
@@ -17,10 +17,10 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 1381 | 0 / 1216 |
-| Undoable | 0 / 1381 | 0 / 1216 |
-| Compensatable | 21 / 1381 | 20 / 1216 |
-| Fully pessimistic | 1360 / 1381 | 1196 / 1216 |
+| Previewable | 0 / 1400 | 0 / 1227 |
+| Undoable | 0 / 1400 | 0 / 1227 |
+| Compensatable | 21 / 1400 | 20 / 1227 |
+| Fully pessimistic | 1379 / 1400 | 1207 / 1227 |
 
 ## By parent tool
 
@@ -29,10 +29,10 @@ truthful result, not a gap in coverage.
 | `animation_physics` | 99 | 89 | 0 | 0 | 0 |
 | `build_environment` | 150 | 145 | 0 | 0 | 3 |
 | `control_actor` | 46 | 32 | 0 | 0 | 4 |
-| `control_editor` | 42 | 23 | 0 | 0 | 2 |
+| `control_editor` | 45 | 25 | 0 | 0 | 2 |
 | `inspect` | 36 | 6 | 0 | 0 | 0 |
 | `manage_ai` | 65 | 61 | 0 | 0 | 0 |
-| `manage_asset` | 158 | 124 | 0 | 0 | 1 |
+| `manage_asset` | 169 | 129 | 0 | 0 | 1 |
 | `manage_audio` | 50 | 50 | 0 | 0 | 1 |
 | `manage_blueprint` | 121 | 111 | 0 | 0 | 3 |
 | `manage_character` | 27 | 26 | 0 | 0 | 0 |
@@ -42,13 +42,13 @@ truthful result, not a gap in coverage.
 | `manage_geometry` | 86 | 84 | 0 | 0 | 0 |
 | `manage_interaction` | 22 | 21 | 0 | 0 | 0 |
 | `manage_inventory` | 33 | 32 | 0 | 0 | 0 |
-| `manage_level` | 24 | 19 | 0 | 0 | 0 |
+| `manage_level` | 25 | 20 | 0 | 0 | 0 |
 | `manage_level_structure` | 45 | 43 | 0 | 0 | 0 |
-| `manage_networking` | 77 | 71 | 0 | 0 | 0 |
+| `manage_networking` | 78 | 72 | 0 | 0 | 0 |
 | `manage_pcg` | 30 | 30 | 0 | 0 | 0 |
 | `manage_sequence` | 81 | 74 | 0 | 0 | 3 |
 | `manage_tools` | 8 | 5 | 0 | 0 | 2 |
-| `system_control` | 52 | 47 | 0 | 0 | 2 |
+| `system_control` | 55 | 49 | 0 | 0 | 2 |
 
 ## Capabilities with an earned (non-pessimistic) declaration
 
@@ -179,6 +179,7 @@ truthful result, not a gap in coverage.
 | `animation_physics.setup_physics_simulation` | write | none | none | none |
 | `animation_physics.setup_ragdoll` | write | none | none | none |
 | `animation_physics.setup_retargeting` | write | none | none | none |
+| `asset.add_fab_asset_to_project` | write | none | none | none |
 | `asset.add_material_parameter` | write | none | none | none |
 | `asset.analyze_graph` | read | none | none | none |
 | `asset.bulk_delete` | destructive | none | none | none |
@@ -189,6 +190,7 @@ truthful result, not a gap in coverage.
 | `asset.delete` | destructive | none | none | none |
 | `asset.delete_asset` | destructive | none | none | none |
 | `asset.delete_assets` | destructive | none | none | none |
+| `asset.download_fab_asset` | write | none | none | none |
 | `asset.duplicate` | write | none | none | none |
 | `asset.duplicate_asset` | write | none | none | none |
 | `asset.exists` | read | none | none | none |
@@ -198,12 +200,19 @@ truthful result, not a gap in coverage.
 | `asset.generate_report` | read | none | none | none |
 | `asset.get_asset_graph` | read | none | none | none |
 | `asset.get_dependencies` | read | none | none | none |
+| `asset.get_fab_listing_details` | read | none | none | none |
 | `asset.get_material_stats` | read | none | none | none |
 | `asset.get_metadata` | read | none | none | none |
 | `asset.get_source_control_state` | read | none | none | none |
 | `asset.import` | write | none | none | none |
+| `asset.import_megascans_asset` | write | none | none | none |
 | `asset.list` | read | none | none | none |
+| `asset.list_content_sources` | read | none | none | none |
+| `asset.list_fab_downloads` | read | none | none | none |
+| `asset.list_fab_library` | read | none | none | none |
 | `asset.list_instances` | read | none | none | none |
+| `asset.list_megascans_library` | read | none | none | none |
+| `asset.migrate_assets` | write | none | none | none |
 | `asset.move` | write | none | none | none |
 | `asset.move_asset` | write | none | none | none |
 | `asset.nanite_rebuild_mesh` | write | none | none | none |
@@ -211,6 +220,7 @@ truthful result, not a gap in coverage.
 | `asset.rename_asset` | write | none | none | none |
 | `asset.reset_instance_parameters` | write | none | none | none |
 | `asset.search_assets` | read | none | none | none |
+| `asset.search_fab_listings` | read | none | none | none |
 | `asset.set_metadata` | write | none | none | none |
 | `asset.set_tags` | write | none | none | none |
 | `asset.source_control_checkout` | write | none | none | none |
@@ -493,7 +503,7 @@ truthful result, not a gap in coverage.
 | `control_actor.apply_material` | write | none | none | none |
 | `control_actor.attach` | write | none | none | none |
 | `control_actor.attach_actor` | write | none | none | none |
-| `control_actor.call_actor_function` | write | none | none | none |
+| `control_actor.call_actor_function` | destructive | none | none | none |
 | `control_actor.create_snapshot` | read | none | none | none |
 | `control_actor.delete` | destructive | none | none | none |
 | `control_actor.delete_by_tag` | destructive | none | none | none |
@@ -536,12 +546,15 @@ truthful result, not a gap in coverage.
 | `control_editor.close_asset` | write | none | none | none |
 | `control_editor.console_command` | write | none | none | none |
 | `control_editor.create_bookmark` | write | none | none | none |
+| `control_editor.describe_reflected_api` | read | none | none | none |
 | `control_editor.eject` | write | none | none | none |
 | `control_editor.execute_command` | write | none | none | none |
 | `control_editor.focus_actor` | read | none | none | none |
 | `control_editor.hide_stats` | read | none | none | none |
+| `control_editor.invoke_reflected_function` | destructive | none | none | none |
 | `control_editor.jump_to_bookmark` | read | none | none | none |
 | `control_editor.open_asset` | read | none | none | inverse: control_editor.close_asset |
+| `control_editor.open_editor_tab` | write | none | none | none |
 | `control_editor.open_level` | write | none | none | none |
 | `control_editor.pause` | write | none | none | none |
 | `control_editor.play` | write | none | none | none |
@@ -1064,6 +1077,7 @@ truthful result, not a gap in coverage.
 | `manage_level.save_level` | write | none | none | none |
 | `manage_level.save_level_as` | write | none | none | none |
 | `manage_level.set_metadata` | write | none | none | none |
+| `manage_level.set_world_settings` | write | none | none | none |
 | `manage_level.stream` | write | none | none | none |
 | `manage_level.unload` | write | none | none | none |
 | `manage_level.unload_level` | write | none | none | none |
@@ -1173,6 +1187,7 @@ truthful result, not a gap in coverage.
 | `manage_networking.set_autonomous_proxy` | write | none | none | none |
 | `manage_networking.set_default_pawn_class` | write | none | none | none |
 | `manage_networking.set_game_state_class` | write | none | none | none |
+| `manage_networking.set_hud_class` | write | none | none | none |
 | `manage_networking.set_input_modifier` | write | none | none | none |
 | `manage_networking.set_input_trigger` | write | none | none | none |
 | `manage_networking.set_net_dormancy` | write | none | none | none |
@@ -1276,6 +1291,7 @@ truthful result, not a gap in coverage.
 | `material.set_blend_mode` | write | none | none | none |
 | `material.set_material_domain` | write | none | none | none |
 | `material.set_material_parameter` | write | none | none | none |
+| `material.set_node_position` | write | none | none | none |
 | `material.set_scalar_parameter_value` | write | none | none | none |
 | `material.set_shading_model` | write | none | none | none |
 | `material.set_static_switch_parameter_value` | write | none | none | none |
@@ -1399,12 +1415,15 @@ truthful result, not a gap in coverage.
 | `system_control.configure_world_partition` | write | none | none | none |
 | `system_control.console_command` | write | none | none | none |
 | `system_control.create_widget` | write | none | none | none |
+| `system_control.disable_plugin` | write | none | none | none |
 | `system_control.enable_gpu_timing` | write | none | none | none |
+| `system_control.enable_plugin` | write | none | none | none |
 | `system_control.execute_command` | write | none | none | none |
 | `system_control.execute_python` | write | none | none | none |
 | `system_control.generate_memory_report` | write | none | none | none |
 | `system_control.get_project_settings` | read | none | none | none |
 | `system_control.get_trace_status` | read | none | none | none |
+| `system_control.list_plugins` | read | none | none | none |
 | `system_control.lumen_update_scene` | write | none | none | none |
 | `system_control.merge_actors` | write | none | none | none |
 | `system_control.optimize_draw_calls` | write | none | none | none |

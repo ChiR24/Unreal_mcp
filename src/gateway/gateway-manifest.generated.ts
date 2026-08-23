@@ -1035,6 +1035,7 @@ export const gatewayManifest = {
         "captureSource",
         "channel",
         "channels",
+        "closedLoop",
         "collisionEnabled",
         "compensationValue",
         "componentCount",
@@ -1309,6 +1310,10 @@ export const gatewayManifest = {
               "description": "Lighting channel index."
             },
             "description": "Lighting channel indices (0, 1, or 2)."
+          },
+          "closedLoop": {
+            "type": "boolean",
+            "description": "Close the spline into a loop, joining the last point back to the first."
           },
           "collisionEnabled": {
             "type": "boolean",
@@ -2678,6 +2683,9 @@ export const gatewayManifest = {
         "set_game_view",
         "show_stats",
         "hide_stats",
+        "invoke_reflected_function",
+        "describe_reflected_api",
+        "open_editor_tab",
         "console_command",
         "execute_command",
         "set_preferences",
@@ -2696,19 +2704,23 @@ export const gatewayManifest = {
       ],
       "parameterNames": [
         "actorName",
+        "arguments",
         "assetPath",
         "blendTime",
         "bookmarkName",
         "button",
         "category",
+        "className",
         "command",
         "deltaTime",
         "description",
         "durationSeconds",
         "enabled",
         "filename",
+        "filter",
         "fov",
         "frameRate",
+        "functionName",
         "height",
         "id",
         "includeMetadata",
@@ -2730,6 +2742,7 @@ export const gatewayManifest = {
         "speed",
         "stat",
         "steps",
+        "tabId",
         "type",
         "viewMode",
         "width",
@@ -2742,6 +2755,11 @@ export const gatewayManifest = {
           "actorName": {
             "type": "string",
             "description": "Name of the actor to target."
+          },
+          "arguments": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true,
+            "description": "Argument values keyed by parameter name. Converted per-property, so structs and arrays are accepted in their JSON form. Omitted parameters keep their zero-initialised default and are listed in unsetParameters."
           },
           "assetPath": {
             "type": "string",
@@ -2762,6 +2780,10 @@ export const gatewayManifest = {
           "category": {
             "type": "string",
             "description": "Preferences category."
+          },
+          "className": {
+            "type": "string",
+            "description": "Reflected class name without prefix, for example \"FabBrowserApi\". The live instance is preferred; the class default object is the fallback when no instance exists yet."
           },
           "command": {
             "type": "string",
@@ -2787,6 +2809,10 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Screenshot or recording filename."
           },
+          "filter": {
+            "type": "string",
+            "description": "Case-sensitive substring matched against function names."
+          },
           "fov": {
             "type": "number",
             "description": "Camera field of view in degrees."
@@ -2794,6 +2820,10 @@ export const gatewayManifest = {
           "frameRate": {
             "type": "number",
             "description": "Recording frame rate."
+          },
+          "functionName": {
+            "type": "string",
+            "description": "Function name exactly as reported by describe_reflected_api."
           },
           "height": {
             "type": "number",
@@ -2876,7 +2906,7 @@ export const gatewayManifest = {
           },
           "resolution": {
             "type": "string",
-            "description": "Resolution setting (e.g. 1024x1024)."
+            "description": "Maximum WxH for the returned PNG (e.g. \"1280x720\"). The capture is downscaled to fit inside this box with its aspect ratio preserved; a box at least as large as the viewport leaves the image untouched. Use this to bring an oversized capture under the base64 limit."
           },
           "returnBase64": {
             "type": "boolean",
@@ -2912,6 +2942,10 @@ export const gatewayManifest = {
           "steps": {
             "type": "integer",
             "description": "Number of frames to step."
+          },
+          "tabId": {
+            "type": "string",
+            "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge) or \"FabTab\" (Fab)."
           },
           "type": {
             "type": "string",
@@ -2963,6 +2997,9 @@ export const gatewayManifest = {
               "set_game_view",
               "show_stats",
               "hide_stats",
+              "invoke_reflected_function",
+              "describe_reflected_api",
+              "open_editor_tab",
               "console_command",
               "execute_command",
               "set_preferences",
@@ -4174,6 +4211,16 @@ export const gatewayManifest = {
         "delete_assets",
         "create_folder",
         "search_assets",
+        "list_content_sources",
+        "list_fab_downloads",
+        "list_fab_library",
+        "download_fab_asset",
+        "get_fab_listing_details",
+        "search_fab_listings",
+        "add_fab_asset_to_project",
+        "list_megascans_library",
+        "import_megascans_asset",
+        "migrate_assets",
         "get_dependencies",
         "get_source_control_state",
         "analyze_graph",
@@ -4239,6 +4286,7 @@ export const gatewayManifest = {
         "set_material_parameter",
         "get_material_node_details",
         "remove_material_node",
+        "set_node_position",
         "set_blend_mode",
         "set_shading_model",
         "set_material_domain",
@@ -4324,8 +4372,10 @@ export const gatewayManifest = {
         "additionalOutputs",
         "alphaTexture",
         "amount",
+        "assetId",
         "assetPath",
         "assetPaths",
+        "assetType",
         "baseTexture",
         "blendMode",
         "blendTexture",
@@ -4336,6 +4386,7 @@ export const gatewayManifest = {
         "classNames",
         "clearExisting",
         "code",
+        "columnTypes",
         "compressionSettings",
         "constA",
         "constB",
@@ -4346,20 +4397,29 @@ export const gatewayManifest = {
         "defaultValue",
         "depth",
         "description",
+        "destinationDirectory",
         "destinationName",
         "destinationPath",
         "direction",
         "directory",
         "directoryPath",
+        "downloadType",
+        "downloadUrl",
         "downstream",
+        "dryRun",
         "endPin",
         "enumPath",
+        "exportMode",
+        "exposeToLibrary",
         "expressionIndex",
+        "filter",
         "filterMethod",
         "fixupRedirectors",
+        "folderName",
         "folderPath",
         "force",
         "format",
+        "freeOnly",
         "functionPath",
         "gamma",
         "gradientType",
@@ -4368,6 +4428,7 @@ export const gatewayManifest = {
         "height",
         "inBlack",
         "inWhite",
+        "includePackageCounts",
         "includeTags",
         "index",
         "inputName",
@@ -4378,11 +4439,13 @@ export const gatewayManifest = {
         "layers",
         "levels",
         "limit",
+        "listingId",
         "lodBias",
         "lodCount",
         "materialDomain",
         "materialPath",
         "maxDepth",
+        "maxPackages",
         "memberName",
         "memberType",
         "members",
@@ -4420,12 +4483,14 @@ export const gatewayManifest = {
         "paths",
         "pattern",
         "patternType",
+        "payload",
         "pinName",
         "posX",
         "posY",
         "position",
         "prefix",
         "propertyName",
+        "query",
         "radius",
         "recursive",
         "recursiveClasses",
@@ -4448,9 +4513,11 @@ export const gatewayManifest = {
         "seed",
         "shadingModel",
         "showConfirmation",
+        "sourceId",
         "sourceNodeId",
         "sourcePath",
         "sourcePin",
+        "sourceRoot",
         "sourceTexture",
         "speed",
         "speedX",
@@ -4461,6 +4528,7 @@ export const gatewayManifest = {
         "structPath",
         "structType",
         "structValues",
+        "subPath",
         "suffix",
         "tag",
         "tags",
@@ -4472,6 +4540,7 @@ export const gatewayManifest = {
         "twoSided",
         "type",
         "uTiling",
+        "upstream",
         "vTiling",
         "value",
         "valueName",
@@ -4501,12 +4570,23 @@ export const gatewayManifest = {
             "type": "number",
             "description": "Desaturation amount (0-1)."
           },
+          "assetId": {
+            "type": "string",
+            "description": "Fab asset id, used as the cache key."
+          },
           "assetPath": {
             "type": "string",
             "description": "Alias for path (accepted for compatibility)."
           },
           "assetPaths": {
             "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Absolute paths of the downloaded pack files. Used with folderName to synthesize a single-entry envelope when payload is omitted."
+              },
               {
                 "type": "array",
                 "items": {
@@ -4522,7 +4602,12 @@ export const gatewayManifest = {
                 "description": "Explicit asset paths."
               }
             ],
-            "description": "Explicit asset paths to delete."
+            "description": "Absolute paths of the downloaded pack files. Used with folderName to synthesize a single-entry envelope when payload is omitted."
+          },
+          "assetType": {
+            "type": "string",
+            "default": "3d",
+            "description": "Bridge asset type: 3d, 3dplant, atlas or surface."
           },
           "baseTexture": {
             "type": "string",
@@ -4567,6 +4652,13 @@ export const gatewayManifest = {
             "type": "string",
             "description": "HLSL code."
           },
+          "columnTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Column struct paths to read, for example \"/Script/Fab.FabObjectNameColumn\". Defaults to the columns Fab currently writes. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call."
+          },
           "compressionSettings": {
             "type": "string",
             "description": "Compression format."
@@ -4605,6 +4697,10 @@ export const gatewayManifest = {
                 "description": "Default RGBA value."
               },
               {
+                "type": "number",
+                "description": "Default scalar value."
+              },
+              {
                 "type": "string",
                 "description": "Default value as string."
               }
@@ -4617,14 +4713,36 @@ export const gatewayManifest = {
           },
           "description": {
             "type": "string",
-            "description": "Submit description."
+            "description": "Function description."
+          },
+          "destinationDirectory": {
+            "type": "string",
+            "description": "Where the pack lands. Defaults to the Fab library cache directory, which list_fab_downloads and the fabLibrary source root both read."
           },
           "destinationName": {
             "type": "string",
             "description": "New asset name."
           },
           "destinationPath": {
-            "type": "string",
+            "oneOf": [
+              {
+                "type": "string",
+                "default": "/Game",
+                "description": "Root the copied tree lands under. Leave at \"/Game\" to preserve the source layout and keep internal references valid; any deeper path relocates the tree and flags referenceIntegrity as \"at-risk\"."
+              },
+              {
+                "type": "string",
+                "description": "Destination /Game asset path."
+              },
+              {
+                "type": "string",
+                "description": "Destination /Game path."
+              },
+              {
+                "type": "string",
+                "description": "Export file path."
+              }
+            ],
             "description": "Destination /Game asset path."
           },
           "direction": {
@@ -4639,9 +4757,22 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Directory path to fix up."
           },
+          "downloadType": {
+            "type": "string",
+            "default": "http",
+            "description": "Transfer mode: \"http\" or \"buildpatch\". BuildPatchServices is for Marketplace-era packs; pointing it at a plain URL stalls rather than failing, so it must be opted into."
+          },
+          "downloadUrl": {
+            "type": "string",
+            "description": "Signed https download URL issued by Fab. Short-lived: a stale URL fails with DOWNLOAD_FAILED."
+          },
           "downstream": {
             "type": "boolean",
             "description": "Report downstream connections instead of upstream."
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Report what would be copied without writing anything. Returns the same counts and packagePaths sample."
           },
           "endPin": {
             "type": "string",
@@ -4651,9 +4782,22 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Asset path of the UserDefinedEnum (e.g. /Game/Enums/E_MyEnum)."
           },
+          "exportMode": {
+            "type": "string",
+            "default": "normal",
+            "description": "Bridge export mode: normal, normal_drag or progressive."
+          },
+          "exposeToLibrary": {
+            "type": "boolean",
+            "description": "Expose in the material function library."
+          },
           "expressionIndex": {
             "type": "number",
             "description": "Expression index."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Case-sensitive substring matched against each serialized index entry."
           },
           "filterMethod": {
             "type": "string",
@@ -4662,6 +4806,10 @@ export const gatewayManifest = {
           "fixupRedirectors": {
             "type": "boolean",
             "description": "Fix up redirectors left behind by the deletion."
+          },
+          "folderName": {
+            "type": "string",
+            "description": "Destination folder name under /Game/Megascans. Required when synthesizing from assetPaths."
           },
           "folderPath": {
             "type": "string",
@@ -4674,6 +4822,11 @@ export const gatewayManifest = {
           "format": {
             "type": "string",
             "description": "Pixel format."
+          },
+          "freeOnly": {
+            "type": "boolean",
+            "default": false,
+            "description": "Restrict to free listings."
           },
           "functionPath": {
             "type": "string",
@@ -4706,6 +4859,10 @@ export const gatewayManifest = {
           "inWhite": {
             "type": "number",
             "description": "Input white point."
+          },
+          "includePackageCounts": {
+            "type": "boolean",
+            "description": "Include packageCount per source. Costs a recursive file scan per returned entry, so leave off for a broad sweep and turn on once the candidate list is short."
           },
           "includeTags": {
             "type": "boolean",
@@ -4752,11 +4909,34 @@ export const gatewayManifest = {
             "description": "Noise level count."
           },
           "limit": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 500,
-            "default": 50,
-            "description": "Page size (1-500, default 50)."
+            "oneOf": [
+              {
+                "type": "number",
+                "default": 200,
+                "minimum": 1,
+                "maximum": 1000,
+                "description": "Maximum rows to return, clamped plugin-side."
+              },
+              {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 50,
+                "default": 12,
+                "description": "Maximum listings to return (1-50)."
+              },
+              {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 500,
+                "default": 50,
+                "description": "Page size (1-500, default 50)."
+              }
+            ],
+            "description": "Maximum listings to return (1-50)."
+          },
+          "listingId": {
+            "type": "string",
+            "description": "Fab listing uid, as it appears in a fab.com/listings/<uid> URL. Restricted to [A-Za-z0-9_-], 64 characters max, because it is used to build an API path."
           },
           "lodBias": {
             "type": "number",
@@ -4777,6 +4957,11 @@ export const gatewayManifest = {
           "maxDepth": {
             "type": "number",
             "description": "Maximum traversal depth (clamped to 8)."
+          },
+          "maxPackages": {
+            "type": "number",
+            "default": 4000,
+            "description": "Refuse the migration when the source holds more files than this, so a mistyped source cannot copy tens of gigabytes. Narrow with subPath or raise deliberately."
           },
           "memberName": {
             "type": "string",
@@ -4943,7 +5128,7 @@ export const gatewayManifest = {
           },
           "parameterType": {
             "type": "string",
-            "description": "Parameter type."
+            "description": "Parameter kind: scalar (default), vector, or texture. Selects which parameter expression the value is written to."
           },
           "parentMaterial": {
             "type": "string",
@@ -5021,17 +5206,22 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Pattern type."
           },
+          "payload": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true,
+            "description": "A complete Bridge export envelope: { exportPayload: [ { assetId, assetType, exportMode, exportType, folderName, name, assetPaths[] } ] }. Use this to pass through exactly what Bridge would have sent."
+          },
           "pinName": {
             "type": "string",
             "description": "Pin name."
           },
           "posX": {
             "type": "number",
-            "description": "Node X position."
+            "description": "New X coordinate (fallback spelling)."
           },
           "posY": {
             "type": "number",
-            "description": "Node Y position."
+            "description": "New Y coordinate (fallback spelling)."
           },
           "position": {
             "type": "string",
@@ -5050,6 +5240,10 @@ export const gatewayManifest = {
           "propertyName": {
             "type": "string",
             "description": "Property name."
+          },
+          "query": {
+            "type": "string",
+            "description": "Free-text search. At most 128 characters, and no quotes, backslashes or control characters."
           },
           "radius": {
             "type": "number",
@@ -5154,6 +5348,10 @@ export const gatewayManifest = {
             "type": "boolean",
             "description": "Show confirmation prompt."
           },
+          "sourceId": {
+            "type": "string",
+            "description": "Relative id under sourceRoot, exactly as returned by list_content_sources (for example \"TP_VehicleAdvBP\"). Must be relative: no \"..\", no leading \"/\", no drive prefix. Omit to migrate the root itself."
+          },
           "sourceNodeId": {
             "type": "string",
             "description": "Source node ID."
@@ -5165,6 +5363,10 @@ export const gatewayManifest = {
           "sourcePin": {
             "type": "string",
             "description": "Source pin name."
+          },
+          "sourceRoot": {
+            "type": "string",
+            "description": "Content source root token. One of: engineTemplates | engineFeaturePacks | engineContent | enginePlugins | megascansLibrary | fabLibrary | projectContent | projectPlugins. A filesystem path is never accepted here — the token is resolved plugin-side, so no directory outside these roots is reachable. megascansLibrary probes both the shell Documents folder and the profile Documents folder (OneDrive redirects the first) and honours MCP_MEGASCANS_LIBRARY_DIR; fabLibrary reads the Fab plugin's own UFabSettings.CacheDirectoryPath and honours MCP_FAB_LIBRARY_DIR. The Fab plugin owns its own sign-in and downloading — these roots only read what it already placed on disk."
           },
           "sourceTexture": {
             "type": "string",
@@ -5206,6 +5408,10 @@ export const gatewayManifest = {
             "type": "object",
             "x-unreal-reflection-boundary": true,
             "description": "Field-name to value map."
+          },
+          "subPath": {
+            "type": "string",
+            "description": "Optional folder under the source content directory, to migrate one subtree instead of the whole pack."
           },
           "suffix": {
             "type": "string",
@@ -5253,6 +5459,10 @@ export const gatewayManifest = {
           "uTiling": {
             "type": "number",
             "description": "U tiling factor (default 1)."
+          },
+          "upstream": {
+            "type": "boolean",
+            "description": "Walk every upstream producer, overriding direction and depth."
           },
           "vTiling": {
             "type": "number",
@@ -5329,11 +5539,11 @@ export const gatewayManifest = {
           },
           "x": {
             "type": "number",
-            "description": "Node X position (preferred spelling; posX is the fallback)."
+            "description": "New X coordinate (posX is the fallback spelling)."
           },
           "y": {
             "type": "number",
-            "description": "Node Y position (preferred spelling; posY is the fallback)."
+            "description": "New Y coordinate (posY is the fallback spelling)."
           },
           "action": {
             "type": "string",
@@ -5351,6 +5561,16 @@ export const gatewayManifest = {
               "delete_assets",
               "create_folder",
               "search_assets",
+              "list_content_sources",
+              "list_fab_downloads",
+              "list_fab_library",
+              "download_fab_asset",
+              "get_fab_listing_details",
+              "search_fab_listings",
+              "add_fab_asset_to_project",
+              "list_megascans_library",
+              "import_megascans_asset",
+              "migrate_assets",
               "get_dependencies",
               "get_source_control_state",
               "analyze_graph",
@@ -5416,6 +5636,7 @@ export const gatewayManifest = {
               "set_material_parameter",
               "get_material_node_details",
               "remove_material_node",
+              "set_node_position",
               "set_blend_mode",
               "set_shading_model",
               "set_material_domain",
@@ -6695,14 +6916,29 @@ export const gatewayManifest = {
             "description": "Function to call on unhover."
           },
           "operations": {
-            "type": "array",
-            "description": "Batch operations for probe_handle.",
-            "items": {
-              "type": "object",
-              "additionalProperties": true,
-              "x-unreal-reflection-boundary": true
-            },
-            "x-unreal-reflection-boundary": true
+            "oneOf": [
+              {
+                "type": "array",
+                "description": "Batch operations for probe_handle.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "x-unreal-reflection-boundary": true
+                },
+                "x-unreal-reflection-boundary": true
+              },
+              {
+                "type": "array",
+                "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform and a nested properties bag.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "x-unreal-reflection-boundary": true
+                },
+                "x-unreal-reflection-boundary": true
+              }
+            ],
+            "description": "Batch operations for probe_handle."
           },
           "options": {
             "type": "array",
@@ -10860,6 +11096,7 @@ export const gatewayManifest = {
         "create_light",
         "build_lighting",
         "set_metadata",
+        "set_world_settings",
         "list_levels",
         "get_current_level",
         "get_summary",
@@ -10872,8 +11109,12 @@ export const gatewayManifest = {
         "assetPath",
         "color",
         "destinationPath",
+        "enableWorldBoundsChecks",
         "exportPath",
+        "gameMode",
+        "gravityZ",
         "intensity",
+        "killZ",
         "levelName",
         "levelPath",
         "levelPaths",
@@ -10900,6 +11141,7 @@ export const gatewayManifest = {
         "sublevelPath",
         "targetPath",
         "template",
+        "timeDilation",
         "useWorldPartition"
       ],
       "inputSchema": {
@@ -10920,13 +11162,29 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Destination path for move/copy."
           },
+          "enableWorldBoundsChecks": {
+            "type": "boolean",
+            "description": "Whether actors leaving the world bounds are culled."
+          },
           "exportPath": {
             "type": "string",
             "description": "Export file path."
           },
+          "gameMode": {
+            "type": "string",
+            "description": "GameMode override for the level. Accepts the Blueprint asset path or its generated _C class path."
+          },
+          "gravityZ": {
+            "type": "number",
+            "description": "World gravity along Z; setting it also enables the global gravity override."
+          },
           "intensity": {
             "type": "number",
             "description": "Light intensity."
+          },
+          "killZ": {
+            "type": "number",
+            "description": "Z height below which actors are destroyed."
           },
           "levelName": {
             "type": "string",
@@ -11041,6 +11299,10 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Level template path accepted for compatibility; create_level dispatch does not apply it."
           },
+          "timeDilation": {
+            "type": "number",
+            "description": "Global time dilation multiplier for the level."
+          },
           "useWorldPartition": {
             "type": "boolean",
             "description": "Create the level with World Partition enabled."
@@ -11065,6 +11327,7 @@ export const gatewayManifest = {
               "create_light",
               "build_lighting",
               "set_metadata",
+              "set_world_settings",
               "list_levels",
               "get_current_level",
               "get_summary",
@@ -11853,6 +12116,7 @@ export const gatewayManifest = {
         "set_autonomous_proxy",
         "set_default_pawn_class",
         "set_game_state_class",
+        "set_hud_class",
         "set_input_modifier",
         "set_input_trigger",
         "set_net_dormancy",
@@ -12562,6 +12826,7 @@ export const gatewayManifest = {
               "set_autonomous_proxy",
               "set_default_pawn_class",
               "set_game_state_class",
+              "set_hud_class",
               "set_input_modifier",
               "set_input_trigger",
               "set_net_dormancy",
@@ -13305,7 +13570,8 @@ export const gatewayManifest = {
           },
           "endFrame": {
             "type": "integer",
-            "description": "Custom playback range end frame (>= startFrame)."
+            "minimum": 1,
+            "description": "Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE."
           },
           "executorClass": {
             "type": "string",
@@ -13912,7 +14178,7 @@ export const gatewayManifest = {
             "description": "Whether to render against the currently loaded level."
           },
           "value": {
-            "description": "Generic value (any type)."
+            "description": "Keyframe value. For property \"Transform\" pass a composed object with any subset of {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}}; each component supplied must carry all of its finite axes. For \"Location\"/\"Rotation\"/\"Scale\" pass that component object alone. Other properties take their own scalar value, so no type is declared here."
           },
           "visibility": {
             "type": "string",
@@ -14130,6 +14396,9 @@ export const gatewayManifest = {
         "get_project_settings",
         "validate_assets",
         "lumen_update_scene",
+        "list_plugins",
+        "enable_plugin",
+        "disable_plugin",
         "start_session",
         "start_unreal_insights",
         "capture_insights_trace",
@@ -14166,6 +14435,7 @@ export const gatewayManifest = {
         "enableBatching",
         "enableInstancing",
         "enabled",
+        "enabledOnly",
         "file",
         "filename",
         "filter",
@@ -14191,6 +14461,7 @@ export const gatewayManifest = {
         "paths",
         "pitch",
         "platform",
+        "pluginName",
         "poolSize",
         "port",
         "profile",
@@ -14305,6 +14576,10 @@ export const gatewayManifest = {
             "type": "boolean",
             "description": "Enable (true) or disable (false) GPU timing."
           },
+          "enabledOnly": {
+            "type": "boolean",
+            "description": "Return only plugins currently enabled for this project."
+          },
           "file": {
             "type": "string",
             "description": "Path to a .py file to execute.",
@@ -14316,7 +14591,7 @@ export const gatewayManifest = {
           },
           "filter": {
             "type": "string",
-            "description": "Optional test name filter."
+            "description": "Case-sensitive substring matched against the plugin name and category."
           },
           "forceLOD": {
             "type": "number",
@@ -14424,6 +14699,10 @@ export const gatewayManifest = {
           "platform": {
             "type": "string",
             "description": "Platform (default Win64)."
+          },
+          "pluginName": {
+            "type": "string",
+            "description": "Plugin name exactly as reported by list_plugins (the .uplugin name, not the friendly name)."
           },
           "poolSize": {
             "type": "number",
@@ -14599,6 +14878,9 @@ export const gatewayManifest = {
               "get_project_settings",
               "validate_assets",
               "lumen_update_scene",
+              "list_plugins",
+              "enable_plugin",
+              "disable_plugin",
               "start_session",
               "start_unreal_insights",
               "capture_insights_trace",

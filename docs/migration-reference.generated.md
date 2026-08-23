@@ -4,7 +4,7 @@
 
 # Legacy to canonical migration reference
 
-Catalog revision: `0abb865ac0aef993`
+Catalog revision: `eb0ee83d64c4f28f`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,14 +13,14 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-Every one of the 1340 shipped legacy `{tool, action}` occurrences
+Every one of the 1359 shipped legacy `{tool, action}` occurrences
 resolves to exactly one disposition. Nothing falls through to a default.
 
 ## Dispositions
 
 | Disposition | Count | Meaning |
 | --- | --- | --- |
-| canonical | 1327 | Maps 1:1 to a live capability record. |
+| canonical | 1346 | Maps 1:1 to a live capability record. |
 | alias | 5 | An alias of a canonical capability; resolves losslessly. |
 | removed | 8 | The verb was retired. A typed removal with guidance — NOT a silent fallback. |
 | non-translatable | 0 | Refuses translation rather than coercing lossy parameters. |
@@ -332,12 +332,15 @@ error, never as a reason to fall back to the old behavior.
 | `control_editor::close_asset` | canonical | `control_editor.close_asset` |
 | `control_editor::console_command` | canonical | `control_editor.console_command` |
 | `control_editor::create_bookmark` | canonical | `control_editor.create_bookmark` |
+| `control_editor::describe_reflected_api` | canonical | `control_editor.describe_reflected_api` |
 | `control_editor::eject` | canonical | `control_editor.eject` |
 | `control_editor::execute_command` | canonical | `control_editor.execute_command` |
 | `control_editor::focus_actor` | canonical | `control_editor.focus_actor` |
 | `control_editor::hide_stats` | canonical | `control_editor.hide_stats` |
+| `control_editor::invoke_reflected_function` | canonical | `control_editor.invoke_reflected_function` |
 | `control_editor::jump_to_bookmark` | canonical | `control_editor.jump_to_bookmark` |
 | `control_editor::open_asset` | canonical | `control_editor.open_asset` |
+| `control_editor::open_editor_tab` | canonical | `control_editor.open_editor_tab` |
 | `control_editor::open_level` | canonical | `control_editor.open_level` |
 | `control_editor::pause` | canonical | `control_editor.pause` |
 | `control_editor::play` | canonical | `control_editor.play` |
@@ -472,6 +475,7 @@ error, never as a reason to fall back to the old behavior.
 | `manage_asset::add_custom_expression` | canonical | `material.add_custom_expression` |
 | `manage_asset::add_data_table_row` | canonical | `datatable.add_data_table_row` |
 | `manage_asset::add_enum_value` | canonical | `enum.add_enum_value` |
+| `manage_asset::add_fab_asset_to_project` | canonical | `asset.add_fab_asset_to_project` |
 | `manage_asset::add_fresnel` | canonical | `material.add_fresnel` |
 | `manage_asset::add_function_input` | canonical | `material.add_function_input` |
 | `manage_asset::add_function_output` | canonical | `material.add_function_output` |
@@ -539,6 +543,7 @@ error, never as a reason to fall back to the old behavior.
 | `manage_asset::delete_struct` | canonical | `struct.delete_struct` |
 | `manage_asset::desaturate` | canonical | `texture.desaturate` |
 | `manage_asset::disconnect_nodes` | canonical | `material.disconnect_nodes` |
+| `manage_asset::download_fab_asset` | canonical | `asset.download_fab_asset` |
 | `manage_asset::duplicate` | canonical | `asset.duplicate` |
 | `manage_asset::duplicate_asset` | canonical | `asset.duplicate_asset` |
 | `manage_asset::duplicate_struct` | canonical | `struct.duplicate_struct` |
@@ -554,6 +559,7 @@ error, never as a reason to fall back to the old behavior.
 | `manage_asset::get_data_table_row` | canonical | `datatable.get_data_table_row` |
 | `manage_asset::get_dependencies` | canonical | `asset.get_dependencies` |
 | `manage_asset::get_enum` | canonical | `enum.get_enum` |
+| `manage_asset::get_fab_listing_details` | canonical | `asset.get_fab_listing_details` |
 | `manage_asset::get_instanced_struct_property` | canonical | `struct.get_instanced_struct_property` |
 | `manage_asset::get_material_function_info` | canonical | `material.get_material_function_info` |
 | `manage_asset::get_material_info` | canonical | `material.get_material_info` |
@@ -569,13 +575,19 @@ error, never as a reason to fall back to the old behavior.
 | `manage_asset::get_texture_info` | canonical | `texture.get_texture_info` |
 | `manage_asset::import` | canonical | `asset.import` |
 | `manage_asset::import_data_table_rows` | canonical | `datatable.import_data_table_rows` |
+| `manage_asset::import_megascans_asset` | canonical | `asset.import_megascans_asset` |
 | `manage_asset::import_struct` | canonical | `struct.import_struct` |
 | `manage_asset::invert` | canonical | `texture.invert` |
 | `manage_asset::list` | canonical | `asset.list` |
+| `manage_asset::list_content_sources` | canonical | `asset.list_content_sources` |
 | `manage_asset::list_data_table_rows` | canonical | `datatable.list_data_table_rows` |
+| `manage_asset::list_fab_downloads` | canonical | `asset.list_fab_downloads` |
+| `manage_asset::list_fab_library` | canonical | `asset.list_fab_library` |
 | `manage_asset::list_instances` | canonical | `asset.list_instances` |
+| `manage_asset::list_megascans_library` | canonical | `asset.list_megascans_library` |
 | `manage_asset::list_struct_members` | canonical | `struct.list_struct_members` |
 | `manage_asset::list_structs` | canonical | `struct.list_structs` |
+| `manage_asset::migrate_assets` | canonical | `asset.migrate_assets` |
 | `manage_asset::move` | canonical | `asset.move` |
 | `manage_asset::move_asset` | canonical | `asset.move_asset` |
 | `manage_asset::nanite_rebuild_mesh` | canonical | `asset.nanite_rebuild_mesh` |
@@ -596,6 +608,7 @@ error, never as a reason to fall back to the old behavior.
 | `manage_asset::reset_instance_parameters` | canonical | `asset.reset_instance_parameters` |
 | `manage_asset::resize_texture` | canonical | `texture.resize_texture` |
 | `manage_asset::search_assets` | canonical | `asset.search_assets` |
+| `manage_asset::search_fab_listings` | canonical | `asset.search_fab_listings` |
 | `manage_asset::search_struct_usage` | canonical | `struct.search_struct_usage` |
 | `manage_asset::set_blend_mode` | canonical | `material.set_blend_mode` |
 | `manage_asset::set_compression_settings` | canonical | `texture.set_compression_settings` |
@@ -606,6 +619,7 @@ error, never as a reason to fall back to the old behavior.
 | `manage_asset::set_material_domain` | canonical | `material.set_material_domain` |
 | `manage_asset::set_material_parameter` | canonical | `material.set_material_parameter` |
 | `manage_asset::set_metadata` | canonical | `asset.set_metadata` |
+| `manage_asset::set_node_position` | canonical | `material.set_node_position` |
 | `manage_asset::set_scalar_parameter_value` | canonical | `material.set_scalar_parameter_value` |
 | `manage_asset::set_shading_model` | canonical | `material.set_shading_model` |
 | `manage_asset::set_static_switch_parameter_value` | canonical | `material.set_static_switch_parameter_value` |
@@ -1088,6 +1102,7 @@ error, never as a reason to fall back to the old behavior.
 | `manage_level::save_level` | canonical | `manage_level.save_level` |
 | `manage_level::save_level_as` | canonical | `manage_level.save_level_as` |
 | `manage_level::set_metadata` | canonical | `manage_level.set_metadata` |
+| `manage_level::set_world_settings` | canonical | `manage_level.set_world_settings` |
 | `manage_level::stream` | canonical | `manage_level.stream` |
 | `manage_level::unload` | canonical | `manage_level.unload` |
 | `manage_level::unload_level` | canonical | `manage_level.unload_level` |
@@ -1197,6 +1212,7 @@ error, never as a reason to fall back to the old behavior.
 | `manage_networking::set_autonomous_proxy` | canonical | `manage_networking.set_autonomous_proxy` |
 | `manage_networking::set_default_pawn_class` | canonical | `manage_networking.set_default_pawn_class` |
 | `manage_networking::set_game_state_class` | canonical | `manage_networking.set_game_state_class` |
+| `manage_networking::set_hud_class` | canonical | `manage_networking.set_hud_class` |
 | `manage_networking::set_input_modifier` | canonical | `manage_networking.set_input_modifier` |
 | `manage_networking::set_input_trigger` | canonical | `manage_networking.set_input_trigger` |
 | `manage_networking::set_net_dormancy` | canonical | `manage_networking.set_net_dormancy` |
@@ -1344,12 +1360,15 @@ error, never as a reason to fall back to the old behavior.
 | `system_control::configure_world_partition` | canonical | `system_control.configure_world_partition` |
 | `system_control::console_command` | alias | `system_control.console_command` |
 | `system_control::create_widget` | canonical | `system_control.create_widget` |
+| `system_control::disable_plugin` | canonical | `system_control.disable_plugin` |
 | `system_control::enable_gpu_timing` | canonical | `system_control.enable_gpu_timing` |
+| `system_control::enable_plugin` | canonical | `system_control.enable_plugin` |
 | `system_control::execute_command` | alias | `system_control.execute_command` |
 | `system_control::execute_python` | canonical | `system_control.execute_python` |
 | `system_control::generate_memory_report` | canonical | `system_control.generate_memory_report` |
 | `system_control::get_project_settings` | alias | `system_control.get_project_settings` |
 | `system_control::get_trace_status` | canonical | `system_control.get_trace_status` |
+| `system_control::list_plugins` | canonical | `system_control.list_plugins` |
 | `system_control::lumen_update_scene` | canonical | `system_control.lumen_update_scene` |
 | `system_control::merge_actors` | canonical | `system_control.merge_actors` |
 | `system_control::optimize_draw_calls` | canonical | `system_control.optimize_draw_calls` |

@@ -3,30 +3,30 @@
   "metadata": {
     "generatedBy": "generate-normalization-inventory",
     "sourceToolCount": 23,
-    "occurrenceCount": 1335,
-    "contentSha256": "4904c8555383914a5239768e13c63354839af970a40b6cf0d8cd5b5948ba7a8d"
+    "occurrenceCount": 1341,
+    "contentSha256": "18494af9be48871e7649a519e641b75686b78a09bb5092e1b70768f5149bd6aa"
   },
   "metrics": {
-    "occurrenceCount": 1335,
+    "occurrenceCount": 1341,
     "toolCount": 23,
-    "distinctActionNames": 1288,
+    "distinctActionNames": 1294,
     "duplicateNames": 36,
     "duplicateNameOccurrences": 83,
     "maxExactNameReductions": 47,
     "actualCanonicalReductions": 5,
-    "verbFamilyAddCreateSetConfigure": 817,
+    "verbFamilyAddCreateSetConfigure": 820,
     "unclassifiedOccurrences": 0,
     "canonicalCollisions": 0,
     "classificationCounts": {
       "A": 10,
       "B": 0,
-      "C": 1317,
+      "C": 1323,
       "D": 0,
       "E": 8,
       "F": 0
     },
     "dispositionCounts": {
-      "keep": 1330,
+      "keep": 1336,
       "alias": 5,
       "map": 0,
       "promote": 0,
@@ -4608,6 +4608,22 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:control_editor:describe_reflected_api",
+      "action": "describe_reflected_api",
+      "namespace": "control_editor",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "control_editor:describe_reflected_api"
+      ],
+      "evidence": {
+        "source": "src/tools/catalog/capabilities/records/control-editor/builder.ts",
+        "symbol": "buildControlEditorRecords()",
+        "tool": "control_editor"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:control_editor:eject",
       "action": "eject",
       "namespace": "control_editor",
@@ -4656,6 +4672,22 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:control_editor:invoke_reflected_function",
+      "action": "invoke_reflected_function",
+      "namespace": "control_editor",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "control_editor:invoke_reflected_function"
+      ],
+      "evidence": {
+        "source": "src/tools/catalog/capabilities/records/control-editor/builder.ts",
+        "symbol": "buildControlEditorRecords()",
+        "tool": "control_editor"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:control_editor:jump_to_bookmark",
       "action": "jump_to_bookmark",
       "namespace": "control_editor",
@@ -4679,6 +4711,22 @@
       "disposition": "keep",
       "occurrences": [
         "control_editor:open_asset"
+      ],
+      "evidence": {
+        "source": "src/tools/catalog/capabilities/records/control-editor/builder.ts",
+        "symbol": "buildControlEditorRecords()",
+        "tool": "control_editor"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:control_editor:open_editor_tab",
+      "action": "open_editor_tab",
+      "namespace": "control_editor",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "control_editor:open_editor_tab"
       ],
       "evidence": {
         "source": "src/tools/catalog/capabilities/records/control-editor/builder.ts",
@@ -8919,6 +8967,22 @@
       "disposition": "keep",
       "occurrences": [
         "manage_asset:set_metadata"
+      ],
+      "evidence": {
+        "source": "src/tools/catalog/capabilities/records/manage-asset/builder.ts",
+        "symbol": "buildManageAssetRecords()",
+        "tool": "manage_asset"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_asset:set_node_position",
+      "action": "set_node_position",
+      "namespace": "manage_asset",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_asset:set_node_position"
       ],
       "evidence": {
         "source": "src/tools/catalog/capabilities/records/manage-asset/builder.ts",
@@ -16576,6 +16640,22 @@
       "aliases": []
     },
     {
+      "canonicalId": "cap:manage_level:set_world_settings",
+      "action": "set_world_settings",
+      "namespace": "manage_level",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_level:set_world_settings"
+      ],
+      "evidence": {
+        "source": "src/tools/catalog/capabilities/records/manage-level/builder.ts",
+        "symbol": "buildManageLevelRecords()",
+        "tool": "manage_level"
+      },
+      "aliases": []
+    },
+    {
       "canonicalId": "cap:manage_level:stream",
       "action": "stream",
       "namespace": "manage_level",
@@ -18311,6 +18391,22 @@
       "disposition": "keep",
       "occurrences": [
         "manage_networking:set_game_state_class"
+      ],
+      "evidence": {
+        "source": "src/tools/catalog/capabilities/records/manage-networking/builder.ts",
+        "symbol": "buildManageNetworkingRecords()",
+        "tool": "manage_networking"
+      },
+      "aliases": []
+    },
+    {
+      "canonicalId": "cap:manage_networking:set_hud_class",
+      "action": "set_hud_class",
+      "namespace": "manage_networking",
+      "classification": "C",
+      "disposition": "keep",
+      "occurrences": [
+        "manage_networking:set_hud_class"
       ],
       "evidence": {
         "source": "src/tools/catalog/capabilities/records/manage-networking/builder.ts",
@@ -27351,6 +27447,27 @@
       "justification": "Distinct target/semantics: single declaration of \"create_bookmark\" under \"control_editor\" (cap:control_editor:create_bookmark); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "control_editor:describe_reflected_api",
+      "tool": "control_editor",
+      "action": "describe_reflected_api",
+      "canonicalId": "cap:control_editor:describe_reflected_api",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/catalog/capabilities/records/control-editor/builder.ts",
+        "symbol": "buildControlEditorRecords()",
+        "tool": "control_editor"
+      },
+      "rawRoute": {
+        "ownerTool": "control_editor",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "control_editor"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"describe_reflected_api\" under \"control_editor\" (cap:control_editor:describe_reflected_api); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "control_editor:eject",
       "tool": "control_editor",
       "action": "eject",
@@ -27435,6 +27552,27 @@
       "justification": "Distinct target/semantics: single declaration of \"hide_stats\" under \"control_editor\" (cap:control_editor:hide_stats); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "control_editor:invoke_reflected_function",
+      "tool": "control_editor",
+      "action": "invoke_reflected_function",
+      "canonicalId": "cap:control_editor:invoke_reflected_function",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/catalog/capabilities/records/control-editor/builder.ts",
+        "symbol": "buildControlEditorRecords()",
+        "tool": "control_editor"
+      },
+      "rawRoute": {
+        "ownerTool": "control_editor",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "control_editor"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"invoke_reflected_function\" under \"control_editor\" (cap:control_editor:invoke_reflected_function); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "control_editor:jump_to_bookmark",
       "tool": "control_editor",
       "action": "jump_to_bookmark",
@@ -27475,6 +27613,27 @@
         "namespace": "control_editor"
       },
       "justification": "Distinct target/semantics: single declaration of \"open_asset\" under \"control_editor\" (cap:control_editor:open_asset); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "control_editor:open_editor_tab",
+      "tool": "control_editor",
+      "action": "open_editor_tab",
+      "canonicalId": "cap:control_editor:open_editor_tab",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/catalog/capabilities/records/control-editor/builder.ts",
+        "symbol": "buildControlEditorRecords()",
+        "tool": "control_editor"
+      },
+      "rawRoute": {
+        "ownerTool": "control_editor",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "control_editor"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"open_editor_tab\" under \"control_editor\" (cap:control_editor:open_editor_tab); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "control_editor:open_level",
@@ -33103,6 +33262,27 @@
         "namespace": "manage_asset"
       },
       "justification": "Distinct target/semantics: single declaration of \"set_metadata\" under \"manage_asset\" (cap:manage_asset:set_metadata); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_asset:set_node_position",
+      "tool": "manage_asset",
+      "action": "set_node_position",
+      "canonicalId": "cap:manage_asset:set_node_position",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/catalog/capabilities/records/manage-asset/builder.ts",
+        "symbol": "buildManageAssetRecords()",
+        "tool": "manage_asset"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_asset",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_asset"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"set_node_position\" under \"manage_asset\" (cap:manage_asset:set_node_position); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_asset:set_scalar_parameter_value",
@@ -43143,6 +43323,27 @@
       "justification": "Distinct target/semantics: single declaration of \"set_metadata\" under \"manage_level\" (cap:manage_level:set_metadata); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
+      "occurrenceKey": "manage_level:set_world_settings",
+      "tool": "manage_level",
+      "action": "set_world_settings",
+      "canonicalId": "cap:manage_level:set_world_settings",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/catalog/capabilities/records/manage-level/builder.ts",
+        "symbol": "buildManageLevelRecords()",
+        "tool": "manage_level"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_level",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_level"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"set_world_settings\" under \"manage_level\" (cap:manage_level:set_world_settings); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
       "occurrenceKey": "manage_level:stream",
       "tool": "manage_level",
       "action": "stream",
@@ -45430,6 +45631,27 @@
         "namespace": "manage_networking"
       },
       "justification": "Distinct target/semantics: single declaration of \"set_game_state_class\" under \"manage_networking\" (cap:manage_networking:set_game_state_class); no shared name, no preset/alias/composite/obsolete marker."
+    },
+    {
+      "occurrenceKey": "manage_networking:set_hud_class",
+      "tool": "manage_networking",
+      "action": "set_hud_class",
+      "canonicalId": "cap:manage_networking:set_hud_class",
+      "classification": "C",
+      "role": "primary",
+      "disposition": "keep",
+      "evidence": {
+        "source": "src/tools/catalog/capabilities/records/manage-networking/builder.ts",
+        "symbol": "buildManageNetworkingRecords()",
+        "tool": "manage_networking"
+      },
+      "rawRoute": {
+        "ownerTool": "manage_networking",
+        "surface": "ts-action-enum",
+        "status": "exposed",
+        "namespace": "manage_networking"
+      },
+      "justification": "Distinct target/semantics: single declaration of \"set_hud_class\" under \"manage_networking\" (cap:manage_networking:set_hud_class); no shared name, no preset/alias/composite/obsolete marker."
     },
     {
       "occurrenceKey": "manage_networking:set_input_modifier",
