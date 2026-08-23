@@ -1,5 +1,14 @@
 #pragma once
 
+#include "CoreMinimal.h"
+#include "Dom/JsonValue.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+
+// Include it rather than forward-declaring: relying on McpAutomationBridgeHelpersPropertyApply.h
+// listing Objects before Arrays makes a build break out of swapping two include lines.
+#include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersPropertyApplyObjects.h"
+
 static inline bool ApplyJsonArrayValueToProperty(void *TargetContainer, FProperty *Property,
                                                  const TSharedPtr<FJsonValue> &ValueField,
                                                  FString &OutError) {
@@ -7,7 +16,34 @@ static inline bool ApplyJsonArrayValueToProperty(void *TargetContainer, FPropert
   // types will return an error to avoid relying on ImportText-like APIs.
   if (FArrayProperty *AP = CastField<FArrayProperty>(Property)) {
     if (ValueField->Type != EJson::Array) {
-      OutError = TEXT("Expected array for array property");
+      // Callers commonly hand us an array that is *already* serialized: either
+      // a double-encoded JSON array ("[1, 2, 3]") or UE export text
+      // ("((Animation=\"...\",SampleValue=...))"), which is what get_property
+      // returns for array properties. Accept both before failing.
+      if (ValueField->Type == EJson::String) {
+        const FString Txt = ValueField->AsString();
+
+        TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Txt);
+        TArray<TSharedPtr<FJsonValue>> ParsedArray;
+        if (FJsonSerializer::Deserialize(Reader, ParsedArray)) {
+          const TSharedPtr<FJsonValue> Reparsed =
+              MakeShared<FJsonValueArray>(ParsedArray);
+          return ApplyJsonArrayValueToProperty(TargetContainer, Property,
+                                               Reparsed, OutError);
+        }
+
+        if (ImportExportTextIntoValue(
+                AP->ContainerPtrToValuePtr<void>(TargetContainer), AP, Txt)) {
+          return true;
+        }
+      }
+
+      OutError = FString::Printf(
+          TEXT("Expected a JSON array for array property '%s'. Accepted forms: "
+               "a JSON array ([1, 2, 3]), the same array as a JSON string "
+               "(\"[1, 2, 3]\"), or UE export text ((A=1,B=2)) -- the form "
+               "get_property returns."),
+          *AP->GetName());
       return false;
     }
     FScriptArrayHelper Helper(
@@ -77,9 +113,25 @@ static inline bool ApplyJsonArrayValueToProperty(void *TargetContainer, FPropert
         continue;
       }
 
-      // Unsupported inner type -> fail explicitly
-      OutError =
-          TEXT("Unsupported array inner property type for JSON assignment");
+      // Last resort for element types the JSON path cannot express: let the
+      // engine parse the element's export text.
+      if (V->Type == EJson::String &&
+          ImportExportTextIntoValue(ElemPtr, Inner, V->AsString())) {
+        continue;
+      }
+
+      // Still no: say which element failed, what it is, and what we accept --
+      // "Unsupported array inner property type" told the caller nothing.
+      OutError = FString::Printf(
+          TEXT("Could not convert element %d of array property '%s' (element "
+               "type '%s'%s). Directly supported element types: string, name, "
+               "bool, float, double, int32, int64, byte, object reference, "
+               "soft object/class reference, and struct (as a JSON object or "
+               "UE export text)."),
+          i, *AP->GetName(),
+          Inner ? *Inner->GetClass()->GetName() : TEXT("<unknown>"),
+          InnerError.IsEmpty() ? TEXT("")
+                               : *FString::Printf(TEXT(": %s"), *InnerError));
       return false;
     }
     return true;
