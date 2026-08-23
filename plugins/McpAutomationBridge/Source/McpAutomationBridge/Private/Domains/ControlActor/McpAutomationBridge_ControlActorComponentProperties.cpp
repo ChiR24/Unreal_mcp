@@ -203,7 +203,43 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     Data->SetArrayField(TEXT("applied"), PropsArray);
   }
 
+  // PropertyWarnings was collected above and then thrown away: a value the
+  // converter could not handle came back as "Component properties updated",
+  // success:true, just with no `applied` entry -- so the caller had to diff the
+  // property afterwards to discover nothing happened.
+  if (PropertyWarnings.Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> WarnArray;
+    for (const FString &Warning : PropertyWarnings)
+      WarnArray.Add(MakeShared<FJsonValueString>(Warning));
+    Data->SetArrayField(TEXT("warnings"), WarnArray);
+  }
+
 	McpHandlerUtils::AddVerification(Data, Found);
+
+  // Nothing asked for could be written: that is a failure, not an update.
+  if (AppliedProperties.Num() == 0 && PropertyWarnings.Num() > 0) {
+    SendAutomationResponse(
+        Socket, RequestId, false,
+        FString::Printf(TEXT("No component properties were applied: %s"),
+                        *FString::Join(PropertyWarnings, TEXT("; "))),
+        Data, TEXT("PROPERTY_CONVERSION_FAILED"));
+    return true;
+  }
+
+  // A PARTIAL apply used to look identical to a clean one: success:true, the same message, and a `warnings`
+  // array the model will not read. Put the shortfall where it cannot be missed.
+  if (PropertyWarnings.Num() > 0) {
+    Data->SetBoolField(TEXT("partial"), true);
+    SendAutomationResponse(
+        Socket, RequestId, true,
+        FString::Printf(TEXT("Applied %d of %d component properties (%d failed): %s"),
+                        AppliedProperties.Num(),
+                        AppliedProperties.Num() + PropertyWarnings.Num(),
+                        PropertyWarnings.Num(),
+                        *FString::Join(PropertyWarnings, TEXT("; "))),
+        Data);
+    return true;
+  }
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Component properties updated"), Data);
   return true;
