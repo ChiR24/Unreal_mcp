@@ -1,5 +1,7 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 
+#include "Foundation/Reflection/McpReflectedInvoke.h"
+
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -217,28 +219,43 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
   }
 
   UFunction* Function = Actor->FindFunction(*FunctionName);
-  if (Function) {
-    // Check if function has parameters - passing nullptr to a function expecting
-    // parameters can cause crashes or undefined behavior
-    if (Function->ParmsSize > 0) {
-      void* ParmsBuffer = FMemory::Malloc(Function->ParmsSize, 16);
-      FMemory::Memzero(ParmsBuffer, Function->ParmsSize);
-
-      Actor->ProcessEvent(Function, ParmsBuffer);
-
-      FMemory::Free(ParmsBuffer);
-    } else {
-      Actor->ProcessEvent(Function, nullptr);
-    }
-
-    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-    Data->SetStringField(TEXT("actorName"), ActorName);
-    Data->SetStringField(TEXT("functionName"), FunctionName);
-    SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Function called"), Data);
+  if (!Function) {
+    SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Function not found: %s"), *FunctionName), TEXT("FUNCTION_NOT_FOUND"));
     return true;
   }
 
-  SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Function not found: %s"), *FunctionName), TEXT("FUNCTION_NOT_FOUND"));
+  const TSharedPtr<FJsonObject> *ArgsPtr = nullptr;
+  Payload->TryGetObjectField(TEXT("arguments"), ArgsPtr);
+  const TSharedPtr<FJsonObject> Args =
+      (ArgsPtr && ArgsPtr->IsValid()) ? *ArgsPtr : nullptr;
+
+  TArray<TSharedPtr<FJsonValue>> Unset;
+  TSharedPtr<FJsonObject> Outputs;
+
+  if (Function->ParmsSize > 0) {
+    // The parameter block must be constructed, bound and destroyed through the
+    // function's own property chain. Handing ProcessEvent a merely zeroed buffer
+    // -- what this did before -- discarded every argument the caller sent while
+    // still reporting success, so a bool argument always arrived false.
+    FMcpScopedParamBlock Params(Function);
+    FString BindError;
+    if (!McpBindJsonArgsToParams(Function, Args, Params.Data(), Unset, BindError)) {
+      SendAutomationError(Socket, RequestId, BindError, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    Actor->ProcessEvent(Function, Params.Data());
+    Outputs = McpReadParamOutputs(Function, Params.Data());
+  } else {
+    Actor->ProcessEvent(Function, nullptr);
+    Outputs = MakeShared<FJsonObject>();
+  }
+
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  Data->SetStringField(TEXT("actorName"), ActorName);
+  Data->SetStringField(TEXT("functionName"), FunctionName);
+  Data->SetObjectField(TEXT("outputs"), Outputs);
+  Data->SetArrayField(TEXT("unsetParameters"), Unset);
+  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Function called"), Data);
   return true;
 #else
   return false;

@@ -14,6 +14,12 @@ namespace McpPropertyReflection
 MCPAUTOMATIONBRIDGE_API TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FProperty* Property);
 MCPAUTOMATIONBRIDGE_API TSharedPtr<FJsonObject> ExportObjectToJson(UObject* Object, bool bIncludeTransient = false);
 MCPAUTOMATIONBRIDGE_API TSharedPtr<FJsonObject> ExportPropertiesToJson(UObject* Object, const TArray<FName>& PropertyNames);
+// A broad export walks every reflected property, so a large CDO answered with
+// a payload the gateway then refused as RESULT_TOO_LARGE - advice the caller
+// cannot act on, because inspect_cdo has no narrowing parameter other than the
+// targeted propertyNames path this deliberately leaves alone.
+static constexpr int32 McpMaxBoundedExportProperties = 200;
+MCPAUTOMATIONBRIDGE_API TSharedPtr<FJsonObject> ExportObjectToJsonBounded(UObject* Object, bool bIncludeTransient = false, int32 MaxProperties = McpMaxBoundedExportProperties);
 MCPAUTOMATIONBRIDGE_API bool ApplyJsonValueToProperty(void* TargetContainer, FProperty* Property, const TSharedPtr<FJsonValue>& ValueField, FString& OutError);
 MCPAUTOMATIONBRIDGE_API int32 ApplyJsonValuesToObject(UObject* Object, const TMap<FName, TSharedPtr<FJsonValue>>& JsonValues, TMap<FName, FString>* OutErrors = nullptr);
 MCPAUTOMATIONBRIDGE_API int32 ApplyJsonObjectToObject(UObject* Object, const TSharedPtr<FJsonObject>& JsonObject, TMap<FName, FString>* OutErrors = nullptr);

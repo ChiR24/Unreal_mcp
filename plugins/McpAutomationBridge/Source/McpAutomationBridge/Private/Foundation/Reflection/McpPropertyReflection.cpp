@@ -1,3 +1,5 @@
+#include "Foundation/Reflection/McpPropertyReflection.h"
+
 #include "Foundation/Reflection/McpPropertyReflectionPrivate.h"
 
 namespace McpPropertyReflection

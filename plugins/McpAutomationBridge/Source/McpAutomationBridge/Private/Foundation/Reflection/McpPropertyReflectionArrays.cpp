@@ -41,6 +41,18 @@ TArray<TSharedPtr<FJsonValue>> ExportArrayToJson(void* Container, FArrayProperty
                 Out.Add(MakeShared<FJsonValueNumber>(static_cast<double>(ByteVal)));
             }
         }
+        else if (FObjectProperty* ObjectInner = CastField<FObjectProperty>(Inner))
+        {
+            UObject* Obj = ObjectInner->GetObjectPropertyValue(ElemPtr);
+            if (Obj) { Out.Add(MakeShared<FJsonValueString>(Obj->GetPathName())); }
+            else { Out.Add(MakeShared<FJsonValueNull>()); }
+        }
+        else if (FSoftObjectProperty* SoftObjectInner = CastField<FSoftObjectProperty>(Inner))
+        {
+            const FSoftObjectPtr* SoftPtr = reinterpret_cast<const FSoftObjectPtr*>(ElemPtr);
+            if (SoftPtr && !SoftPtr->IsNull()) { Out.Add(MakeShared<FJsonValueString>(SoftPtr->ToSoftObjectPath().ToString())); }
+            else { Out.Add(MakeShared<FJsonValueNull>()); }
+        }
         else
         {
             FString ElemStr;

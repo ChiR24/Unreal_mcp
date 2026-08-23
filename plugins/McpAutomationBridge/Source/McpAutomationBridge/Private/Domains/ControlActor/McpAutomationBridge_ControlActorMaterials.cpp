@@ -97,6 +97,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
 
     Component->Modify();
     Component->SetMaterial(MaterialSlot, Material);
+    // BB-022 contingency (UE 5.7): UDynamicMeshComponent::SetMaterial routes
+    // into mesh material attributes, not OverrideMaterials. Mirror the
+    // assignment so get_component_property(OverrideMaterials) read-back agrees.
+    if (UMeshComponent* MeshComp = Cast<UMeshComponent>(Component)) {
+      if (MeshComp->OverrideMaterials.IsValidIndex(MaterialSlot)) {
+        MeshComp->OverrideMaterials[MaterialSlot] = Material;
+      } else {
+        const int32 NewSize = FMath::Max(MeshComp->OverrideMaterials.Num(), MaterialSlot + 1);
+        MeshComp->OverrideMaterials.SetNumZeroed(NewSize);
+        MeshComp->OverrideMaterials[MaterialSlot] = Material;
+      }
+    }
     Component->MarkRenderStateDirty();
     Component->MarkPackageDirty();
 

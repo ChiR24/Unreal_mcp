@@ -15,8 +15,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
     return true;
   }
 
+  // subAction FIRST, `action` only as the fallback — the same priority the
+  // pre-queue gate's McpHandlerUtils::NormalizeAction uses. This domain spans
+  // read actions (find_by_class) and destructive ones (delete), so a dispatcher
+  // that read `action` while the gate read `subAction` let a read-scoped caller
+  // delete actors. AuthorizeAutomationRequest already refuses a payload whose
+  // two fields disagree; resolving them in the gate's own order means this
+  // handler cannot diverge even if that guard is ever bypassed.
   FString SubAction;
-  Payload->TryGetStringField(TEXT("action"), SubAction);
+  if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("action"), SubAction);
+  }
   const FString LowerSub = SubAction.ToLower();
 
 

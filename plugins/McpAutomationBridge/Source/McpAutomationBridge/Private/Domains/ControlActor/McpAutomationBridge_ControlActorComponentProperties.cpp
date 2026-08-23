@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersNestedPropertyPath.h"
 
 #if WITH_EDITOR
 #include "ComponentReregisterContext.h"
@@ -243,7 +244,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
     return true;
   }
 
-  FProperty* Property = Component->GetClass()->FindPropertyByName(*PropertyName);
+  // BB-022/023: resolve through the shared nested-path boundary so dotted
+  // paths (e.g. BodyInstance.CollisionEnabled) resolve, not just single names.
+  void* ContainerPtr = nullptr;
+  FString ResolveError;
+  FProperty* Property = ResolveNestedPropertyPath(Component, PropertyName, ContainerPtr, ResolveError);
   if (!Property) {
     SendAutomationError(Socket, RequestId,
         FString::Printf(TEXT("Property not found: %s on component: %s"), *PropertyName, *ComponentName),
@@ -257,7 +262,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
   Data->SetStringField(TEXT("propertyName"), PropertyName);
   Data->SetStringField(TEXT("propertyType"), Property->GetClass()->GetName());
 
-  TSharedPtr<FJsonValue> PropertyValue = ExportPropertyToJsonValue(Component, Property);
+  // Read from the resolved container (== Component for single-name paths).
+  TSharedPtr<FJsonValue> PropertyValue = ExportPropertyToJsonValue(ContainerPtr, Property);
   if (PropertyValue.IsValid()) {
     Data->SetField(TEXT("value"), PropertyValue);
   } else {

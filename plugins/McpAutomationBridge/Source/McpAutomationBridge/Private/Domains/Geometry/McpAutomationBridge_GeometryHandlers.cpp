@@ -32,6 +32,19 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
         return true;
     }
 
+    // BB-060: normalize targetActor -> actorName before routing. The TS stdio
+    // surface already does this copy; the native /mcp surface bypasses TS
+    // normalization, so the seam belongs here too. Non-clobbering.
+    FString TargetActor = GetJsonStringField(Payload, TEXT("targetActor"));
+    if (!TargetActor.IsEmpty())
+    {
+        FString ExistingActorName;
+        if (!Payload->TryGetStringField(TEXT("actorName"), ExistingActorName) || ExistingActorName.IsEmpty())
+        {
+            Payload->SetStringField(TEXT("actorName"), TargetActor);
+        }
+    }
+
     // Primitives
     if (SubAction == TEXT("create_box")) return HandleCreateBox(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("create_sphere")) return HandleCreateSphere(this, RequestId, Payload, RequestingSocket);

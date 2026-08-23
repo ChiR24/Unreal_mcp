@@ -227,6 +227,8 @@ function normalizeGeometryArgs(action: string, args: HandlerArgs): Record<string
     normalized.axis = normalizeFiniteNumberArray(args.axis);
   }
 
+  copyAlias(normalized, args, 'targetActor', 'actorName');
+
   normalizeGeometryAliases(action, args, normalized);
 
   return normalizePathFields(normalized, GEOMETRY_PATH_FIELDS);
