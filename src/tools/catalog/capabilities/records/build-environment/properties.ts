@@ -110,6 +110,7 @@ export const P = {
   blueprintPath: str('Canonical /Game blueprint path.'),
   spacing: num('Mesh spacing along the spline.'),
   width: num('Spline width.'),
+  closedLoop: bool('Close the spline into a loop, joining the last point back to the first.'),
   alignToSpline: bool('Align meshes to spline direction.'),
   randomizeRotation: bool('Randomize mesh rotation.'),
   randomizeScale: bool('Randomize mesh scale.'),

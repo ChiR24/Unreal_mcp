@@ -2,6 +2,7 @@
 #include "Domains/Render/McpAutomationBridge_RenderSupport.h"
 #include "Domains/Render/McpAutomationBridge_RenderSupportEnums.h"
 #include "Domains/Render/McpAutomationBridge_RenderSupportSettings.h"
+#include "Foundation/Render/McpPostProcessVolumeResolution.h"
 
 #include "McpAutomationBridgeSubsystem.h"
 
@@ -103,9 +104,16 @@ bool HandleRenderPostProcessLensAction(
         return false;
     }
 
-    APostProcessVolume* Volume = RequirePostProcessVolume(Subsystem, RequestId, Payload, RequestingSocket);
+    FString ResolveError;
+    FString ResolveErrorCode;
+    APostProcessVolume* Volume = McpResolvePostProcessVolume(
+        GetRenderWorld(), Payload, false, ResolveError, ResolveErrorCode);
     if (!Volume)
     {
+        if (!ResolveError.IsEmpty())
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, ResolveError, ResolveErrorCode);
+        }
         return true;
     }
     Volume->Modify();
