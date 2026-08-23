@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpAutomationBridge_InteractionHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 namespace McpInteractionHandlers
 {
@@ -58,12 +59,18 @@ bool HandleChestAction(
         SCS->AddNode(TriggerNode);
         TriggerNode->SetParent(RootNode);
         FBlueprintEditorUtils::MarkBlueprintAsModified(ChestBP);
-        McpSafeAssetSave(ChestBP);
+        const bool bChestSaved = McpSafeAssetSave(ChestBP);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("chestPath"), ChestBP->GetPathName());
         Result->SetStringField(TEXT("blueprintPath"), ChestBP->GetPathName());
         Result->SetBoolField(TEXT("locked"), Locked);
+        TArray<FString> ChestChanges;
+        ChestChanges.Add(TEXT("created chest blueprint"));
+        ChestChanges.Add(TEXT("added chest components"));
+        // Only claimed when the save actually reported success.
+        if (bChestSaved) { ChestChanges.Add(TEXT("saved")); }
+        AddMutationEvidence(Result, ChestBP, ChestChanges);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Chest actor created"), Result);
 #else
         Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("create_chest_actor is editor-only"), TEXT("EDITOR_ONLY"));
@@ -115,7 +122,15 @@ bool HandleChestAction(
     Result->SetBoolField(TEXT("configured"), true);
     Result->SetStringField(TEXT("chestPath"), ChestPath);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
+    const bool bChestConfigSaved = McpSafeAssetSave(Blueprint);
+    TArray<FString> ChestChanges;
+    ChestChanges.Add(TEXT("configured chest properties"));
+    if (!LootTablePath.IsEmpty())
+    {
+        ChestChanges.Add(TEXT("assigned loot table"));
+    }
+    if (bChestConfigSaved) { ChestChanges.Add(TEXT("saved")); }
+    AddMutationEvidence(Result, Blueprint, ChestChanges);
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Chest properties configured"), Result);
 #else
     Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("configure_chest_properties is editor-only"), TEXT("EDITOR_ONLY"));

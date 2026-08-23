@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpAutomationBridge_InteractionHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 namespace
 {
@@ -112,7 +113,7 @@ bool HandleDestructionAction(
     AddBlueprintVariableIfMissing(Blueprint, TEXT("bIsDestroyed"), BoolType);
     AddBlueprintVariableIfMissing(Blueprint, TEXT("DestructionStage"), IntType);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
+    const bool bDestructionSaved = McpSafeAssetSave(Blueprint);
 
     TArray<TSharedPtr<FJsonValue>> AddedVars;
     AddedVars.Add(MakeShared<FJsonValueString>(TEXT("Health")));
@@ -124,6 +125,10 @@ bool HandleDestructionAction(
     Result->SetStringField(TEXT("componentName"), ComponentName);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Result->SetArrayField(TEXT("variablesAdded"), AddedVars);
+    TArray<FString> DestructionChanges;
+    DestructionChanges.Add(TEXT("added destruction component"));
+    if (bDestructionSaved) { DestructionChanges.Add(TEXT("saved")); }
+    AddMutationEvidence(Result, Blueprint, DestructionChanges);
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Destruction component added"), Result);
 #else
     Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("add_destruction_component is editor-only"), TEXT("EDITOR_ONLY"));

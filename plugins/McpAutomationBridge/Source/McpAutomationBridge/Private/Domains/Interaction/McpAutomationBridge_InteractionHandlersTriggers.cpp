@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpAutomationBridge_InteractionHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 namespace
 {
@@ -82,12 +83,16 @@ bool HandleTriggerAction(
             TriggerBP->SimpleConstructionScript->AddNode(RootNode);
         }
         FBlueprintEditorUtils::MarkBlueprintAsModified(TriggerBP);
-        McpSafeAssetSave(TriggerBP);
+        const bool bTriggerSaved = McpSafeAssetSave(TriggerBP);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("triggerPath"), TriggerBP->GetPathName());
         Result->SetStringField(TEXT("blueprintPath"), TriggerBP->GetPathName());
         Result->SetStringField(TEXT("triggerShape"), TriggerShape);
+        TArray<FString> TriggerChanges;
+        TriggerChanges.Add(TEXT("created trigger blueprint"));
+        if (bTriggerSaved) { TriggerChanges.Add(TEXT("saved")); }
+        AddMutationEvidence(Result, TriggerBP, TriggerChanges);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Trigger actor created"), Result);
 #else
         Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("create_trigger_actor is editor-only"), TEXT("EDITOR_ONLY"));
@@ -163,7 +168,11 @@ bool HandleTriggerAction(
     {
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     }
-    McpSafeAssetSave(Blueprint);
+    const bool bTriggerConfigSaved = McpSafeAssetSave(Blueprint);
+    TArray<FString> TriggerChanges;
+    TriggerChanges.Add(TEXT("configured trigger"));
+    if (bTriggerConfigSaved) { TriggerChanges.Add(TEXT("saved")); }
+    AddMutationEvidence(Result, Blueprint, TriggerChanges);
     const FString Message = SubAction == TEXT("configure_trigger_events") ? TEXT("Trigger events configured") :
         SubAction == TEXT("configure_trigger_filter") ? TEXT("Trigger filter configured") : TEXT("Trigger response configured");
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, Message, Result);

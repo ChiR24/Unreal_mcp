@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpAutomationBridge_InteractionHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 namespace McpInteractionHandlers
 {
@@ -88,7 +89,7 @@ bool HandleDoorAction(
         SCS->AddNode(CollisionNode);
         CollisionNode->SetParent(RootNode);
         FBlueprintEditorUtils::MarkBlueprintAsModified(DoorBP);
-        McpSafeAssetSave(DoorBP);
+        const bool bDoorSaved = McpSafeAssetSave(DoorBP);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetNumberField(TEXT("openAngle"), OpenAngle);
@@ -97,6 +98,11 @@ bool HandleDoorAction(
         Result->SetNumberField(TEXT("autoCloseDelay"), AutoCloseDelay);
         Result->SetBoolField(TEXT("requiresKey"), RequiresKey);
         McpHandlerUtils::AddVerification(Result, DoorBP);
+        TArray<FString> DoorChanges;
+        DoorChanges.Add(TEXT("created door blueprint"));
+        DoorChanges.Add(TEXT("added door components"));
+        if (bDoorSaved) { DoorChanges.Add(TEXT("saved")); }
+        AddMutationEvidence(Result, DoorBP, DoorChanges);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Door actor created"), Result);
 #else
         Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("create_door_actor is editor-only"), TEXT("EDITOR_ONLY"));
@@ -120,6 +126,40 @@ bool HandleDoorAction(
     if (!Blueprint)
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
+        return true;
+    }
+
+    // This branch used to mutate whatever blueprint it loaded, so aiming it at
+    // a chest authored door variables onto the chest, compiled it, and stalled
+    // into a -32001 timeout. create_door_actor builds DoorPivot + DoorMesh
+    // (see the create branch above) while a chest builds ChestBase/LidPivot/
+    // LidMesh, so requiring both names discriminates rather than guesses.
+    bool bHasDoorPivot = false;
+    bool bHasDoorMesh = false;
+    if (Blueprint->SimpleConstructionScript)
+    {
+        for (USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
+        {
+            if (!Node)
+            {
+                continue;
+            }
+            const FString NodeName = Node->GetVariableName().ToString();
+            if (NodeName == TEXT("DoorPivot"))
+            {
+                bHasDoorPivot = true;
+            }
+            else if (NodeName == TEXT("DoorMesh"))
+            {
+                bHasDoorMesh = true;
+            }
+        }
+    }
+    if (!bHasDoorPivot || !bHasDoorMesh)
+    {
+        Subsystem->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("%s is not a door blueprint: expected SCS nodes DoorPivot and DoorMesh. Run create_door_actor first, or target the door asset."), *ResolvedPath),
+            TEXT("INVALID_OBJECT_TYPE"));
         return true;
     }
 
@@ -163,7 +203,11 @@ bool HandleDoorAction(
     Result->SetBoolField(TEXT("configured"), true);
     Result->SetStringField(TEXT("doorPath"), DoorPath);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
+    const bool bDoorConfigSaved = McpSafeAssetSave(Blueprint);
+    TArray<FString> DoorChanges;
+    DoorChanges.Add(TEXT("configured door properties"));
+    if (bDoorConfigSaved) { DoorChanges.Add(TEXT("saved")); }
+    AddMutationEvidence(Result, Blueprint, DoorChanges);
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Door properties configured"), Result);
 #else
     Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("configure_door_properties is editor-only"), TEXT("EDITOR_ONLY"));

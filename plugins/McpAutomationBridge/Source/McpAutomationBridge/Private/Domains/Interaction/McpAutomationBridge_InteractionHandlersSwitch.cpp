@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpAutomationBridge_InteractionHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 namespace McpInteractionHandlers
 {
@@ -60,12 +61,16 @@ bool HandleSwitchAction(
         SCS->AddNode(TriggerNode);
         TriggerNode->SetParent(RootNode);
         FBlueprintEditorUtils::MarkBlueprintAsModified(SwitchBP);
-        McpSafeAssetSave(SwitchBP);
+        const bool bSwitchSaved = McpSafeAssetSave(SwitchBP);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("switchPath"), SwitchBP->GetPathName());
         Result->SetStringField(TEXT("blueprintPath"), SwitchBP->GetPathName());
         Result->SetStringField(TEXT("switchType"), SwitchType);
+        TArray<FString> SwitchChanges;
+        SwitchChanges.Add(TEXT("created switch blueprint"));
+        if (bSwitchSaved) { SwitchChanges.Add(TEXT("saved")); }
+        AddMutationEvidence(Result, SwitchBP, SwitchChanges);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Switch actor created"), Result);
 #else
         Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("create_switch_actor is editor-only"), TEXT("EDITOR_ONLY"));
@@ -111,7 +116,11 @@ bool HandleSwitchAction(
     Result->SetBoolField(TEXT("configured"), true);
     Result->SetStringField(TEXT("switchPath"), SwitchPath);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
+    const bool bSwitchConfigSaved = McpSafeAssetSave(Blueprint);
+    TArray<FString> SwitchChanges;
+    SwitchChanges.Add(TEXT("configured switch properties"));
+    if (bSwitchConfigSaved) { SwitchChanges.Add(TEXT("saved")); }
+    AddMutationEvidence(Result, Blueprint, SwitchChanges);
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Switch properties configured"), Result);
 #else
     Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("configure_switch_properties is editor-only"), TEXT("EDITOR_ONLY"));

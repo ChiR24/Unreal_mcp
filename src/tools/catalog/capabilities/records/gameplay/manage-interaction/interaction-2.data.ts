@@ -118,6 +118,21 @@ export const INTERACTION_2: readonly CapabilityRecordSource[] = [
     action: 'get_interaction_info',
     summary: 'Read interaction asset or editor-world actor metadata.',
     read: true,
+    // projectCanonicalOutput keeps ONLY declared fields, so while the shared
+    // {assetPath} default was the whole contract every metadata field the
+    // native reader emits was stripped and this read answered {}. Bounded
+    // union of exactly what HandleInteractionInfoAction emits.
+    outputProps: {
+      assetType: { type: 'string', description: 'Resolved kind: Blueprint, Actor, Door, Switch, Chest or Trigger.' },
+      blueprintName: { type: 'string', description: 'Blueprint asset name, when the target resolved to a Blueprint.' },
+      blueprintPath: NP.blueprintPath,
+      actorName: NP.actorName,
+      actorClass: { type: 'string', description: 'Class name of the resolved editor-world actor.' },
+      doorPath: NP.doorPath,
+      switchPath: NP.switchPath,
+      chestPath: NP.chestPath,
+      triggerPath: NP.triggerPath,
+    },
     inputProps: {
       blueprintPath: NP.blueprintPath,
       actorName: NP.actorName,

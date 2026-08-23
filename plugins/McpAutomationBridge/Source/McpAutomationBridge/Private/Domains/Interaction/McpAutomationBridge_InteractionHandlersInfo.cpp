@@ -22,6 +22,9 @@ bool AddBlueprintInfo(
     }
 
     Result->SetStringField(TEXT("assetType"), TypeField);
+    // The resolved package path, so this read receipt carries the same canonical
+    // assetPath handle every interaction mutation receipt now emits.
+    Result->SetStringField(TEXT("assetPath"), ResolvedPath);
     Result->SetStringField(PathField, Path);
     if (PathField == TEXT("blueprintPath"))
     {

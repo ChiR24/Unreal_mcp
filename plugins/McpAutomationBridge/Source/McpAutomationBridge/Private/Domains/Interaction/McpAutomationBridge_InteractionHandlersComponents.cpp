@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpAutomationBridge_InteractionHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 namespace McpInteractionHandlers
 {
@@ -44,12 +45,16 @@ bool HandleInteractionComponentAuthoringAction(
         }
         Blueprint->SimpleConstructionScript->AddNode(Node);
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        McpSafeAssetSave(Blueprint);
+        const bool bComponentSaved = McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("componentAdded"), true);
         Result->SetStringField(TEXT("componentName"), ComponentName);
         McpHandlerUtils::AddVerification(Result, Blueprint);
+        TArray<FString> ComponentChanges;
+        ComponentChanges.Add(TEXT("added interaction component"));
+        if (bComponentSaved) { ComponentChanges.Add(TEXT("saved")); }
+        AddMutationEvidence(Result, Blueprint, ComponentChanges);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Interaction component added"), Result);
 #else
         Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("create_interaction_component is editor-only"), TEXT("EDITOR_ONLY"));
@@ -119,8 +124,12 @@ bool HandleInteractionComponentAuthoringAction(
         Result->SetNumberField(TEXT("traceRadius"), TraceRadius);
         Result->SetBoolField(TEXT("configured"), bConfigured);
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        McpSafeAssetSave(Blueprint);
+        const bool bTraceSaved = McpSafeAssetSave(Blueprint);
         McpHandlerUtils::AddVerification(Result, Blueprint);
+        TArray<FString> TraceChanges;
+        TraceChanges.Add(TEXT("configured interaction trace"));
+        if (bTraceSaved) { TraceChanges.Add(TEXT("saved")); }
+        AddMutationEvidence(Result, Blueprint, TraceChanges);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Interaction trace configured"), Result);
 #else
         Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("configure_interaction_trace is editor-only"), TEXT("EDITOR_ONLY"));

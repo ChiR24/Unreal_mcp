@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpAutomationBridge_InteractionHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 namespace McpInteractionHandlers
 {
@@ -45,7 +46,11 @@ bool HandleInteractionWidgetEventAction(
         Result->SetBoolField(TEXT("configured"), true);
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        McpSafeAssetSave(Blueprint);
+        const bool bWidgetSaved = McpSafeAssetSave(Blueprint);
+        TArray<FString> WidgetChanges;
+        WidgetChanges.Add(TEXT("configured interaction widget"));
+        if (bWidgetSaved) { WidgetChanges.Add(TEXT("saved")); }
+        AddMutationEvidence(Result, Blueprint, WidgetChanges);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Interaction widget configured"), Result);
 #else
         Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("configure_interaction_widget is editor-only"), TEXT("EDITOR_ONLY"));
@@ -97,7 +102,11 @@ bool HandleInteractionWidgetEventAction(
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetNumberField(TEXT("eventCount"), EventNames.Num());
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        McpSafeAssetSave(Blueprint);
+        const bool bEventsSaved = McpSafeAssetSave(Blueprint);
+        TArray<FString> EventChanges;
+        EventChanges.Add(TEXT("added interaction events"));
+        if (bEventsSaved) { EventChanges.Add(TEXT("saved")); }
+        AddMutationEvidence(Result, Blueprint, EventChanges);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Interaction events added"), Result);
 #else
         Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("add_interaction_events is editor-only"), TEXT("EDITOR_ONLY"));

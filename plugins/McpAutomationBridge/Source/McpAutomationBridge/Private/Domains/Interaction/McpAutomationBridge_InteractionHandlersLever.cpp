@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpAutomationBridge_InteractionHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 namespace McpInteractionHandlers
 {
@@ -61,11 +62,15 @@ bool HandleLeverAction(
     SCS->AddNode(TriggerNode);
     TriggerNode->SetParent(RootNode);
     FBlueprintEditorUtils::MarkBlueprintAsModified(LeverBP);
-    McpSafeAssetSave(LeverBP);
+    const bool bLeverSaved = McpSafeAssetSave(LeverBP);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("leverPath"), LeverBP->GetPathName());
     Result->SetStringField(TEXT("blueprintPath"), LeverBP->GetPathName());
+    TArray<FString> LeverChanges;
+    LeverChanges.Add(TEXT("created lever blueprint"));
+    if (bLeverSaved) { LeverChanges.Add(TEXT("saved")); }
+    AddMutationEvidence(Result, LeverBP, LeverChanges);
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lever actor created"), Result);
 #else
     Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("create_lever_actor is editor-only"), TEXT("EDITOR_ONLY"));

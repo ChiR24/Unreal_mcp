@@ -67,6 +67,12 @@ export interface InteractionActionSpec {
   readonly exampleInput: JsonObject;
   /** Only get_interaction_info reads without writing. */
   readonly read?: boolean;
+  /**
+   * Extra declared output fields, MERGED over the shared assetPath handle.
+   * Merged rather than replaced so a record cannot accidentally drop the
+   * identity handle records.test.ts requires of every capability.
+   */
+  readonly outputProps?: PropertyMap;
 }
 
 /**
@@ -86,7 +92,7 @@ export function interactionRecord(spec: InteractionActionSpec): CapabilityRecord
     whenNotToUse: ['Do not substitute a similarly named action with different semantics.'],
     inputProps: { action: P.action, ...spec.inputProps },
     required: ['action', ...(spec.required ?? [])],
-    outputProps: { assetPath: P.assetPath },
+    outputProps: { assetPath: P.assetPath, ...(spec.outputProps ?? {}) },
     outputRequired: [],
     effect: spec.read === true ? 'read' : 'write',
     latency: 'interactive',
