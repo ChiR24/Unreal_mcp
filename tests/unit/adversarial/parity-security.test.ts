@@ -19,7 +19,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { streamFor } from './fuzz-random.mjs';
 import { fuzzAssetPath } from './fuzz-generators.mjs';
-import { firstTokenWs, loadNativePolicy, nativeDecision, verifyNativeAlgorithmContract } from './native-policy-mirror.mjs';
+import { commandNameMatches, loadNativePolicy, nativeDecision, verifyNativeAlgorithmContract } from './native-policy-mirror.mjs';
 import {
   hostPathContained,
   makeSymlinkFixture,
@@ -52,10 +52,11 @@ describe('Task 51 — the native mirror is derived from the plugin, not from mem
     expect(contract.ok).toBe(true);
   });
 
-  it('reproduces ParseIntoArrayWS, including a leading-whitespace input', () => {
-    // ParseIntoArrayWS drops empty entries; a naive split leaves '' first and would
-    // let "  quit" through as an empty command name.
-    expect(firstTokenWs('   quit now')).toBe('quit');
+  it('reproduces CommandNameMatches prefix matching, including a trailing non-alnum boundary', () => {
+    expect(commandNameMatches('quit', 'quit')).toBe(true);
+    expect(commandNameMatches('quit.', 'quit')).toBe(true);
+    expect(commandNameMatches('quit=x', 'quit')).toBe(true);
+    expect(commandNameMatches('quitter', 'quit')).toBe(false);
     expect(nativeDecision('   quit now', policy).blocked).toBe(true);
   });
 

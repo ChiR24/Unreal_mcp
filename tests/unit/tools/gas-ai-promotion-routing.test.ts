@@ -39,6 +39,17 @@ const AI_HANDLERS = resolve(
   'src/tools/handlers/ai/ai-handlers.ts',
 );
 
+/** The body of the `switch (action)` block, so a match in a comment or in another
+ *  switch elsewhere in the file cannot pass for a case arm. */
+function aiSwitchBody(): string {
+  const source = readFileSync(AI_HANDLERS, 'utf8');
+  const start = source.indexOf('switch (action) {');
+  if (start < 0) throw new Error(`switch (action) is missing from ${AI_HANDLERS}`);
+  const end = source.indexOf('default:', start);
+  if (end < 0) throw new Error(`switch (action) is unterminated in ${AI_HANDLERS}`);
+  return source.slice(start, end);
+}
+
 const NATIVE_DISPATCH = [
   'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/GAS',
   'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/AI',
@@ -69,8 +80,8 @@ describe('promoted GAS and AI routes are named on the surfaces that gate them', 
   });
 
   it('the manage_ai switch carries a case arm for every promoted AI action', () => {
-    const source = readFileSync(AI_HANDLERS, 'utf8');
-    const missing = AI_PROMOTED.filter((action) => !source.includes(`case '${action}':`));
+    const switchBody = aiSwitchBody();
+    const missing = AI_PROMOTED.filter((action) => !switchBody.includes(`case '${action}':`));
 
     expect(
       missing,

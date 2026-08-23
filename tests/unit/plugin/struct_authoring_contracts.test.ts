@@ -57,7 +57,7 @@ const typeResolver = read(typeResolverPath);
 const typeHelpers = read(typeHelpersPath);
 const manageAssetParent = read(manageAssetParentPath);
 
-describe('Blueprint Struct authoring contracts (issue #510)', () => {
+describe('Blueprint Struct authoring contracts (issue #511)', () => {
   it('rejects self-referencing and unresolved struct members on add', () => {
     // Given / When: add_struct_member and import_struct must guard before
     // FStructureEditorUtils::AddVariable so a struct can never contain itself.
@@ -78,7 +78,7 @@ describe('Blueprint Struct authoring contracts (issue #510)', () => {
     // Given / When: rename_struct must preserve soft references by dropping a
     // UObjectRedirector at the former path rather than deleting the package,
     // using the supported AssetTools::RenameAssets path. This logic lives in
-    // AssetOpsRename.cpp after the issue #510 split of AssetOps.cpp.
+    // AssetOpsRename.cpp after the issue #511 split of AssetOps.cpp.
     // Then
     expect(assetOpsRename).toContain('UObjectRedirector');
     expect(assetOpsRename).toContain('AssetTools::RenameAssets');
@@ -87,7 +87,7 @@ describe('Blueprint Struct authoring contracts (issue #510)', () => {
   it('honors searchScope on search_struct_usage and gates save on recompile_struct', () => {
     // Given / When: search_struct_usage filters by the optional scope and
     // recompile_struct only persists when save/bSave is set. This logic lives
-    // in AnalysisUsage.cpp after the issue #510 split of Analysis.cpp.
+    // in AnalysisUsage.cpp after the issue #511 split of Analysis.cpp.
     // Then
     expect(analysisUsage).toContain('searchScope');
     expect(analysisUsage).toContain('bSave');

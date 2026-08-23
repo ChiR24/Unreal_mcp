@@ -46,11 +46,9 @@ export const NATIVE_ALGORITHM_CONTRACT = Object.freeze([
   'FString LowerCommand = Command.TrimStartAndEnd().ToLower();',
   'if (LowerCommand.IsEmpty())',
   'if (ContainsUnsafeSeparator(LowerCommand))',
-  'LowerCommand.ParseIntoArrayWS(CommandParts);',
-  'const FString& CommandName = CommandParts[0];',
-  'McpGeneratedConsoleCommandPolicy::BLOCKED_COMMANDS',
-  'McpGeneratedConsoleCommandPolicy::RESTRICTED_COMMANDS',
-  'McpGeneratedConsoleCommandPolicy::FORBIDDEN_COMMAND_NAMES',
+  'IsListedCommandName(LowerCommand, McpGeneratedConsoleCommandPolicy::BLOCKED_COMMANDS',
+  'IsListedCommandName(LowerCommand, McpGeneratedConsoleCommandPolicy::RESTRICTED_COMMANDS',
+  'IsListedCommandName(LowerCommand, McpGeneratedConsoleCommandPolicy::FORBIDDEN_COMMAND_NAMES',
   'McpGeneratedConsoleCommandPolicy::FORBIDDEN_TOKENS',
 ]);
 
@@ -117,14 +115,27 @@ export function isAsciiDecidable(command) {
 }
 
 /**
- * `FString::ParseIntoArrayWS` splits on whitespace and DROPS empty entries. JS
- * `split(/\s+/)` leaves a leading empty string when the input starts with
- * whitespace, so the filter is not cosmetic: without it the "first token" of
- * " quit" is '' and the mirror would wrongly allow it.
+ * `CommandNameMatches` mirrors UE's FParse::Command prefix matching: the
+ * command starts with the name and the next character is non-alphanumeric
+ * (or end of string). The old whitespace-split + exact-Equals tokenizer
+ * only split on whitespace, so appending a non-whitespace non-alnum char
+ * (e.g. "quit.") bypassed the block while UE's exec still matched and ran
+ * "quit".
  * @param {string} lowered
+ * @param {string} name
  */
-export function firstTokenWs(lowered) {
-  return lowered.split(/\s+/u).filter((part) => part.length > 0)[0] ?? '';
+export function commandNameMatches(lowered, name) {
+  if (name.length === 0 || lowered.length < name.length) return false;
+  for (let i = 0; i < name.length; ++i) {
+    if (lowered[i] !== name[i]) return false;
+  }
+  if (lowered.length > name.length) {
+    const nextChar = lowered.charCodeAt(name.length);
+    const isAlnum = (nextChar >= 0x30 && nextChar <= 0x39) ||
+      (nextChar >= 0x41 && nextChar <= 0x5a) || (nextChar >= 0x61 && nextChar <= 0x7a);
+    if (isAlnum) return false;
+  }
+  return true;
 }
 
 /**
@@ -144,15 +155,15 @@ export function nativeDecision(command, policy) {
   for (const separator of policy.separators) {
     if (lowered.includes(separator)) return { blocked: true, reason: 'UNSAFE_SEPARATOR', decidable };
   }
-  const name = firstTokenWs(lowered);
-  if (name.length === 0) return { blocked: false, reason: 'NO_TOKEN', decidable };
-  if (policy.blocked.some((entry) => entry.toLowerCase() === name)) {
+  const name = lowered;
+  if (name.length === 0) return { blocked: false, reason: 'EMPTY', decidable };
+  if (policy.blocked.some((entry) => commandNameMatches(name, entry.toLowerCase()))) {
     return { blocked: true, reason: 'DANGEROUS_ENGINE_COMMAND', decidable };
   }
-  if (policy.restricted.some((entry) => entry.toLowerCase() === name)) {
+  if (policy.restricted.some((entry) => commandNameMatches(name, entry.toLowerCase()))) {
     return { blocked: true, reason: 'RESTRICTED_ENGINE_COMMAND', decidable };
   }
-  if (policy.forbiddenNames.some((entry) => entry.toLowerCase() === name)) {
+  if (policy.forbiddenNames.some((entry) => commandNameMatches(name, entry.toLowerCase()))) {
     return { blocked: true, reason: 'SHELL_COMMAND', decidable };
   }
   for (const token of policy.forbiddenTokens) {

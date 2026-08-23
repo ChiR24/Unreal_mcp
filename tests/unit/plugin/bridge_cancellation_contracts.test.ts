@@ -32,6 +32,8 @@ const socketEventsCpp = read('plugins/McpAutomationBridge/Source/McpAutomationBr
 const connectionCpp = read('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Transport/Connection/McpConnectionManagerConnection.cpp');
 const managerCpp = read('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Transport/Connection/McpConnectionManager.cpp');
 const subsystemH = read('plugins/McpAutomationBridge/Source/McpAutomationBridge/Public/McpAutomationBridgeSubsystem.h');
+const nativeSessions = read('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransportSessions.cpp');
+const nativeGatewayStream = read('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransportGatewayStream.cpp');
 
 const pureLoc = (source: string): number =>
     source
@@ -208,5 +210,27 @@ describe('Plugin WebSocket cancellation synchronization + ownership', () => {
         expect(pureLoc(connectionCpp)).toBeLessThanOrEqual(250);
         expect(pureLoc(managerCpp)).toBeLessThanOrEqual(250);
         expect(pureLoc(messagesCpp)).toBeLessThanOrEqual(250);
+    });
+});
+
+describe('Native /mcp precise queue refusal (BB-003)', () => {
+    it('surfaces the real EAutomationQueueRejection from native queue admission', () => {
+        expect(nativeSessions).toContain('EAutomationQueueRejection& OutRejection');
+        expect(nativeSessions).toContain('Subsystem->QueueAutomationRequest(');
+        expect(nativeSessions).toContain('EAutomationQueueRejection::None');
+    });
+
+    it('maps SessionQueueFull to a code distinct from QueueFull in GatewayStream', () => {
+        expect(nativeGatewayStream).toContain('EAutomationQueueRejection::SessionQueueFull');
+        expect(nativeGatewayStream).toContain('AUTOMATION_SESSION_QUEUE_FULL');
+        expect(nativeGatewayStream).toContain('EAutomationQueueRejection::QueueFull');
+        expect(nativeGatewayStream).toContain('AUTOMATION_QUEUE_FULL');
+    });
+
+    it('maps NotAccepting and AlreadyCanceled to their own codes', () => {
+        expect(nativeGatewayStream).toContain('EAutomationQueueRejection::NotAccepting');
+        expect(nativeGatewayStream).toContain('AUTOMATION_NOT_ACCEPTING');
+        expect(nativeGatewayStream).toContain('EAutomationQueueRejection::AlreadyCanceled');
+        expect(nativeGatewayStream).toContain('AUTOMATION_ALREADY_CANCELED');
     });
 });

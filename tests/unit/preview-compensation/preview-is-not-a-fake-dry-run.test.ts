@@ -47,7 +47,7 @@ async function execute(
   return await handleUnrealGatewayCall({ operation: 'execute', ...args }, makeContext(connected));
 }
 
-// asset.delete: behavior.effect === 'destructive', behavior.supportsPreview === true.
+// asset.delete: behavior.effect === 'destructive', behavior.supportsPreview === false.
 // Nothing about this request is rejected before dispatch today.
 const DELETE_CALL = {
   capability: 'asset.delete',
@@ -93,10 +93,11 @@ describe('task 43: options.preview must refuse, never fake a dry run', () => {
   });
 
   it('refuses even when the capability record declares supportsPreview: true', async () => {
-    // asset.duplicate declares behavior.supportsPreview === true. 124 records do,
-    // including 10 destructive ones. That declaration is unbacked: no dispatch
-    // path reads the option, so honouring the declaration would preserve the fake
-    // dry run for exactly the most dangerous capabilities.
+    // asset.duplicate: no record in the current catalog declares
+    // supportsPreview === true (an earlier "124 records do" figure was stale).
+    // The refusal is unconditional precisely so that if a record ever does
+    // declare it, that declaration cannot buy a fake dry run for a capability
+    // whose mutation would otherwise really execute.
     const result = await execute({
       capability: 'asset.duplicate',
       params: { sourcePath: '/Game/Task43/Source' },

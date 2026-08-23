@@ -117,6 +117,107 @@ describe('Task 40 Blocker 1 — the gate and the dispatcher resolve the SAME act
   });
 });
 
+// The REVERSE direction of Blocker 1, and the half that was actually open.
+//
+// The gate reading only `payload.subAction` stops a decoy `payload.action` from
+// LOWERING the demand. It does nothing about the opposite: `payload.action` is
+// not an unread field — domain dispatchers resolve their sub-action from it — so
+// a payload carrying BOTH fields with different values could authorize one
+// capability and execute another. `{subAction:"screenshot", action:
+// "execute_python"}` would buy in-process code execution on a read-scoped token,
+// because the raw WebSocket path applies no schema validation and no post-queue
+// re-authorization between the two readers.
+//
+// The split is RECONCILED, not refused: alias traffic legitimately arrives with
+// `action != subAction` (the gateway dispatches the canonical action and the
+// handler rewrites `subAction` to the native name — `add_socket` ->
+// `create_socket`), so refusing any disagreement would break those capabilities.
+// The authoritative field is `subAction` (the one NormalizeAction and every
+// dispatcher read first); when they disagree, `action` is OVERWRITTEN from it,
+// destroying the decoy rather than trusting it.
+describe('the gate and the dispatcher cannot resolve DIFFERENT actions', () => {
+  it('the WebSocket authorization hop reconciles a payload whose action and subAction disagree', () => {
+    const source = wsAuthority();
+    expect(source, 'authorization must read both action fields').toMatch(
+      /TryGetStringField\(\s*TEXT\("subAction"\)\s*,\s*PayloadSubAction\s*\)/u
+    );
+    expect(source, 'a disagreement must be normalized, not preferred').toMatch(
+      /SetStringField\(\s*TEXT\("action"\)\s*,\s*PayloadSubAction\s*\)/u
+    );
+    expect(source, 'the refusals that broke alias traffic must not return').not.toContain(
+      'CONFLICTING_ACTION'
+    );
+    expect(source).toMatch(
+      /!PayloadAction\.Equals\(\s*PayloadSubAction\s*,\s*ESearchCase::IgnoreCase\s*\)/u
+    );
+  });
+
+  it('the reconciliation runs BEFORE the gate resolves a demand, and before dispatch', () => {
+    const authority = wsAuthority();
+    const reconcileAt = authority.indexOf('SetStringField(TEXT("action"), PayloadSubAction)');
+    const gateAt = authority.indexOf('McpPrequeueGate::Authorize(Request)');
+    expect(reconcileAt).toBeGreaterThan(-1);
+    expect(reconcileAt, 'a split payload must be reconciled before demand resolution').toBeLessThan(
+      gateAt
+    );
+
+    // And the whole hop still precedes the subsystem queue.
+    const messages = wsMessages();
+    expect(messages.indexOf('AuthorizeAutomationRequest(Socket, RootObj)')).toBeLessThan(
+      messages.indexOf('OnMessageReceived.Execute(')
+    );
+  });
+
+  it('the native path stamps subAction from the SERVER-resolved action, unconditionally', () => {
+    const source = nativeExecute();
+    expect(source).toContain('Plan.Arguments->SetStringField(TEXT("subAction"), Plan.LegacyAction)');
+    expect(
+      source,
+      'a caller-supplied subAction must never be preserved in preference to the resolved one'
+    ).not.toMatch(/if\s*\(\s*!Plan\.Arguments->HasField\(\s*TEXT\("subAction"\)\s*\)\s*\)/u);
+  });
+
+  // Defence in depth on the two paths where the split was demonstrably
+  // exploitable: system_control reaches execute_python, control_actor reaches
+  // delete. Both resolve in the gate's own order (subAction first) so they
+  // agree with it even if the ingest guard is ever bypassed.
+  const SUBACTION_FIRST: ReadonlyArray<readonly [string, string[]]> = [
+    ['system_control', ['Domains', 'SystemControl', 'McpAutomationBridge_SystemControlHandlers.cpp']],
+    ['control_actor', ['Domains', 'ControlActor', 'McpAutomationBridge_ControlActorDispatch.cpp']]
+  ];
+
+  it.each(SUBACTION_FIRST)('the %s dispatcher reads subAction before action', (_name, parts) => {
+    const source = privateSource(...parts);
+    const subActionAt = source.indexOf('TryGetStringField(TEXT("subAction"), SubAction)');
+    const actionAt = source.indexOf('TryGetStringField(TEXT("action"), SubAction)');
+    expect(subActionAt, 'the dispatcher must consult subAction at all').toBeGreaterThan(-1);
+    expect(actionAt, 'action stays as the fallback for legacy callers').toBeGreaterThan(-1);
+    expect(subActionAt, 'subAction must be tried FIRST, as NormalizeAction does').toBeLessThan(
+      actionAt
+    );
+  });
+
+  it('the TypeScript bridge applies the same reconciliation before the payload crosses', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'src/automation/bridge-request-dispatcher.ts'),
+      'utf8'
+    );
+    expect(source, 'the bridge must rewrite action from the authoritative subAction').toMatch(
+      /action:\s*payload\.subAction/u
+    );
+    expect(source, 'a single-field payload must be made consistent too').toMatch(
+      /subAction:\s*payload\.action/u
+    );
+  });
+
+  it('the gate file records that payload.action is read by dispatchers', () => {
+    expect(
+      gateDemand(),
+      'the comment that claimed no handler reads payload.action was false and must not return'
+    ).not.toContain('no domain handler reads that');
+  });
+});
+
 describe('Task 40 Blocker 2 — path confinement canonicalizes before it checks', () => {
   it('payload path collection runs the shared canonicalizer', () => {
     expect(pathScan()).toContain('McpCanonicalizeContentPath');

@@ -17,7 +17,7 @@ import { countPureLines } from './plugin-contract-fixtures.js';
 
 const pluginSourceRoot = resolve(
   process.cwd(),
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge',
+  'plugins/McpAutomationBridge/Source',
 );
 const sourceExtensionPattern = /\.(?:cpp|cs|h)$/u;
 const splitArtifactPattern =

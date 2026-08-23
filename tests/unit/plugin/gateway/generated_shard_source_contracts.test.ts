@@ -104,7 +104,7 @@ describe('Task 25: generated capability shards are MSVC-safe translation units',
       expect(Array.isArray(parsed), `${name} is not a record array`).toBe(true);
       total += (parsed as readonly unknown[]).length;
     }
-    expect(total).toBe(1381);
+    expect(total).toBe(1400);
   });
 
   it('publishes a shard table the native loader can enumerate without the payloads', () => {
