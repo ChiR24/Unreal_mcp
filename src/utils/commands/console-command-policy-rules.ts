@@ -161,6 +161,15 @@ export const CONSOLE_COMMAND_POLICY_RULES = [
     matcher: { kind: 'first-token', values: ['delete', 'destroy', 'unrealbuildtool', 'ubt'] },
   },
   {
+    id: 'both.fab-bridge-console',
+    appliesTo: 'both',
+    reasonCode: 'RESTRICTED_ENGINE_COMMAND',
+    matcher: {
+      kind: 'first-token',
+      values: ['mcp.fab.addtoproject', 'mcp.fab.describecatalogshape'],
+    },
+  },
+  {
     id: 'native.forbidden-name-first-token',
     appliesTo: 'native',
     reasonCode: 'SHELL_COMMAND',

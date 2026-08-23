@@ -43,6 +43,8 @@ namespace McpGeneratedConsoleCommandPolicy
         TEXT("destroy"),
         TEXT("unrealbuildtool"),
         TEXT("ubt"),
+        TEXT("mcp.fab.addtoproject"),
+        TEXT("mcp.fab.describecatalogshape"),
     };
 
     static const TCHAR* const FORBIDDEN_COMMAND_NAMES[] = {
