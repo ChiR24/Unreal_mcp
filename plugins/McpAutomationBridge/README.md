@@ -187,7 +187,7 @@ Example prompts:
 Tools & Plugins
 ---------------------
 - **Features:** Editor automation bridge for Model Context Protocol clients. Includes native HTTP/SSE MCP transport, WebSocket bridge transport, dynamic MCP tool management, asset/actor/editor/level automation, Blueprint and graph authoring, Niagara/material/audio/AI/PCG/sequencer helpers, project/system controls, and security settings for loopback, TLS, capability tokens, and rate limits.
-- **Code Modules:** `McpAutomationBridge` - Editor module.
+- **Code Modules:** `McpAutomationBridge` - Editor module; `McpAutomationBridgeFab` - Editor module (delay-loaded Fab asset-store adapter, optional).
 - **Number of Blueprints:** 0.
 - **Network Replicated:** No. This is an editor-only automation and MCP transport plugin; it does not add gameplay replication.
 - **Supported Development Platforms:** Windows: Yes. Mac: Yes. Linux: Yes.

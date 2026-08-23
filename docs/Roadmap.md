@@ -1655,11 +1655,94 @@ The following phases represent the comprehensive expansion to enable **full proj
 ## Phase 37: Asset & Content Plugins
 
 ### 37.1 Quixel Bridge / Megascans / Fab
-- [ ] `connect_to_bridge`, `list_bridge_assets`, `list_downloaded_assets`
-- [ ] `import_megascan_surface`, `import_megascan_3d_asset`, `import_megascan_3d_plant`, `import_megascan_decal`, `import_megascan_atlas`, `import_megascan_brush`
-- [ ] `configure_import_settings`, `set_lod_generation`, `set_material_blend_mode`, `configure_nanite_import`, `configure_virtual_texture`
-- [ ] `search_megascan_library`, `filter_by_category`, `filter_by_biome`, `download_asset`
-- [ ] Fab: `browse_fab_assets`, `download_fab_asset`, `import_fab_asset`
+
+Shipped — content ingestion, built generically rather than per-marketplace.
+Bridge and Fab deliver **cooked `.uasset` packs**, not source art, so bringing
+one in is a package copy plus an asset-registry scan; the same operation also
+covers engine templates and plugin content, which is why these are not
+Megascans-specific actions:
+
+- [x] `asset.list_content_sources` — enumerate engine templates, engine/plugin
+      content, and downloaded Bridge/Fab packs, with optional package counts.
+      Root tokens: `engineTemplates`, `engineFeaturePacks`, `engineContent`,
+      `enginePlugins`, `megascansLibrary`, `projectContent`, `projectPlugins`.
+- [x] `asset.migrate_assets` — copy a source tree into `/Game` preserving the
+      package layout (the only arrangement that keeps stored `/Game/...`
+      references resolvable) and scan it into the asset registry. `dryRun`
+      previews; `maxPackages` caps the blast radius.
+- [x] `system_control.list_plugins` / `enable_plugin` / `disable_plugin` —
+      migrated content usually depends on a plugin that is installed but off
+      (ChaosVehicles for the vehicle template, Bridge for Megascans).
+
+Fab's internal HTTP API, captured from the plugin's own CEF web view with
+`-cefdebug=9222` + Chrome DevTools. These are Epic's private endpoints, not a
+published contract — they can change without notice — but they were observed
+directly rather than guessed, and the `/i/` namespace is what the Fab tab itself
+calls:
+
+```
+GET /i/listings/search?channels=unreal-engine&seller=...   public catalog search
+GET /i/listings/{listingId}                                listing detail
+GET /i/listings/{listingId}/asset-formats/unreal-engine    per-engine format + distribution
+GET /i/listings/{listingId}/asset-formats/gltf             same, other format
+GET /i/users/me/listings-states?listing_ids=...            batch entitlement (account-scoped)
+GET /i/listings/prices-infos?offer_ids=...                 batch pricing
+GET /i/unreal-engine/versions                              engine compatibility matrix
+GET /e/accounts/{EpicAccountId}/ue/library                 owned library (TEDS sync uses this)
+```
+
+The full chain, every step observed in the plugin's own CEF traffic:
+
+```
+GET  /i/listings/search?q=&is_free=&channels=&asset_formats=   catalog search
+POST /i/listings/{listingId}/add-to-library                    entitlement (multipart offer_id)
+GET  /i/listings/{id}/asset-formats/{fmt}/files/{fileId}/download-info?platform=Windows
+                                                               -> signed URL
+     FFabDownloadRequest(assetId, signedUrl, dest)             exported, FAB_API
+     Fab import workflow -> /Game/Fab/...                      verified: mesh+material+3 textures
+```
+
+Contract note for when this is wired: `download_fab_asset` must stop taking a
+`downloadUrl`. A signed URL is transient, authentication-derived material, and
+nothing above the plugin should ever hold one — the caller passes identifiers and
+URL resolution happens internally. The intended public shape collapses to
+`add_to_project(listingId, destination)`, with entitlement check, format
+selection, file selection, resolution, download and import all internal.
+
+Keep those as separate internal operations (search / get-listing /
+ensure-entitlement / resolve-download / download / import / wait-for-assets)
+rather than one function shaped around the first asset that worked. Multiple
+formats, multiple files, Marketplace packs, engine-version variants, Quixel
+quality tiers, already-entitled assets and expired URLs all diverge inside that
+sequence.
+
+Open question: whether an EOS bearer (`EOS_Auth_CopyUserAuthToken`, proven working
+for the library sync) authenticates the `/i/` namespace, or whether it needs the
+CEF session cookie. That single answer decides whether catalog search and
+download become automatable or stay UI-owned.
+
+Next — browsing and downloading, via the Fab plugin's own API. An earlier note
+here claimed these needed an MCP-side network client and credentials; that was
+wrong. The `Fab` engine plugin already handles sign-in (`FabAuthentication.h`)
+and downloading, and exposes `FFabAssetsCache::GetCacheLocation()`,
+`GetCachedAssets()`, `GetCachedFile()` and `IsCached()` as public `FAB_API`,
+plus `FabDownloader.h` and `FabWorkflowFactory` for the import path. Surfacing
+the Fab library is therefore the same kind of read the Content Browser already
+does against an authenticated plugin — no credential handling here at all:
+
+- [ ] `list_fab_assets` / `search_fab_library` — read the plugin's cache and
+      owned-listing set; requires a `Fab` module dependency (the `fabLibrary`
+      source root already reads its cache directory without one)
+- [ ] `download_fab_asset` — drive `FFabDownloader`, report progress
+- [ ] `import_fab_asset` — run the plugin's own workflow (Quixel/Pack/MetaHuman)
+      instead of a raw package copy, so Nanite/VT/quality-tier settings apply
+- [ ] `connect_to_bridge`, `filter_by_category`, `filter_by_biome`
+
+Still open, and genuinely useful — post-import tuning of migrated content:
+
+- [ ] `configure_import_settings`, `set_lod_generation`,
+      `set_material_blend_mode`, `configure_nanite_import`,
+      `configure_virtual_texture`
 
 ### 37.2 Interchange Framework
 - [ ] `create_interchange_pipeline`, `add_pipeline_step`, `configure_pipeline_settings`
