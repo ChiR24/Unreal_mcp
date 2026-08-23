@@ -24,11 +24,10 @@
 
 #if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
+#include "Tests/McpNativeGatewayExecuteValidationSampleValues.h"
 
 namespace McpNativeGatewayExecuteSuite
 {
-TSharedPtr<FJsonValue> SampleValue(const TSharedPtr<FJsonObject>& PropertySchema);
-
 TSharedPtr<FJsonObject> PropertiesOf(const TSharedPtr<FJsonObject>& Schema)
 {
 	const TSharedPtr<FJsonObject>* Properties = nullptr;
@@ -57,104 +56,36 @@ TArray<FString> RequiredOf(const TSharedPtr<FJsonObject>& Schema)
 	return Names;
 }
 
-FString FirstDeclaredType(const TSharedPtr<FJsonObject>& PropertySchema)
-{
-	FString Declared;
-	if (PropertySchema.IsValid() && PropertySchema->TryGetStringField(TEXT("type"), Declared))
-	{
-		return Declared;
-	}
-	const TArray<TSharedPtr<FJsonValue>>* Types = nullptr;
-	if (PropertySchema.IsValid() && PropertySchema->TryGetArrayField(TEXT("type"), Types) &&
-		Types && Types->Num() > 0)
-	{
-		(*Types)[0]->TryGetString(Declared);
-	}
-	return Declared;
-}
-
-TSharedPtr<FJsonValue> SampleValue(const TSharedPtr<FJsonObject>& PropertySchema)
-{
-	if (!PropertySchema.IsValid())
-	{
-		return MakeShared<FJsonValueString>(TEXT("sample"));
-	}
-	const TSharedPtr<FJsonValue> Default = PropertySchema->TryGetField(TEXT("default"));
-	if (Default.IsValid())
-	{
-		return Default;
-	}
-	const TArray<TSharedPtr<FJsonValue>>* Allowed = nullptr;
-	if (PropertySchema->TryGetArrayField(TEXT("enum"), Allowed) && Allowed && Allowed->Num() > 0)
-	{
-		return (*Allowed)[0];
-	}
-
-	const FString Declared = FirstDeclaredType(PropertySchema);
-	if (Declared == TEXT("boolean"))
-	{
-		return MakeShared<FJsonValueBoolean>(true);
-	}
-	if (Declared == TEXT("number") || Declared == TEXT("integer"))
-	{
-		double Minimum = 0.0;
-		double Maximum = 0.0;
-		const bool bHasMin = PropertySchema->TryGetNumberField(TEXT("minimum"), Minimum);
-		const bool bHasMax = PropertySchema->TryGetNumberField(TEXT("maximum"), Maximum);
-		double Value = bHasMin ? FMath::Max(Minimum, 1.0) : 1.0;
-		if (bHasMax) Value = FMath::Min(Value, Maximum);
-		if (bHasMin) Value = FMath::Max(Value, Minimum);
-		return MakeShared<FJsonValueNumber>(Value);
-	}
-	if (Declared == TEXT("array"))
-	{
-		const TSharedPtr<FJsonObject>* ItemSchema = nullptr;
-		PropertySchema->TryGetObjectField(TEXT("items"), ItemSchema);
-		double MinItems = 0.0;
-		PropertySchema->TryGetNumberField(TEXT("minItems"), MinItems);
-		const int32 Count = FMath::Max(static_cast<int32>(MinItems), 1);
-		TArray<TSharedPtr<FJsonValue>> Items;
-		for (int32 Index = 0; Index < Count; ++Index)
-		{
-			Items.Add(SampleValue(ItemSchema ? *ItemSchema : nullptr));
-		}
-		return MakeShared<FJsonValueArray>(Items);
-	}
-	if (Declared == TEXT("object"))
-	{
-		TSharedPtr<FJsonObject> Nested = MakeShared<FJsonObject>();
-		const TSharedPtr<FJsonObject> NestedProperties = PropertiesOf(PropertySchema);
-		for (const FString& Name : RequiredOf(PropertySchema))
-		{
-			const TSharedPtr<FJsonObject>* Child = nullptr;
-			if (NestedProperties.IsValid())
-			{
-				NestedProperties->TryGetObjectField(Name, Child);
-			}
-			Nested->SetField(Name, SampleValue(Child ? *Child : nullptr));
-		}
-		return MakeShared<FJsonValueObject>(Nested);
-	}
-	if (Declared == TEXT("null"))
-	{
-		return MakeShared<FJsonValueNull>();
-	}
-
-	FString MaxLengthValue = TEXT("/Game/Task27/Sample");
-	double MaxLength = 0.0;
-	if (PropertySchema->TryGetNumberField(TEXT("maxLength"), MaxLength) &&
-		MaxLengthValue.Len() > static_cast<int32>(MaxLength))
-	{
-		MaxLengthValue = MaxLengthValue.Left(static_cast<int32>(MaxLength));
-	}
-	return MakeShared<FJsonValueString>(MaxLengthValue);
-}
 
 TSharedPtr<FJsonObject> MinimalValidParams(const TSharedPtr<FJsonObject>& InputSchema)
 {
 	TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
 	const TSharedPtr<FJsonObject> Properties = PropertiesOf(InputSchema);
-	for (const FString& Name : RequiredOf(InputSchema))
+
+	TArray<FString> Names = RequiredOf(InputSchema);
+
+	// `required` alone does not describe a minimal valid request. 22 records
+	// declare an empty `required` plus a `requiredOneOf` group -- add_notify, for
+	// instance, takes either notifyClass or notifyName -- so building only from
+	// `required` produced {} and the validator rejected it. That read as a
+	// schema/validator disagreement when the two in fact agreed: the sample was
+	// the thing that was wrong. One member per group is what "minimal" means.
+	const TArray<TSharedPtr<FJsonValue>>* OneOf = nullptr;
+	if (InputSchema.IsValid() &&
+		InputSchema->TryGetArrayField(TEXT("requiredOneOf"), OneOf) && OneOf)
+	{
+		for (const TSharedPtr<FJsonValue>& Entry : *OneOf)
+		{
+			FString Name;
+			if (Entry.IsValid() && Entry->TryGetString(Name) && !Name.IsEmpty())
+			{
+				Names.AddUnique(Name);
+				break;
+			}
+		}
+	}
+
+	for (const FString& Name : Names)
 	{
 		const TSharedPtr<FJsonObject>* PropertySchema = nullptr;
 		if (Properties.IsValid())
