@@ -26,11 +26,20 @@ public class McpAutomationBridge : ModuleRules {
         ApplyMsvcCompatibility(Target);
         Console.WriteLine(string.Format("McpAutomationBridge: Detected {0}MB available memory (of {1}MB total)", AvailableMemoryMB, TotalMemoryMB));
 
-        PCHUsage = PCHUsageMode.NoPCHs;
+        // NoPCHs made every unity blob re-parse the engine headers from scratch,
+        // which on 1194 files was the single largest cost in a full build. The
+        // module's own PCH already existed at the path below and was never wired
+        // up; using it -- rather than the engine's shared PCH -- keeps the peak
+        // memory that NoPCHs was chosen to protect while reusing the parse.
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+        PrivatePCHHeaderFile = "Private/Core/Module/McpAutomationBridgePCH.h";
         bUseUnity = true;
         TrySetMember(this, "NumIncludedBytesPerUnityCPPOverride", 256 * 1024, _ => true);
         DisableAdaptiveUnityBuild(Target);
         PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
+        // UBT's generated PCH includes the header above by bare filename, so its
+        // directory has to be reachable on the include path.
+        PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private", "Core", "Module"));
 
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Json", "JsonUtilities", "LevelSequence", "MovieScene", "MovieSceneTracks", "GameplayTags", "AIModule", "Landscape" });
 
@@ -44,7 +53,7 @@ public class McpAutomationBridge : ModuleRules {
             PrivateDependencyModuleNames.AddRange(new string[] { "LandscapeEditor", "LandscapeEditorUtilities", "Foliage", "FoliageEdit", "AnimGraph", "AnimationBlueprintLibrary", "Persona", "ToolMenus", "EditorWidgets", "PropertyEditor", "LevelEditor", "RigVM", "RigVMDeveloper", "UMG", "UMGEditor", "MergeActors", "RenderCore", "RHI", "ImageWrapper", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIGraph", "MeshUtilities", "MeshMergeUtilities", "MaterialUtilities", "PhysicsCore", "ClothingSystemRuntimeCommon", "GeometryCore", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription", "NavigationSystem" });
 
             string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
-            AddOptionalModules(Target, EngineDir, new string[] { "D|GameplayAbilities|GameplayAbilities", "D|MetasoundEngine|MetasoundEngine", "C|MetasoundFrontend|MetasoundFrontend", "D|MetasoundEditor|MetasoundEditor", "D|StateTreeModule|StateTreeModule", "D|StateTreeEditorModule|StateTreeEditorModule", "D|SmartObjectsModule|SmartObjectsModule", "D|SmartObjectsEditorModule|SmartObjectsEditorModule", "C|StructUtils|StructUtils", "D|MassEntity|MassEntity", "D|MassSpawner|MassSpawner", "D|MassActors|MassActors", "D|OnlineSubsystem|OnlineSubsystem", "D|OnlineSubsystemUtils|OnlineSubsystemUtils", "D|ControlRig|ControlRig", "D|ControlRigDeveloper|ControlRigDeveloper", "D|ControlRigEditor|ControlRigEditor", "D|ProceduralMeshComponent|ProceduralMeshComponent", "D|EnvironmentQueryEditor|EnvironmentQueryEditor", "D|GeometryScriptingCore|GeometryScriptingCore", "D|GeometryScriptingEditor|GeometryScriptingEditor" });
+            AddOptionalModules(Target, EngineDir, new string[] { "D|GameplayAbilities|GameplayAbilities", "D|MetasoundEngine|MetasoundEngine", "C|MetasoundFrontend|MetasoundFrontend", "D|MetasoundEditor|MetasoundEditor", "D|StateTreeModule|StateTreeModule", "D|StateTreeEditorModule|StateTreeEditorModule", "D|SmartObjectsModule|SmartObjectsModule", "D|SmartObjectsEditorModule|SmartObjectsEditorModule", "D|MassEntity|MassEntity", "D|MassSpawner|MassSpawner", "D|MassActors|MassActors", "D|OnlineSubsystem|OnlineSubsystem", "D|OnlineSubsystemUtils|OnlineSubsystemUtils", "D|ControlRig|ControlRig", "D|ControlRigDeveloper|ControlRigDeveloper", "D|ControlRigEditor|ControlRigEditor", "D|ProceduralMeshComponent|ProceduralMeshComponent", "D|EnvironmentQueryEditor|EnvironmentQueryEditor", "D|GeometryScriptingCore|GeometryScriptingCore", "D|GeometryScriptingEditor|GeometryScriptingEditor" });
 
             ProjectDescriptor Project = Target.ProjectFile == null ? null : ProjectDescriptor.FromFile(Target.ProjectFile);
             PluginDescriptor Bridge = PluginDescriptor.FromFile(new FileReference(Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "McpAutomationBridge.uplugin"))));
@@ -70,12 +79,10 @@ public class McpAutomationBridge : ModuleRules {
             bool bHasReplaySubsystemTotalTime = bHasReplayApi &&
                 FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"), "GetReplayTotalTime");
 
-            PublicDefinitions.Add(bHasCinematicCamera ? "MCP_HAS_CINEMATIC_CAMERA=1" : "MCP_HAS_CINEMATIC_CAMERA=0");
-            PublicDefinitions.Add(bHasMediaAssets ? "MCP_HAS_MEDIA_ASSETS=1" : "MCP_HAS_MEDIA_ASSETS=0");
+            PublicDefinitions.AddRange(new string[] { bHasCinematicCamera ? "MCP_HAS_CINEMATIC_CAMERA=1" : "MCP_HAS_CINEMATIC_CAMERA=0", bHasMediaAssets ? "MCP_HAS_MEDIA_ASSETS=1" : "MCP_HAS_MEDIA_ASSETS=0" });
             PublicDefinitions.Add(bHasMovieRenderPipeline ? "MCP_HAS_MOVIE_RENDER_PIPELINE=1" : "MCP_HAS_MOVIE_RENDER_PIPELINE=0");
-            PublicDefinitions.Add(bHasMoviePipelineObjectIdPass ? "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=1" : "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0");
-            PublicDefinitions.Add(bHasMoviePipelinePassMetadata ? "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=1" : "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=0");
-            PublicDefinitions.Add(bHasSmaa ? "MCP_HAS_SMAA=1" : "MCP_HAS_SMAA=0");
+            PublicDefinitions.AddRange(new string[] { bHasMoviePipelineObjectIdPass ? "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=1" : "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0", bHasMoviePipelinePassMetadata ? "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=1" : "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=0" });
+            bool bHasTeds = AddOptionalModuleGroup(EngineDir, "TypedElementFramework", new string[] { "TypedElementFramework" }); PublicDefinitions.AddRange(new string[] { bHasSmaa ? "MCP_HAS_SMAA=1" : "MCP_HAS_SMAA=0", bHasTeds ? "MCP_HAS_TEDS=1" : "MCP_HAS_TEDS=0" });
             PublicDefinitions.Add(bHasTakeRecorder ? "MCP_HAS_TAKE_RECORDER=1" : "MCP_HAS_TAKE_RECORDER=0");
             PublicDefinitions.Add(bHasTakeRecorderOpenSequencer ? "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=1" : "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=0");
             PublicDefinitions.Add(bHasReplayApi ? "MCP_HAS_REPLAY_API=1" : "MCP_HAS_REPLAY_API=0");
@@ -92,11 +99,24 @@ public class McpAutomationBridge : ModuleRules {
                 PublicDefinitions.Add("MCP_ENABLE_EDIT_AND_CONTINUE=1");
         }
         else {
-            PublicDefinitions.AddRange(new string[] { "MCP_HAS_K2NODE_HEADERS=0", "MCP_HAS_EDGRAPH_SCHEMA_K2=0", "MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=0", "MCP_HAS_WP_FOR_EACH_DATALAYER=0", "MCP_HAS_PCG=0", "MCP_HAS_CINEMATIC_CAMERA=0", "MCP_HAS_MEDIA_ASSETS=0", "MCP_HAS_MOVIE_RENDER_PIPELINE=0", "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0", "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=0", "MCP_HAS_SMAA=0", "MCP_HAS_TAKE_RECORDER=0", "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=0", "MCP_HAS_REPLAY_API=0", "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=0" });
+            PublicDefinitions.AddRange(new string[] { "MCP_HAS_K2NODE_HEADERS=0", "MCP_HAS_EDGRAPH_SCHEMA_K2=0", "MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=0", "MCP_HAS_WP_FOR_EACH_DATALAYER=0", "MCP_HAS_PCG=0", "MCP_HAS_CINEMATIC_CAMERA=0", "MCP_HAS_MEDIA_ASSETS=0", "MCP_HAS_MOVIE_RENDER_PIPELINE=0", "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0", "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=0", "MCP_HAS_SMAA=0", "MCP_HAS_TAKE_RECORDER=0", "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=0", "MCP_HAS_REPLAY_API=0", "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=0", "MCP_HAS_TEDS=0" });
         }
 
         if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion >= 6)
-            SetShadowVariableWarningLevel(WarningLevel.Warning);
+            SetCppWarningLevel("ShadowVariableWarningLevel", WarningLevel.Warning);
+
+        // Every C4996 this module emits comes from an engine header rather than from Private/: a 5.7
+        // editor build reports 978 of them, 373 for UObject::GetAssetRegistryTags alone, each raised
+        // where an engine class declares an override of an engine-deprecated virtual. MSVC scopes a
+        // diagnostic out by path only through /external:, and UBT reserves that for system include
+        // paths, so engine headers reached over /I cannot be quieted on their own. This also silences
+        // the warning for our own sources, so MCP_STRICT_DEPRECATIONS=1 restores it for auditing
+        // whether this module has itself started calling deprecated APIs.
+        if (!string.Equals(Environment.GetEnvironmentVariable("MCP_STRICT_DEPRECATIONS"), "1", StringComparison.Ordinal))
+        {
+            SetCppWarningLevel("DeprecationWarningLevel", WarningLevel.Off);
+            SetCppWarningLevel("MSVCDeprecationWarningLevel", WarningLevel.Off);
+        }
     }
 
     private static void ApplyMsvcCompatibility(ReadOnlyTargetRules Target) {
@@ -157,15 +177,24 @@ public class McpAutomationBridge : ModuleRules {
         return true;
     }
 
-    private void SetShadowVariableWarningLevel(WarningLevel level) {
+    private void SetCppWarningLevel(string warningName, WarningLevel level) {
         var cppSettings = GetType().GetProperty("CppCompileWarningSettings", InstanceFlags)?.GetValue(this);
-        var shadowProperty = cppSettings?.GetType().GetProperty("ShadowVariableWarningLevel", InstanceFlags);
-        if (shadowProperty != null && shadowProperty.CanWrite) {
-            shadowProperty.SetValue(cppSettings, level); return;
+        var warningProperty = cppSettings?.GetType().GetProperty(warningName, InstanceFlags);
+        if (warningProperty != null && warningProperty.CanWrite) {
+            warningProperty.SetValue(cppSettings, level); return;
         }
 
-        var legacyProperty = GetType().GetProperty("ShadowVariableWarningLevel", InstanceFlags);
-        if (legacyProperty != null && legacyProperty.CanWrite) legacyProperty.SetValue(this, level);
+        var legacyProperty = GetType().GetProperty(warningName, InstanceFlags);
+        if (legacyProperty != null && legacyProperty.CanWrite) {
+            legacyProperty.SetValue(this, level); return;
+        }
+        // Fully qualified: LogWarning is an extension method on ILogger, so a bare
+        // Logger.LogWarning needs a `using Microsoft.Extensions.Logging` this file
+        // does not have — without it the module fails to compile with CS1061 and
+        // takes the whole target down as a RulesError before any C++ is built.
+        // Qualifying keeps the fix without adding a line to a file that sits on
+        // the 250-pure-line ceiling.
+        Microsoft.Extensions.Logging.LoggerExtensions.LogWarning(Logger, $"McpAutomationBridge: could not set UBT warning level {warningName}; UBT renamed the setting.");
     }
 
     private static bool TryGetWindowsMemoryMB(out long availableMemoryMB, out long totalMemoryMB) {

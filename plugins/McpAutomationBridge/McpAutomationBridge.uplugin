@@ -25,6 +25,16 @@
         "Mac",
         "Linux"
       ]
+    },
+    {
+      "Name": "McpAutomationBridgeFab",
+      "Type": "Editor",
+      "LoadingPhase": "Default",
+      "PlatformAllowList": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
     }
   ],
   "Plugins": [
@@ -130,11 +140,6 @@
       "Enabled": true
     },
     {
-      "Name": "StructUtils",
-      "Enabled": true,
-      "Optional": true
-    },
-    {
       "Name": "Metasound",
       "Enabled": true,
       "Optional": true
@@ -190,6 +195,16 @@
     },
     {
       "Name": "ElectraPlayer",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Fab",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Bridge",
       "Enabled": true,
       "Optional": true
     }
